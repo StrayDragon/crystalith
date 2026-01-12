@@ -1,0 +1,12 @@
+service_wecom:
+  Name: service_wecom
+
+DB:
+  ECHO: true
+  POOL_SIZE: 10
+
+SQLITEDB:
+  TEST_SQLITE_PATH: .tmp/wecom_db_main.db
+
+ADB:
+  TEST_SQLITE_PATH: .tmp/wecom_db_adb.db

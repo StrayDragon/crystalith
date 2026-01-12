@@ -1,2 +1,3 @@
-def hello() -> str:
-    return "Hello from crystalith!"
+from .app import create_app
+
+__all__ = ["create_app"]
