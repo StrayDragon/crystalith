@@ -1,10 +1,10 @@
 [project]
 name = "cl-sqlalchemyx"
 version = "0.1.0"
-description = "Crystalith internal SQLAlchemy helpers"
+description = "Crystalith SQLAlchemy helpers"
 requires-python = ">=3.12"
 authors = [
-    { name = "straydragon", email = "straydragonl@foxmail.com" }
+    { name = "Crystalith" }
 ]
 dependencies = [
     "sqlalchemy[asyncio]>=2.0.43",
