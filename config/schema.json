@@ -13,7 +13,7 @@
           "type": "string"
         },
         "openapi_ui_path": {
-          "default": "/v1/codev/openapi-ui/scaler",
+          "default": "/v1/codev/openapi-ui/scalar",
           "title": "Openapi Ui Path",
           "type": "string"
         }

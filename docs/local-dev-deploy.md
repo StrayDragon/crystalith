@@ -25,7 +25,7 @@ uv run --project backend/py uvicorn crystalith.app:create_app --factory --host 1
 
 OpenAPI：
 - JSON: `http://127.0.0.1:8000/v1/codev/openapi.json`
-- UI: `http://127.0.0.1:8000/v1/codev/openapi-ui/scaler`
+- UI: `http://127.0.0.1:8000/v1/codev/openapi-ui/scalar`
 
 ### 前端（CRA）
 
@@ -48,7 +48,7 @@ pnpm start
 app:
   name: "Crystalith"
   openapi_path: "/v1/codev/openapi.json"
-  openapi_ui_path: "/v1/codev/openapi-ui/scaler"
+  openapi_ui_path: "/v1/codev/openapi-ui/scalar"
 
 database:
   url: "sqlite+aiosqlite:///./data/app.db"

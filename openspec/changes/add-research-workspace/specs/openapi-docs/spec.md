@@ -7,10 +7,10 @@
 - **THEN** 返回当前 API 的 OpenAPI JSON 文档
 
 ### Requirement: Scalar UI 端点
-系统 SHALL 使用 scalar-fastapi 在 `/v1/codev/openapi-ui/scaler` 提供 OpenAPI UI。
+系统 SHALL 使用 scalar-fastapi 在 `/v1/codev/openapi-ui/scalar` 提供 OpenAPI UI。
 
 #### Scenario: 打开 OpenAPI UI
-- **WHEN** 访问 `/v1/codev/openapi-ui/scaler`
+- **WHEN** 访问 `/v1/codev/openapi-ui/scalar`
 - **THEN** 展示基于 OpenAPI JSON 的 Scalar UI
 
 ### Requirement: 枚举值展示
