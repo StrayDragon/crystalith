@@ -1,0 +1,298 @@
+{
+  "$defs": {
+    "AppSettings": {
+      "properties": {
+        "name": {
+          "default": "Crystalith",
+          "title": "Name",
+          "type": "string"
+        },
+        "openapi_path": {
+          "default": "/v1/codev/openapi.json",
+          "title": "Openapi Path",
+          "type": "string"
+        },
+        "openapi_ui_path": {
+          "default": "/v1/codev/openapi-ui/scaler",
+          "title": "Openapi Ui Path",
+          "type": "string"
+        }
+      },
+      "title": "AppSettings",
+      "type": "object"
+    },
+    "ChatSettings": {
+      "properties": {
+        "provider": {
+          "default": "openai",
+          "enum": [
+            "openai",
+            "ollama"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "model": {
+          "default": "gpt-4o-mini",
+          "title": "Model",
+          "type": "string"
+        },
+        "openai": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OpenAIProviderSettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "ChatSettings",
+      "type": "object"
+    },
+    "DatabaseSettings": {
+      "properties": {
+        "url": {
+          "default": "sqlite+aiosqlite:///./data/app.db",
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "title": "DatabaseSettings",
+      "type": "object"
+    },
+    "EmbeddingSettings": {
+      "properties": {
+        "provider": {
+          "default": "ollama",
+          "enum": [
+            "ollama",
+            "openai"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "model": {
+          "default": "bge-m3",
+          "title": "Model",
+          "type": "string"
+        },
+        "openai": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OpenAIProviderSettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "ollama_options": {
+          "$ref": "#/$defs/OllamaRuntimeOptions"
+        }
+      },
+      "title": "EmbeddingSettings",
+      "type": "object"
+    },
+    "OllamaProviderSettings": {
+      "properties": {
+        "host": {
+          "default": "http://localhost:11434",
+          "title": "Host",
+          "type": "string"
+        }
+      },
+      "title": "OllamaProviderSettings",
+      "type": "object"
+    },
+    "OllamaRuntimeOptions": {
+      "properties": {
+        "num_ctx": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Num Ctx"
+        },
+        "num_thread": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "const": "auto",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Num Thread"
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temperature"
+        },
+        "num_batch": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Num Batch"
+        },
+        "mlock": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mlock"
+        },
+        "numa": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Numa"
+        },
+        "low_vram": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Low Vram"
+        }
+      },
+      "title": "OllamaRuntimeOptions",
+      "type": "object"
+    },
+    "OpenAIProviderSettings": {
+      "properties": {
+        "api_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Api Key"
+        },
+        "base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Url"
+        },
+        "organization": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Organization"
+        },
+        "project": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project"
+        }
+      },
+      "title": "OpenAIProviderSettings",
+      "type": "object"
+    },
+    "RefineSettings": {
+      "properties": {
+        "formats": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Formats",
+          "type": "array"
+        }
+      },
+      "title": "RefineSettings",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "app": {
+      "$ref": "#/$defs/AppSettings"
+    },
+    "database": {
+      "$ref": "#/$defs/DatabaseSettings"
+    },
+    "openai": {
+      "$ref": "#/$defs/OpenAIProviderSettings"
+    },
+    "ollama": {
+      "$ref": "#/$defs/OllamaProviderSettings"
+    },
+    "embedding": {
+      "$ref": "#/$defs/EmbeddingSettings"
+    },
+    "chat": {
+      "$ref": "#/$defs/ChatSettings"
+    },
+    "refine": {
+      "$ref": "#/$defs/RefineSettings"
+    }
+  },
+  "title": "Settings",
+  "type": "object"
+}

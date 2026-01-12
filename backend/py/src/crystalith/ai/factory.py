@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import ollama
 from openai import AsyncOpenAI
 
-from crystalith.config import Settings
+from crystalith.config import OpenAIProviderSettings, Settings
 
 from .interfaces import ChatProvider, EmbeddingProvider
 from .ollama_provider import OllamaChatProvider, OllamaEmbeddingProvider
@@ -18,16 +18,22 @@ class Providers:
     chat: ChatProvider
 
 
-def _create_openai_client(settings: Settings, *, reason: str) -> AsyncOpenAI:
-    api_key = settings.openai.api_key
+def _create_openai_client(
+    settings: Settings,
+    *,
+    reason: str,
+    override: OpenAIProviderSettings | None = None,
+) -> AsyncOpenAI:
+    config = override or settings.openai
+    api_key = config.api_key
     if api_key is None or not api_key.strip():
         raise ValueError(
             f"Missing YAML config `openai.api_key` (required when {reason} provider is 'openai')."
         )
 
-    base_url = settings.openai.base_url or "https://api.openai.com/v1"
-    organization = settings.openai.organization or ""
-    project = settings.openai.project or ""
+    base_url = config.base_url or "https://api.openai.com/v1"
+    organization = config.organization or ""
+    project = config.project or ""
 
     return AsyncOpenAI(
         api_key=api_key,
@@ -47,12 +53,17 @@ def create_embedding_provider(settings: Settings) -> EmbeddingProvider:
         case "openai":
             return OpenAIEmbeddingProvider(
                 model=settings.embedding.model,
-                client=_create_openai_client(settings, reason="embedding"),
+                client=_create_openai_client(
+                    settings,
+                    reason="embedding",
+                    override=settings.embedding.openai,
+                ),
             )
         case "ollama":
             return OllamaEmbeddingProvider(
                 model=settings.embedding.model,
                 client=_create_ollama_client(settings),
+                options=settings.embedding.ollama_options.to_options(),
             )
         case provider:
             raise ValueError(f"Unsupported embedding provider: {provider}")
@@ -63,7 +74,11 @@ def create_chat_provider(settings: Settings) -> ChatProvider:
         case "openai":
             return OpenAIChatProvider(
                 model=settings.chat.model,
-                client=_create_openai_client(settings, reason="chat"),
+                client=_create_openai_client(
+                    settings,
+                    reason="chat",
+                    override=settings.chat.openai,
+                ),
             )
         case "ollama":
             return OllamaChatProvider(
