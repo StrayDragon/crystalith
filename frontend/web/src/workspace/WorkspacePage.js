@@ -85,8 +85,10 @@ function normalizeSource(row) {
 }
 
 function normalizeCitation(row) {
+  const chunkId = Number(row.chunk_id);
   return {
     id: `${row.chunk_id}`,
+    chunkId: Number.isFinite(chunkId) ? chunkId : null,
     sourceTitle: row.source_name,
     snippet: row.snippet,
     chunkIndex: row.chunk_index,
@@ -160,6 +162,10 @@ function WorkspaceTabs({ activePanel, onChange }) {
 function SourcesPanel({
   sources,
   citations,
+  selectedCitationIds,
+  onToggleCitation,
+  onSelectAllCitations,
+  onClearCitationSelection,
   onUpload,
   uploadState,
   isDemo,
@@ -173,6 +179,10 @@ function SourcesPanel({
   createInputRef,
 }) {
   const uploadDisabled = isDemo || showCreate;
+  const selectedCount = citations.reduce(
+    (count, citation) => count + (selectedCitationIds[citation.id] ? 1 : 0),
+    0,
+  );
 
   return (
     <div className="WorkspacePanelBody">
@@ -262,13 +272,46 @@ function SourcesPanel({
       </section>
 
       <section className="WorkspaceSection">
-        <h3 className="WorkspaceSectionTitle">引用</h3>
+        <div className="WorkspaceSectionHeader">
+          <h3 className="WorkspaceSectionTitle">引用</h3>
+          {citations.length ? (
+            <div className="WorkspaceSectionActions">
+              <span className="WorkspaceTiny">
+                已选 {selectedCount}/{citations.length}
+              </span>
+              <button
+                type="button"
+                className="WorkspaceLinkButton"
+                onClick={onSelectAllCitations}
+              >
+                全选
+              </button>
+              <button
+                type="button"
+                className="WorkspaceLinkButton"
+                onClick={onClearCitationSelection}
+                disabled={selectedCount === 0}
+              >
+                清空
+              </button>
+            </div>
+          ) : null}
+        </div>
         {citations.length === 0 ? (
-          <div className="WorkspaceEmpty">暂无引用。发送一次消息后这里会展示引用片段。</div>
+          <div className="WorkspaceEmpty">
+            暂无引用。发送一次消息后这里会展示引用片段（可勾选作为提炼输入）。
+          </div>
         ) : (
           <ul className="WorkspaceList">
             {citations.map((c) => (
               <li key={c.id} className="WorkspaceListItem WorkspaceListItem--compact">
+                <input
+                  type="checkbox"
+                  className="WorkspaceCheckbox"
+                  checked={Boolean(selectedCitationIds[c.id])}
+                  onChange={() => onToggleCitation(c.id)}
+                  aria-label={`选择引用：${c.sourceTitle} #${c.chunkIndex}`}
+                />
                 <div className="WorkspaceListItem__main">
                   <div className="WorkspaceListItem__title">{c.sourceTitle}</div>
                   <div className="WorkspaceListItem__sub">{c.snippet}</div>
@@ -358,6 +401,7 @@ function RefinePanel({
   output,
   isLoading,
   isBlocked,
+  selectedCitationCount,
   prompt,
   onPromptChange,
   onGenerate,
@@ -384,7 +428,11 @@ function RefinePanel({
         <div className="RefineCard__header">
           <div>
             <div className="RefineCard__title">提炼卡片</div>
-            <div className="RefineCard__subtitle">基于当前来源库生成输出，可自定义提炼目标。</div>
+            <div className="RefineCard__subtitle">
+              {selectedCitationCount > 0
+                ? `已选 ${selectedCitationCount} 条引用，将仅基于选中引用生成输出。`
+                : '基于当前来源库自动检索引用生成输出，可自定义提炼目标。'}
+            </div>
           </div>
           <div className="RefineCard__badge">
             {queue.length ? `队列 ${queue.length} 项` : '暂无任务'}
@@ -459,6 +507,9 @@ function RefinePanel({
                 <div className="RefineQueueItem__top">
                   <span className={`RefineQueueItem__status is-${job.status}`}>
                     {statusLabels[job.status]}
+                  </span>
+                  <span className="RefineQueueItem__meta">
+                    {job.chunkIds?.length ? `引用 ${job.chunkIds.length}` : '自动检索'}
                   </span>
                   <span className="RefineQueueItem__time">{job.createdAtLabel}</span>
                 </div>
@@ -580,6 +631,7 @@ export default function WorkspacePage() {
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState('');
   const [citations, setCitations] = useState([]);
+  const [selectedCitationIds, setSelectedCitationIds] = useState({});
   const [refineMode, setRefineMode] = useState('paragraph');
   const [refinePrompt, setRefinePrompt] = useState('');
   const [refineJobs, setRefineJobs] = useState([]);
@@ -620,6 +672,26 @@ export default function WorkspacePage() {
       structured: null,
       evidence: false,
     };
+
+  const selectedChunkIds = useMemo(
+    () =>
+      citations
+        .filter((citation) => selectedCitationIds[citation.id])
+        .map((citation) => citation.chunkId ?? Number(citation.id))
+        .filter((value) => Number.isFinite(value) && value > 0),
+    [citations, selectedCitationIds],
+  );
+
+  useEffect(() => {
+    setSelectedCitationIds((prev) => {
+      if (!prev || Object.keys(prev).length === 0) return prev;
+      const next = {};
+      for (const citation of citations) {
+        if (prev[citation.id]) next[citation.id] = true;
+      }
+      return next;
+    });
+  }, [citations]);
 
   useEffect(() => {
     let cancelled = false;
@@ -688,6 +760,7 @@ export default function WorkspacePage() {
     fetchSources();
     setMessages([]);
     setCitations([]);
+    setSelectedCitationIds({});
     updateRefineQueue(() => []);
     setActiveRefineJobId(null);
     setRefinePrompt(refineTemplates[0]?.prompt ?? '');
@@ -701,10 +774,6 @@ export default function WorkspacePage() {
     if (!createInputRef.current) return;
     createInputRef.current.focus();
   }, [activeNotebookId]);
-
-  useEffect(() => {
-    refineQueueRef.current = refineJobs;
-  }, [refineJobs]);
 
   useEffect(() => {
     if (refinePrompt.trim().length > 0) return;
@@ -758,11 +827,9 @@ export default function WorkspacePage() {
   }
 
   function updateRefineQueue(updater) {
-    setRefineJobs((prev) => {
-      const next = updater(prev);
-      refineQueueRef.current = next;
-      return next;
-    });
+    const next = updater(refineQueueRef.current);
+    refineQueueRef.current = next;
+    setRefineJobs(next);
   }
 
   function runNextRefineJob() {
@@ -774,10 +841,10 @@ export default function WorkspacePage() {
     updateRefineQueue((prev) =>
       prev.map((job) => (job.id === nextJob.id ? { ...job, status: 'running' } : job)),
     );
-    void processRefineJob(nextJob.id, nextJob.prompt);
+    void processRefineJob(nextJob.id, nextJob.prompt, nextJob.chunkIds ?? []);
   }
 
-  async function processRefineJob(jobId, prompt) {
+  async function processRefineJob(jobId, prompt, chunkIds) {
     setLoadingState((prev) => ({ ...prev, refine: true }));
     try {
       let normalizedOutputs = {};
@@ -789,7 +856,7 @@ export default function WorkspacePage() {
           return acc;
         }, {});
       } else if (activeNotebookId) {
-        response = await refineBatch(activeNotebookId, prompt, refineFormats);
+        response = await refineBatch(activeNotebookId, prompt, refineFormats, chunkIds);
         normalizedOutputs = normalizeRefineOutputs(response.outputs ?? {}, response.evidence);
       }
 
@@ -836,10 +903,12 @@ export default function WorkspacePage() {
     const trimmed = refinePrompt.trim();
     if (!trimmed) return;
     const createdAt = new Date().toISOString();
+    const chunkIdsSnapshot = selectedChunkIds.length ? [...selectedChunkIds] : [];
     const job = {
       id: createId(),
       prompt: trimmed,
       status: 'queued',
+      chunkIds: chunkIdsSnapshot,
       outputs: null,
       error: '',
       createdAt,
@@ -873,13 +942,15 @@ export default function WorkspacePage() {
       setMessages((prev) => [...prev, assistantMessage]);
       setCitations([
         {
-          id: createId(),
+          id: '101',
+          chunkId: 101,
           sourceTitle: '需求说明.md',
           snippet: '...与三栏工作区一致：左来源/引用，中聊天，右提炼输出。',
           chunkIndex: 3,
         },
         {
-          id: createId(),
+          id: '102',
+          chunkId: 102,
           sourceTitle: '竞品对比.txt',
           snippet: '...对话区域需要始终可用，提炼区域用于结构化输出。',
           chunkIndex: 1,
@@ -941,6 +1012,28 @@ export default function WorkspacePage() {
           <SourcesPanel
             sources={sources}
             citations={citations}
+            selectedCitationIds={selectedCitationIds}
+            onToggleCitation={(citationId) =>
+              setSelectedCitationIds((prev) => {
+                const next = { ...prev };
+                if (next[citationId]) {
+                  delete next[citationId];
+                } else {
+                  next[citationId] = true;
+                }
+                return next;
+              })
+            }
+            onSelectAllCitations={() =>
+              setSelectedCitationIds(() => {
+                const next = {};
+                for (const citation of citations) {
+                  next[citation.id] = true;
+                }
+                return next;
+              })
+            }
+            onClearCitationSelection={() => setSelectedCitationIds({})}
             onUpload={handleUpload}
             uploadState={uploadState}
             isDemo={isDemo}
@@ -992,6 +1085,7 @@ export default function WorkspacePage() {
             output={currentRefineOutput}
             isLoading={loadingState.refine}
             isBlocked={!activeNotebookId}
+            selectedCitationCount={selectedChunkIds.length}
             prompt={refinePrompt}
             onPromptChange={setRefinePrompt}
             onGenerate={handleRefineGenerate}

@@ -221,6 +221,39 @@
   letter-spacing: 0.08em;
 }
 
+.WorkspaceSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.WorkspaceSectionActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.WorkspaceLinkButton {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 12px;
+  color: rgba(30, 64, 175, 0.92);
+  cursor: pointer;
+}
+
+.WorkspaceLinkButton:hover {
+  color: rgba(29, 78, 216, 1);
+  text-decoration: underline;
+}
+
+.WorkspaceLinkButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  text-decoration: none;
+}
+
 .WorkspaceList {
   margin: 0;
   padding: 0;
@@ -251,6 +284,19 @@
 
 .WorkspaceListItem--compact {
   align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.WorkspaceListItem--compact .WorkspaceBadge {
+  margin-left: auto;
+}
+
+.WorkspaceCheckbox {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  flex: 0 0 auto;
+  accent-color: var(--ws-accent);
 }
 
 .WorkspaceListItem__title {
@@ -692,7 +738,8 @@
 .RefineQueueItem__top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 8px;
   margin-bottom: 8px;
   font-size: 12px;
 }
@@ -726,7 +773,12 @@
   color: rgba(185, 28, 28, 0.9);
 }
 
+.RefineQueueItem__meta {
+  color: var(--ws-text-muted);
+}
+
 .RefineQueueItem__time {
+  margin-left: auto;
   color: var(--ws-text-muted);
 }
 
