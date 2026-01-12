@@ -4,6 +4,7 @@ Right panel now matches NotebookLM’s “manual generation” flow: a提炼卡�
 
 Changes made:
 - Manual提炼队列与卡片式提示词输入（含预设模板、队列列表、输出选择）：`frontend/web/react-flow-demo/src/workspace/WorkspacePage.js`, `frontend/web/react-flow-demo/src/workspace/workspace.css`
+- 右侧提炼卡片文案/模板默认值确认，提示词库扩展：`frontend/web/src/workspace/WorkspacePage.js`, `frontend/web/src/workspace/workspace.css`
 - SQLite锁冲突缓解（WAL + busy_timeout + connect timeout）：`backend/py/src/crystalith/db/manager.py`
 - pnpm ESLint 兼容（hoist规则）：`frontend/web/react-flow-demo/.npmrc`
 - 忽略本地数据文件：`.gitignore`
@@ -21,5 +22,5 @@ Notes:
 
 Next steps (pick one):
 1) 我帮你再跑一遍前后端联调，验证“提炼队列 + 自定义提示词”全流程  
-2) 你确认右侧卡片文案/模板默认值后，我再细化交互与提示词库  
-3) 如果想把“引用区”作为显式输入（例如只提炼选中引用），我继续扩展 UI + API 协议
+2) 如果想把“引用区”作为显式输入（例如只提炼选中引用），我继续扩展 UI + API 协议  
+3) 需要更复杂的提示词库（分组/收藏/最近使用）的话，我再细化交互
