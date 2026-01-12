@@ -1,5 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import '@fontsource-variable/inter/wght.css';
+import '@fontsource/noto-sans-sc/chinese-simplified-400.css';
+import '@fontsource/noto-sans-sc/chinese-simplified-600.css';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
