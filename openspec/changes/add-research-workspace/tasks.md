@@ -6,7 +6,7 @@
 - [x] 1.5 支持分离的 embedding/chat provider 配置（Ollama 用于 embedding，OpenAI 用于 chat）。
 - [x] 1.6 实现 txt/markdown 文档摄取流程（上传、分块、向量化、索引、状态跟踪）。
 - [x] 1.7 实现 RAG 问答接口（含引用与无证据提示）。
-- [ ] 1.8 实现 YAML 配置管理（pydantic-settings + JSON Schema 生成）。
+- [x] 1.8 实现 YAML 配置管理（pydantic-settings + JSON Schema 生成）。
 - [x] 1.9 实现三栏 UI：左来源/引用，中聊天，右“提炼”输出。
 - [x] 1.10 实现“提炼”三种格式（段落/要点/结构化）。
 - [x] 1.13 调整提炼为手动触发与生成队列（可配置提示词）。
