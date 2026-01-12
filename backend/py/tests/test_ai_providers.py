@@ -76,9 +76,10 @@ async def test_openai_chat_returns_content() -> None:
 @pytest.mark.asyncio
 async def test_ollama_embedding_returns_vectors() -> None:
     class FakeOllama:
-        async def embed(self, *, model: str, input: list[str]):
+        async def embed(self, *, model: str, input: list[str], options=None):
             assert model == "bge-m3"
             assert input == ["a", "b"]
+            assert options is None
             return SimpleNamespace(embeddings=[[0.1], [0.2]])
 
     provider = OllamaEmbeddingProvider(model="bge-m3", client=FakeOllama())
