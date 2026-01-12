@@ -1,0 +1,400 @@
+:root {
+  --ws-bg: #0b1220;
+  --ws-surface: rgba(255, 255, 255, 0.08);
+  --ws-surface-strong: rgba(255, 255, 255, 0.12);
+  --ws-border: rgba(255, 255, 255, 0.14);
+  --ws-text: rgba(255, 255, 255, 0.92);
+  --ws-text-muted: rgba(255, 255, 255, 0.68);
+  --ws-accent: #4f8cff;
+  --ws-success: #22c55e;
+  --ws-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
+}
+
+.WorkspaceApp {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--ws-text);
+  background: radial-gradient(1200px 600px at 20% 0%, #16213b 0%, var(--ws-bg) 56%),
+    radial-gradient(900px 520px at 90% 10%, rgba(79, 140, 255, 0.22) 0%, transparent 60%),
+    var(--ws-bg);
+}
+
+.WorkspaceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.WorkspaceHeader__left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+}
+
+.WorkspaceBrand {
+  font-weight: 650;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+}
+
+.WorkspaceMeta {
+  font-size: 12px;
+  color: var(--ws-text-muted);
+}
+
+.WorkspaceHeader__center {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.WorkspaceHeader__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.WorkspaceLabel {
+  font-size: 12px;
+  color: var(--ws-text-muted);
+}
+
+.WorkspaceSelect {
+  border-radius: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--ws-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ws-text);
+}
+
+.WorkspaceSelect:focus {
+  outline: 2px solid rgba(79, 140, 255, 0.35);
+  outline-offset: 2px;
+}
+
+.WorkspacePill {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.14);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: rgba(214, 255, 229, 0.96);
+}
+
+.WorkspaceTiny {
+  font-size: 12px;
+  color: var(--ws-text-muted);
+  white-space: nowrap;
+}
+
+.WorkspaceTabs {
+  display: none;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.WorkspaceTab {
+  flex: 1;
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ws-text);
+  font-size: 13px;
+}
+
+.WorkspaceTab.isActive {
+  border-color: rgba(79, 140, 255, 0.55);
+  background: rgba(79, 140, 255, 0.18);
+}
+
+.WorkspaceMain {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(260px, 380px);
+  gap: 12px;
+  padding: 12px;
+}
+
+.WorkspacePanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: 16px;
+  border: 1px solid var(--ws-border);
+  background: linear-gradient(180deg, var(--ws-surface) 0%, rgba(255, 255, 255, 0.04) 100%);
+  box-shadow: var(--ws-shadow);
+}
+
+.WorkspacePanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.WorkspacePanelTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.2px;
+}
+
+.WorkspacePanelBody {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px;
+}
+
+.WorkspacePanelBody--chat {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.WorkspaceSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.WorkspaceSection:last-child {
+  margin-bottom: 0;
+}
+
+.WorkspaceSectionTitle {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ws-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.WorkspaceList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.WorkspaceListItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.WorkspaceListItem--compact {
+  align-items: flex-start;
+}
+
+.WorkspaceListItem__title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.WorkspaceListItem__sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--ws-text-muted);
+  line-height: 1.35;
+}
+
+.WorkspaceBadge {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.82);
+  white-space: nowrap;
+}
+
+.WorkspaceEmpty {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  padding: 12px;
+  line-height: 1.5;
+}
+
+.ChatMessages {
+  flex: 1;
+  padding: 14px 14px 0 14px;
+  overflow: auto;
+  min-height: 0;
+}
+
+.ChatMessage {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.ChatMessage__meta {
+  font-size: 12px;
+  color: var(--ws-text-muted);
+}
+
+.ChatMessage__bubble {
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.55;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  white-space: pre-wrap;
+}
+
+.ChatMessage.isUser {
+  align-items: flex-end;
+}
+
+.ChatMessage.isUser .ChatMessage__bubble {
+  background: rgba(79, 140, 255, 0.22);
+  border-color: rgba(79, 140, 255, 0.35);
+}
+
+.ChatComposer {
+  padding: 12px 14px 14px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ChatInput {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ws-text);
+  padding: 10px 12px;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 44px;
+  max-height: 140px;
+}
+
+.ChatInput:focus {
+  outline: 2px solid rgba(79, 140, 255, 0.35);
+  outline-offset: 2px;
+}
+
+.ChatActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.PrimaryButton {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 650;
+  color: white;
+  background: linear-gradient(180deg, rgba(79, 140, 255, 1) 0%, rgba(70, 120, 230, 1) 100%);
+  cursor: pointer;
+}
+
+.PrimaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.RefineModes {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.RefineMode {
+  flex: 1;
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ws-text);
+  font-size: 13px;
+}
+
+.RefineMode.isActive {
+  border-color: rgba(79, 140, 255, 0.55);
+  background: rgba(79, 140, 255, 0.18);
+}
+
+.RefineOutput {
+  border-radius: 14px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.RefineParagraph {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.RefineBullets {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+
+.RefineJson {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.45;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+@media (max-width: 900px) {
+  .WorkspaceHeader__left {
+    min-width: auto;
+  }
+
+  .WorkspaceHeader__right {
+    display: none;
+  }
+
+  .WorkspaceTabs {
+    display: flex;
+  }
+
+  .WorkspaceMain {
+    grid-template-columns: 1fr;
+    padding: 10px 12px 12px 12px;
+  }
+
+  .WorkspacePanel {
+    display: none;
+  }
+
+  .WorkspacePanel.isActive {
+    display: flex;
+  }
+}
