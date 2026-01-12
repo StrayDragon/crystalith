@@ -4,7 +4,7 @@
 - [ ] 1.3 引入 cl-fastapix 与 scalar-fastapi，配置 OpenAPI JSON + UI 路由。
 - [x] 1.4 实现 Provider 接口（OpenAI SDK + Ollama SDK），默认嵌入 bge-m3。
 - [x] 1.5 支持分离的 embedding/chat provider 配置（Ollama 用于 embedding，OpenAI 用于 chat）。
-- [ ] 1.6 实现 txt/markdown 文档摄取流程（上传、分块、向量化、索引、状态跟踪）。
+- [x] 1.6 实现 txt/markdown 文档摄取流程（上传、分块、向量化、索引、状态跟踪）。
 - [ ] 1.7 实现 RAG 问答接口（含引用与无证据提示）。
 - [ ] 1.8 实现 YAML 配置管理（pydantic-settings + JSON Schema 生成）。
 - [x] 1.9 实现三栏 UI：左来源/引用，中聊天，右“提炼”输出。
