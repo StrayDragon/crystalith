@@ -1,24 +1,37 @@
 :root {
-  --ws-bg: #f6f7fb;
-  --ws-surface: rgba(255, 255, 255, 0.92);
+  --ws-bg: #f8fafc;
+  --ws-surface: rgba(255, 255, 255, 0.88);
   --ws-surface-strong: rgba(255, 255, 255, 0.98);
-  --ws-border: rgba(15, 23, 42, 0.12);
-  --ws-text: rgba(15, 23, 42, 0.92);
-  --ws-text-muted: rgba(15, 23, 42, 0.62);
+  --ws-border: rgba(148, 163, 184, 0.4);
+  --ws-text: #0f172a;
+  --ws-text-muted: #475569;
   --ws-accent: #2563eb;
-  --ws-accent-weak: rgba(37, 99, 235, 0.14);
+  --ws-accent-weak: rgba(37, 99, 235, 0.16);
+  --ws-accent-strong: #1d4ed8;
+  --ws-highlight: #f97316;
   --ws-success: #16a34a;
-  --ws-shadow: 0 18px 48px rgba(15, 23, 42, 0.1);
+  --ws-warning: #f59e0b;
+  --ws-danger: #dc2626;
+  --ws-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  --ws-shadow-soft: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .WorkspaceApp {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  padding: 14px 14px 16px 14px;
   color: var(--ws-text);
-  background: radial-gradient(980px 520px at 18% 0%, rgba(37, 99, 235, 0.12) 0%, transparent 60%),
-    radial-gradient(880px 520px at 92% 6%, rgba(14, 165, 233, 0.1) 0%, transparent 62%),
-    var(--ws-bg);
+  background-color: var(--ws-bg);
+  background-image: radial-gradient(
+      1100px 520px at 16% -10%,
+      rgba(37, 99, 235, 0.18) 0%,
+      transparent 60%
+    ),
+    radial-gradient(900px 520px at 88% 0%, rgba(249, 115, 22, 0.12) 0%, transparent 60%),
+    repeating-linear-gradient(0deg, rgba(15, 23, 42, 0.04), rgba(15, 23, 42, 0.04) 1px, transparent 1px, transparent 32px),
+    repeating-linear-gradient(90deg, rgba(15, 23, 42, 0.03), rgba(15, 23, 42, 0.03) 1px, transparent 1px, transparent 32px);
 }
 
 .WorkspaceHeader {
@@ -26,10 +39,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(10px);
+  padding: 14px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--ws-shadow-soft);
 }
 
 .WorkspaceHeader__left {
@@ -42,7 +57,7 @@
 .WorkspaceBrand {
   font-weight: 600;
   font-size: 15px;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.4px;
 }
 
 .WorkspaceMeta {
@@ -68,11 +83,12 @@
 }
 
 .WorkspaceSelect {
-  border-radius: 10px;
-  padding: 8px 10px;
+  border-radius: 12px;
+  padding: 8px 12px;
   border: 1px solid var(--ws-border);
   background: rgba(255, 255, 255, 0.9);
   color: var(--ws-text);
+  min-width: 180px;
 }
 
 .WorkspaceSelect:focus {
@@ -82,11 +98,28 @@
 
 .WorkspacePill {
   font-size: 12px;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 999px;
+  border: 1px solid transparent;
+  font-weight: 600;
+}
+
+.WorkspacePill.isLive {
   background: rgba(22, 163, 74, 0.12);
-  border: 1px solid rgba(22, 163, 74, 0.22);
+  border-color: rgba(22, 163, 74, 0.28);
   color: rgba(21, 128, 61, 0.95);
+}
+
+.WorkspacePill.isDemo {
+  background: rgba(249, 115, 22, 0.12);
+  border-color: rgba(249, 115, 22, 0.3);
+  color: rgba(194, 65, 12, 0.92);
+}
+
+.WorkspacePill.isLoading {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.3);
+  color: rgba(30, 64, 175, 0.92);
 }
 
 .WorkspaceTiny {
@@ -98,18 +131,19 @@
 .WorkspaceTabs {
   display: none;
   gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 10px 8px 0 8px;
 }
 
 .WorkspaceTab {
   flex: 1;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 10px 12px;
   border: 1px solid rgba(15, 23, 42, 0.12);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.8);
   color: var(--ws-text);
   font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .WorkspaceTab.isActive {
@@ -123,17 +157,18 @@
   display: grid;
   grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(260px, 380px);
   gap: 12px;
-  padding: 12px;
 }
 
 .WorkspacePanel {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-radius: 16px;
+  border-radius: 18px;
   border: 1px solid var(--ws-border);
-  background: linear-gradient(180deg, var(--ws-surface) 0%, rgba(255, 255, 255, 0.82) 100%);
+  background: linear-gradient(180deg, var(--ws-surface) 0%, rgba(255, 255, 255, 0.78) 100%);
   box-shadow: var(--ws-shadow);
+  overflow: hidden;
+  animation: panelIn 0.4s ease-out;
 }
 
 .WorkspacePanelHeader {
@@ -141,8 +176,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.75);
 }
 
 .WorkspacePanelTitle {
@@ -156,7 +192,7 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 14px;
+  padding: 16px;
 }
 
 .WorkspacePanelBody--chat {
@@ -200,9 +236,17 @@
   justify-content: space-between;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(15, 23, 42, 0.1);
-  background: rgba(255, 255, 255, 0.78);
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.WorkspaceListItem:hover {
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 12px 25px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
 }
 
 .WorkspaceListItem--compact {
@@ -219,31 +263,176 @@
   font-size: 12px;
   color: var(--ws-text-muted);
   line-height: 1.35;
+  word-break: break-word;
 }
 
 .WorkspaceBadge {
   font-size: 12px;
   padding: 4px 8px;
   border-radius: 999px;
-  border: 1px solid rgba(15, 23, 42, 0.14);
+  border: 1px solid rgba(148, 163, 184, 0.6);
   color: rgba(15, 23, 42, 0.78);
   white-space: nowrap;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.WorkspaceBadge.READY {
+  border-color: rgba(22, 163, 74, 0.3);
+  color: rgba(21, 128, 61, 0.95);
+  background: rgba(22, 163, 74, 0.1);
+}
+
+.WorkspaceBadge.PROCESSING {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: rgba(180, 83, 9, 0.92);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.WorkspaceBadge.FAILED {
+  border-color: rgba(220, 38, 38, 0.35);
+  color: rgba(185, 28, 28, 0.92);
+  background: rgba(220, 38, 38, 0.1);
 }
 
 .WorkspaceEmpty {
   font-size: 13px;
   color: rgba(15, 23, 42, 0.72);
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px dashed rgba(15, 23, 42, 0.18);
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px dashed rgba(148, 163, 184, 0.6);
+  border-radius: 14px;
   padding: 12px;
   line-height: 1.5;
 }
 
+.WorkspaceHint {
+  font-size: 12px;
+  color: var(--ws-text-muted);
+}
+
+.WorkspaceHint.isError {
+  color: rgba(185, 28, 28, 0.95);
+}
+
+.CreateCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px dashed rgba(37, 99, 235, 0.35);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.CreateTitle {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.CreateHint {
+  font-size: 12px;
+  color: var(--ws-text-muted);
+  margin-top: 4px;
+}
+
+.CreateActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.CreateInput {
+  min-width: 160px;
+  border-radius: 12px;
+  padding: 8px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(255, 255, 255, 0.98);
+  font-size: 12px;
+  color: var(--ws-text);
+}
+
+.CreateInput:focus {
+  outline: 2px solid rgba(37, 99, 235, 0.28);
+  outline-offset: 2px;
+}
+
+.CreateButton {
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  border-radius: 12px;
+  padding: 8px 12px;
+  background: rgba(37, 99, 235, 0.12);
+  color: rgba(30, 64, 175, 0.95);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.CreateButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.18);
+}
+
+.CreateButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+  transform: none;
+}
+
+.UploadCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px dashed rgba(148, 163, 184, 0.6);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.UploadTitle {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.UploadHint {
+  font-size: 12px;
+  color: var(--ws-text-muted);
+  margin-top: 4px;
+}
+
+.UploadButton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  padding: 8px 14px;
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.12);
+  color: rgba(30, 64, 175, 0.95);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.UploadButton input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.UploadButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.18);
+}
+
 .ChatMessages {
   flex: 1;
-  padding: 14px 14px 0 14px;
+  padding: 16px 16px 0 16px;
   overflow: auto;
+  overflow-x: hidden;
   min-height: 0;
 }
 
@@ -264,9 +453,12 @@
   padding: 10px 12px;
   font-size: 14px;
   line-height: 1.55;
-  border: 1px solid rgba(15, 23, 42, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.4);
   background: rgba(15, 23, 42, 0.03);
   white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: min(100%, 560px);
 }
 
 .ChatMessage.isUser {
@@ -278,10 +470,16 @@
   border-color: rgba(37, 99, 235, 0.32);
 }
 
+.ChatStatus {
+  font-size: 12px;
+  color: rgba(37, 99, 235, 0.8);
+  padding: 8px 0 12px 0;
+}
+
 .ChatComposer {
-  padding: 12px 14px 14px 14px;
-  border-top: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.82);
+  padding: 12px 16px 16px 16px;
+  border-top: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.9);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -290,14 +488,15 @@
 .ChatInput {
   width: 100%;
   border-radius: 14px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.98);
   color: var(--ws-text);
   padding: 10px 12px;
   font-size: 14px;
   resize: vertical;
   min-height: 44px;
-  max-height: 140px;
+  max-height: 160px;
+  overflow: auto;
 }
 
 .ChatInput:focus {
@@ -315,16 +514,106 @@
 .PrimaryButton {
   border: none;
   border-radius: 12px;
-  padding: 10px 14px;
+  padding: 10px 16px;
   font-weight: 600;
   color: white;
   background: linear-gradient(180deg, rgba(37, 99, 235, 1) 0%, rgba(29, 78, 216, 1) 100%);
   cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.PrimaryButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 20px rgba(37, 99, 235, 0.25);
 }
 
 .PrimaryButton:disabled {
   cursor: not-allowed;
   opacity: 0.6;
+  box-shadow: none;
+  transform: none;
+}
+
+.RefineCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.RefineCard__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.RefineCard__title {
+  font-weight: 600;
+  color: var(--ws-text);
+}
+
+.RefineCard__subtitle {
+  font-size: 12px;
+  color: var(--ws-text-muted);
+  margin-top: 4px;
+}
+
+.RefineCard__badge {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(248, 250, 252, 0.9);
+  color: var(--ws-text-muted);
+}
+
+.RefineTemplates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.RefineTemplate {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  background: rgba(248, 250, 252, 0.9);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.RefineTemplate:hover {
+  border-color: rgba(37, 99, 235, 0.4);
+  background: rgba(239, 246, 255, 0.9);
+}
+
+.RefinePrompt {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 84px;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--ws-text);
+}
+
+.RefinePrompt:focus {
+  outline: 2px solid rgba(37, 99, 235, 0.2);
+  outline-offset: 2px;
+}
+
+.RefineActions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .RefineModes {
@@ -337,10 +626,12 @@
   flex: 1;
   border-radius: 12px;
   padding: 10px 12px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(255, 255, 255, 0.85);
   color: var(--ws-text);
   font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .RefineMode.isActive {
@@ -348,11 +639,114 @@
   background: var(--ws-accent-weak);
 }
 
-.RefineOutput {
+.RefineQueue {
+  margin-top: 16px;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: rgba(248, 250, 252, 0.88);
+}
+
+.RefineQueue__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.RefineQueue__title {
+  font-weight: 600;
+  color: var(--ws-text);
+}
+
+.RefineQueue__meta {
+  font-size: 12px;
+  color: var(--ws-text-muted);
+}
+
+.RefineQueue__list {
+  display: grid;
+  gap: 10px;
+}
+
+.RefineQueueItem {
+  border: 1px solid rgba(148, 163, 184, 0.35);
   border-radius: 14px;
   padding: 12px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.9);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.RefineQueueItem:hover {
+  border-color: rgba(37, 99, 235, 0.4);
+  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.12);
+}
+
+.RefineQueueItem.isActive {
+  border-color: rgba(37, 99, 235, 0.6);
+  box-shadow: 0 12px 20px rgba(37, 99, 235, 0.18);
+}
+
+.RefineQueueItem__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.RefineQueueItem__status {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(241, 245, 249, 0.9);
+}
+
+.RefineQueueItem__status.is-queued {
+  color: var(--ws-text-muted);
+}
+
+.RefineQueueItem__status.is-running {
+  border-color: rgba(37, 99, 235, 0.4);
+  background: rgba(219, 234, 254, 0.8);
+  color: rgba(30, 64, 175, 0.9);
+}
+
+.RefineQueueItem__status.is-done {
+  border-color: rgba(22, 163, 74, 0.4);
+  background: rgba(220, 252, 231, 0.8);
+  color: rgba(22, 101, 52, 0.9);
+}
+
+.RefineQueueItem__status.is-error {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(254, 226, 226, 0.85);
+  color: rgba(185, 28, 28, 0.9);
+}
+
+.RefineQueueItem__time {
+  color: var(--ws-text-muted);
+}
+
+.RefineQueueItem__prompt {
+  font-size: 13px;
+  color: var(--ws-text);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.RefineOutputBlock {
+  margin-top: 16px;
+}
+
+.RefineOutput {
+  border-radius: 14px;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .RefineParagraph {
@@ -366,12 +760,53 @@
   line-height: 1.6;
 }
 
-.RefineJson {
-  margin: 0;
-  white-space: pre-wrap;
-  line-height: 1.45;
+.RefineStructured__title {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.RefineStructured__bullets {
+  margin: 0 0 10px 0;
+  padding-left: 18px;
+  line-height: 1.55;
+}
+
+.RefineStructured__terms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.RefineTag {
   font-size: 12px;
-  color: rgba(15, 23, 42, 0.86);
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.12);
+  border: 1px solid rgba(37, 99, 235, 0.28);
+  color: rgba(30, 64, 175, 0.9);
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .WorkspacePanel {
+    animation: none;
+  }
+
+  .WorkspaceListItem,
+  .PrimaryButton,
+  .UploadButton {
+    transition: none;
+  }
 }
 
 @media (max-width: 900px) {
@@ -389,7 +824,6 @@
 
   .WorkspaceMain {
     grid-template-columns: 1fr;
-    padding: 10px 12px 12px 12px;
   }
 
   .WorkspacePanel {

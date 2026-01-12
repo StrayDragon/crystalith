@@ -12,6 +12,7 @@
 - 数据库默认 SQLite，预留 PostgreSQL 作为远端部署目标，并使用 cl-* SQLAlchemy 基础库。
 - 引入 cl-fastapix 并使用 scalar-fastapi 提供 OpenAPI UI。
 - 输出形态 MVP 仅支持“提炼”，提供段落/要点/结构化三种格式。
+- 右侧提炼改为手动触发与生成队列，支持自定义提炼提示词。
 
 ## 影响范围
 - 受影响的 specs：notebook-management, source-ingestion, rag-qa, ai-provider-config, workspace-ui, refine-output, config-management, data-access, openapi-docs
