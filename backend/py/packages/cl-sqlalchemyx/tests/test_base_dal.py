@@ -223,8 +223,18 @@ def _load_sqlite_test_uri() -> tuple[str, Path]:
 
 
 def _cleanup_sqlite_file(path: Path) -> None:
-    if path.exists():
+    try:
         path.unlink()
+    except FileNotFoundError:
+        pass
+
+    if path.parent.name != ".tmp":
+        return
+
+    try:
+        path.parent.rmdir()
+    except OSError:
+        pass
 
 
 @pytest.fixture

@@ -1,6 +1,6 @@
 """时间工具函数合集.
 
-原位于 ``lush-timex`` 包, 现并入 ``lush-stdx`` 便于统一维护.
+原位于独立的 timex 包, 现并入 ``cl-stdx`` 便于统一维护.
 """
 
 from __future__ import annotations
