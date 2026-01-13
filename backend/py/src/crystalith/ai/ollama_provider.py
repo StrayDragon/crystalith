@@ -10,9 +10,15 @@ from .types import ChatMessage
 class OllamaEmbeddingProvider:
     provider: Literal["ollama"] = "ollama"
 
-    def __init__(self, model: str, *, client: Any | None = None) -> None:
+    def __init__(
+        self,
+        model: str,
+        *,
+        client: Any | None = None,
+        host: str | None = None,
+    ) -> None:
         self.model = model
-        self._client = client or ollama.AsyncClient()
+        self._client = client or ollama.AsyncClient(host=host)
 
     async def embed(self, texts: Sequence[str]) -> list[list[float]]:
         if not texts:
@@ -28,9 +34,15 @@ class OllamaEmbeddingProvider:
 class OllamaChatProvider:
     provider: Literal["ollama"] = "ollama"
 
-    def __init__(self, model: str, *, client: Any | None = None) -> None:
+    def __init__(
+        self,
+        model: str,
+        *,
+        client: Any | None = None,
+        host: str | None = None,
+    ) -> None:
         self.model = model
-        self._client = client or ollama.AsyncClient()
+        self._client = client or ollama.AsyncClient(host=host)
 
     async def chat(self, messages: Sequence[ChatMessage]) -> str:
         if not messages:
@@ -43,4 +55,3 @@ class OllamaChatProvider:
 
         content = response.message.content
         return content or ""
-
