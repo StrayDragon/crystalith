@@ -233,7 +233,15 @@ async def refine(
 
         context = _format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
     else:
-        query_vector = (await embedder.embed([payload.prompt]))[0]
+        embeddings = await embedder.embed([payload.prompt])
+        if not embeddings:
+            return RefineResponse(
+                format=format_name,
+                citations=[],
+                evidence=False,
+                created_at=created_at,
+            )
+        query_vector = embeddings[0]
         results = vector_index.search(
             notebook_id=notebook_id,
             query_vector=query_vector,
@@ -338,7 +346,15 @@ async def refine_batch(
 
         context = _format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
     else:
-        query_vector = (await embedder.embed([payload.prompt]))[0]
+        embeddings = await embedder.embed([payload.prompt])
+        if not embeddings:
+            return RefineBatchResponse(
+                outputs={},
+                citations=[],
+                evidence=False,
+                created_at=created_at,
+            )
+        query_vector = embeddings[0]
         results = vector_index.search(
             notebook_id=notebook_id,
             query_vector=query_vector,

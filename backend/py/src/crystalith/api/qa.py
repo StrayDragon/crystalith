@@ -65,7 +65,15 @@ async def ask_question(
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
 
-    query_vector = (await embedder.embed([payload.question]))[0]
+    embeddings = await embedder.embed([payload.question])
+    if not embeddings:
+        return QAResponse(
+            answer="Insufficient evidence in notebook sources.",
+            citations=[],
+            evidence=False,
+            created_at=datetime.datetime.now(datetime.UTC),
+        )
+    query_vector = embeddings[0]
     results = vector_index.search(
         notebook_id=notebook_id,
         query_vector=query_vector,

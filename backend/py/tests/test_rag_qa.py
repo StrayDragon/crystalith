@@ -19,6 +19,8 @@ class FakeEmbeddingProvider:
     model = "fake"
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
+        if len(texts) == 1 and texts[0] == "__empty__":
+            return []
         return [[float(len(text)), 0.0, 1.0] for text in texts]
 
 
@@ -83,6 +85,27 @@ async def test_rag_no_evidence(test_client: AsyncClient) -> None:
     response = await test_client.post(
         f"/v1/notebooks/{notebook_id}/qa",
         json={"question": "unknown"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["evidence"] is False
+    assert payload["citations"] == []
+
+
+@pytest.mark.asyncio
+async def test_rag_empty_embedding_returns_no_evidence(test_client: AsyncClient) -> None:
+    created = await test_client.post("/v1/notebooks", json={"name": "Notes"})
+    notebook_id = created.json()["id"]
+
+    upload = await test_client.post(
+        f"/v1/notebooks/{notebook_id}/sources",
+        files={"file": ("note.md", b"hello world", "text/markdown")},
+    )
+    assert upload.status_code == 201
+
+    response = await test_client.post(
+        f"/v1/notebooks/{notebook_id}/qa",
+        json={"question": "__empty__"},
     )
     assert response.status_code == 200
     payload = response.json()
