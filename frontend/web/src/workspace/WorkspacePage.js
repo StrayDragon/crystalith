@@ -163,9 +163,11 @@ function SourcesPanel({
   sources,
   citations,
   selectedCitationIds,
+  autoSelectCitations,
   onToggleCitation,
   onSelectAllCitations,
   onClearCitationSelection,
+  onToggleAutoSelectCitations,
   onUpload,
   uploadState,
   isDemo,
@@ -279,6 +281,15 @@ function SourcesPanel({
               <span className="WorkspaceTiny">
                 已选 {selectedCount}/{citations.length}
               </span>
+              <button
+                type="button"
+                className={`WorkspaceToggle ${autoSelectCitations ? 'isActive' : ''}`}
+                onClick={onToggleAutoSelectCitations}
+                aria-pressed={autoSelectCitations}
+                title="默认全选引用作为提炼输入"
+              >
+                引用模式
+              </button>
               <button
                 type="button"
                 className="WorkspaceLinkButton"
@@ -395,6 +406,57 @@ function ChatPanel({
   );
 }
 
+function RefineTemplateItem({ item, isActive, isFavorite, onSelect, onToggleFavorite }) {
+  return (
+    <div className={`RefineTemplateItem ${isActive ? 'isActive' : ''}`}>
+      <button
+        type="button"
+        className="RefineTemplateButton"
+        aria-pressed={isActive}
+        onClick={() => onSelect(item)}
+      >
+        {item.label}
+      </button>
+      <button
+        type="button"
+        className={`RefineTemplateStar ${isFavorite ? 'isActive' : ''}`}
+        aria-label={isFavorite ? `取消收藏 ${item.label}` : `收藏 ${item.label}`}
+        onClick={() => onToggleFavorite(item.id)}
+      >
+        {isFavorite ? '★' : '☆'}
+      </button>
+    </div>
+  );
+}
+
+function RefineTemplateSection({
+  title,
+  items,
+  activeTemplateId,
+  favoriteSet,
+  onSelect,
+  onToggleFavorite,
+}) {
+  if (!items.length) return null;
+  return (
+    <div className="RefineTemplateGroup">
+      <div className="RefineTemplateGroup__title">{title}</div>
+      <div className="RefineTemplateList" role="list">
+        {items.map((item) => (
+          <RefineTemplateItem
+            key={item.id}
+            item={item}
+            isActive={activeTemplateId === item.id}
+            isFavorite={favoriteSet.has(item.id)}
+            onSelect={onSelect}
+            onToggleFavorite={onToggleFavorite}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function RefinePanel({
   mode,
   onModeChange,
@@ -412,17 +474,73 @@ function RefinePanel({
   activeError,
 }) {
   const promptRef = useRef(null);
+  const [favoriteTemplateIds, setFavoriteTemplateIds] = useState([]);
+  const [recentTemplateIds, setRecentTemplateIds] = useState([]);
   const hasOutput = Boolean(
     output?.paragraph || output?.bullets?.length || output?.structured?.title,
   );
   const showError = Boolean(activeError);
   const normalizedPrompt = prompt.trim();
+  const activeTemplate = templates.find((item) => item.prompt === normalizedPrompt) ?? null;
+  const activeTemplateId = activeTemplate?.id ?? null;
+  const favoriteSet = useMemo(
+    () => new Set(favoriteTemplateIds),
+    [favoriteTemplateIds],
+  );
+  const recentTemplates = useMemo(
+    () =>
+      recentTemplateIds
+        .map((id) => templates.find((item) => item.id === id))
+        .filter((item) => item && !favoriteSet.has(item.id)),
+    [recentTemplateIds, templates, favoriteSet],
+  );
+  const favoriteTemplates = useMemo(
+    () => templates.filter((item) => favoriteSet.has(item.id)),
+    [templates, favoriteSet],
+  );
+  const templateGroups = useMemo(() => {
+    const order = ['决策', '行动', '风险', '分析', '洞察', '表达'];
+    const grouped = new Map();
+    for (const item of templates) {
+      const group = item.group ?? '其他';
+      if (!grouped.has(group)) grouped.set(group, []);
+      grouped.get(group).push(item);
+    }
+    const sorted = [];
+    for (const group of order) {
+      if (grouped.has(group)) {
+        sorted.push({ id: group, label: group, items: grouped.get(group) });
+        grouped.delete(group);
+      }
+    }
+    for (const [group, items] of grouped) {
+      sorted.push({ id: group, label: group, items });
+    }
+    return sorted;
+  }, [templates]);
   const statusLabels = {
     queued: '排队中',
     running: '生成中',
     done: '已完成',
     error: '失败',
   };
+
+  function handleSelectTemplate(item) {
+    onPromptChange(item.prompt);
+    promptRef.current?.focus();
+    setRecentTemplateIds((prev) => {
+      const next = [item.id, ...prev.filter((id) => id !== item.id)];
+      return next.slice(0, 4);
+    });
+  }
+
+  function handleToggleFavorite(templateId) {
+    setFavoriteTemplateIds((prev) =>
+      prev.includes(templateId)
+        ? prev.filter((id) => id !== templateId)
+        : [...prev, templateId],
+    );
+  }
 
   return (
     <div className="WorkspacePanelBody">
@@ -440,24 +558,34 @@ function RefinePanel({
             {queue.length ? `队列 ${queue.length} 项` : '队列为空'}
           </div>
         </div>
-        <div className="RefineTemplates" role="list">
-          {templates.map((item) => {
-            const isActive = normalizedPrompt === item.prompt;
-            return (
-              <button
-                key={item.label}
-                type="button"
-                className={`RefineTemplate ${isActive ? 'isActive' : ''}`}
-                aria-pressed={isActive}
-                onClick={() => {
-                  onPromptChange(item.prompt);
-                  promptRef.current?.focus();
-                }}
-              >
-                {item.label}
-              </button>
-            );
-          })}
+        <div className="RefineTemplates">
+          <RefineTemplateSection
+            title="收藏"
+            items={favoriteTemplates}
+            activeTemplateId={activeTemplateId}
+            favoriteSet={favoriteSet}
+            onSelect={handleSelectTemplate}
+            onToggleFavorite={handleToggleFavorite}
+          />
+          <RefineTemplateSection
+            title="最近"
+            items={recentTemplates}
+            activeTemplateId={activeTemplateId}
+            favoriteSet={favoriteSet}
+            onSelect={handleSelectTemplate}
+            onToggleFavorite={handleToggleFavorite}
+          />
+          {templateGroups.map((group) => (
+            <RefineTemplateSection
+              key={group.id}
+              title={group.label}
+              items={group.items}
+              activeTemplateId={activeTemplateId}
+              favoriteSet={favoriteSet}
+              onSelect={handleSelectTemplate}
+              onToggleFavorite={handleToggleFavorite}
+            />
+          ))}
         </div>
         <textarea
           className="RefinePrompt"
@@ -619,28 +747,58 @@ export default function WorkspacePage() {
   const refineTemplates = useMemo(
     () => [
       {
+        id: 'core-insights',
         label: '关键结论',
         prompt: '提炼核心结论与决策要点，保持简洁。',
+        group: '决策',
       },
       {
+        id: 'action-items',
         label: '行动清单',
         prompt: '列出可执行的行动项，并按优先级排序。',
+        group: '行动',
       },
       {
+        id: 'role-advice',
+        label: '角色建议',
+        prompt: '按角色（负责人/协作方/风险人）给出建议要点。',
+        group: '行动',
+      },
+      {
+        id: 'risk-gaps',
         label: '风险盲点',
         prompt: '找出潜在风险、限制与未覆盖的关键点。',
+        group: '风险',
       },
       {
+        id: 'terms',
         label: '术语速记',
         prompt: '提炼关键术语并用一句话解释。',
+        group: '洞察',
       },
       {
+        id: 'compare',
         label: '对比差异',
         prompt: '如果存在多个对象/方案，提炼主要差异与取舍。',
+        group: '分析',
       },
       {
+        id: 'questions',
         label: '问题清单',
         prompt: '列出尚待验证的问题与需要补充的信息。',
+        group: '洞察',
+      },
+      {
+        id: 'summary-outline',
+        label: '摘要大纲',
+        prompt: '整理成背景 / 洞察 / 下一步的三段式摘要。',
+        group: '表达',
+      },
+      {
+        id: 'highlights',
+        label: '亮点摘录',
+        prompt: '提炼最值得传播的亮点金句，控制在 3-5 条。',
+        group: '表达',
       },
     ],
     [],
@@ -654,6 +812,7 @@ export default function WorkspacePage() {
   const [draft, setDraft] = useState('');
   const [citations, setCitations] = useState([]);
   const [selectedCitationIds, setSelectedCitationIds] = useState({});
+  const [autoSelectCitations, setAutoSelectCitations] = useState(false);
   const [refineMode, setRefineMode] = useState('paragraph');
   const [refinePrompt, setRefinePrompt] = useState('');
   const [refineJobs, setRefineJobs] = useState([]);
@@ -709,14 +868,17 @@ export default function WorkspacePage() {
 
   useEffect(() => {
     setSelectedCitationIds((prev) => {
-      if (!prev || Object.keys(prev).length === 0) return prev;
       const next = {};
       for (const citation of citations) {
-        if (prev[citation.id]) next[citation.id] = true;
+        if (autoSelectCitations) {
+          next[citation.id] = true;
+        } else if (prev?.[citation.id]) {
+          next[citation.id] = true;
+        }
       }
       return next;
     });
-  }, [citations]);
+  }, [citations, autoSelectCitations]);
 
   useEffect(() => {
     let cancelled = false;
@@ -786,6 +948,7 @@ export default function WorkspacePage() {
     setMessages([]);
     setCitations([]);
     setSelectedCitationIds({});
+    setAutoSelectCitations(false);
     updateRefineQueue(() => []);
     setActiveRefineJobId(null);
     setRefinePrompt(refineTemplates[0]?.prompt ?? '');
@@ -929,6 +1092,53 @@ export default function WorkspacePage() {
     }
   }
 
+  function handleToggleCitation(citationId) {
+    const wasSelected = Boolean(selectedCitationIds[citationId]);
+    if (autoSelectCitations && wasSelected) {
+      setAutoSelectCitations(false);
+    }
+    setSelectedCitationIds((prev) => {
+      const next = { ...prev };
+      if (next[citationId]) {
+        delete next[citationId];
+      } else {
+        next[citationId] = true;
+      }
+      return next;
+    });
+  }
+
+  function handleSelectAllCitations() {
+    setAutoSelectCitations(true);
+    setSelectedCitationIds(() => {
+      const next = {};
+      for (const citation of citations) {
+        next[citation.id] = true;
+      }
+      return next;
+    });
+  }
+
+  function handleClearCitationSelection() {
+    setAutoSelectCitations(false);
+    setSelectedCitationIds({});
+  }
+
+  function handleToggleAutoSelectCitations() {
+    setAutoSelectCitations((prev) => {
+      const next = !prev;
+      setSelectedCitationIds(() => {
+        if (!next) return {};
+        const selection = {};
+        for (const citation of citations) {
+          selection[citation.id] = true;
+        }
+        return selection;
+      });
+      return next;
+    });
+  }
+
   function handleRefineGenerate() {
     if (!activeNotebookId && !isDemo) {
       setErrors((prev) => ({ ...prev, send: '请先创建笔记本。' }));
@@ -1045,27 +1255,11 @@ export default function WorkspacePage() {
             sources={sources}
             citations={citations}
             selectedCitationIds={selectedCitationIds}
-            onToggleCitation={(citationId) =>
-              setSelectedCitationIds((prev) => {
-                const next = { ...prev };
-                if (next[citationId]) {
-                  delete next[citationId];
-                } else {
-                  next[citationId] = true;
-                }
-                return next;
-              })
-            }
-            onSelectAllCitations={() =>
-              setSelectedCitationIds(() => {
-                const next = {};
-                for (const citation of citations) {
-                  next[citation.id] = true;
-                }
-                return next;
-              })
-            }
-            onClearCitationSelection={() => setSelectedCitationIds({})}
+            autoSelectCitations={autoSelectCitations}
+            onToggleCitation={handleToggleCitation}
+            onSelectAllCitations={handleSelectAllCitations}
+            onClearCitationSelection={handleClearCitationSelection}
+            onToggleAutoSelectCitations={handleToggleAutoSelectCitations}
             onUpload={handleUpload}
             uploadState={uploadState}
             isDemo={isDemo}

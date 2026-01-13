@@ -27,7 +27,7 @@ uv run --project backend/py uvicorn crystalith.app:create_app --factory --host 1
 
 OpenAPI：
 - JSON: `http://127.0.0.1:8000/v1/codev/openapi.json`
-- UI: `http://127.0.0.1:8000/v1/codev/openapi-ui/scaler`
+- UI: `http://127.0.0.1:8000/v1/codev/openapi-ui/scalar`
 
 ### 2) 前端 (CRA)
 

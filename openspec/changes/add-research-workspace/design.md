@@ -26,7 +26,7 @@
 - 默认嵌入模型为 Ollama 的 bge-m3（可配置）。
 - 默认聊天模型由 OpenAI SDK 调用（可配置）。
 - 配置使用 pydantic-settings + YAML，提供配置管理器并自动生成 JSON Schema，支持 YAML 语言服务（# yaml-language-server: $schema=...）。
-- OpenAPI JSON 路由为 `/v1/codev/openapi.json`，UI 路由为 `/v1/codev/openapi-ui/scaler`。
+- OpenAPI JSON 路由为 `/v1/codev/openapi.json`，UI 路由为 `/v1/codev/openapi-ui/scalar`。
 
 ## 风险 / 权衡
 - 仅支持 txt/markdown 会限制数据来源，但可降低解析复杂度与风险。
