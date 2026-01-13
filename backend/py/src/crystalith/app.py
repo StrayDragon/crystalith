@@ -10,7 +10,7 @@ from cl_sqlalchemyx.mgrs import AsyncDBManager
 
 from .config import Settings
 from .db import create_db_manager
-from .api import notebooks_router, qa_router, sources_router
+from .api import notebooks_router, qa_router, refine_router, sources_router
 from .vector_index import InMemoryVectorIndex
 
 
@@ -49,6 +49,7 @@ def create_app(
 
     app.include_router(notebooks_router)
     app.include_router(qa_router)
+    app.include_router(refine_router)
     app.include_router(sources_router)
 
     return app
