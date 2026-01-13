@@ -1,5 +1,5 @@
 ## 1. Implementation
-- [ ] 1.1 设计并实现 Notebook/Source/Chunk 元数据模型（SQLite + PostgreSQL 兼容）。
+- [x] 1.1 设计并实现 Notebook/Source/Chunk 元数据模型（SQLite + PostgreSQL 兼容）。
 - [ ] 1.2 引入 cl-* SQLAlchemy 公共库到 backend/py/packages，并完成必要脱敏与适配。
 - [ ] 1.3 引入 cl-fastapix 与 scalar-fastapi，配置 OpenAPI JSON + UI 路由。
 - [x] 1.4 实现 Provider 接口（OpenAI SDK + Ollama SDK），默认嵌入 bge-m3。
