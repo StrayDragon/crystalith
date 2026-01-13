@@ -3,9 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Literal
 
-import yaml
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings.sources import YamlConfigSettingsSource
 
 
 class AppSettings(BaseModel):
@@ -86,5 +86,8 @@ class Settings(BaseSettings):
 
     @classmethod
     def from_yaml(cls, path: Path) -> "Settings":
-        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        if not path.is_file():
+            raise FileNotFoundError(f"Config file not found: {path}")
+        source = YamlConfigSettingsSource(cls, yaml_file=path, yaml_file_encoding="utf-8")
+        data = source()
         return cls.model_validate(data)
