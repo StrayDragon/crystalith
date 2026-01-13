@@ -64,21 +64,26 @@ export async function askQuestion(notebookId, question) {
 }
 
 export async function refinePrompt(notebookId, prompt, format) {
+  const body = { prompt, format };
   return request(`/v1/notebooks/${notebookId}/refine`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ prompt, format }),
+    body: JSON.stringify(body),
   });
 }
 
-export async function refineBatch(notebookId, prompt, formats) {
+export async function refineBatch(notebookId, prompt, formats, chunkIds) {
+  const body = { prompt, formats };
+  if (Array.isArray(chunkIds) && chunkIds.length > 0) {
+    body.chunk_ids = chunkIds;
+  }
   return request(`/v1/notebooks/${notebookId}/refine/batch`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ prompt, formats }),
+    body: JSON.stringify(body),
   });
 }

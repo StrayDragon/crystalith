@@ -23,6 +23,7 @@ router = APIRouter(prefix="/v1/notebooks/{notebook_id}/refine", tags=["refine"])
 class RefineRequest(BaseModel):
     prompt: str = Field(..., min_length=1)
     format: str = Field("paragraph")
+    chunk_ids: list[int] | None = None
     top_k: int = Field(5, ge=1, le=20)
     min_score: float = Field(0.2, ge=0.0, le=1.0)
 
@@ -30,6 +31,7 @@ class RefineRequest(BaseModel):
 class RefineBatchRequest(BaseModel):
     prompt: str = Field(..., min_length=1)
     formats: list[str] | None = None
+    chunk_ids: list[int] | None = None
     top_k: int = Field(5, ge=1, le=20)
     min_score: float = Field(0.2, ge=0.0, le=1.0)
 
@@ -89,6 +91,19 @@ def _format_context(results: list[VectorSearchResult], chunk_map: dict[int, tupl
     blocks: list[str] = []
     for index, result in enumerate(results, start=1):
         chunk, source = chunk_map[result.entry.chunk_id]
+        blocks.append(
+            f"[{index}] Source: {source.filename} (chunk {chunk.chunk_index})\n{chunk.text}"
+        )
+    return "\n\n".join(blocks)
+
+
+def _format_context_from_chunk_ids(
+    chunk_ids: list[int],
+    chunk_map: dict[int, tuple[Chunk, Source]],
+) -> str:
+    blocks: list[str] = []
+    for index, chunk_id in enumerate(chunk_ids, start=1):
+        chunk, source = chunk_map[chunk_id]
         blocks.append(
             f"[{index}] Source: {source.filename} (chunk {chunk.chunk_index})\n{chunk.text}"
         )
@@ -185,49 +200,79 @@ async def refine(
         raise HTTPException(status_code=404, detail="Notebook not found")
 
     format_name = _normalize_format(settings.refine, payload.format)
-    query_vector = (await embedder.embed([payload.prompt]))[0]
-    results = vector_index.search(
-        notebook_id=notebook_id,
-        query_vector=query_vector,
-        top_k=payload.top_k,
-        min_score=payload.min_score,
-    )
-
     created_at = datetime.datetime.now(datetime.UTC)
-    if not results:
-        return RefineResponse(
-            format=format_name,
-            citations=[],
-            evidence=False,
-            created_at=created_at,
+
+    explicit_chunk_ids = [int(value) for value in (payload.chunk_ids or []) if int(value) > 0]
+    if explicit_chunk_ids:
+        rows = await session.execute(
+            select(Chunk, Source)
+            .join(Source, Source.id == Chunk.source_id)
+            .where(Chunk.id.in_(explicit_chunk_ids), Source.notebook_id == notebook_id)
         )
+        chunk_map: dict[int, tuple[Chunk, Source]] = {
+            chunk.id: (chunk, source) for chunk, source in rows.all()
+        }
+        missing = [chunk_id for chunk_id in explicit_chunk_ids if chunk_id not in chunk_map]
+        if missing:
+            raise HTTPException(status_code=400, detail="Unknown chunk_id in chunk_ids")
 
-    chunk_ids = [result.entry.chunk_id for result in results]
-    rows = await session.execute(
-        select(Chunk, Source)
-        .join(Source, Source.id == Chunk.source_id)
-        .where(Chunk.id.in_(chunk_ids))
-    )
-    chunk_map: dict[int, tuple[Chunk, Source]] = {
-        chunk.id: (chunk, source) for chunk, source in rows.all()
-    }
-
-    citations: list[RefineCitation] = []
-    for result in results:
-        chunk, source = chunk_map[result.entry.chunk_id]
-        snippet = chunk.text.strip()[:200]
-        citations.append(
-            RefineCitation(
-                source_id=source.id,
-                source_name=source.filename,
-                chunk_id=chunk.id,
-                chunk_index=chunk.chunk_index,
-                snippet=snippet,
-                score=result.score,
+        citations: list[RefineCitation] = []
+        for chunk_id in explicit_chunk_ids:
+            chunk, source = chunk_map[chunk_id]
+            snippet = chunk.text.strip()[:200]
+            citations.append(
+                RefineCitation(
+                    source_id=source.id,
+                    source_name=source.filename,
+                    chunk_id=chunk.id,
+                    chunk_index=chunk.chunk_index,
+                    snippet=snippet,
+                    score=1.0,
+                )
             )
-        )
 
-    context = _format_context(results, chunk_map)
+        context = _format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
+    else:
+        query_vector = (await embedder.embed([payload.prompt]))[0]
+        results = vector_index.search(
+            notebook_id=notebook_id,
+            query_vector=query_vector,
+            top_k=payload.top_k,
+            min_score=payload.min_score,
+        )
+        if not results:
+            return RefineResponse(
+                format=format_name,
+                citations=[],
+                evidence=False,
+                created_at=created_at,
+            )
+
+        chunk_ids = [result.entry.chunk_id for result in results]
+        rows = await session.execute(
+            select(Chunk, Source)
+            .join(Source, Source.id == Chunk.source_id)
+            .where(Chunk.id.in_(chunk_ids))
+        )
+        chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
+
+        citations = []
+        for result in results:
+            chunk, source = chunk_map[result.entry.chunk_id]
+            snippet = chunk.text.strip()[:200]
+            citations.append(
+                RefineCitation(
+                    source_id=source.id,
+                    source_name=source.filename,
+                    chunk_id=chunk.id,
+                    chunk_index=chunk.chunk_index,
+                    snippet=snippet,
+                    score=result.score,
+                )
+            )
+
+        context = _format_context(results, chunk_map)
+
     messages = _build_messages(format_name, payload.prompt, context)
     answer = await chatter.chat(messages)
     output = _apply_format(format_name, answer, payload.prompt, citations)
@@ -260,49 +305,79 @@ async def refine_batch(
         raise HTTPException(status_code=404, detail="Notebook not found")
 
     formats = _resolve_formats(settings.refine, payload.formats)
-    query_vector = (await embedder.embed([payload.prompt]))[0]
-    results = vector_index.search(
-        notebook_id=notebook_id,
-        query_vector=query_vector,
-        top_k=payload.top_k,
-        min_score=payload.min_score,
-    )
-
     created_at = datetime.datetime.now(datetime.UTC)
-    if not results:
-        return RefineBatchResponse(
-            outputs={},
-            citations=[],
-            evidence=False,
-            created_at=created_at,
+
+    explicit_chunk_ids = [int(value) for value in (payload.chunk_ids or []) if int(value) > 0]
+    if explicit_chunk_ids:
+        rows = await session.execute(
+            select(Chunk, Source)
+            .join(Source, Source.id == Chunk.source_id)
+            .where(Chunk.id.in_(explicit_chunk_ids), Source.notebook_id == notebook_id)
         )
+        chunk_map: dict[int, tuple[Chunk, Source]] = {
+            chunk.id: (chunk, source) for chunk, source in rows.all()
+        }
+        missing = [chunk_id for chunk_id in explicit_chunk_ids if chunk_id not in chunk_map]
+        if missing:
+            raise HTTPException(status_code=400, detail="Unknown chunk_id in chunk_ids")
 
-    chunk_ids = [result.entry.chunk_id for result in results]
-    rows = await session.execute(
-        select(Chunk, Source)
-        .join(Source, Source.id == Chunk.source_id)
-        .where(Chunk.id.in_(chunk_ids))
-    )
-    chunk_map: dict[int, tuple[Chunk, Source]] = {
-        chunk.id: (chunk, source) for chunk, source in rows.all()
-    }
-
-    citations: list[RefineCitation] = []
-    for result in results:
-        chunk, source = chunk_map[result.entry.chunk_id]
-        snippet = chunk.text.strip()[:200]
-        citations.append(
-            RefineCitation(
-                source_id=source.id,
-                source_name=source.filename,
-                chunk_id=chunk.id,
-                chunk_index=chunk.chunk_index,
-                snippet=snippet,
-                score=result.score,
+        citations: list[RefineCitation] = []
+        for chunk_id in explicit_chunk_ids:
+            chunk, source = chunk_map[chunk_id]
+            snippet = chunk.text.strip()[:200]
+            citations.append(
+                RefineCitation(
+                    source_id=source.id,
+                    source_name=source.filename,
+                    chunk_id=chunk.id,
+                    chunk_index=chunk.chunk_index,
+                    snippet=snippet,
+                    score=1.0,
+                )
             )
-        )
 
-    context = _format_context(results, chunk_map)
+        context = _format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
+    else:
+        query_vector = (await embedder.embed([payload.prompt]))[0]
+        results = vector_index.search(
+            notebook_id=notebook_id,
+            query_vector=query_vector,
+            top_k=payload.top_k,
+            min_score=payload.min_score,
+        )
+        if not results:
+            return RefineBatchResponse(
+                outputs={},
+                citations=[],
+                evidence=False,
+                created_at=created_at,
+            )
+
+        chunk_ids = [result.entry.chunk_id for result in results]
+        rows = await session.execute(
+            select(Chunk, Source)
+            .join(Source, Source.id == Chunk.source_id)
+            .where(Chunk.id.in_(chunk_ids))
+        )
+        chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
+
+        citations = []
+        for result in results:
+            chunk, source = chunk_map[result.entry.chunk_id]
+            snippet = chunk.text.strip()[:200]
+            citations.append(
+                RefineCitation(
+                    source_id=source.id,
+                    source_name=source.filename,
+                    chunk_id=chunk.id,
+                    chunk_index=chunk.chunk_index,
+                    snippet=snippet,
+                    score=result.score,
+                )
+            )
+
+        context = _format_context(results, chunk_map)
+
     outputs: dict[str, RefineBatchOutput] = {}
     for format_name in formats:
         messages = _build_messages(format_name, payload.prompt, context)
