@@ -15,11 +15,17 @@ Changes made:
 - 测试补充/更新：`backend/py/tests/test_refine_output.py`, `frontend/web/src/App.test.js`
 
 Tests:
-- `cd backend/py && uv run pytest -q`
-- `cd frontend/web && pnpm install`
-- `cd frontend/web && CI=true pnpm test`
+- `cd backend/py && uv run pytest`
+- `pnpm -C frontend/web install`
+- `CI=true pnpm -C frontend/web test`
 
 Notes:
 - 右侧提炼不再自动生成，改为“加入队列”触发；生成结果按队列任务展示与切换。
 - pnpm 启动已不再报 ESLint plugin 冲突（通过 `.npmrc` hoist 解决）。
 - 当左侧“引用”中存在勾选项时，右侧“加入队列”将仅基于选中引用生成；未勾选时保持原有“按提示词自动检索引用”逻辑。
+- 修复队列首个任务需二次加入才启动的问题（加入队列后即触发执行）。
+
+Next steps (pick one):
+1) 我帮你再跑一遍前后端联调，回归“队列首任务 + 显式引用输入”全流程  
+2) 如果要把引用选择做成默认模式（或增加快捷按钮），我继续优化交互  
+3) 需要更复杂的提示词库（分组/收藏/最近使用）的话，我再细化交互
