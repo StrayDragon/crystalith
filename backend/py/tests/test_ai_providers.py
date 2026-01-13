@@ -20,6 +20,16 @@ from crystalith.config.models import (
 def test_factory_defaults() -> None:
     settings = Settings()
     embedding = create_embedding_provider(settings)
+
+    assert isinstance(embedding, OllamaEmbeddingProvider)
+
+    with pytest.raises(ValueError, match=r"openai\.api_key"):
+        create_chat_provider(settings)
+
+
+def test_factory_defaults_with_openai_api_key() -> None:
+    settings = Settings(openai=OpenAIProviderSettings(api_key="test-api-key"))
+    embedding = create_embedding_provider(settings)
     chat = create_chat_provider(settings)
 
     assert isinstance(embedding, OllamaEmbeddingProvider)
@@ -100,6 +110,7 @@ async def test_chat_empty_messages_rejected() -> None:
 
 def test_factory_supports_switching_providers() -> None:
     settings = Settings(
+        openai=OpenAIProviderSettings(api_key="test-api-key"),
         embedding=EmbeddingSettings(provider="openai", model="text-embedding-3-small"),
         chat=ChatSettings(provider="ollama", model="llama3.2"),
     )
@@ -113,14 +124,41 @@ def test_factory_supports_switching_providers() -> None:
 
 def test_factory_uses_provider_connection_settings() -> None:
     settings = Settings(
-        openai=OpenAIProviderSettings(api_key="sk-test", base_url="https://example.com/v1"),
+        openai=OpenAIProviderSettings(
+            api_key="sk-test",
+            base_url="https://example.com/v1",
+            organization="org-test",
+            project="proj-test",
+        ),
         ollama=OllamaProviderSettings(host="http://example:11434"),
     )
 
     openai_chat = create_chat_provider(settings)
     assert isinstance(openai_chat, OpenAIChatProvider)
     assert str(openai_chat._client.base_url) == "https://example.com/v1/"
+    assert openai_chat._client.organization == "org-test"
+    assert openai_chat._client.project == "proj-test"
+    assert openai_chat._client.webhook_secret == ""
 
     ollama_embed = create_embedding_provider(settings)
     assert isinstance(ollama_embed, OllamaEmbeddingProvider)
     assert str(ollama_embed._client._client.base_url) == "http://example:11434"
+
+
+def test_factory_openai_client_ignores_environment_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://env.example/v1")
+    monkeypatch.setenv("OPENAI_ORG_ID", "env-org")
+    monkeypatch.setenv("OPENAI_PROJECT_ID", "env-project")
+    monkeypatch.setenv("OPENAI_WEBHOOK_SECRET", "env-secret")
+
+    settings = Settings(openai=OpenAIProviderSettings(api_key="yaml-key"))
+
+    provider = create_chat_provider(settings)
+    assert isinstance(provider, OpenAIChatProvider)
+
+    client = provider._client
+    assert client.api_key == "yaml-key"
+    assert str(client.base_url) == "https://api.openai.com/v1/"
+    assert client.organization == ""
+    assert client.project == ""
+    assert client.webhook_secret == ""
