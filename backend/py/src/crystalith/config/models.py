@@ -18,6 +18,17 @@ class DatabaseSettings(BaseModel):
     url: str = "sqlite+aiosqlite:///./data/app.db"
 
 
+class OpenAIProviderSettings(BaseModel):
+    api_key: str | None = None
+    base_url: str | None = None
+    organization: str | None = None
+    project: str | None = None
+
+
+class OllamaProviderSettings(BaseModel):
+    host: str = "http://localhost:11434"
+
+
 class EmbeddingSettings(BaseModel):
     provider: Literal["ollama", "openai"] = "ollama"
     model: str = "bge-m3"
@@ -33,6 +44,8 @@ class Settings(BaseSettings):
 
     app: AppSettings = Field(default_factory=AppSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
+    openai: OpenAIProviderSettings = Field(default_factory=OpenAIProviderSettings)
+    ollama: OllamaProviderSettings = Field(default_factory=OllamaProviderSettings)
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     chat: ChatSettings = Field(default_factory=ChatSettings)
 

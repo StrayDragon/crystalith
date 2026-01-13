@@ -1,5 +1,13 @@
 from .manager import ConfigManager
-from .models import AppSettings, ChatSettings, DatabaseSettings, EmbeddingSettings, Settings
+from .models import (
+    AppSettings,
+    ChatSettings,
+    DatabaseSettings,
+    EmbeddingSettings,
+    OllamaProviderSettings,
+    OpenAIProviderSettings,
+    Settings,
+)
 
 __all__ = [
     "AppSettings",
@@ -7,5 +15,7 @@ __all__ = [
     "ConfigManager",
     "DatabaseSettings",
     "EmbeddingSettings",
+    "OllamaProviderSettings",
+    "OpenAIProviderSettings",
     "Settings",
 ]
