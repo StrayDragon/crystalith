@@ -4,6 +4,8 @@
 
 ## 本地开发
 
+详细配置、模型选择与数据库初始化说明见 `docs/local-dev-deploy.md`。
+
 ### 1) 后端 (FastAPI)
 
 ```bash
