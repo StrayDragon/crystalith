@@ -126,8 +126,8 @@ class TestFieldSerializerIntegration:
 class TestRealWorldUsage:
     """真实世界使用场景测试"""
 
-    def test_wecom_message_like_structure(self):
-        """测试类似企微消息的数据结构"""
+    def test_message_like_structure(self):
+        """测试类似消息的数据结构"""
 
         class LinkContent(BaseModel):
             title: str
@@ -138,12 +138,12 @@ class TestRealWorldUsage:
             type: str
             link: LinkContent | None = None
 
-        class WecomGroupmsgMsgData(BaseModel):
+        class MessageData(BaseModel):
             text_content: str = ""
             attachments: list[SendContentItem] = []
 
-        class WecomGroupmsgMsgCU(BaseModel):
-            data_json: BaseModelJson[WecomGroupmsgMsgData] = WecomGroupmsgMsgData()
+        class MessageCU(BaseModel):
+            data_json: BaseModelJson[MessageData] = MessageData()
 
             @field_serializer("data_json")
             def serialize_data_json(self, value) -> bytes:
@@ -156,7 +156,7 @@ class TestRealWorldUsage:
         }
 
         json_str = json.dumps(test_content, ensure_ascii=False)
-        msg_cu = WecomGroupmsgMsgCU(data_json=json_str)
+        msg_cu = MessageCU(data_json=json_str)
 
         # 验证解析正确
         assert msg_cu.data_json.text_content == "这是测试消息"
