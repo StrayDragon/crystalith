@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 from pydantic import ValidationError
 
 from .models import Settings
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigManager:
@@ -16,6 +19,7 @@ class ConfigManager:
 
     def load(self) -> Settings:
         try:
+            logger.info("Loading config from %s", self.config_path.resolve())
             settings = Settings.from_yaml(self.config_path)
         except FileNotFoundError as exc:
             raise FileNotFoundError(f"Config file not found: {self.config_path}") from exc
@@ -28,6 +32,7 @@ class ConfigManager:
                 f"Failed to load YAML config at {self.config_path}: {exc}"
             ) from exc
         self._settings = settings
+        logger.info("Loaded config from %s", self.config_path.resolve())
         return settings
 
     def get(self) -> Settings:
