@@ -1,10 +1,10 @@
 [project]
 name = "cl-stdx"
 version = "0.1.0"
-description = "Crystalith internal std extensions"
+description = "Crystalith std extensions"
 requires-python = ">=3.12"
 authors = [
-    { name = "straydragon", email = "straydragonl@foxmail.com" }
+    { name = "Crystalith" }
 ]
 dependencies = [
     "pydantic>=2.11.0,<3.0.0",
