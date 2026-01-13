@@ -103,7 +103,7 @@ wheels = [
 [[package]]
 name = "cl-fastapix"
 version = "0.1.0"
-source = { editable = "packages/cl_fastapix" }
+source = { editable = "packages/cl-fastapix" }
 dependencies = [
     { name = "cl-stdx" },
     { name = "fastapi" },
@@ -112,7 +112,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cl-stdx", editable = "packages/cl_stdx" },
+    { name = "cl-stdx", editable = "packages/cl-stdx" },
     { name = "fastapi", specifier = ">=0.117.1" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
 ]
@@ -120,7 +120,7 @@ requires-dist = [
 [[package]]
 name = "cl-pydanticx"
 version = "0.1.0"
-source = { editable = "packages/cl_pydanticx" }
+source = { editable = "packages/cl-pydanticx" }
 dependencies = [
     { name = "pydantic" },
 ]
@@ -131,7 +131,7 @@ requires-dist = [{ name = "pydantic", specifier = ">=2.11.0,<3.0.0" }]
 [[package]]
 name = "cl-sqlalchemyx"
 version = "0.1.0"
-source = { editable = "packages/cl_sqlalchemyx" }
+source = { editable = "packages/cl-sqlalchemyx" }
 dependencies = [
     { name = "cl-pydanticx" },
     { name = "cl-stdx" },
@@ -142,8 +142,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cl-pydanticx", editable = "packages/cl_pydanticx" },
-    { name = "cl-stdx", editable = "packages/cl_stdx" },
+    { name = "cl-pydanticx", editable = "packages/cl-pydanticx" },
+    { name = "cl-stdx", editable = "packages/cl-stdx" },
     { name = "pydantic", specifier = ">=2.11.0,<3.0.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.43" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
@@ -152,7 +152,7 @@ requires-dist = [
 [[package]]
 name = "cl-stdx"
 version = "0.1.0"
-source = { editable = "packages/cl_stdx" }
+source = { editable = "packages/cl-stdx" }
 dependencies = [
     { name = "pydantic" },
     { name = "typing-extensions" },
@@ -220,10 +220,10 @@ dev = [
 requires-dist = [
     { name = "aiosqlite", specifier = ">=0.20.0" },
     { name = "asyncpg", specifier = ">=0.29.0" },
-    { name = "cl-fastapix", editable = "packages/cl_fastapix" },
-    { name = "cl-pydanticx", editable = "packages/cl_pydanticx" },
-    { name = "cl-sqlalchemyx", editable = "packages/cl_sqlalchemyx" },
-    { name = "cl-stdx", editable = "packages/cl_stdx" },
+    { name = "cl-fastapix", editable = "packages/cl-fastapix" },
+    { name = "cl-pydanticx", editable = "packages/cl-pydanticx" },
+    { name = "cl-sqlalchemyx", editable = "packages/cl-sqlalchemyx" },
+    { name = "cl-stdx", editable = "packages/cl-stdx" },
     { name = "fastapi", specifier = ">=0.117.1" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "ollama", specifier = ">=0.3.3" },
