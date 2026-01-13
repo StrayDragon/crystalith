@@ -39,6 +39,10 @@ class ChatSettings(BaseModel):
     model: str = "gpt-4o-mini"
 
 
+class RefineSettings(BaseModel):
+    formats: list[str] = Field(default_factory=lambda: ["paragraph", "bullets", "structured"])
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="ignore", env_prefix="CRYSTALITH_")
 
@@ -48,6 +52,7 @@ class Settings(BaseSettings):
     ollama: OllamaProviderSettings = Field(default_factory=OllamaProviderSettings)
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     chat: ChatSettings = Field(default_factory=ChatSettings)
+    refine: RefineSettings = Field(default_factory=RefineSettings)
 
     @classmethod
     def settings_customise_sources(
