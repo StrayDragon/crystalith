@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=./schema.json
+openai: &openai_default
+  api_key: "sk-WeJOLbzllGll3qGUybVBimMlU6GJZcCrw13hEtMt4bQ7wxxB"
+  base_url: "http://urchinet.lan:50256/v1"
+ollama:
+  host: "http://localhost:11434"
+embedding:
+  provider: "ollama"
+  model: "bge-m3:567m"
+  ollama_options:
+    num_ctx: 32768
+    num_thread: "auto"
+    temperature: 0.1
+    num_batch: 256
+    mlock: true
+    numa: true
+    low_vram: false
+chat:
+  provider: "openai"
+  model: "gpt-5.2"
+  openai: *openai_default
