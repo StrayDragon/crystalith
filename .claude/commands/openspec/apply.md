@@ -5,19 +5,19 @@ category: OpenSpec
 tags: [openspec, apply]
 ---
 <!-- OPENSPEC:START -->
-**Guardrails**
-- Favor straightforward, minimal implementations first and add complexity only when it is requested or clearly required.
-- Keep changes tightly scoped to the requested outcome.
-- Refer to `openspec/AGENTS.md` (located inside the `openspec/` directory—run `ls openspec` or `openspec update` if you don't see it) if you need additional OpenSpec conventions or clarifications.
+**护栏**
+- 优先使用直接、最小的实现，仅在请求或明确需要时才添加复杂性。
+- 保持变更紧密限制在请求的结果范围内。
+- 如果您需要额外的 OpenSpec 约定或说明，请参阅 `openspec/AGENTS.md`（位于 `openspec/` 目录内——如果您看不到它，请运行 `ls openspec` 或 `openspec update`）。
 
-**Steps**
-Track these steps as TODOs and complete them one by one.
-1. Read `changes/<id>/proposal.md`, `design.md` (if present), and `tasks.md` to confirm scope and acceptance criteria.
-2. Work through tasks sequentially, keeping edits minimal and focused on the requested change.
-3. Confirm completion before updating statuses—make sure every item in `tasks.md` is finished.
-4. Update the checklist after all work is done so each task is marked `- [x]` and reflects reality.
-5. Reference `openspec list` or `openspec show <item>` when additional context is required.
+**步骤**
+将这些步骤跟踪为 TODO 并逐一完成。
+1. 阅读 `changes/<id>/proposal.md`、`design.md`（如果存在）和 `tasks.md` 以确认范围和验收标准。
+2. 按顺序完成任务，保持编辑最小化并专注于请求的变更。
+3. 在更新状态之前确认完成——确保 `tasks.md` 中的每一项都已完成。
+4. 在所有工作完成后更新检查清单，使每个任务标记为 `- [x]` 并反映实际情况。
+5. 当需要额外上下文时，参考 `openspec list` 或 `openspec show <item>`。
 
-**Reference**
-- Use `openspec show <id> --json --deltas-only` if you need additional context from the proposal while implementing.
+**参考**
+- 如果您在实施过程中需要提案的额外上下文，请使用 `openspec show <id> --json --deltas-only`。
 <!-- OPENSPEC:END -->

@@ -1,0 +1,53 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Literal
+
+import yaml
+from pydantic import BaseModel, Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class AppSettings(BaseModel):
+    name: str = "Crystalith"
+    openapi_path: str = "/v1/codev/openapi.json"
+    openapi_ui_path: str = "/v1/codev/openapi-ui/scaler"
+
+
+class DatabaseSettings(BaseModel):
+    url: str = "sqlite+aiosqlite:///./data/app.db"
+
+
+class EmbeddingSettings(BaseModel):
+    provider: Literal["ollama", "openai"] = "ollama"
+    model: str = "bge-m3"
+
+
+class ChatSettings(BaseModel):
+    provider: Literal["openai", "ollama"] = "openai"
+    model: str = "gpt-4o-mini"
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(extra="ignore", env_prefix="CRYSTALITH_")
+
+    app: AppSettings = Field(default_factory=AppSettings)
+    database: DatabaseSettings = Field(default_factory=DatabaseSettings)
+    embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
+    chat: ChatSettings = Field(default_factory=ChatSettings)
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings,
+        env_settings,
+        dotenv_settings,
+        file_secret_settings,
+    ):
+        return (init_settings,)
+
+    @classmethod
+    def from_yaml(cls, path: Path) -> "Settings":
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        return cls.model_validate(data)
