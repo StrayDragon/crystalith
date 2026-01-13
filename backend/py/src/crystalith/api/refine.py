@@ -27,6 +27,13 @@ class RefineRequest(BaseModel):
     min_score: float = Field(0.2, ge=0.0, le=1.0)
 
 
+class RefineBatchRequest(BaseModel):
+    prompt: str = Field(..., min_length=1)
+    formats: list[str] | None = None
+    top_k: int = Field(5, ge=1, le=20)
+    min_score: float = Field(0.2, ge=0.0, le=1.0)
+
+
 class RefineCitation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -45,11 +52,24 @@ class StructuredRefine(BaseModel):
     citations: list[RefineCitation]
 
 
+class RefineBatchOutput(BaseModel):
+    paragraph: str | None = None
+    bullets: list[str] | None = None
+    structured: StructuredRefine | None = None
+
+
 class RefineResponse(BaseModel):
     format: str
     paragraph: str | None = None
     bullets: list[str] | None = None
     structured: StructuredRefine | None = None
+    citations: list[RefineCitation]
+    evidence: bool
+    created_at: datetime.datetime
+
+
+class RefineBatchResponse(BaseModel):
+    outputs: dict[str, RefineBatchOutput]
     citations: list[RefineCitation]
     evidence: bool
     created_at: datetime.datetime
@@ -100,6 +120,54 @@ def _normalize_format(settings: RefineSettings, format_name: str) -> str:
     if normalized not in allowed:
         raise HTTPException(status_code=400, detail="Unsupported refine format")
     return normalized
+
+
+def _resolve_formats(settings: RefineSettings, formats: list[str] | None) -> list[str]:
+    if not formats:
+        return [item.strip().lower() for item in settings.formats]
+    resolved: list[str] = []
+    for item in formats:
+        resolved.append(_normalize_format(settings, item))
+    return resolved
+
+
+def _build_messages(format_name: str, prompt: str, context: str) -> list[ChatMessage]:
+    format_prompt = FORMAT_PROMPTS.get(format_name, FORMAT_PROMPTS["paragraph"])
+    return [
+        ChatMessage(
+            role="system",
+            content=(
+                "You are a research assistant. Answer strictly using the provided sources. "
+                f"{format_prompt}"
+            ),
+        ),
+        ChatMessage(role="user", content=f"Prompt:\n{prompt}\n\nSources:\n{context}"),
+    ]
+
+
+def _apply_format(
+    format_name: str,
+    answer: str,
+    prompt: str,
+    citations: list[RefineCitation],
+) -> RefineBatchOutput:
+    if format_name == "paragraph":
+        return RefineBatchOutput(paragraph=answer.strip())
+    if format_name == "bullets":
+        return RefineBatchOutput(bullets=_parse_bullets(answer))
+
+    try:
+        parsed = json.loads(answer)
+        structured = StructuredRefine(
+            title=str(parsed.get("title", "")),
+            bullets=[str(item) for item in parsed.get("bullets", [])],
+            terms=[str(item) for item in parsed.get("terms", [])],
+            citations=citations,
+        )
+    except (json.JSONDecodeError, TypeError, ValueError):
+        structured = _fallback_structured(prompt, citations)
+
+    return RefineBatchOutput(structured=structured)
 
 
 @router.post("", response_model=RefineResponse)
@@ -160,20 +228,9 @@ async def refine(
         )
 
     context = _format_context(results, chunk_map)
-    prompt = FORMAT_PROMPTS.get(format_name, FORMAT_PROMPTS["paragraph"])
-    messages = [
-        ChatMessage(
-            role="system",
-            content=(
-                "You are a research assistant. Answer strictly using the provided sources. "
-                f"{prompt}"
-            ),
-        ),
-        ChatMessage(role="user", content=f"Prompt:\n{payload.prompt}\n\nSources:\n{context}"),
-    ]
-
+    messages = _build_messages(format_name, payload.prompt, context)
     answer = await chatter.chat(messages)
-
+    output = _apply_format(format_name, answer, payload.prompt, citations)
     response = RefineResponse(
         format=format_name,
         citations=citations,
@@ -181,20 +238,80 @@ async def refine(
         created_at=created_at,
     )
 
-    if format_name == "paragraph":
-        response.paragraph = answer.strip()
-    elif format_name == "bullets":
-        response.bullets = _parse_bullets(answer)
-    else:
-        try:
-            parsed = json.loads(answer)
-            response.structured = StructuredRefine(
-                title=str(parsed.get("title", "")),
-                bullets=[str(item) for item in parsed.get("bullets", [])],
-                terms=[str(item) for item in parsed.get("terms", [])],
-                citations=citations,
-            )
-        except (json.JSONDecodeError, TypeError, ValueError):
-            response.structured = _fallback_structured(payload.prompt, citations)
+    response.paragraph = output.paragraph
+    response.bullets = output.bullets
+    response.structured = output.structured
 
     return response
+
+
+@router.post("/batch", response_model=RefineBatchResponse)
+async def refine_batch(
+    notebook_id: int,
+    payload: RefineBatchRequest,
+    session: AsyncSession = Depends(get_db_session),
+    embedder: EmbeddingProvider = Depends(get_embedding_provider),
+    chatter: ChatProvider = Depends(get_chat_provider),
+    vector_index: InMemoryVectorIndex = Depends(get_vector_index),
+    settings: Settings = Depends(get_settings),
+) -> RefineBatchResponse:
+    notebook = await session.get(Notebook, notebook_id)
+    if notebook is None:
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
+    formats = _resolve_formats(settings.refine, payload.formats)
+    query_vector = (await embedder.embed([payload.prompt]))[0]
+    results = vector_index.search(
+        notebook_id=notebook_id,
+        query_vector=query_vector,
+        top_k=payload.top_k,
+        min_score=payload.min_score,
+    )
+
+    created_at = datetime.datetime.now(datetime.UTC)
+    if not results:
+        return RefineBatchResponse(
+            outputs={},
+            citations=[],
+            evidence=False,
+            created_at=created_at,
+        )
+
+    chunk_ids = [result.entry.chunk_id for result in results]
+    rows = await session.execute(
+        select(Chunk, Source)
+        .join(Source, Source.id == Chunk.source_id)
+        .where(Chunk.id.in_(chunk_ids))
+    )
+    chunk_map: dict[int, tuple[Chunk, Source]] = {
+        chunk.id: (chunk, source) for chunk, source in rows.all()
+    }
+
+    citations: list[RefineCitation] = []
+    for result in results:
+        chunk, source = chunk_map[result.entry.chunk_id]
+        snippet = chunk.text.strip()[:200]
+        citations.append(
+            RefineCitation(
+                source_id=source.id,
+                source_name=source.filename,
+                chunk_id=chunk.id,
+                chunk_index=chunk.chunk_index,
+                snippet=snippet,
+                score=result.score,
+            )
+        )
+
+    context = _format_context(results, chunk_map)
+    outputs: dict[str, RefineBatchOutput] = {}
+    for format_name in formats:
+        messages = _build_messages(format_name, payload.prompt, context)
+        answer = await chatter.chat(messages)
+        outputs[format_name] = _apply_format(format_name, answer, payload.prompt, citations)
+
+    return RefineBatchResponse(
+        outputs=outputs,
+        citations=citations,
+        evidence=True,
+        created_at=created_at,
+    )

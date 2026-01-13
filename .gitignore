@@ -21,6 +21,10 @@
 # Local configuration that shouldn't be shared
 *.local
 
+# Local runtime data (databases/uploads)
+data/
+backend/py/data/
+
 ### Python ###
 # Python compiled files, virtual environments, and cache
 
@@ -161,14 +165,11 @@ site/
 ### Pnpm ###
 # pnpm package manager specific files
 
-# PNPM
-pnpm-lock.yaml
 pnpm-workspace.yaml
 .pnpm/
 .pnpm-debug.log
 
 .pnpm-store/
-pnpm-lock.yaml.bak
 .pnpmfile.cjs
 node_modules/
 .pnpm-cache/
@@ -365,3 +366,5 @@ storybook-static/
 .env.*.local
 *.log
 
+# Local app data
+data/
