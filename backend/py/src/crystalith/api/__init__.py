@@ -1,4 +1,5 @@
 from .notebooks import router as notebooks_router
+from .qa import router as qa_router
 from .sources import router as sources_router
 
-__all__ = ["notebooks_router", "sources_router"]
+__all__ = ["notebooks_router", "qa_router", "sources_router"]
