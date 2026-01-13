@@ -11,7 +11,7 @@ from pydantic_settings.sources import YamlConfigSettingsSource
 class AppSettings(BaseModel):
     name: str = "Crystalith"
     openapi_path: str = "/v1/codev/openapi.json"
-    openapi_ui_path: str = "/v1/codev/openapi-ui/scaler"
+    openapi_ui_path: str = "/v1/codev/openapi-ui/scalar"
 
 
 class DatabaseSettings(BaseModel):
