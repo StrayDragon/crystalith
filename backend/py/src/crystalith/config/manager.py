@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from .models import Settings
 
 
@@ -13,7 +15,18 @@ class ConfigManager:
         self._settings: Settings | None = None
 
     def load(self) -> Settings:
-        settings = Settings.from_yaml(self.config_path)
+        try:
+            settings = Settings.from_yaml(self.config_path)
+        except FileNotFoundError as exc:
+            raise FileNotFoundError(f"Config file not found: {self.config_path}") from exc
+        except ValidationError as exc:
+            raise ValueError(
+                f"Invalid YAML config at {self.config_path}:\n{exc}"
+            ) from exc
+        except Exception as exc:
+            raise ValueError(
+                f"Failed to load YAML config at {self.config_path}: {exc}"
+            ) from exc
         self._settings = settings
         return settings
 
@@ -32,7 +45,13 @@ class ConfigManager:
         return self.schema_path
 
     def schema_reference(self) -> str:
-        reference = self.schema_path.as_posix()
+        reference_path = self.schema_path
+        try:
+            reference_path = self.schema_path.relative_to(self.config_path.parent)
+        except ValueError:
+            reference_path = self.schema_path
+
+        reference = reference_path.as_posix()
         if not reference.startswith((".", "/")):
             return f"./{reference}"
         return reference
