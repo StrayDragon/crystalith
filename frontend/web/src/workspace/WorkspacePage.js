@@ -367,10 +367,12 @@ function RefinePanel({
   onSelectJob,
   activeError,
 }) {
+  const promptRef = useRef(null);
   const hasOutput = Boolean(
     output?.paragraph || output?.bullets?.length || output?.structured?.title,
   );
   const showError = Boolean(activeError);
+  const normalizedPrompt = prompt.trim();
   const statusLabels = {
     queued: '排队中',
     running: '生成中',
@@ -384,33 +386,43 @@ function RefinePanel({
         <div className="RefineCard__header">
           <div>
             <div className="RefineCard__title">提炼卡片</div>
-            <div className="RefineCard__subtitle">基于当前来源库生成输出，可自定义提炼目标。</div>
+            <div className="RefineCard__subtitle">
+              选择模板或自定义提示词，加入队列后生成。
+            </div>
           </div>
           <div className="RefineCard__badge">
-            {queue.length ? `队列 ${queue.length} 项` : '暂无任务'}
+            {queue.length ? `队列 ${queue.length} 项` : '队列为空'}
           </div>
         </div>
         <div className="RefineTemplates" role="list">
-          {templates.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              className="RefineTemplate"
-              onClick={() => onPromptChange(item.prompt)}
-            >
-              {item.label}
-            </button>
-          ))}
+          {templates.map((item) => {
+            const isActive = normalizedPrompt === item.prompt;
+            return (
+              <button
+                key={item.label}
+                type="button"
+                className={`RefineTemplate ${isActive ? 'isActive' : ''}`}
+                aria-pressed={isActive}
+                onClick={() => {
+                  onPromptChange(item.prompt);
+                  promptRef.current?.focus();
+                }}
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </div>
         <textarea
           className="RefinePrompt"
+          ref={promptRef}
           value={prompt}
           onChange={(event) => onPromptChange(event.target.value)}
           rows={3}
           disabled={isBlocked}
-          placeholder={isBlocked ? '请先创建笔记本' : '例如：提炼关键结论、术语与风险点。'}
+          placeholder={isBlocked ? '请先创建笔记本' : '例如：提炼核心结论、行动项与风险点。'}
         />
-        <div className="RefineModes" role="tablist" aria-label="提炼格式">
+        <div className="RefineModes" role="tablist" aria-label="输出格式">
           {[
             { id: 'paragraph', label: '段落' },
             { id: 'bullets', label: '要点' },
@@ -442,11 +454,11 @@ function RefinePanel({
 
       <div className="RefineQueue">
         <div className="RefineQueue__header">
-          <div className="RefineQueue__title">生成队列</div>
-          <div className="RefineQueue__meta">点击任务可查看输出</div>
+          <div className="RefineQueue__title">提炼队列</div>
+          <div className="RefineQueue__meta">点击任务切换结果</div>
         </div>
         {queue.length === 0 ? (
-          <div className="WorkspaceEmpty">暂无任务，点击上方按钮生成提炼。</div>
+          <div className="WorkspaceEmpty">队列为空，先添加一个提炼任务。</div>
         ) : (
           <div className="RefineQueue__list">
             {queue.map((job) => (
@@ -478,7 +490,7 @@ function RefinePanel({
                 ? activeError
                 : isLoading
                   ? '正在生成提炼结果…'
-                  : '暂无输出，选择队列中的任务查看内容。'}
+                  : '暂无输出，选择队列任务查看结果。'}
           </div>
         ) : (
           <div className="RefineOutput" aria-label="提炼结果">
@@ -559,15 +571,27 @@ export default function WorkspacePage() {
     () => [
       {
         label: '关键结论',
-        prompt: '提炼这份资料的核心结论与可执行要点。',
+        prompt: '提炼核心结论与决策要点，保持简洁。',
       },
       {
-        label: '风险与盲点',
-        prompt: '找出文档中提到的风险、限制或未覆盖的关键点。',
+        label: '行动清单',
+        prompt: '列出可执行的行动项，并按优先级排序。',
+      },
+      {
+        label: '风险盲点',
+        prompt: '找出潜在风险、限制与未覆盖的关键点。',
       },
       {
         label: '术语速记',
-        prompt: '提炼关键术语并解释其含义（保持简洁）。',
+        prompt: '提炼关键术语并用一句话解释。',
+      },
+      {
+        label: '对比差异',
+        prompt: '如果存在多个对象/方案，提炼主要差异与取舍。',
+      },
+      {
+        label: '问题清单',
+        prompt: '列出尚待验证的问题与需要补充的信息。',
       },
     ],
     [],
@@ -984,7 +1008,7 @@ export default function WorkspacePage() {
         >
           <div className="WorkspacePanelHeader">
             <h2 className="WorkspacePanelTitle">提炼</h2>
-            <div className="WorkspaceTiny">输出面板</div>
+            <div className="WorkspaceTiny">手动提炼 · 队列生成</div>
           </div>
           <RefinePanel
             mode={refineMode}
