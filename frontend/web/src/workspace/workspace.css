@@ -593,6 +593,12 @@
   background: rgba(239, 246, 255, 0.9);
 }
 
+.RefineTemplate.isActive {
+  border-color: rgba(37, 99, 235, 0.6);
+  background: rgba(219, 234, 254, 0.9);
+  color: rgba(30, 64, 175, 0.95);
+}
+
 .RefinePrompt {
   width: 100%;
   border-radius: 14px;
