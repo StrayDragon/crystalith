@@ -6,6 +6,7 @@ from .models import (
     EmbeddingSettings,
     OllamaProviderSettings,
     OpenAIProviderSettings,
+    RefineSettings,
     Settings,
 )
 
@@ -17,5 +18,6 @@ __all__ = [
     "EmbeddingSettings",
     "OllamaProviderSettings",
     "OpenAIProviderSettings",
+    "RefineSettings",
     "Settings",
 ]
