@@ -6,11 +6,18 @@ from fastapi.responses import HTMLResponse, Response
 from scalar_fastapi import get_scalar_api_reference
 
 from cl_fastapix import FastAPIX
+from cl_sqlalchemyx.mgrs import AsyncDBManager
 
 from .config import Settings
+from .db import create_db_manager
+from .api import notebooks_router
 
 
-def create_app(settings: Settings | None = None) -> FastAPIX:
+def create_app(
+    settings: Settings | None = None,
+    *,
+    db_manager: AsyncDBManager | None = None,
+) -> FastAPIX:
     resolved = settings or Settings()
 
     app = FastAPIX(
@@ -19,6 +26,9 @@ def create_app(settings: Settings | None = None) -> FastAPIX:
         docs_url=None,
         redoc_url=None,
     )
+
+    app.state.settings = resolved
+    app.state.db = db_manager or create_db_manager(resolved.database.url)
 
     @app.get(resolved.app.openapi_ui_path, include_in_schema=False)
     def scalar_docs() -> Response:
@@ -29,5 +39,11 @@ def create_app(settings: Settings | None = None) -> FastAPIX:
         if isinstance(rendered, Response):
             return rendered
         return HTMLResponse(rendered)
+
+    @app.on_event("shutdown")
+    async def close_db() -> None:
+        await app.state.db.close()
+
+    app.include_router(notebooks_router)
 
     return app
