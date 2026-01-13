@@ -1,5 +1,0 @@
-Crystalith research note:
-- Product goals: improve onboarding, reduce churn, increase activation.
-- Risks: unclear pricing, high learning curve, limited integrations.
-- Opportunities: guided checklist, template library, team collaboration.
-- Metrics: activation rate, time-to-first-value, retention.
