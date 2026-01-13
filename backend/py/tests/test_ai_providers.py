@@ -8,7 +8,13 @@ from crystalith.ai.factory import create_chat_provider, create_embedding_provide
 from crystalith.ai.ollama_provider import OllamaChatProvider, OllamaEmbeddingProvider
 from crystalith.ai.openai_provider import OpenAIChatProvider, OpenAIEmbeddingProvider
 from crystalith.ai.types import ChatMessage
-from crystalith.config.models import ChatSettings, EmbeddingSettings, Settings
+from crystalith.config.models import (
+    ChatSettings,
+    EmbeddingSettings,
+    OllamaProviderSettings,
+    OpenAIProviderSettings,
+    Settings,
+)
 
 
 def test_factory_defaults() -> None:
@@ -104,3 +110,17 @@ def test_factory_supports_switching_providers() -> None:
     assert isinstance(embedding, OpenAIEmbeddingProvider)
     assert isinstance(chat, OllamaChatProvider)
 
+
+def test_factory_uses_provider_connection_settings() -> None:
+    settings = Settings(
+        openai=OpenAIProviderSettings(api_key="sk-test", base_url="https://example.com/v1"),
+        ollama=OllamaProviderSettings(host="http://example:11434"),
+    )
+
+    openai_chat = create_chat_provider(settings)
+    assert isinstance(openai_chat, OpenAIChatProvider)
+    assert str(openai_chat._client.base_url) == "https://example.com/v1/"
+
+    ollama_embed = create_embedding_provider(settings)
+    assert isinstance(ollama_embed, OllamaEmbeddingProvider)
+    assert str(ollama_embed._client._client.base_url) == "http://example:11434"

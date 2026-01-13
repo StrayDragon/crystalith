@@ -10,9 +10,23 @@ from .types import ChatMessage
 class OpenAIEmbeddingProvider:
     provider: Literal["openai"] = "openai"
 
-    def __init__(self, model: str, *, client: Any | None = None) -> None:
+    def __init__(
+        self,
+        model: str,
+        *,
+        client: Any | None = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        organization: str | None = None,
+        project: str | None = None,
+    ) -> None:
         self.model = model
-        self._client = client or AsyncOpenAI()
+        self._client = client or AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            organization=organization,
+            project=project,
+        )
 
     async def embed(self, texts: Sequence[str]) -> list[list[float]]:
         if not texts:
@@ -32,9 +46,23 @@ class OpenAIEmbeddingProvider:
 class OpenAIChatProvider:
     provider: Literal["openai"] = "openai"
 
-    def __init__(self, model: str, *, client: Any | None = None) -> None:
+    def __init__(
+        self,
+        model: str,
+        *,
+        client: Any | None = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        organization: str | None = None,
+        project: str | None = None,
+    ) -> None:
         self.model = model
-        self._client = client or AsyncOpenAI()
+        self._client = client or AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            organization=organization,
+            project=project,
+        )
 
     async def chat(self, messages: Sequence[ChatMessage]) -> str:
         if not messages:
@@ -47,4 +75,3 @@ class OpenAIChatProvider:
 
         content = response.choices[0].message.content
         return content or ""
-
