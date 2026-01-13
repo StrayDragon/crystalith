@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field
@@ -29,14 +29,33 @@ class OllamaProviderSettings(BaseModel):
     host: str = "http://localhost:11434"
 
 
+class OllamaRuntimeOptions(BaseModel):
+    num_ctx: int | None = None
+    num_thread: int | Literal["auto"] | None = None
+    temperature: float | None = None
+    num_batch: int | None = None
+    mlock: bool | None = None
+    numa: bool | None = None
+    low_vram: bool | None = None
+
+    def to_options(self) -> dict[str, Any] | None:
+        data = self.model_dump(exclude_none=True)
+        if data.get("num_thread") == "auto":
+            data.pop("num_thread", None)
+        return data or None
+
+
 class EmbeddingSettings(BaseModel):
     provider: Literal["ollama", "openai"] = "ollama"
     model: str = "bge-m3"
+    openai: OpenAIProviderSettings | None = None
+    ollama_options: OllamaRuntimeOptions = Field(default_factory=OllamaRuntimeOptions)
 
 
 class ChatSettings(BaseModel):
     provider: Literal["openai", "ollama"] = "openai"
     model: str = "gpt-4o-mini"
+    openai: OpenAIProviderSettings | None = None
 
 
 class RefineSettings(BaseModel):

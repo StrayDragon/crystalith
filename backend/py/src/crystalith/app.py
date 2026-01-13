@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from fastapi.responses import HTMLResponse, Response
@@ -8,10 +9,21 @@ from scalar_fastapi import get_scalar_api_reference
 from cl_fastapix import FastAPIX
 from cl_sqlalchemyx.mgrs import AsyncDBManager
 
-from .config import Settings
+from .config import ConfigManager, Settings
 from .db import create_db_manager
 from .api import notebooks_router, qa_router, refine_router, sources_router
 from .vector_index import InMemoryVectorIndex
+
+
+def _load_settings() -> Settings:
+    config_path = Path("config/app.yaml")
+    if config_path.is_file():
+        schema_path = config_path.parent / "schema.json"
+        manager = ConfigManager(config_path, schema_path)
+        if not schema_path.exists():
+            manager.write_schema()
+        return manager.load()
+    return Settings()
 
 
 def create_app(
@@ -20,7 +32,7 @@ def create_app(
     db_manager: AsyncDBManager | None = None,
     vector_index: InMemoryVectorIndex | None = None,
 ) -> FastAPIX:
-    resolved = settings or Settings()
+    resolved = settings or _load_settings()
 
     app = FastAPIX(
         title=resolved.app.name,

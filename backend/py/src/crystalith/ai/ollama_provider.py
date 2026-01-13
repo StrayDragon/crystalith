@@ -16,9 +16,11 @@ class OllamaEmbeddingProvider:
         *,
         client: Any | None = None,
         host: str | None = None,
+        options: dict[str, Any] | None = None,
     ) -> None:
         self.model = model
         self._client = client or ollama.AsyncClient(host=host)
+        self._options = options
 
     async def embed(self, texts: Sequence[str]) -> list[list[float]]:
         if not texts:
@@ -27,6 +29,7 @@ class OllamaEmbeddingProvider:
         response = await self._client.embed(
             model=self.model,
             input=list(texts),
+            options=self._options,
         )
         return [list(vector) for vector in response.embeddings]
 
