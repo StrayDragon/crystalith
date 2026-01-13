@@ -598,6 +598,7 @@ export default function WorkspacePage() {
   const createInputRef = useRef(null);
   const refineQueueRef = useRef([]);
   const refineRunningRef = useRef(false);
+  const runNextRefineJobRef = useRef(() => {});
 
   const isDemo = connectionState === 'demo';
   const activeNotebook = notebooks.find((n) => n.id === activeNotebookId) ?? null;
@@ -620,6 +621,8 @@ export default function WorkspacePage() {
       structured: null,
       evidence: false,
     };
+
+  runNextRefineJobRef.current = runNextRefineJob;
 
   useEffect(() => {
     let cancelled = false;
@@ -704,6 +707,11 @@ export default function WorkspacePage() {
 
   useEffect(() => {
     refineQueueRef.current = refineJobs;
+
+    if (refineRunningRef.current) return;
+    if (!refineJobs.some((job) => job.status === 'queued')) return;
+
+    runNextRefineJobRef.current();
   }, [refineJobs]);
 
   useEffect(() => {
@@ -847,8 +855,6 @@ export default function WorkspacePage() {
     };
     updateRefineQueue((prev) => [...prev, job]);
     setActiveRefineJobId(job.id);
-
-    runNextRefineJob();
   }
 
   async function sendMessage() {
