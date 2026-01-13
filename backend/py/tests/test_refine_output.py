@@ -114,3 +114,71 @@ async def test_refine_no_evidence(test_client: AsyncClient) -> None:
     payload = response.json()
     assert payload["evidence"] is False
     assert payload["citations"] == []
+
+
+@pytest.mark.asyncio
+async def test_refine_explicit_chunk_ids_override_search(test_client: AsyncClient) -> None:
+    created = await test_client.post("/v1/notebooks", json={"name": "Notes"})
+    notebook_id = created.json()["id"]
+
+    upload = await test_client.post(
+        f"/v1/notebooks/{notebook_id}/sources",
+        files={"file": ("note.md", b"hello world", "text/markdown")},
+    )
+    assert upload.status_code == 201
+
+    seeded = await test_client.post(
+        f"/v1/notebooks/{notebook_id}/refine",
+        json={"prompt": "summarize", "format": "paragraph"},
+    )
+    assert seeded.status_code == 200
+    seeded_payload = seeded.json()
+    assert seeded_payload["citations"]
+    chunk_id = seeded_payload["citations"][0]["chunk_id"]
+
+    response = await test_client.post(
+        f"/v1/notebooks/{notebook_id}/refine",
+        json={
+            "prompt": "x",
+            "format": "paragraph",
+            "chunk_ids": [chunk_id],
+            "min_score": 0.99,
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["paragraph"] == "paragraph summary"
+    assert payload["evidence"] is True
+    assert payload["citations"][0]["chunk_id"] == chunk_id
+
+
+@pytest.mark.asyncio
+async def test_refine_batch_explicit_chunk_ids(test_client: AsyncClient) -> None:
+    created = await test_client.post("/v1/notebooks", json={"name": "Notes"})
+    notebook_id = created.json()["id"]
+
+    upload = await test_client.post(
+        f"/v1/notebooks/{notebook_id}/sources",
+        files={"file": ("note.md", b"hello world", "text/markdown")},
+    )
+    assert upload.status_code == 201
+
+    seeded = await test_client.post(
+        f"/v1/notebooks/{notebook_id}/refine",
+        json={"prompt": "summarize", "format": "paragraph"},
+    )
+    chunk_id = seeded.json()["citations"][0]["chunk_id"]
+
+    response = await test_client.post(
+        f"/v1/notebooks/{notebook_id}/refine/batch",
+        json={
+            "prompt": "x",
+            "formats": ["paragraph", "bullets", "structured"],
+            "chunk_ids": [chunk_id],
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["evidence"] is True
+    assert payload["citations"][0]["chunk_id"] == chunk_id
+    assert set(payload["outputs"].keys()) == {"paragraph", "bullets", "structured"}

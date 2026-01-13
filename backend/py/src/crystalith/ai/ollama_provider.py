@@ -26,10 +26,11 @@ class OllamaEmbeddingProvider:
         if not texts:
             return []
 
-        payload: dict[str, Any] = {"model": self.model, "input": list(texts)}
+        kwargs: dict[str, Any] = {"model": self.model, "input": list(texts)}
         if self._options is not None:
-            payload["options"] = self._options
-        response = await self._client.embed(**payload)
+            kwargs["options"] = self._options
+
+        response = await self._client.embed(**kwargs)
         return [list(vector) for vector in response.embeddings]
 
 
