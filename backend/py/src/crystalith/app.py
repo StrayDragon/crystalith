@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,8 @@ from .db import create_all, create_db_manager
 from .api import notebooks_router, qa_router, refine_router, sources_router
 from .vector_index import InMemoryVectorIndex
 
+logger = logging.getLogger(__name__)
+
 
 def _load_settings() -> Settings:
     config_path = Path("config/app.yaml")
@@ -24,6 +27,11 @@ def _load_settings() -> Settings:
         if not schema_path.exists():
             manager.write_schema()
         return manager.load()
+    logger.warning(
+        "Config file not found at %s (cwd=%s). Using default settings.",
+        config_path.resolve(),
+        Path.cwd(),
+    )
     return Settings()
 
 
