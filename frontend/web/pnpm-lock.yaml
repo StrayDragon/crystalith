@@ -38,6 +38,16 @@ importers:
       web-vitals:
         specifier: ^2.1.4
         version: 2.1.4
+    devDependencies:
+      autoprefixer:
+        specifier: ^10.4.23
+        version: 10.4.23(postcss@8.5.6)
+      postcss:
+        specifier: ^8.5.6
+        version: 8.5.6
+      tailwindcss:
+        specifier: ^3.4.19
+        version: 3.4.19
 
 packages:
 

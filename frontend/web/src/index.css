@@ -1,28 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-html,
-body,
-#root {
-  height: 100%;
-}
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
 
-:root {
-  --font-sans: 'Space Grotesk', 'Noto Sans SC', ui-sans-serif, system-ui,
-    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
-    'Segoe UI', sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
-    'Courier New', monospace;
-}
+  body {
+    @apply font-sans text-slate-900 bg-slate-50;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
 
-body {
-  margin: 0;
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
-
-code,
-pre {
-  font-family: var(--font-mono);
+  code,
+  pre {
+    @apply font-mono;
+  }
 }
