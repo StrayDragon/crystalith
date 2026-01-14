@@ -1,10 +1,12 @@
 :root {
-  --ws-bg: #f8fafc;
-  --ws-surface: rgba(255, 255, 255, 0.88);
+  --ws-bg: #f3f4f8;
+  --ws-side-bg: #f9fafb;
+  --ws-center-bg: #ffffff;
+  --ws-surface: rgba(255, 255, 255, 0.9);
   --ws-surface-strong: rgba(255, 255, 255, 0.98);
-  --ws-border: rgba(148, 163, 184, 0.4);
+  --ws-border: rgba(148, 163, 184, 0.32);
   --ws-text: #0f172a;
-  --ws-text-muted: #475569;
+  --ws-text-muted: #4b5563;
   --ws-accent: #2563eb;
   --ws-accent-weak: rgba(37, 99, 235, 0.16);
   --ws-accent-strong: #1d4ed8;
@@ -13,25 +15,32 @@
   --ws-warning: #f59e0b;
   --ws-danger: #dc2626;
   --ws-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
-  --ws-shadow-soft: 0 8px 20px rgba(15, 23, 42, 0.08);
+  --ws-shadow-soft: 0 10px 22px rgba(15, 23, 42, 0.08);
 }
 
 .WorkspaceApp {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 14px 14px 16px 14px;
+  box-sizing: border-box;
+  overflow: hidden;
   color: var(--ws-text);
   background-color: var(--ws-bg);
   background-image: radial-gradient(
       1100px 520px at 16% -10%,
-      rgba(37, 99, 235, 0.18) 0%,
+      rgba(37, 99, 235, 0.12) 0%,
       transparent 60%
     ),
-    radial-gradient(900px 520px at 88% 0%, rgba(249, 115, 22, 0.12) 0%, transparent 60%),
-    repeating-linear-gradient(0deg, rgba(15, 23, 42, 0.04), rgba(15, 23, 42, 0.04) 1px, transparent 1px, transparent 32px),
-    repeating-linear-gradient(90deg, rgba(15, 23, 42, 0.03), rgba(15, 23, 42, 0.03) 1px, transparent 1px, transparent 32px);
+    radial-gradient(900px 520px at 88% 0%, rgba(249, 115, 22, 0.08) 0%, transparent 60%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(15, 23, 42, 0.035),
+      rgba(15, 23, 42, 0.035) 1px,
+      transparent 1px,
+      transparent 36px
+    );
 }
 
 .WorkspaceHeader {
@@ -128,6 +137,46 @@
   white-space: nowrap;
 }
 
+.OutputCenterTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.OutputCenterDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.95);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+  animation: pulseDot 1.6s ease-in-out infinite;
+}
+
+.OutputClearButton {
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ws-text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+
+.OutputClearButton:hover:not(:disabled) {
+  border-color: rgba(37, 99, 235, 0.4);
+  color: rgba(30, 64, 175, 0.95);
+  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.12);
+}
+
+.OutputClearButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
 .WorkspaceTabs {
   display: none;
   gap: 8px;
@@ -163,12 +212,23 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   border-radius: 18px;
   border: 1px solid var(--ws-border);
-  background: linear-gradient(180deg, var(--ws-surface) 0%, rgba(255, 255, 255, 0.78) 100%);
-  box-shadow: var(--ws-shadow);
+  background: var(--ws-panel-bg, var(--ws-side-bg));
+  box-shadow: var(--ws-shadow-soft);
   overflow: hidden;
   animation: panelIn 0.4s ease-out;
+}
+
+.WorkspacePanel--sources,
+.WorkspacePanel--refine {
+  --ws-panel-bg: var(--ws-side-bg);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.6), transparent);
+}
+
+.WorkspacePanel--chat {
+  --ws-panel-bg: var(--ws-center-bg);
 }
 
 .WorkspacePanelHeader {
@@ -178,21 +238,30 @@
   gap: 12px;
   padding: 12px 16px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(255, 255, 255, 0.75);
+  background: transparent;
 }
 
 .WorkspacePanelTitle {
   margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.2px;
 }
 
+.WorkspacePanelHeader--refine {
+  align-items: center;
+}
+
 .WorkspacePanelBody {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow: auto;
   padding: 16px;
+  background: transparent;
 }
 
 .WorkspacePanelBody--chat {
@@ -200,6 +269,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .WorkspaceSection {
@@ -280,6 +350,66 @@
   gap: 10px;
 }
 
+.CitationActionBar {
+  position: sticky;
+  bottom: 0;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 14px 24px rgba(37, 99, 235, 0.12);
+  backdrop-filter: blur(6px);
+  z-index: 2;
+}
+
+.CitationActionMeta {
+  font-size: 12px;
+  color: var(--ws-text-muted);
+}
+
+.CitationActionButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ActionButton {
+  border-radius: 10px;
+  padding: 6px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(248, 250, 252, 0.9);
+  color: var(--ws-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.ActionButton:hover {
+  border-color: rgba(37, 99, 235, 0.4);
+  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.12);
+}
+
+.ActionButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+.ActionButton.isPrimary {
+  border-color: rgba(37, 99, 235, 0.4);
+  background: rgba(37, 99, 235, 0.12);
+  color: rgba(30, 64, 175, 0.95);
+}
+
 .WorkspaceListItem {
   display: flex;
   align-items: center;
@@ -297,6 +427,11 @@
   border-color: rgba(37, 99, 235, 0.35);
   box-shadow: 0 12px 25px rgba(15, 23, 42, 0.08);
   transform: translateY(-1px);
+}
+
+.WorkspaceListItem.isFailed {
+  border-color: rgba(220, 38, 38, 0.45);
+  background: rgba(254, 242, 242, 0.7);
 }
 
 .WorkspaceListItem--compact {
@@ -319,6 +454,42 @@
 .WorkspaceListItem__title {
   font-size: 13px;
   font-weight: 600;
+}
+
+.SourceItemButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.SourceItemButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.SourceRetry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(185, 28, 28, 0.9);
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(254, 226, 226, 0.7);
+}
+
+.SourceRetry__icon {
+  width: 14px;
+  height: 14px;
 }
 
 .WorkspaceListItem__sub {
@@ -497,6 +668,7 @@
   overflow: auto;
   overflow-x: hidden;
   min-height: 0;
+  min-width: 0;
 }
 
 .ChatMessage {
@@ -504,6 +676,7 @@
   flex-direction: column;
   gap: 6px;
   margin-bottom: 14px;
+  min-width: 0;
 }
 
 .ChatMessage__meta {
@@ -522,6 +695,7 @@
   word-break: break-word;
   overflow-wrap: anywhere;
   max-width: min(100%, 560px);
+  min-width: 0;
 }
 
 .ChatMessage.isUser {
@@ -533,6 +707,12 @@
   border-color: rgba(37, 99, 235, 0.32);
 }
 
+.ChatMessage.isHighlighted .ChatMessage__bubble {
+  border-color: rgba(249, 115, 22, 0.6);
+  box-shadow: 0 10px 18px rgba(249, 115, 22, 0.18);
+  background: rgba(255, 247, 237, 0.9);
+}
+
 .ChatStatus {
   font-size: 12px;
   color: rgba(37, 99, 235, 0.8);
@@ -542,7 +722,7 @@
 .ChatComposer {
   padding: 12px 16px 16px 16px;
   border-top: 1px solid rgba(148, 163, 184, 0.3);
-  background: rgba(255, 255, 255, 0.9);
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -552,7 +732,7 @@
   width: 100%;
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(255, 255, 255, 0.98);
+  background: #ffffff;
   color: var(--ws-text);
   padding: 10px 12px;
   font-size: 14px;
@@ -603,9 +783,9 @@
   gap: 12px;
   border-radius: 16px;
   padding: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: var(--ws-surface-strong);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
 }
 
 .RefineCard__header {
@@ -633,6 +813,135 @@
   border: 1px solid rgba(148, 163, 184, 0.4);
   background: rgba(248, 250, 252, 0.9);
   color: var(--ws-text-muted);
+}
+
+.RefineCard__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+
+.IconButton {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.9);
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(15, 23, 42, 0.7);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.IconButton svg {
+  width: 18px;
+  height: 18px;
+}
+
+.IconButton:hover:not(:disabled) {
+  border-color: rgba(37, 99, 235, 0.4);
+  color: rgba(30, 64, 175, 0.95);
+  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.15);
+  transform: translateY(-1px);
+}
+
+.IconButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  box-shadow: none;
+  transform: none;
+}
+
+.OutputConfigPanel {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  width: 260px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.12);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  z-index: 5;
+}
+
+.OutputConfigItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(248, 250, 252, 0.8);
+}
+
+.OutputConfigItem.isDisabled {
+  opacity: 0.65;
+}
+
+.OutputConfigTitle {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.OutputConfigHint {
+  font-size: 11px;
+  color: var(--ws-text-muted);
+  margin-top: 2px;
+}
+
+.Switch {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.Switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.Switch input:disabled ~ .SwitchTrack,
+.Switch input:disabled ~ .SwitchThumb {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.SwitchTrack {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.4);
+  transition: background 0.2s ease;
+}
+
+.SwitchThumb {
+  position: absolute;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: white;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.Switch input:checked + .SwitchTrack {
+  background: rgba(37, 99, 235, 0.7);
+}
+
+.Switch input:checked + .SwitchTrack + .SwitchThumb {
+  transform: translateX(16px);
 }
 
 .RefineTemplates {
@@ -733,6 +1042,232 @@
 .RefineActions {
   display: flex;
   justify-content: flex-end;
+}
+
+.OutputQueueStatus {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: rgba(239, 246, 255, 0.8);
+  margin: 16px 0 12px 0;
+}
+
+.OutputQueueStatus__text {
+  font-size: 12px;
+  color: rgba(30, 64, 175, 0.95);
+  font-weight: 600;
+}
+
+.OutputQueueProgress {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.25);
+  overflow: hidden;
+}
+
+.OutputQueueProgress__bar {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.8), rgba(37, 99, 235, 0.4));
+  transition: width 0.3s ease;
+}
+
+.OutputList {
+  display: grid;
+  gap: 12px;
+}
+
+.OutputEmpty {
+  border-radius: 16px;
+  border: 1px dashed rgba(148, 163, 184, 0.5);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 24px;
+  text-align: center;
+  display: grid;
+  gap: 8px;
+  place-items: center;
+}
+
+.OutputEmpty__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(249, 115, 22, 0.12));
+  position: relative;
+}
+
+.OutputEmpty__icon::before,
+.OutputEmpty__icon::after {
+  content: '';
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.35);
+}
+
+.OutputEmpty__icon::before {
+  width: 16px;
+  height: 16px;
+  top: 12px;
+  left: 12px;
+}
+
+.OutputEmpty__icon::after {
+  width: 24px;
+  height: 24px;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(249, 115, 22, 0.35);
+}
+
+.OutputEmpty__title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.OutputEmpty__subtitle {
+  font-size: 12px;
+  color: var(--ws-text-muted);
+}
+
+.RefineResultCard {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+  padding: 14px 16px;
+  display: grid;
+  gap: 10px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.RefineResultCard:hover {
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+}
+
+.RefineResultCard.isLoading {
+  border-style: dashed;
+  background: rgba(248, 250, 252, 0.95);
+}
+
+.RefineResultCard.isPinned {
+  border-color: rgba(249, 115, 22, 0.4);
+  box-shadow: 0 16px 30px rgba(249, 115, 22, 0.12);
+}
+
+.RefineResultCard.isNew {
+  animation: cardFlash 1.4s ease-out;
+}
+
+.RefineResultCard__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.RefineResultCard__title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.RefineResultCard__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ws-text-muted);
+  margin-top: 4px;
+}
+
+.RefineResultStatus {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(241, 245, 249, 0.9);
+}
+
+.RefineResultStatus.is-queued {
+  color: var(--ws-text-muted);
+}
+
+.RefineResultStatus.is-running {
+  border-color: rgba(37, 99, 235, 0.4);
+  background: rgba(219, 234, 254, 0.8);
+  color: rgba(30, 64, 175, 0.9);
+}
+
+.RefineResultStatus.is-done {
+  border-color: rgba(22, 163, 74, 0.35);
+  background: rgba(220, 252, 231, 0.8);
+  color: rgba(22, 101, 52, 0.9);
+}
+
+.RefineResultStatus.is-error {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(254, 226, 226, 0.85);
+  color: rgba(185, 28, 28, 0.9);
+}
+
+.RefineResultCard__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.RefineResultCard__hint {
+  font-size: 11px;
+  color: rgba(22, 163, 74, 0.9);
+}
+
+.RefineResultCard__prompt {
+  font-size: 12px;
+  color: var(--ws-text-muted);
+  background: rgba(248, 250, 252, 0.8);
+  border-radius: 10px;
+  padding: 6px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  word-break: break-word;
+}
+
+.RefineResultCard__content {
+  font-size: 13px;
+  color: var(--ws-text);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.RefineResultCard__placeholder {
+  display: grid;
+  gap: 6px;
+}
+
+.RefineResultCard__line {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(226, 232, 240, 0.9),
+    rgba(241, 245, 249, 0.9)
+  );
+}
+
+.RefineResultCard__line.isShort {
+  width: 70%;
+}
+
+.RefineResultCard__error {
+  color: rgba(185, 28, 28, 0.95);
+  background: rgba(254, 226, 226, 0.6);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.RefineResultCard__empty {
+  font-size: 12px;
+  color: var(--ws-text-muted);
 }
 
 .RefineModes {
@@ -877,6 +1412,7 @@
 .RefineParagraph {
   margin: 0;
   line-height: 1.6;
+  white-space: pre-wrap;
 }
 
 .RefineBullets {
@@ -922,6 +1458,27 @@
   }
 }
 
+@keyframes pulseDot {
+  0% {
+    transform: scale(1);
+  }
+  70% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes cardFlash {
+  0% {
+    box-shadow: 0 0 0 rgba(249, 115, 22, 0.35);
+  }
+  100% {
+    box-shadow: 0 16px 30px rgba(249, 115, 22, 0.12);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .WorkspacePanel {
     animation: none;
@@ -929,8 +1486,11 @@
 
   .WorkspaceListItem,
   .PrimaryButton,
-  .UploadButton {
+  .UploadButton,
+  .OutputCenterDot,
+  .RefineResultCard.isNew {
     transition: none;
+    animation: none;
   }
 }
 

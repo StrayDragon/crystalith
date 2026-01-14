@@ -48,6 +48,53 @@ function formatTimestamp(value) {
   });
 }
 
+function formatDate(value) {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+}
+
+function buildSourceSummaryPrompt(title) {
+  const safeTitle = title?.trim() || '文档';
+  return `请总结《${safeTitle}》的核心观点`;
+}
+
+function resolveTemplateLabel(prompt, templates) {
+  const normalized = prompt.trim();
+  const match = templates.find((item) => item.prompt.trim() === normalized);
+  return match?.label ?? '自定义';
+}
+
+function buildJobTitle(label, createdAt) {
+  const dateLabel = formatDate(createdAt);
+  return `[${label}] ${dateLabel || '未命名日期'}`;
+}
+
+function formatOutputForCopy(output, mode) {
+  if (!output) return '';
+  if (mode === 'paragraph') return output.paragraph || '';
+  if (mode === 'bullets') {
+    return (output.bullets ?? []).map((item) => `- ${item}`).join('\n');
+  }
+  if (mode === 'structured') {
+    const parts = [];
+    if (output.structured?.title) parts.push(output.structured.title);
+    if (output.structured?.bullets?.length) {
+      parts.push(output.structured.bullets.map((item) => `- ${item}`).join('\n'));
+    }
+    if (output.structured?.terms?.length) {
+      parts.push(`关键术语：${output.structured.terms.join('、')}`);
+    }
+    return parts.join('\n');
+  }
+  return '';
+}
+
 function normalizeNotebook(row) {
   return {
     id: Number(row.id),
@@ -96,6 +143,12 @@ function normalizeCitation(row) {
   };
 }
 
+function collectChunkIds(citations) {
+  return (citations ?? [])
+    .map((citation) => citation.chunkId)
+    .filter((value) => Number.isFinite(value) && value > 0);
+}
+
 function WorkspaceHeader({ notebooks, activeNotebookId, onNotebookChange, statusLabel }) {
   const activeNotebook = notebooks.find((n) => n.id === activeNotebookId) ?? null;
 
@@ -103,7 +156,7 @@ function WorkspaceHeader({ notebooks, activeNotebookId, onNotebookChange, status
     <header className="WorkspaceHeader">
       <div className="WorkspaceHeader__left">
         <div className="WorkspaceBrand">研究工作台</div>
-        <div className="WorkspaceMeta">三栏：来源 / 聊天 / 提炼</div>
+        <div className="WorkspaceMeta">三栏：来源 / 聊天 / 输出中心</div>
       </div>
 
       <div className="WorkspaceHeader__center">
@@ -141,10 +194,10 @@ function WorkspaceTabs({ activePanel, onChange }) {
   return (
     <nav className="WorkspaceTabs" aria-label="工作区面板切换">
       {[
-        { id: 'sources', label: '来源/引用' },
-        { id: 'chat', label: '聊天' },
-        { id: 'refine', label: '提炼' },
-      ].map((item) => (
+        { id: 'sources', label: '来源与引用' },
+      { id: 'chat', label: '聊天' },
+      { id: 'refine', label: '输出中心' },
+    ].map((item) => (
         <button
           key={item.id}
           type="button"
@@ -168,6 +221,10 @@ function SourcesPanel({
   onSelectAllCitations,
   onClearCitationSelection,
   onToggleAutoSelectCitations,
+  onSourceClick,
+  onSendSelectedCitations,
+  onCompareSelectedCitations,
+  onCitationHover,
   onUpload,
   uploadState,
   isDemo,
@@ -185,6 +242,7 @@ function SourcesPanel({
     (count, citation) => count + (selectedCitationIds[citation.id] ? 1 : 0),
     0,
   );
+  const hasSelection = selectedCount > 0;
 
   return (
     <div className="WorkspacePanelBody">
@@ -259,13 +317,45 @@ function SourcesPanel({
         ) : (
           <ul className="WorkspaceList">
             {sources.map((source) => (
-              <li key={source.id} className="WorkspaceListItem">
-                <div className="WorkspaceListItem__main">
-                  <div className="WorkspaceListItem__title">{source.title}</div>
-                  <div className="WorkspaceListItem__sub">
-                    {source.type} · {source.status}
+              <li
+                key={source.id}
+                className={`WorkspaceListItem ${
+                  source.statusTone === 'FAILED' ? 'isFailed' : ''
+                }`}
+              >
+                <button
+                  type="button"
+                  className="SourceItemButton"
+                  onClick={() => onSourceClick(source)}
+                  disabled={showCreate}
+                >
+                  <div className="WorkspaceListItem__main">
+                    <div className="WorkspaceListItem__title">{source.title}</div>
+                    <div className="WorkspaceListItem__sub">
+                      {source.type} · {source.status}
+                    </div>
                   </div>
-                </div>
+                  {source.statusTone === 'FAILED' ? (
+                    <span className="SourceRetry" title="上传失败，请重新上传">
+                      <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                        focusable="false"
+                        className="SourceRetry__icon"
+                      >
+                        <path
+                          d="M6 8a7 7 0 0 1 11.95-4.95l1.05-1.05V6h-4l1.83-1.83A5 5 0 1 0 17 12h2A7 7 0 0 1 6 8Z"
+                          fill="currentColor"
+                        />
+                        <path
+                          d="M18 16a7 7 0 0 1-11.95 4.95L5 22v-4h4l-1.83 1.83A5 5 0 1 0 7 12H5a7 7 0 0 1 13 4Z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                      重试
+                    </span>
+                  ) : null}
+                </button>
                 <div className={`WorkspaceBadge ${source.statusTone}`}>{source.chunks} 段</div>
               </li>
             ))}
@@ -313,24 +403,52 @@ function SourcesPanel({
             暂无引用。发送一次消息后这里会展示引用片段（可勾选作为提炼输入）。
           </div>
         ) : (
-          <ul className="WorkspaceList">
-            {citations.map((c) => (
-              <li key={c.id} className="WorkspaceListItem WorkspaceListItem--compact">
-                <input
-                  type="checkbox"
-                  className="WorkspaceCheckbox"
-                  checked={Boolean(selectedCitationIds[c.id])}
-                  onChange={() => onToggleCitation(c.id)}
-                  aria-label={`选择引用：${c.sourceTitle} #${c.chunkIndex}`}
-                />
-                <div className="WorkspaceListItem__main">
-                  <div className="WorkspaceListItem__title">{c.sourceTitle}</div>
-                  <div className="WorkspaceListItem__sub">{c.snippet}</div>
+          <>
+            <ul className="WorkspaceList">
+              {citations.map((c) => (
+                <li
+                  key={c.id}
+                  className="WorkspaceListItem WorkspaceListItem--compact"
+                  onMouseEnter={() => onCitationHover(c.chunkId)}
+                  onMouseLeave={() => onCitationHover(null)}
+                >
+                  <input
+                    type="checkbox"
+                    className="WorkspaceCheckbox"
+                    checked={Boolean(selectedCitationIds[c.id])}
+                    onChange={() => onToggleCitation(c.id)}
+                    aria-label={`选择引用：${c.sourceTitle} #${c.chunkIndex}`}
+                  />
+                  <div className="WorkspaceListItem__main">
+                    <div className="WorkspaceListItem__title">{c.sourceTitle}</div>
+                    <div className="WorkspaceListItem__sub">{c.snippet}</div>
+                  </div>
+                  <div className="WorkspaceBadge"># {c.chunkIndex}</div>
+                </li>
+              ))}
+            </ul>
+            {hasSelection ? (
+              <div className="CitationActionBar">
+                <div className="CitationActionMeta">已选 {selectedCount} 条引用</div>
+                <div className="CitationActionButtons">
+                  <button
+                    type="button"
+                    className="ActionButton"
+                    onClick={onSendSelectedCitations}
+                  >
+                    发送至右侧提炼
+                  </button>
+                  <button
+                    type="button"
+                    className="ActionButton isPrimary"
+                    onClick={onCompareSelectedCitations}
+                  >
+                    生成对比分析
+                  </button>
                 </div>
-                <div className="WorkspaceBadge"># {c.chunkIndex}</div>
-              </li>
-            ))}
-          </ul>
+              </div>
+            ) : null}
+          </>
         )}
       </section>
     </div>
@@ -345,6 +463,8 @@ function ChatPanel({
   isSending,
   notice,
   isBlocked,
+  inputRef,
+  highlightedChunkId,
 }) {
   return (
     <div className="WorkspacePanelBody WorkspacePanelBody--chat">
@@ -353,18 +473,25 @@ function ChatPanel({
           <div className="WorkspaceEmpty">请先创建笔记本，再开始对话。</div>
         ) : messages.length === 0 ? (
           <div className="WorkspaceEmpty">
-            开始对话吧：输入问题或指令，中间显示聊天，右侧可手动生成提炼。
+            开始对话吧：输入问题或指令，中间显示聊天，右侧输出中心可手动触发提炼。
           </div>
         ) : null}
-        {messages.map((message) => (
+        {messages.map((message) => {
+          const isHighlighted =
+            highlightedChunkId &&
+            message.citationChunkIds?.includes(highlightedChunkId);
+          return (
           <div
             key={message.id}
-            className={`ChatMessage ${message.role === 'user' ? 'isUser' : 'isAssistant'}`}
+            className={`ChatMessage ${message.role === 'user' ? 'isUser' : 'isAssistant'} ${
+              isHighlighted ? 'isHighlighted' : ''
+            }`}
           >
             <div className="ChatMessage__meta">{message.role === 'user' ? '你' : '助手'}</div>
             <div className="ChatMessage__bubble">{message.content}</div>
           </div>
-        ))}
+          );
+        })}
         {notice ? <div className="ChatStatus">{notice}</div> : null}
       </div>
 
@@ -378,6 +505,7 @@ function ChatPanel({
         <textarea
           className="ChatInput"
           name="chatPrompt"
+          ref={inputRef}
           value={draft}
           onChange={(e) => onDraftChange(e.target.value)}
           disabled={isSending || isBlocked}
@@ -460,28 +588,28 @@ function RefineTemplateSection({
 function RefinePanel({
   mode,
   onModeChange,
-  output,
-  isLoading,
   isBlocked,
   selectedCitationCount,
   prompt,
   onPromptChange,
   onGenerate,
   templates,
-  queue,
-  activeJobId,
-  onSelectJob,
-  activeError,
+  jobs,
+  onTogglePin,
+  onDeleteJob,
+  settings,
+  onToggleSetting,
+  highlightedJobId,
 }) {
   const promptRef = useRef(null);
+  const configRef = useRef(null);
   const [favoriteTemplateIds, setFavoriteTemplateIds] = useState([]);
   const [recentTemplateIds, setRecentTemplateIds] = useState([]);
-  const hasOutput = Boolean(
-    output?.paragraph || output?.bullets?.length || output?.structured?.title,
-  );
-  const showError = Boolean(activeError);
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [copiedJobId, setCopiedJobId] = useState(null);
   const normalizedPrompt = prompt.trim();
-  const activeTemplate = templates.find((item) => item.prompt === normalizedPrompt) ?? null;
+  const activeTemplate =
+    templates.find((item) => item.prompt.trim() === normalizedPrompt) ?? null;
   const activeTemplateId = activeTemplate?.id ?? null;
   const favoriteSet = useMemo(
     () => new Set(favoriteTemplateIds),
@@ -524,6 +652,35 @@ function RefinePanel({
     done: '已完成',
     error: '失败',
   };
+  const pendingCount = jobs.filter(
+    (job) => job.status === 'queued' || job.status === 'running',
+  ).length;
+  const totalCount = jobs.length;
+  const progress = totalCount
+    ? Math.round(((totalCount - pendingCount) / totalCount) * 100)
+    : 0;
+  const orderedJobs = useMemo(() => {
+    const pinned = [];
+    const normal = [];
+    for (const job of jobs) {
+      if (job.pinned) pinned.push(job);
+      else normal.push(job);
+    }
+    return [...pinned, ...normal];
+  }, [jobs]);
+
+  useEffect(() => {
+    if (!isConfigOpen) return undefined;
+    function handleClick(event) {
+      if (!configRef.current) return;
+      if (configRef.current.contains(event.target)) return;
+      setIsConfigOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+    };
+  }, [isConfigOpen]);
 
   function handleSelectTemplate(item) {
     onPromptChange(item.prompt);
@@ -542,20 +699,95 @@ function RefinePanel({
     );
   }
 
+  async function handleCopyJob(job) {
+    const output = job.outputs?.[mode];
+    const content = formatOutputForCopy(output, mode);
+    if (!content) return;
+    const text = `${job.title}\n${content}`.trim();
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-1000px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopiedJobId(job.id);
+      window.setTimeout(() => {
+        setCopiedJobId((current) => (current === job.id ? null : current));
+      }, 1500);
+    } catch (error) {
+      // noop: clipboard may be blocked
+    }
+  }
+
   return (
     <div className="WorkspacePanelBody">
       <div className="RefineCard">
         <div className="RefineCard__header">
           <div>
-            <div className="RefineCard__title">提炼卡片</div>
+            <div className="RefineCard__title">智能提炼</div>
             <div className="RefineCard__subtitle">
               {selectedCitationCount > 0
-                ? `已选 ${selectedCitationCount} 条引用，将仅基于选中引用生成输出；可选择模板或自定义提示词。`
-                : '选择模板或自定义提示词，加入队列后自动检索引用生成输出。'}
+                ? `已选 ${selectedCitationCount} 条引用，将仅基于选中引用生成输出。`
+                : '选择模板或自定义提示词，点击提炼生成输出。'}
             </div>
           </div>
-          <div className="RefineCard__badge">
-            {queue.length ? `队列 ${queue.length} 项` : '队列为空'}
+          <div className="RefineCard__actions" ref={configRef}>
+            <div className="RefineCard__badge">
+              {totalCount ? `历史 ${totalCount} 条` : '暂无历史'}
+            </div>
+            <button
+              type="button"
+              className="IconButton"
+              aria-label="输出中心配置"
+              aria-expanded={isConfigOpen}
+              onClick={() => setIsConfigOpen((prev) => !prev)}
+              title="输出中心配置"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path
+                  d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Zm9.25 3.75a7.25 7.25 0 0 0-.1-1.2l2-1.56-1.9-3.29-2.38.94a7.5 7.5 0 0 0-2.08-1.2L16.5 2h-4.9l-.29 2.69a7.5 7.5 0 0 0-2.08 1.2l-2.38-.94-1.9 3.29 2 1.56a7.25 7.25 0 0 0 0 2.4l-2 1.56 1.9 3.29 2.38-.94a7.5 7.5 0 0 0 2.08 1.2L11.6 22h4.9l.29-2.69a7.5 7.5 0 0 0 2.08-1.2l2.38.94 1.9-3.29-2-1.56c.07-.39.1-.79.1-1.2Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+            {isConfigOpen ? (
+              <div className="OutputConfigPanel">
+                <div className="OutputConfigItem isDisabled">
+                  <label className="Switch">
+                    <input type="checkbox" checked={settings.autoTrigger} disabled />
+                    <span className="SwitchTrack" />
+                    <span className="SwitchThumb" />
+                  </label>
+                  <div>
+                    <div className="OutputConfigTitle">对话后自动触发提炼</div>
+                    <div className="OutputConfigHint">当前仅支持手动触发</div>
+                  </div>
+                </div>
+                <div className="OutputConfigItem">
+                  <label className="Switch">
+                    <input
+                      type="checkbox"
+                      checked={settings.asyncQueue}
+                      onChange={() => onToggleSetting('asyncQueue')}
+                    />
+                    <span className="SwitchTrack" />
+                    <span className="SwitchThumb" />
+                  </label>
+                  <div>
+                    <div className="OutputConfigTitle">开启后台异步队列</div>
+                    <div className="OutputConfigHint">任务在后台依序生成输出</div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="RefineTemplates">
@@ -621,86 +853,162 @@ function RefinePanel({
             onClick={onGenerate}
             disabled={isBlocked || prompt.trim().length === 0}
           >
-            加入队列
+            立即提炼
           </button>
         </div>
       </div>
 
-      <div className="RefineQueue">
-        <div className="RefineQueue__header">
-          <div className="RefineQueue__title">提炼队列</div>
-          <div className="RefineQueue__meta">点击任务切换结果</div>
+      {pendingCount > 0 ? (
+        <div className="OutputQueueStatus">
+          <div className="OutputQueueStatus__text">{pendingCount} 个任务处理中…</div>
+          <div className="OutputQueueProgress" aria-hidden="true">
+            <div
+              className="OutputQueueProgress__bar"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
         </div>
-        {queue.length === 0 ? (
-          <div className="WorkspaceEmpty">队列为空，先添加一个提炼任务。</div>
-        ) : (
-          <div className="RefineQueue__list">
-            {queue.map((job) => (
-              <button
-                key={job.id}
-                type="button"
-                className={`RefineQueueItem ${job.id === activeJobId ? 'isActive' : ''}`}
-                onClick={() => onSelectJob(job.id)}
-              >
-                <div className="RefineQueueItem__top">
-                  <span className={`RefineQueueItem__status is-${job.status}`}>
-                    {statusLabels[job.status]}
-                  </span>
-                  <span className="RefineQueueItem__meta">
-                    {job.chunkIds?.length ? `引用 ${job.chunkIds.length}` : '自动检索'}
-                  </span>
-                  <span className="RefineQueueItem__time">{job.createdAtLabel}</span>
-                </div>
-                <div className="RefineQueueItem__prompt">{job.prompt}</div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      ) : null}
 
-      <div className="RefineOutputBlock">
-        {!hasOutput ? (
-          <div className="WorkspaceEmpty">
-            {isBlocked
-              ? '请先创建笔记本。'
-              : showError
-                ? activeError
-                : isLoading
-                  ? '正在生成提炼结果…'
-                  : '暂无输出，选择队列任务查看结果。'}
+      <div className="OutputList" aria-label="输出历史">
+        {orderedJobs.length === 0 ? (
+          <div className="OutputEmpty">
+            <div className="OutputEmpty__icon" aria-hidden="true" />
+            <div className="OutputEmpty__title">暂无输出历史</div>
+            <div className="OutputEmpty__subtitle">
+              点击左侧按钮或通过聊天触发智能提炼
+            </div>
           </div>
         ) : (
-          <div className="RefineOutput" aria-label="提炼结果">
-            {mode === 'paragraph' ? <p className="RefineParagraph">{output.paragraph}</p> : null}
-            {mode === 'bullets' ? (
-              <ul className="RefineBullets">
-                {output.bullets.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            ) : null}
-            {mode === 'structured' && output.structured ? (
-              <div className="RefineStructured">
-                <div className="RefineStructured__title">
-                  {output.structured.title || '未命名主题'}
-                </div>
-                <ul className="RefineStructured__bullets">
-                  {output.structured.bullets?.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-                {output.structured.terms?.length ? (
-                  <div className="RefineStructured__terms">
-                    {output.structured.terms.map((term) => (
-                      <span key={term} className="RefineTag">
-                        {term}
+          orderedJobs.map((job) => {
+            const output = job.outputs?.[mode];
+            const hasOutput = Boolean(
+              output?.paragraph ||
+                output?.bullets?.length ||
+                output?.structured?.title ||
+                output?.structured?.bullets?.length ||
+                output?.structured?.terms?.length,
+            );
+            const isPending = job.status === 'queued' || job.status === 'running';
+            const timeLabel = job.completedAtLabel ?? job.createdAtLabel;
+            return (
+              <div
+                key={job.id}
+                className={`RefineResultCard ${
+                  job.pinned ? 'isPinned' : ''
+                } ${isPending ? 'isLoading' : ''} ${
+                  highlightedJobId === job.id ? 'isNew' : ''
+                }`}
+              >
+                <div className="RefineResultCard__header">
+                  <div>
+                    <div className="RefineResultCard__title">{job.title}</div>
+                    <div className="RefineResultCard__meta">
+                      <span className={`RefineResultStatus is-${job.status}`}>
+                        {statusLabels[job.status]}
                       </span>
-                    ))}
+                      <span>
+                        {job.chunkIds?.length ? `引用 ${job.chunkIds.length}` : '自动检索'}
+                      </span>
+                      <span>{timeLabel}</span>
+                    </div>
                   </div>
-                ) : null}
+                  <div className="RefineResultCard__actions">
+                    {copiedJobId === job.id ? (
+                      <span className="RefineResultCard__hint">已复制</span>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="IconButton"
+                      aria-label={job.pinned ? '取消固定' : '固定结果'}
+                      aria-pressed={job.pinned}
+                      onClick={() => onTogglePin(job.id)}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path
+                          d="M6 3h12l-3 5v5l2 2v1H7v-1l2-2V8L6 3Z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="IconButton"
+                      aria-label="复制结果"
+                      onClick={() => handleCopyJob(job)}
+                      disabled={!hasOutput}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path
+                          d="M9 8h9a2 2 0 0 1 2 2v9h-9a2 2 0 0 1-2-2V8Z"
+                          fill="currentColor"
+                        />
+                        <path
+                          d="M6 5h9a2 2 0 0 1 2 2H8a2 2 0 0 0-2 2v9H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="IconButton"
+                      aria-label="删除结果"
+                      onClick={() => onDeleteJob(job.id)}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path
+                          d="M8 6h8l-.6 14H8.6L8 6Zm9-2h-4l-1-2h-2l-1 2H7v2h10V4Z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="RefineResultCard__prompt">{job.prompt}</div>
+                <div className="RefineResultCard__content">
+                  {job.status === 'error' ? (
+                    <div className="RefineResultCard__error">{job.error}</div>
+                  ) : isPending ? (
+                    <div className="RefineResultCard__placeholder">
+                      <div className="RefineResultCard__line" />
+                      <div className="RefineResultCard__line isShort" />
+                      <div className="RefineResultCard__line" />
+                    </div>
+                  ) : !hasOutput ? (
+                    <div className="RefineResultCard__empty">暂无内容</div>
+                  ) : mode === 'paragraph' ? (
+                    <p className="RefineParagraph">{output.paragraph}</p>
+                  ) : mode === 'bullets' ? (
+                    <ul className="RefineBullets">
+                      {output.bullets.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : mode === 'structured' && output.structured ? (
+                    <div className="RefineStructured">
+                      <div className="RefineStructured__title">
+                        {output.structured.title || '未命名主题'}
+                      </div>
+                      <ul className="RefineStructured__bullets">
+                        {output.structured.bullets?.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                      {output.structured.terms?.length ? (
+                        <div className="RefineStructured__terms">
+                          {output.structured.terms.map((term) => (
+                            <span key={term} className="RefineTag">
+                              {term}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
               </div>
-            ) : null}
-          </div>
+            );
+          })
         )}
       </div>
     </div>
@@ -783,6 +1091,12 @@ export default function WorkspacePage() {
         group: '分析',
       },
       {
+        id: 'compare-analysis',
+        label: '对比分析',
+        prompt: '基于选中引用生成对比分析，输出相同点 / 差异点 / 结论。',
+        group: '分析',
+      },
+      {
         id: 'questions',
         label: '问题清单',
         prompt: '列出尚待验证的问题与需要补充的信息。',
@@ -803,6 +1117,8 @@ export default function WorkspacePage() {
     ],
     [],
   );
+  const compareTemplate =
+    refineTemplates.find((item) => item.id === 'compare-analysis') ?? null;
 
   const [notebooks, setNotebooks] = useState([]);
   const [sources, setSources] = useState([]);
@@ -813,10 +1129,16 @@ export default function WorkspacePage() {
   const [citations, setCitations] = useState([]);
   const [selectedCitationIds, setSelectedCitationIds] = useState({});
   const [autoSelectCitations, setAutoSelectCitations] = useState(false);
+  const [hoveredCitationChunkId, setHoveredCitationChunkId] = useState(null);
   const [refineMode, setRefineMode] = useState('paragraph');
   const [refinePrompt, setRefinePrompt] = useState('');
   const [refineJobs, setRefineJobs] = useState([]);
-  const [activeRefineJobId, setActiveRefineJobId] = useState(null);
+  const [refineSettings, setRefineSettings] = useState({
+    autoTrigger: false,
+    asyncQueue: true,
+  });
+  const [hasNewOutput, setHasNewOutput] = useState(false);
+  const [recentCompletedJobId, setRecentCompletedJobId] = useState(null);
   const [createState, setCreateState] = useState('idle');
   const [createName, setCreateName] = useState('');
   const [connectionState, setConnectionState] = useState('connecting');
@@ -824,14 +1146,16 @@ export default function WorkspacePage() {
   const [loadingState, setLoadingState] = useState({
     notebooks: false,
     sources: false,
-    refine: false,
     send: false,
   });
   const [errors, setErrors] = useState({ notebooks: '', sources: '', send: '', create: '' });
   const createInputRef = useRef(null);
+  const chatInputRef = useRef(null);
   const refineQueueRef = useRef([]);
   const refineRunningRef = useRef(false);
   const runNextRefineJobRef = useRef(() => {});
+  const activePanelRef = useRef(activePanel);
+  const [pendingChatFocus, setPendingChatFocus] = useState(false);
 
   const isDemo = connectionState === 'demo';
   const activeNotebook = notebooks.find((n) => n.id === activeNotebookId) ?? null;
@@ -845,16 +1169,6 @@ export default function WorkspacePage() {
     return { text: '已连接', tone: 'isLive', tooltip: '已连接到后端服务' };
   }, [connectionState]);
 
-  const activeRefineJob =
-    refineJobs.find((job) => job.id === activeRefineJobId) ?? refineJobs[0] ?? null;
-  const currentRefineOutput =
-    activeRefineJob?.outputs?.[refineMode] ?? {
-      paragraph: '',
-      bullets: [],
-      structured: null,
-      evidence: false,
-    };
-
   runNextRefineJobRef.current = runNextRefineJob;
 
   const selectedChunkIds = useMemo(
@@ -865,6 +1179,25 @@ export default function WorkspacePage() {
         .filter((value) => Number.isFinite(value) && value > 0),
     [citations, selectedCitationIds],
   );
+
+  useEffect(() => {
+    activePanelRef.current = activePanel;
+    if (activePanel === 'refine') {
+      setHasNewOutput(false);
+    }
+  }, [activePanel]);
+
+  useEffect(() => {
+    if (!pendingChatFocus) return;
+    if (activePanel !== 'chat') return;
+    const input = chatInputRef.current;
+    if (input) {
+      input.focus();
+      const length = input.value.length;
+      input.setSelectionRange(length, length);
+    }
+    setPendingChatFocus(false);
+  }, [pendingChatFocus, activePanel]);
 
   useEffect(() => {
     setSelectedCitationIds((prev) => {
@@ -879,6 +1212,10 @@ export default function WorkspacePage() {
       return next;
     });
   }, [citations, autoSelectCitations]);
+
+  useEffect(() => {
+    setHoveredCitationChunkId(null);
+  }, [citations]);
 
   useEffect(() => {
     let cancelled = false;
@@ -949,8 +1286,10 @@ export default function WorkspacePage() {
     setCitations([]);
     setSelectedCitationIds({});
     setAutoSelectCitations(false);
+    setHoveredCitationChunkId(null);
     updateRefineQueue(() => []);
-    setActiveRefineJobId(null);
+    setHasNewOutput(false);
+    setRecentCompletedJobId(null);
     setRefinePrompt(refineTemplates[0]?.prompt ?? '');
     return () => {
       cancelled = true;
@@ -1029,6 +1368,16 @@ export default function WorkspacePage() {
     setRefineJobs(next);
   }
 
+  function markJobCompleted(jobId) {
+    if (activePanelRef.current !== 'refine') {
+      setHasNewOutput(true);
+    }
+    setRecentCompletedJobId(jobId);
+    window.setTimeout(() => {
+      setRecentCompletedJobId((current) => (current === jobId ? null : current));
+    }, 2000);
+  }
+
   function runNextRefineJob() {
     if (refineRunningRef.current) return;
     const nextJob = refineQueueRef.current.find((job) => job.status === 'queued');
@@ -1042,7 +1391,6 @@ export default function WorkspacePage() {
   }
 
   async function processRefineJob(jobId, prompt, chunkIds) {
-    setLoadingState((prev) => ({ ...prev, refine: true }));
     try {
       let normalizedOutputs = {};
       let response = null;
@@ -1057,6 +1405,7 @@ export default function WorkspacePage() {
         normalizedOutputs = normalizeRefineOutputs(response.outputs ?? {}, response.evidence);
       }
 
+      const completedAt = new Date().toISOString();
       updateRefineQueue((prev) =>
         prev.map((job) =>
           job.id === jobId
@@ -1065,14 +1414,18 @@ export default function WorkspacePage() {
                 status: 'done',
                 outputs: normalizedOutputs,
                 error: '',
+                completedAt,
+                completedAtLabel: formatTimestamp(completedAt),
               }
             : job,
         ),
       );
+      markJobCompleted(jobId);
       if (response?.citations) {
         setCitations(response.citations.map(normalizeCitation));
       }
     } catch (error) {
+      const completedAt = new Date().toISOString();
       updateRefineQueue((prev) =>
         prev.map((job) =>
           job.id === jobId
@@ -1080,16 +1433,90 @@ export default function WorkspacePage() {
                 ...job,
                 status: 'error',
                 error: '提炼失败，请稍后重试。',
+                completedAt,
+                completedAtLabel: formatTimestamp(completedAt),
               }
             : job,
         ),
       );
+      markJobCompleted(jobId);
       setErrors((prev) => ({ ...prev, send: '提炼生成失败，请稍后重试。' }));
     } finally {
-      setLoadingState((prev) => ({ ...prev, refine: false }));
       refineRunningRef.current = false;
       runNextRefineJob();
     }
+  }
+
+  function enqueueRefineJob({ prompt: jobPrompt, chunkIds, label }) {
+    const createdAt = new Date().toISOString();
+    const jobLabel = label ?? resolveTemplateLabel(jobPrompt, refineTemplates);
+    const job = {
+      id: createId(),
+      prompt: jobPrompt,
+      status: 'queued',
+      chunkIds,
+      outputs: null,
+      error: '',
+      createdAt,
+      createdAtLabel: formatTimestamp(createdAt),
+      completedAt: null,
+      completedAtLabel: '',
+      pinned: false,
+      title: buildJobTitle(jobLabel, createdAt),
+    };
+    updateRefineQueue((prev) => [job, ...prev]);
+    return job;
+  }
+
+  function handleToggleRefinePin(jobId) {
+    updateRefineQueue((prev) =>
+      prev.map((job) => (job.id === jobId ? { ...job, pinned: !job.pinned } : job)),
+    );
+  }
+
+  function handleDeleteRefineJob(jobId) {
+    updateRefineQueue((prev) => prev.filter((job) => job.id !== jobId));
+  }
+
+  function handleClearRefineJobs() {
+    refineRunningRef.current = false;
+    updateRefineQueue(() => []);
+    setHasNewOutput(false);
+    setRecentCompletedJobId(null);
+  }
+
+  function handleToggleRefineSetting(key) {
+    setRefineSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function handleSourceClick(source) {
+    const nextPrompt = buildSourceSummaryPrompt(source.title);
+    setDraft(nextPrompt);
+    setActivePanel('chat');
+    setPendingChatFocus(true);
+  }
+
+  function handleSendSelectedCitations() {
+    if (!selectedChunkIds.length) return;
+    handleRefineGenerate();
+  }
+
+  function handleCompareSelectedCitations() {
+    if (!selectedChunkIds.length) return;
+    if (!activeNotebookId && !isDemo) {
+      setErrors((prev) => ({ ...prev, send: '请先创建笔记本。' }));
+      return;
+    }
+    const promptText =
+      compareTemplate?.prompt ??
+      '基于选中引用生成对比分析，输出相同点 / 差异点 / 结论。';
+    setRefinePrompt(promptText);
+    enqueueRefineJob({
+      prompt: promptText,
+      chunkIds: [...selectedChunkIds],
+      label: compareTemplate?.label ?? '对比分析',
+    });
+    setActivePanel('refine');
   }
 
   function handleToggleCitation(citationId) {
@@ -1146,20 +1573,13 @@ export default function WorkspacePage() {
     }
     const trimmed = refinePrompt.trim();
     if (!trimmed) return;
-    const createdAt = new Date().toISOString();
     const chunkIdsSnapshot = selectedChunkIds.length ? [...selectedChunkIds] : [];
-    const job = {
-      id: createId(),
+    enqueueRefineJob({
       prompt: trimmed,
-      status: 'queued',
       chunkIds: chunkIdsSnapshot,
-      outputs: null,
-      error: '',
-      createdAt,
-      createdAtLabel: formatTimestamp(createdAt),
-    };
-    updateRefineQueue((prev) => [...prev, job]);
-    setActiveRefineJobId(job.id);
+      label: resolveTemplateLabel(trimmed, refineTemplates),
+    });
+    setActivePanel('refine');
   }
 
   async function sendMessage() {
@@ -1176,13 +1596,7 @@ export default function WorkspacePage() {
     setErrors((prev) => ({ ...prev, send: '' }));
 
     if (isDemo) {
-      const assistantMessage = {
-        id: createId(),
-        role: 'assistant',
-        content: `（演示）已收到：${text}`,
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-      setCitations([
+      const demoCitations = [
         {
           id: '101',
           chunkId: 101,
@@ -1197,7 +1611,15 @@ export default function WorkspacePage() {
           snippet: '...对话区域需要始终可用，提炼区域用于结构化输出。',
           chunkIndex: 1,
         },
-      ]);
+      ];
+      const assistantMessage = {
+        id: createId(),
+        role: 'assistant',
+        content: `（演示）已收到：${text}`,
+        citationChunkIds: collectChunkIds(demoCitations),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+      setCitations(demoCitations);
       setActivePanel('chat');
       return;
     }
@@ -1205,14 +1627,16 @@ export default function WorkspacePage() {
     setLoadingState((prev) => ({ ...prev, send: true }));
     try {
       const qaResult = await askQuestion(activeNotebookId, text);
+      const normalizedCitations = qaResult.citations?.map(normalizeCitation) ?? [];
       const assistantMessage = {
         id: createId(),
         role: 'assistant',
         content: qaResult.answer,
+        citationChunkIds: collectChunkIds(normalizedCitations),
       };
       setMessages((prev) => [...prev, assistantMessage]);
-      if (qaResult.citations) {
-        setCitations(qaResult.citations.map(normalizeCitation));
+      if (normalizedCitations.length) {
+        setCitations(normalizedCitations);
       }
 
       setActivePanel('chat');
@@ -1248,7 +1672,7 @@ export default function WorkspacePage() {
           aria-label="来源与引用"
         >
           <div className="WorkspacePanelHeader">
-            <h2 className="WorkspacePanelTitle">来源/引用</h2>
+            <h2 className="WorkspacePanelTitle">来源与引用</h2>
             <div className="WorkspaceTiny">笔记本：{activeNotebook?.title ?? '-'}</div>
           </div>
           <SourcesPanel
@@ -1260,6 +1684,10 @@ export default function WorkspacePage() {
             onSelectAllCitations={handleSelectAllCitations}
             onClearCitationSelection={handleClearCitationSelection}
             onToggleAutoSelectCitations={handleToggleAutoSelectCitations}
+            onSourceClick={handleSourceClick}
+            onSendSelectedCitations={handleSendSelectedCitations}
+            onCompareSelectedCitations={handleCompareSelectedCitations}
+            onCitationHover={setHoveredCitationChunkId}
             onUpload={handleUpload}
             uploadState={uploadState}
             isDemo={isDemo}
@@ -1282,7 +1710,7 @@ export default function WorkspacePage() {
         >
           <div className="WorkspacePanelHeader">
             <h2 className="WorkspacePanelTitle">聊天</h2>
-            <div className="WorkspaceTiny">输入 → 对话 → 提炼</div>
+            <div className="WorkspaceTiny">输入 → 对话 → 输出中心</div>
           </div>
           <ChatPanel
             messages={messages}
@@ -1292,6 +1720,8 @@ export default function WorkspacePage() {
             isSending={loadingState.send}
             notice={errors.send}
             isBlocked={!activeNotebookId}
+            inputRef={chatInputRef}
+            highlightedChunkId={hoveredCitationChunkId}
           />
         </section>
 
@@ -1299,27 +1729,40 @@ export default function WorkspacePage() {
           className={`WorkspacePanel WorkspacePanel--refine ${
             activePanel === 'refine' ? 'isActive' : ''
           }`}
-          aria-label="提炼"
+          aria-label="输出中心"
         >
-          <div className="WorkspacePanelHeader">
-            <h2 className="WorkspacePanelTitle">提炼</h2>
-            <div className="WorkspaceTiny">手动提炼 · 队列生成</div>
+          <div className="WorkspacePanelHeader WorkspacePanelHeader--refine">
+            <h2 className="WorkspacePanelTitle OutputCenterTitle">
+              输出中心
+              {hasNewOutput ? (
+                <span className="OutputCenterDot" aria-label="有新输出" />
+              ) : null}
+            </h2>
+            <button
+              type="button"
+              className="OutputClearButton"
+              onClick={handleClearRefineJobs}
+              disabled={refineJobs.length === 0}
+              title="清空输出历史"
+            >
+              清空全部
+            </button>
           </div>
           <RefinePanel
             mode={refineMode}
             onModeChange={setRefineMode}
-            output={currentRefineOutput}
-            isLoading={loadingState.refine}
             isBlocked={!activeNotebookId}
             selectedCitationCount={selectedChunkIds.length}
             prompt={refinePrompt}
             onPromptChange={setRefinePrompt}
             onGenerate={handleRefineGenerate}
             templates={refineTemplates}
-            queue={refineJobs}
-            activeJobId={activeRefineJobId}
-            onSelectJob={setActiveRefineJobId}
-            activeError={activeRefineJob?.error ?? ''}
+            jobs={refineJobs}
+            onTogglePin={handleToggleRefinePin}
+            onDeleteJob={handleDeleteRefineJob}
+            settings={refineSettings}
+            onToggleSetting={handleToggleRefineSetting}
+            highlightedJobId={recentCompletedJobId}
           />
         </section>
       </main>
