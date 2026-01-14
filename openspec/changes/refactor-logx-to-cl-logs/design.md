@@ -2,18 +2,17 @@
 
 ## Goals
 - Provide a consistent `cl-*` namespace for shared logging utilities.
-- Keep module layout identical to the existing `lush_logx` API.
+- Keep module layout identical to the existing logging API.
 - Ensure uv workspace sources resolve to the renamed package.
 
 ## Package Mapping
-- Workspace package name: `lush-logx` → `cl-logs`
-- Import path: `lush_logx` → `cl_logs`
-- CLI entry point: `lush-logx-cli-log-parser` → `cl-logs-cli-log-parser`
+- Workspace package name: `cl-logs`
+- Import path: `cl_logs`
 
 ## uv Workspace Handling
 - Keep `packages/*` workspace membership.
 - Add `cl-logs` to `[tool.uv.sources]` in `backend/py/pyproject.toml`.
-- Replace internal dependency on `lush-stdx` with `cl-stdx` to match available workspace packages.
+- Ensure internal dependencies use `cl-stdx` to match available workspace packages.
 
 ## Compatibility
-- This change is **breaking** for any external imports referencing `lush_logx`.
+- This change is **breaking**; external imports must use `cl_logs`.
