@@ -35,6 +35,7 @@ members = ["packages/*"]
 
 [tool.uv.sources]
 cl-fastapix = { workspace = true }
+cl-logs = { workspace = true }
 cl-pydanticx = { workspace = true }
 cl-sqlalchemyx = { workspace = true }
 cl-stdx = { workspace = true }
