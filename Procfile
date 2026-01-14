@@ -1,2 +1,2 @@
-backend-dev: HOST=0.0.0.0 PORT=8032 RELOAD=1 AUTO_DB_INIT=1 just -f backend/py/justfile dev
+backend-dev: HOST=0.0.0.0 PORT=8032 RELOAD=1 AUTO_DB_INIT=1 uv run --project backend/py python backend/py/main.py
 frontend-dev: just -f frontend/web/justfile dev
