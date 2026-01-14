@@ -12,5 +12,8 @@ dev:
 test:
     uv run pytest
 
+test-cl-logs:
+    uv run --project packages/cl-logs --group dev pytest packages/cl-logs/tests
+
 db-init:
     uv run python -c "import asyncio; from crystalith.config import Settings; from crystalith.db import create_all, create_db_manager; s=Settings(); m=create_db_manager(s.database.url); asyncio.run(create_all(m.async_engine))"
