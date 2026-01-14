@@ -19,7 +19,7 @@ description: Archive a deployed OpenSpec change and update specs.
 2. 通过运行 `openspec list`（或 `openspec show <id>`）来验证变更 ID，如果变更缺失、已归档或未准备好归档，则停止。
 3. 运行 `openspec archive <id> --yes`，以便 CLI 在没有提示的情况下移动变更并应用规范更新（对于仅工具类的工作，请使用 `--skip-specs`）。
 4. 查看命令输出以确认目标规范已更新，变更已落在 `changes/archive/` 中。
-5. 使用 `openspec validate --strict` 进行验证，如果看起来有任何问题，请使用 `openspec show <id>` 进行检查。
+5. 使用 `openspec validate --strict --no-interactive` 进行验证，如果看起来有任何问题，请使用 `openspec show <id>` 进行检查。
 
 **参考**
 - 使用 `openspec list` 在归档前确认变更 ID。

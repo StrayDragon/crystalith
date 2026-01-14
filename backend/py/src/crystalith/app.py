@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +11,7 @@ from cl_fastapix import FastAPIX
 from cl_sqlalchemyx.mgrs import AsyncDBManager
 
 from .config import ConfigManager, Settings
-from .db import create_db_manager
+from .db import create_all, create_db_manager
 from .api import notebooks_router, qa_router, refine_router, sources_router
 from .vector_index import InMemoryVectorIndex
 
@@ -24,6 +25,13 @@ def _load_settings() -> Settings:
             manager.write_schema()
         return manager.load()
     return Settings()
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() not in {"0", "false", "no", "off"}
 
 
 def create_app(
@@ -44,6 +52,12 @@ def create_app(
     app.state.settings = resolved
     app.state.db = db_manager or create_db_manager(resolved.database.url)
     app.state.vector_index = vector_index if vector_index is not None else InMemoryVectorIndex()
+
+    if _env_bool("AUTO_DB_INIT", False):
+
+        @app.on_event("startup")
+        async def init_db() -> None:
+            await create_all(app.state.db.async_engine)
 
     @app.get(resolved.app.openapi_ui_path, include_in_schema=False)
     def scalar_docs() -> Response:
