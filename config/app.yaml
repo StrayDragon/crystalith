@@ -19,3 +19,16 @@ chat:
   provider: "openai"
   model: "gpt-5.2"
   openai: *openai_default
+vector_storage:
+  provider: "sqlite"
+  sqlite:
+    path: "./data/vectors.db"
+context_window:
+  max_tokens: 8000
+  compression_strategy: "truncate"
+  window_size: 10
+  priority:
+    - "history"
+    - "retrieval"
+    - "recent"
+    - "system"

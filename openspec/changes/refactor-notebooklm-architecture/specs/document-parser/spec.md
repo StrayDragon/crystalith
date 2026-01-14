@@ -1,21 +1,21 @@
 ## ADDED Requirements
 
 ### Requirement: 文档解析器接口
-系统必须提供 `Parser` 抽象接口，定义文档解析的标准操作。
+系统 MUST提供 `Parser` 抽象接口，定义文档解析的标准操作。
 
 #### Scenario: 定义解析器接口
 - **WHEN** 开发者需要实现新的文档解析器
 - **THEN** 系统提供 `Parser` Protocol，包含 `parse(content: bytes) -> list[Chunk]` 方法
 
 ### Requirement: 文本文档解析
-系统必须支持解析纯文本和 Markdown 文档。
+系统 MUST支持解析纯文本和 Markdown 文档。
 
 #### Scenario: 解析 Markdown 文件
 - **WHEN** 用户上传 `.md` 文件
 - **THEN** 系统使用 `TextParser` 解析内容，按段落分块
 
 ### Requirement: PDF 文档解析
-系统必须支持解析 PDF 文档，提取文本内容。
+系统 MUST支持解析 PDF 文档，提取文本内容。
 
 #### Scenario: 解析 PDF 文件
 - **WHEN** 用户上传 `.pdf` 文件
@@ -26,35 +26,35 @@
 - **THEN** 系统返回解析错误，Source 状态设为 `FAILED`
 
 ### Requirement: 网页内容解析
-系统必须支持解析 HTML 网页内容。
+系统 MUST支持解析 HTML 网页内容。
 
 #### Scenario: 解析网页链接
 - **WHEN** 用户提交网页 URL
 - **THEN** 系统抓取网页内容，使用 `HTMLParser` 提取正文，过滤导航/广告
 
 ### Requirement: 音频内容解析
-系统必须支持解析音频文件，转换为文本。
+系统 MUST支持解析音频文件，转换为文本。
 
 #### Scenario: 解析音频文件
 - **WHEN** 用户上传 `.mp3` 或 `.wav` 文件
 - **THEN** 系统使用 Whisper API 转录音频，生成文本分块
 
 ### Requirement: 视频内容解析
-系统必须支持解析视频文件，提取音频并转换为文本。
+系统 MUST支持解析视频文件，提取音频并转换为文本。
 
 #### Scenario: 解析视频文件
 - **WHEN** 用户上传视频文件或 YouTube 链接
 - **THEN** 系统提取音频轨道，使用 Whisper API 转录，生成文本分块
 
 ### Requirement: 解析器工厂
-系统必须提供 `ParserFactory`，根据文件类型自动选择合适的解析器。
+系统 MUST提供 `ParserFactory`，根据文件类型自动选择合适的解析器。
 
 #### Scenario: 自动选择解析器
 - **WHEN** 用户上传文件
 - **THEN** 系统根据 MIME 类型或文件扩展名选择对应的解析器
 
 ### Requirement: 解析元数据
-系统必须在解析过程中提取并保存文档元数据。
+系统 MUST在解析过程中提取并保存文档元数据。
 
 #### Scenario: 保存解析元数据
 - **WHEN** 文档解析完成

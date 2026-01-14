@@ -44,7 +44,7 @@
   }
 
   .WorkspaceSelect {
-    @apply min-w-[180px] rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40;
+    @apply min-w-[180px] rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40 cursor-pointer;
   }
 
   .WorkspacePill {
@@ -72,7 +72,7 @@
   }
 
   .WorkspaceTab {
-    @apply flex-1 rounded-full border border-slate-200/70 bg-white/80 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:text-slate-900;
+    @apply flex-1 rounded-full border border-slate-200/70 bg-white/80 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
   }
 
   .WorkspaceTab.isActive {
@@ -84,7 +84,7 @@
   }
 
   .WorkspacePanel {
-    @apply hidden lg:flex flex-col min-h-0 min-w-0 rounded-2xl border border-white/80 bg-white/70 backdrop-blur-xl shadow-soft overflow-hidden;
+    @apply hidden lg:flex flex-col min-h-0 min-w-0 rounded-2xl border border-white/80 bg-white/70 backdrop-blur-xl shadow-soft overflow-hidden transition-all duration-200;
     animation: panelIn 0.4s ease-out;
   }
 
@@ -142,11 +142,11 @@
   }
 
   .WorkspaceLinkButton {
-    @apply text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline;
+    @apply text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
   }
 
   .WorkspaceToggle {
-    @apply text-xs font-semibold rounded-full border border-slate-200/70 px-3 py-1 text-slate-600 transition hover:text-slate-900;
+    @apply text-xs font-semibold rounded-full border border-slate-200/70 px-3 py-1 text-slate-600 transition hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
   }
 
   .WorkspaceToggle.isActive {
@@ -171,6 +171,14 @@
 
   .WorkspaceListItem.isFailed {
     @apply border-red-200/80 bg-red-50/80;
+  }
+
+  .WorkspaceListItem.isHighlighted {
+    @apply border-orange-300/80 bg-orange-50/70 shadow-soft;
+  }
+
+  .WorkspaceListItem.isHighlighted {
+    @apply border-orange-300/80 bg-orange-50/70 shadow-soft;
   }
 
   .WorkspaceListItem__main {
@@ -201,6 +209,119 @@
     @apply border-red-200/80 text-red-700 bg-red-50;
   }
 
+  .CitationGroups {
+    @apply flex flex-col gap-4;
+  }
+
+  .CitationGroup {
+    @apply rounded-2xl border border-white/80 bg-white/70 px-3 py-3 shadow-sm;
+  }
+
+  .CitationGroupHeader {
+    @apply flex items-center justify-between gap-3 mb-2;
+  }
+
+  .CitationGroupTitle {
+    @apply flex items-center gap-2 text-sm font-semibold text-slate-900;
+  }
+
+  .CitationGroupIcon {
+    @apply inline-flex items-center justify-center w-7 h-7 rounded-xl bg-slate-900/5 text-slate-700;
+  }
+
+  .CitationGroupIcon svg {
+    @apply w-4 h-4;
+  }
+
+  .CitationGroupName {
+    @apply truncate;
+  }
+
+  .CitationGroupCount {
+    @apply text-xs font-semibold text-slate-500;
+  }
+
+  .CitationGroupList {
+    @apply flex flex-col gap-2;
+  }
+
+  .CitationItem {
+    @apply flex items-start gap-3 rounded-2xl border border-white/80 bg-white/80 px-3 py-3 shadow-sm transition-colors;
+  }
+
+  .CitationItem.isHighlighted {
+    @apply border-yellow-300/80 bg-yellow-100 ring-1 ring-yellow-200/70;
+  }
+
+  .CitationCheckbox {
+    @apply mt-1;
+  }
+
+  .CitationHighlight {
+    @apply flex items-center justify-center w-6 h-6 rounded-full border border-transparent text-transparent;
+  }
+
+  .CitationHighlight.isActive {
+    @apply border-yellow-300 bg-yellow-50 text-yellow-600;
+  }
+
+  .CitationHighlight__icon {
+    @apply w-3.5 h-3.5;
+  }
+
+  .CitationContent {
+    @apply flex-1 min-w-0;
+  }
+
+  .CitationMeta {
+    @apply flex items-center gap-2 text-xs text-slate-500;
+  }
+
+  .CitationSnippet {
+    @apply text-sm text-slate-700 mt-1;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .CitationSnippet.isExpanded {
+    display: block;
+    -webkit-line-clamp: initial;
+  }
+
+  .CitationExpand {
+    @apply mt-1 text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline cursor-pointer;
+  }
+
+  .CitationMarkWrapper {
+    @apply relative inline-flex items-center;
+  }
+
+  .CitationMark {
+    @apply inline-flex items-center justify-center rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700 cursor-pointer transition-colors hover:bg-brand-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60;
+  }
+
+  .CitationTooltip {
+    @apply absolute left-0 top-full mt-2 w-64 rounded-xl border border-slate-200/80 bg-white/95 p-3 text-xs text-slate-700 shadow-soft z-50;
+  }
+
+  .CitationTooltip__title {
+    @apply text-xs font-semibold text-slate-900;
+  }
+
+  .CitationTooltip__meta {
+    @apply text-[11px] text-slate-500 mt-1;
+  }
+
+  .CitationTooltip__snippet {
+    @apply text-xs text-slate-600 mt-2;
+  }
+
+  .ChatMessage__citations {
+    @apply mt-2 flex flex-wrap gap-1;
+  }
+
   .WorkspaceEmpty {
     @apply text-sm text-slate-500 rounded-2xl border border-dashed border-slate-200/70 bg-white/70 px-4 py-3;
   }
@@ -213,8 +334,12 @@
     @apply text-red-600;
   }
 
+  .WorkspaceHint .WorkspaceLinkButton {
+    @apply ml-2;
+  }
+
   .WorkspaceCheckbox {
-    @apply h-4 w-4 rounded-md border-slate-300 text-brand-600 focus:ring-brand-500;
+    @apply h-4 w-4 rounded-md border-slate-300 text-brand-600 accent-brand-500 focus:ring-brand-500 cursor-pointer;
   }
 
   .UploadCard {
@@ -258,7 +383,7 @@
   }
 
   .CreateButton {
-    @apply rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-glow transition hover:bg-brand-500;
+    @apply rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-glow transition hover:bg-brand-500 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
   }
 
   .CreateButton:disabled {
@@ -323,7 +448,7 @@
   }
 
   .PrimaryButton {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-brand-600 to-indigo-600 shadow-glow transition hover:from-brand-500 hover:to-indigo-500;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-brand-600 to-indigo-600 shadow-glow transition hover:from-brand-500 hover:to-indigo-500 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
   }
 
   .PrimaryButton:disabled {
@@ -331,11 +456,15 @@
   }
 
   .ActionButton {
-    @apply rounded-full border border-slate-200/70 bg-white/90 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white hover:text-slate-900;
+    @apply rounded-full border border-slate-200/70 bg-white/90 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
   }
 
   .ActionButton.isPrimary {
     @apply border-brand-300 bg-brand-50 text-brand-700;
+  }
+
+  .ActionButton:disabled {
+    @apply opacity-60 cursor-not-allowed;
   }
 
   .CitationActionBar {
@@ -395,7 +524,7 @@
   }
 
   .RefineTemplateButton {
-    @apply rounded-full border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-slate-900;
+    @apply rounded-full border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
   }
 
   .RefineTemplateItem.isActive .RefineTemplateButton {
@@ -403,11 +532,15 @@
   }
 
   .RefineTemplateStar {
-    @apply w-7 h-7 rounded-full border border-transparent text-xs text-slate-400 transition hover:text-slate-700;
+    @apply w-7 h-7 rounded-full border border-transparent text-xs text-slate-400 transition hover:text-slate-700 inline-flex items-center justify-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
   }
 
   .RefineTemplateStar.isActive {
     @apply text-orange-500;
+  }
+
+  .RefineTemplateStar__icon {
+    @apply w-4 h-4;
   }
 
   .RefinePrompt {
@@ -419,11 +552,34 @@
   }
 
   .RefineMode {
-    @apply rounded-full border border-slate-200/70 bg-white/90 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-slate-900;
+    @apply inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
   }
 
   .RefineMode.isActive {
     @apply border-brand-300 bg-brand-50 text-brand-700;
+  }
+
+  .RefineMode.isDisabled {
+    @apply cursor-not-allowed opacity-50 text-slate-400 hover:text-slate-400;
+  }
+
+  .RefineModeBadge {
+    @apply rounded-full border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700;
+  }
+
+  .AudioOverviewOption,
+  .VideoOverviewOption {
+    @apply relative inline-flex items-center;
+  }
+
+  .AudioOverviewTooltip,
+  .VideoOverviewTooltip {
+    @apply pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-full rounded-lg border border-slate-200/80 bg-white/95 px-3 py-1 text-xs text-slate-600 shadow-soft opacity-0 motion-safe:transition-opacity motion-safe:duration-200;
+  }
+
+  .AudioOverviewTooltip.isVisible,
+  .VideoOverviewTooltip.isVisible {
+    @apply opacity-100;
   }
 
   .RefineActions {
@@ -623,7 +779,7 @@
   }
 
   .IconButton {
-    @apply inline-flex items-center justify-center w-9 h-9 rounded-full border border-slate-200/70 bg-white/90 text-slate-600 transition hover:text-slate-900 hover:bg-white cursor-pointer;
+    @apply inline-flex items-center justify-center w-9 h-9 rounded-full border border-slate-200/70 bg-white/90 text-slate-600 transition hover:text-slate-900 hover:bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
   }
 
   .OutputCenterTitle {
@@ -636,7 +792,371 @@
   }
 
   .OutputClearButton {
-    @apply rounded-full border border-slate-200/70 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:text-slate-900 hover:bg-white;
+    @apply rounded-full border border-slate-200/70 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:text-slate-900 hover:bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
+  }
+
+  .OutputHeaderActions {
+    @apply flex items-center gap-2;
+  }
+
+  .SessionSwitcher {
+    @apply relative flex items-center gap-2;
+  }
+
+  .SessionSwitcherButton {
+    @apply inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
+  }
+
+  .SessionSwitcherLabel {
+    @apply text-[10px] uppercase tracking-[0.18em] text-slate-400;
+  }
+
+  .SessionSwitcherValue {
+    @apply text-xs font-semibold text-slate-700;
+  }
+
+  .SessionSwitcherNew {
+    @apply rounded-full border border-slate-200/70 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-slate-900 hover:bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
+  }
+
+  .SessionSwitcherPanel {
+    @apply absolute right-0 top-12 z-20 w-72 rounded-2xl border border-white/80 bg-white/95 p-3 shadow-soft;
+  }
+
+  .SessionSwitcherSearch {
+    @apply mb-2;
+  }
+
+  .SessionSwitcherInput {
+    @apply w-full rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/40;
+  }
+
+  .SessionSwitcherError {
+    @apply mb-2 flex items-center justify-between gap-2 text-xs text-red-600;
+  }
+
+  .SessionSwitcherList {
+    @apply flex flex-col gap-2 max-h-60 overflow-y-auto;
+  }
+
+  .SessionSwitcherOption {
+    @apply text-left rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2 text-xs text-slate-600 transition hover:text-slate-900 hover:bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
+  }
+
+  .SessionSwitcherOption.isActive {
+    @apply border-brand-300 bg-brand-50 text-brand-700;
+  }
+
+  .SessionSwitcherOptionTitle {
+    @apply text-xs font-semibold text-slate-800;
+  }
+
+  .SessionSwitcherOptionMeta {
+    @apply mt-1 text-[11px] text-slate-500;
+  }
+
+  .SessionSwitcherEmpty {
+    @apply text-xs text-slate-400 rounded-xl border border-dashed border-slate-200/70 px-3 py-3 text-center;
+  }
+
+  .OutputTypeSelector {
+    @apply relative;
+  }
+
+  .OutputTypeButton {
+    @apply inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
+  }
+
+  .OutputTypeLabel {
+    @apply text-[10px] uppercase tracking-[0.18em] text-slate-400;
+  }
+
+  .OutputTypeValue {
+    @apply text-xs font-semibold text-slate-800;
+  }
+
+  .OutputTypePanel {
+    @apply absolute right-0 top-12 z-20 w-60 rounded-2xl border border-white/80 bg-white/95 p-3 shadow-soft flex flex-col gap-2;
+  }
+
+  .OutputTypeOption {
+    @apply rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2 text-left transition hover:bg-white hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
+  }
+
+  .OutputTypeOption.isActive {
+    @apply border-brand-300 bg-brand-50 text-brand-700;
+  }
+
+  .OutputTypeOptionLabel {
+    @apply text-xs font-semibold text-slate-800;
+  }
+
+  .OutputTypeOptionDescription {
+    @apply text-[11px] text-slate-500 mt-1;
+  }
+
+  .ChatCitations {
+    @apply mt-2 flex flex-wrap gap-2;
+  }
+
+  .ChatCitation {
+    @apply rounded-full border border-slate-200/70 bg-white/80 px-3 py-1 text-[11px] text-slate-600 transition hover:text-slate-900 hover:bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
+  }
+
+  .ChatSkeletonList {
+    @apply flex flex-col gap-2;
+  }
+
+  .ChatSkeletonBubble {
+    @apply h-12 rounded-2xl bg-slate-100/80;
+  }
+
+  .ChatSkeletonBubble.isShort {
+    @apply w-2/3;
+  }
+
+  .SuggestionPanel {
+    @apply mt-4 rounded-2xl border border-white/80 bg-white/80 px-4 py-3 shadow-soft;
+  }
+
+  .SuggestionHeader {
+    @apply flex items-center justify-between text-xs font-semibold text-slate-700;
+  }
+
+  .SuggestionList {
+    @apply mt-3 flex flex-col gap-2;
+  }
+
+  .SuggestionCard {
+    @apply flex items-center justify-between gap-2 rounded-2xl border border-slate-200/70 bg-white/90 px-3 py-2 text-left text-xs text-slate-600 transition hover:text-slate-900 hover:bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
+  }
+
+  .SuggestionQuestion {
+    @apply font-semibold text-slate-800;
+  }
+
+  .SuggestionTag {
+    @apply rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide;
+  }
+
+  .SuggestionTag.is-factual {
+    @apply bg-emerald-100 text-emerald-700;
+  }
+
+  .SuggestionTag.is-analytical {
+    @apply bg-sky-100 text-sky-700;
+  }
+
+  .SuggestionTag.is-comparative {
+    @apply bg-amber-100 text-amber-700;
+  }
+
+  .SuggestionTag.is-creative {
+    @apply bg-fuchsia-100 text-fuchsia-700;
+  }
+
+  .SuggestionTag.is-deep_dive {
+    @apply bg-indigo-100 text-indigo-700;
+  }
+
+  .SuggestionEmpty {
+    @apply mt-3 text-xs text-slate-400;
+  }
+
+  .WorkspaceSkeletonList {
+    @apply flex flex-col gap-2;
+  }
+
+  .WorkspaceSkeletonItem {
+    @apply h-12 rounded-2xl bg-slate-100/80;
+  }
+
+  .WorkspaceSkeletonItem.isShort {
+    @apply w-2/3;
+  }
+
+  .StructuredOutputCard {
+    @apply rounded-2xl border border-white/80 bg-white/80 px-4 py-4 shadow-soft flex flex-col gap-3 mb-4;
+  }
+
+  .StructuredOutputHeader {
+    @apply flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between;
+  }
+
+  .StructuredOutputTitle {
+    @apply text-sm font-semibold text-slate-900;
+  }
+
+  .StructuredOutputSubtitle {
+    @apply text-xs text-slate-500;
+  }
+
+  .StructuredOutputActions {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .StructuredOutputResults {
+    @apply flex flex-col gap-3;
+  }
+
+  .StructuredOutputItem {
+    @apply rounded-2xl border border-white/80 bg-white/90 px-4 py-3 shadow-sm;
+  }
+
+  .StructuredOutputItemHeader {
+    @apply flex items-start justify-between gap-2;
+  }
+
+  .StructuredOutputItemTitle {
+    @apply text-xs font-semibold text-slate-800;
+  }
+
+  .StructuredOutputItemMeta {
+    @apply text-[11px] text-slate-500;
+  }
+
+  .StructuredOutputItemPrompt {
+    @apply mt-2 text-xs text-slate-500;
+  }
+
+  .StructuredOutputItemContent {
+    @apply mt-2 text-sm text-slate-800;
+  }
+
+  .StructuredOutputFaq {
+    @apply flex flex-col gap-3;
+  }
+
+  .StructuredOutputGuide {
+    @apply flex flex-col gap-3;
+  }
+
+  .StructuredOutputFaqItem {
+    @apply rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2;
+  }
+
+  .StructuredOutputFaqQuestion {
+    @apply text-xs font-semibold text-slate-800;
+  }
+
+  .StructuredOutputFaqAnswer {
+    @apply mt-1 text-xs text-slate-600;
+  }
+
+  .StructuredOutputGuideModule {
+    @apply rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2;
+  }
+
+  .StructuredOutputGuideTitle {
+    @apply text-xs font-semibold text-slate-800;
+  }
+
+  .StructuredOutputGuideObjective {
+    @apply mt-1 text-xs text-slate-600;
+  }
+
+  .StructuredOutputTimeline {
+    @apply flex flex-col gap-3;
+  }
+
+  .StructuredOutputTimelineItem {
+    @apply rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2;
+  }
+
+  .StructuredOutputTimelineDate {
+    @apply text-[11px] uppercase tracking-[0.18em] text-slate-400;
+  }
+
+  .StructuredOutputTimelineEvent {
+    @apply text-xs font-semibold text-slate-800;
+  }
+
+  .StructuredOutputTimelineDesc {
+    @apply mt-1 text-xs text-slate-600;
+  }
+
+  .StructuredOutputQuizItem {
+    @apply rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2;
+  }
+
+  .StructuredOutputQuiz {
+    @apply flex flex-col gap-3;
+  }
+
+  .StructuredOutputQuizQuestion {
+    @apply text-xs font-semibold text-slate-800;
+  }
+
+  .StructuredOutputQuizAnswer {
+    @apply mt-1 text-xs text-slate-600;
+  }
+
+  .StructuredOutputBriefingSection {
+    @apply rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2;
+  }
+
+  .StructuredOutputBriefing {
+    @apply flex flex-col gap-3;
+  }
+
+  .StructuredOutputBriefingHeading {
+    @apply text-xs font-semibold text-slate-800;
+  }
+
+  .StructuredOutputList {
+    @apply list-disc pl-5 mt-2 space-y-1;
+  }
+
+  .StructuredOutputParagraph {
+    @apply text-sm text-slate-700 leading-relaxed;
+  }
+
+  .StructuredOutputStructuredTitle {
+    @apply text-xs font-semibold text-slate-800;
+  }
+
+  .StructuredOutputStructured {
+    @apply flex flex-col gap-2;
+  }
+
+  .StructuredOutputTags {
+    @apply mt-2 flex flex-wrap gap-2;
+  }
+
+  .StructuredOutputTag {
+    @apply rounded-full border border-slate-200/70 bg-white px-2.5 py-0.5 text-[11px] text-slate-600;
+  }
+
+  .StructuredOutputRaw {
+    @apply text-xs text-slate-500 whitespace-pre-wrap;
+  }
+
+  .StructuredMindmapTree {
+    @apply flex flex-col gap-2;
+  }
+
+  .StructuredMindmapNode {
+    @apply rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2;
+  }
+
+  .StructuredMindmapChildren {
+    @apply mt-2 flex flex-col gap-2 pl-4;
+  }
+
+  .StructuredMindmapLabel {
+    @apply text-xs font-semibold text-slate-800;
+  }
+
+  .OutputSkeletonList {
+    @apply flex flex-col gap-2;
+  }
+
+  .OutputSkeletonItem {
+    @apply h-16 rounded-2xl bg-slate-100/80;
+  }
+
+  .OutputSkeletonItem.isShort {
+    @apply w-2/3;
   }
 
 @keyframes panelIn {

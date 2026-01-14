@@ -1,21 +1,21 @@
 ## ADDED Requirements
 
 ### Requirement: 工作流状态管理
-系统必须使用 Context + Reducer 模式管理工作流状态。
+系统 MUST使用 Context + Reducer 模式管理工作流状态。
 
 #### Scenario: 状态管理
 - **WHEN** 用户操作工作区
 - **THEN** 系统通过 `WorkspaceContext` 和 `workspaceReducer` 管理状态
 
 ### Requirement: 输入-对话-输出流程
-系统必须优化输入→对话→输出的主流程。
+系统 MUST优化输入→对话→输出的主流程。
 
 #### Scenario: 主流程
 - **WHEN** 用户输入问题
 - **THEN** 系统依次：检索来源 → 生成回答 → 展示引用 → 可选生成输出
 
 ### Requirement: 会话切换
-系统必须支持在多个会话之间切换。
+系统 MUST支持在多个会话之间切换。
 
 #### Scenario: 切换会话
 - **WHEN** 用户选择不同会话
@@ -26,21 +26,21 @@
 - **THEN** 系统创建新会话并切换到空白对话界面
 
 ### Requirement: 输出类型选择
-系统必须提供输出类型选择界面。
+系统 MUST提供输出类型选择界面。
 
 #### Scenario: 选择输出类型
 - **WHEN** 用户点击输出区域
 - **THEN** 系统展示可用的输出类型列表（FAQ/指南/时间轴等）
 
 ### Requirement: 建议问题展示
-系统必须在界面中展示建议问题。
+系统 MUST在界面中展示建议问题。
 
 #### Scenario: 展示建议
 - **WHEN** 用户打开 Notebook 或完成对话
 - **THEN** 系统在聊天区域展示建议问题卡片
 
 ### Requirement: 面板联动
-系统必须实现三栏面板的联动交互。
+系统 MUST实现三栏面板的联动交互。
 
 #### Scenario: 引用联动
 - **WHEN** 用户点击回答中的引用
@@ -51,21 +51,21 @@
 - **THEN** 右侧输出面板自动展示新生成的内容
 
 ### Requirement: 加载状态
-系统必须清晰展示各种加载状态。
+系统 MUST清晰展示各种加载状态。
 
 #### Scenario: 加载指示
 - **WHEN** 系统正在处理请求
 - **THEN** 界面展示对应的加载指示器（骨架屏/进度条/动画）
 
 ### Requirement: 错误处理
-系统必须优雅处理错误情况。
+系统 MUST优雅处理错误情况。
 
 #### Scenario: 错误提示
 - **WHEN** 请求失败
 - **THEN** 系统展示友好的错误提示，提供重试选项
 
 ### Requirement: 键盘快捷键
-系统必须支持常用的键盘快捷键。
+系统 MUST支持常用的键盘快捷键。
 
 #### Scenario: 快捷键
 - **WHEN** 用户按下快捷键

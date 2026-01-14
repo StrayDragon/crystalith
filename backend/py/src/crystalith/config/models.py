@@ -18,6 +18,21 @@ class DatabaseSettings(BaseModel):
     url: str = "sqlite+aiosqlite:///./data/app.db"
 
 
+class VectorStorageSQLiteSettings(BaseModel):
+    path: str = "./data/vectors.db"
+
+
+class VectorStorageChromaSettings(BaseModel):
+    host: str = "localhost"
+    port: int = 8000
+
+
+class VectorStorageSettings(BaseModel):
+    provider: Literal["memory", "sqlite", "chroma"] = "memory"
+    sqlite: VectorStorageSQLiteSettings = Field(default_factory=VectorStorageSQLiteSettings)
+    chroma: VectorStorageChromaSettings = Field(default_factory=VectorStorageChromaSettings)
+
+
 class OpenAIProviderSettings(BaseModel):
     api_key: str | None = None
     base_url: str | None = None
@@ -62,16 +77,27 @@ class RefineSettings(BaseModel):
     formats: list[str] = Field(default_factory=lambda: ["paragraph", "bullets", "structured"])
 
 
+class ContextWindowSettings(BaseModel):
+    max_tokens: int = Field(8000, ge=1)
+    compression_strategy: Literal["truncate", "summarize"] = "truncate"
+    window_size: int = Field(10, ge=0)
+    priority: list[Literal["history", "retrieval", "recent", "system"]] = Field(
+        default_factory=lambda: ["history", "retrieval", "recent", "system"]
+    )
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="ignore", env_prefix="CRYSTALITH_")
 
     app: AppSettings = Field(default_factory=AppSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
+    vector_storage: VectorStorageSettings = Field(default_factory=VectorStorageSettings)
     openai: OpenAIProviderSettings = Field(default_factory=OpenAIProviderSettings)
     ollama: OllamaProviderSettings = Field(default_factory=OllamaProviderSettings)
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     chat: ChatSettings = Field(default_factory=ChatSettings)
     refine: RefineSettings = Field(default_factory=RefineSettings)
+    context_window: ContextWindowSettings = Field(default_factory=ContextWindowSettings)
 
     @classmethod
     def settings_customise_sources(

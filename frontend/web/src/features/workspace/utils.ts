@@ -1,12 +1,18 @@
 import type {
   ApiCitation,
+  ApiMessage,
   ApiNotebook,
+  ApiOutput,
+  ApiSession,
   ApiSource,
   Citation,
+  ChatMessage,
   Notebook,
+  OutputItem,
   RefineMode,
   RefineOutput,
   RefineTemplate,
+  SessionSummary,
   SourceItem,
 } from './types';
 
@@ -108,6 +114,40 @@ export function normalizeNotebook(row: ApiNotebook): Notebook {
   };
 }
 
+export function normalizeSession(row: ApiSession): SessionSummary {
+  return {
+    id: Number(row.id),
+    title: row.title ?? '未命名会话',
+    createdAt: formatTimestamp(row.created_at ?? undefined),
+    updatedAt: formatTimestamp(row.updated_at ?? undefined),
+  };
+}
+
+export function normalizeMessage(row: ApiMessage): ChatMessage {
+  const citations = Array.isArray(row.citations?.items)
+    ? row.citations?.items?.map(normalizeCitation)
+    : [];
+  return {
+    id: `${row.id}`,
+    role: row.role === 'assistant' ? 'assistant' : 'user',
+    content: row.content ?? '',
+    citations,
+    citationChunkIds: collectChunkIds(citations ?? []),
+  };
+}
+
+export function normalizeOutput(row: ApiOutput): OutputItem {
+  return {
+    id: Number(row.id),
+    type: row.type,
+    prompt: row.prompt ?? '',
+    chunkIds: row.chunk_ids ?? [],
+    content: row.content ?? {},
+    createdAt: formatTimestamp(row.created_at ?? undefined),
+    updatedAt: formatTimestamp(row.updated_at ?? undefined),
+  };
+}
+
 export function formatSourceType(row: ApiSource): string {
   const filename = row.filename ?? '';
   const extension = filename.split('.').pop()?.toLowerCase();
@@ -147,6 +187,8 @@ export function normalizeCitation(row: ApiCitation): Citation {
     sourceTitle: row.source_name ?? '未知来源',
     snippet: row.snippet ?? '',
     chunkIndex: row.chunk_index ?? 0,
+    pageNumber: row.page_number ?? null,
+    paragraphIndex: row.paragraph_index ?? null,
     score: row.score ?? undefined,
   };
 }

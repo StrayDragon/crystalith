@@ -1,8 +1,14 @@
 import type {
   ApiAnswer,
+  ApiMessage,
   ApiNotebook,
+  ApiOutput,
+  ApiOutputBatchResponse,
   ApiRefineBatchResponse,
+  ApiSession,
+  ApiSuggestionResponse,
   ApiSource,
+  OutputTypeId,
   RefineMode,
 } from './types';
 
@@ -64,13 +70,18 @@ export async function uploadSource(notebookId: number, file: File): Promise<ApiS
 export async function askQuestion(
   notebookId: number,
   question: string,
+  sessionId?: number | null,
 ): Promise<ApiAnswer> {
+  const body: { question: string; session_id?: number | null } = { question };
+  if (sessionId != null) {
+    body.session_id = sessionId;
+  }
   return request<ApiAnswer>(`/v1/notebooks/${notebookId}/qa`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -87,6 +98,77 @@ export async function refinePrompt(
     },
     body: JSON.stringify(body),
   });
+}
+
+export async function listSessions(notebookId: number): Promise<ApiSession[]> {
+  return request<ApiSession[]>(`/v1/notebooks/${notebookId}/sessions`);
+}
+
+export async function createSession(
+  notebookId: number,
+  title?: string | null,
+): Promise<ApiSession> {
+  return request<ApiSession>(`/v1/notebooks/${notebookId}/sessions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ title }),
+  });
+}
+
+export async function listMessages(sessionId: number): Promise<ApiMessage[]> {
+  return request<ApiMessage[]>(`/v1/sessions/${sessionId}/messages`);
+}
+
+export async function createSessionSuggestions(
+  sessionId: number,
+  payload: { count?: number; mode?: 'standard' | 'deep_dive'; seed_question?: string | null },
+): Promise<ApiSuggestionResponse> {
+  return request<ApiSuggestionResponse>(`/v1/sessions/${sessionId}/suggestions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function createNotebookSuggestions(
+  notebookId: number,
+  payload: { count?: number; mode?: 'standard' | 'deep_dive'; seed_question?: string | null },
+): Promise<ApiSuggestionResponse> {
+  return request<ApiSuggestionResponse>(`/v1/notebooks/${notebookId}/suggestions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function createOutputs(
+  notebookId: number,
+  payload: {
+    type?: OutputTypeId;
+    types?: OutputTypeId[];
+    prompt?: string | null;
+    chunk_ids?: number[];
+    top_k?: number;
+    min_score?: number;
+  },
+): Promise<ApiOutputBatchResponse> {
+  return request<ApiOutputBatchResponse>(`/v1/notebooks/${notebookId}/outputs`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listOutputs(notebookId: number): Promise<ApiOutput[]> {
+  return request<ApiOutput[]>(`/v1/notebooks/${notebookId}/outputs`);
 }
 
 export async function refineBatch(

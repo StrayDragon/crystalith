@@ -8,12 +8,23 @@ from sqlalchemy.pool import StaticPool
 
 from cl_sqlalchemyx.shortcuts.meta import get_table_ddl_info
 
-from crystalith.db import Chunk, Notebook, Source, SourceStatus, create_all, create_db_manager
+from crystalith.db import (
+    Chunk,
+    Message,
+    Notebook,
+    Session,
+    Source,
+    SourceStatus,
+    create_all,
+    create_db_manager,
+)
 
 
 def test_models_compile_for_sqlite_and_postgres() -> None:
     for suffix, dialect_fn in (("sqlite", None), ("postgres", postgresql.dialect)):
         info_notebook = get_table_ddl_info(Notebook, dialect_fn=dialect_fn) if dialect_fn else get_table_ddl_info(Notebook)
+        info_session = get_table_ddl_info(Session, dialect_fn=dialect_fn) if dialect_fn else get_table_ddl_info(Session)
+        info_message = get_table_ddl_info(Message, dialect_fn=dialect_fn) if dialect_fn else get_table_ddl_info(Message)
         info_source = get_table_ddl_info(Source, dialect_fn=dialect_fn) if dialect_fn else get_table_ddl_info(Source)
         info_chunk = get_table_ddl_info(Chunk, dialect_fn=dialect_fn) if dialect_fn else get_table_ddl_info(Chunk)
 
@@ -25,6 +36,16 @@ def test_models_compile_for_sqlite_and_postgres() -> None:
         assert "sources" in create_sql_source
         assert "foreign key" in create_sql_source
         assert "on delete cascade" in create_sql_source, f"missing ON DELETE CASCADE for {suffix}"
+
+        create_sql_session = str(info_session.create_table).lower()
+        assert "sessions" in create_sql_session
+        assert "foreign key" in create_sql_session
+        assert "on delete cascade" in create_sql_session, f"missing ON DELETE CASCADE for {suffix}"
+
+        create_sql_message = str(info_message.create_table).lower()
+        assert "messages" in create_sql_message
+        assert "foreign key" in create_sql_message
+        assert "on delete cascade" in create_sql_message, f"missing ON DELETE CASCADE for {suffix}"
 
         create_sql_chunk = str(info_chunk.create_table).lower()
         assert "chunks" in create_sql_chunk
@@ -47,10 +68,19 @@ async def test_sqlite_create_all_and_relationship_cascade() -> None:
 
         async with manager.got_manual_session() as session:
             nb = Notebook(name="nb1")
-            src = Source(filename="doc.md", mime_type="text/markdown", status=SourceStatus.PROCESSING)
+            src = Source(
+                filename="doc.md",
+                mime_type="text/markdown",
+                parser_type="text",
+                status=SourceStatus.PROCESSING,
+            )
             src.chunks.append(Chunk(chunk_index=0, text="hello"))
             src.chunks.append(Chunk(chunk_index=1, text="world"))
             nb.sources.append(src)
+
+            session_row = Session()
+            session_row.messages.append(Message(role="user", content="hello", citations=None))
+            nb.sessions.append(session_row)
 
             session.add(nb)
             await session.commit()
@@ -69,6 +99,8 @@ async def test_sqlite_create_all_and_relationship_cascade() -> None:
             await session.commit()
 
             assert (await session.execute(sa.select(Notebook))).scalars().all() == []
+            assert (await session.execute(sa.select(Session))).scalars().all() == []
+            assert (await session.execute(sa.select(Message))).scalars().all() == []
             assert (await session.execute(sa.select(Source))).scalars().all() == []
             assert (await session.execute(sa.select(Chunk))).scalars().all() == []
     finally:

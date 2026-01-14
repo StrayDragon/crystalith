@@ -11,7 +11,8 @@ from crystalith.api.deps import get_chat_provider, get_embedding_provider
 from crystalith.app import create_app
 from crystalith.config import DatabaseSettings, Settings
 from crystalith.db import create_all, create_db_manager
-from crystalith.vector_index import InMemoryVectorIndex
+from crystalith.tasks import TaskQueue
+from crystalith.vector_storage import InMemoryVectorStore
 
 
 class FakeEmbeddingProvider:
@@ -47,10 +48,23 @@ async def test_client() -> AsyncGenerator[AsyncClient, None]:
     )
     await create_all(manager.async_engine)
 
-    vector_index = InMemoryVectorIndex()
-    app = create_app(settings, db_manager=manager, vector_index=vector_index)
+    vector_store = InMemoryVectorStore()
+    task_queue = TaskQueue(
+        db_manager=manager,
+        settings=settings,
+        vector_store=vector_store,
+        embedder_factory=lambda _settings: FakeEmbeddingProvider(),
+        chat_factory=lambda _settings: FakeChatProvider(),
+    )
+    app = create_app(
+        settings,
+        db_manager=manager,
+        vector_store=vector_store,
+        task_queue=task_queue,
+    )
     app.dependency_overrides[get_embedding_provider] = lambda: FakeEmbeddingProvider()
     app.dependency_overrides[get_chat_provider] = lambda: FakeChatProvider()
+    await app.state.task_queue.start_worker()
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

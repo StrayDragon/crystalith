@@ -52,6 +52,46 @@
       "title": "ChatSettings",
       "type": "object"
     },
+    "ContextWindowSettings": {
+      "properties": {
+        "max_tokens": {
+          "default": 8000,
+          "minimum": 1,
+          "title": "Max Tokens",
+          "type": "integer"
+        },
+        "compression_strategy": {
+          "default": "truncate",
+          "enum": [
+            "truncate",
+            "summarize"
+          ],
+          "title": "Compression Strategy",
+          "type": "string"
+        },
+        "window_size": {
+          "default": 10,
+          "minimum": 0,
+          "title": "Window Size",
+          "type": "integer"
+        },
+        "priority": {
+          "items": {
+            "enum": [
+              "history",
+              "retrieval",
+              "recent",
+              "system"
+            ],
+            "type": "string"
+          },
+          "title": "Priority",
+          "type": "array"
+        }
+      },
+      "title": "ContextWindowSettings",
+      "type": "object"
+    },
     "DatabaseSettings": {
       "properties": {
         "url": {
@@ -268,6 +308,55 @@
       },
       "title": "RefineSettings",
       "type": "object"
+    },
+    "VectorStorageChromaSettings": {
+      "properties": {
+        "host": {
+          "default": "localhost",
+          "title": "Host",
+          "type": "string"
+        },
+        "port": {
+          "default": 8000,
+          "title": "Port",
+          "type": "integer"
+        }
+      },
+      "title": "VectorStorageChromaSettings",
+      "type": "object"
+    },
+    "VectorStorageSQLiteSettings": {
+      "properties": {
+        "path": {
+          "default": "./data/vectors.db",
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "title": "VectorStorageSQLiteSettings",
+      "type": "object"
+    },
+    "VectorStorageSettings": {
+      "properties": {
+        "provider": {
+          "default": "memory",
+          "enum": [
+            "memory",
+            "sqlite",
+            "chroma"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "sqlite": {
+          "$ref": "#/$defs/VectorStorageSQLiteSettings"
+        },
+        "chroma": {
+          "$ref": "#/$defs/VectorStorageChromaSettings"
+        }
+      },
+      "title": "VectorStorageSettings",
+      "type": "object"
     }
   },
   "properties": {
@@ -276,6 +365,9 @@
     },
     "database": {
       "$ref": "#/$defs/DatabaseSettings"
+    },
+    "vector_storage": {
+      "$ref": "#/$defs/VectorStorageSettings"
     },
     "openai": {
       "$ref": "#/$defs/OpenAIProviderSettings"
@@ -291,6 +383,9 @@
     },
     "refine": {
       "$ref": "#/$defs/RefineSettings"
+    },
+    "context_window": {
+      "$ref": "#/$defs/ContextWindowSettings"
     }
   },
   "title": "Settings",

@@ -1,7 +1,10 @@
+import { useMemo } from 'react';
 import type { RefObject } from 'react';
 
 import type { AsyncStatus } from '../../../shared/types';
 import type { Citation, SourceItem } from '../types';
+import CitationActions from './citations/CitationActions';
+import CitationList from './citations/CitationList';
 
 interface SourcesPanelProps {
   sources: SourceItem[];
@@ -15,11 +18,16 @@ interface SourcesPanelProps {
   onSourceClick: (source: SourceItem) => void;
   onSendSelectedCitations: () => void;
   onCompareSelectedCitations: () => void;
+  onCopySelectedCitations: () => void;
   onCitationHover: (chunkId: number | null) => void;
+  highlightedChunkIds: Set<number>;
+  jumpToCitationChunkId: number | null;
   onUpload: (file: File | null) => void;
   uploadState: AsyncStatus;
   isDemo: boolean;
   error: string;
+  isLoading: boolean;
+  onRetry: () => void;
   showCreate: boolean;
   createName: string;
   onCreateNameChange: (value: string) => void;
@@ -41,11 +49,16 @@ export default function SourcesPanel({
   onSourceClick,
   onSendSelectedCitations,
   onCompareSelectedCitations,
+  onCopySelectedCitations,
   onCitationHover,
+  highlightedChunkIds,
+  jumpToCitationChunkId,
   onUpload,
   uploadState,
   isDemo,
   error,
+  isLoading,
+  onRetry,
   showCreate,
   createName,
   onCreateNameChange,
@@ -60,6 +73,13 @@ export default function SourcesPanel({
     0,
   );
   const hasSelection = selectedCount > 0;
+  const selectedIdSet = useMemo(() => {
+    const next = new Set<string>();
+    for (const [id, selected] of Object.entries(selectedCitationIds)) {
+      if (selected) next.add(id);
+    }
+    return next;
+  }, [selectedCitationIds]);
 
   return (
     <div className="WorkspacePanelBody">
@@ -124,12 +144,25 @@ export default function SourcesPanel({
           </label>
         </div>
         {isDemo ? <div className="WorkspaceTiny">当前为演示数据，上传已禁用。</div> : null}
-        {error ? <div className="WorkspaceHint isError">{error}</div> : null}
+        {error ? (
+          <div className="WorkspaceHint isError">
+            {error}
+            <button type="button" className="WorkspaceLinkButton" onClick={onRetry}>
+              重试
+            </button>
+          </div>
+        ) : null}
       </section>
 
       <section className="WorkspaceSection">
         <h3 className="WorkspaceSectionTitle">来源</h3>
-        {sources.length === 0 ? (
+        {isLoading ? (
+          <div className="WorkspaceSkeletonList" aria-label="加载来源">
+            <div className="WorkspaceSkeletonItem" />
+            <div className="WorkspaceSkeletonItem isShort" />
+            <div className="WorkspaceSkeletonItem" />
+          </div>
+        ) : sources.length === 0 ? (
           <div className="WorkspaceEmpty">暂无来源。上传文档后会自动索引。</div>
         ) : (
           <ul className="WorkspaceList">
@@ -197,21 +230,6 @@ export default function SourcesPanel({
               >
                 引用模式
               </button>
-              <button
-                type="button"
-                className="WorkspaceLinkButton"
-                onClick={onSelectAllCitations}
-              >
-                全选
-              </button>
-              <button
-                type="button"
-                className="WorkspaceLinkButton"
-                onClick={onClearCitationSelection}
-                disabled={selectedCount === 0}
-              >
-                清空
-              </button>
             </div>
           ) : null}
         </div>
@@ -221,49 +239,24 @@ export default function SourcesPanel({
           </div>
         ) : (
           <>
-            <ul className="WorkspaceList">
-              {citations.map((citation) => (
-                <li
-                  key={citation.id}
-                  className="WorkspaceListItem WorkspaceListItem--compact"
-                  onMouseEnter={() => onCitationHover(citation.chunkId)}
-                  onMouseLeave={() => onCitationHover(null)}
-                >
-                  <input
-                    type="checkbox"
-                    className="WorkspaceCheckbox"
-                    checked={Boolean(selectedCitationIds[citation.id])}
-                    onChange={() => onToggleCitation(citation.id)}
-                    aria-label={`选择引用：${citation.sourceTitle} #${citation.chunkIndex}`}
-                  />
-                  <div className="WorkspaceListItem__main">
-                    <div className="WorkspaceListItem__title">{citation.sourceTitle}</div>
-                    <div className="WorkspaceListItem__sub">{citation.snippet}</div>
-                  </div>
-                  <div className="WorkspaceBadge"># {citation.chunkIndex}</div>
-                </li>
-              ))}
-            </ul>
+            <CitationList
+              citations={citations}
+              selectedCitationIds={selectedIdSet}
+              highlightedChunkIds={highlightedChunkIds}
+              jumpToCitationChunkId={jumpToCitationChunkId}
+              onToggleCitation={onToggleCitation}
+              onCitationHover={onCitationHover}
+            />
             {hasSelection ? (
-              <div className="CitationActionBar">
-                <div className="CitationActionMeta">已选 {selectedCount} 条引用</div>
-                <div className="CitationActionButtons">
-                  <button
-                    type="button"
-                    className="ActionButton"
-                    onClick={onSendSelectedCitations}
-                  >
-                    发送至右侧提炼
-                  </button>
-                  <button
-                    type="button"
-                    className="ActionButton isPrimary"
-                    onClick={onCompareSelectedCitations}
-                  >
-                    生成对比分析
-                  </button>
-                </div>
-              </div>
+              <CitationActions
+                selectedCount={selectedCount}
+                totalCount={citations.length}
+                onSendSelected={onSendSelectedCitations}
+                onCompareSelected={onCompareSelectedCitations}
+                onCopySelected={onCopySelectedCitations}
+                onSelectAll={onSelectAllCitations}
+                onClearSelection={onClearCitationSelection}
+              />
             ) : null}
           </>
         )}
