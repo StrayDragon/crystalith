@@ -93,7 +93,8 @@ async def upload_source(
         status=SourceStatus.PROCESSING,
     )
     session.add(source)
-    await session.flush()
+    await session.commit()
+    await session.refresh(source)
 
     try:
         raw = await file.read()
