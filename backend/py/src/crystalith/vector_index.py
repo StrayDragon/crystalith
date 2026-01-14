@@ -43,10 +43,17 @@ class InMemoryVectorIndex:
         chunk_ids: Sequence[int],
         vectors: Sequence[Sequence[float]],
     ) -> None:
-        if len(chunk_ids) != len(vectors):
+        vectors_list = [list(vector) for vector in vectors]
+        if len(chunk_ids) != len(vectors_list):
             raise ValueError("chunk_ids length must match vectors length")
 
-        for chunk_id, vector in zip(chunk_ids, vectors):
+        if vectors_list:
+            expected_dim = len(vectors_list[0])
+            for vector in vectors_list[1:]:
+                if len(vector) != expected_dim:
+                    raise ValueError("vectors must have consistent dimensions")
+
+        for chunk_id, vector in zip(chunk_ids, vectors_list):
             norm = _norm(vector)
             self._entries.append(
                 VectorEntry(
@@ -72,6 +79,9 @@ class InMemoryVectorIndex:
         top_k: int = 5,
         min_score: float = 0.2,
     ) -> list[VectorSearchResult]:
+        query_len = len(query_vector)
+        if query_len == 0:
+            return []
         query_norm = _norm(query_vector)
         if query_norm == 0:
             return []
@@ -79,6 +89,8 @@ class InMemoryVectorIndex:
         results: list[VectorSearchResult] = []
         for entry in self._entries:
             if entry.notebook_id != notebook_id:
+                continue
+            if len(entry.vector) != query_len:
                 continue
             if entry.norm == 0:
                 continue
