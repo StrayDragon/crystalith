@@ -20,12 +20,12 @@ uv run python -c "import asyncio; from crystalith.config import Settings; from c
 启动服务：
 
 ```bash
-uv run --project backend/py uvicorn crystalith.app:create_app --factory --host 127.0.0.1 --port 8000
+uv run --project backend/py uvicorn crystalith.app:create_app --factory --host 127.0.0.1 --port 8032
 ```
 
 OpenAPI：
-- JSON: `http://127.0.0.1:8000/v1/codev/openapi.json`
-- UI: `http://127.0.0.1:8000/v1/codev/openapi-ui/scalar`
+- JSON: `http://127.0.0.1:8032/v1/codev/openapi.json`
+- UI: `http://127.0.0.1:8032/v1/codev/openapi-ui/scalar`
 
 ### 前端（CRA）
 
@@ -136,7 +136,7 @@ uv run python -c "import asyncio; from crystalith.config import Settings; from c
 3) 启动后端服务（示例）：
 
 ```bash
-uv run --project backend/py uvicorn crystalith.app:create_app --factory --host 0.0.0.0 --port 8000
+uv run --project backend/py uvicorn crystalith.app:create_app --factory --host 0.0.0.0 --port 8032
 ```
 
 4) 前端部署：

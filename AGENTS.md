@@ -16,3 +16,44 @@
 保持此托管块，以便 'openspec update' 可以刷新说明文档。
 
 <!-- OPENSPEC:END -->
+
+# Repository Guidelines
+
+## Project Structure & Module Organization
+- `backend/py/`: FastAPI service with SQLAlchemy async models and local packages.
+  - `src/crystalith/`: main app code (`api`, `ai`, `db`, `ingestion`, `config`).
+  - `packages/`: shared libraries used by the backend.
+  - `tests/` and `packages/*/tests/`: pytest suites.
+- `frontend/web/`: Create React App frontend (`src/`, `public/`).
+- `config/`: runtime config (`app.yaml`) and generated schema (`schema.json`).
+- `docs/`: local dev + deployment notes.
+- `openspec/`: change proposals and planning artifacts.
+
+## Build, Test, and Development Commands
+Backend (run from repo root unless noted):
+- `cd backend/py && uv sync` — install Python dependencies with uv.
+- `uv run --project backend/py uvicorn crystalith.app:create_app --factory --host 127.0.0.1 --port 8000` — start the API server.
+- Optional DB init: see `docs/local-dev-deploy.md` for the `create_all` SQLite command.
+- `cd backend/py && uv run pytest` — run backend tests.
+
+Frontend:
+- `cd frontend/web && pnpm install` — install JS deps.
+- `pnpm start` — dev server (proxy targets `http://127.0.0.1:8000`).
+- `pnpm run build` — production build.
+- `pnpm test` — CRA test runner.
+
+## Coding Style & Naming Conventions
+- Python: 4-space indentation, type hints where practical, async/await for I/O paths; keep modules cohesive under `crystalith/*`.
+- JavaScript/React: follow CRA defaults + ESLint `react-app`; use PascalCase for components (e.g., `WorkspacePage.js`) and camelCase for helpers; co-locate `.css` with related components when appropriate.
+
+## Testing Guidelines
+- Backend uses pytest + pytest-asyncio; name files `test_*.py`.
+- Frontend uses React Testing Library; keep tests alongside components (e.g., `frontend/web/src/App.test.js`).
+
+## Commit & Pull Request Guidelines
+- History mixes conventional prefixes (`feat: ...`) and sentence-style subjects. Use a concise subject, and keep it consistent within a PR.
+- Include context for API/UI changes, relevant test commands, and OpenSpec task references when applicable.
+
+## Security & Configuration Tips
+- Store secrets only in `config/app.yaml`; never commit real keys. `config/schema.json` is generated.
+- For proposal-style or large architectural changes, consult `openspec/AGENTS.md` first.

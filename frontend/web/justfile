@@ -1,0 +1,15 @@
+default:
+    @just -l
+
+install:
+    pnpm install
+
+dev:
+    if [ ! -x node_modules/.bin/react-scripts ]; then pnpm install; fi
+    pnpm start
+
+build:
+    pnpm run build
+
+test:
+    pnpm test
