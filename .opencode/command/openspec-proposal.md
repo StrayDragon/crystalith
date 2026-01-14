@@ -20,7 +20,7 @@ The user has requested the following change proposal. Use the openspec instructi
 4. 当解决方案跨越多个系统、引入新模式或在提交规范之前需要权衡讨论时，在 `design.md` 中捕获架构推理。
 5. 在 `changes/<id>/specs/<capability>/spec.md`（每个功能一个文件夹）中起草规范增量，使用 `## ADDED|MODIFIED|REMOVED Requirements`，每个要求至少包含一个 `#### Scenario:`，并在相关时交叉引用相关功能。
 6. 将 `tasks.md` 起草为有序的小型、可验证的工作项列表，提供用户可见的进度，包括验证（测试、工具），并突出依赖项或可并行化的工作。
-7. 使用 `openspec validate <id> --strict` 进行验证，并在共享提案之前解决每个问题。
+7. 使用 `openspec validate <id> --strict --no-interactive` 进行验证，并在共享提案之前解决每个问题。
 
 **参考**
 - 当验证失败时，使用 `openspec show <id> --json --deltas-only` 或 `openspec show <spec> --type spec` 检查详细信息。
