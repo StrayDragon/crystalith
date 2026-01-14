@@ -1,1458 +1,650 @@
-:root {
-  --ws-bg: #f3f4f8;
-  --ws-side-bg: #f9fafb;
-  --ws-center-bg: #ffffff;
-  --ws-surface: rgba(255, 255, 255, 0.9);
-  --ws-surface-strong: rgba(255, 255, 255, 0.98);
-  --ws-border: rgba(148, 163, 184, 0.32);
-  --ws-text: #0f172a;
-  --ws-text-muted: #4b5563;
-  --ws-accent: #2563eb;
-  --ws-accent-weak: rgba(37, 99, 235, 0.16);
-  --ws-accent-strong: #1d4ed8;
-  --ws-highlight: #f97316;
-  --ws-success: #16a34a;
-  --ws-warning: #f59e0b;
-  --ws-danger: #dc2626;
-  --ws-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
-  --ws-shadow-soft: 0 10px 22px rgba(15, 23, 42, 0.08);
-}
-
-.WorkspaceApp {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px 14px 16px 14px;
-  box-sizing: border-box;
-  overflow: hidden;
-  color: var(--ws-text);
-  background-color: var(--ws-bg);
-  background-image: radial-gradient(
-      1100px 520px at 16% -10%,
-      rgba(37, 99, 235, 0.12) 0%,
-      transparent 60%
-    ),
-    radial-gradient(900px 520px at 88% 0%, rgba(249, 115, 22, 0.08) 0%, transparent 60%),
-    repeating-linear-gradient(
-      0deg,
-      rgba(15, 23, 42, 0.035),
-      rgba(15, 23, 42, 0.035) 1px,
-      transparent 1px,
-      transparent 36px
-    );
-}
-
-.WorkspaceHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 18px;
-  border-radius: 18px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(12px);
-  box-shadow: var(--ws-shadow-soft);
-}
-
-.WorkspaceHeader__left {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 200px;
-}
-
-.WorkspaceBrand {
-  font-weight: 600;
-  font-size: 15px;
-  letter-spacing: 0.4px;
-}
-
-.WorkspaceMeta {
-  font-size: 12px;
-  color: var(--ws-text-muted);
-}
-
-.WorkspaceHeader__center {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.WorkspaceHeader__right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.WorkspaceLabel {
-  font-size: 12px;
-  color: var(--ws-text-muted);
-}
-
-.WorkspaceSelect {
-  border-radius: 12px;
-  padding: 8px 12px;
-  border: 1px solid var(--ws-border);
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--ws-text);
-  min-width: 180px;
-}
-
-.WorkspaceSelect:focus {
-  outline: 2px solid rgba(37, 99, 235, 0.28);
-  outline-offset: 2px;
-}
-
-.WorkspacePill {
-  font-size: 12px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  font-weight: 600;
-}
-
-.WorkspacePill.isLive {
-  background: rgba(22, 163, 74, 0.12);
-  border-color: rgba(22, 163, 74, 0.28);
-  color: rgba(21, 128, 61, 0.95);
-}
-
-.WorkspacePill.isDemo {
-  background: rgba(249, 115, 22, 0.12);
-  border-color: rgba(249, 115, 22, 0.3);
-  color: rgba(194, 65, 12, 0.92);
-}
-
-.WorkspacePill.isLoading {
-  background: rgba(37, 99, 235, 0.12);
-  border-color: rgba(37, 99, 235, 0.3);
-  color: rgba(30, 64, 175, 0.92);
-}
-
-.WorkspaceTiny {
-  font-size: 12px;
-  color: var(--ws-text-muted);
-  white-space: nowrap;
-}
-
-.OutputCenterTitle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.OutputCenterDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(239, 68, 68, 0.95);
-  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
-  animation: pulseDot 1.6s ease-in-out infinite;
-}
-
-.OutputClearButton {
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--ws-text);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
-}
-
-.OutputClearButton:hover:not(:disabled) {
-  border-color: rgba(37, 99, 235, 0.4);
-  color: rgba(30, 64, 175, 0.95);
-  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.12);
-}
-
-.OutputClearButton:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-  box-shadow: none;
-}
-
-.WorkspaceTabs {
-  display: none;
-  gap: 8px;
-  padding: 10px 8px 0 8px;
-}
-
-.WorkspaceTab {
-  flex: 1;
-  border-radius: 12px;
-  padding: 10px 12px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: rgba(255, 255, 255, 0.8);
-  color: var(--ws-text);
-  font-size: 13px;
-  cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease;
-}
-
-.WorkspaceTab.isActive {
-  border-color: rgba(37, 99, 235, 0.4);
-  background: var(--ws-accent-weak);
-}
-
-.WorkspaceMain {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(260px, 380px);
-  gap: 12px;
-}
-
-.WorkspacePanel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  min-width: 0;
-  border-radius: 18px;
-  border: 1px solid var(--ws-border);
-  background: var(--ws-panel-bg, var(--ws-side-bg));
-  box-shadow: var(--ws-shadow-soft);
-  overflow: hidden;
-  animation: panelIn 0.4s ease-out;
-}
-
-.WorkspacePanel--sources,
-.WorkspacePanel--refine {
-  --ws-panel-bg: var(--ws-side-bg);
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.6), transparent);
-}
-
-.WorkspacePanel--chat {
-  --ws-panel-bg: var(--ws-center-bg);
-}
-
-.WorkspacePanelHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
-  background: transparent;
-}
-
-.WorkspacePanelTitle {
-  margin: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-}
-
-.WorkspacePanelHeader--refine {
-  align-items: center;
-}
-
-.WorkspacePanelBody {
-  flex: 1;
-  min-height: 0;
-  min-width: 0;
-  overflow: auto;
-  padding: 16px;
-  background: transparent;
-}
-
-.WorkspacePanelBody--chat {
-  padding: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.WorkspaceSection {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-.WorkspaceSection:last-child {
-  margin-bottom: 0;
-}
-
-.WorkspaceSectionTitle {
-  margin: 0;
-  font-size: 12px;
-  color: var(--ws-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.WorkspaceSectionHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.WorkspaceSectionActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.WorkspaceLinkButton {
-  border: none;
-  background: transparent;
-  padding: 0;
-  font-size: 12px;
-  color: rgba(30, 64, 175, 0.92);
-  cursor: pointer;
-}
-
-.WorkspaceLinkButton:hover {
-  color: rgba(29, 78, 216, 1);
-  text-decoration: underline;
-}
-
-.WorkspaceLinkButton:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-  text-decoration: none;
-}
-
-.WorkspaceToggle {
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  border-radius: 999px;
-  padding: 2px 10px;
-  font-size: 11px;
-  background: rgba(248, 250, 252, 0.9);
-  color: var(--ws-text-muted);
-  cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
-}
-
-.WorkspaceToggle.isActive {
-  border-color: rgba(37, 99, 235, 0.4);
-  background: rgba(219, 234, 254, 0.9);
-  color: rgba(30, 64, 175, 0.95);
-}
-
-.WorkspaceList {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.CitationActionBar {
-  position: sticky;
-  bottom: 0;
-  margin-top: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(37, 99, 235, 0.2);
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 14px 24px rgba(37, 99, 235, 0.12);
-  backdrop-filter: blur(6px);
-  z-index: 2;
-}
-
-.CitationActionMeta {
-  font-size: 12px;
-  color: var(--ws-text-muted);
-}
-
-.CitationActionButtons {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.ActionButton {
-  border-radius: 10px;
-  padding: 6px 12px;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  background: rgba(248, 250, 252, 0.9);
-  color: var(--ws-text);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.ActionButton:hover {
-  border-color: rgba(37, 99, 235, 0.4);
-  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.12);
-}
-
-.ActionButton:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-  box-shadow: none;
-}
-
-.ActionButton.isPrimary {
-  border-color: rgba(37, 99, 235, 0.4);
-  background: rgba(37, 99, 235, 0.12);
-  color: rgba(30, 64, 175, 0.95);
-}
-
-.WorkspaceListItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.WorkspaceListItem:hover {
-  border-color: rgba(37, 99, 235, 0.35);
-  box-shadow: 0 12px 25px rgba(15, 23, 42, 0.08);
-  transform: translateY(-1px);
-}
-
-.WorkspaceListItem.isFailed {
-  border-color: rgba(220, 38, 38, 0.45);
-  background: rgba(254, 242, 242, 0.7);
-}
-
-.WorkspaceListItem--compact {
-  align-items: flex-start;
-  justify-content: flex-start;
-}
-
-.WorkspaceListItem--compact .WorkspaceBadge {
-  margin-left: auto;
-}
-
-.WorkspaceCheckbox {
-  width: 16px;
-  height: 16px;
-  margin-top: 2px;
-  flex: 0 0 auto;
-  accent-color: var(--ws-accent);
-}
-
-.WorkspaceListItem__title {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.SourceItemButton {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border: none;
-  background: transparent;
-  padding: 0;
-  text-align: left;
-  color: inherit;
-  cursor: pointer;
-}
-
-.SourceItemButton:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.SourceRetry {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: rgba(185, 28, 28, 0.9);
-  border: 1px solid rgba(220, 38, 38, 0.25);
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(254, 226, 226, 0.7);
-}
-
-.SourceRetry__icon {
-  width: 14px;
-  height: 14px;
-}
-
-.WorkspaceListItem__sub {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--ws-text-muted);
-  line-height: 1.35;
-  word-break: break-word;
-}
-
-.WorkspaceBadge {
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-  color: rgba(15, 23, 42, 0.78);
-  white-space: nowrap;
-  background: rgba(255, 255, 255, 0.85);
-}
-
-.WorkspaceBadge.READY {
-  border-color: rgba(22, 163, 74, 0.3);
-  color: rgba(21, 128, 61, 0.95);
-  background: rgba(22, 163, 74, 0.1);
-}
-
-.WorkspaceBadge.PROCESSING {
-  border-color: rgba(245, 158, 11, 0.4);
-  color: rgba(180, 83, 9, 0.92);
-  background: rgba(245, 158, 11, 0.12);
-}
-
-.WorkspaceBadge.FAILED {
-  border-color: rgba(220, 38, 38, 0.35);
-  color: rgba(185, 28, 28, 0.92);
-  background: rgba(220, 38, 38, 0.1);
-}
-
-.WorkspaceEmpty {
-  font-size: 13px;
-  color: rgba(15, 23, 42, 0.72);
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px dashed rgba(148, 163, 184, 0.6);
-  border-radius: 14px;
-  padding: 12px;
-  line-height: 1.5;
-}
-
-.WorkspaceHint {
-  font-size: 12px;
-  color: var(--ws-text-muted);
-}
-
-.WorkspaceHint.isError {
-  color: rgba(185, 28, 28, 0.95);
-}
-
-.CreateCard {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 16px;
-  border: 1px dashed rgba(37, 99, 235, 0.35);
-  background: rgba(255, 255, 255, 0.92);
-}
-
-.CreateTitle {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.CreateHint {
-  font-size: 12px;
-  color: var(--ws-text-muted);
-  margin-top: 4px;
-}
-
-.CreateActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.CreateInput {
-  min-width: 160px;
-  border-radius: 12px;
-  padding: 8px 10px;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  background: rgba(255, 255, 255, 0.98);
-  font-size: 12px;
-  color: var(--ws-text);
-}
-
-.CreateInput:focus {
-  outline: 2px solid rgba(37, 99, 235, 0.28);
-  outline-offset: 2px;
-}
-
-.CreateButton {
-  border: 1px solid rgba(37, 99, 235, 0.35);
-  border-radius: 12px;
-  padding: 8px 12px;
-  background: rgba(37, 99, 235, 0.12);
-  color: rgba(30, 64, 175, 0.95);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.CreateButton:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.18);
-}
-
-.CreateButton:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-  box-shadow: none;
-  transform: none;
-}
-
-.UploadCard {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 16px;
-  border: 1px dashed rgba(148, 163, 184, 0.6);
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.UploadTitle {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.UploadHint {
-  font-size: 12px;
-  color: var(--ws-text-muted);
-  margin-top: 4px;
-}
-
-.UploadButton {
-  position: relative;
-  overflow: hidden;
-  border-radius: 12px;
-  padding: 8px 14px;
-  border: 1px solid rgba(37, 99, 235, 0.35);
-  background: rgba(37, 99, 235, 0.12);
-  color: rgba(30, 64, 175, 0.95);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.UploadButton input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.UploadButton:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.18);
-}
-
-.ChatMessages {
-  flex: 1;
-  padding: 16px 16px 0 16px;
-  overflow: auto;
-  overflow-x: hidden;
-  min-height: 0;
-  min-width: 0;
-}
-
-.ChatMessage {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 14px;
-  min-width: 0;
-}
-
-.ChatMessage__meta {
-  font-size: 12px;
-  color: var(--ws-text-muted);
-}
-
-.ChatMessage__bubble {
-  border-radius: 14px;
-  padding: 10px 12px;
-  font-size: 14px;
-  line-height: 1.55;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: rgba(15, 23, 42, 0.03);
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  max-width: min(100%, 560px);
-  min-width: 0;
-}
-
-.ChatMessage.isUser {
-  align-items: flex-end;
-}
-
-.ChatMessage.isUser .ChatMessage__bubble {
-  background: var(--ws-accent-weak);
-  border-color: rgba(37, 99, 235, 0.32);
-}
-
-.ChatMessage.isHighlighted .ChatMessage__bubble {
-  border-color: rgba(249, 115, 22, 0.6);
-  box-shadow: 0 10px 18px rgba(249, 115, 22, 0.18);
-  background: rgba(255, 247, 237, 0.9);
-}
-
-.ChatStatus {
-  font-size: 12px;
-  color: rgba(37, 99, 235, 0.8);
-  padding: 8px 0 12px 0;
-}
-
-.ChatComposer {
-  padding: 12px 16px 16px 16px;
-  border-top: 1px solid rgba(148, 163, 184, 0.3);
-  background: #ffffff;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.ChatInput {
-  width: 100%;
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: #ffffff;
-  color: var(--ws-text);
-  padding: 10px 12px;
-  font-size: 14px;
-  resize: vertical;
-  min-height: 44px;
-  max-height: 160px;
-  overflow: auto;
-}
-
-.ChatInput:focus {
-  outline: 2px solid rgba(37, 99, 235, 0.28);
-  outline-offset: 2px;
-}
-
-.ChatActions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.PrimaryButton {
-  border: none;
-  border-radius: 12px;
-  padding: 10px 16px;
-  font-weight: 600;
-  color: white;
-  background: linear-gradient(180deg, rgba(37, 99, 235, 1) 0%, rgba(29, 78, 216, 1) 100%);
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.PrimaryButton:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 20px rgba(37, 99, 235, 0.25);
-}
-
-.PrimaryButton:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-  box-shadow: none;
-  transform: none;
-}
-
-.RefineCard {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  border-radius: 16px;
-  padding: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: var(--ws-surface-strong);
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
-}
-
-.RefineCard__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.RefineCard__title {
-  font-weight: 600;
-  color: var(--ws-text);
-}
-
-.RefineCard__subtitle {
-  font-size: 12px;
-  color: var(--ws-text-muted);
-  margin-top: 4px;
-}
-
-.RefineCard__badge {
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: rgba(248, 250, 252, 0.9);
-  color: var(--ws-text-muted);
-}
-
-.RefineCard__actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  position: relative;
-}
-
-.IconButton {
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(255, 255, 255, 0.9);
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(15, 23, 42, 0.7);
-  cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.IconButton svg {
-  width: 18px;
-  height: 18px;
-}
-
-.IconButton:hover:not(:disabled) {
-  border-color: rgba(37, 99, 235, 0.4);
-  color: rgba(30, 64, 175, 0.95);
-  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.15);
-  transform: translateY(-1px);
-}
-
-.IconButton:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-  box-shadow: none;
-  transform: none;
-}
-
-.OutputConfigPanel {
-  position: absolute;
-  top: 44px;
-  right: 0;
-  width: 260px;
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.12);
-  padding: 12px;
-  display: grid;
-  gap: 10px;
-  z-index: 5;
-}
-
-.OutputConfigItem {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: rgba(248, 250, 252, 0.8);
-}
-
-.OutputConfigItem.isDisabled {
-  opacity: 0.65;
-}
-
-.OutputConfigTitle {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.OutputConfigHint {
-  font-size: 11px;
-  color: var(--ws-text-muted);
-  margin-top: 2px;
-}
-
-.Switch {
-  position: relative;
-  width: 34px;
-  height: 18px;
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-}
-
-.Switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.Switch input:disabled ~ .SwitchTrack,
-.Switch input:disabled ~ .SwitchThumb {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.SwitchTrack {
-  position: absolute;
-  inset: 0;
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.4);
-  transition: background 0.2s ease;
-}
-
-.SwitchThumb {
-  position: absolute;
-  left: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  background: white;
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
-  transition: transform 0.2s ease;
-}
-
-.Switch input:checked + .SwitchTrack {
-  background: rgba(37, 99, 235, 0.7);
-}
-
-.Switch input:checked + .SwitchTrack + .SwitchThumb {
-  transform: translateX(16px);
-}
-
-.RefineTemplates {
-  display: grid;
-  gap: 12px;
-}
-
-.RefineTemplateGroup {
-  display: grid;
-  gap: 8px;
-}
-
-.RefineTemplateGroup__title {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--ws-text-muted);
-}
-
-.RefineTemplateList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.RefineTemplateItem {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 12px;
-  background: rgba(248, 250, 252, 0.9);
-  cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
-}
-
-.RefineTemplateItem:hover {
-  border-color: rgba(37, 99, 235, 0.4);
-  background: rgba(239, 246, 255, 0.9);
-  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.08);
-}
-
-.RefineTemplateItem.isActive {
-  border-color: rgba(37, 99, 235, 0.6);
-  background: rgba(219, 234, 254, 0.9);
-  color: rgba(30, 64, 175, 0.95);
-}
-
-.RefineTemplateButton {
-  border: none;
-  background: transparent;
-  padding: 0;
-  font-size: 12px;
-  color: inherit;
-  cursor: pointer;
-}
-
-.RefineTemplateStar {
-  border: none;
-  background: rgba(226, 232, 240, 0.9);
-  color: rgba(100, 116, 139, 0.9);
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
-}
-
-.RefineTemplateStar.isActive {
-  background: rgba(254, 249, 195, 0.9);
-  color: rgba(161, 98, 7, 0.95);
-}
-
-.RefinePrompt {
-  width: 100%;
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  padding: 12px 14px;
-  font-size: 13px;
-  line-height: 1.6;
-  resize: vertical;
-  min-height: 84px;
-  background: rgba(255, 255, 255, 0.95);
-  color: var(--ws-text);
-}
-
-.RefinePrompt:focus {
-  outline: 2px solid rgba(37, 99, 235, 0.2);
-  outline-offset: 2px;
-}
-
-.RefineActions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.OutputQueueStatus {
-  display: grid;
-  gap: 8px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(37, 99, 235, 0.2);
-  background: rgba(239, 246, 255, 0.8);
-  margin: 16px 0 12px 0;
-}
-
-.OutputQueueStatus__text {
-  font-size: 12px;
-  color: rgba(30, 64, 175, 0.95);
-  font-weight: 600;
-}
-
-.OutputQueueProgress {
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.25);
-  overflow: hidden;
-}
-
-.OutputQueueProgress__bar {
-  height: 100%;
-  background: linear-gradient(90deg, rgba(37, 99, 235, 0.8), rgba(37, 99, 235, 0.4));
-  transition: width 0.3s ease;
-}
-
-.OutputList {
-  display: grid;
-  gap: 12px;
-}
-
-.OutputEmpty {
-  border-radius: 16px;
-  border: 1px dashed rgba(148, 163, 184, 0.5);
-  background: rgba(255, 255, 255, 0.9);
-  padding: 24px;
-  text-align: center;
-  display: grid;
-  gap: 8px;
-  place-items: center;
-}
-
-.OutputEmpty__icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(249, 115, 22, 0.12));
-  position: relative;
-}
-
-.OutputEmpty__icon::before,
-.OutputEmpty__icon::after {
-  content: '';
-  position: absolute;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.35);
-}
-
-.OutputEmpty__icon::before {
-  width: 16px;
-  height: 16px;
-  top: 12px;
-  left: 12px;
-}
-
-.OutputEmpty__icon::after {
-  width: 24px;
-  height: 24px;
-  bottom: 10px;
-  right: 10px;
-  background: rgba(249, 115, 22, 0.35);
-}
-
-.OutputEmpty__title {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.OutputEmpty__subtitle {
-  font-size: 12px;
-  color: var(--ws-text-muted);
-}
-
-.RefineResultCard {
-  border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
-  padding: 14px 16px;
-  display: grid;
-  gap: 10px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.RefineResultCard:hover {
-  border-color: rgba(37, 99, 235, 0.35);
-  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
-}
-
-.RefineResultCard.isLoading {
-  border-style: dashed;
-  background: rgba(248, 250, 252, 0.95);
-}
-
-.RefineResultCard.isPinned {
-  border-color: rgba(249, 115, 22, 0.4);
-  box-shadow: 0 16px 30px rgba(249, 115, 22, 0.12);
-}
-
-.RefineResultCard.isNew {
-  animation: cardFlash 1.4s ease-out;
-}
-
-.RefineResultCard__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.RefineResultCard__title {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.RefineResultCard__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--ws-text-muted);
-  margin-top: 4px;
-}
-
-.RefineResultStatus {
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: rgba(241, 245, 249, 0.9);
-}
-
-.RefineResultStatus.is-queued {
-  color: var(--ws-text-muted);
-}
-
-.RefineResultStatus.is-running {
-  border-color: rgba(37, 99, 235, 0.4);
-  background: rgba(219, 234, 254, 0.8);
-  color: rgba(30, 64, 175, 0.9);
-}
-
-.RefineResultStatus.is-done {
-  border-color: rgba(22, 163, 74, 0.35);
-  background: rgba(220, 252, 231, 0.8);
-  color: rgba(22, 101, 52, 0.9);
-}
-
-.RefineResultStatus.is-error {
-  border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(254, 226, 226, 0.85);
-  color: rgba(185, 28, 28, 0.9);
-}
-
-.RefineResultCard__actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.RefineResultCard__hint {
-  font-size: 11px;
-  color: rgba(22, 163, 74, 0.9);
-}
-
-.RefineResultCard__prompt {
-  font-size: 12px;
-  color: var(--ws-text-muted);
-  background: rgba(248, 250, 252, 0.8);
-  border-radius: 10px;
-  padding: 6px 10px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  word-break: break-word;
-}
-
-.RefineResultCard__content {
-  font-size: 13px;
-  color: var(--ws-text);
-  line-height: 1.6;
-  word-break: break-word;
-}
-
-.RefineResultCard__placeholder {
-  display: grid;
-  gap: 6px;
-}
-
-.RefineResultCard__line {
-  height: 10px;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    rgba(226, 232, 240, 0.9),
-    rgba(241, 245, 249, 0.9)
-  );
-}
-
-.RefineResultCard__line.isShort {
-  width: 70%;
-}
-
-.RefineResultCard__error {
-  color: rgba(185, 28, 28, 0.95);
-  background: rgba(254, 226, 226, 0.6);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 12px;
-  padding: 8px 10px;
-}
-
-.RefineResultCard__empty {
-  font-size: 12px;
-  color: var(--ws-text-muted);
-}
-
-.RefineModes {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.RefineMode {
-  flex: 1;
-  border-radius: 12px;
-  padding: 10px 12px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: rgba(255, 255, 255, 0.85);
-  color: var(--ws-text);
-  font-size: 13px;
-  cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease;
-}
-
-.RefineMode.isActive {
-  border-color: rgba(37, 99, 235, 0.4);
-  background: var(--ws-accent-weak);
-}
-
-.RefineQueue {
-  margin-top: 16px;
-  border-radius: 16px;
-  padding: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.32);
-  background: rgba(248, 250, 252, 0.88);
-}
-
-.RefineQueue__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.RefineQueue__title {
-  font-weight: 600;
-  color: var(--ws-text);
-}
-
-.RefineQueue__meta {
-  font-size: 12px;
-  color: var(--ws-text-muted);
-}
-
-.RefineQueue__list {
-  display: grid;
-  gap: 10px;
-}
-
-.RefineQueueItem {
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  border-radius: 14px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.9);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.RefineQueueItem:hover {
-  border-color: rgba(37, 99, 235, 0.4);
-  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.12);
-}
-
-.RefineQueueItem.isActive {
-  border-color: rgba(37, 99, 235, 0.6);
-  box-shadow: 0 12px 20px rgba(37, 99, 235, 0.18);
-}
-
-.RefineQueueItem__top {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  margin-bottom: 8px;
-  font-size: 12px;
-}
-
-.RefineQueueItem__status {
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: rgba(241, 245, 249, 0.9);
-}
-
-.RefineQueueItem__status.is-queued {
-  color: var(--ws-text-muted);
-}
-
-.RefineQueueItem__status.is-running {
-  border-color: rgba(37, 99, 235, 0.4);
-  background: rgba(219, 234, 254, 0.8);
-  color: rgba(30, 64, 175, 0.9);
-}
-
-.RefineQueueItem__status.is-done {
-  border-color: rgba(22, 163, 74, 0.4);
-  background: rgba(220, 252, 231, 0.8);
-  color: rgba(22, 101, 52, 0.9);
-}
-
-.RefineQueueItem__status.is-error {
-  border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(254, 226, 226, 0.85);
-  color: rgba(185, 28, 28, 0.9);
-}
-
-.RefineQueueItem__meta {
-  color: var(--ws-text-muted);
-}
-
-.RefineQueueItem__time {
-  margin-left: auto;
-  color: var(--ws-text-muted);
-}
-
-.RefineQueueItem__prompt {
-  font-size: 13px;
-  color: var(--ws-text);
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.RefineOutputBlock {
-  margin-top: 16px;
-}
-
-.RefineOutput {
-  border-radius: 14px;
-  padding: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.RefineParagraph {
-  margin: 0;
-  line-height: 1.6;
-  white-space: pre-wrap;
-}
-
-.RefineBullets {
-  margin: 0;
-  padding-left: 18px;
-  line-height: 1.6;
-}
-
-.RefineStructured__title {
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-
-.RefineStructured__bullets {
-  margin: 0 0 10px 0;
-  padding-left: 18px;
-  line-height: 1.55;
-}
-
-.RefineStructured__terms {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.RefineTag {
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.12);
-  border: 1px solid rgba(37, 99, 235, 0.28);
-  color: rgba(30, 64, 175, 0.9);
-}
+  .WorkspaceApp {
+    @apply min-h-screen flex flex-col gap-3 p-4 text-slate-900 bg-slate-50;
+    background-image: radial-gradient(
+        1000px 520px at 16% -10%,
+        rgba(37, 99, 235, 0.14) 0%,
+        transparent 60%
+      ),
+      radial-gradient(820px 520px at 86% 0%, rgba(249, 115, 22, 0.1) 0%, transparent 60%),
+      repeating-linear-gradient(
+        0deg,
+        rgba(15, 23, 42, 0.03),
+        rgba(15, 23, 42, 0.03) 1px,
+        transparent 1px,
+        transparent 36px
+      );
+  }
+
+  .WorkspaceHeader {
+    @apply flex flex-col lg:flex-row lg:items-center justify-between gap-4 px-4 py-3 rounded-2xl border border-white/70 bg-white/80 backdrop-blur-xl shadow-soft;
+  }
+
+  .WorkspaceHeader__left {
+    @apply flex flex-col gap-1;
+  }
+
+  .WorkspaceBrand {
+    @apply text-sm font-semibold tracking-[0.08em] uppercase text-slate-900;
+  }
+
+  .WorkspaceMeta {
+    @apply text-xs text-slate-500;
+  }
+
+  .WorkspaceHeader__center {
+    @apply flex items-center gap-2;
+  }
+
+  .WorkspaceHeader__right {
+    @apply hidden lg:flex items-center gap-3;
+  }
+
+  .WorkspaceLabel {
+    @apply text-xs text-slate-500;
+  }
+
+  .WorkspaceSelect {
+    @apply min-w-[180px] rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40;
+  }
+
+  .WorkspacePill {
+    @apply text-xs font-semibold rounded-full px-3 py-1 border;
+  }
+
+  .WorkspacePill.isLive {
+    @apply border-emerald-200/80 bg-emerald-50 text-emerald-700;
+  }
+
+  .WorkspacePill.isDemo {
+    @apply border-orange-200/80 bg-orange-50 text-orange-700;
+  }
+
+  .WorkspacePill.isLoading {
+    @apply border-blue-200/80 bg-blue-50 text-blue-700;
+  }
+
+  .WorkspaceTiny {
+    @apply text-xs text-slate-500 whitespace-nowrap;
+  }
+
+  .WorkspaceTabs {
+    @apply flex lg:hidden gap-2;
+  }
+
+  .WorkspaceTab {
+    @apply flex-1 rounded-full border border-slate-200/70 bg-white/80 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:text-slate-900;
+  }
+
+  .WorkspaceTab.isActive {
+    @apply border-brand-300 bg-brand-50 text-brand-700 shadow-soft;
+  }
+
+  .WorkspaceMain {
+    @apply flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(240px,320px)_minmax(0,1fr)_minmax(260px,380px)] gap-3;
+  }
+
+  .WorkspacePanel {
+    @apply hidden lg:flex flex-col min-h-0 min-w-0 rounded-2xl border border-white/80 bg-white/70 backdrop-blur-xl shadow-soft overflow-hidden;
+    animation: panelIn 0.4s ease-out;
+  }
+
+  .WorkspacePanel.isActive {
+    @apply flex;
+  }
+
+  .WorkspacePanel--sources,
+  .WorkspacePanel--refine {
+    @apply bg-white/75;
+  }
+
+  .WorkspacePanel--chat {
+    @apply bg-white/90;
+  }
+
+  .WorkspacePanelHeader {
+    @apply flex items-center justify-between gap-2 px-4 py-3 border-b border-white/70;
+  }
+
+  .WorkspacePanelTitle {
+    @apply m-0 text-xs font-semibold tracking-[0.08em] uppercase text-slate-700;
+  }
+
+  .WorkspacePanelHeader--refine {
+    @apply items-center;
+  }
+
+  .WorkspacePanelBody {
+    @apply flex-1 min-h-0 min-w-0 overflow-y-auto px-4 py-4;
+  }
+
+  .WorkspacePanelBody--chat {
+    @apply p-0 overflow-hidden flex flex-col;
+  }
+
+  .WorkspaceSection {
+    @apply flex flex-col gap-3 mb-5;
+  }
+
+  .WorkspaceSection:last-child {
+    @apply mb-0;
+  }
+
+  .WorkspaceSectionTitle {
+    @apply m-0 text-xs text-slate-500 uppercase tracking-[0.18em];
+  }
+
+  .WorkspaceSectionHeader {
+    @apply flex items-center justify-between gap-2;
+  }
+
+  .WorkspaceSectionActions {
+    @apply flex items-center gap-2;
+  }
+
+  .WorkspaceLinkButton {
+    @apply text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline;
+  }
+
+  .WorkspaceToggle {
+    @apply text-xs font-semibold rounded-full border border-slate-200/70 px-3 py-1 text-slate-600 transition hover:text-slate-900;
+  }
+
+  .WorkspaceToggle.isActive {
+    @apply border-brand-300 bg-brand-50 text-brand-700;
+  }
+
+  .WorkspaceList {
+    @apply flex flex-col gap-2;
+  }
+
+  .WorkspaceListItem {
+    @apply flex items-center justify-between gap-3 rounded-2xl border border-white/80 bg-white/80 px-3 py-2.5 shadow-sm transition;
+  }
+
+  .WorkspaceListItem:hover {
+    @apply border-brand-200/80 shadow-soft;
+  }
+
+  .WorkspaceListItem--compact {
+    @apply items-start gap-3;
+  }
+
+  .WorkspaceListItem.isFailed {
+    @apply border-red-200/80 bg-red-50/80;
+  }
+
+  .WorkspaceListItem__main {
+    @apply flex flex-col gap-1 min-w-0;
+  }
+
+  .WorkspaceListItem__title {
+    @apply text-sm font-semibold text-slate-900 truncate;
+  }
+
+  .WorkspaceListItem__sub {
+    @apply text-xs text-slate-500;
+  }
+
+  .WorkspaceBadge {
+    @apply text-xs px-2.5 py-1 rounded-full border border-slate-200/70 text-slate-600 bg-white/80;
+  }
+
+  .WorkspaceBadge.READY {
+    @apply border-emerald-200/80 text-emerald-700 bg-emerald-50;
+  }
+
+  .WorkspaceBadge.PROCESSING {
+    @apply border-amber-200/80 text-amber-700 bg-amber-50;
+  }
+
+  .WorkspaceBadge.FAILED {
+    @apply border-red-200/80 text-red-700 bg-red-50;
+  }
+
+  .WorkspaceEmpty {
+    @apply text-sm text-slate-500 rounded-2xl border border-dashed border-slate-200/70 bg-white/70 px-4 py-3;
+  }
+
+  .WorkspaceHint {
+    @apply text-xs text-slate-500;
+  }
+
+  .WorkspaceHint.isError {
+    @apply text-red-600;
+  }
+
+  .WorkspaceCheckbox {
+    @apply h-4 w-4 rounded-md border-slate-300 text-brand-600 focus:ring-brand-500;
+  }
+
+  .UploadCard {
+    @apply flex items-center justify-between gap-4 rounded-2xl border border-white/80 bg-white/80 px-4 py-3 shadow-sm;
+  }
+
+  .UploadTitle {
+    @apply text-sm font-semibold text-slate-900;
+  }
+
+  .UploadHint {
+    @apply text-xs text-slate-500;
+  }
+
+  .UploadButton {
+    @apply inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 cursor-pointer;
+  }
+
+  .UploadButton input {
+    @apply hidden;
+  }
+
+  .CreateCard {
+    @apply flex flex-col gap-3 rounded-2xl border border-white/80 bg-white/80 px-4 py-3 shadow-sm;
+  }
+
+  .CreateTitle {
+    @apply text-sm font-semibold text-slate-900;
+  }
+
+  .CreateHint {
+    @apply text-xs text-slate-500;
+  }
+
+  .CreateActions {
+    @apply flex items-center gap-2;
+  }
+
+  .CreateInput {
+    @apply flex-1 rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/40;
+  }
+
+  .CreateButton {
+    @apply rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-glow transition hover:bg-brand-500;
+  }
+
+  .CreateButton:disabled {
+    @apply opacity-60 cursor-not-allowed shadow-none;
+  }
+
+  .SourceItemButton {
+    @apply w-full flex items-center justify-between gap-3 text-left cursor-pointer;
+  }
+
+  .SourceRetry {
+    @apply inline-flex items-center gap-1 text-xs font-semibold text-red-600;
+  }
+
+  .SourceRetry__icon {
+    @apply w-4 h-4;
+  }
+
+  .ChatMessages {
+    @apply flex-1 overflow-y-auto px-4 py-4 space-y-4;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(248, 250, 252, 0.5));
+  }
+
+  .ChatMessage {
+    @apply flex flex-col gap-2 items-start;
+  }
+
+  .ChatMessage.isUser {
+    @apply items-end;
+  }
+
+  .ChatMessage__meta {
+    @apply text-[11px] uppercase tracking-[0.22em] text-slate-500;
+  }
+
+  .ChatMessage__bubble {
+    @apply max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed bg-white/90 border border-white/70 shadow-sm;
+  }
+
+  .ChatMessage.isUser .ChatMessage__bubble {
+    @apply bg-slate-900 text-white border-slate-900 shadow-glow;
+  }
+
+  .ChatMessage.isHighlighted .ChatMessage__bubble {
+    @apply ring-2 ring-orange-400/70 ring-offset-2 ring-offset-white/80;
+  }
+
+  .ChatStatus {
+    @apply text-xs text-orange-600 mt-2;
+  }
+
+  .ChatComposer {
+    @apply border-t border-white/70 bg-white/90 backdrop-blur-xl px-4 py-3;
+  }
+
+  .ChatInput {
+    @apply w-full min-h-[64px] max-h-36 resize-none rounded-2xl border border-slate-200/70 bg-white/90 px-4 py-3 text-sm text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-400/80;
+  }
+
+  .ChatActions {
+    @apply mt-3 flex items-center justify-between gap-3;
+  }
+
+  .PrimaryButton {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-brand-600 to-indigo-600 shadow-glow transition hover:from-brand-500 hover:to-indigo-500;
+  }
+
+  .PrimaryButton:disabled {
+    @apply opacity-60 cursor-not-allowed shadow-none;
+  }
+
+  .ActionButton {
+    @apply rounded-full border border-slate-200/70 bg-white/90 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white hover:text-slate-900;
+  }
+
+  .ActionButton.isPrimary {
+    @apply border-brand-300 bg-brand-50 text-brand-700;
+  }
+
+  .CitationActionBar {
+    @apply mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-200/70 bg-brand-50/70 px-3 py-2;
+  }
+
+  .CitationActionMeta {
+    @apply text-xs font-semibold text-brand-700;
+  }
+
+  .CitationActionButtons {
+    @apply flex items-center gap-2;
+  }
+
+  .RefineCard {
+    @apply rounded-2xl border border-white/80 bg-white/80 px-4 py-4 shadow-soft flex flex-col gap-4;
+  }
+
+  .RefineCard__header {
+    @apply flex items-start justify-between gap-3;
+  }
+
+  .RefineCard__title {
+    @apply text-sm font-semibold text-slate-900;
+  }
+
+  .RefineCard__subtitle {
+    @apply text-xs text-slate-500;
+  }
+
+  .RefineCard__actions {
+    @apply relative flex items-center gap-2;
+  }
+
+  .RefineCard__badge {
+    @apply text-xs font-semibold rounded-full border border-slate-200/70 bg-white/80 px-3 py-1 text-slate-600;
+  }
+
+  .RefineTemplates {
+    @apply flex flex-col gap-3;
+  }
+
+  .RefineTemplateGroup {
+    @apply flex flex-col gap-2;
+  }
+
+  .RefineTemplateGroup__title {
+    @apply text-xs font-semibold text-slate-500 uppercase tracking-[0.2em];
+  }
+
+  .RefineTemplateList {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .RefineTemplateItem {
+    @apply flex items-center gap-1;
+  }
+
+  .RefineTemplateButton {
+    @apply rounded-full border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-slate-900;
+  }
+
+  .RefineTemplateItem.isActive .RefineTemplateButton {
+    @apply border-brand-300 bg-brand-50 text-brand-700;
+  }
+
+  .RefineTemplateStar {
+    @apply w-7 h-7 rounded-full border border-transparent text-xs text-slate-400 transition hover:text-slate-700;
+  }
+
+  .RefineTemplateStar.isActive {
+    @apply text-orange-500;
+  }
+
+  .RefinePrompt {
+    @apply w-full min-h-[86px] resize-none rounded-2xl border border-slate-200/70 bg-white/95 px-4 py-3 text-sm text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-400/80;
+  }
+
+  .RefineModes {
+    @apply flex items-center gap-2 flex-wrap;
+  }
+
+  .RefineMode {
+    @apply rounded-full border border-slate-200/70 bg-white/90 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-slate-900;
+  }
+
+  .RefineMode.isActive {
+    @apply border-brand-300 bg-brand-50 text-brand-700;
+  }
+
+  .RefineActions {
+    @apply flex items-center justify-between;
+  }
+
+  .OutputConfigPanel {
+    @apply absolute right-0 top-11 w-64 rounded-2xl border border-white/80 bg-white/95 p-3 shadow-soft;
+  }
+
+  .OutputConfigItem {
+    @apply flex items-center gap-3 py-2;
+  }
+
+  .OutputConfigItem.isDisabled {
+    @apply opacity-60;
+  }
+
+  .OutputConfigTitle {
+    @apply text-xs font-semibold text-slate-800;
+  }
+
+  .OutputConfigHint {
+    @apply text-xs text-slate-500;
+  }
+
+  .Switch {
+    @apply relative inline-flex items-center w-10 h-6 cursor-pointer;
+  }
+
+  .SwitchTrack {
+    @apply absolute inset-0 rounded-full bg-slate-200;
+  }
+
+  .SwitchThumb {
+    @apply absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow-soft transition;
+  }
+
+  .Switch input {
+    @apply sr-only;
+  }
+
+  .Switch input:checked + .SwitchTrack {
+    @apply bg-brand-500;
+  }
+
+  .Switch input:checked + .SwitchTrack + .SwitchThumb {
+    @apply translate-x-4;
+  }
+
+  .OutputQueueStatus {
+    @apply mt-3 rounded-2xl border border-white/80 bg-white/80 px-4 py-3 shadow-soft;
+  }
+
+  .OutputQueueStatus__text {
+    @apply text-xs font-semibold text-slate-600;
+  }
+
+  .OutputQueueProgress {
+    @apply mt-2 h-2 rounded-full bg-slate-100 overflow-hidden;
+  }
+
+  .OutputQueueProgress__bar {
+    @apply h-full bg-gradient-to-r from-brand-500 to-indigo-500;
+  }
+
+  .OutputList {
+    @apply mt-3 flex flex-col gap-3;
+  }
+
+  .OutputEmpty {
+    @apply rounded-2xl border border-dashed border-slate-200/70 bg-white/70 px-4 py-6 text-center;
+  }
+
+  .OutputEmpty__icon {
+    @apply mx-auto mb-3 h-10 w-10 rounded-full bg-brand-100/70;
+  }
+
+  .OutputEmpty__title {
+    @apply text-sm font-semibold text-slate-800;
+  }
+
+  .OutputEmpty__subtitle {
+    @apply text-xs text-slate-500;
+  }
+
+  .RefineResultCard {
+    @apply rounded-2xl border border-white/80 bg-white/90 px-4 py-4 shadow-soft transition;
+  }
+
+  .RefineResultCard.isPinned {
+    @apply border-brand-200/80 bg-brand-50/40;
+  }
+
+  .RefineResultCard.isNew {
+    animation: cardFlash 0.7s ease-out;
+  }
+
+  .RefineResultCard.isLoading {
+    @apply opacity-80;
+  }
+
+  .RefineResultCard__header {
+    @apply flex items-start justify-between gap-3;
+  }
+
+  .RefineResultCard__title {
+    @apply text-sm font-semibold text-slate-900;
+  }
+
+  .RefineResultCard__meta {
+    @apply mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500;
+  }
+
+  .RefineResultCard__actions {
+    @apply flex items-center gap-2;
+  }
+
+  .RefineResultCard__hint {
+    @apply text-xs text-emerald-600;
+  }
+
+  .RefineResultCard__prompt {
+    @apply mt-3 text-xs text-slate-500;
+  }
+
+  .RefineResultCard__content {
+    @apply mt-3 text-sm text-slate-800;
+  }
+
+  .RefineResultCard__empty {
+    @apply text-xs text-slate-400;
+  }
+
+  .RefineResultCard__error {
+    @apply text-xs text-red-600;
+  }
+
+  .RefineResultCard__placeholder {
+    @apply flex flex-col gap-2;
+  }
+
+  .RefineResultCard__line {
+    @apply h-3 rounded-full bg-slate-100;
+  }
+
+  .RefineResultCard__line.isShort {
+    @apply w-2/3;
+  }
+
+  .RefineResultStatus {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold;
+  }
+
+  .RefineResultStatus.is-queued {
+    @apply bg-slate-100 text-slate-600;
+  }
+
+  .RefineResultStatus.is-running {
+    @apply bg-amber-100 text-amber-700;
+  }
+
+  .RefineResultStatus.is-done {
+    @apply bg-emerald-100 text-emerald-700;
+  }
+
+  .RefineResultStatus.is-error {
+    @apply bg-red-100 text-red-700;
+  }
+
+  .RefineParagraph {
+    @apply leading-relaxed text-slate-800;
+  }
+
+  .RefineBullets {
+    @apply list-disc pl-5 space-y-1;
+  }
+
+  .RefineStructured {
+    @apply flex flex-col gap-3;
+  }
+
+  .RefineStructured__title {
+    @apply text-sm font-semibold text-slate-900;
+  }
+
+  .RefineStructured__bullets {
+    @apply list-disc pl-5 space-y-1;
+  }
+
+  .RefineStructured__terms {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .RefineTag {
+    @apply rounded-full border border-slate-200/70 bg-white px-3 py-1 text-xs text-slate-600;
+  }
+
+  .IconButton {
+    @apply inline-flex items-center justify-center w-9 h-9 rounded-full border border-slate-200/70 bg-white/90 text-slate-600 transition hover:text-slate-900 hover:bg-white cursor-pointer;
+  }
+
+  .OutputCenterTitle {
+    @apply inline-flex items-center gap-2;
+  }
+
+  .OutputCenterDot {
+    @apply w-2 h-2 rounded-full bg-orange-500;
+    animation: pulseDot 1.6s ease-in-out infinite;
+  }
+
+  .OutputClearButton {
+    @apply rounded-full border border-slate-200/70 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:text-slate-900 hover:bg-white;
+  }
 
 @keyframes panelIn {
-  from {
+  0% {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
-  to {
+  100% {
     opacity: 1;
     transform: translateY(0);
   }
@@ -1463,7 +655,7 @@
     transform: scale(1);
   }
   70% {
-    transform: scale(1.1);
+    transform: scale(1.15);
   }
   100% {
     transform: scale(1);
@@ -1480,42 +672,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .WorkspacePanel {
-    animation: none;
-  }
-
-  .WorkspaceListItem,
-  .PrimaryButton,
-  .UploadButton,
+  .WorkspacePanel,
   .OutputCenterDot,
   .RefineResultCard.isNew {
-    transition: none;
     animation: none;
-  }
-}
-
-@media (max-width: 900px) {
-  .WorkspaceHeader__left {
-    min-width: auto;
-  }
-
-  .WorkspaceHeader__right {
-    display: none;
-  }
-
-  .WorkspaceTabs {
-    display: flex;
-  }
-
-  .WorkspaceMain {
-    grid-template-columns: 1fr;
-  }
-
-  .WorkspacePanel {
-    display: none;
-  }
-
-  .WorkspacePanel.isActive {
-    display: flex;
   }
 }
