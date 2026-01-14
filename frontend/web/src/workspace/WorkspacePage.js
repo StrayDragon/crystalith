@@ -114,19 +114,20 @@ function formatSourceType(row) {
 }
 
 function normalizeSource(row) {
+  const statusKey = String(row.status ?? 'READY').toUpperCase();
   const statusLabel =
     {
       READY: '已索引',
       PROCESSING: '处理中',
       FAILED: '失败',
-    }[row.status] ?? row.status;
+    }[statusKey] ?? row.status;
 
   return {
     id: Number(row.id),
     title: row.filename ?? '未命名文件',
     type: formatSourceType(row),
     status: statusLabel,
-    statusTone: row.status ?? 'READY',
+    statusTone: statusKey,
     chunks: row.chunk_count ?? 0,
   };
 }
@@ -1155,6 +1156,7 @@ export default function WorkspacePage() {
   const refineRunningRef = useRef(false);
   const runNextRefineJobRef = useRef(() => {});
   const activePanelRef = useRef(activePanel);
+  const activeNotebookIdRef = useRef(activeNotebookId);
   const [pendingChatFocus, setPendingChatFocus] = useState(false);
 
   const isDemo = connectionState === 'demo';
@@ -1186,6 +1188,10 @@ export default function WorkspacePage() {
       setHasNewOutput(false);
     }
   }, [activePanel]);
+
+  useEffect(() => {
+    activeNotebookIdRef.current = activeNotebookId;
+  }, [activeNotebookId]);
 
   useEffect(() => {
     if (!pendingChatFocus) return;
@@ -1387,10 +1393,15 @@ export default function WorkspacePage() {
     updateRefineQueue((prev) =>
       prev.map((job) => (job.id === nextJob.id ? { ...job, status: 'running' } : job)),
     );
-    void processRefineJob(nextJob.id, nextJob.prompt, nextJob.chunkIds ?? []);
+    void processRefineJob(
+      nextJob.id,
+      nextJob.prompt,
+      nextJob.chunkIds ?? [],
+      nextJob.notebookId,
+    );
   }
 
-  async function processRefineJob(jobId, prompt, chunkIds) {
+  async function processRefineJob(jobId, prompt, chunkIds, jobNotebookId) {
     try {
       let normalizedOutputs = {};
       let response = null;
@@ -1400,12 +1411,16 @@ export default function WorkspacePage() {
           acc[format] = demoOutput;
           return acc;
         }, {});
-      } else if (activeNotebookId) {
-        response = await refineBatch(activeNotebookId, prompt, refineFormats, chunkIds);
+      } else if (jobNotebookId) {
+        response = await refineBatch(jobNotebookId, prompt, refineFormats, chunkIds);
         normalizedOutputs = normalizeRefineOutputs(response.outputs ?? {}, response.evidence);
+      } else {
+        throw new Error('missing notebook');
       }
 
       const completedAt = new Date().toISOString();
+      const isCurrentNotebook =
+        jobNotebookId && jobNotebookId === activeNotebookIdRef.current;
       updateRefineQueue((prev) =>
         prev.map((job) =>
           job.id === jobId
@@ -1420,12 +1435,17 @@ export default function WorkspacePage() {
             : job,
         ),
       );
-      markJobCompleted(jobId);
-      if (response?.citations) {
+      const stillTracked = refineQueueRef.current.some((job) => job.id === jobId);
+      if (isCurrentNotebook && stillTracked) {
+        markJobCompleted(jobId);
+      }
+      if (response?.citations && isCurrentNotebook && stillTracked) {
         setCitations(response.citations.map(normalizeCitation));
       }
     } catch (error) {
       const completedAt = new Date().toISOString();
+      const isCurrentNotebook =
+        jobNotebookId && jobNotebookId === activeNotebookIdRef.current;
       updateRefineQueue((prev) =>
         prev.map((job) =>
           job.id === jobId
@@ -1439,8 +1459,11 @@ export default function WorkspacePage() {
             : job,
         ),
       );
-      markJobCompleted(jobId);
-      setErrors((prev) => ({ ...prev, send: '提炼生成失败，请稍后重试。' }));
+      const stillTracked = refineQueueRef.current.some((job) => job.id === jobId);
+      if (isCurrentNotebook && stillTracked) {
+        markJobCompleted(jobId);
+        setErrors((prev) => ({ ...prev, send: '提炼生成失败，请稍后重试。' }));
+      }
     } finally {
       refineRunningRef.current = false;
       runNextRefineJob();
@@ -1463,6 +1486,7 @@ export default function WorkspacePage() {
       completedAtLabel: '',
       pinned: false,
       title: buildJobTitle(jobLabel, createdAt),
+      notebookId: activeNotebookId,
     };
     updateRefineQueue((prev) => [job, ...prev]);
     return job;
@@ -1635,9 +1659,7 @@ export default function WorkspacePage() {
         citationChunkIds: collectChunkIds(normalizedCitations),
       };
       setMessages((prev) => [...prev, assistantMessage]);
-      if (normalizedCitations.length) {
-        setCitations(normalizedCitations);
-      }
+      setCitations(normalizedCitations);
 
       setActivePanel('chat');
     } catch (error) {
