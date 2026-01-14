@@ -15,9 +15,9 @@ afterAll(() => {
 test('renders three-column workspace panels', async () => {
   render(<App />);
   await screen.findByText('演示模式');
-  expect(screen.getByRole('heading', { name: '来源/引用' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: '来源与引用' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: '聊天' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: '提炼' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: '输出中心' })).toBeInTheDocument();
 });
 
 test('sending a message updates chat and refine output', async () => {
@@ -30,6 +30,6 @@ test('sending a message updates chat and refine output', async () => {
   expect(screen.getByText('你好，帮我总结一下。')).toBeInTheDocument();
   expect(screen.getByText(/（演示）已收到：你好/)).toBeInTheDocument();
 
-  await userEvent.click(screen.getByRole('button', { name: '加入队列' }));
+  await userEvent.click(screen.getByRole('button', { name: '立即提炼' }));
   expect(await screen.findByText(/已生成提炼结果（演示）/)).toBeInTheDocument();
 });
