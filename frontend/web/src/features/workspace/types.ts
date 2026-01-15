@@ -2,6 +2,17 @@ export type PanelId = 'sources' | 'chat' | 'refine';
 export type ConnectionState = 'connecting' | 'demo' | 'live';
 export type RefineMode = 'paragraph' | 'bullets' | 'structured';
 export type RefineStatus = 'queued' | 'running' | 'done' | 'error';
+export type OutputTypeId =
+  | 'FAQ'
+  | 'GUIDE'
+  | 'TIMELINE'
+  | 'MINDMAP'
+  | 'QUIZ'
+  | 'BRIEFING'
+  | 'PARAGRAPH'
+  | 'BULLETS'
+  | 'STRUCTURED';
+export type SuggestionType = 'factual' | 'analytical' | 'comparative' | 'creative' | 'deep_dive';
 
 export interface Notebook {
   id: number;
@@ -24,6 +35,8 @@ export interface Citation {
   sourceTitle: string;
   snippet: string;
   chunkIndex: number;
+  pageNumber?: number | null;
+  paragraphIndex?: number | null;
   score?: number;
 }
 
@@ -32,6 +45,13 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   citationChunkIds?: number[];
+  citations?: Citation[];
+}
+
+export interface Suggestion {
+  id: string;
+  text: string;
+  type: SuggestionType;
 }
 
 export interface RefineOutputStructured {
@@ -75,6 +95,29 @@ export interface RefineSettings {
   asyncQueue: boolean;
 }
 
+export interface SessionSummary {
+  id: number;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SuggestionItem {
+  question: string;
+  type: SuggestionType;
+  context: string;
+}
+
+export interface OutputItem {
+  id: number;
+  type: OutputTypeId;
+  prompt: string;
+  chunkIds: number[];
+  content: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface StatusLabel {
   text: string;
   tone: 'isLoading' | 'isDemo' | 'isLive';
@@ -84,6 +127,10 @@ export interface StatusLabel {
 export interface ErrorsState {
   notebooks: string;
   sources: string;
+  sessions: string;
+  messages: string;
+  suggestions: string;
+  outputs: string;
   send: string;
   create: string;
 }
@@ -91,6 +138,10 @@ export interface ErrorsState {
 export interface LoadingState {
   notebooks: boolean;
   sources: boolean;
+  sessions: boolean;
+  messages: boolean;
+  suggestions: boolean;
+  outputs: boolean;
   send: boolean;
 }
 
@@ -98,6 +149,50 @@ export interface ApiNotebook {
   id: number;
   name?: string | null;
   updated_at?: string | null;
+}
+
+export interface ApiSession {
+  id: number;
+  notebook_id: number;
+  title?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface ApiMessage {
+  id: number;
+  session_id: number;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  citations?: { items?: ApiCitation[] } | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface ApiSuggestion {
+  question: string;
+  type: SuggestionType;
+  context: string;
+}
+
+export interface ApiSuggestionResponse {
+  suggestions: ApiSuggestion[];
+  created_at?: string | null;
+}
+
+export interface ApiOutput {
+  id: number;
+  notebook_id: number;
+  type: OutputTypeId;
+  prompt?: string | null;
+  chunk_ids?: number[] | null;
+  content: Record<string, unknown>;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface ApiOutputBatchResponse {
+  outputs: ApiOutput[];
 }
 
 export interface ApiSource {
@@ -116,6 +211,8 @@ export interface ApiCitation {
   source_name?: string | null;
   chunk_id?: number | string | null;
   chunk_index?: number | null;
+  page_number?: number | null;
+  paragraph_index?: number | null;
   snippet?: string | null;
   score?: number | null;
 }
@@ -124,6 +221,7 @@ export interface ApiAnswer {
   answer: string;
   citations?: ApiCitation[];
   evidence?: boolean;
+  confidence?: number;
   created_at?: string | null;
 }
 

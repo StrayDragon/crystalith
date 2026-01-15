@@ -1,21 +1,21 @@
 ## ADDED Requirements
 
 ### Requirement: 向量存储抽象接口
-系统必须提供 `VectorStore` 抽象接口，定义向量存储的标准操作，支持多种后端实现。
+系统 MUST提供 `VectorStore` 抽象接口，定义向量存储的标准操作，支持多种后端实现。
 
 #### Scenario: 定义向量存储接口
 - **WHEN** 开发者需要实现新的向量存储后端
 - **THEN** 系统提供 `VectorStore` Protocol，包含 `add`、`search`、`remove_source`、`remove_notebook`、`entries` 方法
 
 ### Requirement: 内存向量存储
-系统必须提供 `InMemoryVectorStore` 实现，用于开发和测试场景。
+系统 MUST提供 `InMemoryVectorStore` 实现，用于开发和测试场景。
 
 #### Scenario: 使用内存向量存储
 - **WHEN** 配置 `vector_storage.provider` 为 `memory`
 - **THEN** 系统使用内存存储向量，重启后数据丢失
 
 ### Requirement: SQLite 向量存储
-系统必须提供 `SQLiteVectorStore` 实现，支持向量持久化存储。
+系统 MUST提供 `SQLiteVectorStore` 实现，支持向量持久化存储。
 
 #### Scenario: 使用 SQLite 向量存储
 - **WHEN** 配置 `vector_storage.provider` 为 `sqlite`
@@ -26,14 +26,14 @@
 - **THEN** 系统返回相似度最高的 Top-K 向量条目，包含 chunk_id 和 score
 
 ### Requirement: 向量存储配置
-系统必须支持通过配置文件选择向量存储后端。
+系统 MUST支持通过配置文件选择向量存储后端。
 
 #### Scenario: 配置向量存储
 - **WHEN** 用户在 `config/app.yaml` 中设置 `vector_storage.provider`
 - **THEN** 系统启动时使用指定的向量存储后端
 
 ### Requirement: 向量存储迁移
-系统必须提供向量数据迁移工具，支持在不同后端之间迁移数据。
+系统 MUST提供向量数据迁移工具，支持在不同后端之间迁移数据。
 
 #### Scenario: 从内存迁移到 SQLite
 - **WHEN** 用户执行迁移命令

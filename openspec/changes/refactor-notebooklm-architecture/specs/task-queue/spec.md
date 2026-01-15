@@ -1,14 +1,14 @@
 ## ADDED Requirements
 
 ### Requirement: 任务模型
-系统必须提供 `Task` 模型，管理异步任务的状态和结果。
+系统 MUST提供 `Task` 模型，管理异步任务的状态和结果。
 
 #### Scenario: 创建任务
 - **WHEN** 用户触发长时间运行的操作（如音频生成）
 - **THEN** 系统创建 Task 记录，状态为 `PENDING`
 
 ### Requirement: 任务状态
-系统必须跟踪任务的生命周期状态。
+系统 MUST跟踪任务的生命周期状态。
 
 #### Scenario: 任务状态流转
 - **WHEN** 任务被处理
@@ -19,7 +19,7 @@
 - **THEN** 系统返回任务的当前状态、进度、结果或错误信息
 
 ### Requirement: 任务队列
-系统必须提供 `TaskQueue` 类，管理任务的排队和执行。
+系统 MUST提供 `TaskQueue` 类，管理任务的排队和执行。
 
 #### Scenario: 任务入队
 - **WHEN** 新任务创建
@@ -30,21 +30,21 @@
 - **THEN** 系统按顺序执行任务，支持并发限制
 
 ### Requirement: 任务类型
-系统必须支持多种任务类型。
+系统 MUST支持多种任务类型。
 
 #### Scenario: 支持的任务类型
 - **WHEN** 系统处理任务
 - **THEN** 支持以下类型：`REFINE`、`AUDIO_OVERVIEW`、`VIDEO_OVERVIEW`、`DOCUMENT_PARSE`
 
 ### Requirement: 任务取消
-系统必须支持取消排队中的任务。
+系统 MUST支持取消排队中的任务。
 
 #### Scenario: 取消任务
 - **WHEN** 用户取消任务
 - **THEN** 如果任务状态为 `PENDING`，系统将其标记为 `CANCELLED`
 
 ### Requirement: 任务 API
-系统必须提供任务管理的 REST API。
+系统 MUST提供任务管理的 REST API。
 
 #### Scenario: 任务状态 API
 - **WHEN** 客户端调用 `/v1/tasks/{id}` 端点
@@ -55,7 +55,7 @@
 - **THEN** 系统返回该 Notebook 下的所有任务
 
 ### Requirement: 任务结果存储
-系统必须持久化存储任务结果。
+系统 MUST持久化存储任务结果。
 
 #### Scenario: 保存任务结果
 - **WHEN** 任务完成

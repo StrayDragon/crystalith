@@ -177,7 +177,7 @@ Crystalith 的目标是成为 Google NotebookLM 的开源实现。NotebookLM 是
 - Agent C: video-overview（依赖 P2.2）
 
 **Phase 3（Week 7-8）- 顺序整合**：
-- 全员: workspace-flow, citation-interaction, E2E 测试
+- 全员: workspace-flow, citation-interaction
 
 ### 关键路径
 ```

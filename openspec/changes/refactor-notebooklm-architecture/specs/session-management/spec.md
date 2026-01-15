@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: 会话模型
-系统必须提供 `Session` 模型，管理用户与 Notebook 的对话会话。
+系统 MUST提供 `Session` 模型，管理用户与 Notebook 的对话会话。
 
 #### Scenario: 创建会话
 - **WHEN** 用户在 Notebook 中开始新对话
@@ -12,7 +12,7 @@
 - **THEN** 系统返回该 Notebook 下所有会话，按更新时间倒序
 
 ### Requirement: 消息模型
-系统必须提供 `Message` 模型，存储会话中的消息历史。
+系统 MUST提供 `Message` 模型，存储会话中的消息历史。
 
 #### Scenario: 保存消息
 - **WHEN** 用户发送问题或系统生成回答
@@ -23,14 +23,14 @@
 - **THEN** 系统返回该会话的所有消息，按时间顺序
 
 ### Requirement: 会话上下文
-系统必须在问答时使用会话历史作为上下文。
+系统 MUST在问答时使用会话历史作为上下文。
 
 #### Scenario: 多轮对话
 - **WHEN** 用户在同一会话中连续提问
 - **THEN** 系统将之前的消息作为上下文，生成连贯的回答
 
 ### Requirement: 会话标题
-系统必须支持会话标题的自动生成和手动修改。
+系统 MUST支持会话标题的自动生成和手动修改。
 
 #### Scenario: 自动生成标题
 - **WHEN** 会话创建后首次提问
@@ -41,14 +41,14 @@
 - **THEN** 系统更新 Session 记录的标题字段
 
 ### Requirement: 会话删除
-系统必须支持删除会话及其所有消息。
+系统 MUST支持删除会话及其所有消息。
 
 #### Scenario: 删除会话
 - **WHEN** 用户删除会话
 - **THEN** 系统删除 Session 记录及关联的所有 Message 记录
 
 ### Requirement: 会话 API
-系统必须提供会话管理的 REST API。
+系统 MUST提供会话管理的 REST API。
 
 #### Scenario: 会话 CRUD API
 - **WHEN** 客户端调用 `/v1/notebooks/{id}/sessions` 端点

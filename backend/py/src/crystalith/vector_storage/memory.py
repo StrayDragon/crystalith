@@ -4,20 +4,13 @@ from dataclasses import dataclass
 from math import sqrt
 from typing import Iterable, Sequence
 
-
-@dataclass(frozen=True, slots=True)
-class VectorEntry:
-    notebook_id: int
-    source_id: int
-    chunk_id: int
-    vector: list[float]
-    norm: float
+from .types import VectorEntry, VectorSearchResult
 
 
 @dataclass(frozen=True, slots=True)
-class VectorSearchResult:
+class _StoredEntry:
     entry: VectorEntry
-    score: float
+    norm: float
 
 
 def _dot(left: Sequence[float], right: Sequence[float]) -> float:
@@ -28,14 +21,14 @@ def _norm(vector: Sequence[float]) -> float:
     return sqrt(sum(value * value for value in vector))
 
 
-class InMemoryVectorIndex:
+class InMemoryVectorStore:
     def __init__(self) -> None:
-        self._entries: list[VectorEntry] = []
+        self._entries: list[_StoredEntry] = []
 
     def __len__(self) -> int:
         return len(self._entries)
 
-    def add(
+    async def add(
         self,
         *,
         notebook_id: int,
@@ -55,23 +48,21 @@ class InMemoryVectorIndex:
 
         for chunk_id, vector in zip(chunk_ids, vectors_list):
             norm = _norm(vector)
-            self._entries.append(
-                VectorEntry(
-                    notebook_id=notebook_id,
-                    source_id=source_id,
-                    chunk_id=chunk_id,
-                    vector=list(vector),
-                    norm=norm,
-                )
+            entry = VectorEntry(
+                notebook_id=notebook_id,
+                source_id=source_id,
+                chunk_id=chunk_id,
+                vector=list(vector),
             )
+            self._entries.append(_StoredEntry(entry=entry, norm=norm))
 
-    def remove_source(self, source_id: int) -> None:
-        self._entries = [entry for entry in self._entries if entry.source_id != source_id]
+    async def remove_source(self, source_id: int) -> None:
+        self._entries = [entry for entry in self._entries if entry.entry.source_id != source_id]
 
-    def remove_notebook(self, notebook_id: int) -> None:
-        self._entries = [entry for entry in self._entries if entry.notebook_id != notebook_id]
+    async def remove_notebook(self, notebook_id: int) -> None:
+        self._entries = [entry for entry in self._entries if entry.entry.notebook_id != notebook_id]
 
-    def search(
+    async def search(
         self,
         *,
         notebook_id: int,
@@ -87,14 +78,15 @@ class InMemoryVectorIndex:
             return []
 
         results: list[VectorSearchResult] = []
-        for entry in self._entries:
+        for stored in self._entries:
+            entry = stored.entry
             if entry.notebook_id != notebook_id:
                 continue
             if len(entry.vector) != query_len:
                 continue
-            if entry.norm == 0:
+            if stored.norm == 0:
                 continue
-            score = _dot(query_vector, entry.vector) / (query_norm * entry.norm)
+            score = _dot(query_vector, entry.vector) / (query_norm * stored.norm)
             if score < min_score:
                 continue
             results.append(VectorSearchResult(entry=entry, score=score))
@@ -102,5 +94,5 @@ class InMemoryVectorIndex:
         results.sort(key=lambda item: item.score, reverse=True)
         return results[:top_k]
 
-    def entries(self) -> Iterable[VectorEntry]:
-        return tuple(self._entries)
+    async def entries(self) -> Iterable[VectorEntry]:
+        return tuple(entry.entry for entry in self._entries)

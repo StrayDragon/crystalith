@@ -1,42 +1,42 @@
 ## ADDED Requirements
 
 ### Requirement: 多源关联检测
-系统必须能够检测不同来源之间的内容关联。
+系统 MUST能够检测不同来源之间的内容关联。
 
 #### Scenario: 检测关联
 - **WHEN** 用户请求分析多个来源
 - **THEN** 系统识别相似主题、引用关系、补充信息
 
 ### Requirement: 主题聚类
-系统必须支持基于向量相似度的主题聚类。
+系统 MUST支持基于向量相似度的主题聚类。
 
 #### Scenario: 主题聚类
 - **WHEN** Notebook 包含多个来源
 - **THEN** 系统自动识别主要主题，将相关 chunks 聚类
 
 ### Requirement: 矛盾检测
-系统必须能够识别不同来源中的矛盾或对立观点。
+系统 MUST能够识别不同来源中的矛盾或对立观点。
 
 #### Scenario: 检测矛盾
 - **WHEN** 用户请求矛盾分析
 - **THEN** 系统识别并高亮显示来源间的矛盾点
 
 ### Requirement: 关联可视化
-系统必须提供来源关联的可视化展示。
+系统 MUST提供来源关联的可视化展示。
 
 #### Scenario: 关联图谱
 - **WHEN** 用户查看分析结果
 - **THEN** 系统展示来源间的关联图谱（节点为来源，边为关联）
 
 ### Requirement: 跨文档问答
-系统必须支持跨多个来源的综合问答。
+系统 MUST支持跨多个来源的综合问答。
 
 #### Scenario: 跨文档问答
 - **WHEN** 用户提问涉及多个来源
 - **THEN** 系统综合多个来源的信息生成回答，标注各来源贡献
 
 ### Requirement: 分析 API
-系统必须提供跨文档分析的 REST API。
+系统 MUST提供跨文档分析的 REST API。
 
 #### Scenario: 分析 API
 - **WHEN** 客户端调用 `/v1/notebooks/{id}/analysis` 端点

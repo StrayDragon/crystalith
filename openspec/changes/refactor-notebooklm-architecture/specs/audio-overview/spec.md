@@ -8,7 +8,7 @@
 > **实现状态**：本阶段仅定义接口和数据模型，暂不实现具体功能。后端返回 501 Not Implemented，前端显示"即将推出"状态。
 
 ### Requirement: 音频概述 API 接口定义
-系统必须定义音频概述的 API 接口，为后续实现预留扩展点。
+系统 MUST定义音频概述的 API 接口，为后续实现预留扩展点。
 
 #### Scenario: API 接口定义
 - **WHEN** 客户端调用 `POST /v1/notebooks/{id}/audio-overview` 端点
@@ -23,14 +23,14 @@
 - **THEN** 包含以下字段：`task_id`（任务 ID）、`status`（状态）、`audio_url`（音频 URL，完成后）、`duration`（时长）、`script`（对话脚本）
 
 ### Requirement: 音频概述数据模型
-系统必须定义音频概述的数据模型，为后续实现预留。
+系统 MUST定义音频概述的数据模型，为后续实现预留。
 
 #### Scenario: AudioOverview 模型
 - **WHEN** 定义数据模型
 - **THEN** 包含字段：`id`、`notebook_id`、`status`（pending/processing/completed/failed）、`audio_url`、`duration`、`script`、`language`、`created_at`
 
 ### Requirement: 前端 UI 预留
-系统必须在前端预留音频概述的 UI 入口，显示"即将推出"状态。
+系统 MUST在前端预留音频概述的 UI 入口，显示"即将推出"状态。
 
 #### Scenario: UI 入口
 - **WHEN** 用户查看输出类型选择器
