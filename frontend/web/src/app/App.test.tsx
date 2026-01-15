@@ -1,25 +1,28 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { afterAll, beforeEach, expect, test, vi } from 'vitest';
 import App from './App';
 
-const originalFetch = global.fetch;
+const originalFetch = globalThis.fetch;
 
-function mockJson(data, status = 200) {
+function mockJson(data: unknown, status = 200): Promise<Response> {
   return Promise.resolve({
     ok: status >= 200 && status < 300,
     status,
     statusText: 'OK',
     json: async () => data,
     text: async () => JSON.stringify(data),
-  });
+  } as Response);
 }
 
 beforeEach(() => {
-  global.fetch = jest.fn(() => Promise.reject(new Error('network')));
+  globalThis.fetch = vi
+    .fn(() => Promise.reject(new Error('network')))
+    .mockName('fetch') as unknown as typeof fetch;
 });
 
 afterAll(() => {
-  global.fetch = originalFetch;
+  globalThis.fetch = originalFetch;
 });
 
 test('renders three-column workspace panels', async () => {
@@ -46,7 +49,8 @@ test('sending a message updates chat and refine output', async () => {
 
 test('maps lowercase source status to label and badge styles', async () => {
   const now = new Date().toISOString();
-  global.fetch = jest.fn((url) => {
+  globalThis.fetch = vi.fn((input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : input.toString();
     if (url === '/v1/notebooks') {
       return mockJson([{ id: 1, name: 'Notes', updated_at: now }]);
     }
@@ -65,7 +69,7 @@ test('maps lowercase source status to label and badge styles', async () => {
       ]);
     }
     throw new Error(`unexpected fetch: ${url}`);
-  });
+  }) as unknown as typeof fetch;
 
   render(<App />);
   expect(await screen.findByText('已连接')).toBeInTheDocument();
@@ -80,7 +84,8 @@ test('clears citations when QA returns empty results', async () => {
   const emptyNotice =
     '暂无引用。发送一次消息后这里会展示引用片段（可勾选作为提炼输入）。';
 
-  global.fetch = jest.fn((url) => {
+  globalThis.fetch = vi.fn((input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : input.toString();
     if (url === '/v1/notebooks') {
       return mockJson([{ id: 1, name: 'Notes', updated_at: now }]);
     }
@@ -114,7 +119,7 @@ test('clears citations when QA returns empty results', async () => {
       });
     }
     throw new Error(`unexpected fetch: ${url}`);
-  });
+  }) as unknown as typeof fetch;
 
   render(<App />);
 

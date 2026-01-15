@@ -5,8 +5,11 @@ install:
     pnpm install
 
 dev:
-    if [ ! -x node_modules/.bin/react-scripts ]; then pnpm install; fi
-    pnpm start
+    if [ ! -x node_modules/.bin/vite ]; then pnpm install; fi
+    pnpm dev
+
+preview:
+    pnpm preview
 
 build:
     pnpm run build
