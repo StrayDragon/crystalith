@@ -24,7 +24,11 @@
   - `src/crystalith/`: main app code (`api`, `ai`, `db`, `ingestion`, `config`).
   - `packages/`: shared libraries used by the backend.
   - `tests/` and `packages/*/tests/`: pytest suites.
-- `frontend/web/`: Create React App frontend (`src/`, `public/`).
+- `frontend/web/`: Vite + React + TypeScript frontend.
+  - `src/app/`: app entry, App shell, global styles.
+  - `src/features/`: feature modules with colocated components/styles (e.g. `workspace/`).
+  - `src/shared/`: shared types, utilities, and UI primitives.
+  - `public/`: static assets.
 - `config/`: runtime config (`app.yaml`) and generated schema (`schema.json`).
 - `docs/`: local dev + deployment notes.
 - `openspec/`: change proposals and planning artifacts.
@@ -38,13 +42,14 @@ Backend (run from repo root unless noted):
 
 Frontend:
 - `cd frontend/web && pnpm install` — install JS deps.
-- `pnpm start` — dev server (proxy targets `http://127.0.0.1:8000`).
+- `pnpm dev` — Vite dev server (port 3000, proxy targets `http://127.0.0.1:8032`).
 - `pnpm run build` — production build.
-- `pnpm test` — CRA test runner.
+- `pnpm preview` — preview production build.
+- `pnpm test` — Vitest runner.
 
 ## Coding Style & Naming Conventions
 - Python: 4-space indentation, type hints where practical, async/await for I/O paths; keep modules cohesive under `crystalith/*`.
-- JavaScript/React: follow CRA defaults + ESLint `react-app`; use PascalCase for components (e.g., `WorkspacePage.js`) and camelCase for helpers; co-locate `.css` with related components when appropriate.
+- TypeScript/React: use `.ts`/`.tsx`, PascalCase for components, camelCase for helpers; co-locate feature components and `.css` under `src/features/...` when appropriate.
 
 ## Testing Guidelines
 - Backend uses pytest + pytest-asyncio; name files `test_*.py`.
