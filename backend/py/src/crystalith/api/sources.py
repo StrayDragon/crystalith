@@ -1,26 +1,24 @@
 from __future__ import annotations
 
 import datetime
-from pathlib import Path
+from time import perf_counter
+from typing import Any, Iterable
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from crystalith.ai.interfaces import EmbeddingProvider
 from crystalith.db import Chunk, Notebook, Source, SourceStatus
-from crystalith.ingestion import chunk_text
-from crystalith.vector_index import InMemoryVectorIndex
+from crystalith.parsers import Parser, ParserFactory, TranscriptionProvider, UnsupportedDocumentError
+from crystalith.vector_storage import VectorStore
 
-from .deps import get_db_session, get_embedding_provider, get_vector_index
+from .deps import get_db_session, get_embedding_provider, get_transcription_provider, get_vector_store
 
 
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/sources", tags=["sources"])
-
-SUPPORTED_EXTENSIONS = {".txt", ".md", ".markdown"}
-SUPPORTED_MIME_TYPES = {"text/plain", "text/markdown"}
 
 
 class SourceRead(BaseModel):
@@ -30,6 +28,12 @@ class SourceRead(BaseModel):
     notebook_id: int
     filename: str
     mime_type: str | None
+    parser_type: str
+    metadata: dict[str, Any] | None = Field(
+        default=None,
+        validation_alias="metadata_",
+        serialization_alias="metadata",
+    )
     status: SourceStatus
     error_message: str | None
     chunk_count: int = 0
@@ -37,18 +41,51 @@ class SourceRead(BaseModel):
     updated_at: datetime.datetime
 
 
-def _ensure_supported_file(file: UploadFile) -> None:
-    filename = file.filename or ""
-    extension = Path(filename).suffix.lower()
-    if extension in SUPPORTED_EXTENSIONS:
-        return
-    if file.content_type in SUPPORTED_MIME_TYPES:
-        return
-    raise HTTPException(status_code=415, detail="Only txt/markdown files are supported")
+def _resolve_parser(file: UploadFile, transcriber: TranscriptionProvider) -> Parser:
+    try:
+        return ParserFactory.from_file(
+            filename=file.filename,
+            mime_type=file.content_type,
+            transcriber=transcriber,
+        )
+    except UnsupportedDocumentError as exc:
+        raise HTTPException(status_code=415, detail="Unsupported file type") from exc
+
+
+def _page_count_from_chunks(chunks: Iterable[Any]) -> int | None:
+    pages: list[int] = []
+    for chunk in chunks:
+        if not hasattr(chunk, "metadata"):
+            continue
+        page = chunk.metadata.get("page") if isinstance(chunk.metadata, dict) else None
+        if isinstance(page, int):
+            pages.append(page)
+    return max(pages) if pages else None
+
+
+def _build_source_metadata(
+    chunks: Iterable[Any],
+    *,
+    parser_type: str,
+    parse_time_ms: int,
+    page_count: int | None,
+) -> dict[str, Any]:
+    word_count = 0
+    for chunk in chunks:
+        text = getattr(chunk, "text", "")
+        word_count += len(text.split())
+    return {
+        "parser_type": parser_type,
+        "word_count": word_count,
+        "parse_time_ms": parse_time_ms,
+        "page_count": page_count,
+    }
 
 
 def _source_to_read(source: Source, *, chunk_count: int) -> SourceRead:
-    return SourceRead.model_validate(source).model_copy(update={"chunk_count": chunk_count})
+    return SourceRead.model_validate(source).model_copy(
+        update={"chunk_count": chunk_count, "metadata": source.metadata_}
+    )
 
 
 @router.get("", response_model=list[SourceRead])
@@ -76,13 +113,14 @@ async def upload_source(
     file: UploadFile = File(...),
     session: AsyncSession = Depends(get_db_session),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
-    vector_index: InMemoryVectorIndex = Depends(get_vector_index),
+    transcriber: TranscriptionProvider = Depends(get_transcription_provider),
+    vector_store: VectorStore = Depends(get_vector_store),
 ) -> SourceRead:
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
 
-    _ensure_supported_file(file)
+    parser = _resolve_parser(file, transcriber)
     filename = file.filename or "upload.txt"
     mime_type = file.content_type
 
@@ -90,6 +128,7 @@ async def upload_source(
         notebook_id=notebook_id,
         filename=filename,
         mime_type=mime_type,
+        parser_type=parser.parser_type,
         status=SourceStatus.PROCESSING,
     )
     session.add(source)
@@ -98,10 +137,21 @@ async def upload_source(
 
     try:
         raw = await file.read()
-        text = raw.decode("utf-8")
-        chunks = chunk_text(text)
+        parse_started = perf_counter()
+        chunks = parser.parse(raw)
+        parse_time_ms = int((perf_counter() - parse_started) * 1000)
         if not chunks:
             raise ValueError("empty document")
+
+        page_count = getattr(parser, "page_count", None)
+        if page_count is None:
+            page_count = _page_count_from_chunks(chunks)
+        source.metadata_ = _build_source_metadata(
+            chunks,
+            parser_type=parser.parser_type,
+            parse_time_ms=parse_time_ms,
+            page_count=page_count,
+        )
 
         embeddings = await embedder.embed([chunk.text for chunk in chunks])
         if len(embeddings) != len(chunks):
@@ -115,6 +165,7 @@ async def upload_source(
                 text=chunk.text,
                 start_offset=chunk.start_offset,
                 end_offset=chunk.end_offset,
+                metadata_=chunk.metadata or None,
             )
             session.add(chunk_model)
             chunk_models.append(chunk_model)
@@ -127,7 +178,7 @@ async def upload_source(
         await session.commit()
         await session.refresh(source)
 
-        vector_index.add(
+        await vector_store.add(
             notebook_id=notebook_id,
             source_id=source.id,
             chunk_ids=chunk_ids,
@@ -149,7 +200,7 @@ async def delete_source(
     notebook_id: int,
     source_id: int,
     session: AsyncSession = Depends(get_db_session),
-    vector_index: InMemoryVectorIndex = Depends(get_vector_index),
+    vector_store: VectorStore = Depends(get_vector_store),
 ) -> None:
     source = await session.get(Source, source_id)
     if source is None or source.notebook_id != notebook_id:
@@ -157,4 +208,4 @@ async def delete_source(
 
     await session.delete(source)
     await session.commit()
-    vector_index.remove_source(source_id)
+    await vector_store.remove_source(source_id)

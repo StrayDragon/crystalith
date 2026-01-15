@@ -1,7 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { RefineJob, RefineMode, RefineSettings, RefineTemplate } from '../types';
+import type {
+  OutputItem,
+  OutputTypeId,
+  RefineJob,
+  RefineMode,
+  RefineSettings,
+  RefineTemplate,
+} from '../types';
 import { formatOutputForCopy } from '../utils';
+import OutputTypeSelector from './OutputTypeSelector';
+
+const AudioOverviewOption = lazy(() => import('./AudioOverviewOption'));
+const VideoOverviewOption = lazy(() => import('./VideoOverviewOption'));
 
 interface RefinePanelProps {
   mode: RefineMode;
@@ -18,6 +29,17 @@ interface RefinePanelProps {
   settings: RefineSettings;
   onToggleSetting: (key: keyof RefineSettings) => void;
   highlightedJobId: string | null;
+  outputTypeOptions: { id: OutputTypeId; label: string; description: string }[];
+  outputType: OutputTypeId;
+  onOutputTypeChange: (value: OutputTypeId) => void;
+  isOutputTypeOpen: boolean;
+  onToggleOutputType: () => void;
+  onCloseOutputType: () => void;
+  outputs: OutputItem[];
+  outputsLoading: boolean;
+  outputsError: string;
+  onGenerateOutput: () => void;
+  onRetryOutputs: () => void;
 }
 
 interface RefineTemplateSectionProps {
@@ -60,7 +82,17 @@ function RefineTemplateItem({
         aria-label={isFavorite ? `取消收藏 ${item.label}` : `收藏 ${item.label}`}
         onClick={() => onToggleFavorite(item.id)}
       >
-        {isFavorite ? '★' : '☆'}
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          focusable="false"
+          className="RefineTemplateStar__icon"
+        >
+          <path
+            d="M11.48 3.499a.75.75 0 0 1 1.04 0l2.753 2.796 3.87.562a.75.75 0 0 1 .416 1.279l-2.8 2.732.66 3.85a.75.75 0 0 1-1.088.793L12 13.347l-3.46 1.82a.75.75 0 0 1-1.088-.793l.66-3.85-2.8-2.732a.75.75 0 0 1 .416-1.279l3.87-.562 2.753-2.796Z"
+            fill="currentColor"
+          />
+        </svg>
       </button>
     </div>
   );
@@ -94,6 +126,169 @@ function RefineTemplateSection({
   );
 }
 
+function renderMindmapNode(
+  node: { label?: string; children?: any[] },
+  depth = 0,
+  index = 0,
+) {
+  if (!node) return null;
+  return (
+    <li key={`${depth}-${index}-${node.label ?? 'node'}`} className={`StructuredMindmapNode depth-${depth}`}>
+      <div className="StructuredMindmapLabel">{node.label || '未命名节点'}</div>
+      {Array.isArray(node.children) && node.children.length > 0 ? (
+        <ul className="StructuredMindmapChildren">
+          {node.children.map((child, childIndex) =>
+            renderMindmapNode(child, depth + 1, childIndex),
+          )}
+        </ul>
+      ) : null}
+    </li>
+  );
+}
+
+function renderOutputContent(output: OutputItem) {
+  const content = output.content ?? {};
+  if (output.type === 'FAQ' && Array.isArray((content as any).items)) {
+    return (
+      <div className="StructuredOutputFaq">
+        {(content as any).items.map((item: any, index: number) => (
+          <div key={index} className="StructuredOutputFaqItem">
+            <div className="StructuredOutputFaqQuestion">{item.question || '问题'}</div>
+            <div className="StructuredOutputFaqAnswer">{item.answer || '暂无回答'}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (output.type === 'GUIDE' && Array.isArray((content as any).modules)) {
+    return (
+      <div className="StructuredOutputGuide">
+        {(content as any).modules.map((module: any, index: number) => (
+          <div key={index} className="StructuredOutputGuideModule">
+            <div className="StructuredOutputGuideTitle">{module.title || '模块'}</div>
+            <div className="StructuredOutputGuideObjective">
+              {module.objective?.text || '暂无目标'}
+            </div>
+            {Array.isArray(module.key_points) ? (
+              <ul className="StructuredOutputList">
+                {module.key_points.map((item: any, itemIndex: number) => (
+                  <li key={itemIndex}>{item.text || '要点'}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (output.type === 'TIMELINE' && Array.isArray((content as any).events)) {
+    return (
+      <ul className="StructuredOutputTimeline">
+        {(content as any).events.map((event: any, index: number) => (
+          <li key={index} className="StructuredOutputTimelineItem">
+            <div className="StructuredOutputTimelineDate">{event.date || '时间'}</div>
+            <div className="StructuredOutputTimelineEvent">{event.event || '事件'}</div>
+            <div className="StructuredOutputTimelineDesc">{event.description || '暂无描述'}</div>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  if (output.type === 'MINDMAP' && (content as any).root) {
+    return (
+      <ul className="StructuredMindmapTree">
+        {renderMindmapNode((content as any).root, 0, 0)}
+      </ul>
+    );
+  }
+
+  if (output.type === 'QUIZ' && Array.isArray((content as any).questions)) {
+    return (
+      <div className="StructuredOutputQuiz">
+        {(content as any).questions.map((question: any, index: number) => (
+          <div key={index} className="StructuredOutputQuizItem">
+            <div className="StructuredOutputQuizQuestion">{question.question || '问题'}</div>
+            {Array.isArray(question.options) && question.options.length > 0 ? (
+              <ul className="StructuredOutputList">
+                {question.options.map((option: string) => (
+                  <li key={option}>{option}</li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="StructuredOutputQuizAnswer">{question.answer || '暂无答案'}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (output.type === 'BRIEFING' && Array.isArray((content as any).sections)) {
+    return (
+      <div className="StructuredOutputBriefing">
+        {(content as any).sections.map((section: any, index: number) => (
+          <div key={index} className="StructuredOutputBriefingSection">
+            <div className="StructuredOutputBriefingHeading">{section.heading || '要点'}</div>
+            {Array.isArray(section.points) ? (
+              <ul className="StructuredOutputList">
+                {section.points.map((point: any, pointIndex: number) => (
+                  <li key={pointIndex}>{point.text || '内容'}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (output.type === 'PARAGRAPH' && typeof (content as any).text === 'string') {
+    return <p className="StructuredOutputParagraph">{(content as any).text}</p>;
+  }
+
+  if (output.type === 'BULLETS' && Array.isArray((content as any).items)) {
+    return (
+      <ul className="StructuredOutputList">
+        {(content as any).items.map((item: any, index: number) => (
+          <li key={index}>{item.text || '要点'}</li>
+        ))}
+      </ul>
+    );
+  }
+
+  if (output.type === 'STRUCTURED') {
+    return (
+      <div className="StructuredOutputStructured">
+        <div className="StructuredOutputStructuredTitle">
+          {(content as any).title || '未命名结构化输出'}
+        </div>
+        {Array.isArray((content as any).bullets) ? (
+          <ul className="StructuredOutputList">
+            {(content as any).bullets.map((item: any, index: number) => (
+              <li key={index}>{item.text || '要点'}</li>
+            ))}
+          </ul>
+        ) : null}
+        {Array.isArray((content as any).terms) && (content as any).terms.length > 0 ? (
+          <div className="StructuredOutputTags">
+            {(content as any).terms.map((term: string) => (
+              <span key={term} className="StructuredOutputTag">
+                {term}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <pre className="StructuredOutputRaw">{JSON.stringify(output.content ?? {}, null, 2)}</pre>
+  );
+}
+
 export default function RefinePanel({
   mode,
   onModeChange,
@@ -109,6 +304,17 @@ export default function RefinePanel({
   settings,
   onToggleSetting,
   highlightedJobId,
+  outputTypeOptions,
+  outputType,
+  onOutputTypeChange,
+  isOutputTypeOpen,
+  onToggleOutputType,
+  onCloseOutputType,
+  outputs,
+  outputsLoading,
+  outputsError,
+  onGenerateOutput,
+  onRetryOutputs,
 }: RefinePanelProps) {
   const promptRef = useRef<HTMLTextAreaElement | null>(null);
   const configRef = useRef<HTMLDivElement | null>(null);
@@ -116,6 +322,18 @@ export default function RefinePanel({
   const [recentTemplateIds, setRecentTemplateIds] = useState<string[]>([]);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [copiedJobId, setCopiedJobId] = useState<string | null>(null);
+  const audioOverviewFallback = (
+    <button type="button" className="RefineMode isDisabled" aria-hidden="true" tabIndex={-1}>
+      音频概述
+      <span className="RefineModeBadge">即将推出</span>
+    </button>
+  );
+  const videoOverviewFallback = (
+    <button type="button" className="RefineMode isDisabled" aria-hidden="true" tabIndex={-1}>
+      视频概述
+      <span className="RefineModeBadge">即将推出</span>
+    </button>
+  );
   const normalizedPrompt = prompt.trim();
   const activeTemplate =
     templates.find((item) => item.prompt.trim() === normalizedPrompt) ?? null;
@@ -155,6 +373,8 @@ export default function RefinePanel({
     }
     return sorted;
   }, [templates]);
+  const outputTypeLabel =
+    outputTypeOptions.find((item) => item.id === outputType)?.label ?? outputType;
   const statusLabels: Record<RefineJob['status'], string> = {
     queued: '排队中',
     running: '生成中',
@@ -238,6 +458,76 @@ export default function RefinePanel({
 
   return (
     <div className="WorkspacePanelBody">
+      <div className="StructuredOutputCard">
+        <div className="StructuredOutputHeader">
+          <div>
+            <div className="StructuredOutputTitle">结构化输出</div>
+            <div className="StructuredOutputSubtitle">
+              选择输出类型，生成 FAQ、指南或时间轴等结构化结果。
+            </div>
+          </div>
+          <div className="StructuredOutputActions">
+            <OutputTypeSelector
+              options={outputTypeOptions}
+              value={outputType}
+              isOpen={isOutputTypeOpen}
+              onToggle={onToggleOutputType}
+              onClose={onCloseOutputType}
+              onSelect={onOutputTypeChange}
+            />
+            <button
+              type="button"
+              className="PrimaryButton"
+              onClick={onGenerateOutput}
+              disabled={isBlocked || outputsLoading}
+            >
+              生成{outputTypeLabel}
+            </button>
+          </div>
+        </div>
+        {outputsError ? (
+          <div className="WorkspaceHint isError">
+            {outputsError}
+            <button type="button" className="WorkspaceLinkButton" onClick={onRetryOutputs}>
+              重试
+            </button>
+          </div>
+        ) : null}
+        {outputsLoading ? (
+          <div className="OutputSkeletonList" aria-label="生成结构化输出">
+            <div className="OutputSkeletonItem" />
+            <div className="OutputSkeletonItem isShort" />
+          </div>
+        ) : outputs.length === 0 ? (
+          <div className="OutputEmpty">
+            <div className="OutputEmpty__icon" aria-hidden="true" />
+            <div className="OutputEmpty__title">暂无结构化输出</div>
+            <div className="OutputEmpty__subtitle">选择类型并点击生成</div>
+          </div>
+        ) : (
+          <div className="StructuredOutputResults">
+            {outputs.map((output) => (
+              <div key={output.id} className="StructuredOutputItem">
+                <div className="StructuredOutputItemHeader">
+                  <div>
+                    <div className="StructuredOutputItemTitle">
+                      {outputTypeOptions.find((item) => item.id === output.type)?.label ??
+                        output.type}
+                    </div>
+                    <div className="StructuredOutputItemMeta">
+                      {output.createdAt || '刚刚生成'}
+                    </div>
+                  </div>
+                </div>
+                {output.prompt ? (
+                  <div className="StructuredOutputItemPrompt">{output.prompt}</div>
+                ) : null}
+                <div className="StructuredOutputItemContent">{renderOutputContent(output)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="RefineCard">
         <div className="RefineCard__header">
           <div>
@@ -354,6 +644,12 @@ export default function RefinePanel({
               {item.label}
             </button>
           ))}
+          <Suspense fallback={audioOverviewFallback}>
+            <AudioOverviewOption />
+          </Suspense>
+          <Suspense fallback={videoOverviewFallback}>
+            <VideoOverviewOption />
+          </Suspense>
         </div>
         <div className="RefineActions">
           <button

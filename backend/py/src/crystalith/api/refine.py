@@ -12,9 +12,17 @@ from crystalith.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.ai.types import ChatMessage
 from crystalith.config import RefineSettings, Settings
 from crystalith.db import Chunk, Notebook, Source
-from crystalith.vector_index import InMemoryVectorIndex, VectorSearchResult
+from crystalith.tasks import TaskQueue, TaskStatus, TaskType
+from crystalith.vector_storage import VectorSearchResult, VectorStore
 
-from .deps import get_chat_provider, get_db_session, get_embedding_provider, get_settings, get_vector_index
+from .deps import (
+    get_chat_provider,
+    get_db_session,
+    get_embedding_provider,
+    get_settings,
+    get_task_queue,
+    get_vector_store,
+)
 
 
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/refine", tags=["refine"])
@@ -190,9 +198,7 @@ async def refine(
     notebook_id: int,
     payload: RefineRequest,
     session: AsyncSession = Depends(get_db_session),
-    embedder: EmbeddingProvider = Depends(get_embedding_provider),
-    chatter: ChatProvider = Depends(get_chat_provider),
-    vector_index: InMemoryVectorIndex = Depends(get_vector_index),
+    task_queue: TaskQueue = Depends(get_task_queue),
     settings: Settings = Depends(get_settings),
 ) -> RefineResponse:
     notebook = await session.get(Notebook, notebook_id)
@@ -200,8 +206,6 @@ async def refine(
         raise HTTPException(status_code=404, detail="Notebook not found")
 
     format_name = _normalize_format(settings.refine, payload.format)
-    created_at = datetime.datetime.now(datetime.UTC)
-
     explicit_chunk_ids = [int(value) for value in (payload.chunk_ids or []) if int(value) > 0]
     if explicit_chunk_ids:
         rows = await session.execute(
@@ -215,87 +219,21 @@ async def refine(
         missing = [chunk_id for chunk_id in explicit_chunk_ids if chunk_id not in chunk_map]
         if missing:
             raise HTTPException(status_code=400, detail="Unknown chunk_id in chunk_ids")
-
-        citations: list[RefineCitation] = []
-        for chunk_id in explicit_chunk_ids:
-            chunk, source = chunk_map[chunk_id]
-            snippet = chunk.text.strip()[:200]
-            citations.append(
-                RefineCitation(
-                    source_id=source.id,
-                    source_name=source.filename,
-                    chunk_id=chunk.id,
-                    chunk_index=chunk.chunk_index,
-                    snippet=snippet,
-                    score=1.0,
-                )
-            )
-
-        context = _format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
-    else:
-        embeddings = await embedder.embed([payload.prompt])
-        if not embeddings:
-            return RefineResponse(
-                format=format_name,
-                citations=[],
-                evidence=False,
-                created_at=created_at,
-            )
-        query_vector = embeddings[0]
-        results = vector_index.search(
-            notebook_id=notebook_id,
-            query_vector=query_vector,
-            top_k=payload.top_k,
-            min_score=payload.min_score,
-        )
-        if not results:
-            return RefineResponse(
-                format=format_name,
-                citations=[],
-                evidence=False,
-                created_at=created_at,
-            )
-
-        chunk_ids = [result.entry.chunk_id for result in results]
-        rows = await session.execute(
-            select(Chunk, Source)
-            .join(Source, Source.id == Chunk.source_id)
-            .where(Chunk.id.in_(chunk_ids))
-        )
-        chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
-
-        citations = []
-        for result in results:
-            chunk, source = chunk_map[result.entry.chunk_id]
-            snippet = chunk.text.strip()[:200]
-            citations.append(
-                RefineCitation(
-                    source_id=source.id,
-                    source_name=source.filename,
-                    chunk_id=chunk.id,
-                    chunk_index=chunk.chunk_index,
-                    snippet=snippet,
-                    score=result.score,
-                )
-            )
-
-        context = _format_context(results, chunk_map)
-
-    messages = _build_messages(format_name, payload.prompt, context)
-    answer = await chatter.chat(messages)
-    output = _apply_format(format_name, answer, payload.prompt, citations)
-    response = RefineResponse(
-        format=format_name,
-        citations=citations,
-        evidence=True,
-        created_at=created_at,
-    )
-
-    response.paragraph = output.paragraph
-    response.bullets = output.bullets
-    response.structured = output.structured
-
-    return response
+    task_payload = {
+        "prompt": payload.prompt,
+        "format": format_name,
+        "chunk_ids": payload.chunk_ids,
+        "top_k": payload.top_k,
+        "min_score": payload.min_score,
+    }
+    task_id = await task_queue.enqueue(TaskType.REFINE, task_payload, notebook_id=notebook_id)
+    await task_queue.wait_for_completion(task_id)
+    task = await task_queue.get_status(task_id)
+    if task.status == TaskStatus.COMPLETED and task.result is not None:
+        return RefineResponse.model_validate(task.result)
+    if task.status == TaskStatus.CANCELLED:
+        raise HTTPException(status_code=409, detail="Task cancelled")
+    raise HTTPException(status_code=500, detail=task.error or "Task failed")
 
 
 @router.post("/batch", response_model=RefineBatchResponse)
@@ -305,7 +243,7 @@ async def refine_batch(
     session: AsyncSession = Depends(get_db_session),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     chatter: ChatProvider = Depends(get_chat_provider),
-    vector_index: InMemoryVectorIndex = Depends(get_vector_index),
+    vector_store: VectorStore = Depends(get_vector_store),
     settings: Settings = Depends(get_settings),
 ) -> RefineBatchResponse:
     notebook = await session.get(Notebook, notebook_id)
@@ -355,7 +293,7 @@ async def refine_batch(
                 created_at=created_at,
             )
         query_vector = embeddings[0]
-        results = vector_index.search(
+        results = await vector_store.search(
             notebook_id=notebook_id,
             query_vector=query_vector,
             top_k=payload.top_k,

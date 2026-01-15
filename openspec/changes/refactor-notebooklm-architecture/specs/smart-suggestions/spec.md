@@ -1,42 +1,42 @@
 ## ADDED Requirements
 
 ### Requirement: 问题生成
-系统必须能够基于文档内容自动生成建议问题。
+系统 MUST能够基于文档内容自动生成建议问题。
 
 #### Scenario: 生成建议问题
 - **WHEN** 用户打开 Notebook
 - **THEN** 系统生成 3-5 个与来源内容相关的建议问题
 
 ### Requirement: 上下文感知建议
-系统必须根据会话历史生成上下文相关的建议。
+系统 MUST根据会话历史生成上下文相关的建议。
 
 #### Scenario: 上下文建议
 - **WHEN** 用户在会话中提问后
 - **THEN** 系统生成与当前话题相关的后续问题建议
 
 ### Requirement: 深度问题引导
-系统必须支持苏格拉底式的深度问题引导。
+系统 MUST支持苏格拉底式的深度问题引导。
 
 #### Scenario: 深度引导
 - **WHEN** 用户选择 "深入探索" 选项
 - **THEN** 系统生成引导用户深入思考的问题序列
 
 ### Requirement: 问题分类
-系统必须对建议问题进行分类。
+系统 MUST对建议问题进行分类。
 
 #### Scenario: 问题分类
 - **WHEN** 生成建议问题
 - **THEN** 系统标注问题类型：事实性、分析性、比较性、创意性
 
 ### Requirement: 建议刷新
-系统必须支持刷新建议问题。
+系统 MUST支持刷新建议问题。
 
 #### Scenario: 刷新建议
 - **WHEN** 用户点击刷新按钮
 - **THEN** 系统生成新的建议问题集
 
 ### Requirement: 建议 API
-系统必须提供建议问题的 REST API。
+系统 MUST提供建议问题的 REST API。
 
 #### Scenario: 建议 API
 - **WHEN** 客户端调用 `/v1/notebooks/{id}/suggestions` 端点
