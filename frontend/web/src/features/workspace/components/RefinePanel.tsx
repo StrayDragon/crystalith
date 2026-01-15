@@ -8,7 +8,7 @@ import type {
   RefineSettings,
   RefineTemplate,
 } from '../types';
-import { formatOutputForCopy } from '../utils';
+import { formatOutputForCopy, formatStructuredOutputForCopy } from '../utils';
 import OutputTypeSelector from './OutputTypeSelector';
 
 const AudioOverviewOption = lazy(() => import('./AudioOverviewOption'));
@@ -36,10 +36,15 @@ interface RefinePanelProps {
   onToggleOutputType: () => void;
   onCloseOutputType: () => void;
   outputs: OutputItem[];
+  outputQueueJobs: { id: string; type: OutputTypeId; status: 'queued' | 'running' | 'done' | 'error' }[];
+  queueSummary: { total: number; done: number };
   outputsLoading: boolean;
   outputsError: string;
   onGenerateOutput: () => void;
   onRetryOutputs: () => void;
+  onReplayRefineJob: (job: RefineJob) => void;
+  onReplayOutput: (output: OutputItem) => void;
+  onDeleteOutput: (outputId: number) => void;
 }
 
 interface RefineTemplateSectionProps {
@@ -311,10 +316,15 @@ export default function RefinePanel({
   onToggleOutputType,
   onCloseOutputType,
   outputs,
+  outputQueueJobs,
+  queueSummary,
   outputsLoading,
   outputsError,
   onGenerateOutput,
   onRetryOutputs,
+  onReplayRefineJob,
+  onReplayOutput,
+  onDeleteOutput,
 }: RefinePanelProps) {
   const promptRef = useRef<HTMLTextAreaElement | null>(null);
   const configRef = useRef<HTMLDivElement | null>(null);
@@ -322,6 +332,8 @@ export default function RefinePanel({
   const [recentTemplateIds, setRecentTemplateIds] = useState<string[]>([]);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [copiedJobId, setCopiedJobId] = useState<string | null>(null);
+  const [copiedOutputId, setCopiedOutputId] = useState<number | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | number | null>(null);
   const audioOverviewFallback = (
     <button type="button" className="RefineMode isDisabled" aria-hidden="true" tabIndex={-1}>
       音频概述
@@ -384,9 +396,19 @@ export default function RefinePanel({
   const pendingCount = jobs.filter(
     (job) => job.status === 'queued' || job.status === 'running',
   ).length;
+  const outputPendingCount = outputQueueJobs.filter(
+    (job) => job.status === 'queued' || job.status === 'running',
+  ).length;
   const totalCount = jobs.length;
-  const progress = totalCount
-    ? Math.round(((totalCount - pendingCount) / totalCount) * 100)
+  const queuedCount =
+    jobs.filter((job) => job.status === 'queued').length +
+    outputQueueJobs.filter((job) => job.status === 'queued').length;
+  const runningCount =
+    jobs.filter((job) => job.status === 'running').length +
+    outputQueueJobs.filter((job) => job.status === 'running').length;
+  const combinedPendingCount = pendingCount + outputPendingCount;
+  const progress = queueSummary.total
+    ? Math.round((queueSummary.done / queueSummary.total) * 100)
     : 0;
   const orderedJobs = useMemo(() => {
     const pinned: RefineJob[] = [];
@@ -397,6 +419,29 @@ export default function RefinePanel({
     }
     return [...pinned, ...normal];
   }, [jobs]);
+  const queueItems = useMemo(() => {
+    const items: { id: string; label: string; status: string }[] = [];
+    const outputTypeMap = new Map(
+      outputTypeOptions.map((option) => [option.id, option.label]),
+    );
+    for (const job of jobs) {
+      if (job.status !== 'queued' && job.status !== 'running') continue;
+      items.push({
+        id: `refine-${job.id}`,
+        label: job.title,
+        status: job.status,
+      });
+    }
+    for (const job of outputQueueJobs) {
+      if (job.status !== 'queued' && job.status !== 'running') continue;
+      items.push({
+        id: `output-${job.id}`,
+        label: `结构化输出 - ${outputTypeMap.get(job.type) ?? job.type}`,
+        status: job.status,
+      });
+    }
+    return items.slice(0, 4);
+  }, [jobs, outputQueueJobs, outputTypeOptions]);
 
   useEffect(() => {
     if (!isConfigOpen) return undefined;
@@ -410,6 +455,20 @@ export default function RefinePanel({
       document.removeEventListener('mousedown', handleClick);
     };
   }, [isConfigOpen]);
+
+  useEffect(() => {
+    if (!openMenuId) return undefined;
+    function handleClick(event: MouseEvent) {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest('[data-menu-root]')) {
+        setOpenMenuId(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+    };
+  }, [openMenuId]);
 
   function handleSelectTemplate(item: RefineTemplate) {
     onPromptChange(item.prompt);
@@ -456,6 +515,35 @@ export default function RefinePanel({
     }
   }
 
+  async function handleCopyOutput(output: OutputItem) {
+    const content = formatStructuredOutputForCopy(output);
+    if (!content) return;
+    const label =
+      outputTypeOptions.find((item) => item.id === output.type)?.label ?? output.type;
+    const text = `${label}\n${content}`.trim();
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-1000px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopiedOutputId(output.id);
+      window.setTimeout(() => {
+        setCopiedOutputId((current) => (current === output.id ? null : current));
+      }, 1500);
+    } catch (error) {
+      // noop
+    }
+  }
+
   return (
     <div className="WorkspacePanelBody">
       <div className="StructuredOutputCard">
@@ -493,7 +581,7 @@ export default function RefinePanel({
             </button>
           </div>
         ) : null}
-        {outputsLoading ? (
+        {outputsLoading && outputs.length === 0 ? (
           <div className="OutputSkeletonList" aria-label="生成结构化输出">
             <div className="OutputSkeletonItem" />
             <div className="OutputSkeletonItem isShort" />
@@ -509,13 +597,69 @@ export default function RefinePanel({
             {outputs.map((output) => (
               <div key={output.id} className="StructuredOutputItem">
                 <div className="StructuredOutputItemHeader">
-                  <div>
-                    <div className="StructuredOutputItemTitle">
-                      {outputTypeOptions.find((item) => item.id === output.type)?.label ??
-                        output.type}
+                  <button
+                    type="button"
+                    className="StructuredOutputItemHeaderButton"
+                    onClick={() => onReplayOutput(output)}
+                    title="点击重新生成并入队"
+                  >
+                    <div>
+                      <div className="StructuredOutputItemTitle">
+                        {outputTypeOptions.find((item) => item.id === output.type)?.label ??
+                          output.type}
+                      </div>
+                      <div className="StructuredOutputItemMeta">
+                        {output.createdAt || '刚刚生成'}
+                      </div>
                     </div>
-                    <div className="StructuredOutputItemMeta">
-                      {output.createdAt || '刚刚生成'}
+                  </button>
+                  <div className="StructuredOutputItemActions">
+                    {copiedOutputId === output.id ? (
+                      <span className="RefineResultCard__hint">已复制</span>
+                    ) : null}
+                    <div className="OutputCardMenu" data-menu-root>
+                      <button
+                        type="button"
+                        className="IconButton"
+                        aria-label="更多操作"
+                        aria-expanded={openMenuId === `output-${output.id}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenMenuId((current) =>
+                            current === `output-${output.id}` ? null : `output-${output.id}`,
+                          );
+                        }}
+                      >
+                        <span aria-hidden="true">...</span>
+                      </button>
+                      {openMenuId === `output-${output.id}` ? (
+                        <div className="OutputCardMenuPanel" role="menu" data-menu-root>
+                          <button
+                            type="button"
+                            className="OutputCardMenuItem"
+                            role="menuitem"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleCopyOutput(output);
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            复制
+                          </button>
+                          <button
+                            type="button"
+                            className="OutputCardMenuItem isDanger"
+                            role="menuitem"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onDeleteOutput(output.id);
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            删除
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -663,12 +807,37 @@ export default function RefinePanel({
         </div>
       </div>
 
-      {pendingCount > 0 ? (
-        <div className="OutputQueueStatus">
-          <div className="OutputQueueStatus__text">{pendingCount} 个任务处理中…</div>
-          <div className="OutputQueueProgress" aria-hidden="true">
-            <div className="OutputQueueProgress__bar" style={{ width: `${progress}%` }} />
+      {combinedPendingCount > 0 ? (
+        <div className="OutputQueueCard" role="status" aria-live="polite">
+          <div className="OutputQueueCard__header">
+            <div>
+              <div className="OutputQueueCard__title">任务队列</div>
+              <div className="OutputQueueCard__meta">
+                排队 {queuedCount} / 进行中 {runningCount} / 总计 {queueSummary.total}
+              </div>
+            </div>
+            <div className="OutputQueueCard__ratio">
+              {queueSummary.done}/{queueSummary.total || combinedPendingCount}
+            </div>
           </div>
+          <div className="OutputQueueCard__progress" aria-hidden="true">
+            <div
+              className="OutputQueueCard__bar"
+              style={{ width: `${Math.min(100, progress)}%` }}
+            />
+          </div>
+          {queueItems.length > 0 ? (
+            <div className="OutputQueueCard__list">
+              {queueItems.map((item) => (
+                <div key={item.id} className="OutputQueueItem">
+                  <span className="OutputQueueItem__label">{item.label}</span>
+                  <span className={`OutputQueueItem__status is-${item.status}`}>
+                    {statusLabels[item.status as RefineJob['status']]}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -699,7 +868,12 @@ export default function RefinePanel({
                 } ${highlightedJobId === job.id ? 'isNew' : ''}`}
               >
                 <div className="RefineResultCard__header">
-                  <div>
+                  <button
+                    type="button"
+                    className="RefineResultCard__headerButton"
+                    onClick={() => onReplayRefineJob(job)}
+                    title="点击重新生成并入队"
+                  >
                     <div className="RefineResultCard__title">{job.title}</div>
                     <div className="RefineResultCard__meta">
                       <span className={`RefineResultStatus is-${job.status}`}>
@@ -710,56 +884,68 @@ export default function RefinePanel({
                       </span>
                       <span>{timeLabel}</span>
                     </div>
-                  </div>
+                  </button>
                   <div className="RefineResultCard__actions">
                     {copiedJobId === job.id ? (
                       <span className="RefineResultCard__hint">已复制</span>
                     ) : null}
-                    <button
-                      type="button"
-                      className="IconButton"
-                      aria-label={job.pinned ? '取消固定' : '固定结果'}
-                      aria-pressed={job.pinned}
-                      onClick={() => onTogglePin(job.id)}
-                    >
-                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path
-                          d="M6 3h12l-3 5v5l2 2v1H7v-1l2-2V8L6 3Z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      className="IconButton"
-                      aria-label="复制结果"
-                      onClick={() => handleCopyJob(job)}
-                      disabled={!hasOutput}
-                    >
-                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path
-                          d="M9 8h9a2 2 0 0 1 2 2v9h-9a2 2 0 0 1-2-2V8Z"
-                          fill="currentColor"
-                        />
-                        <path
-                          d="M6 5h9a2 2 0 0 1 2 2H8a2 2 0 0 0-2 2v9H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      className="IconButton"
-                      aria-label="删除结果"
-                      onClick={() => onDeleteJob(job.id)}
-                    >
-                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path
-                          d="M8 6h8l-.6 14H8.6L8 6Zm9-2h-4l-1-2h-2l-1 2H7v2h10V4Z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                    </button>
+                    <div className="OutputCardMenu" data-menu-root>
+                      <button
+                        type="button"
+                        className="IconButton"
+                        aria-label="更多操作"
+                        aria-expanded={openMenuId === `refine-${job.id}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenMenuId((current) =>
+                            current === `refine-${job.id}` ? null : `refine-${job.id}`,
+                          );
+                        }}
+                      >
+                        <span aria-hidden="true">...</span>
+                      </button>
+                      {openMenuId === `refine-${job.id}` ? (
+                        <div className="OutputCardMenuPanel" role="menu" data-menu-root>
+                          <button
+                            type="button"
+                            className="OutputCardMenuItem"
+                            role="menuitem"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onTogglePin(job.id);
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            {job.pinned ? '取消固定' : '固定'}
+                          </button>
+                          <button
+                            type="button"
+                            className="OutputCardMenuItem"
+                            role="menuitem"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleCopyJob(job);
+                              setOpenMenuId(null);
+                            }}
+                            disabled={!hasOutput}
+                          >
+                            复制
+                          </button>
+                          <button
+                            type="button"
+                            className="OutputCardMenuItem isDanger"
+                            role="menuitem"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onDeleteJob(job.id);
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            删除
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
                 <div className="RefineResultCard__prompt">{job.prompt}</div>

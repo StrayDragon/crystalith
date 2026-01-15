@@ -284,10 +284,15 @@ export default function WorkspaceLayout() {
             onToggleOutputType={() => setOutputTypeOpen((prev) => !prev)}
             onCloseOutputType={() => setOutputTypeOpen(false)}
             outputs={refine.outputs}
+            outputQueueJobs={refine.outputQueueJobs}
+            queueSummary={refine.queueSummary}
             outputsLoading={refine.outputsLoading}
             outputsError={refine.outputsError}
             onGenerateOutput={refine.onGenerateOutput}
             onRetryOutputs={refine.retryOutputs}
+            onReplayRefineJob={refine.onReplayRefineJob}
+            onReplayOutput={refine.onReplayOutput}
+            onDeleteOutput={refine.onDeleteOutput}
           />
         </section>
       </main>
