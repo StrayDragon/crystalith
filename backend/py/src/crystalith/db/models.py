@@ -183,7 +183,11 @@ class Source(AsyncSqlATableBase):
 
     filename: Mapped[str] = mapped_column(sa.String(512), nullable=False)
     mime_type: Mapped[str | None] = mapped_column(sa.String(127), nullable=True)
-    parser_type: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    parser_type: Mapped[str] = mapped_column(
+        sa.String(64),
+        nullable=False,
+        server_default=sa.text("'text'"),
+    )
     metadata_: Mapped[dict[str, Any] | None] = mapped_column(
         "metadata",
         sa.JSON,
