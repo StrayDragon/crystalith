@@ -20,45 +20,48 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `backend/py/`: FastAPI service with SQLAlchemy async models and local packages.
-  - `src/crystalith/`: main app code (`api`, `ai`, `db`, `ingestion`, `config`).
-  - `packages/`: shared libraries used by the backend.
-  - `tests/` and `packages/*/tests/`: pytest suites.
-- `frontend/web/`: Vite + React + TypeScript frontend.
-  - `src/app/`: app entry, App shell, global styles.
-  - `src/features/`: feature modules with colocated components/styles (e.g. `workspace/`).
-  - `src/shared/`: shared types, utilities, and UI primitives.
-  - `public/`: static assets.
-- `config/`: runtime config (`app.yaml`) and generated schema (`schema.json`).
-- `docs/`: local dev + deployment notes.
-- `openspec/`: change proposals and planning artifacts.
+- `backend/py/` houses the FastAPI service, with app code in `backend/py/src/crystalith/` and tests in `backend/py/tests/`.
+- `backend/py/packages/` contains workspace libraries (e.g., `cl-logs`, `cl-fastapix`), each with its own `pyproject.toml` and `tests/`.
+- `frontend/web/` is the Vite + React + TypeScript UI; source lives in `frontend/web/src/`, assets in `frontend/web/public/`.
+- `config/` stores runtime configuration (`app.yaml`) and the generated schema (`schema.json`).
+- `openspec/` contains specification and change-tracking docs; use it when working on spec-driven changes.
 
 ## Build, Test, and Development Commands
-Backend (run from repo root unless noted):
-- `cd backend/py && uv sync` — install Python dependencies with uv.
-- `uv run --project backend/py uvicorn crystalith.app:create_app --factory --host 127.0.0.1 --port 8000` — start the API server.
-- Optional DB init: see `docs/local-dev-deploy.md` for the `create_all` SQLite command.
-- `cd backend/py && uv run pytest` — run backend tests.
-
+Backend (from repo root):
+```bash
+cd backend/py
+uv sync                # install deps
+just dev               # run API server (uvicorn wrapper)
+just test              # run pytest
+just db-init           # create local SQLite tables
+```
 Frontend:
-- `cd frontend/web && pnpm install` — install JS deps.
-- `pnpm dev` — Vite dev server (port 3000, proxy targets `http://127.0.0.1:8032`).
-- `pnpm run build` — production build.
-- `pnpm preview` — preview production build.
-- `pnpm test` — Vitest runner.
+```bash
+cd frontend/web
+pnpm install
+pnpm dev               # local dev server
+pnpm test              # vitest runner
+pnpm run build         # production build
+pnpm preview           # serve build locally
+```
+Tip: `just -l` lists available tasks in each directory.
 
 ## Coding Style & Naming Conventions
-- Python: 4-space indentation, type hints where practical, async/await for I/O paths; keep modules cohesive under `crystalith/*`.
-- TypeScript/React: use `.ts`/`.tsx`, PascalCase for components, camelCase for helpers; co-locate feature components and `.css` under `src/features/...` when appropriate.
+- Python: 4-space indentation, type hints encouraged, `snake_case` for functions/vars, `PascalCase` for classes.
+- TypeScript/React: 2-space indentation, `PascalCase` components, hooks named `useX`, tests as `*.test.tsx`.
+- CSS/Tailwind: keep global styles in `frontend/web/src/app/index.css`; feature styles live alongside components.
+- No repo-wide formatter is configured; match existing style and avoid unrelated reformatting.
 
 ## Testing Guidelines
-- Backend uses pytest + pytest-asyncio; name files `test_*.py`.
-- Frontend uses React Testing Library; keep tests alongside components (e.g., `frontend/web/src/App.test.js`).
+- Backend uses `pytest` + `pytest-asyncio`; tests live in `backend/py/tests/` and `backend/py/packages/*/tests/` with `test_*.py`.
+- Frontend uses Vitest and React Testing Library; colocate tests under `frontend/web/src/`.
+- Run targeted tests for the areas you change and note any manual checks in the PR.
 
 ## Commit & Pull Request Guidelines
-- History mixes conventional prefixes (`feat: ...`) and sentence-style subjects. Use a concise subject, and keep it consistent within a PR.
-- Include context for API/UI changes, relevant test commands, and OpenSpec task references when applicable.
+- Commit messages use short type prefixes like `feat:`, `fix:`, `refactor:`, `doc:`, `dev:`, `misc:` with optional scope (e.g., `feat(backend): add ...`).
+- Keep subjects short, imperative, and focused on one change.
+- PRs should include a clear description, linked issue/spec (if any), test results, and screenshots/GIFs for UI changes.
 
-## Security & Configuration Tips
-- Store secrets only in `config/app.yaml`; never commit real keys. `config/schema.json` is generated.
-- For proposal-style or large architectural changes, consult `openspec/AGENTS.md` first.
+## Configuration & Secrets
+- Local config is `config/app.yaml`; `config/schema.json` is generated for YAML validation.
+- Never commit API keys or tokens. If config shape changes, describe required keys in the PR.
