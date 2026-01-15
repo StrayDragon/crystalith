@@ -20,7 +20,6 @@ export default function WorkspaceLayout() {
   const dispatch = useWorkspaceDispatch();
   const [pendingChatFocus, setPendingChatFocus] = useState(false);
   const [sessionSwitcherOpen, setSessionSwitcherOpen] = useState(false);
-  const [outputTypeOpen, setOutputTypeOpen] = useState(false);
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const createInputRef = useRef<HTMLInputElement | null>(null);
   const sessionSearchRef = useRef<HTMLInputElement | null>(null);
@@ -71,7 +70,6 @@ export default function WorkspaceLayout() {
       }
       if (event.key === 'Escape') {
         setSessionSwitcherOpen(false);
-        setOutputTypeOpen(false);
       }
     }
     window.addEventListener('keydown', handleKeyDown);
@@ -279,16 +277,13 @@ export default function WorkspaceLayout() {
             highlightedJobId={refine.recentCompletedJobId}
             outputTypeOptions={refine.outputTypeOptions}
             outputType={refine.outputType}
-            onOutputTypeChange={refine.setOutputType}
-            isOutputTypeOpen={outputTypeOpen}
-            onToggleOutputType={() => setOutputTypeOpen((prev) => !prev)}
-            onCloseOutputType={() => setOutputTypeOpen(false)}
             outputs={refine.outputs}
             outputQueueJobs={refine.outputQueueJobs}
             queueSummary={refine.queueSummary}
             outputsLoading={refine.outputsLoading}
             outputsError={refine.outputsError}
             onGenerateOutput={refine.onGenerateOutput}
+            onSelectOutputType={refine.setOutputType}
             onRetryOutputs={refine.retryOutputs}
             onReplayRefineJob={refine.onReplayRefineJob}
             onReplayOutput={refine.onReplayOutput}

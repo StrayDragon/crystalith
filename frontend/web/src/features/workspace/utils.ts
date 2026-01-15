@@ -67,6 +67,23 @@ export function formatDate(value?: string | null): string {
   });
 }
 
+export function formatRelativeTime(value?: string | null): string {
+  if (!value) return '';
+  const parsed = new Date(value);
+  const timestamp = parsed.getTime();
+  if (Number.isNaN(timestamp)) return '';
+  const diff = Date.now() - timestamp;
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (diff < minute) return '刚刚';
+  if (diff < hour) return `${Math.floor(diff / minute)} 分钟前`;
+  if (diff < day) return `${Math.floor(diff / hour)} 小时前`;
+  const days = Math.floor(diff / day);
+  if (days < 30) return `${days} 天前`;
+  return formatDate(value);
+}
+
 export function buildSourceSummaryPrompt(title?: string | null): string {
   const safeTitle = title?.trim() || '文档';
   return `请总结《${safeTitle}》的核心观点`;
@@ -250,6 +267,8 @@ export function normalizeOutput(row: ApiOutput): OutputItem {
     content: row.content ?? {},
     createdAt: formatTimestamp(row.created_at ?? undefined),
     updatedAt: formatTimestamp(row.updated_at ?? undefined),
+    createdAtRaw: row.created_at ?? undefined,
+    updatedAtRaw: row.updated_at ?? undefined,
   };
 }
 

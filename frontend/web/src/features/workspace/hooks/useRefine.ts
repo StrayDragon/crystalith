@@ -318,6 +318,7 @@ export function useRefine() {
       try {
         let normalizedOutputs = {};
         let response = null;
+        let resolvedCitations = null;
         if (isDemo) {
           const demoOutput = buildRefineOutput(prompt);
           normalizedOutputs = refineFormats.reduce<Record<RefineMode, typeof demoOutput>>(
@@ -329,6 +330,9 @@ export function useRefine() {
           );
         } else if (jobNotebookId) {
           response = await refineBatch(jobNotebookId, prompt, refineFormats, chunkIds);
+          resolvedCitations = response?.citations
+            ? response.citations.map(normalizeCitation)
+            : null;
           normalizedOutputs = Object.entries(response.outputs ?? {}).reduce(
             (acc, [format, output]) => {
               if (!output) return acc;
@@ -358,6 +362,7 @@ export function useRefine() {
                   status: 'done',
                   outputs: normalizedOutputs,
                   error: '',
+                  citations: resolvedCitations ?? job.citations,
                   completedAt,
                   completedAtLabel: formatTimestamp(completedAt),
                 }
@@ -371,10 +376,10 @@ export function useRefine() {
         if (isCurrentNotebook && stillTracked) {
           markJobCompleted(jobId);
         }
-        if (response?.citations && isCurrentNotebook && stillTracked) {
+        if (resolvedCitations && isCurrentNotebook && stillTracked) {
           dispatch({
             type: 'SET_CITATIONS',
-            payload: response.citations.map(normalizeCitation),
+            payload: resolvedCitations,
           });
         }
       } catch (error) {
@@ -523,14 +528,17 @@ export function useRefine() {
         dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '' } });
         let normalized: OutputItem[] = [];
         if (isDemo) {
+          const createdAtRaw = new Date().toISOString();
           const demoOutput = {
             id: Date.now(),
             type: job.type,
             prompt: job.prompt,
             chunkIds: job.chunkIds,
             content: buildDemoOutputContent(job.type, job.prompt),
-            createdAt: formatTimestamp(new Date().toISOString()),
-            updatedAt: formatTimestamp(new Date().toISOString()),
+            createdAt: formatTimestamp(createdAtRaw),
+            updatedAt: formatTimestamp(createdAtRaw),
+            createdAtRaw,
+            updatedAtRaw: createdAtRaw,
           };
           normalized = [demoOutput];
           dispatch({ type: 'SET_OUTPUTS', payload: [demoOutput, ...state.outputs] });
@@ -740,18 +748,23 @@ export function useRefine() {
     [dispatch],
   );
 
-  const handleGenerateOutput = useCallback(() => {
+  const handleGenerateOutput = useCallback((overrideType?: OutputTypeId) => {
     if (!state.activeNotebookId && !isDemo) {
       dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先创建笔记本。' } });
       return;
     }
-    const selectedOption = OUTPUT_TYPE_OPTIONS.find((item) => item.id === state.outputType);
-    const prompt = resolveOutputPrompt(state.outputType, state.refinePrompt || selectedOption?.prompt);
-    if (prompt) {
+    const selectedType = overrideType ?? state.outputType;
+    const selectedOption = OUTPUT_TYPE_OPTIONS.find((item) => item.id === selectedType);
+    const promptSource = overrideType ? selectedOption?.prompt : state.refinePrompt || selectedOption?.prompt;
+    const prompt = resolveOutputPrompt(selectedType, promptSource);
+    if (!overrideType && prompt) {
       dispatch({ type: 'SET_REFINE_PROMPT', payload: prompt });
     }
+    if (overrideType) {
+      dispatch({ type: 'SET_OUTPUT_TYPE', payload: selectedType });
+    }
     enqueueOutputJob({
-      type: state.outputType,
+      type: selectedType,
       prompt,
       chunkIds: selectedChunkIds.length ? selectedChunkIds : [],
     });

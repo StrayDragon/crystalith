@@ -74,6 +74,7 @@ export interface RefineJob {
   chunkIds?: number[];
   outputs: Partial<Record<RefineMode, RefineOutput>> | null;
   error: string;
+  citations?: Citation[];
   createdAt: string;
   createdAtLabel: string;
   completedAt: string | null;
@@ -116,6 +117,8 @@ export interface OutputItem {
   content: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  createdAtRaw?: string;
+  updatedAtRaw?: string;
 }
 
 export interface StatusLabel {

@@ -60,10 +60,8 @@ test('sending a message updates chat and refine output', async () => {
   expect(await screen.findByText(/（演示）已收到：你好/)).toBeInTheDocument();
 
   await actUser(() => userEvent.click(screen.getByRole('button', { name: '立即提炼' })));
-  expect(await screen.findByText(/已生成提炼结果（演示）/)).toBeInTheDocument();
-  expect(
-    await screen.findByRole('button', { name: '更多操作' }),
-  ).toBeInTheDocument();
+  expect(await screen.findByText('共 1 条')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: '更多操作' })).toBeInTheDocument();
 });
 
 test('maps lowercase source status to label and badge styles', async () => {
@@ -215,6 +213,6 @@ test('output type selector generates a structured output in demo mode', async ()
   renderWorkspace();
   await screen.findByText('演示模式');
 
-  await actUser(() => userEvent.click(screen.getByRole('button', { name: '生成FAQ' })));
-  expect(await screen.findByText('演示问题')).toBeInTheDocument();
+  await actUser(() => userEvent.click(screen.getByRole('button', { name: 'FAQ 问答清单' })));
+  expect(await screen.findByText('整理为 FAQ 问答清单。')).toBeInTheDocument();
 });

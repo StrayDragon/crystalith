@@ -16,9 +16,8 @@ embedding:
     numa: true
     low_vram: false
 chat:
-  provider: "openai"
-  model: "gpt-5.2"
-  openai: *openai_default
+  provider: "ollama"
+  model: "qwen2.5-coder:1.5b"
 vector_storage:
   provider: "sqlite"
   sqlite:

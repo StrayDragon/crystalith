@@ -99,7 +99,11 @@ async def generate_contextual_suggestions(
     fallback_context: str,
 ) -> list[Suggestion]:
     messages = _build_generation_messages(context_label, context_text, count)
-    raw = await chatter.chat(messages)
+    try:
+        raw = await chatter.chat(messages)
+    except Exception as error:  # noqa: BLE001 - degrade to fallback suggestions
+        log.warning("suggestion generation failed", exc_info=error)
+        raw = ""
     drafts = _parse_suggestions(raw, limit=count, fallback_context=fallback_context)
     return await classify_suggestions(chatter, drafts, fallback_context=fallback_context)
 
@@ -113,7 +117,11 @@ async def generate_deep_dive_suggestions(
     fallback_context: str,
 ) -> list[Suggestion]:
     messages = _build_deep_dive_messages(seed_question, context_text, count)
-    raw = await chatter.chat(messages)
+    try:
+        raw = await chatter.chat(messages)
+    except Exception as error:  # noqa: BLE001 - degrade to fallback suggestions
+        log.warning("deep dive suggestion generation failed", exc_info=error)
+        raw = ""
     drafts = _parse_suggestions(raw, limit=count, fallback_context=fallback_context)
     return _finalize_with_type(
         drafts,
@@ -133,8 +141,12 @@ async def classify_suggestions(
 
     questions = [draft.question for draft in drafts]
     messages = _build_classification_messages(questions)
-    raw = await chatter.chat(messages)
-    mapping = _parse_classifications(raw)
+    mapping: dict[str, SuggestionType] = {}
+    try:
+        raw = await chatter.chat(messages)
+        mapping = _parse_classifications(raw)
+    except Exception as error:  # noqa: BLE001 - fall back to default cycling
+        log.warning("suggestion classification failed", exc_info=error)
     fallback_cycle = itertools.cycle(
         [
             SuggestionType.FACTUAL,
@@ -232,7 +244,7 @@ def _parse_suggestions(
 
     def _add_item(question: str, context: str | None) -> None:
         normalized = _normalize_whitespace(question)
-        if not normalized:
+        if not normalized or not _is_valid_question(normalized):
             return
         key = _question_key(normalized)
         if key in seen:
@@ -322,8 +334,45 @@ def _safe_json_load(raw: str) -> object | None:
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
+        pass
+
+    raw_text = raw.strip()
+    if not raw_text:
         log.warning("suggestion json parse failed", raw=raw)
         return None
+
+    def _try_array_slice() -> object | None:
+        match = re.search(r"\[\s*\{", raw_text)
+        if match is None:
+            return None
+        start = match.start()
+        end = raw_text.rfind("]")
+        if end == -1 or end <= start:
+            return None
+        try:
+            return json.loads(raw_text[start : end + 1])
+        except json.JSONDecodeError:
+            return None
+
+    def _try_object_slice() -> object | None:
+        match = re.search(r"\{\s*\"", raw_text)
+        if match is None:
+            return None
+        start = match.start()
+        end = raw_text.rfind("}")
+        if end == -1 or end <= start:
+            return None
+        try:
+            return json.loads(raw_text[start : end + 1])
+        except json.JSONDecodeError:
+            return None
+
+    parsed = _try_array_slice()
+    if parsed is None:
+        parsed = _try_object_slice()
+    if parsed is None:
+        log.warning("suggestion json parse failed", raw=raw)
+    return parsed
 
 
 def _normalize_type(value: str) -> SuggestionType | None:
@@ -350,3 +399,14 @@ def _strip_bullets(line: str) -> str:
     cleaned = line.strip().lstrip("-*•").strip()
     cleaned = re.sub(r"^\d+[\).]\s+", "", cleaned)
     return cleaned
+
+
+def _is_valid_question(text: str) -> bool:
+    if len(text) < 6:
+        return False
+    lowered = text.lower()
+    if lowered.startswith("```"):
+        return False
+    if re.fullmatch(r"[\[\]{}]+", text):
+        return False
+    return bool(re.search(r"[A-Za-z0-9\u4e00-\u9fff]", text))
