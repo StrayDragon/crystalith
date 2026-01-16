@@ -61,6 +61,9 @@ test('sending a message updates chat and refine output', async () => {
 
   await actUser(() => userEvent.click(screen.getByRole('button', { name: '立即提炼' })));
   expect(await screen.findByText(/已生成提炼结果（演示）/)).toBeInTheDocument();
+  expect(
+    await screen.findByRole('button', { name: '更多操作' }),
+  ).toBeInTheDocument();
 });
 
 test('maps lowercase source status to label and badge styles', async () => {
