@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
+import logging
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -14,6 +15,8 @@ from cl_sqlalchemyx.mgrs import AsyncDBManager
 from crystalith.db import create_db_manager
 
 from .types import VectorEntry, VectorSearchResult
+
+logger = logging.getLogger(__name__)
 
 
 _CONFIG_TABLE = "vector_config"
@@ -99,18 +102,19 @@ class SQLiteVectorStore:
                 entry_id = result.lastrowid
                 if entry_id is None:
                     raise RuntimeError("Failed to insert vector entry")
-                await conn.execute(
-                    text(
-                        f"""
-                        INSERT INTO {_INDEX_TABLE} (rowid, embedding)
-                        VALUES (:rowid, :embedding)
-                        """
-                    ),
-                    {
-                        "rowid": entry_id,
-                        "embedding": self._sqlite_vss.serialize(vector),
-                    },
-                )
+                if self._sqlite_vss is not None:
+                    await conn.execute(
+                        text(
+                            f"""
+                            INSERT INTO {_INDEX_TABLE} (rowid, embedding)
+                            VALUES (:rowid, :embedding)
+                            """
+                        ),
+                        {
+                            "rowid": entry_id,
+                            "embedding": self._sqlite_vss.serialize(vector),
+                        },
+                    )
 
     async def search(
         self,
@@ -125,10 +129,20 @@ class SQLiteVectorStore:
             return []
 
         await self._ensure_schema()
-        if self._dimension is None or not self._vss_ready:
+        if self._dimension is None:
             return []
         if len(query) != self._dimension:
             return []
+        if self._sqlite_vss is None or not self._vss_ready:
+            entries = [entry for entry in await self.entries() if entry.notebook_id == notebook_id]
+            results: list[VectorSearchResult] = []
+            for entry in entries:
+                score = _cosine_similarity(query, entry.vector)
+                if score < min_score:
+                    continue
+                results.append(VectorSearchResult(entry=entry, score=score))
+            results.sort(key=lambda item: item.score, reverse=True)
+            return results[:top_k]
 
         query_blob = self._sqlite_vss.serialize(query)
 
@@ -245,9 +259,15 @@ class SQLiteVectorStore:
         try:
             import sqlite_vss
         except ImportError as exc:
-            raise RuntimeError(
-                "sqlite-vss is required when vector_storage.provider is 'sqlite'."
-            ) from exc
+            logger.warning(
+                "sqlite-vss unavailable; falling back to brute-force vector search."
+            )
+            return None
+        if not hasattr(sqlite_vss, "serialize") or not hasattr(sqlite_vss, "load"):
+            logger.warning(
+                "sqlite-vss missing required bindings; falling back to brute-force vector search."
+            )
+            return None
 
         def _unwrap_connection(dbapi_connection):
             candidates = [dbapi_connection]
@@ -272,15 +292,33 @@ class SQLiteVectorStore:
             return None
 
         def _load_extension(dbapi_connection, _connection_record) -> None:
+            if self._sqlite_vss is None:
+                return
             raw_connection = _unwrap_connection(dbapi_connection)
             if raw_connection is None:
-                raise RuntimeError("Unable to access sqlite connection for sqlite-vss loading")
+                logger.warning(
+                    "Unable to access sqlite connection for sqlite-vss loading; "
+                    "falling back to brute-force vector search."
+                )
+                self._sqlite_vss = None
+                self._vss_ready = False
+                return
             enable = getattr(raw_connection, "enable_load_extension", None)
             if callable(enable):
                 enable(True)
-            sqlite_vss.load(raw_connection)
-            if callable(enable):
-                enable(False)
+            try:
+                sqlite_vss.load(raw_connection)
+            except Exception as exc:
+                logger.warning(
+                    "Failed to load sqlite-vss extension; "
+                    "falling back to brute-force vector search: %s",
+                    exc,
+                )
+                self._sqlite_vss = None
+                self._vss_ready = False
+            finally:
+                if callable(enable):
+                    enable(False)
 
         sa.event.listen(self._engine.sync_engine, "connect", _load_extension)
         return sqlite_vss
@@ -332,8 +370,9 @@ class SQLiteVectorStore:
                 row = result.first()
                 if row is not None:
                     self._dimension = int(row.value)
-                    await conn.execute(text(self._vss_table_sql(self._dimension)))
-                    self._vss_ready = True
+                    if self._sqlite_vss is not None:
+                        await conn.execute(text(self._vss_table_sql(self._dimension)))
+                        self._vss_ready = True
             self._initialized = True
 
     async def _ensure_dimension(self, dimension: int) -> None:
@@ -357,9 +396,10 @@ class SQLiteVectorStore:
                     ),
                     {"value": str(dimension)},
                 )
-                await conn.execute(text(self._vss_table_sql(dimension)))
+                if self._sqlite_vss is not None:
+                    await conn.execute(text(self._vss_table_sql(dimension)))
+                    self._vss_ready = True
             self._dimension = dimension
-            self._vss_ready = True
 
     def _vss_table_sql(self, dimension: int) -> str:
         return (

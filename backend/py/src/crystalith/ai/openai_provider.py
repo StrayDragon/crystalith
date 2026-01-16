@@ -4,7 +4,12 @@ from typing import Any, Literal, Sequence
 
 from openai import AsyncOpenAI
 
+from cl_logs.logging import get_logger
+
 from .types import ChatMessage
+
+
+log = get_logger(__name__)
 
 
 class OpenAIEmbeddingProvider:
@@ -32,10 +37,14 @@ class OpenAIEmbeddingProvider:
         if not texts:
             return []
 
-        response = await self._client.embeddings.create(
-            model=self.model,
-            input=list(texts),
-        )
+        try:
+            response = await self._client.embeddings.create(
+                model=self.model,
+                input=list(texts),
+            )
+        except Exception as error:  # noqa: BLE001 - degrade to empty embeddings
+            log.warning("openai embeddings failed", exc_info=error)
+            return []
 
         data = list(response.data)
         if data and hasattr(data[0], "index"):
@@ -68,10 +77,14 @@ class OpenAIChatProvider:
         if not messages:
             raise ValueError("messages must not be empty")
 
-        response = await self._client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": m.role, "content": m.content} for m in messages],
-        )
+        try:
+            response = await self._client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": m.role, "content": m.content} for m in messages],
+            )
+        except Exception as error:  # noqa: BLE001 - degrade to empty response
+            log.warning("openai chat failed", exc_info=error)
+            return ""
 
         content = response.choices[0].message.content
         return content or ""

@@ -1,0 +1,11 @@
+Project Alpha Notes
+
+Goal: Evaluate product differentiation and risks.
+Key points:
+- Feature A reduces onboarding time by 30 percent.
+- Competitor B offers lower pricing but weaker support.
+- Users value faster setup and clear analytics.
+
+Open questions:
+- What are the top retention drivers?
+- Which segments are most price sensitive?
