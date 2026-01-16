@@ -4,15 +4,17 @@ default:
 install:
     pnpm install
 
-dev:
-    if [ ! -x node_modules/.bin/vite ]; then pnpm install; fi
+ensure-deps:
+    if [ ! -f node_modules/.modules.yaml ] || [ pnpm-lock.yaml -nt node_modules/.modules.yaml ]; then pnpm install; fi
+
+dev: ensure-deps
     pnpm dev
 
-preview:
+preview: ensure-deps
     pnpm preview
 
-build:
+build: ensure-deps
     pnpm run build
 
-test:
+test: ensure-deps
     pnpm test
