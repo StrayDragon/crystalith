@@ -34,17 +34,27 @@ from .vector_storage import VectorStore, create_vector_store
 logger = logging.getLogger(__name__)
 
 
+def _find_config_path() -> Path | None:
+    cwd = Path.cwd()
+    for parent in (cwd, *cwd.parents):
+        candidate = parent / "config/app.yaml"
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def _load_settings() -> Settings:
-    config_path = Path("config/app.yaml")
-    if config_path.is_file():
+    config_path = _find_config_path()
+    if config_path is not None:
         schema_path = config_path.parent / "schema.json"
         manager = ConfigManager(config_path, schema_path)
         if not schema_path.exists():
             manager.write_schema()
         return manager.load()
+    fallback_path = Path("config/app.yaml")
     logger.warning(
         "Config file not found at %s (cwd=%s). Using default settings.",
-        config_path.resolve(),
+        fallback_path.resolve(),
         Path.cwd(),
     )
     return Settings()
