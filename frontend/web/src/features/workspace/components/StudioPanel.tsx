@@ -6,6 +6,12 @@ import { formatRelativeTime } from '../utils';
 interface StudioPanelProps {
   tools: WorkspaceTool[];
   outputs: OutputItem[];
+  outputQueueJobs: {
+    id: string;
+    type: OutputTypeId;
+    status: 'queued' | 'running' | 'done' | 'error';
+    chunkIds: number[];
+  }[];
   outputsLoading: boolean;
   outputsError: string;
   onRetryOutputs: () => void;
@@ -23,6 +29,14 @@ type StudioNote = {
   title: string;
   meta: string;
   type: OutputTypeId;
+};
+
+type PendingNote = {
+  id: string;
+  title: string;
+  meta: string;
+  type: OutputTypeId;
+  status: 'queued' | 'running';
 };
 
 const DEFAULT_TYPE_LABELS: Record<OutputTypeId, string> = {
@@ -121,6 +135,21 @@ function resolveTypeLabel(type: OutputTypeId, labels: Map<OutputTypeId, string>)
   return labels.get(type) ?? DEFAULT_TYPE_LABELS[type];
 }
 
+function renderPendingIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="StudioNoteSpinner">
+      <path
+        d="M4.5 12a7.5 7.5 0 0 1 12.7-5.3l1.3-1.2V9h-4l2-1.9A5.5 5.5 0 1 0 6.5 12h-2Z"
+        fill="currentColor"
+      />
+      <path
+        d="M19.5 12a7.5 7.5 0 0 1-12.7 5.3l-1.3 1.2V15h4l-2 1.9A5.5 5.5 0 1 0 17.5 12h2Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 function renderToolIcon(type: OutputTypeId) {
   switch (type) {
     case 'MINDMAP':
@@ -209,6 +238,7 @@ function renderNoteIcon(type: OutputTypeId) {
 export default function StudioPanel({
   tools,
   outputs,
+  outputQueueJobs,
   outputsLoading,
   outputsError,
   onRetryOutputs,
@@ -237,7 +267,31 @@ export default function StudioPanel({
     [outputs],
   );
 
+  const pendingNotes = useMemo<PendingNote[]>(() => {
+    const statusLabels = {
+      queued: '排队中',
+      running: '生成中',
+    } satisfies Record<PendingNote['status'], string>;
+    return outputQueueJobs
+      .filter((job) => job.status === 'queued' || job.status === 'running')
+      .map((job) => {
+        const typeLabel = resolveTypeLabel(job.type, typeLabelMap);
+        const sourceLabel = job.chunkIds.length
+          ? `基于 ${job.chunkIds.length} 个来源`
+          : '自动生成';
+        return {
+          id: `pending-${job.id}`,
+          title: `生成${typeLabel}...`,
+          meta: `${sourceLabel} · ${statusLabels[job.status]}`,
+          type: job.type,
+          status: job.status,
+        };
+      });
+  }, [outputQueueJobs, typeLabelMap]);
+
   const notes = outputNotes.length > 0 ? outputNotes : isDemo ? DEMO_NOTES : [];
+  const showSkeleton = outputsLoading && notes.length === 0 && pendingNotes.length === 0;
+  const showEmpty = !outputsLoading && notes.length === 0 && pendingNotes.length === 0;
 
   return (
     <div className="WorkspacePanelBody StudioBody">
@@ -285,15 +339,42 @@ export default function StudioPanel({
             已生成新的笔记，已加入列表。
           </div>
         ) : null}
-        {outputsLoading ? (
+        {showSkeleton ? (
           <div className="StudioSkeletonList" aria-label="加载笔记">
             <div className="StudioSkeletonItem" />
             <div className="StudioSkeletonItem isShort" />
           </div>
-        ) : notes.length === 0 ? (
+        ) : showEmpty ? (
           <div className="StudioEmpty">暂无笔记</div>
         ) : (
           <div className="StudioNoteList">
+            {pendingNotes.map((note) => {
+              const tone = resolveTone(note.type);
+              const typeLabel = resolveTypeLabel(note.type, typeLabelMap);
+              return (
+                <div
+                  key={note.id}
+                  className={`StudioNoteItem isPending ${
+                    note.status === 'running' ? 'isRunning' : ''
+                  }`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  <div className="StudioNoteButton isPending">
+                    <span className="StudioNoteIcon isPending" data-tone={tone} aria-hidden="true">
+                      {renderPendingIcon()}
+                    </span>
+                    <span className="StudioNoteContent">
+                      <span className="StudioNoteTitleRow">
+                        <span className="StudioNoteTitle">{note.title}</span>
+                        <span className="StudioNoteType">{typeLabel}</span>
+                      </span>
+                      <span className="StudioNoteMeta">{note.meta}</span>
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
             {notes.map((note) => {
               const tone = resolveTone(note.type);
               const typeLabel = resolveTypeLabel(note.type, typeLabelMap);

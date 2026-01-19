@@ -610,7 +610,13 @@
 
 .StudioGrid {
   @apply grid gap-3;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  --studio-tile-min: 120px;
+  --studio-tile-max: 136px;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(var(--studio-tile-min), var(--studio-tile-max))
+  );
+  justify-content: start;
 }
 
 .StudioTile {
@@ -694,8 +700,16 @@
   @apply flex items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-white px-3 py-2 transition hover:bg-slate-50/70;
 }
 
+.StudioNoteItem.isPending {
+  @apply border-dashed border-slate-200 bg-slate-50/70;
+}
+
 .StudioNoteButton {
   @apply flex flex-1 items-center gap-2 text-left cursor-pointer;
+}
+
+.StudioNoteButton.isPending {
+  @apply cursor-default;
 }
 
 .StudioNoteIcon {
@@ -705,8 +719,17 @@
   color: var(--tone-ink, #475569);
 }
 
+.StudioNoteIcon.isPending {
+  @apply text-slate-500;
+}
+
 .StudioNoteIcon svg {
   @apply h-4 w-4;
+}
+
+.StudioNoteSpinner {
+  @apply h-4 w-4;
+  animation: spin 0.8s linear infinite;
 }
 
 .StudioNoteContent {
@@ -934,7 +957,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .WorkspacePanel,
-  .StudioTile {
+  .StudioTile,
+  .StudioNoteSpinner {
     animation: none;
   }
 }
