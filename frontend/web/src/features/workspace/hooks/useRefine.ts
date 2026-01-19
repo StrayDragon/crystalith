@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
-import { createOutputs, listOutputs, refineBatch } from '../api';
+import { createOutput, listOutputs, listWorkspaceTools, refineBatch } from '../api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
-import type { OutputItem, OutputTypeId, RefineJob, RefineMode, RefineTemplate } from '../types';
+import type {
+  ApiWorkspaceTool,
+  OutputItem,
+  OutputTypeId,
+  RefineJob,
+  RefineMode,
+  RefineTemplate,
+  WorkspaceTool,
+} from '../types';
 import {
   buildJobTitle,
   buildRefineOutput,
@@ -79,19 +87,69 @@ const REFINE_TEMPLATES: RefineTemplate[] = [
   },
 ];
 
-const OUTPUT_TYPE_OPTIONS: {
-  id: OutputTypeId;
-  label: string;
-  description: string;
-  prompt: string;
-}[] = [
-  { id: 'FAQ', label: 'FAQ', description: '问答清单', prompt: '整理为 FAQ 问答清单。' },
-  { id: 'GUIDE', label: '指南', description: '学习/行动指南', prompt: '生成结构化学习指南。' },
-  { id: 'TIMELINE', label: '时间轴', description: '关键事件序列', prompt: '按时间轴整理关键事件。' },
-  { id: 'MINDMAP', label: '思维导图', description: '主题层级结构', prompt: '生成思维导图层级结构。' },
-  { id: 'QUIZ', label: '测验', description: '知识检验', prompt: '生成小测验题目。' },
-  { id: 'BRIEFING', label: '简报', description: '高层摘要', prompt: '生成简报：背景/发现/建议/下一步。' },
+const DEFAULT_TOOLS: WorkspaceTool[] = [
+  {
+    id: 'faq',
+    label: '闪卡',
+    description: '问答清单',
+    tone: 'blue',
+    outputType: 'FAQ',
+    prompt: '整理为 FAQ 问答清单。',
+    enabled: true,
+  },
+  {
+    id: 'guide',
+    label: '指南',
+    description: '学习/行动指南',
+    tone: 'green',
+    outputType: 'GUIDE',
+    prompt: '生成结构化学习指南。',
+    enabled: true,
+  },
+  {
+    id: 'timeline',
+    label: '时间轴',
+    description: '关键事件序列',
+    tone: 'rose',
+    outputType: 'TIMELINE',
+    prompt: '按时间轴整理关键事件。',
+    enabled: true,
+  },
+  {
+    id: 'mindmap',
+    label: '思维导图',
+    description: '主题层级结构',
+    tone: 'indigo',
+    outputType: 'MINDMAP',
+    prompt: '生成思维导图层级结构。',
+    enabled: true,
+  },
+  {
+    id: 'quiz',
+    label: '测验',
+    description: '知识检验',
+    tone: 'teal',
+    outputType: 'QUIZ',
+    prompt: '生成小测验题目。',
+    enabled: true,
+  },
+  {
+    id: 'briefing',
+    label: '报告',
+    description: '高层摘要',
+    tone: 'amber',
+    outputType: 'BRIEFING',
+    prompt: '生成简报：背景/发现/建议/下一步。',
+    enabled: true,
+  },
 ];
+
+const DEFAULT_OUTPUT_TYPE_OPTIONS = DEFAULT_TOOLS.map((tool) => ({
+  id: tool.outputType,
+  label: tool.label,
+  description: tool.description,
+  prompt: tool.prompt,
+}));
 
 type OutputQueueStatus = 'queued' | 'running' | 'done' | 'error';
 
@@ -183,6 +241,19 @@ function buildDemoOutputContent(type: OutputTypeId, prompt: string) {
   return { summary: prompt || '示例输出' };
 }
 
+function normalizeTool(tool: ApiWorkspaceTool): WorkspaceTool {
+  return {
+    id: tool.id,
+    label: tool.label,
+    description: tool.description,
+    tone: tool.tone,
+    outputType: tool.output_type,
+    prompt: tool.prompt,
+    badge: tool.badge ?? undefined,
+    enabled: tool.enabled !== false,
+  };
+}
+
 export function useRefine() {
   const state = useWorkspaceState();
   const dispatch = useWorkspaceDispatch();
@@ -194,12 +265,46 @@ export function useRefine() {
     [refineTemplates],
   );
 
+  const { data: toolsData, error: toolsError } = useSWR(
+    !isDemo ? 'workspace/tools' : null,
+    listWorkspaceTools,
+    { revalidateOnFocus: false },
+  );
+
+  const tools = useMemo<WorkspaceTool[]>(() => {
+    if (isDemo) return DEFAULT_TOOLS;
+    if (toolsData?.tools?.length) {
+      return toolsData.tools.map(normalizeTool);
+    }
+    if (toolsError) {
+      return DEFAULT_TOOLS;
+    }
+    return DEFAULT_TOOLS;
+  }, [isDemo, toolsData, toolsError]);
+
+  const outputTypeOptions = useMemo(() => {
+    const seen = new Set<OutputTypeId>();
+    const options: { id: OutputTypeId; label: string; description: string; prompt: string }[] = [];
+    for (const tool of tools) {
+      if (!tool.outputType || seen.has(tool.outputType)) continue;
+      seen.add(tool.outputType);
+      options.push({
+        id: tool.outputType,
+        label: tool.label,
+        description: tool.description,
+        prompt: tool.prompt,
+      });
+    }
+    return options.length > 0 ? options : DEFAULT_OUTPUT_TYPE_OPTIONS;
+  }, [tools]);
+
   const activePanelRef = useRef(state.activePanel);
   const activeNotebookIdRef = useRef(state.activeNotebookId);
   const refineQueueRef = useRef<RefineJob[]>(state.refineJobs);
   const refineRunningRef = useRef(false);
   const runNextRefineJobRef = useRef<() => void>(() => {});
   const [outputQueueJobs, setOutputQueueJobs] = useState<OutputQueueJob[]>([]);
+  const [recentOutputJobId, setRecentOutputJobId] = useState<string | null>(null);
   const outputQueueRef = useRef<OutputQueueJob[]>(outputQueueJobs);
   const outputRunningRef = useRef(false);
   const runNextOutputJobRef = useRef<() => void>(() => {});
@@ -485,12 +590,15 @@ export function useRefine() {
     ],
   );
 
-  const resolveOutputPrompt = useCallback((type: OutputTypeId, prompt?: string) => {
-    const normalized = prompt?.trim();
-    if (normalized) return normalized;
-    const fallback = OUTPUT_TYPE_OPTIONS.find((item) => item.id === type)?.prompt ?? '';
-    return fallback;
-  }, []);
+  const resolveOutputPrompt = useCallback(
+    (type: OutputTypeId, prompt?: string) => {
+      const normalized = prompt?.trim();
+      if (normalized) return normalized;
+      const fallback = outputTypeOptions.find((item) => item.id === type)?.prompt ?? '';
+      return fallback;
+    },
+    [outputTypeOptions],
+  );
 
   const enqueueOutputJob = useCallback(
     ({ type, prompt, chunkIds }: { type: OutputTypeId; prompt: string; chunkIds: number[] }) => {
@@ -543,12 +651,11 @@ export function useRefine() {
           normalized = [demoOutput];
           dispatch({ type: 'SET_OUTPUTS', payload: [demoOutput, ...state.outputs] });
         } else if (job.notebookId) {
-          const response = await createOutputs(job.notebookId, {
-            type: job.type,
+          const response = await createOutput(job.notebookId, job.type, {
             prompt: job.prompt || undefined,
             chunk_ids: job.chunkIds.length ? job.chunkIds : undefined,
           });
-          normalized = response.outputs.map(normalizeOutput);
+          normalized = [normalizeOutput(response)];
           dispatch({ type: 'SET_OUTPUTS', payload: [...normalized, ...state.outputs] });
           await mutateOutputs();
         } else {
@@ -560,8 +667,14 @@ export function useRefine() {
           ),
         );
         const stillTracked = outputQueueRef.current.some((item) => item.id === job.id);
-        if (activePanelRef.current !== 'refine' && normalized.length > 0) {
-          dispatch({ type: 'SET_HAS_NEW_OUTPUT', payload: true });
+        const isCurrentNotebook =
+          job.notebookId != null && job.notebookId === activeNotebookIdRef.current;
+        if (normalized.length > 0 && stillTracked && isCurrentNotebook) {
+          setRecentOutputJobId(job.id);
+          window.setTimeout(() => {
+            setRecentOutputJobId(null);
+          }, 2000);
+          markJobCompleted(job.id);
         }
         dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
         if (stillTracked) {
@@ -591,6 +704,7 @@ export function useRefine() {
       dispatch,
       incrementQueueDone,
       isDemo,
+      markJobCompleted,
       mutateOutputs,
       state.outputs,
       updateOutputQueueJobs,
@@ -754,7 +868,7 @@ export function useRefine() {
       return;
     }
     const selectedType = overrideType ?? state.outputType;
-    const selectedOption = OUTPUT_TYPE_OPTIONS.find((item) => item.id === selectedType);
+    const selectedOption = outputTypeOptions.find((item) => item.id === selectedType);
     const promptSource = overrideType ? selectedOption?.prompt : state.refinePrompt || selectedOption?.prompt;
     const prompt = resolveOutputPrompt(selectedType, promptSource);
     if (!overrideType && prompt) {
@@ -776,6 +890,7 @@ export function useRefine() {
     dispatch,
     enqueueOutputJob,
     isDemo,
+    outputTypeOptions,
     resolveOutputPrompt,
     selectedChunkIds,
     state.activeNotebookId,
@@ -828,6 +943,7 @@ export function useRefine() {
     refineFormats,
     refineTemplates,
     compareTemplate,
+    tools,
     selectedChunkIds,
     refineMode: state.refineMode,
     setRefineMode,
@@ -837,6 +953,7 @@ export function useRefine() {
     refineSettings: state.refineSettings,
     hasNewOutput: state.hasNewOutput,
     recentCompletedJobId: state.recentCompletedJobId,
+    recentOutputJobId,
     onGenerateRefine: handleRefineGenerate,
     onCompareSelected: handleCompareSelectedCitations,
     onReplayRefineJob: handleReplayRefineJob,
@@ -844,7 +961,7 @@ export function useRefine() {
     onDeleteJob: handleDeleteRefineJob,
     onClearJobs: handleClearRefineJobs,
     onToggleSetting: handleToggleRefineSetting,
-    outputTypeOptions: OUTPUT_TYPE_OPTIONS,
+    outputTypeOptions,
     outputType: state.outputType,
     setOutputType,
     outputs: state.outputs,

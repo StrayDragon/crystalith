@@ -64,7 +64,39 @@
 }
 
 .WorkspacePrimaryAction {
-  @apply inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 cursor-pointer;
+  @apply inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+}
+
+.WorkspaceSecondaryAction {
+  @apply inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+}
+
+.WorkspaceCreate {
+  @apply relative;
+}
+
+.WorkspaceCreatePanel {
+  @apply absolute right-0 top-full z-20 mt-2 w-72 rounded-2xl border border-slate-200 bg-white p-3 text-sm shadow-lg;
+}
+
+.WorkspaceCreateLabel {
+  @apply text-[11px] font-semibold text-slate-500;
+}
+
+.WorkspaceCreateInput {
+  @apply mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none;
+}
+
+.WorkspaceCreateHint {
+  @apply mt-2 text-[11px] text-rose-500;
+}
+
+.WorkspaceCreateHint.isMuted {
+  @apply text-slate-500;
+}
+
+.WorkspaceCreateActions {
+  @apply mt-3 flex items-center justify-end gap-2;
 }
 
 .WorkspacePrimaryAction__icon {
@@ -279,6 +311,39 @@
   @apply text-xs text-slate-500;
 }
 
+.SourcesSearchResults {
+  @apply rounded-2xl border border-slate-100 bg-white p-3 text-xs text-slate-600 shadow-sm;
+}
+
+.SourcesSearchResultsHeader {
+  @apply flex items-center justify-between text-xs font-semibold text-slate-700;
+}
+
+.SourcesSearchResultList {
+  @apply mt-2 flex flex-col gap-2;
+}
+
+.SourcesSearchResultItem {
+  @apply rounded-xl border border-slate-100 bg-slate-50/60 p-2 transition hover:bg-slate-50;
+}
+
+.SourcesSearchResultLink {
+  @apply block text-left no-underline;
+  color: inherit;
+}
+
+.SourcesSearchResultTitle {
+  @apply text-sm font-semibold text-slate-800;
+}
+
+.SourcesSearchResultSnippet {
+  @apply mt-1 text-xs text-slate-600;
+}
+
+.SourcesSearchResultMeta {
+  @apply mt-1 text-[11px] text-slate-400;
+}
+
 .SourcesSelectAll {
   @apply flex items-center justify-between text-xs text-slate-500;
 }
@@ -381,6 +446,79 @@
 
 .ChatActionButton svg {
   @apply h-4 w-4;
+}
+
+.SuggestionPanel {
+  @apply px-4 pb-3;
+}
+
+.SuggestionPanel__header {
+  @apply flex items-center justify-between;
+}
+
+.SuggestionPanel__title {
+  @apply text-xs font-semibold text-slate-700;
+}
+
+.SuggestionPanel__subtitle {
+  @apply text-[11px] text-slate-500;
+}
+
+.SuggestionPanel__actions {
+  @apply flex items-center gap-2;
+}
+
+.SuggestionRefreshButton {
+  @apply inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-50 cursor-pointer;
+}
+
+.SuggestionRefreshIcon {
+  @apply h-4 w-4;
+}
+
+.SuggestionRefreshIcon.isSpinning {
+  animation: spin 0.8s linear infinite;
+}
+
+.SuggestionList {
+  @apply mt-2 grid gap-2;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.SuggestionCard {
+  @apply w-full rounded-2xl border border-slate-200 bg-white p-3 text-left text-xs text-slate-700 shadow-sm transition hover:bg-slate-50 cursor-pointer;
+}
+
+.SuggestionCard__title {
+  @apply font-semibold text-slate-800;
+}
+
+.SuggestionCard__meta {
+  @apply mt-2 flex items-center gap-2 text-[11px] text-slate-500;
+}
+
+.SuggestionTypeTag {
+  @apply inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500;
+}
+
+.SuggestionTypeTag--deep_dive {
+  @apply bg-slate-900 text-white;
+}
+
+.SuggestionEmpty {
+  @apply mt-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-500;
+}
+
+.SuggestionSkeletonList {
+  @apply mt-2 flex flex-col gap-2;
+}
+
+.SuggestionSkeletonItem {
+  @apply h-10 rounded-2xl bg-slate-100;
+}
+
+.SuggestionSkeletonItem.isShort {
+  @apply w-2/3;
 }
 
 .ChatComposer {
@@ -518,6 +656,10 @@
   @apply flex-1 min-h-0 overflow-y-auto pr-1;
 }
 
+.StudioNotice {
+  @apply mb-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700;
+}
+
 .StudioNoteList {
   @apply flex flex-col gap-2;
 }
@@ -563,6 +705,82 @@
 
 .StudioAddButton {
   @apply mt-auto rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 cursor-pointer;
+}
+
+.StudioViewerOverlay {
+  @apply fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm;
+}
+
+.StudioViewer {
+  @apply flex h-[82vh] w-[88vw] max-w-5xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl;
+}
+
+.StudioViewer.isFullscreen {
+  @apply h-screen w-screen max-w-none rounded-none;
+}
+
+.StudioViewerHeader {
+  @apply flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4;
+}
+
+.StudioViewerHeading {
+  @apply flex min-w-0 flex-col gap-1;
+}
+
+.StudioViewerTitle {
+  @apply truncate text-lg font-semibold text-slate-900;
+}
+
+.StudioViewerMeta {
+  @apply text-xs text-slate-500;
+}
+
+.StudioViewerActions {
+  @apply flex items-center gap-2;
+}
+
+.StudioViewerAction {
+  @apply inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:bg-slate-50;
+}
+
+.StudioViewerBody {
+  @apply flex min-h-0 flex-1;
+}
+
+.StudioViewerSidebar {
+  @apply w-64 shrink-0 border-r border-slate-100 bg-slate-50/70 p-3;
+}
+
+.StudioViewerSidebarTitle {
+  @apply mb-2 text-xs font-semibold text-slate-500;
+}
+
+.StudioViewerPreviewList {
+  @apply flex min-h-0 flex-col gap-2 overflow-y-auto;
+}
+
+.StudioViewerPreviewItem {
+  @apply flex flex-col items-start gap-1 rounded-xl border border-transparent bg-white px-3 py-2 text-left text-xs text-slate-600 transition hover:border-slate-200 hover:bg-slate-50;
+}
+
+.StudioViewerPreviewItem.isActive {
+  @apply border-slate-300 bg-slate-100 text-slate-800;
+}
+
+.StudioViewerPreviewTitle {
+  @apply text-sm font-semibold text-slate-900 leading-snug;
+}
+
+.StudioViewerPreviewMeta {
+  @apply text-[11px] text-slate-500;
+}
+
+.StudioViewerEmpty {
+  @apply rounded-xl border border-dashed border-slate-200 bg-white px-3 py-4 text-center text-xs text-slate-400;
+}
+
+.StudioViewerContent {
+  @apply flex-1 min-h-0 overflow-y-auto p-6;
 }
 
 .StudioEmpty {
@@ -637,6 +855,20 @@
   --tone-ink: #4f46e5;
 }
 
+@media (max-width: 1024px) {
+  .StudioViewer {
+    @apply h-[90vh] w-[94vw];
+  }
+
+  .StudioViewerBody {
+    @apply flex-col;
+  }
+
+  .StudioViewerSidebar {
+    @apply w-full border-r-0 border-b border-slate-100;
+  }
+}
+
 @keyframes panelEnter {
   0% {
     opacity: 0;
@@ -656,6 +888,12 @@
   100% {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 

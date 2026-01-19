@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { AsyncStatus } from '../../../shared/types';
-import type { SourceItem } from '../types';
+import type { ApiSourceSearchResult, SourceItem } from '../types';
 
 interface SourcesPanelProps {
   sources: SourceItem[];
@@ -10,6 +10,7 @@ interface SourcesPanelProps {
   uploadState: AsyncStatus;
   searchState: AsyncStatus;
   searchNotice: string;
+  searchResults: ApiSourceSearchResult[];
   onSearch: (payload: { query: string; engine: string; mode: string }) => void;
   isDemo: boolean;
   error: string;
@@ -24,6 +25,7 @@ export default function SourcesPanel({
   uploadState,
   searchState,
   searchNotice,
+  searchResults,
   onSearch,
   isDemo,
   error,
@@ -178,6 +180,35 @@ export default function SourcesPanel({
         <div className="SourcesSearchHint">搜索中…</div>
       ) : searchNotice ? (
         <div className="SourcesSearchHint">{searchNotice}</div>
+      ) : null}
+
+      {searchResults.length > 0 ? (
+        <div className="SourcesSearchResults">
+          <div className="SourcesSearchResultsHeader">
+            <span>搜索结果</span>
+            <span>{searchResults.length} 条</span>
+          </div>
+          <ul className="SourcesSearchResultList" role="list">
+            {searchResults.map((item) => (
+              <li key={`${item.title}-${item.url}`} className="SourcesSearchResultItem">
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="SourcesSearchResultLink"
+                >
+                  <div className="SourcesSearchResultTitle">{item.title}</div>
+                  {item.snippet ? (
+                    <div className="SourcesSearchResultSnippet">{item.snippet}</div>
+                  ) : null}
+                  <div className="SourcesSearchResultMeta">
+                    {item.source ? item.source : '来源推荐'}
+                  </div>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       <div className="SourcesSelectAll">

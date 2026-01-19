@@ -4,7 +4,7 @@ import useSWR from 'swr';
 import type { AsyncStatus } from '../../../shared/types';
 import { listSources, searchSources, uploadSource } from '../api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
-import type { ApiSource } from '../types';
+import type { ApiSource, ApiSourceSearchResult } from '../types';
 import { normalizeSource } from '../utils';
 
 export function useSources() {
@@ -13,6 +13,7 @@ export function useSources() {
   const isDemo = state.connectionState === 'demo';
   const [searchState, setSearchState] = useState<AsyncStatus>('idle');
   const [searchNotice, setSearchNotice] = useState('');
+  const [searchResults, setSearchResults] = useState<ApiSourceSearchResult[]>([]);
   const demoSources = useMemo<ApiSource[]>(
     () => [
       {
@@ -85,6 +86,7 @@ export function useSources() {
   useEffect(() => {
     setSearchState('idle');
     setSearchNotice('');
+    setSearchResults([]);
   }, [state.activeNotebookId]);
 
   useEffect(() => {
@@ -249,34 +251,41 @@ export function useSources() {
     async ({ query, engine, mode }: { query: string; engine: string; mode: string }) => {
       if (isDemo) {
         setSearchNotice('演示模式暂不支持搜索。');
+        setSearchResults([]);
         return;
       }
       if (!state.activeNotebookId) {
         setSearchNotice('请先创建笔记本后搜索。');
+        setSearchResults([]);
         return;
       }
       const trimmed = query.trim();
       if (!trimmed) {
         setSearchNotice('请输入搜索关键词。');
+        setSearchResults([]);
         return;
       }
       setSearchState('loading');
       setSearchNotice('');
+      setSearchResults([]);
       try {
         const response = await searchSources(state.activeNotebookId, {
           query: trimmed,
           engine,
           mode,
         });
-        if (response.status === 'not_implemented') {
-          setSearchNotice(response.message || '搜索功能暂未开放。');
-        } else if (response.results.length === 0) {
+        const results = response.results ?? [];
+        setSearchResults(results);
+        if (response.message) {
+          setSearchNotice(response.message);
+        } else if (results.length === 0) {
           setSearchNotice('没有找到匹配结果。');
         } else {
-          setSearchNotice(`已找到 ${response.results.length} 条结果（暂未展示）。`);
+          setSearchNotice(`已找到 ${results.length} 条结果。`);
         }
       } catch (error) {
         setSearchNotice('搜索失败，请稍后重试。');
+        setSearchResults([]);
       } finally {
         setSearchState('idle');
       }
@@ -343,6 +352,7 @@ export function useSources() {
     retrySources,
     searchState,
     searchNotice,
+    searchResults,
     handleSearch,
     isDemo,
   };

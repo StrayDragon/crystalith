@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import type { RefObject } from 'react';
 
-import type { ChatMessage, Citation } from '../types';
+import type { ChatMessage, Citation, SuggestionItem } from '../types';
 import CitationMark from './citations/CitationMark';
+import SuggestionPanel from './SuggestionPanel';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -18,6 +19,11 @@ interface ChatPanelProps {
   isLoadingMessages: boolean;
   messagesError: string;
   onRetryMessages: () => void;
+  suggestions: SuggestionItem[];
+  suggestionsLoading: boolean;
+  suggestionsError: string;
+  onRefreshSuggestions: () => void;
+  onApplySuggestion: (text: string) => void;
 }
 
 export default function ChatPanel({
@@ -34,6 +40,11 @@ export default function ChatPanel({
   isLoadingMessages,
   messagesError,
   onRetryMessages,
+  suggestions,
+  suggestionsLoading,
+  suggestionsError,
+  onRefreshSuggestions,
+  onApplySuggestion,
 }: ChatPanelProps) {
   const citationIndexMap = useMemo(() => {
     const map = new Map<number, { citation: Citation; index: number }>();
@@ -174,6 +185,15 @@ export default function ChatPanel({
           </button>
         </div>
       ) : null}
+
+      <SuggestionPanel
+        suggestions={suggestions}
+        isBlocked={isBlocked}
+        isLoading={suggestionsLoading}
+        error={suggestionsError}
+        onRefresh={onRefreshSuggestions}
+        onSelectSuggestion={onApplySuggestion}
+      />
 
       <form
         className="ChatComposer"

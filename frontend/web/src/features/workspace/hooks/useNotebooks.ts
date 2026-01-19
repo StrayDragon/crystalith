@@ -89,7 +89,7 @@ export function useNotebooks() {
 
   const handleCreateNotebook = useCallback(async () => {
     const name = state.createName.trim();
-    if (!name || state.connectionState === 'demo') return;
+    if (!name || state.connectionState === 'demo') return false;
     dispatch({ type: 'SET_CREATE_STATE', payload: 'loading' });
     dispatch({ type: 'SET_ERROR', payload: { key: 'create', value: '' } });
     try {
@@ -101,11 +101,13 @@ export function useNotebooks() {
         async (current) => (current ? [...current, created] : [created]),
         { revalidate: false },
       );
+      return true;
     } catch (error) {
       dispatch({
         type: 'SET_ERROR',
         payload: { key: 'create', value: '创建失败，请检查后端状态。' },
       });
+      return false;
     } finally {
       dispatch({ type: 'SET_CREATE_STATE', payload: 'idle' });
     }

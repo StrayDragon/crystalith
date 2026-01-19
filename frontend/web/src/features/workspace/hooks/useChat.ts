@@ -203,11 +203,11 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions }: U
         payload: [...pendingMessages, assistantMessage],
       });
       dispatch({ type: 'SET_CITATIONS', payload: normalizedCitations });
-      await mutate();
+      void mutate();
       if (refreshSessions) {
-        await refreshSessions();
+        void refreshSessions();
       }
-      await refreshSuggestions();
+      void refreshSuggestions();
     } catch (error) {
       const assistantMessage = {
         id: createId(),

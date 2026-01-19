@@ -1,46 +1,30 @@
 import { useMemo } from 'react';
 
-import type { OutputItem, OutputTypeId } from '../types';
+import type { OutputItem, OutputTypeId, WorkspaceTool } from '../types';
 import { formatRelativeTime } from '../utils';
 
 interface StudioPanelProps {
+  tools: WorkspaceTool[];
   outputs: OutputItem[];
   outputsLoading: boolean;
   outputsError: string;
   onRetryOutputs: () => void;
   onGenerateOutput: (type?: OutputTypeId) => void;
+  onSelectOutput: (outputId: number) => void;
+  recentOutputJobId: string | null;
   isDemo: boolean;
 }
 
 type StudioTone = 'slate' | 'blue' | 'green' | 'rose' | 'amber' | 'teal' | 'indigo';
 
-type StudioTool = {
-  id: string;
-  label: string;
-  tone: StudioTone;
-  badge?: string;
-  outputType?: OutputTypeId;
-  disabled?: boolean;
-};
-
 type StudioNote = {
   id: string;
+  outputId?: number;
   title: string;
   meta: string;
   tone: StudioTone;
 };
 
-const TOOLS: StudioTool[] = [
-  { id: 'audio', label: '音频概览', tone: 'blue', disabled: true },
-  { id: 'video', label: '视频概览', tone: 'green', disabled: true },
-  { id: 'mindmap', label: '思维导图', tone: 'indigo', outputType: 'MINDMAP' },
-  { id: 'report', label: '报告', tone: 'amber', outputType: 'BRIEFING' },
-  { id: 'flashcards', label: '闪卡', tone: 'rose', outputType: 'FAQ' },
-  { id: 'quiz', label: '测验', tone: 'teal', outputType: 'QUIZ' },
-  { id: 'infographic', label: '信息图', tone: 'slate', badge: 'Beta 版', disabled: true },
-  { id: 'slides', label: '演示文稿', tone: 'blue', badge: 'Beta 版', disabled: true },
-  { id: 'data-table', label: '数据表格', tone: 'green', badge: 'Beta 版', disabled: true },
-];
 
 const DEMO_NOTES: StudioNote[] = [
   {
@@ -122,27 +106,9 @@ function resolveTone(type: OutputTypeId): StudioTone {
   }
 }
 
-function renderToolIcon(id: string) {
-  switch (id) {
-    case 'audio':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path
-            d="M6 14v-4M10 17V7M14 19V5M18 15v-6"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case 'video':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <rect x="5" y="7" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" fill="none" />
-          <path d="m11 10 4 2-4 2z" fill="currentColor" />
-        </svg>
-      );
-    case 'mindmap':
+function renderToolIcon(type: OutputTypeId) {
+  switch (type) {
+    case 'MINDMAP':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <circle cx="6" cy="6" r="2" fill="currentColor" />
@@ -158,7 +124,7 @@ function renderToolIcon(id: string) {
           />
         </svg>
       );
-    case 'report':
+    case 'BRIEFING':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path
@@ -171,41 +137,37 @@ function renderToolIcon(id: string) {
           <path d="M9 12h6M9 16h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
       );
-    case 'flashcards':
+    case 'FAQ':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <rect x="6" y="6" width="12" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" fill="none" />
           <path d="M9 9h6M9 12h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
       );
-    case 'quiz':
+    case 'QUIZ':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <circle cx="12" cy="12" r="7" stroke="currentColor" strokeWidth="1.6" fill="none" />
           <path d="m9 12.5 2 2 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       );
-    case 'infographic':
+    case 'GUIDE':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M6 18V9M12 18V6M18 18v-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          <circle cx="6" cy="7" r="1.5" fill="currentColor" />
-          <circle cx="12" cy="4" r="1.5" fill="currentColor" />
-          <circle cx="18" cy="12" r="1.5" fill="currentColor" />
+          <path
+            d="M6 6h8a3 3 0 0 1 3 3v9a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3V9a3 3 0 0 1 3-3Z"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            fill="none"
+          />
+          <path d="M8 9h6M8 12h5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
       );
-    case 'slides':
+    case 'TIMELINE':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <rect x="5" y="6" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" fill="none" />
-          <path d="M9 10h6M9 13h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-        </svg>
-      );
-    case 'data-table':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <rect x="5" y="6" width="14" height="12" rx="2" stroke="currentColor" strokeWidth="1.6" fill="none" />
-          <path d="M5 10h14M9 6v12M15 6v12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+          <circle cx="12" cy="12" r="7" stroke="currentColor" strokeWidth="1.6" fill="none" />
+          <path d="M12 8v4l3 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       );
     default:
@@ -214,17 +176,21 @@ function renderToolIcon(id: string) {
 }
 
 export default function StudioPanel({
+  tools,
   outputs,
   outputsLoading,
   outputsError,
   onRetryOutputs,
   onGenerateOutput,
+  onSelectOutput,
+  recentOutputJobId,
   isDemo,
 }: StudioPanelProps) {
   const outputNotes = useMemo<StudioNote[]>(
     () =>
       outputs.map((output) => ({
         id: `${output.id}`,
+        outputId: output.id,
         title: resolveOutputTitle(output),
         meta: resolveNoteMeta(output),
         tone: resolveTone(output.type),
@@ -237,8 +203,8 @@ export default function StudioPanel({
   return (
     <div className="WorkspacePanelBody StudioBody">
       <div className="StudioGrid" role="list">
-        {TOOLS.map((tool, index) => {
-          const isDisabled = Boolean(tool.disabled) || !tool.outputType;
+        {tools.map((tool, index) => {
+          const isDisabled = !tool.enabled || !tool.outputType;
           return (
             <button
               key={tool.id}
@@ -252,9 +218,10 @@ export default function StudioPanel({
               }}
               disabled={isDisabled}
               aria-label={tool.badge ? `${tool.label} ${tool.badge}` : tool.label}
+              title={tool.description}
             >
               <span className="StudioTile__icon" aria-hidden="true">
-                {renderToolIcon(tool.id)}
+                {renderToolIcon(tool.outputType)}
               </span>
               <span className="StudioTile__label">
                 <span className="StudioTile__labelText">{tool.label}</span>
@@ -274,6 +241,11 @@ export default function StudioPanel({
       </div>
 
       <div className="StudioNotes">
+        {recentOutputJobId ? (
+          <div className="StudioNotice" role="status">
+            已生成新的笔记，已加入列表。
+          </div>
+        ) : null}
         {outputsLoading ? (
           <div className="StudioSkeletonList" aria-label="加载笔记">
             <div className="StudioSkeletonItem" />
@@ -285,7 +257,15 @@ export default function StudioPanel({
           <div className="StudioNoteList">
             {notes.map((note) => (
               <div key={note.id} className="StudioNoteItem">
-                <button type="button" className="StudioNoteButton">
+                <button
+                  type="button"
+                  className="StudioNoteButton"
+                  onClick={() => {
+                    if (!note.outputId) return;
+                    onSelectOutput(note.outputId);
+                  }}
+                  aria-disabled={!note.outputId}
+                >
                   <span className="StudioNoteIcon" data-tone={note.tone} aria-hidden="true">
                     <svg viewBox="0 0 24 24" focusable="false">
                       <path

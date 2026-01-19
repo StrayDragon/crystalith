@@ -3,12 +3,12 @@ import type {
   ApiMessage,
   ApiNotebook,
   ApiOutput,
-  ApiOutputBatchResponse,
   ApiRefineBatchResponse,
   ApiSession,
   ApiSuggestionResponse,
   ApiSource,
   ApiSourceSearchResponse,
+  ApiWorkspaceToolsResponse,
   OutputTypeId,
   RefineMode,
 } from './types';
@@ -161,18 +161,17 @@ export async function createNotebookSuggestions(
   });
 }
 
-export async function createOutputs(
+export async function createOutput(
   notebookId: number,
+  outputType: OutputTypeId,
   payload: {
-    type?: OutputTypeId;
-    types?: OutputTypeId[];
     prompt?: string | null;
     chunk_ids?: number[];
     top_k?: number;
     min_score?: number;
   },
-): Promise<ApiOutputBatchResponse> {
-  return request<ApiOutputBatchResponse>(`/v1/notebooks/${notebookId}/outputs`, {
+): Promise<ApiOutput> {
+  return request<ApiOutput>(`/v1/notebooks/${notebookId}/outputs/${outputType}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -183,6 +182,10 @@ export async function createOutputs(
 
 export async function listOutputs(notebookId: number): Promise<ApiOutput[]> {
   return request<ApiOutput[]>(`/v1/notebooks/${notebookId}/outputs`);
+}
+
+export async function listWorkspaceTools(): Promise<ApiWorkspaceToolsResponse> {
+  return request<ApiWorkspaceToolsResponse>('/v1/workspace/tools');
 }
 
 export async function refineBatch(
