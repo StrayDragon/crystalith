@@ -9,7 +9,7 @@
   min-height: 100vh;
   color: var(--text-strong);
   background: linear-gradient(180deg, var(--page-bg-soft) 0%, var(--page-bg) 100%);
-  @apply flex flex-col gap-3 p-4;
+  @apply flex flex-col gap-3 sm:gap-4 p-3 sm:p-4 lg:p-6;
 }
 
 @media (min-width: 1024px) {
@@ -29,7 +29,7 @@
 }
 
 .WorkspaceTopBar {
-  @apply flex items-center justify-between gap-4 px-4 py-3 flex-wrap;
+  @apply flex items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 flex-wrap;
   border-bottom: 1px solid var(--panel-border);
 }
 
@@ -38,11 +38,11 @@
 }
 
 .WorkspaceLogo {
-  @apply flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-slate-900 shadow-sm;
+  @apply flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-white text-slate-900 shadow-sm;
 }
 
 .WorkspaceLogo svg {
-  @apply h-5 w-5;
+  @apply h-5 w-5 sm:h-6 sm:w-6;
 }
 
 .WorkspaceTopBar__title {
@@ -64,11 +64,11 @@
 }
 
 .WorkspacePrimaryAction {
-  @apply inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+  @apply inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 sm:px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
 }
 
 .WorkspaceSecondaryAction {
-  @apply inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+  @apply inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
 }
 
 .WorkspaceCreate {
@@ -76,7 +76,8 @@
 }
 
 .WorkspaceCreatePanel {
-  @apply absolute right-0 top-full z-20 mt-2 w-72 rounded-2xl border border-slate-200 bg-white p-3 text-sm shadow-lg;
+  @apply absolute right-0 top-full z-20 mt-2 rounded-2xl border border-slate-200 bg-white p-3 text-sm shadow-lg;
+  width: min(92vw, 18rem);
 }
 
 .WorkspaceCreateLabel {
@@ -108,7 +109,7 @@
 }
 
 .WorkspaceAvatar {
-  @apply relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-700 cursor-pointer;
+  @apply relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-700 cursor-pointer;
 }
 
 .WorkspaceAvatar__ring {
@@ -116,13 +117,13 @@
 }
 
 .WorkspaceAvatar__inner {
-  @apply relative z-10 flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700;
+  @apply relative z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700;
 }
 
 .WorkspaceMain {
-  --sources-width: 300px;
-  --studio-width: 320px;
-  --resize-handle: 12px;
+  --sources-width: clamp(240px, 26vw, 340px);
+  --studio-width: clamp(240px, 28vw, 360px);
+  --resize-handle: clamp(10px, 1.4vw, 14px);
   @apply grid flex-1 min-h-0;
   grid-template-columns:
     minmax(220px, var(--sources-width))
@@ -131,7 +132,7 @@
     var(--resize-handle)
     minmax(240px, var(--studio-width));
   column-gap: 0;
-  row-gap: 12px;
+  row-gap: clamp(8px, 1.4vw, 16px);
 }
 
 @media (max-width: 1024px) {
@@ -163,7 +164,7 @@
 .WorkspaceResizeHandle::before {
   content: '';
   width: 2px;
-  height: 48px;
+  height: clamp(32px, 8vh, 56px);
   border-radius: 999px;
   background: #e2e8f0;
   transition: background 0.2s ease;
@@ -185,7 +186,7 @@
 }
 
 .WorkspacePanelHeader {
-  @apply flex items-center justify-between px-4 py-3;
+  @apply flex items-center justify-between px-3 sm:px-4 lg:px-5 py-2.5 sm:py-3;
   border-bottom: 1px solid var(--panel-border);
   background: #fafbff;
 }
@@ -211,7 +212,7 @@
 }
 
 .WorkspacePanelBody {
-  @apply flex-1 min-h-0 px-4 py-4 flex flex-col gap-3;
+  @apply flex-1 min-h-0 px-3 sm:px-4 lg:px-5 py-3 sm:py-4 flex flex-col gap-3;
 }
 
 .WorkspacePanelBody--chat {
@@ -269,7 +270,7 @@
 .SourcesSearchInput {
   @apply flex flex-1 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500;
   min-width: 0;
-  flex-basis: 200px;
+  flex-basis: clamp(180px, 28vw, 240px);
 }
 
 .SourcesSearchInput svg {
@@ -283,7 +284,7 @@
 
 .SourcesSearchSelect {
   @apply rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 cursor-pointer;
-  flex: 1 1 120px;
+  flex: 1 1 clamp(120px, 22vw, 180px);
   min-width: 0;
   max-width: 100%;
 }
@@ -431,7 +432,7 @@
 }
 
 .ChatScroll {
-  @apply flex-1 min-h-0 overflow-y-auto px-5 py-4 flex flex-col gap-4;
+  @apply flex-1 min-h-0 overflow-y-auto px-4 sm:px-5 lg:px-6 py-3 sm:py-4 flex flex-col gap-4;
 }
 
 .ChatEmpty {
@@ -463,7 +464,7 @@
 }
 
 .ChatActionRow {
-  @apply flex flex-wrap items-center gap-2 border-t border-slate-100 px-4 py-2;
+  @apply flex flex-wrap items-center gap-2 border-t border-slate-100 px-3 sm:px-4 py-2;
 }
 
 .ChatActionButton {
@@ -475,7 +476,7 @@
 }
 
 .SuggestionPanel {
-  @apply px-4 pb-3;
+  @apply px-3 sm:px-4 pb-2 sm:pb-3;
 }
 
 .SuggestionPanel__header {
@@ -508,7 +509,8 @@
 
 .SuggestionList {
   @apply mt-2 grid gap-2;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  --suggestion-min: clamp(140px, 18vw, 180px);
+  grid-template-columns: repeat(auto-fit, minmax(var(--suggestion-min), 1fr));
 }
 
 .SuggestionCard {
@@ -548,16 +550,16 @@
 }
 
 .ChatComposer {
-  @apply px-4 pb-4;
+  @apply px-3 sm:px-4 pb-3 sm:pb-4;
 }
 
 .ChatComposerRow {
-  @apply flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm;
+  @apply flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 sm:px-4 py-2 shadow-sm;
 }
 
 .ChatInput {
   @apply flex-1 bg-transparent text-sm text-slate-700 outline-none resize-none;
-  min-height: 36px;
+  min-height: clamp(32px, 4vw, 44px);
 }
 
 .ChatSendButton {
@@ -589,7 +591,8 @@
 }
 
 .CitationTooltip {
-  @apply absolute left-0 top-full mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-lg z-50;
+  @apply absolute left-0 top-full mt-2 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-lg z-50;
+  width: min(80vw, 16rem);
 }
 
 .CitationTooltip__title {
@@ -610,7 +613,7 @@
 
 .StudioGrid {
   @apply grid gap-2;
-  --studio-tile-min: 140px;
+  --studio-tile-min: clamp(120px, 18vw, 160px);
   grid-template-columns: repeat(auto-fit, minmax(var(--studio-tile-min), 1fr));
   justify-content: start;
 }
@@ -622,7 +625,7 @@
   --tile-edit-size: clamp(18px, 1.6vw, 22px);
   --tile-badge-size: clamp(9px, 0.9vw, 10px);
   @apply relative flex items-center gap-2 rounded-xl border px-3 py-2 text-left font-semibold transition cursor-pointer;
-  min-height: 52px;
+  min-height: clamp(44px, 6vw, 56px);
   padding-right: calc(var(--tile-edit-size) + 16px);
   font-size: var(--tile-font-size);
   background: var(--tone-bg, #f8fafc);
@@ -759,7 +762,7 @@
 }
 
 .StudioAddButton {
-  @apply mt-auto rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 cursor-pointer;
+  @apply mt-auto rounded-full bg-slate-900 px-3 sm:px-4 py-2 sm:py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 cursor-pointer;
 }
 
 .StudioViewerOverlay {
@@ -767,7 +770,9 @@
 }
 
 .StudioViewer {
-  @apply flex h-[82vh] w-[88vw] max-w-5xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl;
+  @apply flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl;
+  width: min(92vw, 64rem);
+  height: min(82vh, 48rem);
 }
 
 .StudioViewer.isFullscreen {
@@ -775,7 +780,7 @@
 }
 
 .StudioViewerHeader {
-  @apply flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4;
+  @apply flex items-start justify-between gap-4 border-b border-slate-100 px-4 sm:px-5 lg:px-6 py-3 sm:py-4;
 }
 
 .StudioViewerHeading {
@@ -803,7 +808,8 @@
 }
 
 .StudioViewerSidebar {
-  @apply w-64 shrink-0 border-r border-slate-100 bg-slate-50/70 p-3;
+  @apply shrink-0 border-r border-slate-100 bg-slate-50/70 p-3;
+  width: clamp(12rem, 22vw, 18rem);
 }
 
 .StudioViewerSidebarTitle {
@@ -835,7 +841,7 @@
 }
 
 .StudioViewerContent {
-  @apply flex-1 min-h-0 overflow-y-auto p-6;
+  @apply flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 lg:p-6;
 }
 
 .StudioEmpty {
@@ -912,7 +918,8 @@
 
 @media (max-width: 1024px) {
   .StudioViewer {
-    @apply h-[90vh] w-[94vw];
+    height: min(90vh, 56rem);
+    width: min(94vw, 64rem);
   }
 
   .StudioViewerBody {
