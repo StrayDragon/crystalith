@@ -345,6 +345,13 @@ async def _resolve_context(state: OutputState) -> dict[str, Any]:
     prompt = state["prompt"]
     chunk_ids = state["chunk_ids"] or []
 
+    log.debug(
+        "resolving context",
+        notebook_id=notebook_id,
+        prompt_length=len(prompt),
+        explicit_chunk_ids_count=len(chunk_ids),
+    )
+
     explicit_chunk_ids = [int(value) for value in chunk_ids if int(value) > 0]
     if explicit_chunk_ids:
         rows = await deps.session.execute(
@@ -422,6 +429,15 @@ async def _generate_output(state: OutputState) -> dict[str, Any]:
 
     schema = OUTPUT_SCHEMAS[output_type]
     model = deps.model or build_chat_model(deps.settings)
+
+    log.info(
+        "generating output",
+        output_type=output_type.value,
+        prompt_length=len(prompt),
+        context_length=len(context),
+        has_context=bool(context.strip()),
+    )
+
     agent = Agent(
         model,
         output_type=schema,
@@ -434,8 +450,21 @@ async def _generate_output(state: OutputState) -> dict[str, Any]:
     try:
         result = await agent.run(user_prompt, deps=deps)
         content = result.output.model_dump()
+        log.info(
+            "output generation succeeded",
+            output_type=output_type.value,
+            content_keys=list(content.keys()) if isinstance(content, dict) else None,
+        )
     except Exception as error:  # noqa: BLE001 - fallback for output generation
-        log.warning("output generation failed", exc_info=error, output_type=output_type.value)
+        error_type = type(error).__name__
+        error_message = str(error)[:200]  # Truncate long error messages
+        log.warning(
+            "output generation failed, using fallback",
+            exc_info=error,
+            output_type=output_type.value,
+            error_type=error_type,
+            error_message=error_message,
+        )
         content = _fallback_output(output_type, prompt)
 
     return {"content": content}

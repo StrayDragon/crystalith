@@ -8,13 +8,19 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from cl_logs.logging import get_logger
+
 from crystalith.agents.deps import StudioDeps
+from crystalith.agents.models import ModelConfigurationError
 from crystalith.agents.output_graph import OutputState, run_output_graph
 from crystalith.config import Settings
 from crystalith.db import Notebook, Output
 from crystalith.outputs import OutputType
 
 from .deps import get_db_session, get_embedding_provider, get_settings, get_vector_store
+
+
+log = get_logger(__name__)
 
 
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/outputs", tags=["outputs"])
@@ -78,10 +84,33 @@ async def create_output(
         "deps": deps,
     }
 
+    log.info(
+        "creating output",
+        notebook_id=notebook_id,
+        output_type=output_type.value,
+        prompt_length=len(payload.prompt) if payload.prompt else 0,
+        chunk_ids_count=len(payload.chunk_ids) if payload.chunk_ids else 0,
+    )
+
     try:
         db_output = await run_output_graph(state)
+    except ModelConfigurationError as exc:
+        log.warning("model configuration error", error=str(exc))
+        raise HTTPException(
+            status_code=503,
+            detail=f"AI model configuration error: {exc}. Please check your config/app.yaml settings.",
+        ) from exc
     except ValueError as exc:
+        log.warning("invalid request", error=str(exc))
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        log.error("unexpected error during output generation", exc_info=exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate output. Please try again later.",
+        ) from exc
+
+    log.info("output created", output_id=db_output.id, output_type=output_type.value)
     return OutputRead.model_validate(db_output)
 
 
