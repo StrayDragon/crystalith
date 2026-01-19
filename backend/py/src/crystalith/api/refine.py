@@ -4,7 +4,7 @@ import datetime
 import json
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +12,7 @@ from crystalith.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.ai.types import ChatMessage
 from crystalith.config import RefineSettings, Settings
 from crystalith.db import Chunk, Notebook, Source
+from crystalith.schemas.citations import Citation
 from crystalith.tasks import TaskQueue, TaskStatus, TaskType
 from crystalith.vector_storage import VectorSearchResult, VectorStore
 
@@ -44,22 +45,11 @@ class RefineBatchRequest(BaseModel):
     min_score: float = Field(0.2, ge=0.0, le=1.0)
 
 
-class RefineCitation(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    source_id: int
-    source_name: str
-    chunk_id: int
-    chunk_index: int
-    snippet: str
-    score: float
-
-
 class StructuredRefine(BaseModel):
     title: str
     bullets: list[str]
     terms: list[str]
-    citations: list[RefineCitation]
+    citations: list[Citation]
 
 
 class RefineBatchOutput(BaseModel):
@@ -73,14 +63,14 @@ class RefineResponse(BaseModel):
     paragraph: str | None = None
     bullets: list[str] | None = None
     structured: StructuredRefine | None = None
-    citations: list[RefineCitation]
+    citations: list[Citation]
     evidence: bool
     created_at: datetime.datetime
 
 
 class RefineBatchResponse(BaseModel):
     outputs: dict[str, RefineBatchOutput]
-    citations: list[RefineCitation]
+    citations: list[Citation]
     evidence: bool
     created_at: datetime.datetime
 
@@ -118,6 +108,18 @@ def _format_context_from_chunk_ids(
     return "\n\n".join(blocks)
 
 
+def _extract_page_number(chunk: Chunk) -> int | None:
+    metadata = chunk.metadata_ if isinstance(chunk.metadata_, dict) else None
+    page = metadata.get("page") if metadata else None
+    return page if isinstance(page, int) else None
+
+
+def _extract_paragraph_index(chunk: Chunk) -> int | None:
+    metadata = chunk.metadata_ if isinstance(chunk.metadata_, dict) else None
+    paragraph_index = metadata.get("paragraph_index") if metadata else None
+    return paragraph_index if isinstance(paragraph_index, int) else None
+
+
 def _parse_bullets(text: str) -> list[str]:
     items: list[str] = []
     for raw in text.splitlines():
@@ -129,7 +131,7 @@ def _parse_bullets(text: str) -> list[str]:
 
 def _fallback_structured(
     prompt: str,
-    citations: list[RefineCitation],
+    citations: list[Citation],
 ) -> StructuredRefine:
     title = prompt.strip()[:48] or "Refine"
     bullets = [citation.snippet for citation in citations[:5]]
@@ -172,7 +174,7 @@ def _apply_format(
     format_name: str,
     answer: str,
     prompt: str,
-    citations: list[RefineCitation],
+    citations: list[Citation],
 ) -> RefineBatchOutput:
     if format_name == "paragraph":
         return RefineBatchOutput(paragraph=answer.strip())
@@ -267,16 +269,18 @@ async def refine_batch(
         if missing:
             raise HTTPException(status_code=400, detail="Unknown chunk_id in chunk_ids")
 
-        citations: list[RefineCitation] = []
+        citations: list[Citation] = []
         for chunk_id in explicit_chunk_ids:
             chunk, source = chunk_map[chunk_id]
             snippet = chunk.text.strip()[:200]
             citations.append(
-                RefineCitation(
+                Citation(
                     source_id=source.id,
                     source_name=source.filename,
                     chunk_id=chunk.id,
                     chunk_index=chunk.chunk_index,
+                    page_number=_extract_page_number(chunk),
+                    paragraph_index=_extract_paragraph_index(chunk),
                     snippet=snippet,
                     score=1.0,
                 )
@@ -315,16 +319,18 @@ async def refine_batch(
         )
         chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
 
-        citations = []
+        citations: list[Citation] = []
         for result in results:
             chunk, source = chunk_map[result.entry.chunk_id]
             snippet = chunk.text.strip()[:200]
             citations.append(
-                RefineCitation(
+                Citation(
                     source_id=source.id,
                     source_name=source.filename,
                     chunk_id=chunk.id,
                     chunk_index=chunk.chunk_index,
+                    page_number=_extract_page_number(chunk),
+                    paragraph_index=_extract_paragraph_index(chunk),
                     snippet=snippet,
                     score=result.score,
                 )

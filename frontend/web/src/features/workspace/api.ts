@@ -8,6 +8,7 @@ import type {
   ApiSession,
   ApiSuggestionResponse,
   ApiSource,
+  ApiSourceSearchResponse,
   OutputTypeId,
   RefineMode,
 } from './types';
@@ -64,6 +65,19 @@ export async function uploadSource(notebookId: number, file: File): Promise<ApiS
   return request<ApiSource>(`/v1/notebooks/${notebookId}/sources`, {
     method: 'POST',
     body: formData,
+  });
+}
+
+export async function searchSources(
+  notebookId: number,
+  payload: { query: string; engine: string; mode: string },
+): Promise<ApiSourceSearchResponse> {
+  return request<ApiSourceSearchResponse>(`/v1/notebooks/${notebookId}/sources/search`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
   });
 }
 

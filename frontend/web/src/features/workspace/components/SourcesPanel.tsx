@@ -8,6 +8,9 @@ interface SourcesPanelProps {
   onSourceClick: (source: SourceItem) => void;
   onUpload: (file: File | null) => void;
   uploadState: AsyncStatus;
+  searchState: AsyncStatus;
+  searchNotice: string;
+  onSearch: (payload: { query: string; engine: string; mode: string }) => void;
   isDemo: boolean;
   error: string;
   isLoading: boolean;
@@ -19,12 +22,16 @@ export default function SourcesPanel({
   onSourceClick,
   onUpload,
   uploadState,
+  searchState,
+  searchNotice,
+  onSearch,
   isDemo,
   error,
   isLoading,
   onRetry,
 }: SourcesPanelProps) {
   const uploadDisabled = isDemo || uploadState === 'loading';
+  const isSearching = searchState === 'loading';
   const [searchQuery, setSearchQuery] = useState('');
   const [engine, setEngine] = useState('Web');
   const [mode, setMode] = useState('Fast Research');
@@ -69,6 +76,11 @@ export default function SourcesPanel({
       [id]: !prev[id],
     }));
   }
+
+  const handleSearch = () => {
+    if (isSearching) return;
+    onSearch({ query: searchQuery, engine, mode });
+  };
 
   return (
     <div className="WorkspacePanelBody SourcesPanel">
@@ -117,6 +129,11 @@ export default function SourcesPanel({
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             aria-label="搜索来源"
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter') return;
+              event.preventDefault();
+              handleSearch();
+            }}
           />
         </div>
         <select
@@ -138,7 +155,13 @@ export default function SourcesPanel({
           <option>Fast Research</option>
           <option>Deep Research</option>
         </select>
-        <button type="button" className="SourcesSearchButton" aria-label="开始搜索">
+        <button
+          type="button"
+          className="SourcesSearchButton"
+          aria-label="开始搜索"
+          onClick={handleSearch}
+          disabled={isSearching}
+        >
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path
               d="M8 12h8m0 0-3-3m3 3-3 3"
@@ -150,6 +173,12 @@ export default function SourcesPanel({
           </svg>
         </button>
       </div>
+
+      {isSearching ? (
+        <div className="SourcesSearchHint">搜索中…</div>
+      ) : searchNotice ? (
+        <div className="SourcesSearchHint">{searchNotice}</div>
+      ) : null}
 
       <div className="SourcesSelectAll">
         <span>选择所有来源</span>

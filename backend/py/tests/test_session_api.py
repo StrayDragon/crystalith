@@ -95,7 +95,16 @@ async def test_message_create_list_and_delete_session(test_client: AsyncClient) 
         json={
             "role": "assistant",
             "content": "Hello",
-            "citations": {"items": [{"note": "demo"}]},
+            "citations": [
+                {
+                    "source_id": 1,
+                    "source_name": "demo",
+                    "chunk_id": 1,
+                    "chunk_index": 0,
+                    "snippet": "demo snippet",
+                    "score": 0.5,
+                }
+            ],
         },
     )
     assert second.status_code == 201

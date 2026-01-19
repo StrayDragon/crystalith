@@ -13,6 +13,7 @@ export type OutputTypeId =
   | 'BULLETS'
   | 'STRUCTURED';
 export type SuggestionType = 'factual' | 'analytical' | 'comparative' | 'creative' | 'deep_dive';
+export type SourceSearchStatus = 'ok' | 'not_implemented';
 
 export interface Notebook {
   id: number;
@@ -167,7 +168,7 @@ export interface ApiMessage {
   session_id: number;
   role: 'user' | 'assistant' | 'system';
   content: string;
-  citations?: { items?: ApiCitation[] } | null;
+  citations?: ApiCitation[] | null;
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -207,6 +208,23 @@ export interface ApiSource {
   chunk_count?: number | null;
   created_at?: string | null;
   updated_at?: string | null;
+}
+
+export interface ApiSourceSearchResult {
+  title: string;
+  url: string;
+  snippet?: string | null;
+  source?: string | null;
+}
+
+export interface ApiSourceSearchResponse {
+  status: SourceSearchStatus;
+  query: string;
+  engine: string;
+  mode: string;
+  results: ApiSourceSearchResult[];
+  message?: string | null;
+  created_at?: string | null;
 }
 
 export interface ApiCitation {

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import datetime
 from time import perf_counter
+from enum import StrEnum
 from typing import Any, Iterable
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -39,6 +40,47 @@ class SourceRead(BaseModel):
     chunk_count: int = 0
     created_at: datetime.datetime
     updated_at: datetime.datetime
+
+
+class SourceSearchStatus(StrEnum):
+    OK = "ok"
+    NOT_IMPLEMENTED = "not_implemented"
+
+
+class SourceSearchRequest(BaseModel):
+    query: str = Field(..., min_length=1)
+    engine: str = Field("Web")
+    mode: str = Field("Fast Research")
+
+    @field_validator("query")
+    @classmethod
+    def _strip_query(cls, value: str) -> str:
+        trimmed = " ".join(value.strip().split())
+        if not trimmed:
+            raise ValueError("query must not be empty")
+        return trimmed
+
+    @field_validator("engine", "mode")
+    @classmethod
+    def _strip_label(cls, value: str) -> str:
+        return value.strip() or value
+
+
+class SourceSearchResult(BaseModel):
+    title: str
+    url: str
+    snippet: str | None = None
+    source: str | None = None
+
+
+class SourceSearchResponse(BaseModel):
+    status: SourceSearchStatus
+    query: str
+    engine: str
+    mode: str
+    results: list[SourceSearchResult]
+    message: str | None = None
+    created_at: datetime.datetime
 
 
 def _resolve_parser(file: UploadFile, transcriber: TranscriptionProvider) -> Parser:
@@ -105,6 +147,28 @@ async def list_sources(
     )
     sources = result.scalars().all()
     return [_source_to_read(source, chunk_count=len(source.chunks)) for source in sources]
+
+
+@router.post("/search", response_model=SourceSearchResponse)
+async def search_sources(
+    notebook_id: int,
+    payload: SourceSearchRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> SourceSearchResponse:
+    notebook = await session.get(Notebook, notebook_id)
+    if notebook is None:
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
+    created_at = datetime.datetime.now(datetime.UTC)
+    return SourceSearchResponse(
+        status=SourceSearchStatus.NOT_IMPLEMENTED,
+        query=payload.query,
+        engine=payload.engine,
+        mode=payload.mode,
+        results=[],
+        message="Search is not implemented yet.",
+        created_at=created_at,
+    )
 
 
 @router.post("", response_model=SourceRead, status_code=status.HTTP_201_CREATED)
