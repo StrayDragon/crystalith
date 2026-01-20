@@ -42,6 +42,29 @@ export class ApiError extends Error {
       }
     }
 
+    // Provide user-friendly messages for common status codes
+    if (!message || message === statusText) {
+      switch (status) {
+        case 400:
+          message = '请求参数有误，请检查输入。';
+          break;
+        case 404:
+          message = '请求的资源不存在。';
+          break;
+        case 422:
+          message = 'AI 模型处理失败，请稍后重试。';
+          break;
+        case 500:
+          message = '服务器内部错误，请稍后重试。';
+          break;
+        case 503:
+          message = 'AI 服务暂时不可用，请检查配置或稍后重试。';
+          break;
+        default:
+          message = `请求失败 (${status})`;
+      }
+    }
+
     super(message);
     this.name = 'ApiError';
     this.status = status;
@@ -85,6 +108,29 @@ export async function createNotebook(name: string): Promise<ApiNotebook> {
   });
 }
 
+export async function getNotebook(notebookId: number): Promise<ApiNotebook> {
+  return request<ApiNotebook>(`/v1/notebooks/${notebookId}`);
+}
+
+export async function updateNotebook(
+  notebookId: number,
+  data: { name?: string },
+): Promise<ApiNotebook> {
+  return request<ApiNotebook>(`/v1/notebooks/${notebookId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteNotebook(notebookId: number): Promise<void> {
+  return request<void>(`/v1/notebooks/${notebookId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function listSources(notebookId: number): Promise<ApiSource[]> {
   return request<ApiSource[]>(`/v1/notebooks/${notebookId}/sources`);
 }
@@ -99,6 +145,12 @@ export async function deleteSources(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ source_ids: sourceIds }),
+  });
+}
+
+export async function deleteSource(notebookId: number, sourceId: number): Promise<void> {
+  return request<void>(`/v1/notebooks/${notebookId}/sources/${sourceId}`, {
+    method: 'DELETE',
   });
 }
 
@@ -174,6 +226,33 @@ export async function createSession(
   });
 }
 
+export async function getSession(
+  notebookId: number,
+  sessionId: number,
+): Promise<ApiSession> {
+  return request<ApiSession>(`/v1/notebooks/${notebookId}/sessions/${sessionId}`);
+}
+
+export async function updateSession(
+  notebookId: number,
+  sessionId: number,
+  data: { title?: string },
+): Promise<ApiSession> {
+  return request<ApiSession>(`/v1/notebooks/${notebookId}/sessions/${sessionId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteSession(notebookId: number, sessionId: number): Promise<void> {
+  return request<void>(`/v1/notebooks/${notebookId}/sessions/${sessionId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function listMessages(sessionId: number): Promise<ApiMessage[]> {
   return request<ApiMessage[]>(`/v1/sessions/${sessionId}/messages`);
 }
@@ -227,6 +306,10 @@ export async function listOutputs(notebookId: number): Promise<ApiOutput[]> {
   return request<ApiOutput[]>(`/v1/notebooks/${notebookId}/outputs`);
 }
 
+export async function getOutput(notebookId: number, outputId: number): Promise<ApiOutput> {
+  return request<ApiOutput>(`/v1/notebooks/${notebookId}/outputs/${outputId}`);
+}
+
 export async function listWorkspaceTools(): Promise<ApiWorkspaceToolsResponse> {
   return request<ApiWorkspaceToolsResponse>('/v1/workspace/tools');
 }
@@ -251,4 +334,39 @@ export async function refineBatch(
     },
     body: JSON.stringify(body),
   });
+}
+
+// Task API
+export interface ApiTask {
+  id: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  progress?: number;
+  result?: unknown;
+  error?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export async function getTask(taskId: string): Promise<ApiTask> {
+  return request<ApiTask>(`/v1/tasks/${taskId}`);
+}
+
+export async function listNotebookTasks(notebookId: number): Promise<ApiTask[]> {
+  return request<ApiTask[]>(`/v1/notebooks/${notebookId}/tasks`);
+}
+
+// Analysis API
+export interface ApiAnalysis {
+  notebook_id: number;
+  source_count: number;
+  chunk_count: number;
+  session_count: number;
+  output_count: number;
+  topics?: string[];
+  summary?: string;
+  created_at?: string;
+}
+
+export async function analyzeNotebook(notebookId: number): Promise<ApiAnalysis> {
+  return request<ApiAnalysis>(`/v1/notebooks/${notebookId}/analysis`);
 }

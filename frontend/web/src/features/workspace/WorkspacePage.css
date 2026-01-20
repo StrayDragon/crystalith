@@ -45,8 +45,45 @@
   @apply h-5 w-5 sm:h-6 sm:w-6;
 }
 
+.WorkspaceTopBar__titleWrap {
+  @apply relative;
+}
+
+.WorkspaceTopBar__titleButton {
+  @apply flex items-center gap-1.5 rounded-lg px-2 py-1 -ml-2 transition cursor-pointer;
+}
+
+.WorkspaceTopBar__titleButton:hover {
+  @apply bg-slate-100;
+}
+
+.WorkspaceTopBar__titleButton:disabled {
+  @apply cursor-default hover:bg-transparent;
+}
+
 .WorkspaceTopBar__title {
   @apply truncate text-base font-semibold font-heading text-slate-900;
+}
+
+.WorkspaceTopBar__editIcon {
+  @apply text-slate-400 opacity-0 transition;
+}
+
+.WorkspaceTopBar__titleButton:hover .WorkspaceTopBar__editIcon {
+  @apply opacity-100;
+}
+
+.WorkspaceEditPanel {
+  @apply absolute left-0 top-full z-20 mt-2 rounded-2xl border border-slate-200 bg-white p-3 text-sm shadow-lg;
+  width: min(92vw, 20rem);
+}
+
+.WorkspaceDangerAction {
+  @apply inline-flex items-center gap-2 rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+}
+
+.WorkspaceCreateActions__spacer {
+  @apply flex-1;
 }
 
 .WorkspaceTopBar__right {
@@ -199,6 +236,14 @@
   @apply flex items-center gap-2;
 }
 
+.PanelHeaderLeft {
+  @apply flex items-center gap-3;
+}
+
+.WorkspacePanelHeader--chat {
+  @apply flex-wrap gap-2;
+}
+
 .PanelIconButton {
   @apply inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 cursor-pointer;
 }
@@ -264,42 +309,66 @@
 }
 
 .SourcesSearchRow {
-  @apply flex flex-wrap items-center gap-2;
+  @apply flex flex-col gap-2;
 }
 
-.SourcesSearchInput {
-  @apply flex flex-1 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500;
-  min-width: 0;
-  flex-basis: clamp(180px, 28vw, 240px);
+.SourcesSearchInputWrap {
+  @apply relative flex items-center w-full;
 }
 
-.SourcesSearchInput svg {
-  @apply h-4 w-4 text-slate-400;
+.SourcesSearchInputIcon {
+  @apply absolute left-3 flex items-center justify-center text-slate-400 pointer-events-none;
 }
 
-.SourcesSearchInput input {
-  @apply flex-1 bg-transparent text-sm text-slate-700 outline-none;
-  min-width: 0;
-}
-
-.SourcesSearchSelect {
-  @apply rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 cursor-pointer;
-  flex: 1 1 clamp(120px, 22vw, 180px);
-  min-width: 0;
-  max-width: 100%;
-}
-
-.SourcesSearchButton {
-  @apply inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition hover:bg-slate-800 cursor-pointer;
-  flex: 0 0 auto;
-}
-
-.SourcesSearchButton svg {
+.SourcesSearchInputIcon svg {
   @apply h-4 w-4;
 }
 
-.SourcesSearchButton:disabled {
+.SourcesSearchInput {
+  @apply w-full rounded-full border border-slate-200 bg-white pl-9 pr-10 py-2 text-sm text-slate-700 outline-none transition;
+  @apply focus:border-slate-300 focus:ring-2 focus:ring-slate-100;
+}
+
+.SourcesSearchInput::placeholder {
+  @apply text-slate-400;
+}
+
+.SourcesSearchOptions {
+  @apply flex items-center gap-1.5 flex-wrap;
+}
+
+.SourcesSearchSelectWrap {
+  @apply relative flex items-center rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 transition hover:bg-slate-50 hover:border-slate-300;
+}
+
+.SourcesSearchSelectIcon {
+  @apply flex items-center justify-center mr-1.5 text-slate-400;
+  font-size: 12px;
+}
+
+.SourcesSearchSelectIcon svg {
+  @apply h-3 w-3;
+}
+
+.SourcesSearchSelect {
+  @apply appearance-none bg-transparent pr-4 text-[11px] font-medium text-slate-600 outline-none cursor-pointer;
+  min-width: 0;
+}
+
+.SourcesSearchSelectArrow {
+  @apply absolute right-1.5 text-[8px] text-slate-400 pointer-events-none;
+}
+
+.SourcesSearchSubmit {
+  @apply absolute right-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-800 text-white transition hover:bg-slate-700 cursor-pointer;
+}
+
+.SourcesSearchSubmit:disabled {
   @apply opacity-60 cursor-not-allowed;
+}
+
+.SourcesSearchSubmit svg {
+  @apply h-3.5 w-3.5;
 }
 
 .SourcesSearchHint {
@@ -364,12 +433,11 @@
 }
 
 .SourcesListWrap {
-  @apply flex-1 min-h-0;
+  @apply flex-1 min-h-0 relative;
 }
 
 .SourcesList {
   @apply flex flex-col gap-2 overflow-y-auto pr-1;
-  overflow-x: hidden;
 }
 
 .SourcesListItem {
@@ -379,6 +447,75 @@
 
 .SourcesListItem:hover {
   @apply border-slate-200;
+}
+
+.SourcesItemActions {
+  @apply flex items-center gap-2;
+}
+
+.SourcesItemMenuWrap {
+  @apply relative;
+  z-index: 10;
+}
+
+.SourcesItemMenuButton {
+  @apply inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition opacity-0 hover:bg-slate-100 hover:text-slate-600 cursor-pointer;
+}
+
+.SourcesListItem:hover .SourcesItemMenuButton {
+  @apply opacity-100;
+}
+
+.SourcesItemMenuButton svg {
+  @apply h-3.5 w-3.5;
+}
+
+.SourcesItemMenu {
+  @apply fixed min-w-[140px] rounded-xl border border-slate-200 bg-white py-1 shadow-lg;
+  z-index: 9999;
+}
+
+.SourcesItemMenuItem {
+  @apply flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-slate-700 transition hover:bg-slate-50 cursor-pointer;
+}
+
+.SourcesItemMenuItem--danger {
+  @apply text-red-600 hover:bg-red-50;
+}
+
+.SourcesItemMenuItem:disabled {
+  @apply cursor-not-allowed opacity-50 hover:bg-transparent;
+}
+
+.SourcesItemMenuIcon {
+  @apply text-sm;
+}
+
+/* Batch action menu */
+.SourcesBatchMenuWrap {
+  @apply relative;
+  z-index: 20;
+}
+
+.SourcesBatchMenu {
+  @apply absolute left-0 top-full mt-1 min-w-[160px] rounded-xl border border-slate-200 bg-white py-1 shadow-lg;
+  z-index: 50;
+}
+
+.SourcesBatchMenuHeader {
+  @apply px-3 py-2 text-xs font-semibold text-slate-500 border-b border-slate-100;
+}
+
+.SourcesBatchMenuItem {
+  @apply flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-slate-700 transition hover:bg-slate-50 cursor-pointer;
+}
+
+.SourcesBatchMenuItem--danger {
+  @apply text-red-600 hover:bg-red-50;
+}
+
+.SourcesBatchMenuIcon {
+  @apply text-sm;
 }
 
 .SourcesListButton {
@@ -549,6 +686,107 @@
   @apply w-2/3;
 }
 
+.SessionSwitcher {
+  @apply relative flex items-center gap-2;
+}
+
+.SessionSwitcherButton {
+  @apply flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 cursor-pointer;
+}
+
+.SessionSwitcherLabel {
+  @apply text-slate-400;
+}
+
+.SessionSwitcherValue {
+  @apply text-slate-700 truncate max-w-[120px];
+}
+
+.SessionSwitcherNew {
+  @apply inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700 hover:border-slate-300 cursor-pointer;
+}
+
+.SessionSwitcherNew svg {
+  @apply h-4 w-4;
+}
+
+.SessionSwitcherPanel {
+  @apply absolute left-0 top-full z-20 mt-2 rounded-2xl border border-slate-200 bg-white p-3 text-sm shadow-lg;
+  width: min(92vw, 20rem);
+}
+
+.SessionSwitcherSearch {
+  @apply mb-2;
+}
+
+.SessionSwitcherInput {
+  @apply w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none;
+}
+
+.SessionSwitcherError {
+  @apply mb-2 text-xs text-red-600;
+}
+
+.SessionSwitcherList {
+  @apply flex flex-col gap-1 max-h-[200px] overflow-y-auto;
+}
+
+.SessionSwitcherEmpty {
+  @apply text-xs text-slate-500 py-2;
+}
+
+.SessionSwitcherOption {
+  @apply flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-left transition hover:bg-slate-50;
+}
+
+.SessionSwitcherOption.isActive {
+  @apply bg-slate-100;
+}
+
+.SessionSwitcherOptionButton {
+  @apply flex-1 min-w-0 text-left cursor-pointer;
+}
+
+.SessionSwitcherOptionTitle {
+  @apply text-sm font-semibold text-slate-800 truncate;
+}
+
+.SessionSwitcherOptionMeta {
+  @apply text-[11px] text-slate-500;
+}
+
+.SessionSwitcherOptionActions {
+  @apply flex items-center gap-1 opacity-0 transition;
+}
+
+.SessionSwitcherOption:hover .SessionSwitcherOptionActions {
+  @apply opacity-100;
+}
+
+.SessionSwitcherOptionAction {
+  @apply inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-200 hover:text-slate-600 cursor-pointer;
+}
+
+.SessionSwitcherOptionAction--danger:hover {
+  @apply bg-red-50 text-red-500;
+}
+
+.SessionSwitcherOptionAction:disabled {
+  @apply cursor-not-allowed opacity-50;
+}
+
+.SessionSwitcherEditRow {
+  @apply flex items-center gap-2 w-full;
+}
+
+.SessionSwitcherEditInput {
+  @apply flex-1 rounded-lg border border-slate-200 px-2 py-1 text-sm text-slate-700 outline-none;
+}
+
+.SessionSwitcherEditAction {
+  @apply inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-200 cursor-pointer;
+}
+
 .ChatComposer {
   @apply px-3 sm:px-4 pb-3 sm:pb-4;
 }
@@ -608,25 +846,34 @@
 }
 
 .StudioBody {
-  @apply flex flex-col min-h-0 gap-4;
+  @apply flex flex-col min-h-0 gap-3;
+  /* Split layout: tools grid (top) + notes list (bottom), each ~50% */
+}
+
+.StudioBody > .StudioGrid {
+  @apply flex-shrink-0;
+  flex: 0 0 auto;
+}
+
+.StudioBody > .StudioNotes {
+  @apply flex-1 min-h-0 overflow-y-auto;
+  min-height: 200px;
 }
 
 .StudioGrid {
   @apply grid gap-2;
-  --studio-tile-min: clamp(120px, 18vw, 160px);
-  grid-template-columns: repeat(auto-fit, minmax(var(--studio-tile-min), 1fr));
-  justify-content: start;
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .StudioTile {
-  --tile-icon-size: clamp(24px, 2.2vw, 30px);
-  --tile-icon-glyph: clamp(12px, 1.2vw, 16px);
-  --tile-font-size: clamp(11px, 1vw, 13px);
-  --tile-edit-size: clamp(18px, 1.6vw, 22px);
-  --tile-badge-size: clamp(9px, 0.9vw, 10px);
-  @apply relative flex items-center gap-2 rounded-xl border px-3 py-2 text-left font-semibold transition cursor-pointer;
-  min-height: clamp(44px, 6vw, 56px);
-  padding-right: calc(var(--tile-edit-size) + 16px);
+  --tile-icon-size: 22px;
+  --tile-icon-glyph: 11px;
+  --tile-font-size: 11px;
+  --tile-edit-size: 14px;
+  --tile-badge-size: 8px;
+  @apply relative flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-left font-semibold transition cursor-pointer;
+  min-height: 34px;
+  padding-right: calc(var(--tile-edit-size) + 6px);
   font-size: var(--tile-font-size);
   background: var(--tone-bg, #f8fafc);
   border-color: var(--tone-border, #e2e8f0);
@@ -697,7 +944,7 @@
 }
 
 .StudioNoteItem {
-  @apply flex items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-white px-3 py-2 transition hover:bg-slate-50/70;
+  @apply flex items-stretch rounded-xl border border-slate-100 bg-white transition hover:bg-slate-50/70 hover:border-slate-200;
 }
 
 .StudioNoteItem.isPending {
@@ -705,64 +952,154 @@
 }
 
 .StudioNoteButton {
-  @apply flex flex-1 items-center gap-2 text-left cursor-pointer;
+  @apply flex flex-1 items-center gap-2.5 text-left cursor-pointer px-2.5 py-2 min-w-0;
 }
 
 .StudioNoteButton.isPending {
   @apply cursor-default;
 }
 
-.StudioNoteIcon {
-  @apply flex h-8 w-8 items-center justify-center rounded-xl border;
-  background: var(--tone-icon, #eef2f6);
-  border-color: var(--tone-border, #e2e8f0);
+.StudioNoteTag {
+  @apply flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-[10px] font-semibold leading-none whitespace-nowrap flex-shrink-0;
+  background: var(--tone-bg, #f4f6fb);
   color: var(--tone-ink, #475569);
+  border: 1px solid var(--tone-border, #e2e8f0);
+  min-width: 48px;
 }
 
-.StudioNoteIcon.isPending {
-  @apply text-slate-500;
+.StudioNoteTag.isPending {
+  @apply border-dashed;
 }
 
-.StudioNoteIcon svg {
-  @apply h-4 w-4;
+.StudioNoteTag svg {
+  @apply h-3 w-3;
 }
 
 .StudioNoteSpinner {
-  @apply h-4 w-4;
+  @apply h-3 w-3;
   animation: spin 0.8s linear infinite;
 }
 
-.StudioNoteContent {
-  @apply flex min-w-0 flex-col;
+.StudioNoteTag[data-tone='slate'] {
+  --tone-bg: #f4f6fb;
+  --tone-border: #e2e8f0;
+  --tone-ink: #475569;
 }
 
-.StudioNoteTitleRow {
-  @apply flex min-w-0 items-center gap-2;
+.StudioNoteTag[data-tone='blue'] {
+  --tone-bg: #eef4ff;
+  --tone-border: #c9d8ff;
+  --tone-ink: #2f5fd0;
+}
+
+.StudioNoteTag[data-tone='green'] {
+  --tone-bg: #edf7f1;
+  --tone-border: #bfe6cf;
+  --tone-ink: #2f8f5b;
+}
+
+.StudioNoteTag[data-tone='rose'] {
+  --tone-bg: #ffeef1;
+  --tone-border: #f7c5cf;
+  --tone-ink: #b4234b;
+}
+
+.StudioNoteTag[data-tone='amber'] {
+  --tone-bg: #fff4e6;
+  --tone-border: #fbd9a2;
+  --tone-ink: #b45309;
+}
+
+.StudioNoteTag[data-tone='teal'] {
+  --tone-bg: #e7f7f6;
+  --tone-border: #b5e1de;
+  --tone-ink: #0f766e;
+}
+
+.StudioNoteTag[data-tone='indigo'] {
+  --tone-bg: #eef0ff;
+  --tone-border: #cfd4ff;
+  --tone-ink: #4f46e5;
+}
+
+.StudioNoteContent {
+  @apply flex min-w-0 flex-1 flex-col justify-center;
 }
 
 .StudioNoteTitle {
-  @apply flex-1 truncate text-sm font-semibold text-slate-900;
-}
-
-.StudioNoteType {
-  @apply rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-600;
-  flex: 0 0 auto;
+  @apply truncate text-xs font-medium text-slate-800 leading-snug;
 }
 
 .StudioNoteMeta {
-  @apply text-xs text-slate-500;
+  @apply text-[10px] text-slate-500;
 }
 
 .StudioNoteMenu {
-  @apply inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 cursor-pointer;
+  @apply inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 cursor-pointer self-center mr-1.5;
 }
 
 .StudioNoteMenu svg {
-  @apply h-3.5 w-3.5;
+  @apply h-3 w-3;
+}
+
+.StudioActions {
+  @apply mt-auto flex items-center gap-2;
 }
 
 .StudioAddButton {
-  @apply mt-auto rounded-full bg-slate-900 px-3 sm:px-4 py-2 sm:py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 cursor-pointer;
+  @apply flex-1 rounded-full bg-slate-900 px-3 sm:px-4 py-2 sm:py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 cursor-pointer;
+}
+
+.StudioAnalysisButton {
+  @apply rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed;
+}
+
+.StudioAnalysisPanel {
+  @apply mt-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm;
+}
+
+.StudioAnalysisHeader {
+  @apply flex items-center justify-between mb-3;
+}
+
+.StudioAnalysisTitle {
+  @apply text-sm font-semibold text-slate-800;
+}
+
+.StudioAnalysisClose {
+  @apply inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 cursor-pointer;
+}
+
+.StudioAnalysisStats {
+  @apply grid grid-cols-4 gap-2 mb-3;
+}
+
+.StudioAnalysisStat {
+  @apply flex flex-col items-center rounded-xl bg-slate-50 px-2 py-2;
+}
+
+.StudioAnalysisStatValue {
+  @apply text-lg font-bold text-slate-800;
+}
+
+.StudioAnalysisStatLabel {
+  @apply text-[10px] text-slate-500;
+}
+
+.StudioAnalysisTopics {
+  @apply flex flex-wrap items-center gap-1 mb-2;
+}
+
+.StudioAnalysisTopicsLabel {
+  @apply text-xs text-slate-500;
+}
+
+.StudioAnalysisTopic {
+  @apply rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600;
+}
+
+.StudioAnalysisSummary {
+  @apply text-xs text-slate-600 leading-relaxed;
 }
 
 .StudioViewerOverlay {
@@ -842,6 +1179,160 @@
 
 .StudioViewerContent {
   @apply flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 lg:p-6;
+}
+
+/* Output Content Styles */
+.OutputFallbackWarning {
+  @apply mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800;
+}
+
+.OutputFallbackWarning .OutputFallbackIcon {
+  @apply mr-2;
+}
+
+.OutputFallbackWarning ul {
+  @apply mt-2 ml-6 list-disc text-xs text-amber-700;
+}
+
+.OutputFallbackWarning li {
+  @apply mt-1;
+}
+
+.StructuredOutputFaq {
+  @apply flex flex-col gap-4;
+}
+
+.StructuredOutputFaqItem {
+  @apply rounded-xl border border-slate-100 bg-slate-50/50 p-4;
+}
+
+.StructuredOutputFaqQuestion {
+  @apply text-sm font-semibold text-slate-900 mb-2;
+}
+
+.StructuredOutputFaqAnswer {
+  @apply text-sm text-slate-600 leading-relaxed;
+}
+
+.StructuredOutputGuide {
+  @apply flex flex-col gap-6;
+}
+
+.StructuredOutputGuideModule {
+  @apply rounded-xl border border-slate-100 bg-slate-50/50 p-4;
+}
+
+.StructuredOutputGuideTitle {
+  @apply text-base font-semibold text-slate-900 mb-2;
+}
+
+.StructuredOutputGuideObjective {
+  @apply text-sm text-slate-600 mb-3;
+}
+
+.StructuredOutputTimeline {
+  @apply flex flex-col gap-4 pl-4 border-l-2 border-slate-200;
+}
+
+.StructuredOutputTimelineItem {
+  @apply relative pl-4;
+}
+
+.StructuredOutputTimelineItem::before {
+  content: '';
+  @apply absolute -left-[1.3rem] top-1 h-2.5 w-2.5 rounded-full bg-slate-400;
+}
+
+.StructuredOutputTimelineDate {
+  @apply text-xs font-semibold text-slate-500 mb-1;
+}
+
+.StructuredOutputTimelineEvent {
+  @apply text-sm font-semibold text-slate-900 mb-1;
+}
+
+.StructuredOutputTimelineDesc {
+  @apply text-sm text-slate-600;
+}
+
+.StructuredMindmapTree {
+  @apply text-sm;
+}
+
+.StructuredMindmapNode {
+  @apply py-1;
+}
+
+.StructuredMindmapLabel {
+  @apply inline-block rounded-lg bg-slate-100 px-3 py-1.5 text-slate-800;
+}
+
+.StructuredMindmapNode.depth-0 > .StructuredMindmapLabel {
+  @apply bg-slate-800 text-white font-semibold;
+}
+
+.StructuredMindmapNode.depth-1 > .StructuredMindmapLabel {
+  @apply bg-slate-200;
+}
+
+.StructuredMindmapChildren {
+  @apply ml-6 mt-1 border-l-2 border-slate-200 pl-4;
+}
+
+.StructuredOutputQuiz {
+  @apply flex flex-col gap-4;
+}
+
+.StructuredOutputQuizItem {
+  @apply rounded-xl border border-slate-100 bg-slate-50/50 p-4;
+}
+
+.StructuredOutputQuizQuestion {
+  @apply text-sm font-semibold text-slate-900 mb-2;
+}
+
+.StructuredOutputQuizAnswer {
+  @apply mt-2 text-sm text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2;
+}
+
+.StructuredOutputBriefing {
+  @apply flex flex-col gap-4;
+}
+
+.StructuredOutputBriefingSection {
+  @apply rounded-xl border border-slate-100 bg-slate-50/50 p-4;
+}
+
+.StructuredOutputBriefingHeading {
+  @apply text-base font-semibold text-slate-900 mb-2;
+}
+
+.StructuredOutputList {
+  @apply list-disc pl-5 text-sm text-slate-600 space-y-1;
+}
+
+.StructuredOutputParagraph {
+  @apply text-sm text-slate-700 leading-relaxed;
+}
+
+.StructuredOutputStructured {
+  @apply flex flex-col gap-3;
+}
+
+.StructuredOutputStructuredTitle {
+  @apply text-lg font-semibold text-slate-900;
+}
+
+.StructuredOutputTags {
+  @apply flex flex-wrap gap-2 mt-2;
+}
+
+.StructuredOutputTag {
+  @apply inline-block rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600;
+}
+
+.StructuredOutputRaw {
+  @apply text-xs text-slate-600 bg-slate-50 rounded-lg p-4 overflow-x-auto;
 }
 
 .StudioEmpty {

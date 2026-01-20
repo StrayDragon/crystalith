@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
-import { createOutput, listOutputs, listWorkspaceTools, refineBatch } from '../api';
+import { createOutput, getOutput, listOutputs, listWorkspaceTools, refineBatch } from '../api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
 import type {
   ApiWorkspaceTool,
@@ -984,6 +984,31 @@ export function useRefine() {
     dispatch({ type: 'SET_OUTPUTS', payload: [] });
   }, [dispatch]);
 
+  const fetchOutput = useCallback(
+    async (outputId: number) => {
+      if (!state.activeNotebookId || isDemo) return null;
+      try {
+        const output = await getOutput(state.activeNotebookId, outputId);
+        const normalized = normalizeOutput(output);
+        // Update the output in the list if it exists
+        dispatch({
+          type: 'SET_OUTPUTS',
+          payload: state.outputs.map((item) =>
+            item.id === outputId ? normalized : item,
+          ),
+        });
+        return normalized;
+      } catch (error) {
+        dispatch({
+          type: 'SET_ERROR',
+          payload: { key: 'outputs', value: '获取输出详情失败。' },
+        });
+        return null;
+      }
+    },
+    [dispatch, isDemo, state.activeNotebookId, state.outputs],
+  );
+
   return {
     refineFormats,
     refineTemplates,
@@ -1019,5 +1044,6 @@ export function useRefine() {
     onDeleteOutput: deleteOutput,
     retryOutputs,
     onClearOutputs: clearOutputs,
+    fetchOutput,
   };
 }

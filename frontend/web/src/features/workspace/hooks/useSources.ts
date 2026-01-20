@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 
 import type { AsyncStatus } from '../../../shared/types';
-import { deleteSources, listSources, searchSources, uploadSource } from '../api';
+import { deleteSource, deleteSources, listSources, searchSources, uploadSource } from '../api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
 import type { ApiSource, ApiSourceSearchResult } from '../types';
 import { normalizeSource } from '../utils';
@@ -333,6 +333,41 @@ export function useSources() {
     [dispatch, isDemo, mutate, state.activeNotebookId],
   );
 
+  const removeSource = useCallback(
+    async (sourceId: number) => {
+      if (isDemo) {
+        dispatch({
+          type: 'SET_ERROR',
+          payload: { key: 'sources', value: '演示模式暂不支持删除来源。' },
+        });
+        return false;
+      }
+      if (!state.activeNotebookId) {
+        dispatch({
+          type: 'SET_ERROR',
+          payload: { key: 'sources', value: '请先创建笔记本后再删除来源。' },
+        });
+        return false;
+      }
+      setRemoveState('loading');
+      dispatch({ type: 'SET_ERROR', payload: { key: 'sources', value: '' } });
+      try {
+        await deleteSource(state.activeNotebookId, sourceId);
+        await mutate();
+        return true;
+      } catch (error) {
+        dispatch({
+          type: 'SET_ERROR',
+          payload: { key: 'sources', value: '删除失败，请稍后重试。' },
+        });
+        return false;
+      } finally {
+        setRemoveState('idle');
+      }
+    },
+    [dispatch, isDemo, mutate, state.activeNotebookId],
+  );
+
   const copySelectedCitations = useCallback(async () => {
     const selected = state.citations.filter(
       (citation) => state.selectedCitationIds[citation.id],
@@ -395,6 +430,7 @@ export function useSources() {
     searchResults,
     handleSearch,
     removeSources,
+    removeSource,
     removeState,
     isDemo,
   };

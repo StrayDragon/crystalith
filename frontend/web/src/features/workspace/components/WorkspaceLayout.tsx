@@ -1,10 +1,12 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 
 import ChatPanel from './ChatPanel';
+import SessionSwitcher from './SessionSwitcher';
 import SourcesPanel from './SourcesPanel';
 import StudioPanel from './StudioPanel';
 import WorkspaceHeader from './WorkspaceHeader';
 import { useWorkspaceState } from '../context/WorkspaceContext';
+import { useAnalysis } from '../hooks/useAnalysis';
 import { useChat } from '../hooks/useChat';
 import { useNotebooks } from '../hooks/useNotebooks';
 import { useRefine } from '../hooks/useRefine';
@@ -61,7 +63,9 @@ export default function WorkspaceLayout() {
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [isViewerFullscreen, setIsViewerFullscreen] = useState(false);
   const [viewerOutputId, setViewerOutputId] = useState<number | null>(null);
+  const [isSessionSwitcherOpen, setIsSessionSwitcherOpen] = useState(false);
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const sessionSearchRef = useRef<HTMLInputElement | null>(null);
   const mainRef = useRef<HTMLElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
   const sizesRef = useRef({
@@ -78,6 +82,7 @@ export default function WorkspaceLayout() {
     enableSuggestions: true,
   });
   const refine = useRefine();
+  const analysis = useAnalysis();
 
   const applySizes = useCallback((left: number, right: number) => {
     sizesRef.current = { left, right };
@@ -222,6 +227,17 @@ export default function WorkspaceLayout() {
         isDemo={notebooks.isDemo}
         onCreateNameChange={notebooks.setCreateName}
         onCreateNotebook={notebooks.createNotebook}
+        onUpdateNotebook={(name) =>
+          notebooks.activeNotebookId
+            ? notebooks.updateNotebook(notebooks.activeNotebookId, name)
+            : Promise.resolve(false)
+        }
+        onDeleteNotebook={() =>
+          notebooks.activeNotebookId
+            ? notebooks.deleteNotebook(notebooks.activeNotebookId)
+            : Promise.resolve(false)
+        }
+        activeNotebookId={notebooks.activeNotebookId}
       />
 
       <main
@@ -232,16 +248,6 @@ export default function WorkspaceLayout() {
         <section className="WorkspacePanel WorkspacePanel--sources" aria-label="来源">
           <div className="WorkspacePanelHeader">
             <h2 className="WorkspacePanelTitle">来源</h2>
-            <button type="button" className="PanelIconButton" aria-label="来源设置">
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path
-                  d="M6 7h12M6 12h12M6 17h12"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
           </div>
           <SourcesPanel
             sources={sources.sources}
@@ -253,6 +259,7 @@ export default function WorkspaceLayout() {
             searchResults={sources.searchResults}
             onSearch={sources.handleSearch}
             onRemoveSources={sources.removeSources}
+            onRemoveSource={sources.removeSource}
             isDemo={sources.isDemo}
             error={sources.error || notebooks.notebooksError}
             isLoading={sources.isLoading}
@@ -282,26 +289,27 @@ export default function WorkspaceLayout() {
         />
 
         <section className="WorkspacePanel WorkspacePanel--chat" aria-label="对话">
-          <div className="WorkspacePanelHeader">
-            <h2 className="WorkspacePanelTitle">对话</h2>
-            <div className="PanelHeaderActions">
-              <button type="button" className="PanelIconButton" aria-label="筛选对话">
-                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path
-                    d="M4 6h16M7 12h10M10 18h4"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </button>
-              <button type="button" className="PanelIconButton" aria-label="更多操作">
-                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <circle cx="6" cy="12" r="1.5" fill="currentColor" />
-                  <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-                  <circle cx="18" cy="12" r="1.5" fill="currentColor" />
-                </svg>
-              </button>
+          <div className="WorkspacePanelHeader WorkspacePanelHeader--chat">
+            <div className="PanelHeaderLeft">
+              <h2 className="WorkspacePanelTitle">对话</h2>
+              <SessionSwitcher
+                sessions={sessions.sessions}
+                activeSessionId={sessions.activeSessionId}
+                isOpen={isSessionSwitcherOpen}
+                isLoading={sessions.isLoading}
+                error={sessions.error}
+                isDemo={sessions.isDemo}
+                searchInputRef={sessionSearchRef}
+                onToggle={() => setIsSessionSwitcherOpen((prev) => !prev)}
+                onClose={() => setIsSessionSwitcherOpen(false)}
+                onSelect={sessions.setActiveSessionId}
+                onCreate={async () => {
+                  await sessions.createSession();
+                }}
+                onUpdate={sessions.updateSession}
+                onDelete={sessions.deleteSession}
+                onRetry={sessions.retrySessions}
+              />
             </div>
           </div>
           <ChatPanel
@@ -349,12 +357,6 @@ export default function WorkspaceLayout() {
         <section className="WorkspacePanel WorkspacePanel--studio" aria-label="Studio">
           <div className="WorkspacePanelHeader">
             <h2 className="WorkspacePanelTitle">Studio</h2>
-            <button type="button" className="PanelIconButton" aria-label="Studio 设置">
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <rect x="5" y="5" width="14" height="14" rx="3" stroke="currentColor" strokeWidth="1.6" fill="none" />
-                <path d="M12 5v14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-            </button>
           </div>
           <StudioPanel
             tools={refine.tools}
@@ -367,6 +369,10 @@ export default function WorkspaceLayout() {
             onSelectOutput={handleOpenOutputViewer}
             recentOutputJobId={refine.recentOutputJobId}
             isDemo={isDemo}
+            analysis={analysis.analysis}
+            analysisLoading={analysis.isLoading}
+            analysisError={analysis.error}
+            onFetchAnalysis={analysis.fetchAnalysis}
           />
         </section>
       </main>
