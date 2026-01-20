@@ -8,13 +8,13 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from crystalith.ai.interfaces import ChatProvider, EmbeddingProvider
-from crystalith.db import Chunk, Notebook, Output, Source
-from crystalith.outputs import OutputType, create_output_generator
-from crystalith.schemas.citations import Citation
-from crystalith.vector_storage import VectorSearchResult, VectorStore
+from crystalith.agents.deps import StudioDeps
+from crystalith.agents.output_graph import OutputState, run_output_graph
+from crystalith.config import Settings
+from crystalith.db import Notebook, Output
+from crystalith.outputs import OutputType
 
-from .deps import get_chat_provider, get_db_session, get_embedding_provider, get_vector_store
+from .deps import get_db_session, get_embedding_provider, get_settings, get_vector_store
 
 
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/outputs", tags=["outputs"])
@@ -48,202 +48,40 @@ class OutputRead(BaseModel):
     updated_at: datetime.datetime
 
 
-def _format_context(results: list[VectorSearchResult], chunk_map: dict[int, tuple[Chunk, Source]]) -> str:
-    blocks: list[str] = []
-    for index, result in enumerate(results, start=1):
-        chunk, source = chunk_map[result.entry.chunk_id]
-        blocks.append(
-            f"[{index}] Source: {source.filename} (chunk {chunk.chunk_index})\n{chunk.text}"
-        )
-    return "\n\n".join(blocks)
-
-
-def _format_context_from_chunk_ids(
-    chunk_ids: list[int],
-    chunk_map: dict[int, tuple[Chunk, Source]],
-) -> str:
-    blocks: list[str] = []
-    for index, chunk_id in enumerate(chunk_ids, start=1):
-        chunk, source = chunk_map[chunk_id]
-        blocks.append(
-            f"[{index}] Source: {source.filename} (chunk {chunk.chunk_index})\n{chunk.text}"
-        )
-    return "\n\n".join(blocks)
-
-
-def _extract_page_number(chunk: Chunk) -> int | None:
-    metadata = chunk.metadata_ if isinstance(chunk.metadata_, dict) else None
-    page = metadata.get("page") if metadata else None
-    return page if isinstance(page, int) else None
-
-
-def _extract_paragraph_index(chunk: Chunk) -> int | None:
-    metadata = chunk.metadata_ if isinstance(chunk.metadata_, dict) else None
-    paragraph_index = metadata.get("paragraph_index") if metadata else None
-    return paragraph_index if isinstance(paragraph_index, int) else None
-
-
-def _build_citation(chunk: Chunk, source: Source, score: float) -> Citation:
-    snippet = chunk.text.strip()[:200]
-    return Citation(
-        source_id=source.id,
-        source_name=source.filename,
-        chunk_id=chunk.id,
-        chunk_index=chunk.chunk_index,
-        page_number=_extract_page_number(chunk),
-        paragraph_index=_extract_paragraph_index(chunk),
-        snippet=snippet,
-        score=score,
-    )
-
-
-def _resolve_citation_indices(value: Any) -> list[int]:
-    if not isinstance(value, list):
-        return []
-    indices: list[int] = []
-    for item in value:
-        try:
-            index = int(item)
-        except (TypeError, ValueError):
-            continue
-        if index > 0:
-            indices.append(index)
-    return indices
-
-
-def _resolve_citations(
-    indices: list[int],
-    citation_map: dict[int, Citation],
-    fallback: list[Citation],
-) -> list[dict[str, Any]]:
-    resolved: list[Citation] = []
-    for index in indices:
-        citation = citation_map.get(index)
-        if citation is not None:
-            resolved.append(citation)
-    if not resolved and fallback:
-        resolved = fallback[:1]
-    return [item.model_dump() for item in resolved]
-
-
-def _map_citations(
-    payload: Any,
-    citation_map: dict[int, Citation],
-    fallback: list[Citation],
-) -> Any:
-    if isinstance(payload, dict):
-        mapped: dict[str, Any] = {}
-        for key, value in payload.items():
-            if key == "citations":
-                indices = _resolve_citation_indices(value)
-                mapped[key] = _resolve_citations(indices, citation_map, fallback)
-            else:
-                mapped[key] = _map_citations(value, citation_map, fallback)
-        return mapped
-    if isinstance(payload, list):
-        return [_map_citations(item, citation_map, fallback) for item in payload]
-    return payload
-
-
-async def _resolve_context(
-    *,
-    notebook_id: int,
-    payload: OutputGenerateRequest,
-    session: AsyncSession,
-    embedder: EmbeddingProvider,
-    vector_store: VectorStore,
-) -> tuple[str, list[Citation], list[int]]:
-    explicit_chunk_ids = [int(value) for value in (payload.chunk_ids or []) if int(value) > 0]
-    if explicit_chunk_ids:
-        rows = await session.execute(
-            select(Chunk, Source)
-            .join(Source, Source.id == Chunk.source_id)
-            .where(Chunk.id.in_(explicit_chunk_ids), Source.notebook_id == notebook_id)
-        )
-        chunk_map: dict[int, tuple[Chunk, Source]] = {
-            chunk.id: (chunk, source) for chunk, source in rows.all()
-        }
-        missing = [chunk_id for chunk_id in explicit_chunk_ids if chunk_id not in chunk_map]
-        if missing:
-            raise HTTPException(status_code=400, detail="Unknown chunk_id in chunk_ids")
-
-        citations = [
-            _build_citation(chunk_map[chunk_id][0], chunk_map[chunk_id][1], 1.0)
-            for chunk_id in explicit_chunk_ids
-        ]
-        context = _format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
-        return context, citations, explicit_chunk_ids
-
-    seed = payload.prompt or "Summarize the notebook sources."
-    embeddings = await embedder.embed([seed])
-    if not embeddings:
-        return "", [], []
-    query_vector = embeddings[0]
-    results = await vector_store.search(
-        notebook_id=notebook_id,
-        query_vector=query_vector,
-        top_k=payload.top_k,
-        min_score=payload.min_score,
-    )
-    if not results:
-        return "", [], []
-
-    chunk_ids = [result.entry.chunk_id for result in results]
-    rows = await session.execute(
-        select(Chunk, Source)
-        .join(Source, Source.id == Chunk.source_id)
-        .where(Chunk.id.in_(chunk_ids))
-    )
-    chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
-
-    citations: list[Citation] = []
-    for result in results:
-        chunk, source = chunk_map[result.entry.chunk_id]
-        citations.append(_build_citation(chunk, source, result.score))
-
-    context = _format_context(results, chunk_map)
-    return context, citations, chunk_ids
-
-
 @router.post("/{output_type}", response_model=OutputRead, status_code=status.HTTP_201_CREATED)
 async def create_output(
     notebook_id: int,
     output_type: OutputType,
     payload: OutputGenerateRequest,
     session: AsyncSession = Depends(get_db_session),
-    embedder: EmbeddingProvider = Depends(get_embedding_provider),
-    chatter: ChatProvider = Depends(get_chat_provider),
-    vector_store: VectorStore = Depends(get_vector_store),
+    settings: Settings = Depends(get_settings),
+    embedder=Depends(get_embedding_provider),
+    vector_store=Depends(get_vector_store),
 ) -> OutputRead:
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
 
-    context, citations, resolved_chunk_ids = await _resolve_context(
-        notebook_id=notebook_id,
-        payload=payload,
+    deps = StudioDeps(
+        settings=settings,
         session=session,
-        embedder=embedder,
         vector_store=vector_store,
+        embedder=embedder,
     )
+    state: OutputState = {
+        "notebook_id": notebook_id,
+        "output_type": output_type,
+        "prompt": payload.prompt or "",
+        "chunk_ids": payload.chunk_ids,
+        "top_k": payload.top_k,
+        "min_score": payload.min_score,
+        "deps": deps,
+    }
 
-    citation_map = {index: citation for index, citation in enumerate(citations, start=1)}
-    fallback_citations = citations[:1]
-    generator = create_output_generator(output_type, chatter)
-    content = await generator.generate(context=context, prompt=payload.prompt or "")
-    mapped = _map_citations(content, citation_map, fallback_citations)
-
-    db_output = Output(
-        notebook_id=notebook_id,
-        type=output_type,
-        prompt=payload.prompt,
-        chunk_ids=resolved_chunk_ids or None,
-        content=mapped,
-    )
-    session.add(db_output)
-    await session.commit()
-    await session.refresh(db_output)
-
+    try:
+        db_output = await run_output_graph(state)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return OutputRead.model_validate(db_output)
 
 
@@ -266,3 +104,15 @@ async def list_outputs(
         .limit(limit)
     )
     return [OutputRead.model_validate(item) for item in result.scalars().all()]
+
+
+@router.get("/{output_id}", response_model=OutputRead)
+async def get_output(
+    notebook_id: int,
+    output_id: int,
+    session: AsyncSession = Depends(get_db_session),
+) -> OutputRead:
+    output = await session.get(Output, output_id)
+    if output is None or output.notebook_id != notebook_id:
+        raise HTTPException(status_code=404, detail="Output not found")
+    return OutputRead.model_validate(output)
