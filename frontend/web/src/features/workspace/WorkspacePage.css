@@ -1,1534 +1,627 @@
-  .WorkspaceApp {
-    @apply min-h-screen flex flex-col gap-3 p-4 text-slate-900 bg-slate-50;
-    background-image: radial-gradient(
-        1000px 520px at 16% -10%,
-        rgba(37, 99, 235, 0.14) 0%,
-        transparent 60%
-      ),
-      radial-gradient(820px 520px at 86% 0%, rgba(249, 115, 22, 0.1) 0%, transparent 60%),
-      repeating-linear-gradient(
-        0deg,
-        rgba(15, 23, 42, 0.03),
-        rgba(15, 23, 42, 0.03) 1px,
-        transparent 1px,
-        transparent 36px
-      );
+.WorkspaceApp {
+  --page-bg: #edf0f6;
+  --page-bg-soft: #f6f7fb;
+  --panel-bg: #ffffff;
+  --panel-border: #e5e7f0;
+  --panel-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+  --text-strong: #1f2937;
+  --text-muted: #6b7280;
+  min-height: 100vh;
+  color: var(--text-strong);
+  background: linear-gradient(180deg, var(--page-bg-soft) 0%, var(--page-bg) 100%);
+  @apply flex flex-col gap-3 p-4;
+}
+
+.WorkspaceApp button:focus-visible,
+.WorkspaceApp input:focus-visible,
+.WorkspaceApp textarea:focus-visible,
+.WorkspaceApp select:focus-visible {
+  outline: 2px solid #c7d2fe;
+  outline-offset: 2px;
+}
+
+.WorkspaceTopBar {
+  @apply flex items-center justify-between gap-4 px-4 py-3 flex-wrap;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.WorkspaceTopBar__left {
+  @apply flex items-center gap-3 min-w-0;
+}
+
+.WorkspaceLogo {
+  @apply flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-slate-900 shadow-sm;
+}
+
+.WorkspaceLogo svg {
+  @apply h-5 w-5;
+}
+
+.WorkspaceTopBar__title {
+  @apply truncate text-base font-semibold font-heading text-slate-900;
+}
+
+.WorkspaceTopBar__right {
+  @apply flex items-center gap-2;
+}
+
+@media (max-width: 640px) {
+  .WorkspaceTopBar {
+    @apply flex-col items-start;
   }
 
-  .WorkspaceHeader {
-    @apply flex flex-col lg:flex-row lg:items-center justify-between gap-4 px-4 py-3 rounded-2xl border border-white/70 bg-white/80 backdrop-blur-xl shadow-soft;
+  .WorkspaceTopBar__right {
+    @apply w-full justify-between;
   }
+}
 
-  .WorkspaceHeader__left {
-    @apply flex flex-col gap-1;
-  }
+.WorkspacePrimaryAction {
+  @apply inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800 cursor-pointer;
+}
 
-  .WorkspaceBrand {
-    @apply text-sm font-semibold tracking-[0.08em] uppercase text-slate-900;
-  }
+.WorkspacePrimaryAction__icon {
+  @apply inline-flex text-sm leading-none;
+}
 
-  .WorkspaceMeta {
-    @apply text-xs text-slate-500;
-  }
+.WorkspacePrimaryAction__icon svg {
+  @apply h-4 w-4;
+}
 
-  .WorkspaceHeader__center {
-    @apply flex items-center gap-2;
-  }
+.WorkspaceTopBar__icons {
+  @apply flex items-center gap-2;
+}
 
-  .WorkspaceHeader__right {
-    @apply hidden lg:flex items-center gap-3;
-  }
+.WorkspaceIconButton {
+  @apply inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 cursor-pointer;
+}
 
-  .WorkspaceLabel {
-    @apply text-xs text-slate-500;
-  }
+.WorkspaceIconButton svg {
+  @apply h-4 w-4;
+}
 
-  .WorkspaceSelect {
-    @apply min-w-[180px] rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40 cursor-pointer;
-  }
+.WorkspaceAvatar {
+  @apply relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-700 cursor-pointer;
+}
 
-  .WorkspacePill {
-    @apply text-xs font-semibold rounded-full px-3 py-1 border;
-  }
+.WorkspaceAvatar__ring {
+  @apply absolute inset-[3px] rounded-full border border-slate-300;
+}
 
-  .WorkspacePill.isLive {
-    @apply border-emerald-200/80 bg-emerald-50 text-emerald-700;
-  }
+.WorkspaceAvatar__inner {
+  @apply relative z-10 flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700;
+}
 
-  .WorkspacePill.isDemo {
-    @apply border-orange-200/80 bg-orange-50 text-orange-700;
-  }
+.WorkspaceMain {
+  --sources-width: 300px;
+  --studio-width: 320px;
+  --resize-handle: 12px;
+  @apply grid flex-1 min-h-0;
+  grid-template-columns:
+    minmax(220px, var(--sources-width))
+    var(--resize-handle)
+    minmax(0, 1fr)
+    var(--resize-handle)
+    minmax(240px, var(--studio-width));
+  column-gap: 0;
+  row-gap: 12px;
+}
 
-  .WorkspacePill.isLoading {
-    @apply border-blue-200/80 bg-blue-50 text-blue-700;
-  }
-
-  .WorkspaceTiny {
-    @apply text-xs text-slate-500 whitespace-nowrap;
-  }
-
-  .WorkspaceTabs {
-    @apply flex lg:hidden gap-2;
-  }
-
-  .WorkspaceTab {
-    @apply flex-1 rounded-full border border-slate-200/70 bg-white/80 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .WorkspaceTab.isActive {
-    @apply border-brand-300 bg-brand-50 text-brand-700 shadow-soft;
-  }
-
+@media (max-width: 1024px) {
   .WorkspaceMain {
-    @apply flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(240px,320px)_minmax(0,1fr)_minmax(260px,380px)] gap-3;
-  }
-
-  .WorkspacePanel {
-    @apply hidden lg:flex flex-col min-h-0 min-w-0 rounded-2xl border border-white/80 bg-white/70 backdrop-blur-xl shadow-soft overflow-hidden transition-all duration-200;
-    animation: panelIn 0.4s ease-out;
-  }
-
-  .WorkspacePanel.isActive {
-    @apply flex;
-  }
-
-  .WorkspacePanel--sources,
-  .WorkspacePanel--refine {
-    @apply bg-white/75;
-  }
-
-  .WorkspacePanel--chat {
-    @apply bg-white/90;
-  }
-
-  .WorkspacePanelHeader {
-    @apply flex items-center justify-between gap-2 px-4 py-3 border-b border-white/70;
-  }
-
-  .WorkspacePanelTitle {
-    @apply m-0 text-xs font-semibold tracking-[0.08em] uppercase text-slate-700;
-  }
-
-  .WorkspacePanelHeader--refine {
-    @apply items-center;
-  }
-
-  .WorkspacePanelBody {
-    @apply flex-1 min-h-0 min-w-0 overflow-y-auto px-4 py-4;
-  }
-
-  .WorkspacePanelBody--chat {
-    @apply p-0 overflow-hidden flex flex-col;
-  }
-
-  .WorkspaceSection {
-    @apply flex flex-col gap-3 mb-5;
-  }
-
-  .WorkspaceSection:last-child {
-    @apply mb-0;
-  }
-
-  .WorkspaceSectionTitle {
-    @apply m-0 text-xs text-slate-500 uppercase tracking-[0.18em];
-  }
-
-  .WorkspaceSectionHeader {
-    @apply flex items-center justify-between gap-2;
-  }
-
-  .WorkspaceSectionActions {
-    @apply flex items-center gap-2;
-  }
-
-  .WorkspaceLinkButton {
-    @apply text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .WorkspaceToggle {
-    @apply text-xs font-semibold rounded-full border border-slate-200/70 px-3 py-1 text-slate-600 transition hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .WorkspaceToggle.isActive {
-    @apply border-brand-300 bg-brand-50 text-brand-700;
-  }
-
-  .WorkspaceList {
-    @apply flex flex-col gap-2;
-  }
-
-  .WorkspaceListItem {
-    @apply flex items-center justify-between gap-3 rounded-2xl border border-white/80 bg-white/80 px-3 py-2.5 shadow-sm transition;
-  }
-
-  .WorkspaceListItem:hover {
-    @apply border-brand-200/80 shadow-soft;
-  }
-
-  .WorkspaceListItem--compact {
-    @apply items-start gap-3;
-  }
-
-  .WorkspaceListItem.isFailed {
-    @apply border-red-200/80 bg-red-50/80;
-  }
-
-  .WorkspaceListItem.isHighlighted {
-    @apply border-orange-300/80 bg-orange-50/70 shadow-soft;
-  }
-
-  .WorkspaceListItem.isHighlighted {
-    @apply border-orange-300/80 bg-orange-50/70 shadow-soft;
-  }
-
-  .WorkspaceListItem__main {
-    @apply flex flex-col gap-1 min-w-0;
-  }
-
-  .WorkspaceListItem__title {
-    @apply text-sm font-semibold text-slate-900 truncate;
-  }
-
-  .WorkspaceListItem__sub {
-    @apply text-xs text-slate-500;
-  }
-
-  .WorkspaceBadge {
-    @apply text-xs px-2.5 py-1 rounded-full border border-slate-200/70 text-slate-600 bg-white/80;
-  }
-
-  .WorkspaceBadge.READY {
-    @apply border-emerald-200/80 text-emerald-700 bg-emerald-50;
-  }
-
-  .WorkspaceBadge.PROCESSING {
-    @apply border-amber-200/80 text-amber-700 bg-amber-50;
-  }
-
-  .WorkspaceBadge.FAILED {
-    @apply border-red-200/80 text-red-700 bg-red-50;
-  }
-
-  .CitationGroups {
-    @apply flex flex-col gap-4;
-  }
-
-  .CitationGroup {
-    @apply rounded-2xl border border-white/80 bg-white/70 px-3 py-3 shadow-sm;
-  }
-
-  .CitationGroupHeader {
-    @apply flex items-center justify-between gap-3 mb-2;
-  }
-
-  .CitationGroupTitle {
-    @apply flex items-center gap-2 text-sm font-semibold text-slate-900;
-  }
-
-  .CitationGroupIcon {
-    @apply inline-flex items-center justify-center w-7 h-7 rounded-xl bg-slate-900/5 text-slate-700;
-  }
-
-  .CitationGroupIcon svg {
-    @apply w-4 h-4;
-  }
-
-  .CitationGroupName {
-    @apply truncate;
-  }
-
-  .CitationGroupCount {
-    @apply text-xs font-semibold text-slate-500;
-  }
-
-  .CitationGroupList {
-    @apply flex flex-col gap-2;
-  }
-
-  .CitationItem {
-    @apply flex items-start gap-3 rounded-2xl border border-white/80 bg-white/80 px-3 py-3 shadow-sm transition-colors;
-  }
-
-  .CitationItem.isHighlighted {
-    @apply border-yellow-300/80 bg-yellow-100 ring-1 ring-yellow-200/70;
-  }
-
-  .CitationCheckbox {
-    @apply mt-1;
-  }
-
-  .CitationHighlight {
-    @apply flex items-center justify-center w-6 h-6 rounded-full border border-transparent text-transparent;
-  }
-
-  .CitationHighlight.isActive {
-    @apply border-yellow-300 bg-yellow-50 text-yellow-600;
-  }
-
-  .CitationHighlight__icon {
-    @apply w-3.5 h-3.5;
-  }
-
-  .CitationContent {
-    @apply flex-1 min-w-0;
-  }
-
-  .CitationMeta {
-    @apply flex items-center gap-2 text-xs text-slate-500;
-  }
-
-  .CitationSnippet {
-    @apply text-sm text-slate-700 mt-1;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .CitationSnippet.isExpanded {
-    display: block;
-    -webkit-line-clamp: initial;
-  }
-
-  .CitationExpand {
-    @apply mt-1 text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline cursor-pointer;
-  }
-
-  .CitationMarkWrapper {
-    @apply relative inline-flex items-center;
-  }
-
-  .CitationMark {
-    @apply inline-flex items-center justify-center rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700 cursor-pointer transition-colors hover:bg-brand-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60;
-  }
-
-  .CitationTooltip {
-    @apply absolute left-0 top-full mt-2 w-64 rounded-xl border border-slate-200/80 bg-white/95 p-3 text-xs text-slate-700 shadow-soft z-50;
-  }
-
-  .CitationTooltip__title {
-    @apply text-xs font-semibold text-slate-900;
-  }
-
-  .CitationTooltip__meta {
-    @apply text-[11px] text-slate-500 mt-1;
-  }
-
-  .CitationTooltip__snippet {
-    @apply text-xs text-slate-600 mt-2;
-  }
-
-  .ChatMessage__citations {
-    @apply mt-2 flex flex-wrap gap-1;
-  }
-
-  .WorkspaceEmpty {
-    @apply text-sm text-slate-500 rounded-2xl border border-dashed border-slate-200/70 bg-white/70 px-4 py-3;
-  }
-
-  .WorkspaceHint {
-    @apply text-xs text-slate-500;
-  }
-
-  .WorkspaceHint.isError {
-    @apply text-red-600;
-  }
-
-  .WorkspaceHint .WorkspaceLinkButton {
-    @apply ml-2;
-  }
-
-  .WorkspaceCheckbox {
-    @apply h-4 w-4 rounded-md border-slate-300 text-brand-600 accent-brand-500 focus:ring-brand-500 cursor-pointer;
-  }
-
-  .UploadCard {
-    @apply flex items-center justify-between gap-4 rounded-2xl border border-white/80 bg-white/80 px-4 py-3 shadow-sm;
-  }
-
-  .UploadTitle {
-    @apply text-sm font-semibold text-slate-900;
-  }
-
-  .UploadHint {
-    @apply text-xs text-slate-500;
-  }
-
-  .UploadButton {
-    @apply inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 cursor-pointer;
-  }
-
-  .UploadButton input {
-    @apply hidden;
-  }
-
-  .CreateCard {
-    @apply flex flex-col gap-3 rounded-2xl border border-white/80 bg-white/80 px-4 py-3 shadow-sm;
-  }
-
-  .CreateTitle {
-    @apply text-sm font-semibold text-slate-900;
-  }
-
-  .CreateHint {
-    @apply text-xs text-slate-500;
-  }
-
-  .CreateActions {
-    @apply flex items-center gap-2;
-  }
-
-  .CreateInput {
-    @apply flex-1 rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .CreateButton {
-    @apply rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-glow transition hover:bg-brand-500 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .CreateButton:disabled {
-    @apply opacity-60 cursor-not-allowed shadow-none;
-  }
-
-  .SourceItemButton {
-    @apply w-full flex items-center justify-between gap-3 text-left cursor-pointer;
-  }
-
-  .SourceRetry {
-    @apply inline-flex items-center gap-1 text-xs font-semibold text-red-600;
-  }
-
-  .SourceRetry__icon {
-    @apply w-4 h-4;
-  }
-
-  .ChatMessages {
-    @apply flex-1 overflow-y-auto px-4 py-4 space-y-4;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(248, 250, 252, 0.5));
-  }
-
-  .ChatMessage {
-    @apply flex flex-col gap-2 items-start;
-  }
-
-  .ChatMessage.isUser {
-    @apply items-end;
-  }
-
-  .ChatMessage__meta {
-    @apply text-[11px] uppercase tracking-[0.22em] text-slate-500;
-  }
-
-  .ChatMessage__bubble {
-    @apply max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed bg-white/90 border border-white/70 shadow-sm;
-  }
-
-  .ChatMessage.isUser .ChatMessage__bubble {
-    @apply bg-slate-900 text-white border-slate-900 shadow-glow;
-  }
-
-  .ChatMessage.isHighlighted .ChatMessage__bubble {
-    @apply ring-2 ring-orange-400/70 ring-offset-2 ring-offset-white/80;
-  }
-
-  .ChatStatus {
-    @apply text-xs text-orange-600 mt-2;
-  }
-
-  .ChatComposer {
-    @apply border-t border-white/70 bg-white/90 backdrop-blur-xl px-4 py-3;
-  }
-
-  .ChatInput {
-    @apply w-full min-h-[64px] max-h-36 resize-none rounded-2xl border border-slate-200/70 bg-white/90 px-4 py-3 text-sm text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-400/80;
-  }
-
-  .ChatActions {
-    @apply mt-3 flex items-center justify-between gap-3;
-  }
-
-  .PrimaryButton {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-xs font-semibold text-white bg-gradient-to-r from-brand-600 to-indigo-600 shadow-glow transition hover:from-brand-500 hover:to-indigo-500 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .PrimaryButton:disabled {
-    @apply opacity-60 cursor-not-allowed shadow-none;
-  }
-
-  .ActionButton {
-    @apply rounded-full border border-slate-200/70 bg-white/90 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-white hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .ActionButton.isPrimary {
-    @apply border-brand-300 bg-brand-50 text-brand-700;
-  }
-
-  .ActionButton:disabled {
-    @apply opacity-60 cursor-not-allowed;
-  }
-
-  .CitationActionBar {
-    @apply mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-200/70 bg-brand-50/70 px-3 py-2;
-  }
-
-  .CitationActionMeta {
-    @apply text-xs font-semibold text-brand-700;
-  }
-
-  .CitationActionButtons {
-    @apply flex items-center gap-2;
-  }
-
-  .RefineCard {
-    @apply rounded-xl border border-slate-200/80 bg-white px-4 py-4 shadow-none flex flex-col gap-4;
-  }
-
-  .RefineCard__header {
-    @apply flex items-start justify-between gap-3;
-  }
-
-  .RefineCard__title {
-    @apply text-sm font-semibold text-slate-900;
-  }
-
-  .RefineCard__subtitle {
-    @apply text-xs text-slate-500;
-  }
-
-  .RefineCard__actions {
-    @apply relative flex items-center gap-2;
-  }
-
-  .RefineCard__badge {
-    @apply text-xs font-semibold rounded-full border border-slate-200/70 bg-white/80 px-3 py-1 text-slate-600;
-  }
-
-  .RefineTemplates {
-    @apply flex flex-col gap-3;
-  }
-
-  .RefineTemplateGroup {
-    @apply flex flex-col gap-2;
-  }
-
-  .RefineTemplateGroup__title {
-    @apply text-xs font-semibold text-slate-500 uppercase tracking-[0.2em];
-  }
-
-  .RefineTemplateList {
-    @apply flex flex-wrap gap-2;
-  }
-
-  .RefineTemplateItem {
-    @apply flex items-center gap-1;
-  }
-
-  .RefineTemplateButton {
-    @apply rounded-full border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .RefineTemplateItem.isActive .RefineTemplateButton {
-    @apply border-brand-300 bg-brand-50 text-brand-700;
-  }
-
-  .RefineTemplateStar {
-    @apply w-7 h-7 rounded-full border border-transparent text-xs text-slate-400 transition hover:text-slate-700 inline-flex items-center justify-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .RefineTemplateStar.isActive {
-    @apply text-orange-500;
-  }
-
-  .RefineTemplateStar__icon {
-    @apply w-4 h-4;
-  }
-
-  .RefinePrompt {
-    @apply w-full min-h-[86px] resize-none rounded-2xl border border-slate-200/70 bg-white/95 px-4 py-3 text-sm text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-400/80;
-  }
-
-  .RefineModes {
-    @apply flex items-center gap-2 flex-wrap;
-  }
-
-  .RefineMode {
-    @apply inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-4 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .RefineMode.isActive {
-    @apply border-brand-300 bg-brand-50 text-brand-700;
-  }
-
-  .RefineMode.isDisabled {
-    @apply cursor-not-allowed opacity-50 text-slate-400 hover:text-slate-400;
-  }
-
-  .RefineModeBadge {
-    @apply rounded-full border border-amber-200/80 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700;
-  }
-
-  .AudioOverviewOption,
-  .VideoOverviewOption {
-    @apply relative inline-flex items-center;
-  }
-
-  .AudioOverviewTooltip,
-  .VideoOverviewTooltip {
-    @apply pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-full rounded-lg border border-slate-200/80 bg-white/95 px-3 py-1 text-xs text-slate-600 shadow-soft opacity-0 motion-safe:transition-opacity motion-safe:duration-200;
-  }
-
-  .AudioOverviewTooltip.isVisible,
-  .VideoOverviewTooltip.isVisible {
-    @apply opacity-100;
-  }
-
-  .RefineActions {
-    @apply flex items-center justify-between;
-  }
-
-  .OutputConfigPanel {
-    @apply absolute right-0 top-11 w-64 rounded-2xl border border-white/80 bg-white/95 p-3 shadow-soft;
-  }
-
-  .OutputConfigItem {
-    @apply flex items-center gap-3 py-2;
-  }
-
-  .OutputConfigItem.isDisabled {
-    @apply opacity-60;
-  }
-
-  .OutputConfigTitle {
-    @apply text-xs font-semibold text-slate-800;
-  }
-
-  .OutputConfigHint {
-    @apply text-xs text-slate-500;
-  }
-
-  .Switch {
-    @apply relative inline-flex items-center w-10 h-6 cursor-pointer;
-  }
-
-  .SwitchTrack {
-    @apply absolute inset-0 rounded-full bg-slate-200;
-  }
-
-  .SwitchThumb {
-    @apply absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow-soft transition;
-  }
-
-  .Switch input {
-    @apply sr-only;
-  }
-
-  .Switch input:checked + .SwitchTrack {
-    @apply bg-brand-500;
-  }
-
-  .Switch input:checked + .SwitchTrack + .SwitchThumb {
-    @apply translate-x-4;
-  }
-
-  .OutputCenterCard {
-    @apply rounded-2xl border border-slate-200/80 bg-white divide-y divide-slate-200/70;
-    --tone-slate-bg: #f8fafc;
-    --tone-slate-icon: #f1f5f9;
-    --tone-slate-border: #e2e8f0;
-    --tone-slate-ink: #475569;
-    --tone-blue-bg: #eaf1ff;
-    --tone-blue-icon: #d8e6ff;
-    --tone-blue-border: #c9d7ff;
-    --tone-blue-ink: #2f5fd0;
-    --tone-green-bg: #e9f7ef;
-    --tone-green-icon: #d2f0de;
-    --tone-green-border: #bfe6cf;
-    --tone-green-ink: #2f8f5b;
-    --tone-rose-bg: #ffe9ed;
-    --tone-rose-icon: #ffd6dd;
-    --tone-rose-border: #f9c7d0;
-    --tone-rose-ink: #b4234b;
-    --tone-amber-bg: #fff4df;
-    --tone-amber-icon: #ffe7bd;
-    --tone-amber-border: #fbd9a2;
-    --tone-amber-ink: #b45309;
-    --tone-teal-bg: #e6f9f5;
-    --tone-teal-icon: #c9f1e7;
-    --tone-teal-border: #b2e4d7;
-    --tone-teal-ink: #0f766e;
-    --tone-indigo-bg: #eef0ff;
-    --tone-indigo-icon: #dde2ff;
-    --tone-indigo-border: #cfd4ff;
-    --tone-indigo-ink: #4f46e5;
-  }
-
-  .OutputCenterCard [data-tone='slate'] {
-    --tone-bg: var(--tone-slate-bg);
-    --tone-icon: var(--tone-slate-icon);
-    --tone-border: var(--tone-slate-border);
-    --tone-ink: var(--tone-slate-ink);
-  }
-
-  .OutputCenterCard [data-tone='blue'] {
-    --tone-bg: var(--tone-blue-bg);
-    --tone-icon: var(--tone-blue-icon);
-    --tone-border: var(--tone-blue-border);
-    --tone-ink: var(--tone-blue-ink);
-  }
-
-  .OutputCenterCard [data-tone='green'] {
-    --tone-bg: var(--tone-green-bg);
-    --tone-icon: var(--tone-green-icon);
-    --tone-border: var(--tone-green-border);
-    --tone-ink: var(--tone-green-ink);
-  }
-
-  .OutputCenterCard [data-tone='rose'] {
-    --tone-bg: var(--tone-rose-bg);
-    --tone-icon: var(--tone-rose-icon);
-    --tone-border: var(--tone-rose-border);
-    --tone-ink: var(--tone-rose-ink);
-  }
-
-  .OutputCenterCard [data-tone='amber'] {
-    --tone-bg: var(--tone-amber-bg);
-    --tone-icon: var(--tone-amber-icon);
-    --tone-border: var(--tone-amber-border);
-    --tone-ink: var(--tone-amber-ink);
-  }
-
-  .OutputCenterCard [data-tone='teal'] {
-    --tone-bg: var(--tone-teal-bg);
-    --tone-icon: var(--tone-teal-icon);
-    --tone-border: var(--tone-teal-border);
-    --tone-ink: var(--tone-teal-ink);
-  }
-
-  .OutputCenterCard [data-tone='indigo'] {
-    --tone-bg: var(--tone-indigo-bg);
-    --tone-icon: var(--tone-indigo-icon);
-    --tone-border: var(--tone-indigo-border);
-    --tone-ink: var(--tone-indigo-ink);
-  }
-
-  .OutputStudio {
-    @apply px-4 pt-3 pb-2;
-  }
-
-  .OutputStudioHeader {
-    @apply flex items-center justify-between gap-3;
-  }
-
-  .OutputStudioTitle {
-    @apply text-sm font-semibold text-slate-900;
-  }
-
-  .OutputStudioSubtitle {
-    @apply mt-0.5 text-[11px] text-slate-500;
-  }
-
-  .OutputStudioMeta {
-    @apply text-[11px] font-semibold text-slate-500 rounded-full border border-slate-200/70 bg-white px-2 py-1;
-  }
-
-  .OutputStudioGrid {
-    @apply mt-3 grid grid-cols-2 gap-2 md:grid-cols-3;
-  }
-
-  .OutputStudioTile {
-    @apply flex items-center justify-between gap-2 rounded-xl border px-2 py-2 transition;
-    background-color: var(--tone-bg, #f8fafc);
-    border-color: var(--tone-border, #e2e8f0);
-  }
-
-  .OutputStudioTile:hover {
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-  }
-
-  .OutputStudioTile.isDisabled {
-    @apply opacity-60;
-    box-shadow: none;
-  }
-
-  .OutputStudioTile.isActive {
-    @apply ring-2 ring-brand-200/70;
-  }
-
-  .OutputStudioTile__main {
-    @apply flex items-center gap-2 text-left flex-1 min-w-0 bg-transparent border-0 p-1 rounded-lg cursor-pointer transition-colors hover:bg-white/70 focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .OutputStudioTile__main:disabled {
-    @apply cursor-not-allowed;
-  }
-
-  .OutputStudioTile__icon {
-    @apply flex h-8 w-8 items-center justify-center rounded-lg border shadow-sm;
-    background-color: var(--tone-icon, #f1f5f9);
-    color: var(--tone-ink, #475569);
-    border-color: var(--tone-border, #e2e8f0);
-  }
-
-  .OutputStudioTile__icon svg {
-    @apply h-4 w-4;
-  }
-
-  .OutputStudioTile__content {
-    @apply flex flex-col min-w-0;
-  }
-
-  .OutputStudioTile__title {
-    @apply text-xs font-semibold truncate flex items-center gap-2;
-    color: var(--tone-ink, #1f2937);
-  }
-
-  .OutputStudioTile__badge {
-    @apply rounded-full bg-slate-900 text-white text-[10px] px-2 py-0.5;
-  }
-
-  .OutputStudioTile__actions {
-    @apply flex items-center;
-  }
-
-  .OutputStudioTile__menu {
-    @apply inline-flex items-center justify-center h-7 w-7 rounded-full text-slate-500 transition hover:bg-white/70 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .OutputStudioTile__menu:disabled {
-    @apply text-slate-300 cursor-not-allowed hover:bg-transparent;
-  }
-
-  .OutputStudioTile__menu svg {
-    @apply h-4 w-4;
-  }
-
-  .OutputQueueStatus {
-    @apply mt-3 rounded-2xl border border-white/80 bg-white/80 px-4 py-3 shadow-soft;
-  }
-
-  .OutputQueueStatus__text {
-    @apply text-xs font-semibold text-slate-600;
-  }
-
-  .OutputQueueProgress {
-    @apply mt-2 h-2 rounded-full bg-slate-100 overflow-hidden;
-  }
-
-  .OutputQueueProgress__bar {
-    @apply h-full bg-gradient-to-r from-brand-500 to-indigo-500;
-  }
-
-  .OutputQueueCard {
-    @apply bg-white px-4 py-3;
-  }
-
-  .OutputQueueCard__header {
-    @apply flex items-start justify-between gap-3;
-  }
-
-  .OutputQueueCard__title {
-    @apply text-xs font-semibold text-slate-900;
-  }
-
-  .OutputQueueCard__meta {
-    @apply mt-1 text-[11px] text-slate-500;
-  }
-
-  .OutputQueueCard__ratio {
-    @apply text-[11px] font-semibold text-slate-600;
-  }
-
-  .OutputQueueCard__progress {
-    @apply mt-2 h-2 rounded-full bg-slate-100 overflow-hidden;
-  }
-
-  .OutputQueueCard__bar {
-    @apply h-full bg-gradient-to-r from-brand-500 to-indigo-500 transition-[width] duration-300;
-  }
-
-  .OutputQueueCard__list {
-    @apply mt-2 flex flex-col gap-2;
-  }
-
-  .OutputQueueItem {
-    @apply flex items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2 text-xs text-slate-700;
-  }
-
-  .OutputQueueItem__label {
-    @apply font-semibold text-slate-800;
-  }
-
-  .OutputQueueItem__status {
-    @apply rounded-full px-2 py-0.5 text-[10px] font-semibold;
-  }
-
-  .OutputQueueItem__status.is-queued {
-    @apply bg-slate-100 text-slate-600;
-  }
-
-  .OutputQueueItem__status.is-running {
-    @apply bg-amber-100 text-amber-700;
-  }
-
-  .OutputQueueItem__status.is-done {
-    @apply bg-emerald-100 text-emerald-700;
-  }
-
-  .OutputQueueItem__status.is-error {
-    @apply bg-red-100 text-red-700;
-  }
-
-  .OutputHistory {
-    @apply bg-transparent;
-  }
-
-  .OutputHistoryHeader {
-    @apply flex items-center justify-between gap-3 px-4 py-2;
-  }
-
-  .OutputHistoryTitle {
-    @apply text-xs font-semibold text-slate-700;
-  }
-
-  .OutputHistorySubtitle {
-    @apply text-xs text-slate-500;
-  }
-
-  .OutputHistoryMeta {
-    @apply text-[11px] font-semibold text-slate-400;
-  }
-
-  .OutputHistoryList {
-    @apply flex flex-col divide-y divide-slate-200/70;
-  }
-
-  .OutputHistoryItem {
-    @apply flex items-center justify-between gap-3 px-4 py-2 transition;
-  }
-
-  .OutputHistoryItem:hover {
-    @apply bg-slate-50/60;
-  }
-
-  .OutputHistoryItem.isPinned {
-    @apply bg-brand-50/40;
-  }
-
-  .OutputHistoryItem.isHighlighted {
-    @apply bg-orange-50/70;
-  }
-
-  .OutputHistoryItem.isLoading {
-    @apply opacity-70;
-  }
-
-  .OutputHistoryItem__main {
-    @apply flex items-center gap-2 text-left flex-1 min-w-0 bg-transparent border-0 cursor-pointer rounded-lg -m-1 p-1 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .OutputHistoryItem__icon {
-    @apply flex h-8 w-8 items-center justify-center rounded-lg border;
-    background-color: var(--tone-icon, #f1f5f9);
-    color: var(--tone-ink, #475569);
-    border-color: var(--tone-border, #e2e8f0);
-  }
-
-  .OutputHistoryItem__icon svg {
-    @apply h-4 w-4;
-  }
-
-  .OutputHistoryItem__content {
-    @apply flex flex-col min-w-0;
-  }
-
-  .OutputHistoryItem__title {
-    @apply text-sm font-semibold text-slate-900 truncate;
-  }
-
-  .OutputHistoryItem__meta {
-    @apply mt-1 flex flex-wrap items-center text-[11px] text-slate-500;
-  }
-
-  .OutputHistoryMetaItem {
-    @apply inline-flex items-center;
-  }
-
-  .OutputHistoryMetaItem + .OutputHistoryMetaItem::before {
-    content: '·';
-    margin: 0 6px;
-    color: #94a3b8;
-  }
-
-  .OutputHistoryMetaItem.is-queued {
-    @apply text-slate-500 font-semibold;
-  }
-
-  .OutputHistoryMetaItem.is-running {
-    @apply text-amber-600 font-semibold;
-  }
-
-  .OutputHistoryMetaItem.is-error {
-    @apply text-red-600 font-semibold;
-  }
-
-  .OutputHistoryItem__subtitle {
-    @apply mt-1 text-xs text-slate-500 truncate;
-  }
-
-  .OutputHistoryItem__actions {
-    @apply flex items-center gap-1;
-  }
-
-  .OutputHistoryMenuButton {
-    @apply inline-flex items-center justify-center h-7 w-7 rounded-full border border-slate-200/70 bg-white text-slate-500 transition hover:text-slate-700 hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .OutputHistoryEmpty {
-    @apply rounded-none border-0 bg-transparent px-4 py-6;
-  }
-
-  .OutputEmpty {
-    @apply rounded-2xl border border-dashed border-slate-200/70 bg-white/70 px-4 py-6 text-center;
-  }
-
-  .OutputEmpty__icon {
-    @apply mx-auto mb-3 h-10 w-10 rounded-full bg-brand-100/70;
-  }
-
-  .OutputEmpty__title {
-    @apply text-sm font-semibold text-slate-800;
-  }
-
-  .OutputEmpty__subtitle {
-    @apply text-xs text-slate-500;
-  }
-
-  .RefineResultCard {
-    @apply border-0 rounded-none bg-transparent px-4 py-3 transition;
-  }
-
-  .RefineResultCard.isPinned {
-    @apply bg-brand-50/40;
-  }
-
-  .RefineResultCard.isNew {
-    animation: cardFlash 0.7s ease-out;
-  }
-
-  .RefineResultCard.isLoading {
-    @apply opacity-80;
-  }
-
-  .RefineResultCard__header {
-    @apply flex items-start justify-between gap-2;
-  }
-
-  .RefineResultCard__headerButton {
-    @apply flex-1 text-left cursor-pointer bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-brand-500/40 rounded-lg px-1 -mx-1 transition-colors hover:bg-slate-50 active:bg-slate-100;
-  }
-
-  .RefineResultCard__title {
-    @apply text-sm font-semibold text-slate-900;
-  }
-
-  .RefineResultCard__meta {
-    @apply mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500;
-  }
-
-  .RefineResultCard__actions {
-    @apply flex items-center gap-2;
-  }
-
-  .RefineResultCard__hint {
-    @apply text-xs text-emerald-600;
-  }
-
-  .RefineResultCard__prompt {
-    @apply mt-2 text-xs text-slate-500;
-  }
-
-  .RefineResultCard__content {
-    @apply mt-2 text-sm text-slate-800;
-  }
-
-  .RefineResultCard__empty {
-    @apply text-xs text-slate-400;
-  }
-
-  .RefineResultCard__error {
-    @apply text-xs text-red-600;
-  }
-
-  .RefineResultCard__placeholder {
-    @apply flex flex-col gap-2;
-  }
-
-  .RefineResultCard__line {
-    @apply h-3 rounded-full bg-slate-100;
-  }
-
-  .RefineResultCard__line.isShort {
-    @apply w-2/3;
-  }
-
-  .RefineResultStatus {
-    @apply inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold;
-  }
-
-  .RefineResultStatus.is-queued {
-    @apply bg-slate-100 text-slate-600;
-  }
-
-  .RefineResultStatus.is-running {
-    @apply bg-amber-100 text-amber-700;
-  }
-
-  .RefineResultStatus.is-done {
-    @apply bg-emerald-100 text-emerald-700;
-  }
-
-  .RefineResultStatus.is-error {
-    @apply bg-red-100 text-red-700;
-  }
-
-  .RefineParagraph {
-    @apply leading-relaxed text-slate-800;
-  }
-
-  .RefineBullets {
-    @apply list-disc pl-5 space-y-1;
-  }
-
-  .RefineStructured {
-    @apply flex flex-col gap-3;
-  }
-
-  .RefineStructured__title {
-    @apply text-sm font-semibold text-slate-900;
-  }
-
-  .RefineStructured__bullets {
-    @apply list-disc pl-5 space-y-1;
-  }
-
-  .RefineStructured__terms {
-    @apply flex flex-wrap gap-2;
-  }
-
-  .RefineTag {
-    @apply rounded-full border border-slate-200/70 bg-white px-3 py-1 text-xs text-slate-600;
-  }
-
-  .IconButton {
-    @apply inline-flex items-center justify-center w-9 h-9 rounded-full border border-slate-200/70 bg-white/90 text-slate-600 transition hover:text-slate-900 hover:bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .OutputCenterTitle {
-    @apply inline-flex items-center gap-2;
-  }
-
-  .OutputCenterDot {
-    @apply w-2 h-2 rounded-full bg-orange-500;
-    animation: pulseDot 1.6s ease-in-out infinite;
-  }
-
-  .OutputClearButton {
-    @apply rounded-full border border-slate-200/70 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:text-slate-900 hover:bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .OutputHeaderActions {
-    @apply flex items-center gap-2;
-  }
-
-  .SessionSwitcher {
-    @apply relative flex items-center gap-2;
-  }
-
-  .SessionSwitcherButton {
-    @apply inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .SessionSwitcherLabel {
-    @apply text-[10px] uppercase tracking-[0.18em] text-slate-400;
-  }
-
-  .SessionSwitcherValue {
-    @apply text-xs font-semibold text-slate-700;
-  }
-
-  .SessionSwitcherNew {
-    @apply rounded-full border border-slate-200/70 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-slate-900 hover:bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .SessionSwitcherPanel {
-    @apply absolute right-0 top-12 z-20 w-72 rounded-2xl border border-white/80 bg-white/95 p-3 shadow-soft;
-  }
-
-  .SessionSwitcherSearch {
-    @apply mb-2;
-  }
-
-  .SessionSwitcherInput {
-    @apply w-full rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .SessionSwitcherError {
-    @apply mb-2 flex items-center justify-between gap-2 text-xs text-red-600;
-  }
-
-  .SessionSwitcherList {
-    @apply flex flex-col gap-2 max-h-60 overflow-y-auto;
-  }
-
-  .SessionSwitcherOption {
-    @apply text-left rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2 text-xs text-slate-600 transition hover:text-slate-900 hover:bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .SessionSwitcherOption.isActive {
-    @apply border-brand-300 bg-brand-50 text-brand-700;
-  }
-
-  .SessionSwitcherOptionTitle {
-    @apply text-xs font-semibold text-slate-800;
-  }
-
-  .SessionSwitcherOptionMeta {
-    @apply mt-1 text-[11px] text-slate-500;
-  }
-
-  .SessionSwitcherEmpty {
-    @apply text-xs text-slate-400 rounded-xl border border-dashed border-slate-200/70 px-3 py-3 text-center;
-  }
-
-  .OutputTypeSelector {
-    @apply relative;
-  }
-
-  .OutputTypeButton {
-    @apply inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .OutputTypeLabel {
-    @apply text-[10px] uppercase tracking-[0.18em] text-slate-400;
-  }
-
-  .OutputTypeValue {
-    @apply text-xs font-semibold text-slate-800;
-  }
-
-  .OutputTypePanel {
-    @apply absolute right-0 top-12 z-20 w-60 rounded-2xl border border-white/80 bg-white/95 p-3 shadow-soft flex flex-col gap-2;
-  }
-
-  .OutputTypeOption {
-    @apply rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2 text-left transition hover:bg-white hover:text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .OutputTypeOption.isActive {
-    @apply border-brand-300 bg-brand-50 text-brand-700;
-  }
-
-  .OutputTypeOptionLabel {
-    @apply text-xs font-semibold text-slate-800;
-  }
-
-  .OutputTypeOptionDescription {
-    @apply text-[11px] text-slate-500 mt-1;
-  }
-
-  .ChatCitations {
-    @apply mt-2 flex flex-wrap gap-2;
-  }
-
-  .ChatCitation {
-    @apply rounded-full border border-slate-200/70 bg-white/80 px-3 py-1 text-[11px] text-slate-600 transition hover:text-slate-900 hover:bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .ChatSkeletonList {
-    @apply flex flex-col gap-2;
-  }
-
-  .ChatSkeletonBubble {
-    @apply h-12 rounded-2xl bg-slate-100/80;
-  }
-
-  .ChatSkeletonBubble.isShort {
-    @apply w-2/3;
-  }
-
-  .SuggestionPanel {
-    @apply mt-4 rounded-2xl border border-white/80 bg-white/80 px-4 py-3 shadow-soft;
-  }
-
-  .SuggestionHeader {
-    @apply flex items-center justify-between text-xs font-semibold text-slate-700;
-  }
-
-  .SuggestionList {
-    @apply mt-3 flex flex-col gap-2;
-  }
-
-  .SuggestionCard {
-    @apply flex items-center justify-between gap-2 rounded-2xl border border-slate-200/70 bg-white/90 px-3 py-2 text-left text-xs text-slate-600 transition hover:text-slate-900 hover:bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/40;
-  }
-
-  .SuggestionQuestion {
-    @apply font-semibold text-slate-800;
-  }
-
-  .SuggestionTag {
-    @apply rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide;
-  }
-
-  .SuggestionTag.is-factual {
-    @apply bg-emerald-100 text-emerald-700;
-  }
-
-  .SuggestionTag.is-analytical {
-    @apply bg-sky-100 text-sky-700;
-  }
-
-  .SuggestionTag.is-comparative {
-    @apply bg-amber-100 text-amber-700;
-  }
-
-  .SuggestionTag.is-creative {
-    @apply bg-fuchsia-100 text-fuchsia-700;
-  }
-
-  .SuggestionTag.is-deep_dive {
-    @apply bg-indigo-100 text-indigo-700;
-  }
-
-  .SuggestionEmpty {
-    @apply mt-3 text-xs text-slate-400;
-  }
-
-  .WorkspaceSkeletonList {
-    @apply flex flex-col gap-2;
-  }
-
-  .WorkspaceSkeletonItem {
-    @apply h-12 rounded-2xl bg-slate-100/80;
-  }
-
-  .WorkspaceSkeletonItem.isShort {
-    @apply w-2/3;
-  }
-
-  .StructuredOutputCard {
-    @apply rounded-xl border border-slate-200/80 bg-white px-4 py-3 shadow-none flex flex-col gap-2 mb-3;
-  }
-
-  .StructuredOutputHeader {
-    @apply flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between;
-  }
-
-  .StructuredOutputTitle {
-    @apply text-sm font-semibold text-slate-900;
-  }
-
-  .StructuredOutputSubtitle {
-    @apply text-xs text-slate-500;
-  }
-
-  .StructuredOutputActions {
-    @apply flex flex-wrap items-center gap-2;
-  }
-
-  .StructuredOutputResults {
-    @apply flex flex-col -mx-4 border-t border-slate-200/70 divide-y divide-slate-200/70;
-  }
-
-  .StructuredOutputItem {
-    @apply border-0 rounded-none bg-transparent px-4 py-3;
-  }
-
-  .StructuredOutputItemHeader {
-    @apply flex items-start justify-between gap-2;
-  }
-
-  .StructuredOutputItemHeaderButton {
-    @apply flex-1 text-left cursor-pointer bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-brand-500/40 rounded-lg px-1 -mx-1 transition-colors hover:bg-slate-50 active:bg-slate-100;
-  }
-
-  .StructuredOutputItemActions {
-    @apply flex items-center gap-2;
-  }
-
-  .StructuredOutputItemTitle {
-    @apply text-xs font-semibold text-slate-800;
-  }
-
-  .StructuredOutputItemMeta {
-    @apply text-[11px] text-slate-500;
-  }
-
-  .StructuredOutputItemPrompt {
-    @apply mt-1 text-xs text-slate-500;
-  }
-
-  .StructuredOutputItemContent {
-    @apply mt-2 text-sm text-slate-800;
-  }
-
-  .OutputCardMenu {
-    @apply relative;
-  }
-
-  .OutputCardMenuPanel {
-    @apply absolute right-0 top-9 z-20 w-36 rounded-xl border border-slate-200/80 bg-white py-1 shadow-soft;
-  }
-
-  .OutputCardMenuItem {
-    @apply w-full bg-transparent border-0 px-3 py-2 text-left text-xs font-semibold text-slate-700 transition hover:bg-slate-50 cursor-pointer;
-  }
-
-  .OutputCardMenuItem:disabled {
-    @apply text-slate-300 cursor-not-allowed hover:bg-transparent;
-  }
-
-  .OutputCardMenuItem.isDanger {
-    @apply text-red-600;
-  }
-
-  .StructuredOutputFaq {
-    @apply flex flex-col gap-3;
-  }
-
-  .StructuredOutputGuide {
-    @apply flex flex-col gap-3;
-  }
-
-  .StructuredOutputFaqItem {
-    @apply border-l-2 border-slate-200/80 bg-transparent px-3 py-2;
-  }
-
-  .StructuredOutputFaqQuestion {
-    @apply text-xs font-semibold text-slate-800;
-  }
-
-  .StructuredOutputFaqAnswer {
-    @apply mt-1 text-xs text-slate-600;
-  }
-
-  .StructuredOutputGuideModule {
-    @apply border-l-2 border-slate-200/80 bg-transparent px-3 py-2;
-  }
-
-  .StructuredOutputGuideTitle {
-    @apply text-xs font-semibold text-slate-800;
-  }
-
-  .StructuredOutputGuideObjective {
-    @apply mt-1 text-xs text-slate-600;
-  }
-
-  .StructuredOutputTimeline {
-    @apply flex flex-col gap-3;
-  }
-
-  .StructuredOutputTimelineItem {
-    @apply border-l-2 border-slate-200/80 bg-transparent px-3 py-2;
-  }
-
-  .StructuredOutputTimelineDate {
-    @apply text-[11px] uppercase tracking-[0.18em] text-slate-400;
-  }
-
-  .StructuredOutputTimelineEvent {
-    @apply text-xs font-semibold text-slate-800;
-  }
-
-  .StructuredOutputTimelineDesc {
-    @apply mt-1 text-xs text-slate-600;
-  }
-
-  .StructuredOutputQuizItem {
-    @apply border-l-2 border-slate-200/80 bg-transparent px-3 py-2;
-  }
-
-  .StructuredOutputQuiz {
-    @apply flex flex-col gap-3;
-  }
-
-  .StructuredOutputQuizQuestion {
-    @apply text-xs font-semibold text-slate-800;
-  }
-
-  .StructuredOutputQuizAnswer {
-    @apply mt-1 text-xs text-slate-600;
-  }
-
-  .StructuredOutputBriefingSection {
-    @apply border-l-2 border-slate-200/80 bg-transparent px-3 py-2;
-  }
-
-  .StructuredOutputBriefing {
-    @apply flex flex-col gap-3;
-  }
-
-  .StructuredOutputBriefingHeading {
-    @apply text-xs font-semibold text-slate-800;
-  }
-
-  .StructuredOutputList {
-    @apply list-disc pl-5 mt-2 space-y-1;
-  }
-
-  .StructuredOutputParagraph {
-    @apply text-sm text-slate-700 leading-relaxed;
-  }
-
-  .StructuredOutputStructuredTitle {
-    @apply text-xs font-semibold text-slate-800;
-  }
-
-  .StructuredOutputStructured {
-    @apply flex flex-col gap-2;
-  }
-
-  .StructuredOutputTags {
-    @apply mt-2 flex flex-wrap gap-2;
-  }
-
-  .StructuredOutputTag {
-    @apply rounded-full border border-slate-200/70 bg-white px-2.5 py-0.5 text-[11px] text-slate-600;
-  }
-
-  .StructuredOutputRaw {
-    @apply text-xs text-slate-500 whitespace-pre-wrap;
-  }
-
-  .StructuredMindmapTree {
-    @apply flex flex-col gap-2;
-  }
-
-  .StructuredMindmapNode {
-    @apply border-l-2 border-slate-200/80 bg-transparent px-3 py-2;
-  }
-
-  .StructuredMindmapChildren {
-    @apply mt-2 flex flex-col gap-2 pl-4;
-  }
-
-  .StructuredMindmapLabel {
-    @apply text-xs font-semibold text-slate-800;
-  }
-
-  .OutputSkeletonList {
-    @apply flex flex-col gap-2;
-  }
-
-  .OutputSkeletonItem {
-    @apply h-16 rounded-2xl bg-slate-100/80;
-  }
-
-  .OutputSkeletonItem.isShort {
-    @apply w-2/3;
-  }
-
-@keyframes panelIn {
+    grid-template-columns: 1fr;
+    row-gap: 12px;
+  }
+}
+
+.WorkspacePanel {
+  @apply flex flex-col min-h-0 min-w-0 rounded-2xl;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
+  overflow: hidden;
+  animation: panelEnter 0.4s ease both;
+}
+
+.WorkspaceResizeHandle {
+  @apply relative flex items-center justify-center;
+  width: var(--resize-handle);
+  cursor: col-resize;
+  background: transparent;
+  border: none;
+  padding: 0;
+  touch-action: none;
+}
+
+.WorkspaceResizeHandle::before {
+  content: '';
+  width: 2px;
+  height: 48px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  transition: background 0.2s ease;
+}
+
+.WorkspaceResizeHandle:hover::before,
+.WorkspaceResizeHandle:focus-visible::before {
+  background: #94a3b8;
+}
+
+.WorkspaceMain.isResizing .WorkspaceResizeHandle::before {
+  background: #64748b;
+}
+
+@media (max-width: 1024px) {
+  .WorkspaceResizeHandle {
+    display: none;
+  }
+}
+
+.WorkspacePanelHeader {
+  @apply flex items-center justify-between px-4 py-3;
+  border-bottom: 1px solid var(--panel-border);
+  background: #fafbff;
+}
+
+.WorkspacePanelTitle {
+  @apply text-xs font-semibold text-slate-700 font-heading tracking-[0.08em];
+}
+
+.PanelHeaderActions {
+  @apply flex items-center gap-2;
+}
+
+.PanelIconButton {
+  @apply inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 cursor-pointer;
+}
+
+.PanelIconButton svg {
+  @apply h-4 w-4;
+}
+
+.WorkspacePanel--studio .PanelIconButton {
+  @apply rounded-lg;
+}
+
+.WorkspacePanelBody {
+  @apply flex-1 min-h-0 px-4 py-4 flex flex-col gap-3;
+}
+
+.WorkspacePanelBody--chat {
+  @apply p-0 gap-0;
+}
+
+.WorkspaceHint {
+  @apply text-xs text-slate-500;
+}
+
+.WorkspaceHint.isError {
+  @apply text-red-600;
+}
+
+.WorkspaceLinkButton {
+  @apply ml-2 text-xs font-semibold text-slate-900 hover:underline cursor-pointer;
+}
+
+.SourcesPanel {
+  @apply gap-3;
+}
+
+.SourcesAddButton {
+  @apply inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 cursor-pointer;
+}
+
+.SourcesAddButton[data-disabled='true'] {
+  @apply opacity-60 cursor-not-allowed;
+}
+
+.SourcesAddButton input {
+  @apply hidden;
+}
+
+.SourcesAddButton__icon {
+  @apply flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] font-semibold text-white;
+}
+
+.SourcesDeepResearch {
+  @apply flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-800;
+}
+
+.SourcesDeepResearchIcon {
+  @apply flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700;
+}
+
+.SourcesDeepResearchIcon svg {
+  @apply h-3.5 w-3.5;
+}
+
+.SourcesSearchRow {
+  @apply flex flex-wrap items-center gap-2;
+}
+
+.SourcesSearchInput {
+  @apply flex flex-1 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500;
+  min-width: 160px;
+}
+
+.SourcesSearchInput svg {
+  @apply h-4 w-4 text-slate-400;
+}
+
+.SourcesSearchInput input {
+  @apply flex-1 bg-transparent text-sm text-slate-700 outline-none;
+}
+
+.SourcesSearchSelect {
+  @apply rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 cursor-pointer;
+}
+
+.SourcesSearchButton {
+  @apply inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition hover:bg-slate-800 cursor-pointer;
+}
+
+.SourcesSearchButton svg {
+  @apply h-4 w-4;
+}
+
+.SourcesSelectAll {
+  @apply flex items-center justify-between text-xs text-slate-500;
+}
+
+.SourcesCheckbox {
+  @apply h-4 w-4 rounded border-slate-300 accent-slate-900 cursor-pointer;
+}
+
+.SourcesListWrap {
+  @apply flex-1 min-h-0;
+}
+
+.SourcesList {
+  @apply flex flex-col gap-2 overflow-y-auto pr-1;
+}
+
+.SourcesListItem {
+  @apply flex items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-white px-3 py-2 shadow-sm transition;
+}
+
+.SourcesListItem:hover {
+  @apply border-slate-200;
+}
+
+.SourcesListButton {
+  @apply flex flex-1 items-center gap-2 text-left cursor-pointer;
+}
+
+.SourcesItemIcon {
+  @apply flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600;
+}
+
+.SourcesItemIcon svg {
+  @apply h-4 w-4;
+}
+
+.SourcesItemText {
+  @apply flex min-w-0 flex-col;
+}
+
+.SourcesItemTitle {
+  @apply truncate text-sm font-semibold text-slate-800;
+}
+
+.SourcesEmpty {
+  @apply rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-xs text-slate-500;
+}
+
+.SourcesSkeletonList {
+  @apply flex flex-col gap-2;
+}
+
+.SourcesSkeletonItem {
+  @apply h-10 rounded-2xl bg-slate-100;
+}
+
+.SourcesSkeletonItem.isShort {
+  @apply w-2/3;
+}
+
+.ChatScroll {
+  @apply flex-1 min-h-0 overflow-y-auto px-5 py-4 flex flex-col gap-4;
+}
+
+.ChatEmpty {
+  @apply rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-xs text-slate-500;
+}
+
+.ChatMessage {
+  @apply flex flex-col gap-2;
+}
+
+.ChatMessage__body {
+  @apply text-sm text-slate-800 leading-relaxed whitespace-pre-wrap;
+}
+
+.ChatMessage.isUser {
+  @apply items-end;
+}
+
+.ChatMessage.isUser .ChatMessage__body {
+  @apply rounded-2xl bg-slate-100 px-4 py-2 text-slate-700;
+}
+
+.ChatMessage__citations {
+  @apply mt-2 flex flex-wrap gap-1;
+}
+
+.ChatNotice {
+  @apply text-xs text-amber-600;
+}
+
+.ChatActionRow {
+  @apply flex flex-wrap items-center gap-2 border-t border-slate-100 px-4 py-2;
+}
+
+.ChatActionButton {
+  @apply inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 cursor-pointer;
+}
+
+.ChatActionButton svg {
+  @apply h-4 w-4;
+}
+
+.ChatComposer {
+  @apply px-4 pb-4;
+}
+
+.ChatComposerRow {
+  @apply flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm;
+}
+
+.ChatInput {
+  @apply flex-1 bg-transparent text-sm text-slate-700 outline-none resize-none;
+  min-height: 36px;
+}
+
+.ChatSendButton {
+  @apply inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white transition hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer;
+}
+
+.ChatSendButton svg {
+  @apply h-4 w-4;
+}
+
+.ChatSkeletonList {
+  @apply flex flex-col gap-2;
+}
+
+.ChatSkeletonItem {
+  @apply h-10 rounded-2xl bg-slate-100;
+}
+
+.ChatSkeletonItem.isShort {
+  @apply w-2/3;
+}
+
+.CitationMarkWrapper {
+  @apply relative inline-flex items-center;
+}
+
+.CitationMark {
+  @apply inline-flex h-5 min-w-[20px] items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-semibold text-slate-500 transition hover:text-slate-800;
+}
+
+.CitationTooltip {
+  @apply absolute left-0 top-full mt-2 w-64 rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600 shadow-lg z-50;
+}
+
+.CitationTooltip__title {
+  @apply text-xs font-semibold text-slate-900;
+}
+
+.CitationTooltip__meta {
+  @apply mt-1 text-[11px] text-slate-500;
+}
+
+.CitationTooltip__snippet {
+  @apply mt-2 text-xs text-slate-600;
+}
+
+.StudioBody {
+  @apply flex flex-col min-h-0 gap-4;
+}
+
+.StudioGrid {
+  @apply grid gap-3;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.StudioTile {
+  --tile-icon-size: clamp(28px, 2.6vw, 36px);
+  --tile-icon-glyph: clamp(14px, 1.4vw, 18px);
+  --tile-font-size: clamp(11px, 1.1vw, 13px);
+  --tile-edit-size: clamp(22px, 1.8vw, 26px);
+  --tile-badge-size: clamp(9px, 0.9vw, 10px);
+  @apply relative flex flex-col items-start gap-3 rounded-2xl border p-3 text-left font-semibold transition cursor-pointer;
+  aspect-ratio: 1 / 1;
+  font-size: var(--tile-font-size);
+  background: var(--tone-bg, #f8fafc);
+  border-color: var(--tone-border, #e2e8f0);
+  color: var(--tone-ink, #334155);
+  animation: tileEnter 0.35s ease both;
+}
+
+.StudioTile:hover {
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.StudioTile.isDisabled {
+  @apply cursor-not-allowed;
+  box-shadow: none;
+}
+
+.StudioTile__icon {
+  @apply flex items-center justify-center rounded-xl border;
+  width: var(--tile-icon-size);
+  height: var(--tile-icon-size);
+  background: var(--tone-icon, #eef2f6);
+  border-color: var(--tone-border, #e2e8f0);
+}
+
+.StudioTile__icon svg {
+  width: var(--tile-icon-glyph);
+  height: var(--tile-icon-glyph);
+}
+
+.StudioTile__label {
+  @apply flex min-w-0 flex-1 flex-col gap-1;
+}
+
+.StudioTile__labelText {
+  @apply leading-snug;
+  font-size: var(--tile-font-size);
+  word-break: break-word;
+}
+
+.StudioTile__badge {
+  @apply self-start rounded-md bg-slate-900 px-2 py-0.5 font-semibold text-white;
+  font-size: var(--tile-badge-size);
+}
+
+.StudioTile__edit {
+  @apply inline-flex items-center justify-center rounded-full bg-slate-200 text-slate-600;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: var(--tile-edit-size);
+  height: var(--tile-edit-size);
+}
+
+.StudioTile__edit svg {
+  @apply h-3.5 w-3.5;
+}
+
+.StudioNotes {
+  @apply flex-1 min-h-0 overflow-y-auto pr-1;
+}
+
+.StudioNoteList {
+  @apply flex flex-col gap-2;
+}
+
+.StudioNoteItem {
+  @apply flex items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-white px-3 py-2 transition hover:bg-slate-50/70;
+}
+
+.StudioNoteButton {
+  @apply flex flex-1 items-center gap-2 text-left cursor-pointer;
+}
+
+.StudioNoteIcon {
+  @apply flex h-8 w-8 items-center justify-center rounded-xl border;
+  background: var(--tone-icon, #eef2f6);
+  border-color: var(--tone-border, #e2e8f0);
+  color: var(--tone-ink, #475569);
+}
+
+.StudioNoteIcon svg {
+  @apply h-4 w-4;
+}
+
+.StudioNoteContent {
+  @apply flex min-w-0 flex-col;
+}
+
+.StudioNoteTitle {
+  @apply truncate text-sm font-semibold text-slate-900;
+}
+
+.StudioNoteMeta {
+  @apply text-xs text-slate-500;
+}
+
+.StudioNoteMenu {
+  @apply inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 cursor-pointer;
+}
+
+.StudioNoteMenu svg {
+  @apply h-3.5 w-3.5;
+}
+
+.StudioAddButton {
+  @apply mt-auto rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 cursor-pointer;
+}
+
+.StudioEmpty {
+  @apply rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-center text-xs text-slate-500;
+}
+
+.StudioSkeletonList {
+  @apply flex flex-col gap-2;
+}
+
+.StudioSkeletonItem {
+  @apply h-12 rounded-2xl bg-slate-100;
+}
+
+.StudioSkeletonItem.isShort {
+  @apply w-2/3;
+}
+
+.StudioTile[data-tone='slate'],
+.StudioNoteIcon[data-tone='slate'] {
+  --tone-bg: #f4f6fb;
+  --tone-icon: #e7ebf2;
+  --tone-border: #e2e8f0;
+  --tone-ink: #475569;
+}
+
+.StudioTile[data-tone='blue'],
+.StudioNoteIcon[data-tone='blue'] {
+  --tone-bg: #eef4ff;
+  --tone-icon: #dbe7ff;
+  --tone-border: #c9d8ff;
+  --tone-ink: #2f5fd0;
+}
+
+.StudioTile[data-tone='green'],
+.StudioNoteIcon[data-tone='green'] {
+  --tone-bg: #edf7f1;
+  --tone-icon: #d6f1e2;
+  --tone-border: #bfe6cf;
+  --tone-ink: #2f8f5b;
+}
+
+.StudioTile[data-tone='rose'],
+.StudioNoteIcon[data-tone='rose'] {
+  --tone-bg: #ffeef1;
+  --tone-icon: #ffd7de;
+  --tone-border: #f7c5cf;
+  --tone-ink: #b4234b;
+}
+
+.StudioTile[data-tone='amber'],
+.StudioNoteIcon[data-tone='amber'] {
+  --tone-bg: #fff4e6;
+  --tone-icon: #ffe3c5;
+  --tone-border: #fbd9a2;
+  --tone-ink: #b45309;
+}
+
+.StudioTile[data-tone='teal'],
+.StudioNoteIcon[data-tone='teal'] {
+  --tone-bg: #e7f7f6;
+  --tone-icon: #ccefed;
+  --tone-border: #b5e1de;
+  --tone-ink: #0f766e;
+}
+
+.StudioTile[data-tone='indigo'],
+.StudioNoteIcon[data-tone='indigo'] {
+  --tone-bg: #eef0ff;
+  --tone-icon: #dde2ff;
+  --tone-border: #cfd4ff;
+  --tone-ink: #4f46e5;
+}
+
+@keyframes panelEnter {
   0% {
     opacity: 0;
     transform: translateY(8px);
@@ -1539,31 +632,20 @@
   }
 }
 
-@keyframes pulseDot {
+@keyframes tileEnter {
   0% {
-    transform: scale(1);
-  }
-  70% {
-    transform: scale(1.15);
+    opacity: 0;
+    transform: translateY(8px);
   }
   100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes cardFlash {
-  0% {
-    box-shadow: 0 0 0 rgba(249, 115, 22, 0.35);
-  }
-  100% {
-    box-shadow: 0 16px 30px rgba(249, 115, 22, 0.12);
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .WorkspacePanel,
-  .OutputCenterDot,
-  .RefineResultCard.isNew {
+  .StudioTile {
     animation: none;
   }
 }

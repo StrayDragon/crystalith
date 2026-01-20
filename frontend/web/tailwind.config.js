@@ -5,7 +5,19 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: [
-          '"Space Grotesk"',
+          '"Work Sans"',
+          '"Noto Sans SC"',
+          '"Outfit"',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          'sans-serif',
+        ],
+        heading: [
+          '"Outfit"',
+          '"Work Sans"',
           '"Noto Sans SC"',
           'ui-sans-serif',
           'system-ui',
