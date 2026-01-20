@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 
 import type { AsyncStatus } from '../../../shared/types';
 import type { ApiSourceSearchResult, SourceItem } from '../types';
+import { IconDeepResearch, IconPlus, IconRemove, IconSearch, IconSpinner } from './Icons';
 
 interface SourcesPanelProps {
   sources: SourceItem[];
@@ -20,7 +21,7 @@ interface SourcesPanelProps {
   onRetry: () => void;
 }
 
-export default function SourcesPanel({
+function SourcesPanel({
   sources,
   onSourceClick,
   onUpload,
@@ -114,7 +115,7 @@ export default function SourcesPanel({
         aria-disabled={uploadDisabled}
       >
         <span className="SourcesAddButton__icon" aria-hidden="true">
-          +
+          <IconPlus />
         </span>
         {uploadState === 'loading' ? '上传中…' : '添加来源'}
         <input
@@ -128,24 +129,14 @@ export default function SourcesPanel({
 
       <div className="SourcesDeepResearch">
         <span className="SourcesDeepResearchIcon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" focusable="false">
-            <path
-              d="M11 5a6 6 0 1 0 3.9 10.6l3 3 1.4-1.4-3-3A6 6 0 0 0 11 5Zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"
-              fill="currentColor"
-            />
-          </svg>
+          <IconDeepResearch />
         </span>
         试用 Deep Research，获取深度报告和新来源！
       </div>
 
       <div className="SourcesSearchRow">
         <div className="SourcesSearchInput">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path
-              d="M11 5a6 6 0 1 0 3.9 10.6l3 3 1.4-1.4-3-3A6 6 0 0 0 11 5Zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"
-              fill="currentColor"
-            />
-          </svg>
+          <IconDeepResearch aria-hidden="true" focusable="false" />
           <input
             type="text"
             name="sourceSearch"
@@ -166,15 +157,7 @@ export default function SourcesPanel({
             onClick={handleSearch}
             disabled={isSearching}
           >
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path
-                d="M8 12h8m0 0-3-3m3 3-3 3"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <IconSearch />
           </button>
         </div>
         <select
@@ -243,11 +226,7 @@ export default function SourcesPanel({
             disabled={removeDisabled}
             title={removeDisabled ? '请选择来源后再操作' : '移除已选来源'}
           >
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <circle cx="12" cy="6" r="1.6" fill="currentColor" />
-              <circle cx="12" cy="12" r="1.6" fill="currentColor" />
-              <circle cx="12" cy="18" r="1.6" fill="currentColor" />
-            </svg>
+            <IconRemove />
           </button>
           <span>选择所有来源</span>
         </div>
@@ -279,15 +258,7 @@ export default function SourcesPanel({
                   onClick={() => onSourceClick(source)}
                 >
                   <span className="SourcesItemIcon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" focusable="false">
-                      <path
-                        d="M7 5h7l3 3v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
-                        stroke="currentColor"
-                        strokeWidth="1.4"
-                        fill="none"
-                      />
-                      <path d="M14 5v3h3" stroke="currentColor" strokeWidth="1.4" fill="none" />
-                    </svg>
+                    <IconSearch focusable="false" />
                   </span>
                   <span className="SourcesItemText">
                     <span className="SourcesItemTitle">{source.title}</span>
@@ -317,3 +288,5 @@ export default function SourcesPanel({
     </div>
   );
 }
+
+export default memo(SourcesPanel);

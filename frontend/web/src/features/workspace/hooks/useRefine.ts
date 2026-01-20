@@ -491,13 +491,39 @@ export function useRefine() {
         const completedAt = new Date().toISOString();
         const isCurrentNotebook =
           jobNotebookId != null && jobNotebookId === activeNotebookIdRef.current;
+
+        // Extract meaningful error message
+        let errorMessage = '提炼失败，请稍后重试。';
+        let userFacingError = '提炼生成失败。';
+
+        if (error instanceof Error) {
+          const statusError = error as Error & { status?: number };
+
+          if (statusError.status === 503) {
+            errorMessage = 'AI 服务暂时不可用，请检查模型配置。';
+            userFacingError = 'AI 服务配置错误，请联系管理员。';
+          } else if (statusError.status === 404) {
+            errorMessage = '笔记本不存在或已被删除。';
+            userFacingError = '笔记本已失效，请刷新页面。';
+          } else if (statusError.status === 400) {
+            errorMessage = '请求参数无效，请检查输入。';
+            userFacingError = '输入参数有误。';
+          } else if (statusError.status === 500) {
+            errorMessage = '服务器内部错误，请稍后重试。';
+            userFacingError = '服务器错误，请稍后重试。';
+          } else if (error.message && error.message.length < 100) {
+            errorMessage = error.message;
+            userFacingError = error.message;
+          }
+        }
+
         updateRefineJobs((prev) =>
           prev.map((job) =>
             job.id === jobId
               ? {
                   ...job,
                   status: 'error',
-                  error: '提炼失败，请稍后重试。',
+                  error: errorMessage,
                   completedAt,
                   completedAtLabel: formatTimestamp(completedAt),
                 }
@@ -510,7 +536,7 @@ export function useRefine() {
         }
         if (isCurrentNotebook && stillTracked) {
           markJobCompleted(jobId);
-          dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '提炼生成失败。' } });
+          dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: userFacingError } });
         }
       } finally {
         refineRunningRef.current = false;
@@ -681,6 +707,25 @@ export function useRefine() {
           incrementQueueDone();
         }
       } catch (error) {
+        // Extract meaningful error message
+        let userFacingError = '输出生成失败，请稍后重试。';
+
+        if (error instanceof Error) {
+          const statusError = error as Error & { status?: number };
+
+          if (statusError.status === 503) {
+            userFacingError = 'AI 服务配置错误，请联系管理员。';
+          } else if (statusError.status === 404) {
+            userFacingError = '笔记本已失效，请刷新页面。';
+          } else if (statusError.status === 400) {
+            userFacingError = '请求参数有误，请检查输入。';
+          } else if (statusError.status === 500) {
+            userFacingError = '服务器错误，请稍后重试。';
+          } else if (error.message && error.message.length < 100 && !error.message.includes('fetch')) {
+            userFacingError = error.message;
+          }
+        }
+
         updateOutputQueueJobs((prev) =>
           prev.map((item) =>
             item.id === job.id ? { ...item, status: 'error' } : item,
@@ -689,7 +734,7 @@ export function useRefine() {
         const stillTracked = outputQueueRef.current.some((item) => item.id === job.id);
         dispatch({
           type: 'SET_ERROR',
-          payload: { key: 'outputs', value: '输出生成失败，请稍后重试。' },
+          payload: { key: 'outputs', value: userFacingError },
         });
         if (stillTracked) {
           incrementQueueDone();

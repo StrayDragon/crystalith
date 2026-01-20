@@ -18,6 +18,38 @@ const DEFAULT_HEADERS: HeadersInit = {
   Accept: 'application/json',
 };
 
+/**
+ * Custom error class for API requests with status code and structured details.
+ */
+export class ApiError extends Error {
+  status: number;
+  detail: string;
+  statusText: string;
+
+  constructor(status: number, detail: string, statusText: string) {
+    // Create user-friendly message based on status
+    let message = detail || statusText || '请求失败';
+
+    // Try to parse JSON error detail
+    if (detail) {
+      try {
+        const parsed = JSON.parse(detail);
+        if (parsed.detail) {
+          message = typeof parsed.detail === 'string' ? parsed.detail : JSON.stringify(parsed.detail);
+        }
+      } catch {
+        // Use raw detail if not JSON
+      }
+    }
+
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.detail = detail;
+    this.statusText = statusText;
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(path, {
     ...options,
@@ -29,10 +61,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     const detail = await response.text().catch(() => '');
-    const message = detail || response.statusText || '请求失败';
-    const error = new Error(message) as Error & { status?: number };
-    error.status = response.status;
-    throw error;
+    throw new ApiError(response.status, detail, response.statusText);
   }
 
   if (response.status === 204) {
