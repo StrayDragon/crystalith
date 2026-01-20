@@ -21,13 +21,15 @@ const DEMO_SUGGESTIONS: SuggestionItem[] = [
 interface UseChatOptions {
   ensureSession: (title?: string | null) => Promise<number | null>;
   refreshSessions?: () => Promise<void>;
+  enableSuggestions?: boolean;
 }
 
-export function useChat({ ensureSession, refreshSessions }: UseChatOptions) {
+export function useChat({ ensureSession, refreshSessions, enableSuggestions }: UseChatOptions) {
   const state = useWorkspaceState();
   const dispatch = useWorkspaceDispatch();
   const isDemo = state.connectionState === 'demo';
   const [suggestionKey, setSuggestionKey] = useState(0);
+  const suggestionsEnabled = Boolean(enableSuggestions);
 
   const { data, error, isLoading, mutate } = useSWR(
     state.activeSessionId && !isDemo
@@ -63,7 +65,7 @@ export function useChat({ ensureSession, refreshSessions }: UseChatOptions) {
     isLoading: suggestionLoading,
     mutate: mutateSuggestions,
   } = useSWR(
-    state.activeNotebookId
+    state.activeNotebookId && suggestionsEnabled
       ? ['workspace/suggestions', state.activeNotebookId, state.activeSessionId, suggestionKey]
       : null,
     async () => {
@@ -82,13 +84,25 @@ export function useChat({ ensureSession, refreshSessions }: UseChatOptions) {
   );
 
   useEffect(() => {
+    if (!suggestionsEnabled) {
+      dispatch({
+        type: 'SET_LOADING',
+        payload: { key: 'suggestions', value: false },
+      });
+      return;
+    }
     dispatch({
       type: 'SET_LOADING',
       payload: { key: 'suggestions', value: suggestionLoading },
     });
-  }, [dispatch, suggestionLoading]);
+  }, [dispatch, suggestionLoading, suggestionsEnabled]);
 
   useEffect(() => {
+    if (!suggestionsEnabled) {
+      dispatch({ type: 'SET_SUGGESTIONS', payload: [] });
+      dispatch({ type: 'SET_ERROR', payload: { key: 'suggestions', value: '' } });
+      return;
+    }
     if (suggestionError) {
       dispatch({
         type: 'SET_ERROR',
@@ -102,12 +116,13 @@ export function useChat({ ensureSession, refreshSessions }: UseChatOptions) {
       payload: suggestionData.suggestions ?? [],
     });
     dispatch({ type: 'SET_ERROR', payload: { key: 'suggestions', value: '' } });
-  }, [dispatch, suggestionData, suggestionError]);
+  }, [dispatch, suggestionData, suggestionError, suggestionsEnabled]);
 
   const refreshSuggestions = useCallback(async () => {
+    if (!suggestionsEnabled) return;
     setSuggestionKey((prev) => prev + 1);
     await mutateSuggestions();
-  }, [mutateSuggestions]);
+  }, [mutateSuggestions, suggestionsEnabled]);
 
   const setDraft = useCallback(
     (value: string) => dispatch({ type: 'SET_DRAFT', payload: value }),
