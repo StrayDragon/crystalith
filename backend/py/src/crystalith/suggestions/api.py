@@ -7,7 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from cl_logs.logging import get_logger
+
 from crystalith.agents.deps import StudioDeps
+from crystalith.agents.models import ModelConfigurationError
 from crystalith.agents.suggestions_graph import SuggestionState, run_suggestions_graph
 from crystalith.config import Settings
 from crystalith.db import Notebook, Session
@@ -15,6 +18,9 @@ from crystalith.api.deps import get_db_session, get_embedding_provider, get_sett
 
 from .generator import Suggestion
 from .types import SuggestionType
+
+
+log = get_logger(__name__)
 
 
 router = APIRouter(prefix="/v1", tags=["suggestions"])
@@ -69,11 +75,32 @@ async def notebook_suggestions(
         "deps": deps,
     }
 
+    log.info(
+        "generating notebook suggestions",
+        notebook_id=notebook_id,
+        count=payload.count,
+        mode=payload.mode.value,
+    )
+
     try:
         suggestions = await run_suggestions_graph(state)
+    except ModelConfigurationError as exc:
+        log.warning("model configuration error", error=str(exc))
+        raise HTTPException(
+            status_code=503,
+            detail=f"AI model configuration error: {exc}. Please check your config/app.yaml settings.",
+        ) from exc
     except ValueError as exc:
+        log.warning("invalid request", error=str(exc))
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        log.error("unexpected error during suggestion generation", exc_info=exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate suggestions. Please try again later.",
+        ) from exc
 
+    log.info("notebook suggestions generated", count=len(suggestions))
     created_at = datetime.datetime.now(datetime.UTC)
     return _build_response(suggestions, created_at)
 
@@ -105,11 +132,32 @@ async def session_suggestions(
         "deps": deps,
     }
 
+    log.info(
+        "generating session suggestions",
+        session_id=session_id,
+        count=payload.count,
+        mode=payload.mode.value,
+    )
+
     try:
         suggestions = await run_suggestions_graph(state)
+    except ModelConfigurationError as exc:
+        log.warning("model configuration error", error=str(exc))
+        raise HTTPException(
+            status_code=503,
+            detail=f"AI model configuration error: {exc}. Please check your config/app.yaml settings.",
+        ) from exc
     except ValueError as exc:
+        log.warning("invalid request", error=str(exc))
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        log.error("unexpected error during suggestion generation", exc_info=exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate suggestions. Please try again later.",
+        ) from exc
 
+    log.info("session suggestions generated", count=len(suggestions))
     created_at = datetime.datetime.now(datetime.UTC)
     return _build_response(suggestions, created_at)
 
