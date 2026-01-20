@@ -22,46 +22,57 @@ type StudioNote = {
   outputId?: number;
   title: string;
   meta: string;
-  tone: StudioTone;
+  type: OutputTypeId;
 };
 
+const DEFAULT_TYPE_LABELS: Record<OutputTypeId, string> = {
+  FAQ: '闪卡',
+  GUIDE: '指南',
+  TIMELINE: '时间轴',
+  MINDMAP: '思维导图',
+  QUIZ: '测验',
+  BRIEFING: '报告',
+  PARAGRAPH: '段落',
+  BULLETS: '要点',
+  STRUCTURED: '结构化',
+};
 
 const DEMO_NOTES: StudioNote[] = [
   {
     id: 'demo-1',
     title: '米诺地尔治疗脱发（激素抵抗性脱发）的研究总结与临...',
     meta: '39 个来源 · 3 天前',
-    tone: 'amber',
+    type: 'BRIEFING',
   },
   {
     id: 'demo-2',
     title: '脱发问答',
     meta: '39 个来源 · 6 天前',
-    tone: 'blue',
+    type: 'FAQ',
   },
   {
     id: 'demo-3',
     title: 'AGA 现代图景 或者 AGA Modern Landscape',
     meta: '39 个来源 · 7 天前',
-    tone: 'slate',
+    type: 'MINDMAP',
   },
   {
     id: 'demo-4',
     title: 'Eating for Healthier Hair: A Practical Guide to Key...',
     meta: '39 个来源 · 7 天前',
-    tone: 'green',
+    type: 'GUIDE',
   },
   {
     id: 'demo-5',
     title: '雄激素脱发：脱发与治疗',
     meta: '39 个来源 · 7 天前',
-    tone: 'rose',
+    type: 'TIMELINE',
   },
   {
     id: 'demo-6',
     title: '雄激素性脱发：机制和新治疗',
     meta: '39 个来源 · 7 天前',
-    tone: 'indigo',
+    type: 'QUIZ',
   },
 ];
 
@@ -104,6 +115,10 @@ function resolveTone(type: OutputTypeId): StudioTone {
     default:
       return 'slate';
   }
+}
+
+function resolveTypeLabel(type: OutputTypeId, labels: Map<OutputTypeId, string>) {
+  return labels.get(type) ?? DEFAULT_TYPE_LABELS[type];
 }
 
 function renderToolIcon(type: OutputTypeId) {
@@ -175,6 +190,22 @@ function renderToolIcon(type: OutputTypeId) {
   }
 }
 
+function renderNoteIcon(type: OutputTypeId) {
+  return (
+    renderToolIcon(type) ?? (
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path
+          d="M7 5h7l3 3v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          fill="none"
+        />
+        <path d="M14 5v3h3" stroke="currentColor" strokeWidth="1.4" fill="none" />
+      </svg>
+    )
+  );
+}
+
 export default function StudioPanel({
   tools,
   outputs,
@@ -186,6 +217,14 @@ export default function StudioPanel({
   recentOutputJobId,
   isDemo,
 }: StudioPanelProps) {
+  const typeLabelMap = useMemo(() => {
+    const map = new Map<OutputTypeId, string>();
+    tools.forEach((tool) => {
+      map.set(tool.outputType, tool.label);
+    });
+    return map;
+  }, [tools]);
+
   const outputNotes = useMemo<StudioNote[]>(
     () =>
       outputs.map((output) => ({
@@ -193,7 +232,7 @@ export default function StudioPanel({
         outputId: output.id,
         title: resolveOutputTitle(output),
         meta: resolveNoteMeta(output),
-        tone: resolveTone(output.type),
+        type: output.type,
       })),
     [outputs],
   );
@@ -255,42 +294,41 @@ export default function StudioPanel({
           <div className="StudioEmpty">暂无笔记</div>
         ) : (
           <div className="StudioNoteList">
-            {notes.map((note) => (
-              <div key={note.id} className="StudioNoteItem">
-                <button
-                  type="button"
-                  className="StudioNoteButton"
-                  onClick={() => {
-                    if (!note.outputId) return;
-                    onSelectOutput(note.outputId);
-                  }}
-                  aria-disabled={!note.outputId}
-                >
-                  <span className="StudioNoteIcon" data-tone={note.tone} aria-hidden="true">
+            {notes.map((note) => {
+              const tone = resolveTone(note.type);
+              const typeLabel = resolveTypeLabel(note.type, typeLabelMap);
+              return (
+                <div key={note.id} className="StudioNoteItem">
+                  <button
+                    type="button"
+                    className="StudioNoteButton"
+                    onClick={() => {
+                      if (!note.outputId) return;
+                      onSelectOutput(note.outputId);
+                    }}
+                    aria-disabled={!note.outputId}
+                  >
+                    <span className="StudioNoteIcon" data-tone={tone} aria-hidden="true">
+                      {renderNoteIcon(note.type)}
+                    </span>
+                    <span className="StudioNoteContent">
+                      <span className="StudioNoteTitleRow">
+                        <span className="StudioNoteTitle">{note.title}</span>
+                        <span className="StudioNoteType">{typeLabel}</span>
+                      </span>
+                      <span className="StudioNoteMeta">{note.meta}</span>
+                    </span>
+                  </button>
+                  <button type="button" className="StudioNoteMenu" aria-label="更多操作">
                     <svg viewBox="0 0 24 24" focusable="false">
-                      <path
-                        d="M7 5h7l3 3v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
-                        stroke="currentColor"
-                        strokeWidth="1.4"
-                        fill="none"
-                      />
-                      <path d="M14 5v3h3" stroke="currentColor" strokeWidth="1.4" fill="none" />
+                      <circle cx="6" cy="12" r="1.5" fill="currentColor" />
+                      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                      <circle cx="18" cy="12" r="1.5" fill="currentColor" />
                     </svg>
-                  </span>
-                  <span className="StudioNoteContent">
-                    <span className="StudioNoteTitle">{note.title}</span>
-                    <span className="StudioNoteMeta">{note.meta}</span>
-                  </span>
-                </button>
-                <button type="button" className="StudioNoteMenu" aria-label="更多操作">
-                  <svg viewBox="0 0 24 24" focusable="false">
-                    <circle cx="6" cy="12" r="1.5" fill="currentColor" />
-                    <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-                    <circle cx="18" cy="12" r="1.5" fill="currentColor" />
-                  </svg>
-                </button>
-              </div>
-            ))}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
         {outputsError ? (
