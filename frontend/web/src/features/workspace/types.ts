@@ -14,6 +14,7 @@ export type OutputTypeId =
   | 'STRUCTURED';
 export type SuggestionType = 'factual' | 'analytical' | 'comparative' | 'creative' | 'deep_dive';
 export type SourceSearchStatus = 'ok' | 'not_implemented';
+export type ToolTone = 'slate' | 'blue' | 'green' | 'rose' | 'amber' | 'teal' | 'indigo';
 
 export interface Notebook {
   id: number;
@@ -49,10 +50,15 @@ export interface ChatMessage {
   citations?: Citation[];
 }
 
-export interface Suggestion {
+export interface WorkspaceTool {
   id: string;
-  text: string;
-  type: SuggestionType;
+  label: string;
+  description: string;
+  tone: ToolTone;
+  outputType: OutputTypeId;
+  prompt: string;
+  badge?: string;
+  enabled: boolean;
 }
 
 export interface RefineOutputStructured {
@@ -184,6 +190,21 @@ export interface ApiSuggestionResponse {
   created_at?: string | null;
 }
 
+export interface ApiWorkspaceTool {
+  id: string;
+  label: string;
+  description: string;
+  tone: ToolTone;
+  output_type: OutputTypeId;
+  prompt: string;
+  badge?: string | null;
+  enabled?: boolean | null;
+}
+
+export interface ApiWorkspaceToolsResponse {
+  tools: ApiWorkspaceTool[];
+}
+
 export interface ApiOutput {
   id: number;
   notebook_id: number;
@@ -193,10 +214,6 @@ export interface ApiOutput {
   content: Record<string, unknown>;
   created_at?: string | null;
   updated_at?: string | null;
-}
-
-export interface ApiOutputBatchResponse {
-  outputs: ApiOutput[];
 }
 
 export interface ApiSource {

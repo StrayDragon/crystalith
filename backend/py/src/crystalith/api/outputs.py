@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import datetime
 from typing import Any
 
@@ -21,27 +20,11 @@ from .deps import get_chat_provider, get_db_session, get_embedding_provider, get
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/outputs", tags=["outputs"])
 
 
-class OutputCreateRequest(BaseModel):
-    type: OutputType | None = None
-    types: list[OutputType] | None = None
+class OutputGenerateRequest(BaseModel):
     prompt: str | None = None
     chunk_ids: list[int] | None = None
     top_k: int = Field(5, ge=1, le=20)
     min_score: float = Field(0.2, ge=0.0, le=1.0)
-
-    @field_validator("type", mode="before")
-    @classmethod
-    def _normalize_type(cls, value: Any) -> Any:
-        if isinstance(value, str):
-            return value.strip().upper()
-        return value
-
-    @field_validator("types", mode="before")
-    @classmethod
-    def _normalize_types(cls, value: Any) -> Any:
-        if isinstance(value, list):
-            return [item.strip().upper() if isinstance(item, str) else item for item in value]
-        return value
 
     @field_validator("prompt")
     @classmethod
@@ -63,10 +46,6 @@ class OutputRead(BaseModel):
     content: dict[str, Any]
     created_at: datetime.datetime
     updated_at: datetime.datetime
-
-
-class OutputBatchResponse(BaseModel):
-    outputs: list[OutputRead]
 
 
 def _format_context(results: list[VectorSearchResult], chunk_map: dict[int, tuple[Chunk, Source]]) -> str:
@@ -169,7 +148,7 @@ def _map_citations(
 async def _resolve_context(
     *,
     notebook_id: int,
-    payload: OutputCreateRequest,
+    payload: OutputGenerateRequest,
     session: AsyncSession,
     embedder: EmbeddingProvider,
     vector_store: VectorStore,
@@ -226,28 +205,20 @@ async def _resolve_context(
     return context, citations, chunk_ids
 
 
-def _resolve_types(payload: OutputCreateRequest) -> list[OutputType]:
-    if payload.types:
-        return list(dict.fromkeys(payload.types))
-    if payload.type:
-        return [payload.type]
-    raise HTTPException(status_code=400, detail="type or types is required")
-
-
-@router.post("", response_model=OutputBatchResponse, status_code=status.HTTP_201_CREATED)
-async def create_outputs(
+@router.post("/{output_type}", response_model=OutputRead, status_code=status.HTTP_201_CREATED)
+async def create_output(
     notebook_id: int,
-    payload: OutputCreateRequest,
+    output_type: OutputType,
+    payload: OutputGenerateRequest,
     session: AsyncSession = Depends(get_db_session),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     chatter: ChatProvider = Depends(get_chat_provider),
     vector_store: VectorStore = Depends(get_vector_store),
-) -> OutputBatchResponse:
+) -> OutputRead:
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
 
-    output_types = _resolve_types(payload)
     context, citations, resolved_chunk_ids = await _resolve_context(
         notebook_id=notebook_id,
         payload=payload,
@@ -255,36 +226,25 @@ async def create_outputs(
         embedder=embedder,
         vector_store=vector_store,
     )
-    if not citations:
-        return OutputBatchResponse(outputs=[])
 
     citation_map = {index: citation for index, citation in enumerate(citations, start=1)}
     fallback_citations = citations[:1]
+    generator = create_output_generator(output_type, chatter)
+    content = await generator.generate(context=context, prompt=payload.prompt or "")
+    mapped = _map_citations(content, citation_map, fallback_citations)
 
-    async def _generate_output(output_type: OutputType) -> tuple[OutputType, dict[str, Any]]:
-        generator = create_output_generator(output_type, chatter)
-        content = await generator.generate(context=context, prompt=payload.prompt or "")
-        mapped = _map_citations(content, citation_map, fallback_citations)
-        return output_type, mapped
-
-    results = await asyncio.gather(*[_generate_output(output_type) for output_type in output_types])
-    outputs: list[Output] = []
-    for output_type, content in results:
-        db_output = Output(
-            notebook_id=notebook_id,
-            type=output_type,
-            prompt=payload.prompt,
-            chunk_ids=resolved_chunk_ids or None,
-            content=content,
-        )
-        session.add(db_output)
-        outputs.append(db_output)
-
+    db_output = Output(
+        notebook_id=notebook_id,
+        type=output_type,
+        prompt=payload.prompt,
+        chunk_ids=resolved_chunk_ids or None,
+        content=mapped,
+    )
+    session.add(db_output)
     await session.commit()
-    for db_output in outputs:
-        await session.refresh(db_output)
+    await session.refresh(db_output)
 
-    return OutputBatchResponse(outputs=[OutputRead.model_validate(item) for item in outputs])
+    return OutputRead.model_validate(db_output)
 
 
 @router.get("", response_model=list[OutputRead])

@@ -16,7 +16,6 @@ from .config import ConfigManager, Settings
 from .db import create_all, create_db_manager
 from .api import (
     analysis_router,
-    audio_overview_router,
     messages_router,
     notebooks_router,
     outputs_router,
@@ -26,7 +25,7 @@ from .api import (
     sources_router,
     suggestions_router,
     tasks_router,
-    video_overview_router,
+    workspace_tools_router,
 )
 from .tasks import TaskQueue
 from .vector_storage import VectorStore, create_vector_store
@@ -124,16 +123,15 @@ def create_app(
         return HTMLResponse(rendered)
 
     app.include_router(notebooks_router)
-    app.include_router(audio_overview_router)
     app.include_router(analysis_router)
     app.include_router(qa_router)
     app.include_router(outputs_router)
     app.include_router(refine_router)
-    app.include_router(video_overview_router)
     app.include_router(sessions_router)
     app.include_router(messages_router)
     app.include_router(sources_router)
     app.include_router(suggestions_router)
     app.include_router(tasks_router)
+    app.include_router(workspace_tools_router)
 
     return app

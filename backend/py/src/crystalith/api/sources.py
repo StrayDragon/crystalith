@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import datetime
-from time import perf_counter
+import urllib.parse
 from enum import StrEnum
+from time import perf_counter
 from typing import Any, Iterable
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -11,12 +12,19 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from crystalith.ai.interfaces import EmbeddingProvider
+from crystalith.ai.interfaces import ChatProvider, EmbeddingProvider
+from crystalith.ai.types import ChatMessage
 from crystalith.db import Chunk, Notebook, Source, SourceStatus
 from crystalith.parsers import Parser, ParserFactory, TranscriptionProvider, UnsupportedDocumentError
 from crystalith.vector_storage import VectorStore
 
-from .deps import get_db_session, get_embedding_provider, get_transcription_provider, get_vector_store
+from .deps import (
+    get_chat_provider,
+    get_db_session,
+    get_embedding_provider,
+    get_transcription_provider,
+    get_vector_store,
+)
 
 
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/sources", tags=["sources"])
@@ -81,6 +89,63 @@ class SourceSearchResponse(BaseModel):
     results: list[SourceSearchResult]
     message: str | None = None
     created_at: datetime.datetime
+
+
+SEARCH_SUMMARY_SYSTEM_PROMPT = (
+    "You are a research assistant. Provide a concise summary of the query and a suggested "
+    "next step. Keep it within 2 sentences."
+)
+
+
+def _build_stub_results(query: str, engine: str, message: str | None) -> list[SourceSearchResult]:
+    # TODO: Replace stubbed results with real search integration.
+    slug = urllib.parse.quote_plus(query)
+    snippet = message or "基于当前查询生成的候选来源摘要。"
+    return [
+        SourceSearchResult(
+            title=f"{query} 综述",
+            url=f"https://example.com/search?q={slug}",
+            snippet=snippet,
+            source=engine,
+        ),
+        SourceSearchResult(
+            title=f"{query} 关键观点整理",
+            url=f"https://example.com/articles/{slug}",
+            snippet=snippet,
+            source=engine,
+        ),
+        SourceSearchResult(
+            title=f"{query} 实践案例",
+            url=f"https://example.com/cases/{slug}",
+            snippet=snippet,
+            source=engine,
+        ),
+    ]
+
+
+async def _generate_search_message(
+    *,
+    chatter: ChatProvider,
+    query: str,
+    mode: str,
+    engine: str,
+) -> str:
+    prompt = (
+        f"Query: {query}\n"
+        f"Mode: {mode}\n"
+        f"Engine: {engine}\n"
+        "Respond with a brief summary and a suggested next step."
+    )
+    try:
+        response = await chatter.chat(
+            [
+                ChatMessage(role="system", content=SEARCH_SUMMARY_SYSTEM_PROMPT),
+                ChatMessage(role="user", content=prompt),
+            ]
+        )
+    except Exception:
+        return ""
+    return " ".join(response.strip().split())
 
 
 def _resolve_parser(file: UploadFile, transcriber: TranscriptionProvider) -> Parser:
@@ -154,19 +219,27 @@ async def search_sources(
     notebook_id: int,
     payload: SourceSearchRequest,
     session: AsyncSession = Depends(get_db_session),
+    chatter: ChatProvider = Depends(get_chat_provider),
 ) -> SourceSearchResponse:
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
 
     created_at = datetime.datetime.now(datetime.UTC)
+    message = await _generate_search_message(
+        chatter=chatter,
+        query=payload.query,
+        mode=payload.mode,
+        engine=payload.engine,
+    )
+    results = _build_stub_results(payload.query, payload.engine, message)
     return SourceSearchResponse(
-        status=SourceSearchStatus.NOT_IMPLEMENTED,
+        status=SourceSearchStatus.OK,
         query=payload.query,
         engine=payload.engine,
         mode=payload.mode,
-        results=[],
-        message="Search is not implemented yet.",
+        results=results,
+        message=message or "已生成简要搜索结果（TODO: 接入真实搜索）。",
         created_at=created_at,
     )
 

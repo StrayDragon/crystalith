@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type {
   Citation,
@@ -11,8 +11,6 @@ import type {
 } from '../types';
 import { formatOutputForCopy, formatRelativeTime, formatStructuredOutputForCopy } from '../utils';
 
-const AudioOverviewOption = lazy(() => import('./AudioOverviewOption'));
-const VideoOverviewOption = lazy(() => import('./VideoOverviewOption'));
 
 interface RefinePanelProps {
   mode: RefineMode;
@@ -509,18 +507,6 @@ export default function RefinePanel({
   const [copiedJobId, setCopiedJobId] = useState<string | null>(null);
   const [copiedOutputId, setCopiedOutputId] = useState<number | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | number | null>(null);
-  const audioOverviewFallback = (
-    <button type="button" className="RefineMode isDisabled" aria-hidden="true" tabIndex={-1}>
-      音频概述
-      <span className="RefineModeBadge">即将推出</span>
-    </button>
-  );
-  const videoOverviewFallback = (
-    <button type="button" className="RefineMode isDisabled" aria-hidden="true" tabIndex={-1}>
-      视频概述
-      <span className="RefineModeBadge">即将推出</span>
-    </button>
-  );
   const normalizedPrompt = prompt.trim();
   const activeTemplate =
     templates.find((item) => item.prompt.trim() === normalizedPrompt) ?? null;
@@ -612,16 +598,13 @@ export default function RefinePanel({
     [outputTypeOptions],
   );
   const studioTiles = useMemo(
-    () => [
-      { id: 'AUDIO', label: '音频概览', description: '即将推出', disabled: true, badge: '即将推出' },
-      { id: 'VIDEO', label: '视频概览', description: '即将推出', disabled: true, badge: '即将推出' },
-      ...outputTypeOptions.map((option) => ({
+    () =>
+      outputTypeOptions.map((option) => ({
         id: option.id,
         label: option.label,
         description: option.description,
         type: option.id,
       })),
-    ],
     [outputTypeOptions],
   );
   const outputHistory = useMemo<OutputHistoryItem[]>(() => {
@@ -1320,12 +1303,6 @@ export default function RefinePanel({
               {item.label}
             </button>
           ))}
-          <Suspense fallback={audioOverviewFallback}>
-            <AudioOverviewOption />
-          </Suspense>
-          <Suspense fallback={videoOverviewFallback}>
-            <VideoOverviewOption />
-          </Suspense>
         </div>
         <div className="RefineActions">
           <button

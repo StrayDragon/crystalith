@@ -150,39 +150,49 @@ def _assert_citations(content: dict, output_type: OutputType) -> None:
 async def test_outputs_create_per_type(test_client: AsyncClient, output_type: OutputType) -> None:
     notebook_id = await _create_notebook_with_source(test_client)
     response = await test_client.post(
-        f"/v1/notebooks/{notebook_id}/outputs",
-        json={"type": output_type.value, "prompt": "summarize"},
+        f"/v1/notebooks/{notebook_id}/outputs/{output_type.value}",
+        json={"prompt": "summarize"},
     )
     assert response.status_code == 201
     payload = response.json()
-    outputs = payload["outputs"]
-    assert outputs[0]["type"] == output_type.value
-    _assert_citations(outputs[0]["content"], output_type)
+    assert payload["type"] == output_type.value
+    _assert_citations(payload["content"], output_type)
 
 
 @pytest.mark.asyncio
-async def test_outputs_create_batch(test_client: AsyncClient) -> None:
+async def test_outputs_create_multiple(test_client: AsyncClient) -> None:
     notebook_id = await _create_notebook_with_source(test_client)
-    response = await test_client.post(
-        f"/v1/notebooks/{notebook_id}/outputs",
-        json={"types": [OutputType.FAQ.value, OutputType.GUIDE.value], "prompt": "summarize"},
+    faq_response = await test_client.post(
+        f"/v1/notebooks/{notebook_id}/outputs/{OutputType.FAQ.value}",
+        json={"prompt": "summarize"},
     )
-    assert response.status_code == 201
-    payload = response.json()
-    types = [item["type"] for item in payload["outputs"]]
-    assert types == [OutputType.FAQ.value, OutputType.GUIDE.value]
-    for item in payload["outputs"]:
-        _assert_citations(item["content"], OutputType(item["type"]))
+    guide_response = await test_client.post(
+        f"/v1/notebooks/{notebook_id}/outputs/{OutputType.GUIDE.value}",
+        json={"prompt": "summarize"},
+    )
+    assert faq_response.status_code == 201
+    assert guide_response.status_code == 201
+    faq_payload = faq_response.json()
+    guide_payload = guide_response.json()
+    assert faq_payload["type"] == OutputType.FAQ.value
+    assert guide_payload["type"] == OutputType.GUIDE.value
+    _assert_citations(faq_payload["content"], OutputType.FAQ)
+    _assert_citations(guide_payload["content"], OutputType.GUIDE)
 
 
 @pytest.mark.asyncio
 async def test_outputs_list(test_client: AsyncClient) -> None:
     notebook_id = await _create_notebook_with_source(test_client)
-    created = await test_client.post(
-        f"/v1/notebooks/{notebook_id}/outputs",
-        json={"types": [OutputType.FAQ.value, OutputType.TIMELINE.value], "prompt": "summarize"},
+    faq = await test_client.post(
+        f"/v1/notebooks/{notebook_id}/outputs/{OutputType.FAQ.value}",
+        json={"prompt": "summarize"},
     )
-    assert created.status_code == 201
+    timeline = await test_client.post(
+        f"/v1/notebooks/{notebook_id}/outputs/{OutputType.TIMELINE.value}",
+        json={"prompt": "summarize"},
+    )
+    assert faq.status_code == 201
+    assert timeline.status_code == 201
 
     response = await test_client.get(f"/v1/notebooks/{notebook_id}/outputs")
     assert response.status_code == 200
