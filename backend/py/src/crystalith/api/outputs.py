@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from crystalith.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.db import Chunk, Notebook, Output, Source
 from crystalith.outputs import OutputType, create_output_generator
+from crystalith.schemas.citations import Citation
 from crystalith.vector_storage import VectorSearchResult, VectorStore
 
 from .deps import get_chat_provider, get_db_session, get_embedding_provider, get_vector_store
@@ -49,19 +50,6 @@ class OutputCreateRequest(BaseModel):
             return None
         cleaned = " ".join(value.strip().split())
         return cleaned or None
-
-
-class OutputCitation(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    source_id: int
-    source_name: str
-    chunk_id: int
-    chunk_index: int
-    page_number: int | None
-    paragraph_index: int | None
-    snippet: str
-    score: float
 
 
 class OutputRead(BaseModel):
@@ -116,9 +104,9 @@ def _extract_paragraph_index(chunk: Chunk) -> int | None:
     return paragraph_index if isinstance(paragraph_index, int) else None
 
 
-def _build_citation(chunk: Chunk, source: Source, score: float) -> OutputCitation:
+def _build_citation(chunk: Chunk, source: Source, score: float) -> Citation:
     snippet = chunk.text.strip()[:200]
-    return OutputCitation(
+    return Citation(
         source_id=source.id,
         source_name=source.filename,
         chunk_id=chunk.id,
@@ -146,10 +134,10 @@ def _resolve_citation_indices(value: Any) -> list[int]:
 
 def _resolve_citations(
     indices: list[int],
-    citation_map: dict[int, OutputCitation],
-    fallback: list[OutputCitation],
+    citation_map: dict[int, Citation],
+    fallback: list[Citation],
 ) -> list[dict[str, Any]]:
-    resolved: list[OutputCitation] = []
+    resolved: list[Citation] = []
     for index in indices:
         citation = citation_map.get(index)
         if citation is not None:
@@ -161,8 +149,8 @@ def _resolve_citations(
 
 def _map_citations(
     payload: Any,
-    citation_map: dict[int, OutputCitation],
-    fallback: list[OutputCitation],
+    citation_map: dict[int, Citation],
+    fallback: list[Citation],
 ) -> Any:
     if isinstance(payload, dict):
         mapped: dict[str, Any] = {}
@@ -185,7 +173,7 @@ async def _resolve_context(
     session: AsyncSession,
     embedder: EmbeddingProvider,
     vector_store: VectorStore,
-) -> tuple[str, list[OutputCitation], list[int]]:
+) -> tuple[str, list[Citation], list[int]]:
     explicit_chunk_ids = [int(value) for value in (payload.chunk_ids or []) if int(value) > 0]
     if explicit_chunk_ids:
         rows = await session.execute(
@@ -200,7 +188,10 @@ async def _resolve_context(
         if missing:
             raise HTTPException(status_code=400, detail="Unknown chunk_id in chunk_ids")
 
-        citations = [_build_citation(chunk_map[chunk_id][0], chunk_map[chunk_id][1], 1.0) for chunk_id in explicit_chunk_ids]
+        citations = [
+            _build_citation(chunk_map[chunk_id][0], chunk_map[chunk_id][1], 1.0)
+            for chunk_id in explicit_chunk_ids
+        ]
         context = _format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
         return context, citations, explicit_chunk_ids
 
@@ -226,7 +217,7 @@ async def _resolve_context(
     )
     chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
 
-    citations: list[OutputCitation] = []
+    citations: list[Citation] = []
     for result in results:
         chunk, source = chunk_map[result.entry.chunk_id]
         citations.append(_build_citation(chunk, source, result.score))

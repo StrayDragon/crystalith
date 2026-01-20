@@ -12,6 +12,14 @@
   @apply flex flex-col gap-3 p-4;
 }
 
+@media (min-width: 1024px) {
+  .WorkspaceApp {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+}
+
 .WorkspaceApp button:focus-visible,
 .WorkspaceApp input:focus-visible,
 .WorkspaceApp textarea:focus-visible,
@@ -263,6 +271,14 @@
   @apply h-4 w-4;
 }
 
+.SourcesSearchButton:disabled {
+  @apply opacity-60 cursor-not-allowed;
+}
+
+.SourcesSearchHint {
+  @apply text-xs text-slate-500;
+}
+
 .SourcesSelectAll {
   @apply flex items-center justify-between text-xs text-slate-500;
 }
@@ -430,7 +446,7 @@
 
 .StudioGrid {
   @apply grid gap-3;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
 }
 
 .StudioTile {

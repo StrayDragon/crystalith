@@ -70,6 +70,7 @@ export default function WorkspaceLayout() {
   const chat = useChat({
     ensureSession: sessions.ensureSession,
     refreshSessions: sessions.refreshSessions,
+    enableSuggestions: false,
   });
   const refine = useRefine();
 
@@ -202,6 +203,9 @@ export default function WorkspaceLayout() {
             onSourceClick={handleSourceClick}
             onUpload={sources.handleUpload}
             uploadState={sources.uploadState}
+            searchState={sources.searchState}
+            searchNotice={sources.searchNotice}
+            onSearch={sources.handleSearch}
             isDemo={sources.isDemo}
             error={sources.error || notebooks.notebooksError}
             isLoading={sources.isLoading}

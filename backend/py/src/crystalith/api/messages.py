@@ -33,7 +33,7 @@ async def create_message(
         session_id=session_id,
         role=payload.role,
         content=payload.content,
-        citations=payload.citations,
+        citations=[item.model_dump() for item in payload.citations] if payload.citations else None,
     )
     db_session.updated_at = datetime.datetime.now(datetime.UTC)
     session.add(message)

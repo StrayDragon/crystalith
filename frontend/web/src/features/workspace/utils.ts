@@ -246,8 +246,8 @@ export function normalizeSession(row: ApiSession): SessionSummary {
 }
 
 export function normalizeMessage(row: ApiMessage): ChatMessage {
-  const citations = Array.isArray(row.citations?.items)
-    ? row.citations?.items?.map(normalizeCitation)
+  const citations = Array.isArray(row.citations)
+    ? row.citations.map(normalizeCitation)
     : [];
   return {
     id: `${row.id}`,

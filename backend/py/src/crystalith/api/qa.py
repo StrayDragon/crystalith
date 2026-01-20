@@ -13,6 +13,7 @@ from crystalith.ai.types import ChatMessage
 from crystalith.config import Settings
 from crystalith.context import ContextStats, ContextWindow, TokenCounter
 from crystalith.db import Chunk, Message, Notebook, Session, Source, SourceStatus
+from crystalith.schemas.citations import Citation
 from crystalith.vector_storage import VectorSearchResult, VectorStore
 
 from .deps import (
@@ -34,19 +35,6 @@ class QARequest(BaseModel):
     session_id: int | None = None
 
 
-class QACitation(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    source_id: int
-    source_name: str
-    chunk_id: int
-    chunk_index: int
-    page_number: int | None
-    paragraph_index: int | None
-    snippet: str
-    score: float
-
-
 class ContextStatsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -61,7 +49,7 @@ class ContextStatsResponse(BaseModel):
 
 class QAResponse(BaseModel):
     answer: str
-    citations: list[QACitation]
+    citations: list[Citation]
     evidence: bool
     confidence: float
     created_at: datetime.datetime
@@ -121,7 +109,7 @@ def _extract_paragraph_index(chunk: Chunk) -> int | None:
     return paragraph_index if isinstance(paragraph_index, int) else None
 
 
-def _ensure_inline_citations(answer: str, citations: list[QACitation]) -> str:
+def _ensure_inline_citations(answer: str, citations: list[Citation]) -> str:
     if not citations:
         return answer
     if "[" in answer and "]" in answer:
@@ -161,7 +149,7 @@ async def ask_question(
 
     async def _persist_session_messages(
         answer: str,
-        citations: list[QACitation],
+        citations: list[Citation],
         created_at: datetime.datetime,
     ) -> None:
         if db_session is None:
@@ -182,7 +170,7 @@ async def ask_question(
                 session_id=db_session.id,
                 role="assistant",
                 content=answer,
-                citations={"items": [citation.model_dump() for citation in citations]},
+                citations=[citation.model_dump() for citation in citations],
             )
         )
         await session.commit()
@@ -286,12 +274,12 @@ async def ask_question(
             context=ContextStatsResponse.model_validate(stats),
         )
 
-    citations: list[QACitation] = []
+    citations: list[Citation] = []
     for result in valid_results:
         chunk, source = chunk_map[result.entry.chunk_id]
         snippet = chunk.text.strip()[:200]
         citations.append(
-            QACitation(
+            Citation(
                 source_id=source.id,
                 source_name=source.filename,
                 chunk_id=chunk.id,

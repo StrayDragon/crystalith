@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 
-import { listSources, uploadSource } from '../api';
+import type { AsyncStatus } from '../../../shared/types';
+import { listSources, searchSources, uploadSource } from '../api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
 import type { ApiSource } from '../types';
 import { normalizeSource } from '../utils';
@@ -10,6 +11,8 @@ export function useSources() {
   const state = useWorkspaceState();
   const dispatch = useWorkspaceDispatch();
   const isDemo = state.connectionState === 'demo';
+  const [searchState, setSearchState] = useState<AsyncStatus>('idle');
+  const [searchNotice, setSearchNotice] = useState('');
   const demoSources = useMemo<ApiSource[]>(
     () => [
       {
@@ -78,6 +81,11 @@ export function useSources() {
   useEffect(() => {
     dispatch({ type: 'SET_HOVERED_CITATION', payload: null });
   }, [dispatch, state.citations]);
+
+  useEffect(() => {
+    setSearchState('idle');
+    setSearchNotice('');
+  }, [state.activeNotebookId]);
 
   useEffect(() => {
     if (state.jumpToCitationChunkId == null) return undefined;
@@ -237,6 +245,45 @@ export function useSources() {
     await mutate();
   }, [dispatch, mutate]);
 
+  const handleSearch = useCallback(
+    async ({ query, engine, mode }: { query: string; engine: string; mode: string }) => {
+      if (isDemo) {
+        setSearchNotice('演示模式暂不支持搜索。');
+        return;
+      }
+      if (!state.activeNotebookId) {
+        setSearchNotice('请先创建笔记本后搜索。');
+        return;
+      }
+      const trimmed = query.trim();
+      if (!trimmed) {
+        setSearchNotice('请输入搜索关键词。');
+        return;
+      }
+      setSearchState('loading');
+      setSearchNotice('');
+      try {
+        const response = await searchSources(state.activeNotebookId, {
+          query: trimmed,
+          engine,
+          mode,
+        });
+        if (response.status === 'not_implemented') {
+          setSearchNotice(response.message || '搜索功能暂未开放。');
+        } else if (response.results.length === 0) {
+          setSearchNotice('没有找到匹配结果。');
+        } else {
+          setSearchNotice(`已找到 ${response.results.length} 条结果（暂未展示）。`);
+        }
+      } catch (error) {
+        setSearchNotice('搜索失败，请稍后重试。');
+      } finally {
+        setSearchState('idle');
+      }
+    },
+    [isDemo, state.activeNotebookId],
+  );
+
   const copySelectedCitations = useCallback(async () => {
     const selected = state.citations.filter(
       (citation) => state.selectedCitationIds[citation.id],
@@ -294,6 +341,9 @@ export function useSources() {
     copySelectedCitations,
     handleUpload,
     retrySources,
+    searchState,
+    searchNotice,
+    handleSearch,
     isDemo,
   };
 }
