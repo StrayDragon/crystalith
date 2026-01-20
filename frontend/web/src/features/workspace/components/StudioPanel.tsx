@@ -1,7 +1,19 @@
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 
 import type { OutputItem, OutputTypeId, WorkspaceTool } from '../types';
 import { formatRelativeTime } from '../utils';
+import {
+  IconBriefing,
+  IconEdit,
+  IconFAQ,
+  IconGuide,
+  IconMindmap,
+  IconMoreHorizontal,
+  IconQuiz,
+  IconSave,
+  IconSpinner,
+  IconTimeline,
+} from './Icons';
 
 interface StudioPanelProps {
   tools: WorkspaceTool[];
@@ -137,83 +149,24 @@ function resolveTypeLabel(type: OutputTypeId, labels: Map<OutputTypeId, string>)
 
 function renderPendingIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="StudioNoteSpinner">
-      <path
-        d="M4.5 12a7.5 7.5 0 0 1 12.7-5.3l1.3-1.2V9h-4l2-1.9A5.5 5.5 0 1 0 6.5 12h-2Z"
-        fill="currentColor"
-      />
-      <path
-        d="M19.5 12a7.5 7.5 0 0 1-12.7 5.3l-1.3 1.2V15h4l-2 1.9A5.5 5.5 0 1 0 17.5 12h2Z"
-        fill="currentColor"
-      />
-    </svg>
+    <IconSpinner className="StudioNoteSpinner" aria-hidden="true" focusable="false" />
   );
 }
 
 function renderToolIcon(type: OutputTypeId) {
   switch (type) {
     case 'MINDMAP':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <circle cx="6" cy="6" r="2" fill="currentColor" />
-          <circle cx="18" cy="6" r="2" fill="currentColor" />
-          <circle cx="12" cy="18" r="2" fill="currentColor" />
-          <path
-            d="M8 6h8M12 8v7M9.5 15.5 12 18l2.5-2.5"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        </svg>
-      );
+      return <IconMindmap aria-hidden="true" focusable="false" />;
     case 'BRIEFING':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path
-            d="M7 5h7l3 3v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            fill="none"
-          />
-          <path d="M14 5v3h3" stroke="currentColor" strokeWidth="1.6" fill="none" />
-          <path d="M9 12h6M9 16h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-        </svg>
-      );
+      return <IconBriefing aria-hidden="true" focusable="false" />;
     case 'FAQ':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <rect x="6" y="6" width="12" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" fill="none" />
-          <path d="M9 9h6M9 12h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-        </svg>
-      );
+      return <IconFAQ aria-hidden="true" focusable="false" />;
     case 'QUIZ':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <circle cx="12" cy="12" r="7" stroke="currentColor" strokeWidth="1.6" fill="none" />
-          <path d="m9 12.5 2 2 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      );
+      return <IconQuiz aria-hidden="true" focusable="false" />;
     case 'GUIDE':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path
-            d="M6 6h8a3 3 0 0 1 3 3v9a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3V9a3 3 0 0 1 3-3Z"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            fill="none"
-          />
-          <path d="M8 9h6M8 12h5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-        </svg>
-      );
+      return <IconGuide aria-hidden="true" focusable="false" />;
     case 'TIMELINE':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <circle cx="12" cy="12" r="7" stroke="currentColor" strokeWidth="1.6" fill="none" />
-          <path d="M12 8v4l3 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      );
+      return <IconTimeline aria-hidden="true" focusable="false" />;
     default:
       return null;
   }
@@ -222,20 +175,12 @@ function renderToolIcon(type: OutputTypeId) {
 function renderNoteIcon(type: OutputTypeId) {
   return (
     renderToolIcon(type) ?? (
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path
-          d="M7 5h7l3 3v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          fill="none"
-        />
-        <path d="M14 5v3h3" stroke="currentColor" strokeWidth="1.4" fill="none" />
-      </svg>
+      <IconSave aria-hidden="true" focusable="false" />
     )
   );
 }
 
-export default function StudioPanel({
+function StudioPanel({
   tools,
   outputs,
   outputQueueJobs,
@@ -321,12 +266,7 @@ export default function StudioPanel({
                 {tool.badge ? <span className="StudioTile__badge">{tool.badge}</span> : null}
               </span>
               <span className="StudioTile__edit" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <path
-                    d="M6 16.5V18h1.5l7.9-7.9-1.5-1.5L6 16.5Zm9.9-9.9 1.5 1.5 1-1a1 1 0 0 0 0-1.5l-.5-.5a1 1 0 0 0-1.5 0l-1 1Z"
-                    fill="currentColor"
-                  />
-                </svg>
+                <IconEdit focusable="false" />
               </span>
             </button>
           );
@@ -401,11 +341,7 @@ export default function StudioPanel({
                     </span>
                   </button>
                   <button type="button" className="StudioNoteMenu" aria-label="更多操作">
-                    <svg viewBox="0 0 24 24" focusable="false">
-                      <circle cx="6" cy="12" r="1.5" fill="currentColor" />
-                      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-                      <circle cx="18" cy="12" r="1.5" fill="currentColor" />
-                    </svg>
+                    <IconMoreHorizontal focusable="false" />
                   </button>
                 </div>
               );
@@ -432,3 +368,5 @@ export default function StudioPanel({
     </div>
   );
 }
+
+export default memo(StudioPanel);

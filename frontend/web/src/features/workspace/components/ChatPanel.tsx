@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import type { RefObject } from 'react';
 
 import type { ChatMessage, Citation, SuggestionItem } from '../types';
 import CitationMark from './citations/CitationMark';
 import SuggestionPanel from './SuggestionPanel';
+import { IconCopy, IconFeedback, IconSave, IconSend } from './Icons';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -26,7 +27,7 @@ interface ChatPanelProps {
   onApplySuggestion: (text: string) => void;
 }
 
-export default function ChatPanel({
+function ChatPanel({
   messages,
   draft,
   onDraftChange,
@@ -141,45 +142,19 @@ export default function ChatPanel({
         <div className="ChatActionRow" aria-label="对话操作">
           <button type="button" className="ChatActionButton">
             <span aria-hidden="true">
-              <svg viewBox="0 0 24 24" focusable="false">
-                <path
-                  d="M7 5h7l3 3v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  fill="none"
-                />
-                <path d="M14 5v3h3" stroke="currentColor" strokeWidth="1.4" fill="none" />
-              </svg>
+              <IconSave />
             </span>
             保存到笔记
           </button>
           <button type="button" className="ChatActionButton">
             <span aria-hidden="true">
-              <svg viewBox="0 0 24 24" focusable="false">
-                <path
-                  d="M8 8h8v10H8V8Zm-2 8V6a2 2 0 0 1 2-2h8"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              </svg>
+              <IconCopy />
             </span>
             复制
           </button>
           <button type="button" className="ChatActionButton">
             <span aria-hidden="true">
-              <svg viewBox="0 0 24 24" focusable="false">
-                <path
-                  d="M7 10h10v7H7v-7Zm2-3h6v3H9V7Z"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              </svg>
+              <IconFeedback />
             </span>
             反馈
           </button>
@@ -227,18 +202,12 @@ export default function ChatPanel({
             aria-label="发送"
             disabled={draft.trim().length === 0 || isSending || isBlocked}
           >
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path
-                d="M5 12h13m0 0-4-4m4 4-4 4"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <IconSend />
           </button>
         </div>
       </form>
     </div>
   );
 }
+
+export default memo(ChatPanel);
