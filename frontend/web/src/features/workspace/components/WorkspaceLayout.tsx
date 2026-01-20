@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import ChatPanel from './ChatPanel';
 import SourcesPanel from './SourcesPanel';
 import StudioPanel from './StudioPanel';
+import StudioOutputViewer from './StudioOutputViewer';
 import WorkspaceHeader from './WorkspaceHeader';
 import { useWorkspaceState } from '../context/WorkspaceContext';
 import { useChat } from '../hooks/useChat';
@@ -56,6 +57,9 @@ export default function WorkspaceLayout() {
   const state = useWorkspaceState();
   const [pendingChatFocus, setPendingChatFocus] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [isViewerFullscreen, setIsViewerFullscreen] = useState(false);
+  const [viewerOutputId, setViewerOutputId] = useState<number | null>(null);
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const mainRef = useRef<HTMLElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
@@ -70,7 +74,7 @@ export default function WorkspaceLayout() {
   const chat = useChat({
     ensureSession: sessions.ensureSession,
     refreshSessions: sessions.refreshSessions,
-    enableSuggestions: false,
+    enableSuggestions: true,
   });
   const refine = useRefine();
 
@@ -167,6 +171,38 @@ export default function WorkspaceLayout() {
     void sources.retrySources();
   }, [notebooks.notebooksError, notebooks.retryNotebooks, sources.retrySources]);
 
+  const handleOpenOutputViewer = useCallback((outputId: number) => {
+    setViewerOutputId(outputId);
+    setIsViewerOpen(true);
+    setIsViewerFullscreen(false);
+  }, []);
+
+  const handleCloseOutputViewer = useCallback(() => {
+    setIsViewerOpen(false);
+    setIsViewerFullscreen(false);
+  }, []);
+
+  const handleToggleOutputViewer = useCallback(() => {
+    setIsViewerFullscreen((prev) => !prev);
+  }, []);
+
+  const handleSelectOutput = useCallback((outputId: number) => {
+    setViewerOutputId(outputId);
+  }, []);
+
+  useEffect(() => {
+    if (!isViewerOpen) return;
+    if (refine.outputs.length === 0) {
+      setIsViewerOpen(false);
+      setViewerOutputId(null);
+      return;
+    }
+    if (viewerOutputId && refine.outputs.some((item) => item.id === viewerOutputId)) {
+      return;
+    }
+    setViewerOutputId(refine.outputs[0].id);
+  }, [isViewerOpen, refine.outputs, viewerOutputId]);
+
   const activeNotebook =
     notebooks.notebooks.find((item) => item.id === notebooks.activeNotebookId) ?? null;
   const isDemo = notebooks.connectionState === 'demo';
@@ -177,7 +213,15 @@ export default function WorkspaceLayout() {
 
   return (
     <div className="WorkspaceApp">
-      <WorkspaceHeader title={title} />
+      <WorkspaceHeader
+        title={title}
+        createName={notebooks.createName}
+        createState={notebooks.createState}
+        createError={notebooks.createError}
+        isDemo={notebooks.isDemo}
+        onCreateNameChange={notebooks.setCreateName}
+        onCreateNotebook={notebooks.createNotebook}
+      />
 
       <main
         ref={mainRef}
@@ -205,6 +249,7 @@ export default function WorkspaceLayout() {
             uploadState={sources.uploadState}
             searchState={sources.searchState}
             searchNotice={sources.searchNotice}
+            searchResults={sources.searchResults}
             onSearch={sources.handleSearch}
             isDemo={sources.isDemo}
             error={sources.error || notebooks.notebooksError}
@@ -270,6 +315,11 @@ export default function WorkspaceLayout() {
             isLoadingMessages={state.loading.messages}
             messagesError={state.errors.messages}
             onRetryMessages={chat.retryMessages}
+            suggestions={chat.suggestions}
+            suggestionsLoading={chat.suggestionsLoading}
+            suggestionsError={chat.suggestionsError}
+            onRefreshSuggestions={chat.refreshSuggestions}
+            onApplySuggestion={chat.applySuggestion}
           />
         </section>
 
@@ -304,15 +354,28 @@ export default function WorkspaceLayout() {
             </button>
           </div>
           <StudioPanel
+            tools={refine.tools}
             outputs={refine.outputs}
             outputsLoading={refine.outputsLoading}
             outputsError={refine.outputsError}
             onRetryOutputs={refine.retryOutputs}
             onGenerateOutput={refine.onGenerateOutput}
+            onSelectOutput={handleOpenOutputViewer}
+            recentOutputJobId={refine.recentOutputJobId}
             isDemo={isDemo}
           />
         </section>
       </main>
+
+      <StudioOutputViewer
+        outputs={refine.outputs}
+        selectedOutputId={viewerOutputId}
+        isOpen={isViewerOpen}
+        isFullscreen={isViewerFullscreen}
+        onClose={handleCloseOutputViewer}
+        onToggleFullscreen={handleToggleOutputViewer}
+        onSelectOutput={handleSelectOutput}
+      />
     </div>
   );
 }
