@@ -137,6 +137,23 @@ export default function SourcesPanel({
               handleSearch();
             }}
           />
+          <button
+            type="button"
+            className="SourcesSearchButton"
+            aria-label="开始搜索"
+            onClick={handleSearch}
+            disabled={isSearching}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path
+                d="M8 12h8m0 0-3-3m3 3-3 3"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
         </div>
         <select
           className="SourcesSearchSelect"
@@ -157,23 +174,6 @@ export default function SourcesPanel({
           <option>Fast Research</option>
           <option>Deep Research</option>
         </select>
-        <button
-          type="button"
-          className="SourcesSearchButton"
-          aria-label="开始搜索"
-          onClick={handleSearch}
-          disabled={isSearching}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path
-              d="M8 12h8m0 0-3-3m3 3-3 3"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
       </div>
 
       {isSearching ? (

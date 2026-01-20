@@ -289,8 +289,8 @@
 }
 
 .SourcesSearchButton {
-  @apply inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition hover:bg-slate-800 cursor-pointer;
-  flex: 0 0 36px;
+  @apply inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition hover:bg-slate-800 cursor-pointer;
+  flex: 0 0 auto;
 }
 
 .SourcesSearchButton svg {
