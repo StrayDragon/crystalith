@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import urllib.parse
 from enum import StrEnum
 from time import perf_counter
 from typing import Any, Iterable
@@ -12,16 +11,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from crystalith.ai.interfaces import ChatProvider, EmbeddingProvider
-from crystalith.ai.types import ChatMessage
+from crystalith.ai.interfaces import EmbeddingProvider
+from crystalith.agents.deps import StudioDeps
+from crystalith.agents.search_graph import SearchState, run_search_graph
+from crystalith.config import Settings
 from crystalith.db import Chunk, Notebook, Source, SourceStatus
 from crystalith.parsers import Parser, ParserFactory, TranscriptionProvider, UnsupportedDocumentError
 from crystalith.vector_storage import VectorStore
 
 from .deps import (
-    get_chat_provider,
     get_db_session,
     get_embedding_provider,
+    get_settings,
     get_transcription_provider,
     get_vector_store,
 )
@@ -91,61 +92,6 @@ class SourceSearchResponse(BaseModel):
     created_at: datetime.datetime
 
 
-SEARCH_SUMMARY_SYSTEM_PROMPT = (
-    "You are a research assistant. Provide a concise summary of the query and a suggested "
-    "next step. Keep it within 2 sentences."
-)
-
-
-def _build_stub_results(query: str, engine: str, message: str | None) -> list[SourceSearchResult]:
-    # TODO: Replace stubbed results with real search integration.
-    slug = urllib.parse.quote_plus(query)
-    snippet = message or "基于当前查询生成的候选来源摘要。"
-    return [
-        SourceSearchResult(
-            title=f"{query} 综述",
-            url=f"https://example.com/search?q={slug}",
-            snippet=snippet,
-            source=engine,
-        ),
-        SourceSearchResult(
-            title=f"{query} 关键观点整理",
-            url=f"https://example.com/articles/{slug}",
-            snippet=snippet,
-            source=engine,
-        ),
-        SourceSearchResult(
-            title=f"{query} 实践案例",
-            url=f"https://example.com/cases/{slug}",
-            snippet=snippet,
-            source=engine,
-        ),
-    ]
-
-
-async def _generate_search_message(
-    *,
-    chatter: ChatProvider,
-    query: str,
-    mode: str,
-    engine: str,
-) -> str:
-    prompt = (
-        f"Query: {query}\n"
-        f"Mode: {mode}\n"
-        f"Engine: {engine}\n"
-        "Respond with a brief summary and a suggested next step."
-    )
-    try:
-        response = await chatter.chat(
-            [
-                ChatMessage(role="system", content=SEARCH_SUMMARY_SYSTEM_PROMPT),
-                ChatMessage(role="user", content=prompt),
-            ]
-        )
-    except Exception:
-        return ""
-    return " ".join(response.strip().split())
 
 
 def _resolve_parser(file: UploadFile, transcriber: TranscriptionProvider) -> Parser:
@@ -219,20 +165,31 @@ async def search_sources(
     notebook_id: int,
     payload: SourceSearchRequest,
     session: AsyncSession = Depends(get_db_session),
-    chatter: ChatProvider = Depends(get_chat_provider),
+    settings: Settings = Depends(get_settings),
+    embedder: EmbeddingProvider = Depends(get_embedding_provider),
+    vector_store: VectorStore = Depends(get_vector_store),
 ) -> SourceSearchResponse:
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
 
-    created_at = datetime.datetime.now(datetime.UTC)
-    message = await _generate_search_message(
-        chatter=chatter,
-        query=payload.query,
-        mode=payload.mode,
-        engine=payload.engine,
+    deps = StudioDeps(
+        settings=settings,
+        session=session,
+        vector_store=vector_store,
+        embedder=embedder,
     )
-    results = _build_stub_results(payload.query, payload.engine, message)
+    state: SearchState = {
+        "query": payload.query,
+        "engine": payload.engine,
+        "mode": payload.mode,
+        "deps": deps,
+    }
+    result = await run_search_graph(state)
+    message = result.get("message", "")
+    raw_results = result.get("results", [])
+    results = [SourceSearchResult.model_validate(item) for item in raw_results]
+    created_at = datetime.datetime.now(datetime.UTC)
     return SourceSearchResponse(
         status=SourceSearchStatus.OK,
         query=payload.query,
