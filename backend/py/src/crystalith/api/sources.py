@@ -92,6 +92,15 @@ class SourceSearchResponse(BaseModel):
     created_at: datetime.datetime
 
 
+class SourceBatchDeleteRequest(BaseModel):
+    source_ids: list[int] = Field(..., min_length=1)
+
+
+class SourceBatchDeleteResponse(BaseModel):
+    deleted_ids: list[int]
+    deleted_count: int
+
+
 
 
 def _resolve_parser(file: UploadFile, transcriber: TranscriptionProvider) -> Parser:
@@ -303,3 +312,33 @@ async def delete_source(
     await session.delete(source)
     await session.commit()
     await vector_store.remove_source(source_id)
+
+
+@router.post("/batch-delete", response_model=SourceBatchDeleteResponse)
+async def batch_delete_sources(
+    notebook_id: int,
+    payload: SourceBatchDeleteRequest,
+    session: AsyncSession = Depends(get_db_session),
+    vector_store: VectorStore = Depends(get_vector_store),
+) -> SourceBatchDeleteResponse:
+    notebook = await session.get(Notebook, notebook_id)
+    if notebook is None:
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
+    source_ids = list(dict.fromkeys(payload.source_ids))
+    result = await session.execute(
+        select(Source).where(Source.notebook_id == notebook_id, Source.id.in_(source_ids))
+    )
+    sources = result.scalars().all()
+    found_ids = [source.id for source in sources]
+    if len(found_ids) != len(source_ids):
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    for source in sources:
+        await session.delete(source)
+    await session.commit()
+
+    for source_id in found_ids:
+        await vector_store.remove_source(source_id)
+
+    return SourceBatchDeleteResponse(deleted_ids=found_ids, deleted_count=len(found_ids))

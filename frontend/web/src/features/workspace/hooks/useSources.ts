@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 
 import type { AsyncStatus } from '../../../shared/types';
-import { listSources, searchSources, uploadSource } from '../api';
+import { deleteSources, listSources, searchSources, uploadSource } from '../api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
 import type { ApiSource, ApiSourceSearchResult } from '../types';
 import { normalizeSource } from '../utils';
@@ -12,6 +12,7 @@ export function useSources() {
   const dispatch = useWorkspaceDispatch();
   const isDemo = state.connectionState === 'demo';
   const [searchState, setSearchState] = useState<AsyncStatus>('idle');
+  const [removeState, setRemoveState] = useState<AsyncStatus>('idle');
   const [searchNotice, setSearchNotice] = useState('');
   const [searchResults, setSearchResults] = useState<ApiSourceSearchResult[]>([]);
   const demoSources = useMemo<ApiSource[]>(
@@ -87,6 +88,7 @@ export function useSources() {
     setSearchState('idle');
     setSearchNotice('');
     setSearchResults([]);
+    setRemoveState('idle');
   }, [state.activeNotebookId]);
 
   useEffect(() => {
@@ -293,6 +295,44 @@ export function useSources() {
     [isDemo, state.activeNotebookId],
   );
 
+  const removeSources = useCallback(
+    async (sourceIds: number[]) => {
+      if (isDemo) {
+        dispatch({
+          type: 'SET_ERROR',
+          payload: { key: 'sources', value: '演示模式暂不支持删除来源。' },
+        });
+        return false;
+      }
+      if (!state.activeNotebookId) {
+        dispatch({
+          type: 'SET_ERROR',
+          payload: { key: 'sources', value: '请先创建笔记本后再删除来源。' },
+        });
+        return false;
+      }
+      if (sourceIds.length === 0) {
+        return false;
+      }
+      setRemoveState('loading');
+      dispatch({ type: 'SET_ERROR', payload: { key: 'sources', value: '' } });
+      try {
+        await deleteSources(state.activeNotebookId, sourceIds);
+        await mutate();
+        return true;
+      } catch (error) {
+        dispatch({
+          type: 'SET_ERROR',
+          payload: { key: 'sources', value: '删除失败，请稍后重试。' },
+        });
+        return false;
+      } finally {
+        setRemoveState('idle');
+      }
+    },
+    [dispatch, isDemo, mutate, state.activeNotebookId],
+  );
+
   const copySelectedCitations = useCallback(async () => {
     const selected = state.citations.filter(
       (citation) => state.selectedCitationIds[citation.id],
@@ -354,6 +394,8 @@ export function useSources() {
     searchNotice,
     searchResults,
     handleSearch,
+    removeSources,
+    removeState,
     isDemo,
   };
 }

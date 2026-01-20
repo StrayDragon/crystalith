@@ -139,6 +139,44 @@ async def test_upload_and_delete_source(
 
 
 @pytest.mark.asyncio
+async def test_batch_delete_sources(
+    test_client: tuple[AsyncClient, InMemoryVectorStore, object],
+) -> None:
+    client, vector_store, _manager = test_client
+
+    created = await client.post("/v1/notebooks", json={"name": "Notes"})
+    notebook_id = created.json()["id"]
+
+    for name in ("note-a.md", "note-b.md"):
+        upload = await client.post(
+            f"/v1/notebooks/{notebook_id}/sources",
+            files={"file": (name, b"hello world", "text/markdown")},
+        )
+        assert upload.status_code == 201
+
+    listing = await client.get(f"/v1/notebooks/{notebook_id}/sources")
+    assert listing.status_code == 200
+    sources = listing.json()
+    assert len(sources) == 2
+    assert len(vector_store) > 0
+
+    source_ids = [item["id"] for item in sources]
+    deleted = await client.post(
+        f"/v1/notebooks/{notebook_id}/sources/batch-delete",
+        json={"source_ids": source_ids},
+    )
+    assert deleted.status_code == 200
+    payload = deleted.json()
+    assert set(payload["deleted_ids"]) == set(source_ids)
+    assert payload["deleted_count"] == len(source_ids)
+
+    listing = await client.get(f"/v1/notebooks/{notebook_id}/sources")
+    assert listing.status_code == 200
+    assert listing.json() == []
+    assert len(vector_store) == 0
+
+
+@pytest.mark.asyncio
 async def test_upload_failure_marks_source_failed(
     failing_client: tuple[AsyncClient, InMemoryVectorStore],
 ) -> None:

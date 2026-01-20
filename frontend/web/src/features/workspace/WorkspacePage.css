@@ -339,7 +339,23 @@
 }
 
 .SourcesSelectAll {
-  @apply flex items-center justify-between text-xs text-slate-500;
+  @apply flex items-center justify-between gap-2 text-xs text-slate-500;
+}
+
+.SourcesSelectAllLeft {
+  @apply flex items-center gap-2;
+}
+
+.SourcesActionButton {
+  @apply inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50;
+}
+
+.SourcesActionButton:disabled {
+  @apply cursor-not-allowed opacity-50 hover:bg-white;
+}
+
+.SourcesActionButton svg {
+  @apply h-4 w-4;
 }
 
 .SourcesCheckbox {
