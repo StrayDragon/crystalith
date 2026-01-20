@@ -1,37 +1,20 @@
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
-import json
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from pydantic_ai import models
+from pydantic_ai.models.test import TestModel
 from sqlalchemy.pool import StaticPool
 
-from crystalith.api.deps import get_chat_provider, get_embedding_provider
+from crystalith.agents import suggestions_graph
+from crystalith.api.deps import get_embedding_provider
 from crystalith.app import create_app
 from crystalith.config import DatabaseSettings, Settings
 from crystalith.db import create_all, create_db_manager
 from crystalith.vector_storage import InMemoryVectorStore
-
-
-GENERATION_ITEMS = [
-    {"question": "What is the main topic?", "context": "overview"},
-    {"question": "How does A compare to B?", "context": "comparison"},
-    {"question": "What implications follow?", "context": "analysis"},
-]
-
-CLASSIFICATION_ITEMS = [
-    {"question": "What is the main topic?", "type": "factual"},
-    {"question": "How does A compare to B?", "type": "comparative"},
-    {"question": "What implications follow?", "type": "analytical"},
-]
-
-DEEP_DIVE_ITEMS = [
-    {"question": "Why does the concept matter?", "context": "deep dive"},
-    {"question": "What assumptions underpin it?", "context": "deep dive"},
-    {"question": "How would you test it?", "context": "deep dive"},
-]
 
 
 class FakeEmbeddingProvider:
@@ -42,17 +25,11 @@ class FakeEmbeddingProvider:
         return [[float(len(text)), 0.0, 1.0] for text in texts]
 
 
-class FakeChatProvider:
-    provider = "fake"
-    model = "fake"
-
-    async def chat(self, messages) -> str:
-        system_text = messages[0].content.lower()
-        if "classify" in system_text:
-            return json.dumps(CLASSIFICATION_ITEMS)
-        if "socratic" in system_text:
-            return json.dumps(DEEP_DIVE_ITEMS)
-        return json.dumps(GENERATION_ITEMS)
+@pytest.fixture(autouse=True)
+def _mock_agent_model(monkeypatch) -> None:
+    models.ALLOW_MODEL_REQUESTS = False
+    test_model = TestModel()
+    monkeypatch.setattr(suggestions_graph, "build_chat_model", lambda _settings: test_model)
 
 
 @pytest_asyncio.fixture
@@ -68,7 +45,6 @@ async def test_client() -> AsyncGenerator[AsyncClient, None]:
     vector_store = InMemoryVectorStore()
     app = create_app(settings, db_manager=manager, vector_store=vector_store)
     app.dependency_overrides[get_embedding_provider] = lambda: FakeEmbeddingProvider()
-    app.dependency_overrides[get_chat_provider] = lambda: FakeChatProvider()
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

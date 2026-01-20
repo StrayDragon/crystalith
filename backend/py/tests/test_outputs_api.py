@@ -5,9 +5,12 @@ from collections.abc import AsyncGenerator
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from pydantic_ai import models
+from pydantic_ai.models.test import TestModel
 from sqlalchemy.pool import StaticPool
 
-from crystalith.api.deps import get_chat_provider, get_embedding_provider
+from crystalith.agents import output_graph
+from crystalith.api.deps import get_embedding_provider
 from crystalith.app import create_app
 from crystalith.config import DatabaseSettings, Settings
 from crystalith.db import create_all, create_db_manager
@@ -64,6 +67,13 @@ class FakeChatProvider:
         return "{}"
 
 
+@pytest.fixture(autouse=True)
+def _mock_agent_model(monkeypatch) -> None:
+    models.ALLOW_MODEL_REQUESTS = False
+    test_model = TestModel()
+    monkeypatch.setattr(output_graph, "build_chat_model", lambda _settings: test_model)
+
+
 @pytest_asyncio.fixture
 async def test_client() -> AsyncGenerator[AsyncClient, None]:
     settings = Settings(database=DatabaseSettings(url="sqlite+aiosqlite:///:memory:"))
@@ -89,7 +99,6 @@ async def test_client() -> AsyncGenerator[AsyncClient, None]:
         task_queue=task_queue,
     )
     app.dependency_overrides[get_embedding_provider] = lambda: FakeEmbeddingProvider()
-    app.dependency_overrides[get_chat_provider] = lambda: FakeChatProvider()
     await app.state.task_queue.start_worker()
 
     transport = ASGITransport(app=app)
@@ -199,3 +208,19 @@ async def test_outputs_list(test_client: AsyncClient) -> None:
     payload = response.json()
     returned_types = {item["type"] for item in payload}
     assert {OutputType.FAQ.value, OutputType.TIMELINE.value} <= returned_types
+
+
+@pytest.mark.asyncio
+async def test_output_detail(test_client: AsyncClient) -> None:
+    notebook_id = await _create_notebook_with_source(test_client)
+    created = await test_client.post(
+        f"/v1/notebooks/{notebook_id}/outputs/{OutputType.FAQ.value}",
+        json={"prompt": "summarize"},
+    )
+    assert created.status_code == 201
+    output_id = created.json()["id"]
+
+    response = await test_client.get(f"/v1/notebooks/{notebook_id}/outputs/{output_id}")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["id"] == output_id
