@@ -358,6 +358,7 @@ export default function WorkspaceLayout() {
           <StudioPanel
             tools={refine.tools}
             outputs={refine.outputs}
+            outputQueueJobs={refine.outputQueueJobs}
             outputsLoading={refine.outputsLoading}
             outputsError={refine.outputsError}
             onRetryOutputs={refine.retryOutputs}
