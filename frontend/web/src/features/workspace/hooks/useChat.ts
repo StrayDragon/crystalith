@@ -40,10 +40,6 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions }: U
   );
 
   useEffect(() => {
-    dispatch({ type: 'SET_LOADING', payload: { key: 'messages', value: isLoading } });
-  }, [dispatch, isLoading]);
-
-  useEffect(() => {
     if (error) {
       dispatch({
         type: 'SET_ERROR',
@@ -82,20 +78,6 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions }: U
     },
     { revalidateOnFocus: false },
   );
-
-  useEffect(() => {
-    if (!suggestionsEnabled) {
-      dispatch({
-        type: 'SET_LOADING',
-        payload: { key: 'suggestions', value: false },
-      });
-      return;
-    }
-    dispatch({
-      type: 'SET_LOADING',
-      payload: { key: 'suggestions', value: suggestionLoading },
-    });
-  }, [dispatch, suggestionLoading, suggestionsEnabled]);
 
   useEffect(() => {
     if (!suggestionsEnabled) {
@@ -209,16 +191,42 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions }: U
       }
       void refreshSuggestions();
     } catch (error) {
+      // Extract meaningful error message from different error types
+      let errorMessage = '请求失败，请检查后端服务或稍后重试。';
+      let userFacingError = '请求失败。';
+
+      if (error instanceof Error) {
+        const statusError = error as Error & { status?: number };
+
+        if (statusError.status === 503) {
+          errorMessage = 'AI 服务暂时不可用，请检查模型配置或稍后重试。';
+          userFacingError = 'AI 服务配置错误，请联系管理员。';
+        } else if (statusError.status === 404) {
+          errorMessage = '会话或笔记本不存在。';
+          userFacingError = '会话已失效，请刷新页面。';
+        } else if (statusError.status === 500) {
+          errorMessage = '服务器内部错误，请稍后重试。';
+          userFacingError = '服务器错误，请稍后重试。';
+        } else if (error.message) {
+          // Use error message if available and not too technical
+          const msg = error.message;
+          if (msg.length < 100 && !msg.includes('fetch')) {
+            errorMessage = msg;
+            userFacingError = msg;
+          }
+        }
+      }
+
       const assistantMessage = {
         id: createId(),
         role: 'assistant',
-        content: '请求失败，请检查后端服务或稍后重试。',
+        content: errorMessage,
       };
       dispatch({
         type: 'SET_MESSAGES',
         payload: [...pendingMessages, assistantMessage],
       });
-      dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '请求失败。' } });
+      dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: userFacingError } });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'send', value: false } });
     }
@@ -261,11 +269,13 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions }: U
     sendError: state.errors.send,
     citations: state.citations,
     suggestions: state.suggestions,
-    suggestionsLoading: state.loading.suggestions,
+    suggestionsLoading: suggestionLoading,
     suggestionsError: state.errors.suggestions,
     refreshSuggestions,
     applySuggestion,
     retryMessages,
     retrySuggestions,
+    isLoadingMessages: isLoading,
+    messagesError: state.errors.messages,
   };
 }

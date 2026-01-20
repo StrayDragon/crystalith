@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 
 import ChatPanel from './ChatPanel';
 import SourcesPanel from './SourcesPanel';
 import StudioPanel from './StudioPanel';
-import StudioOutputViewer from './StudioOutputViewer';
 import WorkspaceHeader from './WorkspaceHeader';
 import { useWorkspaceState } from '../context/WorkspaceContext';
 import { useChat } from '../hooks/useChat';
@@ -13,6 +12,8 @@ import { useSessions } from '../hooks/useSessions';
 import { useSources } from '../hooks/useSources';
 import type { SourceItem } from '../types';
 import { buildSourceSummaryPrompt } from '../utils';
+
+const StudioOutputViewer = lazy(() => import('./StudioOutputViewer'));
 
 type DragSide = 'left' | 'right';
 
@@ -314,7 +315,7 @@ export default function WorkspaceLayout() {
             isDemo={isDemo}
             inputRef={chatInputRef}
             citations={sources.citations}
-            isLoadingMessages={state.loading.messages}
+            isLoadingMessages={chat.isLoadingMessages}
             messagesError={state.errors.messages}
             onRetryMessages={chat.retryMessages}
             suggestions={chat.suggestions}
@@ -370,15 +371,17 @@ export default function WorkspaceLayout() {
         </section>
       </main>
 
-      <StudioOutputViewer
-        outputs={refine.outputs}
-        selectedOutputId={viewerOutputId}
-        isOpen={isViewerOpen}
-        isFullscreen={isViewerFullscreen}
-        onClose={handleCloseOutputViewer}
-        onToggleFullscreen={handleToggleOutputViewer}
-        onSelectOutput={handleSelectOutput}
-      />
+      <Suspense fallback={null}>
+        <StudioOutputViewer
+          outputs={refine.outputs}
+          selectedOutputId={viewerOutputId}
+          isOpen={isViewerOpen}
+          isFullscreen={isViewerFullscreen}
+          onClose={handleCloseOutputViewer}
+          onToggleFullscreen={handleToggleOutputViewer}
+          onSelectOutput={handleSelectOutput}
+        />
+      </Suspense>
     </div>
   );
 }
