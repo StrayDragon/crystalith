@@ -609,24 +609,21 @@
 }
 
 .StudioGrid {
-  @apply grid gap-3;
-  --studio-tile-min: 120px;
-  --studio-tile-max: 136px;
-  grid-template-columns: repeat(
-    auto-fit,
-    minmax(var(--studio-tile-min), var(--studio-tile-max))
-  );
+  @apply grid gap-2;
+  --studio-tile-min: 140px;
+  grid-template-columns: repeat(auto-fit, minmax(var(--studio-tile-min), 1fr));
   justify-content: start;
 }
 
 .StudioTile {
-  --tile-icon-size: clamp(28px, 2.6vw, 36px);
-  --tile-icon-glyph: clamp(14px, 1.4vw, 18px);
-  --tile-font-size: clamp(11px, 1.1vw, 13px);
-  --tile-edit-size: clamp(22px, 1.8vw, 26px);
+  --tile-icon-size: clamp(24px, 2.2vw, 30px);
+  --tile-icon-glyph: clamp(12px, 1.2vw, 16px);
+  --tile-font-size: clamp(11px, 1vw, 13px);
+  --tile-edit-size: clamp(18px, 1.6vw, 22px);
   --tile-badge-size: clamp(9px, 0.9vw, 10px);
-  @apply relative flex flex-col items-start gap-3 rounded-2xl border p-3 text-left font-semibold transition cursor-pointer;
-  aspect-ratio: 1 / 1;
+  @apply relative flex items-center gap-2 rounded-xl border px-3 py-2 text-left font-semibold transition cursor-pointer;
+  min-height: 52px;
+  padding-right: calc(var(--tile-edit-size) + 16px);
   font-size: var(--tile-font-size);
   background: var(--tone-bg, #f8fafc);
   border-color: var(--tone-border, #e2e8f0);
@@ -644,7 +641,7 @@
 }
 
 .StudioTile__icon {
-  @apply flex items-center justify-center rounded-xl border;
+  @apply flex shrink-0 items-center justify-center rounded-lg border;
   width: var(--tile-icon-size);
   height: var(--tile-icon-size);
   background: var(--tone-icon, #eef2f6);
@@ -674,14 +671,14 @@
 .StudioTile__edit {
   @apply inline-flex items-center justify-center rounded-full bg-slate-200 text-slate-600;
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 6px;
+  right: 8px;
   width: var(--tile-edit-size);
   height: var(--tile-edit-size);
 }
 
 .StudioTile__edit svg {
-  @apply h-3.5 w-3.5;
+  @apply h-3 w-3;
 }
 
 .StudioNotes {
