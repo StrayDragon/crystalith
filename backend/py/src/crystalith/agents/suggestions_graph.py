@@ -242,6 +242,14 @@ async def _generate_drafts(state: SuggestionState) -> dict[str, Any]:
     fallback_context = state.get("fallback_context", "")
     seed_question = state.get("seed_question")
 
+    log.info(
+        "generating suggestion drafts",
+        mode=mode,
+        count=count,
+        context_length=len(context_text),
+        has_seed=bool(seed_question),
+    )
+
     system_prompt = SYSTEM_PROMPT_DEEP_DIVE if mode == "deep_dive" else SYSTEM_PROMPT_STANDARD
     model = deps.model or build_chat_model(deps.settings)
     agent = Agent(
@@ -260,8 +268,21 @@ async def _generate_drafts(state: SuggestionState) -> dict[str, Any]:
     try:
         result = await agent.run(user_prompt, deps=deps)
         items = result.output.items
+        log.info(
+            "suggestion drafts generated",
+            mode=mode,
+            generated_count=len(items),
+        )
     except Exception as error:  # noqa: BLE001 - fallback for generation
-        log.warning("suggestion generation failed", exc_info=error)
+        error_type = type(error).__name__
+        error_message = str(error)[:200]
+        log.warning(
+            "suggestion generation failed, using fallback",
+            exc_info=error,
+            mode=mode,
+            error_type=error_type,
+            error_message=error_message,
+        )
         items = []
 
     drafts = _normalize_drafts(items, limit=count, fallback_context=fallback_context)
@@ -273,7 +294,14 @@ async def _classify_or_finalize(state: SuggestionState) -> dict[str, Any]:
     drafts = state.get("drafts", [])
     fallback_context = state.get("fallback_context", "")
 
+    log.debug(
+        "classifying suggestions",
+        mode=mode,
+        drafts_count=len(drafts),
+    )
+
     if not drafts:
+        log.info("no drafts to classify, returning empty suggestions")
         return {"suggestions": []}
 
     if mode == "deep_dive":
