@@ -107,18 +107,6 @@
   @apply h-4 w-4;
 }
 
-.WorkspaceTopBar__icons {
-  @apply flex items-center gap-2;
-}
-
-.WorkspaceIconButton {
-  @apply inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 cursor-pointer;
-}
-
-.WorkspaceIconButton svg {
-  @apply h-4 w-4;
-}
-
 .WorkspaceAvatar {
   @apply relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-700 cursor-pointer;
 }
@@ -280,7 +268,8 @@
 
 .SourcesSearchInput {
   @apply flex flex-1 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500;
-  min-width: 160px;
+  min-width: 0;
+  flex-basis: 200px;
 }
 
 .SourcesSearchInput svg {
@@ -289,14 +278,19 @@
 
 .SourcesSearchInput input {
   @apply flex-1 bg-transparent text-sm text-slate-700 outline-none;
+  min-width: 0;
 }
 
 .SourcesSearchSelect {
   @apply rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 cursor-pointer;
+  flex: 1 1 120px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .SourcesSearchButton {
   @apply inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition hover:bg-slate-800 cursor-pointer;
+  flex: 0 0 36px;
 }
 
 .SourcesSearchButton svg {
@@ -358,10 +352,12 @@
 
 .SourcesList {
   @apply flex flex-col gap-2 overflow-y-auto pr-1;
+  overflow-x: hidden;
 }
 
 .SourcesListItem {
   @apply flex items-center justify-between gap-2 rounded-2xl border border-slate-100 bg-white px-3 py-2 shadow-sm transition;
+  min-width: 0;
 }
 
 .SourcesListItem:hover {
@@ -370,6 +366,7 @@
 
 .SourcesListButton {
   @apply flex flex-1 items-center gap-2 text-left cursor-pointer;
+  min-width: 0;
 }
 
 .SourcesItemIcon {
@@ -385,7 +382,20 @@
 }
 
 .SourcesItemTitle {
-  @apply truncate text-sm font-semibold text-slate-800;
+  @apply text-sm font-semibold text-slate-800;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .SourcesSearchRow {
+    @apply items-stretch;
+  }
+
+  .SourcesSearchInput {
+    flex-basis: 100%;
+  }
 }
 
 .SourcesEmpty {
@@ -687,8 +697,17 @@
   @apply flex min-w-0 flex-col;
 }
 
+.StudioNoteTitleRow {
+  @apply flex min-w-0 items-center gap-2;
+}
+
 .StudioNoteTitle {
-  @apply truncate text-sm font-semibold text-slate-900;
+  @apply flex-1 truncate text-sm font-semibold text-slate-900;
+}
+
+.StudioNoteType {
+  @apply rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-600;
+  flex: 0 0 auto;
 }
 
 .StudioNoteMeta {
