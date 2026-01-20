@@ -227,6 +227,11 @@ export interface ApiSource {
   updated_at?: string | null;
 }
 
+export interface ApiSourceDeleteResponse {
+  deleted_ids: number[];
+  deleted_count: number;
+}
+
 export interface ApiSourceSearchResult {
   title: string;
   url: string;

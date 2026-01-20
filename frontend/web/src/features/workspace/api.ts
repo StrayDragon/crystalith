@@ -8,6 +8,7 @@ import type {
   ApiSuggestionResponse,
   ApiSource,
   ApiSourceSearchResponse,
+  ApiSourceDeleteResponse,
   ApiWorkspaceToolsResponse,
   OutputTypeId,
   RefineMode,
@@ -57,6 +58,19 @@ export async function createNotebook(name: string): Promise<ApiNotebook> {
 
 export async function listSources(notebookId: number): Promise<ApiSource[]> {
   return request<ApiSource[]>(`/v1/notebooks/${notebookId}/sources`);
+}
+
+export async function deleteSources(
+  notebookId: number,
+  sourceIds: number[],
+): Promise<ApiSourceDeleteResponse> {
+  return request<ApiSourceDeleteResponse>(`/v1/notebooks/${notebookId}/sources/batch-delete`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ source_ids: sourceIds }),
+  });
 }
 
 export async function uploadSource(notebookId: number, file: File): Promise<ApiSource> {

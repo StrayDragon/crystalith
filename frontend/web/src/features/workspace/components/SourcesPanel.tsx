@@ -12,9 +12,11 @@ interface SourcesPanelProps {
   searchNotice: string;
   searchResults: ApiSourceSearchResult[];
   onSearch: (payload: { query: string; engine: string; mode: string }) => void;
+  onRemoveSources: (sourceIds: number[]) => Promise<boolean>;
   isDemo: boolean;
   error: string;
   isLoading: boolean;
+  removeState: AsyncStatus;
   onRetry: () => void;
 }
 
@@ -27,9 +29,11 @@ export default function SourcesPanel({
   searchNotice,
   searchResults,
   onSearch,
+  onRemoveSources,
   isDemo,
   error,
   isLoading,
+  removeState,
   onRetry,
 }: SourcesPanelProps) {
   const uploadDisabled = isDemo || uploadState === 'loading';
@@ -59,6 +63,11 @@ export default function SourcesPanel({
     () => sources.length > 0 && sources.every((source) => selectedSourceIds[source.id]),
     [sources, selectedSourceIds],
   );
+  const selectedIds = useMemo(
+    () => sources.filter((source) => selectedSourceIds[source.id]).map((source) => source.id),
+    [sources, selectedSourceIds],
+  );
+  const removeDisabled = isDemo || removeState === 'loading' || selectedIds.length === 0;
 
   function handleToggleAll() {
     if (allSelected) {
@@ -82,6 +91,19 @@ export default function SourcesPanel({
   const handleSearch = () => {
     if (isSearching) return;
     onSearch({ query: searchQuery, engine, mode });
+  };
+
+  const handleRemoveSelected = async () => {
+    if (removeDisabled) return;
+    const label =
+      selectedIds.length === 1
+        ? '移除已选的 1 个来源？'
+        : `移除已选的 ${selectedIds.length} 个来源？`;
+    if (!window.confirm(label)) return;
+    const success = await onRemoveSources(selectedIds);
+    if (success) {
+      setSelectedSourceIds({});
+    }
   };
 
   return (
@@ -212,7 +234,23 @@ export default function SourcesPanel({
       ) : null}
 
       <div className="SourcesSelectAll">
-        <span>选择所有来源</span>
+        <div className="SourcesSelectAllLeft">
+          <button
+            type="button"
+            className="SourcesActionButton"
+            aria-label="移除已选来源"
+            onClick={handleRemoveSelected}
+            disabled={removeDisabled}
+            title={removeDisabled ? '请选择来源后再操作' : '移除已选来源'}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="6" r="1.6" fill="currentColor" />
+              <circle cx="12" cy="12" r="1.6" fill="currentColor" />
+              <circle cx="12" cy="18" r="1.6" fill="currentColor" />
+            </svg>
+          </button>
+          <span>选择所有来源</span>
+        </div>
         <input
           type="checkbox"
           className="SourcesCheckbox"
