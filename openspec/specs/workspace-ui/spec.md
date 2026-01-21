@@ -1,5 +1,9 @@
 # Workspace UI
 
+## Purpose
+
+定义 Crystalith 前端工作区界面的布局、交互和样式要求，包括三栏布局、响应式设计、Sources/Chat/Studio 面板组成以及 Tailwind CSS 驱动的样式系统。
+
 ## Requirements
 
 ### Requirement: Workspace layout and navigation
