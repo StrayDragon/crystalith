@@ -6,6 +6,8 @@
 ### Universal ###
 # Common files that should be ignored in all projects
 
+.vibe-images
+
 # Logs
 *.log
 # Temporary files
@@ -368,3 +370,8 @@ storybook-static/
 
 # Local app data
 data/
+
+### Generated API SDK ###
+# These files are generated from OpenAPI schema
+frontend/web/openapi.json
+frontend/web/src/api/generated/

@@ -13,42 +13,11 @@ from crystalith.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.ai.types import ChatMessage
 from crystalith.config import RefineSettings, Settings
 from crystalith.db import Chunk, Notebook, Source
+from crystalith.utils import format_context, format_context_from_chunk_ids, parse_bullets
 from crystalith.vector_storage import VectorSearchResult, VectorStore
 
 from .models import Task
 from .types import TaskType
-
-
-def _format_context(results: list[VectorSearchResult], chunk_map: dict[int, tuple[Chunk, Source]]) -> str:
-    blocks: list[str] = []
-    for index, result in enumerate(results, start=1):
-        chunk, source = chunk_map[result.entry.chunk_id]
-        blocks.append(
-            f"[{index}] Source: {source.filename} (chunk {chunk.chunk_index})\n{chunk.text}"
-        )
-    return "\n\n".join(blocks)
-
-
-def _format_context_from_chunk_ids(
-    chunk_ids: list[int],
-    chunk_map: dict[int, tuple[Chunk, Source]],
-) -> str:
-    blocks: list[str] = []
-    for index, chunk_id in enumerate(chunk_ids, start=1):
-        chunk, source = chunk_map[chunk_id]
-        blocks.append(
-            f"[{index}] Source: {source.filename} (chunk {chunk.chunk_index})\n{chunk.text}"
-        )
-    return "\n\n".join(blocks)
-
-
-def _parse_bullets(text: str) -> list[str]:
-    items: list[str] = []
-    for raw in text.splitlines():
-        cleaned = raw.strip().lstrip("-").strip()
-        if cleaned:
-            items.append(cleaned)
-    return items
 
 
 def _fallback_structured(prompt: str, citations: list[dict[str, Any]]) -> dict[str, Any]:
@@ -88,7 +57,7 @@ def _apply_format(
     if format_name == "paragraph":
         return {"paragraph": answer.strip()}
     if format_name == "bullets":
-        return {"bullets": _parse_bullets(answer)}
+        return {"bullets": parse_bullets(answer)}
 
     try:
         parsed = json.loads(answer)
@@ -181,7 +150,7 @@ async def _execute_refine(
                 }
             )
 
-        context = _format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
+        context = format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
     else:
         embedder = embedder_factory(settings)
         embeddings = await embedder.embed([prompt])
@@ -230,7 +199,7 @@ async def _execute_refine(
                 }
             )
 
-        context = _format_context(results, chunk_map)
+        context = format_context(results, chunk_map)
 
     chat_provider = chat_factory(settings)
     messages = _build_messages(format_name, prompt, context)

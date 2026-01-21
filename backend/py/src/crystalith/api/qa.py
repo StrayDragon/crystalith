@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import datetime
+import json
+from collections.abc import AsyncGenerator
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +17,7 @@ from crystalith.config import Settings
 from crystalith.context import ContextStats, ContextWindow, TokenCounter
 from crystalith.db import Chunk, Message, Notebook, Session, Source, SourceStatus
 from crystalith.schemas.citations import Citation
+from crystalith.utils import extract_page_number, extract_paragraph_index, format_context
 from crystalith.vector_storage import VectorSearchResult, VectorStore
 
 from .deps import (
@@ -66,16 +70,6 @@ SYSTEM_PROMPT = (
 )
 
 
-def _format_context(results: list[VectorSearchResult], chunk_map: dict[int, tuple[Chunk, Source]]) -> str:
-    blocks: list[str] = []
-    for index, result in enumerate(results, start=1):
-        chunk, source = chunk_map[result.entry.chunk_id]
-        blocks.append(
-            f"[{index}] Source: {source.filename} (chunk {chunk.chunk_index})\n{chunk.text}"
-        )
-    return "\n\n".join(blocks)
-
-
 def _generate_session_title(question: str) -> str:
     cleaned = " ".join(question.strip().split())
     if not cleaned:
@@ -95,18 +89,6 @@ def _confidence_score(
     if score > 1.0:
         return 1.0
     return score
-
-
-def _extract_page_number(chunk: Chunk) -> int | None:
-    metadata = chunk.metadata_ if isinstance(chunk.metadata_, dict) else None
-    page = metadata.get("page") if metadata else None
-    return page if isinstance(page, int) else None
-
-
-def _extract_paragraph_index(chunk: Chunk) -> int | None:
-    metadata = chunk.metadata_ if isinstance(chunk.metadata_, dict) else None
-    paragraph_index = metadata.get("paragraph_index") if metadata else None
-    return paragraph_index if isinstance(paragraph_index, int) else None
 
 
 def _ensure_inline_citations(answer: str, citations: list[Citation]) -> str:
@@ -284,14 +266,14 @@ async def ask_question(
                 source_name=source.filename,
                 chunk_id=chunk.id,
                 chunk_index=chunk.chunk_index,
-                page_number=_extract_page_number(chunk),
-                paragraph_index=_extract_paragraph_index(chunk),
+                page_number=extract_page_number(chunk),
+                paragraph_index=extract_paragraph_index(chunk),
                 snippet=snippet,
                 score=result.score,
             )
         )
 
-    context = _format_context(valid_results, chunk_map)
+    context = format_context(valid_results, chunk_map)
     messages, stats = _build_context_window(
         settings=settings,
         history_messages=history_messages,
@@ -359,4 +341,305 @@ def _build_context_window(
         history_messages=history_messages,
         query=question,
         retrieval=context,
+    )
+
+
+# SSE event formatting helpers
+def _sse_event(event: str, data: dict) -> str:
+    """Format a Server-Sent Event."""
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+class QAStreamDoneData(BaseModel):
+    """Data sent in the 'done' SSE event."""
+
+    citations: list[Citation]
+    evidence: bool
+    confidence: float
+    created_at: datetime.datetime
+    context: ContextStatsResponse
+
+
+@router.post(
+    "/stream",
+    responses={
+        200: {
+            "description": "SSE stream of QA response",
+            "content": {"text/event-stream": {}},
+        }
+    },
+)
+async def ask_question_stream(
+    notebook_id: int,
+    payload: QARequest,
+    session: AsyncSession = Depends(get_db_session),
+    embedder: EmbeddingProvider = Depends(get_embedding_provider),
+    chatter: ChatProvider = Depends(get_chat_provider),
+    vector_store: VectorStore = Depends(get_vector_store),
+    settings: Settings = Depends(get_settings),
+) -> StreamingResponse:
+    """
+    Stream QA response using Server-Sent Events.
+
+    Events:
+    - `chunk`: Text chunk `{"text": "..."}`
+    - `done`: Completion `{"citations": [...], "evidence": bool, "confidence": float, ...}`
+    - `error`: Error `{"message": "..."}`
+    """
+    notebook = await session.get(Notebook, notebook_id)
+    if notebook is None:
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
+    db_session: Session | None = None
+    history_messages: list[ChatMessage] = []
+    if payload.session_id is not None:
+        db_session = await session.get(Session, payload.session_id)
+        if db_session is None or db_session.notebook_id != notebook_id:
+            raise HTTPException(status_code=404, detail="Session not found")
+        history_rows = await session.execute(
+            select(Message)
+            .where(Message.session_id == payload.session_id)
+            .order_by(Message.created_at.asc())
+        )
+        history_messages = [
+            ChatMessage(role=message.role, content=message.content)
+            for message in history_rows.scalars().all()
+        ]
+
+    async def _persist_session_messages_stream(
+        answer: str,
+        citations: list[Citation],
+        created_at: datetime.datetime,
+    ) -> None:
+        if db_session is None:
+            return
+        if not history_messages and not db_session.title:
+            db_session.title = _generate_session_title(payload.question)
+        db_session.updated_at = created_at
+        session.add(
+            Message(
+                session_id=db_session.id,
+                role="user",
+                content=payload.question,
+                citations=None,
+            )
+        )
+        session.add(
+            Message(
+                session_id=db_session.id,
+                role="assistant",
+                content=answer,
+                citations=[citation.model_dump() for citation in citations],
+            )
+        )
+        await session.commit()
+
+    async def generate_stream() -> AsyncGenerator[str, None]:
+        # Embed the question
+        embeddings = await embedder.embed([payload.question])
+        if not embeddings:
+            created_at = datetime.datetime.now(datetime.UTC)
+            _, stats = _build_context_window(
+                settings=settings,
+                history_messages=history_messages,
+                question=payload.question,
+                context="",
+            )
+            await _persist_session_messages_stream(
+                answer=NO_EVIDENCE_ANSWER,
+                citations=[],
+                created_at=created_at,
+            )
+            yield _sse_event("chunk", {"text": NO_EVIDENCE_ANSWER})
+            yield _sse_event(
+                "done",
+                QAStreamDoneData(
+                    citations=[],
+                    evidence=False,
+                    confidence=0.0,
+                    created_at=created_at,
+                    context=ContextStatsResponse.model_validate(stats),
+                ).model_dump(mode="json"),
+            )
+            return
+
+        query_vector = embeddings[0]
+        results = await vector_store.search(
+            notebook_id=notebook_id,
+            query_vector=query_vector,
+            top_k=payload.top_k,
+            min_score=payload.min_score,
+        )
+
+        if not results:
+            created_at = datetime.datetime.now(datetime.UTC)
+            _, stats = _build_context_window(
+                settings=settings,
+                history_messages=history_messages,
+                question=payload.question,
+                context="",
+            )
+            await _persist_session_messages_stream(
+                answer=NO_EVIDENCE_ANSWER,
+                citations=[],
+                created_at=created_at,
+            )
+            yield _sse_event("chunk", {"text": NO_EVIDENCE_ANSWER})
+            yield _sse_event(
+                "done",
+                QAStreamDoneData(
+                    citations=[],
+                    evidence=False,
+                    confidence=0.0,
+                    created_at=created_at,
+                    context=ContextStatsResponse.model_validate(stats),
+                ).model_dump(mode="json"),
+            )
+            return
+
+        chunk_ids = [result.entry.chunk_id for result in results]
+        rows = await session.execute(
+            select(Chunk, Source)
+            .join(Source, Source.id == Chunk.source_id)
+            .where(Chunk.id.in_(chunk_ids))
+        )
+
+        chunk_map: dict[int, tuple[Chunk, Source]] = {
+            chunk.id: (chunk, source) for chunk, source in rows.all()
+        }
+
+        valid_results: list[VectorSearchResult] = []
+        for result in results:
+            mapping = chunk_map.get(result.entry.chunk_id)
+            if mapping is None:
+                continue
+            chunk, source = mapping
+            if source.status != SourceStatus.READY:
+                continue
+            if chunk.source_id != source.id or result.entry.source_id != source.id:
+                continue
+            if not chunk.text.strip():
+                continue
+            valid_results.append(result)
+
+        if not valid_results:
+            created_at = datetime.datetime.now(datetime.UTC)
+            _, stats = _build_context_window(
+                settings=settings,
+                history_messages=history_messages,
+                question=payload.question,
+                context="",
+            )
+            await _persist_session_messages_stream(
+                answer=NO_EVIDENCE_ANSWER,
+                citations=[],
+                created_at=created_at,
+            )
+            yield _sse_event("chunk", {"text": NO_EVIDENCE_ANSWER})
+            yield _sse_event(
+                "done",
+                QAStreamDoneData(
+                    citations=[],
+                    evidence=False,
+                    confidence=0.0,
+                    created_at=created_at,
+                    context=ContextStatsResponse.model_validate(stats),
+                ).model_dump(mode="json"),
+            )
+            return
+
+        citations: list[Citation] = []
+        for result in valid_results:
+            chunk, source = chunk_map[result.entry.chunk_id]
+            snippet = chunk.text.strip()[:200]
+            citations.append(
+                Citation(
+                    source_id=source.id,
+                    source_name=source.filename,
+                    chunk_id=chunk.id,
+                    chunk_index=chunk.chunk_index,
+                    page_number=extract_page_number(chunk),
+                    paragraph_index=extract_paragraph_index(chunk),
+                    snippet=snippet,
+                    score=result.score,
+                )
+            )
+
+        context = format_context(valid_results, chunk_map)
+        messages, stats = _build_context_window(
+            settings=settings,
+            history_messages=history_messages,
+            question=payload.question,
+            context=context,
+        )
+
+        evidence_threshold = max(payload.min_score, EVIDENCE_THRESHOLD_DEFAULT)
+        similarity_avg = sum(result.score for result in valid_results) / len(valid_results)
+        if similarity_avg < evidence_threshold:
+            created_at = datetime.datetime.now(datetime.UTC)
+            await _persist_session_messages_stream(
+                answer=NO_EVIDENCE_ANSWER,
+                citations=[],
+                created_at=created_at,
+            )
+            yield _sse_event("chunk", {"text": NO_EVIDENCE_ANSWER})
+            yield _sse_event(
+                "done",
+                QAStreamDoneData(
+                    citations=[],
+                    evidence=False,
+                    confidence=0.0,
+                    created_at=created_at,
+                    context=ContextStatsResponse.model_validate(stats),
+                ).model_dump(mode="json"),
+            )
+            return
+
+        total_sources = await session.scalar(
+            select(sa.func.count(Source.id)).where(Source.notebook_id == notebook_id)
+        )
+        total_sources = total_sources or 0
+        unique_sources = len({citation.source_id for citation in citations})
+        coverage_ratio = unique_sources / total_sources if total_sources else 0.0
+        citation_ratio = min(1.0, len(citations) / payload.top_k)
+        confidence = _confidence_score(
+            similarity_avg=similarity_avg,
+            coverage_ratio=coverage_ratio,
+            citation_ratio=citation_ratio,
+        )
+
+        # Stream the answer
+        answer_chunks: list[str] = []
+        try:
+            async for chunk in chatter.chat_stream(messages):
+                answer_chunks.append(chunk)
+                yield _sse_event("chunk", {"text": chunk})
+        except Exception as e:  # noqa: BLE001
+            yield _sse_event("error", {"message": str(e)})
+            return
+
+        answer = "".join(answer_chunks)
+        answer = _ensure_inline_citations(answer, citations)
+        created_at = datetime.datetime.now(datetime.UTC)
+        await _persist_session_messages_stream(answer=answer, citations=citations, created_at=created_at)
+
+        yield _sse_event(
+            "done",
+            QAStreamDoneData(
+                citations=citations,
+                evidence=True,
+                confidence=confidence,
+                created_at=created_at,
+                context=ContextStatsResponse.model_validate(stats),
+            ).model_dump(mode="json"),
+        )
+
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal, Sequence
+from typing import Any, AsyncIterator, Literal, Sequence
 
 from openai import AsyncOpenAI
 
@@ -88,3 +88,21 @@ class OpenAIChatProvider:
 
         content = response.choices[0].message.content
         return content or ""
+
+    async def chat_stream(self, messages: Sequence[ChatMessage]) -> AsyncIterator[str]:
+        """Stream chat completion, yielding text chunks as they arrive."""
+        if not messages:
+            raise ValueError("messages must not be empty")
+
+        try:
+            response = await self._client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": m.role, "content": m.content} for m in messages],
+                stream=True,
+            )
+            async for chunk in response:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+        except Exception as error:  # noqa: BLE001 - degrade to empty stream
+            log.warning("openai chat stream failed", exc_info=error)
+            return

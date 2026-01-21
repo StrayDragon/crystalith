@@ -25,6 +25,12 @@ from crystalith.agents.output_schemas import (
 from crystalith.db import Chunk, Output, Source
 from crystalith.outputs import OutputType
 from crystalith.schemas.citations import Citation
+from crystalith.utils import (
+    extract_page_number,
+    extract_paragraph_index,
+    format_context,
+    format_context_from_chunk_ids,
+)
 from crystalith.vector_storage import VectorSearchResult
 
 
@@ -79,41 +85,6 @@ OUTPUT_SCHEMAS = {
 }
 
 
-def _format_context(results: list[VectorSearchResult], chunk_map: dict[int, tuple[Chunk, Source]]) -> str:
-    blocks: list[str] = []
-    for index, result in enumerate(results, start=1):
-        chunk, source = chunk_map[result.entry.chunk_id]
-        blocks.append(
-            f"[{index}] Source: {source.filename} (chunk {chunk.chunk_index})\n{chunk.text}"
-        )
-    return "\n\n".join(blocks)
-
-
-def _format_context_from_chunk_ids(
-    chunk_ids: list[int],
-    chunk_map: dict[int, tuple[Chunk, Source]],
-) -> str:
-    blocks: list[str] = []
-    for index, chunk_id in enumerate(chunk_ids, start=1):
-        chunk, source = chunk_map[chunk_id]
-        blocks.append(
-            f"[{index}] Source: {source.filename} (chunk {chunk.chunk_index})\n{chunk.text}"
-        )
-    return "\n\n".join(blocks)
-
-
-def _extract_page_number(chunk: Chunk) -> int | None:
-    metadata = chunk.metadata_ if isinstance(chunk.metadata_, dict) else None
-    page = metadata.get("page") if metadata else None
-    return page if isinstance(page, int) else None
-
-
-def _extract_paragraph_index(chunk: Chunk) -> int | None:
-    metadata = chunk.metadata_ if isinstance(chunk.metadata_, dict) else None
-    paragraph_index = metadata.get("paragraph_index") if metadata else None
-    return paragraph_index if isinstance(paragraph_index, int) else None
-
-
 def _build_citation(chunk: Chunk, source: Source, score: float) -> Citation:
     snippet = chunk.text.strip()[:200]
     return Citation(
@@ -121,8 +92,8 @@ def _build_citation(chunk: Chunk, source: Source, score: float) -> Citation:
         source_name=source.filename,
         chunk_id=chunk.id,
         chunk_index=chunk.chunk_index,
-        page_number=_extract_page_number(chunk),
-        paragraph_index=_extract_paragraph_index(chunk),
+        page_number=extract_page_number(chunk),
+        paragraph_index=extract_paragraph_index(chunk),
         snippet=snippet,
         score=score,
     )
@@ -404,7 +375,7 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
                 _build_citation(chunk_map[cid][0], chunk_map[cid][1], 1.0)
                 for cid in explicit_chunk_ids
             ]
-            state.context = _format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
+            state.context = format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
             state.resolved_chunk_ids = explicit_chunk_ids
             return GenerateOutput()
 
@@ -442,7 +413,7 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
             chunk, source = chunk_map[result.entry.chunk_id]
             citations.append(_build_citation(chunk, source, result.score))
 
-        state.context = _format_context(results, chunk_map)
+        state.context = format_context(results, chunk_map)
         state.citations = citations
         state.resolved_chunk_ids = chunk_ids
         return GenerateOutput()

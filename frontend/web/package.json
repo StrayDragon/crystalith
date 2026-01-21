@@ -25,8 +25,9 @@
     "preview": "vite preview",
     "test": "vitest",
     "api:generate": "openapi-ts -i ./openapi.json -o ./src/api/generated -c @hey-api/client-fetch",
-    "api:fetch": "cd ../../backend/py && uv run python -c \"import json; from crystalith.app import create_app; app = create_app(); open('../../frontend/web/openapi.json', 'w').write(json.dumps(app.openapi(), indent=2, ensure_ascii=False))\"",
-    "api:sync": "pnpm run api:fetch && pnpm run api:generate"
+    "api:fetch": "cd ../../backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.json",
+    "api:sync": "pnpm run api:fetch && pnpm run api:generate",
+    "api:check": "cd ../../backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.json"
   },
   "eslintConfig": {
     "extends": [
