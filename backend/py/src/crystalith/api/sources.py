@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from crystalith.ai.interfaces import EmbeddingProvider
 from crystalith.agents.deps import StudioDeps
-from crystalith.agents.search_graph import SearchState, run_search_graph
+from crystalith.agents.search_graph import run_search_graph
 from crystalith.config import Settings
 from crystalith.db import Chunk, Notebook, Source, SourceStatus
 from crystalith.parsers import Parser, ParserFactory, TranscriptionProvider, UnsupportedDocumentError
@@ -188,13 +188,12 @@ async def search_sources(
         vector_store=vector_store,
         embedder=embedder,
     )
-    state: SearchState = {
-        "query": payload.query,
-        "engine": payload.engine,
-        "mode": payload.mode,
-        "deps": deps,
-    }
-    result = await run_search_graph(state)
+    result = await run_search_graph(
+        query=payload.query,
+        engine=payload.engine,
+        mode=payload.mode,
+        deps=deps,
+    )
     message = result.get("message", "")
     raw_results = result.get("results", [])
     results = [SourceSearchResult.model_validate(item) for item in raw_results]
