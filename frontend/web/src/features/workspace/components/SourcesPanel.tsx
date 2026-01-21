@@ -7,7 +7,6 @@ import {
   Typography,
   Stack,
   CircularProgress,
-  Tooltip,
   List,
   ListItem,
   ListItemButton,
@@ -219,11 +218,11 @@ function SourcesPanel({
         />
       </Button>
 
-      {/* Search Section - Like image 1 design */}
+      {/* Search Section - Compact design with smaller border radius */}
       <Paper
         variant="outlined"
         sx={{
-          borderRadius: 2.5,
+          borderRadius: 1.5,
           overflow: 'hidden',
         }}
       >
@@ -275,14 +274,14 @@ function SourcesPanel({
           }}
         />
 
-        {/* Search Options - Below search bar */}
+        {/* Search Options - Below search bar (compact) */}
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 1,
-            px: 1.5,
-            py: 1,
+            gap: 0.75,
+            px: 1,
+            py: 0.75,
             borderTop: '1px solid',
             borderColor: 'divider',
             bgcolor: 'grey.50',
@@ -294,13 +293,14 @@ function SourcesPanel({
             size="small"
             onClick={(e) => setEngineMenuAnchor(e.currentTarget)}
             startIcon={getEngineIcon()}
-            endIcon={<ExpandMoreIcon sx={{ fontSize: 14 }} />}
+            endIcon={<ExpandMoreIcon sx={{ fontSize: 12 }} />}
             sx={{
-              borderRadius: 5,
+              borderRadius: 1.5,
               textTransform: 'none',
-              fontSize: '0.75rem',
-              py: 0.25,
-              px: 1.25,
+              fontSize: '0.6875rem',
+              py: 0.125,
+              px: 1,
+              minHeight: 24,
               borderColor: 'divider',
               color: 'text.primary',
               '&:hover': { borderColor: 'grey.400' },
@@ -331,13 +331,14 @@ function SourcesPanel({
             size="small"
             onClick={(e) => setModeMenuAnchor(e.currentTarget)}
             startIcon={getModeIcon()}
-            endIcon={<ExpandMoreIcon sx={{ fontSize: 14 }} />}
+            endIcon={<ExpandMoreIcon sx={{ fontSize: 12 }} />}
             sx={{
-              borderRadius: 5,
+              borderRadius: 1.5,
               textTransform: 'none',
-              fontSize: '0.75rem',
-              py: 0.25,
-              px: 1.25,
+              fontSize: '0.6875rem',
+              py: 0.125,
+              px: 1,
+              minHeight: 24,
               borderColor: 'divider',
               color: 'text.primary',
               '&:hover': { borderColor: 'grey.400' },
@@ -373,7 +374,7 @@ function SourcesPanel({
 
       {/* Search Results */}
       {searchResults.length > 0 && (
-        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2.5 }}>
+        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1.5 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
             <Typography variant="caption" fontWeight={600}>
               搜索结果
@@ -482,10 +483,10 @@ function SourcesPanel({
           <Paper
             variant="outlined"
             sx={{
-              p: 2,
+              p: 1.5,
               textAlign: 'center',
               borderStyle: 'dashed',
-              borderRadius: 2.5,
+              borderRadius: 1.5,
               bgcolor: 'grey.50',
             }}
           >
@@ -574,18 +575,6 @@ function SourcesPanel({
         open={Boolean(menuAnchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem
-          onClick={() => {
-            const source = sources.find((s) => s.id === activeSourceId);
-            if (source) onSourceClick(source);
-            handleMenuClose();
-          }}
-        >
-          <ListItemIcon>
-            <DescriptionIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>查看摘要</ListItemText>
-        </MenuItem>
         <MenuItem
           onClick={async () => {
             if (isDemo || removeState === 'loading' || !activeSourceId) return;

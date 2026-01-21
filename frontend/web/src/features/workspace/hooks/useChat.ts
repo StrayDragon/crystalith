@@ -4,36 +4,23 @@ import useSWR from 'swr';
 import {
   askQuestion,
   askQuestionStream,
-  createNotebookSuggestions,
-  createSessionSuggestions,
   listMessages,
 } from '../api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
-import type { SuggestionItem } from '../types';
 import { collectChunkIds, createId, normalizeCitation, normalizeMessage } from '../utils';
-
-const DEMO_SUGGESTIONS: SuggestionItem[] = [
-  { question: '当前资料的关键结论是什么？', type: 'analytical', context: 'demo' },
-  { question: '有哪些值得进一步验证的假设？', type: 'factual', context: 'demo' },
-  { question: '和竞品相比，我们的差异点是什么？', type: 'comparative', context: 'demo' },
-  { question: '可以延伸哪些深度探索问题？', type: 'deep_dive', context: 'demo' },
-];
 
 interface UseChatOptions {
   ensureSession: (title?: string | null) => Promise<number | null>;
   refreshSessions?: () => Promise<void>;
-  enableSuggestions?: boolean;
   enableStreaming?: boolean;
 }
 
-export function useChat({ ensureSession, refreshSessions, enableSuggestions, enableStreaming = true }: UseChatOptions) {
+export function useChat({ ensureSession, refreshSessions, enableStreaming = true }: UseChatOptions) {
   const state = useWorkspaceState();
   const dispatch = useWorkspaceDispatch();
   const isDemo = state.connectionState === 'demo';
-  const [suggestionKey, setSuggestionKey] = useState(0);
   const [isStreaming, setIsStreaming] = useState(false);
   const streamingMessageIdRef = useRef<string | null>(null);
-  const suggestionsEnabled = Boolean(enableSuggestions);
 
   const { data, error, isLoading, mutate } = useSWR(
     state.activeNotebookId && state.activeSessionId && !isDemo
@@ -58,57 +45,6 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions, ena
     dispatch({ type: 'SET_MESSAGES', payload: normalized });
     dispatch({ type: 'SET_ERROR', payload: { key: 'messages', value: '' } });
   }, [data, dispatch, error]);
-
-  const {
-    data: suggestionData,
-    error: suggestionError,
-    isLoading: suggestionLoading,
-    mutate: mutateSuggestions,
-  } = useSWR(
-    state.activeNotebookId && suggestionsEnabled
-      ? ['workspace/suggestions', state.activeNotebookId, state.activeSessionId, suggestionKey]
-      : null,
-    async () => {
-      if (!state.activeNotebookId) {
-        return { suggestions: [] };
-      }
-      if (isDemo) {
-        return { suggestions: DEMO_SUGGESTIONS };
-      }
-      if (state.activeSessionId && state.activeNotebookId) {
-        return createSessionSuggestions(state.activeNotebookId, state.activeSessionId, { count: 4, mode: 'standard' });
-      }
-      return createNotebookSuggestions(state.activeNotebookId, { count: 4, mode: 'standard' });
-    },
-    { revalidateOnFocus: false },
-  );
-
-  useEffect(() => {
-    if (!suggestionsEnabled) {
-      dispatch({ type: 'SET_SUGGESTIONS', payload: [] });
-      dispatch({ type: 'SET_ERROR', payload: { key: 'suggestions', value: '' } });
-      return;
-    }
-    if (suggestionError) {
-      dispatch({
-        type: 'SET_ERROR',
-        payload: { key: 'suggestions', value: '建议加载失败，请稍后重试。' },
-      });
-      return;
-    }
-    if (!suggestionData) return;
-    dispatch({
-      type: 'SET_SUGGESTIONS',
-      payload: suggestionData.suggestions ?? [],
-    });
-    dispatch({ type: 'SET_ERROR', payload: { key: 'suggestions', value: '' } });
-  }, [dispatch, suggestionData, suggestionError, suggestionsEnabled]);
-
-  const refreshSuggestions = useCallback(async () => {
-    if (!suggestionsEnabled) return;
-    setSuggestionKey((prev) => prev + 1);
-    await mutateSuggestions();
-  }, [mutateSuggestions, suggestionsEnabled]);
 
   const setDraft = useCallback(
     (value: string) => dispatch({ type: 'SET_DRAFT', payload: value }),
@@ -164,7 +100,6 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions, ena
       });
       dispatch({ type: 'SET_CITATIONS', payload: demoCitations });
       dispatch({ type: 'SET_LOADING', payload: { key: 'send', value: false } });
-      await refreshSuggestions();
       return;
     }
 
@@ -231,7 +166,6 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions, ena
         if (refreshSessions) {
           void refreshSessions();
         }
-        void refreshSuggestions();
       } catch (error) {
         let errorMessage = '请求失败，请检查后端服务或稍后重试。';
         if (error instanceof Error) {
@@ -282,7 +216,6 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions, ena
       if (refreshSessions) {
         void refreshSessions();
       }
-      void refreshSuggestions();
     } catch (error) {
       // Extract meaningful error message from different error types
       let errorMessage = '请求失败，请检查后端服务或稍后重试。';
@@ -330,29 +263,15 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions, ena
     isDemo,
     mutate,
     refreshSessions,
-    refreshSuggestions,
     state.activeNotebookId,
     state.draft,
     state.messages,
   ]);
 
-  const applySuggestion = useCallback(
-    (value: string) => {
-      dispatch({ type: 'SET_DRAFT', payload: value });
-      dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'chat' });
-    },
-    [dispatch],
-  );
-
   const retryMessages = useCallback(async () => {
     dispatch({ type: 'SET_ERROR', payload: { key: 'messages', value: '' } });
     await mutate();
   }, [dispatch, mutate]);
-
-  const retrySuggestions = useCallback(async () => {
-    dispatch({ type: 'SET_ERROR', payload: { key: 'suggestions', value: '' } });
-    await mutateSuggestions();
-  }, [dispatch, mutateSuggestions]);
 
   return {
     messages: state.messages,
@@ -363,13 +282,7 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions, ena
     isStreaming,
     sendError: state.errors.send,
     citations: state.citations,
-    suggestions: state.suggestions,
-    suggestionsLoading: suggestionLoading,
-    suggestionsError: state.errors.suggestions,
-    refreshSuggestions,
-    applySuggestion,
     retryMessages,
-    retrySuggestions,
     isLoadingMessages: isLoading,
     messagesError: state.errors.messages,
   };

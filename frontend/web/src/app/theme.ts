@@ -414,20 +414,6 @@ const theme = createTheme({
         },
       },
     },
-    MuiTooltip: {
-      styleOverrides: {
-        tooltip: {
-          backgroundColor: '#1e293b',
-          fontSize: '0.75rem',
-          fontWeight: 500,
-          padding: '8px 12px',
-          borderRadius: 8,
-        },
-        arrow: {
-          color: '#1e293b',
-        },
-      },
-    },
     MuiMenu: {
       styleOverrides: {
         paper: {

@@ -19,6 +19,8 @@ export {
   deleteSource,
   deleteSources,
   searchSources,
+  getSourceSummary,
+  askSourceQuestion,
   // Sessions
   listSessions,
   createSession,
@@ -30,23 +32,26 @@ export {
   // QA
   askQuestion,
   askQuestionStream,
-  // Suggestions
-  createNotebookSuggestions,
-  createSessionSuggestions,
   // Outputs
   createOutput,
   listOutputs,
   getOutput,
+  deleteOutput,
+  convertOutputToSource,
   // Refine
   refinePrompt,
   refineBatch,
   // Workspace Tools
   listWorkspaceTools,
+  getToolConfig,
   // Tasks
   getTask,
   listNotebookTasks,
   // Analysis
   analyzeNotebook,
+  // Models
+  listModels,
+  getModel,
   // Error class
   ApiError,
 } from '../../api/client';
@@ -73,6 +78,12 @@ export type {
   QAStreamErrorEvent,
   QAStreamEvent,
   QAStreamCallbacks,
+  SourceSummaryResponse,
+  SourceQAResponse,
+  ToolConfigResponse,
+  ToolConfigOption,
+  ModelRead,
+  ModelsListResponse,
 } from '../../api/client';
 
 // Type aliases for backward compatibility

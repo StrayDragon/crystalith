@@ -8,7 +8,6 @@ import {
   Typography,
   Stack,
   CircularProgress,
-  Tooltip,
   List,
   ListItemButton,
   ListItemText,
@@ -162,28 +161,6 @@ export default function SessionSwitcher({
         bgcolor: 'background.paper',
       }}
     >
-      {/* New Session Button - Left side */}
-      <Tooltip title="新建会话">
-        <IconButton
-          size="small"
-          onClick={async () => {
-            await onCreate();
-            handleClose();
-          }}
-          sx={{
-            borderRadius: 0,
-            borderRight: '1px solid',
-            borderColor: 'divider',
-            px: 1,
-            '&:hover': {
-              bgcolor: 'action.hover',
-            },
-          }}
-        >
-          <AddIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
-
       {/* Session Selector Button */}
       <Button
         onClick={handleToggle}
@@ -221,6 +198,26 @@ export default function SessionSwitcher({
           </Typography>
         </Stack>
       </Button>
+
+      {/* New Session Button - Right side */}
+      <IconButton
+        size="small"
+        onClick={async () => {
+          await onCreate();
+          handleClose();
+        }}
+        sx={{
+          borderRadius: 0,
+          borderLeft: '1px solid',
+          borderColor: 'divider',
+          px: 1,
+          '&:hover': {
+            bgcolor: 'action.hover',
+          },
+        }}
+      >
+        <AddIcon fontSize="small" />
+      </IconButton>
 
       {/* Session List Popover */}
       <Popover

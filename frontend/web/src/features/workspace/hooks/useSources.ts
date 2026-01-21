@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 
 import type { AsyncStatus } from '../../../shared/types';
-import { deleteSource, deleteSources, listSources, searchSources, uploadSource } from '../api';
+import { convertOutputToSource, deleteSource, deleteSources, listSources, searchSources, uploadSource } from '../api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
 import type { ApiSource, ApiSourceSearchResult } from '../types';
 import { normalizeSource } from '../utils';
@@ -401,6 +401,26 @@ export function useSources() {
     }
   }, [state.citations, state.selectedCitationIds]);
 
+  const handleConvertOutputToSource = useCallback(
+    async (outputId: number) => {
+      if (!state.activeNotebookId) return;
+      if (isDemo) {
+        window.alert('演示模式下不支持此功能');
+        return;
+      }
+      try {
+        const result = await convertOutputToSource(state.activeNotebookId, outputId);
+        // Refresh sources list to show the new source
+        await mutate();
+        window.alert(`已转换为来源：${result.filename}（${result.chunk_count} 个分块）`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '转换失败';
+        window.alert(`转换失败：${message}`);
+      }
+    },
+    [state.activeNotebookId, isDemo, mutate],
+  );
+
   return {
     sources: state.sources,
     citations: state.citations,
@@ -432,6 +452,7 @@ export function useSources() {
     removeSources,
     removeSource,
     removeState,
+    convertOutputToSource: handleConvertOutputToSource,
     isDemo,
   };
 }

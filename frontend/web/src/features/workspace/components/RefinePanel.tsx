@@ -818,7 +818,6 @@ export default function RefinePanel({
                     type="button"
                     className="OutputStudioTile__main"
                     disabled={isDisabled}
-                    title={tile.description}
                     aria-label={
                       tile.description ? `${tile.label} ${tile.description}` : tile.label
                     }
@@ -1007,7 +1006,6 @@ export default function RefinePanel({
                         type="button"
                         className="OutputHistoryItem__main"
                         onClick={() => onReplayRefineJob(job)}
-                        title="点击重新生成并入队"
                       >
                         <span
                           className="OutputHistoryItem__icon"
@@ -1108,7 +1106,6 @@ export default function RefinePanel({
                       type="button"
                       className="OutputHistoryItem__main"
                       onClick={() => onReplayOutput(output)}
-                      title="点击重新生成并入队"
                     >
                       <span
                         className="OutputHistoryItem__icon"
@@ -1204,7 +1201,6 @@ export default function RefinePanel({
               aria-label="输出中心配置"
               aria-expanded={isConfigOpen}
               onClick={() => setIsConfigOpen((prev) => !prev)}
-              title="输出中心配置"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path

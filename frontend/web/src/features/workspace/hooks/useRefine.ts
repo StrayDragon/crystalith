@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
-import { createOutput, getOutput, listOutputs, listWorkspaceTools, refineBatch } from '../api';
+import { createOutput, deleteOutput as deleteOutputApi, getOutput, listOutputs, listWorkspaceTools, refineBatch } from '../api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
 import type {
   ApiWorkspaceTool,
@@ -87,7 +87,8 @@ const REFINE_TEMPLATES: RefineTemplate[] = [
   },
 ];
 
-const DEFAULT_TOOLS: WorkspaceTool[] = [
+// Demo mode default tools (only used when backend is not available in demo mode)
+const DEMO_DEFAULT_TOOLS: WorkspaceTool[] = [
   {
     id: 'faq',
     label: '闪卡',
@@ -144,13 +145,6 @@ const DEFAULT_TOOLS: WorkspaceTool[] = [
   },
 ];
 
-const DEFAULT_OUTPUT_TYPE_OPTIONS = DEFAULT_TOOLS.map((tool) => ({
-  id: tool.outputType,
-  label: tool.label,
-  description: tool.description,
-  prompt: tool.prompt,
-}));
-
 type OutputQueueStatus = 'queued' | 'running' | 'done' | 'error';
 
 interface OutputQueueJob {
@@ -162,6 +156,7 @@ interface OutputQueueJob {
   createdAt: string;
   createdAtLabel: string;
   notebookId: number | null;
+  modelId?: string;
 }
 
 function buildDemoOutputContent(type: OutputTypeId, prompt: string) {
@@ -265,22 +260,22 @@ export function useRefine() {
     [refineTemplates],
   );
 
-  const { data: toolsData, error: toolsError } = useSWR(
+  const { data: toolsData, error: toolsError, isLoading: toolsLoading } = useSWR(
     !isDemo ? 'workspace/tools' : null,
     listWorkspaceTools,
     { revalidateOnFocus: false },
   );
 
   const tools = useMemo<WorkspaceTool[]>(() => {
-    if (isDemo) return DEFAULT_TOOLS;
+    // Only use default tools in demo mode
+    if (isDemo) return DEMO_DEFAULT_TOOLS;
+    // Return backend data if available
     if (toolsData?.tools?.length) {
       return toolsData.tools.map(normalizeTool);
     }
-    if (toolsError) {
-      return DEFAULT_TOOLS;
-    }
-    return DEFAULT_TOOLS;
-  }, [isDemo, toolsData, toolsError]);
+    // Return empty array while loading or on error (UI should show appropriate state)
+    return [];
+  }, [isDemo, toolsData]);
 
   const outputTypeOptions = useMemo(() => {
     const seen = new Set<OutputTypeId>();
@@ -295,7 +290,7 @@ export function useRefine() {
         prompt: tool.prompt,
       });
     }
-    return options.length > 0 ? options : DEFAULT_OUTPUT_TYPE_OPTIONS;
+    return options;
   }, [tools]);
 
   const activePanelRef = useRef(state.activePanel);
@@ -304,7 +299,6 @@ export function useRefine() {
   const refineRunningRef = useRef(false);
   const runNextRefineJobRef = useRef<() => void>(() => {});
   const [outputQueueJobs, setOutputQueueJobs] = useState<OutputQueueJob[]>([]);
-  const [recentOutputJobId, setRecentOutputJobId] = useState<string | null>(null);
   const outputQueueRef = useRef<OutputQueueJob[]>(outputQueueJobs);
   const outputRunningRef = useRef(false);
   const runNextOutputJobRef = useRef<() => void>(() => {});
@@ -627,7 +621,7 @@ export function useRefine() {
   );
 
   const enqueueOutputJob = useCallback(
-    ({ type, prompt, chunkIds }: { type: OutputTypeId; prompt: string; chunkIds: number[] }) => {
+    ({ type, prompt, chunkIds, modelId }: { type: OutputTypeId; prompt: string; chunkIds: number[]; modelId?: string }) => {
       const createdAt = new Date().toISOString();
       if (!hasPendingJobs()) {
         resetQueueSummary();
@@ -642,6 +636,7 @@ export function useRefine() {
         createdAt,
         createdAtLabel: formatTimestamp(createdAt),
         notebookId: state.activeNotebookId,
+        modelId,
       };
       updateOutputQueueJobs((prev) => [job, ...prev]);
       return job;
@@ -680,6 +675,7 @@ export function useRefine() {
           const response = await createOutput(job.notebookId, job.type, {
             prompt: job.prompt || undefined,
             chunk_ids: job.chunkIds.length ? job.chunkIds : undefined,
+            model_id: job.modelId || undefined,
           });
           normalized = [normalizeOutput(response)];
           dispatch({ type: 'SET_OUTPUTS', payload: [...normalized, ...state.outputs] });
@@ -696,10 +692,6 @@ export function useRefine() {
         const isCurrentNotebook =
           job.notebookId != null && job.notebookId === activeNotebookIdRef.current;
         if (normalized.length > 0 && stillTracked && isCurrentNotebook) {
-          setRecentOutputJobId(job.id);
-          window.setTimeout(() => {
-            setRecentOutputJobId(null);
-          }, 2000);
           markJobCompleted(job.id);
         }
         dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
@@ -907,7 +899,7 @@ export function useRefine() {
     [dispatch],
   );
 
-  const handleGenerateOutput = useCallback((overrideType?: OutputTypeId) => {
+  const handleGenerateOutput = useCallback((overrideType?: OutputTypeId, modelId?: string | null) => {
     if (!state.activeNotebookId && !isDemo) {
       dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先创建笔记本。' } });
       return;
@@ -926,6 +918,7 @@ export function useRefine() {
       type: selectedType,
       prompt,
       chunkIds: selectedChunkIds.length ? selectedChunkIds : [],
+      modelId: modelId ?? undefined,
     });
     if (state.activePanel !== 'refine') {
       dispatch({ type: 'SET_HAS_NEW_OUTPUT', payload: true });
@@ -965,19 +958,52 @@ export function useRefine() {
     [dispatch, enqueueOutputJob, isDemo, resolveOutputPrompt, state.activeNotebookId],
   );
 
+  const saveContentAsNote = useCallback(
+    (content: string) => {
+      if (!state.activeNotebookId && !isDemo) {
+        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先创建笔记本。' } });
+        return;
+      }
+      enqueueOutputJob({
+        type: 'PARAGRAPH',
+        prompt: content,
+        chunkIds: [],
+      });
+      if (state.activePanel !== 'refine') {
+        dispatch({ type: 'SET_HAS_NEW_OUTPUT', payload: true });
+      }
+      dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
+    },
+    [dispatch, enqueueOutputJob, isDemo, state.activeNotebookId, state.activePanel],
+  );
+
   const retryOutputs = useCallback(async () => {
     dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '' } });
     await mutateOutputs();
   }, [dispatch, mutateOutputs]);
 
   const deleteOutput = useCallback(
-    (outputId: number) => {
+    async (outputId: number) => {
+      if (!state.activeNotebookId) return;
+
+      // Optimistic update: remove from UI immediately
       dispatch({
         type: 'SET_OUTPUTS',
         payload: state.outputs.filter((item) => item.id !== outputId),
       });
+
+      // Call API (if not demo mode)
+      if (!isDemo) {
+        try {
+          await deleteOutputApi(state.activeNotebookId, outputId);
+        } catch (error) {
+          console.error('Failed to delete output:', error);
+          // Revert optimistic update on error
+          await mutateOutputs();
+        }
+      }
     },
-    [dispatch, state.outputs],
+    [dispatch, state.outputs, state.activeNotebookId, isDemo, mutateOutputs],
   );
 
   const clearOutputs = useCallback(() => {
@@ -1014,6 +1040,8 @@ export function useRefine() {
     refineTemplates,
     compareTemplate,
     tools,
+    toolsLoading,
+    toolsError: toolsError ? '工具加载失败' : '',
     selectedChunkIds,
     refineMode: state.refineMode,
     setRefineMode,
@@ -1023,7 +1051,6 @@ export function useRefine() {
     refineSettings: state.refineSettings,
     hasNewOutput: state.hasNewOutput,
     recentCompletedJobId: state.recentCompletedJobId,
-    recentOutputJobId,
     onGenerateRefine: handleRefineGenerate,
     onCompareSelected: handleCompareSelectedCitations,
     onReplayRefineJob: handleReplayRefineJob,
@@ -1042,6 +1069,7 @@ export function useRefine() {
     onGenerateOutput: handleGenerateOutput,
     onReplayOutput: handleReplayOutput,
     onDeleteOutput: deleteOutput,
+    saveContentAsNote,
     retryOutputs,
     onClearOutputs: clearOutputs,
     fetchOutput,

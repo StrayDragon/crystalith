@@ -26,8 +26,9 @@
   }
 
   /* MUI Integration - Smooth transitions */
+  /* Avoid global transition on transform as it breaks Popper.js positioning */
   * {
-    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+    transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;
   }

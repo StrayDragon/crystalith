@@ -21,8 +21,6 @@ import {
   listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet,
   askQuestionV1NotebooksNotebookIdQaPost,
   askQuestionStreamV1NotebooksNotebookIdQaStreamPost,
-  notebookSuggestionsV1NotebooksNotebookIdSuggestionsPost,
-  sessionSuggestionsV1NotebooksNotebookIdSessionsSessionIdSuggestionsPost,
   createOutputV1NotebooksNotebookIdOutputsOutputTypePost,
   listOutputsV1NotebooksNotebookIdOutputsGet,
   getOutputV1NotebooksNotebookIdOutputsOutputIdGet,
@@ -45,7 +43,6 @@ import type {
   SessionUpdate,
   MessageRead,
   QaResponse,
-  SuggestionResponse,
   OutputRead,
   OutputType,
   RefineResponse,
@@ -64,7 +61,6 @@ export type {
   SessionRead,
   MessageRead,
   QaResponse,
-  SuggestionResponse,
   OutputRead,
   OutputType,
   RefineResponse,
@@ -181,6 +177,51 @@ export async function searchSources(
     body: payload,
   });
   return handleResponse(result);
+}
+
+// Source Summary and QA (not yet in generated SDK)
+export interface SourceSummaryResponse {
+  source_id: number;
+  summary: string;
+  key_points: string[];
+  topics: string[];
+  word_count: number;
+  generated_at: string;
+}
+
+export interface SourceQAResponse {
+  source_id: number;
+  answer: string;
+  created_at: string;
+}
+
+export async function getSourceSummary(
+  notebookId: number,
+  sourceId: number,
+): Promise<SourceSummaryResponse> {
+  const response = await fetch(`/v1/notebooks/${notebookId}/sources/${sourceId}/summary`);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, err.detail || 'Failed to get source summary');
+  }
+  return response.json();
+}
+
+export async function askSourceQuestion(
+  notebookId: number,
+  sourceId: number,
+  question: string,
+): Promise<SourceQAResponse> {
+  const response = await fetch(`/v1/notebooks/${notebookId}/sources/${sourceId}/qa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, err.detail || 'Failed to ask source question');
+  }
+  return response.json();
 }
 
 // Sessions
@@ -360,30 +401,6 @@ export async function askQuestionStream(
   return { fullAnswer, done: doneEvent };
 }
 
-// Suggestions
-export async function createNotebookSuggestions(
-  notebookId: number,
-  payload: { count?: number; mode?: 'standard' | 'deep_dive'; seed_question?: string | null },
-): Promise<SuggestionResponse> {
-  const result = await notebookSuggestionsV1NotebooksNotebookIdSuggestionsPost({
-    path: { notebook_id: notebookId },
-    body: payload,
-  });
-  return handleResponse(result);
-}
-
-export async function createSessionSuggestions(
-  notebookId: number,
-  sessionId: number,
-  payload: { count?: number; mode?: 'standard' | 'deep_dive'; seed_question?: string | null },
-): Promise<SuggestionResponse> {
-  const result = await sessionSuggestionsV1NotebooksNotebookIdSessionsSessionIdSuggestionsPost({
-    path: { notebook_id: notebookId, session_id: sessionId },
-    body: payload,
-  });
-  return handleResponse(result);
-}
-
 // Outputs
 export async function createOutput(
   notebookId: number,
@@ -393,6 +410,7 @@ export async function createOutput(
     chunk_ids?: number[];
     top_k?: number;
     min_score?: number;
+    model_id?: string | null;
   },
 ): Promise<OutputRead> {
   const result = await createOutputV1NotebooksNotebookIdOutputsOutputTypePost({
@@ -414,6 +432,39 @@ export async function getOutput(notebookId: number, outputId: number): Promise<O
     path: { notebook_id: notebookId, output_id: outputId },
   });
   return handleResponse(result);
+}
+
+export async function deleteOutput(notebookId: number, outputId: number): Promise<void> {
+  const response = await fetch(`/v1/notebooks/${notebookId}/outputs/${outputId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, err.detail || 'Failed to delete output');
+  }
+}
+
+export interface ConvertToSourceResponse {
+  source_id: number;
+  filename: string;
+  chunk_count: number;
+}
+
+export async function convertOutputToSource(
+  notebookId: number,
+  outputId: number,
+): Promise<ConvertToSourceResponse> {
+  const response = await fetch(`/v1/notebooks/${notebookId}/outputs/${outputId}/convert-to-source`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, err.detail || 'Failed to convert output to source');
+  }
+  return response.json();
 }
 
 // Refine
@@ -452,6 +503,31 @@ export async function listWorkspaceTools(): Promise<WorkspaceToolsResponse> {
   return handleResponse(result);
 }
 
+// Tool Configuration (not yet in generated SDK)
+export interface ToolConfigOption {
+  id: string;
+  label: string;
+  is_default: boolean;
+}
+
+export interface ToolConfigResponse {
+  tool_id: string;
+  tool_label: string;
+  quantity_options: ToolConfigOption[] | null;
+  difficulty_options: ToolConfigOption[] | null;
+  topic_placeholder: string | null;
+  supports_topic: boolean;
+}
+
+export async function getToolConfig(toolId: string): Promise<ToolConfigResponse> {
+  const response = await fetch(`/v1/workspace/tools/${toolId}/config`);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, err.detail || 'Failed to get tool config');
+  }
+  return response.json();
+}
+
 // Tasks
 export async function getTask(taskId: string): Promise<TaskRead> {
   const result = await getTaskV1TasksTaskIdGet({
@@ -473,6 +549,47 @@ export async function analyzeNotebook(notebookId: number): Promise<AnalysisResul
     path: { notebook_id: notebookId },
   });
   return handleResponse(result);
+}
+
+// Models API
+
+export interface ModelRead {
+  id: string;
+  provider: 'openai' | 'ollama';
+  model: string;
+  display_name: string;
+  description: string;
+  capabilities: Array<'chat' | 'embedding'>;
+}
+
+export interface ModelsListResponse {
+  models: ModelRead[];
+  default_chat: string | null;
+  default_embedding: string | null;
+}
+
+/**
+ * List all available AI models.
+ * @param capability - Optional filter by capability ('chat' or 'embedding')
+ */
+export async function listModels(capability?: 'chat' | 'embedding'): Promise<ModelsListResponse> {
+  const url = capability ? `/v1/models?capability=${capability}` : '/v1/models';
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new ApiError(response.status, `Failed to list models: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+/**
+ * Get a specific model by ID.
+ */
+export async function getModel(modelId: string): Promise<ModelRead> {
+  const response = await fetch(`/v1/models/${encodeURIComponent(modelId)}`);
+  if (!response.ok) {
+    throw new ApiError(response.status, `Failed to get model: ${response.statusText}`);
+  }
+  return response.json();
 }
 
 // Export ApiError for use in other modules

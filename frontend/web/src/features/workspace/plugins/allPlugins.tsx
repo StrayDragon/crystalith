@@ -1,0 +1,289 @@
+/**
+ * All Output Plugins
+ *
+ * This file exports all built-in output plugins for registration.
+ * To add a new output type, create a plugin file and add it to the exports.
+ */
+
+import {
+  AccountTree as MindmapIcon,
+  Assignment as BriefingIcon,
+  QuestionAnswer as FAQIcon,
+  Quiz as QuizIcon,
+  MenuBook as GuideIcon,
+  Timeline as TimelineIcon,
+} from '@mui/icons-material';
+
+import type { OutputPlugin, OutputContent } from './index';
+import { MindmapViewer } from '../components/MindmapViewer';
+
+// --- Shared Components ---
+
+function FallbackWarning() {
+  return (
+    <div className="OutputFallbackWarning">
+      <span className="OutputFallbackIcon">⚠️</span>
+      <span>AI 模型生成失败。这可能是因为模型能力不足或响应格式不正确。建议：</span>
+      <ul>
+        <li>稍后重试</li>
+        <li>使用更强大的 AI 模型（如 GPT-4、Claude 等）</li>
+        <li>简化提示内容</li>
+      </ul>
+    </div>
+  );
+}
+
+// --- FAQ Plugin ---
+
+export const faqPlugin: OutputPlugin = {
+  id: 'FAQ',
+  label: '闪卡',
+  description: '问答清单',
+  tone: 'blue',
+  icon: <FAQIcon fontSize="small" />,
+  defaultPrompt: '整理为 FAQ 问答清单。',
+  configSchema: {
+    quantityOptions: [
+      { id: 'less', label: '更少' },
+      { id: 'standard', label: '标准（默认）', isDefault: true },
+      { id: 'more', label: '更多' },
+    ],
+    topicPlaceholder: '示例提示\n• 抽认卡必须仅限于一个特定来源\n• 抽认卡必须专注于一个特定主题\n• 卡片正面内容必须简短易记',
+    supportsTopic: true,
+  },
+  enabled: true,
+  render: (content, isFallback) => {
+    const items = (content as any).items;
+    if (!Array.isArray(items)) return <div className="OutputError">无效的闪卡数据</div>;
+    return (
+      <div className="StructuredOutputFaq">
+        {isFallback && <FallbackWarning />}
+        {items.map((item: any, index: number) => (
+          <div key={index} className="StructuredOutputFaqItem">
+            <div className="StructuredOutputFaqQuestion">{item.question || '问题'}</div>
+            <div className="StructuredOutputFaqAnswer">{item.answer || '暂无回答'}</div>
+          </div>
+        ))}
+      </div>
+    );
+  },
+  validateContent: (content) => Array.isArray((content as any).items),
+};
+
+// --- Guide Plugin ---
+
+export const guidePlugin: OutputPlugin = {
+  id: 'GUIDE',
+  label: '指南',
+  description: '学习/行动指南',
+  tone: 'green',
+  icon: <GuideIcon fontSize="small" />,
+  defaultPrompt: '生成结构化学习指南。',
+  configSchema: {
+    quantityOptions: [
+      { id: 'brief', label: '简要' },
+      { id: 'standard', label: '标准（默认）', isDefault: true },
+      { id: 'detailed', label: '详细' },
+    ],
+    difficultyOptions: [
+      { id: 'easy', label: '简单' },
+      { id: 'medium', label: '中等（默认）', isDefault: true },
+      { id: 'hard', label: '困难' },
+    ],
+    topicPlaceholder: '指南应该聚焦于什么主题？\n例如：入门指南、最佳实践',
+    supportsTopic: true,
+  },
+  enabled: true,
+  render: (content, isFallback) => {
+    const modules = (content as any).modules;
+    if (!Array.isArray(modules)) return <div className="OutputError">无效的指南数据</div>;
+    return (
+      <div className="StructuredOutputGuide">
+        {isFallback && <FallbackWarning />}
+        {modules.map((module: any, index: number) => (
+          <div key={index} className="StructuredOutputGuideModule">
+            <div className="StructuredOutputGuideTitle">{module.title || '模块'}</div>
+            <div className="StructuredOutputGuideObjective">{module.objective?.text || '暂无目标'}</div>
+            {Array.isArray(module.key_points) && (
+              <ul className="StructuredOutputList">
+                {module.key_points.map((item: any, i: number) => <li key={i}>{item.text || '要点'}</li>)}
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  },
+  validateContent: (content) => Array.isArray((content as any).modules),
+};
+
+// --- Timeline Plugin ---
+
+export const timelinePlugin: OutputPlugin = {
+  id: 'TIMELINE',
+  label: '时间轴',
+  description: '关键事件序列',
+  tone: 'rose',
+  icon: <TimelineIcon fontSize="small" />,
+  defaultPrompt: '按时间轴整理关键事件。',
+  configSchema: {
+    quantityOptions: [
+      { id: 'less', label: '更少' },
+      { id: 'standard', label: '标准（默认）', isDefault: true },
+      { id: 'more', label: '更多' },
+    ],
+    topicPlaceholder: '时间轴应该覆盖什么时间范围或事件类型？\n例如：技术发展历程、项目里程碑',
+    supportsTopic: true,
+  },
+  enabled: true,
+  render: (content, isFallback) => {
+    const events = (content as any).events;
+    if (!Array.isArray(events)) return <div className="OutputError">无效的时间轴数据</div>;
+    return (
+      <>
+        {isFallback && <FallbackWarning />}
+        <ul className="StructuredOutputTimeline">
+          {events.map((event: any, index: number) => (
+            <li key={index} className="StructuredOutputTimelineItem">
+              <div className="StructuredOutputTimelineDate">{event.date || '时间'}</div>
+              <div className="StructuredOutputTimelineEvent">{event.event || '事件'}</div>
+              <div className="StructuredOutputTimelineDesc">{event.description || '暂无描述'}</div>
+            </li>
+          ))}
+        </ul>
+      </>
+    );
+  },
+  validateContent: (content) => Array.isArray((content as any).events),
+};
+
+// --- Mindmap Plugin ---
+
+export const mindmapPlugin: OutputPlugin = {
+  id: 'MINDMAP',
+  label: '思维导图',
+  description: '主题层级结构',
+  tone: 'indigo',
+  icon: <MindmapIcon fontSize="small" />,
+  defaultPrompt: '生成思维导图层级结构。',
+  configSchema: {
+    quantityOptions: [
+      { id: 'shallow', label: '浅层（2层）' },
+      { id: 'standard', label: '标准（3层）', isDefault: true },
+      { id: 'deep', label: '深层（4层）' },
+    ],
+    topicPlaceholder: '思维导图的核心主题是什么？\n例如：系统架构、知识体系',
+    supportsTopic: true,
+  },
+  enabled: true,
+  render: (content, isFallback) => {
+    const root = (content as any).root;
+    if (!root) return <div className="OutputError">无效的思维导图数据</div>;
+    return (
+      <>
+        {isFallback && <FallbackWarning />}
+        <MindmapViewer data={{ root }} className="StructuredMindmapInteractive" />
+      </>
+    );
+  },
+  validateContent: (content) => !!(content as any).root,
+};
+
+// --- Quiz Plugin ---
+
+export const quizPlugin: OutputPlugin = {
+  id: 'QUIZ',
+  label: '测验',
+  description: '知识检验',
+  tone: 'teal',
+  icon: <QuizIcon fontSize="small" />,
+  defaultPrompt: '生成小测验题目。',
+  configSchema: {
+    quantityOptions: [
+      { id: 'less', label: '更少' },
+      { id: 'standard', label: '标准（默认）', isDefault: true },
+      { id: 'more', label: '更多' },
+    ],
+    difficultyOptions: [
+      { id: 'easy', label: '简单' },
+      { id: 'medium', label: '中等（默认）', isDefault: true },
+      { id: 'hard', label: '困难' },
+    ],
+    topicPlaceholder: '测验应该测试什么知识点？\n例如：基础概念、高级应用',
+    supportsTopic: true,
+  },
+  enabled: true,
+  render: (content, isFallback) => {
+    const questions = (content as any).questions;
+    if (!Array.isArray(questions)) return <div className="OutputError">无效的测验数据</div>;
+    return (
+      <div className="StructuredOutputQuiz">
+        {isFallback && <FallbackWarning />}
+        {questions.map((question: any, index: number) => (
+          <div key={index} className="StructuredOutputQuizItem">
+            <div className="StructuredOutputQuizQuestion">{question.question || '问题'}</div>
+            {Array.isArray(question.options) && question.options.length > 0 && (
+              <ul className="StructuredOutputList">
+                {question.options.map((option: string) => <li key={option}>{option}</li>)}
+              </ul>
+            )}
+            <div className="StructuredOutputQuizAnswer">{question.answer || '暂无答案'}</div>
+          </div>
+        ))}
+      </div>
+    );
+  },
+  validateContent: (content) => Array.isArray((content as any).questions),
+};
+
+// --- Briefing Plugin ---
+
+export const briefingPlugin: OutputPlugin = {
+  id: 'BRIEFING',
+  label: '报告',
+  description: '高层摘要',
+  tone: 'amber',
+  icon: <BriefingIcon fontSize="small" />,
+  defaultPrompt: '生成简报：背景/发现/建议/下一步。',
+  configSchema: {
+    quantityOptions: [
+      { id: 'executive', label: '高管摘要' },
+      { id: 'standard', label: '标准报告（默认）', isDefault: true },
+      { id: 'comprehensive', label: '详尽报告' },
+    ],
+    topicPlaceholder: '报告应该重点关注什么方面？\n例如：技术分析、市场趋势',
+    supportsTopic: true,
+  },
+  enabled: true,
+  render: (content, isFallback) => {
+    const sections = (content as any).sections;
+    if (!Array.isArray(sections)) return <div className="OutputError">无效的报告数据</div>;
+    return (
+      <div className="StructuredOutputBriefing">
+        {isFallback && <FallbackWarning />}
+        {sections.map((section: any, index: number) => (
+          <div key={index} className="StructuredOutputBriefingSection">
+            <div className="StructuredOutputBriefingHeading">{section.heading || '要点'}</div>
+            {Array.isArray(section.points) && (
+              <ul className="StructuredOutputList">
+                {section.points.map((point: any, i: number) => <li key={i}>{point.text || '内容'}</li>)}
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  },
+  validateContent: (content) => Array.isArray((content as any).sections),
+};
+
+// --- Export all plugins ---
+
+export const allPlugins: OutputPlugin[] = [
+  faqPlugin,
+  guidePlugin,
+  timelinePlugin,
+  mindmapPlugin,
+  quizPlugin,
+  briefingPlugin,
+];
