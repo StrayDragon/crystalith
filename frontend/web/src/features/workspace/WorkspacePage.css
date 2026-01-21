@@ -792,12 +792,23 @@
 }
 
 .ChatComposerRow {
-  @apply flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 sm:px-4 py-2 shadow-sm;
+  @apply flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 sm:px-4 py-2 shadow-sm transition-all duration-200;
+}
+
+.ChatComposerRow:focus-within {
+  @apply border-slate-400 ring-2 ring-slate-100;
 }
 
 .ChatInput {
-  @apply flex-1 bg-transparent text-sm text-slate-700 outline-none resize-none;
+  @apply flex-1 bg-transparent text-sm text-slate-700 outline-none resize-none border-none;
   min-height: clamp(32px, 4vw, 44px);
+}
+
+.ChatInput:focus,
+.ChatInput:focus-visible {
+  @apply outline-none ring-0;
+  outline: none !important;
+  box-shadow: none;
 }
 
 .ChatSendButton {
