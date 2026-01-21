@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import urllib.parse
-from typing import Any, TypedDict
+from dataclasses import dataclass, field
+from typing import Any
 
-from langgraph.graph import END, StateGraph
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent
+from pydantic_graph import BaseNode, End, Graph, GraphRunContext
 
 from cl_logs.logging import get_logger
 
@@ -16,13 +17,15 @@ from crystalith.agents.models import build_chat_model
 log = get_logger(__name__)
 
 
-class SearchState(TypedDict, total=False):
+@dataclass
+class SearchGraphState:
+    """State object passed through the search graph."""
+
     query: str
     engine: str
     mode: str
-    deps: StudioDeps
-    message: str
-    results: list[dict[str, Any]]
+    message: str = ""
+    results: list[dict[str, Any]] = field(default_factory=list)
 
 
 class SearchSummary(BaseModel):
@@ -63,52 +66,73 @@ def _build_stub_results(query: str, engine: str, message: str | None) -> list[di
     ]
 
 
-async def _generate_summary(state: SearchState) -> dict[str, Any]:
-    deps = state["deps"]
-    query = state["query"]
-    mode = state["mode"]
-    engine = state["engine"]
+# =============================================================================
+# Graph Nodes
+# =============================================================================
 
-    model = deps.model or build_chat_model(deps.settings)
-    agent = Agent(
-        model,
-        output_type=SearchSummary,
-        deps_type=StudioDeps,
-        system_prompt=SYSTEM_PROMPT,
-        retries=2,
+
+@dataclass
+class GenerateSummary(BaseNode[SearchGraphState, StudioDeps, dict[str, Any]]):
+    """Generate a summary for the search query using LLM."""
+
+    async def run(
+        self, ctx: GraphRunContext[SearchGraphState, StudioDeps]
+    ) -> "BuildResults":
+        state = ctx.state
+        deps = ctx.deps
+
+        model = deps.model or build_chat_model(deps.settings)
+        agent = Agent(
+            model,
+            output_type=SearchSummary,
+            deps_type=StudioDeps,
+            system_prompt=SYSTEM_PROMPT,
+            retries=2,
+        )
+        user_prompt = f"Query: {state.query}\nMode: {state.mode}\nEngine: {state.engine}"
+
+        try:
+            result = await agent.run(user_prompt, deps=deps)
+            state.message = f"{result.output.summary} {result.output.next_step}".strip()
+        except Exception as error:  # noqa: BLE001 - fallback to empty message
+            log.warning("search summary failed", exc_info=error)
+            state.message = ""
+
+        return BuildResults()
+
+
+@dataclass
+class BuildResults(BaseNode[SearchGraphState, StudioDeps, dict[str, Any]]):
+    """Build search results based on the generated summary."""
+
+    async def run(
+        self, ctx: GraphRunContext[SearchGraphState, StudioDeps]
+    ) -> End[dict[str, Any]]:
+        state = ctx.state
+        state.results = _build_stub_results(state.query, state.engine, state.message)
+        return End({"message": state.message, "results": state.results})
+
+
+# =============================================================================
+# Graph Definition
+# =============================================================================
+
+SEARCH_GRAPH: Graph[SearchGraphState, StudioDeps, dict[str, Any]] = Graph(
+    nodes=[GenerateSummary, BuildResults]
+)
+
+
+async def run_search_graph(
+    query: str,
+    engine: str,
+    mode: str,
+    deps: StudioDeps,
+) -> dict[str, Any]:
+    """Run the search graph and return the results."""
+    state = SearchGraphState(
+        query=query,
+        engine=engine,
+        mode=mode,
     )
-    user_prompt = f"Query: {query}\nMode: {mode}\nEngine: {engine}"
-
-    try:
-        result = await agent.run(user_prompt, deps=deps)
-        message = f"{result.output.summary} {result.output.next_step}".strip()
-    except Exception as error:  # noqa: BLE001 - fallback to empty message
-        log.warning("search summary failed", exc_info=error)
-        message = ""
-
-    return {"message": message}
-
-
-async def _build_results(state: SearchState) -> dict[str, Any]:
-    query = state["query"]
-    engine = state["engine"]
-    message = state.get("message")
-    results = _build_stub_results(query, engine, message)
-    return {"results": results}
-
-
-def _build_graph():
-    graph = StateGraph(SearchState)
-    graph.add_node("generate_summary", _generate_summary)
-    graph.add_node("build_results", _build_results)
-    graph.set_entry_point("generate_summary")
-    graph.add_edge("generate_summary", "build_results")
-    graph.add_edge("build_results", END)
-    return graph.compile()
-
-
-_SEARCH_GRAPH = _build_graph()
-
-
-async def run_search_graph(state: SearchState) -> dict[str, Any]:
-    return await _SEARCH_GRAPH.ainvoke(state)
+    result = await SEARCH_GRAPH.run(GenerateSummary(), state=state, deps=deps)
+    return result.output

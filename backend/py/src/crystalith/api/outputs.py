@@ -5,6 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,7 +13,7 @@ from cl_logs.logging import get_logger
 
 from crystalith.agents.deps import StudioDeps
 from crystalith.agents.models import ModelConfigurationError
-from crystalith.agents.output_graph import OutputState, run_output_graph
+from crystalith.agents.output_graph import run_output_graph
 from crystalith.config import Settings
 from crystalith.db import Notebook, Output
 from crystalith.outputs import OutputType
@@ -74,15 +75,6 @@ async def create_output(
         vector_store=vector_store,
         embedder=embedder,
     )
-    state: OutputState = {
-        "notebook_id": notebook_id,
-        "output_type": output_type,
-        "prompt": payload.prompt or "",
-        "chunk_ids": payload.chunk_ids,
-        "top_k": payload.top_k,
-        "min_score": payload.min_score,
-        "deps": deps,
-    }
 
     log.info(
         "creating output",
@@ -93,13 +85,35 @@ async def create_output(
     )
 
     try:
-        db_output = await run_output_graph(state)
+        db_output = await run_output_graph(
+            notebook_id=notebook_id,
+            output_type=output_type,
+            prompt=payload.prompt or "",
+            deps=deps,
+            chunk_ids=payload.chunk_ids,
+            top_k=payload.top_k,
+            min_score=payload.min_score,
+        )
     except ModelConfigurationError as exc:
         log.warning("model configuration error", error=str(exc))
         raise HTTPException(
             status_code=503,
             detail=f"AI model configuration error: {exc}. Please check your config/app.yaml settings.",
         ) from exc
+    except UnexpectedModelBehavior as exc:
+        # pydantic_ai validation errors - model output didn't match expected schema
+        error_msg = str(exc)
+        log.warning(
+            "model output validation failed",
+            error=error_msg,
+            output_type=output_type.value,
+        )
+        # Provide user-friendly message
+        if "maximum retries" in error_msg.lower():
+            detail = "AI 模型输出格式不符合预期，已达到最大重试次数。请稍后重试或尝试更简单的提示。"
+        else:
+            detail = f"AI 模型响应异常：{error_msg[:100]}"
+        raise HTTPException(status_code=422, detail=detail) from exc
     except ValueError as exc:
         log.warning("invalid request", error=str(exc))
         raise HTTPException(status_code=400, detail=str(exc)) from exc
