@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import useSWR from 'swr';
 
-import { createNotebook, listNotebooks } from '../api';
+import { createNotebook, deleteNotebook, listNotebooks, updateNotebook } from '../api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
 import type { ApiNotebook, StatusLabel } from '../types';
 import { normalizeNotebook } from '../utils';
@@ -119,6 +119,63 @@ export function useNotebooks() {
     await mutate();
   }, [dispatch, mutate]);
 
+  const handleUpdateNotebook = useCallback(
+    async (notebookId: number, name: string) => {
+      if (state.connectionState === 'demo') return false;
+      const trimmed = name.trim();
+      if (!trimmed) return false;
+      try {
+        const updated = await updateNotebook(notebookId, { name: trimmed });
+        const normalized = normalizeNotebook(updated);
+        await mutate(
+          async (current) =>
+            current?.map((item) => (item.id === notebookId ? updated : item)) ?? [updated],
+          { revalidate: false },
+        );
+        dispatch({
+          type: 'SET_NOTEBOOKS',
+          payload: state.notebooks.map((item) =>
+            item.id === notebookId ? normalized : item,
+          ),
+        });
+        return true;
+      } catch (error) {
+        dispatch({
+          type: 'SET_ERROR',
+          payload: { key: 'notebooks', value: '更新笔记本失败，请稍后重试。' },
+        });
+        return false;
+      }
+    },
+    [dispatch, mutate, state.connectionState, state.notebooks],
+  );
+
+  const handleDeleteNotebook = useCallback(
+    async (notebookId: number) => {
+      if (state.connectionState === 'demo') return false;
+      try {
+        await deleteNotebook(notebookId);
+        await mutate(
+          async (current) => current?.filter((item) => item.id !== notebookId) ?? [],
+          { revalidate: false },
+        );
+        const remaining = state.notebooks.filter((item) => item.id !== notebookId);
+        dispatch({ type: 'SET_NOTEBOOKS', payload: remaining });
+        if (state.activeNotebookId === notebookId) {
+          dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: remaining[0]?.id ?? null });
+        }
+        return true;
+      } catch (error) {
+        dispatch({
+          type: 'SET_ERROR',
+          payload: { key: 'notebooks', value: '删除笔记本失败，请稍后重试。' },
+        });
+        return false;
+      }
+    },
+    [dispatch, mutate, state.activeNotebookId, state.connectionState, state.notebooks],
+  );
+
   const statusLabel = useMemo<StatusLabel>(() => {
     if (state.connectionState === 'connecting') {
       return { text: '连接中', tone: 'isLoading', tooltip: '正在连接后端服务' };
@@ -137,6 +194,8 @@ export function useNotebooks() {
     setCreateName,
     createState: state.createState,
     createNotebook: handleCreateNotebook,
+    updateNotebook: handleUpdateNotebook,
+    deleteNotebook: handleDeleteNotebook,
     statusLabel,
     connectionState: state.connectionState,
     notebooksError: state.errors.notebooks,

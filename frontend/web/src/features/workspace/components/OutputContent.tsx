@@ -4,6 +4,20 @@ interface OutputContentProps {
   output: OutputItem;
 }
 
+function FallbackWarning() {
+  return (
+    <div className="OutputFallbackWarning">
+      <span className="OutputFallbackIcon">⚠️</span>
+      <span>AI 模型生成失败。这可能是因为模型能力不足或响应格式不正确。建议：</span>
+      <ul>
+        <li>稍后重试</li>
+        <li>使用更强大的 AI 模型（如 GPT-4、Claude 等）</li>
+        <li>简化提示内容</li>
+      </ul>
+    </div>
+  );
+}
+
 function renderMindmapNode(
   node: { label?: string; children?: any[] },
   depth = 0,
@@ -29,9 +43,12 @@ function renderMindmapNode(
 
 export default function OutputContent({ output }: OutputContentProps) {
   const content = output.content ?? {};
+  const isFallback = (content as any)._fallback === true;
+
   if (output.type === 'FAQ' && Array.isArray((content as any).items)) {
     return (
       <div className="StructuredOutputFaq">
+        {isFallback ? <FallbackWarning /> : null}
         {(content as any).items.map((item: any, index: number) => (
           <div key={index} className="StructuredOutputFaqItem">
             <div className="StructuredOutputFaqQuestion">{item.question || '问题'}</div>
@@ -45,6 +62,7 @@ export default function OutputContent({ output }: OutputContentProps) {
   if (output.type === 'GUIDE' && Array.isArray((content as any).modules)) {
     return (
       <div className="StructuredOutputGuide">
+        {isFallback ? <FallbackWarning /> : null}
         {(content as any).modules.map((module: any, index: number) => (
           <div key={index} className="StructuredOutputGuideModule">
             <div className="StructuredOutputGuideTitle">{module.title || '模块'}</div>
@@ -66,29 +84,36 @@ export default function OutputContent({ output }: OutputContentProps) {
 
   if (output.type === 'TIMELINE' && Array.isArray((content as any).events)) {
     return (
-      <ul className="StructuredOutputTimeline">
-        {(content as any).events.map((event: any, index: number) => (
-          <li key={index} className="StructuredOutputTimelineItem">
-            <div className="StructuredOutputTimelineDate">{event.date || '时间'}</div>
-            <div className="StructuredOutputTimelineEvent">{event.event || '事件'}</div>
-            <div className="StructuredOutputTimelineDesc">{event.description || '暂无描述'}</div>
-          </li>
-        ))}
-      </ul>
+      <>
+        {isFallback ? <FallbackWarning /> : null}
+        <ul className="StructuredOutputTimeline">
+          {(content as any).events.map((event: any, index: number) => (
+            <li key={index} className="StructuredOutputTimelineItem">
+              <div className="StructuredOutputTimelineDate">{event.date || '时间'}</div>
+              <div className="StructuredOutputTimelineEvent">{event.event || '事件'}</div>
+              <div className="StructuredOutputTimelineDesc">{event.description || '暂无描述'}</div>
+            </li>
+          ))}
+        </ul>
+      </>
     );
   }
 
   if (output.type === 'MINDMAP' && (content as any).root) {
     return (
-      <ul className="StructuredMindmapTree">
-        {renderMindmapNode((content as any).root, 0, 0)}
-      </ul>
+      <>
+        {isFallback ? <FallbackWarning /> : null}
+        <ul className="StructuredMindmapTree">
+          {renderMindmapNode((content as any).root, 0, 0)}
+        </ul>
+      </>
     );
   }
 
   if (output.type === 'QUIZ' && Array.isArray((content as any).questions)) {
     return (
       <div className="StructuredOutputQuiz">
+        {isFallback ? <FallbackWarning /> : null}
         {(content as any).questions.map((question: any, index: number) => (
           <div key={index} className="StructuredOutputQuizItem">
             <div className="StructuredOutputQuizQuestion">{question.question || '问题'}</div>
@@ -109,6 +134,7 @@ export default function OutputContent({ output }: OutputContentProps) {
   if (output.type === 'BRIEFING' && Array.isArray((content as any).sections)) {
     return (
       <div className="StructuredOutputBriefing">
+        {isFallback ? <FallbackWarning /> : null}
         {(content as any).sections.map((section: any, index: number) => (
           <div key={index} className="StructuredOutputBriefingSection">
             <div className="StructuredOutputBriefingHeading">{section.heading || '要点'}</div>
@@ -126,22 +152,31 @@ export default function OutputContent({ output }: OutputContentProps) {
   }
 
   if (output.type === 'PARAGRAPH' && typeof (content as any).text === 'string') {
-    return <p className="StructuredOutputParagraph">{(content as any).text}</p>;
+    return (
+      <>
+        {isFallback ? <FallbackWarning /> : null}
+        <p className="StructuredOutputParagraph">{(content as any).text}</p>
+      </>
+    );
   }
 
   if (output.type === 'BULLETS' && Array.isArray((content as any).items)) {
     return (
-      <ul className="StructuredOutputList">
-        {(content as any).items.map((item: any, index: number) => (
-          <li key={index}>{item.text || '要点'}</li>
-        ))}
-      </ul>
+      <>
+        {isFallback ? <FallbackWarning /> : null}
+        <ul className="StructuredOutputList">
+          {(content as any).items.map((item: any, index: number) => (
+            <li key={index}>{item.text || '要点'}</li>
+          ))}
+        </ul>
+      </>
     );
   }
 
   if (output.type === 'STRUCTURED') {
     return (
       <div className="StructuredOutputStructured">
+        {isFallback ? <FallbackWarning /> : null}
         <div className="StructuredOutputStructuredTitle">
           {(content as any).title || '未命名结构化输出'}
         </div>

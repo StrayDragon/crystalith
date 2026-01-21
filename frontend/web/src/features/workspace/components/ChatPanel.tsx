@@ -1,5 +1,7 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState, useCallback } from 'react';
 import type { RefObject } from 'react';
+import { Collapse, Box, IconButton, Stack, Typography, alpha } from '@mui/material';
+import { ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon } from '@mui/icons-material';
 
 import type { ChatMessage, Citation, SuggestionItem } from '../types';
 import CitationMark from './citations/CitationMark';
@@ -138,36 +140,16 @@ function ChatPanel({
         {notice ? <div className="ChatNotice">{notice}</div> : null}
       </div>
 
-      {showActions ? (
-        <div className="ChatActionRow" aria-label="对话操作">
-          <button type="button" className="ChatActionButton">
-            <span aria-hidden="true">
-              <IconSave />
-            </span>
-            保存到笔记
-          </button>
-          <button type="button" className="ChatActionButton">
-            <span aria-hidden="true">
-              <IconCopy />
-            </span>
-            复制
-          </button>
-          <button type="button" className="ChatActionButton">
-            <span aria-hidden="true">
-              <IconFeedback />
-            </span>
-            反馈
-          </button>
-        </div>
-      ) : null}
-
-      <SuggestionPanel
+      {/* Collapsible Actions + Suggestions */}
+      <CollapsibleSection
+        title="对话操作"
+        showActions={showActions}
         suggestions={suggestions}
         isBlocked={isBlocked}
-        isLoading={suggestionsLoading}
-        error={suggestionsError}
-        onRefresh={onRefreshSuggestions}
-        onSelectSuggestion={onApplySuggestion}
+        suggestionsLoading={suggestionsLoading}
+        suggestionsError={suggestionsError}
+        onRefreshSuggestions={onRefreshSuggestions}
+        onApplySuggestion={onApplySuggestion}
       />
 
       <form
@@ -207,6 +189,126 @@ function ChatPanel({
         </div>
       </form>
     </div>
+  );
+}
+
+// Collapsible section for actions and suggestions (lazy load)
+interface CollapsibleSectionProps {
+  title: string;
+  showActions: boolean;
+  suggestions: SuggestionItem[];
+  isBlocked: boolean;
+  suggestionsLoading: boolean;
+  suggestionsError: string;
+  onRefreshSuggestions: () => void;
+  onApplySuggestion: (text: string) => void;
+}
+
+function CollapsibleSection({
+  showActions,
+  suggestions,
+  isBlocked,
+  suggestionsLoading,
+  suggestionsError,
+  onRefreshSuggestions,
+  onApplySuggestion,
+}: CollapsibleSectionProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  const handleToggle = useCallback(() => {
+    setIsExpanded((prev) => {
+      const next = !prev;
+      // Lazy load: only trigger refresh on first expand
+      if (next && !hasLoaded && !isBlocked) {
+        setHasLoaded(true);
+        onRefreshSuggestions();
+      }
+      return next;
+    });
+  }, [hasLoaded, isBlocked, onRefreshSuggestions]);
+
+  return (
+    <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+      {/* Toggle Header */}
+      <Box
+        onClick={handleToggle}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          px: 1.5,
+          py: 0.75,
+          cursor: 'pointer',
+          bgcolor: (theme) => alpha(theme.palette.grey[100], 0.5),
+          '&:hover': {
+            bgcolor: 'grey.100',
+          },
+          transition: 'background-color 0.2s',
+        }}
+      >
+        <Stack direction="row" alignItems="center" spacing={0.75}>
+          <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.6875rem', color: 'text.secondary' }}>
+            {isExpanded ? '收起' : '展开'} 建议与操作
+          </Typography>
+          {!isExpanded && suggestions.length > 0 && (
+            <Box
+              sx={{
+                px: 0.75,
+                py: 0.125,
+                borderRadius: 1,
+                bgcolor: 'primary.main',
+                color: 'white',
+                fontSize: '0.5625rem',
+                fontWeight: 600,
+              }}
+            >
+              {suggestions.length}
+            </Box>
+          )}
+        </Stack>
+        <IconButton size="small" sx={{ width: 20, height: 20 }}>
+          {isExpanded ? <ExpandLessIcon sx={{ fontSize: 14 }} /> : <ExpandMoreIcon sx={{ fontSize: 14 }} />}
+        </IconButton>
+      </Box>
+
+      {/* Collapsible Content */}
+      <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+        {/* Actions */}
+        {showActions && (
+          <div className="ChatActionRow" aria-label="对话操作">
+            <button type="button" className="ChatActionButton">
+              <span aria-hidden="true">
+                <IconSave />
+              </span>
+              保存到笔记
+            </button>
+            <button type="button" className="ChatActionButton">
+              <span aria-hidden="true">
+                <IconCopy />
+              </span>
+              复制
+            </button>
+            <button type="button" className="ChatActionButton">
+              <span aria-hidden="true">
+                <IconFeedback />
+              </span>
+              反馈
+            </button>
+          </div>
+        )}
+
+        {/* Suggestions */}
+        <SuggestionPanel
+          suggestions={suggestions}
+          isBlocked={isBlocked}
+          isLoading={suggestionsLoading}
+          error={suggestionsError}
+          onRefresh={onRefreshSuggestions}
+          onSelectSuggestion={onApplySuggestion}
+        />
+      </Collapse>
+    </Box>
   );
 }
 

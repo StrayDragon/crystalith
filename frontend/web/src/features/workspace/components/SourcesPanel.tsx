@@ -1,8 +1,50 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Box,
+  Button,
+  IconButton,
+  TextField,
+  Typography,
+  Stack,
+  CircularProgress,
+  Tooltip,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  InputAdornment,
+  Checkbox,
+  Menu,
+  MenuItem,
+  Select,
+  FormControl,
+  Chip,
+  Paper,
+  Skeleton,
+  Divider,
+  alpha,
+  Link,
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Search as SearchIcon,
+  MoreHoriz as MoreHorizIcon,
+  Delete as DeleteIcon,
+  Description as DescriptionIcon,
+  CloudUpload as CloudUploadIcon,
+  Language as LanguageIcon,
+  School as ScholarIcon,
+  Article as ArticleIcon,
+  Speed as SpeedIcon,
+  Psychology as PsychologyIcon,
+  ExpandMore as ExpandMoreIcon,
+  ArrowForward as ArrowForwardIcon,
+} from '@mui/icons-material';
 
 import type { AsyncStatus } from '../../../shared/types';
 import type { ApiSourceSearchResult, SourceItem } from '../types';
-import { IconDeepResearch, IconPlus, IconRemove, IconSearch, IconSpinner } from './Icons';
+import SourceDetailDialog from './SourceDetailDialog';
 
 interface SourcesPanelProps {
   sources: SourceItem[];
@@ -14,6 +56,7 @@ interface SourcesPanelProps {
   searchResults: ApiSourceSearchResult[];
   onSearch: (payload: { query: string; engine: string; mode: string }) => void;
   onRemoveSources: (sourceIds: number[]) => Promise<boolean>;
+  onRemoveSource: (sourceId: number) => Promise<boolean>;
   isDemo: boolean;
   error: string;
   isLoading: boolean;
@@ -31,6 +74,7 @@ function SourcesPanel({
   searchResults,
   onSearch,
   onRemoveSources,
+  onRemoveSource,
   isDemo,
   error,
   isLoading,
@@ -43,6 +87,23 @@ function SourcesPanel({
   const [engine, setEngine] = useState('Web');
   const [mode, setMode] = useState('Fast Research');
   const [selectedSourceIds, setSelectedSourceIds] = useState<Record<number, boolean>>({});
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [activeSourceId, setActiveSourceId] = useState<number | null>(null);
+  const [batchMenuAnchorEl, setBatchMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [engineMenuAnchor, setEngineMenuAnchor] = useState<null | HTMLElement>(null);
+  const [modeMenuAnchor, setModeMenuAnchor] = useState<null | HTMLElement>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedSource, setSelectedSource] = useState<SourceItem | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleOpenDetail = useCallback((source: SourceItem) => {
+    setSelectedSource(source);
+    setDetailDialogOpen(true);
+  }, []);
+
+  const handleCloseDetail = useCallback(() => {
+    setDetailDialogOpen(false);
+  }, []);
 
   useEffect(() => {
     if (!sources.length) {
@@ -94,198 +155,474 @@ function SourcesPanel({
     onSearch({ query: searchQuery, engine, mode });
   };
 
-  const handleRemoveSelected = async () => {
-    if (removeDisabled) return;
-    const label =
-      selectedIds.length === 1
-        ? '移除已选的 1 个来源？'
-        : `移除已选的 ${selectedIds.length} 个来源？`;
-    if (!window.confirm(label)) return;
-    const success = await onRemoveSources(selectedIds);
-    if (success) {
-      setSelectedSourceIds({});
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, sourceId: number) => {
+    event.stopPropagation();
+    setMenuAnchorEl(event.currentTarget);
+    setActiveSourceId(sourceId);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchorEl(null);
+    setActiveSourceId(null);
+  };
+
+  const getEngineIcon = () => {
+    switch (engine) {
+      case 'Scholar':
+        return <ScholarIcon fontSize="small" />;
+      case 'Docs':
+        return <ArticleIcon fontSize="small" />;
+      default:
+        return <LanguageIcon fontSize="small" />;
     }
   };
 
+  const getModeIcon = () => {
+    return mode === 'Deep Research' ? (
+      <PsychologyIcon fontSize="small" />
+    ) : (
+      <SpeedIcon fontSize="small" />
+    );
+  };
+
   return (
-    <div className="WorkspacePanelBody SourcesPanel">
-      <label
-        className="SourcesAddButton"
-        data-disabled={uploadDisabled ? 'true' : 'false'}
-        aria-disabled={uploadDisabled}
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5, p: { xs: 1.5, sm: 2 }, minHeight: 0 }}>
+      {/* Upload Button */}
+      <Button
+        component="label"
+        variant="outlined"
+        fullWidth
+        size="small"
+        startIcon={uploadState === 'loading' ? <CircularProgress size={12} /> : <CloudUploadIcon fontSize="small" />}
+        disabled={uploadDisabled}
+        sx={{
+          borderRadius: 5,
+          py: 0.875,
+          borderStyle: 'dashed',
+          borderWidth: 1,
+          fontSize: '0.75rem',
+          '&:hover': {
+            borderStyle: 'dashed',
+            bgcolor: 'action.hover',
+          },
+        }}
       >
-        <span className="SourcesAddButton__icon" aria-hidden="true">
-          <IconPlus />
-        </span>
         {uploadState === 'loading' ? '上传中…' : '添加来源'}
         <input
+          ref={fileInputRef}
           type="file"
-          name="sourceFile"
+          hidden
           accept=".txt,.md,.markdown,text/plain,text/markdown"
           onChange={(event) => onUpload(event.target.files?.[0] ?? null)}
           disabled={uploadDisabled}
         />
-      </label>
+      </Button>
 
-      <div className="SourcesDeepResearch">
-        <span className="SourcesDeepResearchIcon" aria-hidden="true">
-          <IconDeepResearch />
-        </span>
-        试用 Deep Research，获取深度报告和新来源！
-      </div>
-
-      <div className="SourcesSearchRow">
-        <div className="SourcesSearchInput">
-          <IconDeepResearch aria-hidden="true" focusable="false" />
-          <input
-            type="text"
-            name="sourceSearch"
-            placeholder="在网络中搜索新来源"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            aria-label="搜索来源"
-            onKeyDown={(event) => {
-              if (event.key !== 'Enter') return;
-              event.preventDefault();
+      {/* Search Section - Like image 1 design */}
+      <Paper
+        variant="outlined"
+        sx={{
+          borderRadius: 2.5,
+          overflow: 'hidden',
+        }}
+      >
+        {/* Search Input */}
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="在网络中搜索新来源"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
               handleSearch();
-            }}
-          />
-          <button
-            type="button"
-            className="SourcesSearchButton"
-            aria-label="开始搜索"
-            onClick={handleSearch}
-            disabled={isSearching}
-          >
-            <IconSearch />
-          </button>
-        </div>
-        <select
-          className="SourcesSearchSelect"
-          value={engine}
-          onChange={(event) => setEngine(event.target.value)}
-          aria-label="搜索引擎"
-        >
-          <option>Web</option>
-          <option>Scholar</option>
-          <option>Docs</option>
-        </select>
-        <select
-          className="SourcesSearchSelect"
-          value={mode}
-          onChange={(event) => setMode(event.target.value)}
-          aria-label="检索模式"
-        >
-          <option>Fast Research</option>
-          <option>Deep Research</option>
-        </select>
-      </div>
-
-      {isSearching ? (
-        <div className="SourcesSearchHint">搜索中…</div>
-      ) : searchNotice ? (
-        <div className="SourcesSearchHint">{searchNotice}</div>
-      ) : null}
-
-      {searchResults.length > 0 ? (
-        <div className="SourcesSearchResults">
-          <div className="SourcesSearchResultsHeader">
-            <span>搜索结果</span>
-            <span>{searchResults.length} 条</span>
-          </div>
-          <ul className="SourcesSearchResultList" role="list">
-            {searchResults.map((item) => (
-              <li key={`${item.title}-${item.url}`} className="SourcesSearchResultItem">
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="SourcesSearchResultLink"
+            }
+          }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" color="action" />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  size="small"
+                  onClick={handleSearch}
+                  disabled={isSearching}
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    bgcolor: 'primary.main',
+                    color: 'white',
+                    borderRadius: '50%',
+                    '&:hover': { bgcolor: 'primary.dark' },
+                    '&.Mui-disabled': { bgcolor: 'grey.300' },
+                  }}
                 >
-                  <div className="SourcesSearchResultTitle">{item.title}</div>
-                  {item.snippet ? (
-                    <div className="SourcesSearchResultSnippet">{item.snippet}</div>
-                  ) : null}
-                  <div className="SourcesSearchResultMeta">
-                    {item.source ? item.source : '来源推荐'}
-                  </div>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      <div className="SourcesSelectAll">
-        <div className="SourcesSelectAllLeft">
-          <button
-            type="button"
-            className="SourcesActionButton"
-            aria-label="移除已选来源"
-            onClick={handleRemoveSelected}
-            disabled={removeDisabled}
-            title={removeDisabled ? '请选择来源后再操作' : '移除已选来源'}
-          >
-            <IconRemove />
-          </button>
-          <span>选择所有来源</span>
-        </div>
-        <input
-          type="checkbox"
-          className="SourcesCheckbox"
-          checked={allSelected}
-          onChange={handleToggleAll}
-          aria-label="选择所有来源"
+                  {isSearching ? <CircularProgress size={14} color="inherit" /> : <ArrowForwardIcon sx={{ fontSize: 16 }} />}
+                </IconButton>
+              </InputAdornment>
+            ),
+            sx: { fontSize: '0.8125rem' },
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': { border: 'none' },
+            },
+          }}
         />
-      </div>
 
-      <div className="SourcesListWrap">
-        {isLoading ? (
-          <div className="SourcesSkeletonList" aria-label="加载来源">
-            <div className="SourcesSkeletonItem" />
-            <div className="SourcesSkeletonItem" />
-            <div className="SourcesSkeletonItem isShort" />
-          </div>
-        ) : sources.length === 0 ? (
-          <div className="SourcesEmpty">暂无来源。添加文档后这里会展示来源列表。</div>
-        ) : (
-          <ul className="SourcesList">
-            {sources.map((source) => (
-              <li key={source.id} className="SourcesListItem">
-                <button
-                  type="button"
-                  className="SourcesListButton"
-                  onClick={() => onSourceClick(source)}
-                >
-                  <span className="SourcesItemIcon" aria-hidden="true">
-                    <IconSearch focusable="false" />
-                  </span>
-                  <span className="SourcesItemText">
-                    <span className="SourcesItemTitle">{source.title}</span>
-                  </span>
-                </button>
-                <input
-                  type="checkbox"
-                  className="SourcesCheckbox"
-                  checked={Boolean(selectedSourceIds[source.id])}
-                  onChange={() => handleToggleSource(source.id)}
-                  aria-label={`选择来源：${source.title}`}
-                />
-              </li>
+        {/* Search Options - Below search bar */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            px: 1.5,
+            py: 1,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'grey.50',
+          }}
+        >
+          {/* Engine Select */}
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={(e) => setEngineMenuAnchor(e.currentTarget)}
+            startIcon={getEngineIcon()}
+            endIcon={<ExpandMoreIcon sx={{ fontSize: 14 }} />}
+            sx={{
+              borderRadius: 5,
+              textTransform: 'none',
+              fontSize: '0.75rem',
+              py: 0.25,
+              px: 1.25,
+              borderColor: 'divider',
+              color: 'text.primary',
+              '&:hover': { borderColor: 'grey.400' },
+            }}
+          >
+            {engine}
+          </Button>
+          <Menu
+            anchorEl={engineMenuAnchor}
+            open={Boolean(engineMenuAnchor)}
+            onClose={() => setEngineMenuAnchor(null)}
+          >
+            {['Web', 'Scholar', 'Docs'].map((opt) => (
+              <MenuItem
+                key={opt}
+                selected={engine === opt}
+                onClick={() => { setEngine(opt); setEngineMenuAnchor(null); }}
+                sx={{ fontSize: '0.75rem' }}
+              >
+                {opt}
+              </MenuItem>
             ))}
-          </ul>
-        )}
-      </div>
+          </Menu>
 
-      {error ? (
-        <div className="WorkspaceHint isError">
-          {error}
-          <button type="button" className="WorkspaceLinkButton" onClick={onRetry}>
+          {/* Mode Select */}
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={(e) => setModeMenuAnchor(e.currentTarget)}
+            startIcon={getModeIcon()}
+            endIcon={<ExpandMoreIcon sx={{ fontSize: 14 }} />}
+            sx={{
+              borderRadius: 5,
+              textTransform: 'none',
+              fontSize: '0.75rem',
+              py: 0.25,
+              px: 1.25,
+              borderColor: 'divider',
+              color: 'text.primary',
+              '&:hover': { borderColor: 'grey.400' },
+            }}
+          >
+            {mode}
+          </Button>
+          <Menu
+            anchorEl={modeMenuAnchor}
+            open={Boolean(modeMenuAnchor)}
+            onClose={() => setModeMenuAnchor(null)}
+          >
+            {['Fast Research', 'Deep Research'].map((opt) => (
+              <MenuItem
+                key={opt}
+                selected={mode === opt}
+                onClick={() => { setMode(opt); setModeMenuAnchor(null); }}
+                sx={{ fontSize: '0.75rem' }}
+              >
+                {opt}
+              </MenuItem>
+            ))}
+          </Menu>
+        </Box>
+      </Paper>
+
+      {/* Search Status */}
+      {(isSearching || searchNotice) && (
+        <Typography variant="caption" color="text.secondary">
+          {isSearching ? '搜索中…' : searchNotice}
+        </Typography>
+      )}
+
+      {/* Search Results */}
+      {searchResults.length > 0 && (
+        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2.5 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+            <Typography variant="caption" fontWeight={600}>
+              搜索结果
+            </Typography>
+            <Chip label={`${searchResults.length} 条`} size="small" />
+          </Stack>
+          <Stack spacing={1}>
+            {searchResults.map((item) => (
+              <Box
+                key={`${item.title}-${item.url}`}
+                component={Link}
+                href={item.url}
+                target="_blank"
+                rel="noreferrer"
+                sx={{
+                  display: 'block',
+                  p: 1,
+                  borderRadius: 1.5,
+                  bgcolor: 'grey.50',
+                  textDecoration: 'none',
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    bgcolor: 'grey.100',
+                  },
+                }}
+              >
+                <Typography variant="caption" fontWeight={600} color="text.primary" sx={{ display: 'block', mb: 0.25, lineHeight: 1.3 }}>
+                  {item.title}
+                </Typography>
+                {item.snippet && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.25, fontSize: '0.625rem', lineHeight: 1.3 }}>
+                    {item.snippet}
+                  </Typography>
+                )}
+                <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.625rem' }}>
+                  {item.source || '来源推荐'}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        </Paper>
+      )}
+
+      {/* Select All & Batch Actions */}
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+          选择所有来源
+        </Typography>
+        <Stack direction="row" alignItems="center" spacing={0.5}>
+          <Checkbox
+            checked={allSelected}
+            onChange={handleToggleAll}
+            size="small"
+            sx={{ '&.Mui-checked': { color: 'primary.main' } }}
+          />
+          <IconButton
+            size="small"
+            onClick={(e) => setBatchMenuAnchorEl(e.currentTarget)}
+            disabled={removeDisabled}
+            sx={{ border: '1px solid', borderColor: 'divider', width: 22, height: 22 }}
+          >
+            <MoreHorizIcon fontSize="small" />
+          </IconButton>
+          <Menu
+            anchorEl={batchMenuAnchorEl}
+            open={Boolean(batchMenuAnchorEl)}
+            onClose={() => setBatchMenuAnchorEl(null)}
+          >
+            <Typography variant="caption" color="text.secondary" sx={{ px: 1.5, py: 0.75, display: 'block', fontSize: '0.6875rem' }}>
+              已选择 {selectedIds.length} 个来源
+            </Typography>
+            <Divider />
+            <MenuItem
+              onClick={async () => {
+                setBatchMenuAnchorEl(null);
+                const label =
+                  selectedIds.length === 1
+                    ? '确定要移除已选的 1 个来源吗？'
+                    : `确定要移除已选的 ${selectedIds.length} 个来源吗？`;
+                if (!window.confirm(label)) return;
+                const success = await onRemoveSources(selectedIds);
+                if (success) {
+                  setSelectedSourceIds({});
+                }
+              }}
+              sx={{ color: 'error.main' }}
+            >
+              <ListItemIcon>
+                <DeleteIcon fontSize="small" color="error" />
+              </ListItemIcon>
+              <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>删除已选来源</ListItemText>
+            </MenuItem>
+          </Menu>
+        </Stack>
+      </Stack>
+
+      {/* Sources List */}
+      <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+        {isLoading ? (
+          <Stack spacing={1}>
+            <Skeleton variant="rounded" height={36} sx={{ borderRadius: 2 }} />
+            <Skeleton variant="rounded" height={36} sx={{ borderRadius: 2 }} />
+            <Skeleton variant="rounded" height={36} width="70%" sx={{ borderRadius: 2 }} />
+          </Stack>
+        ) : sources.length === 0 ? (
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 2,
+              textAlign: 'center',
+              borderStyle: 'dashed',
+              borderRadius: 2.5,
+              bgcolor: 'grey.50',
+            }}
+          >
+            <Typography variant="caption" color="text.secondary">
+              暂无来源。添加文档后这里会展示来源列表。
+            </Typography>
+          </Paper>
+        ) : (
+          <List disablePadding sx={{ '& .MuiListItem-root': { mb: 0.5 } }}>
+            {sources.map((source) => (
+              <ListItem
+                key={source.id}
+                disablePadding
+                secondaryAction={
+                  <Stack direction="row" alignItems="center" spacing={0.25}>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleMenuOpen(e, source.id)}
+                      sx={{
+                        width: 22,
+                        height: 22,
+                        opacity: 0,
+                        transition: 'opacity 0.2s',
+                        '.MuiListItem-root:hover &': { opacity: 1 },
+                      }}
+                    >
+                      <MoreHorizIcon fontSize="small" />
+                    </IconButton>
+                    <Checkbox
+                      checked={Boolean(selectedSourceIds[source.id])}
+                      onChange={() => handleToggleSource(source.id)}
+                      size="small"
+                    />
+                  </Stack>
+                }
+              >
+                <ListItemButton
+                  onClick={() => handleOpenDetail(source)}
+                  sx={{
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper',
+                    py: 0.75,
+                    px: 1,
+                    minHeight: 36,
+                    '&:hover': {
+                      borderColor: 'grey.300',
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 28 }}>
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 1.5,
+                        bgcolor: 'grey.100',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <DescriptionIcon fontSize="small" color="action" />
+                    </Box>
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={source.title}
+                    primaryTypographyProps={{
+                      variant: 'caption',
+                      fontWeight: 600,
+                      noWrap: true,
+                      fontSize: '0.75rem',
+                    }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </Box>
+
+      {/* Source Item Menu */}
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem
+          onClick={() => {
+            const source = sources.find((s) => s.id === activeSourceId);
+            if (source) onSourceClick(source);
+            handleMenuClose();
+          }}
+        >
+          <ListItemIcon>
+            <DescriptionIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>查看摘要</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={async () => {
+            if (isDemo || removeState === 'loading' || !activeSourceId) return;
+            const source = sources.find((s) => s.id === activeSourceId);
+            handleMenuClose();
+            if (!source) return;
+            if (!window.confirm(`确定要删除「${source.title}」吗？此操作不可撤销。`)) return;
+            await onRemoveSource(activeSourceId);
+          }}
+          disabled={isDemo || removeState === 'loading'}
+          sx={{ color: 'error.main' }}
+        >
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          <ListItemText>{removeState === 'loading' ? '删除中…' : '删除来源'}</ListItemText>
+        </MenuItem>
+      </Menu>
+
+      {/* Error State */}
+      {error && (
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Typography variant="caption" color="error">
+            {error}
+          </Typography>
+          <Button size="small" onClick={onRetry} sx={{ minWidth: 'auto' }}>
             重试
-          </button>
-        </div>
-      ) : null}
-    </div>
+          </Button>
+        </Stack>
+      )}
+
+      {/* Source Detail Dialog */}
+      <SourceDetailDialog
+        open={detailDialogOpen}
+        source={selectedSource}
+        onClose={handleCloseDetail}
+      />
+    </Box>
   );
 }
 
