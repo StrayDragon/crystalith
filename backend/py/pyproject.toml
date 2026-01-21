@@ -54,7 +54,11 @@ dev = [
     "jinja2sql>=0.3.4",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
+    "pytest-xdist>=3.5.0",
 ]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# Use -n auto to run tests in parallel with pytest-xdist
+# Example: uv run pytest -n auto
+addopts = "-n auto"
