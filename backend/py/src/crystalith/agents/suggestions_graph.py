@@ -255,14 +255,10 @@ class GenerateDrafts(BaseNode[SuggestionGraphState, StudioDeps, list[Suggestion]
                 generated_count=len(items),
             )
         except Exception as error:  # noqa: BLE001 - fallback for generation
-            error_type = type(error).__name__
-            error_message = str(error)[:200]
             log.warning(
                 "suggestion generation failed, using fallback",
-                exc_info=error,
                 mode=state.mode,
-                error_type=error_type,
-                error_message=error_message,
+                error=type(error).__name__,
             )
             items = []
 
@@ -322,7 +318,7 @@ class ClassifyOrFinalize(BaseNode[SuggestionGraphState, StudioDeps, list[Suggest
                 key = question_key(item.question)
                 mapping[key] = suggestion_type
         except Exception as error:  # noqa: BLE001 - fallback to cycling
-            log.warning("suggestion classification failed", exc_info=error)
+            log.warning("suggestion classification failed", error=type(error).__name__)
 
         cycle = [
             SuggestionType.FACTUAL,

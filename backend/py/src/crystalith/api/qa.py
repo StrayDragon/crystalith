@@ -436,7 +436,14 @@ async def ask_question_stream(
 
     async def generate_stream() -> AsyncGenerator[str, None]:
         # Embed the question
-        embeddings = await embedder.embed([payload.question])
+        try:
+            embeddings = await embedder.embed([payload.question])
+        except Exception as embed_error:
+            # Handle embedding service errors (e.g., Ollama 503)
+            error_msg = f"Embedding 服务暂时不可用: {embed_error}"
+            yield _sse_event("error", {"message": error_msg})
+            return
+
         if not embeddings:
             created_at = datetime.datetime.now(datetime.UTC)
             _, stats = _build_context_window(

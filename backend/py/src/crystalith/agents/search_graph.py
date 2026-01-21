@@ -95,7 +95,7 @@ class GenerateSummary(BaseNode[SearchGraphState, StudioDeps, dict[str, Any]]):
             result = await agent.run(user_prompt, deps=deps)
             state.message = f"{result.output.summary} {result.output.next_step}".strip()
         except Exception as error:  # noqa: BLE001 - fallback to empty message
-            log.warning("search summary failed", exc_info=error)
+            log.warning("search summary failed", error=type(error).__name__)
             state.message = ""
 
         return BuildResults()

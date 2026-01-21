@@ -458,14 +458,10 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                 content_keys=list(state.content.keys()) if isinstance(state.content, dict) else None,
             )
         except Exception as error:  # noqa: BLE001 - fallback for output generation
-            error_type = type(error).__name__
-            error_message = str(error)[:200]
             log.warning(
                 "output generation failed, using fallback",
-                exc_info=error,
                 output_type=state.output_type.value,
-                error_type=error_type,
-                error_message=error_message,
+                error=type(error).__name__,
             )
             state.content = _fallback_output(state.output_type, state.prompt)
 

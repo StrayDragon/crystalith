@@ -110,12 +110,13 @@ function SourcesPanel({
       setSelectedSourceIds({});
       return;
     }
+    // Default to all sources selected
     setSelectedSourceIds((prev) => {
       const next: Record<number, boolean> = {};
+      const hasExistingSelection = Object.keys(prev).length > 0;
       sources.forEach((source) => {
-        if (prev[source.id]) {
-          next[source.id] = true;
-        }
+        // If user has made selections before, preserve them; otherwise select all by default
+        next[source.id] = hasExistingSelection ? Boolean(prev[source.id]) : true;
       });
       return next;
     });
