@@ -5,13 +5,14 @@ from enum import StrEnum
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cl_logs.logging import get_logger
 
 from crystalith.agents.deps import StudioDeps
 from crystalith.agents.models import ModelConfigurationError
-from crystalith.agents.suggestions_graph import SuggestionState, run_suggestions_graph
+from crystalith.agents.suggestions_graph import run_suggestions_graph
 from crystalith.config import Settings
 from crystalith.db import Notebook, Session
 from crystalith.api.deps import get_db_session, get_embedding_provider, get_settings, get_vector_store
@@ -67,13 +68,6 @@ async def notebook_suggestions(
         vector_store=vector_store,
         embedder=embedder,
     )
-    state: SuggestionState = {
-        "notebook_id": notebook_id,
-        "count": payload.count,
-        "mode": payload.mode.value,
-        "seed_question": payload.seed_question,
-        "deps": deps,
-    }
 
     log.info(
         "generating notebook suggestions",
@@ -83,13 +77,27 @@ async def notebook_suggestions(
     )
 
     try:
-        suggestions = await run_suggestions_graph(state)
+        suggestions = await run_suggestions_graph(
+            deps=deps,
+            notebook_id=notebook_id,
+            count=payload.count,
+            mode=payload.mode.value,
+            seed_question=payload.seed_question,
+        )
     except ModelConfigurationError as exc:
         log.warning("model configuration error", error=str(exc))
         raise HTTPException(
             status_code=503,
             detail=f"AI model configuration error: {exc}. Please check your config/app.yaml settings.",
         ) from exc
+    except UnexpectedModelBehavior as exc:
+        error_msg = str(exc)
+        log.warning("model output validation failed", error=error_msg)
+        if "maximum retries" in error_msg.lower():
+            detail = "AI 模型输出格式不符合预期，已达到最大重试次数。请稍后重试。"
+        else:
+            detail = f"AI 模型响应异常：{error_msg[:100]}"
+        raise HTTPException(status_code=422, detail=detail) from exc
     except ValueError as exc:
         log.warning("invalid request", error=str(exc))
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -124,13 +132,6 @@ async def session_suggestions(
         vector_store=vector_store,
         embedder=embedder,
     )
-    state: SuggestionState = {
-        "session_id": session_id,
-        "count": payload.count,
-        "mode": payload.mode.value,
-        "seed_question": payload.seed_question,
-        "deps": deps,
-    }
 
     log.info(
         "generating session suggestions",
@@ -140,13 +141,27 @@ async def session_suggestions(
     )
 
     try:
-        suggestions = await run_suggestions_graph(state)
+        suggestions = await run_suggestions_graph(
+            deps=deps,
+            session_id=session_id,
+            count=payload.count,
+            mode=payload.mode.value,
+            seed_question=payload.seed_question,
+        )
     except ModelConfigurationError as exc:
         log.warning("model configuration error", error=str(exc))
         raise HTTPException(
             status_code=503,
             detail=f"AI model configuration error: {exc}. Please check your config/app.yaml settings.",
         ) from exc
+    except UnexpectedModelBehavior as exc:
+        error_msg = str(exc)
+        log.warning("model output validation failed", error=error_msg)
+        if "maximum retries" in error_msg.lower():
+            detail = "AI 模型输出格式不符合预期，已达到最大重试次数。请稍后重试。"
+        else:
+            detail = f"AI 模型响应异常：{error_msg[:100]}"
+        raise HTTPException(status_code=422, detail=detail) from exc
     except ValueError as exc:
         log.warning("invalid request", error=str(exc))
         raise HTTPException(status_code=400, detail=str(exc)) from exc
