@@ -139,8 +139,8 @@ export async function deleteSources(
   notebookId: number,
   sourceIds: number[],
 ): Promise<ApiSourceDeleteResponse> {
-  return request<ApiSourceDeleteResponse>(`/v1/notebooks/${notebookId}/sources/batch-delete`, {
-    method: 'POST',
+  return request<ApiSourceDeleteResponse>(`/v1/notebooks/${notebookId}/sources`, {
+    method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
     },
@@ -253,15 +253,16 @@ export async function deleteSession(notebookId: number, sessionId: number): Prom
   });
 }
 
-export async function listMessages(sessionId: number): Promise<ApiMessage[]> {
-  return request<ApiMessage[]>(`/v1/sessions/${sessionId}/messages`);
+export async function listMessages(notebookId: number, sessionId: number): Promise<ApiMessage[]> {
+  return request<ApiMessage[]>(`/v1/notebooks/${notebookId}/sessions/${sessionId}/messages`);
 }
 
 export async function createSessionSuggestions(
+  notebookId: number,
   sessionId: number,
   payload: { count?: number; mode?: 'standard' | 'deep_dive'; seed_question?: string | null },
 ): Promise<ApiSuggestionResponse> {
-  return request<ApiSuggestionResponse>(`/v1/sessions/${sessionId}/suggestions`, {
+  return request<ApiSuggestionResponse>(`/v1/notebooks/${notebookId}/sessions/${sessionId}/suggestions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

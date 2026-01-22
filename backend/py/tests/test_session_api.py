@@ -85,13 +85,13 @@ async def test_message_create_list_and_delete_session(test_client: AsyncClient) 
     session_id = session_create.json()["id"]
 
     first = await test_client.post(
-        f"/v1/sessions/{session_id}/messages",
+        f"/v1/notebooks/{notebook_id}/sessions/{session_id}/messages",
         json={"role": "user", "content": "Hi"},
     )
     assert first.status_code == 201
 
     second = await test_client.post(
-        f"/v1/sessions/{session_id}/messages",
+        f"/v1/notebooks/{notebook_id}/sessions/{session_id}/messages",
         json={
             "role": "assistant",
             "content": "Hello",
@@ -109,7 +109,7 @@ async def test_message_create_list_and_delete_session(test_client: AsyncClient) 
     )
     assert second.status_code == 201
 
-    listing = await test_client.get(f"/v1/sessions/{session_id}/messages")
+    listing = await test_client.get(f"/v1/notebooks/{notebook_id}/sessions/{session_id}/messages")
     assert listing.status_code == 200
     items = listing.json()
     assert [item["role"] for item in items] == ["user", "assistant"]
@@ -119,5 +119,5 @@ async def test_message_create_list_and_delete_session(test_client: AsyncClient) 
     )
     assert deleted.status_code == 204
 
-    missing = await test_client.get(f"/v1/sessions/{session_id}/messages")
+    missing = await test_client.get(f"/v1/notebooks/{notebook_id}/sessions/{session_id}/messages")
     assert missing.status_code == 404

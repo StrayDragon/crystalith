@@ -32,10 +32,10 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions }: U
   const suggestionsEnabled = Boolean(enableSuggestions);
 
   const { data, error, isLoading, mutate } = useSWR(
-    state.activeSessionId && !isDemo
-      ? ['workspace/messages', state.activeSessionId]
+    state.activeNotebookId && state.activeSessionId && !isDemo
+      ? ['workspace/messages', state.activeNotebookId, state.activeSessionId]
       : null,
-    () => listMessages(state.activeSessionId ?? 0),
+    () => listMessages(state.activeNotebookId ?? 0, state.activeSessionId ?? 0),
     { revalidateOnFocus: false },
   );
 
@@ -71,8 +71,8 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions }: U
       if (isDemo) {
         return { suggestions: DEMO_SUGGESTIONS };
       }
-      if (state.activeSessionId) {
-        return createSessionSuggestions(state.activeSessionId, { count: 4, mode: 'standard' });
+      if (state.activeSessionId && state.activeNotebookId) {
+        return createSessionSuggestions(state.activeNotebookId, state.activeSessionId, { count: 4, mode: 'standard' });
       }
       return createNotebookSuggestions(state.activeNotebookId, { count: 4, mode: 'standard' });
     },

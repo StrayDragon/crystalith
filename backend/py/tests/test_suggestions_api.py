@@ -87,16 +87,16 @@ async def test_session_suggestions_classified(test_client: AsyncClient) -> None:
     session_id = session_create.json()["id"]
 
     await test_client.post(
-        f"/v1/sessions/{session_id}/messages",
+        f"/v1/notebooks/{notebook_id}/sessions/{session_id}/messages",
         json={"role": "user", "content": "Explain the topic"},
     )
     await test_client.post(
-        f"/v1/sessions/{session_id}/messages",
+        f"/v1/notebooks/{notebook_id}/sessions/{session_id}/messages",
         json={"role": "assistant", "content": "Sure"},
     )
 
     response = await test_client.post(
-        f"/v1/sessions/{session_id}/suggestions",
+        f"/v1/notebooks/{notebook_id}/sessions/{session_id}/suggestions",
         json={"count": 3},
     )
     assert response.status_code == 200

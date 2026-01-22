@@ -23,7 +23,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "api:generate": "openapi-ts -i ./openapi.json -o ./src/api/generated -c @hey-api/client-fetch",
+    "api:fetch": "cd ../../backend/py && uv run python -c \"import json; from crystalith.app import create_app; app = create_app(); open('../../frontend/web/openapi.json', 'w').write(json.dumps(app.openapi(), indent=2, ensure_ascii=False))\"",
+    "api:sync": "pnpm run api:fetch && pnpm run api:generate"
   },
   "eslintConfig": {
     "extends": [
@@ -44,6 +47,7 @@
     ]
   },
   "devDependencies": {
+    "@hey-api/openapi-ts": "^0.90.8",
     "@types/node": "^22.18.6",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.8",

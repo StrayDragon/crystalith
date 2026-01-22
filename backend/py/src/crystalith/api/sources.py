@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-from enum import StrEnum
 from time import perf_counter
 from typing import Any, Iterable
 
@@ -10,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+from cl_stdx.enumx import MetaInfoStrEnum, XMetaInfo
 
 from crystalith.ai.interfaces import EmbeddingProvider
 from crystalith.agents.deps import StudioDeps
@@ -51,9 +52,11 @@ class SourceRead(BaseModel):
     updated_at: datetime.datetime
 
 
-class SourceSearchStatus(StrEnum):
-    OK = "ok"
-    NOT_IMPLEMENTED = "not_implemented"
+class SourceSearchStatus(MetaInfoStrEnum):
+    """Status of a source search operation."""
+
+    OK = "ok", XMetaInfo(description="搜索成功", display_text="成功")
+    NOT_IMPLEMENTED = "not_implemented", XMetaInfo(description="功能未实现", display_text="未实现")
 
 
 class SourceSearchRequest(BaseModel):
@@ -313,7 +316,7 @@ async def delete_source(
     await vector_store.remove_source(source_id)
 
 
-@router.post("/batch-delete", response_model=SourceBatchDeleteResponse)
+@router.delete("", response_model=SourceBatchDeleteResponse)
 async def batch_delete_sources(
     notebook_id: int,
     payload: SourceBatchDeleteRequest,
