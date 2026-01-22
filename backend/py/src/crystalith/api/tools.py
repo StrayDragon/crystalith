@@ -1,24 +1,18 @@
 from __future__ import annotations
 
-from enum import StrEnum
+from functools import lru_cache
+from typing import Literal
 
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from crystalith.outputs.types import OutputType
+from crystalith.outputs.types import OutputType, OutputTypeMeta
 
 
 router = APIRouter(prefix="/v1/workspace", tags=["workspace-tools"])
 
 
-class ToolTone(StrEnum):
-    SLATE = "slate"
-    BLUE = "blue"
-    GREEN = "green"
-    ROSE = "rose"
-    AMBER = "amber"
-    TEAL = "teal"
-    INDIGO = "indigo"
+ToolTone = Literal["slate", "blue", "green", "rose", "amber", "teal", "indigo"]
 
 
 class WorkspaceTool(BaseModel):
@@ -36,58 +30,25 @@ class WorkspaceToolsResponse(BaseModel):
     tools: list[WorkspaceTool]
 
 
-TOOLS: list[WorkspaceTool] = [
-    WorkspaceTool(
-        id="faq",
-        label="闪卡",
-        description="问答清单",
-        tone=ToolTone.BLUE,
-        output_type=OutputType.FAQ,
-        prompt="整理为 FAQ 问答清单。",
-    ),
-    WorkspaceTool(
-        id="guide",
-        label="指南",
-        description="学习/行动指南",
-        tone=ToolTone.GREEN,
-        output_type=OutputType.GUIDE,
-        prompt="生成结构化学习指南。",
-    ),
-    WorkspaceTool(
-        id="timeline",
-        label="时间轴",
-        description="关键事件序列",
-        tone=ToolTone.ROSE,
-        output_type=OutputType.TIMELINE,
-        prompt="按时间轴整理关键事件。",
-    ),
-    WorkspaceTool(
-        id="mindmap",
-        label="思维导图",
-        description="主题层级结构",
-        tone=ToolTone.INDIGO,
-        output_type=OutputType.MINDMAP,
-        prompt="生成思维导图层级结构。",
-    ),
-    WorkspaceTool(
-        id="quiz",
-        label="测验",
-        description="知识检验",
-        tone=ToolTone.TEAL,
-        output_type=OutputType.QUIZ,
-        prompt="生成小测验题目。",
-    ),
-    WorkspaceTool(
-        id="briefing",
-        label="报告",
-        description="高层摘要",
-        tone=ToolTone.AMBER,
-        output_type=OutputType.BRIEFING,
-        prompt="生成简报：背景/发现/建议/下一步。",
-    ),
-]
+@lru_cache(maxsize=1)
+def _build_tools() -> list[WorkspaceTool]:
+    """Build workspace tools from OutputType metadata."""
+    tools: list[WorkspaceTool] = []
+    for output_type in OutputType.get_tool_types():
+        meta: OutputTypeMeta = output_type.x_meta  # pyright: ignore[reportAttributeAccessIssue]
+        tools.append(
+            WorkspaceTool(
+                id=output_type.value.lower(),
+                label=meta.display_text,
+                description=meta.description,
+                tone=meta.tone,  # pyright: ignore[reportArgumentType]
+                output_type=output_type,
+                prompt=meta.prompt,
+            )
+        )
+    return tools
 
 
 @router.get("/tools", response_model=WorkspaceToolsResponse)
 async def list_workspace_tools() -> WorkspaceToolsResponse:
-    return WorkspaceToolsResponse(tools=TOOLS)
+    return WorkspaceToolsResponse(tools=_build_tools())

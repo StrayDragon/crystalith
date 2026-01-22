@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-from enum import StrEnum
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -9,6 +8,7 @@ from pydantic_ai.exceptions import UnexpectedModelBehavior
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cl_logs.logging import get_logger
+from cl_stdx.enumx import MetaInfoStrEnum, XMetaInfo
 
 from crystalith.agents.deps import StudioDeps
 from crystalith.agents.models import ModelConfigurationError
@@ -27,9 +27,11 @@ log = get_logger(__name__)
 router = APIRouter(prefix="/v1", tags=["suggestions"])
 
 
-class SuggestionMode(StrEnum):
-    STANDARD = "standard"
-    DEEP_DIVE = "deep_dive"
+class SuggestionMode(MetaInfoStrEnum):
+    """Mode for generating suggestions."""
+
+    STANDARD = "standard", XMetaInfo(description="标准模式", display_text="标准")
+    DEEP_DIVE = "deep_dive", XMetaInfo(description="深入探索模式", display_text="深入")
 
 
 class SuggestionRequest(BaseModel):
@@ -113,8 +115,9 @@ async def notebook_suggestions(
     return _build_response(suggestions, created_at)
 
 
-@router.post("/sessions/{session_id}/suggestions", response_model=SuggestionResponse)
+@router.post("/notebooks/{notebook_id}/sessions/{session_id}/suggestions", response_model=SuggestionResponse)
 async def session_suggestions(
+    notebook_id: int,
     session_id: int,
     payload: SuggestionRequest,
     session: AsyncSession = Depends(get_db_session),
@@ -122,8 +125,12 @@ async def session_suggestions(
     embedder=Depends(get_embedding_provider),
     vector_store=Depends(get_vector_store),
 ) -> SuggestionResponse:
+    notebook = await session.get(Notebook, notebook_id)
+    if notebook is None:
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
     db_session = await session.get(Session, session_id)
-    if db_session is None:
+    if db_session is None or db_session.notebook_id != notebook_id:
         raise HTTPException(status_code=404, detail="Session not found")
 
     deps = StudioDeps(
