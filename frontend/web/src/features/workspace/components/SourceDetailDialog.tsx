@@ -24,6 +24,8 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
+import { getSourceSummary, askSourceQuestion, type SourceSummaryResponse } from '../api';
+import { useWorkspaceState } from '../context/WorkspaceContext';
 import type { SourceItem } from '../types';
 
 interface SourceDetailDialogProps {
@@ -51,11 +53,16 @@ interface SourceBrief {
 const briefCache = new Map<number, SourceBrief>();
 
 export default function SourceDetailDialog({ open, source, onClose }: SourceDetailDialogProps) {
+  const state = useWorkspaceState();
+  const notebookId = state.activeNotebookId;
+  const isDemo = state.connectionState === 'demo';
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [brief, setBrief] = useState<SourceBrief | null>(null);
   const [isBriefLoading, setIsBriefLoading] = useState(false);
+  const [briefError, setBriefError] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom when new messages arrive
@@ -75,31 +82,55 @@ export default function SourceDetailDialog({ open, source, onClose }: SourceDeta
     const cached = briefCache.get(source.id);
     if (cached) {
       setBrief(cached);
+      setBriefError('');
       return;
     }
 
-    // Generate brief (mock - in real app, call API)
-    setIsBriefLoading(true);
-    const timer = setTimeout(() => {
-      const newBrief: SourceBrief = {
-        summary: `这是关于「${source.title}」的自动生成摘要。该文档主要讨论了相关主题的核心概念、实践应用和最佳方案。`,
-        keyPoints: [
-          '核心概念和定义',
-          '主要方法论',
-          '实践案例分析',
-          '建议和最佳实践',
-        ],
-        topics: ['分析', '方法论', '实践'],
-        wordCount: Math.floor(Math.random() * 5000) + 1000,
-        generatedAt: new Date(),
-      };
-      briefCache.set(source.id, newBrief);
-      setBrief(newBrief);
-      setIsBriefLoading(false);
-    }, 800);
+    // If demo mode or no notebook, use mock data
+    if (isDemo || !notebookId) {
+      setIsBriefLoading(true);
+      const timer = setTimeout(() => {
+        const newBrief: SourceBrief = {
+          summary: `这是关于「${source.title}」的自动生成摘要。该文档主要讨论了相关主题的核心概念、实践应用和最佳方案。`,
+          keyPoints: [
+            '核心概念和定义',
+            '主要方法论',
+            '实践案例分析',
+            '建议和最佳实践',
+          ],
+          topics: ['分析', '方法论', '实践'],
+          wordCount: Math.floor(Math.random() * 5000) + 1000,
+          generatedAt: new Date(),
+        };
+        briefCache.set(source.id, newBrief);
+        setBrief(newBrief);
+        setIsBriefLoading(false);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
 
-    return () => clearTimeout(timer);
-  }, [source, open]);
+    // Call real API
+    setIsBriefLoading(true);
+    setBriefError('');
+    getSourceSummary(notebookId, source.id)
+      .then((response) => {
+        const newBrief: SourceBrief = {
+          summary: response.summary,
+          keyPoints: response.key_points,
+          topics: response.topics,
+          wordCount: response.word_count,
+          generatedAt: new Date(response.generated_at),
+        };
+        briefCache.set(source.id, newBrief);
+        setBrief(newBrief);
+      })
+      .catch((err) => {
+        setBriefError(err.message || '加载摘要失败');
+      })
+      .finally(() => {
+        setIsBriefLoading(false);
+      });
+  }, [source, open, notebookId, isDemo]);
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -107,6 +138,7 @@ export default function SourceDetailDialog({ open, source, onClose }: SourceDeta
       setMessages([]);
       setInputValue('');
       setBrief(null);
+      setBriefError('');
     }
   }, [open]);
 
@@ -124,43 +156,93 @@ export default function SourceDetailDialog({ open, source, onClose }: SourceDeta
     setInputValue('');
     setIsLoading(true);
 
-    // Mock RAG response (in real app, call API with source context)
-    setTimeout(() => {
+    // If demo mode or no notebook, use mock response
+    if (isDemo || !notebookId) {
+      setTimeout(() => {
+        const assistantMessage: ChatMessage = {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content: `基于「${source.title}」的内容，关于您的问题"${userMessage.content}"，以下是相关信息：\n\n这是一个模拟的 RAG 回答。在实际实现中，这里会基于文档内容进行检索增强生成，提供准确的答案和引用。`,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+        setIsLoading(false);
+      }, 1000);
+      return;
+    }
+
+    // Call real API
+    try {
+      const response = await askSourceQuestion(notebookId, source.id, userMessage.content);
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: `基于「${source.title}」的内容，关于您的问题"${userMessage.content}"，以下是相关信息：\n\n这是一个模拟的 RAG 回答。在实际实现中，这里会基于文档内容进行检索增强生成，提供准确的答案和引用。`,
-        timestamp: new Date(),
+        content: response.answer,
+        timestamp: new Date(response.created_at),
       };
       setMessages((prev) => [...prev, assistantMessage]);
+    } catch (err) {
+      const errorMessage: ChatMessage = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: `抱歉，回答生成失败：${err instanceof Error ? err.message : '未知错误'}`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
-  }, [inputValue, isLoading, source]);
+    }
+  }, [inputValue, isLoading, source, notebookId, isDemo]);
 
   const handleRefreshBrief = useCallback(() => {
     if (!source) return;
     briefCache.delete(source.id);
     setBrief(null);
+    setBriefError('');
     setIsBriefLoading(true);
-    
-    setTimeout(() => {
-      const newBrief: SourceBrief = {
-        summary: `这是重新生成的关于「${source.title}」的摘要。文档深入探讨了该领域的关键问题和解决方案。`,
-        keyPoints: [
-          '更新后的核心要点',
-          '新的方法论见解',
-          '最新实践案例',
-          '改进的建议',
-        ],
-        topics: ['更新', '洞察', '方案'],
-        wordCount: Math.floor(Math.random() * 5000) + 1000,
-        generatedAt: new Date(),
-      };
-      briefCache.set(source.id, newBrief);
-      setBrief(newBrief);
-      setIsBriefLoading(false);
-    }, 800);
-  }, [source]);
+
+    // If demo mode or no notebook, use mock data
+    if (isDemo || !notebookId) {
+      setTimeout(() => {
+        const newBrief: SourceBrief = {
+          summary: `这是重新生成的关于「${source.title}」的摘要。文档深入探讨了该领域的关键问题和解决方案。`,
+          keyPoints: [
+            '更新后的核心要点',
+            '新的方法论见解',
+            '最新实践案例',
+            '改进的建议',
+          ],
+          topics: ['更新', '洞察', '方案'],
+          wordCount: Math.floor(Math.random() * 5000) + 1000,
+          generatedAt: new Date(),
+        };
+        briefCache.set(source.id, newBrief);
+        setBrief(newBrief);
+        setIsBriefLoading(false);
+      }, 800);
+      return;
+    }
+
+    // Call real API
+    getSourceSummary(notebookId, source.id)
+      .then((response) => {
+        const newBrief: SourceBrief = {
+          summary: response.summary,
+          keyPoints: response.key_points,
+          topics: response.topics,
+          wordCount: response.word_count,
+          generatedAt: new Date(response.generated_at),
+        };
+        briefCache.set(source.id, newBrief);
+        setBrief(newBrief);
+      })
+      .catch((err) => {
+        setBriefError(err.message || '刷新摘要失败');
+      })
+      .finally(() => {
+        setIsBriefLoading(false);
+      });
+  }, [source, notebookId, isDemo]);
 
   if (!source) return null;
 
@@ -254,6 +336,10 @@ export default function SourceDetailDialog({ open, source, onClose }: SourceDeta
               <Skeleton variant="text" width="85%" />
               <Skeleton variant="text" width="60%" />
             </Stack>
+          ) : briefError ? (
+            <Typography variant="caption" color="error" sx={{ fontSize: '0.75rem' }}>
+              {briefError}
+            </Typography>
           ) : brief ? (
             <Stack spacing={1.5}>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', lineHeight: 1.6 }}>

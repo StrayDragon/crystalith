@@ -14,7 +14,6 @@ import type {
   RefineSettings,
   SessionSummary,
   SourceItem,
-  SuggestionItem,
 } from '../types';
 
 export interface WorkspaceState {
@@ -22,7 +21,6 @@ export interface WorkspaceState {
   sources: SourceItem[];
   sessions: SessionSummary[];
   messages: ChatMessage[];
-  suggestions: SuggestionItem[];
   outputs: OutputItem[];
   activeNotebookId: number | null;
   activeSessionId: number | null;
@@ -54,7 +52,6 @@ export type WorkspaceAction =
   | { type: 'SET_SOURCES'; payload: SourceItem[] }
   | { type: 'SET_SESSIONS'; payload: SessionSummary[] }
   | { type: 'SET_MESSAGES'; payload: ChatMessage[] }
-  | { type: 'SET_SUGGESTIONS'; payload: SuggestionItem[] }
   | { type: 'SET_OUTPUTS'; payload: OutputItem[] }
   | { type: 'SET_ACTIVE_NOTEBOOK'; payload: number | null }
   | { type: 'SET_ACTIVE_SESSION'; payload: number | null }
@@ -88,7 +85,6 @@ export const initialWorkspaceState: WorkspaceState = {
   sources: [],
   sessions: [],
   messages: [],
-  suggestions: [],
   outputs: [],
   activeNotebookId: null,
   activeSessionId: null,
@@ -118,7 +114,6 @@ export const initialWorkspaceState: WorkspaceState = {
     sources: false,
     sessions: false,
     messages: false,
-    suggestions: false,
     outputs: false,
     send: false,
   },
@@ -127,7 +122,6 @@ export const initialWorkspaceState: WorkspaceState = {
     sources: '',
     sessions: '',
     messages: '',
-    suggestions: '',
     outputs: '',
     send: '',
     create: '',
@@ -148,8 +142,6 @@ export function workspaceReducer(
       return { ...state, sessions: action.payload };
     case 'SET_MESSAGES':
       return { ...state, messages: action.payload };
-    case 'SET_SUGGESTIONS':
-      return { ...state, suggestions: action.payload };
     case 'SET_OUTPUTS':
       return { ...state, outputs: action.payload };
     case 'SET_ACTIVE_NOTEBOOK':
@@ -160,7 +152,6 @@ export function workspaceReducer(
         sources: [],
         sessions: [],
         messages: [],
-        suggestions: [],
         outputs: [],
         citations: [],
         selectedCitationIds: {},
@@ -176,7 +167,6 @@ export function workspaceReducer(
           sources: '',
           sessions: '',
           messages: '',
-          suggestions: '',
           outputs: '',
           send: '',
         },
@@ -186,7 +176,6 @@ export function workspaceReducer(
         ...state,
         activeSessionId: action.payload,
         messages: [],
-        suggestions: [],
         citations: [],
         selectedCitationIds: {},
         autoSelectCitations: false,
@@ -196,7 +185,6 @@ export function workspaceReducer(
         errors: {
           ...state.errors,
           messages: '',
-          suggestions: '',
           send: '',
         },
       };

@@ -9,7 +9,6 @@ import {
   Typography,
   Stack,
   CircularProgress,
-  Tooltip,
   Paper,
   Divider,
 } from '@mui/material';
@@ -156,7 +155,6 @@ export default function WorkspaceHeader({
 
         {/* Title with Edit */}
         <Box ref={editPanelRef}>
-          <Tooltip title={isDemo ? '演示模式下无法编辑' : '点击编辑笔记本'}>
             <Button
               onClick={openEditPanel}
               disabled={isDemo || !activeNotebookId}
@@ -203,7 +201,6 @@ export default function WorkspaceHeader({
                 />
               )}
             </Button>
-          </Tooltip>
 
           {/* Edit Popover */}
           <Popover
@@ -357,7 +354,6 @@ export default function WorkspaceHeader({
         </Box>
 
         {/* User Avatar */}
-        <Tooltip title="个人账户">
           <IconButton
             size="small"
             sx={{
@@ -379,7 +375,6 @@ export default function WorkspaceHeader({
               CL
             </Avatar>
           </IconButton>
-        </Tooltip>
       </Stack>
     </Box>
   );

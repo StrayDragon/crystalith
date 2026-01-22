@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 import type { Citation } from '../../types';
-import CitationTooltip from './CitationTooltip';
 
 interface CitationMarkProps {
   index: number;
@@ -12,8 +12,45 @@ interface CitationMarkProps {
 
 export default function CitationMark({ index, citation, onHover, onJump }: CitationMarkProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const chunkId = citation.chunkId ?? null;
-  const pageLabel = citation.pageNumber ? `第 ${citation.pageNumber} 页` : '页码未知';
+  const pageLabel = citation.pageNumber ? `第 ${citation.pageNumber} 页` : null;
+
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const tooltipWidth = 280;
+      const tooltipHeight = 120; // estimated max height
+      const gap = 6;
+
+      let top = rect.bottom + gap;
+      let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+
+      // Ensure tooltip stays within viewport horizontally
+      const minLeft = 8;
+      const maxLeft = window.innerWidth - tooltipWidth - 8;
+      if (left < minLeft) {
+        left = minLeft;
+      } else if (left > maxLeft) {
+        left = maxLeft;
+      }
+
+      // If tooltip would go below viewport, show above the button
+      if (top + tooltipHeight > window.innerHeight - 8) {
+        top = rect.top - tooltipHeight - gap;
+      }
+
+      // Ensure tooltip doesn't go above viewport
+      if (top < 8) {
+        top = 8;
+      }
+
+      setPosition({ top, left });
+    } else {
+      setPosition(null);
+    }
+  }, [isOpen]);
 
   function handleOpen() {
     setIsOpen(true);
@@ -29,9 +66,29 @@ export default function CitationMark({ index, citation, onHover, onJump }: Citat
     onJump(chunkId);
   }
 
+  const tooltip = isOpen && position ? (
+    <div
+      className="CitationTooltip"
+      style={{
+        position: 'fixed',
+        top: position.top,
+        left: position.left,
+        zIndex: 99999,
+      }}
+      role="tooltip"
+    >
+      <div className="CitationTooltip__title">{citation.sourceTitle}</div>
+      {pageLabel && <div className="CitationTooltip__meta">{pageLabel}</div>}
+      {citation.snippet && (
+        <div className="CitationTooltip__snippet">{citation.snippet}</div>
+      )}
+    </div>
+  ) : null;
+
   return (
     <span className="CitationMarkWrapper">
       <button
+        ref={buttonRef}
         type="button"
         role="button"
         tabIndex={0}
@@ -41,11 +98,11 @@ export default function CitationMark({ index, citation, onHover, onJump }: Citat
         onFocus={handleOpen}
         onBlur={handleClose}
         onClick={handleJump}
-        aria-label={`查看引用 ${index}，来源 ${citation.sourceTitle}，${pageLabel}`}
+        aria-label={`查看引用 ${index}，来源 ${citation.sourceTitle}，${pageLabel ?? '页码未知'}`}
       >
         [{index}]
       </button>
-      {isOpen ? <CitationTooltip citation={citation} /> : null}
+      {tooltip && createPortal(tooltip, document.body)}
     </span>
   );
 }
