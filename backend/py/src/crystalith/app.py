@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, Response
 from scalar_fastapi import get_scalar_api_reference
 
@@ -134,6 +135,15 @@ def create_app(
     app.state.db = db
     app.state.vector_store = store
     app.state.task_queue = queue
+
+    # Add CORS middleware for frontend development
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.get(resolved.app.openapi_ui_path, include_in_schema=False)
     def scalar_docs() -> Response:
