@@ -179,6 +179,32 @@ export async function searchSources(
   return handleResponse(result);
 }
 
+// Add source from URL (not yet in generated SDK)
+export type SourceFromUrlMode = 'fetch' | 'link';
+
+export interface AddSourceFromUrlPayload {
+  url: string;
+  title?: string;
+  snippet?: string;
+  mode: SourceFromUrlMode;
+}
+
+export async function addSourceFromUrl(
+  notebookId: number,
+  payload: AddSourceFromUrlPayload,
+): Promise<SourceRead> {
+  const response = await fetch(`/v1/notebooks/${notebookId}/sources/from-url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, err.detail || 'Failed to add source from URL');
+  }
+  return response.json();
+}
+
 // Source Summary and QA (not yet in generated SDK)
 export interface SourceSummaryResponse {
   source_id: number;

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import urllib.parse
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -12,6 +11,7 @@ from cl_logs.logging import get_logger
 
 from crystalith.agents.deps import StudioDeps
 from crystalith.agents.models import build_chat_model
+from crystalith.search import SearXNGSearcher
 
 
 log = get_logger(__name__)
@@ -39,31 +39,6 @@ SYSTEM_PROMPT = (
     "You are a research assistant. Provide a concise summary of the query and a "
     "suggested next step. Keep it within 2 sentences. Return JSON with keys summary and next_step."
 )
-
-
-def _build_stub_results(query: str, engine: str, message: str | None) -> list[dict[str, Any]]:
-    slug = urllib.parse.quote_plus(query)
-    snippet = message or "基于当前查询生成的候选来源摘要。"
-    return [
-        {
-            "title": f"{query} 综述",
-            "url": f"https://example.com/search?q={slug}",
-            "snippet": snippet,
-            "source": engine,
-        },
-        {
-            "title": f"{query} 关键观点整理",
-            "url": f"https://example.com/articles/{slug}",
-            "snippet": snippet,
-            "source": engine,
-        },
-        {
-            "title": f"{query} 实践案例",
-            "url": f"https://example.com/cases/{slug}",
-            "snippet": snippet,
-            "source": engine,
-        },
-    ]
 
 
 # =============================================================================
@@ -103,13 +78,35 @@ class GenerateSummary(BaseNode[SearchGraphState, StudioDeps, dict[str, Any]]):
 
 @dataclass
 class BuildResults(BaseNode[SearchGraphState, StudioDeps, dict[str, Any]]):
-    """Build search results based on the generated summary."""
+    """Build search results using real search engine."""
 
     async def run(
         self, ctx: GraphRunContext[SearchGraphState, StudioDeps]
     ) -> End[dict[str, Any]]:
         state = ctx.state
-        state.results = _build_stub_results(state.query, state.engine, state.message)
+        deps = ctx.deps
+
+        # Execute real search via SearXNG
+        searcher = SearXNGSearcher.from_settings(deps.settings)
+        search_results = await searcher.search(state.query, mode=state.mode)
+
+        # Convert SearchResult objects to dicts for API response
+        state.results = [
+            {
+                "title": r.title,
+                "url": r.url,
+                "snippet": r.snippet,
+                "source": r.engine or state.engine,
+            }
+            for r in search_results
+        ]
+
+        log.info(
+            "search completed",
+            query=state.query[:50],
+            result_count=len(state.results),
+        )
+
         return End({"message": state.message, "results": state.results})
 
 

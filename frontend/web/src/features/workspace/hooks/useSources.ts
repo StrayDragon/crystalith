@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 
 import type { AsyncStatus } from '../../../shared/types';
-import { convertOutputToSource, deleteSource, deleteSources, listSources, searchSources, uploadSource } from '../api';
+import { toast } from '../../../shared/toast';
+import { addSourceFromUrl, convertOutputToSource, deleteSource, deleteSources, listSources, searchSources, uploadSource } from '../api';
+import type { SourceFromUrlMode } from '../../../api/client';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
 import type { ApiSource, ApiSourceSearchResult } from '../types';
 import { normalizeSource } from '../utils';
@@ -68,10 +70,7 @@ export function useSources() {
       return;
     }
     if (error) {
-      dispatch({
-        type: 'SET_ERROR',
-        payload: { key: 'sources', value: '来源加载失败，请检查后端状态。' },
-      });
+      toast.error('来源加载失败，请检查后端状态。');
       return;
     }
     if (data) {
@@ -228,15 +227,12 @@ export function useSources() {
     async (file: File | null) => {
       if (!file || isDemo || !state.activeNotebookId) return;
       dispatch({ type: 'SET_UPLOAD_STATE', payload: 'loading' });
-      dispatch({ type: 'SET_ERROR', payload: { key: 'sources', value: '' } });
       try {
         await uploadSource(state.activeNotebookId, file);
         await mutate();
+        toast.success('来源上传成功');
       } catch (error) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'sources', value: '上传失败，请检查文件格式或后端状态。' },
-        });
+        toast.error('上传失败，请检查文件格式或后端状态。');
       } finally {
         dispatch({ type: 'SET_UPLOAD_STATE', payload: 'idle' });
       }
@@ -298,74 +294,56 @@ export function useSources() {
   const removeSources = useCallback(
     async (sourceIds: number[]) => {
       if (isDemo) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'sources', value: '演示模式暂不支持删除来源。' },
-        });
+        toast.warning('演示模式暂不支持删除来源。');
         return false;
       }
       if (!state.activeNotebookId) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'sources', value: '请先创建笔记本后再删除来源。' },
-        });
+        toast.warning('请先创建笔记本后再删除来源。');
         return false;
       }
       if (sourceIds.length === 0) {
         return false;
       }
       setRemoveState('loading');
-      dispatch({ type: 'SET_ERROR', payload: { key: 'sources', value: '' } });
       try {
         await deleteSources(state.activeNotebookId, sourceIds);
         await mutate();
+        toast.success('来源删除成功');
         return true;
       } catch (error) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'sources', value: '删除失败，请稍后重试。' },
-        });
+        toast.error('删除失败，请稍后重试。');
         return false;
       } finally {
         setRemoveState('idle');
       }
     },
-    [dispatch, isDemo, mutate, state.activeNotebookId],
+    [isDemo, mutate, state.activeNotebookId],
   );
 
   const removeSource = useCallback(
     async (sourceId: number) => {
       if (isDemo) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'sources', value: '演示模式暂不支持删除来源。' },
-        });
+        toast.warning('演示模式暂不支持删除来源。');
         return false;
       }
       if (!state.activeNotebookId) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'sources', value: '请先创建笔记本后再删除来源。' },
-        });
+        toast.warning('请先创建笔记本后再删除来源。');
         return false;
       }
       setRemoveState('loading');
-      dispatch({ type: 'SET_ERROR', payload: { key: 'sources', value: '' } });
       try {
         await deleteSource(state.activeNotebookId, sourceId);
         await mutate();
+        toast.success('来源删除成功');
         return true;
       } catch (error) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'sources', value: '删除失败，请稍后重试。' },
-        });
+        toast.error('删除失败，请稍后重试。');
         return false;
       } finally {
         setRemoveState('idle');
       }
     },
-    [dispatch, isDemo, mutate, state.activeNotebookId],
+    [isDemo, mutate, state.activeNotebookId],
   );
 
   const copySelectedCitations = useCallback(async () => {
@@ -421,6 +399,35 @@ export function useSources() {
     [state.activeNotebookId, isDemo, mutate],
   );
 
+  const clearSearchResults = useCallback(() => {
+    setSearchResults([]);
+    setSearchNotice('');
+  }, []);
+
+  const handleAddSourceFromUrl = useCallback(
+    async (
+      url: string,
+      mode: SourceFromUrlMode,
+      options?: { title?: string; snippet?: string },
+    ) => {
+      if (isDemo) {
+        throw new Error('演示模式暂不支持此功能');
+      }
+      if (!state.activeNotebookId) {
+        throw new Error('请先创建笔记本');
+      }
+      const result = await addSourceFromUrl(state.activeNotebookId, {
+        url,
+        mode,
+        title: options?.title,
+        snippet: options?.snippet,
+      });
+      await mutate();
+      return result;
+    },
+    [isDemo, state.activeNotebookId, mutate],
+  );
+
   return {
     sources: state.sources,
     citations: state.citations,
@@ -431,7 +438,6 @@ export function useSources() {
     jumpToCitationChunkId: state.jumpToCitationChunkId,
     uploadState: state.uploadState,
     isLoading: state.loading.sources,
-    error: state.errors.sources,
     selectedChunkIds,
     selectedCount,
     highlightedChunkIds,
@@ -453,6 +459,8 @@ export function useSources() {
     removeSource,
     removeState,
     convertOutputToSource: handleConvertOutputToSource,
+    clearSearchResults,
+    addSourceFromUrl: handleAddSourceFromUrl,
     isDemo,
   };
 }

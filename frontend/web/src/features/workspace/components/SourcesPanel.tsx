@@ -35,8 +35,12 @@ import {
 } from '@mui/icons-material';
 
 import type { AsyncStatus } from '../../../shared/types';
+import type { SourceFromUrlMode } from '../../../api/client';
 import type { ApiSourceSearchResult, SourceItem } from '../types';
 import SourceDetailDialog from './SourceDetailDialog';
+import SearchResultsQueue from './SearchResultsQueue';
+import AddSearchResultDialog from './AddSearchResultDialog';
+import type { SearchResultItem } from './SearchResultCard';
 
 interface SourcesPanelProps {
   sources: SourceItem[];
@@ -47,13 +51,17 @@ interface SourcesPanelProps {
   searchNotice: string;
   searchResults: ApiSourceSearchResult[];
   onSearch: (payload: { query: string; engine: string; mode: string }) => void;
+  onClearSearchResults: () => void;
+  onAddSourceFromUrl: (
+    url: string,
+    mode: SourceFromUrlMode,
+    options?: { title?: string; snippet?: string },
+  ) => Promise<unknown>;
   onRemoveSources: (sourceIds: number[]) => Promise<boolean>;
   onRemoveSource: (sourceId: number) => Promise<boolean>;
   isDemo: boolean;
-  error: string;
   isLoading: boolean;
   removeState: AsyncStatus;
-  onRetry: () => void;
 }
 
 function SourcesPanel({
@@ -65,13 +73,13 @@ function SourcesPanel({
   searchNotice,
   searchResults,
   onSearch,
+  onClearSearchResults,
+  onAddSourceFromUrl,
   onRemoveSources,
   onRemoveSource,
   isDemo,
-  error,
   isLoading,
   removeState,
-  onRetry,
 }: SourcesPanelProps) {
   const uploadDisabled = isDemo || uploadState === 'loading';
   const isSearching = searchState === 'loading';
@@ -84,6 +92,12 @@ function SourcesPanel({
   const [selectedSource, setSelectedSource] = useState<SourceItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Add search results dialog state
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [resultsToAdd, setResultsToAdd] = useState<SearchResultItem[]>([]);
+  const [addMode, setAddMode] = useState<SourceFromUrlMode>('link');
+  const [isAddingFromUrl, setIsAddingFromUrl] = useState(false);
+
   const handleOpenDetail = useCallback((source: SourceItem) => {
     setSelectedSource(source);
     setDetailDialogOpen(true);
@@ -91,6 +105,31 @@ function SourcesPanel({
 
   const handleCloseDetail = useCallback(() => {
     setDetailDialogOpen(false);
+  }, []);
+
+  const handleAddToSources = useCallback((selected: SearchResultItem[], mode: SourceFromUrlMode) => {
+    setResultsToAdd(selected);
+    setAddMode(mode);
+    setAddDialogOpen(true);
+  }, []);
+
+  const handleAddSource = useCallback(
+    async (result: SearchResultItem, mode: SourceFromUrlMode) => {
+      await onAddSourceFromUrl(result.url, mode, {
+        title: result.title,
+        snippet: result.snippet ?? undefined,
+      });
+    },
+    [onAddSourceFromUrl],
+  );
+
+  const handleAddComplete = useCallback(() => {
+    setResultsToAdd([]);
+    onClearSearchResults();
+  }, [onClearSearchResults]);
+
+  const handleCloseAddDialog = useCallback(() => {
+    setAddDialogOpen(false);
   }, []);
 
   useEffect(() => {
@@ -280,47 +319,21 @@ function SourcesPanel({
         </div>
       </div>
 
-      {/* Search Status */}
-      {(isSearching || searchNotice) && (
+      {/* Search Status - only show loading state */}
+      {isSearching && (
         <Typography variant="small" className="text-[11px] text-gray-600 font-medium px-1">
-          {isSearching ? '搜索中…' : searchNotice}
+          搜索中…
         </Typography>
       )}
 
-      {/* Search Results */}
-      {searchResults.length > 0 && (
-        <Card className="p-3 border border-gray-200 shadow-sm rounded-xl">
-          <div className="flex items-center justify-between mb-2">
-            <Typography variant="small" className="font-semibold text-gray-800 text-xs">
-              搜索结果
-            </Typography>
-            <Chip value={`${searchResults.length} 条`} size="sm" className="bg-gray-900 text-[10px] h-5 py-0 px-2" />
-          </div>
-          <div className="flex flex-col gap-2">
-            {searchResults.map((item) => (
-              <a
-                key={`${item.title}-${item.url}`}
-                href={item.url}
-                target="_blank"
-                rel="noreferrer"
-                className="block p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
-              >
-                <Typography variant="small" className="font-semibold text-gray-900 text-xs leading-snug mb-0.5">
-                  {item.title}
-                </Typography>
-                {item.snippet && (
-                  <Typography variant="small" className="text-[10px] text-gray-600 font-medium leading-snug mb-0.5 line-clamp-2">
-                    {item.snippet}
-                  </Typography>
-                )}
-                <Typography variant="small" className="text-[10px] text-gray-500 font-medium">
-                  {item.source || '来源推荐'}
-                </Typography>
-              </a>
-            ))}
-          </div>
-        </Card>
-      )}
+      {/* Search Results Queue */}
+      <SearchResultsQueue
+        results={searchResults}
+        searchSummary={searchNotice}
+        onClear={onClearSearchResults}
+        onAddToSources={handleAddToSources}
+        isAdding={isAddingFromUrl}
+      />
 
       {/* Select All & Batch Actions */}
       <div className="flex items-center justify-between px-1">
@@ -453,28 +466,21 @@ function SourcesPanel({
         )}
       </div>
 
-      {/* Error State */}
-      {error && (
-        <div className="flex items-center gap-2 mt-1">
-          <Typography variant="small" color="red" className="text-[11px]">
-            {error}
-          </Typography>
-          <Button
-            variant="text"
-            size="sm"
-            onClick={onRetry}
-            className="px-2 py-1 h-6 min-h-0 text-[11px] text-gray-800"
-          >
-            重试
-          </Button>
-        </div>
-      )}
-
       {/* Source Detail Dialog */}
       <SourceDetailDialog
         open={detailDialogOpen}
         source={selectedSource}
         onClose={handleCloseDetail}
+      />
+
+      {/* Add Search Results Dialog */}
+      <AddSearchResultDialog
+        open={addDialogOpen}
+        onClose={handleCloseAddDialog}
+        results={resultsToAdd}
+        mode={addMode}
+        onAddSource={handleAddSource}
+        onComplete={handleAddComplete}
       />
     </div>
   );

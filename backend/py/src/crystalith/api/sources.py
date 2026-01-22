@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import datetime
 from time import perf_counter
-from typing import Any, Iterable
+from typing import Any, Iterable, Literal
 
+import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
@@ -19,6 +20,7 @@ from crystalith.agents.search_graph import run_search_graph
 from crystalith.config import Settings
 from crystalith.db import Chunk, Notebook, Source, SourceStatus
 from crystalith.parsers import Parser, ParserFactory, TranscriptionProvider, UnsupportedDocumentError
+from crystalith.parsers.html import HTMLParser
 from crystalith.vector_storage import VectorStore
 
 from .deps import (
@@ -104,6 +106,30 @@ class SourceBatchDeleteRequest(BaseModel):
 class SourceBatchDeleteResponse(BaseModel):
     deleted_ids: list[int]
     deleted_count: int
+
+
+class SourceFromUrlMode(MetaInfoStrEnum):
+    """Mode for creating source from URL."""
+
+    FETCH = "fetch", XMetaInfo(description="获取完整内容", display_text="获取内容")
+    LINK = "link", XMetaInfo(description="仅保存链接", display_text="保存链接")
+
+
+class SourceFromUrlRequest(BaseModel):
+    url: str = Field(..., min_length=1)
+    title: str | None = Field(None)
+    snippet: str | None = Field(None)
+    mode: SourceFromUrlMode = Field(SourceFromUrlMode.LINK)
+
+    @field_validator("url")
+    @classmethod
+    def _validate_url(cls, value: str) -> str:
+        trimmed = value.strip()
+        if not trimmed:
+            raise ValueError("url must not be empty")
+        if not trimmed.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        return trimmed
 
 
 
@@ -212,6 +238,144 @@ async def search_sources(
         message=message or "已生成简要搜索结果（TODO: 接入真实搜索）。",
         created_at=created_at,
     )
+
+
+@router.post("/from-url", response_model=SourceRead, status_code=status.HTTP_201_CREATED)
+async def create_source_from_url(
+    notebook_id: int,
+    payload: SourceFromUrlRequest,
+    session: AsyncSession = Depends(get_db_session),
+    embedder: EmbeddingProvider = Depends(get_embedding_provider),
+    vector_store: VectorStore = Depends(get_vector_store),
+) -> SourceRead:
+    """Create a source from a URL.
+
+    Supports two modes:
+    - `link`: Save URL, title, and snippet as a lightweight source
+    - `fetch`: Fetch the webpage content and parse it as a full source
+    """
+    notebook = await session.get(Notebook, notebook_id)
+    if notebook is None:
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
+    url = payload.url
+    title = payload.title or url
+    snippet = payload.snippet or ""
+
+    if payload.mode == SourceFromUrlMode.LINK:
+        # Link mode: create a simple source with URL metadata
+        content_text = f"# {title}\n\n{snippet}\n\n来源: {url}"
+        chunks = [
+            type("Chunk", (), {
+                "text": content_text,
+                "start_offset": 0,
+                "end_offset": len(content_text),
+                "metadata": {"url": url, "title": title},
+            })()
+        ]
+        parser_type = "link"
+        parse_time_ms = 0
+    else:
+        # Fetch mode: download and parse the webpage
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(url, follow_redirects=True)
+                response.raise_for_status()
+                content = response.content
+        except httpx.HTTPStatusError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to fetch URL: HTTP {exc.response.status_code}",
+            ) from exc
+        except httpx.RequestError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to fetch URL: {exc!s}",
+            ) from exc
+
+        parse_started = perf_counter()
+        try:
+            parser = HTMLParser()
+            chunks = parser.parse(content)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to parse HTML content: {exc!s}",
+            ) from exc
+        parse_time_ms = int((perf_counter() - parse_started) * 1000)
+        parser_type = "html"
+
+        if not chunks:
+            raise HTTPException(status_code=400, detail="No content extracted from URL")
+
+    # Create the source record
+    source = Source(
+        notebook_id=notebook_id,
+        filename=title[:255],  # Truncate if too long
+        mime_type="text/html",
+        parser_type=parser_type,
+        status=SourceStatus.PROCESSING,
+    )
+    session.add(source)
+    await session.commit()
+    await session.refresh(source)
+
+    try:
+        # Build metadata
+        page_count = None
+        source.metadata_ = _build_source_metadata(
+            chunks,
+            parser_type=parser_type,
+            parse_time_ms=parse_time_ms,
+            page_count=page_count,
+        )
+        source.metadata_["url"] = url
+        if payload.title:
+            source.metadata_["original_title"] = payload.title
+
+        # Embed chunks
+        embeddings = await embedder.embed([chunk.text for chunk in chunks])
+        if len(embeddings) != len(chunks):
+            raise ValueError("embedding count mismatch")
+
+        # Create chunk records
+        chunk_models: list[Chunk] = []
+        for index, chunk in enumerate(chunks):
+            chunk_model = Chunk(
+                source_id=source.id,
+                chunk_index=index,
+                text=chunk.text,
+                start_offset=chunk.start_offset,
+                end_offset=chunk.end_offset,
+                metadata_=chunk.metadata if hasattr(chunk, "metadata") else None,
+            )
+            session.add(chunk_model)
+            chunk_models.append(chunk_model)
+
+        await session.flush()
+        chunk_ids = [chunk.id for chunk in chunk_models]
+
+        source.status = SourceStatus.READY
+        source.error_message = None
+        await session.commit()
+        await session.refresh(source)
+
+        # Add to vector store
+        await vector_store.add(
+            notebook_id=notebook_id,
+            source_id=source.id,
+            chunk_ids=chunk_ids,
+            vectors=embeddings,
+        )
+    except Exception as exc:
+        await session.rollback()
+        source.status = SourceStatus.FAILED
+        source.error_message = str(exc)[:512]
+        session.add(source)
+        await session.commit()
+        raise HTTPException(status_code=500, detail="Ingestion failed") from exc
+
+    return _source_to_read(source, chunk_count=len(chunk_models))
 
 
 @router.post("", response_model=SourceRead, status_code=status.HTTP_201_CREATED)
