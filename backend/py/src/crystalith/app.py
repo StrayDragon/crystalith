@@ -12,8 +12,10 @@ from scalar_fastapi import get_scalar_api_reference
 from cl_fastapix import FastAPIX
 from cl_sqlalchemyx.mgrs import AsyncDBManager
 
+from sqlalchemy import delete, select
+
 from .config import ConfigManager, Settings
-from .db import create_all, create_db_manager
+from .db import Source, SourceStatus, create_all, create_db_manager
 from .api import (
     analysis_router,
     messages_router,
@@ -87,6 +89,27 @@ def create_app(
     async def lifespan(app: FastAPIX):
         if _env_bool("AUTO_DB_INIT", False):
             await create_all(app.state.db.async_engine)
+
+        # Clean up sources with status=FAILED (failed ingestion)
+        if _env_bool("AUTO_CLEANUP_FAILED_SOURCES", True):
+            async with app.state.db.got_manual_session() as session:
+                # Find sources with status=FAILED
+                failed_sources = await session.execute(
+                    select(Source).where(Source.status == SourceStatus.FAILED)
+                )
+                failed_list = list(failed_sources.scalars().all())
+                if failed_list:
+                    source_ids = [s.id for s in failed_list]
+                    await session.execute(
+                        delete(Source).where(Source.id.in_(source_ids))
+                    )
+                    await session.commit()
+                    logger.info(
+                        "Cleaned up %d failed sources on startup: %s",
+                        len(source_ids),
+                        source_ids,
+                    )
+
         await app.state.task_queue.start_worker()
         try:
             yield

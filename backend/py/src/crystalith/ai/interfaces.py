@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol, Sequence
+from typing import AsyncIterator, Protocol, Sequence
 
 from .types import ChatMessage, ProviderType
 
@@ -16,4 +16,8 @@ class EmbeddingProvider(Provider, Protocol):
 
 class ChatProvider(Provider, Protocol):
     async def chat(self, messages: Sequence[ChatMessage]) -> str: ...
+
+    async def chat_stream(self, messages: Sequence[ChatMessage]) -> AsyncIterator[str]:
+        """Stream chat completion, yielding text chunks as they arrive."""
+        ...
 

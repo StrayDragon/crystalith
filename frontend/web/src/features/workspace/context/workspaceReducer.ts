@@ -78,7 +78,10 @@ export type WorkspaceAction =
   | { type: 'SET_UPLOAD_STATE'; payload: AsyncStatus }
   | { type: 'SET_LOADING'; payload: { key: keyof LoadingState; value: boolean } }
   | { type: 'SET_ERROR'; payload: { key: keyof ErrorsState; value: string } }
-  | { type: 'SET_OUTPUT_TYPE'; payload: OutputTypeId };
+  | { type: 'SET_OUTPUT_TYPE'; payload: OutputTypeId }
+  | { type: 'APPEND_MESSAGE_CONTENT'; payload: { messageId: string; text: string } }
+  | { type: 'UPDATE_MESSAGE'; payload: { messageId: string; updates: Partial<ChatMessage> } }
+  | { type: 'ADD_STREAMING_MESSAGE'; payload: ChatMessage };
 
 export const initialWorkspaceState: WorkspaceState = {
   notebooks: [],
@@ -245,6 +248,29 @@ export function workspaceReducer(
       };
     case 'SET_OUTPUT_TYPE':
       return { ...state, outputType: action.payload };
+    case 'APPEND_MESSAGE_CONTENT':
+      return {
+        ...state,
+        messages: state.messages.map((msg) =>
+          msg.id === action.payload.messageId
+            ? { ...msg, content: msg.content + action.payload.text }
+            : msg,
+        ),
+      };
+    case 'UPDATE_MESSAGE':
+      return {
+        ...state,
+        messages: state.messages.map((msg) =>
+          msg.id === action.payload.messageId
+            ? { ...msg, ...action.payload.updates }
+            : msg,
+        ),
+      };
+    case 'ADD_STREAMING_MESSAGE':
+      return {
+        ...state,
+        messages: [...state.messages, action.payload],
+      };
     default:
       return state;
   }

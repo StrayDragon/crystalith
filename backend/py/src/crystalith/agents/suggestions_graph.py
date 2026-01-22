@@ -24,6 +24,7 @@ from crystalith.suggestions.generator import (
     format_source_context,
 )
 from crystalith.suggestions.types import SuggestionType
+from crystalith.utils import is_valid_question, normalize_whitespace, question_key
 
 
 log = get_logger(__name__)
@@ -91,23 +92,6 @@ SYSTEM_PROMPT_CLASSIFY = (
 )
 
 
-def _normalize_whitespace(text: str) -> str:
-    return " ".join(text.strip().split())
-
-
-def _question_key(text: str) -> str:
-    return _normalize_whitespace(text).lower()
-
-
-def _is_valid_question(text: str) -> bool:
-    if len(text) < 6:
-        return False
-    lowered = text.lower()
-    if lowered.startswith("```"):
-        return False
-    return True
-
-
 def _normalize_drafts(
     items: Iterable[SuggestionDraftItem],
     *,
@@ -119,14 +103,14 @@ def _normalize_drafts(
     seen: set[str] = set()
 
     for item in items:
-        question = _normalize_whitespace(item.question)
-        if not _is_valid_question(question):
+        question = normalize_whitespace(item.question)
+        if not is_valid_question(question):
             continue
-        key = _question_key(question)
+        key = question_key(question)
         if key in seen:
             continue
         seen.add(key)
-        context = _normalize_whitespace(item.context or fallback_context) or fallback_context
+        context = normalize_whitespace(item.context or fallback_context) or fallback_context
         drafts.append(SuggestionDraft(question=question, context=context))
         if len(drafts) >= limit:
             return drafts
@@ -134,10 +118,10 @@ def _normalize_drafts(
     for fallback in FALLBACK_QUESTIONS:
         if len(drafts) >= limit:
             break
-        question = _normalize_whitespace(fallback)
+        question = normalize_whitespace(fallback)
         if not question:
             continue
-        key = _question_key(question)
+        key = question_key(question)
         if key in seen:
             continue
         seen.add(key)
@@ -147,14 +131,14 @@ def _normalize_drafts(
 
 
 def _normalize_type(value: str) -> SuggestionType | None:
-    cleaned = _normalize_whitespace(value).lower()
+    cleaned = normalize_whitespace(value).lower()
     return TYPE_ALIASES.get(cleaned)
 
 
 def _last_user_question(turns: list[SessionTurn]) -> str | None:
     for turn in reversed(turns):
         if turn.role == "user":
-            cleaned = _normalize_whitespace(turn.content)
+            cleaned = normalize_whitespace(turn.content)
             if cleaned:
                 return cleaned
     return None
@@ -197,7 +181,7 @@ class LoadContext(BaseNode[SuggestionGraphState, StudioDeps, list[Suggestion]]):
             state.context_text = format_source_context(snippets) if snippets else ""
             state.fallback_context = "notebook sources"
             if state.mode == "deep_dive":
-                seed = _normalize_whitespace(state.seed_question or "")
+                seed = normalize_whitespace(state.seed_question or "")
                 if not seed:
                     raise ValueError("seed_question is required for deep_dive")
                 state.fallback_context = f"Deep dive on: {seed}"
@@ -218,7 +202,7 @@ class LoadContext(BaseNode[SuggestionGraphState, StudioDeps, list[Suggestion]]):
         state.fallback_context = "session history"
 
         if state.mode == "deep_dive":
-            seed = _normalize_whitespace(state.seed_question or "")
+            seed = normalize_whitespace(state.seed_question or "")
             if not seed:
                 seed = _last_user_question(turns) or ""
             if not seed:
@@ -335,7 +319,7 @@ class ClassifyOrFinalize(BaseNode[SuggestionGraphState, StudioDeps, list[Suggest
                 suggestion_type = _normalize_type(item.type)
                 if suggestion_type is None:
                     continue
-                key = _question_key(item.question)
+                key = question_key(item.question)
                 mapping[key] = suggestion_type
         except Exception as error:  # noqa: BLE001 - fallback to cycling
             log.warning("suggestion classification failed", exc_info=error)
@@ -348,7 +332,7 @@ class ClassifyOrFinalize(BaseNode[SuggestionGraphState, StudioDeps, list[Suggest
         ]
         suggestions: list[Suggestion] = []
         for index, draft in enumerate(state.drafts):
-            key = _question_key(draft.question)
+            key = question_key(draft.question)
             suggestion_type = mapping.get(key) or cycle[index % len(cycle)]
             context = draft.context or state.fallback_context
             suggestions.append(
