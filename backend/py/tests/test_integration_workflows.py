@@ -50,7 +50,7 @@ class TestChatWorkflow:
         assert payload["citations"]
 
         # Verify messages are stored in session
-        messages_response = await test_client.get(f"/v1/sessions/{session_id}/messages")
+        messages_response = await test_client.get(f"/v1/notebooks/{notebook_id}/sessions/{session_id}/messages")
         assert messages_response.status_code == 200
         messages = messages_response.json()
         assert len(messages) == 2  # user + assistant
@@ -93,7 +93,7 @@ class TestChatWorkflow:
         assert response2.status_code == 200
 
         # Verify all messages are stored
-        messages_response = await test_client.get(f"/v1/sessions/{session_id}/messages")
+        messages_response = await test_client.get(f"/v1/notebooks/{notebook_id}/sessions/{session_id}/messages")
         messages = messages_response.json()
         assert len(messages) == 4  # 2 user + 2 assistant
 
@@ -200,17 +200,17 @@ class TestSuggestionWorkflow:
 
         # Add some messages to the session
         await test_client.post(
-            f"/v1/sessions/{session_id}/messages",
+            f"/v1/notebooks/{notebook_id}/sessions/{session_id}/messages",
             json={"role": "user", "content": "Tell me about the topic"},
         )
         await test_client.post(
-            f"/v1/sessions/{session_id}/messages",
+            f"/v1/notebooks/{notebook_id}/sessions/{session_id}/messages",
             json={"role": "assistant", "content": "Here is some information..."},
         )
 
         # Generate suggestions
         response = await test_client.post(
-            f"/v1/sessions/{session_id}/suggestions",
+            f"/v1/notebooks/{notebook_id}/sessions/{session_id}/suggestions",
             json={"count": 3, "mode": "standard"},
         )
         assert response.status_code == 200
@@ -367,8 +367,9 @@ class TestSourceManagement:
         source_id = upload1.json()["id"]
 
         # Delete source
-        delete_response = await test_client.post(
-            f"/v1/notebooks/{notebook_id}/sources/batch-delete",
+        delete_response = await test_client.request(
+            "DELETE",
+            f"/v1/notebooks/{notebook_id}/sources",
             json={"source_ids": [source_id]},
         )
         assert delete_response.status_code == 200

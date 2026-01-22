@@ -1,20 +1,22 @@
 from __future__ import annotations
 
 import datetime
-from enum import StrEnum
 from typing import Any
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from cl_sqlalchemyx.base.dal import AsyncSqlATableBase
+from cl_stdx.enumx import MetaInfoStrEnum, XMetaInfo
 from crystalith.outputs.types import OutputType
 
 
-class SourceStatus(StrEnum):
-    PROCESSING = "processing"
-    READY = "ready"
-    FAILED = "failed"
+class SourceStatus(MetaInfoStrEnum):
+    """Status of a document source."""
+
+    PROCESSING = "processing", XMetaInfo(description="正在处理", display_text="处理中")
+    READY = "ready", XMetaInfo(description="处理完成", display_text="就绪")
+    FAILED = "failed", XMetaInfo(description="处理失败", display_text="失败")
 
 
 class Notebook(AsyncSqlATableBase):

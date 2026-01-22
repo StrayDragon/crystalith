@@ -161,8 +161,9 @@ async def test_batch_delete_sources(
     assert len(vector_store) > 0
 
     source_ids = [item["id"] for item in sources]
-    deleted = await client.post(
-        f"/v1/notebooks/{notebook_id}/sources/batch-delete",
+    deleted = await client.request(
+        "DELETE",
+        f"/v1/notebooks/{notebook_id}/sources",
         json={"source_ids": source_ids},
     )
     assert deleted.status_code == 200
