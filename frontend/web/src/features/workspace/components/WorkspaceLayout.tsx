@@ -75,11 +75,13 @@ export default function WorkspaceLayout() {
   const notebooks = useNotebooks();
   const sessions = useSessions();
   const sources = useSources();
+  const refine = useRefine();
   const chat = useChat({
     ensureSession: sessions.ensureSession,
     refreshSessions: sessions.refreshSessions,
+    refreshSources: sources.retrySources,
+    refreshOutputs: refine.retryOutputs,
   });
-  const refine = useRefine();
 
   const applySizes = useCallback((left: number, right: number) => {
     sizesRef.current = { left, right };
@@ -323,6 +325,9 @@ export default function WorkspaceLayout() {
             messagesError={state.errors.messages}
             onRetryMessages={chat.retryMessages}
             onSaveToNote={refine.saveContentAsNote}
+            onConvertToSource={chat.convertSessionToSource}
+            onConvertToOutput={chat.convertSessionToOutput}
+            isConverting={chat.isConverting}
           />
         </section>
 

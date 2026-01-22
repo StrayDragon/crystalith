@@ -269,6 +269,86 @@ export async function deleteSession(notebookId: number, sessionId: number): Prom
   handleResponse(result);
 }
 
+// Session Conversion
+
+export interface ConvertSessionToSourceRequest {
+  message_ids?: number[] | null;
+}
+
+export interface ConvertSessionToSourceResponse {
+  source_id: number;
+  filename: string;
+  chunk_count: number;
+}
+
+export interface ConvertSessionToOutputRequest {
+  message_ids?: number[] | null;
+  output_type: OutputType;
+}
+
+export interface ConvertSessionToOutputResponse {
+  output_id: number;
+  output_type: string;
+  title: string;
+}
+
+/**
+ * Convert session messages to a source document for RAG queries.
+ * @param notebookId - Notebook ID
+ * @param sessionId - Session ID
+ * @param messageIds - Optional specific message IDs to convert. If null, converts entire session.
+ */
+export async function convertSessionToSource(
+  notebookId: number,
+  sessionId: number,
+  messageIds?: number[] | null,
+): Promise<ConvertSessionToSourceResponse> {
+  const response = await fetch(
+    `/v1/notebooks/${notebookId}/sessions/${sessionId}/convert-to-source`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message_ids: messageIds ?? null }),
+    },
+  );
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, err.detail || 'Failed to convert session to source');
+  }
+  return response.json();
+}
+
+/**
+ * Convert session messages to a studio output/note.
+ * @param notebookId - Notebook ID
+ * @param sessionId - Session ID
+ * @param outputType - Type of output to create (PARAGRAPH, BULLETS, STRUCTURED)
+ * @param messageIds - Optional specific message IDs to convert. If null, converts entire session.
+ */
+export async function convertSessionToOutput(
+  notebookId: number,
+  sessionId: number,
+  outputType: OutputType,
+  messageIds?: number[] | null,
+): Promise<ConvertSessionToOutputResponse> {
+  const response = await fetch(
+    `/v1/notebooks/${notebookId}/sessions/${sessionId}/convert-to-output`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message_ids: messageIds ?? null,
+        output_type: outputType,
+      }),
+    },
+  );
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, err.detail || 'Failed to convert session to output');
+  }
+  return response.json();
+}
+
 // Messages
 export async function listMessages(notebookId: number, sessionId: number): Promise<MessageRead[]> {
   const result = await listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet({
