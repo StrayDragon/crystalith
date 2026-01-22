@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
+from openai import AsyncOpenAI
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.ollama import OllamaProvider
 from pydantic_ai.providers.openai import OpenAIProvider
@@ -80,14 +81,16 @@ def build_chat_model(
     if provider == "openai":
         openai_settings = _resolve_openai_settings(settings)
         _validate_openai_settings(openai_settings)
+        # Create AsyncOpenAI client with all settings to support organization/project/base_url
+        openai_client = AsyncOpenAI(
+            api_key=openai_settings.api_key,
+            base_url=openai_settings.base_url,
+            organization=openai_settings.organization or None,
+            project=openai_settings.project or None,
+        )
         return OpenAIChatModel(
             model_name,
-            provider=OpenAIProvider(
-                api_key=openai_settings.api_key,
-                base_url=openai_settings.base_url,
-                organization=openai_settings.organization,
-                project=openai_settings.project,
-            ),
+            provider=OpenAIProvider(openai_client=openai_client),
         )
 
     if provider == "ollama":
@@ -99,3 +102,46 @@ def build_chat_model(
         )
 
     raise ValueError(f"Unsupported chat provider: {provider}")
+
+
+def build_chat_model_from_model_id(
+    settings: Settings,
+    model_id: str,
+) -> OpenAIChatModel:
+    """Build a chat model from a specific model ID.
+
+    Looks up the model configuration from settings.models.available and
+    builds the appropriate model.
+
+    Args:
+        settings: Application settings
+        model_id: The model ID to use (must exist in settings.models.available)
+
+    Returns:
+        Configured OpenAIChatModel instance
+
+    Raises:
+        ModelConfigurationError: If the model is not found or doesn't support chat
+        ValueError: If provider is not supported
+    """
+    from crystalith.ai.factory import get_model_config_by_id
+
+    model_config = get_model_config_by_id(settings, model_id)
+    if model_config is None:
+        raise ModelConfigurationError(f"Model not found: {model_id}")
+
+    if "chat" not in model_config.capabilities:
+        raise ModelConfigurationError(f"Model {model_id} does not support chat capability")
+
+    log.debug(
+        "building chat model from model_id",
+        model_id=model_id,
+        provider=model_config.provider,
+        model=model_config.model,
+    )
+
+    return build_chat_model(
+        settings,
+        provider_override=model_config.provider,
+        model_override=model_config.model,
+    )

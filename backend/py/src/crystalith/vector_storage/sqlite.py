@@ -123,6 +123,7 @@ class SQLiteVectorStore:
         query_vector: Sequence[float],
         top_k: int = 5,
         min_score: float = 0.2,
+        source_ids: Sequence[int] | None = None,
     ) -> list[VectorSearchResult]:
         query = list(query_vector)
         if not query:
@@ -133,8 +134,13 @@ class SQLiteVectorStore:
             return []
         if len(query) != self._dimension:
             return []
+
+        source_id_set = set(source_ids) if source_ids else None
+
         if self._sqlite_vss is None or not self._vss_ready:
             entries = [entry for entry in await self.entries() if entry.notebook_id == notebook_id]
+            if source_id_set is not None:
+                entries = [entry for entry in entries if entry.source_id in source_id_set]
             results: list[VectorSearchResult] = []
             for entry in entries:
                 score = _cosine_similarity(query, entry.vector)
@@ -146,6 +152,12 @@ class SQLiteVectorStore:
 
         query_blob = self._sqlite_vss.serialize(query)
 
+        # Build source filter condition
+        if source_id_set is not None:
+            source_filter = f"AND m.source_id IN ({','.join(str(sid) for sid in source_id_set)})"
+        else:
+            source_filter = ""
+
         async with self._engine.connect() as conn:
             result = await conn.execute(
                 text(
@@ -154,6 +166,7 @@ class SQLiteVectorStore:
                     FROM {_INDEX_TABLE} AS v
                     JOIN {_ENTRIES_TABLE} AS m ON v.rowid = m.id
                     WHERE m.notebook_id = :notebook_id
+                      {source_filter}
                       AND vss_search(v.embedding, :query)
                     ORDER BY v.distance
                     LIMIT :top_k

@@ -7,14 +7,41 @@ from httpx import AsyncClient
 from pydantic_ai import models
 from pydantic_ai.models.test import TestModel
 
-from crystalith.agents import output_graph, suggestions_graph
+from crystalith.agents import output_graph
 from crystalith.outputs import OutputType
 
-from conftest import (
-    create_notebook,
-    create_notebook_with_source,
-    create_session,
-)
+
+async def create_notebook(client: AsyncClient, name: str = "Test Notebook") -> int:
+    """Helper to create a notebook and return its ID."""
+    response = await client.post("/v1/notebooks", json={"name": name})
+    assert response.status_code == 201
+    return response.json()["id"]
+
+
+async def create_notebook_with_source(
+    client: AsyncClient,
+    name: str = "Test Notebook",
+    source_content: bytes = b"hello world test content",
+    source_filename: str = "test.md",
+) -> int:
+    """Helper to create a notebook with a source and return the notebook ID."""
+    notebook_id = await create_notebook(client, name)
+    upload = await client.post(
+        f"/v1/notebooks/{notebook_id}/sources",
+        files={"file": (source_filename, source_content, "text/markdown")},
+    )
+    assert upload.status_code == 201
+    return notebook_id
+
+
+async def create_session(client: AsyncClient, notebook_id: int, title: str | None = None) -> int:
+    """Helper to create a session and return its ID."""
+    response = await client.post(
+        f"/v1/notebooks/{notebook_id}/sessions",
+        json={"title": title} if title else {},
+    )
+    assert response.status_code == 201
+    return response.json()["id"]
 
 
 @pytest.fixture(autouse=True)
@@ -23,7 +50,6 @@ def _mock_agent_model(monkeypatch) -> None:
     models.ALLOW_MODEL_REQUESTS = False
     test_model = TestModel()
     monkeypatch.setattr(output_graph, "build_chat_model", lambda _settings: test_model)
-    monkeypatch.setattr(suggestions_graph, "build_chat_model", lambda _settings: test_model)
 
 
 class TestChatWorkflow:
@@ -175,68 +201,6 @@ class TestOutputWorkflow:
             assert payload["type"] == output_type.value
 
 
-class TestSuggestionWorkflow:
-    """Tests for the suggestion generation workflow."""
-
-    @pytest.mark.asyncio
-    async def test_notebook_suggestions(self, test_client: AsyncClient) -> None:
-        """Test generating suggestions for a notebook."""
-        notebook_id = await create_notebook_with_source(test_client)
-
-        response = await test_client.post(
-            f"/v1/notebooks/{notebook_id}/suggestions",
-            json={"count": 4, "mode": "standard"},
-        )
-        assert response.status_code == 200
-        payload = response.json()
-        assert "suggestions" in payload
-        assert len(payload["suggestions"]) >= 3  # At least 3 from fallback
-
-    @pytest.mark.asyncio
-    async def test_session_suggestions(self, test_client: AsyncClient) -> None:
-        """Test generating suggestions for a session with chat history."""
-        notebook_id = await create_notebook_with_source(test_client)
-        session_id = await create_session(test_client, notebook_id)
-
-        # Add some messages to the session
-        await test_client.post(
-            f"/v1/notebooks/{notebook_id}/sessions/{session_id}/messages",
-            json={"role": "user", "content": "Tell me about the topic"},
-        )
-        await test_client.post(
-            f"/v1/notebooks/{notebook_id}/sessions/{session_id}/messages",
-            json={"role": "assistant", "content": "Here is some information..."},
-        )
-
-        # Generate suggestions
-        response = await test_client.post(
-            f"/v1/notebooks/{notebook_id}/sessions/{session_id}/suggestions",
-            json={"count": 3, "mode": "standard"},
-        )
-        assert response.status_code == 200
-        payload = response.json()
-        assert len(payload["suggestions"]) == 3
-
-    @pytest.mark.asyncio
-    async def test_deep_dive_suggestions(self, test_client: AsyncClient) -> None:
-        """Test deep dive suggestion mode."""
-        notebook_id = await create_notebook_with_source(test_client)
-
-        response = await test_client.post(
-            f"/v1/notebooks/{notebook_id}/suggestions",
-            json={
-                "count": 3,
-                "mode": "deep_dive",
-                "seed_question": "Why is this important?",
-            },
-        )
-        assert response.status_code == 200
-        payload = response.json()
-        assert len(payload["suggestions"]) == 3
-        # All deep dive suggestions should have type "deep_dive"
-        assert all(s["type"] == "deep_dive" for s in payload["suggestions"])
-
-
 class TestRefineWorkflow:
     """Tests for the refine/batch refine workflow."""
 
@@ -285,15 +249,6 @@ class TestErrorHandling:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_session_not_found(self, test_client: AsyncClient) -> None:
-        """Test 404 response for non-existent session."""
-        response = await test_client.post(
-            "/v1/sessions/99999/suggestions",
-            json={"count": 3},
-        )
-        assert response.status_code == 404
-
-    @pytest.mark.asyncio
     async def test_invalid_output_type(self, test_client: AsyncClient) -> None:
         """Test 422 response for invalid output type."""
         notebook_id = await create_notebook_with_source(test_client)
@@ -302,28 +257,6 @@ class TestErrorHandling:
             json={"prompt": "test"},
         )
         assert response.status_code == 422
-
-    @pytest.mark.asyncio
-    async def test_invalid_suggestion_mode(self, test_client: AsyncClient) -> None:
-        """Test validation error for invalid suggestion mode."""
-        notebook_id = await create_notebook_with_source(test_client)
-        response = await test_client.post(
-            f"/v1/notebooks/{notebook_id}/suggestions",
-            json={"count": 3, "mode": "invalid_mode"},
-        )
-        assert response.status_code == 422
-
-    @pytest.mark.asyncio
-    async def test_deep_dive_without_seed_question(self, test_client_simple: AsyncClient) -> None:
-        """Test that deep_dive mode without sources/seed_question returns error."""
-        notebook_id = await create_notebook(test_client_simple)
-
-        response = await test_client_simple.post(
-            f"/v1/notebooks/{notebook_id}/suggestions",
-            json={"count": 3, "mode": "deep_dive"},
-        )
-        # Should fail because no sources and no seed question
-        assert response.status_code == 400
 
 
 class TestSourceManagement:

@@ -86,6 +86,37 @@ class ContextWindowSettings(BaseModel):
     )
 
 
+class ModelConfig(BaseModel):
+    """Configuration for a single AI model."""
+
+    id: str = Field(..., description="Unique identifier for the model")
+    provider: Literal["openai", "ollama"] = Field(..., description="Provider type")
+    model: str = Field(..., description="Model name/identifier used by the provider")
+    display_name: str = Field(..., description="Human-readable display name")
+    description: str = Field("", description="Optional description of the model")
+    capabilities: list[Literal["chat", "embedding"]] = Field(
+        default_factory=lambda: ["chat"],
+        description="List of capabilities this model supports",
+    )
+
+
+class ModelsSettings(BaseModel):
+    """Settings for multi-model configuration."""
+
+    available: list[ModelConfig] = Field(
+        default_factory=list,
+        description="List of available AI models",
+    )
+    default_chat: str | None = Field(
+        None,
+        description="Default model ID for chat/generation tasks",
+    )
+    default_embedding: str | None = Field(
+        None,
+        description="Default model ID for embedding tasks",
+    )
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="ignore", env_prefix="CRYSTALITH_")
 
@@ -98,6 +129,7 @@ class Settings(BaseSettings):
     chat: ChatSettings = Field(default_factory=ChatSettings)
     refine: RefineSettings = Field(default_factory=RefineSettings)
     context_window: ContextWindowSettings = Field(default_factory=ContextWindowSettings)
+    models: ModelsSettings = Field(default_factory=ModelsSettings)
 
     @classmethod
     def settings_customise_sources(
