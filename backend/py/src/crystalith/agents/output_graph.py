@@ -10,7 +10,7 @@ from sqlalchemy import select
 from cl_logs.logging import get_logger
 
 from crystalith.agents.deps import StudioDeps
-from crystalith.agents.models import build_chat_model
+from crystalith.agents.models import build_chat_model, build_chat_model_from_model_id
 from crystalith.agents.output_schemas import (
     BriefingOutput,
     BulletsOutput,
@@ -52,6 +52,7 @@ class OutputGraphState:
     resolved_chunk_ids: list[int] = field(default_factory=list)
     content: dict[str, Any] = field(default_factory=dict)
     db_output: Output | None = None
+    model_id: str | None = None  # Optional model ID for dynamic model selection
 
 
 DEFAULT_PROMPTS: dict[OutputType, str] = {
@@ -430,7 +431,12 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         deps = ctx.deps
 
         schema = OUTPUT_SCHEMAS[state.output_type]
-        model = deps.model or build_chat_model(deps.settings)
+
+        # Build model: prefer state.model_id, then deps.model, then default from settings
+        if state.model_id:
+            model = build_chat_model_from_model_id(deps.settings, state.model_id)
+        else:
+            model = deps.model or build_chat_model(deps.settings)
 
         log.info(
             "generating output",
@@ -438,6 +444,7 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
             prompt_length=len(state.prompt),
             context_length=len(state.context),
             has_context=bool(state.context.strip()),
+            model_id=state.model_id,
         )
 
         agent = Agent(
@@ -456,12 +463,14 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                 "output generation succeeded",
                 output_type=state.output_type.value,
                 content_keys=list(state.content.keys()) if isinstance(state.content, dict) else None,
+                model_id=state.model_id,
             )
         except Exception as error:  # noqa: BLE001 - fallback for output generation
             log.warning(
                 "output generation failed, using fallback",
                 output_type=state.output_type.value,
                 error=type(error).__name__,
+                model_id=state.model_id,
             )
             state.content = _fallback_output(state.output_type, state.prompt)
 
@@ -533,8 +542,20 @@ async def run_output_graph(
     chunk_ids: list[int] | None = None,
     top_k: int = 10,
     min_score: float = 0.0,
+    model_id: str | None = None,
 ) -> Output:
-    """Run the output generation graph and return the persisted Output."""
+    """Run the output generation graph and return the persisted Output.
+
+    Args:
+        notebook_id: The notebook to generate output for
+        output_type: Type of output to generate
+        prompt: User prompt for generation
+        deps: Studio dependencies
+        chunk_ids: Optional specific chunk IDs to use as context
+        top_k: Number of chunks to retrieve if chunk_ids not specified
+        min_score: Minimum similarity score for chunk retrieval
+        model_id: Optional model ID to use (overrides default from settings)
+    """
     state = OutputGraphState(
         notebook_id=notebook_id,
         output_type=output_type,
@@ -542,6 +563,7 @@ async def run_output_graph(
         chunk_ids=chunk_ids,
         top_k=top_k,
         min_score=min_score,
+        model_id=model_id,
     )
     result = await OUTPUT_GRAPH.run(ResolveContext(), state=state, deps=deps)
     return result.output

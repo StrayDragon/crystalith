@@ -20,13 +20,13 @@ from .db import Source, SourceStatus, create_all, create_db_manager
 from .api import (
     analysis_router,
     messages_router,
+    models_router,
     notebooks_router,
     outputs_router,
     qa_router,
     refine_router,
     sessions_router,
     sources_router,
-    suggestions_router,
     tasks_router,
     workspace_tools_router,
 )
@@ -157,13 +157,13 @@ def create_app(
 
     app.include_router(notebooks_router)
     app.include_router(analysis_router)
+    app.include_router(models_router)
     app.include_router(qa_router)
     app.include_router(outputs_router)
     app.include_router(refine_router)
     app.include_router(sessions_router)
     app.include_router(messages_router)
     app.include_router(sources_router)
-    app.include_router(suggestions_router)
     app.include_router(tasks_router)
     app.include_router(workspace_tools_router)
 
