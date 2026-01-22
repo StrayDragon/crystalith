@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal, Sequence
+from typing import Any, AsyncIterator, Literal, Sequence
 
 import ollama
 
@@ -58,3 +58,17 @@ class OllamaChatProvider:
 
         content = response.message.content
         return content or ""
+
+    async def chat_stream(self, messages: Sequence[ChatMessage]) -> AsyncIterator[str]:
+        """Stream chat completion, yielding text chunks as they arrive."""
+        if not messages:
+            raise ValueError("messages must not be empty")
+
+        response = await self._client.chat(
+            model=self.model,
+            messages=[{"role": m.role, "content": m.content} for m in messages],
+            stream=True,
+        )
+        async for chunk in response:
+            if chunk.message and chunk.message.content:
+                yield chunk.message.content

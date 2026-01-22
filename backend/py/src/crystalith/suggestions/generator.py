@@ -10,6 +10,7 @@ from cl_logs.logging import get_logger
 
 from crystalith.ai.interfaces import ChatProvider
 from crystalith.ai.types import ChatMessage
+from crystalith.utils import normalize_whitespace, question_key
 
 from .types import SuggestionType
 
@@ -158,9 +159,9 @@ async def classify_suggestions(
 
     suggestions: list[Suggestion] = []
     for draft in drafts:
-        key = _question_key(draft.question)
+        key = question_key(draft.question)
         suggestion_type = mapping.get(key) or next(fallback_cycle)
-        context = _normalize_whitespace(draft.context or fallback_context) or fallback_context
+        context = normalize_whitespace(draft.context or fallback_context) or fallback_context
         suggestions.append(
             Suggestion(
                 question=draft.question,
@@ -180,7 +181,7 @@ def _finalize_with_type(
 ) -> list[Suggestion]:
     suggestions: list[Suggestion] = []
     for draft in drafts:
-        context = _normalize_whitespace(draft.context or fallback_context) or fallback_context
+        context = normalize_whitespace(draft.context or fallback_context) or fallback_context
         suggestions.append(
             Suggestion(
                 question=draft.question,
@@ -243,14 +244,14 @@ def _parse_suggestions(
     seen: set[str] = set()
 
     def _add_item(question: str, context: str | None) -> None:
-        normalized = _normalize_whitespace(question)
+        normalized = normalize_whitespace(question)
         if not normalized or not _is_valid_question(normalized):
             return
-        key = _question_key(normalized)
+        key = question_key(normalized)
         if key in seen:
             return
         seen.add(key)
-        context_value = _normalize_whitespace(context or fallback_context) or fallback_context
+        context_value = normalize_whitespace(context or fallback_context) or fallback_context
         items.append(SuggestionDraft(question=normalized, context=context_value))
 
     parsed = _safe_json_load(raw)
@@ -299,7 +300,7 @@ def _parse_classifications(raw: str) -> dict[str, SuggestionType]:
         suggestion_type = _normalize_type(value)
         if suggestion_type is None:
             return
-        key = _question_key(question)
+        key = question_key(question)
         if not key:
             return
         mapping[key] = suggestion_type
@@ -376,20 +377,12 @@ def _safe_json_load(raw: str) -> object | None:
 
 
 def _normalize_type(value: str) -> SuggestionType | None:
-    cleaned = _normalize_whitespace(value).lower()
+    cleaned = normalize_whitespace(value).lower()
     return TYPE_ALIASES.get(cleaned)
 
 
-def _normalize_whitespace(text: str) -> str:
-    return " ".join(text.strip().split())
-
-
-def _question_key(text: str) -> str:
-    return _normalize_whitespace(text).lower()
-
-
 def _truncate(text: str, limit: int) -> str:
-    cleaned = _normalize_whitespace(text)
+    cleaned = normalize_whitespace(text)
     if len(cleaned) <= limit:
         return cleaned
     return cleaned[: limit - 3].rstrip() + "..."

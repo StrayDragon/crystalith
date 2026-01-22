@@ -1,0 +1,56 @@
+# Pre-commit configuration
+# Install: pip install pre-commit && pre-commit install
+# Or: uv tool install pre-commit && pre-commit install
+
+repos:
+  # Backend Python checks
+  - repo: local
+    hooks:
+      - id: backend-tests
+        name: Backend Tests
+        entry: bash -c 'cd backend/py && uv run pytest tests/ -q --tb=no'
+        language: system
+        files: ^backend/py/
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: api-schema-check
+        name: API Schema Consistency
+        entry: bash -c 'cd backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.json'
+        language: system
+        files: ^backend/py/src/crystalith/(api|schemas|db/models)
+        pass_filenames: false
+        stages: [pre-commit]
+
+  # Frontend checks
+  - repo: local
+    hooks:
+      - id: frontend-build
+        name: Frontend Build Check
+        entry: bash -c 'cd frontend/web && pnpm run build > /dev/null 2>&1'
+        language: system
+        files: ^frontend/web/src/
+        pass_filenames: false
+        stages: [pre-commit]
+
+  # Standard pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(frontend/web/openapi\.json|frontend/web/src/api/generated/)
+      - id: end-of-file-fixer
+        exclude: ^(frontend/web/openapi\.json|frontend/web/src/api/generated/)
+      - id: check-yaml
+      - id: check-json
+        exclude: ^frontend/web/openapi\.json$
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+
+  # Python formatting (optional, uncomment if needed)
+  # - repo: https://github.com/astral-sh/ruff-pre-commit
+  #   rev: v0.8.6
+  #   hooks:
+  #     - id: ruff
+  #       args: [--fix]
+  #     - id: ruff-format

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 
 import {
   askQuestion,
+  askQuestionStream,
   createNotebookSuggestions,
   createSessionSuggestions,
   listMessages,
@@ -22,13 +23,16 @@ interface UseChatOptions {
   ensureSession: (title?: string | null) => Promise<number | null>;
   refreshSessions?: () => Promise<void>;
   enableSuggestions?: boolean;
+  enableStreaming?: boolean;
 }
 
-export function useChat({ ensureSession, refreshSessions, enableSuggestions }: UseChatOptions) {
+export function useChat({ ensureSession, refreshSessions, enableSuggestions, enableStreaming = true }: UseChatOptions) {
   const state = useWorkspaceState();
   const dispatch = useWorkspaceDispatch();
   const isDemo = state.connectionState === 'demo';
   const [suggestionKey, setSuggestionKey] = useState(0);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const streamingMessageIdRef = useRef<string | null>(null);
   const suggestionsEnabled = Boolean(enableSuggestions);
 
   const { data, error, isLoading, mutate } = useSWR(
@@ -170,6 +174,95 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions }: U
       return;
     }
 
+    // Use streaming if enabled
+    if (enableStreaming) {
+      const assistantMessageId = createId();
+      streamingMessageIdRef.current = assistantMessageId;
+      setIsStreaming(true);
+
+      // Add empty assistant message that will be filled by streaming
+      const assistantMessage = {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+      };
+      dispatch({ type: 'ADD_STREAMING_MESSAGE', payload: assistantMessage });
+
+      try {
+        const { done } = await askQuestionStream(
+          state.activeNotebookId,
+          text,
+          sessionId,
+          {
+            onChunk: (chunkText) => {
+              dispatch({
+                type: 'APPEND_MESSAGE_CONTENT',
+                payload: { messageId: assistantMessageId, text: chunkText },
+              });
+            },
+            onDone: (doneData) => {
+              const normalizedCitations = doneData.citations?.map(normalizeCitation) ?? [];
+              dispatch({
+                type: 'UPDATE_MESSAGE',
+                payload: {
+                  messageId: assistantMessageId,
+                  updates: {
+                    citationChunkIds: collectChunkIds(normalizedCitations),
+                    citations: normalizedCitations,
+                  },
+                },
+              });
+              dispatch({ type: 'SET_CITATIONS', payload: normalizedCitations });
+            },
+            onError: (errorMessage) => {
+              dispatch({
+                type: 'UPDATE_MESSAGE',
+                payload: {
+                  messageId: assistantMessageId,
+                  updates: { content: errorMessage },
+                },
+              });
+              dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: errorMessage } });
+            },
+          },
+        );
+
+        void mutate();
+        if (refreshSessions) {
+          void refreshSessions();
+        }
+        void refreshSuggestions();
+      } catch (error) {
+        let errorMessage = '请求失败，请检查后端服务或稍后重试。';
+        if (error instanceof Error) {
+          const statusError = error as Error & { status?: number };
+          if (statusError.status === 503) {
+            errorMessage = 'AI 服务暂时不可用，请检查模型配置或稍后重试。';
+          } else if (statusError.status === 404) {
+            errorMessage = '会话或笔记本不存在。';
+          } else if (statusError.status === 500) {
+            errorMessage = '服务器内部错误，请稍后重试。';
+          } else if (error.message && error.message.length < 100) {
+            errorMessage = error.message;
+          }
+        }
+        dispatch({
+          type: 'UPDATE_MESSAGE',
+          payload: {
+            messageId: assistantMessageId,
+            updates: { content: errorMessage },
+          },
+        });
+        dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: errorMessage } });
+      } finally {
+        setIsStreaming(false);
+        streamingMessageIdRef.current = null;
+        dispatch({ type: 'SET_LOADING', payload: { key: 'send', value: false } });
+      }
+      return;
+    }
+
+    // Non-streaming fallback
     try {
       const qaResult = await askQuestion(state.activeNotebookId, text, sessionId);
       const normalizedCitations = qaResult.citations?.map(normalizeCitation) ?? [];
@@ -232,6 +325,7 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions }: U
     }
   }, [
     dispatch,
+    enableStreaming,
     ensureSession,
     isDemo,
     mutate,
@@ -266,6 +360,7 @@ export function useChat({ ensureSession, refreshSessions, enableSuggestions }: U
     setDraft,
     sendMessage,
     isSending: state.loading.send,
+    isStreaming,
     sendError: state.errors.send,
     citations: state.citations,
     suggestions: state.suggestions,
