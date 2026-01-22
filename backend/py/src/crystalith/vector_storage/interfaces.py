@@ -24,6 +24,7 @@ class VectorStore(Protocol):
         query_vector: Sequence[float],
         top_k: int = 5,
         min_score: float = 0.2,
+        source_ids: Sequence[int] | None = None,
     ) -> list[VectorSearchResult]:
         ...
 

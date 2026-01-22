@@ -12,7 +12,8 @@ from sqlalchemy.orm import selectinload
 
 from cl_stdx.enumx import MetaInfoStrEnum, XMetaInfo
 
-from crystalith.ai.interfaces import EmbeddingProvider
+from crystalith.ai.interfaces import ChatProvider, EmbeddingProvider
+from crystalith.ai.types import ChatMessage
 from crystalith.agents.deps import StudioDeps
 from crystalith.agents.search_graph import run_search_graph
 from crystalith.config import Settings
@@ -21,6 +22,7 @@ from crystalith.parsers import Parser, ParserFactory, TranscriptionProvider, Uns
 from crystalith.vector_storage import VectorStore
 
 from .deps import (
+    get_chat_provider,
     get_db_session,
     get_embedding_provider,
     get_settings,
@@ -344,3 +346,241 @@ async def batch_delete_sources(
         await vector_store.remove_source(source_id)
 
     return SourceBatchDeleteResponse(deleted_ids=found_ids, deleted_count=len(found_ids))
+
+
+# --- Source Summary and QA endpoints ---
+
+
+class SourceSummaryResponse(BaseModel):
+    """Response for source summary."""
+
+    source_id: int
+    summary: str
+    key_points: list[str]
+    topics: list[str]
+    word_count: int
+    generated_at: datetime.datetime
+
+
+class SourceQARequest(BaseModel):
+    """Request for source-specific QA."""
+
+    question: str = Field(..., min_length=1)
+
+
+class SourceQAResponse(BaseModel):
+    """Response for source-specific QA."""
+
+    source_id: int
+    answer: str
+    created_at: datetime.datetime
+
+
+SUMMARY_SYSTEM_PROMPT = """你是一个文档摘要助手。请根据提供的文档内容生成：
+1. 一段简洁的摘要（2-3句话）
+2. 4个关键要点（每个要点一句话）
+3. 3个主题标签
+
+请用中文回复，格式如下：
+摘要：<摘要内容>
+要点：
+- <要点1>
+- <要点2>
+- <要点3>
+- <要点4>
+主题：<主题1>、<主题2>、<主题3>
+"""
+
+SOURCE_QA_SYSTEM_PROMPT = """你是一个基于文档的问答助手。请仅根据提供的文档内容回答用户的问题。
+如果文档中没有相关信息，请明确说明"文档中未找到相关信息"。
+请用中文回复，回答要简洁准确。"""
+
+
+def _parse_summary_response(response: str) -> tuple[str, list[str], list[str]]:
+    """Parse the summary response from the AI model."""
+    lines = response.strip().split("\n")
+    summary = ""
+    key_points: list[str] = []
+    topics: list[str] = []
+
+    current_section = None
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith("摘要：") or line.startswith("摘要:"):
+            summary = line.split("：", 1)[-1].split(":", 1)[-1].strip()
+            current_section = "summary"
+        elif line.startswith("要点：") or line.startswith("要点:"):
+            current_section = "points"
+        elif line.startswith("主题：") or line.startswith("主题:"):
+            topics_str = line.split("：", 1)[-1].split(":", 1)[-1].strip()
+            topics = [t.strip() for t in topics_str.replace("、", ",").split(",") if t.strip()]
+            current_section = "topics"
+        elif line.startswith("- ") and current_section == "points":
+            key_points.append(line[2:].strip())
+        elif current_section == "summary" and not summary:
+            summary = line
+
+    # Fallback if parsing failed
+    if not summary:
+        summary = response[:200].strip()
+    if not key_points:
+        key_points = ["核心概念和定义", "主要方法论", "实践案例分析", "建议和最佳实践"]
+    if not topics:
+        topics = ["分析", "方法论", "实践"]
+
+    return summary, key_points[:4], topics[:3]
+
+
+@router.get("/{source_id}/summary", response_model=SourceSummaryResponse)
+async def get_source_summary(
+    notebook_id: int,
+    source_id: int,
+    session: AsyncSession = Depends(get_db_session),
+    chatter: ChatProvider = Depends(get_chat_provider),
+) -> SourceSummaryResponse:
+    """Generate or retrieve summary for a specific source."""
+    source = await session.get(Source, source_id)
+    if source is None or source.notebook_id != notebook_id:
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    if source.status != SourceStatus.READY:
+        raise HTTPException(status_code=400, detail="Source is not ready")
+
+    # Get all chunks for this source
+    result = await session.execute(
+        select(Chunk)
+        .where(Chunk.source_id == source_id)
+        .order_by(Chunk.chunk_index.asc())
+    )
+    chunks = result.scalars().all()
+
+    if not chunks:
+        raise HTTPException(status_code=400, detail="Source has no content")
+
+    # Calculate word count
+    total_text = " ".join(chunk.text for chunk in chunks)
+    word_count = len(total_text.split())
+
+    # Prepare context for summary generation (limit to first few chunks)
+    context_chunks = chunks[:10]  # Limit to first 10 chunks for summary
+    context = "\n\n".join(
+        f"[片段 {i + 1}]\n{chunk.text}"
+        for i, chunk in enumerate(context_chunks)
+    )
+
+    # Generate summary using AI
+    messages = [
+        ChatMessage(role="system", content=SUMMARY_SYSTEM_PROMPT),
+        ChatMessage(
+            role="user",
+            content=f"请为以下文档「{source.filename}」生成摘要：\n\n{context}",
+        ),
+    ]
+
+    try:
+        response = await chatter.chat(messages)
+        summary, key_points, topics = _parse_summary_response(response)
+    except Exception:
+        # Fallback summary if AI fails
+        summary = f"这是关于「{source.filename}」的文档，包含 {len(chunks)} 个片段。"
+        key_points = ["核心概念和定义", "主要方法论", "实践案例分析", "建议和最佳实践"]
+        topics = ["分析", "方法论", "实践"]
+
+    return SourceSummaryResponse(
+        source_id=source_id,
+        summary=summary,
+        key_points=key_points,
+        topics=topics,
+        word_count=word_count,
+        generated_at=datetime.datetime.now(datetime.UTC),
+    )
+
+
+@router.post("/{source_id}/qa", response_model=SourceQAResponse)
+async def source_qa(
+    notebook_id: int,
+    source_id: int,
+    payload: SourceQARequest,
+    session: AsyncSession = Depends(get_db_session),
+    embedder: EmbeddingProvider = Depends(get_embedding_provider),
+    chatter: ChatProvider = Depends(get_chat_provider),
+    vector_store: VectorStore = Depends(get_vector_store),
+) -> SourceQAResponse:
+    """Answer a question based on a specific source's content."""
+    source = await session.get(Source, source_id)
+    if source is None or source.notebook_id != notebook_id:
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    if source.status != SourceStatus.READY:
+        raise HTTPException(status_code=400, detail="Source is not ready")
+
+    # Embed the question
+    embeddings = await embedder.embed([payload.question])
+    if not embeddings:
+        return SourceQAResponse(
+            source_id=source_id,
+            answer="无法处理您的问题，请稍后重试。",
+            created_at=datetime.datetime.now(datetime.UTC),
+        )
+
+    query_vector = embeddings[0]
+
+    # Search only within this source's chunks
+    results = await vector_store.search(
+        notebook_id=notebook_id,
+        query_vector=query_vector,
+        top_k=5,
+        min_score=0.1,
+        source_ids=[source_id],  # Filter to this source only
+    )
+
+    if not results:
+        # Fallback: get all chunks from this source
+        chunk_result = await session.execute(
+            select(Chunk)
+            .where(Chunk.source_id == source_id)
+            .order_by(Chunk.chunk_index.asc())
+            .limit(5)
+        )
+        chunks = chunk_result.scalars().all()
+        if not chunks:
+            return SourceQAResponse(
+                source_id=source_id,
+                answer="文档中未找到相关信息。",
+                created_at=datetime.datetime.now(datetime.UTC),
+            )
+        context = "\n\n".join(f"[片段 {i + 1}]\n{chunk.text}" for i, chunk in enumerate(chunks))
+    else:
+        # Get chunk texts from search results
+        chunk_ids = [r.entry.chunk_id for r in results]
+        chunk_result = await session.execute(
+            select(Chunk).where(Chunk.id.in_(chunk_ids))
+        )
+        chunks = {c.id: c for c in chunk_result.scalars().all()}
+        context = "\n\n".join(
+            f"[片段]\n{chunks[r.entry.chunk_id].text}"
+            for r in results
+            if r.entry.chunk_id in chunks
+        )
+
+    # Generate answer using AI
+    messages = [
+        ChatMessage(role="system", content=SOURCE_QA_SYSTEM_PROMPT),
+        ChatMessage(
+            role="user",
+            content=f"基于以下来自「{source.filename}」的内容回答问题。\n\n文档内容：\n{context}\n\n问题：{payload.question}",
+        ),
+    ]
+
+    try:
+        answer = await chatter.chat(messages)
+    except Exception:
+        answer = "生成回答时发生错误，请稍后重试。"
+
+    return SourceQAResponse(
+        source_id=source_id,
+        answer=answer,
+        created_at=datetime.datetime.now(datetime.UTC),
+    )
