@@ -1,12 +1,9 @@
-import { memo, useMemo, useState, useCallback } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import type { RefObject } from 'react';
-import { Collapse, Box, IconButton, Stack, Typography, alpha } from '@mui/material';
-import { ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon } from '@mui/icons-material';
 
-import type { ChatMessage, Citation, SuggestionItem } from '../types';
+import type { ChatMessage, Citation } from '../types';
 import CitationMark from './citations/CitationMark';
-import SuggestionPanel from './SuggestionPanel';
-import { IconCopy, IconFeedback, IconSave, IconSend } from './Icons';
+import { IconCopy, IconSave, IconSend } from './Icons';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -22,11 +19,7 @@ interface ChatPanelProps {
   isLoadingMessages: boolean;
   messagesError: string;
   onRetryMessages: () => void;
-  suggestions: SuggestionItem[];
-  suggestionsLoading: boolean;
-  suggestionsError: string;
-  onRefreshSuggestions: () => void;
-  onApplySuggestion: (text: string) => void;
+  onSaveToNote?: (content: string) => void;
 }
 
 function ChatPanel({
@@ -43,11 +36,7 @@ function ChatPanel({
   isLoadingMessages,
   messagesError,
   onRetryMessages,
-  suggestions,
-  suggestionsLoading,
-  suggestionsError,
-  onRefreshSuggestions,
-  onApplySuggestion,
+  onSaveToNote,
 }: ChatPanelProps) {
   const citationIndexMap = useMemo(() => {
     const map = new Map<number, { citation: Citation; index: number }>();
@@ -58,13 +47,32 @@ function ChatPanel({
     return map;
   }, [citations]);
 
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopy = useCallback(async (messageId: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedId(messageId);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = content;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopiedId(messageId);
+      setTimeout(() => setCopiedId(null), 2000);
+    }
+  }, []);
+
   const showDemoSeed =
     isDemo &&
     !isBlocked &&
     !isLoadingMessages &&
     !messagesError &&
     messages.length === 0;
-  const showActions = !isBlocked && (messages.length > 0 || showDemoSeed);
   const demoContent = `一、维生素类：\n- 维生素D：与毛囊周期相关，缺乏会影响再生能力。\n- 生物素（维生素B7）：促进角蛋白生成，建议从胡萝卜、坚果与鱼类中摄取。\n- 维生素E：抗氧化保护，常见于坚果与全谷物。\n\n二、需警惕的\"黑榜\"：\n- 高糖食品：刺激胰岛素反应，可能间接影响激素水平。\n- 油腻/高脂饮食：增加炎症反应与毛囊压力。\n- 生鸡蛋：生物素吸收受限，不建议大量食用。`;
 
   return (
@@ -92,6 +100,24 @@ function ChatPanel({
         {showDemoSeed ? (
           <div className="ChatMessage isAssistant">
             <div className="ChatMessage__body">{demoContent}</div>
+            <div className="ChatMessage__actions">
+              <button
+                type="button"
+                className="ChatMessage__actionBtn"
+                onClick={() => onSaveToNote?.(demoContent)}
+              >
+                <IconSave />
+                保存到笔记
+              </button>
+              <button
+                type="button"
+                className="ChatMessage__actionBtn"
+                onClick={() => handleCopy('demo', demoContent)}
+              >
+                <IconCopy />
+                {copiedId === 'demo' ? '已复制' : '复制'}
+              </button>
+            </div>
           </div>
         ) : null}
 
@@ -134,23 +160,31 @@ function ChatPanel({
                   </div>
                 ) : null}
               </div>
+              {message.role === 'assistant' && message.content ? (
+                <div className="ChatMessage__actions">
+                  <button
+                    type="button"
+                    className="ChatMessage__actionBtn"
+                    onClick={() => onSaveToNote?.(message.content)}
+                  >
+                    <IconSave />
+                    保存到笔记
+                  </button>
+                  <button
+                    type="button"
+                    className="ChatMessage__actionBtn"
+                    onClick={() => handleCopy(message.id, message.content)}
+                  >
+                    <IconCopy />
+                    {copiedId === message.id ? '已复制' : '复制'}
+                  </button>
+                </div>
+              ) : null}
             </div>
           );
         })}
         {notice ? <div className="ChatNotice">{notice}</div> : null}
       </div>
-
-      {/* Collapsible Actions + Suggestions */}
-      <CollapsibleSection
-        title="对话操作"
-        showActions={showActions}
-        suggestions={suggestions}
-        isBlocked={isBlocked}
-        suggestionsLoading={suggestionsLoading}
-        suggestionsError={suggestionsError}
-        onRefreshSuggestions={onRefreshSuggestions}
-        onApplySuggestion={onApplySuggestion}
-      />
 
       <form
         className="ChatComposer"
@@ -172,7 +206,7 @@ function ChatPanel({
             onKeyDown={(event) => {
               if (event.key !== 'Enter') return;
               if (event.shiftKey) return;
-              if (event.isComposing) return;
+              if (event.nativeEvent.isComposing) return;
               event.preventDefault();
               onSend();
             }}
@@ -189,126 +223,6 @@ function ChatPanel({
         </div>
       </form>
     </div>
-  );
-}
-
-// Collapsible section for actions and suggestions (lazy load)
-interface CollapsibleSectionProps {
-  title: string;
-  showActions: boolean;
-  suggestions: SuggestionItem[];
-  isBlocked: boolean;
-  suggestionsLoading: boolean;
-  suggestionsError: string;
-  onRefreshSuggestions: () => void;
-  onApplySuggestion: (text: string) => void;
-}
-
-function CollapsibleSection({
-  showActions,
-  suggestions,
-  isBlocked,
-  suggestionsLoading,
-  suggestionsError,
-  onRefreshSuggestions,
-  onApplySuggestion,
-}: CollapsibleSectionProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
-
-  const handleToggle = useCallback(() => {
-    setIsExpanded((prev) => {
-      const next = !prev;
-      // Lazy load: only trigger refresh on first expand
-      if (next && !hasLoaded && !isBlocked) {
-        setHasLoaded(true);
-        onRefreshSuggestions();
-      }
-      return next;
-    });
-  }, [hasLoaded, isBlocked, onRefreshSuggestions]);
-
-  return (
-    <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
-      {/* Toggle Header */}
-      <Box
-        onClick={handleToggle}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          px: 1.5,
-          py: 0.75,
-          cursor: 'pointer',
-          bgcolor: (theme) => alpha(theme.palette.grey[100], 0.5),
-          '&:hover': {
-            bgcolor: 'grey.100',
-          },
-          transition: 'background-color 0.2s',
-        }}
-      >
-        <Stack direction="row" alignItems="center" spacing={0.75}>
-          <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.6875rem', color: 'text.secondary' }}>
-            {isExpanded ? '收起' : '展开'} 建议与操作
-          </Typography>
-          {!isExpanded && suggestions.length > 0 && (
-            <Box
-              sx={{
-                px: 0.75,
-                py: 0.125,
-                borderRadius: 1,
-                bgcolor: 'primary.main',
-                color: 'white',
-                fontSize: '0.5625rem',
-                fontWeight: 600,
-              }}
-            >
-              {suggestions.length}
-            </Box>
-          )}
-        </Stack>
-        <IconButton size="small" sx={{ width: 20, height: 20 }}>
-          {isExpanded ? <ExpandLessIcon sx={{ fontSize: 14 }} /> : <ExpandMoreIcon sx={{ fontSize: 14 }} />}
-        </IconButton>
-      </Box>
-
-      {/* Collapsible Content */}
-      <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-        {/* Actions */}
-        {showActions && (
-          <div className="ChatActionRow" aria-label="对话操作">
-            <button type="button" className="ChatActionButton">
-              <span aria-hidden="true">
-                <IconSave />
-              </span>
-              保存到笔记
-            </button>
-            <button type="button" className="ChatActionButton">
-              <span aria-hidden="true">
-                <IconCopy />
-              </span>
-              复制
-            </button>
-            <button type="button" className="ChatActionButton">
-              <span aria-hidden="true">
-                <IconFeedback />
-              </span>
-              反馈
-            </button>
-          </div>
-        )}
-
-        {/* Suggestions */}
-        <SuggestionPanel
-          suggestions={suggestions}
-          isBlocked={isBlocked}
-          isLoading={suggestionsLoading}
-          error={suggestionsError}
-          onRefresh={onRefreshSuggestions}
-          onSelectSuggestion={onApplySuggestion}
-        />
-      </Collapse>
-    </Box>
   );
 }
 

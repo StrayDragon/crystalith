@@ -6,7 +6,6 @@ import SourcesPanel from './SourcesPanel';
 import StudioPanel from './StudioPanel';
 import WorkspaceHeader from './WorkspaceHeader';
 import { useWorkspaceState } from '../context/WorkspaceContext';
-import { useAnalysis } from '../hooks/useAnalysis';
 import { useChat } from '../hooks/useChat';
 import { useNotebooks } from '../hooks/useNotebooks';
 import { useRefine } from '../hooks/useRefine';
@@ -79,10 +78,8 @@ export default function WorkspaceLayout() {
   const chat = useChat({
     ensureSession: sessions.ensureSession,
     refreshSessions: sessions.refreshSessions,
-    enableSuggestions: true,
   });
   const refine = useRefine();
-  const analysis = useAnalysis();
 
   const applySizes = useCallback((left: number, right: number) => {
     sizesRef.current = { left, right };
@@ -326,11 +323,7 @@ export default function WorkspaceLayout() {
             isLoadingMessages={chat.isLoadingMessages}
             messagesError={state.errors.messages}
             onRetryMessages={chat.retryMessages}
-            suggestions={chat.suggestions}
-            suggestionsLoading={chat.suggestionsLoading}
-            suggestionsError={chat.suggestionsError}
-            onRefreshSuggestions={chat.refreshSuggestions}
-            onApplySuggestion={chat.applySuggestion}
+            onSaveToNote={refine.saveContentAsNote}
           />
         </section>
 
@@ -360,19 +353,19 @@ export default function WorkspaceLayout() {
           </div>
           <StudioPanel
             tools={refine.tools}
+            toolsLoading={refine.toolsLoading}
+            toolsError={refine.toolsError}
             outputs={refine.outputs}
             outputQueueJobs={refine.outputQueueJobs}
             outputsLoading={refine.outputsLoading}
             outputsError={refine.outputsError}
             onRetryOutputs={refine.retryOutputs}
             onGenerateOutput={refine.onGenerateOutput}
+            onDeleteOutput={refine.onDeleteOutput}
             onSelectOutput={handleOpenOutputViewer}
-            recentOutputJobId={refine.recentOutputJobId}
+            onSaveNote={refine.saveContentAsNote}
+            onConvertToSource={sources.convertOutputToSource}
             isDemo={isDemo}
-            analysis={analysis.analysis}
-            analysisLoading={analysis.isLoading}
-            analysisError={analysis.error}
-            onFetchAnalysis={analysis.fetchAnalysis}
           />
         </section>
       </main>
@@ -386,6 +379,7 @@ export default function WorkspaceLayout() {
           onClose={handleCloseOutputViewer}
           onToggleFullscreen={handleToggleOutputViewer}
           onSelectOutput={handleSelectOutput}
+          onDeleteOutput={refine.onDeleteOutput}
         />
       </Suspense>
     </div>

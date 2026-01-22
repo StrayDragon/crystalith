@@ -1,4 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
+import { Menu, MenuItem, ListItemIcon, ListItemText, IconButton } from '@mui/material';
+import { MoreVert as MoreVertIcon, Delete as DeleteIcon } from '@mui/icons-material';
 
 import type { OutputItem } from '../types';
 import { formatRelativeTime } from '../utils';
@@ -12,6 +14,7 @@ interface StudioOutputViewerProps {
   onClose: () => void;
   onToggleFullscreen: () => void;
   onSelectOutput: (outputId: number) => void;
+  onDeleteOutput?: (outputId: number) => void;
 }
 
 function resolveOutputTitle(output: OutputItem): string {
@@ -44,11 +47,40 @@ export default function StudioOutputViewer({
   onClose,
   onToggleFullscreen,
   onSelectOutput,
+  onDeleteOutput,
 }: StudioOutputViewerProps) {
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const [menuOutputId, setMenuOutputId] = useState<number | null>(null);
+
   const selectedOutput = useMemo(() => {
     if (!selectedOutputId) return outputs[0] ?? null;
     return outputs.find((item) => item.id === selectedOutputId) ?? outputs[0] ?? null;
   }, [outputs, selectedOutputId]);
+
+  const handleMenuOpen = useCallback((event: React.MouseEvent<HTMLElement>, outputId: number) => {
+    event.stopPropagation();
+    setMenuAnchor(event.currentTarget);
+    setMenuOutputId(outputId);
+  }, []);
+
+  const handleMenuClose = useCallback(() => {
+    setMenuAnchor(null);
+    setMenuOutputId(null);
+  }, []);
+
+  const handleDelete = useCallback(() => {
+    if (menuOutputId && onDeleteOutput) {
+      const output = outputs.find((o) => o.id === menuOutputId);
+      if (output && window.confirm(`确定要删除「${resolveOutputTitle(output)}」吗？此操作不可撤销。`)) {
+        onDeleteOutput(menuOutputId);
+        // If deleting currently selected, close viewer if no more outputs
+        if (menuOutputId === selectedOutputId && outputs.length <= 1) {
+          onClose();
+        }
+      }
+    }
+    handleMenuClose();
+  }, [menuOutputId, onDeleteOutput, outputs, selectedOutputId, onClose, handleMenuClose]);
 
   if (!isOpen) return null;
 
@@ -116,20 +148,46 @@ export default function StudioOutputViewer({
                 {outputs.map((output) => {
                   const isActive = output.id === selectedOutput?.id;
                   return (
-                    <button
+                    <div
                       key={output.id}
-                      type="button"
                       className={`StudioViewerPreviewItem ${isActive ? 'isActive' : ''}`}
-                      onClick={() => onSelectOutput(output.id)}
-                      aria-current={isActive}
+                      style={{ position: 'relative' }}
                     >
-                      <span className="StudioViewerPreviewTitle">
-                        {resolveOutputTitle(output)}
-                      </span>
-                      <span className="StudioViewerPreviewMeta">
-                        {resolveOutputMeta(output)}
-                      </span>
-                    </button>
+                      <button
+                        type="button"
+                        className="StudioViewerPreviewItemButton"
+                        onClick={() => onSelectOutput(output.id)}
+                        aria-current={isActive}
+                        style={{ flex: 1, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 12px' }}
+                      >
+                        <span className="StudioViewerPreviewTitle">
+                          {resolveOutputTitle(output)}
+                        </span>
+                        <span className="StudioViewerPreviewMeta">
+                          {resolveOutputMeta(output)}
+                        </span>
+                      </button>
+                      {onDeleteOutput && (
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleMenuOpen(e, output.id)}
+                          sx={{
+                            position: 'absolute',
+                            right: 4,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            opacity: 0,
+                            transition: 'opacity 0.2s',
+                            '.StudioViewerPreviewItem:hover &, .StudioViewerPreviewItem.isActive &': {
+                              opacity: 1,
+                            },
+                          }}
+                          className="preview-menu-btn"
+                        >
+                          <MoreVertIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -140,6 +198,22 @@ export default function StudioOutputViewer({
           </section>
         </div>
       </div>
+
+      {/* Output Context Menu */}
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={handleMenuClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          <ListItemText>删除</ListItemText>
+        </MenuItem>
+      </Menu>
     </div>
   );
 }

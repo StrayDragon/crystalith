@@ -12,7 +12,6 @@ export type OutputTypeId =
   | 'PARAGRAPH'
   | 'BULLETS'
   | 'STRUCTURED';
-export type SuggestionType = 'factual' | 'analytical' | 'comparative' | 'creative' | 'deep_dive';
 export type SourceSearchStatus = 'ok' | 'not_implemented';
 export type ToolTone = 'slate' | 'blue' | 'green' | 'rose' | 'amber' | 'teal' | 'indigo';
 
@@ -110,12 +109,6 @@ export interface SessionSummary {
   updatedAt: string;
 }
 
-export interface SuggestionItem {
-  question: string;
-  type: SuggestionType;
-  context: string;
-}
-
 export interface OutputItem {
   id: number;
   type: OutputTypeId;
@@ -139,7 +132,6 @@ export interface ErrorsState {
   sources: string;
   sessions: string;
   messages: string;
-  suggestions: string;
   outputs: string;
   send: string;
   create: string;
@@ -150,7 +142,6 @@ export interface LoadingState {
   sources: boolean;
   sessions: boolean;
   messages: boolean;
-  suggestions: boolean;
   outputs: boolean;
   send: boolean;
 }
@@ -177,17 +168,6 @@ export interface ApiMessage {
   citations?: ApiCitation[] | null;
   created_at?: string | null;
   updated_at?: string | null;
-}
-
-export interface ApiSuggestion {
-  question: string;
-  type: SuggestionType;
-  context: string;
-}
-
-export interface ApiSuggestionResponse {
-  suggestions: ApiSuggestion[];
-  created_at?: string | null;
 }
 
 export interface ApiWorkspaceTool {

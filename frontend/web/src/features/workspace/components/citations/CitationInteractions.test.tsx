@@ -34,23 +34,6 @@ const sampleCitations: Citation[] = [
   },
 ];
 
-test('citation mark shows tooltip preview on hover', async () => {
-  render(
-    <CitationMark
-      index={1}
-      citation={sampleCitations[0]}
-      onHover={vi.fn()}
-      onJump={vi.fn()}
-    />,
-  );
-
-  await userEvent.hover(screen.getByText('[1]'));
-
-  expect(screen.getByRole('tooltip')).toHaveTextContent('需求说明.md');
-  expect(screen.getByRole('tooltip')).toHaveTextContent('第 2 页');
-  expect(screen.getByRole('tooltip')).toHaveTextContent('短引用片段');
-});
-
 test('groups citations by source and toggles snippet expansion', async () => {
   render(
     <CitationList

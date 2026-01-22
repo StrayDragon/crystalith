@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -11,8 +11,6 @@ import {
   Skeleton,
   Grid,
   alpha,
-  Collapse,
-  Tooltip,
   Menu,
   MenuItem,
   ListItemIcon,
@@ -29,7 +27,6 @@ import {
   Add as AddIcon,
   MoreHoriz as MoreHorizIcon,
   Close as CloseIcon,
-  Analytics as AnalyticsIcon,
   AccountTree as MindmapIcon,
   Assignment as BriefingIcon,
   QuestionAnswer as FAQIcon,
@@ -40,15 +37,18 @@ import {
   Save as SaveIcon,
   Delete as DeleteIcon,
   ContentCopy as CopyIcon,
-  OpenInNew as OpenInNewIcon,
+  DriveFileMove as ConvertIcon,
 } from '@mui/icons-material';
 
-import type { ApiAnalysis } from '../api';
+import { getToolConfig, type ToolConfigResponse, type ToolConfigOption } from '../api';
+import { ModelSelector } from './ModelSelector';
 import type { OutputItem, OutputTypeId, WorkspaceTool } from '../types';
 import { formatRelativeTime } from '../utils';
 
 interface StudioPanelProps {
   tools: WorkspaceTool[];
+  toolsLoading?: boolean;
+  toolsError?: string;
   outputs: OutputItem[];
   outputQueueJobs: {
     id: string;
@@ -59,14 +59,12 @@ interface StudioPanelProps {
   outputsLoading: boolean;
   outputsError: string;
   onRetryOutputs: () => void;
-  onGenerateOutput: (type?: OutputTypeId) => void;
+  onGenerateOutput: (type?: OutputTypeId, modelId?: string | null) => void;
+  onDeleteOutput: (outputId: number) => void;
   onSelectOutput: (outputId: number) => void;
-  recentOutputJobId: string | null;
+  onSaveNote?: (content: string) => void;
+  onConvertToSource?: (outputId: number) => void;
   isDemo: boolean;
-  analysis?: ApiAnalysis | null;
-  analysisLoading?: boolean;
-  analysisError?: string;
-  onFetchAnalysis?: () => Promise<ApiAnalysis | null>;
 }
 
 type StudioTone = 'slate' | 'blue' | 'green' | 'rose' | 'amber' | 'teal' | 'indigo';
@@ -84,7 +82,7 @@ type PendingNote = {
   title: string;
   meta: string;
   type: OutputTypeId;
-  status: 'queued' | 'running';
+  status: 'queued' | 'running' | 'error';
 };
 
 const DEFAULT_TYPE_LABELS: Record<OutputTypeId, string> = {
@@ -215,30 +213,60 @@ function getToolIcon(type: OutputTypeId) {
 
 function StudioPanel({
   tools,
+  toolsLoading,
+  toolsError,
   outputs,
   outputQueueJobs,
   outputsLoading,
   outputsError,
   onRetryOutputs,
   onGenerateOutput,
+  onDeleteOutput,
   onSelectOutput,
-  recentOutputJobId,
+  onSaveNote,
+  onConvertToSource,
   isDemo,
-  analysis,
-  analysisLoading,
-  analysisError,
-  onFetchAnalysis,
 }: StudioPanelProps) {
-  const [showAnalysis, setShowAnalysis] = useState(false);
   const [noteMenuAnchor, setNoteMenuAnchor] = useState<null | HTMLElement>(null);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
-  
+
+  // Note editor dialog state
+  const [noteEditorOpen, setNoteEditorOpen] = useState(false);
+  const [noteEditorContent, setNoteEditorContent] = useState('');
+
   // Tool config dialog state
   const [toolConfigOpen, setToolConfigOpen] = useState(false);
   const [activeToolType, setActiveToolType] = useState<OutputTypeId | null>(null);
-  const [configQuantity, setConfigQuantity] = useState<'less' | 'standard' | 'more'>('standard');
-  const [configDifficulty, setConfigDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [configQuantity, setConfigQuantity] = useState<string>('standard');
+  const [configDifficulty, setConfigDifficulty] = useState<string>('medium');
   const [configTopic, setConfigTopic] = useState('');
+  const [configModelId, setConfigModelId] = useState<string | null>(null);
+  const [toolConfig, setToolConfig] = useState<ToolConfigResponse | null>(null);
+  const [toolConfigLoading, setToolConfigLoading] = useState(false);
+
+  // Fetch tool config when dialog opens
+  useEffect(() => {
+    if (!toolConfigOpen || !activeToolType || isDemo) return;
+
+    const toolId = activeToolType.toLowerCase();
+    setToolConfigLoading(true);
+    getToolConfig(toolId)
+      .then((config) => {
+        setToolConfig(config);
+        // Set default values from config
+        const defaultQuantity = config.quantity_options?.find((o) => o.is_default)?.id || 'standard';
+        const defaultDifficulty = config.difficulty_options?.find((o) => o.is_default)?.id || 'medium';
+        setConfigQuantity(defaultQuantity);
+        setConfigDifficulty(defaultDifficulty);
+      })
+      .catch(() => {
+        // Fallback to defaults if API fails
+        setToolConfig(null);
+      })
+      .finally(() => {
+        setToolConfigLoading(false);
+      });
+  }, [toolConfigOpen, activeToolType, isDemo]);
 
   const handleToolConfigOpen = useCallback((event: React.MouseEvent<HTMLElement>, toolType: OutputTypeId) => {
     event.stopPropagation();
@@ -248,27 +276,23 @@ function StudioPanel({
     setConfigQuantity('standard');
     setConfigDifficulty('medium');
     setConfigTopic('');
+    setConfigModelId(null);
+    setToolConfig(null);
   }, []);
 
   const handleToolConfigClose = useCallback(() => {
     setToolConfigOpen(false);
     setActiveToolType(null);
+    setToolConfig(null);
+    setConfigModelId(null);
   }, []);
 
   const handleGenerateWithConfig = useCallback(() => {
     if (activeToolType) {
-      // TODO: Pass config to API when backend supports it
-      onGenerateOutput(activeToolType);
+      onGenerateOutput(activeToolType, configModelId);
     }
     handleToolConfigClose();
-  }, [activeToolType, onGenerateOutput, handleToolConfigClose]);
-
-  async function handleShowAnalysis() {
-    if (onFetchAnalysis) {
-      await onFetchAnalysis();
-    }
-    setShowAnalysis(true);
-  }
+  }, [activeToolType, configModelId, onGenerateOutput, handleToolConfigClose]);
 
   const handleNoteMenuOpen = useCallback((event: React.MouseEvent<HTMLElement>, noteId: string) => {
     event.stopPropagation();
@@ -287,9 +311,51 @@ function StudioPanel({
   }, [handleNoteMenuClose]);
 
   const handleDeleteNote = useCallback(() => {
-    // TODO: Implement delete note API call
+    if (!activeNoteId) {
+      handleNoteMenuClose();
+      return;
+    }
+    // activeNoteId is the output.id as string
+    const outputId = parseInt(activeNoteId, 10);
+    if (!isNaN(outputId)) {
+      if (!window.confirm('确定要删除此输出吗？此操作不可撤销。')) {
+        handleNoteMenuClose();
+        return;
+      }
+      onDeleteOutput(outputId);
+    }
     handleNoteMenuClose();
-  }, [handleNoteMenuClose]);
+  }, [activeNoteId, handleNoteMenuClose, onDeleteOutput]);
+
+  const handleConvertToSource = useCallback(() => {
+    if (!activeNoteId) {
+      handleNoteMenuClose();
+      return;
+    }
+    const outputId = parseInt(activeNoteId, 10);
+    if (!isNaN(outputId) && onConvertToSource) {
+      onConvertToSource(outputId);
+    }
+    handleNoteMenuClose();
+  }, [activeNoteId, handleNoteMenuClose, onConvertToSource]);
+
+  // Note editor handlers
+  const handleOpenNoteEditor = useCallback(() => {
+    setNoteEditorContent('');
+    setNoteEditorOpen(true);
+  }, []);
+
+  const handleCloseNoteEditor = useCallback(() => {
+    setNoteEditorOpen(false);
+    setNoteEditorContent('');
+  }, []);
+
+  const handleSaveNote = useCallback(() => {
+    if (noteEditorContent.trim() && onSaveNote) {
+      onSaveNote(noteEditorContent.trim());
+    }
+    handleCloseNoteEditor();
+  }, [noteEditorContent, onSaveNote, handleCloseNoteEditor]);
 
   const typeLabelMap = useMemo(() => {
     const map = new Map<OutputTypeId, string>();
@@ -315,20 +381,22 @@ function StudioPanel({
     const statusLabels = {
       queued: '排队中',
       running: '生成中',
+      error: '生成失败',
     } satisfies Record<PendingNote['status'], string>;
     return outputQueueJobs
-      .filter((job) => job.status === 'queued' || job.status === 'running')
+      .filter((job) => job.status === 'queued' || job.status === 'running' || job.status === 'error')
       .map((job) => {
         const typeLabel = resolveTypeLabel(job.type, typeLabelMap);
         const sourceLabel = job.chunkIds.length
           ? `基于 ${job.chunkIds.length} 个来源`
           : '自动生成';
+        const statusLabel = statusLabels[job.status as PendingNote['status']] || job.status;
         return {
           id: `pending-${job.id}`,
-          title: `生成${typeLabel}...`,
-          meta: `${sourceLabel} · ${statusLabels[job.status]}`,
+          title: job.status === 'error' ? `${typeLabel} 生成失败` : `生成${typeLabel}...`,
+          meta: `${sourceLabel} · ${statusLabel}`,
           type: job.type,
-          status: job.status,
+          status: job.status as PendingNote['status'],
         };
       });
   }, [outputQueueJobs, typeLabelMap]);
@@ -340,15 +408,53 @@ function StudioPanel({
   return (
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5, p: { xs: 1.5, sm: 2 }, minHeight: 0 }}>
       {/* Tools Grid */}
-      <Grid container spacing={0.75}>
-        {tools.map((tool, index) => {
+      {toolsLoading ? (
+        <Grid container spacing={0.75}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Grid size={{ xs: 6 }} key={i}>
+              <Skeleton variant="rounded" height={32} sx={{ borderRadius: 1.5 }} />
+            </Grid>
+          ))}
+        </Grid>
+      ) : toolsError ? (
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 1.5,
+            textAlign: 'center',
+            borderRadius: 2,
+            bgcolor: 'error.50',
+            borderColor: 'error.200',
+          }}
+        >
+          <Typography variant="caption" color="error">
+            {toolsError}
+          </Typography>
+        </Paper>
+      ) : tools.length === 0 ? (
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 1.5,
+            textAlign: 'center',
+            borderStyle: 'dashed',
+            borderRadius: 2,
+            bgcolor: 'grey.50',
+          }}
+        >
+          <Typography variant="caption" color="text.secondary">
+            暂无可用工具
+          </Typography>
+        </Paper>
+      ) : (
+        <Grid container spacing={0.75}>
+          {tools.map((tool, index) => {
           const isDisabled = !tool.enabled || !tool.outputType;
           const tone = tool.tone as StudioTone || 'slate';
           const colors = TONE_COLORS[tone];
 
           return (
             <Grid size={{ xs: 6 }} key={tool.id}>
-              <Tooltip title={tool.description || ''} placement="top">
                 <Button
                   fullWidth
                   disabled={isDisabled}
@@ -453,32 +559,14 @@ function StudioPanel({
                     <EditIcon sx={{ fontSize: 10 }} />
                   </IconButton>
                 </Button>
-              </Tooltip>
             </Grid>
           );
         })}
-      </Grid>
+        </Grid>
+      )}
 
       {/* Notes Section */}
       <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-        {/* Recent Output Notice */}
-        {recentOutputJobId && (
-          <Paper
-            sx={{
-              mb: 1.5,
-              p: 1,
-              borderRadius: 2,
-              bgcolor: 'success.50',
-              border: '1px solid',
-              borderColor: 'success.200',
-            }}
-          >
-            <Typography variant="caption" color="success.main" fontWeight={500} sx={{ fontSize: '0.6875rem' }}>
-              已生成新的笔记，已加入列表。
-            </Typography>
-          </Paper>
-        )}
-
         {/* Loading Skeleton */}
         {showSkeleton && (
           <Stack spacing={1}>
@@ -513,6 +601,7 @@ function StudioPanel({
               const tone = resolveTone(note.type);
               const colors = TONE_COLORS[tone];
               const typeLabel = resolveTypeLabel(note.type, typeLabelMap);
+              const isError = note.status === 'error';
 
               return (
                 <Paper
@@ -525,11 +614,10 @@ function StudioPanel({
                     p: 0.75,
                     borderRadius: 2,
                     borderStyle: 'dashed',
-                    bgcolor: alpha(colors.bg, 0.5),
+                    bgcolor: isError ? alpha('#fef2f2', 0.8) : alpha(colors.bg, 0.5),
+                    borderColor: isError ? 'error.200' : undefined,
                   }}
                 >
-                  {/* Spinning icon with tooltip */}
-                  <Tooltip title={`${typeLabel} - 生成中`} placement="top" arrow>
                     <Box
                       sx={{
                         display: 'flex',
@@ -538,21 +626,41 @@ function StudioPanel({
                         width: 22,
                         height: 22,
                         borderRadius: 1.5,
-                        bgcolor: colors.bg,
+                        bgcolor: isError ? 'error.50' : colors.bg,
                         border: '1px dashed',
-                        borderColor: colors.border,
-                        color: colors.text,
+                        borderColor: isError ? 'error.300' : colors.border,
+                        color: isError ? 'error.main' : colors.text,
                         flexShrink: 0,
                       }}
                     >
-                      <CircularProgress size={12} sx={{ color: 'inherit' }} />
+                      {isError ? (
+                        <Typography sx={{ fontSize: 12, lineHeight: 1 }}>!</Typography>
+                      ) : (
+                        <CircularProgress size={12} sx={{ color: 'inherit' }} />
+                      )}
                     </Box>
-                  </Tooltip>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="caption" fontWeight={500} noWrap sx={{ fontSize: '0.6875rem', lineHeight: 1.3 }}>
+                    <Typography
+                      variant="caption"
+                      fontWeight={500}
+                      noWrap
+                      sx={{
+                        fontSize: '0.6875rem',
+                        lineHeight: 1.3,
+                        color: isError ? 'error.main' : 'text.primary',
+                      }}
+                    >
                       {note.title}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.5625rem', lineHeight: 1.2 }}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        display: 'block',
+                        fontSize: '0.5625rem',
+                        lineHeight: 1.2,
+                        color: isError ? 'error.light' : 'text.secondary',
+                      }}
+                    >
                       {note.meta}
                     </Typography>
                   </Box>
@@ -602,8 +710,6 @@ function StudioPanel({
                       '&:hover': { bgcolor: 'transparent' },
                     }}
                   >
-                    {/* Icon-only tag with tooltip */}
-                    <Tooltip title={typeLabel} placement="top" arrow>
                       <Box
                         sx={{
                           display: 'flex',
@@ -621,7 +727,6 @@ function StudioPanel({
                       >
                         {getToolIcon(note.type)}
                       </Box>
-                    </Tooltip>
                     <Box sx={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                       <Typography variant="caption" fontWeight={500} noWrap sx={{ fontSize: '0.6875rem', lineHeight: 1.3 }}>
                         {note.title}
@@ -665,107 +770,16 @@ function StudioPanel({
       </Box>
 
       {/* Actions */}
-      <Stack direction="row" spacing={1}>
-        <Button
-          variant="contained"
-          fullWidth
-          size="small"
-          startIcon={<AddIcon fontSize="small" />}
-          onClick={() => onGenerateOutput('BRIEFING')}
-          sx={{ borderRadius: 5, py: 0.75, fontSize: '0.6875rem' }}
-        >
-          添加笔记
-        </Button>
-        {onFetchAnalysis && (
-          <Tooltip title="查看笔记本分析">
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleShowAnalysis}
-              disabled={analysisLoading}
-              sx={{
-                borderRadius: 5,
-                minWidth: 48,
-                px: 1.5,
-                py: 0.75,
-                fontSize: '0.6875rem',
-              }}
-            >
-              {analysisLoading ? <CircularProgress size={14} /> : '分析'}
-            </Button>
-          </Tooltip>
-        )}
-      </Stack>
-
-      {/* Analysis Panel */}
-      <Collapse in={showAnalysis && !!analysis}>
-        {analysis && (
-          <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2.5 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-              <Typography variant="caption" fontWeight={600}>
-                笔记本分析
-              </Typography>
-              <IconButton size="small" onClick={() => setShowAnalysis(false)} sx={{ width: 20, height: 20 }}>
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            </Stack>
-
-            {/* Stats Grid */}
-            <Grid container spacing={0.5} sx={{ mb: 1 }}>
-              {[
-                { label: '来源', value: analysis.source_count },
-                { label: '片段', value: analysis.chunk_count },
-                { label: '会话', value: analysis.session_count },
-                { label: '输出', value: analysis.output_count },
-              ].map((stat) => (
-                <Grid size={{ xs: 3 }} key={stat.label}>
-                  <Paper
-                    sx={{
-                      p: 0.75,
-                      textAlign: 'center',
-                      bgcolor: 'grey.50',
-                      borderRadius: 1.5,
-                    }}
-                  >
-                    <Typography variant="body2" fontWeight={700} sx={{ fontSize: '0.875rem', lineHeight: 1.2 }}>
-                      {stat.value}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.5625rem' }}>
-                      {stat.label}
-                    </Typography>
-                  </Paper>
-                </Grid>
-              ))}
-            </Grid>
-
-            {/* Topics */}
-            {analysis.topics && analysis.topics.length > 0 && (
-              <Stack direction="row" alignItems="center" flexWrap="wrap" gap={0.5} sx={{ mb: 1 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.625rem' }}>
-                  主题：
-                </Typography>
-                {analysis.topics.map((topic) => (
-                  <Chip key={topic} label={topic} size="small" sx={{ height: 16, fontSize: '0.5625rem' }} />
-                ))}
-              </Stack>
-            )}
-
-            {/* Summary */}
-            {analysis.summary && (
-              <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.5, fontSize: '0.6875rem' }}>
-                {analysis.summary}
-              </Typography>
-            )}
-          </Paper>
-        )}
-      </Collapse>
-
-      {/* Analysis Error */}
-      {analysisError && (
-        <Typography variant="caption" color="error" sx={{ fontSize: '0.6875rem' }}>
-          {analysisError}
-        </Typography>
-      )}
+      <Button
+        variant="contained"
+        fullWidth
+        size="small"
+        startIcon={<AddIcon fontSize="small" />}
+        onClick={handleOpenNoteEditor}
+        sx={{ borderRadius: 5, py: 0.75, fontSize: '0.6875rem' }}
+      >
+        添加笔记
+      </Button>
 
       {/* Note Context Menu */}
       <Menu
@@ -780,6 +794,12 @@ function StudioPanel({
           },
         }}
       >
+        <MenuItem onClick={handleConvertToSource} sx={{ fontSize: '0.75rem' }}>
+          <ListItemIcon>
+            <ConvertIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>转换为来源</ListItemText>
+        </MenuItem>
         <MenuItem onClick={handleCopyNote} sx={{ fontSize: '0.75rem' }}>
           <ListItemIcon>
             <CopyIcon fontSize="small" />
@@ -830,72 +850,112 @@ function StudioPanel({
         </DialogTitle>
 
         <DialogContent sx={{ pt: 2 }}>
-          {/* Quantity Selection */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-              卡片数量
-            </Typography>
-            <ToggleButtonGroup
-              value={configQuantity}
-              exclusive
-              onChange={(_, value) => value && setConfigQuantity(value)}
-              size="small"
-              sx={{ gap: 1, '& .MuiToggleButton-root': { borderRadius: 5, px: 2.5, py: 0.5, border: '1px solid', borderColor: 'divider' } }}
-            >
-              <ToggleButton value="less">更少</ToggleButton>
-              <ToggleButton value="standard">
-                <Stack direction="row" alignItems="center" spacing={0.5}>
-                  {configQuantity === 'standard' && <span>✓</span>}
-                  <span>标准（默认）</span>
-                </Stack>
-              </ToggleButton>
-              <ToggleButton value="more">更多</ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
+          {toolConfigLoading ? (
+            <Stack spacing={2}>
+              <Skeleton variant="rectangular" height={60} sx={{ borderRadius: 2 }} />
+              <Skeleton variant="rectangular" height={60} sx={{ borderRadius: 2 }} />
+              <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 2 }} />
+            </Stack>
+          ) : (
+            <>
+              {/* Quantity Selection */}
+              {(toolConfig?.quantity_options || !toolConfig) && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    数量
+                  </Typography>
+                  <ToggleButtonGroup
+                    value={configQuantity}
+                    exclusive
+                    onChange={(_, value) => value && setConfigQuantity(value)}
+                    size="small"
+                    sx={{ gap: 1, flexWrap: 'wrap', '& .MuiToggleButton-root': { borderRadius: 5, px: 2, py: 0.5, border: '1px solid', borderColor: 'divider' } }}
+                  >
+                    {(toolConfig?.quantity_options || [
+                      { id: 'less', label: '更少', is_default: false },
+                      { id: 'standard', label: '标准（默认）', is_default: true },
+                      { id: 'more', label: '更多', is_default: false },
+                    ]).map((option) => (
+                      <ToggleButton key={option.id} value={option.id}>
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                          {configQuantity === option.id && option.is_default && <span>✓</span>}
+                          <span>{option.label}</span>
+                        </Stack>
+                      </ToggleButton>
+                    ))}
+                  </ToggleButtonGroup>
+                </Box>
+              )}
 
-          {/* Difficulty Selection */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-              难度等级
-            </Typography>
-            <ToggleButtonGroup
-              value={configDifficulty}
-              exclusive
-              onChange={(_, value) => value && setConfigDifficulty(value)}
-              size="small"
-              sx={{ gap: 1, '& .MuiToggleButton-root': { borderRadius: 5, px: 2.5, py: 0.5, border: '1px solid', borderColor: 'divider' } }}
-            >
-              <ToggleButton value="easy">简单</ToggleButton>
-              <ToggleButton value="medium">
-                <Stack direction="row" alignItems="center" spacing={0.5}>
-                  {configDifficulty === 'medium' && <span>✓</span>}
-                  <span>中等（默认）</span>
-                </Stack>
-              </ToggleButton>
-              <ToggleButton value="hard">困难</ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
+              {/* Difficulty Selection - only show if tool has difficulty options */}
+              {(toolConfig?.difficulty_options || (!toolConfig && activeToolType !== 'FAQ' && activeToolType !== 'TIMELINE' && activeToolType !== 'MINDMAP' && activeToolType !== 'BRIEFING')) && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    难度等级
+                  </Typography>
+                  <ToggleButtonGroup
+                    value={configDifficulty}
+                    exclusive
+                    onChange={(_, value) => value && setConfigDifficulty(value)}
+                    size="small"
+                    sx={{ gap: 1, flexWrap: 'wrap', '& .MuiToggleButton-root': { borderRadius: 5, px: 2, py: 0.5, border: '1px solid', borderColor: 'divider' } }}
+                  >
+                    {(toolConfig?.difficulty_options || [
+                      { id: 'easy', label: '简单', is_default: false },
+                      { id: 'medium', label: '中等（默认）', is_default: true },
+                      { id: 'hard', label: '困难', is_default: false },
+                    ]).map((option) => (
+                      <ToggleButton key={option.id} value={option.id}>
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                          {configDifficulty === option.id && option.is_default && <span>✓</span>}
+                          <span>{option.label}</span>
+                        </Stack>
+                      </ToggleButton>
+                    ))}
+                  </ToggleButtonGroup>
+                </Box>
+              )}
 
-          {/* Topic Input */}
-          <Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-              主题应该是什么？
-            </Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              placeholder="示例提示&#10;• 抽认卡必须仅限于一个特定来源（例如&quot;一篇介绍意大利的文章&quot;）&#10;• 抽认卡必须专注于一个特定主题（例如&quot;牛顿第二定律&quot;）&#10;• 卡片正面内容必须简短易记（1-5 个字词）"
-              value={configTopic}
-              onChange={(e) => setConfigTopic(e.target.value)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2,
-                  fontSize: '0.875rem',
-                },
-              }}
-            />
-          </Box>
+              {/* Topic Input */}
+              {(toolConfig?.supports_topic !== false) && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    主题应该是什么？
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={4}
+                    placeholder={toolConfig?.topic_placeholder || "示例提示\n• 限定特定来源或主题\n• 说明重点关注的方向\n• 提供具体的约束条件"}
+                    value={configTopic}
+                    onChange={(e) => setConfigTopic(e.target.value)}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        fontSize: '0.875rem',
+                      },
+                    }}
+                  />
+                </Box>
+              )}
+
+              {/* Model Selection */}
+              {!isDemo && (
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    AI 模型
+                  </Typography>
+                  <ModelSelector
+                    value={configModelId}
+                    onChange={setConfigModelId}
+                    capability="chat"
+                    label="选择生成模型"
+                    size="small"
+                  />
+                </Box>
+              )}
+            </>
+          )}
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 3 }}>
@@ -905,6 +965,79 @@ function StudioPanel({
             sx={{ borderRadius: 5, px: 4 }}
           >
             生成
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Note Editor Dialog */}
+      <Dialog
+        open={noteEditorOpen}
+        onClose={handleCloseNoteEditor}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3 },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 32,
+                height: 32,
+                borderRadius: 1.5,
+                bgcolor: 'primary.50',
+                color: 'primary.main',
+              }}
+            >
+              <EditIcon fontSize="small" />
+            </Box>
+            <Typography variant="subtitle1" fontWeight={600}>
+              新建笔记
+            </Typography>
+          </Stack>
+          <IconButton size="small" onClick={handleCloseNoteEditor}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ pt: 2 }}>
+          <TextField
+            autoFocus
+            multiline
+            rows={8}
+            fullWidth
+            placeholder="在此输入笔记内容..."
+            value={noteEditorContent}
+            onChange={(e) => setNoteEditorContent(e.target.value)}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                fontSize: '0.875rem',
+              },
+            }}
+          />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            支持 Markdown 格式
+          </Typography>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={handleCloseNoteEditor} sx={{ borderRadius: 5 }}>
+            取消
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveNote}
+            disabled={!noteEditorContent.trim()}
+            startIcon={<SaveIcon fontSize="small" />}
+            sx={{ borderRadius: 5, px: 3 }}
+          >
+            保存笔记
           </Button>
         </DialogActions>
       </Dialog>
