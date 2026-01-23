@@ -101,7 +101,7 @@ export default function StudioOutputViewer({
             <Typography variant="h6" className="text-lg font-semibold text-gray-900 truncate">
               {selectedOutput ? resolveOutputTitle(selectedOutput) : '暂无输出'}
             </Typography>
-            <Typography variant="small" className="text-gray-600 font-normal">
+            <Typography variant="small" className="text-gray-600 font-medium">
               {selectedOutput ? resolveOutputMeta(selectedOutput) : '请先生成输出内容'}
             </Typography>
           </div>
@@ -172,7 +172,7 @@ export default function StudioOutputViewer({
                         >
                           {resolveOutputTitle(output)}
                         </Typography>
-                        <Typography variant="small" className="text-[10px] text-gray-500 mt-0.5 truncate">
+                        <Typography variant="small" className="text-[10px] text-gray-500 font-medium mt-0.5 truncate">
                           {resolveOutputMeta(output)}
                         </Typography>
                       </button>

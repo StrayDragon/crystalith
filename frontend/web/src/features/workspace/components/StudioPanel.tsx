@@ -394,13 +394,13 @@ function StudioPanel({
         </div>
       ) : toolsError ? (
         <div className="p-3 text-center rounded-lg bg-red-50 border border-red-200">
-          <Typography variant="small" color="red" className="font-normal">
+          <Typography variant="small" color="red" className="font-medium">
             {toolsError}
           </Typography>
         </div>
       ) : tools.length === 0 ? (
         <div className="p-3 text-center border border-dashed border-gray-400 rounded-lg bg-gray-100">
-          <Typography variant="small" className="font-normal text-gray-600">
+          <Typography variant="small" className="font-medium text-gray-600">
             暂无可用工具
           </Typography>
         </div>
@@ -487,7 +487,7 @@ function StudioPanel({
         {/* Empty State */}
         {showEmpty && (
           <div className="p-4 text-center border border-dashed border-gray-300 rounded-xl bg-gray-100">
-            <Typography variant="small" className="text-gray-600 font-normal">
+            <Typography variant="small" className="text-gray-600 font-medium">
               暂无笔记
             </Typography>
           </div>
@@ -531,7 +531,7 @@ function StudioPanel({
                     </Typography>
                     <Typography
                       variant="small"
-                      className={`text-[10px] leading-tight ${isError ? 'text-red-500' : 'text-gray-600'}`}
+                      className={`text-[10px] font-medium leading-tight ${isError ? 'text-red-500' : 'text-gray-600'}`}
                     >
                       {note.meta}
                     </Typography>
@@ -577,7 +577,7 @@ function StudioPanel({
                       </Typography>
                       <Typography
                         variant="small"
-                        className="text-[9px] text-gray-600 leading-tight truncate"
+                        className="text-[10px] text-gray-500 font-medium leading-tight truncate"
                       >
                         {note.meta}
                       </Typography>
