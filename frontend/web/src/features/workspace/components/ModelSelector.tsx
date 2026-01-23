@@ -4,17 +4,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  FormControl,
-  InputLabel,
   Select,
-  MenuItem,
+  Option,
   Typography,
-  Box,
   Chip,
-  Skeleton,
   Alert,
-  type SelectChangeEvent,
-} from '@mui/material';
+} from '@material-tailwind/react';
 import {
   SmartToy as AIIcon,
   CloudQueue as CloudIcon,
@@ -35,8 +30,8 @@ export interface ModelSelectorProps {
   /** Whether the selector is disabled */
   disabled?: boolean;
   /** Size variant */
-  size?: 'small' | 'medium';
-  /** Full width */
+  size?: 'md' | 'lg';
+  /** Full width - handled by className in MT */
   fullWidth?: boolean;
   /** Optional class name */
   className?: string;
@@ -48,9 +43,9 @@ export function ModelSelector({
   capability = 'chat',
   label = '选择模型',
   disabled = false,
-  size = 'small',
-  fullWidth = true,
-  className,
+  size = 'md',
+  fullWidth = true, // Ignored in MT Select as it is block by default or controlled by container
+  className = '',
 }: ModelSelectorProps) {
   const [modelsData, setModelsData] = useState<ModelsListResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,8 +85,7 @@ export function ModelSelector({
   }, [capability]);
 
   const handleChange = useCallback(
-    (event: SelectChangeEvent<string>) => {
-      const newValue = event.target.value;
+    (newValue: string | undefined) => {
       onChange(newValue || null);
     },
     [onChange]
@@ -100,16 +94,14 @@ export function ModelSelector({
   // Render loading state
   if (loading) {
     return (
-      <Box className={className} sx={{ width: fullWidth ? '100%' : 'auto' }}>
-        <Skeleton variant="rectangular" height={40} sx={{ borderRadius: 1 }} />
-      </Box>
+      <div className={`h-10 w-full rounded-lg bg-gray-200 animate-pulse ${className}`} />
     );
   }
 
   // Render error state
   if (error) {
     return (
-      <Alert severity="warning" sx={{ py: 0.5, fontSize: '0.75rem' }}>
+      <Alert color="amber" variant="ghost" className={`py-2 text-xs ${className}`}>
         {error}
       </Alert>
     );
@@ -118,86 +110,77 @@ export function ModelSelector({
   // No models available
   if (!modelsData || modelsData.models.length === 0) {
     return (
-      <Alert severity="info" sx={{ py: 0.5, fontSize: '0.75rem' }}>
+      <Alert color="blue" variant="ghost" className={`py-2 text-xs ${className}`}>
         暂无可用模型
       </Alert>
     );
   }
 
   const models = modelsData.models;
-  const selectedModel = models.find((m) => m.id === value);
+
+  // Find selected model for rendering custom selected state if needed
+  // MT Select handles display automatically based on Option children
 
   return (
-    <FormControl
-      fullWidth={fullWidth}
-      size={size}
-      disabled={disabled}
-      className={className}
-    >
-      <InputLabel id="model-selector-label">{label}</InputLabel>
+    <div className={className}>
       <Select
-        labelId="model-selector-label"
-        id="model-selector"
-        value={value || ''}
         label={label}
+        value={value || ''}
         onChange={handleChange}
-        renderValue={(selected) => {
-          const model = models.find((m) => m.id === selected);
-          if (!model) return selected;
+        disabled={disabled}
+        size={size}
+        selected={(element) => {
+          // Custom render for selected value
+          // element is the React Element of the selected Option
+          if (!element) return null;
+          const modelId = element.props.value;
+          const model = models.find((m) => m.id === modelId);
+          if (!model) return element;
+
           return (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {model.provider === 'openai' ? (
-                <CloudIcon sx={{ fontSize: 16, color: 'primary.main' }} />
-              ) : (
-                <LocalIcon sx={{ fontSize: 16, color: 'success.main' }} />
-              )}
-              <Typography variant="body2">{model.display_name}</Typography>
-            </Box>
+             <div className="flex items-center gap-2">
+                {model.provider === 'openai' ? (
+                  <CloudIcon className="h-4 w-4 text-blue-500" />
+                ) : (
+                  <LocalIcon className="h-4 w-4 text-green-500" />
+                )}
+                <span className="text-sm text-gray-900">{model.display_name}</span>
+             </div>
           );
         }}
       >
         {models.map((model) => (
-          <MenuItem key={model.id} value={model.id}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
+          <Option key={model.id} value={model.id} className="flex items-center gap-2 p-2">
+            <div className="flex items-center gap-2 w-full">
               {model.provider === 'openai' ? (
-                <CloudIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+                <CloudIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
               ) : (
-                <LocalIcon sx={{ fontSize: 18, color: 'success.main' }} />
+                <LocalIcon className="h-4 w-4 text-green-500 flex-shrink-0" />
               )}
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              <div className="flex-1 min-w-0 flex flex-col">
+                <Typography variant="small" className="font-medium text-gray-900 leading-snug">
                   {model.display_name}
                 </Typography>
                 {model.description && (
                   <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{
-                      display: 'block',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
+                    variant="small"
+                    className="text-[10px] text-gray-500 truncate"
                   >
                     {model.description}
                   </Typography>
                 )}
-              </Box>
+              </div>
               <Chip
-                label={model.provider}
-                size="small"
+                value={model.provider}
+                size="sm"
                 variant="outlined"
-                sx={{
-                  fontSize: '0.65rem',
-                  height: 20,
-                  '& .MuiChip-label': { px: 1 },
-                }}
+                className="h-5 px-1 text-[9px] rounded-full normal-case border-gray-200 text-gray-500 flex items-center"
               />
-            </Box>
-          </MenuItem>
+            </div>
+          </Option>
         ))}
       </Select>
-    </FormControl>
+    </div>
   );
 }
 

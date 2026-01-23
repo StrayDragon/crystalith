@@ -1,28 +1,23 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Box,
   Button,
   IconButton,
   Typography,
-  Stack,
-  CircularProgress,
   Chip,
-  Paper,
-  Skeleton,
-  Grid,
-  alpha,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
+  Card,
   Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
-} from '@mui/material';
+  DialogHeader,
+  DialogBody,
+  DialogFooter,
+  Textarea,
+  Input,
+  Menu,
+  MenuHandler,
+  MenuList,
+  MenuItem,
+  Spinner,
+  Tooltip,
+} from '@material-tailwind/react';
 import {
   Add as AddIcon,
   MoreHoriz as MoreHorizIcon,
@@ -40,7 +35,7 @@ import {
   DriveFileMove as ConvertIcon,
 } from '@mui/icons-material';
 
-import { getToolConfig, type ToolConfigResponse, type ToolConfigOption } from '../api';
+import { getToolConfig, type ToolConfigResponse } from '../api';
 import { ModelSelector } from './ModelSelector';
 import type { OutputItem, OutputTypeId, WorkspaceTool } from '../types';
 import { formatRelativeTime } from '../utils';
@@ -192,22 +187,23 @@ function resolveTypeLabel(type: OutputTypeId, labels: Map<OutputTypeId, string>)
 }
 
 function getToolIcon(type: OutputTypeId) {
-  // Use 'small' fontSize which is configured to 14px in theme
+  // Using MUI icons for now, can be replaced later
+  const props = { style: { fontSize: 18 } };
   switch (type) {
     case 'MINDMAP':
-      return <MindmapIcon fontSize="small" />;
+      return <MindmapIcon {...props} />;
     case 'BRIEFING':
-      return <BriefingIcon fontSize="small" />;
+      return <BriefingIcon {...props} />;
     case 'FAQ':
-      return <FAQIcon fontSize="small" />;
+      return <FAQIcon {...props} />;
     case 'QUIZ':
-      return <QuizIcon fontSize="small" />;
+      return <QuizIcon {...props} />;
     case 'GUIDE':
-      return <GuideIcon fontSize="small" />;
+      return <GuideIcon {...props} />;
     case 'TIMELINE':
-      return <TimelineIcon fontSize="small" />;
+      return <TimelineIcon {...props} />;
     default:
-      return <SaveIcon fontSize="small" />;
+      return <SaveIcon {...props} />;
   }
 }
 
@@ -227,7 +223,6 @@ function StudioPanel({
   onConvertToSource,
   isDemo,
 }: StudioPanelProps) {
-  const [noteMenuAnchor, setNoteMenuAnchor] = useState<null | HTMLElement>(null);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
 
   // Note editor dialog state
@@ -294,50 +289,33 @@ function StudioPanel({
     handleToolConfigClose();
   }, [activeToolType, configModelId, onGenerateOutput, handleToolConfigClose]);
 
-  const handleNoteMenuOpen = useCallback((event: React.MouseEvent<HTMLElement>, noteId: string) => {
-    event.stopPropagation();
-    setNoteMenuAnchor(event.currentTarget);
-    setActiveNoteId(noteId);
-  }, []);
-
-  const handleNoteMenuClose = useCallback(() => {
-    setNoteMenuAnchor(null);
-    setActiveNoteId(null);
-  }, []);
+  // Note: Menu state is handled locally by Menu component in MT, but we need to track active item for actions
+  // We'll use a specific way to handle menu actions
 
   const handleCopyNote = useCallback(() => {
     // TODO: Implement copy to clipboard
-    handleNoteMenuClose();
-  }, [handleNoteMenuClose]);
+    setActiveNoteId(null);
+  }, []);
 
-  const handleDeleteNote = useCallback(() => {
-    if (!activeNoteId) {
-      handleNoteMenuClose();
-      return;
-    }
+  const handleDeleteNote = useCallback((id: string) => {
+    if (!id) return;
     // activeNoteId is the output.id as string
-    const outputId = parseInt(activeNoteId, 10);
+    const outputId = parseInt(id, 10);
     if (!isNaN(outputId)) {
       if (!window.confirm('确定要删除此输出吗？此操作不可撤销。')) {
-        handleNoteMenuClose();
         return;
       }
       onDeleteOutput(outputId);
     }
-    handleNoteMenuClose();
-  }, [activeNoteId, handleNoteMenuClose, onDeleteOutput]);
+  }, [onDeleteOutput]);
 
-  const handleConvertToSource = useCallback(() => {
-    if (!activeNoteId) {
-      handleNoteMenuClose();
-      return;
-    }
-    const outputId = parseInt(activeNoteId, 10);
+  const handleConvertToSource = useCallback((id: string) => {
+    if (!id) return;
+    const outputId = parseInt(id, 10);
     if (!isNaN(outputId) && onConvertToSource) {
       onConvertToSource(outputId);
     }
-    handleNoteMenuClose();
-  }, [activeNoteId, handleNoteMenuClose, onConvertToSource]);
+  }, [onConvertToSource]);
 
   // Note editor handlers
   const handleOpenNoteEditor = useCallback(() => {
@@ -406,265 +384,159 @@ function StudioPanel({
   const showEmpty = !outputsLoading && notes.length === 0 && pendingNotes.length === 0;
 
   return (
-    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5, p: { xs: 1.5, sm: 2 }, minHeight: 0 }}>
+    <div className="flex flex-1 flex-col gap-3 p-3 sm:p-4 min-h-0">
       {/* Tools Grid */}
       {toolsLoading ? (
-        <Grid container spacing={0.75}>
+        <div className="grid grid-cols-2 gap-2">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Grid size={{ xs: 6 }} key={i}>
-              <Skeleton variant="rounded" height={32} sx={{ borderRadius: 1.5 }} />
-            </Grid>
+            <div key={i} className="h-8 rounded-lg bg-gray-300 animate-pulse" />
           ))}
-        </Grid>
+        </div>
       ) : toolsError ? (
-        <Paper
-          variant="outlined"
-          sx={{
-            p: 1.5,
-            textAlign: 'center',
-            borderRadius: 2,
-            bgcolor: 'error.50',
-            borderColor: 'error.200',
-          }}
-        >
-          <Typography variant="caption" color="error">
+        <div className="p-3 text-center rounded-lg bg-red-50 border border-red-200">
+          <Typography variant="small" color="red" className="font-normal">
             {toolsError}
           </Typography>
-        </Paper>
+        </div>
       ) : tools.length === 0 ? (
-        <Paper
-          variant="outlined"
-          sx={{
-            p: 1.5,
-            textAlign: 'center',
-            borderStyle: 'dashed',
-            borderRadius: 2,
-            bgcolor: 'grey.50',
-          }}
-        >
-          <Typography variant="caption" color="text.secondary">
+        <div className="p-3 text-center border border-dashed border-gray-400 rounded-lg bg-gray-100">
+          <Typography variant="small" className="font-normal text-gray-600">
             暂无可用工具
           </Typography>
-        </Paper>
+        </div>
       ) : (
-        <Grid container spacing={0.75}>
+        <div className="grid grid-cols-2 gap-2">
           {tools.map((tool, index) => {
-          const isDisabled = !tool.enabled || !tool.outputType;
-          const tone = tool.tone as StudioTone || 'slate';
-          const colors = TONE_COLORS[tone];
+            const isDisabled = !tool.enabled || !tool.outputType;
+            const tone = tool.tone as StudioTone || 'slate';
+            const colors = TONE_COLORS[tone];
 
-          return (
-            <Grid size={{ xs: 6 }} key={tool.id}>
-                <Button
-                  fullWidth
+            return (
+              <Tooltip
+                key={tool.id}
+                content={tool.description || tool.label}
+                placement="top"
+                className="max-w-[200px] text-xs bg-gray-900 text-white px-2 py-1 rounded"
+                animate={{
+                  mount: { opacity: 1, scale: 1 },
+                  unmount: { opacity: 0, scale: 0.95 },
+                }}
+              >
+                <button
+                  type="button"
                   disabled={isDisabled}
+                  className={`group flex items-center gap-2 px-2 py-1.5 min-h-[34px] w-full rounded-lg border text-left font-semibold text-[11px] transition-all hover:shadow-sm hover:-translate-y-[1px] ${
+                    isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  }`}
+                  style={{
+                    backgroundColor: colors.bg,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  }}
                   onClick={() => {
                     if (isDisabled) return;
                     onGenerateOutput(tool.outputType);
                   }}
-                  sx={{
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.75,
-                    px: 1,
-                    py: 0.625,
-                    minHeight: 32,
-                    borderRadius: 1.5,
-                    border: '1px solid',
-                    borderColor: colors.border,
-                    bgcolor: colors.bg,
-                    color: colors.text,
-                    textTransform: 'none',
-                    justifyContent: 'flex-start',
-                    fontWeight: 600,
-                    fontSize: '0.6875rem',
-                    transition: 'all 0.2s',
-                    animation: `fadeIn 0.35s ease ${index * 40}ms both`,
-                    '@keyframes fadeIn': {
-                      from: { opacity: 0, transform: 'translateY(6px)' },
-                      to: { opacity: 1, transform: 'translateY(0)' },
-                    },
-                    '&:hover': {
-                      boxShadow: '0 6px 16px rgba(0,0,0,0.06)',
-                      transform: 'translateY(-1px)',
-                    },
-                    '&.Mui-disabled': {
-                      bgcolor: colors.bg,
-                      borderColor: colors.border,
-                      color: alpha(colors.text, 0.5),
-                    },
-                  }}
                 >
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 20,
-                      height: 20,
-                      borderRadius: 1,
-                      bgcolor: colors.icon,
-                      border: '1px solid',
+                  <div
+                    className="flex items-center justify-center w-5 h-5 rounded border flex-shrink-0"
+                    style={{
+                      backgroundColor: colors.icon,
                       borderColor: colors.border,
-                      flexShrink: 0,
                     }}
                   >
                     {getToolIcon(tool.outputType)}
-                  </Box>
-                  <Stack alignItems="flex-start" spacing={0.125} sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: '0.6875rem',
-                        lineHeight: 1.2,
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {tool.label}
-                    </Typography>
-                    {tool.badge && (
-                      <Chip
-                        label={tool.badge}
-                        size="small"
-                        sx={{
-                          height: 12,
-                          fontSize: '0.5rem',
-                          fontWeight: 600,
-                          bgcolor: 'grey.900',
-                          color: 'white',
-                          '& .MuiChip-label': { px: 0.5 },
-                        }}
-                      />
-                    )}
-                  </Stack>
-                  {/* Config button - click to open config dialog */}
-                  <IconButton
-                    size="small"
-                    onClick={(e) => handleToolConfigOpen(e, tool.outputType)}
-                    sx={{
-                      position: 'absolute',
-                      top: 4,
-                      right: 4,
-                      width: 18,
-                      height: 18,
-                      borderRadius: '50%',
-                      bgcolor: alpha(colors.text, 0.08),
-                      '&:hover': {
-                        bgcolor: alpha(colors.text, 0.2),
-                      },
+                  </div>
+                  <span className="leading-tight truncate flex-1 min-w-0">{tool.label}</span>
+                  {tool.badge && (
+                    <span className="h-3 px-1 text-[8px] bg-gray-900 text-white rounded leading-none flex items-center flex-shrink-0">
+                      {tool.badge}
+                    </span>
+                  )}
+                  {/* Config button - inline, hidden by default */}
+                  <span
+                    role="button"
+                    tabIndex={-1}
+                    className="flex-shrink-0 h-4 w-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleToolConfigOpen(e as unknown as React.MouseEvent<HTMLElement>, tool.outputType);
                     }}
+                    aria-label="自定义工具参数"
                   >
                     <EditIcon sx={{ fontSize: 10 }} />
-                  </IconButton>
-                </Button>
-            </Grid>
-          );
-        })}
-        </Grid>
+                  </span>
+                </button>
+              </Tooltip>
+            );
+          })}
+        </div>
       )}
 
       {/* Notes Section */}
-      <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
         {/* Loading Skeleton */}
         {showSkeleton && (
-          <Stack spacing={1}>
-            <Skeleton variant="rounded" height={40} sx={{ borderRadius: 2 }} />
-            <Skeleton variant="rounded" height={40} width="70%" sx={{ borderRadius: 2 }} />
-          </Stack>
+          <div className="flex flex-col gap-2">
+            <div className="h-10 rounded-lg bg-gray-100 animate-pulse" />
+            <div className="h-10 w-2/3 rounded-lg bg-gray-100 animate-pulse" />
+          </div>
         )}
 
         {/* Empty State */}
         {showEmpty && (
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 2,
-              textAlign: 'center',
-              borderStyle: 'dashed',
-              borderRadius: 2.5,
-              bgcolor: 'grey.50',
-            }}
-          >
-            <Typography variant="caption" color="text.secondary">
+          <div className="p-4 text-center border border-dashed border-gray-300 rounded-xl bg-gray-100">
+            <Typography variant="small" className="text-gray-600 font-normal">
               暂无笔记
             </Typography>
-          </Paper>
+          </div>
         )}
 
         {/* Notes List */}
         {!showSkeleton && !showEmpty && (
-          <Stack spacing={0.75}>
+          <div className="flex flex-col gap-2">
             {/* Pending Notes */}
             {pendingNotes.map((note) => {
               const tone = resolveTone(note.type);
               const colors = TONE_COLORS[tone];
-              const typeLabel = resolveTypeLabel(note.type, typeLabelMap);
               const isError = note.status === 'error';
 
               return (
-                <Paper
+                <div
                   key={note.id}
-                  variant="outlined"
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.75,
-                    p: 0.75,
-                    borderRadius: 2,
-                    borderStyle: 'dashed',
-                    bgcolor: isError ? alpha('#fef2f2', 0.8) : alpha(colors.bg, 0.5),
-                    borderColor: isError ? 'error.200' : undefined,
-                  }}
+                  className={`flex items-center gap-2 p-2 rounded-lg border border-dashed ${
+                    isError ? 'bg-red-50/80 border-red-200' : ''
+                  }`}
+                  style={!isError ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border } : undefined}
                 >
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 22,
-                        height: 22,
-                        borderRadius: 1.5,
-                        bgcolor: isError ? 'error.50' : colors.bg,
-                        border: '1px dashed',
-                        borderColor: isError ? 'error.300' : colors.border,
-                        color: isError ? 'error.main' : colors.text,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {isError ? (
-                        <Typography sx={{ fontSize: 12, lineHeight: 1 }}>!</Typography>
-                      ) : (
-                        <CircularProgress size={12} sx={{ color: 'inherit' }} />
-                      )}
-                    </Box>
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    className={`flex items-center justify-center w-6 h-6 rounded-md border border-dashed flex-shrink-0 ${
+                      isError ? 'bg-red-50 border-red-300 text-red-500' : ''
+                    }`}
+                    style={!isError ? { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text } : undefined}
+                  >
+                    {isError ? (
+                      <span className="text-xs font-bold">!</span>
+                    ) : (
+                      <Spinner className="h-3 w-3" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
                     <Typography
-                      variant="caption"
-                      fontWeight={500}
-                      noWrap
-                      sx={{
-                        fontSize: '0.6875rem',
-                        lineHeight: 1.3,
-                        color: isError ? 'error.main' : 'text.primary',
-                      }}
+                      variant="small"
+                      className={`font-medium leading-snug truncate ${isError ? 'text-red-700' : 'text-gray-900'}`}
                     >
                       {note.title}
                     </Typography>
                     <Typography
-                      variant="caption"
-                      sx={{
-                        display: 'block',
-                        fontSize: '0.5625rem',
-                        lineHeight: 1.2,
-                        color: isError ? 'error.light' : 'text.secondary',
-                      }}
+                      variant="small"
+                      className={`text-[10px] leading-tight ${isError ? 'text-red-500' : 'text-gray-600'}`}
                     >
                       {note.meta}
                     </Typography>
-                  </Box>
-                </Paper>
+                  </div>
+                </div>
               );
             })}
 
@@ -672,277 +544,226 @@ function StudioPanel({
             {notes.map((note) => {
               const tone = resolveTone(note.type);
               const colors = TONE_COLORS[tone];
-              const typeLabel = resolveTypeLabel(note.type, typeLabelMap);
 
               return (
-                <Paper
+                <div
                   key={note.id}
-                  variant="outlined"
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      borderColor: 'grey.300',
-                      bgcolor: 'grey.50',
-                      '& .note-menu': { opacity: 1 },
-                    },
-                  }}
+                  className="group relative flex items-center rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:bg-gray-50 hover:border-gray-300"
                 >
-                  <Button
-                    fullWidth
+                  <button
+                    className="flex flex-1 items-center gap-2 p-2 text-left w-full"
                     onClick={() => {
                       if (!note.outputId) return;
                       onSelectOutput(note.outputId);
                     }}
                     disabled={!note.outputId}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 0.75,
-                      p: 0.75,
-                      textTransform: 'none',
-                      justifyContent: 'flex-start',
-                      color: 'text.primary',
-                      minHeight: 32,
-                      '&:hover': { bgcolor: 'transparent' },
-                    }}
                   >
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 22,
-                          height: 22,
-                          borderRadius: 1.5,
-                          bgcolor: colors.bg,
-                          border: '1px solid',
-                          borderColor: colors.border,
-                          color: colors.text,
-                          flexShrink: 0,
-                        }}
+                    <div
+                      className="flex items-center justify-center w-6 h-6 rounded-md border flex-shrink-0"
+                      style={{
+                        backgroundColor: colors.bg,
+                        borderColor: colors.border,
+                        color: colors.text,
+                      }}
+                    >
+                      {getToolIcon(note.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Typography
+                        variant="small"
+                        className="font-medium text-gray-900 leading-snug truncate text-[11px]"
                       >
-                        {getToolIcon(note.type)}
-                      </Box>
-                    <Box sx={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                      <Typography variant="caption" fontWeight={500} noWrap sx={{ fontSize: '0.6875rem', lineHeight: 1.3 }}>
                         {note.title}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.5625rem', lineHeight: 1.2 }}>
+                      <Typography
+                        variant="small"
+                        className="text-[9px] text-gray-600 leading-tight truncate"
+                      >
                         {note.meta}
                       </Typography>
-                    </Box>
-                  </Button>
-                  <IconButton
-                    size="small"
-                    className="note-menu"
-                    onClick={(e) => handleNoteMenuOpen(e, note.id)}
-                    sx={{
-                      mr: 0.5,
-                      width: 22,
-                      height: 22,
-                      opacity: 0,
-                      transition: 'opacity 0.2s',
-                    }}
-                  >
-                    <MoreHorizIcon fontSize="small" />
-                  </IconButton>
-                </Paper>
+                    </div>
+                  </button>
+
+                  <Menu placement="bottom-end">
+                    <MenuHandler>
+                      <IconButton
+                        variant="text"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 w-6 h-6 min-w-[24px] rounded-full mr-1 hover:bg-gray-200 text-gray-500"
+                      >
+                        <MoreHorizIcon fontSize="small" />
+                      </IconButton>
+                    </MenuHandler>
+                    <MenuList className="p-1 min-w-[140px]">
+                      <MenuItem
+                        onClick={() => handleConvertToSource(note.id)}
+                        className="flex items-center gap-2 py-2 px-3 text-xs"
+                      >
+                        <ConvertIcon className="h-3.5 w-3.5" />
+                        <span>转换为来源</span>
+                      </MenuItem>
+                      <MenuItem
+                        onClick={() => handleCopyNote()}
+                        className="flex items-center gap-2 py-2 px-3 text-xs"
+                      >
+                        <CopyIcon className="h-3.5 w-3.5" />
+                        <span>复制内容</span>
+                      </MenuItem>
+                      <MenuItem
+                        onClick={() => handleDeleteNote(note.id)}
+                        className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                      >
+                        <DeleteIcon className="h-3.5 w-3.5" />
+                        <span>删除</span>
+                      </MenuItem>
+                    </MenuList>
+                  </Menu>
+                </div>
               );
             })}
-          </Stack>
+          </div>
         )}
 
         {/* Error State */}
         {outputsError && (
-          <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mt: 1.5 }}>
-            <Typography variant="caption" color="error" sx={{ fontSize: '0.6875rem' }}>
+          <div className="flex items-center gap-2 mt-2">
+            <Typography variant="small" color="red" className="text-[11px]">
               {outputsError}
             </Typography>
-            <Button size="small" onClick={onRetryOutputs} sx={{ minWidth: 'auto', fontSize: '0.6875rem' }}>
+            <Button
+              variant="text"
+              size="sm"
+              onClick={onRetryOutputs}
+              className="px-2 py-1 h-6 min-h-0 text-[11px] text-gray-800"
+            >
               重试
             </Button>
-          </Stack>
+          </div>
         )}
-      </Box>
+      </div>
 
       {/* Actions */}
       <Button
-        variant="contained"
+        variant="filled"
         fullWidth
-        size="small"
-        startIcon={<AddIcon fontSize="small" />}
+        size="sm"
+        className="flex items-center justify-center gap-2 rounded-full py-2 bg-slate-900 text-xs normal-case"
         onClick={handleOpenNoteEditor}
-        sx={{ borderRadius: 5, py: 0.75, fontSize: '0.6875rem' }}
       >
+        <AddIcon style={{ fontSize: 16 }} />
         添加笔记
       </Button>
 
-      {/* Note Context Menu */}
-      <Menu
-        anchorEl={noteMenuAnchor}
-        open={Boolean(noteMenuAnchor)}
-        onClose={handleNoteMenuClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        slotProps={{
-          paper: {
-            sx: { minWidth: 140, borderRadius: 2 },
-          },
-        }}
-      >
-        <MenuItem onClick={handleConvertToSource} sx={{ fontSize: '0.75rem' }}>
-          <ListItemIcon>
-            <ConvertIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>转换为来源</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleCopyNote} sx={{ fontSize: '0.75rem' }}>
-          <ListItemIcon>
-            <CopyIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>复制内容</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleDeleteNote} sx={{ fontSize: '0.75rem', color: 'error.main' }}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText>删除</ListItemText>
-        </MenuItem>
-      </Menu>
-
-      {/* Tool Config Dialog - Like image 3 */}
+      {/* Tool Config Dialog */}
       <Dialog
         open={toolConfigOpen}
-        onClose={handleToolConfigClose}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: { borderRadius: 3 },
-        }}
+        handler={handleToolConfigClose}
+        size="xs"
+        className="rounded-xl overflow-hidden"
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 32,
-                height: 32,
-                borderRadius: 1.5,
-                bgcolor: 'primary.50',
-                color: 'primary.main',
-              }}
-            >
+        <DialogHeader className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-500">
               {activeToolType && getToolIcon(activeToolType)}
-            </Box>
-            <Typography variant="subtitle1" fontWeight={600}>
+            </div>
+            <Typography variant="h6" color="blue-gray" className="text-sm font-semibold">
               自定义{activeToolType && resolveTypeLabel(activeToolType, typeLabelMap)}
             </Typography>
-          </Stack>
-          <IconButton size="small" onClick={handleToolConfigClose}>
-            <CloseIcon fontSize="small" />
+          </div>
+          <IconButton variant="text" size="sm" onClick={handleToolConfigClose} className="rounded-full">
+            <CloseIcon className="h-4 w-4" />
           </IconButton>
-        </DialogTitle>
+        </DialogHeader>
 
-        <DialogContent sx={{ pt: 2 }}>
+        <DialogBody className="p-4 flex flex-col gap-4 overflow-y-auto max-h-[60vh]">
           {toolConfigLoading ? (
-            <Stack spacing={2}>
-              <Skeleton variant="rectangular" height={60} sx={{ borderRadius: 2 }} />
-              <Skeleton variant="rectangular" height={60} sx={{ borderRadius: 2 }} />
-              <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 2 }} />
-            </Stack>
+            <div className="flex flex-col gap-3">
+              <div className="h-12 bg-gray-100 rounded-lg animate-pulse" />
+              <div className="h-12 bg-gray-100 rounded-lg animate-pulse" />
+              <div className="h-20 bg-gray-100 rounded-lg animate-pulse" />
+            </div>
           ) : (
             <>
               {/* Quantity Selection */}
               {(toolConfig?.quantity_options || !toolConfig) && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                <div>
+                  <Typography variant="small" className="mb-2 font-medium text-gray-700">
                     数量
                   </Typography>
-                  <ToggleButtonGroup
-                    value={configQuantity}
-                    exclusive
-                    onChange={(_, value) => value && setConfigQuantity(value)}
-                    size="small"
-                    sx={{ gap: 1, flexWrap: 'wrap', '& .MuiToggleButton-root': { borderRadius: 5, px: 2, py: 0.5, border: '1px solid', borderColor: 'divider' } }}
-                  >
+                  <div className="flex flex-wrap gap-2">
                     {(toolConfig?.quantity_options || [
                       { id: 'less', label: '更少', is_default: false },
                       { id: 'standard', label: '标准（默认）', is_default: true },
                       { id: 'more', label: '更多', is_default: false },
                     ]).map((option) => (
-                      <ToggleButton key={option.id} value={option.id}>
-                        <Stack direction="row" alignItems="center" spacing={0.5}>
-                          {configQuantity === option.id && option.is_default && <span>✓</span>}
-                          <span>{option.label}</span>
-                        </Stack>
-                      </ToggleButton>
+                      <Button
+                        key={option.id}
+                        variant={configQuantity === option.id ? 'filled' : 'outlined'}
+                        size="sm"
+                        onClick={() => setConfigQuantity(option.id)}
+                        className={`rounded-full px-3 py-1.5 normal-case font-normal border-gray-200 ${
+                          configQuantity === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
+                        }`}
+                      >
+                         {configQuantity === option.id && option.is_default && <span className="mr-1">✓</span>}
+                         {option.label}
+                      </Button>
                     ))}
-                  </ToggleButtonGroup>
-                </Box>
+                  </div>
+                </div>
               )}
 
-              {/* Difficulty Selection - only show if tool has difficulty options */}
+              {/* Difficulty Selection */}
               {(toolConfig?.difficulty_options || (!toolConfig && activeToolType !== 'FAQ' && activeToolType !== 'TIMELINE' && activeToolType !== 'MINDMAP' && activeToolType !== 'BRIEFING')) && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                <div>
+                  <Typography variant="small" className="mb-2 font-medium text-gray-700">
                     难度等级
                   </Typography>
-                  <ToggleButtonGroup
-                    value={configDifficulty}
-                    exclusive
-                    onChange={(_, value) => value && setConfigDifficulty(value)}
-                    size="small"
-                    sx={{ gap: 1, flexWrap: 'wrap', '& .MuiToggleButton-root': { borderRadius: 5, px: 2, py: 0.5, border: '1px solid', borderColor: 'divider' } }}
-                  >
+                  <div className="flex flex-wrap gap-2">
                     {(toolConfig?.difficulty_options || [
                       { id: 'easy', label: '简单', is_default: false },
                       { id: 'medium', label: '中等（默认）', is_default: true },
                       { id: 'hard', label: '困难', is_default: false },
                     ]).map((option) => (
-                      <ToggleButton key={option.id} value={option.id}>
-                        <Stack direction="row" alignItems="center" spacing={0.5}>
-                          {configDifficulty === option.id && option.is_default && <span>✓</span>}
-                          <span>{option.label}</span>
-                        </Stack>
-                      </ToggleButton>
+                      <Button
+                        key={option.id}
+                        variant={configDifficulty === option.id ? 'filled' : 'outlined'}
+                        size="sm"
+                        onClick={() => setConfigDifficulty(option.id)}
+                        className={`rounded-full px-3 py-1.5 normal-case font-normal border-gray-200 ${
+                          configDifficulty === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
+                        }`}
+                      >
+                         {configDifficulty === option.id && option.is_default && <span className="mr-1">✓</span>}
+                         {option.label}
+                      </Button>
                     ))}
-                  </ToggleButtonGroup>
-                </Box>
+                  </div>
+                </div>
               )}
 
               {/* Topic Input */}
               {(toolConfig?.supports_topic !== false) && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                <div>
+                  <Typography variant="small" className="mb-2 font-medium text-gray-700">
                     主题应该是什么？
                   </Typography>
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={4}
+                  <Textarea
                     placeholder={toolConfig?.topic_placeholder || "示例提示\n• 限定特定来源或主题\n• 说明重点关注的方向\n• 提供具体的约束条件"}
                     value={configTopic}
                     onChange={(e) => setConfigTopic(e.target.value)}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
-                        fontSize: '0.875rem',
-                      },
+                    className="!border-t-blue-gray-200 focus:!border-t-gray-900 min-h-[100px]"
+                    labelProps={{
+                      className: "before:content-none after:content-none",
                     }}
                   />
-                </Box>
+                </div>
               )}
 
               {/* Model Selection */}
               {!isDemo && (
-                <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                <div>
+                  <Typography variant="small" className="mb-2 font-medium text-gray-700">
                     AI 模型
                   </Typography>
                   <ModelSelector
@@ -950,98 +771,84 @@ function StudioPanel({
                     onChange={setConfigModelId}
                     capability="chat"
                     label="选择生成模型"
-                    size="small"
+                    size="md"
                   />
-                </Box>
+                </div>
               )}
             </>
           )}
-        </DialogContent>
+        </DialogBody>
 
-        <DialogActions sx={{ px: 3, pb: 3 }}>
+        <DialogFooter className="p-4 pt-2">
           <Button
-            variant="contained"
+            variant="filled"
+            fullWidth
             onClick={handleGenerateWithConfig}
-            sx={{ borderRadius: 5, px: 4 }}
+            className="rounded-full bg-slate-900 normal-case"
           >
             生成
           </Button>
-        </DialogActions>
+        </DialogFooter>
       </Dialog>
 
       {/* Note Editor Dialog */}
       <Dialog
         open={noteEditorOpen}
-        onClose={handleCloseNoteEditor}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: { borderRadius: 3 },
-        }}
+        handler={handleCloseNoteEditor}
+        size="sm"
+        className="rounded-xl"
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 32,
-                height: 32,
-                borderRadius: 1.5,
-                bgcolor: 'primary.50',
-                color: 'primary.main',
-              }}
-            >
+        <DialogHeader className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-700">
               <EditIcon fontSize="small" />
-            </Box>
-            <Typography variant="subtitle1" fontWeight={600}>
+            </div>
+            <Typography variant="h6" className="text-sm font-semibold text-slate-900">
               新建笔记
             </Typography>
-          </Stack>
-          <IconButton size="small" onClick={handleCloseNoteEditor}>
-            <CloseIcon fontSize="small" />
+          </div>
+          <IconButton variant="text" size="sm" onClick={handleCloseNoteEditor} className="rounded-full">
+            <CloseIcon className="h-4 w-4" />
           </IconButton>
-        </DialogTitle>
+        </DialogHeader>
 
-        <DialogContent sx={{ pt: 2 }}>
-          <TextField
+        <DialogBody className="p-4">
+          <Textarea
             autoFocus
-            multiline
             rows={8}
-            fullWidth
             placeholder="在此输入笔记内容..."
             value={noteEditorContent}
             onChange={(e) => setNoteEditorContent(e.target.value)}
-            variant="outlined"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 2,
-                fontSize: '0.875rem',
-              },
+            className="!border-t-blue-gray-200 focus:!border-t-gray-900"
+            labelProps={{
+              className: "before:content-none after:content-none",
             }}
           />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+          <Typography variant="small" className="mt-2 text-xs text-gray-500">
             支持 Markdown 格式
           </Typography>
-        </DialogContent>
+        </DialogBody>
 
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={handleCloseNoteEditor} sx={{ borderRadius: 5 }}>
+        <DialogFooter className="flex justify-end gap-2 p-4">
+          <Button
+            variant="text"
+            onClick={handleCloseNoteEditor}
+            className="rounded-full text-gray-600 normal-case"
+          >
             取消
           </Button>
           <Button
-            variant="contained"
+            variant="filled"
             onClick={handleSaveNote}
             disabled={!noteEditorContent.trim()}
-            startIcon={<SaveIcon fontSize="small" />}
-            sx={{ borderRadius: 5, px: 3 }}
+            className="flex items-center gap-2 rounded-full bg-slate-900 normal-case"
           >
+            <SaveIcon className="h-4 w-4" />
             保存笔记
           </Button>
-        </DialogActions>
+        </DialogFooter>
       </Dialog>
-    </Box>
+    </div>
   );
 }
 

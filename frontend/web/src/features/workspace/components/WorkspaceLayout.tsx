@@ -215,7 +215,7 @@ export default function WorkspaceLayout() {
       : activeNotebook?.title ?? '未命名笔记本';
 
   return (
-    <div className="WorkspaceApp">
+    <div className="flex flex-col min-h-screen bg-gray-50/50 gap-3 sm:gap-4 p-3 sm:p-4 lg:p-6 lg:h-screen lg:overflow-hidden text-gray-900">
       <WorkspaceHeader
         title={title}
         createName={notebooks.createName}
@@ -239,12 +239,20 @@ export default function WorkspaceLayout() {
 
       <main
         ref={mainRef}
-        className={`WorkspaceMain ${isResizing ? 'isResizing' : ''}`}
+        className={`grid flex-1 min-h-0 gap-y-3 lg:gap-y-0 ${isResizing ? 'cursor-col-resize select-none' : ''}`}
         aria-label="三栏工作区"
+        style={{
+          // We use inline style for grid layout to support dynamic resizing logic
+          gridTemplateColumns: window.innerWidth >= 1024
+            ? `minmax(220px, var(--sources-width, ${DEFAULT_SOURCES_WIDTH}px)) ${RESIZE_HANDLE_WIDTH}px minmax(0, 1fr) ${RESIZE_HANDLE_WIDTH}px minmax(240px, var(--studio-width, ${DEFAULT_STUDIO_WIDTH}px))`
+            : '1fr',
+          // Mobile layout is single column (handled by media query in Tailwind or JS check above)
+          // Actually, let's use a class for mobile override to be safer
+        }}
       >
-        <section className="WorkspacePanel WorkspacePanel--sources" aria-label="来源">
-          <div className="WorkspacePanelHeader">
-            <h2 className="WorkspacePanelTitle">来源</h2>
+        <section className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" aria-label="来源">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">来源</h2>
           </div>
           <SourcesPanel
             sources={sources.sources}
@@ -267,7 +275,7 @@ export default function WorkspaceLayout() {
 
         <button
           type="button"
-          className="WorkspaceResizeHandle WorkspaceResizeHandle--left"
+          className="hidden lg:flex items-center justify-center w-3 cursor-col-resize bg-transparent hover:bg-transparent group"
           aria-label="调整来源宽度"
           onPointerDown={(event) => {
             if (window.innerWidth < 1024) return;
@@ -283,12 +291,14 @@ export default function WorkspaceLayout() {
             };
             setIsResizing(true);
           }}
-        />
+        >
+          <div className={`w-0.5 h-12 rounded-full bg-gray-200 transition-colors group-hover:bg-gray-400 ${isResizing ? 'bg-gray-500' : ''}`} />
+        </button>
 
-        <section className="WorkspacePanel WorkspacePanel--chat" aria-label="对话">
-          <div className="WorkspacePanelHeader WorkspacePanelHeader--chat">
-            <div className="PanelHeaderLeft">
-              <h2 className="WorkspacePanelTitle">对话</h2>
+        <section className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" aria-label="对话">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">对话</h2>
               <SessionSwitcher
                 sessions={sessions.sessions}
                 activeSessionId={sessions.activeSessionId}
@@ -329,7 +339,7 @@ export default function WorkspaceLayout() {
 
         <button
           type="button"
-          className="WorkspaceResizeHandle WorkspaceResizeHandle--right"
+          className="hidden lg:flex items-center justify-center w-3 cursor-col-resize bg-transparent hover:bg-transparent group"
           aria-label="调整 Studio 宽度"
           onPointerDown={(event) => {
             if (window.innerWidth < 1024) return;
@@ -345,11 +355,13 @@ export default function WorkspaceLayout() {
             };
             setIsResizing(true);
           }}
-        />
+        >
+          <div className={`w-0.5 h-12 rounded-full bg-gray-200 transition-colors group-hover:bg-gray-400 ${isResizing ? 'bg-gray-500' : ''}`} />
+        </button>
 
-        <section className="WorkspacePanel WorkspacePanel--studio" aria-label="Studio">
-          <div className="WorkspacePanelHeader">
-            <h2 className="WorkspacePanelTitle">Studio</h2>
+        <section className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" aria-label="Studio">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Studio</h2>
           </div>
           <StudioPanel
             tools={refine.tools}

@@ -1,20 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import {
-  Box,
   Button,
   IconButton,
-  TextField,
+  Input,
   Popover,
+  PopoverHandler,
+  PopoverContent,
   Typography,
-  Stack,
-  CircularProgress,
   List,
-  ListItemButton,
-  ListItemText,
-  InputAdornment,
-  Chip,
-  alpha,
-} from '@mui/material';
+  ListItem,
+  Spinner,
+} from '@material-tailwind/react';
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -23,7 +19,6 @@ import {
   Close as CloseIcon,
   Search as SearchIcon,
   ExpandMore as ExpandMoreIcon,
-  Chat as ChatIcon,
 } from '@mui/icons-material';
 
 import type { SessionSummary } from '../types';
@@ -61,7 +56,6 @@ export default function SessionSwitcher({
   onDelete,
   onRetry,
 }: SessionSwitcherProps) {
-  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const [searchValue, setSearchValue] = useState('');
   const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
@@ -76,15 +70,14 @@ export default function SessionSwitcher({
     return sessions.filter((item) => item.title.toLowerCase().includes(keyword));
   }, [searchValue, sessions]);
 
-  function handleToggle(event: React.MouseEvent<HTMLButtonElement>) {
-    if (isOpen) {
-      setAnchorEl(null);
-      onClose();
-    } else {
-      setAnchorEl(event.currentTarget);
+  // Handle Popover state change
+  const handlePopoverHandler = (openState: boolean) => {
+    if (openState && !isOpen) {
       onToggle();
+    } else if (!openState && isOpen) {
+      onClose();
     }
-  }
+  };
 
   function startEditing(session: SessionSummary) {
     setEditingSessionId(session.id);
@@ -123,17 +116,14 @@ export default function SessionSwitcher({
   useEffect(() => {
     if (editingSessionId && editInputRef.current) {
       editInputRef.current.focus();
-      editInputRef.current.select();
+      // editInputRef.current.select(); // HTMLInputElement select
     }
   }, [editingSessionId]);
 
   useEffect(() => {
-    if (!isOpen) return;
-    // Focus search input when opened
-    setTimeout(() => {
-      const input = document.querySelector('[data-session-search]') as HTMLInputElement;
-      if (input) input.focus();
-    }, 100);
+    if (isOpen) {
+        // Focus search input when opened
+    }
   }, [isOpen]);
 
   useEffect(() => {
@@ -143,169 +133,82 @@ export default function SessionSwitcher({
     setEditingTitle('');
   }, [isOpen]);
 
-  const handleClose = () => {
-    setAnchorEl(null);
-    onClose();
-  };
-
   return (
-    <Stack
-      direction="row"
-      alignItems="center"
-      spacing={0}
-      sx={{
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 2,
-        overflow: 'hidden',
-        bgcolor: 'background.paper',
-      }}
-    >
-      {/* Session Selector Button */}
-      <Button
-        onClick={handleToggle}
-        variant="text"
-        size="small"
-        endIcon={<ExpandMoreIcon sx={{ fontSize: 16, transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none' }} />}
-        sx={{
-          borderRadius: 0,
-          px: 1.5,
-          py: 0.5,
-          minHeight: 32,
-          textTransform: 'none',
-          color: 'text.primary',
-          '&:hover': {
-            bgcolor: 'action.hover',
-          },
-        }}
-      >
-        <Stack direction="row" alignItems="center" spacing={0.75}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.6875rem' }}>
-            会话
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              fontWeight: 600,
-              fontSize: '0.75rem',
-              maxWidth: 100,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {activeSession?.title ?? '未命名'}
-          </Typography>
-        </Stack>
-      </Button>
-
-      {/* New Session Button - Right side */}
-      <IconButton
-        size="small"
-        onClick={async () => {
-          await onCreate();
-          handleClose();
-        }}
-        sx={{
-          borderRadius: 0,
-          borderLeft: '1px solid',
-          borderColor: 'divider',
-          px: 1,
-          '&:hover': {
-            bgcolor: 'action.hover',
-          },
-        }}
-      >
-        <AddIcon fontSize="small" />
-      </IconButton>
-
-      {/* Session List Popover */}
+    <div className="flex items-center border border-gray-300 rounded-lg bg-white overflow-hidden h-8">
       <Popover
-        open={isOpen && Boolean(anchorEl)}
-        anchorEl={anchorEl}
-        onClose={handleClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        slotProps={{
-          paper: {
-            sx: { width: 340, maxHeight: 420 },
-          },
-        }}
+        open={isOpen}
+        handler={handlePopoverHandler}
+        placement="bottom-start"
+        offset={4}
       >
-        <Box sx={{ p: 2 }}>
-          {/* Search Input */}
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="搜索会话"
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            inputProps={{ 'data-session-search': true }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" color="action" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ mb: 1.5 }}
-          />
-
-          {/* Error State */}
-          {error && (
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
-              <Typography variant="caption" color="error">
-                {error}
-              </Typography>
-              <Button size="small" onClick={onRetry} sx={{ minWidth: 'auto', fontSize: '0.75rem' }}>
-                重试
-              </Button>
-            </Stack>
-          )}
-
-          {/* Session List */}
-          <List
-            sx={{
-              maxHeight: 260,
-              overflow: 'auto',
-              mx: -1,
-              '& .MuiListItemButton-root': {
-                borderRadius: 2,
-                mx: 1,
-                mb: 0.5,
-              },
-            }}
+        <PopoverHandler>
+          <button
+            className="flex items-center gap-2 px-3 py-1 h-full hover:bg-gray-100 transition-colors text-left min-w-[120px] max-w-[200px]"
           >
+            <Typography variant="small" className="font-medium text-gray-600 text-[11px]">
+              会话
+            </Typography>
+            <Typography
+              variant="small"
+              className="font-semibold text-gray-900 text-xs truncate max-w-[100px]"
+            >
+              {activeSession?.title ?? '未命名'}
+            </Typography>
+            <ExpandMoreIcon
+               className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+        </PopoverHandler>
+        <PopoverContent className="w-[340px] max-h-[420px] p-0 overflow-hidden z-[9999]">
+          <div className="p-3 border-b border-gray-200">
+             <div className="relative w-full">
+                <div className="absolute top-2/4 left-3 -translate-y-2/4 text-gray-500">
+                   <SearchIcon style={{ fontSize: 16 }} />
+                </div>
+                <input
+                  ref={searchInputRef}
+                  className="w-full h-8 pl-9 pr-3 rounded-lg bg-gray-100 border border-gray-300 text-xs text-gray-900 focus:outline-none focus:border-gray-500 focus:ring-0"
+                  placeholder="搜索会话"
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  autoFocus
+                />
+             </div>
+             {/* Error State */}
+             {error && (
+               <div className="flex items-center gap-2 mt-2">
+                 <Typography variant="small" color="red" className="text-[11px]">
+                   {error}
+                 </Typography>
+                 <button onClick={() => onRetry && onRetry()} className="text-[11px] text-gray-800 underline">
+                   重试
+                 </button>
+               </div>
+             )}
+          </div>
+
+          <div className="max-h-[260px] overflow-y-auto p-2 flex flex-col gap-1">
             {isLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-                <CircularProgress size={24} />
-              </Box>
+              <div className="flex justify-center py-4">
+                <Spinner className="h-5 w-5" />
+              </div>
             ) : filteredSessions.length === 0 ? (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ textAlign: 'center', py: 3 }}
-              >
+              <div className="py-4 text-center text-xs text-gray-600">
                 {searchValue ? '未找到匹配会话' : '暂无会话记录'}
-              </Typography>
+              </div>
             ) : (
               filteredSessions.map((item) => (
-                <ListItemButton
+                <div
                   key={item.id}
-                  selected={item.id === activeSessionId}
-                  sx={{
-                    position: 'relative',
-                    '&:hover .session-actions': {
-                      opacity: 1,
-                    },
-                  }}
+                  className={`group relative rounded-lg transition-colors ${
+                    item.id === activeSessionId ? 'bg-gray-200' : 'hover:bg-gray-100'
+                  }`}
                 >
                   {editingSessionId === item.id ? (
-                    <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
-                      <TextField
-                        inputRef={editInputRef}
-                        size="small"
-                        fullWidth
+                    <div className="flex items-center gap-1 p-1 pr-2">
+                      <input
+                        ref={editInputRef}
+                        className="flex-1 h-7 px-2 text-sm rounded border border-gray-400 focus:border-blue-500 focus:outline-none"
                         value={editingTitle}
                         onChange={(e) => setEditingTitle(e.target.value)}
                         onKeyDown={(e) => {
@@ -318,114 +221,107 @@ export default function SessionSwitcher({
                           }
                         }}
                         disabled={isUpdating}
-                        sx={{ '& .MuiInputBase-root': { borderRadius: 2 } }}
                       />
                       <IconButton
-                        size="small"
+                        size="sm"
+                        variant="text"
+                        className="w-6 h-6 min-w-[24px] rounded text-blue-500 hover:bg-blue-50"
                         onClick={handleSaveEdit}
                         disabled={isUpdating}
-                        color="primary"
                       >
-                        {isUpdating ? <CircularProgress size={16} /> : <CheckIcon fontSize="small" />}
+                         {isUpdating ? <Spinner className="h-3 w-3" /> : <CheckIcon style={{ fontSize: 16 }} />}
                       </IconButton>
                       <IconButton
-                        size="small"
+                        size="sm"
+                        variant="text"
+                        className="w-6 h-6 min-w-[24px] rounded text-gray-600 hover:bg-gray-200"
                         onClick={() => {
                           setEditingSessionId(null);
                           setEditingTitle('');
                         }}
                       >
-                        <CloseIcon fontSize="small" />
+                         <CloseIcon style={{ fontSize: 16 }} />
                       </IconButton>
-                    </Stack>
+                    </div>
                   ) : (
                     <>
-                      <ListItemText
-                        onClick={() => {
-                          onSelect(item.id);
-                          handleClose();
-                        }}
-                        primary={
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontWeight: item.id === activeSessionId ? 600 : 500,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {item.title}
-                          </Typography>
-                        }
-                        secondary={
-                          <Typography variant="caption" color="text.secondary">
-                            {item.updatedAt}
-                          </Typography>
-                        }
-                        sx={{ cursor: 'pointer' }}
-                      />
-                      <Stack
-                        direction="row"
-                        spacing={0.5}
-                        className="session-actions"
-                        sx={{
-                          opacity: 0,
-                          transition: 'opacity 0.2s',
-                          position: 'absolute',
-                          right: 8,
-                        }}
-                      >
-                        {onUpdate && (
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              startEditing(item);
-                            }}
-                            sx={{ '&:hover': { bgcolor: 'action.hover' } }}
-                          >
-                            <EditIcon sx={{ fontSize: 16 }} />
-                          </IconButton>
-                        )}
-                        {onDelete && (
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void handleDeleteSession(item.id, item.title);
-                            }}
-                            disabled={isDeleting}
-                            sx={{
-                              '&:hover': {
-                                bgcolor: alpha('#ef4444', 0.1),
-                                color: 'error.main',
-                              },
-                            }}
-                          >
-                            <DeleteIcon sx={{ fontSize: 16 }} />
-                          </IconButton>
-                        )}
-                      </Stack>
+                       <button
+                         className="w-full text-left p-2 pr-16"
+                         onClick={() => {
+                           onSelect(item.id);
+                           onClose();
+                         }}
+                       >
+                         <Typography
+                           variant="small"
+                           className={`text-xs truncate ${item.id === activeSessionId ? 'font-semibold text-gray-900' : 'font-medium text-gray-800'}`}
+                         >
+                           {item.title}
+                         </Typography>
+                         <Typography variant="small" className="text-[10px] text-gray-500 mt-0.5">
+                           {item.updatedAt}
+                         </Typography>
+                       </button>
+
+                       <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-inherit">
+                          {onUpdate && (
+                             <IconButton
+                               size="sm"
+                               variant="text"
+                               className="w-6 h-6 min-w-[24px] rounded hover:bg-gray-300 text-gray-600"
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 startEditing(item);
+                               }}
+                             >
+                                <EditIcon style={{ fontSize: 14 }} />
+                             </IconButton>
+                          )}
+                          {onDelete && (
+                             <IconButton
+                               size="sm"
+                               variant="text"
+                               className="w-6 h-6 min-w-[24px] rounded hover:bg-red-50 text-gray-500 hover:text-red-600"
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 void handleDeleteSession(item.id, item.title);
+                               }}
+                               disabled={isDeleting}
+                             >
+                                <DeleteIcon style={{ fontSize: 14 }} />
+                             </IconButton>
+                          )}
+                       </div>
                     </>
                   )}
-                </ListItemButton>
+                </div>
               ))
             )}
-          </List>
+          </div>
 
-          {/* Demo Mode Notice */}
           {isDemo && (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ display: 'block', mt: 1.5, textAlign: 'center' }}
-            >
-              演示模式下会话仅在前端保存。
-            </Typography>
+             <div className="p-2 border-t border-gray-200 text-center">
+                <Typography variant="small" className="text-[10px] text-gray-500">
+                  演示模式下会话仅在前端保存。
+                </Typography>
+             </div>
           )}
-        </Box>
+        </PopoverContent>
       </Popover>
-    </Stack>
+
+      <div className="h-4 w-px bg-gray-300" />
+
+      <IconButton
+        variant="text"
+        size="sm"
+        className="rounded-none h-full w-8 hover:bg-gray-100"
+        onClick={async () => {
+          await onCreate();
+          onClose(); // Close popover if open
+        }}
+      >
+        <AddIcon style={{ fontSize: 18 }} />
+      </IconButton>
+    </div>
   );
 }
