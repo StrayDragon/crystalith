@@ -4,6 +4,7 @@ import asyncio
 import inspect
 import json
 import logging
+import struct
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -17,6 +18,11 @@ from crystalith.db import create_db_manager
 from .types import VectorEntry, VectorSearchResult
 
 logger = logging.getLogger(__name__)
+
+
+def _serialize_vector(vector: Sequence[float]) -> bytes:
+    """Serialize a vector of floats into raw bytes for sqlite-vss."""
+    return struct.pack(f"{len(vector)}f", *vector)
 
 
 _CONFIG_TABLE = "vector_config"
@@ -112,7 +118,7 @@ class SQLiteVectorStore:
                         ),
                         {
                             "rowid": entry_id,
-                            "embedding": self._sqlite_vss.serialize(vector),
+                            "embedding": _serialize_vector(vector),
                         },
                     )
 
@@ -150,7 +156,7 @@ class SQLiteVectorStore:
             results.sort(key=lambda item: item.score, reverse=True)
             return results[:top_k]
 
-        query_blob = self._sqlite_vss.serialize(query)
+        query_blob = _serialize_vector(query)
 
         # Build source filter condition
         if source_id_set is not None:
@@ -276,9 +282,9 @@ class SQLiteVectorStore:
                 "sqlite-vss unavailable; falling back to brute-force vector search."
             )
             return None
-        if not hasattr(sqlite_vss, "serialize") or not hasattr(sqlite_vss, "load"):
+        if not hasattr(sqlite_vss, "load"):
             logger.warning(
-                "sqlite-vss missing required bindings; falling back to brute-force vector search."
+                "sqlite-vss missing required load function; falling back to brute-force vector search."
             )
             return None
 

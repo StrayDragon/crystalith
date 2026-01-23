@@ -1,8 +1,22 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import type { RefObject } from 'react';
-import { Button, IconButton, Textarea } from '@material-tailwind/react';
+import {
+  Button,
+  IconButton,
+  Menu,
+  MenuHandler,
+  MenuList,
+  MenuItem,
+  Spinner,
+} from '@material-tailwind/react';
+import {
+  DriveFileMove as ConvertIcon,
+  Notes as NotesIcon,
+  Source as SourceIcon,
+  ExpandMore as ExpandMoreIcon,
+} from '@mui/icons-material';
 
-import type { ChatMessage, Citation } from '../types';
+import type { ChatMessage, Citation, OutputTypeId } from '../types';
 import CitationMark from './citations/CitationMark';
 import { IconCopy, IconSave, IconSend } from './Icons';
 
@@ -21,6 +35,10 @@ interface ChatPanelProps {
   messagesError: string;
   onRetryMessages: () => void;
   onSaveToNote?: (content: string) => void;
+  // Conversion callbacks
+  onConvertToSource?: () => Promise<void>;
+  onConvertToOutput?: (outputType: OutputTypeId) => Promise<void>;
+  isConverting?: boolean;
 }
 
 function ChatPanel({
@@ -38,6 +56,9 @@ function ChatPanel({
   messagesError,
   onRetryMessages,
   onSaveToNote,
+  onConvertToSource,
+  onConvertToOutput,
+  isConverting = false,
 }: ChatPanelProps) {
   const citationIndexMap = useMemo(() => {
     const map = new Map<number, { citation: Citation; index: number }>();
@@ -178,7 +199,7 @@ function ChatPanel({
                 ) : null}
               </div>
               {message.role === 'assistant' && message.content ? (
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-1 mt-1 flex-wrap">
                   <button
                     type="button"
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
@@ -195,6 +216,70 @@ function ChatPanel({
                     <IconCopy className="w-3.5 h-3.5" />
                     {copiedId === message.id ? '已复制' : '复制'}
                   </button>
+
+                  {/* Conversion menu - only show if conversion callbacks are provided and not in demo mode */}
+                  {!isDemo && (onConvertToSource || onConvertToOutput) && (
+                    <Menu placement="bottom-start">
+                      <MenuHandler>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
+                          disabled={isConverting}
+                        >
+                          {isConverting ? (
+                            <Spinner className="w-3.5 h-3.5" />
+                          ) : (
+                            <ConvertIcon style={{ fontSize: 14 }} />
+                          )}
+                          转换
+                          <ExpandMoreIcon style={{ fontSize: 12 }} />
+                        </button>
+                      </MenuHandler>
+                      <MenuList className="p-1 min-w-[160px] z-50">
+                        {onConvertToSource && (
+                          <MenuItem
+                            onClick={() => onConvertToSource()}
+                            className="flex items-center gap-2 py-2 px-3 text-xs"
+                            disabled={isConverting}
+                          >
+                            <SourceIcon style={{ fontSize: 14 }} />
+                            <span>转为来源</span>
+                          </MenuItem>
+                        )}
+                        {onConvertToOutput && (
+                          <>
+                            <div className="px-3 py-1 text-[10px] text-gray-400 font-medium">
+                              转为笔记
+                            </div>
+                            <MenuItem
+                              onClick={() => onConvertToOutput('PARAGRAPH')}
+                              className="flex items-center gap-2 py-2 px-3 text-xs"
+                              disabled={isConverting}
+                            >
+                              <NotesIcon style={{ fontSize: 14 }} />
+                              <span>段落</span>
+                            </MenuItem>
+                            <MenuItem
+                              onClick={() => onConvertToOutput('BULLETS')}
+                              className="flex items-center gap-2 py-2 px-3 text-xs"
+                              disabled={isConverting}
+                            >
+                              <NotesIcon style={{ fontSize: 14 }} />
+                              <span>要点</span>
+                            </MenuItem>
+                            <MenuItem
+                              onClick={() => onConvertToOutput('STRUCTURED')}
+                              className="flex items-center gap-2 py-2 px-3 text-xs"
+                              disabled={isConverting}
+                            >
+                              <NotesIcon style={{ fontSize: 14 }} />
+                              <span>结构化</span>
+                            </MenuItem>
+                          </>
+                        )}
+                      </MenuList>
+                    </Menu>
+                  )}
                 </div>
               ) : null}
             </div>
