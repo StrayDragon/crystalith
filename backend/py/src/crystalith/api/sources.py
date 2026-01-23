@@ -247,6 +247,7 @@ async def create_source_from_url(
     session: AsyncSession = Depends(get_db_session),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     vector_store: VectorStore = Depends(get_vector_store),
+    settings: Settings = Depends(get_settings),
 ) -> SourceRead:
     """Create a source from a URL.
 
@@ -277,21 +278,88 @@ async def create_source_from_url(
         parse_time_ms = 0
     else:
         # Fetch mode: download and parse the webpage
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(url, follow_redirects=True)
-                response.raise_for_status()
-                content = response.content
-        except httpx.HTTPStatusError as exc:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Failed to fetch URL: HTTP {exc.response.status_code}",
-            ) from exc
-        except httpx.RequestError as exc:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Failed to fetch URL: {exc!s}",
-            ) from exc
+        # 从配置获取 URL 获取设置
+        url_fetch_settings = settings.source_ingestion.url_fetch
+        proxy_settings = url_fetch_settings.proxy
+
+        # 使用浏览器伪装请求头
+        browser_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
+            "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Upgrade-Insecure-Requests": "1",
+        }
+
+        # 从配置获取超时和重试参数
+        timeout = url_fetch_settings.timeout
+        max_retries = url_fetch_settings.retry_count
+        retry_delay = url_fetch_settings.retry_delay
+
+        # 获取代理配置（如果启用且目标主机需要代理）
+        from urllib.parse import urlparse
+        parsed_url = urlparse(url)
+        host = parsed_url.hostname or ""
+        proxy_url = None
+        if proxy_settings.should_proxy(host):
+            proxy_url = proxy_settings.get_proxy_url()
+
+        last_error: Exception | None = None
+        content: bytes | None = None
+
+        for attempt in range(max_retries + 1):
+            try:
+                async with httpx.AsyncClient(
+                    timeout=float(timeout),
+                    follow_redirects=True,
+                    headers=browser_headers,
+                    proxy=proxy_url,
+                ) as client:
+                    response = await client.get(url)
+                    response.raise_for_status()
+                    content = response.content
+                    break  # 成功，退出重试循环
+            except httpx.HTTPStatusError as exc:
+                last_error = exc
+                error_detail = f"HTTP {exc.response.status_code}"
+                # 4xx 错误不重试（客户端错误）
+                if 400 <= exc.response.status_code < 500:
+                    proxy_hint = "（代理已启用）" if proxy_url else "，可能需要配置代理"
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"无法获取网页内容: {error_detail}。目标服务器拒绝了请求{proxy_hint}或网站有访问限制。",
+                    ) from exc
+            except httpx.RequestError as exc:
+                last_error = exc
+                # 网络错误可以重试
+                if attempt < max_retries:
+                    import asyncio
+                    await asyncio.sleep(retry_delay)
+                    continue
+
+        if content is None:
+            proxy_hint = "（代理已启用）" if proxy_url else "，或尝试配置代理"
+            if last_error:
+                if isinstance(last_error, httpx.HTTPStatusError):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"无法获取网页内容: HTTP {last_error.response.status_code}。请检查 URL 是否正确{proxy_hint}。",
+                    ) from last_error
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"网络请求失败: {last_error!s}。请检查网络连接{proxy_hint}。",
+                    ) from last_error
+            raise HTTPException(status_code=400, detail="无法获取网页内容: 未知错误")
 
         parse_started = perf_counter()
         try:
@@ -300,13 +368,13 @@ async def create_source_from_url(
         except Exception as exc:
             raise HTTPException(
                 status_code=400,
-                detail=f"Failed to parse HTML content: {exc!s}",
+                detail=f"解析网页内容失败: {exc!s}",
             ) from exc
         parse_time_ms = int((perf_counter() - parse_started) * 1000)
         parser_type = "html"
 
         if not chunks:
-            raise HTTPException(status_code=400, detail="No content extracted from URL")
+            raise HTTPException(status_code=400, detail="网页中未提取到有效内容")
 
     # Create the source record
     source = Source(

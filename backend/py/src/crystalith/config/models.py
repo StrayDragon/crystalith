@@ -406,6 +406,88 @@ class SearchSettings(BaseModel):
 
 
 # =============================================================================
+# HTTP Proxy Settings (YAML Anchor Support)
+# =============================================================================
+
+class HttpProxySettings(BaseModel):
+    """
+    HTTP 代理配置。
+
+    支持 HTTP/HTTPS/SOCKS5 代理协议，可作为 YAML anchor 被其他功能引用。
+
+    Example:
+        proxy_settings: &default_proxy
+          enabled: false
+          http_url: "http://127.0.0.1:7890"
+          https_url: "http://127.0.0.1:7890"
+          socks5_url: null
+          no_proxy: ["localhost", "127.0.0.1"]
+
+        source_ingestion:
+          url_fetch:
+            proxy: *default_proxy
+    """
+    enabled: bool = Field(False, description="是否启用代理")
+    http_url: str | None = Field(None, description="HTTP 代理 URL (例如 http://127.0.0.1:7890)")
+    https_url: str | None = Field(None, description="HTTPS 代理 URL (可选，默认使用 http_url)")
+    socks5_url: str | None = Field(None, description="SOCKS5 代理 URL (例如 socks5://127.0.0.1:1080)")
+    no_proxy: list[str] = Field(
+        default_factory=lambda: ["localhost", "127.0.0.1"],
+        description="不走代理的域名/IP列表",
+    )
+
+    @field_validator("http_url", "https_url", "socks5_url", mode="before")
+    @classmethod
+    def validate_proxy_url(cls, v: str | None) -> str | None:
+        if v is None or v == "":
+            return None
+        # 基本验证 URL 格式
+        if not v.startswith(("http://", "https://", "socks5://")):
+            raise ValueError(f"代理 URL 必须以 http://, https:// 或 socks5:// 开头: {v}")
+        return v
+
+    def get_proxy_url(self) -> str | None:
+        """返回 httpx 兼容的代理 URL 字符串。"""
+        if not self.enabled:
+            return None
+
+        # SOCKS5 优先
+        if self.socks5_url:
+            return self.socks5_url
+
+        # HTTP/HTTPS 代理
+        if self.http_url:
+            return self.http_url
+
+        return None
+
+    def should_proxy(self, host: str) -> bool:
+        """检查指定主机是否应该使用代理。"""
+        if not self.enabled:
+            return False
+
+        # 检查 no_proxy 列表
+        for no_proxy_host in self.no_proxy:
+            if host == no_proxy_host or host.endswith(f".{no_proxy_host}"):
+                return False
+
+        return True
+
+
+class UrlFetchSettings(BaseModel):
+    """URL 内容获取配置。"""
+    proxy: HttpProxySettings = Field(default_factory=HttpProxySettings, description="代理配置")
+    timeout: int = Field(30, ge=5, le=120, description="请求超时时间（秒）")
+    retry_count: int = Field(2, ge=0, le=5, description="重试次数")
+    retry_delay: float = Field(1.0, ge=0.0, le=10.0, description="重试间隔（秒）")
+
+
+class SourceIngestionSettings(BaseModel):
+    """来源导入配置。"""
+    url_fetch: UrlFetchSettings = Field(default_factory=UrlFetchSettings, description="URL 获取配置")
+
+
+# =============================================================================
 # Main Settings Class
 # =============================================================================
 
@@ -477,6 +559,10 @@ class Settings(BaseSettings):
     refine: RefineSettings = Field(default_factory=RefineSettings)
     context_window: ContextWindowSettings = Field(default_factory=ContextWindowSettings)
     search: SearchSettings = Field(default_factory=lambda: SearchSettings(), description="Web search settings")
+    source_ingestion: SourceIngestionSettings = Field(
+        default_factory=SourceIngestionSettings,
+        description="来源导入配置（包含 URL 获取和代理设置）",
+    )
 
     # === Models ===
     models: ModelsSettings = Field(default_factory=ModelsSettings, description="Model configurations")
