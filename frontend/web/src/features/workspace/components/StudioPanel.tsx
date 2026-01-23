@@ -550,8 +550,10 @@ function StudioPanel({
                   key={note.id}
                   className="group relative flex items-center rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:bg-gray-50 hover:border-gray-300"
                 >
+                  {/* Main clickable area for note content */}
                   <button
-                    className="flex flex-1 items-center gap-2 p-2 text-left w-full"
+                    type="button"
+                    className="flex flex-1 items-center gap-2 p-2 text-left min-w-0"
                     onClick={() => {
                       if (!note.outputId) return;
                       onSelectOutput(note.outputId);
@@ -584,40 +586,48 @@ function StudioPanel({
                     </div>
                   </button>
 
-                  <Menu placement="bottom-end">
-                    <MenuHandler>
-                      <IconButton
-                        variant="text"
-                        size="sm"
-                        className="opacity-0 group-hover:opacity-100 w-6 h-6 min-w-[24px] rounded-full mr-1 hover:bg-gray-200 text-gray-500"
-                      >
-                        <MoreHorizIcon fontSize="small" />
-                      </IconButton>
-                    </MenuHandler>
-                    <MenuList className="p-1 min-w-[140px]">
-                      <MenuItem
-                        onClick={() => handleConvertToSource(note.id)}
-                        className="flex items-center gap-2 py-2 px-3 text-xs"
-                      >
-                        <ConvertIcon className="h-3.5 w-3.5" />
-                        <span>转换为来源</span>
-                      </MenuItem>
-                      <MenuItem
-                        onClick={() => handleCopyNote()}
-                        className="flex items-center gap-2 py-2 px-3 text-xs"
-                      >
-                        <CopyIcon className="h-3.5 w-3.5" />
-                        <span>复制内容</span>
-                      </MenuItem>
-                      <MenuItem
-                        onClick={() => handleDeleteNote(note.id)}
-                        className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
-                      >
-                        <DeleteIcon className="h-3.5 w-3.5" />
-                        <span>删除</span>
-                      </MenuItem>
-                    </MenuList>
-                  </Menu>
+                  {/* Menu button - separate from main button to fix click issues */}
+                  <div
+                    className="flex-shrink-0 pr-1"
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    <Menu placement="bottom-end">
+                      <MenuHandler>
+                        <IconButton
+                          variant="text"
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100 w-7 h-7 min-w-[28px] rounded-full hover:bg-gray-200 text-gray-500 transition-opacity"
+                          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                        >
+                          <MoreHorizIcon fontSize="small" />
+                        </IconButton>
+                      </MenuHandler>
+                      <MenuList className="p-1 min-w-[140px] z-50">
+                        <MenuItem
+                          onClick={() => handleConvertToSource(note.id)}
+                          className="flex items-center gap-2 py-2 px-3 text-xs"
+                        >
+                          <ConvertIcon className="h-3.5 w-3.5" />
+                          <span>转换为来源</span>
+                        </MenuItem>
+                        <MenuItem
+                          onClick={() => handleCopyNote()}
+                          className="flex items-center gap-2 py-2 px-3 text-xs"
+                        >
+                          <CopyIcon className="h-3.5 w-3.5" />
+                          <span>复制内容</span>
+                        </MenuItem>
+                        <MenuItem
+                          onClick={() => handleDeleteNote(note.id)}
+                          className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                        >
+                          <DeleteIcon className="h-3.5 w-3.5" />
+                          <span>删除</span>
+                        </MenuItem>
+                      </MenuList>
+                    </Menu>
+                  </div>
                 </div>
               );
             })}

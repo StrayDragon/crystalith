@@ -4,18 +4,29 @@ import useSWR from 'swr';
 import {
   askQuestion,
   askQuestionStream,
+  convertSessionToOutput,
+  convertSessionToSource,
   listMessages,
 } from '../api';
+import type { OutputType } from '../api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
 import { collectChunkIds, createId, normalizeCitation, normalizeMessage } from '../utils';
 
 interface UseChatOptions {
   ensureSession: (title?: string | null) => Promise<number | null>;
   refreshSessions?: () => Promise<void>;
+  refreshSources?: () => Promise<void>;
+  refreshOutputs?: () => Promise<void>;
   enableStreaming?: boolean;
 }
 
-export function useChat({ ensureSession, refreshSessions, enableStreaming = true }: UseChatOptions) {
+export function useChat({
+  ensureSession,
+  refreshSessions,
+  refreshSources,
+  refreshOutputs,
+  enableStreaming = true,
+}: UseChatOptions) {
   const state = useWorkspaceState();
   const dispatch = useWorkspaceDispatch();
   const isDemo = state.connectionState === 'demo';
@@ -273,6 +284,57 @@ export function useChat({ ensureSession, refreshSessions, enableStreaming = true
     await mutate();
   }, [dispatch, mutate]);
 
+  // --- Session Conversion Methods ---
+  const [isConverting, setIsConverting] = useState(false);
+
+  const handleConvertSessionToSource = useCallback(async () => {
+    if (!state.activeNotebookId || !state.activeSessionId || isDemo) return;
+    setIsConverting(true);
+    try {
+      const result = await convertSessionToSource(
+        state.activeNotebookId,
+        state.activeSessionId,
+        null, // Convert entire session
+      );
+      // Refresh sources list to show the new source
+      if (refreshSources) {
+        await refreshSources();
+      }
+      window.alert(`已转换为来源：${result.filename}（${result.chunk_count} 个分块）`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '转换失败';
+      window.alert(`转换失败：${message}`);
+    } finally {
+      setIsConverting(false);
+    }
+  }, [state.activeNotebookId, state.activeSessionId, isDemo, refreshSources]);
+
+  const handleConvertSessionToOutput = useCallback(
+    async (outputType: OutputType) => {
+      if (!state.activeNotebookId || !state.activeSessionId || isDemo) return;
+      setIsConverting(true);
+      try {
+        const result = await convertSessionToOutput(
+          state.activeNotebookId,
+          state.activeSessionId,
+          outputType,
+          null, // Convert entire session
+        );
+        // Refresh outputs list to show the new output
+        if (refreshOutputs) {
+          await refreshOutputs();
+        }
+        window.alert(`已转换为笔记：${result.title}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '转换失败';
+        window.alert(`转换失败：${message}`);
+      } finally {
+        setIsConverting(false);
+      }
+    },
+    [state.activeNotebookId, state.activeSessionId, isDemo, refreshOutputs],
+  );
+
   return {
     messages: state.messages,
     draft: state.draft,
@@ -285,5 +347,9 @@ export function useChat({ ensureSession, refreshSessions, enableStreaming = true
     retryMessages,
     isLoadingMessages: isLoading,
     messagesError: state.errors.messages,
+    // Conversion
+    isConverting,
+    convertSessionToSource: handleConvertSessionToSource,
+    convertSessionToOutput: handleConvertSessionToOutput,
   };
 }

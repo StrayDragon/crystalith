@@ -27,6 +27,9 @@ export {
   getSession,
   updateSession,
   deleteSession,
+  // Session Conversion
+  convertSessionToSource,
+  convertSessionToOutput,
   // Messages
   listMessages,
   // QA
@@ -84,6 +87,11 @@ export type {
   ToolConfigOption,
   ModelRead,
   ModelsListResponse,
+  // Session Conversion types
+  ConvertSessionToSourceRequest,
+  ConvertSessionToSourceResponse,
+  ConvertSessionToOutputRequest,
+  ConvertSessionToOutputResponse,
 } from '../../api/client';
 
 // Type aliases for backward compatibility
