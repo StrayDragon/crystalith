@@ -1,21 +1,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Dialog,
-  DialogTitle,
-  DialogContent,
-  Box,
-  Typography,
+  DialogHeader,
+  DialogBody,
   IconButton,
-  TextField,
-  Stack,
-  Paper,
-  Divider,
-  CircularProgress,
+  Input,
+  Typography,
   Chip,
-  InputAdornment,
-  Skeleton,
-  alpha,
-} from '@mui/material';
+  Spinner,
+} from '@material-tailwind/react';
 import {
   Close as CloseIcon,
   Send as SendIcon,
@@ -24,7 +17,7 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
-import { getSourceSummary, askSourceQuestion, type SourceSummaryResponse } from '../api';
+import { getSourceSummary, askSourceQuestion } from '../api';
 import { useWorkspaceState } from '../context/WorkspaceContext';
 import type { SourceItem } from '../types';
 
@@ -249,229 +242,165 @@ export default function SourceDetailDialog({ open, source, onClose }: SourceDeta
   return (
     <Dialog
       open={open}
-      onClose={onClose}
-      maxWidth="md"
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 3,
-          maxHeight: '85vh',
-          overflow: 'hidden',
-        },
-      }}
+      handler={onClose}
+      size="lg"
+      className="rounded-xl overflow-hidden max-h-[85vh] flex flex-col"
     >
       {/* Header */}
-      <DialogTitle
-        sx={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: 2,
-          pb: 1.5,
-          borderBottom: '1px solid',
-          borderColor: 'divider',
-        }}
-      >
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 36,
-              height: 36,
-              borderRadius: 2,
-              bgcolor: 'grey.100',
-              flexShrink: 0,
-            }}
-          >
-            <DescriptionIcon color="action" fontSize="small" />
-          </Box>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="subtitle1" fontWeight={600} noWrap sx={{ fontSize: '0.9375rem' }}>
+      <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 p-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 text-gray-500 flex-shrink-0">
+            <DescriptionIcon fontSize="small" />
+          </div>
+          <div className="min-w-0">
+            <Typography variant="h6" className="text-[15px] font-semibold text-gray-900 truncate">
               {source.title}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="small" className="text-gray-500 text-xs font-normal">
               来源详情 · 支持 RAG 问答
             </Typography>
-          </Box>
-        </Stack>
-        <IconButton size="small" onClick={onClose} sx={{ mt: -0.5, mr: -0.5 }}>
-          <CloseIcon fontSize="small" />
+          </div>
+        </div>
+        <IconButton variant="text" size="sm" onClick={onClose} className="rounded-full flex-shrink-0">
+          <CloseIcon className="h-4 w-4" />
         </IconButton>
-      </DialogTitle>
+      </DialogHeader>
 
-      <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column' }}>
+      <DialogBody className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden">
         {/* Brief Section */}
-        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'grey.50' }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <AutoAwesomeIcon sx={{ fontSize: 16, color: 'primary.main' }} />
-              <Typography variant="caption" fontWeight={600}>
+        <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-blue-500">
+              <AutoAwesomeIcon style={{ fontSize: 16 }} />
+              <Typography variant="small" className="font-semibold text-xs">
                 自动摘要
               </Typography>
-            </Stack>
+            </div>
             <IconButton
-              size="small"
+              variant="text"
+              size="sm"
               onClick={handleRefreshBrief}
               disabled={isBriefLoading}
-              sx={{ width: 24, height: 24 }}
+              className={`rounded-full w-6 h-6 text-gray-400 hover:text-gray-700 ${isBriefLoading ? 'animate-spin' : ''}`}
             >
-              <RefreshIcon
-                fontSize="small"
-                sx={{
-                  animation: isBriefLoading ? 'spin 1s linear infinite' : 'none',
-                  '@keyframes spin': {
-                    from: { transform: 'rotate(0deg)' },
-                    to: { transform: 'rotate(360deg)' },
-                  },
-                }}
-              />
+              <RefreshIcon style={{ fontSize: 16 }} />
             </IconButton>
-          </Stack>
+          </div>
 
           {isBriefLoading ? (
-            <Stack spacing={1}>
-              <Skeleton variant="text" width="100%" />
-              <Skeleton variant="text" width="85%" />
-              <Skeleton variant="text" width="60%" />
-            </Stack>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-full animate-pulse" />
+              <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse" />
+              <div className="h-4 bg-gray-200 rounded w-4/6 animate-pulse" />
+            </div>
           ) : briefError ? (
-            <Typography variant="caption" color="error" sx={{ fontSize: '0.75rem' }}>
+            <Typography variant="small" color="red" className="text-xs">
               {briefError}
             </Typography>
           ) : brief ? (
-            <Stack spacing={1.5}>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', lineHeight: 1.6 }}>
+            <div className="space-y-3">
+              <Typography variant="small" className="text-xs text-gray-600 leading-relaxed">
                 {brief.summary}
               </Typography>
-              <Divider />
-              <Box>
-                <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
+              <div className="h-px bg-gray-200" />
+              <div>
+                <Typography variant="small" className="text-xs font-semibold text-gray-500 mb-1.5">
                   关键要点
                 </Typography>
-                <Stack spacing={0.5}>
+                <div className="space-y-1">
                   {brief.keyPoints.map((point, index) => (
-                    <Typography key={index} variant="caption" sx={{ fontSize: '0.6875rem', display: 'flex', alignItems: 'flex-start', gap: 0.5 }}>
-                      <span style={{ color: '#94a3b8' }}>•</span>
-                      {point}
-                    </Typography>
+                    <div key={index} className="flex items-start gap-1.5">
+                      <span className="text-gray-400 text-xs">•</span>
+                      <Typography variant="small" className="text-[11px] text-gray-600 leading-tight">
+                        {point}
+                      </Typography>
+                    </div>
                   ))}
-                </Stack>
-              </Box>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Stack direction="row" spacing={0.5}>
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex gap-1">
                   {brief.topics.map((topic) => (
-                    <Chip key={topic} label={topic} size="small" sx={{ height: 18, fontSize: '0.5625rem' }} />
+                    <Chip key={topic} value={topic} size="sm" variant="ghost" className="h-5 px-2 py-0 text-[10px] bg-gray-100 text-gray-600 normal-case font-normal" />
                   ))}
-                </Stack>
-                <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.5625rem' }}>
+                </div>
+                <Typography variant="small" className="text-[9px] text-gray-400">
                   约 {brief.wordCount.toLocaleString()} 字
                 </Typography>
-              </Stack>
-            </Stack>
+              </div>
+            </div>
           ) : null}
-        </Box>
+        </div>
 
         {/* Chat Section */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 200 }}>
+        <div className="flex flex-col flex-1 min-h-[200px] overflow-hidden bg-white">
           {/* Messages */}
-          <Box sx={{ flex: 1, overflow: 'auto', p: 2, minHeight: 150, maxHeight: 280 }}>
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 ? (
-              <Box sx={{ textAlign: 'center', py: 3 }}>
-                <Typography variant="caption" color="text.secondary">
+              <div className="text-center py-6">
+                <Typography variant="small" className="text-gray-400 text-xs">
                   基于此来源内容提问，获取针对性回答
                 </Typography>
-              </Box>
+              </div>
             ) : (
-              <Stack spacing={1.5}>
-                {messages.map((message) => (
-                  <Box
-                    key={message.id}
-                    sx={{
-                      display: 'flex',
-                      justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
-                    }}
+              messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed whitespace-pre-wrap ${
+                      message.role === 'user'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}
                   >
-                    <Paper
-                      sx={{
-                        px: 1.5,
-                        py: 1,
-                        maxWidth: '80%',
-                        borderRadius: 2,
-                        bgcolor: message.role === 'user' ? 'primary.main' : 'grey.100',
-                        color: message.role === 'user' ? 'white' : 'text.primary',
-                      }}
-                    >
-                      <Typography variant="body2" sx={{ fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}>
-                        {message.content}
-                      </Typography>
-                    </Paper>
-                  </Box>
-                ))}
-                {isLoading && (
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
-                    <Paper sx={{ px: 1.5, py: 1, borderRadius: 2, bgcolor: 'grey.100' }}>
-                      <Stack direction="row" spacing={0.5} alignItems="center">
-                        <CircularProgress size={12} />
-                        <Typography variant="caption" color="text.secondary">
-                          思考中...
-                        </Typography>
-                      </Stack>
-                    </Paper>
-                  </Box>
-                )}
-                <div ref={messagesEndRef} />
-              </Stack>
+                    {message.content}
+                  </div>
+                </div>
+              ))
             )}
-          </Box>
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 px-3 py-2 rounded-xl flex items-center gap-2">
+                  <Spinner className="h-3 w-3" />
+                  <span className="text-xs text-gray-500">思考中...</span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
 
           {/* Input */}
-          <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="基于此来源内容提问..."
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              disabled={isLoading}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      size="small"
-                      onClick={handleSend}
-                      disabled={!inputValue.trim() || isLoading}
-                      sx={{
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                        width: 28,
-                        height: 28,
-                        '&:hover': { bgcolor: 'primary.dark' },
-                        '&.Mui-disabled': { bgcolor: 'grey.300', color: 'grey.500' },
-                      }}
-                    >
-                      <SendIcon sx={{ fontSize: 14 }} />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-                sx: { pr: 0.5, fontSize: '0.75rem' },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 3,
-                },
-              }}
-            />
-          </Box>
-        </Box>
-      </DialogContent>
+          <div className="p-3 border-t border-gray-100 bg-white">
+            <div className="relative">
+               <input
+                 className="w-full h-9 pl-3 pr-10 rounded-full bg-gray-50 border border-transparent focus:bg-white focus:border-gray-200 focus:ring-0 text-sm outline-none transition-all placeholder:text-gray-400"
+                 placeholder="基于此来源内容提问..."
+                 value={inputValue}
+                 onChange={(e) => setInputValue(e.target.value)}
+                 onKeyDown={(e) => {
+                   if (e.key === 'Enter' && !e.shiftKey) {
+                     e.preventDefault();
+                     handleSend();
+                   }
+                 }}
+                 disabled={isLoading}
+               />
+               <div className="absolute right-1 top-1/2 -translate-y-1/2">
+                  <IconButton
+                    size="sm"
+                    className={`rounded-full w-7 h-7 ${!inputValue.trim() || isLoading ? 'bg-gray-200 text-gray-400' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
+                    onClick={handleSend}
+                    disabled={!inputValue.trim() || isLoading}
+                  >
+                    <SendIcon style={{ fontSize: 14 }} />
+                  </IconButton>
+               </div>
+            </div>
+          </div>
+        </div>
+      </DialogBody>
     </Dialog>
   );
 }

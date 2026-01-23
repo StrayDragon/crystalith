@@ -1,17 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Box,
   Button,
   IconButton,
-  TextField,
+  Input,
   Popover,
-  Avatar,
+  PopoverHandler,
+  PopoverContent,
   Typography,
-  Stack,
-  CircularProgress,
-  Paper,
-  Divider,
-} from '@mui/material';
+  Spinner,
+} from '@material-tailwind/react';
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -46,26 +43,23 @@ export default function WorkspaceHeader({
   onDeleteNotebook,
   activeNotebookId,
 }: WorkspaceHeaderProps) {
-  const [createAnchorEl, setCreateAnchorEl] = useState<HTMLButtonElement | null>(null);
-  const [editAnchorEl, setEditAnchorEl] = useState<HTMLButtonElement | null>(null);
   const [editName, setEditName] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const panelRef = useRef<HTMLDivElement | null>(null);
-  const editPanelRef = useRef<HTMLDivElement | null>(null);
+  // Control popovers manually
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+
   const isCreating = createState === 'loading';
   const createDisabled = isDemo || isCreating || createName.trim().length === 0;
   const updateDisabled = isDemo || isUpdating || editName.trim().length === 0;
   const deleteDisabled = isDemo || isDeleting || !activeNotebookId;
 
-  const isCreateOpen = Boolean(createAnchorEl);
-  const isEditOpen = Boolean(editAnchorEl);
-
   async function handleCreate() {
     if (createDisabled) return;
     const created = await onCreateNotebook();
     if (created) {
-      setCreateAnchorEl(null);
+      setCreateOpen(false);
     }
   }
 
@@ -75,7 +69,7 @@ export default function WorkspaceHeader({
     try {
       const updated = await onUpdateNotebook(editName);
       if (updated) {
-        setEditAnchorEl(null);
+        setEditOpen(false);
         setEditName('');
       }
     } finally {
@@ -89,51 +83,18 @@ export default function WorkspaceHeader({
     setIsDeleting(true);
     try {
       await onDeleteNotebook();
-      setEditAnchorEl(null);
+      setEditOpen(false);
     } finally {
       setIsDeleting(false);
     }
   }
 
-  function openEditPanel(event: React.MouseEvent<HTMLButtonElement>) {
-    setEditName(title);
-    setEditAnchorEl(event.currentTarget);
-  }
-
   return (
-    <Box
-      component="header"
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: { xs: 1.5, sm: 2 },
-        px: { xs: 1.5, sm: 2, lg: 3 },
-        py: { xs: 1, sm: 1.25 },
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 3,
-        flexWrap: 'wrap',
-        bgcolor: 'background.paper',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
-      }}
-    >
+    <header className="flex items-center justify-between gap-3 px-3 py-2 sm:px-4 sm:py-2.5 bg-white border border-gray-300 rounded-xl shadow-sm flex-wrap">
       {/* Left Section - Logo & Title */}
-      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
+      <div className="flex items-center gap-3 min-w-0">
         {/* Logo */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: { xs: 28, sm: 32 },
-            height: { xs: 28, sm: 32 },
-            borderRadius: 2,
-            bgcolor: 'background.paper',
-            boxShadow: 1,
-            color: 'text.primary',
-          }}
-        >
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white shadow-sm border border-gray-100 text-gray-900">
           <svg viewBox="0 0 24 24" width="18" height="18" focusable="false">
             <path
               d="M6 12a6 6 0 0 1 10.8-3.6"
@@ -151,76 +112,46 @@ export default function WorkspaceHeader({
             />
             <circle cx="12" cy="14.5" r="1.4" fill="currentColor" />
           </svg>
-        </Box>
+        </div>
 
         {/* Title with Edit */}
-        <Box ref={editPanelRef}>
-            <Button
-              onClick={openEditPanel}
-              disabled={isDemo || !activeNotebookId}
-              size="small"
-              sx={{
-                textTransform: 'none',
-                color: 'text.primary',
-                px: 1,
-                py: 0.5,
-                borderRadius: 1.5,
-                minHeight: 28,
-                '&:hover': {
-                  bgcolor: 'action.hover',
-                },
-                '&:hover .edit-icon': {
-                  opacity: 1,
-                },
+        <Popover
+          open={editOpen}
+          handler={setEditOpen}
+          placement="bottom-start"
+        >
+          <PopoverHandler>
+            <button
+              onClick={() => {
+                setEditName(title);
+                // setEditOpen(true); // Handled by PopoverHandler click
               }}
+              disabled={isDemo || !activeNotebookId}
+              className="group flex items-center px-2 py-1 rounded-lg hover:bg-gray-50 transition-colors disabled:cursor-default"
             >
               <Typography
-                variant="body2"
-                component="h1"
-                sx={{
-                  fontWeight: 600,
-                  fontSize: { xs: '0.8125rem', sm: '0.875rem' },
-                  maxWidth: { xs: 140, sm: 200, md: 300 },
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
+                variant="small"
+                className="font-bold text-gray-900 text-sm truncate max-w-[140px] sm:max-w-[200px] md:max-w-[300px]"
               >
                 {title}
               </Typography>
               {!isDemo && activeNotebookId && (
                 <EditIcon
-                  className="edit-icon"
-                  fontSize="small"
-                  sx={{
-                    ml: 0.5,
-                    color: 'text.secondary',
-                    opacity: 0,
-                    transition: 'opacity 0.2s',
-                  }}
+                  className="ml-1 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ fontSize: 14 }}
                 />
               )}
-            </Button>
-
-          {/* Edit Popover */}
-          <Popover
-            open={isEditOpen}
-            anchorEl={editAnchorEl}
-            onClose={() => setEditAnchorEl(null)}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-            slotProps={{
-              paper: {
-                sx: { width: 280, p: 2 },
-              },
-            }}
-          >
-            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 1, display: 'block', fontSize: '0.6875rem' }}>
+            </button>
+          </PopoverHandler>
+          <PopoverContent className="w-72 p-4 z-[9999]">
+            <Typography variant="small" className="font-semibold text-gray-600 text-[11px] mb-2">
               笔记本名称
             </Typography>
-            <TextField
-              fullWidth
-              size="small"
+            <Input
+              variant="outlined"
+              labelProps={{ className: "hidden" }}
+              className="!border !border-gray-300 bg-white text-gray-900 shadow-lg shadow-gray-900/5 ring-4 ring-transparent placeholder:text-gray-500 focus:!border-gray-900 focus:!border-t-gray-900 focus:ring-gray-900/10"
+              containerProps={{ className: "min-w-0" }}
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               placeholder="输入新名称"
@@ -232,82 +163,71 @@ export default function WorkspaceHeader({
                   void handleUpdate();
                 }
               }}
-              sx={{ mb: 1.5 }}
             />
-            <Stack direction="row" spacing={0.75} alignItems="center">
+            <div className="flex items-center justify-between mt-3 gap-2">
               <Button
-                size="small"
-                color="error"
+                size="sm"
                 variant="outlined"
-                startIcon={isDeleting ? <CircularProgress size={10} color="inherit" /> : <DeleteIcon fontSize="small" />}
+                color="red"
+                className="flex items-center gap-1 rounded-full px-3 py-1.5 normal-case font-normal text-[11px]"
                 onClick={handleDelete}
                 disabled={deleteDisabled}
-                sx={{ borderRadius: 5, fontSize: '0.6875rem' }}
               >
+                {isDeleting ? <Spinner className="h-3 w-3" /> : <DeleteIcon style={{ fontSize: 14 }} />}
                 {isDeleting ? '删除中…' : '删除'}
               </Button>
-              <Box sx={{ flex: 1 }} />
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => setEditAnchorEl(null)}
-                sx={{ borderRadius: 5, fontSize: '0.6875rem' }}
-              >
-                取消
-              </Button>
-              <Button
-                size="small"
-                variant="contained"
-                disabled={updateDisabled}
-                onClick={handleUpdate}
-                sx={{ borderRadius: 5, fontSize: '0.6875rem' }}
-              >
-                {isUpdating ? '保存中…' : '保存'}
-              </Button>
-            </Stack>
-          </Popover>
-        </Box>
-      </Stack>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="text"
+                  className="rounded-full px-3 py-1.5 normal-case font-normal text-gray-700 text-[11px]"
+                  onClick={() => setEditOpen(false)}
+                >
+                  取消
+                </Button>
+                <Button
+                  size="sm"
+                  variant="filled"
+                  className="rounded-full px-3 py-1.5 normal-case font-normal bg-gray-900 text-[11px]"
+                  disabled={updateDisabled}
+                  onClick={handleUpdate}
+                >
+                  {isUpdating ? '保存中…' : '保存'}
+                </Button>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
 
       {/* Right Section - Create & Avatar */}
-      <Stack direction="row" alignItems="center" spacing={1}>
+      <div className="flex items-center gap-2">
         {/* Create Notebook Button */}
-        <Box ref={panelRef}>
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={isCreating ? <CircularProgress size={12} color="inherit" /> : <AddIcon fontSize="small" />}
-            onClick={(e) => setCreateAnchorEl(e.currentTarget)}
-            disabled={isDemo}
-            sx={{
-              borderRadius: 5,
-              px: { xs: 1.5, sm: 2 },
-              py: 0.625,
-              fontSize: '0.75rem',
-            }}
-          >
-            {isCreating ? '创建中…' : '创建笔记本'}
-          </Button>
-
-          {/* Create Popover */}
-          <Popover
-            open={isCreateOpen}
-            anchorEl={createAnchorEl}
-            onClose={() => setCreateAnchorEl(null)}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-            slotProps={{
-              paper: {
-                sx: { width: 260, p: 2 },
-              },
-            }}
-          >
-            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 1, display: 'block', fontSize: '0.6875rem' }}>
+        <Popover
+          open={createOpen}
+          handler={setCreateOpen}
+          placement="bottom-end"
+        >
+          <PopoverHandler>
+            <Button
+              variant="filled"
+              size="sm"
+              className="flex items-center gap-1.5 rounded-full bg-gray-900 py-2 px-3 normal-case font-normal text-xs"
+              disabled={isDemo}
+            >
+              {isCreating ? <Spinner className="h-3 w-3" /> : <AddIcon style={{ fontSize: 16 }} />}
+              {isCreating ? '创建中…' : '创建笔记本'}
+            </Button>
+          </PopoverHandler>
+          <PopoverContent className="w-64 p-4 z-[9999]">
+            <Typography variant="small" className="font-semibold text-gray-600 text-[11px] mb-2">
               笔记本名称
             </Typography>
-            <TextField
-              fullWidth
-              size="small"
+            <Input
+              variant="outlined"
+              labelProps={{ className: "hidden" }}
+              className="!border !border-gray-300 bg-white text-gray-900 shadow-lg shadow-gray-900/5 ring-4 ring-transparent placeholder:text-gray-500 focus:!border-gray-900 focus:!border-t-gray-900 focus:ring-gray-900/10"
+              containerProps={{ className: "min-w-0" }}
               value={createName}
               onChange={(e) => onCreateNameChange(e.target.value)}
               placeholder={isDemo ? '演示模式不可创建' : '输入名称'}
@@ -319,63 +239,46 @@ export default function WorkspaceHeader({
                   void handleCreate();
                 }
               }}
-              sx={{ mb: 1 }}
             />
             {createError && (
-              <Typography variant="caption" color="error" sx={{ display: 'block', mb: 0.75, fontSize: '0.6875rem' }}>
+              <Typography variant="small" color="red" className="mt-1 text-[10px]">
                 {createError}
               </Typography>
             )}
             {isDemo && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75, fontSize: '0.6875rem' }}>
+              <Typography variant="small" className="mt-1 text-[10px] text-gray-500">
                 演示模式下无法创建笔记本。
               </Typography>
             )}
-            <Stack direction="row" spacing={0.75} justifyContent="flex-end" sx={{ mt: 1 }}>
+            <div className="flex justify-end gap-2 mt-3">
               <Button
-                size="small"
-                variant="outlined"
-                onClick={() => setCreateAnchorEl(null)}
-                sx={{ borderRadius: 5, fontSize: '0.6875rem' }}
+                size="sm"
+                variant="text"
+                className="rounded-full px-3 py-1.5 normal-case font-normal text-gray-700 text-[11px]"
+                onClick={() => setCreateOpen(false)}
               >
                 取消
               </Button>
               <Button
-                size="small"
-                variant="contained"
+                size="sm"
+                variant="filled"
+                className="rounded-full px-3 py-1.5 normal-case font-normal bg-gray-900 text-[11px]"
                 disabled={createDisabled}
                 onClick={handleCreate}
-                sx={{ borderRadius: 5, fontSize: '0.6875rem' }}
               >
                 创建
               </Button>
-            </Stack>
-          </Popover>
-        </Box>
+            </div>
+          </PopoverContent>
+        </Popover>
 
         {/* User Avatar */}
-          <IconButton
-            size="small"
-            sx={{
-              p: 0.25,
-              border: '1.5px solid',
-              borderColor: 'divider',
-            }}
-          >
-            <Avatar
-              sx={{
-                width: { xs: 24, sm: 28 },
-                height: { xs: 24, sm: 28 },
-                bgcolor: 'grey.200',
-                color: 'text.primary',
-                fontSize: '0.625rem',
-                fontWeight: 600,
-              }}
-            >
-              CL
-            </Avatar>
-          </IconButton>
-      </Stack>
-    </Box>
+        <div className="p-0.5 border-2 border-gray-100 rounded-full cursor-pointer">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+            CL
+          </div>
+        </div>
+      </div>
+    </header>
   );
 }
