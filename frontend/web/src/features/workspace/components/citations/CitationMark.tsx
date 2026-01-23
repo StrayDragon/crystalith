@@ -76,9 +76,9 @@ export default function CitationMark({ index, citation, onHover, onJump }: Citat
       role="tooltip"
     >
       <div className="text-xs font-semibold truncate text-gray-900">{citation.sourceTitle}</div>
-      {pageLabel && <div className="text-[10px] mt-0.5 text-gray-500">{pageLabel}</div>}
+      {pageLabel && <div className="text-[10px] font-medium mt-0.5 text-gray-500">{pageLabel}</div>}
       {citation.snippet && (
-        <div className="text-[11px] mt-1.5 line-clamp-3 leading-relaxed text-gray-500">{citation.snippet}</div>
+        <div className="text-[11px] font-medium mt-1.5 line-clamp-3 leading-relaxed text-gray-500">{citation.snippet}</div>
       )}
     </div>
   ) : null;

@@ -258,7 +258,7 @@ export default function SessionSwitcher({
                          >
                            {item.title}
                          </Typography>
-                         <Typography variant="small" className="text-[10px] text-gray-500 mt-0.5">
+                         <Typography variant="small" className="text-[10px] text-gray-500 font-medium mt-0.5">
                            {item.updatedAt}
                          </Typography>
                        </button>
@@ -301,7 +301,7 @@ export default function SessionSwitcher({
 
           {isDemo && (
              <div className="p-2 border-t border-gray-200 text-center">
-                <Typography variant="small" className="text-[10px] text-gray-500">
+                <Typography variant="small" className="text-[10px] text-gray-500 font-medium">
                   演示模式下会话仅在前端保存。
                 </Typography>
              </div>

@@ -256,7 +256,7 @@ export default function SourceDetailDialog({ open, source, onClose }: SourceDeta
             <Typography variant="h6" className="text-[15px] font-semibold text-gray-900 truncate">
               {source.title}
             </Typography>
-            <Typography variant="small" className="text-gray-500 text-xs font-normal">
+            <Typography variant="small" className="text-gray-500 text-xs font-medium">
               来源详情 · 支持 RAG 问答
             </Typography>
           </div>
@@ -311,7 +311,7 @@ export default function SourceDetailDialog({ open, source, onClose }: SourceDeta
                   {brief.keyPoints.map((point, index) => (
                     <div key={index} className="flex items-start gap-1.5">
                       <span className="text-gray-400 text-xs">•</span>
-                      <Typography variant="small" className="text-[11px] text-gray-600 leading-tight">
+                      <Typography variant="small" className="text-[11px] text-gray-600 font-medium leading-tight">
                         {point}
                       </Typography>
                     </div>
@@ -324,7 +324,7 @@ export default function SourceDetailDialog({ open, source, onClose }: SourceDeta
                     <Chip key={topic} value={topic} size="sm" variant="ghost" className="h-5 px-2 py-0 text-[10px] bg-gray-100 text-gray-600 normal-case font-normal" />
                   ))}
                 </div>
-                <Typography variant="small" className="text-[9px] text-gray-400">
+                <Typography variant="small" className="text-[10px] text-gray-500 font-medium">
                   约 {brief.wordCount.toLocaleString()} 字
                 </Typography>
               </div>
@@ -338,7 +338,7 @@ export default function SourceDetailDialog({ open, source, onClose }: SourceDeta
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 ? (
               <div className="text-center py-6">
-                <Typography variant="small" className="text-gray-400 text-xs">
+                <Typography variant="small" className="text-gray-500 text-xs font-medium">
                   基于此来源内容提问，获取针对性回答
                 </Typography>
               </div>

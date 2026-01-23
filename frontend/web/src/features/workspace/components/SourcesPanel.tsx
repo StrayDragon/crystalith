@@ -282,7 +282,7 @@ function SourcesPanel({
 
       {/* Search Status */}
       {(isSearching || searchNotice) && (
-        <Typography variant="small" className="text-[11px] text-gray-600 px-1">
+        <Typography variant="small" className="text-[11px] text-gray-600 font-medium px-1">
           {isSearching ? '搜索中…' : searchNotice}
         </Typography>
       )}
@@ -309,11 +309,11 @@ function SourcesPanel({
                   {item.title}
                 </Typography>
                 {item.snippet && (
-                  <Typography variant="small" className="text-[10px] text-gray-600 leading-snug mb-0.5 line-clamp-2">
+                  <Typography variant="small" className="text-[10px] text-gray-600 font-medium leading-snug mb-0.5 line-clamp-2">
                     {item.snippet}
                   </Typography>
                 )}
-                <Typography variant="small" className="text-[10px] text-gray-500">
+                <Typography variant="small" className="text-[10px] text-gray-500 font-medium">
                   {item.source || '来源推荐'}
                 </Typography>
               </a>
@@ -324,7 +324,7 @@ function SourcesPanel({
 
       {/* Select All & Batch Actions */}
       <div className="flex items-center justify-between px-1">
-        <Typography variant="small" className="text-[11px] text-gray-600">
+        <Typography variant="small" className="text-[11px] text-gray-600 font-medium">
           选择所有来源
         </Typography>
         <div className="flex items-center gap-1">
@@ -382,7 +382,7 @@ function SourcesPanel({
           </div>
         ) : sources.length === 0 ? (
           <div className="p-3 text-center border border-dashed border-gray-300 rounded-lg bg-gray-100">
-            <Typography variant="small" className="text-gray-600 text-[11px] font-normal">
+            <Typography variant="small" className="text-gray-600 text-[11px] font-medium">
               暂无来源。添加文档后这里会展示来源列表。
             </Typography>
           </div>
