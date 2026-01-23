@@ -1,30 +1,23 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Box,
   Button,
   IconButton,
-  TextField,
+  Input,
   Typography,
-  Stack,
-  CircularProgress,
   List,
   ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  InputAdornment,
+  ListItemPrefix,
+  ListItemSuffix,
   Checkbox,
   Menu,
+  MenuHandler,
+  MenuList,
   MenuItem,
-  Select,
-  FormControl,
   Chip,
-  Paper,
-  Skeleton,
-  Divider,
-  alpha,
-  Link,
-} from '@mui/material';
+  Card,
+  Spinner,
+  Tooltip,
+} from '@material-tailwind/react';
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -86,11 +79,7 @@ function SourcesPanel({
   const [engine, setEngine] = useState('Web');
   const [mode, setMode] = useState('Fast Research');
   const [selectedSourceIds, setSelectedSourceIds] = useState<Record<number, boolean>>({});
-  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [activeSourceId, setActiveSourceId] = useState<number | null>(null);
-  const [batchMenuAnchorEl, setBatchMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const [engineMenuAnchor, setEngineMenuAnchor] = useState<null | HTMLElement>(null);
-  const [modeMenuAnchor, setModeMenuAnchor] = useState<null | HTMLElement>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedSource, setSelectedSource] = useState<SourceItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -155,455 +144,330 @@ function SourcesPanel({
     onSearch({ query: searchQuery, engine, mode });
   };
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, sourceId: number) => {
-    event.stopPropagation();
-    setMenuAnchorEl(event.currentTarget);
-    setActiveSourceId(sourceId);
-  };
-
-  const handleMenuClose = () => {
-    setMenuAnchorEl(null);
-    setActiveSourceId(null);
-  };
-
   const getEngineIcon = () => {
     switch (engine) {
       case 'Scholar':
-        return <ScholarIcon fontSize="small" />;
+        return <ScholarIcon style={{ fontSize: 16 }} />;
       case 'Docs':
-        return <ArticleIcon fontSize="small" />;
+        return <ArticleIcon style={{ fontSize: 16 }} />;
       default:
-        return <LanguageIcon fontSize="small" />;
+        return <LanguageIcon style={{ fontSize: 16 }} />;
     }
   };
 
   const getModeIcon = () => {
     return mode === 'Deep Research' ? (
-      <PsychologyIcon fontSize="small" />
+      <PsychologyIcon style={{ fontSize: 16 }} />
     ) : (
-      <SpeedIcon fontSize="small" />
+      <SpeedIcon style={{ fontSize: 16 }} />
     );
   };
 
   return (
-    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5, p: { xs: 1.5, sm: 2 }, minHeight: 0 }}>
+    <div className="flex flex-1 flex-col gap-3 p-3 sm:p-4 min-h-0">
       {/* Upload Button */}
-      <Button
-        component="label"
-        variant="outlined"
-        fullWidth
-        size="small"
-        startIcon={uploadState === 'loading' ? <CircularProgress size={12} /> : <CloudUploadIcon fontSize="small" />}
-        disabled={uploadDisabled}
-        sx={{
-          borderRadius: 5,
-          py: 0.875,
-          borderStyle: 'dashed',
-          borderWidth: 1,
-          fontSize: '0.75rem',
-          '&:hover': {
-            borderStyle: 'dashed',
-            bgcolor: 'action.hover',
-          },
-        }}
-      >
-        {uploadState === 'loading' ? '上传中…' : '添加来源'}
-        <input
-          ref={fileInputRef}
-          type="file"
-          hidden
-          accept=".txt,.md,.markdown,text/plain,text/markdown"
-          onChange={(event) => onUpload(event.target.files?.[0] ?? null)}
-          disabled={uploadDisabled}
-        />
-      </Button>
-
-      {/* Search Section - Compact design with smaller border radius */}
-      <Paper
-        variant="outlined"
-        sx={{
-          borderRadius: 1.5,
-          overflow: 'hidden',
-        }}
-      >
-        {/* Search Input */}
-        <TextField
+      <Tooltip content="支持文本(.txt)和Markdown(.md)文件">
+        <Button
+          variant="outlined"
           fullWidth
-          size="small"
-          placeholder="在网络中搜索新来源"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              handleSearch();
-            }
-          }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon fontSize="small" color="action" />
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton
-                  size="small"
-                  onClick={handleSearch}
-                  disabled={isSearching}
-                  sx={{
-                    width: 28,
-                    height: 28,
-                    bgcolor: 'primary.main',
-                    color: 'white',
-                    borderRadius: '50%',
-                    '&:hover': { bgcolor: 'primary.dark' },
-                    '&.Mui-disabled': { bgcolor: 'grey.300' },
-                  }}
-                >
-                  {isSearching ? <CircularProgress size={14} color="inherit" /> : <ArrowForwardIcon sx={{ fontSize: 16 }} />}
-                </IconButton>
-              </InputAdornment>
-            ),
-            sx: { fontSize: '0.8125rem' },
-          }}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              '& fieldset': { border: 'none' },
-            },
-          }}
-        />
-
-        {/* Search Options - Below search bar (compact) */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 0.75,
-            px: 1,
-            py: 0.75,
-            borderTop: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'grey.50',
-          }}
+          size="sm"
+          disabled={uploadDisabled}
+          className="flex items-center justify-center gap-2 py-2 rounded-full border-dashed border-gray-400 normal-case font-normal text-gray-700 hover:bg-gray-100 hover:border-gray-500"
+          onClick={() => fileInputRef.current?.click()}
         >
+          {uploadState === 'loading' ? (
+            <Spinner className="h-3 w-3" />
+          ) : (
+            <CloudUploadIcon style={{ fontSize: 18 }} />
+          )}
+          {uploadState === 'loading' ? '上传中…' : '添加来源'}
+          <input
+            ref={fileInputRef}
+            type="file"
+            hidden
+            accept=".txt,.md,.markdown,text/plain,text/markdown"
+            onChange={(event) => onUpload(event.target.files?.[0] ?? null)}
+            disabled={uploadDisabled}
+          />
+        </Button>
+      </Tooltip>
+
+      {/* Search Section */}
+      <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
+        <div className="p-2">
+          <div className="relative flex w-full">
+            <div className="absolute top-2/4 left-3 -translate-y-2/4 text-gray-500">
+               <SearchIcon style={{ fontSize: 20 }} />
+            </div>
+            <input
+              className="w-full h-9 pl-10 pr-10 rounded-lg bg-transparent border-none outline-none text-sm text-gray-800 placeholder-gray-500 focus:ring-0"
+              placeholder="在网络中搜索新来源"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSearch();
+                }
+              }}
+            />
+            <div className="absolute top-2/4 right-1 -translate-y-2/4">
+               <IconButton
+                 size="sm"
+                 className="rounded-full w-7 h-7 bg-blue-500 hover:bg-blue-600"
+                 onClick={handleSearch}
+                 disabled={isSearching}
+               >
+                 {isSearching ? <Spinner className="h-3 w-3" /> : <ArrowForwardIcon style={{ fontSize: 16 }} />}
+               </IconButton>
+            </div>
+          </div>
+        </div>
+
+        {/* Search Options */}
+        <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 border-t border-gray-200">
           {/* Engine Select */}
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={(e) => setEngineMenuAnchor(e.currentTarget)}
-            startIcon={getEngineIcon()}
-            endIcon={<ExpandMoreIcon sx={{ fontSize: 12 }} />}
-            sx={{
-              borderRadius: 1.5,
-              textTransform: 'none',
-              fontSize: '0.6875rem',
-              py: 0.125,
-              px: 1,
-              minHeight: 24,
-              borderColor: 'divider',
-              color: 'text.primary',
-              '&:hover': { borderColor: 'grey.400' },
-            }}
-          >
-            {engine}
-          </Button>
-          <Menu
-            anchorEl={engineMenuAnchor}
-            open={Boolean(engineMenuAnchor)}
-            onClose={() => setEngineMenuAnchor(null)}
-          >
-            {['Web', 'Scholar', 'Docs'].map((opt) => (
-              <MenuItem
-                key={opt}
-                selected={engine === opt}
-                onClick={() => { setEngine(opt); setEngineMenuAnchor(null); }}
-                sx={{ fontSize: '0.75rem' }}
+          <Menu placement="bottom-start">
+            <MenuHandler>
+              <Button
+                variant="outlined"
+                size="sm"
+                className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border-gray-300 bg-white text-gray-800 normal-case font-normal text-[11px] hover:bg-gray-100"
               >
-                {opt}
-              </MenuItem>
-            ))}
+                {getEngineIcon()}
+                {engine}
+                <ExpandMoreIcon style={{ fontSize: 12 }} />
+              </Button>
+            </MenuHandler>
+            <MenuList className="min-w-[100px] p-1">
+              {['Web', 'Scholar', 'Docs'].map((opt) => (
+                <MenuItem
+                  key={opt}
+                  className={`py-1.5 px-3 text-xs ${engine === opt ? 'bg-gray-100 font-medium' : ''}`}
+                  onClick={() => setEngine(opt)}
+                >
+                  {opt}
+                </MenuItem>
+              ))}
+            </MenuList>
           </Menu>
 
           {/* Mode Select */}
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={(e) => setModeMenuAnchor(e.currentTarget)}
-            startIcon={getModeIcon()}
-            endIcon={<ExpandMoreIcon sx={{ fontSize: 12 }} />}
-            sx={{
-              borderRadius: 1.5,
-              textTransform: 'none',
-              fontSize: '0.6875rem',
-              py: 0.125,
-              px: 1,
-              minHeight: 24,
-              borderColor: 'divider',
-              color: 'text.primary',
-              '&:hover': { borderColor: 'grey.400' },
-            }}
-          >
-            {mode}
-          </Button>
-          <Menu
-            anchorEl={modeMenuAnchor}
-            open={Boolean(modeMenuAnchor)}
-            onClose={() => setModeMenuAnchor(null)}
-          >
-            {['Fast Research', 'Deep Research'].map((opt) => (
-              <MenuItem
-                key={opt}
-                selected={mode === opt}
-                onClick={() => { setMode(opt); setModeMenuAnchor(null); }}
-                sx={{ fontSize: '0.75rem' }}
+          <Menu placement="bottom-start">
+            <MenuHandler>
+              <Button
+                variant="outlined"
+                size="sm"
+                className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border-gray-300 bg-white text-gray-800 normal-case font-normal text-[11px] hover:bg-gray-100"
               >
-                {opt}
-              </MenuItem>
-            ))}
+                {getModeIcon()}
+                {mode}
+                <ExpandMoreIcon style={{ fontSize: 12 }} />
+              </Button>
+            </MenuHandler>
+            <MenuList className="min-w-[120px] p-1">
+              {['Fast Research', 'Deep Research'].map((opt) => (
+                <MenuItem
+                  key={opt}
+                  className={`py-1.5 px-3 text-xs ${mode === opt ? 'bg-gray-100 font-medium' : ''}`}
+                  onClick={() => setMode(opt)}
+                >
+                  {opt}
+                </MenuItem>
+              ))}
+            </MenuList>
           </Menu>
-        </Box>
-      </Paper>
+        </div>
+      </div>
 
       {/* Search Status */}
       {(isSearching || searchNotice) && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="small" className="text-[11px] text-gray-600 px-1">
           {isSearching ? '搜索中…' : searchNotice}
         </Typography>
       )}
 
       {/* Search Results */}
       {searchResults.length > 0 && (
-        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1.5 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-            <Typography variant="caption" fontWeight={600}>
+        <Card className="p-3 border border-gray-200 shadow-sm rounded-xl">
+          <div className="flex items-center justify-between mb-2">
+            <Typography variant="small" className="font-semibold text-gray-800 text-xs">
               搜索结果
             </Typography>
-            <Chip label={`${searchResults.length} 条`} size="small" />
-          </Stack>
-          <Stack spacing={1}>
+            <Chip value={`${searchResults.length} 条`} size="sm" className="bg-gray-900 text-[10px] h-5 py-0 px-2" />
+          </div>
+          <div className="flex flex-col gap-2">
             {searchResults.map((item) => (
-              <Box
+              <a
                 key={`${item.title}-${item.url}`}
-                component={Link}
                 href={item.url}
                 target="_blank"
                 rel="noreferrer"
-                sx={{
-                  display: 'block',
-                  p: 1,
-                  borderRadius: 1.5,
-                  bgcolor: 'grey.50',
-                  textDecoration: 'none',
-                  transition: 'all 0.2s',
-                  '&:hover': {
-                    bgcolor: 'grey.100',
-                  },
-                }}
+                className="block p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
               >
-                <Typography variant="caption" fontWeight={600} color="text.primary" sx={{ display: 'block', mb: 0.25, lineHeight: 1.3 }}>
+                <Typography variant="small" className="font-semibold text-gray-900 text-xs leading-snug mb-0.5">
                   {item.title}
                 </Typography>
                 {item.snippet && (
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.25, fontSize: '0.625rem', lineHeight: 1.3 }}>
+                  <Typography variant="small" className="text-[10px] text-gray-600 leading-snug mb-0.5 line-clamp-2">
                     {item.snippet}
                   </Typography>
                 )}
-                <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.625rem' }}>
+                <Typography variant="small" className="text-[10px] text-gray-500">
                   {item.source || '来源推荐'}
                 </Typography>
-              </Box>
+              </a>
             ))}
-          </Stack>
-        </Paper>
+          </div>
+        </Card>
       )}
 
       {/* Select All & Batch Actions */}
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+      <div className="flex items-center justify-between px-1">
+        <Typography variant="small" className="text-[11px] text-gray-600">
           选择所有来源
         </Typography>
-        <Stack direction="row" alignItems="center" spacing={0.5}>
+        <div className="flex items-center gap-1">
           <Checkbox
             checked={allSelected}
             onChange={handleToggleAll}
-            size="small"
-            sx={{ '&.Mui-checked': { color: 'primary.main' } }}
+            containerProps={{ className: "p-1" }}
+            className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
+            iconProps={{ className: "text-white" }}
           />
-          <IconButton
-            size="small"
-            onClick={(e) => setBatchMenuAnchorEl(e.currentTarget)}
-            disabled={removeDisabled}
-            sx={{ border: '1px solid', borderColor: 'divider', width: 22, height: 22 }}
-          >
-            <MoreHorizIcon fontSize="small" />
-          </IconButton>
-          <Menu
-            anchorEl={batchMenuAnchorEl}
-            open={Boolean(batchMenuAnchorEl)}
-            onClose={() => setBatchMenuAnchorEl(null)}
-          >
-            <Typography variant="caption" color="text.secondary" sx={{ px: 1.5, py: 0.75, display: 'block', fontSize: '0.6875rem' }}>
-              已选择 {selectedIds.length} 个来源
-            </Typography>
-            <Divider />
-            <MenuItem
-              onClick={async () => {
-                setBatchMenuAnchorEl(null);
-                const label =
-                  selectedIds.length === 1
-                    ? '确定要移除已选的 1 个来源吗？'
-                    : `确定要移除已选的 ${selectedIds.length} 个来源吗？`;
-                if (!window.confirm(label)) return;
-                const success = await onRemoveSources(selectedIds);
-                if (success) {
-                  setSelectedSourceIds({});
-                }
-              }}
-              sx={{ color: 'error.main' }}
-            >
-              <ListItemIcon>
-                <DeleteIcon fontSize="small" color="error" />
-              </ListItemIcon>
-              <ListItemText primaryTypographyProps={{ fontSize: '0.75rem' }}>删除已选来源</ListItemText>
-            </MenuItem>
+          <Menu placement="bottom-end">
+             <MenuHandler>
+               <IconButton
+                 size="sm"
+                 variant="outlined"
+                 className="w-6 h-6 min-w-[24px] rounded border-gray-200"
+                 disabled={removeDisabled}
+               >
+                 <MoreHorizIcon style={{ fontSize: 16 }} />
+               </IconButton>
+             </MenuHandler>
+             <MenuList className="p-1 min-w-[160px]">
+                <div className="px-3 py-2 text-[11px] font-semibold text-gray-500 border-b border-gray-100 mb-1">
+                  已选择 {selectedIds.length} 个来源
+                </div>
+                <MenuItem
+                  onClick={async () => {
+                    const label =
+                      selectedIds.length === 1
+                        ? '确定要移除已选的 1 个来源吗？'
+                        : `确定要移除已选的 ${selectedIds.length} 个来源吗？`;
+                    if (!window.confirm(label)) return;
+                    const success = await onRemoveSources(selectedIds);
+                    if (success) {
+                      setSelectedSourceIds({});
+                    }
+                  }}
+                  className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                >
+                  <DeleteIcon style={{ fontSize: 16 }} />
+                  <span>删除已选来源</span>
+                </MenuItem>
+             </MenuList>
           </Menu>
-        </Stack>
-      </Stack>
+        </div>
+      </div>
 
       {/* Sources List */}
-      <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {isLoading ? (
-          <Stack spacing={1}>
-            <Skeleton variant="rounded" height={36} sx={{ borderRadius: 2 }} />
-            <Skeleton variant="rounded" height={36} sx={{ borderRadius: 2 }} />
-            <Skeleton variant="rounded" height={36} width="70%" sx={{ borderRadius: 2 }} />
-          </Stack>
+          <div className="flex flex-col gap-2">
+            <div className="h-10 rounded-lg bg-gray-100 animate-pulse" />
+            <div className="h-10 rounded-lg bg-gray-100 animate-pulse" />
+            <div className="h-10 w-2/3 rounded-lg bg-gray-100 animate-pulse" />
+          </div>
         ) : sources.length === 0 ? (
-          <Paper
-            variant="outlined"
-            sx={{
-              p: 1.5,
-              textAlign: 'center',
-              borderStyle: 'dashed',
-              borderRadius: 1.5,
-              bgcolor: 'grey.50',
-            }}
-          >
-            <Typography variant="caption" color="text.secondary">
+          <div className="p-3 text-center border border-dashed border-gray-300 rounded-lg bg-gray-100">
+            <Typography variant="small" className="text-gray-600 text-[11px] font-normal">
               暂无来源。添加文档后这里会展示来源列表。
             </Typography>
-          </Paper>
+          </div>
         ) : (
-          <List disablePadding sx={{ '& .MuiListItem-root': { mb: 0.5 } }}>
+          <div className="flex flex-col gap-1.5">
             {sources.map((source) => (
-              <ListItem
-                key={source.id}
-                disablePadding
-                secondaryAction={
-                  <Stack direction="row" alignItems="center" spacing={0.25}>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => handleMenuOpen(e, source.id)}
-                      sx={{
-                        width: 22,
-                        height: 22,
-                        opacity: 0,
-                        transition: 'opacity 0.2s',
-                        '.MuiListItem-root:hover &': { opacity: 1 },
-                      }}
-                    >
-                      <MoreHorizIcon fontSize="small" />
-                    </IconButton>
-                    <Checkbox
-                      checked={Boolean(selectedSourceIds[source.id])}
-                      onChange={() => handleToggleSource(source.id)}
-                      size="small"
-                    />
-                  </Stack>
-                }
-              >
-                <ListItemButton
-                  onClick={() => handleOpenDetail(source)}
-                  sx={{
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    bgcolor: 'background.paper',
-                    py: 0.75,
-                    px: 1,
-                    minHeight: 36,
-                    '&:hover': {
-                      borderColor: 'grey.300',
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ minWidth: 28 }}>
-                    <Box
-                      sx={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: 1.5,
-                        bgcolor: 'grey.100',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <DescriptionIcon fontSize="small" color="action" />
-                    </Box>
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={source.title}
-                    primaryTypographyProps={{
-                      variant: 'caption',
-                      fontWeight: 600,
-                      noWrap: true,
-                      fontSize: '0.75rem',
-                    }}
-                  />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-        )}
-      </Box>
+               <div
+                 key={source.id}
+                 className="group relative flex items-center rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:border-gray-300 hover:shadow"
+               >
+                  <button
+                    className="flex flex-1 items-center gap-3 p-2 text-left min-w-0"
+                    onClick={() => handleOpenDetail(source)}
+                  >
+                     <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-200 text-gray-600 flex-shrink-0">
+                        <DescriptionIcon style={{ fontSize: 18 }} />
+                     </div>
+                     <Typography
+                       variant="small"
+                       className="font-semibold text-gray-900 text-xs truncate"
+                     >
+                        {source.title}
+                     </Typography>
+                  </button>
 
-      {/* Source Item Menu */}
-      <Menu
-        anchorEl={menuAnchorEl}
-        open={Boolean(menuAnchorEl)}
-        onClose={handleMenuClose}
-      >
-        <MenuItem
-          onClick={async () => {
-            if (isDemo || removeState === 'loading' || !activeSourceId) return;
-            const source = sources.find((s) => s.id === activeSourceId);
-            handleMenuClose();
-            if (!source) return;
-            if (!window.confirm(`确定要删除「${source.title}」吗？此操作不可撤销。`)) return;
-            await onRemoveSource(activeSourceId);
-          }}
-          disabled={isDemo || removeState === 'loading'}
-          sx={{ color: 'error.main' }}
-        >
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText>{removeState === 'loading' ? '删除中…' : '删除来源'}</ListItemText>
-        </MenuItem>
-      </Menu>
+                  <div className="flex items-center gap-1 pr-2">
+                     <Menu placement="bottom-end">
+                        <MenuHandler>
+                           <IconButton
+                              size="sm"
+                              variant="text"
+                              className="w-6 h-6 min-w-[24px] rounded-full text-gray-500 opacity-0 group-hover:opacity-100 hover:bg-gray-200"
+                              onClick={(e) => {
+                                 e.stopPropagation(); // Stop propagation to avoid clicking the item
+                                 setActiveSourceId(source.id);
+                              }}
+                           >
+                              <MoreHorizIcon style={{ fontSize: 16 }} />
+                           </IconButton>
+                        </MenuHandler>
+                        <MenuList className="p-1 min-w-[140px]">
+                           <MenuItem
+                              onClick={async () => {
+                                 if (isDemo || removeState === 'loading') return;
+                                 if (!window.confirm(`确定要删除「${source.title}」吗？此操作不可撤销。`)) return;
+                                 await onRemoveSource(source.id);
+                              }}
+                              disabled={isDemo || removeState === 'loading'}
+                              className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                           >
+                              <DeleteIcon style={{ fontSize: 16 }} />
+                              <span>{removeState === 'loading' ? '删除中…' : '删除来源'}</span>
+                           </MenuItem>
+                        </MenuList>
+                     </Menu>
+
+                     <Checkbox
+                       checked={Boolean(selectedSourceIds[source.id])}
+                       onChange={() => handleToggleSource(source.id)}
+                       containerProps={{ className: "p-1" }}
+                       className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
+                       iconProps={{ className: "text-white" }}
+                     />
+                  </div>
+               </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Error State */}
       {error && (
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Typography variant="caption" color="error">
+        <div className="flex items-center gap-2 mt-1">
+          <Typography variant="small" color="red" className="text-[11px]">
             {error}
           </Typography>
-          <Button size="small" onClick={onRetry} sx={{ minWidth: 'auto' }}>
+          <Button
+            variant="text"
+            size="sm"
+            onClick={onRetry}
+            className="px-2 py-1 h-6 min-h-0 text-[11px] text-gray-800"
+          >
             重试
           </Button>
-        </Stack>
+        </div>
       )}
 
       {/* Source Detail Dialog */}
@@ -612,7 +476,7 @@ function SourcesPanel({
         source={selectedSource}
         onClose={handleCloseDetail}
       />
-    </Box>
+    </div>
   );
 }
 

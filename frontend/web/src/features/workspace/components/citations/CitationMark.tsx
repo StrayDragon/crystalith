@@ -68,31 +68,29 @@ export default function CitationMark({ index, citation, onHover, onJump }: Citat
 
   const tooltip = isOpen && position ? (
     <div
-      className="CitationTooltip"
+      className="fixed z-[99999] w-[280px] max-w-[90vw] rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-xl pointer-events-none"
       style={{
-        position: 'fixed',
         top: position.top,
         left: position.left,
-        zIndex: 99999,
       }}
       role="tooltip"
     >
-      <div className="CitationTooltip__title">{citation.sourceTitle}</div>
-      {pageLabel && <div className="CitationTooltip__meta">{pageLabel}</div>}
+      <div className="text-xs font-semibold truncate text-gray-900">{citation.sourceTitle}</div>
+      {pageLabel && <div className="text-[10px] mt-0.5 text-gray-500">{pageLabel}</div>}
       {citation.snippet && (
-        <div className="CitationTooltip__snippet">{citation.snippet}</div>
+        <div className="text-[11px] mt-1.5 line-clamp-3 leading-relaxed text-gray-500">{citation.snippet}</div>
       )}
     </div>
   ) : null;
 
   return (
-    <span className="CitationMarkWrapper">
+    <span className="relative inline-flex items-center">
       <button
         ref={buttonRef}
         type="button"
         role="button"
         tabIndex={0}
-        className="CitationMark"
+        className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full border border-gray-200 bg-white text-[10px] font-semibold text-gray-500 transition hover:text-gray-800 cursor-pointer"
         onMouseEnter={handleOpen}
         onMouseLeave={handleClose}
         onFocus={handleOpen}
