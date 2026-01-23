@@ -392,6 +392,19 @@ class ContextWindowSettings(BaseModel):
     )
 
 
+class SearXNGSettings(BaseModel):
+    """SearXNG search engine settings."""
+    host: str = Field("http://localhost:8888", description="SearXNG instance URL")
+    api_key: str | None = Field(None, description="Optional API key for authentication")
+    timeout: int = Field(10, ge=1, description="Request timeout in seconds")
+    max_results: int = Field(10, ge=1, le=50, description="Maximum number of results")
+
+
+class SearchSettings(BaseModel):
+    """Web search settings."""
+    searxng: SearXNGSettings = Field(default_factory=lambda: SearXNGSettings())
+
+
 # =============================================================================
 # Main Settings Class
 # =============================================================================
@@ -463,6 +476,7 @@ class Settings(BaseSettings):
     chat: ChatSettings = Field(default_factory=ChatSettings)
     refine: RefineSettings = Field(default_factory=RefineSettings)
     context_window: ContextWindowSettings = Field(default_factory=ContextWindowSettings)
+    search: SearchSettings = Field(default_factory=lambda: SearchSettings(), description="Web search settings")
 
     # === Models ===
     models: ModelsSettings = Field(default_factory=ModelsSettings, description="Model configurations")

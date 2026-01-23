@@ -207,17 +207,17 @@ class SQLiteVectorStore:
         await self._ensure_schema()
         async with self._engine.begin() as conn:
             if self._vss_ready:
-                await conn.execute(
-                    text(
-                        f"""
-                        DELETE FROM {_INDEX_TABLE}
-                        WHERE rowid IN (
-                            SELECT id FROM {_ENTRIES_TABLE} WHERE source_id = :source_id
-                        )
-                        """
-                    ),
+                # sqlite-vss doesn't support DELETE with subquery, so we first get the rowids
+                result = await conn.execute(
+                    text(f"SELECT id FROM {_ENTRIES_TABLE} WHERE source_id = :source_id"),
                     {"source_id": source_id},
                 )
+                rowids = [row.id for row in result.fetchall()]
+                for rowid in rowids:
+                    await conn.execute(
+                        text(f"DELETE FROM {_INDEX_TABLE} WHERE rowid = :rowid"),
+                        {"rowid": rowid},
+                    )
             await conn.execute(
                 text(f"DELETE FROM {_ENTRIES_TABLE} WHERE source_id = :source_id"),
                 {"source_id": source_id},
@@ -227,17 +227,17 @@ class SQLiteVectorStore:
         await self._ensure_schema()
         async with self._engine.begin() as conn:
             if self._vss_ready:
-                await conn.execute(
-                    text(
-                        f"""
-                        DELETE FROM {_INDEX_TABLE}
-                        WHERE rowid IN (
-                            SELECT id FROM {_ENTRIES_TABLE} WHERE notebook_id = :notebook_id
-                        )
-                        """
-                    ),
+                # sqlite-vss doesn't support DELETE with subquery, so we first get the rowids
+                result = await conn.execute(
+                    text(f"SELECT id FROM {_ENTRIES_TABLE} WHERE notebook_id = :notebook_id"),
                     {"notebook_id": notebook_id},
                 )
+                rowids = [row.id for row in result.fetchall()]
+                for rowid in rowids:
+                    await conn.execute(
+                        text(f"DELETE FROM {_INDEX_TABLE} WHERE rowid = :rowid"),
+                        {"rowid": rowid},
+                    )
             await conn.execute(
                 text(f"DELETE FROM {_ENTRIES_TABLE} WHERE notebook_id = :notebook_id"),
                 {"notebook_id": notebook_id},

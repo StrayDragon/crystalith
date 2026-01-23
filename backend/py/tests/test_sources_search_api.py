@@ -14,6 +14,7 @@ from crystalith.api.deps import get_embedding_provider
 from crystalith.app import create_app
 from crystalith.config import DatabaseSettings, Settings
 from crystalith.db import create_all, create_db_manager
+from crystalith.search import SearchResult
 from crystalith.vector_storage import InMemoryVectorStore
 
 from conftest import create_test_models
@@ -32,6 +33,31 @@ def _mock_agent_model(monkeypatch) -> None:
     models.ALLOW_MODEL_REQUESTS = False
     test_model = TestModel()
     monkeypatch.setattr(search_graph, "build_chat_model", lambda _settings: test_model)
+
+
+@pytest.fixture(autouse=True)
+def _mock_searxng_searcher(monkeypatch) -> None:
+    """Mock the SearXNGSearcher to return fake search results."""
+    async def mock_search(self, query: str, *, mode: str = "Web"):
+        return [
+            SearchResult(
+                title=f"{query} - Result 1",
+                url=f"https://example.com/search/{query}",
+                snippet=f"This is a search result for {query}",
+                engine="mock",
+            ),
+            SearchResult(
+                title=f"{query} - Result 2",
+                url=f"https://example.com/articles/{query}",
+                snippet=f"Another result for {query}",
+                engine="mock",
+            ),
+        ]
+
+    monkeypatch.setattr(
+        "crystalith.agents.search_graph.SearXNGSearcher.search",
+        mock_search,
+    )
 
 
 @pytest_asyncio.fixture
