@@ -206,35 +206,24 @@ export default function WorkspaceLayout() {
     setViewerOutputId(refine.outputs[0].id);
   }, [isViewerOpen, refine.outputs, viewerOutputId]);
 
-  const activeNotebook =
-    notebooks.notebooks.find((item) => item.id === notebooks.activeNotebookId) ?? null;
   const isDemo = notebooks.connectionState === 'demo';
-  const title =
-    isDemo
-      ? 'Modern Strategies for Male Hair Loss and Restoration'
-      : activeNotebook?.title ?? '未命名笔记本';
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50/50 gap-3 sm:gap-4 p-3 sm:p-4 lg:p-6 lg:h-screen lg:overflow-hidden text-gray-900">
       <WorkspaceHeader
-        title={title}
+        notebooks={notebooks.notebooks}
+        activeNotebookId={notebooks.activeNotebookId}
+        isNotebooksLoading={notebooks.isLoading}
+        notebooksError={notebooks.notebooksError}
         createName={notebooks.createName}
         createState={notebooks.createState}
         createError={notebooks.createError}
         isDemo={notebooks.isDemo}
         onCreateNameChange={notebooks.setCreateName}
         onCreateNotebook={notebooks.createNotebook}
-        onUpdateNotebook={(name) =>
-          notebooks.activeNotebookId
-            ? notebooks.updateNotebook(notebooks.activeNotebookId, name)
-            : Promise.resolve(false)
-        }
-        onDeleteNotebook={() =>
-          notebooks.activeNotebookId
-            ? notebooks.deleteNotebook(notebooks.activeNotebookId)
-            : Promise.resolve(false)
-        }
-        activeNotebookId={notebooks.activeNotebookId}
+        onUpdateNotebook={notebooks.updateNotebook}
+        onDeleteNotebook={notebooks.deleteNotebook}
+        onSelectNotebook={notebooks.setActiveNotebookId}
       />
 
       <main

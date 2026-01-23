@@ -129,6 +129,9 @@ export function ModelSelector({
         onChange={handleChange}
         disabled={disabled}
         size={size}
+        menuProps={{
+          className: "max-h-60 overflow-y-auto z-[9999]",
+        }}
         selected={(element) => {
           // Custom render for selected value
           // element is the React Element of the selected Option
@@ -164,7 +167,7 @@ export function ModelSelector({
                 {model.description && (
                   <Typography
                     variant="small"
-                    className="text-[10px] text-gray-500 truncate"
+                    className="text-[10px] text-gray-500 font-medium truncate"
                   >
                     {model.description}
                   </Typography>
@@ -174,7 +177,7 @@ export function ModelSelector({
                 value={model.provider}
                 size="sm"
                 variant="outlined"
-                className="h-5 px-1 text-[9px] rounded-full normal-case border-gray-200 text-gray-500 flex items-center"
+                className="h-5 px-1.5 text-[10px] font-medium rounded-full normal-case border-gray-200 text-gray-500 flex items-center"
               />
             </div>
           </Option>
