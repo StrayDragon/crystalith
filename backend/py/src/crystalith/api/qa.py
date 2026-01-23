@@ -334,7 +334,10 @@ def _build_context_window(
     context: str,
 ) -> tuple[list[ChatMessage], ContextStats]:
     system_message = ChatMessage(role="system", content=SYSTEM_PROMPT)
-    counter = TokenCounter(settings.chat.model)
+    # Get model name from default chat model
+    default_chat = settings.get_default_chat_model()
+    model_name = default_chat.model if default_chat else "gpt-4"
+    counter = TokenCounter(model_name)
     window = ContextWindow(settings.context_window, counter)
     return window.build(
         system_message=system_message,
