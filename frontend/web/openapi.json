@@ -1,0 +1,3952 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Crystalith",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/v1/notebooks": {
+      "get": {
+        "tags": [
+          "notebooks"
+        ],
+        "summary": "List Notebooks",
+        "operationId": "list_notebooks_v1_notebooks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NotebookRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Notebooks V1 Notebooks Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "notebooks"
+        ],
+        "summary": "Create Notebook",
+        "operationId": "create_notebook_v1_notebooks_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotebookCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotebookRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}": {
+      "get": {
+        "tags": [
+          "notebooks"
+        ],
+        "summary": "Get Notebook",
+        "operationId": "get_notebook_v1_notebooks__notebook_id__get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotebookRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "notebooks"
+        ],
+        "summary": "Update Notebook",
+        "operationId": "update_notebook_v1_notebooks__notebook_id__patch",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotebookUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotebookRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "notebooks"
+        ],
+        "summary": "Delete Notebook",
+        "operationId": "delete_notebook_v1_notebooks__notebook_id__delete",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/analysis": {
+      "get": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Analyze Notebook",
+        "operationId": "analyze_notebook_v1_notebooks__notebook_id__analysis_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "List Models",
+        "description": "List all available AI models.\n\nOptionally filter by role (chat, embed, edit, autocomplete) or capability.",
+        "operationId": "list_models_v1_models_get",
+        "parameters": [
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "chat",
+                    "embed",
+                    "edit",
+                    "autocomplete"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            }
+          },
+          {
+            "name": "capability",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Capability"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelsListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models/{model_id}": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "Get Model",
+        "description": "Get a specific model by ID.",
+        "operationId": "get_model_v1_models__model_id__get",
+        "parameters": [
+          {
+            "name": "model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Model Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/qa": {
+      "post": {
+        "tags": [
+          "qa"
+        ],
+        "summary": "Ask Question",
+        "operationId": "ask_question_v1_notebooks__notebook_id__qa_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QARequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QAResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/qa/stream": {
+      "post": {
+        "tags": [
+          "qa"
+        ],
+        "summary": "Ask Question Stream",
+        "description": "Stream QA response using Server-Sent Events.\n\nEvents:\n- `chunk`: Text chunk `{\"text\": \"...\"}`\n- `done`: Completion `{\"citations\": [...], \"evidence\": bool, \"confidence\": float, ...}`\n- `error`: Error `{\"message\": \"...\"}`",
+        "operationId": "ask_question_stream_v1_notebooks__notebook_id__qa_stream_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QARequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SSE stream of QA response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/outputs/{output_type}": {
+      "post": {
+        "tags": [
+          "outputs"
+        ],
+        "summary": "Create Output",
+        "operationId": "create_output_v1_notebooks__notebook_id__outputs__output_type__post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "output_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "title": "Output Type",
+              "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+              "enum": [
+                "FAQ",
+                "GUIDE",
+                "TIMELINE",
+                "MINDMAP",
+                "QUIZ",
+                "BRIEFING",
+                "PARAGRAPH",
+                "BULLETS",
+                "STRUCTURED"
+              ],
+              "type": "string",
+              "x-enum-module": "crystalith.outputs.types",
+              "x-enum-class": "OutputType",
+              "default": "PARAGRAPH"
+            },
+            "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutputGenerateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/outputs": {
+      "get": {
+        "tags": [
+          "outputs"
+        ],
+        "summary": "List Outputs",
+        "operationId": "list_outputs_v1_notebooks__notebook_id__outputs_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputRead"
+                  },
+                  "title": "Response List Outputs V1 Notebooks  Notebook Id  Outputs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/outputs/{output_id}": {
+      "get": {
+        "tags": [
+          "outputs"
+        ],
+        "summary": "Get Output",
+        "operationId": "get_output_v1_notebooks__notebook_id__outputs__output_id__get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "output_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Output Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "outputs"
+        ],
+        "summary": "Delete Output",
+        "description": "Delete a specific output by ID.",
+        "operationId": "delete_output_v1_notebooks__notebook_id__outputs__output_id__delete",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "output_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Output Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/outputs/{output_id}/convert-to-source": {
+      "post": {
+        "tags": [
+          "outputs"
+        ],
+        "summary": "Convert Output To Source",
+        "description": "Convert an output to a source document that can be used for RAG queries.",
+        "operationId": "convert_output_to_source_v1_notebooks__notebook_id__outputs__output_id__convert_to_source_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "output_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Output Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvertToSourceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/refine": {
+      "post": {
+        "tags": [
+          "refine"
+        ],
+        "summary": "Refine",
+        "operationId": "refine_v1_notebooks__notebook_id__refine_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefineRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/refine/batch": {
+      "post": {
+        "tags": [
+          "refine"
+        ],
+        "summary": "Refine Batch",
+        "operationId": "refine_batch_v1_notebooks__notebook_id__refine_batch_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefineBatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefineBatchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sessions": {
+      "post": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Create Session",
+        "operationId": "create_session_v1_notebooks__notebook_id__sessions_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "List Sessions",
+        "operationId": "list_sessions_v1_notebooks__notebook_id__sessions_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionRead"
+                  },
+                  "title": "Response List Sessions V1 Notebooks  Notebook Id  Sessions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sessions/{session_id}": {
+      "get": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Get Session",
+        "operationId": "get_session_v1_notebooks__notebook_id__sessions__session_id__get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Update Session",
+        "operationId": "update_session_v1_notebooks__notebook_id__sessions__session_id__patch",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Delete Session",
+        "operationId": "delete_session_v1_notebooks__notebook_id__sessions__session_id__delete",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sessions/{session_id}/convert-to-source": {
+      "post": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Convert Session To Source",
+        "description": "Convert session messages to a source document for RAG queries.",
+        "operationId": "convert_session_to_source_v1_notebooks__notebook_id__sessions__session_id__convert_to_source_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertSessionToSourceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvertSessionToSourceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sessions/{session_id}/convert-to-output": {
+      "post": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Convert Session To Output",
+        "description": "Convert session messages to a studio output/note.",
+        "operationId": "convert_session_to_output_v1_notebooks__notebook_id__sessions__session_id__convert_to_output_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertSessionToOutputRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvertSessionToOutputResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sessions/{session_id}/messages": {
+      "post": {
+        "tags": [
+          "messages"
+        ],
+        "summary": "Create Message",
+        "operationId": "create_message_v1_notebooks__notebook_id__sessions__session_id__messages_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "messages"
+        ],
+        "summary": "List Messages",
+        "operationId": "list_messages_v1_notebooks__notebook_id__sessions__session_id__messages_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MessageRead"
+                  },
+                  "title": "Response List Messages V1 Notebooks  Notebook Id  Sessions  Session Id  Messages Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sources": {
+      "get": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "List Sources",
+        "operationId": "list_sources_v1_notebooks__notebook_id__sources_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SourceRead"
+                  },
+                  "title": "Response List Sources V1 Notebooks  Notebook Id  Sources Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "Upload Source",
+        "operationId": "upload_source_v1_notebooks__notebook_id__sources_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_source_v1_notebooks__notebook_id__sources_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "Batch Delete Sources",
+        "operationId": "batch_delete_sources_v1_notebooks__notebook_id__sources_delete",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceBatchDeleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceBatchDeleteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sources/search": {
+      "post": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "Search Sources",
+        "operationId": "search_sources_v1_notebooks__notebook_id__sources_search_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceSearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sources/from-url": {
+      "post": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "Create Source From Url",
+        "description": "Create a source from a URL.\n\nSupports two modes:\n- `link`: Save URL, title, and snippet as a lightweight source\n- `fetch`: Fetch the webpage content and parse it as a full source",
+        "operationId": "create_source_from_url_v1_notebooks__notebook_id__sources_from_url_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceFromUrlRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sources/{source_id}": {
+      "delete": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "Delete Source",
+        "operationId": "delete_source_v1_notebooks__notebook_id__sources__source_id__delete",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sources/{source_id}/summary": {
+      "get": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "Get Source Summary",
+        "description": "Generate or retrieve summary for a specific source.",
+        "operationId": "get_source_summary_v1_notebooks__notebook_id__sources__source_id__summary_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceSummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sources/{source_id}/qa": {
+      "post": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "Source Qa",
+        "description": "Answer a question based on a specific source's content.",
+        "operationId": "source_qa_v1_notebooks__notebook_id__sources__source_id__qa_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceQARequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceQAResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tasks/{task_id}": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "Get Task",
+        "operationId": "get_task_v1_tasks__task_id__get",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/tasks": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "List Tasks",
+        "operationId": "list_tasks_v1_notebooks__notebook_id__tasks_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskRead"
+                  },
+                  "title": "Response List Tasks V1 Notebooks  Notebook Id  Tasks Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspace/tools": {
+      "get": {
+        "tags": [
+          "workspace-tools"
+        ],
+        "summary": "List Workspace Tools",
+        "operationId": "list_workspace_tools_v1_workspace_tools_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceToolsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspace/tools/{tool_id}/config": {
+      "get": {
+        "tags": [
+          "workspace-tools"
+        ],
+        "summary": "Get Tool Config",
+        "description": "Get configuration options for a specific tool.",
+        "operationId": "get_tool_config_v1_workspace_tools__tool_id__config_get",
+        "parameters": [
+          {
+            "name": "tool_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tool Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolConfigResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalysisResult": {
+        "properties": {
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/Topic"
+            },
+            "type": "array",
+            "title": "Topics"
+          },
+          "relations": {
+            "items": {
+              "$ref": "#/components/schemas/Relation"
+            },
+            "type": "array",
+            "title": "Relations"
+          },
+          "contradictions": {
+            "items": {
+              "$ref": "#/components/schemas/Relation"
+            },
+            "type": "array",
+            "title": "Contradictions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "topics",
+          "relations",
+          "contradictions"
+        ],
+        "title": "AnalysisResult"
+      },
+      "Body_upload_source_v1_notebooks__notebook_id__sources_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_source_v1_notebooks__notebook_id__sources_post"
+      },
+      "Citation": {
+        "properties": {
+          "source_id": {
+            "type": "integer",
+            "title": "Source Id"
+          },
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "chunk_id": {
+            "type": "integer",
+            "title": "Chunk Id"
+          },
+          "chunk_index": {
+            "type": "integer",
+            "title": "Chunk Index"
+          },
+          "page_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Number"
+          },
+          "paragraph_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paragraph Index"
+          },
+          "snippet": {
+            "type": "string",
+            "title": "Snippet"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "source_name",
+          "chunk_id",
+          "chunk_index",
+          "snippet"
+        ],
+        "title": "Citation"
+      },
+      "ConfigOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "is_default": {
+            "type": "boolean",
+            "title": "Is Default",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "ConfigOption",
+        "description": "A single configuration option."
+      },
+      "ContextStatsResponse": {
+        "properties": {
+          "total_tokens": {
+            "type": "integer",
+            "title": "Total Tokens"
+          },
+          "system_tokens": {
+            "type": "integer",
+            "title": "System Tokens"
+          },
+          "history_tokens": {
+            "type": "integer",
+            "title": "History Tokens"
+          },
+          "retrieval_tokens": {
+            "type": "integer",
+            "title": "Retrieval Tokens"
+          },
+          "query_tokens": {
+            "type": "integer",
+            "title": "Query Tokens"
+          },
+          "max_tokens": {
+            "type": "integer",
+            "title": "Max Tokens"
+          },
+          "compressed": {
+            "type": "boolean",
+            "title": "Compressed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_tokens",
+          "system_tokens",
+          "history_tokens",
+          "retrieval_tokens",
+          "query_tokens",
+          "max_tokens",
+          "compressed"
+        ],
+        "title": "ContextStatsResponse"
+      },
+      "ConvertSessionToOutputRequest": {
+        "properties": {
+          "message_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Ids",
+            "description": "Specific message IDs to convert. If null, converts entire session."
+          },
+          "output_type": {
+            "type": "string",
+            "enum": [
+              "FAQ",
+              "GUIDE",
+              "TIMELINE",
+              "MINDMAP",
+              "QUIZ",
+              "BRIEFING",
+              "PARAGRAPH",
+              "BULLETS",
+              "STRUCTURED"
+            ],
+            "title": "OutputType",
+            "description": "Type of output to create.\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+            "default": "PARAGRAPH",
+            "x-enum-class": "OutputType",
+            "x-enum-module": "crystalith.outputs.types"
+          }
+        },
+        "type": "object",
+        "title": "ConvertSessionToOutputRequest",
+        "description": "Request to convert session messages to an output."
+      },
+      "ConvertSessionToOutputResponse": {
+        "properties": {
+          "output_id": {
+            "type": "integer",
+            "title": "Output Id"
+          },
+          "output_type": {
+            "type": "string",
+            "title": "Output Type"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "output_id",
+          "output_type",
+          "title"
+        ],
+        "title": "ConvertSessionToOutputResponse",
+        "description": "Response after converting session to output."
+      },
+      "ConvertSessionToSourceRequest": {
+        "properties": {
+          "message_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Ids",
+            "description": "Specific message IDs to convert. If null, converts entire session."
+          }
+        },
+        "type": "object",
+        "title": "ConvertSessionToSourceRequest",
+        "description": "Request to convert session messages to a source document."
+      },
+      "ConvertSessionToSourceResponse": {
+        "properties": {
+          "source_id": {
+            "type": "integer",
+            "title": "Source Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "chunk_count": {
+            "type": "integer",
+            "title": "Chunk Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "filename",
+          "chunk_count"
+        ],
+        "title": "ConvertSessionToSourceResponse",
+        "description": "Response after converting session to source."
+      },
+      "ConvertToSourceResponse": {
+        "properties": {
+          "source_id": {
+            "type": "integer",
+            "title": "Source Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "chunk_count": {
+            "type": "integer",
+            "title": "Chunk Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "filename",
+          "chunk_count"
+        ],
+        "title": "ConvertToSourceResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MessageCreate": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "system"
+            ],
+            "title": "Role"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Content"
+          },
+          "citations": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Citation"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "MessageCreate"
+      },
+      "MessageRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "session_id": {
+            "type": "integer",
+            "title": "Session Id"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "system"
+            ],
+            "title": "Role"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "citations": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Citation"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citations"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "session_id",
+          "role",
+          "content",
+          "citations",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "MessageRead"
+      },
+      "ModelRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "ollama"
+            ],
+            "title": "Provider"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles",
+            "description": "Model roles: chat, embed, edit, etc."
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Capabilities",
+            "description": "Special capabilities: tool_use, image_input, etc."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "provider",
+          "model",
+          "display_name",
+          "description"
+        ],
+        "title": "ModelRead",
+        "description": "Response model for a single AI model."
+      },
+      "ModelsListResponse": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelRead"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "default_chat": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Chat"
+          },
+          "default_embedding": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Embedding"
+          }
+        },
+        "type": "object",
+        "required": [
+          "models"
+        ],
+        "title": "ModelsListResponse",
+        "description": "Response model for the models list endpoint."
+      },
+      "NotebookCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "NotebookCreate"
+      },
+      "NotebookRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "NotebookRead"
+      },
+      "NotebookUpdate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "NotebookUpdate"
+      },
+      "OutputGenerateRequest": {
+        "properties": {
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt"
+          },
+          "chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Ids"
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "default": 5
+          },
+          "min_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Min Score",
+            "default": 0.2
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id",
+            "description": "Optional model ID to use for generation"
+          }
+        },
+        "type": "object",
+        "title": "OutputGenerateRequest"
+      },
+      "OutputRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "notebook_id": {
+            "type": "integer",
+            "title": "Notebook Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "FAQ",
+              "GUIDE",
+              "TIMELINE",
+              "MINDMAP",
+              "QUIZ",
+              "BRIEFING",
+              "PARAGRAPH",
+              "BULLETS",
+              "STRUCTURED"
+            ],
+            "title": "OutputType",
+            "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+            "x-enum-class": "OutputType",
+            "x-enum-module": "crystalith.outputs.types"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt"
+          },
+          "chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Ids"
+          },
+          "content": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Content"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "notebook_id",
+          "type",
+          "prompt",
+          "chunk_ids",
+          "content",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "OutputRead"
+      },
+      "OutputType-Input": {
+        "type": "string",
+        "enum": [
+          "FAQ",
+          "GUIDE",
+          "TIMELINE",
+          "MINDMAP",
+          "QUIZ",
+          "BRIEFING",
+          "PARAGRAPH",
+          "BULLETS",
+          "STRUCTURED"
+        ],
+        "title": "OutputType",
+        "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+        "default": "PARAGRAPH",
+        "x-enum-class": "OutputType",
+        "x-enum-module": "crystalith.outputs.types"
+      },
+      "OutputType-Output": {
+        "type": "string",
+        "enum": [
+          "FAQ",
+          "GUIDE",
+          "TIMELINE",
+          "MINDMAP",
+          "QUIZ",
+          "BRIEFING",
+          "PARAGRAPH",
+          "BULLETS",
+          "STRUCTURED"
+        ],
+        "title": "OutputType",
+        "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+        "x-enum-class": "OutputType",
+        "x-enum-module": "crystalith.outputs.types"
+      },
+      "QARequest": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Question"
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "default": 5
+          },
+          "min_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Min Score",
+            "default": 0.2
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "title": "QARequest"
+      },
+      "QAResponse": {
+        "properties": {
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "type": "array",
+            "title": "Citations"
+          },
+          "evidence": {
+            "type": "boolean",
+            "title": "Evidence"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "context": {
+            "$ref": "#/components/schemas/ContextStatsResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "answer",
+          "citations",
+          "evidence",
+          "confidence",
+          "created_at",
+          "context"
+        ],
+        "title": "QAResponse"
+      },
+      "RefineBatchOutput": {
+        "properties": {
+          "paragraph": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paragraph"
+          },
+          "bullets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bullets"
+          },
+          "structured": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StructuredRefine"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "RefineBatchOutput"
+      },
+      "RefineBatchRequest": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Prompt"
+          },
+          "formats": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Formats"
+          },
+          "chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Ids"
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "default": 5
+          },
+          "min_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Min Score",
+            "default": 0.2
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt"
+        ],
+        "title": "RefineBatchRequest"
+      },
+      "RefineBatchResponse": {
+        "properties": {
+          "outputs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RefineBatchOutput"
+            },
+            "type": "object",
+            "title": "Outputs"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "type": "array",
+            "title": "Citations"
+          },
+          "evidence": {
+            "type": "boolean",
+            "title": "Evidence"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "outputs",
+          "citations",
+          "evidence",
+          "created_at"
+        ],
+        "title": "RefineBatchResponse"
+      },
+      "RefineRequest": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Prompt"
+          },
+          "format": {
+            "type": "string",
+            "title": "Format",
+            "default": "paragraph"
+          },
+          "chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Ids"
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "default": 5
+          },
+          "min_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Min Score",
+            "default": 0.2
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt"
+        ],
+        "title": "RefineRequest"
+      },
+      "RefineResponse": {
+        "properties": {
+          "format": {
+            "type": "string",
+            "title": "Format"
+          },
+          "paragraph": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paragraph"
+          },
+          "bullets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bullets"
+          },
+          "structured": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StructuredRefine"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "type": "array",
+            "title": "Citations"
+          },
+          "evidence": {
+            "type": "boolean",
+            "title": "Evidence"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "format",
+          "citations",
+          "evidence",
+          "created_at"
+        ],
+        "title": "RefineResponse"
+      },
+      "Relation": {
+        "properties": {
+          "source_chunk_id": {
+            "type": "integer",
+            "title": "Source Chunk Id"
+          },
+          "target_chunk_id": {
+            "type": "integer",
+            "title": "Target Chunk Id"
+          },
+          "relation_type": {
+            "type": "string",
+            "enum": [
+              "similar",
+              "references",
+              "contradicts"
+            ],
+            "title": "Relation Type"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_chunk_id",
+          "target_chunk_id",
+          "relation_type",
+          "score"
+        ],
+        "title": "Relation"
+      },
+      "SessionCreate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "title": "SessionCreate"
+      },
+      "SessionRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "notebook_id": {
+            "type": "integer",
+            "title": "Notebook Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "notebook_id",
+          "title",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SessionRead"
+      },
+      "SessionUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "title": "SessionUpdate"
+      },
+      "SourceBatchDeleteRequest": {
+        "properties": {
+          "source_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Source Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_ids"
+        ],
+        "title": "SourceBatchDeleteRequest"
+      },
+      "SourceBatchDeleteResponse": {
+        "properties": {
+          "deleted_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Deleted Ids"
+          },
+          "deleted_count": {
+            "type": "integer",
+            "title": "Deleted Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deleted_ids",
+          "deleted_count"
+        ],
+        "title": "SourceBatchDeleteResponse"
+      },
+      "SourceFromUrlMode": {
+        "type": "string",
+        "enum": [
+          "fetch",
+          "link"
+        ],
+        "title": "SourceFromUrlMode",
+        "description": "枚举值:\n\n* `fetch`: 获取完整内容\n* `link`: 仅保存链接",
+        "default": "link",
+        "x-enum-class": "SourceFromUrlMode",
+        "x-enum-module": "crystalith.api.sources"
+      },
+      "SourceFromUrlRequest": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Url"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snippet"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "fetch",
+              "link"
+            ],
+            "title": "SourceFromUrlMode",
+            "description": "枚举值:\n\n* `fetch`: 获取完整内容\n* `link`: 仅保存链接",
+            "default": "link",
+            "x-enum-class": "SourceFromUrlMode",
+            "x-enum-module": "crystalith.api.sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "SourceFromUrlRequest"
+      },
+      "SourceQARequest": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Question"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "title": "SourceQARequest",
+        "description": "Request for source-specific QA."
+      },
+      "SourceQAResponse": {
+        "properties": {
+          "source_id": {
+            "type": "integer",
+            "title": "Source Id"
+          },
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "answer",
+          "created_at"
+        ],
+        "title": "SourceQAResponse",
+        "description": "Response for source-specific QA."
+      },
+      "SourceRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "notebook_id": {
+            "type": "integer",
+            "title": "Notebook Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type"
+          },
+          "parser_type": {
+            "type": "string",
+            "title": "Parser Type"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processing",
+              "ready",
+              "failed"
+            ],
+            "title": "SourceStatus",
+            "description": "枚举值:\n\n* `processing`: 正在处理\n* `ready`: 处理完成\n* `failed`: 处理失败",
+            "x-enum-class": "SourceStatus",
+            "x-enum-module": "crystalith.db.models"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "chunk_count": {
+            "type": "integer",
+            "title": "Chunk Count",
+            "default": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "notebook_id",
+          "filename",
+          "mime_type",
+          "parser_type",
+          "status",
+          "error_message",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SourceRead"
+      },
+      "SourceSearchRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Query"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine",
+            "default": "Web"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode",
+            "default": "Fast Research"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "SourceSearchRequest"
+      },
+      "SourceSearchResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "not_implemented"
+            ],
+            "title": "SourceSearchStatus",
+            "description": "枚举值:\n\n* `ok`: 搜索成功\n* `not_implemented`: 功能未实现",
+            "x-enum-class": "SourceSearchStatus",
+            "x-enum-module": "crystalith.api.sources"
+          },
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SourceSearchResult"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "query",
+          "engine",
+          "mode",
+          "results",
+          "created_at"
+        ],
+        "title": "SourceSearchResponse"
+      },
+      "SourceSearchResult": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snippet"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "url"
+        ],
+        "title": "SourceSearchResult"
+      },
+      "SourceSearchStatus": {
+        "type": "string",
+        "enum": [
+          "ok",
+          "not_implemented"
+        ],
+        "title": "SourceSearchStatus",
+        "description": "枚举值:\n\n* `ok`: 搜索成功\n* `not_implemented`: 功能未实现",
+        "x-enum-class": "SourceSearchStatus",
+        "x-enum-module": "crystalith.api.sources"
+      },
+      "SourceStatus": {
+        "type": "string",
+        "enum": [
+          "processing",
+          "ready",
+          "failed"
+        ],
+        "title": "SourceStatus",
+        "description": "枚举值:\n\n* `processing`: 正在处理\n* `ready`: 处理完成\n* `failed`: 处理失败",
+        "x-enum-class": "SourceStatus",
+        "x-enum-module": "crystalith.db.models"
+      },
+      "SourceSummaryResponse": {
+        "properties": {
+          "source_id": {
+            "type": "integer",
+            "title": "Source Id"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "key_points": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Key Points"
+          },
+          "topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Topics"
+          },
+          "word_count": {
+            "type": "integer",
+            "title": "Word Count"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "summary",
+          "key_points",
+          "topics",
+          "word_count",
+          "generated_at"
+        ],
+        "title": "SourceSummaryResponse",
+        "description": "Response for source summary."
+      },
+      "StructuredRefine": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "bullets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Bullets"
+          },
+          "terms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Terms"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "type": "array",
+            "title": "Citations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "bullets",
+          "terms",
+          "citations"
+        ],
+        "title": "StructuredRefine"
+      },
+      "TaskRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "notebook_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notebook Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "refine",
+              "document_parse"
+            ],
+            "title": "TaskType",
+            "description": "枚举值:\n\n* `refine`: 内容精炼任务\n* `document_parse`: 文档解析任务",
+            "x-enum-class": "TaskType",
+            "x-enum-module": "crystalith.tasks.types"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed",
+              "cancelled"
+            ],
+            "title": "TaskStatus",
+            "description": "枚举值:\n\n* `pending`: 等待执行\n* `running`: 正在执行\n* `completed`: 执行完成\n* `failed`: 执行失败\n* `cancelled`: 已取消",
+            "x-enum-class": "TaskStatus",
+            "x-enum-module": "crystalith.tasks.types"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "progress": {
+            "type": "integer",
+            "title": "Progress"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "notebook_id",
+          "type",
+          "status",
+          "payload",
+          "result",
+          "error",
+          "progress",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TaskRead"
+      },
+      "TaskStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "running",
+          "completed",
+          "failed",
+          "cancelled"
+        ],
+        "title": "TaskStatus",
+        "description": "枚举值:\n\n* `pending`: 等待执行\n* `running`: 正在执行\n* `completed`: 执行完成\n* `failed`: 执行失败\n* `cancelled`: 已取消",
+        "x-enum-class": "TaskStatus",
+        "x-enum-module": "crystalith.tasks.types"
+      },
+      "TaskType": {
+        "type": "string",
+        "enum": [
+          "refine",
+          "document_parse"
+        ],
+        "title": "TaskType",
+        "description": "枚举值:\n\n* `refine`: 内容精炼任务\n* `document_parse`: 文档解析任务",
+        "x-enum-class": "TaskType",
+        "x-enum-module": "crystalith.tasks.types"
+      },
+      "ToolConfigResponse": {
+        "properties": {
+          "tool_id": {
+            "type": "string",
+            "title": "Tool Id"
+          },
+          "tool_label": {
+            "type": "string",
+            "title": "Tool Label"
+          },
+          "quantity_options": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ConfigOption"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity Options"
+          },
+          "difficulty_options": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ConfigOption"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty Options"
+          },
+          "topic_placeholder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic Placeholder"
+          },
+          "supports_topic": {
+            "type": "boolean",
+            "title": "Supports Topic",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "tool_id",
+          "tool_label"
+        ],
+        "title": "ToolConfigResponse",
+        "description": "Configuration options for a specific tool."
+      },
+      "Topic": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "chunk_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Chunk Ids"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keywords"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "chunk_ids",
+          "keywords"
+        ],
+        "title": "Topic"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WorkspaceTool": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "tone": {
+            "type": "string",
+            "enum": [
+              "slate",
+              "blue",
+              "green",
+              "rose",
+              "amber",
+              "teal",
+              "indigo"
+            ],
+            "title": "Tone"
+          },
+          "output_type": {
+            "type": "string",
+            "enum": [
+              "FAQ",
+              "GUIDE",
+              "TIMELINE",
+              "MINDMAP",
+              "QUIZ",
+              "BRIEFING",
+              "PARAGRAPH",
+              "BULLETS",
+              "STRUCTURED"
+            ],
+            "title": "OutputType",
+            "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+            "x-enum-class": "OutputType",
+            "x-enum-module": "crystalith.outputs.types"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "badge": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Badge"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "description",
+          "tone",
+          "output_type",
+          "prompt"
+        ],
+        "title": "WorkspaceTool"
+      },
+      "WorkspaceToolsResponse": {
+        "properties": {
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceTool"
+            },
+            "type": "array",
+            "title": "Tools"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tools"
+        ],
+        "title": "WorkspaceToolsResponse"
+      }
+    }
+  }
+}
