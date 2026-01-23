@@ -254,13 +254,13 @@ export default function WorkspaceLayout() {
             searchNotice={sources.searchNotice}
             searchResults={sources.searchResults}
             onSearch={sources.handleSearch}
+            onClearSearchResults={sources.clearSearchResults}
+            onAddSourceFromUrl={sources.addSourceFromUrl}
             onRemoveSources={sources.removeSources}
             onRemoveSource={sources.removeSource}
             isDemo={sources.isDemo}
-            error={sources.error || notebooks.notebooksError}
             isLoading={sources.isLoading}
             removeState={sources.removeState}
-            onRetry={handleRetrySources}
           />
         </section>
 
