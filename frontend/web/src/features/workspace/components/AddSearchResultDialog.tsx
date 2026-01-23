@@ -32,6 +32,8 @@ interface ResultStatus {
   error?: string;
 }
 
+type ProcessingState = 'idle' | 'running' | 'done';
+
 /**
  * 自定义 Portal Modal 组件
  * 不使用 Material Tailwind Dialog 以完全控制 z-index 堆叠
@@ -45,26 +47,42 @@ export default function AddSearchResultDialog({
   onComplete,
 }: AddSearchResultDialogProps) {
   const [statuses, setStatuses] = useState<ResultStatus[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingState, setProcessingState] = useState<ProcessingState>('idle');
   const [isCancelled, setIsCancelled] = useState(false);
   const cancelledRef = useRef(false);
+  // Track which results batch we're processing to prevent re-runs
+  const processedResultsRef = useRef<string | null>(null);
 
-  // Initialize statuses when dialog opens
+  // Compute a stable key for the current results batch
+  const resultsKey = results.map((r) => r.url).join('|');
+
+  // Initialize statuses when dialog opens with new results
   useEffect(() => {
-    if (open && results.length > 0) {
+    if (open && results.length > 0 && processedResultsRef.current !== resultsKey) {
       setStatuses(results.map((r) => ({ url: r.url, status: 'pending' })));
-      setIsProcessing(false);
+      setProcessingState('idle');
       setIsCancelled(false);
       cancelledRef.current = false;
     }
-  }, [open, results]);
+  }, [open, results, resultsKey]);
 
-  // Start processing when dialog opens
+  // Reset when dialog closes
   useEffect(() => {
-    if (!open || isProcessing || statuses.length === 0) return;
+    if (!open) {
+      processedResultsRef.current = null;
+      setProcessingState('idle');
+    }
+  }, [open]);
+
+  // Start processing when dialog opens - only runs once per results batch
+  useEffect(() => {
+    if (!open || processingState !== 'idle' || statuses.length === 0) return;
+    // Prevent re-processing the same batch
+    if (processedResultsRef.current === resultsKey) return;
 
     const processResults = async () => {
-      setIsProcessing(true);
+      processedResultsRef.current = resultsKey;
+      setProcessingState('running');
 
       for (let i = 0; i < results.length; i++) {
         // 检查是否已取消
@@ -106,11 +124,13 @@ export default function AddSearchResultDialog({
         }
       }
 
-      setIsProcessing(false);
+      setProcessingState('done');
     };
 
     processResults();
-  }, [open, isProcessing, results, mode, onAddSource, statuses.length]);
+  }, [open, processingState, results, resultsKey, mode, onAddSource, statuses.length]);
+
+  const isProcessing = processingState === 'running';
 
   const completedCount = statuses.filter((s) => s.status === 'success').length;
   const errorCount = statuses.filter((s) => s.status === 'error').length;

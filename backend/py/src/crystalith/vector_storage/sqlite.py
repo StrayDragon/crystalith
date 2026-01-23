@@ -3,12 +3,12 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
-import logging
 import struct
 from pathlib import Path
 from typing import Iterable, Sequence
 
 import sqlalchemy as sa
+from cl_logs import get_logger
 from sqlalchemy import text
 
 from cl_sqlalchemyx.mgrs import AsyncDBManager
@@ -17,7 +17,7 @@ from crystalith.db import create_db_manager
 
 from .types import VectorEntry, VectorSearchResult
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def _serialize_vector(vector: Sequence[float]) -> bytes:
@@ -108,19 +108,28 @@ class SQLiteVectorStore:
                 entry_id = result.lastrowid
                 if entry_id is None:
                     raise RuntimeError("Failed to insert vector entry")
-                if self._sqlite_vss is not None:
-                    await conn.execute(
-                        text(
-                            f"""
-                            INSERT INTO {_INDEX_TABLE} (rowid, embedding)
-                            VALUES (:rowid, :embedding)
-                            """
-                        ),
-                        {
-                            "rowid": entry_id,
-                            "embedding": _serialize_vector(vector),
-                        },
-                    )
+                if self._sqlite_vss is not None and self._vss_ready:
+                    try:
+                        await conn.execute(
+                            text(
+                                f"""
+                                INSERT INTO {_INDEX_TABLE} (rowid, embedding)
+                                VALUES (:rowid, :embedding)
+                                """
+                            ),
+                            {
+                                "rowid": entry_id,
+                                "embedding": _serialize_vector(vector),
+                            },
+                        )
+                    except Exception as exc:
+                        # sqlite-vss failed, disable it and fall back to brute-force
+                        logger.warning(
+                            "sqlite-vss insert failed, disabling VSS and falling back to brute-force search: %s",
+                            exc,
+                        )
+                        self._sqlite_vss = None
+                        self._vss_ready = False
 
     async def search(
         self,

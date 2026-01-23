@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import useSWR from 'swr';
 
 import { createNotebook, deleteNotebook, listNotebooks, updateNotebook } from '../api';
@@ -6,9 +6,13 @@ import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceCon
 import type { ApiNotebook, StatusLabel } from '../types';
 import { normalizeNotebook } from '../utils';
 
+const DEFAULT_NOTEBOOK_NAME = '未命名笔记本';
+
 export function useNotebooks() {
   const state = useWorkspaceState();
   const dispatch = useWorkspaceDispatch();
+  // Track if we've already attempted to auto-create a notebook
+  const autoCreateAttemptedRef = useRef(false);
   const demoNotebooks = useMemo<ApiNotebook[]>(
     () => [
       { id: 1, name: '示例：产品调研', updated_at: new Date().toISOString() },
@@ -71,6 +75,38 @@ export function useNotebooks() {
     notebookError,
     state.activeNotebookId,
   ]);
+
+  // Auto-create a default notebook when there are no notebooks
+  useEffect(() => {
+    // Only attempt auto-create once per session
+    if (autoCreateAttemptedRef.current) return;
+    // Wait for data to be loaded and connection to be live
+    if (isLoading || notebookError || !notebookData) return;
+    // Only create if there are no notebooks
+    if (notebookData.length > 0) return;
+
+    autoCreateAttemptedRef.current = true;
+
+    const autoCreateNotebook = async () => {
+      dispatch({ type: 'SET_CREATE_STATE', payload: 'loading' });
+      try {
+        const created = await createNotebook(DEFAULT_NOTEBOOK_NAME);
+        const normalized = normalizeNotebook(created);
+        dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: normalized.id });
+        await mutate(
+          async (current) => (current ? [...current, created] : [created]),
+          { revalidate: false },
+        );
+      } catch (error) {
+        // Silent fail - user can manually create a notebook
+        console.error('Failed to auto-create notebook:', error);
+      } finally {
+        dispatch({ type: 'SET_CREATE_STATE', payload: 'idle' });
+      }
+    };
+
+    autoCreateNotebook();
+  }, [dispatch, isLoading, mutate, notebookData, notebookError]);
 
   const setActiveNotebookId = useCallback(
     (value: number | null) => {
