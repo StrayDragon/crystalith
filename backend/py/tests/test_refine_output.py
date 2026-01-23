@@ -14,6 +14,8 @@ from crystalith.db import create_all, create_db_manager
 from crystalith.tasks import TaskQueue
 from crystalith.vector_storage import InMemoryVectorStore
 
+from conftest import create_test_models
+
 
 class FakeEmbeddingProvider:
     provider = "fake"

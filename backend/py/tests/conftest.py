@@ -14,10 +14,43 @@ from sqlalchemy.pool import StaticPool
 
 from crystalith.api.deps import get_chat_provider, get_embedding_provider
 from crystalith.app import create_app
-from crystalith.config import DatabaseSettings, Settings
+from crystalith.config import DatabaseSettings, ModelConfig, ModelDefaults, ModelsSettings, Settings
 from crystalith.db import create_all, create_db_manager
 from crystalith.tasks import TaskQueue
 from crystalith.vector_storage import InMemoryVectorStore
+
+
+def create_test_models() -> ModelsSettings:
+    """Create default models configuration for tests."""
+    return ModelsSettings(
+        defaults=ModelDefaults(
+            chat="test-chat",
+            embedding="test-embed",
+        ),
+        available=[
+            ModelConfig(
+                id="test-chat",
+                provider="openai",
+                model="gpt-4o-mini",
+                display_name="Test Chat",
+                roles=["chat"],
+                provider_config={
+                    "api_key": "test-api-key",
+                    "base_url": "https://api.openai.com/v1",
+                },
+            ),
+            ModelConfig(
+                id="test-embed",
+                provider="ollama",
+                model="bge-m3",
+                display_name="Test Embed",
+                roles=["embed"],
+                provider_config={
+                    "host": "http://localhost:11434",
+                },
+            ),
+        ],
+    )
 
 
 class FakeEmbeddingProvider:
@@ -90,8 +123,11 @@ class FakeChatProvider:
 
 @pytest.fixture
 def test_settings() -> Settings:
-    """Create test settings with in-memory database."""
-    return Settings(database=DatabaseSettings(url="sqlite+aiosqlite:///:memory:"))
+    """Create test settings with in-memory database and test models."""
+    return Settings(
+        database=DatabaseSettings(url="sqlite+aiosqlite:///:memory:"),
+        models=create_test_models(),
+    )
 
 
 @pytest.fixture

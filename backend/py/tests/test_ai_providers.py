@@ -4,31 +4,100 @@ from types import SimpleNamespace
 
 import pytest
 
-from crystalith.ai.factory import create_chat_provider, create_embedding_provider
+from crystalith.ai.factory import (
+    create_chat_provider,
+    create_chat_provider_by_model_id,
+    create_embedding_provider,
+    create_embedding_provider_by_model_id,
+)
 from crystalith.ai.ollama_provider import OllamaChatProvider, OllamaEmbeddingProvider
 from crystalith.ai.openai_provider import OpenAIChatProvider, OpenAIEmbeddingProvider
 from crystalith.ai.types import ChatMessage
 from crystalith.config.models import (
-    ChatSettings,
-    EmbeddingSettings,
-    OllamaProviderSettings,
-    OpenAIProviderSettings,
+    ModelConfig,
+    ModelDefaults,
+    ModelsSettings,
     Settings,
 )
 
 
-def test_factory_defaults() -> None:
-    settings = Settings()
-    embedding = create_embedding_provider(settings)
+def _create_test_settings(
+    *,
+    openai_api_key: str = "test-api-key",
+    openai_base_url: str = "https://api.openai.com/v1",
+    ollama_host: str = "http://localhost:11434",
+    default_chat: str = "test-openai",
+    default_embedding: str = "test-ollama-embed",
+) -> Settings:
+    """Create Settings with test model configurations."""
+    return Settings(
+        models=ModelsSettings(
+            defaults=ModelDefaults(
+                chat=default_chat,
+                embedding=default_embedding,
+            ),
+            available=[
+                ModelConfig(
+                    id="test-openai",
+                    provider="openai",
+                    model="gpt-4o-mini",
+                    display_name="Test OpenAI",
+                    roles=["chat", "edit"],
+                    provider_config={
+                        "api_key": openai_api_key,
+                        "base_url": openai_base_url,
+                    },
+                ),
+                ModelConfig(
+                    id="test-ollama",
+                    provider="ollama",
+                    model="llama3.2",
+                    display_name="Test Ollama",
+                    roles=["chat"],
+                    provider_config={
+                        "host": ollama_host,
+                    },
+                ),
+                ModelConfig(
+                    id="test-ollama-embed",
+                    provider="ollama",
+                    model="bge-m3",
+                    display_name="Test Embed",
+                    roles=["embed"],
+                    provider_config={
+                        "host": ollama_host,
+                    },
+                ),
+                ModelConfig(
+                    id="test-openai-embed",
+                    provider="openai",
+                    model="text-embedding-3-small",
+                    display_name="Test OpenAI Embed",
+                    roles=["embed"],
+                    provider_config={
+                        "api_key": openai_api_key,
+                        "base_url": openai_base_url,
+                    },
+                ),
+            ],
+        )
+    )
 
-    assert isinstance(embedding, OllamaEmbeddingProvider)
 
-    with pytest.raises(ValueError, match=r"openai\.api_key"):
+def test_factory_defaults_no_models() -> None:
+    """Test that factory raises error when no models are configured."""
+    settings = Settings(models=ModelsSettings())
+
+    with pytest.raises(ValueError, match="No default embedding model"):
+        create_embedding_provider(settings)
+
+    with pytest.raises(ValueError, match="No default chat model"):
         create_chat_provider(settings)
 
 
-def test_factory_defaults_with_openai_api_key() -> None:
-    settings = Settings(openai=OpenAIProviderSettings(api_key="test-api-key"))
+def test_factory_with_configured_models() -> None:
+    settings = _create_test_settings()
+
     embedding = create_embedding_provider(settings)
     chat = create_chat_provider(settings)
 
@@ -109,52 +178,82 @@ async def test_chat_empty_messages_rejected() -> None:
         await OllamaChatProvider(model="llama3.2", client=SimpleNamespace()).chat([])
 
 
-def test_factory_supports_switching_providers() -> None:
-    settings = Settings(
-        openai=OpenAIProviderSettings(api_key="test-api-key"),
-        embedding=EmbeddingSettings(provider="openai", model="text-embedding-3-small"),
-        chat=ChatSettings(provider="ollama", model="llama3.2"),
+def test_factory_create_by_model_id() -> None:
+    """Test creating providers by specific model ID."""
+    settings = _create_test_settings()
+
+    # Create chat provider by model ID
+    openai_chat = create_chat_provider_by_model_id(settings, "test-openai")
+    assert isinstance(openai_chat, OpenAIChatProvider)
+    assert openai_chat.model == "gpt-4o-mini"
+
+    ollama_chat = create_chat_provider_by_model_id(settings, "test-ollama")
+    assert isinstance(ollama_chat, OllamaChatProvider)
+    assert ollama_chat.model == "llama3.2"
+
+    # Create embedding provider by model ID
+    ollama_embed = create_embedding_provider_by_model_id(settings, "test-ollama-embed")
+    assert isinstance(ollama_embed, OllamaEmbeddingProvider)
+
+    openai_embed = create_embedding_provider_by_model_id(settings, "test-openai-embed")
+    assert isinstance(openai_embed, OpenAIEmbeddingProvider)
+
+
+def test_factory_model_not_found() -> None:
+    """Test that factory raises error for unknown model ID."""
+    settings = _create_test_settings()
+
+    with pytest.raises(ValueError, match="Model not found"):
+        create_chat_provider_by_model_id(settings, "nonexistent")
+
+    with pytest.raises(ValueError, match="Model not found"):
+        create_embedding_provider_by_model_id(settings, "nonexistent")
+
+
+def test_factory_wrong_role() -> None:
+    """Test that factory raises error when model doesn't support requested role."""
+    settings = _create_test_settings()
+
+    # Embedding model doesn't support chat
+    with pytest.raises(ValueError, match="does not support chat role"):
+        create_chat_provider_by_model_id(settings, "test-ollama-embed")
+
+    # Chat model doesn't support embed
+    with pytest.raises(ValueError, match="does not support embed role"):
+        create_embedding_provider_by_model_id(settings, "test-openai")
+
+
+def test_factory_uses_provider_config() -> None:
+    """Test that factory uses model's provider_config settings."""
+    settings = _create_test_settings(
+        openai_api_key="sk-test",
+        openai_base_url="https://example.com/v1",
+        ollama_host="http://example:11434",
     )
 
-    embedding = create_embedding_provider(settings)
-    chat = create_chat_provider(settings)
-
-    assert isinstance(embedding, OpenAIEmbeddingProvider)
-    assert isinstance(chat, OllamaChatProvider)
-
-
-def test_factory_uses_provider_connection_settings() -> None:
-    settings = Settings(
-        openai=OpenAIProviderSettings(
-            api_key="sk-test",
-            base_url="https://example.com/v1",
-            organization="org-test",
-            project="proj-test",
-        ),
-        ollama=OllamaProviderSettings(host="http://example:11434"),
-    )
-
-    openai_chat = create_chat_provider(settings)
+    openai_chat = create_chat_provider_by_model_id(settings, "test-openai")
     assert isinstance(openai_chat, OpenAIChatProvider)
     assert str(openai_chat._client.base_url) == "https://example.com/v1/"
-    assert openai_chat._client.organization == "org-test"
-    assert openai_chat._client.project == "proj-test"
     assert openai_chat._client.webhook_secret == ""
 
-    ollama_embed = create_embedding_provider(settings)
+    ollama_embed = create_embedding_provider_by_model_id(settings, "test-ollama-embed")
     assert isinstance(ollama_embed, OllamaEmbeddingProvider)
     assert str(ollama_embed._client._client.base_url) == "http://example:11434"
 
 
 def test_factory_openai_client_ignores_environment_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that OpenAI client uses config values, not environment defaults."""
     monkeypatch.setenv("OPENAI_BASE_URL", "https://env.example/v1")
     monkeypatch.setenv("OPENAI_ORG_ID", "env-org")
     monkeypatch.setenv("OPENAI_PROJECT_ID", "env-project")
     monkeypatch.setenv("OPENAI_WEBHOOK_SECRET", "env-secret")
 
-    settings = Settings(openai=OpenAIProviderSettings(api_key="yaml-key"))
+    settings = _create_test_settings(
+        openai_api_key="yaml-key",
+        openai_base_url="https://api.openai.com/v1",
+    )
 
-    provider = create_chat_provider(settings)
+    provider = create_chat_provider_by_model_id(settings, "test-openai")
     assert isinstance(provider, OpenAIChatProvider)
 
     client = provider._client

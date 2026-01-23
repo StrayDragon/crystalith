@@ -11,7 +11,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from crystalith.config import ModelConfig, Settings
+from crystalith.config import ModelConfig, ModelRole, Settings
 
 from .deps import get_settings
 
@@ -27,7 +27,8 @@ class ModelRead(BaseModel):
     model: str
     display_name: str
     description: str
-    capabilities: list[Literal["chat", "embedding"]]
+    roles: list[str] = Field(default_factory=list, description="Model roles: chat, embed, edit, etc.")
+    capabilities: list[str] = Field(default_factory=list, description="Special capabilities: tool_use, image_input, etc.")
 
 
 class ModelsListResponse(BaseModel):
@@ -46,31 +47,37 @@ def _model_config_to_read(config: ModelConfig) -> ModelRead:
         model=config.model,
         display_name=config.display_name,
         description=config.description,
-        capabilities=config.capabilities,
+        roles=list(config.roles),
+        capabilities=list(config.capabilities),
     )
 
 
 @router.get("", response_model=ModelsListResponse)
 async def list_models(
     settings: Settings = Depends(get_settings),
-    capability: Literal["chat", "embedding"] | None = None,
+    role: Literal["chat", "embed", "edit", "autocomplete"] | None = None,
+    capability: str | None = None,
 ) -> ModelsListResponse:
     """
     List all available AI models.
 
-    Optionally filter by capability (chat or embedding).
+    Optionally filter by role (chat, embed, edit, autocomplete) or capability.
     """
     models_settings = settings.models
     available = models_settings.available
 
-    # Filter by capability if specified
+    # Filter by role if specified
+    if role:
+        available = [m for m in available if m.has_role(role)]
+
+    # Filter by capability if specified (supports legacy 'chat'/'embedding')
     if capability:
-        available = [m for m in available if capability in m.capabilities]
+        available = [m for m in available if m.has_capability(capability)]
 
     return ModelsListResponse(
         models=[_model_config_to_read(m) for m in available],
-        default_chat=models_settings.default_chat,
-        default_embedding=models_settings.default_embedding,
+        default_chat=models_settings.defaults.chat,
+        default_embedding=models_settings.defaults.embedding,
     )
 
 
@@ -80,8 +87,8 @@ async def get_model(
     settings: Settings = Depends(get_settings),
 ) -> ModelRead:
     """Get a specific model by ID."""
-    for model in settings.models.available:
-        if model.id == model_id:
-            return _model_config_to_read(model)
+    model = settings.get_model_config(model_id)
+    if model:
+        return _model_config_to_read(model)
 
     raise HTTPException(status_code=404, detail=f"Model not found: {model_id}")

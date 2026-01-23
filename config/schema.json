@@ -1,6 +1,7 @@
 {
   "$defs": {
     "AppSettings": {
+      "description": "Application settings.",
       "properties": {
         "name": {
           "default": "Crystalith",
@@ -22,37 +23,119 @@
       "type": "object"
     },
     "ChatSettings": {
+      "description": "Chat settings.\n\nUse models.defaults.chat to specify the default chat model.\nThis section only contains chat-specific options.",
+      "properties": {},
+      "title": "ChatSettings",
+      "type": "object"
+    },
+    "CompletionOptions": {
+      "description": "Default completion options for model inference.\n\nSimilar to Continue's defaultCompletionOptions.",
       "properties": {
-        "provider": {
-          "default": "openai",
-          "enum": [
-            "openai",
-            "ollama"
-          ],
-          "title": "Provider",
-          "type": "string"
-        },
-        "model": {
-          "default": "gpt-4o-mini",
-          "title": "Model",
-          "type": "string"
-        },
-        "openai": {
+        "context_length": {
           "anyOf": [
             {
-              "$ref": "#/$defs/OpenAIProviderSettings"
+              "type": "integer"
             },
             {
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Maximum context length (tokens)",
+          "title": "Context Length"
+        },
+        "max_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Maximum tokens to generate",
+          "title": "Max Tokens"
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "maximum": 2.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Sampling temperature",
+          "title": "Temperature"
+        },
+        "top_p": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Nucleus sampling probability",
+          "title": "Top P"
+        },
+        "top_k": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Top-k sampling",
+          "title": "Top K"
+        },
+        "stop": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Stop sequences",
+          "title": "Stop"
+        },
+        "reasoning": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Enable reasoning/thinking mode",
+          "title": "Reasoning"
         }
       },
-      "title": "ChatSettings",
+      "title": "CompletionOptions",
       "type": "object"
     },
     "ContextWindowSettings": {
+      "description": "Context window management settings.",
       "properties": {
         "max_tokens": {
           "default": 8000,
@@ -93,6 +176,7 @@
       "type": "object"
     },
     "DatabaseSettings": {
+      "description": "Database settings.",
       "properties": {
         "url": {
           "default": "sqlite+aiosqlite:///./data/app.db",
@@ -104,40 +188,244 @@
       "type": "object"
     },
     "EmbeddingSettings": {
+      "description": "Embedding settings.\n\nUse models.defaults.embedding to specify the default embedding model.\nThis section only contains embedding-specific options.",
       "properties": {
-        "provider": {
-          "default": "ollama",
-          "enum": [
-            "ollama",
-            "openai"
-          ],
-          "title": "Provider",
-          "type": "string"
+        "chunk_size": {
+          "default": 512,
+          "description": "Default chunk size for embedding",
+          "minimum": 64,
+          "title": "Chunk Size",
+          "type": "integer"
         },
-        "model": {
-          "default": "bge-m3",
-          "title": "Model",
-          "type": "string"
-        },
-        "openai": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/OpenAIProviderSettings"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "ollama_options": {
-          "$ref": "#/$defs/OllamaRuntimeOptions"
+        "batch_size": {
+          "default": 32,
+          "description": "Batch size for embedding requests",
+          "minimum": 1,
+          "title": "Batch Size",
+          "type": "integer"
         }
       },
       "title": "EmbeddingSettings",
       "type": "object"
     },
+    "ModelConfig": {
+      "description": "Configuration for a single AI model.\n\nInspired by Continue's model configuration with enhancements for Crystalith.\n\nExample:\n    - id: \"gpt-5.2\"\n      provider: \"openai\"\n      model: \"gpt-5.2\"\n      display_name: \"GPT-5.2\"\n      description: \"Latest OpenAI model\"\n      roles: [chat, edit]\n      capabilities: [tool_use, image_input]\n      provider_config:\n        <<: *openai_main\n      completion_options:\n        temperature: 0.7\n        max_tokens: 4096",
+      "properties": {
+        "id": {
+          "description": "Unique identifier for the model",
+          "title": "Id",
+          "type": "string"
+        },
+        "provider": {
+          "description": "Provider type",
+          "enum": [
+            "openai",
+            "ollama"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "model": {
+          "description": "Model name/identifier used by the provider",
+          "title": "Model",
+          "type": "string"
+        },
+        "display_name": {
+          "description": "Human-readable display name",
+          "title": "Display Name",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "description": "Optional description",
+          "title": "Description",
+          "type": "string"
+        },
+        "roles": {
+          "description": "Roles this model can fulfill: chat, embed, edit, apply, autocomplete, summarize",
+          "items": {
+            "enum": [
+              "chat",
+              "embed",
+              "edit",
+              "apply",
+              "autocomplete",
+              "summarize"
+            ],
+            "type": "string"
+          },
+          "title": "Roles",
+          "type": "array"
+        },
+        "capabilities": {
+          "description": "Special capabilities: tool_use, image_input, audio_input, streaming",
+          "items": {
+            "anyOf": [
+              {
+                "enum": [
+                  "tool_use",
+                  "image_input",
+                  "audio_input",
+                  "streaming"
+                ],
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "chat",
+                  "embedding"
+                ],
+                "type": "string"
+              }
+            ]
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "provider_config": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OpenAIProviderSettings"
+            },
+            {
+              "$ref": "#/$defs/OllamaProviderSettings"
+            },
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Provider-specific configuration (can reference providers via anchors)",
+          "title": "Provider Config"
+        },
+        "completion_options": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CompletionOptions"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default completion options for this model"
+        },
+        "ollama_options": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OllamaRuntimeOptions"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Ollama-specific runtime options"
+        },
+        "request_options": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RequestOptions"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HTTP request options"
+        }
+      },
+      "required": [
+        "id",
+        "provider",
+        "model",
+        "display_name"
+      ],
+      "title": "ModelConfig",
+      "type": "object"
+    },
+    "ModelDefaults": {
+      "description": "Default model selections.",
+      "properties": {
+        "chat": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default model ID for chat/generation",
+          "title": "Chat"
+        },
+        "embedding": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default model ID for embeddings",
+          "title": "Embedding"
+        },
+        "edit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default model ID for code editing",
+          "title": "Edit"
+        },
+        "autocomplete": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Default model ID for autocomplete",
+          "title": "Autocomplete"
+        }
+      },
+      "title": "ModelDefaults",
+      "type": "object"
+    },
+    "ModelsSettings": {
+      "description": "Multi-model configuration settings.\n\nAll models must be defined in `available` list with unique IDs.\nUse `defaults` to specify which model to use for each role.\n\nExample:\n    models:\n      defaults:\n        chat: \"gpt-5.2\"\n        embedding: \"bge-m3-local\"\n      available:\n        - id: \"gpt-5.2\"\n          provider: \"openai\"\n          model: \"gpt-5.2\"\n          roles: [chat, edit]",
+      "properties": {
+        "defaults": {
+          "$ref": "#/$defs/ModelDefaults"
+        },
+        "available": {
+          "items": {
+            "$ref": "#/$defs/ModelConfig"
+          },
+          "title": "Available",
+          "type": "array"
+        }
+      },
+      "title": "ModelsSettings",
+      "type": "object"
+    },
     "OllamaProviderSettings": {
+      "description": "Ollama provider settings.",
       "properties": {
         "host": {
           "default": "http://localhost:11434",
@@ -149,6 +437,7 @@
       "type": "object"
     },
     "OllamaRuntimeOptions": {
+      "description": "Ollama model runtime options.",
       "properties": {
         "num_ctx": {
           "anyOf": [
@@ -243,6 +532,7 @@
       "type": "object"
     },
     "OpenAIProviderSettings": {
+      "description": "OpenAI-compatible provider settings.",
       "properties": {
         "api_key": {
           "anyOf": [
@@ -297,6 +587,7 @@
       "type": "object"
     },
     "RefineSettings": {
+      "description": "Content refinement settings.",
       "properties": {
         "formats": {
           "items": {
@@ -309,7 +600,63 @@
       "title": "RefineSettings",
       "type": "object"
     },
+    "RequestOptions": {
+      "description": "HTTP request options for model API calls.",
+      "properties": {
+        "timeout": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Request timeout in seconds",
+          "title": "Timeout"
+        },
+        "verify_ssl": {
+          "default": true,
+          "description": "Verify SSL certificates",
+          "title": "Verify Ssl",
+          "type": "boolean"
+        },
+        "proxy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Proxy URL",
+          "title": "Proxy"
+        },
+        "headers": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Custom headers",
+          "title": "Headers"
+        }
+      },
+      "title": "RequestOptions",
+      "type": "object"
+    },
     "VectorStorageChromaSettings": {
+      "description": "Chroma vector storage settings.",
       "properties": {
         "host": {
           "default": "localhost",
@@ -326,6 +673,7 @@
       "type": "object"
     },
     "VectorStorageSQLiteSettings": {
+      "description": "SQLite vector storage settings.",
       "properties": {
         "path": {
           "default": "./data/vectors.db",
@@ -337,6 +685,7 @@
       "type": "object"
     },
     "VectorStorageSettings": {
+      "description": "Vector storage settings.",
       "properties": {
         "provider": {
           "default": "memory",
@@ -359,7 +708,32 @@
       "type": "object"
     }
   },
+  "description": "Configuration schema for Crystalith. Supports YAML anchors for reusable configurations and ${{ env.VAR }} / ${{ secrets.VAR }} for variable interpolation.",
   "properties": {
+    "name": {
+      "default": "Crystalith",
+      "description": "Configuration name",
+      "title": "Name",
+      "type": "string"
+    },
+    "version": {
+      "default": "1.0.0",
+      "description": "Configuration version",
+      "title": "Version",
+      "type": "string"
+    },
+    "schema": {
+      "default": "v1",
+      "description": "Schema version",
+      "title": "Schema",
+      "type": "string"
+    },
+    "providers": {
+      "additionalProperties": true,
+      "description": "Reusable provider configurations (use YAML anchors)",
+      "title": "Providers",
+      "type": "object"
+    },
     "app": {
       "$ref": "#/$defs/AppSettings"
     },
@@ -368,12 +742,6 @@
     },
     "vector_storage": {
       "$ref": "#/$defs/VectorStorageSettings"
-    },
-    "openai": {
-      "$ref": "#/$defs/OpenAIProviderSettings"
-    },
-    "ollama": {
-      "$ref": "#/$defs/OllamaProviderSettings"
     },
     "embedding": {
       "$ref": "#/$defs/EmbeddingSettings"
@@ -386,8 +754,13 @@
     },
     "context_window": {
       "$ref": "#/$defs/ContextWindowSettings"
+    },
+    "models": {
+      "$ref": "#/$defs/ModelsSettings",
+      "description": "Model configurations"
     }
   },
-  "title": "Settings",
-  "type": "object"
+  "title": "Crystalith Configuration",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#"
 }

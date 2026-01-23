@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
 
 import ollama
 from openai import AsyncOpenAI
 
-from crystalith.config import ModelConfig, OpenAIProviderSettings, Settings
+from crystalith.config import ModelConfig, OpenAIProviderSettings, OllamaProviderSettings, Settings
 
 from .interfaces import ChatProvider, EmbeddingProvider
 from .ollama_provider import OllamaChatProvider, OllamaEmbeddingProvider
@@ -21,23 +20,26 @@ class Providers:
 
 def get_model_config_by_id(settings: Settings, model_id: str) -> ModelConfig | None:
     """Get a model configuration by its ID."""
-    for model in settings.models.available:
-        if model.id == model_id:
-            return model
-    return None
+    return settings.get_model_config(model_id)
 
 
 def _create_openai_client(
-    settings: Settings,
+    model_config: ModelConfig,
     *,
     reason: str,
-    override: OpenAIProviderSettings | None = None,
 ) -> AsyncOpenAI:
-    config = override or settings.openai
+    """
+    Create an OpenAI client from model configuration.
+
+    The model's provider_config must contain valid OpenAI settings.
+    """
+    config = model_config.get_openai_config()
+
     api_key = config.api_key
     if api_key is None or not api_key.strip():
         raise ValueError(
-            f"Missing YAML config `openai.api_key` (required when {reason} provider is 'openai')."
+            f"Missing api_key in provider_config for model '{model_config.id}' "
+            f"(required when {reason} provider is 'openai')."
         )
 
     base_url = config.base_url or "https://api.openai.com/v1"
@@ -53,52 +55,50 @@ def _create_openai_client(
     )
 
 
-def _create_ollama_client(settings: Settings) -> ollama.AsyncClient:
-    return ollama.AsyncClient(host=settings.ollama.host)
+def _create_ollama_client(model_config: ModelConfig) -> ollama.AsyncClient:
+    """
+    Create an Ollama client from model configuration.
+
+    Uses the model's provider_config for host settings.
+    """
+    ollama_settings = model_config.get_ollama_config()
+    return ollama.AsyncClient(host=ollama_settings.host)
 
 
 def create_embedding_provider(settings: Settings) -> EmbeddingProvider:
-    match settings.embedding.provider:
-        case "openai":
-            return OpenAIEmbeddingProvider(
-                model=settings.embedding.model,
-                client=_create_openai_client(
-                    settings,
-                    reason="embedding",
-                    override=settings.embedding.openai,
-                ),
-            )
-        case "ollama":
-            return OllamaEmbeddingProvider(
-                model=settings.embedding.model,
-                client=_create_ollama_client(settings),
-                options=settings.embedding.ollama_options.to_options(),
-            )
-        case provider:
-            raise ValueError(f"Unsupported embedding provider: {provider}")
+    """
+    Create the default embedding provider from settings.
+
+    Uses models.defaults.embedding to determine which model to use.
+    """
+    model_config = settings.get_default_embedding_model()
+    if model_config is None:
+        raise ValueError(
+            "No default embedding model configured. "
+            "Set models.defaults.embedding or add a model with role 'embed'."
+        )
+
+    return create_embedding_provider_by_model_id(settings, model_config.id)
 
 
 def create_chat_provider(settings: Settings) -> ChatProvider:
-    match settings.chat.provider:
-        case "openai":
-            return OpenAIChatProvider(
-                model=settings.chat.model,
-                client=_create_openai_client(
-                    settings,
-                    reason="chat",
-                    override=settings.chat.openai,
-                ),
-            )
-        case "ollama":
-            return OllamaChatProvider(
-                model=settings.chat.model,
-                client=_create_ollama_client(settings),
-            )
-        case provider:
-            raise ValueError(f"Unsupported chat provider: {provider}")
+    """
+    Create the default chat provider from settings.
+
+    Uses models.defaults.chat to determine which model to use.
+    """
+    model_config = settings.get_default_chat_model()
+    if model_config is None:
+        raise ValueError(
+            "No default chat model configured. "
+            "Set models.defaults.chat or add a model with role 'chat'."
+        )
+
+    return create_chat_provider_by_model_id(settings, model_config.id)
 
 
 def create_providers(settings: Settings) -> Providers:
+    """Create both embedding and chat providers using default models."""
     return Providers(
         embedding=create_embedding_provider(settings),
         chat=create_chat_provider(settings),
@@ -119,22 +119,20 @@ def create_chat_provider_by_model_id(
     if model_config is None:
         raise ValueError(f"Model not found: {model_id}")
 
-    if "chat" not in model_config.capabilities:
-        raise ValueError(f"Model {model_id} does not support chat capability")
+    # Check for chat role
+    if not model_config.has_role("chat"):
+        raise ValueError(f"Model {model_id} does not support chat role")
 
     match model_config.provider:
         case "openai":
             return OpenAIChatProvider(
                 model=model_config.model,
-                client=_create_openai_client(
-                    settings,
-                    reason=f"model:{model_id}",
-                ),
+                client=_create_openai_client(model_config, reason=f"model:{model_id}"),
             )
         case "ollama":
             return OllamaChatProvider(
                 model=model_config.model,
-                client=_create_ollama_client(settings),
+                client=_create_ollama_client(model_config),
             )
         case provider:
             raise ValueError(f"Unsupported provider for model {model_id}: {provider}")
@@ -154,23 +152,26 @@ def create_embedding_provider_by_model_id(
     if model_config is None:
         raise ValueError(f"Model not found: {model_id}")
 
-    if "embedding" not in model_config.capabilities:
-        raise ValueError(f"Model {model_id} does not support embedding capability")
+    # Check for embed role
+    if not model_config.has_role("embed"):
+        raise ValueError(f"Model {model_id} does not support embed role")
 
     match model_config.provider:
         case "openai":
             return OpenAIEmbeddingProvider(
                 model=model_config.model,
-                client=_create_openai_client(
-                    settings,
-                    reason=f"embedding:{model_id}",
-                ),
+                client=_create_openai_client(model_config, reason=f"embedding:{model_id}"),
             )
         case "ollama":
+            # Use model's ollama_options if specified
+            options = None
+            if model_config.ollama_options:
+                options = model_config.ollama_options.to_options()
+
             return OllamaEmbeddingProvider(
                 model=model_config.model,
-                client=_create_ollama_client(settings),
-                options=None,  # Use defaults for dynamic model
+                client=_create_ollama_client(model_config),
+                options=options,
             )
         case provider:
             raise ValueError(f"Unsupported provider for model {model_id}: {provider}")

@@ -89,10 +89,26 @@ class DisabledTranscriber:
 
 
 def create_transcription_provider(settings: Settings) -> TranscriptionProvider:
-    config = settings.openai
+    """
+    Create a transcription provider using OpenAI's Whisper API.
+
+    Finds an OpenAI model from available models to get API credentials.
+    """
+    # Find an OpenAI model to get API credentials
+    openai_model = None
+    for model in settings.models.available:
+        if model.provider == "openai":
+            openai_model = model
+            break
+
+    if openai_model is None:
+        return DisabledTranscriber()
+
+    config = openai_model.get_openai_config()
     api_key = config.api_key or ""
     if not api_key.strip():
         return DisabledTranscriber()
+
     return OpenAITranscriber(
         api_key=config.api_key,
         base_url=config.base_url,

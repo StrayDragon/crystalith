@@ -13,6 +13,8 @@ from crystalith.db import create_all, create_db_manager
 from crystalith.tasks import TaskQueue, TaskStatus, TaskType
 from crystalith.vector_storage import InMemoryVectorStore
 
+from conftest import create_test_models
+
 
 @pytest_asyncio.fixture
 async def task_queue() -> AsyncGenerator[TaskQueue, None]:
