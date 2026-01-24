@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Button, Checkbox, Typography, Chip, Dialog, DialogHeader, DialogBody, IconButton, Tooltip } from '@material-tailwind/react';
+import { Button, Checkbox, Typography, Chip, Dialog, DialogHeader, DialogBody, IconButton, Tooltip, Spinner } from '@material-tailwind/react';
 import {
   Close as CloseIcon,
   Add as AddIcon,
@@ -10,9 +10,11 @@ import {
   Link as LinkIcon,
   Download as DownloadIcon,
   OpenInNew as OpenInNewIcon,
+  Error as ErrorIcon,
 } from '@mui/icons-material';
 
 import SearchResultCard, { type SearchResultItem } from './SearchResultCard';
+import type { SearchQueueItem } from '../hooks/useSources';
 
 interface SearchResultsQueueProps {
   results: SearchResultItem[];
@@ -20,6 +22,10 @@ interface SearchResultsQueueProps {
   onClear: () => void;
   onAddToSources: (selected: SearchResultItem[], mode: 'fetch' | 'link') => void;
   isAdding?: boolean;
+  /** 搜索队列项列表 */
+  searchQueue?: SearchQueueItem[];
+  /** 移除单个搜索队列项 */
+  onRemoveQueueItem?: (queueItemId: string) => void;
 }
 
 export default function SearchResultsQueue({
@@ -28,18 +34,52 @@ export default function SearchResultsQueue({
   onClear,
   onAddToSources,
   isAdding = false,
+  searchQueue = [],
+  onRemoveQueueItem,
 }: SearchResultsQueueProps) {
   const [selectedUrls, setSelectedUrls] = useState<Set<string>>(new Set());
   const [isExpanded, setIsExpanded] = useState(true);
   const [expandedResult, setExpandedResult] = useState<SearchResultItem | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // 跟踪每个队列项的展开状态
+  const [expandedQueueItems, setExpandedQueueItems] = useState<Set<string>>(new Set());
+
+  // 合并所有队列项的结果（用于全屏视图和批量操作）
+  const allQueueResults = useMemo(() => {
+    const allResults: SearchResultItem[] = [];
+    for (const item of searchQueue) {
+      for (const result of item.results) {
+        // 避免重复
+        if (!allResults.some((r) => r.url === result.url)) {
+          allResults.push(result);
+        }
+      }
+    }
+    return allResults;
+  }, [searchQueue]);
+
+  // 如果有队列项，优先使用队列结果；否则使用旧的 results（向后兼容）
+  const effectiveResults = searchQueue.length > 0 ? allQueueResults : results;
 
   const selectedResults = useMemo(
-    () => results.filter((r) => selectedUrls.has(r.url)),
-    [results, selectedUrls],
+    () => effectiveResults.filter((r) => selectedUrls.has(r.url)),
+    [effectiveResults, selectedUrls],
   );
 
-  const allSelected = results.length > 0 && selectedUrls.size === results.length;
+  const allSelected = effectiveResults.length > 0 && selectedUrls.size === effectiveResults.length;
+
+  // 切换队列项展开状态
+  const toggleQueueItemExpanded = useCallback((queueItemId: string) => {
+    setExpandedQueueItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(queueItemId)) {
+        next.delete(queueItemId);
+      } else {
+        next.add(queueItemId);
+      }
+      return next;
+    });
+  }, []);
 
   const handleToggle = useCallback((result: SearchResultItem) => {
     setSelectedUrls((prev) => {
@@ -57,9 +97,9 @@ export default function SearchResultsQueue({
     if (allSelected) {
       setSelectedUrls(new Set());
     } else {
-      setSelectedUrls(new Set(results.map((r) => r.url)));
+      setSelectedUrls(new Set(effectiveResults.map((r) => r.url)));
     }
-  }, [allSelected, results]);
+  }, [allSelected, effectiveResults]);
 
   const handleAddAsLink = useCallback(() => {
     if (selectedResults.length > 0) {
@@ -90,75 +130,121 @@ export default function SearchResultsQueue({
     onAddToSources([result], 'fetch');
   }, [onAddToSources]);
 
-  if (results.length === 0) {
+  // 如果没有队列项且没有旧结果，不渲染
+  if (searchQueue.length === 0 && results.length === 0) {
     return null;
   }
 
-  return (
-    <>
-      {/* Compact Queue - like Studio notes */}
-      <div className="border border-blue-200 rounded-xl shadow-sm bg-blue-50/50 overflow-hidden">
+  // 渲染单个搜索队列项
+  const renderQueueItem = (queueItem: SearchQueueItem) => {
+    const isItemExpanded = expandedQueueItems.has(queueItem.id);
+    const isLoading = queueItem.status === 'loading';
+    const isError = queueItem.status === 'error';
+    const itemResults = queueItem.results;
+    const itemSelectedCount = itemResults.filter((r) => selectedUrls.has(r.url)).length;
+
+    return (
+      <div
+        key={queueItem.id}
+        className={`border rounded-xl shadow-sm overflow-hidden ${
+          isLoading
+            ? 'border-blue-300 bg-blue-50/30'
+            : isError
+              ? 'border-red-200 bg-red-50/50'
+              : 'border-blue-200 bg-blue-50/50'
+        }`}
+      >
         {/* Header */}
         <button
           type="button"
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={() => toggleQueueItemExpanded(queueItem.id)}
           className="flex items-center justify-between w-full px-3 py-2 hover:bg-blue-100/50 transition-colors"
         >
-          <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-5 h-5 rounded bg-blue-100 border border-blue-200">
-              <SearchIcon style={{ fontSize: 12 }} className="text-blue-600" />
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className={`flex items-center justify-center w-5 h-5 rounded border flex-shrink-0 ${
+              isLoading
+                ? 'bg-blue-100 border-blue-300'
+                : isError
+                  ? 'bg-red-100 border-red-200'
+                  : 'bg-blue-100 border-blue-200'
+            }`}>
+              {isLoading ? (
+                <Spinner className="h-3 w-3 text-blue-600" />
+              ) : isError ? (
+                <ErrorIcon style={{ fontSize: 12 }} className="text-red-500" />
+              ) : (
+                <SearchIcon style={{ fontSize: 12 }} className="text-blue-600" />
+              )}
             </div>
-            <Typography variant="small" className="font-semibold text-blue-900 text-xs">
-              搜索结果
+            <Typography variant="small" className="font-semibold text-blue-900 text-xs truncate">
+              {queueItem.query}
             </Typography>
-            <Chip
-              value={`${results.length} 条`}
-              size="sm"
-              className="bg-blue-600 text-[10px] h-5 py-0 px-2"
-            />
-            {selectedUrls.size > 0 && (
+            {isLoading ? (
               <Chip
-                value={`已选 ${selectedUrls.size}`}
+                value="搜索中..."
                 size="sm"
-                className="bg-gray-900 text-[10px] h-5 py-0 px-2"
+                className="bg-blue-400 text-[10px] h-5 py-0 px-2 flex-shrink-0"
+              />
+            ) : isError ? (
+              <Chip
+                value="失败"
+                size="sm"
+                className="bg-red-500 text-[10px] h-5 py-0 px-2 flex-shrink-0"
+              />
+            ) : (
+              <Chip
+                value={`${itemResults.length} 条`}
+                size="sm"
+                className="bg-blue-600 text-[10px] h-5 py-0 px-2 flex-shrink-0"
+              />
+            )}
+            {itemSelectedCount > 0 && (
+              <Chip
+                value={`已选 ${itemSelectedCount}`}
+                size="sm"
+                className="bg-gray-900 text-[10px] h-5 py-0 px-2 flex-shrink-0"
               />
             )}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {!isLoading && itemResults.length > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsFullscreen(true);
+                }}
+                className="p-1 rounded-lg hover:bg-blue-200 transition-colors"
+                title="全屏查看"
+              >
+                <OpenInFullIcon style={{ fontSize: 14 }} className="text-blue-600" />
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setIsFullscreen(true);
+                onRemoveQueueItem?.(queueItem.id);
               }}
               className="p-1 rounded-lg hover:bg-blue-200 transition-colors"
-              title="全屏查看"
-            >
-              <OpenInFullIcon style={{ fontSize: 14 }} className="text-blue-600" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleClear();
-              }}
-              className="p-1 rounded-lg hover:bg-blue-200 transition-colors"
-              title="清空搜索结果"
+              title="移除此搜索"
             >
               <CloseIcon style={{ fontSize: 14 }} className="text-blue-600" />
             </button>
-            {isExpanded ? (
-              <ExpandLessIcon style={{ fontSize: 18 }} className="text-blue-600" />
-            ) : (
-              <ExpandMoreIcon style={{ fontSize: 18 }} className="text-blue-600" />
+            {!isLoading && itemResults.length > 0 && (
+              isItemExpanded ? (
+                <ExpandLessIcon style={{ fontSize: 18 }} className="text-blue-600" />
+              ) : (
+                <ExpandMoreIcon style={{ fontSize: 18 }} className="text-blue-600" />
+              )
             )}
           </div>
         </button>
 
         {/* Expandable Content */}
-        {isExpanded && (
+        {!isLoading && isItemExpanded && itemResults.length > 0 && (
           <>
             {/* Results List - compact cards */}
-            <div className="flex flex-col px-1.5 pb-1.5 max-h-[200px] overflow-y-auto scrollbar-thin">
-              {results.map((result) => (
+            <div className="flex flex-col px-1.5 pb-1.5 max-h-[150px] overflow-y-auto scrollbar-thin">
+              {itemResults.map((result) => (
                 <SearchResultCard
                   key={result.url}
                   result={result}
@@ -172,12 +258,31 @@ export default function SearchResultsQueue({
               ))}
             </div>
 
-            {/* Actions Footer - simplified */}
+            {/* Actions Footer */}
             <div className="flex items-center justify-between px-2 py-1.5 border-t border-blue-200 bg-blue-100/50">
               <div className="flex items-center gap-1.5">
                 <Checkbox
-                  checked={allSelected}
-                  onChange={handleToggleAll}
+                  checked={itemResults.every((r) => selectedUrls.has(r.url))}
+                  onChange={() => {
+                    const allItemSelected = itemResults.every((r) => selectedUrls.has(r.url));
+                    if (allItemSelected) {
+                      setSelectedUrls((prev) => {
+                        const next = new Set(prev);
+                        for (const r of itemResults) {
+                          next.delete(r.url);
+                        }
+                        return next;
+                      });
+                    } else {
+                      setSelectedUrls((prev) => {
+                        const next = new Set(prev);
+                        for (const r of itemResults) {
+                          next.add(r.url);
+                        }
+                        return next;
+                      });
+                    }
+                  }}
                   containerProps={{ className: 'p-0' }}
                   className="h-3.5 w-3.5 rounded border-gray-300 bg-white checked:bg-blue-600 checked:border-blue-600"
                   iconProps={{ className: 'text-white' }}
@@ -186,13 +291,18 @@ export default function SearchResultsQueue({
                   全选
                 </Typography>
               </div>
-              {selectedUrls.size > 0 && (
+              {itemSelectedCount > 0 && (
                 <div className="flex items-center gap-1">
                   <Tooltip content="作为链接导入" placement="top" className="z-[10000]">
                     <IconButton
                       size="sm"
                       variant="outlined"
-                      onClick={handleAddAsLink}
+                      onClick={() => {
+                        const selected = itemResults.filter((r) => selectedUrls.has(r.url));
+                        if (selected.length > 0) {
+                          onAddToSources(selected, 'link');
+                        }
+                      }}
                       disabled={isAdding}
                       className="w-6 h-6 min-w-[24px] border-blue-300 text-blue-700 bg-white"
                     >
@@ -202,7 +312,12 @@ export default function SearchResultsQueue({
                   <Tooltip content="作为全文导入" placement="top" className="z-[10000]">
                     <IconButton
                       size="sm"
-                      onClick={handleAddWithFetch}
+                      onClick={() => {
+                        const selected = itemResults.filter((r) => selectedUrls.has(r.url));
+                        if (selected.length > 0) {
+                          onAddToSources(selected, 'fetch');
+                        }
+                      }}
                       disabled={isAdding}
                       className="w-6 h-6 min-w-[24px] bg-blue-600 text-white"
                     >
@@ -214,7 +329,145 @@ export default function SearchResultsQueue({
             </div>
           </>
         )}
+
+        {/* Error notice */}
+        {isError && queueItem.notice && (
+          <div className="px-3 py-2 text-xs text-red-600 bg-red-50 border-t border-red-200">
+            {queueItem.notice}
+          </div>
+        )}
       </div>
+    );
+  };
+
+  return (
+    <>
+      {/* 搜索队列项列表 */}
+      {searchQueue.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {searchQueue.map(renderQueueItem)}
+        </div>
+      ) : (
+        /* 向后兼容：如果没有队列项但有旧结果，显示旧的单一队列 */
+        <div className="border border-blue-200 rounded-xl shadow-sm bg-blue-50/50 overflow-hidden">
+          {/* Header */}
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center justify-between w-full px-3 py-2 hover:bg-blue-100/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center w-5 h-5 rounded bg-blue-100 border border-blue-200">
+                <SearchIcon style={{ fontSize: 12 }} className="text-blue-600" />
+              </div>
+              <Typography variant="small" className="font-semibold text-blue-900 text-xs">
+                搜索结果
+              </Typography>
+              <Chip
+                value={`${results.length} 条`}
+                size="sm"
+                className="bg-blue-600 text-[10px] h-5 py-0 px-2"
+              />
+              {selectedUrls.size > 0 && (
+                <Chip
+                  value={`已选 ${selectedUrls.size}`}
+                  size="sm"
+                  className="bg-gray-900 text-[10px] h-5 py-0 px-2"
+                />
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsFullscreen(true);
+                }}
+                className="p-1 rounded-lg hover:bg-blue-200 transition-colors"
+                title="全屏查看"
+              >
+                <OpenInFullIcon style={{ fontSize: 14 }} className="text-blue-600" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClear();
+                }}
+                className="p-1 rounded-lg hover:bg-blue-200 transition-colors"
+                title="清空搜索结果"
+              >
+                <CloseIcon style={{ fontSize: 14 }} className="text-blue-600" />
+              </button>
+              {isExpanded ? (
+                <ExpandLessIcon style={{ fontSize: 18 }} className="text-blue-600" />
+              ) : (
+                <ExpandMoreIcon style={{ fontSize: 18 }} className="text-blue-600" />
+              )}
+            </div>
+          </button>
+
+          {/* Expandable Content */}
+          {isExpanded && (
+            <>
+              {/* Results List - compact cards */}
+              <div className="flex flex-col px-1.5 pb-1.5 max-h-[200px] overflow-y-auto scrollbar-thin">
+                {results.map((result) => (
+                  <SearchResultCard
+                    key={result.url}
+                    result={result}
+                    isSelected={selectedUrls.has(result.url)}
+                    onToggle={handleToggle}
+                    onExpand={handleExpand}
+                    onAddAsLink={handleAddSingleAsLink}
+                    onAddWithFetch={handleAddSingleWithFetch}
+                    compact
+                  />
+                ))}
+              </div>
+
+              {/* Actions Footer - simplified */}
+              <div className="flex items-center justify-between px-2 py-1.5 border-t border-blue-200 bg-blue-100/50">
+                <div className="flex items-center gap-1.5">
+                  <Checkbox
+                    checked={allSelected}
+                    onChange={handleToggleAll}
+                    containerProps={{ className: 'p-0' }}
+                    className="h-3.5 w-3.5 rounded border-gray-300 bg-white checked:bg-blue-600 checked:border-blue-600"
+                    iconProps={{ className: 'text-white' }}
+                  />
+                  <Typography variant="small" className="text-[10px] text-blue-800 font-medium">
+                    全选
+                  </Typography>
+                </div>
+                {selectedUrls.size > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Tooltip content="作为链接导入" placement="top" className="z-[10000]">
+                      <IconButton
+                        size="sm"
+                        variant="outlined"
+                        onClick={handleAddAsLink}
+                        disabled={isAdding}
+                        className="w-6 h-6 min-w-[24px] border-blue-300 text-blue-700 bg-white"
+                      >
+                        <LinkIcon style={{ fontSize: 14 }} />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip content="作为全文导入" placement="top" className="z-[10000]">
+                      <IconButton
+                        size="sm"
+                        onClick={handleAddWithFetch}
+                        disabled={isAdding}
+                        className="w-6 h-6 min-w-[24px] bg-blue-600 text-white"
+                      >
+                        <DownloadIcon style={{ fontSize: 14 }} />
+                      </IconButton>
+                    </Tooltip>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Expanded Result Dialog */}
       <Dialog
@@ -317,6 +570,7 @@ export default function SearchResultsQueue({
         handler={() => setIsFullscreen(false)}
         size="xl"
         className="rounded-xl max-h-[90vh] flex flex-col"
+        dismiss={{ outsidePress: false }}
       >
         <DialogHeader className="flex items-center justify-between border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -328,7 +582,7 @@ export default function SearchResultsQueue({
                 搜索结果
               </Typography>
               <Typography variant="small" className="text-gray-500">
-                共 {results.length} 条结果 · 已选择 {selectedUrls.size} 条
+                共 {effectiveResults.length} 条结果 · 已选择 {selectedUrls.size} 条
               </Typography>
             </div>
           </div>
@@ -349,7 +603,7 @@ export default function SearchResultsQueue({
             </div>
           )}
           <div className="flex flex-col gap-3">
-            {results.map((result) => {
+            {effectiveResults.map((result) => {
               const hostname = (() => {
                 try { return new URL(result.url).hostname; } catch { return result.url; }
               })();
@@ -453,7 +707,7 @@ export default function SearchResultsQueue({
               iconProps={{ className: 'text-white' }}
             />
             <Typography className="text-gray-700 text-sm font-medium">
-              全选 ({results.length})
+              全选 ({effectiveResults.length})
             </Typography>
           </div>
           <div className="flex items-center gap-3">

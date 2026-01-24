@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
 import type { AsyncStatus } from '../../../shared/types';
@@ -9,6 +9,21 @@ import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceCon
 import type { ApiSource, ApiSourceSearchResult } from '../types';
 import { normalizeSource } from '../utils';
 
+/** 搜索队列项状态 */
+export type SearchQueueItemStatus = 'loading' | 'success' | 'error';
+
+/** 搜索队列项 */
+export interface SearchQueueItem {
+  id: string;
+  query: string;
+  engine: string;
+  mode: string;
+  status: SearchQueueItemStatus;
+  results: ApiSourceSearchResult[];
+  notice: string;
+  createdAt: number;
+}
+
 export function useSources() {
   const state = useWorkspaceState();
   const dispatch = useWorkspaceDispatch();
@@ -17,6 +32,9 @@ export function useSources() {
   const [removeState, setRemoveState] = useState<AsyncStatus>('idle');
   const [searchNotice, setSearchNotice] = useState('');
   const [searchResults, setSearchResults] = useState<ApiSourceSearchResult[]>([]);
+  // 搜索队列状态
+  const [searchQueue, setSearchQueue] = useState<SearchQueueItem[]>([]);
+  const searchIdRef = useRef(0);
   const demoSources = useMemo<ApiSource[]>(
     () => [
       {
@@ -88,6 +106,7 @@ export function useSources() {
     setSearchNotice('');
     setSearchResults([]);
     setRemoveState('idle');
+    setSearchQueue([]);
   }, [state.activeNotebookId]);
 
   useEffect(() => {
@@ -263,9 +282,28 @@ export function useSources() {
         setSearchResults([]);
         return;
       }
+
+      // 生成唯一的搜索 ID
+      searchIdRef.current += 1;
+      const searchId = `search-${searchIdRef.current}-${Date.now()}`;
+
+      // 立即创建 loading 状态的队列项
+      const newQueueItem: SearchQueueItem = {
+        id: searchId,
+        query: trimmed,
+        engine,
+        mode,
+        status: 'loading',
+        results: [],
+        notice: '',
+        createdAt: Date.now(),
+      };
+      setSearchQueue((prev) => [...prev, newQueueItem]);
+
+      // 同时更新旧的状态以保持向后兼容
       setSearchState('loading');
       setSearchNotice('');
-      setSearchResults([]);
+
       try {
         const response = await searchSources(state.activeNotebookId, {
           query: trimmed,
@@ -273,16 +311,38 @@ export function useSources() {
           mode,
         });
         const results = response.results ?? [];
-        setSearchResults(results);
+        let notice = '';
         if (response.message) {
-          setSearchNotice(response.message);
+          notice = response.message;
         } else if (results.length === 0) {
-          setSearchNotice('没有找到匹配结果。');
+          notice = '没有找到匹配结果。';
         } else {
-          setSearchNotice(`已找到 ${results.length} 条结果。`);
+          notice = `已找到 ${results.length} 条结果。`;
         }
+
+        // 更新队列项状态
+        setSearchQueue((prev) =>
+          prev.map((item) =>
+            item.id === searchId
+              ? { ...item, status: 'success', results, notice }
+              : item,
+          ),
+        );
+
+        // 同时更新旧的状态
+        setSearchResults(results);
+        setSearchNotice(notice);
       } catch (error) {
-        setSearchNotice('搜索失败，请稍后重试。');
+        const errorNotice = '搜索失败，请稍后重试。';
+        // 更新队列项状态为错误
+        setSearchQueue((prev) =>
+          prev.map((item) =>
+            item.id === searchId
+              ? { ...item, status: 'error', notice: errorNotice }
+              : item,
+          ),
+        );
+        setSearchNotice(errorNotice);
         setSearchResults([]);
       } finally {
         setSearchState('idle');
@@ -290,6 +350,24 @@ export function useSources() {
     },
     [isDemo, state.activeNotebookId],
   );
+
+  // 移除单个搜索队列项
+  const removeSearchQueueItem = useCallback((queueItemId: string) => {
+    setSearchQueue((prev) => prev.filter((item) => item.id !== queueItemId));
+  }, []);
+
+  // 从搜索队列项中移除已添加的结果
+  const removeResultsFromQueue = useCallback((urls: string[]) => {
+    const urlSet = new Set(urls);
+    setSearchQueue((prev) =>
+      prev
+        .map((item) => ({
+          ...item,
+          results: item.results.filter((r) => !urlSet.has(r.url)),
+        }))
+        .filter((item) => item.results.length > 0 || item.status === 'loading'),
+    );
+  }, []);
 
   const removeSources = useCallback(
     async (sourceIds: number[]) => {
@@ -462,5 +540,9 @@ export function useSources() {
     clearSearchResults,
     addSourceFromUrl: handleAddSourceFromUrl,
     isDemo,
+    // 搜索队列相关
+    searchQueue,
+    removeSearchQueueItem,
+    removeResultsFromQueue,
   };
 }

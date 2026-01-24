@@ -70,7 +70,7 @@ The system **MUST** avoid distracting continuous animations and respect reduced 
 
 ### Requirement: 搜索结果胶囊队列
 
-来源面板 **MUST** 以胶囊队列形式展示搜索结果，支持多选和批量添加到来源。
+来源面板 **MUST** 以胶囊队列形式展示搜索结果，支持多选和批量添加到来源，并支持多个搜索请求的队列化处理。
 
 #### Scenario: 搜索结果展示为胶囊卡片
 
@@ -92,6 +92,33 @@ The system **MUST** avoid distracting continuous animations and respect reduced 
 - **THEN** 系统显示添加进度对话框
 - **AND** 逐个处理选中的结果
 - **AND** 完成后刷新来源列表
+
+#### Scenario: 添加来源后保持搜索队列可见
+
+- **WHEN** 用户从搜索结果添加来源完成后
+- **THEN** 搜索结果队列保持可见
+- **AND** 仅移除已成功添加的结果项
+- **AND** 用户可继续从剩余结果中添加更多来源
+
+#### Scenario: 搜索队列化处理
+
+- **WHEN** 用户点击搜索按钮发起搜索
+- **THEN** 系统立即创建一个 loading 状态的搜索队列项
+- **AND** 搜索按钮不被禁用
+- **AND** 用户可继续输入新查询并发起新搜索
+
+#### Scenario: 多个搜索请求并行处理
+
+- **WHEN** 用户在前一个搜索未完成时发起新搜索
+- **THEN** 新搜索作为独立队列项添加到队列中
+- **AND** 每个队列项独立显示其 loading/loaded/error 状态
+- **AND** 搜索完成后队列项更新为实际结果
+
+#### Scenario: 单独清除搜索队列项
+
+- **WHEN** 用户点击某个搜索队列项的关闭按钮
+- **THEN** 仅该队列项被移除
+- **AND** 其他队列项保持不变
 
 ### Requirement: 从 URL 添加来源
 

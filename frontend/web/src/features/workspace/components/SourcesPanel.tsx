@@ -38,6 +38,7 @@ import {
 import type { AsyncStatus } from '../../../shared/types';
 import type { SourceFromUrlMode } from '../../../api/client';
 import type { ApiSourceSearchResult, SourceItem } from '../types';
+import type { SearchQueueItem } from '../hooks/useSources';
 import SourceDetailDialog from './SourceDetailDialog';
 import SearchResultsQueue from './SearchResultsQueue';
 import AddSearchResultDialog from './AddSearchResultDialog';
@@ -64,6 +65,12 @@ interface SourcesPanelProps {
   isLoading: boolean;
   removeState: AsyncStatus;
   isFullscreen?: boolean;
+  /** 搜索队列 */
+  searchQueue?: SearchQueueItem[];
+  /** 移除单个搜索队列项 */
+  onRemoveSearchQueueItem?: (queueItemId: string) => void;
+  /** 从搜索队列中移除已添加的结果 */
+  onRemoveResultsFromQueue?: (urls: string[]) => void;
 }
 
 function SourcesPanel({
@@ -83,6 +90,9 @@ function SourcesPanel({
   isLoading,
   removeState,
   isFullscreen = false,
+  searchQueue = [],
+  onRemoveSearchQueueItem,
+  onRemoveResultsFromQueue,
 }: SourcesPanelProps) {
   const uploadDisabled = isDemo || uploadState === 'loading';
   const isSearching = searchState === 'loading';
@@ -135,9 +145,14 @@ function SourcesPanel({
   );
 
   const handleAddComplete = useCallback(() => {
+    // 从搜索队列中移除已成功添加的结果，而不是清空整个队列
+    if (resultsToAdd.length > 0 && onRemoveResultsFromQueue) {
+      const addedUrls = resultsToAdd.map((r) => r.url);
+      onRemoveResultsFromQueue(addedUrls);
+    }
     setResultsToAdd([]);
-    onClearSearchResults();
-  }, [onClearSearchResults]);
+    // 不再调用 onClearSearchResults，保持搜索队列可见
+  }, [resultsToAdd, onRemoveResultsFromQueue]);
 
   const handleCloseAddDialog = useCallback(() => {
     setAddDialogOpen(false);
@@ -190,7 +205,7 @@ function SourcesPanel({
   }
 
   const handleSearch = () => {
-    if (isSearching) return;
+    // 不再检查 isSearching，允许用户连续发起多个搜索
     onSearch({ query: searchQuery, engine, mode });
   };
 
@@ -266,9 +281,8 @@ function SourcesPanel({
                  size="sm"
                  className="rounded-full w-7 h-7 bg-blue-500 hover:bg-blue-600"
                  onClick={handleSearch}
-                 disabled={isSearching}
                >
-                 {isSearching ? <Spinner className="h-3 w-3" /> : <ArrowForwardIcon style={{ fontSize: 16 }} />}
+                 <ArrowForwardIcon style={{ fontSize: 16 }} />
                </IconButton>
             </div>
           </div>
@@ -344,6 +358,8 @@ function SourcesPanel({
         onClear={onClearSearchResults}
         onAddToSources={handleAddToSources}
         isAdding={isAddingFromUrl}
+        searchQueue={searchQueue}
+        onRemoveQueueItem={onRemoveSearchQueueItem}
       />
 
       {/* Select All & Batch Actions */}
