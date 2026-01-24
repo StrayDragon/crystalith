@@ -33,6 +33,7 @@ import {
   Delete as DeleteIcon,
   ContentCopy as CopyIcon,
   DriveFileMove as ConvertIcon,
+  OpenInFull as OpenInFullIcon,
 } from '@mui/icons-material';
 
 import { getToolConfig, type ToolConfigResponse } from '../api';
@@ -57,9 +58,11 @@ interface StudioPanelProps {
   onGenerateOutput: (type?: OutputTypeId, modelId?: string | null) => void;
   onDeleteOutput: (outputId: number) => void;
   onSelectOutput: (outputId: number) => void;
+  onSelectOutputFullscreen?: (outputId: number) => void;
   onSaveNote?: (content: string) => void;
   onConvertToSource?: (outputId: number) => void;
   isDemo: boolean;
+  isFullscreen?: boolean;
 }
 
 type StudioTone = 'slate' | 'blue' | 'green' | 'rose' | 'amber' | 'teal' | 'indigo';
@@ -219,9 +222,11 @@ function StudioPanel({
   onGenerateOutput,
   onDeleteOutput,
   onSelectOutput,
+  onSelectOutputFullscreen,
   onSaveNote,
   onConvertToSource,
   isDemo,
+  isFullscreen = false,
 }: StudioPanelProps) {
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
 
@@ -384,10 +389,10 @@ function StudioPanel({
   const showEmpty = !outputsLoading && notes.length === 0 && pendingNotes.length === 0;
 
   return (
-    <div className="flex flex-1 flex-col gap-3 p-3 sm:p-4 min-h-0">
+    <div className={`flex flex-1 flex-col gap-3 p-3 sm:p-4 min-h-0 ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''}`}>
       {/* Tools Grid */}
       {toolsLoading ? (
-        <div className="grid grid-cols-2 gap-2">
+        <div className={`grid gap-2 ${isFullscreen ? 'grid-cols-3 sm:grid-cols-4' : 'grid-cols-2'}`}>
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="h-8 rounded-lg bg-gray-300 animate-pulse" />
           ))}
@@ -405,7 +410,7 @@ function StudioPanel({
           </Typography>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2">
+        <div className={`grid gap-2 ${isFullscreen ? 'grid-cols-3 sm:grid-cols-4' : 'grid-cols-2'}`}>
           {tools.map((tool, index) => {
             const isDisabled = !tool.enabled || !tool.outputType;
             const tone = tool.tone as StudioTone || 'slate';
@@ -604,6 +609,15 @@ function StudioPanel({
                         </IconButton>
                       </MenuHandler>
                       <MenuList className="p-1 min-w-[140px] z-50">
+                        {onSelectOutputFullscreen && note.outputId && (
+                          <MenuItem
+                            onClick={() => onSelectOutputFullscreen(note.outputId!)}
+                            className="flex items-center gap-2 py-2 px-3 text-xs"
+                          >
+                            <OpenInFullIcon className="h-3.5 w-3.5" />
+                            <span>放大查看</span>
+                          </MenuItem>
+                        )}
                         <MenuItem
                           onClick={() => handleConvertToSource(note.id)}
                           className="flex items-center gap-2 py-2 px-3 text-xs"

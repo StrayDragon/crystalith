@@ -57,3 +57,60 @@ export function IconFeedback(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function IconFullscreen(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <path
+        d="M7 9V7h2M17 9V7h-2M7 15v2h2M17 15v2h-2"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+export function IconExitFullscreen(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <path
+        d="M9 7v2H7M15 7v2h2M9 17v-2H7M15 17v-2h2"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+export function IconClose(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <path
+        d="M7 7l10 10M17 7L7 17"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+export function IconExpand(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...props}>
+      <path
+        d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
