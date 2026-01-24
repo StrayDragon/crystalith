@@ -15,6 +15,8 @@ import {
   Description as DescriptionIcon,
   AutoAwesome as AutoAwesomeIcon,
   Refresh as RefreshIcon,
+  Fullscreen as FullscreenIcon,
+  FullscreenExit as FullscreenExitIcon,
 } from '@mui/icons-material';
 
 import { getSourceSummary, askSourceQuestion } from '../api';
@@ -25,6 +27,8 @@ interface SourceDetailDialogProps {
   open: boolean;
   source: SourceItem | null;
   onClose: () => void;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 interface ChatMessage {
@@ -45,7 +49,7 @@ interface SourceBrief {
 // Cache for source briefs
 const briefCache = new Map<number, SourceBrief>();
 
-export default function SourceDetailDialog({ open, source, onClose }: SourceDetailDialogProps) {
+export default function SourceDetailDialog({ open, source, onClose, isFullscreen = false, onToggleFullscreen }: SourceDetailDialogProps) {
   const state = useWorkspaceState();
   const notebookId = state.activeNotebookId;
   const isDemo = state.connectionState === 'demo';
@@ -243,8 +247,8 @@ export default function SourceDetailDialog({ open, source, onClose }: SourceDeta
     <Dialog
       open={open}
       handler={onClose}
-      size="lg"
-      className="rounded-xl overflow-hidden max-h-[85vh] flex flex-col"
+      size={isFullscreen ? 'xxl' : 'lg'}
+      className={`rounded-xl overflow-hidden flex flex-col ${isFullscreen ? 'h-[95vh] max-h-[95vh]' : 'max-h-[85vh]'}`}
     >
       {/* Header */}
       <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 p-4">
@@ -261,9 +265,20 @@ export default function SourceDetailDialog({ open, source, onClose }: SourceDeta
             </Typography>
           </div>
         </div>
-        <IconButton variant="text" size="sm" onClick={onClose} className="rounded-full flex-shrink-0">
-          <CloseIcon className="h-4 w-4" />
-        </IconButton>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {onToggleFullscreen && (
+            <IconButton variant="text" size="sm" onClick={onToggleFullscreen} className="rounded-full">
+              {isFullscreen ? (
+                <FullscreenExitIcon className="h-4 w-4" />
+              ) : (
+                <FullscreenIcon className="h-4 w-4" />
+              )}
+            </IconButton>
+          )}
+          <IconButton variant="text" size="sm" onClick={onClose} className="rounded-full">
+            <CloseIcon className="h-4 w-4" />
+          </IconButton>
+        </div>
       </DialogHeader>
 
       <DialogBody className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden">

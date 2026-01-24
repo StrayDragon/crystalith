@@ -1,4 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { IconButton, Tooltip } from '@material-tailwind/react';
 
 import ChatPanel from './ChatPanel';
 import SessionSwitcher from './SessionSwitcher';
@@ -13,8 +14,11 @@ import { useSessions } from '../hooks/useSessions';
 import { useSources } from '../hooks/useSources';
 import type { SourceItem } from '../types';
 import { buildSourceSummaryPrompt } from '../utils';
+import { IconFullscreen, IconExitFullscreen } from './Icons';
 
 const StudioOutputViewer = lazy(() => import('./StudioOutputViewer'));
+
+type ExpandedPanel = 'sources' | 'chat' | 'studio' | null;
 
 type DragSide = 'left' | 'right';
 
@@ -63,6 +67,7 @@ export default function WorkspaceLayout() {
   const [isViewerFullscreen, setIsViewerFullscreen] = useState(false);
   const [viewerOutputId, setViewerOutputId] = useState<number | null>(null);
   const [isSessionSwitcherOpen, setIsSessionSwitcherOpen] = useState(false);
+  const [expandedPanel, setExpandedPanel] = useState<ExpandedPanel>(null);
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const sessionSearchRef = useRef<HTMLInputElement | null>(null);
   const mainRef = useRef<HTMLElement | null>(null);
@@ -182,6 +187,12 @@ export default function WorkspaceLayout() {
     setIsViewerFullscreen(false);
   }, []);
 
+  const handleOpenOutputViewerFullscreen = useCallback((outputId: number) => {
+    setViewerOutputId(outputId);
+    setIsViewerOpen(true);
+    setIsViewerFullscreen(true);
+  }, []);
+
   const handleCloseOutputViewer = useCallback(() => {
     setIsViewerOpen(false);
     setIsViewerFullscreen(false);
@@ -194,6 +205,22 @@ export default function WorkspaceLayout() {
   const handleSelectOutput = useCallback((outputId: number) => {
     setViewerOutputId(outputId);
   }, []);
+
+  const handleToggleExpand = useCallback((panel: ExpandedPanel) => {
+    setExpandedPanel((prev) => (prev === panel ? null : panel));
+  }, []);
+
+  // ESC key to collapse expanded panel
+  useEffect(() => {
+    if (!expandedPanel) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setExpandedPanel(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [expandedPanel]);
 
   useEffect(() => {
     if (!isViewerOpen) return;
@@ -230,20 +257,42 @@ export default function WorkspaceLayout() {
 
       <main
         ref={mainRef}
-        className={`grid flex-1 min-h-0 gap-y-3 lg:gap-y-0 ${isResizing ? 'cursor-col-resize select-none' : ''}`}
+        className={`flex-1 min-h-0 grid gap-y-3 lg:gap-y-0 ${isResizing ? 'cursor-col-resize select-none' : ''}`}
         aria-label="三栏工作区"
         style={{
-          // We use inline style for grid layout to support dynamic resizing logic
-          gridTemplateColumns: window.innerWidth >= 1024
-            ? `minmax(220px, var(--sources-width, ${DEFAULT_SOURCES_WIDTH}px)) ${RESIZE_HANDLE_WIDTH}px minmax(0, 1fr) ${RESIZE_HANDLE_WIDTH}px minmax(240px, var(--studio-width, ${DEFAULT_STUDIO_WIDTH}px))`
-            : '1fr',
-          // Mobile layout is single column (handled by media query in Tailwind or JS check above)
-          // Actually, let's use a class for mobile override to be safer
+          gridTemplateColumns:
+            typeof window !== 'undefined' && window.innerWidth >= 1024
+              ? expandedPanel
+                ? '1fr' // Single column when expanded
+                : `minmax(220px, var(--sources-width, ${DEFAULT_SOURCES_WIDTH}px)) ${RESIZE_HANDLE_WIDTH}px minmax(0, 1fr) ${RESIZE_HANDLE_WIDTH}px minmax(240px, var(--studio-width, ${DEFAULT_STUDIO_WIDTH}px))`
+              : '1fr',
         }}
       >
-        <section className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" aria-label="来源">
+        {/* Sources Panel */}
+        {(!expandedPanel || expandedPanel === 'sources') && (
+        <section
+          className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          style={{
+            animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+          aria-label="来源"
+        >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">来源</h2>
+            <Tooltip content={expandedPanel === 'sources' ? '收起' : '展开'}>
+              <IconButton
+                variant="text"
+                size="sm"
+                className="w-7 h-7 rounded-full text-gray-500 hover:bg-gray-200"
+                onClick={() => handleToggleExpand('sources')}
+              >
+                {expandedPanel === 'sources' ? (
+                  <IconExitFullscreen className="w-4 h-4" />
+                ) : (
+                  <IconFullscreen className="w-4 h-4" />
+                )}
+              </IconButton>
+            </Tooltip>
           </div>
           <SourcesPanel
             sources={sources.sources}
@@ -261,15 +310,21 @@ export default function WorkspaceLayout() {
             isDemo={sources.isDemo}
             isLoading={sources.isLoading}
             removeState={sources.removeState}
+            isFullscreen={expandedPanel === 'sources'}
           />
         </section>
+        )}
 
+        {/* Left Resize Handle - hidden when any panel is expanded */}
+        {!expandedPanel && (
         <button
           type="button"
-          className="hidden lg:flex items-center justify-center w-3 cursor-col-resize bg-transparent hover:bg-transparent group"
+          className={`items-center justify-center w-3 cursor-col-resize bg-transparent hover:bg-transparent group ${
+            expandedPanel ? 'hidden' : 'hidden lg:flex'
+          }`}
           aria-label="调整来源宽度"
           onPointerDown={(event) => {
-            if (window.innerWidth < 1024) return;
+            if (window.innerWidth < 1024 || expandedPanel) return;
             const main = mainRef.current;
             if (!main) return;
             const { width } = main.getBoundingClientRect();
@@ -285,8 +340,17 @@ export default function WorkspaceLayout() {
         >
           <div className={`w-0.5 h-12 rounded-full bg-gray-200 transition-colors group-hover:bg-gray-400 ${isResizing ? 'bg-gray-500' : ''}`} />
         </button>
+        )}
 
-        <section className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" aria-label="对话">
+        {/* Chat Panel */}
+        {(!expandedPanel || expandedPanel === 'chat') && (
+        <section
+          className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          style={{
+            animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+          aria-label="对话"
+        >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex-wrap gap-2">
             <div className="flex items-center gap-3">
               <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">对话</h2>
@@ -309,6 +373,20 @@ export default function WorkspaceLayout() {
                 onRetry={sessions.retrySessions}
               />
             </div>
+            <Tooltip content={expandedPanel === 'chat' ? '收起' : '展开'}>
+              <IconButton
+                variant="text"
+                size="sm"
+                className="w-7 h-7 rounded-full text-gray-500 hover:bg-gray-200"
+                onClick={() => handleToggleExpand('chat')}
+              >
+                {expandedPanel === 'chat' ? (
+                  <IconExitFullscreen className="w-4 h-4" />
+                ) : (
+                  <IconFullscreen className="w-4 h-4" />
+                )}
+              </IconButton>
+            </Tooltip>
           </div>
           <ChatPanel
             messages={chat.messages}
@@ -330,13 +408,16 @@ export default function WorkspaceLayout() {
             isConverting={chat.isConverting}
           />
         </section>
+        )}
 
+        {/* Right Resize Handle - hidden when any panel is expanded */}
+        {!expandedPanel && (
         <button
           type="button"
-          className="hidden lg:flex items-center justify-center w-3 cursor-col-resize bg-transparent hover:bg-transparent group"
+          className="items-center justify-center w-3 cursor-col-resize bg-transparent hover:bg-transparent group hidden lg:flex"
           aria-label="调整 Studio 宽度"
           onPointerDown={(event) => {
-            if (window.innerWidth < 1024) return;
+            if (window.innerWidth < 1024 || expandedPanel) return;
             const main = mainRef.current;
             if (!main) return;
             const { width } = main.getBoundingClientRect();
@@ -352,10 +433,33 @@ export default function WorkspaceLayout() {
         >
           <div className={`w-0.5 h-12 rounded-full bg-gray-200 transition-colors group-hover:bg-gray-400 ${isResizing ? 'bg-gray-500' : ''}`} />
         </button>
+        )}
 
-        <section className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" aria-label="Studio">
+        {/* Studio Panel */}
+        {(!expandedPanel || expandedPanel === 'studio') && (
+        <section
+          className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          style={{
+            animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+          aria-label="Studio"
+        >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Studio</h2>
+            <Tooltip content={expandedPanel === 'studio' ? '收起' : '展开'}>
+              <IconButton
+                variant="text"
+                size="sm"
+                className="w-7 h-7 rounded-full text-gray-500 hover:bg-gray-200"
+                onClick={() => handleToggleExpand('studio')}
+              >
+                {expandedPanel === 'studio' ? (
+                  <IconExitFullscreen className="w-4 h-4" />
+                ) : (
+                  <IconFullscreen className="w-4 h-4" />
+                )}
+              </IconButton>
+            </Tooltip>
           </div>
           <StudioPanel
             tools={refine.tools}
@@ -369,11 +473,14 @@ export default function WorkspaceLayout() {
             onGenerateOutput={refine.onGenerateOutput}
             onDeleteOutput={refine.onDeleteOutput}
             onSelectOutput={handleOpenOutputViewer}
+            onSelectOutputFullscreen={handleOpenOutputViewerFullscreen}
             onSaveNote={refine.saveContentAsNote}
             onConvertToSource={sources.convertOutputToSource}
             isDemo={isDemo}
+            isFullscreen={expandedPanel === 'studio'}
           />
         </section>
+        )}
       </main>
 
       <Suspense fallback={null}>

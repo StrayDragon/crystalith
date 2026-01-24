@@ -32,6 +32,7 @@ import {
   Psychology as PsychologyIcon,
   ExpandMore as ExpandMoreIcon,
   ArrowForward as ArrowForwardIcon,
+  OpenInFull as OpenInFullIcon,
 } from '@mui/icons-material';
 
 import type { AsyncStatus } from '../../../shared/types';
@@ -62,6 +63,7 @@ interface SourcesPanelProps {
   isDemo: boolean;
   isLoading: boolean;
   removeState: AsyncStatus;
+  isFullscreen?: boolean;
 }
 
 function SourcesPanel({
@@ -80,6 +82,7 @@ function SourcesPanel({
   isDemo,
   isLoading,
   removeState,
+  isFullscreen = false,
 }: SourcesPanelProps) {
   const uploadDisabled = isDemo || uploadState === 'loading';
   const isSearching = searchState === 'loading';
@@ -97,14 +100,22 @@ function SourcesPanel({
   const [resultsToAdd, setResultsToAdd] = useState<SearchResultItem[]>([]);
   const [addMode, setAddMode] = useState<SourceFromUrlMode>('link');
   const [isAddingFromUrl, setIsAddingFromUrl] = useState(false);
+  const [isDetailFullscreen, setIsDetailFullscreen] = useState(false);
 
   const handleOpenDetail = useCallback((source: SourceItem) => {
     setSelectedSource(source);
     setDetailDialogOpen(true);
-  }, []);
+    // If panel is in fullscreen mode, open detail in fullscreen too
+    setIsDetailFullscreen(isFullscreen);
+  }, [isFullscreen]);
 
   const handleCloseDetail = useCallback(() => {
     setDetailDialogOpen(false);
+    setIsDetailFullscreen(false);
+  }, []);
+
+  const handleToggleDetailFullscreen = useCallback(() => {
+    setIsDetailFullscreen((prev) => !prev);
   }, []);
 
   const handleAddToSources = useCallback((selected: SearchResultItem[], mode: SourceFromUrlMode) => {
@@ -203,7 +214,7 @@ function SourcesPanel({
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-3 p-3 sm:p-4 min-h-0">
+    <div className={`flex flex-1 flex-col gap-3 p-3 sm:p-4 min-h-0 ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''}`}>
       {/* Upload Button */}
       <Tooltip content="支持文本(.txt)和Markdown(.md)文件">
         <Button
@@ -438,6 +449,17 @@ function SourcesPanel({
                         </MenuHandler>
                         <MenuList className="p-1 min-w-[140px]">
                            <MenuItem
+                              onClick={() => {
+                                setSelectedSource(source);
+                                setDetailDialogOpen(true);
+                                setIsDetailFullscreen(true);
+                              }}
+                              className="flex items-center gap-2 py-2 px-3 text-xs"
+                           >
+                              <OpenInFullIcon style={{ fontSize: 16 }} />
+                              <span>放大查看</span>
+                           </MenuItem>
+                           <MenuItem
                               onClick={async () => {
                                  if (isDemo || removeState === 'loading') return;
                                  if (!window.confirm(`确定要删除「${source.title}」吗？此操作不可撤销。`)) return;
@@ -471,6 +493,8 @@ function SourcesPanel({
         open={detailDialogOpen}
         source={selectedSource}
         onClose={handleCloseDetail}
+        isFullscreen={isDetailFullscreen}
+        onToggleFullscreen={handleToggleDetailFullscreen}
       />
 
       {/* Add Search Results Dialog */}
