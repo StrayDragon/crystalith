@@ -311,6 +311,9 @@ export default function WorkspaceLayout() {
             isLoading={sources.isLoading}
             removeState={sources.removeState}
             isFullscreen={expandedPanel === 'sources'}
+            searchQueue={sources.searchQueue}
+            onRemoveSearchQueueItem={sources.removeSearchQueueItem}
+            onRemoveResultsFromQueue={sources.removeResultsFromQueue}
           />
         </section>
         )}
