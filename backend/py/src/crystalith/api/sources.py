@@ -5,11 +5,14 @@ from time import perf_counter
 from typing import Any, Iterable, Literal
 
 import httpx
+from cl_logs import get_logger
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+logger = get_logger(__name__)
 
 from cl_stdx.enumx import MetaInfoStrEnum, XMetaInfo
 
@@ -438,10 +441,20 @@ async def create_source_from_url(
     except Exception as exc:
         await session.rollback()
         source.status = SourceStatus.FAILED
-        source.error_message = str(exc)[:512]
+        error_detail = str(exc)[:512]
+        source.error_message = error_detail
         session.add(source)
         await session.commit()
-        raise HTTPException(status_code=500, detail="Ingestion failed") from exc
+        # Log with Rich exception traceback
+        logger.exception(
+            "Source ingestion failed for URL",
+            url=url,
+            error=error_detail,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ingestion failed: {error_detail}",
+        ) from exc
 
     return _source_to_read(source, chunk_count=len(chunk_models))
 
@@ -526,10 +539,20 @@ async def upload_source(
     except Exception as exc:
         await session.rollback()
         source.status = SourceStatus.FAILED
-        source.error_message = str(exc)[:512]
+        error_detail = str(exc)[:512]
+        source.error_message = error_detail
         session.add(source)
         await session.commit()
-        raise HTTPException(status_code=500, detail="Ingestion failed") from exc
+        # Log with Rich exception traceback
+        logger.exception(
+            "Source upload ingestion failed",
+            filename=file.filename,
+            error=error_detail,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ingestion failed: {error_detail}",
+        ) from exc
 
     return _source_to_read(source, chunk_count=len(chunk_ids))
 
