@@ -19,6 +19,7 @@ Run from `backend/py`:
 - Use `snake_case` for functions/variables and `PascalCase` for classes.
 - Type hints are encouraged where they improve clarity.
 - No repo-wide formatter is enforced; match existing style and avoid large reformatting.
+- If Backend API changed, must remember use pnpm run api:generate in frontend, and checked it
 
 ## Testing Guidelines
 - Frameworks: `pytest` + `pytest-asyncio`.

@@ -27,6 +27,7 @@ Tip: `just -l` lists available tasks in each directory.
 - TypeScript/React: 2-space indentation; `PascalCase` components; hooks named `useX`.
 - CSS/Tailwind: keep global styles in `frontend/web/src/app/index.css`; feature styles live alongside components.
 - No repo-wide formatter is configured; match existing style and avoid unrelated reformatting.
+- If Backend API changed, must remember use pnpm run api:generate in frontend, and checked it
 
 ## Testing Guidelines
 - Backend uses `pytest` + `pytest-asyncio`; tests live in `backend/py/tests/` and `backend/py/packages/*/tests/` with `test_*.py` names.
