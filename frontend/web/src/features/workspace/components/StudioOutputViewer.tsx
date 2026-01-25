@@ -82,7 +82,7 @@ export default function StudioOutputViewer({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm ${isFullscreen ? 'p-0' : 'p-4 sm:p-6'}`}
+      className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm ${isFullscreen ? 'p-0' : 'p-4 sm:p-6'}`}
       role="dialog"
       aria-modal="true"
       aria-label="Studio 输出详情"
