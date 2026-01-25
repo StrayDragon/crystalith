@@ -26,6 +26,7 @@ Tip: `just -l` lists available tasks in each directory.
 - Python: 4-space indentation; `snake_case` for functions/vars, `PascalCase` classes.
 - CSS/Tailwind: global styles in `frontend/web/src/app/index.css`; feature styles live alongside components.
 - No repo-wide formatter is configured; match existing style and avoid unrelated reformatting.
+- If Backend API changed, must remember use pnpm run api:generate in frontend, and checked it
 
 ## Testing Guidelines
 - Frontend uses Vitest + React Testing Library; colocate tests under `frontend/web/src/`.
