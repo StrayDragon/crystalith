@@ -33,6 +33,40 @@ export type BodyUploadSourceV1NotebooksNotebookIdSourcesPost = {
 };
 
 /**
+ * ChunkRead
+ *
+ * Response model for a text chunk.
+ */
+export type ChunkRead = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Chunk Index
+     */
+    chunk_index: number;
+    /**
+     * Text
+     */
+    text: string;
+    /**
+     * Start Offset
+     */
+    start_offset: number | null;
+    /**
+     * End Offset
+     */
+    end_offset: number | null;
+    /**
+     * Metadata
+     */
+    metadata?: {
+        [key: string]: unknown;
+    } | null;
+};
+
+/**
  * Citation
  */
 export type Citation = {
@@ -206,6 +240,34 @@ export type ConvertSessionToSourceResponse = {
      * Chunk Count
      */
     chunk_count: number;
+};
+
+/**
+ * ConvertSourceQAToSourceRequest
+ *
+ * Request to convert source QA conversation to a new source.
+ */
+export type ConvertSourceQaToSourceRequest = {
+    /**
+     * Messages
+     */
+    messages: Array<QaMessage>;
+};
+
+/**
+ * ConvertSourceQAToSourceResponse
+ *
+ * Response after converting source QA to a new source.
+ */
+export type ConvertSourceQaToSourceResponse = {
+    /**
+     * Source Id
+     */
+    source_id: number;
+    /**
+     * Filename
+     */
+    filename: string;
 };
 
 /**
@@ -563,6 +625,22 @@ export type OutputTypeInput = 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' 
  * * `STRUCTURED`: 结构化摘要
  */
 export type OutputTypeOutput = 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
+
+/**
+ * QAMessage
+ *
+ * A single QA message.
+ */
+export type QaMessage = {
+    /**
+     * Role
+     */
+    role: 'user' | 'assistant';
+    /**
+     * Content
+     */
+    content: string;
+};
 
 /**
  * QARequest
@@ -2402,6 +2480,42 @@ export type DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponses = {
 
 export type DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponse = DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponses[keyof DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponses];
 
+export type ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Source Id
+         */
+        source_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/{source_id}/chunks';
+};
+
+export type ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetError = ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetErrors[keyof ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetErrors];
+
+export type ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponses = {
+    /**
+     * Response List Source Chunks V1 Notebooks  Notebook Id  Sources  Source Id  Chunks Get
+     *
+     * Successful Response
+     */
+    200: Array<ChunkRead>;
+};
+
+export type ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponse = ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponses[keyof ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponses];
+
 export type GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetData = {
     body?: never;
     path: {
@@ -2469,6 +2583,40 @@ export type SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponses = {
 };
 
 export type SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponse = SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponses[keyof SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponses];
+
+export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostData = {
+    body: ConvertSourceQaToSourceRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Source Id
+         */
+        source_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/{source_id}/qa/convert-to-source';
+};
+
+export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostError = ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostErrors[keyof ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostErrors];
+
+export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponses = {
+    /**
+     * Successful Response
+     */
+    201: ConvertSourceQaToSourceResponse;
+};
+
+export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponse = ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponses[keyof ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponses];
 
 export type GetTaskV1TasksTaskIdGetData = {
     body?: never;

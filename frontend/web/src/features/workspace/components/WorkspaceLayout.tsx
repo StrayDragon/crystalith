@@ -316,6 +316,7 @@ export default function WorkspaceLayout() {
             onRemoveResultsFromQueue={sources.removeResultsFromQueue}
             availableExtractors={sources.availableExtractors}
             defaultExtractor={sources.defaultExtractor}
+            onConvertSourceQAToSource={sources.convertSourceQAToSource}
           />
         </section>
         )}

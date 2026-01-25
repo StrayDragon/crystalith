@@ -3,7 +3,8 @@ import useSWR from 'swr';
 
 import type { AsyncStatus } from '../../../shared/types';
 import { toast } from '../../../shared/toast';
-import { addSourceFromUrl, convertOutputToSource, deleteSource, deleteSources, listExtractors, listSources, searchSources, uploadSource } from '../api';
+import { addSourceFromUrl, convertOutputToSource, convertSourceQAToSource, deleteSource, deleteSources, listExtractors, listSources, searchSources, uploadSource } from '../api';
+import type { QAMessage } from '../api';
 import type { ExtractorInfo, ExtractorsListResponse, ExtractorType, SourceFromUrlMode } from '../../../api/client';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
 import type { ApiSource, ApiSourceSearchResult } from '../types';
@@ -531,6 +532,26 @@ export function useSources() {
     return extractorsData?.default_extractor ?? null;
   }, [extractorsData]);
 
+  // Convert source QA to source
+  const handleConvertSourceQAToSource = useCallback(
+    async (sourceId: number, messages: QAMessage[]) => {
+      if (isDemo) {
+        throw new Error('演示模式暂不支持此功能');
+      }
+      if (!state.activeNotebookId) {
+        throw new Error('请先创建笔记本');
+      }
+      const result = await convertSourceQAToSource(
+        state.activeNotebookId,
+        sourceId,
+        messages,
+      );
+      await mutate();
+      return result;
+    },
+    [isDemo, state.activeNotebookId, mutate],
+  );
+
   return {
     sources: state.sources,
     citations: state.citations,
@@ -574,5 +595,7 @@ export function useSources() {
     availableExtractors,
     defaultExtractor,
     extractorsLoading,
+    // Source QA 转换
+    convertSourceQAToSource: handleConvertSourceQAToSource,
   };
 }
