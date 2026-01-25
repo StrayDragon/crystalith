@@ -17,6 +17,7 @@ import {
 } from '@mui/icons-material';
 
 import { listModels, type ModelRead, type ModelsListResponse } from '../api';
+import { LAYER_LEVELS } from '../../../shared/layer';
 
 export interface ModelSelectorProps {
   /** Currently selected model ID */
@@ -130,7 +131,8 @@ export function ModelSelector({
         disabled={disabled}
         size={size}
         menuProps={{
-          className: "max-h-60 overflow-y-auto z-[9999]",
+          className: "max-h-60 overflow-y-auto",
+          style: { zIndex: LAYER_LEVELS.popover },
         }}
         selected={(element) => {
           // Custom render for selected value

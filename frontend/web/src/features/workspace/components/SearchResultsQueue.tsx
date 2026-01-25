@@ -17,6 +17,7 @@ import {
 import SearchResultCard, { type SearchResultItem } from './SearchResultCard';
 import type { SearchQueueItem } from '../hooks/useSources';
 import type { ExtractorInfo, ExtractorType } from '../../../api/client';
+import { LAYER_LEVELS } from '../../../shared/layer';
 
 interface SearchResultsQueueProps {
   results: SearchResultItem[];
@@ -158,7 +159,7 @@ export default function SearchResultsQueue({
             <SettingsIcon style={{ fontSize: compact ? 12 : 14 }} className="text-gray-500" />
           </IconButton>
         </MenuHandler>
-        <MenuList className="p-1 min-w-[180px] z-[10001]">
+        <MenuList className="p-1 min-w-[180px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
           <Typography variant="small" className="px-3 py-1 text-[10px] text-gray-500 font-medium">
             选择提取方式
           </Typography>
@@ -350,7 +351,7 @@ export default function SearchResultsQueue({
               </div>
               {itemSelectedCount > 0 && (
                 <div className="flex items-center gap-1">
-                  <Tooltip content="作为链接导入" placement="top" className="z-[10000]">
+                  <Tooltip content="作为链接导入" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
                     <IconButton
                       size="sm"
                       variant="outlined"
@@ -366,7 +367,7 @@ export default function SearchResultsQueue({
                       <LinkIcon style={{ fontSize: 14 }} />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip content="作为全文导入" placement="top" className="z-[10000]">
+                  <Tooltip content="作为全文导入" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
                     <IconButton
                       size="sm"
                       onClick={() => {
@@ -497,7 +498,7 @@ export default function SearchResultsQueue({
                 </div>
                 {selectedUrls.size > 0 && (
                   <div className="flex items-center gap-1">
-                    <Tooltip content="作为链接导入" placement="top" className="z-[10000]">
+                    <Tooltip content="作为链接导入" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
                       <IconButton
                         size="sm"
                         variant="outlined"
@@ -508,7 +509,7 @@ export default function SearchResultsQueue({
                         <LinkIcon style={{ fontSize: 14 }} />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip content="作为全文导入" placement="top" className="z-[10000]">
+                    <Tooltip content="作为全文导入" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
                       <IconButton
                         size="sm"
                         onClick={handleAddWithFetch}
@@ -703,7 +704,7 @@ export default function SearchResultsQueue({
                     </div>
                     {/* Action buttons */}
                     <div className="flex items-center gap-2">
-                      <Tooltip content="仅保存标题、摘要和链接作为来源引用" placement="top" className="z-[10000]">
+                      <Tooltip content="仅保存标题、摘要和链接作为来源引用" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
                         <Button
                           size="sm"
                           variant="outlined"
@@ -718,7 +719,7 @@ export default function SearchResultsQueue({
                           作为链接导入
                         </Button>
                       </Tooltip>
-                      <Tooltip content="抓取网页完整内容导入为来源" placement="top" className="z-[10000]">
+                      <Tooltip content="抓取网页完整内容导入为来源" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
                         <Button
                           size="sm"
                           onClick={(e) => {
@@ -732,7 +733,7 @@ export default function SearchResultsQueue({
                           作为全文导入
                         </Button>
                       </Tooltip>
-                      <Tooltip content="在新窗口中打开原网页" placement="top" className="z-[10000]">
+                      <Tooltip content="在新窗口中打开原网页" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
                         <Button
                           size="sm"
                           variant="text"
@@ -811,7 +812,7 @@ export default function SearchResultsQueue({
                           <ExpandMoreIcon style={{ fontSize: 18 }} />
                         </Button>
                       </MenuHandler>
-                      <MenuList className="p-1 min-w-[200px] z-[10001]">
+                      <MenuList className="p-1 min-w-[200px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
                         <Typography variant="small" className="px-3 py-1 text-[10px] text-gray-500 font-medium">
                           选择提取方式
                         </Typography>

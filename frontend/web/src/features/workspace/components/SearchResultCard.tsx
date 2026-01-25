@@ -8,6 +8,7 @@ import {
   CloudDownload as FetchIcon,
   Link as LinkIcon,
 } from '@mui/icons-material';
+import { LAYER_LEVELS } from '../../../shared/layer';
 
 export interface SearchResultItem {
   title: string;
@@ -87,7 +88,7 @@ const SearchResultCard = forwardRef<HTMLDivElement, SearchResultCardProps>(
                   <MoreHorizIcon style={{ fontSize: 14 }} />
                 </IconButton>
               </MenuHandler>
-              <MenuList className="p-1 min-w-[140px] z-50">
+              <MenuList className="p-1 min-w-[140px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
                 <MenuItem
                   onClick={() => onAddAsLink?.(result)}
                   className="flex items-center gap-2 py-2 px-3 text-xs"

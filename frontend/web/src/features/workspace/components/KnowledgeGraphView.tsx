@@ -38,6 +38,7 @@ import {
 
 import type { AnalysisResult } from '../../../api/client';
 import type { SourceItem, OutputItem, SessionSummary, ChatMessage } from '../types';
+import { useLayer } from '../../../shared/layer';
 
 // Cache for node positions (survives component unmount within session)
 const nodePositionsCache = new Map<string, { x: number; y: number }>();
@@ -673,8 +674,10 @@ function KnowledgeGraphView({
   const contradictionCount = analysis?.contradictions?.length || 0;
   const totalNodes = sources.length + outputs.length + sessions.length;
 
+  const { style: modalStyle } = useLayer('modal');
+
   return (
-    <div className="fixed inset-0 z-50 bg-gray-900/95 flex flex-col">
+    <div className="fixed inset-0 bg-gray-900/95 flex flex-col" style={modalStyle}>
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 bg-gray-800/90 backdrop-blur-sm">
         <div className="flex items-center gap-4">

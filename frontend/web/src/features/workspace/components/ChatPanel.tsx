@@ -19,6 +19,7 @@ import {
 import type { ChatMessage, Citation, OutputTypeId } from '../types';
 import CitationMark from './citations/CitationMark';
 import { IconCopy, IconSave, IconSend } from './Icons';
+import { LAYER_LEVELS } from '../../../shared/layer';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -235,7 +236,7 @@ function ChatPanel({
                           <ExpandMoreIcon style={{ fontSize: 12 }} />
                         </button>
                       </MenuHandler>
-                      <MenuList className="p-1 min-w-[160px] z-50">
+                      <MenuList className="p-1 min-w-[160px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
                         {onConvertToSource && (
                           <MenuItem
                             onClick={() => onConvertToSource()}

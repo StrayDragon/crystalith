@@ -13,6 +13,7 @@ import { MoreVert as MoreVertIcon, Delete as DeleteIcon } from '@mui/icons-mater
 import type { OutputItem } from '../types';
 import { formatRelativeTime } from '../utils';
 import OutputContent from './OutputContent';
+import { useLayer } from '../../../shared/layer';
 
 interface StudioOutputViewerProps {
   outputs: OutputItem[];
@@ -78,11 +79,14 @@ export default function StudioOutputViewer({
     setActiveMenuId(null);
   }, [onDeleteOutput, outputs, selectedOutputId, onClose]);
 
+  const { style: modalStyle } = useLayer('modal');
+
   if (!isOpen) return null;
 
   return (
     <div
-      className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm ${isFullscreen ? 'p-0' : 'p-4 sm:p-6'}`}
+      className={`fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm ${isFullscreen ? 'p-0' : 'p-4 sm:p-6'}`}
+      style={modalStyle}
       role="dialog"
       aria-modal="true"
       aria-label="Studio 输出详情"

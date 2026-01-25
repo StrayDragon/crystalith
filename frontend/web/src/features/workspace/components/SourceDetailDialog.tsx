@@ -40,6 +40,7 @@ import type { ChunkRead } from '../api';
 import { useWorkspaceState } from '../context/WorkspaceContext';
 import type { SourceItem } from '../types';
 import { toast } from '../../../shared/toast';
+import { useLayer } from '../../../shared/layer';
 
 interface SourceDetailDialogProps {
   open: boolean;
@@ -669,7 +670,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                                   )}
                                 </IconButton>
                               </MenuHandler>
-                              <MenuList className="min-w-[160px] z-[10001]">
+                              <MenuList className="min-w-[160px]">
                                 <MenuItem
                                   className="flex items-center gap-2 text-xs"
                                   onClick={() => {
