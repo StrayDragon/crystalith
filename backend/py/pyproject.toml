@@ -34,6 +34,14 @@ dependencies = [
     "tiktoken>=0.12.0",
     "jsonschema>=4.26.0",
     "sqlite-vss>=0.1.2",
+    # Web content extraction
+    "trafilatura>=2.0.0",
+    "firecrawl-py>=4.0.0",
+]
+
+[project.optional-dependencies]
+browserless = [
+    "playwright>=1.40.0",
 ]
 
 [build-system]

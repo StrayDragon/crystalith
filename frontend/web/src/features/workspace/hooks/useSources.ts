@@ -3,8 +3,8 @@ import useSWR from 'swr';
 
 import type { AsyncStatus } from '../../../shared/types';
 import { toast } from '../../../shared/toast';
-import { addSourceFromUrl, convertOutputToSource, deleteSource, deleteSources, listSources, searchSources, uploadSource } from '../api';
-import type { SourceFromUrlMode } from '../../../api/client';
+import { addSourceFromUrl, convertOutputToSource, deleteSource, deleteSources, listExtractors, listSources, searchSources, uploadSource } from '../api';
+import type { ExtractorInfo, ExtractorsListResponse, ExtractorType, SourceFromUrlMode } from '../../../api/client';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
 import type { ApiSource, ApiSourceSearchResult } from '../types';
 import { normalizeSource } from '../utils';
@@ -486,7 +486,7 @@ export function useSources() {
     async (
       url: string,
       mode: SourceFromUrlMode,
-      options?: { title?: string; snippet?: string },
+      options?: { title?: string; snippet?: string; extractor?: ExtractorType },
     ) => {
       if (isDemo) {
         throw new Error('演示模式暂不支持此功能');
@@ -499,12 +499,37 @@ export function useSources() {
         mode,
         title: options?.title,
         snippet: options?.snippet,
+        extractor: options?.extractor,
       });
       await mutate();
       return result;
     },
     [isDemo, state.activeNotebookId, mutate],
   );
+
+  // Fetch available extractors
+  const {
+    data: extractorsData,
+    isLoading: extractorsLoading,
+  } = useSWR<ExtractorsListResponse>(
+    state.activeNotebookId && !isDemo
+      ? ['workspace/extractors', state.activeNotebookId]
+      : null,
+    () => listExtractors(state.activeNotebookId ?? 0),
+    { revalidateOnFocus: false },
+  );
+
+  const extractors = useMemo<ExtractorInfo[]>(() => {
+    return extractorsData?.extractors ?? [];
+  }, [extractorsData]);
+
+  const availableExtractors = useMemo<ExtractorInfo[]>(() => {
+    return extractors.filter((e) => e.available);
+  }, [extractors]);
+
+  const defaultExtractor = useMemo<ExtractorType | null>(() => {
+    return extractorsData?.default_extractor ?? null;
+  }, [extractorsData]);
 
   return {
     sources: state.sources,
@@ -544,5 +569,10 @@ export function useSources() {
     searchQueue,
     removeSearchQueueItem,
     removeResultsFromQueue,
+    // 提取器相关
+    extractors,
+    availableExtractors,
+    defaultExtractor,
+    extractorsLoading,
   };
 }

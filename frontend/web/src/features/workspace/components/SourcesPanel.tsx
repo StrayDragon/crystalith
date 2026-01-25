@@ -36,7 +36,7 @@ import {
 } from '@mui/icons-material';
 
 import type { AsyncStatus } from '../../../shared/types';
-import type { SourceFromUrlMode } from '../../../api/client';
+import type { ExtractorInfo, ExtractorType, SourceFromUrlMode } from '../../../api/client';
 import type { ApiSourceSearchResult, SourceItem } from '../types';
 import type { SearchQueueItem } from '../hooks/useSources';
 import SourceDetailDialog from './SourceDetailDialog';
@@ -57,7 +57,7 @@ interface SourcesPanelProps {
   onAddSourceFromUrl: (
     url: string,
     mode: SourceFromUrlMode,
-    options?: { title?: string; snippet?: string },
+    options?: { title?: string; snippet?: string; extractor?: ExtractorType },
   ) => Promise<unknown>;
   onRemoveSources: (sourceIds: number[]) => Promise<boolean>;
   onRemoveSource: (sourceId: number) => Promise<boolean>;
@@ -71,6 +71,10 @@ interface SourcesPanelProps {
   onRemoveSearchQueueItem?: (queueItemId: string) => void;
   /** 从搜索队列中移除已添加的结果 */
   onRemoveResultsFromQueue?: (urls: string[]) => void;
+  /** 可用的提取器列表 */
+  availableExtractors?: ExtractorInfo[];
+  /** 默认提取器 */
+  defaultExtractor?: ExtractorType | null;
 }
 
 function SourcesPanel({
@@ -93,6 +97,8 @@ function SourcesPanel({
   searchQueue = [],
   onRemoveSearchQueueItem,
   onRemoveResultsFromQueue,
+  availableExtractors = [],
+  defaultExtractor = null,
 }: SourcesPanelProps) {
   const uploadDisabled = isDemo || uploadState === 'loading';
   const isSearching = searchState === 'loading';
@@ -109,6 +115,7 @@ function SourcesPanel({
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [resultsToAdd, setResultsToAdd] = useState<SearchResultItem[]>([]);
   const [addMode, setAddMode] = useState<SourceFromUrlMode>('link');
+  const [selectedExtractor, setSelectedExtractor] = useState<ExtractorType | undefined>(undefined);
   const [isAddingFromUrl, setIsAddingFromUrl] = useState(false);
   const [isDetailFullscreen, setIsDetailFullscreen] = useState(false);
 
@@ -128,9 +135,10 @@ function SourcesPanel({
     setIsDetailFullscreen((prev) => !prev);
   }, []);
 
-  const handleAddToSources = useCallback((selected: SearchResultItem[], mode: SourceFromUrlMode) => {
+  const handleAddToSources = useCallback((selected: SearchResultItem[], mode: SourceFromUrlMode, extractor?: ExtractorType) => {
     setResultsToAdd(selected);
     setAddMode(mode);
+    setSelectedExtractor(extractor);
     setAddDialogOpen(true);
   }, []);
 
@@ -139,9 +147,10 @@ function SourcesPanel({
       await onAddSourceFromUrl(result.url, mode, {
         title: result.title,
         snippet: result.snippet ?? undefined,
+        extractor: mode === 'fetch' ? selectedExtractor : undefined,
       });
     },
-    [onAddSourceFromUrl],
+    [onAddSourceFromUrl, selectedExtractor],
   );
 
   const handleAddComplete = useCallback(() => {
@@ -360,6 +369,8 @@ function SourcesPanel({
         isAdding={isAddingFromUrl}
         searchQueue={searchQueue}
         onRemoveQueueItem={onRemoveSearchQueueItem}
+        availableExtractors={availableExtractors}
+        defaultExtractor={defaultExtractor}
       />
 
       {/* Select All & Batch Actions */}

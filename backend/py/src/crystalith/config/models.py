@@ -482,9 +482,106 @@ class UrlFetchSettings(BaseModel):
     retry_delay: float = Field(1.0, ge=0.0, le=10.0, description="重试间隔（秒）")
 
 
+# =============================================================================
+# Web Extraction Settings
+# =============================================================================
+
+class TrafilaturaSettings(BaseModel):
+    """Trafilatura 本地提取器配置。"""
+    enabled: bool = Field(True, description="是否启用 Trafilatura 提取器")
+    include_tables: bool = Field(True, description="是否提取表格")
+    include_links: bool = Field(True, description="是否提取链接")
+    output_format: Literal["markdown", "txt", "xml", "json"] = Field(
+        "markdown", description="输出格式"
+    )
+    timeout: int = Field(30, ge=5, le=120, description="请求超时时间（秒）")
+    proxy: HttpProxySettings | None = Field(None, description="代理配置（可选）")
+
+
+class JinaSettings(BaseModel):
+    """Jina Reader API 提取器配置。"""
+    enabled: bool = Field(True, description="是否启用 Jina Reader 提取器")
+    api_key: str | None = Field(None, description="Jina API 密钥（可选，用于更高配额）")
+    timeout: int = Field(30, ge=5, le=120, description="请求超时时间（秒）")
+    proxy: HttpProxySettings | None = Field(None, description="代理配置（可选）")
+
+
+class FirecrawlSettings(BaseModel):
+    """Firecrawl API 提取器配置。"""
+    enabled: bool = Field(False, description="是否启用 Firecrawl 提取器")
+    api_key: str | None = Field(None, description="Firecrawl API 密钥")
+    timeout: int = Field(60, ge=10, le=300, description="请求超时时间（秒）")
+
+
+class BrowserlessSettings(BaseModel):
+    """Browserless 浏览器渲染提取器配置。"""
+    enabled: bool = Field(False, description="是否启用 Browserless 提取器")
+    endpoint: str = Field("ws://localhost:3000", description="Browserless WebSocket 端点")
+    token: str | None = Field(None, description="认证令牌（可选）")
+    timeout: int = Field(60, ge=10, le=300, description="页面加载超时时间（秒）")
+    wait_until: Literal["load", "domcontentloaded", "networkidle"] = Field(
+        "networkidle", description="页面等待条件"
+    )
+
+
+class WebExtractionSettings(BaseModel):
+    """
+    网页内容提取配置。
+
+    支持多种提取策略，按优先级自动降级：
+    1. trafilatura - 本地提取，速度快，无需外部服务
+    2. jina - Jina Reader API，免费且支持 JS 渲染
+    3. firecrawl - 外部 API，功能强大，需要 API 密钥
+    4. browserless - 浏览器渲染，适合复杂动态页面，需要服务
+
+    Example:
+        web_extraction:
+          fallback_order: ["trafilatura", "jina", "firecrawl", "browserless"]
+          trafilatura:
+            enabled: true
+            output_format: "markdown"
+          jina:
+            enabled: true
+          firecrawl:
+            enabled: false
+            api_key: "fc-xxx"
+          browserless:
+            enabled: false
+            endpoint: "ws://localhost:3000"
+    """
+    # 降级顺序配置
+    fallback_order: list[str] = Field(
+        default_factory=lambda: ["trafilatura", "jina", "firecrawl", "browserless"],
+        description="提取器降级顺序（按优先级排列）",
+    )
+    enable_fallback: bool = Field(True, description="是否启用自动降级")
+
+    # 各提取器配置
+    trafilatura: TrafilaturaSettings = Field(
+        default_factory=TrafilaturaSettings,
+        description="Trafilatura 本地提取器配置",
+    )
+    jina: JinaSettings = Field(
+        default_factory=JinaSettings,
+        description="Jina Reader API 提取器配置",
+    )
+    firecrawl: FirecrawlSettings = Field(
+        default_factory=FirecrawlSettings,
+        description="Firecrawl API 提取器配置",
+    )
+    browserless: BrowserlessSettings = Field(
+        default_factory=BrowserlessSettings,
+        description="Browserless 浏览器渲染提取器配置",
+    )
+
+
 class SourceIngestionSettings(BaseModel):
     """来源导入配置。"""
     url_fetch: UrlFetchSettings = Field(default_factory=UrlFetchSettings, description="URL 获取配置")
+    web_extraction: WebExtractionSettings = Field(
+        default_factory=WebExtractionSettings,
+        description="网页内容提取配置",
+    )
 
 
 # =============================================================================

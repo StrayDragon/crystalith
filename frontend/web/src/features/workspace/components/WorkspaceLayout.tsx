@@ -314,6 +314,8 @@ export default function WorkspaceLayout() {
             searchQueue={sources.searchQueue}
             onRemoveSearchQueueItem={sources.removeSearchQueueItem}
             onRemoveResultsFromQueue={sources.removeResultsFromQueue}
+            availableExtractors={sources.availableExtractors}
+            defaultExtractor={sources.defaultExtractor}
           />
         </section>
         )}

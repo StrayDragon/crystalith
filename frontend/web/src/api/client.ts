@@ -181,12 +181,14 @@ export async function searchSources(
 
 // Add source from URL (not yet in generated SDK)
 export type SourceFromUrlMode = 'fetch' | 'link';
+export type ExtractorType = 'trafilatura' | 'firecrawl' | 'browserless';
 
 export interface AddSourceFromUrlPayload {
   url: string;
   title?: string;
   snippet?: string;
   mode: SourceFromUrlMode;
+  extractor?: ExtractorType;
 }
 
 export async function addSourceFromUrl(
@@ -201,6 +203,36 @@ export async function addSourceFromUrl(
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
     throw new ApiError(response.status, err.detail || 'Failed to add source from URL');
+  }
+  return response.json();
+}
+
+// Extractors API
+export interface ExtractorInfo {
+  type: ExtractorType;
+  enabled: boolean;
+  available: boolean;
+  display_name: string;
+  description: string;
+  priority: number;
+  requires_api_key: boolean;
+  requires_service: boolean;
+}
+
+export interface ExtractorsListResponse {
+  extractors: ExtractorInfo[];
+  default_extractor: ExtractorType | null;
+  fallback_enabled: boolean;
+}
+
+/**
+ * List available web content extractors for a notebook.
+ */
+export async function listExtractors(notebookId: number): Promise<ExtractorsListResponse> {
+  const response = await fetch(`/v1/notebooks/${notebookId}/sources/extractors`);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, err.detail || 'Failed to list extractors');
   }
   return response.json();
 }

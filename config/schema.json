@@ -22,6 +22,57 @@
       "title": "AppSettings",
       "type": "object"
     },
+    "BrowserlessSettings": {
+      "description": "Browserless 浏览器渲染提取器配置。",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "是否启用 Browserless 提取器",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "endpoint": {
+          "default": "ws://localhost:3000",
+          "description": "Browserless WebSocket 端点",
+          "title": "Endpoint",
+          "type": "string"
+        },
+        "token": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "认证令牌（可选）",
+          "title": "Token"
+        },
+        "timeout": {
+          "default": 60,
+          "description": "页面加载超时时间（秒）",
+          "maximum": 300,
+          "minimum": 10,
+          "title": "Timeout",
+          "type": "integer"
+        },
+        "wait_until": {
+          "default": "networkidle",
+          "description": "页面等待条件",
+          "enum": [
+            "load",
+            "domcontentloaded",
+            "networkidle"
+          ],
+          "title": "Wait Until",
+          "type": "string"
+        }
+      },
+      "title": "BrowserlessSettings",
+      "type": "object"
+    },
     "ChatSettings": {
       "description": "Chat settings.\n\nUse models.defaults.chat to specify the default chat model.\nThis section only contains chat-specific options.",
       "properties": {},
@@ -206,6 +257,146 @@
         }
       },
       "title": "EmbeddingSettings",
+      "type": "object"
+    },
+    "FirecrawlSettings": {
+      "description": "Firecrawl API 提取器配置。",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "是否启用 Firecrawl 提取器",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "api_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Firecrawl API 密钥",
+          "title": "Api Key"
+        },
+        "timeout": {
+          "default": 60,
+          "description": "请求超时时间（秒）",
+          "maximum": 300,
+          "minimum": 10,
+          "title": "Timeout",
+          "type": "integer"
+        }
+      },
+      "title": "FirecrawlSettings",
+      "type": "object"
+    },
+    "HttpProxySettings": {
+      "description": "HTTP 代理配置。\n\n支持 HTTP/HTTPS/SOCKS5 代理协议，可作为 YAML anchor 被其他功能引用。\n\nExample:\n    proxy_settings: &default_proxy\n      enabled: false\n      http_url: \"http://127.0.0.1:7890\"\n      https_url: \"http://127.0.0.1:7890\"\n      socks5_url: null\n      no_proxy: [\"localhost\", \"127.0.0.1\"]\n\n    source_ingestion:\n      url_fetch:\n        proxy: *default_proxy",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "是否启用代理",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "http_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HTTP 代理 URL (例如 http://127.0.0.1:7890)",
+          "title": "Http Url"
+        },
+        "https_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HTTPS 代理 URL (可选，默认使用 http_url)",
+          "title": "Https Url"
+        },
+        "socks5_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "SOCKS5 代理 URL (例如 socks5://127.0.0.1:1080)",
+          "title": "Socks5 Url"
+        },
+        "no_proxy": {
+          "description": "不走代理的域名/IP列表",
+          "items": {
+            "type": "string"
+          },
+          "title": "No Proxy",
+          "type": "array"
+        }
+      },
+      "title": "HttpProxySettings",
+      "type": "object"
+    },
+    "JinaSettings": {
+      "description": "Jina Reader API 提取器配置。",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "是否启用 Jina Reader 提取器",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "api_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Jina API 密钥（可选，用于更高配额）",
+          "title": "Api Key"
+        },
+        "timeout": {
+          "default": 30,
+          "description": "请求超时时间（秒）",
+          "maximum": 120,
+          "minimum": 5,
+          "title": "Timeout",
+          "type": "integer"
+        },
+        "proxy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HttpProxySettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "代理配置（可选）"
+        }
+      },
+      "title": "JinaSettings",
       "type": "object"
     },
     "ModelConfig": {
@@ -655,6 +846,164 @@
       "title": "RequestOptions",
       "type": "object"
     },
+    "SearXNGSettings": {
+      "description": "SearXNG search engine settings.",
+      "properties": {
+        "host": {
+          "default": "http://localhost:8888",
+          "description": "SearXNG instance URL",
+          "title": "Host",
+          "type": "string"
+        },
+        "api_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional API key for authentication",
+          "title": "Api Key"
+        },
+        "timeout": {
+          "default": 10,
+          "description": "Request timeout in seconds",
+          "minimum": 1,
+          "title": "Timeout",
+          "type": "integer"
+        },
+        "max_results": {
+          "default": 10,
+          "description": "Maximum number of results",
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Max Results",
+          "type": "integer"
+        }
+      },
+      "title": "SearXNGSettings",
+      "type": "object"
+    },
+    "SearchSettings": {
+      "description": "Web search settings.",
+      "properties": {
+        "searxng": {
+          "$ref": "#/$defs/SearXNGSettings"
+        }
+      },
+      "title": "SearchSettings",
+      "type": "object"
+    },
+    "SourceIngestionSettings": {
+      "description": "来源导入配置。",
+      "properties": {
+        "url_fetch": {
+          "$ref": "#/$defs/UrlFetchSettings",
+          "description": "URL 获取配置"
+        },
+        "web_extraction": {
+          "$ref": "#/$defs/WebExtractionSettings",
+          "description": "网页内容提取配置"
+        }
+      },
+      "title": "SourceIngestionSettings",
+      "type": "object"
+    },
+    "TrafilaturaSettings": {
+      "description": "Trafilatura 本地提取器配置。",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "是否启用 Trafilatura 提取器",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "include_tables": {
+          "default": true,
+          "description": "是否提取表格",
+          "title": "Include Tables",
+          "type": "boolean"
+        },
+        "include_links": {
+          "default": true,
+          "description": "是否提取链接",
+          "title": "Include Links",
+          "type": "boolean"
+        },
+        "output_format": {
+          "default": "markdown",
+          "description": "输出格式",
+          "enum": [
+            "markdown",
+            "txt",
+            "xml",
+            "json"
+          ],
+          "title": "Output Format",
+          "type": "string"
+        },
+        "timeout": {
+          "default": 30,
+          "description": "请求超时时间（秒）",
+          "maximum": 120,
+          "minimum": 5,
+          "title": "Timeout",
+          "type": "integer"
+        },
+        "proxy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HttpProxySettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "代理配置（可选）"
+        }
+      },
+      "title": "TrafilaturaSettings",
+      "type": "object"
+    },
+    "UrlFetchSettings": {
+      "description": "URL 内容获取配置。",
+      "properties": {
+        "proxy": {
+          "$ref": "#/$defs/HttpProxySettings",
+          "description": "代理配置"
+        },
+        "timeout": {
+          "default": 30,
+          "description": "请求超时时间（秒）",
+          "maximum": 120,
+          "minimum": 5,
+          "title": "Timeout",
+          "type": "integer"
+        },
+        "retry_count": {
+          "default": 2,
+          "description": "重试次数",
+          "maximum": 5,
+          "minimum": 0,
+          "title": "Retry Count",
+          "type": "integer"
+        },
+        "retry_delay": {
+          "default": 1.0,
+          "description": "重试间隔（秒）",
+          "maximum": 10.0,
+          "minimum": 0.0,
+          "title": "Retry Delay",
+          "type": "number"
+        }
+      },
+      "title": "UrlFetchSettings",
+      "type": "object"
+    },
     "VectorStorageChromaSettings": {
       "description": "Chroma vector storage settings.",
       "properties": {
@@ -706,6 +1055,43 @@
       },
       "title": "VectorStorageSettings",
       "type": "object"
+    },
+    "WebExtractionSettings": {
+      "description": "网页内容提取配置。\n\n支持多种提取策略，按优先级自动降级：\n1. trafilatura - 本地提取，速度快，无需外部服务\n2. jina - Jina Reader API，免费且支持 JS 渲染\n3. firecrawl - 外部 API，功能强大，需要 API 密钥\n4. browserless - 浏览器渲染，适合复杂动态页面，需要服务\n\nExample:\n    web_extraction:\n      fallback_order: [\"trafilatura\", \"jina\", \"firecrawl\", \"browserless\"]\n      trafilatura:\n        enabled: true\n        output_format: \"markdown\"\n      jina:\n        enabled: true\n      firecrawl:\n        enabled: false\n        api_key: \"fc-xxx\"\n      browserless:\n        enabled: false\n        endpoint: \"ws://localhost:3000\"",
+      "properties": {
+        "fallback_order": {
+          "description": "提取器降级顺序（按优先级排列）",
+          "items": {
+            "type": "string"
+          },
+          "title": "Fallback Order",
+          "type": "array"
+        },
+        "enable_fallback": {
+          "default": true,
+          "description": "是否启用自动降级",
+          "title": "Enable Fallback",
+          "type": "boolean"
+        },
+        "trafilatura": {
+          "$ref": "#/$defs/TrafilaturaSettings",
+          "description": "Trafilatura 本地提取器配置"
+        },
+        "jina": {
+          "$ref": "#/$defs/JinaSettings",
+          "description": "Jina Reader API 提取器配置"
+        },
+        "firecrawl": {
+          "$ref": "#/$defs/FirecrawlSettings",
+          "description": "Firecrawl API 提取器配置"
+        },
+        "browserless": {
+          "$ref": "#/$defs/BrowserlessSettings",
+          "description": "Browserless 浏览器渲染提取器配置"
+        }
+      },
+      "title": "WebExtractionSettings",
+      "type": "object"
     }
   },
   "description": "Configuration schema for Crystalith. Supports YAML anchors for reusable configurations and ${{ env.VAR }} / ${{ secrets.VAR }} for variable interpolation.",
@@ -754,6 +1140,14 @@
     },
     "context_window": {
       "$ref": "#/$defs/ContextWindowSettings"
+    },
+    "search": {
+      "$ref": "#/$defs/SearchSettings",
+      "description": "Web search settings"
+    },
+    "source_ingestion": {
+      "$ref": "#/$defs/SourceIngestionSettings",
+      "description": "来源导入配置（包含 URL 获取和代理设置）"
     },
     "models": {
       "$ref": "#/$defs/ModelsSettings",

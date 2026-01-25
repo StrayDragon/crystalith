@@ -227,6 +227,66 @@ export type ConvertToSourceResponse = {
 };
 
 /**
+ * ExtractorInfoResponse
+ *
+ * Information about an available extractor.
+ */
+export type ExtractorInfoResponse = {
+    /**
+     * Type
+     */
+    type: string;
+    /**
+     * Enabled
+     */
+    enabled: boolean;
+    /**
+     * Available
+     */
+    available: boolean;
+    /**
+     * Display Name
+     */
+    display_name: string;
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Priority
+     */
+    priority: number;
+    /**
+     * Requires Api Key
+     */
+    requires_api_key?: boolean;
+    /**
+     * Requires Service
+     */
+    requires_service?: boolean;
+};
+
+/**
+ * ExtractorsListResponse
+ *
+ * Response for listing available extractors.
+ */
+export type ExtractorsListResponse = {
+    /**
+     * Extractors
+     */
+    extractors: Array<ExtractorInfoResponse>;
+    /**
+     * Default Extractor
+     */
+    default_extractor?: string | null;
+    /**
+     * Fallback Enabled
+     */
+    fallback_enabled?: boolean;
+};
+
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -802,6 +862,12 @@ export type SourceFromUrlRequest = {
      * * `link`: 仅保存链接
      */
     mode?: 'fetch' | 'link';
+    /**
+     * Extractor
+     *
+     * 指定使用的提取器类型 (trafilatura, firecrawl, browserless)。如果不指定，使用默认降级顺序。
+     */
+    extractor?: string | null;
 };
 
 /**
@@ -2119,6 +2185,36 @@ export type CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostRespo
 };
 
 export type CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponse = CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses[keyof CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses];
+
+export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/extractors';
+};
+
+export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetError = ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetErrors[keyof ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetErrors];
+
+export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ExtractorsListResponse;
+};
+
+export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponse = ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses[keyof ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses];
 
 export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteData = {
     body: SourceBatchDeleteRequest;

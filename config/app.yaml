@@ -208,3 +208,53 @@ source_ingestion:
     timeout: 30       # 请求超时时间（秒）
     retry_count: 2    # 重试次数
     retry_delay: 1.0  # 重试间隔（秒）
+
+  # 网页内容提取配置
+  web_extraction:
+    # 提取器降级顺序（按优先级排列）
+    # 默认: trafilatura > jina > firecrawl > browserless
+    fallback_order:
+      - trafilatura
+      - jina
+      - firecrawl
+      - browserless
+    enable_fallback: true  # 是否启用自动降级
+
+    # Trafilatura 本地提取器（默认启用）
+    # 使用本地 trafilatura 库提取网页正文，速度快，无需外部服务
+    trafilatura:
+      enabled: true
+      include_tables: true
+      include_links: true
+      output_format: "markdown"  # markdown | txt | xml | json
+      timeout: 30
+      proxy:
+        <<: *default_proxy
+
+    # Jina Reader API 提取器（免费，支持 JS 渲染）
+    # 使用 Jina Reader (r.jina.ai) 提取网页内容，返回 Markdown
+    # 免费使用，无需 API 密钥；可选配置 API 密钥获取更高配额
+    jina:
+      enabled: true
+      api_key: ""  # 可选，用于更高配额
+      timeout: 30
+      proxy:
+        <<: *default_proxy
+
+    # Firecrawl API 提取器（需要 API 密钥）
+    # 使用 Firecrawl API 提取网页内容，功能强大
+    # 获取 API 密钥: https://firecrawl.dev
+    firecrawl:
+      enabled: false
+      api_key: ""  # 填入你的 Firecrawl API 密钥
+      timeout: 60
+
+    # Browserless 浏览器渲染提取器（需要服务）
+    # 使用 Browserless 服务渲染页面后提取，适合复杂动态页面
+    # 部署: docker run -p 3000:3000 ghcr.io/browserless/chromium
+    browserless:
+      enabled: false
+      endpoint: "ws://localhost:3000"
+      token: ""  # 可选认证令牌
+      timeout: 60
+      wait_until: "networkidle"  # load | domcontentloaded | networkidle
