@@ -25,6 +25,7 @@ from .api import (
     outputs_router,
     qa_router,
     refine_router,
+    research_router,
     sessions_router,
     sources_router,
     tasks_router,
@@ -161,6 +162,7 @@ def create_app(
     app.include_router(qa_router)
     app.include_router(outputs_router)
     app.include_router(refine_router)
+    app.include_router(research_router)
     app.include_router(sessions_router)
     app.include_router(messages_router)
     app.include_router(sources_router)

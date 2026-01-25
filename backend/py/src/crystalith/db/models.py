@@ -19,6 +19,36 @@ class SourceStatus(MetaInfoStrEnum):
     FAILED = "failed", XMetaInfo(description="处理失败", display_text="失败")
 
 
+class ResearchStatus(MetaInfoStrEnum):
+    """Status of a research session."""
+
+    PLANNING = "planning", XMetaInfo(description="正在规划搜索", display_text="规划中")
+    SEARCHING = "searching", XMetaInfo(description="正在执行搜索", display_text="搜索中")
+    ANALYZING = "analyzing", XMetaInfo(description="正在分析结果", display_text="分析中")
+    WAITING_USER = "waiting_user", XMetaInfo(description="等待用户确认", display_text="待确认")
+    COMPLETED = "completed", XMetaInfo(description="研究完成", display_text="已完成")
+    CANCELLED = "cancelled", XMetaInfo(description="已取消", display_text="已取消")
+
+
+class ResearchStepType(MetaInfoStrEnum):
+    """Type of research step."""
+
+    PLAN = "plan", XMetaInfo(description="搜索计划", display_text="计划")
+    SEARCH = "search", XMetaInfo(description="执行搜索", display_text="搜索")
+    ANALYZE = "analyze", XMetaInfo(description="分析结果", display_text="分析")
+    USER_INPUT = "user_input", XMetaInfo(description="用户输入", display_text="用户输入")
+    SUMMARY = "summary", XMetaInfo(description="生成报告", display_text="报告")
+
+
+class ResearchStepStatus(MetaInfoStrEnum):
+    """Status of a research step."""
+
+    PENDING = "pending", XMetaInfo(description="等待执行", display_text="待执行")
+    RUNNING = "running", XMetaInfo(description="正在执行", display_text="执行中")
+    COMPLETED = "completed", XMetaInfo(description="执行完成", display_text="已完成")
+    SKIPPED = "skipped", XMetaInfo(description="已跳过", display_text="已跳过")
+
+
 class Notebook(AsyncSqlATableBase):
     __tablename__ = "notebooks"
 
@@ -271,4 +301,109 @@ class Chunk(AsyncSqlATableBase):
     __table_args__ = (
         sa.UniqueConstraint("source_id", "chunk_index", name="uq_chunks_source_id_chunk_index"),
         sa.Index("ix_chunks_source_id_chunk_index", "source_id", "chunk_index"),
+    )
+
+
+class ResearchSession(AsyncSqlATableBase):
+    """Deep research session for multi-round iterative search."""
+
+    __tablename__ = "research_sessions"
+
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True, autoincrement=True)
+    notebook_id: Mapped[int] = mapped_column(
+        sa.Integer,
+        sa.ForeignKey("notebooks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    topic: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    status: Mapped[ResearchStatus] = mapped_column(
+        sa.Enum(ResearchStatus, name="research_status"),
+        nullable=False,
+        server_default=sa.text(f"'{ResearchStatus.PLANNING.value}'"),
+    )
+    current_iteration: Mapped[int] = mapped_column(
+        sa.Integer,
+        nullable=False,
+        server_default=sa.text("1"),
+    )
+    max_iterations: Mapped[int] = mapped_column(
+        sa.Integer,
+        nullable=False,
+        server_default=sa.text("4"),
+    )
+    aggregated_results: Mapped[list[dict[str, Any]] | None] = mapped_column(
+        sa.JSON,
+        nullable=True,
+    )
+    final_report: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+        onupdate=sa.sql.func.now(),
+    )
+
+    notebook: Mapped["Notebook"] = relationship(
+        lazy="selectin",
+    )
+    steps: Mapped[list["ResearchStep"]] = relationship(
+        back_populates="session",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="ResearchStep.created_at",
+        lazy="selectin",
+    )
+
+    __table_args__ = (
+        sa.Index("ix_research_sessions_status", "status"),
+    )
+
+
+class ResearchStep(AsyncSqlATableBase):
+    """Individual step in a research session."""
+
+    __tablename__ = "research_steps"
+
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(
+        sa.Integer,
+        sa.ForeignKey("research_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    iteration: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    type: Mapped[ResearchStepType] = mapped_column(
+        sa.Enum(ResearchStepType, name="research_step_type"),
+        nullable=False,
+    )
+    input_data: Mapped[dict[str, Any] | None] = mapped_column(sa.JSON, nullable=True)
+    output_data: Mapped[dict[str, Any] | None] = mapped_column(sa.JSON, nullable=True)
+    status: Mapped[ResearchStepStatus] = mapped_column(
+        sa.Enum(ResearchStepStatus, name="research_step_status"),
+        nullable=False,
+        server_default=sa.text(f"'{ResearchStepStatus.PENDING.value}'"),
+    )
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+    )
+
+    session: Mapped["ResearchSession"] = relationship(
+        back_populates="steps",
+        lazy="selectin",
+    )
+
+    __table_args__ = (
+        sa.Index("ix_research_steps_session_iteration", "session_id", "iteration"),
     )

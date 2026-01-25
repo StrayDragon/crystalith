@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { analyzeNotebook, type ApiAnalysis } from '../api';
+import { analyzeNotebook, type AnalysisResult } from '../api';
 import { useWorkspaceState } from '../context/WorkspaceContext';
 
 interface AnalysisState {
-  analysis: ApiAnalysis | null;
+  analysis: AnalysisResult | null;
   isLoading: boolean;
   error: string;
 }
@@ -34,15 +34,26 @@ export function useAnalysis() {
 
     if (isDemo) {
       // Return demo analysis data
-      const demoAnalysis: ApiAnalysis = {
-        notebook_id: state.activeNotebookId,
-        source_count: state.sources.length,
-        chunk_count: state.sources.reduce((sum, s) => sum + s.chunks, 0),
-        session_count: state.sessions.length,
-        output_count: state.outputs.length,
-        topics: ['产品调研', '竞品分析', '用户需求'],
-        summary: '这是一个演示笔记本，包含产品调研相关的资料和分析。',
-        created_at: new Date().toISOString(),
+      const demoAnalysis: AnalysisResult = {
+        topics: [
+          {
+            id: 'topic-1',
+            name: '产品调研 / 用户需求',
+            chunk_ids: [1, 2, 3],
+            keywords: ['产品', '调研', '用户', '需求', '分析'],
+          },
+          {
+            id: 'topic-2',
+            name: '竞品分析 / 市场',
+            chunk_ids: [4, 5],
+            keywords: ['竞品', '分析', '市场', '对比'],
+          },
+        ],
+        relations: [
+          { source_chunk_id: 1, target_chunk_id: 4, relation_type: 'similar', score: 0.85 },
+          { source_chunk_id: 2, target_chunk_id: 5, relation_type: 'similar', score: 0.72 },
+        ],
+        contradictions: [],
       };
       setAnalysisState({
         analysis: demoAnalysis,
@@ -65,7 +76,7 @@ export function useAnalysis() {
       }));
       return null;
     }
-  }, [isDemo, state.activeNotebookId, state.outputs.length, state.sessions.length, state.sources]);
+  }, [isDemo, state.activeNotebookId]);
 
   const clearAnalysis = useCallback(() => {
     setAnalysisState({ analysis: null, isLoading: false, error: '' });
