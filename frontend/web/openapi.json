@@ -1383,6 +1383,49 @@
         }
       }
     },
+    "/v1/notebooks/{notebook_id}/sources/extractors": {
+      "get": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "List Extractors",
+        "description": "List available web content extractors.\n\nReturns information about all configured extractors, including:\n- Whether they are enabled in configuration\n- Whether they are actually available (dependencies installed, service reachable)\n- Display name and description\n- Priority order for fallback\n\nThe frontend can use this to show users which extraction methods are available\nand let them choose a preferred method.",
+        "operationId": "list_extractors_v1_notebooks__notebook_id__sources_extractors_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractorsListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/notebooks/{notebook_id}/sources": {
       "get": {
         "tags": [
@@ -1587,7 +1630,7 @@
           "sources"
         ],
         "summary": "Create Source From Url",
-        "description": "Create a source from a URL.\n\nSupports two modes:\n- `link`: Save URL, title, and snippet as a lightweight source\n- `fetch`: Fetch the webpage content and parse it as a full source",
+        "description": "Create a source from a URL.\n\nSupports two modes:\n- `link`: Save URL, title, and snippet as a lightweight source\n- `fetch`: Fetch the webpage content and parse it as a full source\n\nFor `fetch` mode, you can optionally specify an extractor:\n- `trafilatura`: Local extraction using trafilatura library (default)\n- `firecrawl`: External API using Firecrawl service\n- `browserless`: Browser rendering using Browserless + Playwright",
         "operationId": "create_source_from_url_v1_notebooks__notebook_id__sources_from_url_post",
         "parameters": [
           {
@@ -2259,6 +2302,88 @@
           "chunk_count"
         ],
         "title": "ConvertToSourceResponse"
+      },
+      "ExtractorInfoResponse": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "priority": {
+            "type": "integer",
+            "title": "Priority"
+          },
+          "requires_api_key": {
+            "type": "boolean",
+            "title": "Requires Api Key",
+            "default": false
+          },
+          "requires_service": {
+            "type": "boolean",
+            "title": "Requires Service",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "enabled",
+          "available",
+          "display_name",
+          "description",
+          "priority"
+        ],
+        "title": "ExtractorInfoResponse",
+        "description": "Information about an available extractor."
+      },
+      "ExtractorsListResponse": {
+        "properties": {
+          "extractors": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractorInfoResponse"
+            },
+            "type": "array",
+            "title": "Extractors"
+          },
+          "default_extractor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Extractor"
+          },
+          "fallback_enabled": {
+            "type": "boolean",
+            "title": "Fallback Enabled",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "extractors"
+        ],
+        "title": "ExtractorsListResponse",
+        "description": "Response for listing available extractors."
       },
       "HTTPValidationError": {
         "properties": {
@@ -3227,6 +3352,18 @@
             "default": "link",
             "x-enum-class": "SourceFromUrlMode",
             "x-enum-module": "crystalith.api.sources"
+          },
+          "extractor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extractor",
+            "description": "指定使用的提取器类型 (trafilatura, firecrawl, browserless)。如果不指定，使用默认降级顺序。"
           }
         },
         "type": "object",
