@@ -404,7 +404,10 @@ embedding:
 # Storage
 # ============================================================================
 vector_storage:
-  provider: "sqlite"
+  provider: "chroma"
+  chroma:
+    path: "./data/chroma"
+    telemetry: false
   sqlite:
     path: "./data/vectors.db"
 

@@ -344,13 +344,15 @@ class VectorStorageSQLiteSettings(BaseModel):
 
 class VectorStorageChromaSettings(BaseModel):
     """Chroma vector storage settings."""
+    path: str = "./data/chroma"
+    telemetry: bool = False
     host: str = "localhost"
     port: int = 8000
 
 
 class VectorStorageSettings(BaseModel):
     """Vector storage settings."""
-    provider: Literal["memory", "sqlite", "chroma"] = "memory"
+    provider: Literal["memory", "sqlite", "chroma"] = "chroma"
     sqlite: VectorStorageSQLiteSettings = Field(default_factory=VectorStorageSQLiteSettings)
     chroma: VectorStorageChromaSettings = Field(default_factory=VectorStorageChromaSettings)
 

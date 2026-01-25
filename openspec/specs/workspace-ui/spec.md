@@ -167,6 +167,12 @@ The system **MUST** avoid distracting continuous animations and respect reduced 
 - **THEN** 系统仅使用当前来源作为上下文进行问答
 - **AND** 答案展示在详情面板内
 
+#### Scenario: 对话框内弹出菜单层级
+
+- **WHEN** 用户在来源详情对话框内点击下拉菜单
+- **THEN** 菜单使用 `dropdown` 层级
+- **AND** 菜单显示在对话框内容之上但不超出对话框边界
+
 ### Requirement: 批量添加搜索结果到来源
 
 系统 **MUST** 支持批量添加搜索结果到来源，并正确处理多层对话框的显示层级。
@@ -188,8 +194,9 @@ The system **MUST** avoid distracting continuous animations and respect reduced 
 #### Scenario: 添加进度对话框层级
 
 - **WHEN** 添加进度对话框打开
-- **THEN** 对话框 z-index 确保在其他 UI 元素之上
-- **AND** 用户可以清晰看到每个结果的处理状态
+- **THEN** 对话框使用 `modal` 层级
+- **AND** 对话框内的下拉菜单使用 `dropdown` 层级并正确显示在对话框之上
+- **AND** Toast 通知使用 `toast` 层级并显示在所有对话框之上
 
 ### Requirement: 知识图谱视图
 
@@ -273,3 +280,25 @@ The system **MUST** avoid distracting continuous animations and respect reduced 
 - **WHEN** 用户在详情预览面板中点击"打开详情"按钮
 - **THEN** 图谱关闭
 - **AND** 打开对应内容的详情视图（来源详情/产出查看器/对话）
+
+### Requirement: 统一层级管理系统
+
+系统 **MUST** 提供统一的 z-index 层级管理机制，确保弹窗、通知、提示等层叠元素按预期顺序显示。
+
+#### Scenario: 层级常量定义
+
+- **WHEN** 开发者需要为组件设置 z-index
+- **THEN** 系统提供语义化层级常量（base、dropdown、popover、modal、toast、tooltip）
+- **AND** 层级值按固定优先级排序：base < dropdown < popover < modal < toast < tooltip
+
+#### Scenario: 声明式层级 API
+
+- **WHEN** 开发者在组件中使用 `useLayer` hook
+- **THEN** 可通过传入层级名称获取对应的 z-index 值
+- **AND** 无需手动管理具体的数字值
+
+#### Scenario: 动态层级 slot
+
+- **WHEN** 同一层级存在多个元素（如多个 Toast）
+- **THEN** 开发者可传入 slot 参数区分优先级
+- **AND** 后出现的元素自动获得更高的 z-index

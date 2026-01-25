@@ -11,6 +11,7 @@
 """
 
 import asyncio
+import os
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any, ClassVar
@@ -214,6 +215,10 @@ def _load_sqlite_test_uri() -> tuple[str, Path]:
 
     sqlite_cfg: dict[str, Any] = config.get("SQLITEDB", {})
     sqlite_rel_path = sqlite_cfg.get("TEST_SQLITE_PATH", ".tmp/cl_sqlalchemyx_test.db")
+    worker_id = os.getenv("PYTEST_XDIST_WORKER")
+    if worker_id:
+        rel_path = Path(sqlite_rel_path)
+        sqlite_rel_path = str(rel_path.with_name(f"{rel_path.stem}_{worker_id}{rel_path.suffix}"))
 
     sqlite_path = (TEST_CONFIG_PATH.parent / sqlite_rel_path).resolve()
     sqlite_path.parent.mkdir(parents=True, exist_ok=True)

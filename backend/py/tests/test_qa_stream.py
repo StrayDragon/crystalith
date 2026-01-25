@@ -14,7 +14,7 @@ from crystalith.config import DatabaseSettings, Settings
 from crystalith.db import create_all, create_db_manager
 from crystalith.vector_storage import InMemoryVectorStore
 
-from conftest import create_test_models
+from crystalith.tests_support import create_test_models
 
 
 class FakeEmbeddingProvider:
