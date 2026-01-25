@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Button, Checkbox, Typography, Chip, Dialog, DialogHeader, DialogBody, IconButton, Tooltip, Spinner } from '@material-tailwind/react';
+import { Button, Checkbox, Typography, Chip, Dialog, DialogHeader, DialogBody, IconButton, Tooltip, Spinner, Menu, MenuHandler, MenuList, MenuItem } from '@material-tailwind/react';
 import {
   Close as CloseIcon,
   Add as AddIcon,
@@ -11,21 +11,27 @@ import {
   Download as DownloadIcon,
   OpenInNew as OpenInNewIcon,
   Error as ErrorIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 
 import SearchResultCard, { type SearchResultItem } from './SearchResultCard';
 import type { SearchQueueItem } from '../hooks/useSources';
+import type { ExtractorInfo, ExtractorType } from '../../../api/client';
 
 interface SearchResultsQueueProps {
   results: SearchResultItem[];
   searchSummary?: string;
   onClear: () => void;
-  onAddToSources: (selected: SearchResultItem[], mode: 'fetch' | 'link') => void;
+  onAddToSources: (selected: SearchResultItem[], mode: 'fetch' | 'link', extractor?: ExtractorType) => void;
   isAdding?: boolean;
   /** 搜索队列项列表 */
   searchQueue?: SearchQueueItem[];
   /** 移除单个搜索队列项 */
   onRemoveQueueItem?: (queueItemId: string) => void;
+  /** 可用的提取器列表 */
+  availableExtractors?: ExtractorInfo[];
+  /** 默认提取器 */
+  defaultExtractor?: ExtractorType | null;
 }
 
 export default function SearchResultsQueue({
@@ -36,6 +42,8 @@ export default function SearchResultsQueue({
   isAdding = false,
   searchQueue = [],
   onRemoveQueueItem,
+  availableExtractors = [],
+  defaultExtractor = null,
 }: SearchResultsQueueProps) {
   const [selectedUrls, setSelectedUrls] = useState<Set<string>>(new Set());
   const [isExpanded, setIsExpanded] = useState(true);
@@ -43,6 +51,10 @@ export default function SearchResultsQueue({
   const [isFullscreen, setIsFullscreen] = useState(false);
   // 跟踪每个队列项的展开状态
   const [expandedQueueItems, setExpandedQueueItems] = useState<Set<string>>(new Set());
+  // 选中的提取器
+  const [selectedExtractor, setSelectedExtractor] = useState<ExtractorType | undefined>(
+    defaultExtractor ?? undefined
+  );
 
   // 合并所有队列项的结果（用于全屏视图和批量操作）
   const allQueueResults = useMemo(() => {
@@ -107,11 +119,11 @@ export default function SearchResultsQueue({
     }
   }, [selectedResults, onAddToSources]);
 
-  const handleAddWithFetch = useCallback(() => {
+  const handleAddWithFetch = useCallback((extractor?: ExtractorType) => {
     if (selectedResults.length > 0) {
-      onAddToSources(selectedResults, 'fetch');
+      onAddToSources(selectedResults, 'fetch', extractor ?? selectedExtractor);
     }
-  }, [selectedResults, onAddToSources]);
+  }, [selectedResults, onAddToSources, selectedExtractor]);
 
   const handleClear = useCallback(() => {
     setSelectedUrls(new Set());
@@ -126,9 +138,54 @@ export default function SearchResultsQueue({
     onAddToSources([result], 'link');
   }, [onAddToSources]);
 
-  const handleAddSingleWithFetch = useCallback((result: SearchResultItem) => {
-    onAddToSources([result], 'fetch');
-  }, [onAddToSources]);
+  const handleAddSingleWithFetch = useCallback((result: SearchResultItem, extractor?: ExtractorType) => {
+    onAddToSources([result], 'fetch', extractor ?? selectedExtractor);
+  }, [onAddToSources, selectedExtractor]);
+
+  // 提取器选择器组件
+  const ExtractorSelector = useCallback(({ onSelect, compact = false }: { onSelect?: (extractor: ExtractorType) => void; compact?: boolean }) => {
+    if (availableExtractors.length === 0) return null;
+
+    return (
+      <Menu placement="bottom-end">
+        <MenuHandler>
+          <IconButton
+            size="sm"
+            variant="text"
+            className={compact ? "w-5 h-5 min-w-[20px]" : "w-6 h-6 min-w-[24px]"}
+            title="选择提取方式"
+          >
+            <SettingsIcon style={{ fontSize: compact ? 12 : 14 }} className="text-gray-500" />
+          </IconButton>
+        </MenuHandler>
+        <MenuList className="p-1 min-w-[180px] z-[10001]">
+          <Typography variant="small" className="px-3 py-1 text-[10px] text-gray-500 font-medium">
+            选择提取方式
+          </Typography>
+          {availableExtractors.map((ext) => (
+            <MenuItem
+              key={ext.type}
+              onClick={() => {
+                setSelectedExtractor(ext.type);
+                onSelect?.(ext.type);
+              }}
+              className={`flex items-center gap-2 py-2 px-3 text-xs ${
+                selectedExtractor === ext.type ? 'bg-blue-50' : ''
+              }`}
+            >
+              <div className="flex-1">
+                <div className="font-medium">{ext.display_name}</div>
+                <div className="text-[10px] text-gray-500 line-clamp-1">{ext.description}</div>
+              </div>
+              {selectedExtractor === ext.type && (
+                <div className="w-2 h-2 rounded-full bg-blue-600" />
+              )}
+            </MenuItem>
+          ))}
+        </MenuList>
+      </Menu>
+    );
+  }, [availableExtractors, selectedExtractor]);
 
   // 如果没有队列项且没有旧结果，不渲染
   if (searchQueue.length === 0 && results.length === 0) {
@@ -732,17 +789,57 @@ export default function SearchResultsQueue({
                   <AddIcon style={{ fontSize: 18 }} />
                   作为链接导入 ({selectedUrls.size})
                 </Button>
-                <Button
-                  onClick={() => {
-                    handleAddWithFetch();
-                    setIsFullscreen(false);
-                  }}
-                  disabled={isAdding}
-                  className="flex items-center gap-2 normal-case bg-blue-600"
-                >
-                  <AddIcon style={{ fontSize: 18 }} />
-                  作为全文导入 ({selectedUrls.size})
-                </Button>
+                <div className="flex items-center">
+                  <Button
+                    onClick={() => {
+                      handleAddWithFetch();
+                      setIsFullscreen(false);
+                    }}
+                    disabled={isAdding}
+                    className="flex items-center gap-2 normal-case bg-blue-600 rounded-r-none"
+                  >
+                    <AddIcon style={{ fontSize: 18 }} />
+                    作为全文导入 ({selectedUrls.size})
+                  </Button>
+                  {availableExtractors.length > 0 && (
+                    <Menu placement="top-end">
+                      <MenuHandler>
+                        <Button
+                          disabled={isAdding}
+                          className="px-2 bg-blue-700 rounded-l-none border-l border-blue-500"
+                        >
+                          <ExpandMoreIcon style={{ fontSize: 18 }} />
+                        </Button>
+                      </MenuHandler>
+                      <MenuList className="p-1 min-w-[200px] z-[10001]">
+                        <Typography variant="small" className="px-3 py-1 text-[10px] text-gray-500 font-medium">
+                          选择提取方式
+                        </Typography>
+                        {availableExtractors.map((ext) => (
+                          <MenuItem
+                            key={ext.type}
+                            onClick={() => {
+                              setSelectedExtractor(ext.type);
+                              handleAddWithFetch(ext.type);
+                              setIsFullscreen(false);
+                            }}
+                            className={`flex items-center gap-2 py-2 px-3 text-xs ${
+                              selectedExtractor === ext.type ? 'bg-blue-50' : ''
+                            }`}
+                          >
+                            <div className="flex-1">
+                              <div className="font-medium">{ext.display_name}</div>
+                              <div className="text-[10px] text-gray-500 line-clamp-1">{ext.description}</div>
+                            </div>
+                            {selectedExtractor === ext.type && (
+                              <div className="w-2 h-2 rounded-full bg-blue-600" />
+                            )}
+                          </MenuItem>
+                        ))}
+                      </MenuList>
+                    </Menu>
+                  )}
+                </div>
               </>
             )}
           </div>

@@ -20,6 +20,7 @@ export {
   deleteSources,
   searchSources,
   addSourceFromUrl,
+  listExtractors,
   getSourceSummary,
   askSourceQuestion,
   // Sessions
@@ -93,6 +94,10 @@ export type {
   ConvertSessionToSourceResponse,
   ConvertSessionToOutputRequest,
   ConvertSessionToOutputResponse,
+  // Extractor types
+  ExtractorType,
+  ExtractorInfo,
+  ExtractorsListResponse,
 } from '../../api/client';
 
 // Type aliases for backward compatibility

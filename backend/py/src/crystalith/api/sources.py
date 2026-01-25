@@ -118,11 +118,43 @@ class SourceFromUrlMode(MetaInfoStrEnum):
     LINK = "link", XMetaInfo(description="仅保存链接", display_text="保存链接")
 
 
+class ExtractorTypeEnum(MetaInfoStrEnum):
+    """Available extractor types for URL content extraction."""
+
+    TRAFILATURA = "trafilatura", XMetaInfo(description="本地提取 (Trafilatura)", display_text="本地提取")
+    JINA = "jina", XMetaInfo(description="Jina Reader API", display_text="Jina Reader")
+    FIRECRAWL = "firecrawl", XMetaInfo(description="Firecrawl API", display_text="Firecrawl")
+    BROWSERLESS = "browserless", XMetaInfo(description="浏览器渲染 (Browserless)", display_text="浏览器渲染")
+
+
+class ExtractorInfoResponse(BaseModel):
+    """Information about an available extractor."""
+    type: str
+    enabled: bool
+    available: bool
+    display_name: str
+    description: str
+    priority: int
+    requires_api_key: bool = False
+    requires_service: bool = False
+
+
+class ExtractorsListResponse(BaseModel):
+    """Response for listing available extractors."""
+    extractors: list[ExtractorInfoResponse]
+    default_extractor: str | None = None
+    fallback_enabled: bool = True
+
+
 class SourceFromUrlRequest(BaseModel):
     url: str = Field(..., min_length=1)
     title: str | None = Field(None)
     snippet: str | None = Field(None)
     mode: SourceFromUrlMode = Field(SourceFromUrlMode.LINK)
+    extractor: str | None = Field(
+        None,
+        description="指定使用的提取器类型 (trafilatura, firecrawl, browserless)。如果不指定，使用默认降级顺序。",
+    )
 
     @field_validator("url")
     @classmethod
@@ -133,6 +165,16 @@ class SourceFromUrlRequest(BaseModel):
         if not trimmed.startswith(("http://", "https://")):
             raise ValueError("url must start with http:// or https://")
         return trimmed
+
+    @field_validator("extractor")
+    @classmethod
+    def _validate_extractor(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        valid_extractors = {"trafilatura", "jina", "firecrawl", "browserless"}
+        if value.lower() not in valid_extractors:
+            raise ValueError(f"extractor must be one of: {', '.join(sorted(valid_extractors))}")
+        return value.lower()
 
 
 
@@ -181,6 +223,60 @@ def _build_source_metadata(
 def _source_to_read(source: Source, *, chunk_count: int) -> SourceRead:
     return SourceRead.model_validate(source).model_copy(
         update={"chunk_count": chunk_count, "metadata": source.metadata_}
+    )
+
+
+@router.get("/extractors", response_model=ExtractorsListResponse)
+async def list_extractors(
+    notebook_id: int,
+    session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
+) -> ExtractorsListResponse:
+    """List available web content extractors.
+
+    Returns information about all configured extractors, including:
+    - Whether they are enabled in configuration
+    - Whether they are actually available (dependencies installed, service reachable)
+    - Display name and description
+    - Priority order for fallback
+
+    The frontend can use this to show users which extraction methods are available
+    and let them choose a preferred method.
+    """
+    notebook = await session.get(Notebook, notebook_id)
+    if notebook is None:
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
+    from crystalith.extraction import ExtractorFactory
+
+    web_extraction_settings = settings.source_ingestion.web_extraction
+    factory = ExtractorFactory(web_extraction_settings)
+
+    extractor_infos = factory.get_available_extractors()
+
+    # Find the default (first available) extractor
+    default_extractor: str | None = None
+    for info in extractor_infos:
+        if info.available:
+            default_extractor = info.type.value
+            break
+
+    return ExtractorsListResponse(
+        extractors=[
+            ExtractorInfoResponse(
+                type=info.type.value,
+                enabled=info.enabled,
+                available=info.available,
+                display_name=info.display_name,
+                description=info.description,
+                priority=info.priority,
+                requires_api_key=info.requires_api_key,
+                requires_service=info.requires_service,
+            )
+            for info in extractor_infos
+        ],
+        default_extractor=default_extractor,
+        fallback_enabled=web_extraction_settings.enable_fallback,
     )
 
 
@@ -257,6 +353,11 @@ async def create_source_from_url(
     Supports two modes:
     - `link`: Save URL, title, and snippet as a lightweight source
     - `fetch`: Fetch the webpage content and parse it as a full source
+
+    For `fetch` mode, you can optionally specify an extractor:
+    - `trafilatura`: Local extraction using trafilatura library (default)
+    - `firecrawl`: External API using Firecrawl service
+    - `browserless`: Browser rendering using Browserless + Playwright
     """
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
@@ -265,6 +366,7 @@ async def create_source_from_url(
     url = payload.url
     title = payload.title or url
     snippet = payload.snippet or ""
+    extraction_metadata: dict[str, Any] = {}
 
     if payload.mode == SourceFromUrlMode.LINK:
         # Link mode: create a simple source with URL metadata
@@ -280,104 +382,69 @@ async def create_source_from_url(
         parser_type = "link"
         parse_time_ms = 0
     else:
-        # Fetch mode: download and parse the webpage
-        # 从配置获取 URL 获取设置
-        url_fetch_settings = settings.source_ingestion.url_fetch
-        proxy_settings = url_fetch_settings.proxy
+        # Fetch mode: use the extraction system
+        from crystalith.extraction import ExtractorFactory, ExtractionError
+        from crystalith.extraction.types import ExtractorType
+        from crystalith.ingestion.chunker import chunk_text
 
-        # 使用浏览器伪装请求头
-        browser_headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
-            "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-            "Sec-Ch-Ua-Mobile": "?0",
-            "Sec-Ch-Ua-Platform": '"Windows"',
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1",
-            "Upgrade-Insecure-Requests": "1",
-        }
+        web_extraction_settings = settings.source_ingestion.web_extraction
 
-        # 从配置获取超时和重试参数
-        timeout = url_fetch_settings.timeout
-        max_retries = url_fetch_settings.retry_count
-        retry_delay = url_fetch_settings.retry_delay
+        # Create extractor factory
+        factory = ExtractorFactory(web_extraction_settings)
 
-        # 获取代理配置（如果启用且目标主机需要代理）
-        from urllib.parse import urlparse
-        parsed_url = urlparse(url)
-        host = parsed_url.hostname or ""
-        proxy_url = None
-        if proxy_settings.should_proxy(host):
-            proxy_url = proxy_settings.get_proxy_url()
-
-        last_error: Exception | None = None
-        content: bytes | None = None
-
-        for attempt in range(max_retries + 1):
+        # Determine preferred extractor
+        preferred_extractor: ExtractorType | None = None
+        if payload.extractor:
             try:
-                async with httpx.AsyncClient(
-                    timeout=float(timeout),
-                    follow_redirects=True,
-                    headers=browser_headers,
-                    proxy=proxy_url,
-                ) as client:
-                    response = await client.get(url)
-                    response.raise_for_status()
-                    content = response.content
-                    break  # 成功，退出重试循环
-            except httpx.HTTPStatusError as exc:
-                last_error = exc
-                error_detail = f"HTTP {exc.response.status_code}"
-                # 4xx 错误不重试（客户端错误）
-                if 400 <= exc.response.status_code < 500:
-                    proxy_hint = "（代理已启用）" if proxy_url else "，可能需要配置代理"
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"无法获取网页内容: {error_detail}。目标服务器拒绝了请求{proxy_hint}或网站有访问限制。",
-                    ) from exc
-            except httpx.RequestError as exc:
-                last_error = exc
-                # 网络错误可以重试
-                if attempt < max_retries:
-                    import asyncio
-                    await asyncio.sleep(retry_delay)
-                    continue
+                preferred_extractor = ExtractorType(payload.extractor)
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"无效的提取器类型: {payload.extractor}",
+                )
 
-        if content is None:
-            proxy_hint = "（代理已启用）" if proxy_url else "，或尝试配置代理"
-            if last_error:
-                if isinstance(last_error, httpx.HTTPStatusError):
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"无法获取网页内容: HTTP {last_error.response.status_code}。请检查 URL 是否正确{proxy_hint}。",
-                    ) from last_error
-                else:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"网络请求失败: {last_error!s}。请检查网络连接{proxy_hint}。",
-                    ) from last_error
-            raise HTTPException(status_code=400, detail="无法获取网页内容: 未知错误")
-
-        parse_started = perf_counter()
+        # Extract content
         try:
-            parser = HTMLParser()
-            chunks = parser.parse(content)
-        except Exception as exc:
+            extracted = await factory.extract(
+                url,
+                preferred_extractor=preferred_extractor,
+                enable_fallback=web_extraction_settings.enable_fallback,
+            )
+        except ExtractionError as exc:
+            logger.warning(
+                "Content extraction failed",
+                url=url,
+                error=str(exc),
+            )
             raise HTTPException(
                 status_code=400,
-                detail=f"解析网页内容失败: {exc!s}",
+                detail=f"无法提取网页内容: {exc.message}",
             ) from exc
-        parse_time_ms = int((perf_counter() - parse_started) * 1000)
-        parser_type = "html"
+        except Exception as exc:
+            logger.exception(
+                "Unexpected extraction error",
+                url=url,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=f"提取过程发生错误: {exc!s}",
+            ) from exc
+
+        # Update title from extraction if available
+        if extracted.title and not payload.title:
+            title = extracted.title
+
+        # Chunk the extracted text
+        chunks = chunk_text(extracted.text)
 
         if not chunks:
             raise HTTPException(status_code=400, detail="网页中未提取到有效内容")
+
+        parse_time_ms = extracted.extraction_time_ms
+        parser_type = f"web:{extracted.extractor}"
+
+        # Store extraction metadata
+        extraction_metadata = extracted.to_metadata()
 
     # Create the source record
     source = Source(
@@ -403,6 +470,10 @@ async def create_source_from_url(
         source.metadata_["url"] = url
         if payload.title:
             source.metadata_["original_title"] = payload.title
+
+        # Add extraction metadata
+        if extraction_metadata:
+            source.metadata_.update(extraction_metadata)
 
         # Embed chunks
         embeddings = await embedder.embed([chunk.text for chunk in chunks])
