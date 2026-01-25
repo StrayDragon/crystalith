@@ -2,11 +2,13 @@ import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { IconButton, Tooltip } from '@material-tailwind/react';
 
 import ChatPanel from './ChatPanel';
+import KnowledgeGraphView from './KnowledgeGraphView';
 import SessionSwitcher from './SessionSwitcher';
 import SourcesPanel from './SourcesPanel';
 import StudioPanel from './StudioPanel';
 import WorkspaceHeader from './WorkspaceHeader';
 import { useWorkspaceState } from '../context/WorkspaceContext';
+import { useAnalysis } from '../hooks/useAnalysis';
 import { useChat } from '../hooks/useChat';
 import { useNotebooks } from '../hooks/useNotebooks';
 import { useRefine } from '../hooks/useRefine';
@@ -77,10 +79,13 @@ export default function WorkspaceLayout() {
     right: DEFAULT_STUDIO_WIDTH,
   });
 
+  const [isGraphViewOpen, setIsGraphViewOpen] = useState(false);
+
   const notebooks = useNotebooks();
   const sessions = useSessions();
   const sources = useSources();
   const refine = useRefine();
+  const analysis = useAnalysis();
   const chat = useChat({
     ensureSession: sessions.ensureSession,
     refreshSessions: sessions.refreshSessions,
@@ -253,6 +258,12 @@ export default function WorkspaceLayout() {
         onUpdateNotebook={notebooks.updateNotebook}
         onDeleteNotebook={notebooks.deleteNotebook}
         onSelectNotebook={notebooks.setActiveNotebookId}
+        onOpenKnowledgeGraph={() => {
+          setIsGraphViewOpen(true);
+          if (!analysis.analysis && !analysis.isLoading) {
+            analysis.fetchAnalysis();
+          }
+        }}
       />
 
       <main
@@ -501,6 +512,25 @@ export default function WorkspaceLayout() {
           onDeleteOutput={refine.onDeleteOutput}
         />
       </Suspense>
+
+      {/* Knowledge Graph View (Full Screen Overlay) */}
+      {isGraphViewOpen && (
+        <KnowledgeGraphView
+          sources={sources.sources}
+          outputs={refine.outputs}
+          sessions={sessions.sessions}
+          messages={chat.messages}
+          analysis={analysis.analysis}
+          isLoading={analysis.isLoading}
+          error={analysis.error}
+          onClose={() => setIsGraphViewOpen(false)}
+          onRefresh={analysis.fetchAnalysis}
+          onSourceClick={handleSourceClick}
+          onOutputClick={(output) => handleOpenOutputViewer(output.id)}
+          onSessionClick={(session) => sessions.setActiveSessionId(session.id)}
+          isDemo={analysis.isDemo}
+        />
+      )}
     </div>
   );
 }
