@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cl_logs.logging import get_logger
 
+from crystalith.ai.interfaces import EmbeddingProvider
 from crystalith.config import Settings
 from crystalith.db import (
     Notebook,
@@ -26,11 +27,122 @@ from crystalith.db import (
     ResearchStepType,
 )
 from crystalith.search import SearXNGSearcher
+from crystalith.vector_storage import VectorStore
 
-from .deps import get_db_session, get_settings
+from .deps import get_db_session, get_embedding_provider, get_settings, get_vector_store
 
 
 log = get_logger(__name__)
+
+
+# =============================================================================
+# Lock Management
+# =============================================================================
+
+# Lock timeout in seconds (10 minutes)
+LOCK_TIMEOUT_SECONDS = 600
+
+
+async def acquire_lock(
+    session: AsyncSession,
+    research: ResearchSession,
+    timeout_seconds: int = LOCK_TIMEOUT_SECONDS,
+) -> bool:
+    """Acquire a lock on the research session.
+
+    Returns True if lock acquired, False if already locked by another process.
+    """
+    now = datetime.datetime.now(datetime.UTC)
+
+    # Check if there's an existing valid lock
+    if research.locked_at and research.lock_expires_at:
+        if research.lock_expires_at > now:
+            log.warning(
+                "research session already locked",
+                session_id=research.id,
+                locked_at=research.locked_at.isoformat(),
+                expires_at=research.lock_expires_at.isoformat(),
+            )
+            return False
+
+    # Acquire lock
+    research.locked_at = now
+    research.lock_expires_at = now + datetime.timedelta(seconds=timeout_seconds)
+    await session.commit()
+
+    log.info(
+        "lock acquired",
+        session_id=research.id,
+        expires_at=research.lock_expires_at.isoformat(),
+    )
+    return True
+
+
+async def release_lock(session: AsyncSession, research: ResearchSession) -> None:
+    """Release the lock on the research session."""
+    research.locked_at = None
+    research.lock_expires_at = None
+    await session.commit()
+
+    log.info("lock released", session_id=research.id)
+
+
+async def extend_lock(
+    session: AsyncSession,
+    research: ResearchSession,
+    timeout_seconds: int = LOCK_TIMEOUT_SECONDS,
+) -> bool:
+    """Extend the lock timeout.
+
+    Returns True if extended, False if lock was not held.
+    """
+    now = datetime.datetime.now(datetime.UTC)
+
+    if not research.locked_at:
+        return False
+
+    research.lock_expires_at = now + datetime.timedelta(seconds=timeout_seconds)
+    await session.commit()
+    return True
+
+
+async def check_and_cleanup_expired_locks(session: AsyncSession) -> int:
+    """Clean up expired locks. Returns count of cleaned locks."""
+    now = datetime.datetime.now(datetime.UTC)
+
+    # Find sessions with expired locks
+    stmt = select(ResearchSession).where(
+        ResearchSession.lock_expires_at.isnot(None),
+        ResearchSession.lock_expires_at < now,
+    )
+    result = await session.execute(stmt)
+    expired_sessions = result.scalars().all()
+
+    count = 0
+    for research in expired_sessions:
+        research.locked_at = None
+        research.lock_expires_at = None
+
+        # If session was in an active state, mark it as cancelled
+        if research.status in (
+            ResearchStatus.PLANNING,
+            ResearchStatus.SEARCHING,
+            ResearchStatus.ANALYZING,
+            ResearchStatus.WAITING_USER,
+        ):
+            research.status = ResearchStatus.CANCELLED
+            log.warning(
+                "cancelled research due to expired lock",
+                session_id=research.id,
+            )
+
+        count += 1
+
+    if count > 0:
+        await session.commit()
+        log.info("cleaned up expired locks", count=count)
+
+    return count
 
 
 # =============================================================================
@@ -452,6 +564,48 @@ async def finish_research(
     return ResearchSessionResponse.model_validate(research)
 
 
+@router.post("/{research_id}/cancel", response_model=ResearchSessionResponse)
+async def cancel_research(
+    notebook_id: int,
+    research_id: int,
+    session: AsyncSession = Depends(get_db_session),
+) -> ResearchSessionResponse:
+    """Cancel an ongoing research session."""
+    research = await _get_research_session(session, notebook_id, research_id)
+
+    if research.status in (ResearchStatus.COMPLETED, ResearchStatus.CANCELLED):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot cancel: session is already '{research.status.value}'",
+        )
+
+    # Record cancellation as a step
+    step = ResearchStep(
+        session_id=research.id,
+        iteration=research.current_iteration,
+        type=ResearchStepType.USER_INPUT,
+        input_data={"action": "cancel"},
+        output_data=None,
+        status=ResearchStepStatus.COMPLETED,
+    )
+    session.add(step)
+
+    # Mark as cancelled and release any lock
+    research.status = ResearchStatus.CANCELLED
+    research.locked_at = None
+    research.lock_expires_at = None
+    await session.commit()
+    await session.refresh(research)
+
+    log.info(
+        "research cancelled",
+        research_id=research_id,
+        iteration=research.current_iteration,
+    )
+
+    return ResearchSessionResponse.model_validate(research)
+
+
 # =============================================================================
 # Research Execution
 # =============================================================================
@@ -464,7 +618,7 @@ async def _run_research_background(
     max_iterations: int,
     settings: Settings,
 ) -> None:
-    """Run research graph in background."""
+    """Run research graph in background with lock management."""
     from crystalith.db import create_db_manager
     from crystalith.research import ResearchDeps, run_research_graph
 
@@ -475,25 +629,53 @@ async def _run_research_background(
 
     try:
         async with db_manager.got_manual_session() as db_session:
-            deps = ResearchDeps(
-                settings=settings,
-                session=db_session,
-                searcher=searcher,
-            )
+            # Acquire lock
+            research = await db_session.get(ResearchSession, session_id)
+            if not research:
+                log.error("research session not found", session_id=session_id)
+                return
 
-            result = await run_research_graph(
-                session_id=session_id,
-                notebook_id=notebook_id,
-                topic=topic,
-                deps=deps,
-                max_iterations=max_iterations,
-            )
+            if not await acquire_lock(db_session, research):
+                log.error("failed to acquire lock", session_id=session_id)
+                return
 
-            log.info(
-                "background research completed",
-                session_id=session_id,
-                result=result,
-            )
+            try:
+                deps = ResearchDeps(
+                    settings=settings,
+                    session=db_session,
+                    searcher=searcher,
+                )
+
+                # Start a background task to extend lock periodically
+                lock_extension_task = asyncio.create_task(
+                    _extend_lock_periodically(db_manager, session_id)
+                )
+
+                try:
+                    result = await run_research_graph(
+                        session_id=session_id,
+                        notebook_id=notebook_id,
+                        topic=topic,
+                        deps=deps,
+                        max_iterations=max_iterations,
+                    )
+
+                    log.info(
+                        "background research completed",
+                        session_id=session_id,
+                        result=result,
+                    )
+                finally:
+                    lock_extension_task.cancel()
+                    try:
+                        await lock_extension_task
+                    except asyncio.CancelledError:
+                        pass
+
+            finally:
+                # Release lock
+                await db_session.refresh(research)
+                await release_lock(db_session, research)
 
     except Exception as error:
         log.error("background research failed", session_id=session_id, error=str(error))
@@ -502,10 +684,31 @@ async def _run_research_background(
             research = await db_session.get(ResearchSession, session_id)
             if research:
                 research.status = ResearchStatus.CANCELLED
+                research.locked_at = None
+                research.lock_expires_at = None
                 await db_session.commit()
 
     finally:
         await db_manager.close()
+
+
+async def _extend_lock_periodically(db_manager, session_id: int) -> None:
+    """Periodically extend the lock to prevent timeout during long operations."""
+    from crystalith.db import create_db_manager
+
+    # Extend lock every 5 minutes (half of the 10-minute timeout)
+    extension_interval = 300
+
+    while True:
+        await asyncio.sleep(extension_interval)
+        try:
+            async with db_manager.got_manual_session() as db_session:
+                research = await db_session.get(ResearchSession, session_id)
+                if research and research.locked_at:
+                    await extend_lock(db_session, research)
+                    log.debug("lock extended", session_id=session_id)
+        except Exception as e:
+            log.warning("failed to extend lock", session_id=session_id, error=str(e))
 
 
 @router.post("/{research_id}/start", response_model=ResearchSessionResponse)
@@ -601,9 +804,17 @@ async def stream_research_progress(
         # Poll for updates
         poll_interval = 0.5  # Faster polling for more responsive updates
         max_polls = 1200  # 10 minutes max
+        heartbeat_interval = 30  # Send heartbeat every 30 seconds
+        polls_since_heartbeat = 0
 
-        for _ in range(max_polls):
+        for poll_count in range(max_polls):
             await asyncio.sleep(poll_interval)
+            polls_since_heartbeat += 1
+
+            # Send heartbeat to keep connection alive
+            if polls_since_heartbeat * poll_interval >= heartbeat_interval:
+                yield _sse_event("heartbeat", {"timestamp": datetime.datetime.now(datetime.UTC).isoformat()})
+                polls_since_heartbeat = 0
 
             # Expire all to force fresh data from database
             session.expire(research)
@@ -770,3 +981,198 @@ async def stream_research_progress(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# =============================================================================
+# Export Endpoint
+# =============================================================================
+
+
+class ExportResearchRequest(BaseModel):
+    """Request model for exporting research results."""
+
+    export_type: str = Field("source", description="Export type: 'source' or 'note'")
+    include_report: bool = Field(True, description="Include final report")
+    include_results: bool = Field(False, description="Include aggregated results as links")
+
+
+class ExportResearchResponse(BaseModel):
+    """Response model for export operation."""
+
+    success: bool
+    message: str
+    source_id: int | None = None
+    note_id: int | None = None
+
+
+@router.post("/{research_id}/export", response_model=ExportResearchResponse)
+async def export_research(
+    notebook_id: int,
+    research_id: int,
+    payload: ExportResearchRequest,
+    session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
+    embedder: EmbeddingProvider = Depends(get_embedding_provider),
+    vector_store: VectorStore = Depends(get_vector_store),
+) -> ExportResearchResponse:
+    """Export research report to a source or note.
+
+    - export_type='source': Creates a new markdown source with the report
+    - export_type='note': Creates a new note (output) with the report
+    """
+    from crystalith.db import Chunk, Output, Source, SourceStatus
+    from crystalith.outputs.types import OutputType
+
+    research = await _get_research_session(session, notebook_id, research_id)
+
+    if not research.final_report:
+        raise HTTPException(
+            status_code=400,
+            detail="Research has no final report to export",
+        )
+
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    if payload.export_type == "source":
+        # Create markdown content
+        content_parts = [f"# 深度研究报告：{research.topic}\n"]
+        content_parts.append(f"> 生成时间：{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
+        content_parts.append(f"> 研究轮次：{research.current_iteration}/{research.max_iterations}\n\n")
+        content_parts.append("---\n\n")
+        content_parts.append(research.final_report)
+
+        # Add results summary if requested
+        if payload.include_results and research.aggregated_results:
+            content_parts.append("\n\n---\n\n## 参考来源\n\n")
+            for i, result in enumerate(research.aggregated_results[:20], 1):
+                title = result.get("title", "未知标题")
+                url = result.get("url", "")
+                snippet = result.get("snippet", "")[:100]
+                content_parts.append(f"{i}. [{title}]({url})\n")
+                if snippet:
+                    content_parts.append(f"   > {snippet}...\n\n")
+
+        text_content = "".join(content_parts)
+        filename = f"研究报告_{research.topic[:20]}_{timestamp}.md"
+
+        # Create source
+        source = Source(
+            notebook_id=notebook_id,
+            filename=filename,
+            mime_type="text/markdown",
+            parser_type="text",
+            metadata_={
+                "research_id": research.id,
+                "research_topic": research.topic,
+                "export_timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+            },
+            status=SourceStatus.PROCESSING,
+        )
+        session.add(source)
+        await session.commit()
+        await session.refresh(source)
+
+        try:
+            # Create embeddings and chunks
+            log.info("starting export to source", research_id=research.id, source_id=source.id)
+
+            # Simple chunking by paragraphs
+            paragraphs = [p.strip() for p in text_content.split("\n\n") if p.strip()]
+            chunk_texts = []
+            current_chunk = ""
+            for para in paragraphs:
+                if len(current_chunk) + len(para) > 1000:
+                    if current_chunk:
+                        chunk_texts.append(current_chunk)
+                    current_chunk = para
+                else:
+                    current_chunk = f"{current_chunk}\n\n{para}" if current_chunk else para
+            if current_chunk:
+                chunk_texts.append(current_chunk)
+
+            if not chunk_texts:
+                chunk_texts = [text_content]
+
+            log.info("creating embeddings", chunk_count=len(chunk_texts))
+            embeddings = await embedder.embed(chunk_texts)
+            log.info("embeddings created", embedding_count=len(embeddings))
+
+            db_chunks: list[Chunk] = []
+            for idx, (chunk_text, embedding) in enumerate(zip(chunk_texts, embeddings)):
+                chunk = Chunk(
+                    source_id=source.id,
+                    chunk_index=idx,
+                    text=chunk_text,
+                    metadata_={"source_type": "research_export"},
+                )
+                session.add(chunk)
+                await session.flush()
+                db_chunks.append(chunk)
+
+            await vector_store.add(
+                notebook_id=notebook_id,
+                source_id=source.id,
+                chunk_ids=[c.id for c in db_chunks],
+                vectors=embeddings,
+            )
+
+            source.status = SourceStatus.READY
+            await session.commit()
+
+            log.info(
+                "research exported to source",
+                research_id=research.id,
+                source_id=source.id,
+            )
+
+            return ExportResearchResponse(
+                success=True,
+                message=f"报告已导出为来源：{filename}",
+                source_id=source.id,
+            )
+
+        except Exception as e:
+            source.status = SourceStatus.ERROR
+            await session.commit()
+            log.error("failed to export research to source", error=str(e))
+            raise HTTPException(status_code=500, detail=f"导出失败：{e!s}")
+
+    elif payload.export_type == "note":
+        # Create as output/note
+        # Build content structure for the output
+        content = {
+            "title": f"研究报告：{research.topic[:30]}",
+            "text": research.final_report,
+            "metadata": {
+                "research_id": research.id,
+                "research_topic": research.topic,
+                "export_timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+            },
+        }
+        output = Output(
+            notebook_id=notebook_id,
+            type=OutputType.STRUCTURED,
+            prompt=f"深度研究：{research.topic}",
+            content=content,
+        )
+        session.add(output)
+        await session.commit()
+        await session.refresh(output)
+
+        log.info(
+            "research exported to note",
+            research_id=research.id,
+            output_id=output.id,
+        )
+
+        return ExportResearchResponse(
+            success=True,
+            message=f"报告已导出为笔记",
+            note_id=output.id,
+        )
+
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid export type: {payload.export_type}. Use 'source' or 'note'.",
+        )

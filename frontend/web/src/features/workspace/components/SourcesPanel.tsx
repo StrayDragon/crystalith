@@ -33,6 +33,8 @@ import {
   ExpandMore as ExpandMoreIcon,
   ArrowForward as ArrowForwardIcon,
   OpenInFull as OpenInFullIcon,
+  History as HistoryIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 
 import type { AsyncStatus } from '../../../shared/types';
@@ -115,7 +117,18 @@ function SourcesPanel({
   const isSearching = searchState === 'loading';
   const [searchQuery, setSearchQuery] = useState('');
   const [engine, setEngine] = useState('Web');
-  const [mode, setMode] = useState('Fast Research');
+  // Load search mode preference from localStorage
+  const [mode, setMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('crystalith_search_mode') || 'Fast Research';
+    }
+    return 'Fast Research';
+  });
+
+  // Save search mode preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('crystalith_search_mode', mode);
+  }, [mode]);
   const [selectedSourceIds, setSelectedSourceIds] = useState<Record<number, boolean>>({});
   const [activeSourceId, setActiveSourceId] = useState<number | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -133,6 +146,7 @@ function SourcesPanel({
   // Deep Research state
   const [researchDetailOpen, setResearchDetailOpen] = useState(false);
   const [researchFullscreen, setResearchFullscreen] = useState(true); // Default fullscreen
+  const [showResearchHistory, setShowResearchHistory] = useState(false);
   const research = useResearch(notebookId);
 
   // Fetch research sessions on mount
@@ -297,9 +311,17 @@ function SourcesPanel({
   };
 
   // Handle research session click
-  const handleResearchClick = useCallback((sessionId: number) => {
-    research.fetchSession(sessionId);
+  const handleResearchClick = useCallback(async (sessionId: number) => {
+    // Unsubscribe from any existing SSE connection and clear events
+    research.unsubscribeFromSSE();
+    research.clearEvents();
+    await research.fetchSession(sessionId);
     setResearchDetailOpen(true);
+    // Subscribe to SSE for active sessions only
+    const session = research.sessions.find(s => s.id === sessionId);
+    if (session && ['searching', 'analyzing', 'waiting_user'].includes(session.status)) {
+      research.subscribeToSSE(sessionId);
+    }
   }, [research]);
 
   // Handle research actions
@@ -485,6 +507,7 @@ function SourcesPanel({
       {/* Deep Research Sessions */}
       {research.sessions.length > 0 && (
         <div className="flex flex-col gap-2">
+          {/* Active sessions */}
           {research.sessions
             .filter((s) => ['planning', 'searching', 'analyzing', 'waiting_user'].includes(s.status))
             .map((session) => (
@@ -497,6 +520,16 @@ function SourcesPanel({
                 isExpanded={research.activeSession?.id === session.id}
               />
             ))}
+          {/* History entry - show if there are completed sessions */}
+          {research.sessions.some((s) => s.status === 'completed') && (
+            <button
+              onClick={() => setShowResearchHistory(true)}
+              className="text-xs text-gray-500 hover:text-blue-600 py-1.5 px-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+            >
+              <HistoryIcon style={{ fontSize: 14 }} />
+              查看研究历史 ({research.sessions.filter((s) => s.status === 'completed').length})
+            </button>
+          )}
         </div>
       )}
 
@@ -706,7 +739,77 @@ function SourcesPanel({
               onStart={() => handleResearchStart(research.activeSession!.id)}
               isFullscreen={researchFullscreen}
               onToggleFullscreen={() => setResearchFullscreen(!researchFullscreen)}
+              onAddSourceFromUrl={async (url) => {
+                await onAddSourceFromUrl(url, 'link');
+              }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Research History Dialog */}
+      {showResearchHistory && (
+        <div
+          className="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowResearchHistory(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200 w-full max-w-lg max-h-[70vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <HistoryIcon className="w-5 h-5 text-gray-500" />
+                <h3 className="font-semibold text-gray-900">研究历史</h3>
+              </div>
+              <button
+                onClick={() => setShowResearchHistory(false)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <CloseIcon className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            {/* History List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {research.sessions
+                .filter((s) => s.status === 'completed')
+                .map((session) => (
+                  <button
+                    key={session.id}
+                    onClick={() => {
+                      handleResearchClick(session.id);
+                      setShowResearchHistory(false);
+                    }}
+                    className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 truncate">{session.topic}</h4>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {session.max_iterations} 轮研究 · {session.result_count || 0} 条结果
+                        </p>
+                      </div>
+                      <Chip
+                        value="已完成"
+                        color="green"
+                        size="sm"
+                        className="text-xs"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2">
+                      {new Date(session.created_at).toLocaleString('zh-CN')}
+                    </p>
+                  </button>
+                ))}
+              {research.sessions.filter((s) => s.status === 'completed').length === 0 && (
+                <div className="text-center py-8 text-gray-400">
+                  <HistoryIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>暂无已完成的研究</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

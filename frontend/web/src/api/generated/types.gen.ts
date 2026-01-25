@@ -303,6 +303,56 @@ export type ConvertToSourceResponse = {
 };
 
 /**
+ * ExportResearchRequest
+ *
+ * Request model for exporting research results.
+ */
+export type ExportResearchRequest = {
+    /**
+     * Export Type
+     *
+     * Export type: 'source' or 'note'
+     */
+    export_type?: string;
+    /**
+     * Include Report
+     *
+     * Include final report
+     */
+    include_report?: boolean;
+    /**
+     * Include Results
+     *
+     * Include aggregated results as links
+     */
+    include_results?: boolean;
+};
+
+/**
+ * ExportResearchResponse
+ *
+ * Response model for export operation.
+ */
+export type ExportResearchResponse = {
+    /**
+     * Success
+     */
+    success: boolean;
+    /**
+     * Message
+     */
+    message: string;
+    /**
+     * Source Id
+     */
+    source_id?: number | null;
+    /**
+     * Note Id
+     */
+    note_id?: number | null;
+};
+
+/**
  * ExtractorInfoResponse
  *
  * Information about an available extractor.
@@ -2558,6 +2608,40 @@ export type FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostRespo
 
 export type FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostResponse = FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostResponses[keyof FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostResponses];
 
+export type CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Research Id
+         */
+        research_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/research/{research_id}/cancel';
+};
+
+export type CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostError = CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostErrors[keyof CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostErrors];
+
+export type CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ResearchSessionResponse;
+};
+
+export type CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostResponse = CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostResponses[keyof CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostResponses];
+
 export type StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostData = {
     body?: never;
     path: {
@@ -2623,6 +2707,40 @@ export type StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamG
      */
     200: unknown;
 };
+
+export type ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostData = {
+    body: ExportResearchRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Research Id
+         */
+        research_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/research/{research_id}/export';
+};
+
+export type ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostError = ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostErrors[keyof ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostErrors];
+
+export type ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ExportResearchResponse;
+};
+
+export type ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostResponse = ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostResponses[keyof ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostResponses];
 
 export type ListSessionsV1NotebooksNotebookIdSessionsGetData = {
     body?: never;

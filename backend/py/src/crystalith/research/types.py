@@ -56,6 +56,46 @@ class IterationAnalysis:
     suggested_queries: list[str] = field(default_factory=list)
 
 
+from enum import Enum
+
+
+class ResearchOutputType(str, Enum):
+    """Type of research output/artifact."""
+
+    REPORT = "report"  # Main research report
+    SUB_REPORT = "sub_report"  # Section or sub-topic report
+    REFERENCE = "reference"  # A cited reference with metadata
+    LINK = "link"  # Raw link to be fetched or added
+    RAW_RESULT = "raw_result"  # Unprocessed search result
+
+
+@dataclass
+class ResearchOutput:
+    """A research output/artifact that can be exported.
+
+    This represents any piece of content generated during research
+    that the user might want to export to their notebook.
+    """
+
+    type: ResearchOutputType
+    title: str
+    content: str  # Main content (report text, reference summary, URL, etc.)
+
+    # Metadata
+    url: str | None = None  # URL for references/links
+    source_iteration: int = 1  # Which iteration this came from
+    relevance_score: float = 0.0  # How relevant to the topic (0-1)
+
+    # For references
+    snippet: str = ""  # Brief excerpt
+    citation_index: int | None = None  # [1], [2], etc. in the report
+
+    # Export options
+    can_export_as_source: bool = True
+    can_export_as_note: bool = True
+    recommended_extractor: str | None = None  # For links: which extractor to use
+
+
 @dataclass
 class ResearchGraphState:
     """State object passed through the research graph."""

@@ -26,10 +26,12 @@ import {
   Psychology as PsychologyIcon,
   AutoAwesome as AutoAwesomeIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import type { ResearchSessionResponse, ResearchStepResponse } from '../../../api/client';
 import type { SSEEvent } from '../hooks/useResearch';
 import { toast } from '../../../shared/toast';
+import ResearchExportDialog from './ResearchExportDialog';
 
 // Typewriter component for streaming text effect
 interface TypewriterTextProps {
@@ -169,6 +171,7 @@ interface ResearchDetailPanelProps {
   onStart: () => Promise<void>;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
+  onAddSourceFromUrl?: (url: string) => Promise<void>;
 }
 
 // Status badge colors
@@ -200,10 +203,10 @@ function ResearchDetailPanel({
   onStart,
   isFullscreen = true, // Default to fullscreen
   onToggleFullscreen,
+  onAddSourceFromUrl,
 }: ResearchDetailPanelProps) {
   const [selectedQueries, setSelectedQueries] = useState<Set<number>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showCompletedRounds, setShowCompletedRounds] = useState(false);
   const [showThinking, setShowThinking] = useState(true);
   // Track which thinking blocks are collapsed (all except latest)
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<number>>(new Set());
@@ -211,6 +214,36 @@ function ResearchDetailPanel({
   const [latestTypewriterComplete, setLatestTypewriterComplete] = useState(false);
   // Ref for auto-scroll
   const thinkingScrollRef = useRef<HTMLDivElement>(null);
+  // Export dialog state
+  const [showExportDialog, setShowExportDialog] = useState(false);
+
+  // Extract latest search progress from SSE events
+  const searchProgress = useMemo(() => {
+    const progressEvents = sseEvents.filter(e => e.type === 'search_progress');
+    if (progressEvents.length === 0) return null;
+    const latest = progressEvents[progressEvents.length - 1];
+    if (latest.type === 'search_progress') {
+      return latest.data;
+    }
+    return null;
+  }, [sseEvents]);
+
+  // Extract latest analysis info from SSE events
+  const analysisProgress = useMemo(() => {
+    const analysisEvents = sseEvents.filter(e => e.type === 'analysis');
+    if (analysisEvents.length === 0) return null;
+    const latest = analysisEvents[analysisEvents.length - 1];
+    if (latest.type === 'analysis') {
+      return latest.data;
+    }
+    return null;
+  }, [sseEvents]);
+  // Show results dialog
+  const [showResultsDialog, setShowResultsDialog] = useState(false);
+  // Selected results for export
+  const [selectedResults, setSelectedResults] = useState<Set<number>>(new Set());
+  // Adding sources state
+  const [isAddingSources, setIsAddingSources] = useState(false);
 
   // Get latest plan from SSE events or steps
   const latestPlanEvent = [...sseEvents].reverse().find((e) => e.type === 'plan_ready');
@@ -219,7 +252,7 @@ function ResearchDetailPanel({
   // Get queries from plan
   const queries = latestPlan?.queries || [];
 
-  // Extract thinking/reasoning timeline from events - prioritize thinking events
+  // Extract thinking/reasoning timeline from events or reconstruct from steps
   const thinkingTimeline = useMemo(() => {
     const timeline: Array<{
       type: string;
@@ -229,21 +262,141 @@ function ResearchDetailPanel({
       queries?: string[];
     }> = [];
 
-    sseEvents.forEach((event, index) => {
-      // Prioritize thinking events from backend
-      if (event.type === 'thinking') {
-        timeline.push({
-          type: event.data.type,
-          message: event.data.message,
-          timestamp: index,
-          iteration: event.data.iteration,
-          queries: event.data.queries, // Include search queries if present
+    // For completed sessions, always reconstruct from steps for full history
+    // For active sessions, use SSE events for real-time updates
+    const isCompletedSession = session.status === 'completed';
+    const hasSteps = session.steps && session.steps.length > 0;
+
+    if (!isCompletedSession && sseEvents.length > 0) {
+      // Real-time mode: use SSE events
+      sseEvents.forEach((event, index) => {
+        if (event.type === 'thinking') {
+          timeline.push({
+            type: event.data.type,
+            message: event.data.message,
+            timestamp: index,
+            iteration: event.data.iteration,
+            queries: event.data.queries,
+          });
+        }
+      });
+    } else if (hasSteps) {
+      // Reconstruct thinking timeline from saved steps (history mode)
+      let timestampCounter = 0;
+
+      // Add start message
+      timeline.push({
+        type: 'start',
+        message: `🚀 开始深度研究「${session.topic}」`,
+        timestamp: timestampCounter++,
+        iteration: 1,
+      });
+
+      // Group steps by iteration
+      const stepsByIteration: Record<number, typeof session.steps> = {};
+      session.steps.forEach((step) => {
+        if (!stepsByIteration[step.iteration]) {
+          stepsByIteration[step.iteration] = [];
+        }
+        stepsByIteration[step.iteration].push(step);
+      });
+
+      // Process each iteration
+      Object.entries(stepsByIteration).forEach(([iterStr, steps]) => {
+        const iteration = parseInt(iterStr, 10);
+
+        steps.forEach((step) => {
+          if (step.type === 'plan' && step.output_data) {
+            // Plan step
+            const reasoning = step.output_data.reasoning as string | undefined;
+            const queries = step.output_data.queries as Array<{ query: string }> | undefined;
+
+            if (reasoning) {
+              timeline.push({
+                type: 'reasoning',
+                message: `💭 ${reasoning}`,
+                timestamp: timestampCounter++,
+                iteration,
+              });
+            }
+            if (queries) {
+              timeline.push({
+                type: 'plan_generated',
+                message: `📋 已生成 ${queries.length} 个搜索查询`,
+                timestamp: timestampCounter++,
+                iteration,
+                queries: queries.map((q) => q.query),
+              });
+            }
+          } else if (step.type === 'search' && step.output_data) {
+            // Search step
+            const resultCount = step.output_data.result_count as number | undefined;
+            const newResults = step.output_data.new_results as number | undefined;
+
+            timeline.push({
+              type: 'search_complete',
+              message: `🔎 搜索完成，获取 ${resultCount || 0} 条结果，新增 ${newResults || 0} 条`,
+              timestamp: timestampCounter++,
+              iteration,
+            });
+          } else if (step.type === 'analyze' && step.output_data) {
+            // Analyze step
+            const coverage = step.output_data.coverage as number | undefined;
+            const summary = step.output_data.summary as string | undefined;
+            const needMore = step.output_data.need_more_search as boolean | undefined;
+
+            timeline.push({
+              type: 'analysis_complete',
+              message: `📈 分析完成，覆盖度 ${Math.round((coverage || 0) * 100)}%`,
+              timestamp: timestampCounter++,
+              iteration,
+            });
+
+            if (summary) {
+              timeline.push({
+                type: 'insight',
+                message: `💡 ${summary.slice(0, 150)}${summary.length > 150 ? '...' : ''}`,
+                timestamp: timestampCounter++,
+                iteration,
+              });
+            }
+
+            if (needMore && iteration < session.max_iterations) {
+              timeline.push({
+                type: 'decision',
+                message: '🔄 需要更多搜索，准备下一轮...',
+                timestamp: timestampCounter++,
+                iteration,
+              });
+            }
+          } else if (step.type === 'summary' && step.output_data) {
+            // Summary step
+            const reportLength = step.output_data.report_length as number | undefined;
+
+            timeline.push({
+              type: 'report_complete',
+              message: `📝 报告生成完成，共 ${reportLength || 0} 字`,
+              timestamp: timestampCounter++,
+              iteration,
+            });
+          }
         });
-      }
-    });
+
+        // Add iteration completion marker
+        if (iteration < session.max_iterations || session.status === 'completed') {
+          timeline.push({
+            type: 'completed',
+            message: `✅ 已完成第 ${iteration} 轮研究`,
+            timestamp: timestampCounter++,
+            iteration,
+          });
+        }
+      });
+    }
 
     return timeline;
-  }, [sseEvents]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sseEvents.length, session.steps, session.topic, session.max_iterations, session.status]);
 
   // Auto-collapse previous blocks when new thinking arrives
   useEffect(() => {
@@ -360,6 +513,12 @@ function ResearchDetailPanel({
   const completedIterations = Object.keys(stepsByIteration).length;
   const totalResults = session.aggregated_results?.length || 0;
 
+  // For completed sessions, use the actual completed iterations from steps
+  // This handles cases where current_iteration wasn't properly updated in the database
+  const displayIteration = isCompleted && completedIterations > 0
+    ? completedIterations
+    : session.current_iteration;
+
   return (
     <div className={`flex flex-col ${isFullscreen ? 'h-[90vh]' : 'h-[600px]'}`}>
       {/* Header */}
@@ -475,38 +634,24 @@ function ResearchDetailPanel({
 
         {/* Main Content - Right Side */}
         <div className="flex-1 overflow-y-auto flex flex-col">
-          {/* Progress Steps - Visual Timeline */}
-          <div className="px-5 py-4 bg-gray-50 border-b border-gray-100 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              {Array.from({ length: session.max_iterations }).map((_, i) => {
-                const iterNum = i + 1;
-                const isActive = iterNum === session.current_iteration;
-                const isDone = iterNum < session.current_iteration || isCompleted;
-
-                return (
-                  <div key={i} className="flex items-center flex-1">
-                    {/* Step Circle */}
-                    <div className={`
-                      relative flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium
-                      transition-all duration-200
-                      ${isDone ? 'bg-blue-500 text-white' :
-                        isActive ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-500 ring-offset-2' :
-                        'bg-gray-100 text-gray-400'}
-                    `}>
-                      {isDone ? <CheckIcon className="w-4 h-4" /> : iterNum}
-                      {isActive && (isSearching || isAnalyzing) && (
-                        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse" />
-                      )}
-                    </div>
-                    {/* Connector Line */}
-                    {i < session.max_iterations - 1 && (
-                      <div className={`flex-1 h-0.5 mx-2 rounded-full ${
-                        isDone ? 'bg-blue-500' : 'bg-gray-200'
-                      }`} />
-                    )}
-                  </div>
-                );
-              })}
+          {/* Progress Bar - Compact Style */}
+          <div className="px-5 py-3 bg-gray-50 border-b border-gray-100 flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      isCompleted ? 'bg-green-500' : 'bg-blue-500'
+                    } ${(isSearching || isAnalyzing) ? 'animate-pulse' : ''}`}
+                    style={{
+                      width: `${isCompleted ? 100 : Math.round(((displayIteration - 1) / session.max_iterations) * 100 + (100 / session.max_iterations / 2))}%`
+                    }}
+                  />
+                </div>
+              </div>
+              <span className="text-xs text-gray-500 whitespace-nowrap">
+                第 {displayIteration}/{session.max_iterations} 轮
+              </span>
             </div>
           </div>
 
@@ -549,11 +694,19 @@ function ResearchDetailPanel({
                     <AnalyticsIcon className="w-4 h-4 text-purple-600 animate-pulse" />
                   )}
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="font-medium text-gray-900">
                     {isSearching ? '正在执行搜索...' : '正在分析结果...'}
                   </h3>
-                  <p className="text-sm text-gray-500">请稍候，这可能需要几秒钟</p>
+                  <p className="text-sm text-gray-500">
+                    {isSearching && searchProgress ? (
+                      <>已获取 <span className="font-medium text-purple-600">{searchProgress.result_count}</span> 条结果，新增 <span className="font-medium text-purple-600">{searchProgress.new_results}</span> 条</>
+                    ) : isAnalyzing && analysisProgress ? (
+                      <>覆盖度 <span className="font-medium text-purple-600">{Math.round(analysisProgress.coverage * 100)}%</span></>
+                    ) : (
+                      '请稍候，这可能需要几秒钟'
+                    )}
+                  </p>
                 </div>
               </div>
             </div>
@@ -654,37 +807,6 @@ function ResearchDetailPanel({
             </div>
           )}
 
-          {/* Completed Iterations - Collapsible */}
-          {completedIterations > 0 && (
-            <div className="border border-gray-200 rounded-xl overflow-hidden">
-              <button
-                onClick={() => setShowCompletedRounds(!showCompletedRounds)}
-                className="w-full px-4 py-3 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors"
-              >
-                <span className="text-sm font-medium text-gray-700">
-                  已完成 {completedIterations} 轮研究
-                </span>
-                {showCompletedRounds ? (
-                  <ExpandLessIcon className="w-5 h-5 text-gray-400" />
-                ) : (
-                  <ExpandMoreIcon className="w-5 h-5 text-gray-400" />
-                )}
-              </button>
-              {showCompletedRounds && (
-                <div className="divide-y divide-gray-100">
-                  {Object.entries(stepsByIteration).map(([iteration, steps]) => (
-                    <div key={iteration} className="px-4 py-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-900">第 {iteration} 轮</span>
-                        <span className="text-xs text-gray-400">{steps.length} 个步骤</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Final Report */}
           {isCompleted && session.final_report && (
             <div className="bg-green-50 border border-green-100 rounded-xl p-5">
@@ -702,9 +824,10 @@ function ResearchDetailPanel({
                   size="sm"
                   color="blue"
                   className="flex-1"
-                  onClick={() => toast.info('导出功能开发中')}
+                  onClick={() => setShowExportDialog(true)}
                 >
-                  导出到来源
+                  <DownloadIcon className="w-4 h-4 mr-1" />
+                  导出成果
                 </Button>
                 <Button
                   size="sm"
@@ -741,12 +864,192 @@ function ResearchDetailPanel({
         {totalResults > 0 && (
           <button
             className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-            onClick={() => toast.info('结果详情功能开发中')}
+            onClick={() => {
+              setShowResultsDialog(true);
+              setSelectedResults(new Set());
+            }}
           >
             查看所有结果
           </button>
         )}
       </div>
+
+      {/* Results Dialog */}
+      {showResultsDialog && session.aggregated_results && (
+        <div
+          className="fixed inset-0 z-[60] bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowResultsDialog(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Dialog Header */}
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+              <div>
+                <h3 className="font-semibold text-gray-900">搜索结果</h3>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  共 {session.aggregated_results.length} 条结果，已选 {selectedResults.size} 条
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (selectedResults.size === session.aggregated_results!.length) {
+                      setSelectedResults(new Set());
+                    } else {
+                      setSelectedResults(new Set(session.aggregated_results!.map((_, i) => i)));
+                    }
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1"
+                >
+                  {selectedResults.size === session.aggregated_results.length ? '取消全选' : '全选'}
+                </button>
+                <button
+                  onClick={() => setShowResultsDialog(false)}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <CloseIcon className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+            </div>
+
+            {/* Results List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {session.aggregated_results.map((result, index) => (
+                <label
+                  key={index}
+                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    selectedResults.has(index)
+                      ? 'border-blue-300 bg-blue-50/50'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <Checkbox
+                    checked={selectedResults.has(index)}
+                    onChange={() => {
+                      setSelectedResults((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(index)) {
+                          next.delete(index);
+                        } else {
+                          next.add(index);
+                        }
+                        return next;
+                      });
+                    }}
+                    crossOrigin={undefined}
+                    className="mt-0.5"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <a
+                      href={result.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline line-clamp-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {result.title || '未知标题'}
+                    </a>
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                      {result.snippet || '无摘要'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-gray-400">{result.source || 'web'}</span>
+                      {result.iteration && (
+                        <span className="text-xs text-gray-400">· 第 {result.iteration} 轮</span>
+                      )}
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            {/* Dialog Footer */}
+            <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
+              <span className="text-sm text-gray-500">
+                选中的链接可以添加为来源
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outlined"
+                  color="gray"
+                  onClick={() => setShowResultsDialog(false)}
+                >
+                  取消
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outlined"
+                  color="blue"
+                  disabled={selectedResults.size === 0}
+                  onClick={() => {
+                    const selectedUrls = Array.from(selectedResults).map(
+                      (i) => session.aggregated_results![i].url
+                    );
+                    navigator.clipboard.writeText(selectedUrls.join('\n'));
+                    toast.success(`已复制 ${selectedUrls.length} 个链接`);
+                  }}
+                >
+                  复制链接
+                </Button>
+                {onAddSourceFromUrl && (
+                  <Button
+                    size="sm"
+                    color="blue"
+                    disabled={selectedResults.size === 0 || isAddingSources}
+                    onClick={async () => {
+                      if (!onAddSourceFromUrl) return;
+                      setIsAddingSources(true);
+                      try {
+                        const selectedUrls = Array.from(selectedResults).map(
+                          (i) => session.aggregated_results![i].url
+                        );
+                        let successCount = 0;
+                        for (const url of selectedUrls) {
+                          try {
+                            await onAddSourceFromUrl(url);
+                            successCount++;
+                          } catch (err) {
+                            console.error('Failed to add source:', url, err);
+                          }
+                        }
+                        if (successCount > 0) {
+                          toast.success(`已添加 ${successCount} 个来源`);
+                        }
+                        if (successCount < selectedUrls.length) {
+                          toast.error(`${selectedUrls.length - successCount} 个来源添加失败`);
+                        }
+                        setShowResultsDialog(false);
+                      } finally {
+                        setIsAddingSources(false);
+                      }
+                    }}
+                  >
+                    {isAddingSources ? (
+                      <>
+                        <Spinner className="h-4 w-4 mr-1" />
+                        添加中...
+                      </>
+                    ) : (
+                      `添加 ${selectedResults.size} 个来源`
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Dialog */}
+      {showExportDialog && (
+        <ResearchExportDialog
+          session={session}
+          onClose={() => setShowExportDialog(false)}
+        />
+      )}
     </div>
   );
 }

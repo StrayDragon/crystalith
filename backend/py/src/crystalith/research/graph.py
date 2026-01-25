@@ -87,10 +87,41 @@ Return JSON with:
 - suggested_queries: List of suggested follow-up queries if needed"""
 
 
-REPORT_SYSTEM_PROMPT = """You are a research assistant writing a final report.
-Based on the search results collected, write a comprehensive research report.
-Include key findings, sources, and recommendations.
-Format as Markdown."""
+REPORT_SYSTEM_PROMPT = """You are an expert research analyst writing a comprehensive research report.
+
+Your report should be well-structured, insightful, and actionable. Follow this template:
+
+## Report Structure:
+
+1. **Executive Summary** (2-3 sentences)
+   - Key findings and main takeaway
+
+2. **Background & Context**
+   - Why this topic matters
+   - Current landscape
+
+3. **Key Findings** (3-5 main points)
+   - Each finding with supporting evidence
+   - Include source references [1], [2], etc.
+
+4. **Analysis & Insights**
+   - Patterns and trends observed
+   - Implications and significance
+
+5. **Recommendations** (if applicable)
+   - Actionable next steps
+   - Areas for further research
+
+6. **References**
+   - Numbered list of sources cited
+
+## Guidelines:
+- Write in clear, professional language
+- Use Markdown formatting (headers, lists, bold, links)
+- Be objective and evidence-based
+- Cite sources using [n] notation
+- Keep the report focused and concise (500-1500 words)
+- Write in the same language as the research topic"""
 
 
 # =============================================================================
@@ -230,11 +261,21 @@ class PlanSearches(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]):
 
 @dataclass
 class WaitForApproval(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]):
-    """Wait for user to approve/modify the search plan."""
+    """Wait for user to approve/modify the search plan.
+
+    This node implements Human-in-the-loop by polling the database for user actions.
+    The user can:
+    - approve: Continue with the current search plan
+    - modify: Use a modified search plan
+    - skip: Skip to the next iteration
+    - finish: End research and generate report
+    """
 
     async def run(
         self, ctx: GraphRunContext[ResearchGraphState, ResearchDeps]
     ) -> "ExecuteSearches | AnalyzeResults | GenerateReport":
+        import asyncio
+
         state = ctx.state
         deps = ctx.deps
 
@@ -244,21 +285,117 @@ class WaitForApproval(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]
             iteration=state.current_iteration,
         )
 
-        # In Phase 2, we auto-approve. Phase 3 will implement actual waiting.
-        # For now, check if user_action was set externally
-        if state.user_action == "skip":
-            state.user_action = None
-            if state.current_iteration >= state.max_iterations:
+        # Emit waiting event
+        if deps.on_thinking:
+            await deps.on_thinking({
+                "type": "waiting_user",
+                "message": "⏳ 等待您确认搜索计划...",
+                "iteration": state.current_iteration,
+            })
+
+        # Poll for user action
+        poll_interval = 0.5  # 500ms
+        max_wait_time = 600  # 10 minutes
+        waited = 0
+
+        while waited < max_wait_time:
+            await asyncio.sleep(poll_interval)
+            waited += poll_interval
+
+            # Refresh session to get latest status
+            research = await deps.session.get(ResearchSession, state.session_id)
+            if not research:
+                log.error("research session not found", session_id=state.session_id)
                 return GenerateReport()
-            state.current_iteration += 1
-            return AnalyzeResults()  # Skip to analysis with current results
 
-        if state.user_action == "finish":
-            state.user_action = None
-            return GenerateReport()
+            # Check if user has taken action (status changed from WAITING_USER)
+            if research.status != ResearchStatus.WAITING_USER:
+                # Find the latest user input step
+                user_steps = [
+                    s for s in research.steps
+                    if s.type == ResearchStepType.USER_INPUT
+                    and s.iteration == state.current_iteration
+                ]
 
-        # Default: approve and continue
-        state.user_action = None
+                if user_steps:
+                    latest_step = user_steps[-1]
+                    action = latest_step.input_data.get("action") if latest_step.input_data else None
+
+                    log.info(
+                        "user action received",
+                        session_id=state.session_id,
+                        action=action,
+                        iteration=state.current_iteration,
+                    )
+
+                    if action == "skip":
+                        if deps.on_thinking:
+                            await deps.on_thinking({
+                                "type": "user_action",
+                                "message": "⏭️ 用户选择跳过本轮",
+                                "iteration": state.current_iteration,
+                            })
+                        if state.current_iteration >= state.max_iterations:
+                            return GenerateReport()
+                        state.current_iteration += 1
+                        return AnalyzeResults()
+
+                    if action == "finish":
+                        if deps.on_thinking:
+                            await deps.on_thinking({
+                                "type": "user_action",
+                                "message": "✅ 用户选择结束研究",
+                                "iteration": state.current_iteration,
+                            })
+                        return GenerateReport()
+
+                    if action == "modify":
+                        # Get modified plan from step data
+                        modified_plan = latest_step.input_data.get("plan") if latest_step.input_data else None
+                        if modified_plan:
+                            state.search_plan = SearchPlan(
+                                queries=[
+                                    SearchQuery(**q) for q in modified_plan.get("queries", [])
+                                ],
+                                reasoning=modified_plan.get("reasoning", "用户修改的计划"),
+                            )
+                            if deps.on_thinking:
+                                await deps.on_thinking({
+                                    "type": "user_action",
+                                    "message": f"✏️ 用户修改了搜索计划，共 {len(state.search_plan.queries)} 个查询",
+                                    "iteration": state.current_iteration,
+                                })
+
+                    # Default: approve
+                    if deps.on_thinking:
+                        await deps.on_thinking({
+                            "type": "user_action",
+                            "message": "👍 用户确认搜索计划",
+                            "iteration": state.current_iteration,
+                        })
+
+                # Continue with search
+                state.waiting_for_user = False
+                return ExecuteSearches()
+
+            # Check if session was cancelled
+            if research.status == ResearchStatus.CANCELLED:
+                log.info("research cancelled by user", session_id=state.session_id)
+                return GenerateReport()
+
+        # Timeout - auto-approve and continue
+        log.warning(
+            "user approval timeout, auto-approving",
+            session_id=state.session_id,
+            iteration=state.current_iteration,
+        )
+        if deps.on_thinking:
+            await deps.on_thinking({
+                "type": "timeout",
+                "message": "⏰ 等待超时，自动继续执行",
+                "iteration": state.current_iteration,
+            })
+
         state.waiting_for_user = False
         return ExecuteSearches()
 
@@ -300,11 +437,16 @@ class ExecuteSearches(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]
 
         state.current_results = []
 
-        for i, sq in enumerate(state.search_plan.queries):
-            try:
-                results = await deps.searcher.search(sq.query, mode=sq.engine)
+        # Execute searches with concurrency control
+        import asyncio
+        max_concurrent = 3  # Limit concurrent searches to avoid rate limiting
 
-                for r in results:
+        async def execute_single_search(sq: SearchQuery) -> list[SearchResult]:
+            """Execute a single search query."""
+            results = []
+            try:
+                raw_results = await deps.searcher.search(sq.query, mode=sq.engine)
+                for r in raw_results:
                     sr = SearchResult(
                         title=r.title,
                         url=r.url,
@@ -312,34 +454,89 @@ class ExecuteSearches(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]
                         source=r.engine or sq.engine,
                         iteration=state.current_iteration,
                     )
-                    state.current_results.append(sr)
+                    results.append(sr)
+            except Exception as e:
+                log.warning("search query failed", query=sq.query, error=str(e))
+            return results
 
-                    # Notify progress
+        # Process queries in batches
+        queries = state.search_plan.queries
+        for batch_start in range(0, len(queries), max_concurrent):
+            batch = queries[batch_start:batch_start + max_concurrent]
+            batch_tasks = [execute_single_search(sq) for sq in batch]
+            batch_results = await asyncio.gather(*batch_tasks)
+
+            for results in batch_results:
+                for sr in results:
+                    state.current_results.append(sr)
                     if deps.on_search_result:
                         await deps.on_search_result(sr)
 
-                log.debug(
-                    "search completed",
-                    query=sq.query[:50],
-                    result_count=len(results),
-                )
+        # Log completion
+        log.info(
+            "all searches completed",
+            session_id=state.session_id,
+            iteration=state.current_iteration,
+            total_results=len(state.current_results),
+        )
 
-                # Emit thinking event for each query
-                if deps.on_thinking:
-                    await deps.on_thinking({
-                        "type": "search_result",
-                        "message": f"🔎 「{sq.query[:30]}...」 找到 {len(results)} 条结果",
-                        "iteration": state.current_iteration,
-                        "query": sq.query,
-                        "count": len(results),
-                    })
+        # Emit thinking event for completion
+        if deps.on_thinking:
+            await deps.on_thinking({
+                "type": "search_complete",
+                "message": f"🔎 搜索完成，共找到 {len(state.current_results)} 条结果",
+                "iteration": state.current_iteration,
+                "count": len(state.current_results),
+            })
 
-            except Exception as error:
-                log.warning("search failed", query=sq.query[:50], error=str(error))
-
-        # Deduplicate by URL
+        # Deduplicate by URL and similar titles
         seen_urls: set[str] = {r.url for r in state.all_results}
-        new_results = [r for r in state.current_results if r.url not in seen_urls]
+        seen_titles: set[str] = {r.title.lower().strip() for r in state.all_results}
+
+        def normalize_url(url: str) -> str:
+            """Normalize URL for deduplication (remove trailing slashes, www prefix, etc.)"""
+            url = url.lower().strip()
+            # Remove trailing slash
+            url = url.rstrip('/')
+            # Remove www prefix
+            if '://www.' in url:
+                url = url.replace('://www.', '://')
+            return url
+
+        def is_similar_title(title: str, seen: set[str], threshold: float = 0.85) -> bool:
+            """Check if title is similar to any seen title using simple ratio."""
+            title_lower = title.lower().strip()
+            if title_lower in seen:
+                return True
+            # Simple similarity check - if title is very short, require exact match
+            if len(title_lower) < 20:
+                return title_lower in seen
+            # For longer titles, check if most words overlap
+            title_words = set(title_lower.split())
+            for seen_title in seen:
+                seen_words = set(seen_title.split())
+                if not title_words or not seen_words:
+                    continue
+                overlap = len(title_words & seen_words)
+                max_len = max(len(title_words), len(seen_words))
+                if max_len > 0 and overlap / max_len >= threshold:
+                    return True
+            return False
+
+        # Normalize existing URLs
+        seen_normalized_urls = {normalize_url(r.url) for r in state.all_results}
+
+        new_results = []
+        for r in state.current_results:
+            normalized_url = normalize_url(r.url)
+            if normalized_url in seen_normalized_urls:
+                continue
+            if is_similar_title(r.title, seen_titles):
+                continue
+            new_results.append(r)
+            seen_normalized_urls.add(normalized_url)
+            seen_titles.add(r.title.lower().strip())
+
         state.all_results.extend(new_results)
 
         log.info(
@@ -599,6 +796,7 @@ class GenerateReport(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]])
         research = await deps.session.get(ResearchSession, state.session_id)
         if research:
             research.status = ResearchStatus.COMPLETED
+            research.current_iteration = state.current_iteration
             research.aggregated_results = [
                 {"title": r.title, "url": r.url, "snippet": r.snippet, "source": r.source, "iteration": r.iteration}
                 for r in state.all_results
