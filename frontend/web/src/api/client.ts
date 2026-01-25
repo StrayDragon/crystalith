@@ -13,6 +13,10 @@ import {
   deleteSourceV1NotebooksNotebookIdSourcesSourceIdDelete,
   batchDeleteSourcesV1NotebooksNotebookIdSourcesDelete,
   searchSourcesV1NotebooksNotebookIdSourcesSearchPost,
+  listSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGet,
+  getSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGet,
+  sourceQaV1NotebooksNotebookIdSourcesSourceIdQaPost,
+  convertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePost,
   listSessionsV1NotebooksNotebookIdSessionsGet,
   createSessionV1NotebooksNotebookIdSessionsPost,
   getSessionV1NotebooksNotebookIdSessionsSessionIdGet,
@@ -52,6 +56,11 @@ import type {
   AnalysisResult,
   Citation,
   ContextStatsResponse,
+  ChunkRead,
+  SourceSummaryResponse,
+  SourceQaResponse,
+  QaMessage,
+  ConvertSourceQaToSourceResponse,
 } from './generated';
 
 // Re-export types for convenience
@@ -237,49 +246,78 @@ export async function listExtractors(notebookId: number): Promise<ExtractorsList
   return response.json();
 }
 
-// Source Summary and QA (not yet in generated SDK)
-export interface SourceSummaryResponse {
-  source_id: number;
-  summary: string;
-  key_points: string[];
-  topics: string[];
-  word_count: number;
-  generated_at: string;
-}
+// Re-export SDK types for Source Summary, QA, and Chunks
+export type { SourceSummaryResponse, SourceQaResponse, QaMessage, ConvertSourceQaToSourceResponse, ChunkRead };
 
-export interface SourceQAResponse {
-  source_id: number;
-  answer: string;
-  created_at: string;
-}
+// Type aliases for backward compatibility
+export type SourceQAResponse = SourceQaResponse;
+export type QAMessage = QaMessage;
+export type ConvertSourceQAToSourceResponse = ConvertSourceQaToSourceResponse;
 
+/**
+ * Get source summary.
+ * @param notebookId - Notebook ID
+ * @param sourceId - Source ID
+ */
 export async function getSourceSummary(
   notebookId: number,
   sourceId: number,
 ): Promise<SourceSummaryResponse> {
-  const response = await fetch(`/v1/notebooks/${notebookId}/sources/${sourceId}/summary`);
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new ApiError(response.status, err.detail || 'Failed to get source summary');
-  }
-  return response.json();
+  const result = await getSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGet({
+    path: { notebook_id: notebookId, source_id: sourceId },
+  });
+  return handleResponse(result);
 }
 
+/**
+ * Ask a question based on a specific source's content.
+ * @param notebookId - Notebook ID
+ * @param sourceId - Source ID
+ * @param question - Question to ask
+ */
 export async function askSourceQuestion(
   notebookId: number,
   sourceId: number,
   question: string,
-): Promise<SourceQAResponse> {
-  const response = await fetch(`/v1/notebooks/${notebookId}/sources/${sourceId}/qa`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question }),
+): Promise<SourceQaResponse> {
+  const result = await sourceQaV1NotebooksNotebookIdSourcesSourceIdQaPost({
+    path: { notebook_id: notebookId, source_id: sourceId },
+    body: { question },
   });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new ApiError(response.status, err.detail || 'Failed to ask source question');
-  }
-  return response.json();
+  return handleResponse(result);
+}
+
+/**
+ * Convert source QA conversation to a new source document for RAG queries.
+ * @param notebookId - Notebook ID
+ * @param sourceId - Original source ID
+ * @param messages - QA conversation messages
+ */
+export async function convertSourceQAToSource(
+  notebookId: number,
+  sourceId: number,
+  messages: QaMessage[],
+): Promise<ConvertSourceQaToSourceResponse> {
+  const result = await convertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePost({
+    path: { notebook_id: notebookId, source_id: sourceId },
+    body: { messages },
+  });
+  return handleResponse(result);
+}
+
+/**
+ * List all chunks for a specific source.
+ * @param notebookId - Notebook ID
+ * @param sourceId - Source ID
+ */
+export async function listSourceChunks(
+  notebookId: number,
+  sourceId: number,
+): Promise<ChunkRead[]> {
+  const result = await listSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGet({
+    path: { notebook_id: notebookId, source_id: sourceId },
+  });
+  return handleResponse(result);
 }
 
 // Sessions

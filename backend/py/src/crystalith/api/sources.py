@@ -59,6 +59,22 @@ class SourceRead(BaseModel):
     updated_at: datetime.datetime
 
 
+class ChunkRead(BaseModel):
+    """Response model for a text chunk."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    chunk_index: int
+    text: str
+    start_offset: int | None
+    end_offset: int | None
+    metadata: dict[str, Any] | None = Field(
+        default=None,
+        validation_alias="metadata_",
+        serialization_alias="metadata",
+    )
+
+
 class SourceSearchStatus(MetaInfoStrEnum):
     """Status of a source search operation."""
 
@@ -674,6 +690,47 @@ async def batch_delete_sources(
     return SourceBatchDeleteResponse(deleted_ids=found_ids, deleted_count=len(found_ids))
 
 
+@router.get("/{source_id}/chunks", response_model=list[ChunkRead])
+async def list_source_chunks(
+    notebook_id: int,
+    source_id: int,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[ChunkRead]:
+    """获取来源的所有文本片段（chunks）。
+
+    返回指定来源的所有文本片段，按 chunk_index 升序排列。
+    每个片段包含：
+    - id: 片段唯一标识
+    - chunk_index: 片段索引（从0开始）
+    - text: 片段文本内容
+    - start_offset: 在原文中的起始位置
+    - end_offset: 在原文中的结束位置
+    - metadata: 片段元数据（如页码等）
+    """
+    source = await session.get(Source, source_id)
+    if source is None or source.notebook_id != notebook_id:
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    result = await session.execute(
+        select(Chunk)
+        .where(Chunk.source_id == source_id)
+        .order_by(Chunk.chunk_index.asc())
+    )
+    chunks = result.scalars().all()
+
+    return [
+        ChunkRead(
+            id=chunk.id,
+            chunk_index=chunk.chunk_index,
+            text=chunk.text,
+            start_offset=chunk.start_offset,
+            end_offset=chunk.end_offset,
+            metadata=chunk.metadata_,
+        )
+        for chunk in chunks
+    ]
+
+
 # --- Source Summary and QA endpoints ---
 
 
@@ -910,3 +967,217 @@ async def source_qa(
         answer=answer,
         created_at=datetime.datetime.now(datetime.UTC),
     )
+
+
+# --- Convert Source QA to Source ---
+
+
+class QAMessage(BaseModel):
+    """A single QA message."""
+
+    role: Literal["user", "assistant"]
+    content: str
+
+
+class ConvertSourceQAToSourceRequest(BaseModel):
+    """Request to convert source QA conversation to a new source."""
+
+    messages: list[QAMessage] = Field(..., min_length=1)
+
+
+class ConvertSourceQAToSourceResponse(BaseModel):
+    """Response after converting source QA to a new source."""
+
+    source_id: int
+    filename: str
+
+
+def _split_text_to_chunks(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]:
+    """Split text into chunks for embedding."""
+    if not text:
+        return []
+
+    # Split by paragraphs first
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+
+    chunks: list[str] = []
+    current_chunk: list[str] = []
+    current_length = 0
+
+    for para in paragraphs:
+        para_len = len(para)
+
+        if current_length + para_len <= chunk_size:
+            current_chunk.append(para)
+            current_length += para_len
+        else:
+            if current_chunk:
+                chunks.append("\n\n".join(current_chunk))
+            # Start new chunk with overlap
+            if para_len > chunk_size:
+                # Split long paragraph
+                words = para.split()
+                temp_chunk: list[str] = []
+                temp_len = 0
+                for word in words:
+                    if temp_len + len(word) + 1 <= chunk_size:
+                        temp_chunk.append(word)
+                        temp_len += len(word) + 1
+                    else:
+                        if temp_chunk:
+                            chunks.append(" ".join(temp_chunk))
+                        temp_chunk = [word]
+                        temp_len = len(word)
+                if temp_chunk:
+                    current_chunk = [" ".join(temp_chunk)]
+                    current_length = temp_len
+                else:
+                    current_chunk = []
+                    current_length = 0
+            else:
+                current_chunk = [para]
+                current_length = para_len
+
+    if current_chunk:
+        chunks.append("\n\n".join(current_chunk))
+
+    return chunks
+
+
+def _format_qa_messages_as_markdown(
+    messages: list[QAMessage],
+    source_title: str,
+) -> str:
+    """Format QA messages as markdown content."""
+    timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M:%S")
+    content = f"# 来源问答记录\n\n"
+    content += f"**原始来源**: {source_title}\n"
+    content += f"**生成时间**: {timestamp} UTC\n\n"
+    content += "---\n\n"
+
+    for msg in messages:
+        role = "**问**" if msg.role == "user" else "**答**"
+        content += f"{role}: {msg.content}\n\n"
+
+    return content
+
+
+@router.post(
+    "/{source_id}/qa/convert-to-source",
+    response_model=ConvertSourceQAToSourceResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def convert_source_qa_to_source(
+    notebook_id: int,
+    source_id: int,
+    payload: ConvertSourceQAToSourceRequest,
+    session: AsyncSession = Depends(get_db_session),
+    embedder: EmbeddingProvider = Depends(get_embedding_provider),
+    vector_store: VectorStore = Depends(get_vector_store),
+) -> ConvertSourceQAToSourceResponse:
+    """Convert source QA conversation to a new source document for RAG queries."""
+    # Verify source exists
+    original_source = await session.get(Source, source_id)
+    if original_source is None or original_source.notebook_id != notebook_id:
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    logger.info(
+        "converting source QA to source",
+        source_id=source_id,
+        notebook_id=notebook_id,
+        message_count=len(payload.messages),
+    )
+
+    # Format messages as markdown
+    source_title = original_source.filename
+    text_content = _format_qa_messages_as_markdown(payload.messages, source_title)
+
+    if not text_content.strip():
+        raise HTTPException(status_code=400, detail="No content to convert")
+
+    # Generate filename
+    timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d_%H%M%S")
+    # Remove extension from original filename if present
+    base_name = source_title.rsplit(".", 1)[0] if "." in source_title else source_title
+    filename = f"问答_{base_name}_{timestamp}.md"
+
+    # Build metadata
+    metadata = {
+        "converted_from_source_qa": source_id,
+        "original_source_title": source_title,
+        "conversion_timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+        "message_count": len(payload.messages),
+        "word_count": len(text_content.split()),
+    }
+
+    # Create source
+    source = Source(
+        notebook_id=notebook_id,
+        filename=filename,
+        mime_type="text/markdown",
+        parser_type="text",
+        metadata_=metadata,
+        status=SourceStatus.PROCESSING,
+    )
+    session.add(source)
+    await session.commit()
+    await session.refresh(source)
+
+    try:
+        # Split into chunks
+        chunk_texts = _split_text_to_chunks(text_content)
+        if not chunk_texts:
+            chunk_texts = [text_content]
+
+        # Create embeddings
+        embeddings = await embedder.embed(chunk_texts)
+
+        # Create chunks and store in vector store
+        db_chunks: list[Chunk] = []
+        for idx, (chunk_text, embedding) in enumerate(zip(chunk_texts, embeddings)):
+            chunk = Chunk(
+                source_id=source.id,
+                chunk_index=idx,
+                text=chunk_text,
+                metadata_={"source_type": "converted_source_qa"},
+            )
+            session.add(chunk)
+            await session.flush()
+            db_chunks.append(chunk)
+
+        # Add to vector store
+        await vector_store.add(
+            notebook_id=notebook_id,
+            source_id=source.id,
+            chunk_ids=[c.id for c in db_chunks],
+            vectors=embeddings,
+        )
+
+        # Mark source as ready
+        source.status = SourceStatus.READY
+        await session.commit()
+
+        logger.info(
+            "source QA converted to source successfully",
+            source_id=source.id,
+            chunk_count=len(db_chunks),
+        )
+
+        return ConvertSourceQAToSourceResponse(
+            source_id=source.id,
+            filename=filename,
+        )
+
+    except Exception as exc:
+        logger.error(
+            "failed to convert source QA to source",
+            source_id=source.id,
+            error=str(exc),
+        )
+        source.status = SourceStatus.ERROR
+        source.error_message = str(exc)
+        await session.commit()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process source QA: {exc}",
+        ) from exc

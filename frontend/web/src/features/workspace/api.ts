@@ -23,6 +23,8 @@ export {
   listExtractors,
   getSourceSummary,
   askSourceQuestion,
+  listSourceChunks,
+  convertSourceQAToSource,
   // Sessions
   listSessions,
   createSession,
@@ -98,7 +100,16 @@ export type {
   ExtractorType,
   ExtractorInfo,
   ExtractorsListResponse,
+  // Chunk types
+  ChunkRead,
+  // Source QA Conversion types (using SDK types)
+  QaMessage,
+  ConvertSourceQaToSourceResponse,
 } from '../../api/client';
+
+// Type aliases for backward compatibility with existing code
+export type QAMessage = QaMessage;
+export type ConvertSourceQAToSourceResponse = ConvertSourceQaToSourceResponse;
 
 // Type aliases for backward compatibility
 export type ApiNotebook = import('../../api/client').NotebookRead;

@@ -1721,6 +1721,62 @@
         }
       }
     },
+    "/v1/notebooks/{notebook_id}/sources/{source_id}/chunks": {
+      "get": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "List Source Chunks",
+        "description": "获取来源的所有文本片段（chunks）。\n\n返回指定来源的所有文本片段，按 chunk_index 升序排列。\n每个片段包含：\n- id: 片段唯一标识\n- chunk_index: 片段索引（从0开始）\n- text: 片段文本内容\n- start_offset: 在原文中的起始位置\n- end_offset: 在原文中的结束位置\n- metadata: 片段元数据（如页码等）",
+        "operationId": "list_source_chunks_v1_notebooks__notebook_id__sources__source_id__chunks_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChunkRead"
+                  },
+                  "title": "Response List Source Chunks V1 Notebooks  Notebook Id  Sources  Source Id  Chunks Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/notebooks/{notebook_id}/sources/{source_id}/summary": {
       "get": {
         "tags": [
@@ -1818,6 +1874,68 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SourceQAResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sources/{source_id}/qa/convert-to-source": {
+      "post": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "Convert Source Qa To Source",
+        "description": "Convert source QA conversation to a new source document for RAG queries.",
+        "operationId": "convert_source_qa_to_source_v1_notebooks__notebook_id__sources__source_id__qa_convert_to_source_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertSourceQAToSourceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvertSourceQAToSourceResponse"
                 }
               }
             }
@@ -2035,6 +2153,66 @@
           "file"
         ],
         "title": "Body_upload_source_v1_notebooks__notebook_id__sources_post"
+      },
+      "ChunkRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "chunk_index": {
+            "type": "integer",
+            "title": "Chunk Index"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "start_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Offset"
+          },
+          "end_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Offset"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "chunk_index",
+          "text",
+          "start_offset",
+          "end_offset"
+        ],
+        "title": "ChunkRead",
+        "description": "Response model for a text chunk."
       },
       "Citation": {
         "properties": {
@@ -2279,6 +2457,43 @@
         ],
         "title": "ConvertSessionToSourceResponse",
         "description": "Response after converting session to source."
+      },
+      "ConvertSourceQAToSourceRequest": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/QAMessage"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Messages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "messages"
+        ],
+        "title": "ConvertSourceQAToSourceRequest",
+        "description": "Request to convert source QA conversation to a new source."
+      },
+      "ConvertSourceQAToSourceResponse": {
+        "properties": {
+          "source_id": {
+            "type": "integer",
+            "title": "Source Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "filename"
+        ],
+        "title": "ConvertSourceQAToSourceResponse",
+        "description": "Response after converting source QA to a new source."
       },
       "ConvertToSourceResponse": {
         "properties": {
@@ -2824,6 +3039,29 @@
         "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
         "x-enum-class": "OutputType",
         "x-enum-module": "crystalith.outputs.types"
+      },
+      "QAMessage": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "QAMessage",
+        "description": "A single QA message."
       },
       "QARequest": {
         "properties": {

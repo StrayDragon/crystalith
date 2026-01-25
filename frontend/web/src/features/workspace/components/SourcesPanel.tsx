@@ -36,10 +36,11 @@ import {
 } from '@mui/icons-material';
 
 import type { AsyncStatus } from '../../../shared/types';
-import type { ExtractorInfo, ExtractorType, SourceFromUrlMode } from '../../../api/client';
+import type { ExtractorInfo, ExtractorType, QAMessage, SourceFromUrlMode } from '../../../api/client';
 import type { ApiSourceSearchResult, SourceItem } from '../types';
 import type { SearchQueueItem } from '../hooks/useSources';
 import SourceDetailDialog from './SourceDetailDialog';
+import type { ChatMessage } from './SourceDetailDialog';
 import SearchResultsQueue from './SearchResultsQueue';
 import AddSearchResultDialog from './AddSearchResultDialog';
 import type { SearchResultItem } from './SearchResultCard';
@@ -75,6 +76,8 @@ interface SourcesPanelProps {
   availableExtractors?: ExtractorInfo[];
   /** 默认提取器 */
   defaultExtractor?: ExtractorType | null;
+  /** 将来源问答转换为新来源 */
+  onConvertSourceQAToSource?: (sourceId: number, messages: QAMessage[]) => Promise<unknown>;
 }
 
 function SourcesPanel({
@@ -99,6 +102,7 @@ function SourcesPanel({
   onRemoveResultsFromQueue,
   availableExtractors = [],
   defaultExtractor = null,
+  onConvertSourceQAToSource,
 }: SourcesPanelProps) {
   const uploadDisabled = isDemo || uploadState === 'loading';
   const isSearching = searchState === 'loading';
@@ -134,6 +138,20 @@ function SourcesPanel({
   const handleToggleDetailFullscreen = useCallback(() => {
     setIsDetailFullscreen((prev) => !prev);
   }, []);
+
+  // Handle saving QA as source
+  const handleSaveQAAsSource = useCallback(
+    async (sourceTitle: string, messages: ChatMessage[]) => {
+      if (!selectedSource || !onConvertSourceQAToSource) return;
+      // Convert ChatMessage to QAMessage format
+      const qaMessages: QAMessage[] = messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+      await onConvertSourceQAToSource(selectedSource.id, qaMessages);
+    },
+    [selectedSource, onConvertSourceQAToSource],
+  );
 
   const handleAddToSources = useCallback((selected: SearchResultItem[], mode: SourceFromUrlMode, extractor?: ExtractorType) => {
     setResultsToAdd(selected);
@@ -522,6 +540,7 @@ function SourcesPanel({
         onClose={handleCloseDetail}
         isFullscreen={isDetailFullscreen}
         onToggleFullscreen={handleToggleDetailFullscreen}
+        onSaveQAAsSource={onConvertSourceQAToSource ? handleSaveQAAsSource : undefined}
       />
 
       {/* Add Search Results Dialog */}

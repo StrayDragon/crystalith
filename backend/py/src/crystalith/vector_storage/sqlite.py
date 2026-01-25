@@ -153,18 +153,70 @@ class SQLiteVectorStore:
         source_id_set = set(source_ids) if source_ids else None
 
         if self._sqlite_vss is None or not self._vss_ready:
-            entries = [entry for entry in await self.entries() if entry.notebook_id == notebook_id]
-            if source_id_set is not None:
-                entries = [entry for entry in entries if entry.source_id in source_id_set]
-            results: list[VectorSearchResult] = []
-            for entry in entries:
-                score = _cosine_similarity(query, entry.vector)
-                if score < min_score:
-                    continue
-                results.append(VectorSearchResult(entry=entry, score=score))
-            results.sort(key=lambda item: item.score, reverse=True)
-            return results[:top_k]
+            return await self._brute_force_search(
+                notebook_id=notebook_id,
+                query=query,
+                top_k=top_k,
+                min_score=min_score,
+                source_id_set=source_id_set,
+            )
 
+        # Try VSS search first, fall back to brute-force on error
+        try:
+            return await self._vss_search(
+                notebook_id=notebook_id,
+                query=query,
+                top_k=top_k,
+                min_score=min_score,
+                source_id_set=source_id_set,
+            )
+        except Exception as exc:
+            logger.warning(
+                "sqlite-vss search failed, disabling VSS and falling back to brute-force search: %s",
+                exc,
+            )
+            self._sqlite_vss = None
+            self._vss_ready = False
+            return await self._brute_force_search(
+                notebook_id=notebook_id,
+                query=query,
+                top_k=top_k,
+                min_score=min_score,
+                source_id_set=source_id_set,
+            )
+
+    async def _brute_force_search(
+        self,
+        *,
+        notebook_id: int,
+        query: list[float],
+        top_k: int,
+        min_score: float,
+        source_id_set: set[int] | None,
+    ) -> list[VectorSearchResult]:
+        """Perform brute-force vector search using cosine similarity."""
+        entries = [entry for entry in await self.entries() if entry.notebook_id == notebook_id]
+        if source_id_set is not None:
+            entries = [entry for entry in entries if entry.source_id in source_id_set]
+        results: list[VectorSearchResult] = []
+        for entry in entries:
+            score = _cosine_similarity(query, entry.vector)
+            if score < min_score:
+                continue
+            results.append(VectorSearchResult(entry=entry, score=score))
+        results.sort(key=lambda item: item.score, reverse=True)
+        return results[:top_k]
+
+    async def _vss_search(
+        self,
+        *,
+        notebook_id: int,
+        query: list[float],
+        top_k: int,
+        min_score: float,
+        source_id_set: set[int] | None,
+    ) -> list[VectorSearchResult]:
+        """Perform vector search using sqlite-vss extension."""
         query_blob = _serialize_vector(query)
 
         # Build source filter condition
