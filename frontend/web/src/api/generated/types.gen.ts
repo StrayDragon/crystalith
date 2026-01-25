@@ -23,6 +23,20 @@ export type AnalysisResult = {
 };
 
 /**
+ * ApproveRequest
+ *
+ * Request to approve a search plan.
+ */
+export type ApproveRequest = {
+    /**
+     * Feedback
+     *
+     * Optional feedback on the plan
+     */
+    feedback?: string | null;
+};
+
+/**
  * Body_upload_source_v1_notebooks__notebook_id__sources_post
  */
 export type BodyUploadSourceV1NotebooksNotebookIdSourcesPost = {
@@ -471,6 +485,18 @@ export type ModelsListResponse = {
 };
 
 /**
+ * ModifyRequest
+ *
+ * Request to modify a search plan.
+ */
+export type ModifyRequest = {
+    /**
+     * Modified search plan
+     */
+    plan: SearchPlan;
+};
+
+/**
  * NotebookCreate
  */
 export type NotebookCreate = {
@@ -833,6 +859,306 @@ export type Relation = {
      * Score
      */
     score: number;
+};
+
+/**
+ * ResearchSessionCreate
+ *
+ * Request model to create a research session.
+ */
+export type ResearchSessionCreate = {
+    /**
+     * Topic
+     *
+     * Research topic
+     */
+    topic: string;
+    /**
+     * Max Iterations
+     *
+     * Maximum iterations
+     */
+    max_iterations?: number;
+};
+
+/**
+ * ResearchSessionListItem
+ *
+ * Simplified response for listing research sessions.
+ */
+export type ResearchSessionListItem = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Notebook Id
+     */
+    notebook_id: number;
+    /**
+     * Topic
+     */
+    topic: string;
+    /**
+     * ResearchStatus
+     *
+     * 枚举值:
+     *
+     * * `planning`: 正在规划搜索
+     * * `searching`: 正在执行搜索
+     * * `analyzing`: 正在分析结果
+     * * `waiting_user`: 等待用户确认
+     * * `completed`: 研究完成
+     * * `cancelled`: 已取消
+     */
+    status: 'planning' | 'searching' | 'analyzing' | 'waiting_user' | 'completed' | 'cancelled';
+    /**
+     * Current Iteration
+     */
+    current_iteration: number;
+    /**
+     * Max Iterations
+     */
+    max_iterations: number;
+    /**
+     * Result Count
+     *
+     * Number of aggregated results
+     */
+    result_count?: number;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+};
+
+/**
+ * ResearchSessionResponse
+ *
+ * Response model for a research session.
+ */
+export type ResearchSessionResponse = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Notebook Id
+     */
+    notebook_id: number;
+    /**
+     * Topic
+     */
+    topic: string;
+    /**
+     * ResearchStatus
+     *
+     * 枚举值:
+     *
+     * * `planning`: 正在规划搜索
+     * * `searching`: 正在执行搜索
+     * * `analyzing`: 正在分析结果
+     * * `waiting_user`: 等待用户确认
+     * * `completed`: 研究完成
+     * * `cancelled`: 已取消
+     */
+    status: 'planning' | 'searching' | 'analyzing' | 'waiting_user' | 'completed' | 'cancelled';
+    /**
+     * Current Iteration
+     */
+    current_iteration: number;
+    /**
+     * Max Iterations
+     */
+    max_iterations: number;
+    /**
+     * Aggregated Results
+     */
+    aggregated_results: Array<{
+        [key: string]: unknown;
+    }> | null;
+    /**
+     * Final Report
+     */
+    final_report: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+    /**
+     * Steps
+     */
+    steps?: Array<ResearchStepResponse>;
+};
+
+/**
+ * ResearchStatus
+ *
+ * 枚举值:
+ *
+ * * `planning`: 正在规划搜索
+ * * `searching`: 正在执行搜索
+ * * `analyzing`: 正在分析结果
+ * * `waiting_user`: 等待用户确认
+ * * `completed`: 研究完成
+ * * `cancelled`: 已取消
+ */
+export type ResearchStatus = 'planning' | 'searching' | 'analyzing' | 'waiting_user' | 'completed' | 'cancelled';
+
+/**
+ * ResearchStepResponse
+ *
+ * Response model for a research step.
+ */
+export type ResearchStepResponse = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Session Id
+     */
+    session_id: number;
+    /**
+     * Iteration
+     */
+    iteration: number;
+    /**
+     * ResearchStepType
+     *
+     * 枚举值:
+     *
+     * * `plan`: 搜索计划
+     * * `search`: 执行搜索
+     * * `analyze`: 分析结果
+     * * `user_input`: 用户输入
+     * * `summary`: 生成报告
+     */
+    type: 'plan' | 'search' | 'analyze' | 'user_input' | 'summary';
+    /**
+     * Input Data
+     */
+    input_data: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Output Data
+     */
+    output_data: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * ResearchStepStatus
+     *
+     * 枚举值:
+     *
+     * * `pending`: 等待执行
+     * * `running`: 正在执行
+     * * `completed`: 执行完成
+     * * `skipped`: 已跳过
+     */
+    status: 'pending' | 'running' | 'completed' | 'skipped';
+    /**
+     * Created At
+     */
+    created_at: string;
+};
+
+/**
+ * ResearchStepStatus
+ *
+ * 枚举值:
+ *
+ * * `pending`: 等待执行
+ * * `running`: 正在执行
+ * * `completed`: 执行完成
+ * * `skipped`: 已跳过
+ */
+export type ResearchStepStatus = 'pending' | 'running' | 'completed' | 'skipped';
+
+/**
+ * ResearchStepType
+ *
+ * 枚举值:
+ *
+ * * `plan`: 搜索计划
+ * * `search`: 执行搜索
+ * * `analyze`: 分析结果
+ * * `user_input`: 用户输入
+ * * `summary`: 生成报告
+ */
+export type ResearchStepType = 'plan' | 'search' | 'analyze' | 'user_input' | 'summary';
+
+/**
+ * SearchPlan
+ *
+ * A search plan for one iteration.
+ */
+export type SearchPlan = {
+    /**
+     * Iteration
+     *
+     * Iteration number
+     */
+    iteration: number;
+    /**
+     * Queries
+     *
+     * Queries to execute
+     */
+    queries?: Array<SearchQuery>;
+    /**
+     * Reasoning
+     *
+     * Agent reasoning for this plan
+     */
+    reasoning?: string;
+    /**
+     * Estimated Results
+     *
+     * Estimated number of results
+     */
+    estimated_results?: number;
+};
+
+/**
+ * SearchQuery
+ *
+ * A single search query in a search plan.
+ */
+export type SearchQuery = {
+    /**
+     * Query
+     *
+     * Search query string
+     */
+    query: string;
+    /**
+     * Engine
+     *
+     * Search engine: Web, Scholar, Docs
+     */
+    engine?: string;
+    /**
+     * Priority
+     *
+     * Priority: 1=high, 2=medium, 3=low
+     */
+    priority?: number;
+    /**
+     * Reason
+     *
+     * Reason for this query
+     */
+    reason?: string;
 };
 
 /**
@@ -1943,6 +2269,360 @@ export type RefineBatchV1NotebooksNotebookIdRefineBatchPostResponses = {
 };
 
 export type RefineBatchV1NotebooksNotebookIdRefineBatchPostResponse = RefineBatchV1NotebooksNotebookIdRefineBatchPostResponses[keyof RefineBatchV1NotebooksNotebookIdRefineBatchPostResponses];
+
+export type ListResearchSessionsV1NotebooksNotebookIdResearchGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: {
+        /**
+         * Offset
+         */
+        offset?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Status
+         *
+         * 枚举值:
+         *
+         * * `planning`: 正在规划搜索
+         * * `searching`: 正在执行搜索
+         * * `analyzing`: 正在分析结果
+         * * `waiting_user`: 等待用户确认
+         * * `completed`: 研究完成
+         * * `cancelled`: 已取消
+         */
+        status?: 'planning' | 'searching' | 'analyzing' | 'waiting_user' | 'completed' | 'cancelled' | null;
+    };
+    url: '/v1/notebooks/{notebook_id}/research';
+};
+
+export type ListResearchSessionsV1NotebooksNotebookIdResearchGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListResearchSessionsV1NotebooksNotebookIdResearchGetError = ListResearchSessionsV1NotebooksNotebookIdResearchGetErrors[keyof ListResearchSessionsV1NotebooksNotebookIdResearchGetErrors];
+
+export type ListResearchSessionsV1NotebooksNotebookIdResearchGetResponses = {
+    /**
+     * Response List Research Sessions V1 Notebooks  Notebook Id  Research Get
+     *
+     * Successful Response
+     */
+    200: Array<ResearchSessionListItem>;
+};
+
+export type ListResearchSessionsV1NotebooksNotebookIdResearchGetResponse = ListResearchSessionsV1NotebooksNotebookIdResearchGetResponses[keyof ListResearchSessionsV1NotebooksNotebookIdResearchGetResponses];
+
+export type CreateResearchSessionV1NotebooksNotebookIdResearchPostData = {
+    body: ResearchSessionCreate;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/research';
+};
+
+export type CreateResearchSessionV1NotebooksNotebookIdResearchPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateResearchSessionV1NotebooksNotebookIdResearchPostError = CreateResearchSessionV1NotebooksNotebookIdResearchPostErrors[keyof CreateResearchSessionV1NotebooksNotebookIdResearchPostErrors];
+
+export type CreateResearchSessionV1NotebooksNotebookIdResearchPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: ResearchSessionResponse;
+};
+
+export type CreateResearchSessionV1NotebooksNotebookIdResearchPostResponse = CreateResearchSessionV1NotebooksNotebookIdResearchPostResponses[keyof CreateResearchSessionV1NotebooksNotebookIdResearchPostResponses];
+
+export type DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Research Id
+         */
+        research_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/research/{research_id}';
+};
+
+export type DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteError = DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteErrors[keyof DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteErrors];
+
+export type DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteResponse = DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteResponses[keyof DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteResponses];
+
+export type GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Research Id
+         */
+        research_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/research/{research_id}';
+};
+
+export type GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetError = GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetErrors[keyof GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetErrors];
+
+export type GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ResearchSessionResponse;
+};
+
+export type GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetResponse = GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetResponses[keyof GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetResponses];
+
+export type ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostData = {
+    body: ApproveRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Research Id
+         */
+        research_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/research/{research_id}/approve';
+};
+
+export type ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostError = ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostErrors[keyof ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostErrors];
+
+export type ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ResearchSessionResponse;
+};
+
+export type ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostResponse = ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostResponses[keyof ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostResponses];
+
+export type ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostData = {
+    body: ModifyRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Research Id
+         */
+        research_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/research/{research_id}/modify';
+};
+
+export type ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostError = ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostErrors[keyof ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostErrors];
+
+export type ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ResearchSessionResponse;
+};
+
+export type ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostResponse = ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostResponses[keyof ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostResponses];
+
+export type SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Research Id
+         */
+        research_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/research/{research_id}/skip';
+};
+
+export type SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostError = SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostErrors[keyof SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostErrors];
+
+export type SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ResearchSessionResponse;
+};
+
+export type SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostResponse = SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostResponses[keyof SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostResponses];
+
+export type FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Research Id
+         */
+        research_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/research/{research_id}/finish';
+};
+
+export type FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostError = FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostErrors[keyof FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostErrors];
+
+export type FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ResearchSessionResponse;
+};
+
+export type FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostResponse = FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostResponses[keyof FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostResponses];
+
+export type StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Research Id
+         */
+        research_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/research/{research_id}/start';
+};
+
+export type StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostError = StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostErrors[keyof StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostErrors];
+
+export type StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ResearchSessionResponse;
+};
+
+export type StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostResponse = StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostResponses[keyof StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostResponses];
+
+export type StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Research Id
+         */
+        research_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/research/{research_id}/stream';
+};
+
+export type StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetError = StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetErrors[keyof StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetErrors];
+
+export type StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetResponses = {
+    /**
+     * SSE stream of research progress
+     */
+    200: unknown;
+};
 
 export type ListSessionsV1NotebooksNotebookIdSessionsGetData = {
     body?: never;

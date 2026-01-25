@@ -1,29 +1,48 @@
 ## Why
 
-当前搜索功能只支持基础的 Web 搜索模式，用户无法选择不同的研究深度和搜索引擎类型。用户在进行研究时需要不同的搜索策略：
+当前搜索功能只支持基础的单次搜索，用户无法进行深度研究。在实际研究场景中，用户需要：
 
-1. **快速搜索 (Fast Research)** - 快速获取关键结果，适合快速查找和验证
-2. **深度搜索 (Deep Research)** - 多轮迭代搜索，适合深入研究和全面调研
-3. **搜索引擎选择** - 支持选择特定搜索引擎（Google、Bing、DuckDuckGo 等）
+1. **多轮迭代搜索** - 根据初始结果扩展搜索方向
+2. **智能关键词扩展** - Agent 自动生成相关查询
+3. **人机协作** - 在关键决策点让用户参与
+4. **研究过程可见** - 查看完整的研究历程和中间产物
 
 ## What Changes
 
 ### 后端
-- 添加研究模式配置（fast/deep）
-- 实现 Deep Research 模式的多轮迭代搜索逻辑
-- 支持搜索引擎选择参数
+
+- **数据模型**: 新增 `ResearchSession` 和 `ResearchStep` 表
+- **研究 Agent**: 使用 `pydantic-graph` 构建多步骤研究图
+- **API 端点**: 研究会话 CRUD + 交互端点 + SSE 流式更新
+- **AI 逻辑**: 搜索计划生成、关键词扩展、结果分析
 
 ### 前端
-- 实现搜索模式选择器 UI（Web/Fast Research/Deep Research）
-- 添加搜索引擎选择下拉菜单
-- Deep Research 模式显示搜索进度和中间结果
-- 搜索模式切换时的 UI 状态管理
+
+- **ResearchCapsule**: 研究胶囊组件（显示在搜索队列）
+- **ResearchDetailPanel**: 研究详情面板（可展开的完整交互界面）
+- **useResearch Hook**: 管理研究状态和 SSE 订阅
+- **搜索模式选择器**: Fast Research / Deep Research 切换
 
 ## Impact
 
-- 受影响的规范：`search-engine`（修改）、`research-modes`（新增）
-- 受影响的代码：
-  - `backend/py/src/crystalith/search/` - 搜索模块
-  - `backend/py/src/crystalith/api/sources.py` - 搜索 API
-  - `frontend/web/src/features/workspace/components/SourcesPanel.tsx` - 搜索面板
-  - `frontend/web/src/features/workspace/hooks/useSources.ts` - 搜索 Hook
+- **新增规范**: `research-modes`
+- **受影响代码**:
+  - `backend/py/src/crystalith/research/` - 新增研究模块
+  - `backend/py/src/crystalith/api/research.py` - 研究 API
+  - `backend/py/src/crystalith/db/models.py` - 数据模型
+  - `frontend/web/src/features/workspace/components/Research*.tsx` - 研究组件
+  - `frontend/web/src/features/workspace/hooks/useResearch.ts` - 研究 Hook
+  - `frontend/web/src/features/workspace/components/SourcesPanel.tsx` - 模式选择器
+
+## Design
+
+详见 [design.md](./design.md)
+
+## Risks & Mitigations
+
+| 风险 | 缓解措施 |
+|------|---------|
+| AI 生成计划质量不稳定 | 提供默认 fallback 计划；允许用户修改 |
+| 长时间研究可能中断 | 状态持久化到数据库；支持恢复 |
+| SSE 连接不稳定 | 实现重连机制；提供轮询 fallback |
+| 搜索 API 限流 | 控制并发数量；添加延迟 |

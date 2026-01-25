@@ -851,6 +851,582 @@
         }
       }
     },
+    "/v1/notebooks/{notebook_id}/research": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Create Research Session",
+        "description": "Create a new deep research session.",
+        "operationId": "create_research_session_v1_notebooks__notebook_id__research_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResearchSessionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "List Research Sessions",
+        "description": "List research sessions for a notebook.",
+        "operationId": "list_research_sessions_v1_notebooks__notebook_id__research_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "title": "ResearchStatus",
+                  "description": "枚举值:\n\n* `planning`: 正在规划搜索\n* `searching`: 正在执行搜索\n* `analyzing`: 正在分析结果\n* `waiting_user`: 等待用户确认\n* `completed`: 研究完成\n* `cancelled`: 已取消",
+                  "enum": [
+                    "planning",
+                    "searching",
+                    "analyzing",
+                    "waiting_user",
+                    "completed",
+                    "cancelled"
+                  ],
+                  "type": "string",
+                  "x-enum-module": "crystalith.db.models",
+                  "x-enum-class": "ResearchStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            },
+            "description": "枚举值:\n\n* `planning`: 正在规划搜索\n* `searching`: 正在执行搜索\n* `analyzing`: 正在分析结果\n* `waiting_user`: 等待用户确认\n* `completed`: 研究完成\n* `cancelled`: 已取消"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResearchSessionListItem"
+                  },
+                  "title": "Response List Research Sessions V1 Notebooks  Notebook Id  Research Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Get Research Session",
+        "description": "Get details of a research session including all steps.",
+        "operationId": "get_research_session_v1_notebooks__notebook_id__research__research_id__get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Delete Research Session",
+        "description": "Delete or cancel a research session.",
+        "operationId": "delete_research_session_v1_notebooks__notebook_id__research__research_id__delete",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/approve": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Approve Search Plan",
+        "description": "Approve the current search plan and continue research.",
+        "operationId": "approve_search_plan_v1_notebooks__notebook_id__research__research_id__approve_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/modify": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Modify Search Plan",
+        "description": "Modify the current search plan.",
+        "operationId": "modify_search_plan_v1_notebooks__notebook_id__research__research_id__modify_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/skip": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Skip Iteration",
+        "description": "Skip the current iteration.",
+        "operationId": "skip_iteration_v1_notebooks__notebook_id__research__research_id__skip_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/finish": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Finish Research",
+        "description": "Finish research early and generate report.",
+        "operationId": "finish_research_v1_notebooks__notebook_id__research__research_id__finish_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/start": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Start Research",
+        "description": "Start executing the research graph.",
+        "operationId": "start_research_v1_notebooks__notebook_id__research__research_id__start_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/stream": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Stream Research Progress",
+        "description": "Stream research progress using Server-Sent Events.\n\nEvents:\n- `status`: Status update `{\"status\": \"...\", \"iteration\": n}`\n- `plan_ready`: Search plan ready `{\"plan\": {...}}`\n- `search_progress`: Search progress `{\"query\": \"...\", \"completed\": n, \"total\": m}`\n- `search_result`: New result `{\"title\": \"...\", \"url\": \"...\"}`\n- `analysis`: Analysis complete `{\"summary\": \"...\", \"coverage\": 0.x}`\n- `report`: Final report `{\"report\": \"...\"}`\n- `done`: Research complete `{\"total_results\": n}`\n- `error`: Error `{\"message\": \"...\"}`",
+        "operationId": "stream_research_progress_v1_notebooks__notebook_id__research__research_id__stream_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE stream of research progress",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/notebooks/{notebook_id}/sessions": {
       "post": {
         "tags": [
@@ -2140,6 +2716,25 @@
         ],
         "title": "AnalysisResult"
       },
+      "ApproveRequest": {
+        "properties": {
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback",
+            "description": "Optional feedback on the plan"
+          }
+        },
+        "type": "object",
+        "title": "ApproveRequest",
+        "description": "Request to approve a search plan."
+      },
       "Body_upload_source_v1_notebooks__notebook_id__sources_post": {
         "properties": {
           "file": {
@@ -2804,6 +3399,20 @@
         "title": "ModelsListResponse",
         "description": "Response model for the models list endpoint."
       },
+      "ModifyRequest": {
+        "properties": {
+          "plan": {
+            "$ref": "#/components/schemas/SearchPlan",
+            "description": "Modified search plan"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan"
+        ],
+        "title": "ModifyRequest",
+        "description": "Request to modify a search plan."
+      },
       "NotebookCreate": {
         "properties": {
           "name": {
@@ -3421,6 +4030,395 @@
           "score"
         ],
         "title": "Relation"
+      },
+      "ResearchSessionCreate": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Topic",
+            "description": "Research topic"
+          },
+          "max_iterations": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Max Iterations",
+            "description": "Maximum iterations",
+            "default": 4
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic"
+        ],
+        "title": "ResearchSessionCreate",
+        "description": "Request model to create a research session."
+      },
+      "ResearchSessionListItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "notebook_id": {
+            "type": "integer",
+            "title": "Notebook Id"
+          },
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "planning",
+              "searching",
+              "analyzing",
+              "waiting_user",
+              "completed",
+              "cancelled"
+            ],
+            "title": "ResearchStatus",
+            "description": "枚举值:\n\n* `planning`: 正在规划搜索\n* `searching`: 正在执行搜索\n* `analyzing`: 正在分析结果\n* `waiting_user`: 等待用户确认\n* `completed`: 研究完成\n* `cancelled`: 已取消",
+            "x-enum-class": "ResearchStatus",
+            "x-enum-module": "crystalith.db.models"
+          },
+          "current_iteration": {
+            "type": "integer",
+            "title": "Current Iteration"
+          },
+          "max_iterations": {
+            "type": "integer",
+            "title": "Max Iterations"
+          },
+          "result_count": {
+            "type": "integer",
+            "title": "Result Count",
+            "description": "Number of aggregated results",
+            "default": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "notebook_id",
+          "topic",
+          "status",
+          "current_iteration",
+          "max_iterations",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ResearchSessionListItem",
+        "description": "Simplified response for listing research sessions."
+      },
+      "ResearchSessionResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "notebook_id": {
+            "type": "integer",
+            "title": "Notebook Id"
+          },
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "planning",
+              "searching",
+              "analyzing",
+              "waiting_user",
+              "completed",
+              "cancelled"
+            ],
+            "title": "ResearchStatus",
+            "description": "枚举值:\n\n* `planning`: 正在规划搜索\n* `searching`: 正在执行搜索\n* `analyzing`: 正在分析结果\n* `waiting_user`: 等待用户确认\n* `completed`: 研究完成\n* `cancelled`: 已取消",
+            "x-enum-class": "ResearchStatus",
+            "x-enum-module": "crystalith.db.models"
+          },
+          "current_iteration": {
+            "type": "integer",
+            "title": "Current Iteration"
+          },
+          "max_iterations": {
+            "type": "integer",
+            "title": "Max Iterations"
+          },
+          "aggregated_results": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aggregated Results"
+          },
+          "final_report": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Report"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/ResearchStepResponse"
+            },
+            "type": "array",
+            "title": "Steps"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "notebook_id",
+          "topic",
+          "status",
+          "current_iteration",
+          "max_iterations",
+          "aggregated_results",
+          "final_report",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ResearchSessionResponse",
+        "description": "Response model for a research session."
+      },
+      "ResearchStatus": {
+        "type": "string",
+        "enum": [
+          "planning",
+          "searching",
+          "analyzing",
+          "waiting_user",
+          "completed",
+          "cancelled"
+        ],
+        "title": "ResearchStatus",
+        "description": "枚举值:\n\n* `planning`: 正在规划搜索\n* `searching`: 正在执行搜索\n* `analyzing`: 正在分析结果\n* `waiting_user`: 等待用户确认\n* `completed`: 研究完成\n* `cancelled`: 已取消",
+        "x-enum-class": "ResearchStatus",
+        "x-enum-module": "crystalith.db.models"
+      },
+      "ResearchStepResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "session_id": {
+            "type": "integer",
+            "title": "Session Id"
+          },
+          "iteration": {
+            "type": "integer",
+            "title": "Iteration"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "search",
+              "analyze",
+              "user_input",
+              "summary"
+            ],
+            "title": "ResearchStepType",
+            "description": "枚举值:\n\n* `plan`: 搜索计划\n* `search`: 执行搜索\n* `analyze`: 分析结果\n* `user_input`: 用户输入\n* `summary`: 生成报告",
+            "x-enum-class": "ResearchStepType",
+            "x-enum-module": "crystalith.db.models"
+          },
+          "input_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Data"
+          },
+          "output_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Data"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "skipped"
+            ],
+            "title": "ResearchStepStatus",
+            "description": "枚举值:\n\n* `pending`: 等待执行\n* `running`: 正在执行\n* `completed`: 执行完成\n* `skipped`: 已跳过",
+            "x-enum-class": "ResearchStepStatus",
+            "x-enum-module": "crystalith.db.models"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "session_id",
+          "iteration",
+          "type",
+          "input_data",
+          "output_data",
+          "status",
+          "created_at"
+        ],
+        "title": "ResearchStepResponse",
+        "description": "Response model for a research step."
+      },
+      "ResearchStepStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "running",
+          "completed",
+          "skipped"
+        ],
+        "title": "ResearchStepStatus",
+        "description": "枚举值:\n\n* `pending`: 等待执行\n* `running`: 正在执行\n* `completed`: 执行完成\n* `skipped`: 已跳过",
+        "x-enum-class": "ResearchStepStatus",
+        "x-enum-module": "crystalith.db.models"
+      },
+      "ResearchStepType": {
+        "type": "string",
+        "enum": [
+          "plan",
+          "search",
+          "analyze",
+          "user_input",
+          "summary"
+        ],
+        "title": "ResearchStepType",
+        "description": "枚举值:\n\n* `plan`: 搜索计划\n* `search`: 执行搜索\n* `analyze`: 分析结果\n* `user_input`: 用户输入\n* `summary`: 生成报告",
+        "x-enum-class": "ResearchStepType",
+        "x-enum-module": "crystalith.db.models"
+      },
+      "SearchPlan": {
+        "properties": {
+          "iteration": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Iteration",
+            "description": "Iteration number"
+          },
+          "queries": {
+            "items": {
+              "$ref": "#/components/schemas/SearchQuery"
+            },
+            "type": "array",
+            "title": "Queries",
+            "description": "Queries to execute"
+          },
+          "reasoning": {
+            "type": "string",
+            "title": "Reasoning",
+            "description": "Agent reasoning for this plan",
+            "default": ""
+          },
+          "estimated_results": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Estimated Results",
+            "description": "Estimated number of results",
+            "default": 10
+          }
+        },
+        "type": "object",
+        "required": [
+          "iteration"
+        ],
+        "title": "SearchPlan",
+        "description": "A search plan for one iteration."
+      },
+      "SearchQuery": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query",
+            "description": "Search query string"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine",
+            "description": "Search engine: Web, Scholar, Docs",
+            "default": "Web"
+          },
+          "priority": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Priority",
+            "description": "Priority: 1=high, 2=medium, 3=low",
+            "default": 1
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Reason for this query",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "SearchQuery",
+        "description": "A single search query in a search plan."
       },
       "SessionCreate": {
         "properties": {
