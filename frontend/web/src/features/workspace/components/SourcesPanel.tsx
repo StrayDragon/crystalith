@@ -39,10 +39,14 @@ import type { AsyncStatus } from '../../../shared/types';
 import type { ExtractorInfo, ExtractorType, QAMessage, SourceFromUrlMode } from '../../../api/client';
 import type { ApiSourceSearchResult, SourceItem } from '../types';
 import type { SearchQueueItem } from '../hooks/useSources';
+import { useResearch } from '../hooks/useResearch';
+import { toast } from '../../../shared/toast';
 import SourceDetailDialog from './SourceDetailDialog';
 import type { ChatMessage } from './SourceDetailDialog';
 import SearchResultsQueue from './SearchResultsQueue';
 import AddSearchResultDialog from './AddSearchResultDialog';
+import ResearchCapsule from './ResearchCapsule';
+import ResearchDetailPanel from './ResearchDetailPanel';
 import type { SearchResultItem } from './SearchResultCard';
 
 interface SourcesPanelProps {
@@ -78,6 +82,8 @@ interface SourcesPanelProps {
   defaultExtractor?: ExtractorType | null;
   /** 将来源问答转换为新来源 */
   onConvertSourceQAToSource?: (sourceId: number, messages: QAMessage[]) => Promise<unknown>;
+  /** 当前 notebook ID，用于深度研究功能 */
+  notebookId?: number;
 }
 
 function SourcesPanel({
@@ -103,6 +109,7 @@ function SourcesPanel({
   availableExtractors = [],
   defaultExtractor = null,
   onConvertSourceQAToSource,
+  notebookId,
 }: SourcesPanelProps) {
   const uploadDisabled = isDemo || uploadState === 'loading';
   const isSearching = searchState === 'loading';
@@ -122,6 +129,29 @@ function SourcesPanel({
   const [selectedExtractor, setSelectedExtractor] = useState<ExtractorType | undefined>(undefined);
   const [isAddingFromUrl, setIsAddingFromUrl] = useState(false);
   const [isDetailFullscreen, setIsDetailFullscreen] = useState(false);
+
+  // Deep Research state
+  const [researchDetailOpen, setResearchDetailOpen] = useState(false);
+  const [researchFullscreen, setResearchFullscreen] = useState(true); // Default fullscreen
+  const research = useResearch(notebookId);
+
+  // Fetch research sessions on mount
+  useEffect(() => {
+    if (notebookId) {
+      research.fetchSessions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notebookId]);
+
+  // Subscribe to SSE for active research session
+  useEffect(() => {
+    const sessionId = research.activeSession?.id;
+    if (sessionId) {
+      research.subscribeToSSE(sessionId);
+      return () => research.unsubscribeFromSSE();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [research.activeSession?.id]);
 
   const handleOpenDetail = useCallback((source: SourceItem) => {
     setSelectedSource(source);
@@ -231,10 +261,84 @@ function SourcesPanel({
     }));
   }
 
-  const handleSearch = () => {
-    // 不再检查 isSearching，允许用户连续发起多个搜索
+  const handleSearch = async () => {
+    // Deep Research mode
+    if (mode === 'Deep Research') {
+      if (isDemo) {
+        toast.error('演示模式暂不支持深度研究');
+        return;
+      }
+      if (!notebookId) {
+        toast.error('请先创建笔记本');
+        return;
+      }
+      if (!searchQuery.trim()) {
+        toast.error('请输入研究主题');
+        return;
+      }
+
+      try {
+        const session = await research.createSession(searchQuery.trim());
+        if (session) {
+          // Start the research immediately
+          // SSE subscription is handled by useEffect when activeSession changes
+          await research.startResearch(session.id);
+          setSearchQuery('');
+          toast.success('深度研究已启动');
+        }
+      } catch (error) {
+        toast.error('创建研究失败');
+      }
+      return;
+    }
+
+    // Fast Research mode - use existing search
     onSearch({ query: searchQuery, engine, mode });
   };
+
+  // Handle research session click
+  const handleResearchClick = useCallback((sessionId: number) => {
+    research.fetchSession(sessionId);
+    setResearchDetailOpen(true);
+  }, [research]);
+
+  // Handle research actions
+  const handleResearchStart = useCallback(async (sessionId: number) => {
+    // SSE subscription is handled by useEffect when activeSession changes
+    await research.startResearch(sessionId);
+  }, [research]);
+
+  const handleResearchDelete = useCallback(async (sessionId: number) => {
+    if (window.confirm('确定要删除这个研究会话吗？')) {
+      await research.deleteSession(sessionId);
+    }
+  }, [research]);
+
+  const handleResearchApprove = useCallback(async () => {
+    if (research.activeSession?.id) {
+      await research.approveSearchPlan(research.activeSession.id);
+    }
+  }, [research]);
+
+  const handleResearchSkip = useCallback(async () => {
+    if (research.activeSession?.id) {
+      await research.skipIteration(research.activeSession.id);
+    }
+  }, [research]);
+
+  const handleResearchFinish = useCallback(async () => {
+    if (research.activeSession?.id) {
+      await research.finishResearch(research.activeSession.id);
+    }
+  }, [research]);
+
+  const handleCloseResearchDetail = useCallback(() => {
+    setResearchDetailOpen(false);
+    // Refresh the session to get latest state
+    if (research.activeSession?.id) {
+      research.fetchSession(research.activeSession.id);
+    }
+  }, [research]);
 
   const getEngineIcon = () => {
     switch (engine) {
@@ -376,6 +480,24 @@ function SourcesPanel({
         <Typography variant="small" className="text-[11px] text-gray-600 font-medium px-1">
           搜索中…
         </Typography>
+      )}
+
+      {/* Deep Research Sessions */}
+      {research.sessions.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {research.sessions
+            .filter((s) => ['planning', 'searching', 'analyzing', 'waiting_user'].includes(s.status))
+            .map((session) => (
+              <ResearchCapsule
+                key={session.id}
+                session={session}
+                onClick={() => handleResearchClick(session.id)}
+                onStart={() => handleResearchStart(session.id)}
+                onDelete={() => handleResearchDelete(session.id)}
+                isExpanded={research.activeSession?.id === session.id}
+              />
+            ))}
+        </div>
       )}
 
       {/* Search Results Queue */}
@@ -552,6 +674,42 @@ function SourcesPanel({
         onAddSource={handleAddSource}
         onComplete={handleAddComplete}
       />
+
+      {/* Research Detail Panel - Modal Overlay */}
+      {researchDetailOpen && research.activeSession && (
+        <div
+          className="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleCloseResearchDetail();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') handleCloseResearchDetail();
+          }}
+          role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
+        >
+          <div
+            className={`bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200 transition-all ${
+              researchFullscreen
+                ? 'w-full max-w-5xl'
+                : 'w-full max-w-lg'
+            }`}
+          >
+            <ResearchDetailPanel
+              session={research.activeSession}
+              sseEvents={research.sseEvents}
+              onClose={handleCloseResearchDetail}
+              onApprove={handleResearchApprove}
+              onSkip={handleResearchSkip}
+              onFinish={handleResearchFinish}
+              onStart={() => handleResearchStart(research.activeSession!.id)}
+              isFullscreen={researchFullscreen}
+              onToggleFullscreen={() => setResearchFullscreen(!researchFullscreen)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

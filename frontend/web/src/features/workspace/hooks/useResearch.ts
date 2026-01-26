@@ -55,6 +55,13 @@ interface SSEWaitingEvent {
   message: string;
 }
 
+interface SSEThinkingEvent {
+  type: string;
+  message: string;
+  iteration: number;
+  queries?: string[];
+}
+
 export type SSEEvent =
   | { type: 'status'; data: SSEStatusEvent }
   | { type: 'plan_ready'; data: SSEPlanEvent }
@@ -63,6 +70,7 @@ export type SSEEvent =
   | { type: 'report'; data: SSEReportEvent }
   | { type: 'done'; data: SSEDoneEvent }
   | { type: 'waiting'; data: SSEWaitingEvent }
+  | { type: 'thinking'; data: SSEThinkingEvent }
   | { type: 'error'; data: { message: string } };
 
 interface UseResearchResult {
@@ -147,19 +155,22 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           body: { topic, max_iterations: maxIterations },
         });
         if (response.data) {
+          const data = response.data;
           setSessions((prev) => [
             {
-              id: response.data!.id,
-              topic: response.data!.topic,
-              status: response.data!.status,
-              current_iteration: response.data!.current_iteration,
-              max_iterations: response.data!.max_iterations,
-              created_at: response.data!.created_at,
+              id: data.id,
+              notebook_id: data.notebook_id,
+              topic: data.topic,
+              status: data.status,
+              current_iteration: data.current_iteration,
+              max_iterations: data.max_iterations,
+              created_at: data.created_at,
+              updated_at: data.created_at, // Use created_at as initial updated_at
             },
             ...prev,
           ]);
-          setActiveSession(response.data);
-          return response.data;
+          setActiveSession(data);
+          return data;
         }
         return null;
       } catch (err) {
@@ -276,7 +287,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
         eventSourceRef.current.close();
       }
 
-      const url = `/api/v1/notebooks/${notebookId}/research/${researchId}/stream`;
+      const url = `/v1/notebooks/${notebookId}/research/${researchId}/stream`;
       const eventSource = new EventSource(url);
       eventSourceRef.current = eventSource;
 
@@ -285,9 +296,32 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           const data = JSON.parse(event.data);
           setSSEEvents((prev) => [...prev, { type: eventType, data } as SSEEvent]);
 
-          // Auto-refresh session when status changes
-          if (eventType === 'status' || eventType === 'done') {
+          // Update session state from SSE events for real-time progress
+          if (eventType === 'status' && data.iteration && data.status) {
+            // Update activeSession
+            setActiveSession((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                current_iteration: data.iteration,
+                status: data.status,
+              };
+            });
+            // Also update sessions list for capsule display
+            setSessions((prev) =>
+              prev.map((s) =>
+                s.id === researchId
+                  ? { ...s, current_iteration: data.iteration, status: data.status }
+                  : s
+              )
+            );
+          }
+
+          // Full refresh on done or report to get final data
+          if (eventType === 'done' || eventType === 'report') {
             fetchSession(researchId);
+            // Also refresh sessions list
+            fetchSessions();
           }
         } catch {
           console.error('Failed to parse SSE event:', event.data);
@@ -301,13 +335,14 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       eventSource.addEventListener('report', handleEvent('report'));
       eventSource.addEventListener('done', handleEvent('done'));
       eventSource.addEventListener('waiting', handleEvent('waiting'));
+      eventSource.addEventListener('thinking', handleEvent('thinking'));
 
       eventSource.onerror = () => {
         setSSEEvents((prev) => [...prev, { type: 'error', data: { message: '连接中断' } }]);
         eventSource.close();
       };
     },
-    [notebookId, fetchSession]
+    [notebookId, fetchSession, fetchSessions]
   );
 
   const unsubscribeFromSSE = useCallback(() => {

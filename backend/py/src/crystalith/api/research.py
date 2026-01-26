@@ -591,26 +591,53 @@ async def stream_research_progress(
             "topic": research.topic,
         })
 
+        # Send initial thinking event
+        yield _sse_event("thinking", {
+            "type": "start",
+            "message": f"🚀 开始深度研究「{research.topic}」",
+            "iteration": research.current_iteration,
+        })
+
         # Poll for updates
-        poll_interval = 1.0  # seconds
-        max_polls = 600  # 10 minutes max
+        poll_interval = 0.5  # Faster polling for more responsive updates
+        max_polls = 1200  # 10 minutes max
 
         for _ in range(max_polls):
             await asyncio.sleep(poll_interval)
 
-            # Refresh research session
+            # Expire all to force fresh data from database
+            session.expire(research)
+            # Re-fetch to get fresh data including steps
             await session.refresh(research)
+            # Explicitly access steps to trigger lazy load
+            _ = research.steps
 
             current_status = research.status
             current_iteration = research.current_iteration
             current_step_count = len(research.steps) if research.steps else 0
 
-            # Check for status change
+            # Check for status change and emit thinking events
             if current_status != last_status:
                 yield _sse_event("status", {
                     "status": current_status.value,
                     "iteration": current_iteration,
                 })
+
+                # Generate thinking event for status change
+                status_messages = {
+                    ResearchStatus.PLANNING: f"🔍 正在分析主题，生成第 {current_iteration} 轮搜索策略...",
+                    ResearchStatus.SEARCHING: "🌐 正在执行搜索查询...",
+                    ResearchStatus.ANALYZING: "📊 正在分析搜索结果...",
+                    ResearchStatus.WAITING_USER: "⏳ 等待确认搜索计划",
+                    ResearchStatus.COMPLETED: "✅ 研究完成",
+                }
+                if current_status in status_messages:
+                    yield _sse_event("thinking", {
+                        "type": current_status.value,
+                        "message": status_messages[current_status],
+                        "iteration": current_iteration,
+                    })
+
                 last_status = current_status
 
             # Check for iteration change
@@ -619,32 +646,99 @@ async def stream_research_progress(
                     "status": current_status.value,
                     "iteration": current_iteration,
                 })
+                yield _sse_event("thinking", {
+                    "type": "new_iteration",
+                    "message": f"🔄 开始第 {current_iteration} 轮研究",
+                    "iteration": current_iteration,
+                })
                 last_iteration = current_iteration
 
-            # Check for new steps
+            # Check for new steps and emit detailed thinking events
             if current_step_count > last_step_count:
                 for step in research.steps[last_step_count:]:
                     if step.type == ResearchStepType.PLAN and step.output_data:
+                        queries = step.output_data.get("queries", [])
+                        reasoning = step.output_data.get("reasoning", "")
+
+                        # Emit reasoning as thinking
+                        if reasoning:
+                            yield _sse_event("thinking", {
+                                "type": "reasoning",
+                                "message": f"💭 {reasoning}",
+                                "iteration": step.iteration,
+                            })
+
+                        yield _sse_event("thinking", {
+                            "type": "plan_generated",
+                            "message": f"📋 已生成 {len(queries)} 个搜索查询",
+                            "iteration": step.iteration,
+                            "queries": [q.get("query", "") for q in queries],
+                        })
+
                         yield _sse_event("plan_ready", {
                             "plan": step.output_data,
                             "iteration": step.iteration,
                         })
+
                     elif step.type == ResearchStepType.SEARCH and step.output_data:
+                        result_count = step.output_data.get("result_count", 0)
+                        new_results = step.output_data.get("new_results", 0)
+
+                        yield _sse_event("thinking", {
+                            "type": "search_complete",
+                            "message": f"🔎 搜索完成，获取 {result_count} 条结果，新增 {new_results} 条",
+                            "iteration": step.iteration,
+                        })
+
                         yield _sse_event("search_progress", {
                             "iteration": step.iteration,
-                            "result_count": step.output_data.get("result_count", 0),
-                            "new_results": step.output_data.get("new_results", 0),
+                            "result_count": result_count,
+                            "new_results": new_results,
                         })
+
                     elif step.type == ResearchStepType.ANALYZE and step.output_data:
+                        summary = step.output_data.get("summary", "")
+                        coverage = step.output_data.get("coverage", 0)
+                        need_more = step.output_data.get("need_more_search", False)
+
+                        yield _sse_event("thinking", {
+                            "type": "analysis_complete",
+                            "message": f"📈 分析完成，覆盖度 {int(coverage * 100)}%",
+                            "iteration": step.iteration,
+                        })
+
+                        if summary:
+                            yield _sse_event("thinking", {
+                                "type": "insight",
+                                "message": f"💡 {summary}",
+                                "iteration": step.iteration,
+                            })
+
+                        if need_more:
+                            yield _sse_event("thinking", {
+                                "type": "decision",
+                                "message": "🔄 需要更多搜索，准备下一轮...",
+                                "iteration": step.iteration,
+                            })
+
                         yield _sse_event("analysis", {
                             "iteration": step.iteration,
-                            "summary": step.output_data.get("summary", ""),
-                            "coverage": step.output_data.get("coverage", 0),
-                            "need_more_search": step.output_data.get("need_more_search", False),
+                            "summary": summary,
+                            "coverage": coverage,
+                            "need_more_search": need_more,
                         })
+
                     elif step.type == ResearchStepType.SUMMARY:
+                        report_length = step.output_data.get("report_length", 0) if step.output_data else 0
+
+                        yield _sse_event("thinking", {
+                            "type": "report_complete",
+                            "message": f"📝 报告生成完成，共 {report_length} 字",
+                            "iteration": step.iteration,
+                        })
+
                         yield _sse_event("report", {
-                            "report_length": step.output_data.get("report_length", 0) if step.output_data else 0,
+                            "report_length": report_length,
                         })
 
                 last_step_count = current_step_count
