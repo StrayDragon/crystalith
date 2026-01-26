@@ -231,6 +231,10 @@ coverage/
 lib-cov
 *.lcov
 .nyc_output
+
+# Playwright
+playwright-report/
+test-results/
 # Build output
 
 dist/
