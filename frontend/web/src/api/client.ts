@@ -31,6 +31,12 @@ import {
   refineV1NotebooksNotebookIdRefinePost,
   refineBatchV1NotebooksNotebookIdRefineBatchPost,
   listWorkspaceToolsV1WorkspaceToolsGet,
+  getLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGet,
+  createDraftV1NotebooksNotebookIdSlidesDraftsPost,
+  getDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGet,
+  updateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatch,
+  updateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePut,
+  updateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPut,
   getTaskV1TasksTaskIdGet,
   listTasksV1NotebooksNotebookIdTasksGet,
   analyzeNotebookV1NotebooksNotebookIdAnalysisGet,
@@ -71,6 +77,11 @@ import type {
   SourceQaResponse,
   QaMessage,
   ConvertSourceQaToSourceResponse,
+  SlideDraftCreate,
+  SlideDraftRead,
+  SlideDraftUpdate,
+  SlideOutlineUpdate,
+  SlideMarkdownUpdate,
 } from './generated';
 
 // Re-export types for convenience
@@ -89,6 +100,9 @@ export type {
   AnalysisResult,
   Citation,
   ContextStatsResponse,
+  SlideDraftRead,
+  SlideOutlineUpdate,
+  SlideMarkdownUpdate,
 };
 
 // Configure client base URL (empty string uses relative URLs)
@@ -651,6 +665,71 @@ export async function convertOutputToSource(
     throw new ApiError(response.status, err.detail || 'Failed to convert output to source');
   }
   return response.json();
+}
+
+// Slides
+export async function getLatestSlidesDraft(notebookId: number): Promise<SlideDraftRead> {
+  const result = await getLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGet({
+    path: { notebook_id: notebookId },
+  });
+  return handleResponse(result);
+}
+
+export async function createSlidesDraft(
+  notebookId: number,
+  payload: SlideDraftCreate,
+): Promise<SlideDraftRead> {
+  const result = await createDraftV1NotebooksNotebookIdSlidesDraftsPost({
+    path: { notebook_id: notebookId },
+    body: payload,
+  });
+  return handleResponse(result);
+}
+
+export async function getSlidesDraft(
+  notebookId: number,
+  slideId: number,
+): Promise<SlideDraftRead> {
+  const result = await getDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGet({
+    path: { notebook_id: notebookId, slide_id: slideId },
+  });
+  return handleResponse(result);
+}
+
+export async function updateSlidesDraft(
+  notebookId: number,
+  slideId: number,
+  payload: SlideDraftUpdate,
+): Promise<SlideDraftRead> {
+  const result = await updateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatch({
+    path: { notebook_id: notebookId, slide_id: slideId },
+    body: payload,
+  });
+  return handleResponse(result);
+}
+
+export async function updateSlidesOutline(
+  notebookId: number,
+  slideId: number,
+  payload: SlideOutlineUpdate,
+): Promise<SlideDraftRead> {
+  const result = await updateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePut({
+    path: { notebook_id: notebookId, slide_id: slideId },
+    body: payload,
+  });
+  return handleResponse(result);
+}
+
+export async function updateSlidesMarkdown(
+  notebookId: number,
+  slideId: number,
+  payload: SlideMarkdownUpdate,
+): Promise<SlideDraftRead> {
+  const result = await updateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPut({
+    path: { notebook_id: notebookId, slide_id: slideId },
+    body: payload,
+  });
+  return handleResponse(result);
 }
 
 // Refine

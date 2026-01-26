@@ -195,11 +195,12 @@ export type ConvertSessionToOutputRequest = {
      * * `MINDMAP`: 主题层级结构
      * * `QUIZ`: 知识检验
      * * `BRIEFING`: 高层摘要
+     * * `SLIDES`: 演示文稿
      * * `PARAGRAPH`: 段落摘要
      * * `BULLETS`: 要点列表
      * * `STRUCTURED`: 结构化摘要
      */
-    output_type?: 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
+    output_type?: 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
 };
 
 /**
@@ -639,11 +640,12 @@ export type OutputRead = {
      * * `MINDMAP`: 主题层级结构
      * * `QUIZ`: 知识检验
      * * `BRIEFING`: 高层摘要
+     * * `SLIDES`: 演示文稿
      * * `PARAGRAPH`: 段落摘要
      * * `BULLETS`: 要点列表
      * * `STRUCTURED`: 结构化摘要
      */
-    type: 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
+    type: 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
     /**
      * Prompt
      */
@@ -679,11 +681,12 @@ export type OutputRead = {
  * * `MINDMAP`: 主题层级结构
  * * `QUIZ`: 知识检验
  * * `BRIEFING`: 高层摘要
+ * * `SLIDES`: 演示文稿
  * * `PARAGRAPH`: 段落摘要
  * * `BULLETS`: 要点列表
  * * `STRUCTURED`: 结构化摘要
  */
-export type OutputTypeInput = 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
+export type OutputTypeInput = 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
 
 /**
  * OutputType
@@ -696,11 +699,12 @@ export type OutputTypeInput = 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' 
  * * `MINDMAP`: 主题层级结构
  * * `QUIZ`: 知识检验
  * * `BRIEFING`: 高层摘要
+ * * `SLIDES`: 演示文稿
  * * `PARAGRAPH`: 段落摘要
  * * `BULLETS`: 要点列表
  * * `STRUCTURED`: 结构化摘要
  */
-export type OutputTypeOutput = 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
+export type OutputTypeOutput = 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
 
 /**
  * QAMessage
@@ -1258,6 +1262,190 @@ export type SessionUpdate = {
 };
 
 /**
+ * SlideDraftCreate
+ */
+export type SlideDraftCreate = {
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Prompt
+     */
+    prompt?: string | null;
+    /**
+     * Engine
+     *
+     * Rendering engine (default: slidev)
+     */
+    engine?: string;
+    /**
+     * Chunk Ids
+     */
+    chunk_ids?: Array<number> | null;
+};
+
+/**
+ * SlideDraftRead
+ */
+export type SlideDraftRead = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Notebook Id
+     */
+    notebook_id: number;
+    /**
+     * Output Id
+     */
+    output_id: number | null;
+    /**
+     * Title
+     */
+    title: string | null;
+    /**
+     * Prompt
+     */
+    prompt: string | null;
+    /**
+     * Engine
+     */
+    engine: string;
+    /**
+     * Chunk Ids
+     */
+    chunk_ids: Array<number> | null;
+    outline: SlideOutline | null;
+    /**
+     * Markdown
+     */
+    markdown: string | null;
+    /**
+     * SlideStage
+     *
+     * 枚举值:
+     *
+     * * `input`: 输入阶段
+     * * `outline`: 大纲阶段
+     * * `markdown`: Markdown 阶段
+     */
+    stage: 'input' | 'outline' | 'markdown';
+    /**
+     * SlideStatus
+     *
+     * 枚举值:
+     *
+     * * `idle`: 空闲
+     * * `running`: 生成中
+     * * `error`: 失败
+     */
+    status: 'idle' | 'running' | 'error';
+    /**
+     * Error Message
+     */
+    error_message: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+};
+
+/**
+ * SlideDraftUpdate
+ */
+export type SlideDraftUpdate = {
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Prompt
+     */
+    prompt?: string | null;
+    /**
+     * Engine
+     */
+    engine?: string | null;
+    /**
+     * Chunk Ids
+     */
+    chunk_ids?: Array<number> | null;
+};
+
+/**
+ * SlideMarkdownUpdate
+ */
+export type SlideMarkdownUpdate = {
+    /**
+     * Markdown
+     */
+    markdown: string;
+};
+
+/**
+ * SlideOutline
+ */
+export type SlideOutline = {
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Slides
+     */
+    slides: Array<SlideOutlineItem>;
+};
+
+/**
+ * SlideOutlineItem
+ */
+export type SlideOutlineItem = {
+    /**
+     * Title
+     */
+    title: string;
+    /**
+     * Bullets
+     */
+    bullets?: Array<string>;
+};
+
+/**
+ * SlideOutlineUpdate
+ */
+export type SlideOutlineUpdate = {
+    outline: SlideOutline;
+};
+
+/**
+ * SlideStage
+ *
+ * 枚举值:
+ *
+ * * `input`: 输入阶段
+ * * `outline`: 大纲阶段
+ * * `markdown`: Markdown 阶段
+ */
+export type SlideStage = 'input' | 'outline' | 'markdown';
+
+/**
+ * SlideStatus
+ *
+ * 枚举值:
+ *
+ * * `idle`: 空闲
+ * * `running`: 生成中
+ * * `error`: 失败
+ */
+export type SlideStatus = 'idle' | 'running' | 'error';
+
+/**
  * SourceBatchDeleteRequest
  */
 export type SourceBatchDeleteRequest = {
@@ -1757,11 +1945,12 @@ export type WorkspaceTool = {
      * * `MINDMAP`: 主题层级结构
      * * `QUIZ`: 知识检验
      * * `BRIEFING`: 高层摘要
+     * * `SLIDES`: 演示文稿
      * * `PARAGRAPH`: 段落摘要
      * * `BULLETS`: 要点列表
      * * `STRUCTURED`: 结构化摘要
      */
-    output_type: 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
+    output_type: 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
     /**
      * Prompt
      */
@@ -2089,11 +2278,12 @@ export type CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostData = {
          * * `MINDMAP`: 主题层级结构
          * * `QUIZ`: 知识检验
          * * `BRIEFING`: 高层摘要
+         * * `SLIDES`: 演示文稿
          * * `PARAGRAPH`: 段落摘要
          * * `BULLETS`: 要点列表
          * * `STRUCTURED`: 结构化摘要
          */
-        output_type: 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
+        output_type: 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
     };
     query?: never;
     url: '/v1/notebooks/{notebook_id}/outputs/{output_type}';
@@ -3415,6 +3605,266 @@ export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvert
 };
 
 export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponse = ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponses[keyof ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponses];
+
+export type GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/slides/drafts/latest';
+};
+
+export type GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetError = GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetErrors[keyof GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetErrors];
+
+export type GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: SlideDraftRead;
+};
+
+export type GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponse = GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponses[keyof GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponses];
+
+export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostData = {
+    body: SlideDraftCreate;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/slides/drafts';
+};
+
+export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostError = CreateDraftV1NotebooksNotebookIdSlidesDraftsPostErrors[keyof CreateDraftV1NotebooksNotebookIdSlidesDraftsPostErrors];
+
+export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: SlideDraftRead;
+};
+
+export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponse = CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponses[keyof CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponses];
+
+export type GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Slide Id
+         */
+        slide_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}';
+};
+
+export type GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetError = GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetErrors[keyof GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetErrors];
+
+export type GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: SlideDraftRead;
+};
+
+export type GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponse = GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponses[keyof GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponses];
+
+export type UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchData = {
+    body: SlideDraftUpdate;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Slide Id
+         */
+        slide_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}';
+};
+
+export type UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchError = UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchErrors[keyof UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchErrors];
+
+export type UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponses = {
+    /**
+     * Successful Response
+     */
+    200: SlideDraftRead;
+};
+
+export type UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponse = UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponses[keyof UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponses];
+
+export type UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutData = {
+    body: SlideOutlineUpdate;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Slide Id
+         */
+        slide_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/outline';
+};
+
+export type UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutError = UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutErrors[keyof UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutErrors];
+
+export type UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponses = {
+    /**
+     * Successful Response
+     */
+    200: SlideDraftRead;
+};
+
+export type UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponse = UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponses[keyof UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponses];
+
+export type UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutData = {
+    body: SlideMarkdownUpdate;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Slide Id
+         */
+        slide_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/markdown';
+};
+
+export type UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutError = UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutErrors[keyof UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutErrors];
+
+export type UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponses = {
+    /**
+     * Successful Response
+     */
+    200: SlideDraftRead;
+};
+
+export type UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponse = UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponses[keyof UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponses];
+
+export type GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Slide Id
+         */
+        slide_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/outline/stream';
+};
+
+export type GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetError = GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetErrors[keyof GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetErrors];
+
+export type GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Slide Id
+         */
+        slide_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/markdown/stream';
+};
+
+export type GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetError = GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetErrors[keyof GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetErrors];
+
+export type GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
 
 export type GetTaskV1TasksTaskIdGetData = {
     body?: never;

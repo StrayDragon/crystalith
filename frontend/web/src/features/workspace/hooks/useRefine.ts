@@ -143,6 +143,15 @@ const DEMO_DEFAULT_TOOLS: WorkspaceTool[] = [
     prompt: '生成简报：背景/发现/建议/下一步。',
     enabled: true,
   },
+  {
+    id: 'slides',
+    label: '演示',
+    description: '演示文稿',
+    tone: 'slate',
+    outputType: 'SLIDES',
+    prompt: '生成演示大纲与 Slidev Markdown。',
+    enabled: true,
+  },
 ];
 
 type OutputQueueStatus = 'queued' | 'running' | 'done' | 'error';
@@ -222,6 +231,20 @@ function buildDemoOutputContent(type: OutputTypeId, prompt: string) {
           points: [{ text: prompt || '示例要点', citations: [] }],
         },
       ],
+    };
+  }
+  if (type === 'SLIDES') {
+    return {
+      title: prompt || '演示主题',
+      engine: 'slidev',
+      outline: {
+        title: prompt || '演示主题',
+        slides: [
+          { title: '概览', bullets: ['要点 1', '要点 2'] },
+          { title: '重点', bullets: ['发现 A', '发现 B'] },
+        ],
+      },
+      markdown: `---\ntitle: ${prompt || '演示主题'}\n---\n\n# ${prompt || '演示主题'}\n\n---\n## 概览\n- 要点 1\n- 要点 2\n`,
     };
   }
   if (type === 'PARAGRAPH') {
@@ -905,6 +928,10 @@ export function useRefine() {
       return;
     }
     const selectedType = overrideType ?? state.outputType;
+    if (selectedType === 'SLIDES') {
+      dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请使用演示工具进行生成。' } });
+      return;
+    }
     const selectedOption = outputTypeOptions.find((item) => item.id === selectedType);
     const promptSource = overrideType ? selectedOption?.prompt : state.refinePrompt || selectedOption?.prompt;
     const prompt = resolveOutputPrompt(selectedType, promptSource);
@@ -941,6 +968,10 @@ export function useRefine() {
     (output: OutputItem) => {
       if (!state.activeNotebookId && !isDemo) {
         dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先创建笔记本。' } });
+        return;
+      }
+      if (output.type === 'SLIDES') {
+        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请使用演示工具进行生成。' } });
         return;
       }
       const prompt = resolveOutputPrompt(output.type, output.prompt);

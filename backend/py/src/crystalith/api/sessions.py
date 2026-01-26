@@ -383,6 +383,12 @@ async def convert_session_to_output(
     session: AsyncSession = Depends(get_db_session),
 ) -> ConvertSessionToOutputResponse:
     """Convert session messages to a studio output/note."""
+    if payload.output_type not in {
+        OutputType.PARAGRAPH,
+        OutputType.BULLETS,
+        OutputType.STRUCTURED,
+    }:
+        raise HTTPException(status_code=400, detail="Unsupported output type for session conversion")
     db_session = await _get_session(session, notebook_id, session_id)
 
     # Get messages

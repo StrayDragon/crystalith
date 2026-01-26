@@ -49,6 +49,22 @@ class ResearchStepStatus(MetaInfoStrEnum):
     SKIPPED = "skipped", XMetaInfo(description="已跳过", display_text="已跳过")
 
 
+class SlideStage(MetaInfoStrEnum):
+    """Stage of a studio slide draft."""
+
+    INPUT = "input", XMetaInfo(description="输入阶段", display_text="输入")
+    OUTLINE = "outline", XMetaInfo(description="大纲阶段", display_text="大纲")
+    MARKDOWN = "markdown", XMetaInfo(description="Markdown 阶段", display_text="Markdown")
+
+
+class SlideStatus(MetaInfoStrEnum):
+    """Status of a studio slide draft."""
+
+    IDLE = "idle", XMetaInfo(description="空闲", display_text="空闲")
+    RUNNING = "running", XMetaInfo(description="生成中", display_text="生成中")
+    ERROR = "error", XMetaInfo(description="失败", display_text="失败")
+
+
 class Notebook(AsyncSqlATableBase):
     __tablename__ = "notebooks"
 
@@ -200,6 +216,65 @@ class Output(AsyncSqlATableBase):
     )
 
     __table_args__ = (sa.Index("ix_outputs_notebook_id_created_at", "notebook_id", "created_at"),)
+
+
+class StudioSlide(AsyncSqlATableBase):
+    __tablename__ = "studio_slides"
+
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True, autoincrement=True)
+    notebook_id: Mapped[int] = mapped_column(
+        sa.Integer,
+        sa.ForeignKey("notebooks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    output_id: Mapped[int | None] = mapped_column(
+        sa.Integer,
+        sa.ForeignKey("outputs.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    title: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
+    prompt: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    engine: Mapped[str] = mapped_column(
+        sa.String(64),
+        nullable=False,
+        server_default=sa.text("'slidev'"),
+    )
+    chunk_ids: Mapped[list[int] | None] = mapped_column(sa.JSON, nullable=True)
+    outline: Mapped[dict[str, Any] | None] = mapped_column(sa.JSON, nullable=True)
+    markdown: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    stage: Mapped[SlideStage] = mapped_column(
+        sa.Enum(SlideStage, name="slide_stage"),
+        nullable=False,
+        server_default=sa.text(f"'{SlideStage.INPUT.value}'"),
+    )
+    status: Mapped[SlideStatus] = mapped_column(
+        sa.Enum(SlideStatus, name="slide_status"),
+        nullable=False,
+        server_default=sa.text(f"'{SlideStatus.IDLE.value}'"),
+    )
+    error_message: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+        onupdate=sa.sql.func.now(),
+    )
+
+    notebook: Mapped["Notebook"] = relationship(
+        lazy="selectin",
+    )
+    output: Mapped["Output"] = relationship(
+        lazy="selectin",
+    )
+
+    __table_args__ = (sa.Index("ix_studio_slides_notebook_id_updated_at", "notebook_id", "updated_at"),)
 
 
 class Source(AsyncSqlATableBase):

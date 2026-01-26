@@ -148,6 +148,7 @@ const STUDIO_TONE_MAP: Record<StudioIconId, StudioTone> = {
   MINDMAP: 'indigo',
   QUIZ: 'blue',
   BRIEFING: 'slate',
+  SLIDES: 'slate',
   REFINE: 'slate',
 };
 
@@ -200,6 +201,13 @@ function renderStudioIcon(id: StudioIconId) {
         <svg {...STUDIO_ICON_PROPS} aria-hidden="true" focusable="false">
           <rect x="5" y="5" width="14" height="8" rx="2" />
           <path d="M9 19h6M12 13v6M8 9h2M12 9h4" />
+        </svg>
+      );
+    case 'SLIDES':
+      return (
+        <svg {...STUDIO_ICON_PROPS} aria-hidden="true" focusable="false">
+          <rect x="4" y="5" width="16" height="10" rx="2" />
+          <path d="M8 19h8M12 15v4M7.5 9.5h9" />
         </svg>
       );
     case 'AUDIO':

@@ -478,7 +478,7 @@
             "required": true,
             "schema": {
               "title": "Output Type",
-              "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+              "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
               "enum": [
                 "FAQ",
                 "GUIDE",
@@ -486,6 +486,7 @@
                 "MINDMAP",
                 "QUIZ",
                 "BRIEFING",
+                "SLIDES",
                 "PARAGRAPH",
                 "BULLETS",
                 "STRUCTURED"
@@ -495,7 +496,7 @@
               "x-enum-class": "OutputType",
               "default": "PARAGRAPH"
             },
-            "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要"
+            "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要"
           }
         ],
         "requestBody": {
@@ -2643,6 +2644,430 @@
         }
       }
     },
+    "/v1/notebooks/{notebook_id}/slides/drafts/latest": {
+      "get": {
+        "tags": [
+          "slides"
+        ],
+        "summary": "Get Latest Draft",
+        "operationId": "get_latest_draft_v1_notebooks__notebook_id__slides_drafts_latest_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlideDraftRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/slides/drafts": {
+      "post": {
+        "tags": [
+          "slides"
+        ],
+        "summary": "Create Draft",
+        "operationId": "create_draft_v1_notebooks__notebook_id__slides_drafts_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlideDraftCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlideDraftRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}": {
+      "get": {
+        "tags": [
+          "slides"
+        ],
+        "summary": "Get Draft",
+        "operationId": "get_draft_v1_notebooks__notebook_id__slides_drafts__slide_id__get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "slide_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Slide Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlideDraftRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "slides"
+        ],
+        "summary": "Update Draft",
+        "operationId": "update_draft_v1_notebooks__notebook_id__slides_drafts__slide_id__patch",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "slide_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Slide Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlideDraftUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlideDraftRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/outline": {
+      "put": {
+        "tags": [
+          "slides"
+        ],
+        "summary": "Update Outline",
+        "operationId": "update_outline_v1_notebooks__notebook_id__slides_drafts__slide_id__outline_put",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "slide_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Slide Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlideOutlineUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlideDraftRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/markdown": {
+      "put": {
+        "tags": [
+          "slides"
+        ],
+        "summary": "Update Markdown",
+        "operationId": "update_markdown_v1_notebooks__notebook_id__slides_drafts__slide_id__markdown_put",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "slide_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Slide Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlideMarkdownUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlideDraftRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/outline/stream": {
+      "get": {
+        "tags": [
+          "slides"
+        ],
+        "summary": "Generate Outline Stream",
+        "operationId": "generate_outline_stream_v1_notebooks__notebook_id__slides_drafts__slide_id__outline_stream_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "slide_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Slide Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/markdown/stream": {
+      "get": {
+        "tags": [
+          "slides"
+        ],
+        "summary": "Generate Markdown Stream",
+        "operationId": "generate_markdown_stream_v1_notebooks__notebook_id__slides_drafts__slide_id__markdown_stream_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "slide_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Slide Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/tasks/{task_id}": {
       "get": {
         "tags": [
@@ -3082,12 +3507,13 @@
               "MINDMAP",
               "QUIZ",
               "BRIEFING",
+              "SLIDES",
               "PARAGRAPH",
               "BULLETS",
               "STRUCTURED"
             ],
             "title": "OutputType",
-            "description": "Type of output to create.\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+            "description": "Type of output to create.\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
             "default": "PARAGRAPH",
             "x-enum-class": "OutputType",
             "x-enum-module": "crystalith.outputs.types"
@@ -3729,12 +4155,13 @@
               "MINDMAP",
               "QUIZ",
               "BRIEFING",
+              "SLIDES",
               "PARAGRAPH",
               "BULLETS",
               "STRUCTURED"
             ],
             "title": "OutputType",
-            "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+            "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
             "x-enum-class": "OutputType",
             "x-enum-module": "crystalith.outputs.types"
           },
@@ -3801,12 +4228,13 @@
           "MINDMAP",
           "QUIZ",
           "BRIEFING",
+          "SLIDES",
           "PARAGRAPH",
           "BULLETS",
           "STRUCTURED"
         ],
         "title": "OutputType",
-        "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+        "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
         "default": "PARAGRAPH",
         "x-enum-class": "OutputType",
         "x-enum-module": "crystalith.outputs.types"
@@ -3820,12 +4248,13 @@
           "MINDMAP",
           "QUIZ",
           "BRIEFING",
+          "SLIDES",
           "PARAGRAPH",
           "BULLETS",
           "STRUCTURED"
         ],
         "title": "OutputType",
-        "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+        "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
         "x-enum-class": "OutputType",
         "x-enum-module": "crystalith.outputs.types"
       },
@@ -4678,6 +5107,346 @@
         "type": "object",
         "title": "SessionUpdate"
       },
+      "SlideDraftCreate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine",
+            "description": "Rendering engine (default: slidev)",
+            "default": "slidev"
+          },
+          "chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Ids"
+          }
+        },
+        "type": "object",
+        "title": "SlideDraftCreate"
+      },
+      "SlideDraftRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "notebook_id": {
+            "type": "integer",
+            "title": "Notebook Id"
+          },
+          "output_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine"
+          },
+          "chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Ids"
+          },
+          "outline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SlideOutline"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "markdown": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Markdown"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "input",
+              "outline",
+              "markdown"
+            ],
+            "title": "SlideStage",
+            "description": "枚举值:\n\n* `input`: 输入阶段\n* `outline`: 大纲阶段\n* `markdown`: Markdown 阶段",
+            "x-enum-class": "SlideStage",
+            "x-enum-module": "crystalith.db.models"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "running",
+              "error"
+            ],
+            "title": "SlideStatus",
+            "description": "枚举值:\n\n* `idle`: 空闲\n* `running`: 生成中\n* `error`: 失败",
+            "x-enum-class": "SlideStatus",
+            "x-enum-module": "crystalith.db.models"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "notebook_id",
+          "output_id",
+          "title",
+          "prompt",
+          "engine",
+          "chunk_ids",
+          "outline",
+          "markdown",
+          "stage",
+          "status",
+          "error_message",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SlideDraftRead"
+      },
+      "SlideDraftUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt"
+          },
+          "engine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine"
+          },
+          "chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Ids"
+          }
+        },
+        "type": "object",
+        "title": "SlideDraftUpdate"
+      },
+      "SlideMarkdownUpdate": {
+        "properties": {
+          "markdown": {
+            "type": "string",
+            "title": "Markdown"
+          }
+        },
+        "type": "object",
+        "required": [
+          "markdown"
+        ],
+        "title": "SlideMarkdownUpdate"
+      },
+      "SlideOutline": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "slides": {
+            "items": {
+              "$ref": "#/components/schemas/SlideOutlineItem"
+            },
+            "type": "array",
+            "title": "Slides"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "slides"
+        ],
+        "title": "SlideOutline"
+      },
+      "SlideOutlineItem": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "bullets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Bullets"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "SlideOutlineItem"
+      },
+      "SlideOutlineUpdate": {
+        "properties": {
+          "outline": {
+            "$ref": "#/components/schemas/SlideOutline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "outline"
+        ],
+        "title": "SlideOutlineUpdate"
+      },
+      "SlideStage": {
+        "type": "string",
+        "enum": [
+          "input",
+          "outline",
+          "markdown"
+        ],
+        "title": "SlideStage",
+        "description": "枚举值:\n\n* `input`: 输入阶段\n* `outline`: 大纲阶段\n* `markdown`: Markdown 阶段",
+        "x-enum-class": "SlideStage",
+        "x-enum-module": "crystalith.db.models"
+      },
+      "SlideStatus": {
+        "type": "string",
+        "enum": [
+          "idle",
+          "running",
+          "error"
+        ],
+        "title": "SlideStatus",
+        "description": "枚举值:\n\n* `idle`: 空闲\n* `running`: 生成中\n* `error`: 失败",
+        "x-enum-class": "SlideStatus",
+        "x-enum-module": "crystalith.db.models"
+      },
       "SourceBatchDeleteRequest": {
         "properties": {
           "source_ids": {
@@ -5443,12 +6212,13 @@
               "MINDMAP",
               "QUIZ",
               "BRIEFING",
+              "SLIDES",
               "PARAGRAPH",
               "BULLETS",
               "STRUCTURED"
             ],
             "title": "OutputType",
-            "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+            "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
             "x-enum-class": "OutputType",
             "x-enum-module": "crystalith.outputs.types"
           },

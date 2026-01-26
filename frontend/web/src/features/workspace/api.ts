@@ -45,6 +45,13 @@ export {
   getOutput,
   deleteOutput,
   convertOutputToSource,
+  // Slides
+  getLatestSlidesDraft,
+  createSlidesDraft,
+  getSlidesDraft,
+  updateSlidesDraft,
+  updateSlidesOutline,
+  updateSlidesMarkdown,
   // Refine
   refinePrompt,
   refineBatch,

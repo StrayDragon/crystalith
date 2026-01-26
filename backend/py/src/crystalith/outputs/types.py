@@ -68,6 +68,13 @@ class OutputType(MetaInfoStrEnum):
         prompt="生成简报：背景/发现/建议/下一步。",
         is_tool=True,
     )
+    SLIDES = "SLIDES", OutputTypeMeta(
+        description="演示文稿",
+        display_text="演示",
+        tone="slate",
+        prompt="生成演示大纲与 Slidev Markdown。",
+        is_tool=True,
+    )
     # Internal output types (not exposed as tools)
     PARAGRAPH = "PARAGRAPH", OutputTypeMeta(
         description="段落摘要",

@@ -28,6 +28,7 @@ from .api import (
     research_router,
     sessions_router,
     sources_router,
+    slides_router,
     tasks_router,
     workspace_tools_router,
 )
@@ -136,7 +137,6 @@ def create_app(
     app.state.db = db
     app.state.vector_store = store
     app.state.task_queue = queue
-
     # Add CORS middleware for frontend development
     app.add_middleware(
         CORSMiddleware,
@@ -166,6 +166,7 @@ def create_app(
     app.include_router(sessions_router)
     app.include_router(messages_router)
     app.include_router(sources_router)
+    app.include_router(slides_router)
     app.include_router(tasks_router)
     app.include_router(workspace_tools_router)
 

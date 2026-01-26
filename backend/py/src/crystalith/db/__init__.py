@@ -10,8 +10,11 @@ from .models import (
     ResearchStepStatus,
     ResearchStepType,
     Session,
+    SlideStage,
+    SlideStatus,
     Source,
     SourceStatus,
+    StudioSlide,
 )
 from .schema import create_all
 
@@ -26,8 +29,11 @@ __all__ = [
     "ResearchStepStatus",
     "ResearchStepType",
     "Session",
+    "SlideStage",
+    "SlideStatus",
     "Source",
     "SourceStatus",
+    "StudioSlide",
     "create_all",
     "create_db_manager",
 ]
