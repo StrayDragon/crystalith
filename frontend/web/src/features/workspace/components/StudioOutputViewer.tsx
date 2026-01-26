@@ -24,6 +24,8 @@ interface StudioOutputViewerProps {
   onToggleFullscreen: () => void;
   onSelectOutput: (outputId: number) => void;
   onDeleteOutput?: (outputId: number) => void;
+  /** 是否提升 z-index（用于从其他 modal 如知识图谱中打开时） */
+  elevated?: boolean;
 }
 
 function resolveOutputTitle(output: OutputItem): string {
@@ -57,6 +59,7 @@ export default function StudioOutputViewer({
   onToggleFullscreen,
   onSelectOutput,
   onDeleteOutput,
+  elevated = false,
 }: StudioOutputViewerProps) {
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
 
@@ -79,7 +82,8 @@ export default function StudioOutputViewer({
     setActiveMenuId(null);
   }, [onDeleteOutput, outputs, selectedOutputId, onClose]);
 
-  const { style: modalStyle } = useLayer('modal');
+  // 使用 slot 参数来提升 z-index（当从其他 modal 如知识图谱中打开时）
+  const { style: modalStyle } = useLayer('modal', elevated ? 10 : 0);
 
   if (!isOpen) return null;
 
