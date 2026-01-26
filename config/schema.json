@@ -1007,6 +1007,16 @@
     "VectorStorageChromaSettings": {
       "description": "Chroma vector storage settings.",
       "properties": {
+        "path": {
+          "default": "./data/chroma",
+          "title": "Path",
+          "type": "string"
+        },
+        "telemetry": {
+          "default": false,
+          "title": "Telemetry",
+          "type": "boolean"
+        },
         "host": {
           "default": "localhost",
           "title": "Host",
@@ -1037,7 +1047,7 @@
       "description": "Vector storage settings.",
       "properties": {
         "provider": {
-          "default": "memory",
+          "default": "chroma",
           "enum": [
             "memory",
             "sqlite",
