@@ -32,6 +32,7 @@ import type { ResearchSessionResponse, ResearchStepResponse } from '../../../api
 import type { SSEEvent } from '../hooks/useResearch';
 import { toast } from '../../../shared/toast';
 import ResearchExportDialog from './ResearchExportDialog';
+import { useLayer } from '../../../shared/layer';
 
 // Typewriter component for streaming text effect
 interface TypewriterTextProps {
@@ -876,171 +877,15 @@ function ResearchDetailPanel({
 
       {/* Results Dialog */}
       {showResultsDialog && session.aggregated_results && (
-        <div
-          className="fixed inset-0 z-[60] bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setShowResultsDialog(false)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Dialog Header */}
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
-              <div>
-                <h3 className="font-semibold text-gray-900">搜索结果</h3>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  共 {session.aggregated_results.length} 条结果，已选 {selectedResults.size} 条
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    if (selectedResults.size === session.aggregated_results!.length) {
-                      setSelectedResults(new Set());
-                    } else {
-                      setSelectedResults(new Set(session.aggregated_results!.map((_, i) => i)));
-                    }
-                  }}
-                  className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1"
-                >
-                  {selectedResults.size === session.aggregated_results.length ? '取消全选' : '全选'}
-                </button>
-                <button
-                  onClick={() => setShowResultsDialog(false)}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <CloseIcon className="w-5 h-5 text-gray-400" />
-                </button>
-              </div>
-            </div>
-
-            {/* Results List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {session.aggregated_results.map((result, index) => (
-                <label
-                  key={index}
-                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    selectedResults.has(index)
-                      ? 'border-blue-300 bg-blue-50/50'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <Checkbox
-                    checked={selectedResults.has(index)}
-                    onChange={() => {
-                      setSelectedResults((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(index)) {
-                          next.delete(index);
-                        } else {
-                          next.add(index);
-                        }
-                        return next;
-                      });
-                    }}
-                    crossOrigin={undefined}
-                    className="mt-0.5"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <a
-                      href={result.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline line-clamp-1"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {result.title || '未知标题'}
-                    </a>
-                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
-                      {result.snippet || '无摘要'}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-gray-400">{result.source || 'web'}</span>
-                      {result.iteration && (
-                        <span className="text-xs text-gray-400">· 第 {result.iteration} 轮</span>
-                      )}
-                    </div>
-                  </div>
-                </label>
-              ))}
-            </div>
-
-            {/* Dialog Footer */}
-            <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
-              <span className="text-sm text-gray-500">
-                选中的链接可以添加为来源
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outlined"
-                  color="gray"
-                  onClick={() => setShowResultsDialog(false)}
-                >
-                  取消
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outlined"
-                  color="blue"
-                  disabled={selectedResults.size === 0}
-                  onClick={() => {
-                    const selectedUrls = Array.from(selectedResults).map(
-                      (i) => session.aggregated_results![i].url
-                    );
-                    navigator.clipboard.writeText(selectedUrls.join('\n'));
-                    toast.success(`已复制 ${selectedUrls.length} 个链接`);
-                  }}
-                >
-                  复制链接
-                </Button>
-                {onAddSourceFromUrl && (
-                  <Button
-                    size="sm"
-                    color="blue"
-                    disabled={selectedResults.size === 0 || isAddingSources}
-                    onClick={async () => {
-                      if (!onAddSourceFromUrl) return;
-                      setIsAddingSources(true);
-                      try {
-                        const selectedUrls = Array.from(selectedResults).map(
-                          (i) => session.aggregated_results![i].url
-                        );
-                        let successCount = 0;
-                        for (const url of selectedUrls) {
-                          try {
-                            await onAddSourceFromUrl(url);
-                            successCount++;
-                          } catch (err) {
-                            console.error('Failed to add source:', url, err);
-                          }
-                        }
-                        if (successCount > 0) {
-                          toast.success(`已添加 ${successCount} 个来源`);
-                        }
-                        if (successCount < selectedUrls.length) {
-                          toast.error(`${selectedUrls.length - successCount} 个来源添加失败`);
-                        }
-                        setShowResultsDialog(false);
-                      } finally {
-                        setIsAddingSources(false);
-                      }
-                    }}
-                  >
-                    {isAddingSources ? (
-                      <>
-                        <Spinner className="h-4 w-4 mr-1" />
-                        添加中...
-                      </>
-                    ) : (
-                      `添加 ${selectedResults.size} 个来源`
-                    )}
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <ResultsDialogContent
+          session={session}
+          selectedResults={selectedResults}
+          setSelectedResults={setSelectedResults}
+          onClose={() => setShowResultsDialog(false)}
+          onAddSourceFromUrl={onAddSourceFromUrl}
+          isAddingSources={isAddingSources}
+          setIsAddingSources={setIsAddingSources}
+        />
       )}
 
       {/* Export Dialog */}
@@ -1050,6 +895,202 @@ function ResearchDetailPanel({
           onClose={() => setShowExportDialog(false)}
         />
       )}
+    </div>
+  );
+}
+
+// Extracted Results Dialog component to use hooks
+interface ResultsDialogContentProps {
+  session: ResearchSessionResponse;
+  selectedResults: Set<number>;
+  setSelectedResults: React.Dispatch<React.SetStateAction<Set<number>>>;
+  onClose: () => void;
+  onAddSourceFromUrl?: (url: string) => Promise<void>;
+  isAddingSources: boolean;
+  setIsAddingSources: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+function ResultsDialogContent({
+  session,
+  selectedResults,
+  setSelectedResults,
+  onClose,
+  onAddSourceFromUrl,
+  isAddingSources,
+  setIsAddingSources,
+}: ResultsDialogContentProps) {
+  const { style: modalStyle } = useLayer('modal');
+
+  const handleCopyLinks = () => {
+    const selectedUrls = Array.from(selectedResults).map(
+      (i) => session.aggregated_results![i].url
+    );
+    navigator.clipboard.writeText(selectedUrls.join('\n'));
+    toast.success(`已复制 ${selectedUrls.length} 个链接`);
+  };
+
+  const handleAddSources = async () => {
+    if (!onAddSourceFromUrl) return;
+    setIsAddingSources(true);
+    try {
+      const selectedUrls = Array.from(selectedResults).map(
+        (i) => session.aggregated_results![i].url
+      );
+      let successCount = 0;
+      for (const url of selectedUrls) {
+        try {
+          await onAddSourceFromUrl(url);
+          successCount++;
+        } catch (err) {
+          console.error('Failed to add source:', url, err);
+        }
+      }
+      if (successCount > 0) {
+        toast.success(`已添加 ${successCount} 个来源`);
+      }
+      if (successCount < selectedUrls.length) {
+        toast.error(`${selectedUrls.length - successCount} 个来源添加失败`);
+      }
+      onClose();
+    } finally {
+      setIsAddingSources(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4"
+      style={modalStyle}
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Dialog Header */}
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+          <div>
+            <h3 className="font-semibold text-gray-900">搜索结果</h3>
+            <p className="text-sm text-gray-500 mt-0.5">
+              共 {session.aggregated_results!.length} 条结果，已选 {selectedResults.size} 条
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (selectedResults.size === session.aggregated_results!.length) {
+                  setSelectedResults(new Set());
+                } else {
+                  setSelectedResults(new Set(session.aggregated_results!.map((_, i) => i)));
+                }
+              }}
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1"
+            >
+              {selectedResults.size === session.aggregated_results!.length ? '取消全选' : '全选'}
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <CloseIcon className="w-5 h-5 text-gray-400" />
+            </button>
+          </div>
+        </div>
+
+        {/* Results List */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {session.aggregated_results!.map((result, index) => (
+            <label
+              key={index}
+              className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                selectedResults.has(index)
+                  ? 'border-blue-300 bg-blue-50/50'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <Checkbox
+                checked={selectedResults.has(index)}
+                onChange={() => {
+                  setSelectedResults((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(index)) {
+                      next.delete(index);
+                    } else {
+                      next.add(index);
+                    }
+                    return next;
+                  });
+                }}
+                crossOrigin={undefined}
+                className="mt-0.5"
+              />
+              <div className="flex-1 min-w-0">
+                <a
+                  href={result.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline line-clamp-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {result.title || '未知标题'}
+                </a>
+                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                  {result.snippet || '无摘要'}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-gray-400">{result.source || 'web'}</span>
+                  {result.iteration && (
+                    <span className="text-xs text-gray-400">· 第 {result.iteration} 轮</span>
+                  )}
+                </div>
+              </div>
+            </label>
+          ))}
+        </div>
+
+        {/* Dialog Footer */}
+        <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
+          <span className="text-sm text-gray-500">
+            选中的链接可以添加为来源
+          </span>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outlined"
+              color="gray"
+              onClick={onClose}
+            >
+              取消
+            </Button>
+            <Button
+              size="sm"
+              variant="outlined"
+              color="blue"
+              disabled={selectedResults.size === 0}
+              onClick={handleCopyLinks}
+            >
+              复制链接
+            </Button>
+            {onAddSourceFromUrl && (
+              <Button
+                size="sm"
+                color="blue"
+                disabled={selectedResults.size === 0 || isAddingSources}
+                onClick={handleAddSources}
+              >
+                {isAddingSources ? (
+                  <>
+                    <Spinner className="h-4 w-4 mr-1" />
+                    添加中...
+                  </>
+                ) : (
+                  `添加 ${selectedResults.size} 个来源`
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

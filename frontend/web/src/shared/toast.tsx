@@ -5,6 +5,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import InfoIcon from '@mui/icons-material/Info';
 import WarningIcon from '@mui/icons-material/Warning';
+import { useLayer } from './layer';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -99,11 +100,15 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
 
 export function ToastContainer() {
   const { toasts, removeToast } = useToastStore();
+  const { style } = useLayer('toast');
 
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-[99999] flex flex-col gap-2 max-w-sm">
+    <div
+      className="fixed top-4 right-4 flex flex-col gap-2 max-w-sm"
+      style={style}
+    >
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} onClose={() => removeToast(t.id)} />
       ))}
