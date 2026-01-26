@@ -1324,6 +1324,58 @@
         }
       }
     },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/cancel": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Cancel Research",
+        "description": "Cancel an ongoing research session.",
+        "operationId": "cancel_research_v1_notebooks__notebook_id__research__research_id__cancel_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/notebooks/{notebook_id}/research/{research_id}/start": {
       "post": {
         "tags": [
@@ -1412,6 +1464,68 @@
                 "schema": {}
               },
               "text/event-stream": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/export": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Export Research",
+        "description": "Export research report to a source or note.\n\n- export_type='source': Creates a new markdown source with the report\n- export_type='note': Creates a new note (output) with the report",
+        "operationId": "export_research_v1_notebooks__notebook_id__research__research_id__export_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportResearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportResearchResponse"
+                }
+              }
             }
           },
           "422": {
@@ -3112,6 +3226,72 @@
           "chunk_count"
         ],
         "title": "ConvertToSourceResponse"
+      },
+      "ExportResearchRequest": {
+        "properties": {
+          "export_type": {
+            "type": "string",
+            "title": "Export Type",
+            "description": "Export type: 'source' or 'note'",
+            "default": "source"
+          },
+          "include_report": {
+            "type": "boolean",
+            "title": "Include Report",
+            "description": "Include final report",
+            "default": true
+          },
+          "include_results": {
+            "type": "boolean",
+            "title": "Include Results",
+            "description": "Include aggregated results as links",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ExportResearchRequest",
+        "description": "Request model for exporting research results."
+      },
+      "ExportResearchResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "note_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "ExportResearchResponse",
+        "description": "Response model for export operation."
       },
       "ExtractorInfoResponse": {
         "properties": {

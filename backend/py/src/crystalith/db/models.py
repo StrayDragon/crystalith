@@ -339,6 +339,18 @@ class ResearchSession(AsyncSqlATableBase):
     )
     final_report: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
 
+    # Lock and timeout management
+    locked_at: Mapped[datetime.datetime | None] = mapped_column(
+        sa.DateTime,
+        nullable=True,
+        default=None,
+    )
+    lock_expires_at: Mapped[datetime.datetime | None] = mapped_column(
+        sa.DateTime,
+        nullable=True,
+        default=None,
+    )
+
     created_at: Mapped[datetime.datetime] = mapped_column(
         sa.DateTime,
         nullable=False,
