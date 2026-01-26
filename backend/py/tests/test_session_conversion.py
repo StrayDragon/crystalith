@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from httpx import AsyncClient
 
-from conftest import create_notebook, create_session
+from crystalith.tests_support import create_notebook, create_session
 
 
 @pytest.mark.asyncio
