@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import {
   createResearchSessionV1NotebooksNotebookIdResearchPost,
   listResearchSessionsV1NotebooksNotebookIdResearchGet,
@@ -90,6 +90,7 @@ interface UseResearchResult {
   approveSearchPlan: (researchId: number, feedback?: string) => Promise<void>;
   skipIteration: (researchId: number) => Promise<void>;
   finishResearch: (researchId: number) => Promise<void>;
+  cancelResearch: (researchId: number) => Promise<void>;
   subscribeToSSE: (researchId: number) => void;
   unsubscribeFromSSE: () => void;
   clearEvents: () => void;
@@ -104,6 +105,10 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
   const [sseEvents, setSSEEvents] = useState<SSEEvent[]>([]);
 
   const eventSourceRef = useRef<EventSource | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptRef = useRef(0);
+  const maxReconnectAttempts = 5;
+  const baseReconnectDelay = 1000; // 1 second
 
   const fetchSessions = useCallback(async () => {
     if (!notebookId) return;
@@ -278,32 +283,78 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     [notebookId]
   );
 
-  const subscribeToSSE = useCallback(
-    (researchId: number) => {
+  // Cancel research - uses finish endpoint for now (cancel endpoint requires backend restart)
+  const cancelResearch = useCallback(
+    async (researchId: number) => {
       if (!notebookId) return;
+      setError('');
+      try {
+        // Use finish endpoint to cancel
+        const response = await finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost({
+          path: { notebook_id: notebookId, research_id: researchId },
+        });
+        if (response.data) {
+          setActiveSession(response.data);
+          // Close SSE connection when cancelled
+          if (reconnectTimeoutRef.current) {
+            clearTimeout(reconnectTimeoutRef.current);
+            reconnectTimeoutRef.current = null;
+          }
+          if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+            eventSourceRef.current = null;
+          }
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '取消研究失败');
+      }
+    },
+    [notebookId]
+  );
+
+  const subscribeToSSE = useCallback(
+    (researchId: number, isReconnect = false) => {
+      if (!notebookId) return;
+
+      // Clear any pending reconnect timeout
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
 
       // Close existing connection
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
       }
 
+      // Reset reconnect attempts on fresh subscription
+      if (!isReconnect) {
+        reconnectAttemptRef.current = 0;
+      }
+
       const url = `/v1/notebooks/${notebookId}/research/${researchId}/stream`;
       const eventSource = new EventSource(url);
       eventSourceRef.current = eventSource;
 
+      // Track current research ID for reconnection
+      const currentResearchId = researchId;
+
       const handleEvent = (eventType: SSEEvent['type']) => (event: MessageEvent) => {
+        // Reset reconnect attempts on successful event
+        reconnectAttemptRef.current = 0;
+
         try {
           const data = JSON.parse(event.data);
           setSSEEvents((prev) => [...prev, { type: eventType, data } as SSEEvent]);
 
           // Update session state from SSE events for real-time progress
-          if (eventType === 'status' && data.iteration && data.status) {
-            // Update activeSession
+          if (eventType === 'status' && data.status) {
+            // Update activeSession with iteration if provided
             setActiveSession((prev) => {
               if (!prev) return prev;
               return {
                 ...prev,
-                current_iteration: data.iteration,
+                current_iteration: data.iteration ?? prev.current_iteration,
                 status: data.status,
               };
             });
@@ -311,7 +362,47 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
             setSessions((prev) =>
               prev.map((s) =>
                 s.id === researchId
-                  ? { ...s, current_iteration: data.iteration, status: data.status }
+                  ? {
+                      ...s,
+                      current_iteration: data.iteration ?? s.current_iteration,
+                      status: data.status
+                    }
+                  : s
+              )
+            );
+          }
+
+          // Update iteration from thinking events that include new_iteration type
+          if (eventType === 'thinking' && data.type === 'new_iteration' && data.iteration) {
+            setActiveSession((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                current_iteration: data.iteration,
+              };
+            });
+            setSessions((prev) =>
+              prev.map((s) =>
+                s.id === researchId
+                  ? { ...s, current_iteration: data.iteration }
+                  : s
+              )
+            );
+          }
+
+          // Update from analysis events which include iteration info
+          if (eventType === 'analysis' && data.iteration) {
+            setActiveSession((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                current_iteration: data.iteration,
+              };
+            });
+            setSessions((prev) =>
+              prev.map((s) =>
+                s.id === researchId
+                  ? { ...s, current_iteration: data.iteration }
                   : s
               )
             );
@@ -338,18 +429,73 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       eventSource.addEventListener('thinking', handleEvent('thinking'));
 
       eventSource.onerror = () => {
-        setSSEEvents((prev) => [...prev, { type: 'error', data: { message: '连接中断' } }]);
         eventSource.close();
+        eventSourceRef.current = null;
+
+        // Check if we should attempt reconnection
+        if (reconnectAttemptRef.current < maxReconnectAttempts) {
+          reconnectAttemptRef.current += 1;
+          const delay = baseReconnectDelay * Math.pow(2, reconnectAttemptRef.current - 1);
+
+          console.log(`SSE connection lost, attempting reconnect ${reconnectAttemptRef.current}/${maxReconnectAttempts} in ${delay}ms`);
+
+          setSSEEvents((prev) => [...prev, {
+            type: 'error',
+            data: { message: `连接中断，${Math.round(delay / 1000)}秒后重连...` }
+          }]);
+
+          reconnectTimeoutRef.current = setTimeout(() => {
+            // Check if session is still active before reconnecting
+            const session = sessions.find(s => s.id === currentResearchId);
+            if (session && ['planning', 'searching', 'analyzing', 'waiting_user'].includes(session.status)) {
+              subscribeToSSE(currentResearchId, true);
+            }
+          }, delay);
+        } else {
+          setSSEEvents((prev) => [...prev, {
+            type: 'error',
+            data: { message: '连接失败，请刷新页面重试' }
+          }]);
+        }
+      };
+
+      // Handle successful connection
+      eventSource.onopen = () => {
+        if (isReconnect) {
+          console.log('SSE reconnected successfully');
+          // Refresh session data after reconnect
+          fetchSession(researchId);
+        }
       };
     },
-    [notebookId, fetchSession, fetchSessions]
+    [notebookId, fetchSession, fetchSessions, sessions]
   );
 
   const unsubscribeFromSSE = useCallback(() => {
+    // Clear any pending reconnect timeout
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    // Reset reconnect attempts
+    reconnectAttemptRef.current = 0;
+    // Close connection
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+    };
   }, []);
 
   const clearEvents = useCallback(() => {
@@ -370,6 +516,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     approveSearchPlan,
     skipIteration,
     finishResearch,
+    cancelResearch,
     subscribeToSSE,
     unsubscribeFromSSE,
     clearEvents,
