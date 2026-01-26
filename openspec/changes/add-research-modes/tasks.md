@@ -121,18 +121,18 @@
 
 ### 3.3 交互 API 端点
 
-- [ ] 3.3.1 实现 `POST /v1/notebooks/{id}/research/{rid}/approve`
+- [x] 3.3.1 实现 `POST /v1/notebooks/{id}/research/{rid}/approve`
   - 批准当前搜索计划
   - 恢复图执行
   - 验证: 正确继续到 ExecuteSearches
-- [ ] 3.3.2 实现 `POST /v1/notebooks/{id}/research/{rid}/modify`
+- [x] 3.3.2 实现 `POST /v1/notebooks/{id}/research/{rid}/modify`
   - 修改搜索计划
   - 输入: modified_plan
   - 验证: 使用修改后的计划
-- [ ] 3.3.3 实现 `POST /v1/notebooks/{id}/research/{rid}/skip`
+- [x] 3.3.3 实现 `POST /v1/notebooks/{id}/research/{rid}/skip`
   - 跳过当前轮
   - 验证: 进入下一轮或生成报告
-- [ ] 3.3.4 实现 `POST /v1/notebooks/{id}/research/{rid}/finish`
+- [x] 3.3.4 实现 `POST /v1/notebooks/{id}/research/{rid}/finish`
   - 提前结束研究
   - 验证: 直接生成报告
 
@@ -182,8 +182,9 @@
   - 点击展开详情面板
 - [x] 4.3.4 实现快捷操作菜单 [···]
   - 暂停、取消、设置
-- [ ] 4.3.5 集成到 SearchResultsQueue
+- [x] 4.3.5 集成到 SearchResultsQueue
   - 与现有搜索结果卡片共存
+  - 在 SourcesPanel 中直接显示 ResearchCapsule 组件
 
 ### 4.4 ResearchDetailPanel 组件
 
@@ -219,12 +220,13 @@
 
 ### 4.6 搜索模式选择器
 
-- [ ] 4.6.1 修改 SourcesPanel 添加模式选择
+- [x] 4.6.1 修改 SourcesPanel 添加模式选择
   - Fast Research / Deep Research 切换
-  - 使用 Segment Control 或 Tab 样式
-- [ ] 4.6.2 Deep Research 模式集成
+  - 使用下拉菜单样式（已有实现）
+- [x] 4.6.2 Deep Research 模式集成
   - 调用 useResearch
   - 创建 ResearchCapsule
+  - 启动研究会话并订阅 SSE
 - [ ] 4.6.3 保存用户偏好
   - localStorage 持久化
 

@@ -100,3 +100,4 @@ class ResearchDeps:
     on_plan_ready: Any | None = None
     on_search_result: Any | None = None
     on_analysis: Any | None = None
+    on_thinking: Any | None = None  # Callback for streaming thinking content

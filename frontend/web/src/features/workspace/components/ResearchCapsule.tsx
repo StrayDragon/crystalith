@@ -1,11 +1,10 @@
-import { memo, useCallback } from 'react';
-import { Chip, Progress, Tooltip, IconButton } from '@material-tailwind/react';
+import { memo, useCallback, useState } from 'react';
+import { Chip, Progress, IconButton, Menu, MenuHandler, MenuList, MenuItem } from '@material-tailwind/react';
 import {
   Science as ScienceIcon,
-  Pause as PauseIcon,
   PlayArrow as PlayIcon,
   Delete as DeleteIcon,
-  MoreVert as MoreIcon,
+  MoreVert as MoreVertIcon,
 } from '@mui/icons-material';
 import type { ResearchSessionListItem, ResearchStatus } from '../../../api/client';
 
@@ -30,6 +29,7 @@ const STATUS_CONFIG: Record<
 };
 
 function ResearchCapsule({ session, onClick, onStart, onDelete, isExpanded }: ResearchCapsuleProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const config = STATUS_CONFIG[session.status] || { label: session.status, color: 'gray' };
   const progress = Math.round((session.current_iteration / session.max_iterations) * 100);
   const isActive = ['planning', 'searching', 'analyzing', 'waiting_user'].includes(session.status);
@@ -37,6 +37,7 @@ function ResearchCapsule({ session, onClick, onStart, onDelete, isExpanded }: Re
   const handleStart = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
+      setMenuOpen(false);
       onStart?.();
     },
     [onStart]
@@ -45,10 +46,15 @@ function ResearchCapsule({ session, onClick, onStart, onDelete, isExpanded }: Re
   const handleDelete = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
+      setMenuOpen(false);
       onDelete?.();
     },
     [onDelete]
   );
+
+  const handleMenuClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
 
   return (
     <div
@@ -93,35 +99,29 @@ function ResearchCapsule({ session, onClick, onStart, onDelete, isExpanded }: Re
         )}
       </div>
 
-      {/* Actions - visible on hover */}
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-        {session.status === 'planning' && onStart && (
-          <Tooltip content="开始研究">
-            <IconButton size="sm" variant="text" color="blue" onClick={handleStart}>
-              <PlayIcon style={{ fontSize: 16 }} />
+      {/* Three-dot menu - visible on hover */}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={handleMenuClick}>
+        <Menu open={menuOpen} handler={setMenuOpen} placement="bottom-end">
+          <MenuHandler>
+            <IconButton size="sm" variant="text" color="gray">
+              <MoreVertIcon style={{ fontSize: 18 }} />
             </IconButton>
-          </Tooltip>
-        )}
-        {!isActive && onDelete && (
-          <Tooltip content="删除">
-            <IconButton size="sm" variant="text" color="red" onClick={handleDelete}>
-              <DeleteIcon style={{ fontSize: 16 }} />
-            </IconButton>
-          </Tooltip>
-        )}
-        <Tooltip content="更多选项">
-          <IconButton
-            size="sm"
-            variant="text"
-            color="gray"
-            onClick={(e) => {
-              e.stopPropagation();
-              // TODO: Show menu
-            }}
-          >
-            <MoreIcon style={{ fontSize: 16 }} />
-          </IconButton>
-        </Tooltip>
+          </MenuHandler>
+          <MenuList className="min-w-[140px]">
+            {session.status === 'planning' && onStart && (
+              <MenuItem onClick={handleStart} className="flex items-center gap-2">
+                <PlayIcon style={{ fontSize: 16 }} className="text-blue-500" />
+                <span>开始研究</span>
+              </MenuItem>
+            )}
+            {onDelete && (
+              <MenuItem onClick={handleDelete} className="flex items-center gap-2 text-red-500">
+                <DeleteIcon style={{ fontSize: 16 }} />
+                <span>{isActive ? '取消并删除' : '删除'}</span>
+              </MenuItem>
+            )}
+          </MenuList>
+        </Menu>
       </div>
     </div>
   );
