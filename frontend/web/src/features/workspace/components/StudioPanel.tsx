@@ -58,7 +58,7 @@ interface StudioPanelProps {
   outputsError: string;
   onRetryOutputs: () => void;
   onGenerateOutput: (type?: OutputTypeId, modelId?: string | null) => void;
-  onOpenSlides?: () => void;
+  onOpenSlides?: (options?: { autoGenerate?: boolean }) => void;
   onDeleteOutput: (outputId: number) => void;
   onSelectOutput: (outputId: number) => void;
   onSelectOutputFullscreen?: (outputId: number) => void;
@@ -279,6 +279,10 @@ function StudioPanel({
 
   const handleToolConfigOpen = useCallback((event: React.MouseEvent<HTMLElement>, toolType: OutputTypeId) => {
     event.stopPropagation();
+    if (toolType === 'SLIDES') {
+      onOpenSlides?.({ autoGenerate: false });
+      return;
+    }
     setActiveToolType(toolType);
     setToolConfigOpen(true);
     // Reset config
@@ -287,7 +291,7 @@ function StudioPanel({
     setConfigTopic('');
     setConfigModelId(null);
     setToolConfig(null);
-  }, []);
+  }, [onOpenSlides]);
 
   const handleToolConfigClose = useCallback(() => {
     setToolConfigOpen(false);
@@ -451,7 +455,7 @@ function StudioPanel({
                   onClick={() => {
                     if (isDisabled) return;
                     if (isSlidesTool) {
-                      onOpenSlides?.();
+                      onOpenSlides?.({ autoGenerate: true });
                       return;
                     }
                     onGenerateOutput(tool.outputType);
@@ -472,21 +476,19 @@ function StudioPanel({
                       {tool.badge}
                     </span>
                   )}
-                  {!isSlidesTool && (
-                    <span
-                      role="button"
-                      tabIndex={-1}
-                      className="flex-shrink-0 h-4 w-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        handleToolConfigOpen(e as unknown as React.MouseEvent<HTMLElement>, tool.outputType);
-                      }}
-                      aria-label="自定义工具参数"
-                    >
-                      <EditIcon sx={{ fontSize: 10 }} />
-                    </span>
-                  )}
+                  <span
+                    role="button"
+                    tabIndex={-1}
+                    className="flex-shrink-0 h-4 w-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleToolConfigOpen(e as unknown as React.MouseEvent<HTMLElement>, tool.outputType);
+                    }}
+                    aria-label="自定义工具参数"
+                  >
+                    <EditIcon sx={{ fontSize: 10 }} />
+                  </span>
                 </button>
               </Tooltip>
             );

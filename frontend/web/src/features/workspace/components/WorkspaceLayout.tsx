@@ -98,6 +98,7 @@ export default function WorkspaceLayout() {
   const [graphSessionMessages, setGraphSessionMessages] = useState<ChatMessage[]>([]);
   const [graphSessionMessagesLoading, setGraphSessionMessagesLoading] = useState(false);
   const [isSlidesDialogOpen, setIsSlidesDialogOpen] = useState(false);
+  const [slidesOpenMode, setSlidesOpenMode] = useState<'default' | 'generate' | 'config'>('default');
 
   const notebooks = useNotebooks();
   const sessions = useSessions();
@@ -552,7 +553,10 @@ export default function WorkspaceLayout() {
             outputsError={refine.outputsError}
             onRetryOutputs={refine.retryOutputs}
             onGenerateOutput={refine.onGenerateOutput}
-            onOpenSlides={() => setIsSlidesDialogOpen(true)}
+            onOpenSlides={(options) => {
+              setSlidesOpenMode(options?.autoGenerate ? 'generate' : 'config');
+              setIsSlidesDialogOpen(true);
+            }}
             onDeleteOutput={refine.onDeleteOutput}
             onSelectOutput={handleOpenOutputViewer}
             onSelectOutputFullscreen={handleOpenOutputViewerFullscreen}
@@ -581,11 +585,15 @@ export default function WorkspaceLayout() {
 
       <SlidesStudioDialog
         open={isSlidesDialogOpen}
-        onClose={() => setIsSlidesDialogOpen(false)}
+        onClose={() => {
+          setIsSlidesDialogOpen(false);
+          setSlidesOpenMode('default');
+        }}
         notebookId={state.activeNotebookId}
         selectedChunkIds={selectedChunkIds}
         isDemo={isDemo}
         onOutputsUpdated={refine.retryOutputs}
+        openMode={slidesOpenMode}
       />
 
       {/* Knowledge Graph View (Full Screen Overlay) */}

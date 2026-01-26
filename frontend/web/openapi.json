@@ -2995,6 +2995,22 @@
               "type": "integer",
               "title": "Slide Id"
             }
+          },
+          {
+            "name": "model_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model Id"
+            }
           }
         ],
         "responses": {
@@ -3043,6 +3059,22 @@
             "schema": {
               "type": "integer",
               "title": "Slide Id"
+            }
+          },
+          {
+            "name": "model_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model Id"
             }
           }
         ],
@@ -5150,6 +5182,16 @@
               }
             ],
             "title": "Chunk Ids"
+          },
+          "generation_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SlideGenerationConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -5237,6 +5279,16 @@
             ],
             "title": "Markdown"
           },
+          "generation_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SlideGenerationConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "stage": {
             "type": "string",
             "enum": [
@@ -5294,6 +5346,7 @@
           "chunk_ids",
           "outline",
           "markdown",
+          "generation_config",
           "stage",
           "status",
           "error_message",
@@ -5350,10 +5403,115 @@
               }
             ],
             "title": "Chunk Ids"
+          },
+          "generation_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SlideGenerationConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "title": "SlideDraftUpdate"
+      },
+      "SlideGenerationConfig": {
+        "properties": {
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "audience": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audience"
+          },
+          "structure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Structure"
+          },
+          "tone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tone"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "density": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Density"
+          },
+          "theme_preset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Theme Preset"
+          },
+          "frontmatter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frontmatter"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SlideGenerationConfig"
       },
       "SlideMarkdownUpdate": {
         "properties": {

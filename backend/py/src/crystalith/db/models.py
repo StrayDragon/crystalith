@@ -243,6 +243,7 @@ class StudioSlide(AsyncSqlATableBase):
     chunk_ids: Mapped[list[int] | None] = mapped_column(sa.JSON, nullable=True)
     outline: Mapped[dict[str, Any] | None] = mapped_column(sa.JSON, nullable=True)
     markdown: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    generation_config: Mapped[dict[str, Any] | None] = mapped_column(sa.JSON, nullable=True)
     stage: Mapped[SlideStage] = mapped_column(
         sa.Enum(SlideStage, name="slide_stage"),
         nullable=False,
