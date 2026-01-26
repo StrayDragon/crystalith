@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react';
+import { Tooltip } from '@material-tailwind/react';
+import { Hub as HubIcon } from '@mui/icons-material';
 
 import type { AsyncStatus } from '../../../shared/types';
 import type { Notebook } from '../types';
@@ -18,6 +20,7 @@ interface WorkspaceHeaderProps {
   onUpdateNotebook?: (notebookId: number, name: string) => Promise<boolean>;
   onDeleteNotebook?: (notebookId: number) => Promise<boolean>;
   onSelectNotebook: (notebookId: number | null) => void;
+  onOpenKnowledgeGraph?: () => void;
 }
 
 export default function WorkspaceHeader({
@@ -34,6 +37,7 @@ export default function WorkspaceHeader({
   onUpdateNotebook,
   onDeleteNotebook,
   onSelectNotebook,
+  onOpenKnowledgeGraph,
 }: WorkspaceHeaderProps) {
   const [notebookSwitcherOpen, setNotebookSwitcherOpen] = useState(false);
   const notebookSearchRef = useRef<HTMLInputElement | null>(null);
@@ -85,8 +89,21 @@ export default function WorkspaceHeader({
         />
       </div>
 
-      {/* Right Section - Avatar */}
+      {/* Right Section - Actions & Avatar */}
       <div className="flex items-center gap-2">
+        {/* Knowledge Graph Button */}
+        {onOpenKnowledgeGraph && (
+          <Tooltip content="知识图谱">
+            <button
+              type="button"
+              onClick={onOpenKnowledgeGraph}
+              className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 text-gray-600 hover:text-blue-600 transition-colors"
+            >
+              <HubIcon style={{ fontSize: 18 }} />
+            </button>
+          </Tooltip>
+        )}
+
         {/* User Avatar */}
         <div className="p-0.5 border-2 border-gray-100 rounded-full cursor-pointer">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
