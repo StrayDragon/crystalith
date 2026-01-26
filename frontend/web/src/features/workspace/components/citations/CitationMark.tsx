@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 import type { Citation } from '../../types';
+import { useLayer } from '../../../../shared/layer';
 
 interface CitationMarkProps {
   index: number;
@@ -16,6 +17,7 @@ export default function CitationMark({ index, citation, onHover, onJump }: Citat
   const buttonRef = useRef<HTMLButtonElement>(null);
   const chunkId = citation.chunkId ?? null;
   const pageLabel = citation.pageNumber ? `第 ${citation.pageNumber} 页` : null;
+  const { style: tooltipStyle } = useLayer('tooltip');
 
   useEffect(() => {
     if (isOpen && buttonRef.current) {
@@ -68,8 +70,9 @@ export default function CitationMark({ index, citation, onHover, onJump }: Citat
 
   const tooltip = isOpen && position ? (
     <div
-      className="fixed z-[99999] w-[280px] max-w-[90vw] rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-xl pointer-events-none"
+      className="fixed w-[280px] max-w-[90vw] rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-xl pointer-events-none"
       style={{
+        ...tooltipStyle,
         top: position.top,
         left: position.left,
       }}

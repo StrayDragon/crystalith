@@ -43,6 +43,7 @@ import type { ApiSourceSearchResult, SourceItem } from '../types';
 import type { SearchQueueItem } from '../hooks/useSources';
 import { useResearch } from '../hooks/useResearch';
 import { toast } from '../../../shared/toast';
+import { LAYER_LEVELS } from '../../../shared/layer';
 import SourceDetailDialog from './SourceDetailDialog';
 import type { ChatMessage } from './SourceDetailDialog';
 import SearchResultsQueue from './SearchResultsQueue';
@@ -711,7 +712,8 @@ function SourcesPanel({
       {/* Research Detail Panel - Modal Overlay */}
       {researchDetailOpen && research.activeSession && (
         <div
-          className="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+          style={{ zIndex: LAYER_LEVELS.modal }}
           onClick={(e) => {
             if (e.target === e.currentTarget) handleCloseResearchDetail();
           }}
@@ -750,7 +752,8 @@ function SourcesPanel({
       {/* Research History Dialog */}
       {showResearchHistory && (
         <div
-          className="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+          style={{ zIndex: LAYER_LEVELS.modal }}
           onClick={() => setShowResearchHistory(false)}
         >
           <div

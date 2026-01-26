@@ -16,6 +16,7 @@ import {
 } from '@mui/icons-material';
 
 import type { SearchResultItem } from './SearchResultCard';
+import { useLayer } from '../../../shared/layer';
 
 interface AddSearchResultDialogProps {
   open: boolean;
@@ -157,6 +158,7 @@ export default function AddSearchResultDialog({
 
   const modeLabel = mode === 'fetch' ? '获取内容' : '保存链接';
   const ModeIcon = mode === 'fetch' ? CloudDownloadIcon : LinkIcon;
+  const { style: modalStyle } = useLayer('modal');
 
   // 不渲染如果不是打开状态
   if (!open) return null;
@@ -164,7 +166,8 @@ export default function AddSearchResultDialog({
   // 使用 createPortal 直接渲染到 body，完全控制 z-index
   return createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center"
+      className="fixed inset-0 flex items-center justify-center"
+      style={modalStyle}
       role="dialog"
       aria-modal="true"
     >

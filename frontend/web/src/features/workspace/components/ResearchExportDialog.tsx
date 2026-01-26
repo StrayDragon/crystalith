@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import type { ResearchSessionResponse } from '../../../api/client';
 import { toast } from '../../../shared/toast';
+import { useLayer } from '../../../shared/layer';
 
 interface ResearchExportDialogProps {
   session: ResearchSessionResponse;
@@ -48,6 +49,7 @@ function ResearchExportDialog({
   const [exportTarget, setExportTarget] = useState<ExportTarget>('source');
   const [isExporting, setIsExporting] = useState(false);
   const [relevanceFilter, setRelevanceFilter] = useState<'all' | 'high'>('all');
+  const { style: modalStyle } = useLayer('modal');
 
   // Build exportable items from session data
   const exportItems = useMemo<ExportItem[]>(() => {
@@ -157,7 +159,7 @@ function ResearchExportDialog({
   }, [selectedItems, exportTarget, session, referenceItems, onExportComplete, onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4" style={modalStyle}>
       <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-2xl animate-in zoom-in-95 fade-in duration-200">
         {/* Header */}
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">

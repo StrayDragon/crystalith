@@ -40,6 +40,7 @@ import { getToolConfig, type ToolConfigResponse } from '../api';
 import { ModelSelector } from './ModelSelector';
 import type { OutputItem, OutputTypeId, WorkspaceTool } from '../types';
 import { formatRelativeTime } from '../utils';
+import { LAYER_LEVELS } from '../../../shared/layer';
 
 interface StudioPanelProps {
   tools: WorkspaceTool[];
@@ -608,7 +609,7 @@ function StudioPanel({
                           <MoreHorizIcon fontSize="small" />
                         </IconButton>
                       </MenuHandler>
-                      <MenuList className="p-1 min-w-[140px] z-50">
+                      <MenuList className="p-1 min-w-[140px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
                         {onSelectOutputFullscreen && note.outputId && (
                           <MenuItem
                             onClick={() => onSelectOutputFullscreen(note.outputId!)}
