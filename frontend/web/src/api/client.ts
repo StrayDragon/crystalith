@@ -34,6 +34,16 @@ import {
   getTaskV1TasksTaskIdGet,
   listTasksV1NotebooksNotebookIdTasksGet,
   analyzeNotebookV1NotebooksNotebookIdAnalysisGet,
+  // Research API functions
+  createResearchSessionV1NotebooksNotebookIdResearchPost,
+  listResearchSessionsV1NotebooksNotebookIdResearchGet,
+  getResearchSessionV1NotebooksNotebookIdResearchResearchIdGet,
+  deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete,
+  startResearchV1NotebooksNotebookIdResearchResearchIdStartPost,
+  approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost,
+  modifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPost,
+  skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost,
+  finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost,
 } from './generated';
 
 import type {
@@ -770,3 +780,27 @@ export async function getModel(modelId: string): Promise<ModelRead> {
 
 // Export ApiError for use in other modules
 export { ApiError };
+
+// Re-export research API functions
+export {
+  createResearchSessionV1NotebooksNotebookIdResearchPost,
+  listResearchSessionsV1NotebooksNotebookIdResearchGet,
+  getResearchSessionV1NotebooksNotebookIdResearchResearchIdGet,
+  deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete,
+  startResearchV1NotebooksNotebookIdResearchResearchIdStartPost,
+  approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost,
+  modifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPost,
+  skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost,
+  finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost,
+};
+
+// Re-export research types
+export type {
+  ResearchSessionCreate,
+  ResearchSessionListItem,
+  ResearchSessionResponse,
+  ResearchStepResponse,
+  ResearchStatus,
+  ResearchStepType,
+  ResearchStepStatus,
+} from './generated';

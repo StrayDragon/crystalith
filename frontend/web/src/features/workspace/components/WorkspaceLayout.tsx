@@ -292,8 +292,10 @@ export default function WorkspaceLayout() {
 
   const isDemo = notebooks.connectionState === 'demo';
 
+  // NOTE: Mobile responsive layout is deferred - keeping 3-column horizontal layout always
+  // TODO: Add mobile/tablet responsive layout when adapting for mobile devices
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50/50 gap-3 sm:gap-4 p-3 sm:p-4 lg:p-6 lg:h-screen lg:overflow-hidden text-gray-900">
+    <div className="flex flex-col h-screen bg-gray-50/50 gap-4 p-4 overflow-hidden text-gray-900">
       <WorkspaceHeader
         notebooks={notebooks.notebooks}
         activeNotebookId={notebooks.activeNotebookId}
@@ -318,15 +320,12 @@ export default function WorkspaceLayout() {
 
       <main
         ref={mainRef}
-        className={`flex-1 min-h-0 grid gap-y-3 lg:gap-y-0 ${isResizing ? 'cursor-col-resize select-none' : ''}`}
+        className={`flex-1 min-h-0 grid ${isResizing ? 'cursor-col-resize select-none' : ''}`}
         aria-label="三栏工作区"
         style={{
-          gridTemplateColumns:
-            typeof window !== 'undefined' && window.innerWidth >= 1024
-              ? expandedPanel
-                ? '1fr' // Single column when expanded
-                : `minmax(220px, var(--sources-width, ${DEFAULT_SOURCES_WIDTH}px)) ${RESIZE_HANDLE_WIDTH}px minmax(0, 1fr) ${RESIZE_HANDLE_WIDTH}px minmax(240px, var(--studio-width, ${DEFAULT_STUDIO_WIDTH}px))`
-              : '1fr',
+          gridTemplateColumns: expandedPanel
+            ? '1fr' // Single column when expanded
+            : `minmax(220px, var(--sources-width, ${DEFAULT_SOURCES_WIDTH}px)) ${RESIZE_HANDLE_WIDTH}px minmax(0, 1fr) ${RESIZE_HANDLE_WIDTH}px minmax(240px, var(--studio-width, ${DEFAULT_STUDIO_WIDTH}px))`,
         }}
       >
         {/* Sources Panel */}
@@ -378,6 +377,7 @@ export default function WorkspaceLayout() {
             availableExtractors={sources.availableExtractors}
             defaultExtractor={sources.defaultExtractor}
             onConvertSourceQAToSource={sources.convertSourceQAToSource}
+            notebookId={state.activeNotebookId ?? undefined}
           />
         </section>
         )}
@@ -387,7 +387,7 @@ export default function WorkspaceLayout() {
         <button
           type="button"
           className={`items-center justify-center w-3 cursor-col-resize bg-transparent hover:bg-transparent group ${
-            expandedPanel ? 'hidden' : 'hidden lg:flex'
+            expandedPanel ? 'hidden' : 'flex'
           }`}
           aria-label="调整来源宽度"
           onPointerDown={(event) => {
@@ -481,7 +481,7 @@ export default function WorkspaceLayout() {
         {!expandedPanel && (
         <button
           type="button"
-          className="items-center justify-center w-3 cursor-col-resize bg-transparent hover:bg-transparent group hidden lg:flex"
+          className="items-center justify-center w-3 cursor-col-resize bg-transparent hover:bg-transparent group flex"
           aria-label="调整 Studio 宽度"
           onPointerDown={(event) => {
             if (window.innerWidth < 1024 || expandedPanel) return;
