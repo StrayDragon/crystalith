@@ -3,7 +3,9 @@ import { IconButton, Tooltip } from '@material-tailwind/react';
 
 import ChatPanel from './ChatPanel';
 import KnowledgeGraphView from './KnowledgeGraphView';
+import SessionDetailDialog from './SessionDetailDialog';
 import SessionSwitcher from './SessionSwitcher';
+import SourceDetailDialog from './SourceDetailDialog';
 import SourcesPanel from './SourcesPanel';
 import StudioPanel from './StudioPanel';
 import WorkspaceHeader from './WorkspaceHeader';
@@ -14,8 +16,9 @@ import { useNotebooks } from '../hooks/useNotebooks';
 import { useRefine } from '../hooks/useRefine';
 import { useSessions } from '../hooks/useSessions';
 import { useSources } from '../hooks/useSources';
-import type { SourceItem } from '../types';
-import { buildSourceSummaryPrompt } from '../utils';
+import type { ChatMessage, SourceItem } from '../types';
+import { buildSourceSummaryPrompt, normalizeMessage } from '../utils';
+import { listMessages } from '../api';
 import { IconFullscreen, IconExitFullscreen } from './Icons';
 
 const StudioOutputViewer = lazy(() => import('./StudioOutputViewer'));
@@ -80,6 +83,18 @@ export default function WorkspaceLayout() {
   });
 
   const [isGraphViewOpen, setIsGraphViewOpen] = useState(false);
+
+  // Source detail dialog state for graph view
+  const [graphSourceDetailOpen, setGraphSourceDetailOpen] = useState(false);
+  const [graphSelectedSource, setGraphSelectedSource] = useState<SourceItem | null>(null);
+  const [graphSourceDetailFullscreen, setGraphSourceDetailFullscreen] = useState(false);
+
+  // Session detail dialog state for graph view
+  const [graphSessionDetailOpen, setGraphSessionDetailOpen] = useState(false);
+  const [graphSelectedSession, setGraphSelectedSession] = useState<{ id: number; title: string; createdAt: string; updatedAt: string } | null>(null);
+  const [graphSessionDetailFullscreen, setGraphSessionDetailFullscreen] = useState(false);
+  const [graphSessionMessages, setGraphSessionMessages] = useState<ChatMessage[]>([]);
+  const [graphSessionMessagesLoading, setGraphSessionMessagesLoading] = useState(false);
 
   const notebooks = useNotebooks();
   const sessions = useSessions();
@@ -214,6 +229,41 @@ export default function WorkspaceLayout() {
   const handleToggleExpand = useCallback((panel: ExpandedPanel) => {
     setExpandedPanel((prev) => (prev === panel ? null : panel));
   }, []);
+
+  // Handle source click from graph view - open source detail dialog
+  const handleGraphSourceClick = useCallback((source: SourceItem) => {
+    setGraphSelectedSource(source);
+    setGraphSourceDetailOpen(true);
+    setGraphSourceDetailFullscreen(false);
+  }, []);
+
+  // Handle session click from graph view - open session detail dialog
+  const handleGraphSessionClick = useCallback(async (session: { id: number; title?: string; createdAt?: string; updatedAt?: string }) => {
+    setGraphSelectedSession({
+      id: session.id,
+      title: session.title || `对话 ${session.id}`,
+      createdAt: session.createdAt || '',
+      updatedAt: session.updatedAt || '',
+    });
+    setGraphSessionDetailOpen(true);
+    setGraphSessionDetailFullscreen(false);
+    setGraphSessionMessages([]);
+
+    // Fetch messages for the selected session
+    if (notebooks.activeNotebookId) {
+      setGraphSessionMessagesLoading(true);
+      try {
+        const response = await listMessages(notebooks.activeNotebookId, session.id);
+        const normalizedMessages = response.map(normalizeMessage);
+        setGraphSessionMessages(normalizedMessages);
+      } catch {
+        // Silently fail - dialog will show empty state
+        setGraphSessionMessages([]);
+      } finally {
+        setGraphSessionMessagesLoading(false);
+      }
+    }
+  }, [notebooks.activeNotebookId]);
 
   // ESC key to collapse expanded panel
   useEffect(() => {
@@ -525,12 +575,47 @@ export default function WorkspaceLayout() {
           error={analysis.error}
           onClose={() => setIsGraphViewOpen(false)}
           onRefresh={analysis.fetchAnalysis}
-          onSourceClick={handleSourceClick}
+          onSourceClick={handleGraphSourceClick}
           onOutputClick={(output) => handleOpenOutputViewer(output.id)}
-          onSessionClick={(session) => sessions.setActiveSessionId(session.id)}
+          onSessionClick={handleGraphSessionClick}
           isDemo={analysis.isDemo}
         />
       )}
+
+      {/* Source Detail Dialog for Graph View */}
+      <SourceDetailDialog
+        open={graphSourceDetailOpen}
+        source={graphSelectedSource}
+        onClose={() => {
+          setGraphSourceDetailOpen(false);
+          setGraphSourceDetailFullscreen(false);
+        }}
+        isFullscreen={graphSourceDetailFullscreen}
+        onToggleFullscreen={() => setGraphSourceDetailFullscreen((prev) => !prev)}
+        onSaveQAAsSource={sources.convertSourceQAToSource ? async (sourceTitle: string, messages) => {
+          if (!graphSelectedSource) return;
+          const qaMessages = messages.map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+          }));
+          await sources.convertSourceQAToSource(graphSelectedSource.id, qaMessages);
+        } : undefined}
+      />
+
+      {/* Session Detail Dialog for Graph View */}
+      <SessionDetailDialog
+        open={graphSessionDetailOpen}
+        session={graphSelectedSession}
+        messages={graphSessionMessages}
+        onClose={() => {
+          setGraphSessionDetailOpen(false);
+          setGraphSessionDetailFullscreen(false);
+          setGraphSessionMessages([]);
+        }}
+        isFullscreen={graphSessionDetailFullscreen}
+        onToggleFullscreen={() => setGraphSessionDetailFullscreen((prev) => !prev)}
+        isLoading={graphSessionMessagesLoading}
+      />
     </div>
   );
 }
