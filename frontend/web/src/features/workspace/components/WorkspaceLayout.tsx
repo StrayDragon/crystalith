@@ -71,6 +71,7 @@ export default function WorkspaceLayout() {
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [isViewerFullscreen, setIsViewerFullscreen] = useState(false);
   const [viewerOutputId, setViewerOutputId] = useState<number | null>(null);
+  const [isViewerElevated, setIsViewerElevated] = useState(false);
   const [isSessionSwitcherOpen, setIsSessionSwitcherOpen] = useState(false);
   const [expandedPanel, setExpandedPanel] = useState<ExpandedPanel>(null);
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -201,16 +202,18 @@ export default function WorkspaceLayout() {
     void sources.retrySources();
   }, [notebooks.notebooksError, notebooks.retryNotebooks, sources.retrySources]);
 
-  const handleOpenOutputViewer = useCallback((outputId: number) => {
+  const handleOpenOutputViewer = useCallback((outputId: number, elevated = false) => {
     setViewerOutputId(outputId);
     setIsViewerOpen(true);
     setIsViewerFullscreen(false);
+    setIsViewerElevated(elevated);
   }, []);
 
   const handleOpenOutputViewerFullscreen = useCallback((outputId: number) => {
     setViewerOutputId(outputId);
     setIsViewerOpen(true);
     setIsViewerFullscreen(true);
+    setIsViewerElevated(false);
   }, []);
 
   const handleCloseOutputViewer = useCallback(() => {
@@ -560,6 +563,7 @@ export default function WorkspaceLayout() {
           onToggleFullscreen={handleToggleOutputViewer}
           onSelectOutput={handleSelectOutput}
           onDeleteOutput={refine.onDeleteOutput}
+          elevated={isViewerElevated}
         />
       </Suspense>
 
@@ -576,7 +580,7 @@ export default function WorkspaceLayout() {
           onClose={() => setIsGraphViewOpen(false)}
           onRefresh={analysis.fetchAnalysis}
           onSourceClick={handleGraphSourceClick}
-          onOutputClick={(output) => handleOpenOutputViewer(output.id)}
+          onOutputClick={(output) => handleOpenOutputViewer(output.id, true)}
           onSessionClick={handleGraphSessionClick}
           isDemo={analysis.isDemo}
         />
