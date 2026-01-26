@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -33,10 +33,14 @@ import {
   Chat as ChatIcon,
   Warning as WarningIcon,
   OpenInNew as OpenInNewIcon,
+  CenterFocusStrong as ResetLayoutIcon,
 } from '@mui/icons-material';
 
 import type { AnalysisResult } from '../../../api/client';
 import type { SourceItem, OutputItem, SessionSummary, ChatMessage } from '../types';
+
+// Cache for node positions (survives component unmount within session)
+const nodePositionsCache = new Map<string, { x: number; y: number }>();
 
 // Node type definitions
 type KnowledgeNodeType = 'source' | 'output' | 'session';
@@ -551,27 +555,55 @@ function KnowledgeGraphView({
     // User can close graph manually via the close button
   }, [selectedItem, onSourceClick, onOutputClick, onSessionClick]);
 
-  const { nodes: initialNodes, edges: initialEdges } = useMemo(
-    () =>
-      buildGraphData(
-        sources,
-        outputs,
-        sessions,
-        messages,
-        analysis,
-        visibility,
-        selectedId,
-        handleSourceClick,
-        handleOutputClick,
-        handleSessionClick
-      ),
-    [sources, outputs, sessions, messages, analysis, visibility, selectedId, handleSourceClick, handleOutputClick, handleSessionClick]
-  );
+  // Apply cached positions to nodes
+  const applyPositionsFromCache = useCallback((nodesData: Node<KnowledgeNodeData>[]) => {
+    return nodesData.map((node) => {
+      const cachedPosition = nodePositionsCache.get(node.id);
+      if (cachedPosition) {
+        return { ...node, position: cachedPosition };
+      }
+      return node;
+    });
+  }, []);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
+    const { nodes, edges } = buildGraphData(
+      sources,
+      outputs,
+      sessions,
+      messages,
+      analysis,
+      visibility,
+      selectedId,
+      handleSourceClick,
+      handleOutputClick,
+      handleSessionClick
+    );
+    // Apply cached positions to initial nodes
+    return { nodes: applyPositionsFromCache(nodes), edges };
+    // Only regenerate initial layout when data actually changes, not just selectedId
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sources, outputs, sessions, messages, analysis, visibility, handleSourceClick, handleOutputClick, handleSessionClick, applyPositionsFromCache]);
+
+  const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  useEffect(() => {
+  // Wrap onNodesChange to save positions to cache
+  const onNodesChange = useCallback((changes: Parameters<typeof onNodesChangeBase>[0]) => {
+    onNodesChangeBase(changes);
+    // Save position changes to cache
+    for (const change of changes) {
+      if (change.type === 'position' && change.position) {
+        nodePositionsCache.set(change.id, { x: change.position.x, y: change.position.y });
+      }
+    }
+  }, [onNodesChangeBase]);
+
+  // Reset positions function
+  const handleResetPositions = useCallback(() => {
+    // Clear cache
+    nodePositionsCache.clear();
+    // Rebuild graph with fresh positions
     const { nodes: newNodes, edges: newEdges } = buildGraphData(
       sources,
       outputs,
@@ -587,6 +619,49 @@ function KnowledgeGraphView({
     setNodes(newNodes);
     setEdges(newEdges);
   }, [sources, outputs, sessions, messages, analysis, visibility, selectedId, handleSourceClick, handleOutputClick, handleSessionClick, setNodes, setEdges]);
+
+  // Track if we need full rebuild (data changed) vs just selection update
+  const prevDataRef = useRef({ sources, outputs, sessions, analysis, visibility });
+
+  useEffect(() => {
+    const prevData = prevDataRef.current;
+    const dataChanged =
+      prevData.sources !== sources ||
+      prevData.outputs !== outputs ||
+      prevData.sessions !== sessions ||
+      prevData.analysis !== analysis ||
+      prevData.visibility !== visibility;
+
+    if (dataChanged) {
+      // Full rebuild when actual data changes, but preserve cached positions
+      const { nodes: newNodes, edges: newEdges } = buildGraphData(
+        sources,
+        outputs,
+        sessions,
+        messages,
+        analysis,
+        visibility,
+        selectedId,
+        handleSourceClick,
+        handleOutputClick,
+        handleSessionClick
+      );
+      setNodes(applyPositionsFromCache(newNodes));
+      setEdges(newEdges);
+      prevDataRef.current = { sources, outputs, sessions, analysis, visibility };
+    } else {
+      // Only update selection state, preserve positions
+      setNodes((currentNodes) =>
+        currentNodes.map((node) => ({
+          ...node,
+          data: {
+            ...node.data,
+            isSelected: node.id === selectedId,
+          },
+        }))
+      );
+    }
+  }, [sources, outputs, sessions, messages, analysis, visibility, selectedId, handleSourceClick, handleOutputClick, handleSessionClick, setNodes, setEdges, applyPositionsFromCache]);
 
   const toggleVisibility = (type: keyof VisibilityState) => {
     setVisibility((prev) => ({ ...prev, [type]: !prev[type] }));
@@ -685,6 +760,16 @@ function KnowledgeGraphView({
             </Tooltip>
           </div>
 
+          <Tooltip content="重置布局">
+            <IconButton
+              variant="text"
+              size="sm"
+              onClick={handleResetPositions}
+              className="text-gray-300 hover:text-white hover:bg-gray-700"
+            >
+              <ResetLayoutIcon />
+            </IconButton>
+          </Tooltip>
           <Tooltip content="刷新分析">
             <IconButton
               variant="text"
