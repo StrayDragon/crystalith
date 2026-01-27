@@ -16,7 +16,12 @@ import {
 } from '@mui/icons-material';
 
 import type { OutputPlugin, OutputContent } from './index';
-import { MindmapViewer } from '../components/MindmapViewer';
+import FlashcardViewer from '../components/FlashcardViewer';
+import GuideChecklist from '../components/GuideChecklist';
+import MindmapViewer from '../components/MindmapViewer';
+import QuizRunner from '../components/QuizRunner';
+import ReportViewer from '../components/ReportViewer';
+import TimelineViewer from '../components/TimelineViewer';
 
 // --- Shared Components ---
 
@@ -59,12 +64,7 @@ export const faqPlugin: OutputPlugin = {
     return (
       <div className="StructuredOutputFaq">
         {isFallback && <FallbackWarning />}
-        {items.map((item: any, index: number) => (
-          <div key={index} className="StructuredOutputFaqItem">
-            <div className="StructuredOutputFaqQuestion">{item.question || '问题'}</div>
-            <div className="StructuredOutputFaqAnswer">{item.answer || '暂无回答'}</div>
-          </div>
-        ))}
+        <FlashcardViewer items={items} />
       </div>
     );
   },
@@ -101,17 +101,7 @@ export const guidePlugin: OutputPlugin = {
     return (
       <div className="StructuredOutputGuide">
         {isFallback && <FallbackWarning />}
-        {modules.map((module: any, index: number) => (
-          <div key={index} className="StructuredOutputGuideModule">
-            <div className="StructuredOutputGuideTitle">{module.title || '模块'}</div>
-            <div className="StructuredOutputGuideObjective">{module.objective?.text || '暂无目标'}</div>
-            {Array.isArray(module.key_points) && (
-              <ul className="StructuredOutputList">
-                {module.key_points.map((item: any, i: number) => <li key={i}>{item.text || '要点'}</li>)}
-              </ul>
-            )}
-          </div>
-        ))}
+        <GuideChecklist modules={modules} />
       </div>
     );
   },
@@ -141,18 +131,10 @@ export const timelinePlugin: OutputPlugin = {
     const events = (content as any).events;
     if (!Array.isArray(events)) return <div className="OutputError">无效的时间轴数据</div>;
     return (
-      <>
+      <div className="StructuredOutputTimeline">
         {isFallback && <FallbackWarning />}
-        <ul className="StructuredOutputTimeline">
-          {events.map((event: any, index: number) => (
-            <li key={index} className="StructuredOutputTimelineItem">
-              <div className="StructuredOutputTimelineDate">{event.date || '时间'}</div>
-              <div className="StructuredOutputTimelineEvent">{event.event || '事件'}</div>
-              <div className="StructuredOutputTimelineDesc">{event.description || '暂无描述'}</div>
-            </li>
-          ))}
-        </ul>
-      </>
+        <TimelineViewer events={events} />
+      </div>
     );
   },
   validateContent: (content) => Array.isArray((content as any).events),
@@ -220,17 +202,7 @@ export const quizPlugin: OutputPlugin = {
     return (
       <div className="StructuredOutputQuiz">
         {isFallback && <FallbackWarning />}
-        {questions.map((question: any, index: number) => (
-          <div key={index} className="StructuredOutputQuizItem">
-            <div className="StructuredOutputQuizQuestion">{question.question || '问题'}</div>
-            {Array.isArray(question.options) && question.options.length > 0 && (
-              <ul className="StructuredOutputList">
-                {question.options.map((option: string) => <li key={option}>{option}</li>)}
-              </ul>
-            )}
-            <div className="StructuredOutputQuizAnswer">{question.answer || '暂无答案'}</div>
-          </div>
-        ))}
+        <QuizRunner questions={questions} />
       </div>
     );
   },
@@ -262,16 +234,7 @@ export const briefingPlugin: OutputPlugin = {
     return (
       <div className="StructuredOutputBriefing">
         {isFallback && <FallbackWarning />}
-        {sections.map((section: any, index: number) => (
-          <div key={index} className="StructuredOutputBriefingSection">
-            <div className="StructuredOutputBriefingHeading">{section.heading || '要点'}</div>
-            {Array.isArray(section.points) && (
-              <ul className="StructuredOutputList">
-                {section.points.map((point: any, i: number) => <li key={i}>{point.text || '内容'}</li>)}
-              </ul>
-            )}
-          </div>
-        ))}
+        <ReportViewer sections={sections} />
       </div>
     );
   },
