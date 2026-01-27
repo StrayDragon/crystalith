@@ -1,19 +1,17 @@
 default:
     @just -l
 
-sync:
-    uv sync
-
-install: sync
-
 dev:
     uv run python main.py
 
-test:
-    uv run pytest
+packages-test:
+    #!/bin/bash
+    for package in packages/*; do
+        uv run --project $package pytest $package/tests
+    done
 
-test-cl-logs:
-    uv run --project packages/cl-logs --group dev pytest packages/cl-logs/tests
+test: packages-test
+    uv run pytest
 
 db-init:
     uv run scripts/db_init.py
