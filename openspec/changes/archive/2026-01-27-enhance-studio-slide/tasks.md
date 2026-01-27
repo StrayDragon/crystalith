@@ -29,4 +29,4 @@
 - [x] 5.1 后端：slides config 读写与默认值测试
 - [x] 5.2 后端：prompt 组装、主题预设/frontmatter 生成与模型选择测试
 - [x] 5.3 前端：演示卡片一键生成、配置保存、主题预设选择与 frontmatter 覆盖测试
-- [ ] 5.4 手动验证：选择引用 -> 一键生成 -> 编辑大纲 -> 生成 Markdown -> 主题/frontmatter 生效 -> 预览
+- [x] 5.4 手动验证：选择引用 -> 一键生成 -> 编辑大纲 -> 生成 Markdown -> 主题/frontmatter 生效 -> 预览
