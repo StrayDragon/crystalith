@@ -202,6 +202,22 @@ export function formatStructuredOutputForCopy(output: OutputItem): string {
       })
       .join('\n\n');
   }
+  if (output.type === 'SLIDES') {
+    if (typeof (content as any).markdown === 'string') {
+      return (content as any).markdown;
+    }
+    if ((content as any).outline && Array.isArray((content as any).outline.slides)) {
+      const outline = (content as any).outline;
+      const lines: string[] = [outline.title || '演示'];
+      for (const slide of outline.slides) {
+        lines.push(slide.title || '幻灯片');
+        if (Array.isArray(slide.bullets)) {
+          lines.push(...slide.bullets.map((item: string) => formatOutputLine(`- ${item}`, 1)));
+        }
+      }
+      return lines.join('\n');
+    }
+  }
   if (output.type === 'PARAGRAPH' && typeof (content as any).text === 'string') {
     return (content as any).text;
   }

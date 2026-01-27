@@ -72,6 +72,8 @@ async def create_output(
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
+    if output_type == OutputType.SLIDES:
+        raise HTTPException(status_code=400, detail="Use slides endpoints for SLIDES output")
 
     deps = StudioDeps(
         settings=settings,
@@ -288,6 +290,25 @@ def _extract_text_from_output(output: Output) -> str:
             for rec in content["recommendations"]:
                 parts.append(f"- {rec}")
 
+    elif output_type == OutputType.SLIDES:
+        if "markdown" in content and isinstance(content["markdown"], str):
+            parts.append(content["markdown"])
+        elif "outline" in content and isinstance(content["outline"], dict):
+            outline = content["outline"]
+            title = outline.get("title") or "演示"
+            parts.append(f"# {title}")
+            slides = outline.get("slides", [])
+            if isinstance(slides, list):
+                for slide in slides:
+                    if not isinstance(slide, dict):
+                        continue
+                    slide_title = slide.get("title") or "幻灯片"
+                    parts.append(f"## {slide_title}")
+                    bullets = slide.get("bullets", [])
+                    if isinstance(bullets, list):
+                        for bullet in bullets:
+                            parts.append(f"- {bullet}")
+
     elif output_type == OutputType.STRUCTURED:
         # Generic structured content
         if "sections" in content:
@@ -392,6 +413,7 @@ async def convert_output_to_source(
         OutputType.MINDMAP: "思维导图",
         OutputType.QUIZ: "测验",
         OutputType.BRIEFING: "简报",
+        OutputType.SLIDES: "演示",
         OutputType.PARAGRAPH: "段落笔记",
         OutputType.BULLETS: "要点笔记",
         OutputType.STRUCTURED: "结构化笔记",

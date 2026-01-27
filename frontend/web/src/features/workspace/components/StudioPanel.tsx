@@ -34,6 +34,7 @@ import {
   ContentCopy as CopyIcon,
   DriveFileMove as ConvertIcon,
   OpenInFull as OpenInFullIcon,
+  Slideshow as SlidesIcon,
 } from '@mui/icons-material';
 
 import { getToolConfig, type ToolConfigResponse } from '../api';
@@ -57,6 +58,7 @@ interface StudioPanelProps {
   outputsError: string;
   onRetryOutputs: () => void;
   onGenerateOutput: (type?: OutputTypeId, modelId?: string | null) => void;
+  onOpenSlides?: () => void;
   onDeleteOutput: (outputId: number) => void;
   onSelectOutput: (outputId: number) => void;
   onSelectOutputFullscreen?: (outputId: number) => void;
@@ -91,6 +93,7 @@ const DEFAULT_TYPE_LABELS: Record<OutputTypeId, string> = {
   MINDMAP: '思维导图',
   QUIZ: '测验',
   BRIEFING: '报告',
+  SLIDES: '演示',
   PARAGRAPH: '段落',
   BULLETS: '要点',
   STRUCTURED: '结构化',
@@ -181,6 +184,8 @@ function resolveTone(type: OutputTypeId): StudioTone {
       return 'green';
     case 'TIMELINE':
       return 'rose';
+    case 'SLIDES':
+      return 'slate';
     default:
       return 'slate';
   }
@@ -206,6 +211,8 @@ function getToolIcon(type: OutputTypeId) {
       return <GuideIcon {...props} />;
     case 'TIMELINE':
       return <TimelineIcon {...props} />;
+    case 'SLIDES':
+      return <SlidesIcon {...props} />;
     default:
       return <SaveIcon {...props} />;
   }
@@ -221,6 +228,7 @@ function StudioPanel({
   outputsError,
   onRetryOutputs,
   onGenerateOutput,
+  onOpenSlides,
   onDeleteOutput,
   onSelectOutput,
   onSelectOutputFullscreen,
@@ -414,6 +422,7 @@ function StudioPanel({
         <div className={`grid gap-2 ${isFullscreen ? 'grid-cols-3 sm:grid-cols-4' : 'grid-cols-2'}`}>
           {tools.map((tool, index) => {
             const isDisabled = !tool.enabled || !tool.outputType;
+            const isSlidesTool = tool.outputType === 'SLIDES';
             const tone = tool.tone as StudioTone || 'slate';
             const colors = TONE_COLORS[tone];
 
@@ -441,6 +450,10 @@ function StudioPanel({
                   }}
                   onClick={() => {
                     if (isDisabled) return;
+                    if (isSlidesTool) {
+                      onOpenSlides?.();
+                      return;
+                    }
                     onGenerateOutput(tool.outputType);
                   }}
                 >
@@ -459,20 +472,21 @@ function StudioPanel({
                       {tool.badge}
                     </span>
                   )}
-                  {/* Config button - inline, hidden by default */}
-                  <span
-                    role="button"
-                    tabIndex={-1}
-                    className="flex-shrink-0 h-4 w-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      handleToolConfigOpen(e as unknown as React.MouseEvent<HTMLElement>, tool.outputType);
-                    }}
-                    aria-label="自定义工具参数"
-                  >
-                    <EditIcon sx={{ fontSize: 10 }} />
-                  </span>
+                  {!isSlidesTool && (
+                    <span
+                      role="button"
+                      tabIndex={-1}
+                      className="flex-shrink-0 h-4 w-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        handleToolConfigOpen(e as unknown as React.MouseEvent<HTMLElement>, tool.outputType);
+                      }}
+                      aria-label="自定义工具参数"
+                    >
+                      <EditIcon sx={{ fontSize: 10 }} />
+                    </span>
+                  )}
                 </button>
               </Tooltip>
             );

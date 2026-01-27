@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IconButton, Tooltip } from '@material-tailwind/react';
 
 import ChatPanel from './ChatPanel';
@@ -8,6 +8,7 @@ import SessionSwitcher from './SessionSwitcher';
 import SourceDetailDialog from './SourceDetailDialog';
 import SourcesPanel from './SourcesPanel';
 import StudioPanel from './StudioPanel';
+import SlidesStudioDialog from './SlidesStudioDialog';
 import WorkspaceHeader from './WorkspaceHeader';
 import { useWorkspaceState } from '../context/WorkspaceContext';
 import { useAnalysis } from '../hooks/useAnalysis';
@@ -96,6 +97,7 @@ export default function WorkspaceLayout() {
   const [graphSessionDetailFullscreen, setGraphSessionDetailFullscreen] = useState(false);
   const [graphSessionMessages, setGraphSessionMessages] = useState<ChatMessage[]>([]);
   const [graphSessionMessagesLoading, setGraphSessionMessagesLoading] = useState(false);
+  const [isSlidesDialogOpen, setIsSlidesDialogOpen] = useState(false);
 
   const notebooks = useNotebooks();
   const sessions = useSessions();
@@ -108,6 +110,15 @@ export default function WorkspaceLayout() {
     refreshSources: sources.retrySources,
     refreshOutputs: refine.retryOutputs,
   });
+
+  const selectedChunkIds = useMemo(
+    () =>
+      state.citations
+        .filter((citation) => state.selectedCitationIds[citation.id])
+        .map((citation) => citation.chunkId ?? Number(citation.id))
+        .filter((value): value is number => Number.isFinite(value) && value > 0),
+    [state.citations, state.selectedCitationIds],
+  );
 
   const applySizes = useCallback((left: number, right: number) => {
     sizesRef.current = { left, right };
@@ -541,6 +552,7 @@ export default function WorkspaceLayout() {
             outputsError={refine.outputsError}
             onRetryOutputs={refine.retryOutputs}
             onGenerateOutput={refine.onGenerateOutput}
+            onOpenSlides={() => setIsSlidesDialogOpen(true)}
             onDeleteOutput={refine.onDeleteOutput}
             onSelectOutput={handleOpenOutputViewer}
             onSelectOutputFullscreen={handleOpenOutputViewerFullscreen}
@@ -566,6 +578,15 @@ export default function WorkspaceLayout() {
           elevated={isViewerElevated}
         />
       </Suspense>
+
+      <SlidesStudioDialog
+        open={isSlidesDialogOpen}
+        onClose={() => setIsSlidesDialogOpen(false)}
+        notebookId={state.activeNotebookId}
+        selectedChunkIds={selectedChunkIds}
+        isDemo={isDemo}
+        onOutputsUpdated={refine.retryOutputs}
+      />
 
       {/* Knowledge Graph View (Full Screen Overlay) */}
       {isGraphViewOpen && (

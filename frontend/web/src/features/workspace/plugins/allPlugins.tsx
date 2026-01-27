@@ -12,6 +12,7 @@ import {
   Quiz as QuizIcon,
   MenuBook as GuideIcon,
   Timeline as TimelineIcon,
+  Slideshow as SlidesIcon,
 } from '@mui/icons-material';
 
 import type { OutputPlugin, OutputContent } from './index';
@@ -277,6 +278,73 @@ export const briefingPlugin: OutputPlugin = {
   validateContent: (content) => Array.isArray((content as any).sections),
 };
 
+// --- Slides Plugin ---
+
+export const slidesPlugin: OutputPlugin = {
+  id: 'SLIDES',
+  label: '演示',
+  description: '演示文稿',
+  tone: 'slate',
+  icon: <SlidesIcon fontSize="small" />,
+  defaultPrompt: '生成演示大纲与 Slidev Markdown。',
+  configSchema: {
+    quantityOptions: [
+      { id: 'short', label: '精简' },
+      { id: 'standard', label: '标准（默认）', isDefault: true },
+      { id: 'detailed', label: '详尽' },
+    ],
+    topicPlaceholder: '演示应该围绕什么主题？',
+    supportsTopic: true,
+  },
+  enabled: true,
+  render: (content, isFallback) => {
+    const title = (content as any).title || '演示';
+    const outline = (content as any).outline;
+    const markdown = (content as any).markdown;
+    return (
+      <div className="space-y-4">
+        {isFallback && <FallbackWarning />}
+        <div>
+          <div className="text-lg font-semibold text-gray-900">{title}</div>
+          <div className="text-xs text-gray-500">
+            引擎：{(content as any).engine || 'slidev'}
+          </div>
+        </div>
+        {outline?.slides ? (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <div className="text-xs font-semibold text-gray-600 mb-2">大纲</div>
+            <div className="space-y-2 text-sm text-gray-800">
+              {outline.slides.map((slide: any, index: number) => (
+                <div key={`${slide.title}-${index}`}>
+                  <div className="font-semibold">{slide.title || `幻灯片 ${index + 1}`}</div>
+                  {Array.isArray(slide.bullets) && slide.bullets.length > 0 && (
+                    <ul className="list-disc pl-5 text-xs text-gray-600">
+                      {slide.bullets.map((bullet: string, idx: number) => (
+                        <li key={`${bullet}-${idx}`}>{bullet}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {markdown ? (
+          <pre className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700 whitespace-pre-wrap">
+            {markdown}
+          </pre>
+        ) : (
+          <div className="text-xs text-gray-500">尚未生成 Markdown。</div>
+        )}
+      </div>
+    );
+  },
+  validateContent: (content) =>
+    typeof (content as any).title === 'string' ||
+    typeof (content as any).markdown === 'string' ||
+    Boolean((content as any).outline),
+};
+
 // --- Export all plugins ---
 
 export const allPlugins: OutputPlugin[] = [
@@ -286,4 +354,5 @@ export const allPlugins: OutputPlugin[] = [
   mindmapPlugin,
   quizPlugin,
   briefingPlugin,
+  slidesPlugin,
 ];
