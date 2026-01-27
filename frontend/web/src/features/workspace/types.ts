@@ -9,9 +9,12 @@ export type OutputTypeId =
   | 'MINDMAP'
   | 'QUIZ'
   | 'BRIEFING'
+  | 'SLIDES'
   | 'PARAGRAPH'
   | 'BULLETS'
   | 'STRUCTURED';
+export type SlideStage = 'input' | 'outline' | 'markdown';
+export type SlideStatus = 'idle' | 'running' | 'error';
 export type SourceSearchStatus = 'ok' | 'not_implemented';
 export type ToolTone = 'slate' | 'blue' | 'green' | 'rose' | 'amber' | 'teal' | 'indigo';
 
@@ -58,6 +61,33 @@ export interface WorkspaceTool {
   prompt: string;
   badge?: string;
   enabled: boolean;
+}
+
+export interface SlideOutlineItem {
+  title: string;
+  bullets: string[];
+}
+
+export interface SlideOutline {
+  title: string;
+  slides: SlideOutlineItem[];
+}
+
+export interface SlideDraft {
+  id: number;
+  notebookId: number;
+  outputId?: number | null;
+  title?: string | null;
+  prompt?: string | null;
+  engine: string;
+  chunkIds?: number[] | null;
+  outline?: SlideOutline | null;
+  markdown?: string | null;
+  stage: SlideStage;
+  status: SlideStatus;
+  errorMessage?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface RefineOutputStructured {

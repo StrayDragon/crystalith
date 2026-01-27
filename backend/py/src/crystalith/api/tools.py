@@ -106,6 +106,15 @@ TOOL_CONFIGS: dict[str, dict] = {
         "difficulty_options": None,
         "topic_placeholder": "报告应该重点关注什么方面？\n例如：技术分析、市场趋势、风险评估",
     },
+    "slides": {
+        "quantity_options": [
+            ConfigOption(id="short", label="精简"),
+            ConfigOption(id="standard", label="标准（默认）", is_default=True),
+            ConfigOption(id="detailed", label="详尽"),
+        ],
+        "difficulty_options": None,
+        "topic_placeholder": "演示应该围绕什么主题？\n例如：项目复盘、产品发布、技术方案介绍",
+    },
 }
 
 

@@ -4,7 +4,10 @@ const scrollbar = require("tailwind-scrollbar");
 
 /** @type {import('tailwindcss').Config} */
 module.exports = withMT({
-  content: ['./src/**/*.{js,jsx,ts,tsx}'],
+  content: [
+    './src/**/*.{js,jsx,ts,tsx}',
+    '../packages/crystalith-slidev/src/**/*.{js,jsx,ts,tsx}',
+  ],
   theme: {
     extend: {
       // Use system fonts - no external font loading needed
