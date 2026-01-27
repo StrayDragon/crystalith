@@ -53,12 +53,18 @@ interface StudioPanelProps {
     type: OutputTypeId;
     status: 'queued' | 'running' | 'done' | 'error';
     chunkIds: number[];
+    draftId?: number | null;
   }[];
   outputsLoading: boolean;
   outputsError: string;
   onRetryOutputs: () => void;
   onGenerateOutput: (type?: OutputTypeId, modelId?: string | null) => void;
-  onOpenSlides?: (options?: { autoGenerate?: boolean }) => void;
+  onOpenSlides?: (options?: {
+    mode: 'config' | 'preview';
+    slideId?: number | null;
+    queueStatus?: 'queued' | 'running' | 'error' | 'done' | null;
+    queueJobId?: string | null;
+  }) => void;
   onDeleteOutput: (outputId: number) => void;
   onSelectOutput: (outputId: number) => void;
   onSelectOutputFullscreen?: (outputId: number) => void;
@@ -73,6 +79,7 @@ type StudioTone = 'slate' | 'blue' | 'green' | 'rose' | 'amber' | 'teal' | 'indi
 type StudioNote = {
   id: string;
   outputId?: number;
+  slideId?: number | null;
   title: string;
   meta: string;
   type: OutputTypeId;
@@ -84,6 +91,8 @@ type PendingNote = {
   meta: string;
   type: OutputTypeId;
   status: 'queued' | 'running' | 'error';
+  slideId?: number | null;
+  queueJobId?: string;
 };
 
 const DEFAULT_TYPE_LABELS: Record<OutputTypeId, string> = {
@@ -280,7 +289,7 @@ function StudioPanel({
   const handleToolConfigOpen = useCallback((event: React.MouseEvent<HTMLElement>, toolType: OutputTypeId) => {
     event.stopPropagation();
     if (toolType === 'SLIDES') {
-      onOpenSlides?.({ autoGenerate: false });
+      onOpenSlides?.({ mode: 'config' });
       return;
     }
     setActiveToolType(toolType);
@@ -366,6 +375,7 @@ function StudioPanel({
       outputs.map((output) => ({
         id: `${output.id}`,
         outputId: output.id,
+        slideId: output.type === 'SLIDES' ? (output.content as any)?.slide_id ?? null : null,
         title: resolveOutputTitle(output),
         meta: resolveNoteMeta(output),
         type: output.type,
@@ -393,6 +403,8 @@ function StudioPanel({
           meta: `${sourceLabel} · ${statusLabel}`,
           type: job.type,
           status: job.status as PendingNote['status'],
+          slideId: job.type === 'SLIDES' ? job.draftId ?? null : null,
+          queueJobId: job.id,
         };
       });
   }, [outputQueueJobs, typeLabelMap]);
@@ -455,7 +467,7 @@ function StudioPanel({
                   onClick={() => {
                     if (isDisabled) return;
                     if (isSlidesTool) {
-                      onOpenSlides?.({ autoGenerate: true });
+                      onOpenSlides?.({ mode: 'config' });
                       return;
                     }
                     onGenerateOutput(tool.outputType);
@@ -523,15 +535,10 @@ function StudioPanel({
               const tone = resolveTone(note.type);
               const colors = TONE_COLORS[tone];
               const isError = note.status === 'error';
+              const canOpenSlides = note.type === 'SLIDES' && note.slideId;
 
-              return (
-                <div
-                  key={note.id}
-                  className={`flex items-center gap-2 p-2 rounded-lg border border-dashed ${
-                    isError ? 'bg-red-50/80 border-red-200' : ''
-                  }`}
-                  style={!isError ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border } : undefined}
-                >
+              const content = (
+                <>
                   <div
                     className={`flex items-center justify-center w-6 h-6 rounded-md border border-dashed flex-shrink-0 ${
                       isError ? 'bg-red-50 border-red-300 text-red-500' : ''
@@ -558,6 +565,42 @@ function StudioPanel({
                       {note.meta}
                     </Typography>
                   </div>
+                </>
+              );
+
+              if (canOpenSlides) {
+                return (
+                  <button
+                    key={note.id}
+                    type="button"
+                    className={`flex items-center gap-2 p-2 rounded-lg border border-dashed w-full text-left transition-colors hover:bg-white/70 ${
+                      isError ? 'bg-red-50/80 border-red-200' : ''
+                    }`}
+                    style={!isError ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border } : undefined}
+                    onClick={() => {
+                      if (!note.slideId) return;
+                      onOpenSlides?.({
+                        mode: 'preview',
+                        slideId: note.slideId,
+                        queueStatus: note.status,
+                        queueJobId: note.queueJobId ?? null,
+                      });
+                    }}
+                  >
+                    {content}
+                  </button>
+                );
+              }
+
+              return (
+                <div
+                  key={note.id}
+                  className={`flex items-center gap-2 p-2 rounded-lg border border-dashed ${
+                    isError ? 'bg-red-50/80 border-red-200' : ''
+                  }`}
+                  style={!isError ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border } : undefined}
+                >
+                  {content}
                 </div>
               );
             })}
@@ -577,6 +620,10 @@ function StudioPanel({
                     type="button"
                     className="flex flex-1 items-center gap-2 p-2 text-left min-w-0"
                     onClick={() => {
+                      if (note.type === 'SLIDES' && note.slideId) {
+                        onOpenSlides?.({ mode: 'preview', slideId: note.slideId });
+                        return;
+                      }
                       if (!note.outputId) return;
                       onSelectOutput(note.outputId);
                     }}

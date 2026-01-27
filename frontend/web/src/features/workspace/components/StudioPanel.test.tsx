@@ -38,7 +38,7 @@ function renderPanel(overrides: Partial<ComponentProps<typeof StudioPanel>> = {}
   return { onOpenSlides, onGenerateOutput };
 }
 
-test('slides card triggers auto generate flow', async () => {
+test('slides card opens config flow', async () => {
   const { onOpenSlides, onGenerateOutput } = renderPanel();
   const label = screen.getByText('演示');
   const cardButton = label.closest('button');
@@ -47,12 +47,12 @@ test('slides card triggers auto generate flow', async () => {
     await userEvent.click(cardButton);
   }
   expect(onGenerateOutput).not.toHaveBeenCalled();
-  expect(onOpenSlides).toHaveBeenCalledWith({ autoGenerate: true });
+  expect(onOpenSlides).toHaveBeenCalledWith({ mode: 'config' });
 });
 
 test('slides config icon opens settings mode', async () => {
   const { onOpenSlides } = renderPanel();
   const configButton = screen.getByLabelText('自定义工具参数');
   await userEvent.click(configButton);
-  expect(onOpenSlides).toHaveBeenCalledWith({ autoGenerate: false });
+  expect(onOpenSlides).toHaveBeenCalledWith({ mode: 'config' });
 });
