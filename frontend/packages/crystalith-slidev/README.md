@@ -9,5 +9,8 @@
 启动：
 
 ```bash
+pnpm -C frontend/packages/crystalith-slidev install
 pnpm -C frontend/packages/crystalith-slidev dev
 ```
+
+说明：使用本地依赖启动，无需全局安装 `@slidev/cli`。
