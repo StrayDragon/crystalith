@@ -194,1354 +194,6 @@
         }
       }
     },
-    "/v1/notebooks/{notebook_id}/analysis": {
-      "get": {
-        "tags": [
-          "analysis"
-        ],
-        "summary": "Analyze Notebook",
-        "operationId": "analyze_notebook_v1_notebooks__notebook_id__analysis_get",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AnalysisResult"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/models": {
-      "get": {
-        "tags": [
-          "models"
-        ],
-        "summary": "List Models",
-        "description": "List all available AI models.\n\nOptionally filter by role (chat, embed, edit, autocomplete) or capability.",
-        "operationId": "list_models_v1_models_get",
-        "parameters": [
-          {
-            "name": "role",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "enum": [
-                    "chat",
-                    "embed",
-                    "edit",
-                    "autocomplete"
-                  ],
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Role"
-            }
-          },
-          {
-            "name": "capability",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Capability"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ModelsListResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/models/{model_id}": {
-      "get": {
-        "tags": [
-          "models"
-        ],
-        "summary": "Get Model",
-        "description": "Get a specific model by ID.",
-        "operationId": "get_model_v1_models__model_id__get",
-        "parameters": [
-          {
-            "name": "model_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Model Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ModelRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/qa": {
-      "post": {
-        "tags": [
-          "qa"
-        ],
-        "summary": "Ask Question",
-        "operationId": "ask_question_v1_notebooks__notebook_id__qa_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/QARequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/QAResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/qa/stream": {
-      "post": {
-        "tags": [
-          "qa"
-        ],
-        "summary": "Ask Question Stream",
-        "description": "Stream QA response using Server-Sent Events.\n\nEvents:\n- `chunk`: Text chunk `{\"text\": \"...\"}`\n- `done`: Completion `{\"citations\": [...], \"evidence\": bool, \"confidence\": float, ...}`\n- `error`: Error `{\"message\": \"...\"}`",
-        "operationId": "ask_question_stream_v1_notebooks__notebook_id__qa_stream_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/QARequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "SSE stream of QA response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              },
-              "text/event-stream": {}
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/outputs/{output_type}": {
-      "post": {
-        "tags": [
-          "outputs"
-        ],
-        "summary": "Create Output",
-        "operationId": "create_output_v1_notebooks__notebook_id__outputs__output_type__post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "output_type",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "title": "Output Type",
-              "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
-              "enum": [
-                "FAQ",
-                "GUIDE",
-                "TIMELINE",
-                "MINDMAP",
-                "QUIZ",
-                "BRIEFING",
-                "SLIDES",
-                "PARAGRAPH",
-                "BULLETS",
-                "STRUCTURED"
-              ],
-              "type": "string",
-              "x-enum-module": "crystalith.outputs.types",
-              "x-enum-class": "OutputType",
-              "default": "PARAGRAPH"
-            },
-            "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/OutputGenerateRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OutputRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/outputs": {
-      "get": {
-        "tags": [
-          "outputs"
-        ],
-        "summary": "List Outputs",
-        "operationId": "list_outputs_v1_notebooks__notebook_id__outputs_get",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "default": 0,
-              "title": "Offset"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 200,
-              "minimum": 1,
-              "default": 50,
-              "title": "Limit"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OutputRead"
-                  },
-                  "title": "Response List Outputs V1 Notebooks  Notebook Id  Outputs Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/outputs/{output_id}": {
-      "get": {
-        "tags": [
-          "outputs"
-        ],
-        "summary": "Get Output",
-        "operationId": "get_output_v1_notebooks__notebook_id__outputs__output_id__get",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "output_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Output Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OutputRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "outputs"
-        ],
-        "summary": "Delete Output",
-        "description": "Delete a specific output by ID.",
-        "operationId": "delete_output_v1_notebooks__notebook_id__outputs__output_id__delete",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "output_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Output Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/outputs/{output_id}/convert-to-source": {
-      "post": {
-        "tags": [
-          "outputs"
-        ],
-        "summary": "Convert Output To Source",
-        "description": "Convert an output to a source document that can be used for RAG queries.",
-        "operationId": "convert_output_to_source_v1_notebooks__notebook_id__outputs__output_id__convert_to_source_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "output_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Output Id"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConvertToSourceResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/refine": {
-      "post": {
-        "tags": [
-          "refine"
-        ],
-        "summary": "Refine",
-        "operationId": "refine_v1_notebooks__notebook_id__refine_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefineRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RefineResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/refine/batch": {
-      "post": {
-        "tags": [
-          "refine"
-        ],
-        "summary": "Refine Batch",
-        "operationId": "refine_batch_v1_notebooks__notebook_id__refine_batch_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefineBatchRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RefineBatchResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/research": {
-      "post": {
-        "tags": [
-          "research"
-        ],
-        "summary": "Create Research Session",
-        "description": "Create a new deep research session.",
-        "operationId": "create_research_session_v1_notebooks__notebook_id__research_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResearchSessionCreate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResearchSessionResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "research"
-        ],
-        "summary": "List Research Sessions",
-        "description": "List research sessions for a notebook.",
-        "operationId": "list_research_sessions_v1_notebooks__notebook_id__research_get",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "default": 0,
-              "title": "Offset"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 200,
-              "minimum": 1,
-              "default": 50,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "title": "ResearchStatus",
-                  "description": "枚举值:\n\n* `planning`: 正在规划搜索\n* `searching`: 正在执行搜索\n* `analyzing`: 正在分析结果\n* `waiting_user`: 等待用户确认\n* `completed`: 研究完成\n* `cancelled`: 已取消",
-                  "enum": [
-                    "planning",
-                    "searching",
-                    "analyzing",
-                    "waiting_user",
-                    "completed",
-                    "cancelled"
-                  ],
-                  "type": "string",
-                  "x-enum-module": "crystalith.db.models",
-                  "x-enum-class": "ResearchStatus"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Status"
-            },
-            "description": "枚举值:\n\n* `planning`: 正在规划搜索\n* `searching`: 正在执行搜索\n* `analyzing`: 正在分析结果\n* `waiting_user`: 等待用户确认\n* `completed`: 研究完成\n* `cancelled`: 已取消"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ResearchSessionListItem"
-                  },
-                  "title": "Response List Research Sessions V1 Notebooks  Notebook Id  Research Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/research/{research_id}": {
-      "get": {
-        "tags": [
-          "research"
-        ],
-        "summary": "Get Research Session",
-        "description": "Get details of a research session including all steps.",
-        "operationId": "get_research_session_v1_notebooks__notebook_id__research__research_id__get",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "research_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Research Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResearchSessionResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "research"
-        ],
-        "summary": "Delete Research Session",
-        "description": "Delete or cancel a research session.",
-        "operationId": "delete_research_session_v1_notebooks__notebook_id__research__research_id__delete",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "research_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Research Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/research/{research_id}/approve": {
-      "post": {
-        "tags": [
-          "research"
-        ],
-        "summary": "Approve Search Plan",
-        "description": "Approve the current search plan and continue research.",
-        "operationId": "approve_search_plan_v1_notebooks__notebook_id__research__research_id__approve_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "research_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Research Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ApproveRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResearchSessionResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/research/{research_id}/modify": {
-      "post": {
-        "tags": [
-          "research"
-        ],
-        "summary": "Modify Search Plan",
-        "description": "Modify the current search plan.",
-        "operationId": "modify_search_plan_v1_notebooks__notebook_id__research__research_id__modify_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "research_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Research Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ModifyRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResearchSessionResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/research/{research_id}/skip": {
-      "post": {
-        "tags": [
-          "research"
-        ],
-        "summary": "Skip Iteration",
-        "description": "Skip the current iteration.",
-        "operationId": "skip_iteration_v1_notebooks__notebook_id__research__research_id__skip_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "research_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Research Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResearchSessionResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/research/{research_id}/finish": {
-      "post": {
-        "tags": [
-          "research"
-        ],
-        "summary": "Finish Research",
-        "description": "Finish research early and generate report.",
-        "operationId": "finish_research_v1_notebooks__notebook_id__research__research_id__finish_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "research_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Research Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResearchSessionResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/research/{research_id}/cancel": {
-      "post": {
-        "tags": [
-          "research"
-        ],
-        "summary": "Cancel Research",
-        "description": "Cancel an ongoing research session.",
-        "operationId": "cancel_research_v1_notebooks__notebook_id__research__research_id__cancel_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "research_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Research Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResearchSessionResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/research/{research_id}/start": {
-      "post": {
-        "tags": [
-          "research"
-        ],
-        "summary": "Start Research",
-        "description": "Start executing the research graph.",
-        "operationId": "start_research_v1_notebooks__notebook_id__research__research_id__start_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "research_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Research Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResearchSessionResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/research/{research_id}/stream": {
-      "get": {
-        "tags": [
-          "research"
-        ],
-        "summary": "Stream Research Progress",
-        "description": "Stream research progress using Server-Sent Events.\n\nEvents:\n- `status`: Status update `{\"status\": \"...\", \"iteration\": n}`\n- `plan_ready`: Search plan ready `{\"plan\": {...}}`\n- `search_progress`: Search progress `{\"query\": \"...\", \"completed\": n, \"total\": m}`\n- `search_result`: New result `{\"title\": \"...\", \"url\": \"...\"}`\n- `analysis`: Analysis complete `{\"summary\": \"...\", \"coverage\": 0.x}`\n- `report`: Final report `{\"report\": \"...\"}`\n- `done`: Research complete `{\"total_results\": n}`\n- `error`: Error `{\"message\": \"...\"}`",
-        "operationId": "stream_research_progress_v1_notebooks__notebook_id__research__research_id__stream_get",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "research_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Research Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "SSE stream of research progress",
-            "content": {
-              "application/json": {
-                "schema": {}
-              },
-              "text/event-stream": {}
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/research/{research_id}/export": {
-      "post": {
-        "tags": [
-          "research"
-        ],
-        "summary": "Export Research",
-        "description": "Export research report to a source or note.\n\n- export_type='source': Creates a new markdown source with the report\n- export_type='note': Creates a new note (output) with the report",
-        "operationId": "export_research_v1_notebooks__notebook_id__research__research_id__export_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "research_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Research Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ExportResearchRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExportResearchResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/notebooks/{notebook_id}/sessions": {
       "post": {
         "tags": [
@@ -1813,130 +465,6 @@
         }
       }
     },
-    "/v1/notebooks/{notebook_id}/sessions/{session_id}/convert-to-source": {
-      "post": {
-        "tags": [
-          "sessions"
-        ],
-        "summary": "Convert Session To Source",
-        "description": "Convert session messages to a source document for RAG queries.",
-        "operationId": "convert_session_to_source_v1_notebooks__notebook_id__sessions__session_id__convert_to_source_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConvertSessionToSourceRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConvertSessionToSourceResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/sessions/{session_id}/convert-to-output": {
-      "post": {
-        "tags": [
-          "sessions"
-        ],
-        "summary": "Convert Session To Output",
-        "description": "Convert session messages to a studio output/note.",
-        "operationId": "convert_session_to_output_v1_notebooks__notebook_id__sessions__session_id__convert_to_output_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConvertSessionToOutputRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConvertSessionToOutputResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/notebooks/{notebook_id}/sessions/{session_id}/messages": {
       "post": {
         "tags": [
@@ -2059,6 +587,267 @@
                   "title": "Response List Messages V1 Notebooks  Notebook Id  Sessions  Session Id  Messages Get"
                 }
               }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/analysis": {
+      "get": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Analyze Notebook",
+        "operationId": "analyze_notebook_v1_notebooks__notebook_id__analysis_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "List Models",
+        "description": "List all available AI models.\n\nOptionally filter by role (chat, embed, edit, autocomplete) or capability.",
+        "operationId": "list_models_v1_models_get",
+        "parameters": [
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "chat",
+                    "embed",
+                    "edit",
+                    "autocomplete"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            }
+          },
+          {
+            "name": "capability",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Capability"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelsListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models/{model_id}": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "Get Model",
+        "description": "Get a specific model by ID.",
+        "operationId": "get_model_v1_models__model_id__get",
+        "parameters": [
+          {
+            "name": "model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Model Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/qa": {
+      "post": {
+        "tags": [
+          "qa"
+        ],
+        "summary": "Ask Question",
+        "operationId": "ask_question_v1_notebooks__notebook_id__qa_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QARequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QAResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/qa/stream": {
+      "post": {
+        "tags": [
+          "qa"
+        ],
+        "summary": "Ask Question Stream",
+        "description": "Stream QA response using Server-Sent Events.\n\nEvents:\n- `chunk`: Text chunk `{\"text\": \"...\"}`\n- `done`: Completion `{\"citations\": [...], \"evidence\": bool, \"confidence\": float, ...}`\n- `error`: Error `{\"message\": \"...\"}`",
+        "operationId": "ask_question_stream_v1_notebooks__notebook_id__qa_stream_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QARequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SSE stream of QA response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {}
             }
           },
           "422": {
@@ -2644,6 +1433,402 @@
         }
       }
     },
+    "/v1/notebooks/{notebook_id}/outputs/{output_type}": {
+      "post": {
+        "tags": [
+          "outputs"
+        ],
+        "summary": "Create Output",
+        "operationId": "create_output_v1_notebooks__notebook_id__outputs__output_type__post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "output_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "title": "Output Type",
+              "enum": [
+                "FAQ",
+                "GUIDE",
+                "TIMELINE",
+                "MINDMAP",
+                "QUIZ",
+                "BRIEFING",
+                "SLIDES",
+                "PARAGRAPH",
+                "BULLETS",
+                "STRUCTURED"
+              ],
+              "type": "string",
+              "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+              "x-enum-module": "crystalith.shared.types",
+              "x-enum-class": "OutputType"
+            },
+            "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutputGenerateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/outputs": {
+      "get": {
+        "tags": [
+          "outputs"
+        ],
+        "summary": "List Outputs",
+        "operationId": "list_outputs_v1_notebooks__notebook_id__outputs_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OutputRead"
+                  },
+                  "title": "Response List Outputs V1 Notebooks  Notebook Id  Outputs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/outputs/{output_id}": {
+      "get": {
+        "tags": [
+          "outputs"
+        ],
+        "summary": "Get Output",
+        "operationId": "get_output_v1_notebooks__notebook_id__outputs__output_id__get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "output_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Output Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "outputs"
+        ],
+        "summary": "Delete Output",
+        "description": "Delete a specific output by ID.",
+        "operationId": "delete_output_v1_notebooks__notebook_id__outputs__output_id__delete",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "output_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Output Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/outputs/{output_id}/convert-to-source": {
+      "post": {
+        "tags": [
+          "outputs"
+        ],
+        "summary": "Convert Output To Source",
+        "description": "Convert an output to a source document that can be used for RAG queries.",
+        "operationId": "convert_output_to_source_v1_notebooks__notebook_id__outputs__output_id__convert_to_source_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "output_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Output Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvertToSourceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/refine": {
+      "post": {
+        "tags": [
+          "refine"
+        ],
+        "summary": "Refine",
+        "operationId": "refine_v1_notebooks__notebook_id__refine_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefineRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/refine/batch": {
+      "post": {
+        "tags": [
+          "refine"
+        ],
+        "summary": "Refine Batch",
+        "operationId": "refine_batch_v1_notebooks__notebook_id__refine_batch_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefineBatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefineBatchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/notebooks/{notebook_id}/slides/drafts/latest": {
       "get": {
         "tags": [
@@ -3100,6 +2285,696 @@
         }
       }
     },
+    "/v1/notebooks/{notebook_id}/research": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Create Research Session",
+        "description": "Create a new deep research session.",
+        "operationId": "create_research_session_v1_notebooks__notebook_id__research_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResearchSessionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "List Research Sessions",
+        "description": "List research sessions for a notebook.",
+        "operationId": "list_research_sessions_v1_notebooks__notebook_id__research_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "title": "ResearchStatus",
+                  "enum": [
+                    "planning",
+                    "searching",
+                    "analyzing",
+                    "waiting_user",
+                    "completed",
+                    "cancelled"
+                  ],
+                  "type": "string",
+                  "description": "枚举值:\n\n* `planning`: 正在规划搜索\n* `searching`: 正在执行搜索\n* `analyzing`: 正在分析结果\n* `waiting_user`: 等待用户确认\n* `completed`: 研究完成\n* `cancelled`: 已取消",
+                  "x-enum-module": "crystalith.shared.types",
+                  "x-enum-class": "ResearchStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            },
+            "description": "枚举值:\n\n* `planning`: 正在规划搜索\n* `searching`: 正在执行搜索\n* `analyzing`: 正在分析结果\n* `waiting_user`: 等待用户确认\n* `completed`: 研究完成\n* `cancelled`: 已取消"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResearchSessionListItem"
+                  },
+                  "title": "Response List Research Sessions V1 Notebooks  Notebook Id  Research Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Get Research Session",
+        "description": "Get details of a research session including all steps.",
+        "operationId": "get_research_session_v1_notebooks__notebook_id__research__research_id__get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Delete Research Session",
+        "description": "Delete or cancel a research session.",
+        "operationId": "delete_research_session_v1_notebooks__notebook_id__research__research_id__delete",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/approve": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Approve Search Plan",
+        "description": "Approve the current search plan and continue research.",
+        "operationId": "approve_search_plan_v1_notebooks__notebook_id__research__research_id__approve_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/modify": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Modify Search Plan",
+        "description": "Modify the current search plan.",
+        "operationId": "modify_search_plan_v1_notebooks__notebook_id__research__research_id__modify_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/skip": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Skip Iteration",
+        "description": "Skip the current iteration.",
+        "operationId": "skip_iteration_v1_notebooks__notebook_id__research__research_id__skip_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/finish": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Finish Research",
+        "description": "Finish research early and generate report.",
+        "operationId": "finish_research_v1_notebooks__notebook_id__research__research_id__finish_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/cancel": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Cancel Research",
+        "description": "Cancel an ongoing research session.",
+        "operationId": "cancel_research_v1_notebooks__notebook_id__research__research_id__cancel_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/start": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Start Research",
+        "description": "Start executing the research graph.",
+        "operationId": "start_research_v1_notebooks__notebook_id__research__research_id__start_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/stream": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Stream Research Progress",
+        "description": "Stream research progress using Server-Sent Events.\n\nEvents:\n- `status`: Status update `{\"status\": \"...\", \"iteration\": n}`\n- `plan_ready`: Search plan ready `{\"plan\": {...}}`\n- `search_progress`: Search progress `{\"query\": \"...\", \"completed\": n, \"total\": m}`\n- `search_result`: New result `{\"title\": \"...\", \"url\": \"...\"}`\n- `analysis`: Analysis complete `{\"summary\": \"...\", \"coverage\": 0.x}`\n- `report`: Final report `{\"report\": \"...\"}`\n- `done`: Research complete `{\"total_results\": n}`\n- `error`: Error `{\"message\": \"...\"}`",
+        "operationId": "stream_research_progress_v1_notebooks__notebook_id__research__research_id__stream_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE stream of research progress",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/export": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Export Research",
+        "description": "Export research report to a source or note.\n\n- export_type='source': Creates a new markdown source with the report\n- export_type='note': Creates a new note (output) with the report",
+        "operationId": "export_research_v1_notebooks__notebook_id__research__research_id__export_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportResearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportResearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/tasks/{task_id}": {
       "get": {
         "tags": [
@@ -3188,6 +3063,27 @@
         }
       }
     },
+    "/v1/workspace/tools/slides/config": {
+      "get": {
+        "tags": [
+          "workspace-tools"
+        ],
+        "summary": "Get Slides Config",
+        "operationId": "get_slides_config_v1_workspace_tools_slides_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlidesConfigResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspace/tools": {
       "get": {
         "tags": [
@@ -3245,27 +3141,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workspace/tools/slides/config": {
-      "get": {
-        "tags": [
-          "workspace-tools"
-        ],
-        "summary": "Get Slides Config",
-        "operationId": "get_slides_config_v1_workspace_tools_slides_config_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SlidesConfigResponse"
                 }
               }
             }
@@ -3533,118 +3408,6 @@
           "compressed"
         ],
         "title": "ContextStatsResponse"
-      },
-      "ConvertSessionToOutputRequest": {
-        "properties": {
-          "message_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "integer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Message Ids",
-            "description": "Specific message IDs to convert. If null, converts entire session."
-          },
-          "output_type": {
-            "type": "string",
-            "enum": [
-              "FAQ",
-              "GUIDE",
-              "TIMELINE",
-              "MINDMAP",
-              "QUIZ",
-              "BRIEFING",
-              "SLIDES",
-              "PARAGRAPH",
-              "BULLETS",
-              "STRUCTURED"
-            ],
-            "title": "OutputType",
-            "description": "Type of output to create.\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
-            "default": "PARAGRAPH",
-            "x-enum-class": "OutputType",
-            "x-enum-module": "crystalith.outputs.types"
-          }
-        },
-        "type": "object",
-        "title": "ConvertSessionToOutputRequest",
-        "description": "Request to convert session messages to an output."
-      },
-      "ConvertSessionToOutputResponse": {
-        "properties": {
-          "output_id": {
-            "type": "integer",
-            "title": "Output Id"
-          },
-          "output_type": {
-            "type": "string",
-            "title": "Output Type"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          }
-        },
-        "type": "object",
-        "required": [
-          "output_id",
-          "output_type",
-          "title"
-        ],
-        "title": "ConvertSessionToOutputResponse",
-        "description": "Response after converting session to output."
-      },
-      "ConvertSessionToSourceRequest": {
-        "properties": {
-          "message_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "integer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Message Ids",
-            "description": "Specific message IDs to convert. If null, converts entire session."
-          }
-        },
-        "type": "object",
-        "title": "ConvertSessionToSourceRequest",
-        "description": "Request to convert session messages to a source document."
-      },
-      "ConvertSessionToSourceResponse": {
-        "properties": {
-          "source_id": {
-            "type": "integer",
-            "title": "Source Id"
-          },
-          "filename": {
-            "type": "string",
-            "title": "Filename"
-          },
-          "chunk_count": {
-            "type": "integer",
-            "title": "Chunk Count"
-          }
-        },
-        "type": "object",
-        "required": [
-          "source_id",
-          "filename",
-          "chunk_count"
-        ],
-        "title": "ConvertSessionToSourceResponse",
-        "description": "Response after converting session to source."
       },
       "ConvertSourceQAToSourceRequest": {
         "properties": {
@@ -4216,7 +3979,7 @@
             "title": "OutputType",
             "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
             "x-enum-class": "OutputType",
-            "x-enum-module": "crystalith.outputs.types"
+            "x-enum-module": "crystalith.shared.types"
           },
           "prompt": {
             "anyOf": [
@@ -4272,27 +4035,7 @@
         ],
         "title": "OutputRead"
       },
-      "OutputType-Input": {
-        "type": "string",
-        "enum": [
-          "FAQ",
-          "GUIDE",
-          "TIMELINE",
-          "MINDMAP",
-          "QUIZ",
-          "BRIEFING",
-          "SLIDES",
-          "PARAGRAPH",
-          "BULLETS",
-          "STRUCTURED"
-        ],
-        "title": "OutputType",
-        "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
-        "default": "PARAGRAPH",
-        "x-enum-class": "OutputType",
-        "x-enum-module": "crystalith.outputs.types"
-      },
-      "OutputType-Output": {
+      "OutputType": {
         "type": "string",
         "enum": [
           "FAQ",
@@ -4309,7 +4052,7 @@
         "title": "OutputType",
         "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
         "x-enum-class": "OutputType",
-        "x-enum-module": "crystalith.outputs.types"
+        "x-enum-module": "crystalith.shared.types"
       },
       "QAMessage": {
         "properties": {
@@ -4745,7 +4488,7 @@
             "title": "ResearchStatus",
             "description": "枚举值:\n\n* `planning`: 正在规划搜索\n* `searching`: 正在执行搜索\n* `analyzing`: 正在分析结果\n* `waiting_user`: 等待用户确认\n* `completed`: 研究完成\n* `cancelled`: 已取消",
             "x-enum-class": "ResearchStatus",
-            "x-enum-module": "crystalith.db.models"
+            "x-enum-module": "crystalith.shared.types"
           },
           "current_iteration": {
             "type": "integer",
@@ -4813,7 +4556,7 @@
             "title": "ResearchStatus",
             "description": "枚举值:\n\n* `planning`: 正在规划搜索\n* `searching`: 正在执行搜索\n* `analyzing`: 正在分析结果\n* `waiting_user`: 等待用户确认\n* `completed`: 研究完成\n* `cancelled`: 已取消",
             "x-enum-class": "ResearchStatus",
-            "x-enum-module": "crystalith.db.models"
+            "x-enum-module": "crystalith.shared.types"
           },
           "current_iteration": {
             "type": "integer",
@@ -4896,7 +4639,7 @@
         "title": "ResearchStatus",
         "description": "枚举值:\n\n* `planning`: 正在规划搜索\n* `searching`: 正在执行搜索\n* `analyzing`: 正在分析结果\n* `waiting_user`: 等待用户确认\n* `completed`: 研究完成\n* `cancelled`: 已取消",
         "x-enum-class": "ResearchStatus",
-        "x-enum-module": "crystalith.db.models"
+        "x-enum-module": "crystalith.shared.types"
       },
       "ResearchStepResponse": {
         "properties": {
@@ -4924,7 +4667,7 @@
             "title": "ResearchStepType",
             "description": "枚举值:\n\n* `plan`: 搜索计划\n* `search`: 执行搜索\n* `analyze`: 分析结果\n* `user_input`: 用户输入\n* `summary`: 生成报告",
             "x-enum-class": "ResearchStepType",
-            "x-enum-module": "crystalith.db.models"
+            "x-enum-module": "crystalith.shared.types"
           },
           "input_data": {
             "anyOf": [
@@ -4961,7 +4704,7 @@
             "title": "ResearchStepStatus",
             "description": "枚举值:\n\n* `pending`: 等待执行\n* `running`: 正在执行\n* `completed`: 执行完成\n* `skipped`: 已跳过",
             "x-enum-class": "ResearchStepStatus",
-            "x-enum-module": "crystalith.db.models"
+            "x-enum-module": "crystalith.shared.types"
           },
           "created_at": {
             "type": "string",
@@ -4994,7 +4737,7 @@
         "title": "ResearchStepStatus",
         "description": "枚举值:\n\n* `pending`: 等待执行\n* `running`: 正在执行\n* `completed`: 执行完成\n* `skipped`: 已跳过",
         "x-enum-class": "ResearchStepStatus",
-        "x-enum-module": "crystalith.db.models"
+        "x-enum-module": "crystalith.shared.types"
       },
       "ResearchStepType": {
         "type": "string",
@@ -5008,7 +4751,7 @@
         "title": "ResearchStepType",
         "description": "枚举值:\n\n* `plan`: 搜索计划\n* `search`: 执行搜索\n* `analyze`: 分析结果\n* `user_input`: 用户输入\n* `summary`: 生成报告",
         "x-enum-class": "ResearchStepType",
-        "x-enum-module": "crystalith.db.models"
+        "x-enum-module": "crystalith.shared.types"
       },
       "SearchPlan": {
         "properties": {
@@ -5320,7 +5063,7 @@
             "title": "SlideStage",
             "description": "枚举值:\n\n* `input`: 输入阶段\n* `outline`: 大纲阶段\n* `markdown`: Markdown 阶段",
             "x-enum-class": "SlideStage",
-            "x-enum-module": "crystalith.db.models"
+            "x-enum-module": "crystalith.shared.types"
           },
           "status": {
             "type": "string",
@@ -5332,7 +5075,7 @@
             "title": "SlideStatus",
             "description": "枚举值:\n\n* `idle`: 空闲\n* `running`: 生成中\n* `error`: 失败",
             "x-enum-class": "SlideStatus",
-            "x-enum-module": "crystalith.db.models"
+            "x-enum-module": "crystalith.shared.types"
           },
           "error_message": {
             "anyOf": [
@@ -5612,7 +5355,7 @@
         "title": "SlideStage",
         "description": "枚举值:\n\n* `input`: 输入阶段\n* `outline`: 大纲阶段\n* `markdown`: Markdown 阶段",
         "x-enum-class": "SlideStage",
-        "x-enum-module": "crystalith.db.models"
+        "x-enum-module": "crystalith.shared.types"
       },
       "SlideStatus": {
         "type": "string",
@@ -5624,7 +5367,7 @@
         "title": "SlideStatus",
         "description": "枚举值:\n\n* `idle`: 空闲\n* `running`: 生成中\n* `error`: 失败",
         "x-enum-class": "SlideStatus",
-        "x-enum-module": "crystalith.db.models"
+        "x-enum-module": "crystalith.shared.types"
       },
       "SlidesConfigOption": {
         "properties": {
@@ -5789,7 +5532,7 @@
         "description": "枚举值:\n\n* `fetch`: 获取完整内容\n* `link`: 仅保存链接",
         "default": "link",
         "x-enum-class": "SourceFromUrlMode",
-        "x-enum-module": "crystalith.api.sources"
+        "x-enum-module": "crystalith.features.sources.api"
       },
       "SourceFromUrlRequest": {
         "properties": {
@@ -5830,7 +5573,7 @@
             "description": "枚举值:\n\n* `fetch`: 获取完整内容\n* `link`: 仅保存链接",
             "default": "link",
             "x-enum-class": "SourceFromUrlMode",
-            "x-enum-module": "crystalith.api.sources"
+            "x-enum-module": "crystalith.features.sources.api"
           },
           "extractor": {
             "anyOf": [
@@ -5942,7 +5685,7 @@
             "title": "SourceStatus",
             "description": "枚举值:\n\n* `processing`: 正在处理\n* `ready`: 处理完成\n* `failed`: 处理失败",
             "x-enum-class": "SourceStatus",
-            "x-enum-module": "crystalith.db.models"
+            "x-enum-module": "crystalith.shared.types"
           },
           "error_message": {
             "anyOf": [
@@ -6020,7 +5763,7 @@
             "title": "SourceSearchStatus",
             "description": "枚举值:\n\n* `ok`: 搜索成功\n* `not_implemented`: 功能未实现",
             "x-enum-class": "SourceSearchStatus",
-            "x-enum-module": "crystalith.api.sources"
+            "x-enum-module": "crystalith.features.sources.api"
           },
           "query": {
             "type": "string",
@@ -6118,7 +5861,7 @@
         "title": "SourceSearchStatus",
         "description": "枚举值:\n\n* `ok`: 搜索成功\n* `not_implemented`: 功能未实现",
         "x-enum-class": "SourceSearchStatus",
-        "x-enum-module": "crystalith.api.sources"
+        "x-enum-module": "crystalith.features.sources.api"
       },
       "SourceStatus": {
         "type": "string",
@@ -6130,7 +5873,7 @@
         "title": "SourceStatus",
         "description": "枚举值:\n\n* `processing`: 正在处理\n* `ready`: 处理完成\n* `failed`: 处理失败",
         "x-enum-class": "SourceStatus",
-        "x-enum-module": "crystalith.db.models"
+        "x-enum-module": "crystalith.shared.types"
       },
       "SourceSummaryResponse": {
         "properties": {
@@ -6241,7 +5984,7 @@
             "title": "TaskType",
             "description": "枚举值:\n\n* `refine`: 内容精炼任务\n* `document_parse`: 文档解析任务",
             "x-enum-class": "TaskType",
-            "x-enum-module": "crystalith.tasks.types"
+            "x-enum-module": "crystalith.shared.types"
           },
           "status": {
             "type": "string",
@@ -6255,7 +5998,7 @@
             "title": "TaskStatus",
             "description": "枚举值:\n\n* `pending`: 等待执行\n* `running`: 正在执行\n* `completed`: 执行完成\n* `failed`: 执行失败\n* `cancelled`: 已取消",
             "x-enum-class": "TaskStatus",
-            "x-enum-module": "crystalith.tasks.types"
+            "x-enum-module": "crystalith.shared.types"
           },
           "payload": {
             "additionalProperties": true,
@@ -6327,7 +6070,7 @@
         "title": "TaskStatus",
         "description": "枚举值:\n\n* `pending`: 等待执行\n* `running`: 正在执行\n* `completed`: 执行完成\n* `failed`: 执行失败\n* `cancelled`: 已取消",
         "x-enum-class": "TaskStatus",
-        "x-enum-module": "crystalith.tasks.types"
+        "x-enum-module": "crystalith.shared.types"
       },
       "TaskType": {
         "type": "string",
@@ -6338,7 +6081,7 @@
         "title": "TaskType",
         "description": "枚举值:\n\n* `refine`: 内容精炼任务\n* `document_parse`: 文档解析任务",
         "x-enum-class": "TaskType",
-        "x-enum-module": "crystalith.tasks.types"
+        "x-enum-module": "crystalith.shared.types"
       },
       "ToolConfigResponse": {
         "properties": {
@@ -6514,7 +6257,7 @@
             "title": "OutputType",
             "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
             "x-enum-class": "OutputType",
-            "x-enum-module": "crystalith.outputs.types"
+            "x-enum-module": "crystalith.shared.types"
           },
           "prompt": {
             "type": "string",
