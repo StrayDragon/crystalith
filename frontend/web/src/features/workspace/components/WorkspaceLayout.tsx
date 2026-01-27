@@ -98,7 +98,9 @@ export default function WorkspaceLayout() {
   const [graphSessionMessages, setGraphSessionMessages] = useState<ChatMessage[]>([]);
   const [graphSessionMessagesLoading, setGraphSessionMessagesLoading] = useState(false);
   const [isSlidesDialogOpen, setIsSlidesDialogOpen] = useState(false);
-  const [slidesOpenMode, setSlidesOpenMode] = useState<'default' | 'generate' | 'config'>('default');
+  const [slidesOpenMode, setSlidesOpenMode] = useState<'config' | 'preview'>('config');
+  const [slidesDraftId, setSlidesDraftId] = useState<number | null>(null);
+  const [slidesQueueJobId, setSlidesQueueJobId] = useState<string | null>(null);
 
   const notebooks = useNotebooks();
   const sessions = useSessions();
@@ -111,6 +113,11 @@ export default function WorkspaceLayout() {
     refreshSources: sources.retrySources,
     refreshOutputs: refine.retryOutputs,
   });
+  const slidesQueueStatus = useMemo(() => {
+    if (!slidesQueueJobId) return null;
+    const job = refine.outputQueueJobs.find((item) => item.id === slidesQueueJobId);
+    return job?.status ?? null;
+  }, [refine.outputQueueJobs, slidesQueueJobId]);
 
   const selectedChunkIds = useMemo(
     () =>
@@ -214,19 +221,53 @@ export default function WorkspaceLayout() {
     void sources.retrySources();
   }, [notebooks.notebooksError, notebooks.retryNotebooks, sources.retrySources]);
 
+  const openSlidesDialog = useCallback(
+    (mode: 'config' | 'preview', slideId?: number | null, queueJobId?: string | null) => {
+      setSlidesOpenMode(mode);
+      setSlidesDraftId(slideId ?? null);
+      setSlidesQueueJobId(queueJobId ?? null);
+      setIsSlidesDialogOpen(true);
+      setIsViewerOpen(false);
+      setViewerOutputId(null);
+      setIsViewerFullscreen(false);
+      setIsViewerElevated(false);
+    },
+    [],
+  );
+
+  const resolveSlideDraftId = useCallback(
+    (outputId: number) => {
+      const output = refine.outputs.find((item) => item.id === outputId);
+      if (!output || output.type !== 'SLIDES') return null;
+      const slideId = (output.content as any)?.slide_id;
+      return typeof slideId === 'number' ? slideId : null;
+    },
+    [refine.outputs],
+  );
+
   const handleOpenOutputViewer = useCallback((outputId: number, elevated = false) => {
+    const slideId = resolveSlideDraftId(outputId);
+    if (slideId) {
+      openSlidesDialog('preview', slideId);
+      return;
+    }
     setViewerOutputId(outputId);
     setIsViewerOpen(true);
     setIsViewerFullscreen(false);
     setIsViewerElevated(elevated);
-  }, []);
+  }, [openSlidesDialog, resolveSlideDraftId]);
 
   const handleOpenOutputViewerFullscreen = useCallback((outputId: number) => {
+    const slideId = resolveSlideDraftId(outputId);
+    if (slideId) {
+      openSlidesDialog('preview', slideId);
+      return;
+    }
     setViewerOutputId(outputId);
     setIsViewerOpen(true);
     setIsViewerFullscreen(true);
     setIsViewerElevated(false);
-  }, []);
+  }, [openSlidesDialog, resolveSlideDraftId]);
 
   const handleCloseOutputViewer = useCallback(() => {
     setIsViewerOpen(false);
@@ -238,8 +279,13 @@ export default function WorkspaceLayout() {
   }, []);
 
   const handleSelectOutput = useCallback((outputId: number) => {
+    const slideId = resolveSlideDraftId(outputId);
+    if (slideId) {
+      openSlidesDialog('preview', slideId);
+      return;
+    }
     setViewerOutputId(outputId);
-  }, []);
+  }, [openSlidesDialog, resolveSlideDraftId]);
 
   const handleToggleExpand = useCallback((panel: ExpandedPanel) => {
     setExpandedPanel((prev) => (prev === panel ? null : panel));
@@ -554,8 +600,8 @@ export default function WorkspaceLayout() {
             onRetryOutputs={refine.retryOutputs}
             onGenerateOutput={refine.onGenerateOutput}
             onOpenSlides={(options) => {
-              setSlidesOpenMode(options?.autoGenerate ? 'generate' : 'config');
-              setIsSlidesDialogOpen(true);
+              const mode = options?.mode ?? 'config';
+              openSlidesDialog(mode, options?.slideId ?? null, options?.queueJobId ?? null);
             }}
             onDeleteOutput={refine.onDeleteOutput}
             onSelectOutput={handleOpenOutputViewer}
@@ -587,13 +633,18 @@ export default function WorkspaceLayout() {
         open={isSlidesDialogOpen}
         onClose={() => {
           setIsSlidesDialogOpen(false);
-          setSlidesOpenMode('default');
+          setSlidesOpenMode('config');
+          setSlidesDraftId(null);
+          setSlidesQueueJobId(null);
         }}
         notebookId={state.activeNotebookId}
         selectedChunkIds={selectedChunkIds}
         isDemo={isDemo}
         onOutputsUpdated={refine.retryOutputs}
         openMode={slidesOpenMode}
+        draftId={slidesDraftId}
+        queueStatus={slidesQueueStatus}
+        onQueueSlides={refine.onQueueSlides}
       />
 
       {/* Knowledge Graph View (Full Screen Overlay) */}
