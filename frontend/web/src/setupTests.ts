@@ -3,3 +3,11 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom/vitest';
+
+if (!Element.prototype.animate) {
+  Element.prototype.animate = () =>
+    ({
+      cancel: () => {},
+      finished: Promise.resolve(),
+    }) as unknown as Animation;
+}

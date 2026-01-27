@@ -73,6 +73,17 @@ export interface SlideOutline {
   slides: SlideOutlineItem[];
 }
 
+export interface SlideGenerationConfig {
+  quantity?: string | null;
+  audience?: string | null;
+  structure?: string | null;
+  tone?: string | null;
+  language?: string | null;
+  density?: string | null;
+  themePreset?: string | null;
+  frontmatter?: string | null;
+}
+
 export interface SlideDraft {
   id: number;
   notebookId: number;
@@ -83,6 +94,7 @@ export interface SlideDraft {
   chunkIds?: number[] | null;
   outline?: SlideOutline | null;
   markdown?: string | null;
+  generationConfig?: SlideGenerationConfig | null;
   stage: SlideStage;
   status: SlideStatus;
   errorMessage?: string | null;

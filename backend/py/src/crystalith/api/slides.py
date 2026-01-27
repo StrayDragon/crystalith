@@ -18,6 +18,7 @@ from crystalith.api.deps import get_db_session, get_embedding_provider, get_sett
 from crystalith.db import Notebook, Output, SlideStage, SlideStatus, StudioSlide
 from crystalith.outputs import OutputType
 from crystalith.studio.slides import (
+    SlideGenerationConfig,
     SlideOutline,
     generate_slides_markdown,
     generate_slides_outline,
@@ -36,6 +37,7 @@ class SlideDraftCreate(BaseModel):
     prompt: str | None = None
     engine: str = Field("slidev", description="Rendering engine (default: slidev)")
     chunk_ids: list[int] | None = None
+    generation_config: SlideGenerationConfig | None = None
 
 
 class SlideDraftUpdate(BaseModel):
@@ -43,6 +45,7 @@ class SlideDraftUpdate(BaseModel):
     prompt: str | None = None
     engine: str | None = None
     chunk_ids: list[int] | None = None
+    generation_config: SlideGenerationConfig | None = None
 
 
 class SlideOutlineUpdate(BaseModel):
@@ -65,6 +68,7 @@ class SlideDraftRead(BaseModel):
     chunk_ids: list[int] | None
     outline: SlideOutline | None
     markdown: str | None
+    generation_config: SlideGenerationConfig | None
     stage: SlideStage
     status: SlideStatus
     error_message: str | None
@@ -159,6 +163,7 @@ async def create_draft(
         prompt=payload.prompt,
         engine=payload.engine,
         chunk_ids=payload.chunk_ids or None,
+        generation_config=payload.generation_config.model_dump() if payload.generation_config else None,
         stage=SlideStage.INPUT,
         status=SlideStatus.IDLE,
     )
@@ -194,6 +199,8 @@ async def update_draft(
         slide.engine = payload.engine
     if payload.chunk_ids is not None:
         slide.chunk_ids = payload.chunk_ids
+    if payload.generation_config is not None:
+        slide.generation_config = payload.generation_config.model_dump()
     slide.error_message = None
     await session.commit()
     await session.refresh(slide)
@@ -245,6 +252,7 @@ async def generate_outline_stream(
     settings=Depends(get_settings),
     embedder=Depends(get_embedding_provider),
     vector_store=Depends(get_vector_store),
+    model_id: str | None = None,
 ) -> StreamingResponse:
     slide = await _get_slide(session, notebook_id, slide_id)
 
@@ -274,6 +282,8 @@ async def generate_outline_stream(
                 title=slide.title,
                 prompt=slide.prompt,
                 chunk_ids=slide.chunk_ids,
+                generation_config=slide.generation_config,
+                model_id=model_id,
             )
             slide.outline = outline.model_dump()
             slide.stage = SlideStage.OUTLINE
@@ -306,6 +316,7 @@ async def generate_markdown_stream(
     settings=Depends(get_settings),
     embedder=Depends(get_embedding_provider),
     vector_store=Depends(get_vector_store),
+    model_id: str | None = None,
 ) -> StreamingResponse:
     slide = await _get_slide(session, notebook_id, slide_id)
 
@@ -341,6 +352,8 @@ async def generate_markdown_stream(
                 prompt=slide.prompt,
                 outline=outline,
                 chunk_ids=slide.chunk_ids,
+                generation_config=slide.generation_config,
+                model_id=model_id,
             )
             slide.markdown = markdown
             slide.stage = SlideStage.MARKDOWN

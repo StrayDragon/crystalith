@@ -1,5 +1,5 @@
 from .generator import build_markdown_from_outline, generate_slides_markdown, generate_slides_outline
-from .schemas import SlideMarkdown, SlideOutline, SlideOutlineItem
+from .schemas import SlideGenerationConfig, SlideMarkdown, SlideOutline, SlideOutlineItem
 from .storage import (
     get_preview_markdown_path,
     get_slide_markdown_path,
@@ -9,6 +9,7 @@ from .storage import (
 
 __all__ = [
     "SlideMarkdown",
+    "SlideGenerationConfig",
     "SlideOutline",
     "SlideOutlineItem",
     "build_markdown_from_outline",

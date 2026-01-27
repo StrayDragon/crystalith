@@ -1283,6 +1283,7 @@ export type SlideDraftCreate = {
      * Chunk Ids
      */
     chunk_ids?: Array<number> | null;
+    generation_config?: SlideGenerationConfig | null;
 };
 
 /**
@@ -1322,6 +1323,7 @@ export type SlideDraftRead = {
      * Markdown
      */
     markdown: string | null;
+    generation_config: SlideGenerationConfig | null;
     /**
      * SlideStage
      *
@@ -1376,6 +1378,46 @@ export type SlideDraftUpdate = {
      * Chunk Ids
      */
     chunk_ids?: Array<number> | null;
+    generation_config?: SlideGenerationConfig | null;
+};
+
+/**
+ * SlideGenerationConfig
+ */
+export type SlideGenerationConfig = {
+    /**
+     * Quantity
+     */
+    quantity?: string | null;
+    /**
+     * Audience
+     */
+    audience?: string | null;
+    /**
+     * Structure
+     */
+    structure?: string | null;
+    /**
+     * Tone
+     */
+    tone?: string | null;
+    /**
+     * Language
+     */
+    language?: string | null;
+    /**
+     * Density
+     */
+    density?: string | null;
+    /**
+     * Theme Preset
+     */
+    theme_preset?: string | null;
+    /**
+     * Frontmatter
+     */
+    frontmatter?: string | null;
+    [key: string]: unknown | string | null | string | null | string | null | string | null | string | null | string | null | string | null | string | null | undefined;
 };
 
 /**
@@ -3814,7 +3856,12 @@ export type GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutline
          */
         slide_id: number;
     };
-    query?: never;
+    query?: {
+        /**
+         * Model Id
+         */
+        model_id?: string | null;
+    };
     url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/outline/stream';
 };
 
@@ -3846,7 +3893,12 @@ export type GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdo
          */
         slide_id: number;
     };
-    query?: never;
+    query?: {
+        /**
+         * Model Id
+         */
+        model_id?: string | null;
+    };
     url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/markdown/stream';
 };
 
