@@ -607,6 +607,7 @@ export default function SlidesStudioDialog({
       });
       if (job) {
         toast.success('已加入队列');
+        onClose();
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : '加入队列失败，请稍后重试。';
@@ -621,6 +622,7 @@ export default function SlidesStudioDialog({
     isDemo,
     isQueueing,
     notebookId,
+    onClose,
     onQueueSlides,
     prompt,
     selectedChunkIds,
@@ -1323,8 +1325,8 @@ export default function SlidesStudioDialog({
       size="xxl"
       className={`rounded-xl overflow-hidden flex flex-col bg-white ${
         isFullscreen
-          ? 'h-[95vh] max-h-[95vh] w-[96vw] max-w-[96vw]'
-          : 'h-[80vh] max-h-[80vh] w-[92vw] max-w-[92vw] lg:w-[80vw] lg:max-w-[80vw]'
+          ? 'absolute inset-0 min-w-[100vw] min-h-[100vh] h-[100vh] max-h-[100vh] w-[100vw] max-w-[100vw]'
+          : 'absolute left-[5vw] top-[5vh] min-w-[90vw] min-h-[90vh] h-[90vh] max-h-[90vh] w-[90vw] max-w-[90vw]'
       }`}
     >
       <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 p-4">
@@ -1497,7 +1499,7 @@ export default function SlidesStudioDialog({
                 )}
                 <div className="mt-3 flex-1 min-h-0 rounded-lg border border-slate-200 bg-slate-900/5 overflow-hidden flex items-center justify-center p-3">
                   {previewReady ? (
-                    <div className="w-full max-w-full aspect-video rounded-lg overflow-hidden shadow-lg bg-black">
+                    <div className="h-full w-auto max-w-full aspect-video rounded-lg overflow-hidden shadow-lg bg-black">
                       <iframe
                         key={previewKey}
                         title="Slidev 预览"
