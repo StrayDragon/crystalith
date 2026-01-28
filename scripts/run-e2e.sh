@@ -15,7 +15,8 @@ if ! command -v curl >/dev/null 2>&1; then
 fi
 
 BACKEND_URL="${E2E_API_URL:-http://127.0.0.1:8032}"
-FRONTEND_URL="${E2E_BASE_URL:-http://127.0.0.1:3000}"
+FRONTEND_URL="${E2E_BASE_URL:-http://localhost:3000}"
+FRONTEND_FALLBACK="http://127.0.0.1:3000"
 
 cleanup() {
   if [[ -n "${OVERMIND_PID:-}" ]]; then
@@ -52,17 +53,31 @@ if ! curl -fsS "${BACKEND_URL}/v1/notebooks" >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "Waiting for frontend: ${FRONTEND_URL}/"
-for _ in {1..60}; do
-  if curl -fsS "${FRONTEND_URL}/" >/dev/null 2>&1; then
-    break
-  fi
-  sleep 1
-done
+wait_for_frontend() {
+  local url="$1"
+  for _ in {1..60}; do
+    if curl -fsS "${url}/" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
 
-if ! curl -fsS "${FRONTEND_URL}/" >/dev/null 2>&1; then
-  echo "Frontend did not become ready. Check /tmp/overmind-e2e.log" >&2
-  exit 1
+echo "Waiting for frontend: ${FRONTEND_URL}/"
+if ! wait_for_frontend "$FRONTEND_URL"; then
+  if [[ -z "${E2E_BASE_URL:-}" ]]; then
+    echo "Primary frontend URL not ready, trying fallback: ${FRONTEND_FALLBACK}/"
+    if wait_for_frontend "$FRONTEND_FALLBACK"; then
+      FRONTEND_URL="$FRONTEND_FALLBACK"
+    else
+      echo "Frontend did not become ready. Check /tmp/overmind-e2e.log" >&2
+      exit 1
+    fi
+  else
+    echo "Frontend did not become ready. Check /tmp/overmind-e2e.log" >&2
+    exit 1
+  fi
 fi
 
 echo "Seeding E2E notebook..."
