@@ -23,4 +23,3 @@ TBD - created by archiving change add-research-workspace. Update Purpose after a
 #### Scenario: 无相关来源的提问
 - **WHEN** 用户提问但未检索到高于阈值的来源
 - **THEN** 系统提示缺乏足够信息
-

@@ -52,4 +52,3 @@ TBD - created by archiving change add-research-workspace. Update Purpose after a
 #### Scenario: 增加新的提炼格式
 - **WHEN** 配置中新增提炼格式定义
 - **THEN** UI 输出区出现新的提炼选项
-

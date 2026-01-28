@@ -27,4 +27,3 @@ TBD - created by archiving change add-research-workspace. Update Purpose after a
 #### Scenario: 使用 Schema 注释
 - **WHEN** 用户在 YAML 头部添加 `# yaml-language-server: $schema=<URL>`
 - **THEN** 编辑器可基于生成的 Schema 提供校验与补全
-
