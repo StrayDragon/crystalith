@@ -22,6 +22,7 @@ import {
 } from '@mui/icons-material';
 
 import type { SessionSummary } from '../types';
+import ConfirmPopover from '../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../shared/layer';
 
 interface SessionSwitcherProps {
@@ -101,7 +102,6 @@ export default function SessionSwitcher({
 
   async function handleDeleteSession(sessionId: number, sessionTitle: string) {
     if (!onDelete || isDeleting) return;
-    if (!window.confirm(`确定要删除会话「${sessionTitle}」吗？`)) return;
     setIsDeleting(true);
     try {
       await onDelete(sessionId);
@@ -173,6 +173,9 @@ export default function SessionSwitcher({
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
                   autoFocus
+                  id="session-search-input"
+                  name="sessionSearch"
+                  aria-label="搜索会话"
                 />
              </div>
              {/* Error State */}
@@ -222,6 +225,8 @@ export default function SessionSwitcher({
                           }
                         }}
                         disabled={isUpdating}
+                        name="sessionTitle"
+                        aria-label="编辑会话标题"
                       />
                       <IconButton
                         size="sm"
@@ -279,18 +284,24 @@ export default function SessionSwitcher({
                              </IconButton>
                           )}
                           {onDelete && isConnected && (
-                             <IconButton
-                               size="sm"
-                               variant="text"
-                               className="w-6 h-6 min-w-[24px] rounded hover:bg-red-50 text-gray-500 hover:text-red-600"
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 void handleDeleteSession(item.id, item.title);
-                               }}
-                               disabled={isDeleting}
-                             >
+                            <ConfirmPopover
+                              message={`确定要删除会话「${item.title}」吗？`}
+                              onConfirm={() => void handleDeleteSession(item.id, item.title)}
+                              placement="left"
+                              disabled={isDeleting}
+                            >
+                              <IconButton
+                                size="sm"
+                                variant="text"
+                                className="w-6 h-6 min-w-[24px] rounded hover:bg-red-50 text-gray-500 hover:text-red-600"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                }}
+                                disabled={isDeleting}
+                              >
                                 <DeleteIcon style={{ fontSize: 14 }} />
-                             </IconButton>
+                              </IconButton>
+                            </ConfirmPopover>
                           )}
                        </div>
                     </>

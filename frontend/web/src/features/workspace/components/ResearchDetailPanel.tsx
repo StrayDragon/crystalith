@@ -248,7 +248,23 @@ function ResearchDetailPanel({
 
   // Get latest plan from SSE events or steps
   const latestPlanEvent = [...sseEvents].reverse().find((e) => e.type === 'plan_ready');
-  const latestPlan = latestPlanEvent?.type === 'plan_ready' ? latestPlanEvent.data.plan : null;
+  const latestPlanFromSteps = useMemo(() => {
+    if (!session.steps || session.steps.length === 0) return null;
+    const planStep = [...session.steps]
+      .reverse()
+      .find((step) => step.type === 'plan' && step.output_data);
+    if (!planStep || !planStep.output_data) return null;
+    const plan = planStep.output_data as {
+      queries?: Array<{ query: string; engine: string; priority: number; reason: string }>;
+      reasoning?: string;
+    };
+    if (!Array.isArray(plan.queries)) return null;
+    return {
+      queries: plan.queries,
+      reasoning: typeof plan.reasoning === 'string' ? plan.reasoning : '',
+    };
+  }, [session.steps]);
+  const latestPlan = latestPlanEvent?.type === 'plan_ready' ? latestPlanEvent.data.plan : latestPlanFromSteps;
 
   // Get queries from plan
   const queries = latestPlan?.queries || [];

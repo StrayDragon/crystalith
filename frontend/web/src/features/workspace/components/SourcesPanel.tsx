@@ -43,6 +43,7 @@ import type { ApiSourceSearchResult, SourceItem } from '../types';
 import type { SearchQueueItem } from '../hooks/useSources';
 import { useResearch } from '../hooks/useResearch';
 import { toast } from '../../../shared/toast';
+import ConfirmPopover from '../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../shared/layer';
 import SourceDetailDialog from './SourceDetailDialog';
 import type { ChatMessage } from './SourceDetailDialog';
@@ -332,9 +333,7 @@ function SourcesPanel({
   }, [research]);
 
   const handleResearchDelete = useCallback(async (sessionId: number) => {
-    if (window.confirm('确定要删除这个研究会话吗？')) {
-      await research.deleteSession(sessionId);
-    }
+    await research.deleteSession(sessionId);
   }, [research]);
 
   const handleResearchApprove = useCallback(async () => {
@@ -407,6 +406,9 @@ function SourcesPanel({
             accept=".txt,.md,.markdown,text/plain,text/markdown"
             onChange={(event) => onUpload(event.target.files?.[0] ?? null)}
             disabled={uploadDisabled}
+            id="source-upload-input"
+            name="sourceUpload"
+            aria-label="上传来源文件"
           />
         </Button>
       </Tooltip>
@@ -429,6 +431,9 @@ function SourcesPanel({
                   handleSearch();
                 }
               }}
+              id="source-search-input"
+              name="sourceSearch"
+              aria-label="在网络中搜索新来源"
             />
             <div className="absolute top-2/4 right-1 -translate-y-2/4">
                <IconButton
@@ -575,23 +580,26 @@ function SourcesPanel({
                 <div className="px-3 py-2 text-[11px] font-semibold text-gray-500 border-b border-gray-100 mb-1">
                   已选择 {selectedIds.length} 个来源
                 </div>
-                <MenuItem
-                  onClick={async () => {
-                    const label =
-                      selectedIds.length === 1
-                        ? '确定要移除已选的 1 个来源吗？'
-                        : `确定要移除已选的 ${selectedIds.length} 个来源吗？`;
-                    if (!window.confirm(label)) return;
+                <ConfirmPopover
+                  message={
+                    selectedIds.length === 1
+                      ? '确定要移除已选的 1 个来源吗？'
+                      : `确定要移除已选的 ${selectedIds.length} 个来源吗？`
+                  }
+                  onConfirm={async () => {
                     const success = await onRemoveSources(selectedIds);
                     if (success) {
                       setSelectedSourceIds({});
                     }
                   }}
-                  className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                  placement="left"
+                  disabled={removeDisabled || selectedIds.length === 0}
                 >
-                  <DeleteIcon style={{ fontSize: 16 }} />
-                  <span>删除已选来源</span>
-                </MenuItem>
+                  <MenuItem className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700">
+                    <DeleteIcon style={{ fontSize: 16 }} />
+                    <span>删除已选来源</span>
+                  </MenuItem>
+                </ConfirmPopover>
              </MenuList>
           </Menu>
         </div>
@@ -660,18 +668,23 @@ function SourcesPanel({
                               <OpenInFullIcon style={{ fontSize: 16 }} />
                               <span>放大查看</span>
                            </MenuItem>
-                           <MenuItem
-                              onClick={async () => {
+                           <ConfirmPopover
+                              message={`确定要删除「${source.title}」吗？此操作不可撤销。`}
+                              onConfirm={async () => {
                                  if (!isConnected || removeState === 'loading') return;
-                                 if (!window.confirm(`确定要删除「${source.title}」吗？此操作不可撤销。`)) return;
                                  await onRemoveSource(source.id);
                               }}
+                              placement="left"
                               disabled={!isConnected || removeState === 'loading'}
-                              className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
                            >
-                              <DeleteIcon style={{ fontSize: 16 }} />
-                              <span>{removeState === 'loading' ? '删除中…' : '删除来源'}</span>
-                           </MenuItem>
+                              <MenuItem
+                                 disabled={!isConnected || removeState === 'loading'}
+                                 className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                              >
+                                 <DeleteIcon style={{ fontSize: 16 }} />
+                                 <span>{removeState === 'loading' ? '删除中…' : '删除来源'}</span>
+                              </MenuItem>
+                           </ConfirmPopover>
                         </MenuList>
                      </Menu>
 

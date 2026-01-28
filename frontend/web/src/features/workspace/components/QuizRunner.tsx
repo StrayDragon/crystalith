@@ -142,6 +142,8 @@ export default function QuizRunner({ questions, className }: QuizRunnerProps) {
               value={currentAnswer.selected ?? ''}
               onChange={(event) => handleSelect(event.target.value)}
               disabled={currentAnswer.submitted}
+              name="quizAnswer"
+              aria-label="输入你的答案"
             />
           </div>
         )}
