@@ -3,7 +3,7 @@ import useSWR from 'swr';
 
 import { createNotebook, deleteNotebook, listNotebooks, updateNotebook } from '../api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
-import type { ApiNotebook, StatusLabel } from '../types';
+import type { StatusLabel } from '../types';
 import { normalizeNotebook } from '../utils';
 
 const DEFAULT_NOTEBOOK_NAME = '未命名笔记本';
@@ -13,22 +13,6 @@ export function useNotebooks() {
   const dispatch = useWorkspaceDispatch();
   // Track if we've already attempted to auto-create a notebook
   const autoCreateAttemptedRef = useRef(false);
-  const demoNotebooks = useMemo<ApiNotebook[]>(
-    () => [
-      { id: 1, name: '示例：产品调研', updated_at: new Date().toISOString() },
-      {
-        id: 2,
-        name: '示例：技术笔记',
-        updated_at: new Date(Date.now() - 86400000).toISOString(),
-      },
-    ],
-    [],
-  );
-  const demoNormalized = useMemo(
-    () => demoNotebooks.map(normalizeNotebook),
-    [demoNotebooks],
-  );
-
   const {
     data: notebookData,
     error: notebookError,
@@ -44,15 +28,14 @@ export function useNotebooks() {
 
   useEffect(() => {
     if (notebookError) {
-      dispatch({ type: 'SET_CONNECTION_STATE', payload: 'demo' });
-      dispatch({ type: 'SET_NOTEBOOKS', payload: demoNormalized });
-      const nextActive = demoNormalized[0]?.id ?? null;
-      if (nextActive !== state.activeNotebookId) {
-        dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: nextActive });
+      dispatch({ type: 'SET_CONNECTION_STATE', payload: 'error' });
+      dispatch({ type: 'SET_NOTEBOOKS', payload: [] });
+      if (state.activeNotebookId !== null) {
+        dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: null });
       }
       dispatch({
         type: 'SET_ERROR',
-        payload: { key: 'notebooks', value: '未连接到后端服务，已切换为演示数据。' },
+        payload: { key: 'notebooks', value: '未连接到后端服务，请检查后重试。' },
       });
       return;
     }
@@ -68,13 +51,7 @@ export function useNotebooks() {
     if (nextActive !== currentActive) {
       dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: nextActive });
     }
-  }, [
-    demoNormalized,
-    dispatch,
-    notebookData,
-    notebookError,
-    state.activeNotebookId,
-  ]);
+  }, [dispatch, notebookData, notebookError, state.activeNotebookId]);
 
   // Auto-create a default notebook when there are no notebooks
   useEffect(() => {
@@ -125,7 +102,7 @@ export function useNotebooks() {
 
   const handleCreateNotebook = useCallback(async () => {
     const name = state.createName.trim();
-    if (!name || state.connectionState === 'demo') return false;
+    if (!name || state.connectionState !== 'live') return false;
     dispatch({ type: 'SET_CREATE_STATE', payload: 'loading' });
     dispatch({ type: 'SET_ERROR', payload: { key: 'create', value: '' } });
     try {
@@ -157,7 +134,7 @@ export function useNotebooks() {
 
   const handleUpdateNotebook = useCallback(
     async (notebookId: number, name: string) => {
-      if (state.connectionState === 'demo') return false;
+      if (state.connectionState !== 'live') return false;
       const trimmed = name.trim();
       if (!trimmed) return false;
       try {
@@ -188,7 +165,7 @@ export function useNotebooks() {
 
   const handleDeleteNotebook = useCallback(
     async (notebookId: number) => {
-      if (state.connectionState === 'demo') return false;
+      if (state.connectionState !== 'live') return false;
       try {
         await deleteNotebook(notebookId);
         await mutate(
@@ -216,11 +193,12 @@ export function useNotebooks() {
     if (state.connectionState === 'connecting') {
       return { text: '连接中', tone: 'isLoading', tooltip: '正在连接后端服务' };
     }
-    if (state.connectionState === 'demo') {
-      return { text: '演示模式', tone: 'isDemo', tooltip: '当前为前端演示数据' };
+    if (state.connectionState === 'error') {
+      return { text: '连接失败', tone: 'isError', tooltip: '未连接到后端服务' };
     }
     return { text: '已连接', tone: 'isLive', tooltip: '已连接到后端服务' };
   }, [state.connectionState]);
+  const isConnected = state.connectionState === 'live';
 
   return {
     notebooks: state.notebooks,
@@ -238,6 +216,6 @@ export function useNotebooks() {
     createError: state.errors.create,
     isLoading: state.loading.notebooks,
     retryNotebooks,
-    isDemo: state.connectionState === 'demo',
+    isConnected,
   };
 }

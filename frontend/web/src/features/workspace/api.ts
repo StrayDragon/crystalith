@@ -57,6 +57,7 @@ export {
   refineBatch,
   // Workspace Tools
   listWorkspaceTools,
+  getSlidesConfig,
   getToolConfig,
   // Tasks
   getTask,
@@ -83,6 +84,7 @@ export type {
   RefineResponse,
   RefineBatchResponse,
   WorkspaceToolsResponse,
+  SlidesConfigResponse,
   TaskRead,
   AnalysisResult,
   Citation,

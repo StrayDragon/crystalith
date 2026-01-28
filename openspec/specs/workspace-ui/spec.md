@@ -302,3 +302,16 @@ The system **MUST** avoid distracting continuous animations and respect reduced 
 - **WHEN** 同一层级存在多个元素（如多个 Toast）
 - **THEN** 开发者可传入 slot 参数区分优先级
 - **AND** 后出现的元素自动获得更高的 z-index
+
+### Requirement: 后端不可用错误状态
+系统 **MUST** 在后端不可用时给出明确错误提示，并停止依赖后端的交互流程，不得回退到 demo 数据。
+
+#### Scenario: 初始加载失败
+- **WHEN** 工作区初始化请求无法连接后端或返回不可用错误
+- **THEN** 页面展示明确的错误提示与重试入口
+- **AND** 不渲染 demo 数据或伪造内容
+
+#### Scenario: 生成流程被阻止
+- **WHEN** 后端不可用且用户触发生成或保存操作
+- **THEN** 系统阻止操作并提示当前不可用
+- **AND** 不进入生成队列或半完成状态

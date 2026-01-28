@@ -350,7 +350,7 @@ async def search_sources(
         engine=payload.engine,
         mode=payload.mode,
         results=results,
-        message=message or "已生成简要搜索结果（TODO: 接入真实搜索）。",
+        message=message or "",
         created_at=created_at,
     )
 

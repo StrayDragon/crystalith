@@ -29,7 +29,7 @@ interface ChatPanelProps {
   isSending: boolean;
   notice: string;
   isBlocked: boolean;
-  isDemo: boolean;
+  isConnected: boolean;
   inputRef: RefObject<HTMLTextAreaElement>;
   citations: Citation[];
   isLoadingMessages: boolean;
@@ -50,7 +50,7 @@ function ChatPanel({
   isSending,
   notice,
   isBlocked,
-  isDemo,
+  isConnected,
   inputRef,
   citations,
   isLoadingMessages,
@@ -90,18 +90,14 @@ function ChatPanel({
     }
   }, []);
 
-  const showDemoSeed =
-    isDemo &&
-    !isBlocked &&
-    !isLoadingMessages &&
-    !messagesError &&
-    messages.length === 0;
-  const demoContent = `一、维生素类：\n- 维生素D：与毛囊周期相关，缺乏会影响再生能力。\n- 生物素（维生素B7）：促进角蛋白生成，建议从胡萝卜、坚果与鱼类中摄取。\n- 维生素E：抗氧化保护，常见于坚果与全谷物。\n\n二、需警惕的\"黑榜\"：\n- 高糖食品：刺激胰岛素反应，可能间接影响激素水平。\n- 油腻/高脂饮食：增加炎症反应与毛囊压力。\n- 生鸡蛋：生物素吸收受限，不建议大量食用。`;
-
   return (
     <div className="flex flex-1 flex-col min-h-0 p-0 gap-0">
       <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-5 lg:px-6 py-3 sm:py-4 flex flex-col gap-4" role="log" aria-label="对话内容">
-        {isBlocked ? (
+        {!isConnected ? (
+          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-xs text-gray-500">
+            未连接到后端服务，请检查服务状态后重试。
+          </div>
+        ) : isBlocked ? (
           <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-xs text-gray-500">
             请先创建笔记本，再开始对话。
           </div>
@@ -122,35 +118,9 @@ function ChatPanel({
               重试
             </button>
           </div>
-        ) : messages.length === 0 && !showDemoSeed ? (
+        ) : messages.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-xs text-gray-500">
             开始对话吧：输入问题或指令，NotebookLM 会生成总结与要点。
-          </div>
-        ) : null}
-
-        {showDemoSeed ? (
-          <div className="flex flex-col gap-2 items-start">
-            <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-              {demoContent}
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
-                onClick={() => onSaveToNote?.(demoContent)}
-              >
-                <IconSave className="w-3.5 h-3.5" />
-                保存到笔记
-              </button>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
-                onClick={() => handleCopy('demo', demoContent)}
-              >
-                <IconCopy className="w-3.5 h-3.5" />
-                {copiedId === 'demo' ? '已复制' : '复制'}
-              </button>
-            </div>
           </div>
         ) : null}
 
@@ -218,8 +188,8 @@ function ChatPanel({
                     {copiedId === message.id ? '已复制' : '复制'}
                   </button>
 
-                  {/* Conversion menu - only show if conversion callbacks are provided and not in demo mode */}
-                  {!isDemo && (onConvertToSource || onConvertToOutput) && (
+                  {/* Conversion menu - only show if conversion callbacks are provided and connected */}
+                  {isConnected && (onConvertToSource || onConvertToOutput) && (
                     <Menu placement="bottom-start">
                       <MenuHandler>
                         <button

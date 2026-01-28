@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { getTask, listNotebookTasks, type ApiTask } from '../api';
-import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
+import { useWorkspaceState } from '../context/WorkspaceContext';
 
 interface TaskState {
   tasks: ApiTask[];
@@ -11,8 +11,7 @@ interface TaskState {
 
 export function useTasks() {
   const state = useWorkspaceState();
-  const dispatch = useWorkspaceDispatch();
-  const isDemo = state.connectionState === 'demo';
+  const isConnected = state.connectionState === 'live';
   const [taskState, setTaskState] = useState<TaskState>({
     tasks: [],
     isLoading: false,
@@ -36,7 +35,7 @@ export function useTasks() {
   }, [state.activeNotebookId]);
 
   const fetchTasks = useCallback(async () => {
-    if (!state.activeNotebookId || isDemo) return [];
+    if (!state.activeNotebookId || !isConnected) return [];
     setTaskState((prev) => ({ ...prev, isLoading: true, error: '' }));
     try {
       const tasks = await listNotebookTasks(state.activeNotebookId);
@@ -50,11 +49,11 @@ export function useTasks() {
       }));
       return [];
     }
-  }, [isDemo, state.activeNotebookId]);
+  }, [isConnected, state.activeNotebookId]);
 
   const fetchTask = useCallback(
     async (taskId: string) => {
-      if (isDemo) return null;
+      if (!isConnected) return null;
       try {
         const task = await getTask(taskId);
         setTaskState((prev) => ({
@@ -66,7 +65,7 @@ export function useTasks() {
         return null;
       }
     },
-    [isDemo],
+    [isConnected],
   );
 
   const pollTask = useCallback(
@@ -77,7 +76,7 @@ export function useTasks() {
       intervalMs = 2000,
       maxAttempts = 60,
     ) => {
-      if (isDemo) return () => {};
+      if (!isConnected) return () => {};
 
       let attempts = 0;
 
@@ -126,7 +125,7 @@ export function useTasks() {
         }
       };
     },
-    [fetchTask, isDemo],
+    [fetchTask, isConnected],
   );
 
   const stopPolling = useCallback((taskId: string) => {
@@ -151,6 +150,6 @@ export function useTasks() {
     pollTask,
     stopPolling,
     stopAllPolling,
-    isDemo,
+    isConnected,
   };
 }

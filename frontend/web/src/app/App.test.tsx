@@ -1,5 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import { afterAll, beforeEach, expect, test, vi } from 'vitest';
 import { SWRConfig } from 'swr';
 import App from './App';
@@ -12,12 +11,6 @@ function renderWorkspace() {
       <App />
     </SWRConfig>,
   );
-}
-
-async function actUser(action: () => Promise<unknown> | unknown) {
-  await act(async () => {
-    await action();
-  });
 }
 
 beforeEach(() => {
@@ -37,18 +30,19 @@ test('renders NotebookLM-style panels', async () => {
   expect(screen.getByText('Studio')).toBeInTheDocument();
 });
 
-test('sending a message updates chat', async () => {
+test('chat is disabled when backend is unavailable', async () => {
   renderWorkspace();
-  const input = await screen.findByPlaceholderText(/开始输入/);
-  await actUser(() => userEvent.type(input, '你好，帮我总结一下。'));
-  await actUser(() => userEvent.click(screen.getByRole('button', { name: '发送' })));
-
-  expect(await screen.findByText('你好，帮我总结一下。')).toBeInTheDocument();
-  expect(await screen.findByText(/（演示）已收到：你好/)).toBeInTheDocument();
+  expect(
+    await screen.findByText('未连接到后端服务，请检查服务状态后重试。'),
+  ).toBeInTheDocument();
+  const input = screen.getByLabelText('对话输入');
+  expect(input).toBeDisabled();
+  expect(input).toHaveAttribute('placeholder', '请先创建笔记本');
+  expect(screen.getByRole('button', { name: '发送' })).toBeDisabled();
 });
 
-test('renders studio tools and add-note action', async () => {
+test('renders studio connection error and add-note action', async () => {
   renderWorkspace();
-  expect(await screen.findByRole('button', { name: '思维导图' })).toBeInTheDocument();
+  expect(await screen.findByText('未连接到后端服务。')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '添加笔记' })).toBeInTheDocument();
 });

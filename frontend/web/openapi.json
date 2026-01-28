@@ -3251,6 +3251,27 @@
           }
         }
       }
+    },
+    "/v1/workspace/tools/slides/config": {
+      "get": {
+        "tags": [
+          "workspace-tools"
+        ],
+        "summary": "Get Slides Config",
+        "operationId": "get_slides_config_v1_workspace_tools_slides_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlidesConfigResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5604,6 +5625,121 @@
         "description": "枚举值:\n\n* `idle`: 空闲\n* `running`: 生成中\n* `error`: 失败",
         "x-enum-class": "SlideStatus",
         "x-enum-module": "crystalith.db.models"
+      },
+      "SlidesConfigOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "is_default": {
+            "type": "boolean",
+            "title": "Is Default",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "SlidesConfigOption"
+      },
+      "SlidesConfigResponse": {
+        "properties": {
+          "defaults": {
+            "$ref": "#/components/schemas/SlideGenerationConfig"
+          },
+          "quantity_options": {
+            "items": {
+              "$ref": "#/components/schemas/SlidesConfigOption"
+            },
+            "type": "array",
+            "title": "Quantity Options"
+          },
+          "audience_options": {
+            "items": {
+              "$ref": "#/components/schemas/SlidesConfigOption"
+            },
+            "type": "array",
+            "title": "Audience Options"
+          },
+          "structure_options": {
+            "items": {
+              "$ref": "#/components/schemas/SlidesConfigOption"
+            },
+            "type": "array",
+            "title": "Structure Options"
+          },
+          "tone_options": {
+            "items": {
+              "$ref": "#/components/schemas/SlidesConfigOption"
+            },
+            "type": "array",
+            "title": "Tone Options"
+          },
+          "language_options": {
+            "items": {
+              "$ref": "#/components/schemas/SlidesConfigOption"
+            },
+            "type": "array",
+            "title": "Language Options"
+          },
+          "density_options": {
+            "items": {
+              "$ref": "#/components/schemas/SlidesConfigOption"
+            },
+            "type": "array",
+            "title": "Density Options"
+          },
+          "theme_preset_options": {
+            "items": {
+              "$ref": "#/components/schemas/SlidesThemePreset"
+            },
+            "type": "array",
+            "title": "Theme Preset Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "defaults",
+          "quantity_options",
+          "audience_options",
+          "structure_options",
+          "tone_options",
+          "language_options",
+          "density_options",
+          "theme_preset_options"
+        ],
+        "title": "SlidesConfigResponse"
+      },
+      "SlidesThemePreset": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "template": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Template"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "template"
+        ],
+        "title": "SlidesThemePreset"
       },
       "SourceBatchDeleteRequest": {
         "properties": {
