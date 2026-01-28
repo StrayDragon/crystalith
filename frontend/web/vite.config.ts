@@ -2,6 +2,11 @@ import path from 'path';
 import { configDefaults, defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
+const apiProxyTarget =
+  process.env.E2E_API_URL ||
+  process.env.VITE_API_PROXY_TARGET ||
+  'http://127.0.0.1:8032';
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -16,7 +21,7 @@ export default defineConfig({
     },
     proxy: {
       '/v1': {
-        target: 'http://127.0.0.1:8032',
+        target: apiProxyTarget,
         changeOrigin: true,
       },
     },

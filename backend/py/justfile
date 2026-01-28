@@ -5,7 +5,7 @@ dev:
     uv run python main.py
 
 e2e-dev:
-    HOST=0.0.0.0 PORT=8032 RELOAD=1 AUTO_DB_INIT=1 CRYSTALITH_DATABASE__URL=sqlite+aiosqlite:///./data/e2e.db CRYSTALITH_VECTOR_STORAGE__PROVIDER=sqlite CRYSTALITH_VECTOR_STORAGE__SQLITE__PATH=./data/vectors-e2e.db uv run python main.py
+    HOST=${E2E_BACKEND_HOST:-0.0.0.0} PORT=${E2E_BACKEND_PORT:-8032} RELOAD=1 AUTO_DB_INIT=1 CRYSTALITH_DATABASE__URL=sqlite+aiosqlite:///./data/e2e.db CRYSTALITH_VECTOR_STORAGE__PROVIDER=sqlite CRYSTALITH_VECTOR_STORAGE__SQLITE__PATH=./data/vectors-e2e.db uv run python main.py
 
 packages-test:
     #!/bin/bash
