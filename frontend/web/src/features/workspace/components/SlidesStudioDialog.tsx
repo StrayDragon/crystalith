@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import useSWR from 'swr';
 import {
   Button,
   Dialog,
@@ -23,6 +24,7 @@ import type { SlideDraft, SlideGenerationConfig, SlideOutline, SlideOutlineItem,
 import {
   createSlidesDraft,
   getLatestSlidesDraft,
+  getSlidesConfig,
   getSlidesDraft,
   updateSlidesDraft,
   updateSlidesOutline,
@@ -30,6 +32,7 @@ import {
 } from '../api';
 import { buildSlidevPreviewUrl } from '@crystalith-slidev';
 import { toast } from '../../../shared/toast';
+import { buildFrontmatterPreview, normalizeGenerationConfig } from '../utils/slides';
 
 const STAGES: { id: SlideStage; label: string }[] = [
   { id: 'input', label: '输入' },
@@ -37,148 +40,71 @@ const STAGES: { id: SlideStage; label: string }[] = [
   { id: 'markdown', label: 'Markdown' },
 ];
 
-const DEFAULT_CONFIG: Required<SlideGenerationConfig> = {
-  quantity: 'standard',
-  audience: 'general',
-  structure: 'standard',
-  tone: 'professional',
-  language: 'zh',
-  density: 'standard',
-  themePreset: 'minimal-clean',
-  frontmatter: '',
+type SlidesConfigOption = {
+  id: string;
+  label: string;
+  isDefault?: boolean;
 };
 
-const QUANTITY_OPTIONS = [
-  { id: 'short', label: '精简（6-8）' },
-  { id: 'standard', label: '标准（8-12）' },
-  { id: 'detailed', label: '详尽（12-18）' },
-];
-
-const AUDIENCE_OPTIONS = [
-  { id: 'general', label: '通用受众' },
-  { id: 'executive', label: '管理层' },
-  { id: 'technical', label: '技术受众' },
-  { id: 'external', label: '外部受众' },
-];
-
-const STRUCTURE_OPTIONS = [
-  { id: 'standard', label: '通用结构' },
-  { id: 'problem-solution', label: '问题/方案' },
-  { id: 'story', label: '故事叙事' },
-  { id: 'project-review', label: '项目复盘' },
-  { id: 'training', label: '培训课程' },
-];
-
-const TONE_OPTIONS = [
-  { id: 'professional', label: '正式专业' },
-  { id: 'friendly', label: '亲和易读' },
-  { id: 'inspiring', label: '鼓舞愿景' },
-  { id: 'serious', label: '严谨客观' },
-];
-
-const LANGUAGE_OPTIONS = [
-  { id: 'zh', label: '中文' },
-  { id: 'en', label: '英文' },
-];
-
-const DENSITY_OPTIONS = [
-  { id: 'sparse', label: '稀疏（2-3 要点）' },
-  { id: 'standard', label: '标准（3-5 要点）' },
-  { id: 'dense', label: '密集（5-7 要点）' },
-];
-
-const THEME_PRESET_OPTIONS = [
-  { id: 'minimal-clean', label: '清爽极简' },
-  { id: 'business-brief', label: '商务汇报' },
-  { id: 'product-launch', label: '产品发布' },
-  { id: 'research-paper', label: '学术研究' },
-  { id: 'data-insight', label: '数据洞察' },
-  { id: 'creative-visual', label: '创意视觉' },
-];
-
-const THEME_PRESET_TEMPLATES: Record<string, Record<string, string | Record<string, string>>> = {
-  'minimal-clean': {
-    theme: 'default',
-    colorSchema: 'light',
-    fonts: { sans: 'Manrope', serif: 'Noto Serif SC', mono: 'Fira Code' },
-    transition: 'fade',
-    background: '#F8FAFC',
-    class: 'text-left',
-  },
-  'business-brief': {
-    theme: 'default',
-    colorSchema: 'light',
-    fonts: { sans: 'IBM Plex Sans', serif: 'Noto Serif SC', mono: 'JetBrains Mono' },
-    transition: 'slide-left',
-    background: 'linear-gradient(180deg, #F8FAFC 0%, #EEF2FF 100%)',
-    class: 'text-left',
-  },
-  'product-launch': {
-    theme: 'default',
-    colorSchema: 'light',
-    fonts: { sans: 'Space Grotesk', serif: 'Noto Serif SC', mono: 'Fira Code' },
-    transition: 'fade-out',
-    background: 'radial-gradient(circle at 20% 20%, #FDE68A 0%, #FFFFFF 45%, #EEF2FF 100%)',
-    class: 'text-center',
-  },
-  'research-paper': {
-    theme: 'default',
-    colorSchema: 'light',
-    fonts: { sans: 'Source Sans 3', serif: 'Source Serif 4', mono: 'Source Code Pro' },
-    transition: 'slide-up',
-    background: '#FFFBF5',
-    class: 'text-left',
-  },
-  'data-insight': {
-    theme: 'default',
-    colorSchema: 'light',
-    fonts: { sans: 'Inter', serif: 'Noto Serif SC', mono: 'JetBrains Mono' },
-    transition: 'slide-right',
-    background: 'repeating-linear-gradient(0deg, #F8FAFC 0px, #F8FAFC 24px, #E5E7EB 25px)',
-    class: 'text-left',
-  },
-  'creative-visual': {
-    theme: 'default',
-    colorSchema: 'dark',
-    fonts: { sans: 'Bebas Neue', serif: 'Noto Serif SC', mono: 'Fira Code' },
-    transition: 'zoom',
-    background: 'linear-gradient(135deg, #0F172A 0%, #111827 50%, #1F2937 100%)',
-    class: 'text-white text-left',
-  },
+type SlidesThemePreset = {
+  id: string;
+  label: string;
+  template: Record<string, any>;
 };
 
-const DEMO_DRAFT: SlideDraft = {
-  id: 0,
-  notebookId: 0,
-  outputId: null,
-  title: '演示主题',
-  prompt: '请生成演示大纲与 Slidev Markdown。',
-  engine: 'slidev',
-  chunkIds: [],
-  outline: {
-    title: '演示主题',
-    slides: [
-      { title: '概览', bullets: ['要点 1', '要点 2'] },
-      { title: '重点', bullets: ['发现 A', '发现 B'] },
-    ],
-  },
-  markdown: '---\ntitle: 演示主题\n---\n\n# 演示主题\n\n---\n## 概览\n- 要点 1\n- 要点 2\n',
-  generationConfig: {
-    quantity: 'standard',
-    audience: 'general',
-    structure: 'standard',
-    tone: 'professional',
-    language: 'zh',
-    density: 'standard',
-    themePreset: 'minimal-clean',
-    frontmatter: '',
-  },
-  stage: 'markdown',
-  status: 'idle',
-  errorMessage: null,
-  createdAt: '',
-  updatedAt: '',
+type SlidesConfig = {
+  defaults: SlideGenerationConfig;
+  quantityOptions: SlidesConfigOption[];
+  audienceOptions: SlidesConfigOption[];
+  structureOptions: SlidesConfigOption[];
+  toneOptions: SlidesConfigOption[];
+  languageOptions: SlidesConfigOption[];
+  densityOptions: SlidesConfigOption[];
+  themePresetOptions: SlidesThemePreset[];
 };
+
+function normalizeSlidesConfig(raw: any): SlidesConfig | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const defaults = normalizeGenerationConfig(raw.defaults) ?? {};
+  const normalizeOption = (option: any) => ({
+    id: option.id,
+    label: option.label,
+    isDefault: option.is_default ?? option.isDefault ?? false,
+  });
+  const normalizeTheme = (option: any) => ({
+    id: option.id,
+    label: option.label,
+    template: option.template ?? {},
+  });
+  return {
+    defaults: {
+      quantity: defaults.quantity ?? null,
+      audience: defaults.audience ?? null,
+      structure: defaults.structure ?? null,
+      tone: defaults.tone ?? null,
+      language: defaults.language ?? null,
+      density: defaults.density ?? null,
+      themePreset: defaults.themePreset ?? null,
+      frontmatter: defaults.frontmatter ?? '',
+    },
+    quantityOptions: (raw.quantity_options ?? []).map(normalizeOption),
+    audienceOptions: (raw.audience_options ?? []).map(normalizeOption),
+    structureOptions: (raw.structure_options ?? []).map(normalizeOption),
+    toneOptions: (raw.tone_options ?? []).map(normalizeOption),
+    languageOptions: (raw.language_options ?? []).map(normalizeOption),
+    densityOptions: (raw.density_options ?? []).map(normalizeOption),
+    themePresetOptions: (raw.theme_preset_options ?? []).map(normalizeTheme),
+  };
+}
+
+function resolveOptionId(
+  value: string | null | undefined,
+  options: SlidesConfigOption[],
+): string {
+  if (value && options.some((option) => option.id === value)) return value;
+  const fallback = options.find((option) => option.isDefault)?.id ?? options[0]?.id ?? '';
+  return fallback;
+}
 
 function normalizeDraft(raw: any): SlideDraft {
   return {
@@ -200,21 +126,6 @@ function normalizeDraft(raw: any): SlideDraft {
   };
 }
 
-function normalizeGenerationConfig(raw: any): SlideGenerationConfig | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const config = raw as Record<string, any>;
-  return {
-    quantity: config.quantity ?? null,
-    audience: config.audience ?? null,
-    structure: config.structure ?? null,
-    tone: config.tone ?? null,
-    language: config.language ?? null,
-    density: config.density ?? null,
-    themePreset: config.themePreset ?? config.theme_preset ?? null,
-    frontmatter: config.frontmatter ?? null,
-  };
-}
-
 function outlineTitleFromDraft(draft: SlideDraft | null) {
   return draft?.outline?.title || draft?.title || '演示';
 }
@@ -230,54 +141,12 @@ function resolveErrorStatus(error: any): number | undefined {
   return undefined;
 }
 
-function normalizeFrontmatterOverride(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return '';
-  if (!trimmed.startsWith('---')) return trimmed;
-  const lines = trimmed.split('\n');
-  const stripped = lines[0].trim() === '---' ? lines.slice(1) : lines;
-  const endIndex = stripped.findIndex((line, index) => index > 0 && line.trim() === '---');
-  const body = endIndex >= 0 ? stripped.slice(0, endIndex) : stripped;
-  return body.join('\n').trim();
-}
-
-function yamlValue(value: string): string {
-  return JSON.stringify(value);
-}
-
-function buildFrontmatterPreview(
-  title: string,
-  themePreset: string,
-  override: string,
-): string {
-  const normalizedOverride = normalizeFrontmatterOverride(override);
-  if (normalizedOverride) {
-    if (normalizedOverride.includes('title:')) {
-      return normalizedOverride;
-    }
-    return `title: ${yamlValue(title)}\n${normalizedOverride}`.trim();
-  }
-  const template = THEME_PRESET_TEMPLATES[themePreset] ?? THEME_PRESET_TEMPLATES['minimal-clean'];
-  const lines: string[] = [`title: ${yamlValue(title)}`];
-  Object.entries(template).forEach(([key, value]) => {
-    if (key === 'fonts' && typeof value === 'object' && value) {
-      lines.push('fonts:');
-      Object.entries(value as Record<string, string>).forEach(([fontKey, fontValue]) => {
-        lines.push(`  ${fontKey}: ${yamlValue(fontValue)}`);
-      });
-      return;
-    }
-    lines.push(`${key}: ${yamlValue(String(value))}`);
-  });
-  return lines.join('\n');
-}
-
 interface SlidesStudioDialogProps {
   open: boolean;
   onClose: () => void;
   notebookId: number | null;
   selectedChunkIds: number[];
-  isDemo: boolean;
+  isConnected: boolean;
   onOutputsUpdated: () => void;
   openMode?: 'config' | 'preview';
   draftId?: number | null;
@@ -296,7 +165,7 @@ export default function SlidesStudioDialog({
   onClose,
   notebookId,
   selectedChunkIds,
-  isDemo,
+  isConnected,
   onOutputsUpdated,
   openMode = 'config',
   draftId = null,
@@ -311,14 +180,14 @@ export default function SlidesStudioDialog({
   const [isQueueing, setIsQueueing] = useState(false);
   const [events, setEvents] = useState<{ type: string; message: string }[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [configQuantity, setConfigQuantity] = useState(DEFAULT_CONFIG.quantity);
-  const [configAudience, setConfigAudience] = useState(DEFAULT_CONFIG.audience);
-  const [configStructure, setConfigStructure] = useState(DEFAULT_CONFIG.structure);
-  const [configTone, setConfigTone] = useState(DEFAULT_CONFIG.tone);
-  const [configLanguage, setConfigLanguage] = useState(DEFAULT_CONFIG.language);
-  const [configDensity, setConfigDensity] = useState(DEFAULT_CONFIG.density);
-  const [configThemePreset, setConfigThemePreset] = useState(DEFAULT_CONFIG.themePreset);
-  const [configFrontmatter, setConfigFrontmatter] = useState(DEFAULT_CONFIG.frontmatter);
+  const [configQuantity, setConfigQuantity] = useState('');
+  const [configAudience, setConfigAudience] = useState('');
+  const [configStructure, setConfigStructure] = useState('');
+  const [configTone, setConfigTone] = useState('');
+  const [configLanguage, setConfigLanguage] = useState('');
+  const [configDensity, setConfigDensity] = useState('');
+  const [configThemePreset, setConfigThemePreset] = useState('');
+  const [configFrontmatter, setConfigFrontmatter] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [configModelId, setConfigModelId] = useState<string | null>(null);
 
@@ -337,6 +206,19 @@ export default function SlidesStudioDialog({
   const autoPreviewRef = useRef<number | null>(null);
   const isConfigOnly = openMode === 'config';
   const isPreviewMode = openMode === 'preview';
+  const {
+    data: slidesConfigData,
+    error: slidesConfigError,
+    isLoading: slidesConfigLoading,
+  } = useSWR(open && isConnected ? 'workspace/slides-config' : null, getSlidesConfig, {
+    revalidateOnFocus: false,
+  });
+  const slidesConfig = useMemo(() => normalizeSlidesConfig(slidesConfigData), [slidesConfigData]);
+  const slidesConfigErrorMessage = !isConnected
+    ? '未连接到后端服务。'
+    : slidesConfigError
+      ? '演示配置加载失败。'
+      : '';
 
   const selectionLabel = useMemo(() => {
     const chunkIds = isPreviewMode && draft?.chunkIds?.length ? draft.chunkIds : selectedChunkIds;
@@ -344,9 +226,21 @@ export default function SlidesStudioDialog({
     return `已选择 ${chunkIds.length} 条引用，将仅基于选中引用生成。`;
   }, [draft?.chunkIds, isPreviewMode, selectedChunkIds]);
 
+  const selectedThemePreset = useMemo(() => {
+    const options = slidesConfig?.themePresetOptions ?? [];
+    if (!options.length) return null;
+    return options.find((option) => option.id === configThemePreset) ?? options[0] ?? null;
+  }, [configThemePreset, slidesConfig?.themePresetOptions]);
+  const configDefaults = slidesConfig?.defaults ?? null;
+
   const frontmatterPreview = useMemo(
-    () => buildFrontmatterPreview(title.trim() || '演示', configThemePreset, configFrontmatter),
-    [configFrontmatter, configThemePreset, title],
+    () =>
+      buildFrontmatterPreview(
+        title.trim() || '演示',
+        selectedThemePreset?.template,
+        configFrontmatter,
+      ),
+    [configFrontmatter, selectedThemePreset?.template, title],
   );
 
   const previewStale = useMemo(
@@ -366,18 +260,26 @@ export default function SlidesStudioDialog({
   }, []);
 
   const resetDraftState = useCallback(() => {
+    const defaults = configDefaults;
+    const quantityOptions = slidesConfig?.quantityOptions ?? [];
+    const audienceOptions = slidesConfig?.audienceOptions ?? [];
+    const structureOptions = slidesConfig?.structureOptions ?? [];
+    const toneOptions = slidesConfig?.toneOptions ?? [];
+    const languageOptions = slidesConfig?.languageOptions ?? [];
+    const densityOptions = slidesConfig?.densityOptions ?? [];
+    const themeOptions = slidesConfig?.themePresetOptions ?? [];
     setDraft(null);
     setActiveStage('input');
     setLoading(false);
     setIsGenerating(false);
-    setConfigQuantity(DEFAULT_CONFIG.quantity);
-    setConfigAudience(DEFAULT_CONFIG.audience);
-    setConfigStructure(DEFAULT_CONFIG.structure);
-    setConfigTone(DEFAULT_CONFIG.tone);
-    setConfigLanguage(DEFAULT_CONFIG.language);
-    setConfigDensity(DEFAULT_CONFIG.density);
-    setConfigThemePreset(DEFAULT_CONFIG.themePreset);
-    setConfigFrontmatter(DEFAULT_CONFIG.frontmatter);
+    setConfigQuantity(resolveOptionId(defaults?.quantity ?? null, quantityOptions));
+    setConfigAudience(resolveOptionId(defaults?.audience ?? null, audienceOptions));
+    setConfigStructure(resolveOptionId(defaults?.structure ?? null, structureOptions));
+    setConfigTone(resolveOptionId(defaults?.tone ?? null, toneOptions));
+    setConfigLanguage(resolveOptionId(defaults?.language ?? null, languageOptions));
+    setConfigDensity(resolveOptionId(defaults?.density ?? null, densityOptions));
+    setConfigThemePreset(resolveOptionId(defaults?.themePreset ?? null, themeOptions));
+    setConfigFrontmatter(defaults?.frontmatter ?? '');
     setShowAdvanced(false);
     setConfigModelId(null);
     setTitle('');
@@ -394,18 +296,38 @@ export default function SlidesStudioDialog({
     setShowMarkdownEditor(false);
     autoPreviewRef.current = null;
     setIsQueueing(false);
-  }, []);
+  }, [configDefaults, slidesConfig]);
 
   const applyGenerationConfig = useCallback((config: SlideGenerationConfig | null | undefined) => {
-    setConfigQuantity(config?.quantity ?? DEFAULT_CONFIG.quantity);
-    setConfigAudience(config?.audience ?? DEFAULT_CONFIG.audience);
-    setConfigStructure(config?.structure ?? DEFAULT_CONFIG.structure);
-    setConfigTone(config?.tone ?? DEFAULT_CONFIG.tone);
-    setConfigLanguage(config?.language ?? DEFAULT_CONFIG.language);
-    setConfigDensity(config?.density ?? DEFAULT_CONFIG.density);
-    setConfigThemePreset(config?.themePreset ?? DEFAULT_CONFIG.themePreset);
-    setConfigFrontmatter(config?.frontmatter ?? DEFAULT_CONFIG.frontmatter);
-  }, []);
+    const defaults = configDefaults;
+    const quantityOptions = slidesConfig?.quantityOptions ?? [];
+    const audienceOptions = slidesConfig?.audienceOptions ?? [];
+    const structureOptions = slidesConfig?.structureOptions ?? [];
+    const toneOptions = slidesConfig?.toneOptions ?? [];
+    const languageOptions = slidesConfig?.languageOptions ?? [];
+    const densityOptions = slidesConfig?.densityOptions ?? [];
+    const themeOptions = slidesConfig?.themePresetOptions ?? [];
+    setConfigQuantity(
+      resolveOptionId(config?.quantity ?? defaults?.quantity ?? null, quantityOptions),
+    );
+    setConfigAudience(
+      resolveOptionId(config?.audience ?? defaults?.audience ?? null, audienceOptions),
+    );
+    setConfigStructure(
+      resolveOptionId(config?.structure ?? defaults?.structure ?? null, structureOptions),
+    );
+    setConfigTone(resolveOptionId(config?.tone ?? defaults?.tone ?? null, toneOptions));
+    setConfigLanguage(
+      resolveOptionId(config?.language ?? defaults?.language ?? null, languageOptions),
+    );
+    setConfigDensity(
+      resolveOptionId(config?.density ?? defaults?.density ?? null, densityOptions),
+    );
+    setConfigThemePreset(
+      resolveOptionId(config?.themePreset ?? defaults?.themePreset ?? null, themeOptions),
+    );
+    setConfigFrontmatter(config?.frontmatter ?? defaults?.frontmatter ?? '');
+  }, [configDefaults, slidesConfig]);
 
   const syncFromDraft = useCallback((nextDraft: SlideDraft | null) => {
     if (!nextDraft) {
@@ -428,8 +350,8 @@ export default function SlidesStudioDialog({
       resetDraftState();
       return;
     }
-    if (!notebookId || isDemo) {
-      syncFromDraft(isDemo ? DEMO_DRAFT : null);
+    if (!notebookId || !isConnected) {
+      syncFromDraft(null);
       return;
     }
     setLoading(true);
@@ -449,15 +371,15 @@ export default function SlidesStudioDialog({
     } finally {
       setLoading(false);
     }
-  }, [draftId, isConfigOnly, isDemo, notebookId, open, resetDraftState, syncFromDraft]);
+  }, [draftId, isConfigOnly, isConnected, notebookId, open, resetDraftState, syncFromDraft]);
 
   const refreshDraft = useCallback(async (slideId?: number) => {
-    if (!notebookId) return;
+    if (!notebookId || !isConnected) return;
     const targetId = slideId ?? draft?.id;
     if (!targetId) return;
     const latest = await getSlidesDraft(notebookId, targetId);
     syncFromDraft(normalizeDraft(latest));
-  }, [draft?.id, notebookId, syncFromDraft]);
+  }, [draft?.id, isConnected, notebookId, syncFromDraft]);
 
   useEffect(() => {
     if (open) {
@@ -484,6 +406,32 @@ export default function SlidesStudioDialog({
     }
   }, [isConfigOnly, isPreviewMode, open]);
 
+  useEffect(() => {
+    if (!open || !slidesConfig) return;
+    setConfigQuantity((prev) =>
+      prev || resolveOptionId(configDefaults?.quantity ?? null, slidesConfig.quantityOptions),
+    );
+    setConfigAudience((prev) =>
+      prev || resolveOptionId(configDefaults?.audience ?? null, slidesConfig.audienceOptions),
+    );
+    setConfigStructure((prev) =>
+      prev || resolveOptionId(configDefaults?.structure ?? null, slidesConfig.structureOptions),
+    );
+    setConfigTone((prev) =>
+      prev || resolveOptionId(configDefaults?.tone ?? null, slidesConfig.toneOptions),
+    );
+    setConfigLanguage((prev) =>
+      prev || resolveOptionId(configDefaults?.language ?? null, slidesConfig.languageOptions),
+    );
+    setConfigDensity((prev) =>
+      prev || resolveOptionId(configDefaults?.density ?? null, slidesConfig.densityOptions),
+    );
+    setConfigThemePreset((prev) =>
+      prev || resolveOptionId(configDefaults?.themePreset ?? null, slidesConfig.themePresetOptions),
+    );
+    setConfigFrontmatter((prev) => prev || configDefaults?.frontmatter || '');
+  }, [configDefaults, open, slidesConfig]);
+
   useEffect(() => () => closeEventSource(), [closeEventSource]);
 
   useEffect(() => {
@@ -503,13 +451,13 @@ export default function SlidesStudioDialog({
   }, [draft?.id]);
 
   useEffect(() => {
-    if (!open || !isPreviewMode || !draft?.id || isDemo) return;
+    if (!open || !isPreviewMode || !draft?.id || !isConnected) return;
     if (queueStatus !== 'running') return;
     const timer = window.setInterval(() => {
       void refreshDraft(draft.id);
     }, 5000);
     return () => window.clearInterval(timer);
-  }, [draft?.id, isDemo, isPreviewMode, open, queueStatus, refreshDraft]);
+  }, [draft?.id, isConnected, isPreviewMode, open, queueStatus, refreshDraft]);
 
   useEffect(() => {
     if (!open || !isPreviewMode || !draft?.id) return;
@@ -561,6 +509,10 @@ export default function SlidesStudioDialog({
 
   const saveInputStage = useCallback(async () => {
     if (!notebookId) return null;
+    if (!isConnected) {
+      setError('未连接到后端服务。');
+      return null;
+    }
     setError('');
     const payload = {
       title: title.trim() || undefined,
@@ -581,6 +533,7 @@ export default function SlidesStudioDialog({
   }, [
     buildGenerationConfigPayload,
     draft,
+    isConnected,
     notebookId,
     prompt,
     selectedChunkIds,
@@ -591,7 +544,11 @@ export default function SlidesStudioDialog({
   const handleQueueSlides = useCallback(async () => {
     if (!onQueueSlides) return;
     if (isQueueing) return;
-    if (!notebookId && !isDemo) {
+    if (!isConnected) {
+      toast.error('未连接到后端服务。');
+      return;
+    }
+    if (!notebookId) {
       toast.error('请先创建笔记本。');
       return;
     }
@@ -619,7 +576,7 @@ export default function SlidesStudioDialog({
   }, [
     buildGenerationConfig,
     configModelId,
-    isDemo,
+    isConnected,
     isQueueing,
     notebookId,
     onClose,
@@ -631,6 +588,10 @@ export default function SlidesStudioDialog({
 
   const handleSaveOutline = useCallback(async () => {
     if (!notebookId || !draft) return;
+    if (!isConnected) {
+      setError('未连接到后端服务。');
+      return;
+    }
     const outline: SlideOutline = {
       title: outlineTitle.trim() || title.trim() || '演示',
       slides: outlineItems.map((item) => ({
@@ -640,16 +601,20 @@ export default function SlidesStudioDialog({
     };
     const updated = await updateSlidesOutline(notebookId, draft.id, { outline });
     syncFromDraft(normalizeDraft(updated));
-  }, [draft, notebookId, outlineItems, outlineTitle, syncFromDraft, title]);
+  }, [draft, isConnected, notebookId, outlineItems, outlineTitle, syncFromDraft, title]);
 
   const handleSaveMarkdown = useCallback(async () => {
     if (!notebookId || !draft) return;
+    if (!isConnected) {
+      setError('未连接到后端服务。');
+      return;
+    }
     const updated = await updateSlidesMarkdown(notebookId, draft.id, {
       markdown: markdown,
     });
     syncFromDraft(normalizeDraft(updated));
     onOutputsUpdated();
-  }, [draft, markdown, notebookId, onOutputsUpdated, syncFromDraft]);
+  }, [draft, isConnected, markdown, notebookId, onOutputsUpdated, syncFromDraft]);
 
   const buildOutlineStreamUrl = useCallback(
     (slideId: number) => {
@@ -721,7 +686,11 @@ export default function SlidesStudioDialog({
   );
 
   const handleGenerateOutline = useCallback(async () => {
-    if (!notebookId || isDemo) return;
+    if (!notebookId) return;
+    if (!isConnected) {
+      setError('未连接到后端服务。');
+      return;
+    }
     const saved = await saveInputStage();
     if (!saved) return;
     const url = buildOutlineStreamUrl(saved.id);
@@ -732,10 +701,14 @@ export default function SlidesStudioDialog({
         setActiveStage('outline');
       },
     });
-  }, [buildOutlineStreamUrl, isDemo, notebookId, refreshDraft, saveInputStage, startEventSource]);
+  }, [buildOutlineStreamUrl, isConnected, notebookId, refreshDraft, saveInputStage, startEventSource]);
 
   const handleGenerateMarkdown = useCallback(async () => {
-    if (!notebookId || !draft || isDemo) return;
+    if (!notebookId || !draft) return;
+    if (!isConnected) {
+      setError('未连接到后端服务。');
+      return;
+    }
     await handleSaveOutline();
     const url = buildMarkdownStreamUrl(draft.id);
     if (!url) return;
@@ -750,7 +723,7 @@ export default function SlidesStudioDialog({
     buildMarkdownStreamUrl,
     draft,
     handleSaveOutline,
-    isDemo,
+    isConnected,
     notebookId,
     onOutputsUpdated,
     refreshDraft,
@@ -758,7 +731,11 @@ export default function SlidesStudioDialog({
   ]);
 
   const handleGenerateAll = useCallback(async () => {
-    if (!notebookId || isDemo) return;
+    if (!notebookId) return;
+    if (!isConnected) {
+      setError('未连接到后端服务。');
+      return;
+    }
     const saved = await saveInputStage();
     if (!saved) return;
     const outlineUrl = buildOutlineStreamUrl(saved.id);
@@ -780,7 +757,7 @@ export default function SlidesStudioDialog({
   }, [
     buildMarkdownStreamUrl,
     buildOutlineStreamUrl,
-    isDemo,
+    isConnected,
     notebookId,
     onOutputsUpdated,
     refreshDraft,
@@ -789,6 +766,10 @@ export default function SlidesStudioDialog({
   ]);
 
   const buildPreview = useCallback(async (force = false) => {
+    if (!isConnected) {
+      setPreviewError('未连接到后端服务。');
+      return;
+    }
     if (!markdown.trim()) {
       setPreviewError('请先生成 Markdown。');
       return;
@@ -806,7 +787,7 @@ export default function SlidesStudioDialog({
     } finally {
       setIsPreviewSyncing(false);
     }
-  }, [draft?.markdown, handleSaveMarkdown, markdown, previewMarkdown]);
+  }, [draft?.markdown, handleSaveMarkdown, isConnected, markdown, previewMarkdown]);
 
   const handlePreview = useCallback(() => {
     void buildPreview(false);
@@ -864,7 +845,25 @@ export default function SlidesStudioDialog({
       );
     }
 
-    if (!notebookId && !isDemo) {
+    if (slidesConfigErrorMessage) {
+      return (
+        <div className="rounded-lg border border-dashed border-red-200 bg-red-50 p-6 text-center">
+          <Typography variant="small" className="text-red-600">
+            {slidesConfigErrorMessage}
+          </Typography>
+        </div>
+      );
+    }
+
+    if ((isConfigOnly || activeStage === 'input') && slidesConfigLoading && !slidesConfig) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <Spinner className="h-6 w-6" />
+        </div>
+      );
+    }
+
+    if (!notebookId) {
       return (
         <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center">
           <Typography variant="small" className="text-gray-600">
@@ -1003,7 +1002,7 @@ export default function SlidesStudioDialog({
                   value={configQuantity}
                   onChange={(event) => setConfigQuantity(event.target.value)}
                 >
-                  {QUANTITY_OPTIONS.map((option) => (
+                  {quantityOptions.map((option) => (
                     <option key={option.id} value={option.id}>{option.label}</option>
                   ))}
                 </select>
@@ -1015,7 +1014,7 @@ export default function SlidesStudioDialog({
                   value={configStructure}
                   onChange={(event) => setConfigStructure(event.target.value)}
                 >
-                  {STRUCTURE_OPTIONS.map((option) => (
+                  {structureOptions.map((option) => (
                     <option key={option.id} value={option.id}>{option.label}</option>
                   ))}
                 </select>
@@ -1027,7 +1026,7 @@ export default function SlidesStudioDialog({
                   value={configAudience}
                   onChange={(event) => setConfigAudience(event.target.value)}
                 >
-                  {AUDIENCE_OPTIONS.map((option) => (
+                  {audienceOptions.map((option) => (
                     <option key={option.id} value={option.id}>{option.label}</option>
                   ))}
                 </select>
@@ -1039,7 +1038,7 @@ export default function SlidesStudioDialog({
                   value={configTone}
                   onChange={(event) => setConfigTone(event.target.value)}
                 >
-                  {TONE_OPTIONS.map((option) => (
+                  {toneOptions.map((option) => (
                     <option key={option.id} value={option.id}>{option.label}</option>
                   ))}
                 </select>
@@ -1051,7 +1050,7 @@ export default function SlidesStudioDialog({
                   value={configLanguage}
                   onChange={(event) => setConfigLanguage(event.target.value)}
                 >
-                  {LANGUAGE_OPTIONS.map((option) => (
+                  {languageOptions.map((option) => (
                     <option key={option.id} value={option.id}>{option.label}</option>
                   ))}
                 </select>
@@ -1063,7 +1062,7 @@ export default function SlidesStudioDialog({
                   value={configDensity}
                   onChange={(event) => setConfigDensity(event.target.value)}
                 >
-                  {DENSITY_OPTIONS.map((option) => (
+                  {densityOptions.map((option) => (
                     <option key={option.id} value={option.id}>{option.label}</option>
                   ))}
                 </select>
@@ -1075,7 +1074,7 @@ export default function SlidesStudioDialog({
                   value={configThemePreset}
                   onChange={(event) => setConfigThemePreset(event.target.value)}
                 >
-                  {THEME_PRESET_OPTIONS.map((option) => (
+                  {themePresetOptions.map((option) => (
                     <option key={option.id} value={option.id}>{option.label}</option>
                   ))}
                 </select>
@@ -1106,7 +1105,7 @@ export default function SlidesStudioDialog({
                     {frontmatterPreview}
                   </pre>
                 </div>
-                {!isDemo && (
+                {isConnected && (
                   <div className="space-y-1">
                     <Typography variant="small" className="text-gray-600 text-xs font-medium">
                       AI 模型
@@ -1200,7 +1199,7 @@ export default function SlidesStudioDialog({
   };
 
   const stageActions = () => {
-    if (!notebookId && !isDemo) {
+    if (!notebookId) {
       return (
         <Button variant="outlined" onClick={onClose}>
           关闭
@@ -1217,7 +1216,7 @@ export default function SlidesStudioDialog({
           <Button
             color="blue"
             onClick={handleQueueSlides}
-            disabled={!onQueueSlides || isQueueing || loading}
+            disabled={!onQueueSlides || isQueueing || loading || configActionsDisabled}
           >
             生成
           </Button>
@@ -1231,11 +1230,9 @@ export default function SlidesStudioDialog({
           <Button variant="outlined" onClick={onClose}>
             关闭
           </Button>
-          {!isDemo && (
-            <Button variant="outlined" onClick={handleSaveMarkdown} disabled={isGenerating || !draft}>
-              保存 Markdown
-            </Button>
-          )}
+          <Button variant="outlined" onClick={handleSaveMarkdown} disabled={isGenerating || !draft || !isConnected}>
+            保存 Markdown
+          </Button>
         </div>
       );
     }
@@ -1246,13 +1243,25 @@ export default function SlidesStudioDialog({
           <Button variant="outlined" onClick={onClose}>
             关闭
           </Button>
-          <Button variant="outlined" onClick={saveInputStage} disabled={isGenerating}>
+          <Button
+            variant="outlined"
+            onClick={saveInputStage}
+            disabled={isGenerating || configActionsDisabled}
+          >
             保存
           </Button>
-          <Button variant="outlined" onClick={handleGenerateOutline} disabled={isGenerating}>
+          <Button
+            variant="outlined"
+            onClick={handleGenerateOutline}
+            disabled={isGenerating || configActionsDisabled}
+          >
             生成大纲
           </Button>
-          <Button color="blue" onClick={handleGenerateAll} disabled={isGenerating}>
+          <Button
+            color="blue"
+            onClick={handleGenerateAll}
+            disabled={isGenerating || configActionsDisabled}
+          >
             一键生成
           </Button>
         </div>
@@ -1265,10 +1274,18 @@ export default function SlidesStudioDialog({
           <Button variant="outlined" onClick={() => setActiveStage('input')}>
             返回输入
           </Button>
-          <Button variant="outlined" onClick={handleSaveOutline} disabled={isGenerating}>
+          <Button
+            variant="outlined"
+            onClick={handleSaveOutline}
+            disabled={isGenerating || !isConnected}
+          >
             保存大纲
           </Button>
-          <Button color="blue" onClick={handleGenerateMarkdown} disabled={isGenerating}>
+          <Button
+            color="blue"
+            onClick={handleGenerateMarkdown}
+            disabled={isGenerating || !isConnected}
+          >
             生成 Markdown
           </Button>
         </div>
@@ -1280,7 +1297,11 @@ export default function SlidesStudioDialog({
         <Button variant="outlined" onClick={() => setActiveStage('outline')}>
           返回大纲
         </Button>
-        <Button variant="outlined" onClick={handleSaveMarkdown} disabled={isGenerating}>
+        <Button
+          variant="outlined"
+          onClick={handleSaveMarkdown}
+          disabled={isGenerating || !isConnected}
+        >
           保存 Markdown
         </Button>
       </div>
@@ -1317,6 +1338,15 @@ export default function SlidesStudioDialog({
     }
     return null;
   })();
+  const configActionsDisabled = !isConnected || slidesConfigLoading || Boolean(slidesConfigError);
+
+  const quantityOptions = slidesConfig?.quantityOptions ?? [];
+  const structureOptions = slidesConfig?.structureOptions ?? [];
+  const audienceOptions = slidesConfig?.audienceOptions ?? [];
+  const toneOptions = slidesConfig?.toneOptions ?? [];
+  const languageOptions = slidesConfig?.languageOptions ?? [];
+  const densityOptions = slidesConfig?.densityOptions ?? [];
+  const themePresetOptions = slidesConfig?.themePresetOptions ?? [];
 
   return (
     <Dialog
@@ -1454,7 +1484,7 @@ export default function SlidesStudioDialog({
                     size="sm"
                     color="blue"
                     onClick={handlePreview}
-                    disabled={!canBuildPreview || isGenerating || isPreviewSyncing}
+                    disabled={!canBuildPreview || isGenerating || isPreviewSyncing || !isConnected}
                   >
                     {isPreviewSyncing ? (
                       <span className="flex items-center gap-2">
@@ -1472,7 +1502,7 @@ export default function SlidesStudioDialog({
                       size="sm"
                       variant="outlined"
                       onClick={handleRefreshPreview}
-                      disabled={isGenerating || isPreviewSyncing}
+                      disabled={isGenerating || isPreviewSyncing || !isConnected}
                     >
                       强制刷新
                     </Button>

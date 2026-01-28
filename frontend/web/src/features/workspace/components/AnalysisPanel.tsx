@@ -25,7 +25,7 @@ interface AnalysisPanelProps {
   isLoading: boolean;
   error: string;
   onRefresh: () => void;
-  isDemo: boolean;
+  isConnected: boolean;
   sourceCount: number;
 }
 
@@ -207,7 +207,7 @@ function AnalysisPanel({
   isLoading,
   error,
   onRefresh,
-  isDemo,
+  isConnected,
   sourceCount,
 }: AnalysisPanelProps) {
   const handleRefresh = useCallback(() => {
@@ -299,20 +299,13 @@ function AnalysisPanel({
           <Typography variant="small" className="font-semibold text-gray-800 text-xs">
             跨文档分析
           </Typography>
-          {isDemo && (
-            <Chip
-              value="演示"
-              size="sm"
-              className="bg-amber-100 text-amber-700 text-[10px] h-5 py-0 px-1.5"
-            />
-          )}
         </div>
         <Tooltip content="刷新分析">
           <Button
             variant="text"
             size="sm"
             onClick={handleRefresh}
-            disabled={isLoading}
+            disabled={isLoading || !isConnected}
             className="p-1.5 min-w-0 rounded-full"
           >
             <RefreshIcon

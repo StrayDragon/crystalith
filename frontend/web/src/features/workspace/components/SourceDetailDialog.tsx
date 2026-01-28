@@ -134,7 +134,7 @@ function ChunkItem({ chunk, index }: { chunk: ChunkRead; index: number }) {
 export default function SourceDetailDialog({ open, source, onClose, isFullscreen = false, onToggleFullscreen, onSaveQAAsSource }: SourceDetailDialogProps) {
   const state = useWorkspaceState();
   const notebookId = state.activeNotebookId;
-  const isDemo = state.connectionState === 'demo';
+  const isConnected = state.connectionState === 'live';
 
   const [activeTab, setActiveTab] = useState<TabValue>('overview');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -172,27 +172,11 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
       return;
     }
 
-    // If demo mode or no notebook, use mock data
-    if (isDemo || !notebookId) {
-      setIsBriefLoading(true);
-      const timer = setTimeout(() => {
-        const newBrief: SourceBrief = {
-          summary: `这是关于「${source.title}」的自动生成摘要。该文档主要讨论了相关主题的核心概念、实践应用和最佳方案。`,
-          keyPoints: [
-            '核心概念和定义',
-            '主要方法论',
-            '实践案例分析',
-            '建议和最佳实践',
-          ],
-          topics: ['分析', '方法论', '实践'],
-          wordCount: Math.floor(Math.random() * 5000) + 1000,
-          generatedAt: new Date(),
-        };
-        briefCache.set(source.id, newBrief);
-        setBrief(newBrief);
-        setIsBriefLoading(false);
-      }, 800);
-      return () => clearTimeout(timer);
+    if (!notebookId || !isConnected) {
+      setBrief(null);
+      setBriefError('未连接到后端服务，无法生成摘要。');
+      setIsBriefLoading(false);
+      return;
     }
 
     // Call real API
@@ -216,7 +200,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
       .finally(() => {
         setIsBriefLoading(false);
       });
-  }, [source, open, notebookId, isDemo]);
+  }, [source, open, notebookId, isConnected]);
 
   // Load chunks when switching to raw tab
   useEffect(() => {
@@ -230,23 +214,11 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
       return;
     }
 
-    // If demo mode or no notebook, use mock data
-    if (isDemo || !notebookId) {
-      setIsChunksLoading(true);
-      const timer = setTimeout(() => {
-        const mockChunks: ChunkRead[] = Array.from({ length: 5 }, (_, i) => ({
-          id: i + 1,
-          chunk_index: i,
-          text: `这是第 ${i + 1} 个文本片段的内容。它包含了来源文档「${source.title}」中的一部分信息。在实际应用中，这些片段会被用于向量检索和 RAG 问答。每个片段通常包含 200-500 个字符，以确保语义完整性。`,
-          start_offset: i * 300,
-          end_offset: (i + 1) * 300,
-          metadata: i % 2 === 0 ? { page: i + 1 } : null,
-        }));
-        chunksCache.set(source.id, mockChunks);
-        setChunks(mockChunks);
-        setIsChunksLoading(false);
-      }, 500);
-      return () => clearTimeout(timer);
+    if (!notebookId || !isConnected) {
+      setChunks([]);
+      setChunksError('未连接到后端服务，无法加载原始内容。');
+      setIsChunksLoading(false);
+      return;
     }
 
     // Call real API
@@ -263,7 +235,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
       .finally(() => {
         setIsChunksLoading(false);
       });
-  }, [source, open, activeTab, notebookId, isDemo]);
+  }, [source, open, activeTab, notebookId, isConnected]);
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -292,18 +264,15 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     setInputValue('');
     setIsLoading(true);
 
-    // If demo mode or no notebook, use mock response
-    if (isDemo || !notebookId) {
-      setTimeout(() => {
-        const assistantMessage: ChatMessage = {
-          id: `assistant-${Date.now()}`,
-          role: 'assistant',
-          content: `基于「${source.title}」的内容，关于您的问题"${userMessage.content}"，以下是相关信息：\n\n这是一个模拟的 RAG 回答。在实际实现中，这里会基于文档内容进行检索增强生成，提供准确的答案和引用。`,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-        setIsLoading(false);
-      }, 1000);
+    if (!notebookId || !isConnected) {
+      const assistantMessage: ChatMessage = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: '未连接到后端服务，无法生成回答。',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+      setIsLoading(false);
       return;
     }
 
@@ -328,7 +297,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     } finally {
       setIsLoading(false);
     }
-  }, [inputValue, isLoading, source, notebookId, isDemo]);
+  }, [inputValue, isLoading, source, notebookId, isConnected]);
 
   const handleRefreshBrief = useCallback(() => {
     if (!source) return;
@@ -337,25 +306,9 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     setBriefError('');
     setIsBriefLoading(true);
 
-    // If demo mode or no notebook, use mock data
-    if (isDemo || !notebookId) {
-      setTimeout(() => {
-        const newBrief: SourceBrief = {
-          summary: `这是重新生成的关于「${source.title}」的摘要。文档深入探讨了该领域的关键问题和解决方案。`,
-          keyPoints: [
-            '更新后的核心要点',
-            '新的方法论见解',
-            '最新实践案例',
-            '改进的建议',
-          ],
-          topics: ['更新', '洞察', '方案'],
-          wordCount: Math.floor(Math.random() * 5000) + 1000,
-          generatedAt: new Date(),
-        };
-        briefCache.set(source.id, newBrief);
-        setBrief(newBrief);
-        setIsBriefLoading(false);
-      }, 800);
+    if (!notebookId || !isConnected) {
+      setBriefError('未连接到后端服务，无法刷新摘要。');
+      setIsBriefLoading(false);
       return;
     }
 
@@ -378,7 +331,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
       .finally(() => {
         setIsBriefLoading(false);
       });
-  }, [source, notebookId, isDemo]);
+  }, [source, notebookId, isConnected]);
 
   // Generate QA content as markdown
   const generateQAContent = useCallback(() => {

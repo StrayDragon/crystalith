@@ -1,12 +1,23 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from crystalith.outputs.types import OutputType, OutputTypeMeta
+from crystalith.studio.slides.config import (
+    AUDIENCE_OPTIONS,
+    DEFAULT_CONFIG,
+    DENSITY_OPTIONS,
+    LANGUAGE_OPTIONS,
+    QUANTITY_OPTIONS,
+    STRUCTURE_OPTIONS,
+    THEME_PRESET_OPTIONS,
+    TONE_OPTIONS,
+)
+from crystalith.studio.slides.schemas import SlideGenerationConfig
 
 
 router = APIRouter(prefix="/v1/workspace", tags=["workspace-tools"])
@@ -47,6 +58,29 @@ class ToolConfigResponse(BaseModel):
     difficulty_options: list[ConfigOption] | None = None
     topic_placeholder: str | None = None
     supports_topic: bool = True
+
+
+class SlidesConfigOption(BaseModel):
+    id: str
+    label: str
+    is_default: bool = False
+
+
+class SlidesThemePreset(BaseModel):
+    id: str
+    label: str
+    template: dict[str, Any]
+
+
+class SlidesConfigResponse(BaseModel):
+    defaults: SlideGenerationConfig
+    quantity_options: list[SlidesConfigOption]
+    audience_options: list[SlidesConfigOption]
+    structure_options: list[SlidesConfigOption]
+    tone_options: list[SlidesConfigOption]
+    language_options: list[SlidesConfigOption]
+    density_options: list[SlidesConfigOption]
+    theme_preset_options: list[SlidesThemePreset]
 
 
 # Default configuration options
@@ -145,9 +179,32 @@ def _get_tool_by_id(tool_id: str) -> WorkspaceTool | None:
     return None
 
 
+def _option_to_response(option) -> SlidesConfigOption:
+    return SlidesConfigOption(id=option.id, label=option.label, is_default=option.is_default)
+
+
+def _theme_to_response(option) -> SlidesThemePreset:
+    return SlidesThemePreset(id=option.id, label=option.label, template=option.template)
+
+
 @router.get("/tools", response_model=WorkspaceToolsResponse)
 async def list_workspace_tools() -> WorkspaceToolsResponse:
     return WorkspaceToolsResponse(tools=_build_tools())
+
+
+@router.get("/tools/slides/config", response_model=SlidesConfigResponse)
+async def get_slides_config() -> SlidesConfigResponse:
+    # Keep this before /tools/{tool_id}/config to avoid route shadowing.
+    return SlidesConfigResponse(
+        defaults=DEFAULT_CONFIG,
+        quantity_options=[_option_to_response(option) for option in QUANTITY_OPTIONS],
+        audience_options=[_option_to_response(option) for option in AUDIENCE_OPTIONS],
+        structure_options=[_option_to_response(option) for option in STRUCTURE_OPTIONS],
+        tone_options=[_option_to_response(option) for option in TONE_OPTIONS],
+        language_options=[_option_to_response(option) for option in LANGUAGE_OPTIONS],
+        density_options=[_option_to_response(option) for option in DENSITY_OPTIONS],
+        theme_preset_options=[_theme_to_response(option) for option in THEME_PRESET_OPTIONS],
+    )
 
 
 @router.get("/tools/{tool_id}/config", response_model=ToolConfigResponse)

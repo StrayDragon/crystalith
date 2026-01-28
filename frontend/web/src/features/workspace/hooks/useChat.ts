@@ -29,12 +29,12 @@ export function useChat({
 }: UseChatOptions) {
   const state = useWorkspaceState();
   const dispatch = useWorkspaceDispatch();
-  const isDemo = state.connectionState === 'demo';
+  const isConnected = state.connectionState === 'live';
   const [isStreaming, setIsStreaming] = useState(false);
   const streamingMessageIdRef = useRef<string | null>(null);
 
   const { data, error, isLoading, mutate } = useSWR(
-    state.activeNotebookId && state.activeSessionId && !isDemo
+    state.activeNotebookId && state.activeSessionId && isConnected
       ? ['workspace/messages', state.activeNotebookId, state.activeSessionId]
       : null,
     () => listMessages(state.activeNotebookId ?? 0, state.activeSessionId ?? 0),
@@ -69,6 +69,10 @@ export function useChat({
       dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '请先创建笔记本。' } });
       return;
     }
+    if (!isConnected) {
+      dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '未连接到后端服务。' } });
+      return;
+    }
 
     dispatch({ type: 'SET_LOADING', payload: { key: 'send', value: true } });
     dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '' } });
@@ -80,39 +84,6 @@ export function useChat({
     dispatch({ type: 'SET_DRAFT', payload: '' });
 
     const sessionId = await ensureSession();
-
-    if (isDemo) {
-      const demoCitations = [
-        {
-          id: '101',
-          chunkId: 101,
-          sourceTitle: '需求说明.md',
-          snippet: '...与三栏工作区一致：左来源/引用，中聊天，右提炼输出。',
-          chunkIndex: 3,
-        },
-        {
-          id: '102',
-          chunkId: 102,
-          sourceTitle: '竞品对比.txt',
-          snippet: '...对话区域需要始终可用，提炼区域用于结构化输出。',
-          chunkIndex: 1,
-        },
-      ];
-      const assistantMessage = {
-        id: createId(),
-        role: 'assistant',
-        content: `（演示）已收到：${text}`,
-        citationChunkIds: collectChunkIds(demoCitations),
-        citations: demoCitations,
-      };
-      dispatch({
-        type: 'SET_MESSAGES',
-        payload: [...pendingMessages, assistantMessage],
-      });
-      dispatch({ type: 'SET_CITATIONS', payload: demoCitations });
-      dispatch({ type: 'SET_LOADING', payload: { key: 'send', value: false } });
-      return;
-    }
 
     if (!sessionId) {
       dispatch({ type: 'SET_LOADING', payload: { key: 'send', value: false } });
@@ -271,7 +242,7 @@ export function useChat({
     dispatch,
     enableStreaming,
     ensureSession,
-    isDemo,
+    isConnected,
     mutate,
     refreshSessions,
     state.activeNotebookId,
@@ -288,7 +259,11 @@ export function useChat({
   const [isConverting, setIsConverting] = useState(false);
 
   const handleConvertSessionToSource = useCallback(async () => {
-    if (!state.activeNotebookId || !state.activeSessionId || isDemo) return;
+    if (!state.activeNotebookId || !state.activeSessionId) return;
+    if (!isConnected) {
+      window.alert('未连接到后端服务，暂不支持转换。');
+      return;
+    }
     setIsConverting(true);
     try {
       const result = await convertSessionToSource(
@@ -307,11 +282,15 @@ export function useChat({
     } finally {
       setIsConverting(false);
     }
-  }, [state.activeNotebookId, state.activeSessionId, isDemo, refreshSources]);
+  }, [state.activeNotebookId, state.activeSessionId, isConnected, refreshSources]);
 
   const handleConvertSessionToOutput = useCallback(
     async (outputType: OutputType) => {
-      if (!state.activeNotebookId || !state.activeSessionId || isDemo) return;
+      if (!state.activeNotebookId || !state.activeSessionId) return;
+      if (!isConnected) {
+        window.alert('未连接到后端服务，暂不支持转换。');
+        return;
+      }
       setIsConverting(true);
       try {
         const result = await convertSessionToOutput(
@@ -332,7 +311,7 @@ export function useChat({
         setIsConverting(false);
       }
     },
-    [state.activeNotebookId, state.activeSessionId, isDemo, refreshOutputs],
+    [state.activeNotebookId, state.activeSessionId, isConnected, refreshOutputs],
   );
 
   return {
