@@ -1175,7 +1175,7 @@ async def convert_source_qa_to_source(
             source_id=source.id,
             error=str(exc),
         )
-        source.status = SourceStatus.ERROR
+        source.status = SourceStatus.FAILED
         source.error_message = str(exc)
         await session.commit()
         raise HTTPException(

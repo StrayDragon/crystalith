@@ -1221,7 +1221,13 @@ export default function RefinePanel({
               <div className="OutputConfigPanel">
                 <div className="OutputConfigItem isDisabled">
                   <label className="Switch">
-                    <input type="checkbox" checked={settings.autoTrigger} disabled />
+                    <input
+                      type="checkbox"
+                      checked={settings.autoTrigger}
+                      disabled
+                      name="refineAutoTrigger"
+                      aria-label="对话后自动触发提炼"
+                    />
                     <span className="SwitchTrack" />
                     <span className="SwitchThumb" />
                   </label>
@@ -1236,6 +1242,8 @@ export default function RefinePanel({
                       type="checkbox"
                       checked={settings.asyncQueue}
                       onChange={() => onToggleSetting('asyncQueue')}
+                      name="refineAsyncQueue"
+                      aria-label="开启后台异步队列"
                     />
                     <span className="SwitchTrack" />
                     <span className="SwitchThumb" />

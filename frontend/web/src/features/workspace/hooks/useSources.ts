@@ -436,17 +436,17 @@ export function useSources() {
     async (outputId: number) => {
       if (!state.activeNotebookId) return;
       if (!isConnected) {
-        window.alert('未连接到后端服务，暂不支持此功能');
+        toast.warning('未连接到后端服务，暂不支持此功能。');
         return;
       }
       try {
         const result = await convertOutputToSource(state.activeNotebookId, outputId);
         // Refresh sources list to show the new source
         await mutate();
-        window.alert(`已转换为来源：${result.filename}（${result.chunk_count} 个分块）`);
+        toast.success(`已转换为来源：${result.filename}（${result.chunk_count} 个分块）`);
       } catch (error) {
         const message = error instanceof Error ? error.message : '转换失败';
-        window.alert(`转换失败：${message}`);
+        toast.error(`转换失败：${message}`);
       }
     },
     [state.activeNotebookId, isConnected, mutate],

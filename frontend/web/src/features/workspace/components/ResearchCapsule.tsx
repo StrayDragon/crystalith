@@ -7,6 +7,7 @@ import {
   MoreVert as MoreVertIcon,
 } from '@mui/icons-material';
 import type { ResearchSessionListItem, ResearchStatus } from '../../../api/client';
+import ConfirmPopover from '../../../shared/ConfirmPopover';
 
 interface ResearchCapsuleProps {
   session: ResearchSessionListItem;
@@ -43,14 +44,10 @@ function ResearchCapsule({ session, onClick, onStart, onDelete, isExpanded }: Re
     [onStart]
   );
 
-  const handleDelete = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      setMenuOpen(false);
-      onDelete?.();
-    },
-    [onDelete]
-  );
+  const handleDelete = useCallback(() => {
+    setMenuOpen(false);
+    onDelete?.();
+  }, [onDelete]);
 
   const handleMenuClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -115,10 +112,16 @@ function ResearchCapsule({ session, onClick, onStart, onDelete, isExpanded }: Re
               </MenuItem>
             )}
             {onDelete && (
-              <MenuItem onClick={handleDelete} className="flex items-center gap-2 text-red-500">
-                <DeleteIcon style={{ fontSize: 16 }} />
-                <span>{isActive ? '取消并删除' : '删除'}</span>
-              </MenuItem>
+              <ConfirmPopover
+                message={`确定要${isActive ? '取消并删除' : '删除'}该研究会话吗？`}
+                onConfirm={handleDelete}
+                placement="left"
+              >
+                <MenuItem className="flex items-center gap-2 text-red-500">
+                  <DeleteIcon style={{ fontSize: 16 }} />
+                  <span>{isActive ? '取消并删除' : '删除'}</span>
+                </MenuItem>
+              </ConfirmPopover>
             )}
           </MenuList>
         </Menu>

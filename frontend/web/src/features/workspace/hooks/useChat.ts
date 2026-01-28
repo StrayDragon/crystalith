@@ -9,6 +9,7 @@ import {
   listMessages,
 } from '../api';
 import type { OutputType } from '../api';
+import { toast } from '../../../shared/toast';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
 import { collectChunkIds, createId, normalizeCitation, normalizeMessage } from '../utils';
 
@@ -261,7 +262,7 @@ export function useChat({
   const handleConvertSessionToSource = useCallback(async () => {
     if (!state.activeNotebookId || !state.activeSessionId) return;
     if (!isConnected) {
-      window.alert('未连接到后端服务，暂不支持转换。');
+      toast.warning('未连接到后端服务，暂不支持转换。');
       return;
     }
     setIsConverting(true);
@@ -275,10 +276,10 @@ export function useChat({
       if (refreshSources) {
         await refreshSources();
       }
-      window.alert(`已转换为来源：${result.filename}（${result.chunk_count} 个分块）`);
+      toast.success(`已转换为来源：${result.filename}（${result.chunk_count} 个分块）`);
     } catch (error) {
       const message = error instanceof Error ? error.message : '转换失败';
-      window.alert(`转换失败：${message}`);
+      toast.error(`转换失败：${message}`);
     } finally {
       setIsConverting(false);
     }
@@ -288,7 +289,7 @@ export function useChat({
     async (outputType: OutputType) => {
       if (!state.activeNotebookId || !state.activeSessionId) return;
       if (!isConnected) {
-        window.alert('未连接到后端服务，暂不支持转换。');
+        toast.warning('未连接到后端服务，暂不支持转换。');
         return;
       }
       setIsConverting(true);
@@ -303,10 +304,10 @@ export function useChat({
         if (refreshOutputs) {
           await refreshOutputs();
         }
-        window.alert(`已转换为笔记：${result.title}`);
+        toast.success(`已转换为笔记：${result.title}`);
       } catch (error) {
         const message = error instanceof Error ? error.message : '转换失败';
-        window.alert(`转换失败：${message}`);
+        toast.error(`转换失败：${message}`);
       } finally {
         setIsConverting(false);
       }
