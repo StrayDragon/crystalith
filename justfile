@@ -10,6 +10,22 @@ api-sync: api-check
 api-check:
     cd backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.json
 
+# Generate Python SDK (manual)
+sdk-gen VERSION='':
+    cd backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.json
+    SDK_VERSION={{VERSION}} ./scripts/sdk/generate_python_sdk.sh
+
+# Check Python SDK is up to date (for pre-commit)
+sdk-check:
+    cd backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.json
+    ./scripts/sdk/generate_python_sdk.sh
+    git add sdk/client/python
+    git diff --staged --exit-code
+
+# Run pre-commit checks
+sdk-prek:
+    prek run --all-files
+
 # Run all tests
 test: test-backend test-frontend
 
