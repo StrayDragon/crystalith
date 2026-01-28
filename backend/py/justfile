@@ -13,6 +13,9 @@ packages-test:
 test: packages-test
     uv run pytest tests/ -v
 
+check-imports:
+    rg --files -g '*.py' src/crystalith/features src/crystalith/shared | uv run python scripts/check_imports.py
+
 db-init:
     uv run scripts/db_init.py
 
