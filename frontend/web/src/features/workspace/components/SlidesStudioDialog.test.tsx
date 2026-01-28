@@ -1,11 +1,44 @@
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import SlidesStudioDialog from './SlidesStudioDialog';
+import type SlidesStudioDialog from './SlidesStudioDialog';
 import { getSlidesConfig } from '../api';
+
+const swrState = vi.hoisted(() => ({
+  data: null as unknown,
+  error: null as unknown,
+  isLoading: false,
+}));
+
+vi.mock('swr', async () => {
+  const actual = await vi.importActual<typeof import('swr')>('swr');
+  return {
+    ...actual,
+    default: (key: string | null) => ({
+      data: key ? swrState.data : undefined,
+      error: swrState.error,
+      isLoading: swrState.isLoading,
+    }),
+  };
+});
+
+vi.mock('./ModelSelector', () => ({
+  __esModule: true,
+  default: () => <div data-testid="model-selector" />,
+  ModelSelector: () => <div data-testid="model-selector" />,
+}));
+
+vi.mock('@material-tailwind/react', async () => {
+  const actual = await vi.importActual<typeof import('@material-tailwind/react')>('@material-tailwind/react');
+  return {
+    ...actual,
+    Dialog: ({ open, children }: { open?: boolean; children?: ReactNode }) =>
+      open ? <div>{children}</div> : null,
+  };
+});
 
 vi.mock('../api', async () => {
   const actual = await vi.importActual<typeof import('../api')>('../api');
@@ -15,10 +48,13 @@ vi.mock('../api', async () => {
   };
 });
 
-function renderDialog(overrides: Partial<ComponentProps<typeof SlidesStudioDialog>> = {}) {
+type SlidesStudioDialogProps = ComponentProps<typeof SlidesStudioDialog>;
+
+async function renderDialog(overrides: Partial<SlidesStudioDialogProps> = {}) {
+  const { default: SlidesStudioDialogComponent } = await import('./SlidesStudioDialog');
   render(
     <SWRConfig value={{ provider: () => new Map() }}>
-      <SlidesStudioDialog
+      <SlidesStudioDialogComponent
         open
         onClose={() => {}}
         notebookId={1}
@@ -34,10 +70,13 @@ function renderDialog(overrides: Partial<ComponentProps<typeof SlidesStudioDialo
 
 beforeEach(() => {
   vi.resetAllMocks();
+  swrState.data = null;
+  swrState.error = null;
+  swrState.isLoading = false;
 });
 
 test('renders slides config options from backend', async () => {
-  vi.mocked(getSlidesConfig).mockResolvedValue({
+  swrState.data = {
     defaults: {
       quantity: 'standard',
       audience: 'general',
@@ -64,9 +103,9 @@ test('renders slides config options from backend', async () => {
         template: { theme: 'default', transition: 'fade', background: '#fff' },
       },
     ],
-  });
+  };
 
-  renderDialog();
+  await renderDialog();
   expect(await screen.findByText('精简')).toBeInTheDocument();
 
   const advancedButton = screen.getByRole('button', { name: '高级设置' });
@@ -75,8 +114,8 @@ test('renders slides config options from backend', async () => {
   expect(await screen.findByText(/transition: "fade"/)).toBeInTheDocument();
 });
 
-test('shows backend unavailable message when disconnected', () => {
-  renderDialog({ isConnected: false });
+test('shows backend unavailable message when disconnected', async () => {
+  await renderDialog({ isConnected: false });
   expect(screen.getByText('未连接到后端服务。')).toBeInTheDocument();
   expect(getSlidesConfig).not.toHaveBeenCalled();
 });
