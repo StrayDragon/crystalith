@@ -2,6 +2,16 @@
 
 Crystalith uses SQLAlchemy (async) and supports SQLite (dev) and PostgreSQL (prod).
 
+## Module layout
+
+Backend source lives in `backend/py/src/crystalith`:
+
+- `web/`: FastAPI app creation, global dependencies, router registration
+- `features/`: business-domain slices (api/service/repo/schemas)
+- `shared/`: cross-cutting infrastructure (config/db/ai/vector_storage/utils)
+
+Dependency direction is enforced as `web -> features -> shared` via `just check-imports`.
+
 ### Option A: create_all (MVP / local dev)
 
 ```bash

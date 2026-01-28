@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetData, AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetErrors, AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetResponses, ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostData, ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostErrors, ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostResponses, AskQuestionStreamV1NotebooksNotebookIdQaStreamPostData, AskQuestionStreamV1NotebooksNotebookIdQaStreamPostErrors, AskQuestionStreamV1NotebooksNotebookIdQaStreamPostResponses, AskQuestionV1NotebooksNotebookIdQaPostData, AskQuestionV1NotebooksNotebookIdQaPostErrors, AskQuestionV1NotebooksNotebookIdQaPostResponses, BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteData, BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteErrors, BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteResponses, CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostData, CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostErrors, CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostResponses, ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostData, ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostErrors, ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostResponses, ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostData, ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostErrors, ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostResponses, ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostData, ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostErrors, ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostResponses, ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostData, ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostErrors, ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponses, CreateDraftV1NotebooksNotebookIdSlidesDraftsPostData, CreateDraftV1NotebooksNotebookIdSlidesDraftsPostErrors, CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponses, CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostData, CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostErrors, CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses, CreateNotebookV1NotebooksPostData, CreateNotebookV1NotebooksPostErrors, CreateNotebookV1NotebooksPostResponses, CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostData, CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostErrors, CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostResponses, CreateResearchSessionV1NotebooksNotebookIdResearchPostData, CreateResearchSessionV1NotebooksNotebookIdResearchPostErrors, CreateResearchSessionV1NotebooksNotebookIdResearchPostResponses, CreateSessionV1NotebooksNotebookIdSessionsPostData, CreateSessionV1NotebooksNotebookIdSessionsPostErrors, CreateSessionV1NotebooksNotebookIdSessionsPostResponses, CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostData, CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostErrors, CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponses, DeleteNotebookV1NotebooksNotebookIdDeleteData, DeleteNotebookV1NotebooksNotebookIdDeleteErrors, DeleteNotebookV1NotebooksNotebookIdDeleteResponses, DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteData, DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteErrors, DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteResponses, DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteData, DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteErrors, DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteResponses, DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteData, DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteErrors, DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteResponses, DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteData, DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteErrors, DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponses, ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostData, ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostErrors, ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostResponses, FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostData, FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostErrors, FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostResponses, GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetData, GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetErrors, GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetResponses, GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetData, GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetErrors, GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetResponses, GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetData, GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetErrors, GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponses, GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetData, GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetErrors, GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponses, GetModelV1ModelsModelIdGetData, GetModelV1ModelsModelIdGetErrors, GetModelV1ModelsModelIdGetResponses, GetNotebookV1NotebooksNotebookIdGetData, GetNotebookV1NotebooksNotebookIdGetErrors, GetNotebookV1NotebooksNotebookIdGetResponses, GetOutputV1NotebooksNotebookIdOutputsOutputIdGetData, GetOutputV1NotebooksNotebookIdOutputsOutputIdGetErrors, GetOutputV1NotebooksNotebookIdOutputsOutputIdGetResponses, GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetData, GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetErrors, GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetResponses, GetSessionV1NotebooksNotebookIdSessionsSessionIdGetData, GetSessionV1NotebooksNotebookIdSessionsSessionIdGetErrors, GetSessionV1NotebooksNotebookIdSessionsSessionIdGetResponses, GetSlidesConfigV1WorkspaceToolsSlidesConfigGetData, GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses, GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetData, GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetErrors, GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetResponses, GetTaskV1TasksTaskIdGetData, GetTaskV1TasksTaskIdGetErrors, GetTaskV1TasksTaskIdGetResponses, GetToolConfigV1WorkspaceToolsToolIdConfigGetData, GetToolConfigV1WorkspaceToolsToolIdConfigGetErrors, GetToolConfigV1WorkspaceToolsToolIdConfigGetResponses, ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetData, ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetErrors, ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses, ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetData, ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetErrors, ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetResponses, ListModelsV1ModelsGetData, ListModelsV1ModelsGetErrors, ListModelsV1ModelsGetResponses, ListNotebooksV1NotebooksGetData, ListNotebooksV1NotebooksGetResponses, ListOutputsV1NotebooksNotebookIdOutputsGetData, ListOutputsV1NotebooksNotebookIdOutputsGetErrors, ListOutputsV1NotebooksNotebookIdOutputsGetResponses, ListResearchSessionsV1NotebooksNotebookIdResearchGetData, ListResearchSessionsV1NotebooksNotebookIdResearchGetErrors, ListResearchSessionsV1NotebooksNotebookIdResearchGetResponses, ListSessionsV1NotebooksNotebookIdSessionsGetData, ListSessionsV1NotebooksNotebookIdSessionsGetErrors, ListSessionsV1NotebooksNotebookIdSessionsGetResponses, ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetData, ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetErrors, ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponses, ListSourcesV1NotebooksNotebookIdSourcesGetData, ListSourcesV1NotebooksNotebookIdSourcesGetErrors, ListSourcesV1NotebooksNotebookIdSourcesGetResponses, ListTasksV1NotebooksNotebookIdTasksGetData, ListTasksV1NotebooksNotebookIdTasksGetErrors, ListTasksV1NotebooksNotebookIdTasksGetResponses, ListWorkspaceToolsV1WorkspaceToolsGetData, ListWorkspaceToolsV1WorkspaceToolsGetResponses, ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostData, ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostErrors, ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostResponses, RefineBatchV1NotebooksNotebookIdRefineBatchPostData, RefineBatchV1NotebooksNotebookIdRefineBatchPostErrors, RefineBatchV1NotebooksNotebookIdRefineBatchPostResponses, RefineV1NotebooksNotebookIdRefinePostData, RefineV1NotebooksNotebookIdRefinePostErrors, RefineV1NotebooksNotebookIdRefinePostResponses, SearchSourcesV1NotebooksNotebookIdSourcesSearchPostData, SearchSourcesV1NotebooksNotebookIdSourcesSearchPostErrors, SearchSourcesV1NotebooksNotebookIdSourcesSearchPostResponses, SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostData, SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostErrors, SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostResponses, SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostData, SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostErrors, SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponses, StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostData, StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostErrors, StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostResponses, StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetData, StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetErrors, StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetResponses, UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchData, UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchErrors, UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponses, UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutData, UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutErrors, UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponses, UpdateNotebookV1NotebooksNotebookIdPatchData, UpdateNotebookV1NotebooksNotebookIdPatchErrors, UpdateNotebookV1NotebooksNotebookIdPatchResponses, UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutData, UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutErrors, UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponses, UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchData, UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchErrors, UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponses, UploadSourceV1NotebooksNotebookIdSourcesPostData, UploadSourceV1NotebooksNotebookIdSourcesPostErrors, UploadSourceV1NotebooksNotebookIdSourcesPostResponses } from './types.gen';
+import type { AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetData, AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetErrors, AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetResponses, ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostData, ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostErrors, ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostResponses, AskQuestionStreamV1NotebooksNotebookIdQaStreamPostData, AskQuestionStreamV1NotebooksNotebookIdQaStreamPostErrors, AskQuestionStreamV1NotebooksNotebookIdQaStreamPostResponses, AskQuestionV1NotebooksNotebookIdQaPostData, AskQuestionV1NotebooksNotebookIdQaPostErrors, AskQuestionV1NotebooksNotebookIdQaPostResponses, BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteData, BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteErrors, BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteResponses, CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostData, CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostErrors, CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostResponses, ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostData, ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostErrors, ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostResponses, ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostData, ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostErrors, ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponses, CreateDraftV1NotebooksNotebookIdSlidesDraftsPostData, CreateDraftV1NotebooksNotebookIdSlidesDraftsPostErrors, CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponses, CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostData, CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostErrors, CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses, CreateNotebookV1NotebooksPostData, CreateNotebookV1NotebooksPostErrors, CreateNotebookV1NotebooksPostResponses, CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostData, CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostErrors, CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostResponses, CreateResearchSessionV1NotebooksNotebookIdResearchPostData, CreateResearchSessionV1NotebooksNotebookIdResearchPostErrors, CreateResearchSessionV1NotebooksNotebookIdResearchPostResponses, CreateSessionV1NotebooksNotebookIdSessionsPostData, CreateSessionV1NotebooksNotebookIdSessionsPostErrors, CreateSessionV1NotebooksNotebookIdSessionsPostResponses, CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostData, CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostErrors, CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponses, DeleteNotebookV1NotebooksNotebookIdDeleteData, DeleteNotebookV1NotebooksNotebookIdDeleteErrors, DeleteNotebookV1NotebooksNotebookIdDeleteResponses, DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteData, DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteErrors, DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteResponses, DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteData, DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteErrors, DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteResponses, DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteData, DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteErrors, DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteResponses, DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteData, DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteErrors, DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponses, ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostData, ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostErrors, ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostResponses, FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostData, FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostErrors, FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostResponses, GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetData, GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetErrors, GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetResponses, GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetData, GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetErrors, GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetResponses, GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetData, GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetErrors, GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponses, GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetData, GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetErrors, GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponses, GetModelV1ModelsModelIdGetData, GetModelV1ModelsModelIdGetErrors, GetModelV1ModelsModelIdGetResponses, GetNotebookV1NotebooksNotebookIdGetData, GetNotebookV1NotebooksNotebookIdGetErrors, GetNotebookV1NotebooksNotebookIdGetResponses, GetOutputV1NotebooksNotebookIdOutputsOutputIdGetData, GetOutputV1NotebooksNotebookIdOutputsOutputIdGetErrors, GetOutputV1NotebooksNotebookIdOutputsOutputIdGetResponses, GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetData, GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetErrors, GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetResponses, GetSessionV1NotebooksNotebookIdSessionsSessionIdGetData, GetSessionV1NotebooksNotebookIdSessionsSessionIdGetErrors, GetSessionV1NotebooksNotebookIdSessionsSessionIdGetResponses, GetSlidesConfigV1WorkspaceToolsSlidesConfigGetData, GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses, GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetData, GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetErrors, GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetResponses, GetTaskV1TasksTaskIdGetData, GetTaskV1TasksTaskIdGetErrors, GetTaskV1TasksTaskIdGetResponses, GetToolConfigV1WorkspaceToolsToolIdConfigGetData, GetToolConfigV1WorkspaceToolsToolIdConfigGetErrors, GetToolConfigV1WorkspaceToolsToolIdConfigGetResponses, ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetData, ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetErrors, ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses, ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetData, ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetErrors, ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetResponses, ListModelsV1ModelsGetData, ListModelsV1ModelsGetErrors, ListModelsV1ModelsGetResponses, ListNotebooksV1NotebooksGetData, ListNotebooksV1NotebooksGetResponses, ListOutputsV1NotebooksNotebookIdOutputsGetData, ListOutputsV1NotebooksNotebookIdOutputsGetErrors, ListOutputsV1NotebooksNotebookIdOutputsGetResponses, ListResearchSessionsV1NotebooksNotebookIdResearchGetData, ListResearchSessionsV1NotebooksNotebookIdResearchGetErrors, ListResearchSessionsV1NotebooksNotebookIdResearchGetResponses, ListSessionsV1NotebooksNotebookIdSessionsGetData, ListSessionsV1NotebooksNotebookIdSessionsGetErrors, ListSessionsV1NotebooksNotebookIdSessionsGetResponses, ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetData, ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetErrors, ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponses, ListSourcesV1NotebooksNotebookIdSourcesGetData, ListSourcesV1NotebooksNotebookIdSourcesGetErrors, ListSourcesV1NotebooksNotebookIdSourcesGetResponses, ListTasksV1NotebooksNotebookIdTasksGetData, ListTasksV1NotebooksNotebookIdTasksGetErrors, ListTasksV1NotebooksNotebookIdTasksGetResponses, ListWorkspaceToolsV1WorkspaceToolsGetData, ListWorkspaceToolsV1WorkspaceToolsGetResponses, ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostData, ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostErrors, ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostResponses, RefineBatchV1NotebooksNotebookIdRefineBatchPostData, RefineBatchV1NotebooksNotebookIdRefineBatchPostErrors, RefineBatchV1NotebooksNotebookIdRefineBatchPostResponses, RefineV1NotebooksNotebookIdRefinePostData, RefineV1NotebooksNotebookIdRefinePostErrors, RefineV1NotebooksNotebookIdRefinePostResponses, SearchSourcesV1NotebooksNotebookIdSourcesSearchPostData, SearchSourcesV1NotebooksNotebookIdSourcesSearchPostErrors, SearchSourcesV1NotebooksNotebookIdSourcesSearchPostResponses, SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostData, SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostErrors, SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostResponses, SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostData, SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostErrors, SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponses, StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostData, StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostErrors, StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostResponses, StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetData, StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetErrors, StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetResponses, UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchData, UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchErrors, UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponses, UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutData, UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutErrors, UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponses, UpdateNotebookV1NotebooksNotebookIdPatchData, UpdateNotebookV1NotebooksNotebookIdPatchErrors, UpdateNotebookV1NotebooksNotebookIdPatchResponses, UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutData, UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutErrors, UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponses, UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchData, UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchErrors, UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponses, UploadSourceV1NotebooksNotebookIdSourcesPostData, UploadSourceV1NotebooksNotebookIdSourcesPostErrors, UploadSourceV1NotebooksNotebookIdSourcesPostResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -58,6 +58,62 @@ export const updateNotebookV1NotebooksNotebookIdPatch = <ThrowOnError extends bo
 });
 
 /**
+ * List Sessions
+ */
+export const listSessionsV1NotebooksNotebookIdSessionsGet = <ThrowOnError extends boolean = false>(options: Options<ListSessionsV1NotebooksNotebookIdSessionsGetData, ThrowOnError>) => (options.client ?? client).get<ListSessionsV1NotebooksNotebookIdSessionsGetResponses, ListSessionsV1NotebooksNotebookIdSessionsGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sessions', ...options });
+
+/**
+ * Create Session
+ */
+export const createSessionV1NotebooksNotebookIdSessionsPost = <ThrowOnError extends boolean = false>(options: Options<CreateSessionV1NotebooksNotebookIdSessionsPostData, ThrowOnError>) => (options.client ?? client).post<CreateSessionV1NotebooksNotebookIdSessionsPostResponses, CreateSessionV1NotebooksNotebookIdSessionsPostErrors, ThrowOnError>({
+    url: '/v1/notebooks/{notebook_id}/sessions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete Session
+ */
+export const deleteSessionV1NotebooksNotebookIdSessionsSessionIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteResponses, DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sessions/{session_id}', ...options });
+
+/**
+ * Get Session
+ */
+export const getSessionV1NotebooksNotebookIdSessionsSessionIdGet = <ThrowOnError extends boolean = false>(options: Options<GetSessionV1NotebooksNotebookIdSessionsSessionIdGetData, ThrowOnError>) => (options.client ?? client).get<GetSessionV1NotebooksNotebookIdSessionsSessionIdGetResponses, GetSessionV1NotebooksNotebookIdSessionsSessionIdGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sessions/{session_id}', ...options });
+
+/**
+ * Update Session
+ */
+export const updateSessionV1NotebooksNotebookIdSessionsSessionIdPatch = <ThrowOnError extends boolean = false>(options: Options<UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponses, UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchErrors, ThrowOnError>({
+    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List Messages
+ */
+export const listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet = <ThrowOnError extends boolean = false>(options: Options<ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetData, ThrowOnError>) => (options.client ?? client).get<ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetResponses, ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/messages', ...options });
+
+/**
+ * Create Message
+ */
+export const createMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPost = <ThrowOnError extends boolean = false>(options: Options<CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostData, ThrowOnError>) => (options.client ?? client).post<CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses, CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostErrors, ThrowOnError>({
+    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/messages',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Analyze Notebook
  */
 export const analyzeNotebookV1NotebooksNotebookIdAnalysisGet = <ThrowOnError extends boolean = false>(options: Options<AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetData, ThrowOnError>) => (options.client ?? client).get<AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetResponses, AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/analysis', ...options });
@@ -102,275 +158,6 @@ export const askQuestionV1NotebooksNotebookIdQaPost = <ThrowOnError extends bool
  */
 export const askQuestionStreamV1NotebooksNotebookIdQaStreamPost = <ThrowOnError extends boolean = false>(options: Options<AskQuestionStreamV1NotebooksNotebookIdQaStreamPostData, ThrowOnError>) => (options.client ?? client).post<AskQuestionStreamV1NotebooksNotebookIdQaStreamPostResponses, AskQuestionStreamV1NotebooksNotebookIdQaStreamPostErrors, ThrowOnError>({
     url: '/v1/notebooks/{notebook_id}/qa/stream',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Create Output
- */
-export const createOutputV1NotebooksNotebookIdOutputsOutputTypePost = <ThrowOnError extends boolean = false>(options: Options<CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostData, ThrowOnError>) => (options.client ?? client).post<CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostResponses, CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostErrors, ThrowOnError>({
-    url: '/v1/notebooks/{notebook_id}/outputs/{output_type}',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * List Outputs
- */
-export const listOutputsV1NotebooksNotebookIdOutputsGet = <ThrowOnError extends boolean = false>(options: Options<ListOutputsV1NotebooksNotebookIdOutputsGetData, ThrowOnError>) => (options.client ?? client).get<ListOutputsV1NotebooksNotebookIdOutputsGetResponses, ListOutputsV1NotebooksNotebookIdOutputsGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/outputs', ...options });
-
-/**
- * Delete Output
- *
- * Delete a specific output by ID.
- */
-export const deleteOutputV1NotebooksNotebookIdOutputsOutputIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteResponses, DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/outputs/{output_id}', ...options });
-
-/**
- * Get Output
- */
-export const getOutputV1NotebooksNotebookIdOutputsOutputIdGet = <ThrowOnError extends boolean = false>(options: Options<GetOutputV1NotebooksNotebookIdOutputsOutputIdGetData, ThrowOnError>) => (options.client ?? client).get<GetOutputV1NotebooksNotebookIdOutputsOutputIdGetResponses, GetOutputV1NotebooksNotebookIdOutputsOutputIdGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/outputs/{output_id}', ...options });
-
-/**
- * Convert Output To Source
- *
- * Convert an output to a source document that can be used for RAG queries.
- */
-export const convertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePost = <ThrowOnError extends boolean = false>(options: Options<ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostData, ThrowOnError>) => (options.client ?? client).post<ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostResponses, ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/outputs/{output_id}/convert-to-source', ...options });
-
-/**
- * Refine
- */
-export const refineV1NotebooksNotebookIdRefinePost = <ThrowOnError extends boolean = false>(options: Options<RefineV1NotebooksNotebookIdRefinePostData, ThrowOnError>) => (options.client ?? client).post<RefineV1NotebooksNotebookIdRefinePostResponses, RefineV1NotebooksNotebookIdRefinePostErrors, ThrowOnError>({
-    url: '/v1/notebooks/{notebook_id}/refine',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Refine Batch
- */
-export const refineBatchV1NotebooksNotebookIdRefineBatchPost = <ThrowOnError extends boolean = false>(options: Options<RefineBatchV1NotebooksNotebookIdRefineBatchPostData, ThrowOnError>) => (options.client ?? client).post<RefineBatchV1NotebooksNotebookIdRefineBatchPostResponses, RefineBatchV1NotebooksNotebookIdRefineBatchPostErrors, ThrowOnError>({
-    url: '/v1/notebooks/{notebook_id}/refine/batch',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * List Research Sessions
- *
- * List research sessions for a notebook.
- */
-export const listResearchSessionsV1NotebooksNotebookIdResearchGet = <ThrowOnError extends boolean = false>(options: Options<ListResearchSessionsV1NotebooksNotebookIdResearchGetData, ThrowOnError>) => (options.client ?? client).get<ListResearchSessionsV1NotebooksNotebookIdResearchGetResponses, ListResearchSessionsV1NotebooksNotebookIdResearchGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research', ...options });
-
-/**
- * Create Research Session
- *
- * Create a new deep research session.
- */
-export const createResearchSessionV1NotebooksNotebookIdResearchPost = <ThrowOnError extends boolean = false>(options: Options<CreateResearchSessionV1NotebooksNotebookIdResearchPostData, ThrowOnError>) => (options.client ?? client).post<CreateResearchSessionV1NotebooksNotebookIdResearchPostResponses, CreateResearchSessionV1NotebooksNotebookIdResearchPostErrors, ThrowOnError>({
-    url: '/v1/notebooks/{notebook_id}/research',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Delete Research Session
- *
- * Delete or cancel a research session.
- */
-export const deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteResponses, DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}', ...options });
-
-/**
- * Get Research Session
- *
- * Get details of a research session including all steps.
- */
-export const getResearchSessionV1NotebooksNotebookIdResearchResearchIdGet = <ThrowOnError extends boolean = false>(options: Options<GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetData, ThrowOnError>) => (options.client ?? client).get<GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetResponses, GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}', ...options });
-
-/**
- * Approve Search Plan
- *
- * Approve the current search plan and continue research.
- */
-export const approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost = <ThrowOnError extends boolean = false>(options: Options<ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostData, ThrowOnError>) => (options.client ?? client).post<ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostResponses, ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostErrors, ThrowOnError>({
-    url: '/v1/notebooks/{notebook_id}/research/{research_id}/approve',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Modify Search Plan
- *
- * Modify the current search plan.
- */
-export const modifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPost = <ThrowOnError extends boolean = false>(options: Options<ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostData, ThrowOnError>) => (options.client ?? client).post<ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostResponses, ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostErrors, ThrowOnError>({
-    url: '/v1/notebooks/{notebook_id}/research/{research_id}/modify',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Skip Iteration
- *
- * Skip the current iteration.
- */
-export const skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost = <ThrowOnError extends boolean = false>(options: Options<SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostData, ThrowOnError>) => (options.client ?? client).post<SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostResponses, SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/skip', ...options });
-
-/**
- * Finish Research
- *
- * Finish research early and generate report.
- */
-export const finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost = <ThrowOnError extends boolean = false>(options: Options<FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostData, ThrowOnError>) => (options.client ?? client).post<FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostResponses, FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/finish', ...options });
-
-/**
- * Cancel Research
- *
- * Cancel an ongoing research session.
- */
-export const cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost = <ThrowOnError extends boolean = false>(options: Options<CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostData, ThrowOnError>) => (options.client ?? client).post<CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostResponses, CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/cancel', ...options });
-
-/**
- * Start Research
- *
- * Start executing the research graph.
- */
-export const startResearchV1NotebooksNotebookIdResearchResearchIdStartPost = <ThrowOnError extends boolean = false>(options: Options<StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostData, ThrowOnError>) => (options.client ?? client).post<StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostResponses, StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/start', ...options });
-
-/**
- * Stream Research Progress
- *
- * Stream research progress using Server-Sent Events.
- *
- * Events:
- * - `status`: Status update `{"status": "...", "iteration": n}`
- * - `plan_ready`: Search plan ready `{"plan": {...}}`
- * - `search_progress`: Search progress `{"query": "...", "completed": n, "total": m}`
- * - `search_result`: New result `{"title": "...", "url": "..."}`
- * - `analysis`: Analysis complete `{"summary": "...", "coverage": 0.x}`
- * - `report`: Final report `{"report": "..."}`
- * - `done`: Research complete `{"total_results": n}`
- * - `error`: Error `{"message": "..."}`
- */
-export const streamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGet = <ThrowOnError extends boolean = false>(options: Options<StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetData, ThrowOnError>) => (options.client ?? client).get<StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetResponses, StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/stream', ...options });
-
-/**
- * Export Research
- *
- * Export research report to a source or note.
- *
- * - export_type='source': Creates a new markdown source with the report
- * - export_type='note': Creates a new note (output) with the report
- */
-export const exportResearchV1NotebooksNotebookIdResearchResearchIdExportPost = <ThrowOnError extends boolean = false>(options: Options<ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostData, ThrowOnError>) => (options.client ?? client).post<ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostResponses, ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostErrors, ThrowOnError>({
-    url: '/v1/notebooks/{notebook_id}/research/{research_id}/export',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * List Sessions
- */
-export const listSessionsV1NotebooksNotebookIdSessionsGet = <ThrowOnError extends boolean = false>(options: Options<ListSessionsV1NotebooksNotebookIdSessionsGetData, ThrowOnError>) => (options.client ?? client).get<ListSessionsV1NotebooksNotebookIdSessionsGetResponses, ListSessionsV1NotebooksNotebookIdSessionsGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sessions', ...options });
-
-/**
- * Create Session
- */
-export const createSessionV1NotebooksNotebookIdSessionsPost = <ThrowOnError extends boolean = false>(options: Options<CreateSessionV1NotebooksNotebookIdSessionsPostData, ThrowOnError>) => (options.client ?? client).post<CreateSessionV1NotebooksNotebookIdSessionsPostResponses, CreateSessionV1NotebooksNotebookIdSessionsPostErrors, ThrowOnError>({
-    url: '/v1/notebooks/{notebook_id}/sessions',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Delete Session
- */
-export const deleteSessionV1NotebooksNotebookIdSessionsSessionIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteResponses, DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sessions/{session_id}', ...options });
-
-/**
- * Get Session
- */
-export const getSessionV1NotebooksNotebookIdSessionsSessionIdGet = <ThrowOnError extends boolean = false>(options: Options<GetSessionV1NotebooksNotebookIdSessionsSessionIdGetData, ThrowOnError>) => (options.client ?? client).get<GetSessionV1NotebooksNotebookIdSessionsSessionIdGetResponses, GetSessionV1NotebooksNotebookIdSessionsSessionIdGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sessions/{session_id}', ...options });
-
-/**
- * Update Session
- */
-export const updateSessionV1NotebooksNotebookIdSessionsSessionIdPatch = <ThrowOnError extends boolean = false>(options: Options<UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponses, UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchErrors, ThrowOnError>({
-    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Convert Session To Source
- *
- * Convert session messages to a source document for RAG queries.
- */
-export const convertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePost = <ThrowOnError extends boolean = false>(options: Options<ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostData, ThrowOnError>) => (options.client ?? client).post<ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostResponses, ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostErrors, ThrowOnError>({
-    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/convert-to-source',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Convert Session To Output
- *
- * Convert session messages to a studio output/note.
- */
-export const convertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPost = <ThrowOnError extends boolean = false>(options: Options<ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostData, ThrowOnError>) => (options.client ?? client).post<ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostResponses, ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostErrors, ThrowOnError>({
-    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/convert-to-output',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * List Messages
- */
-export const listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet = <ThrowOnError extends boolean = false>(options: Options<ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetData, ThrowOnError>) => (options.client ?? client).get<ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetResponses, ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/messages', ...options });
-
-/**
- * Create Message
- */
-export const createMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPost = <ThrowOnError extends boolean = false>(options: Options<CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostData, ThrowOnError>) => (options.client ?? client).post<CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses, CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostErrors, ThrowOnError>({
-    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/messages',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -516,6 +303,66 @@ export const convertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConver
 });
 
 /**
+ * Create Output
+ */
+export const createOutputV1NotebooksNotebookIdOutputsOutputTypePost = <ThrowOnError extends boolean = false>(options: Options<CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostData, ThrowOnError>) => (options.client ?? client).post<CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostResponses, CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostErrors, ThrowOnError>({
+    url: '/v1/notebooks/{notebook_id}/outputs/{output_type}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List Outputs
+ */
+export const listOutputsV1NotebooksNotebookIdOutputsGet = <ThrowOnError extends boolean = false>(options: Options<ListOutputsV1NotebooksNotebookIdOutputsGetData, ThrowOnError>) => (options.client ?? client).get<ListOutputsV1NotebooksNotebookIdOutputsGetResponses, ListOutputsV1NotebooksNotebookIdOutputsGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/outputs', ...options });
+
+/**
+ * Delete Output
+ *
+ * Delete a specific output by ID.
+ */
+export const deleteOutputV1NotebooksNotebookIdOutputsOutputIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteResponses, DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/outputs/{output_id}', ...options });
+
+/**
+ * Get Output
+ */
+export const getOutputV1NotebooksNotebookIdOutputsOutputIdGet = <ThrowOnError extends boolean = false>(options: Options<GetOutputV1NotebooksNotebookIdOutputsOutputIdGetData, ThrowOnError>) => (options.client ?? client).get<GetOutputV1NotebooksNotebookIdOutputsOutputIdGetResponses, GetOutputV1NotebooksNotebookIdOutputsOutputIdGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/outputs/{output_id}', ...options });
+
+/**
+ * Convert Output To Source
+ *
+ * Convert an output to a source document that can be used for RAG queries.
+ */
+export const convertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePost = <ThrowOnError extends boolean = false>(options: Options<ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostData, ThrowOnError>) => (options.client ?? client).post<ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostResponses, ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/outputs/{output_id}/convert-to-source', ...options });
+
+/**
+ * Refine
+ */
+export const refineV1NotebooksNotebookIdRefinePost = <ThrowOnError extends boolean = false>(options: Options<RefineV1NotebooksNotebookIdRefinePostData, ThrowOnError>) => (options.client ?? client).post<RefineV1NotebooksNotebookIdRefinePostResponses, RefineV1NotebooksNotebookIdRefinePostErrors, ThrowOnError>({
+    url: '/v1/notebooks/{notebook_id}/refine',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Refine Batch
+ */
+export const refineBatchV1NotebooksNotebookIdRefineBatchPost = <ThrowOnError extends boolean = false>(options: Options<RefineBatchV1NotebooksNotebookIdRefineBatchPostData, ThrowOnError>) => (options.client ?? client).post<RefineBatchV1NotebooksNotebookIdRefineBatchPostResponses, RefineBatchV1NotebooksNotebookIdRefineBatchPostErrors, ThrowOnError>({
+    url: '/v1/notebooks/{notebook_id}/refine/batch',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Get Latest Draft
  */
 export const getLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGet = <ThrowOnError extends boolean = false>(options: Options<GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetData, ThrowOnError>) => (options.client ?? client).get<GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponses, GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/slides/drafts/latest', ...options });
@@ -584,6 +431,131 @@ export const generateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlin
 export const generateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGet = <ThrowOnError extends boolean = false>(options: Options<GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetData, ThrowOnError>) => (options.client ?? client).get<GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetResponses, GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/markdown/stream', ...options });
 
 /**
+ * List Research Sessions
+ *
+ * List research sessions for a notebook.
+ */
+export const listResearchSessionsV1NotebooksNotebookIdResearchGet = <ThrowOnError extends boolean = false>(options: Options<ListResearchSessionsV1NotebooksNotebookIdResearchGetData, ThrowOnError>) => (options.client ?? client).get<ListResearchSessionsV1NotebooksNotebookIdResearchGetResponses, ListResearchSessionsV1NotebooksNotebookIdResearchGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research', ...options });
+
+/**
+ * Create Research Session
+ *
+ * Create a new deep research session.
+ */
+export const createResearchSessionV1NotebooksNotebookIdResearchPost = <ThrowOnError extends boolean = false>(options: Options<CreateResearchSessionV1NotebooksNotebookIdResearchPostData, ThrowOnError>) => (options.client ?? client).post<CreateResearchSessionV1NotebooksNotebookIdResearchPostResponses, CreateResearchSessionV1NotebooksNotebookIdResearchPostErrors, ThrowOnError>({
+    url: '/v1/notebooks/{notebook_id}/research',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete Research Session
+ *
+ * Delete or cancel a research session.
+ */
+export const deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteResponses, DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}', ...options });
+
+/**
+ * Get Research Session
+ *
+ * Get details of a research session including all steps.
+ */
+export const getResearchSessionV1NotebooksNotebookIdResearchResearchIdGet = <ThrowOnError extends boolean = false>(options: Options<GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetData, ThrowOnError>) => (options.client ?? client).get<GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetResponses, GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}', ...options });
+
+/**
+ * Approve Search Plan
+ *
+ * Approve the current search plan and continue research.
+ */
+export const approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost = <ThrowOnError extends boolean = false>(options: Options<ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostData, ThrowOnError>) => (options.client ?? client).post<ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostResponses, ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostErrors, ThrowOnError>({
+    url: '/v1/notebooks/{notebook_id}/research/{research_id}/approve',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Modify Search Plan
+ *
+ * Modify the current search plan.
+ */
+export const modifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPost = <ThrowOnError extends boolean = false>(options: Options<ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostData, ThrowOnError>) => (options.client ?? client).post<ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostResponses, ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostErrors, ThrowOnError>({
+    url: '/v1/notebooks/{notebook_id}/research/{research_id}/modify',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Skip Iteration
+ *
+ * Skip the current iteration.
+ */
+export const skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost = <ThrowOnError extends boolean = false>(options: Options<SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostData, ThrowOnError>) => (options.client ?? client).post<SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostResponses, SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/skip', ...options });
+
+/**
+ * Finish Research
+ *
+ * Finish research early and generate report.
+ */
+export const finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost = <ThrowOnError extends boolean = false>(options: Options<FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostData, ThrowOnError>) => (options.client ?? client).post<FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostResponses, FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/finish', ...options });
+
+/**
+ * Cancel Research
+ *
+ * Cancel an ongoing research session.
+ */
+export const cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost = <ThrowOnError extends boolean = false>(options: Options<CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostData, ThrowOnError>) => (options.client ?? client).post<CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostResponses, CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/cancel', ...options });
+
+/**
+ * Start Research
+ *
+ * Start executing the research graph.
+ */
+export const startResearchV1NotebooksNotebookIdResearchResearchIdStartPost = <ThrowOnError extends boolean = false>(options: Options<StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostData, ThrowOnError>) => (options.client ?? client).post<StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostResponses, StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/start', ...options });
+
+/**
+ * Stream Research Progress
+ *
+ * Stream research progress using Server-Sent Events.
+ *
+ * Events:
+ * - `status`: Status update `{"status": "...", "iteration": n}`
+ * - `plan_ready`: Search plan ready `{"plan": {...}}`
+ * - `search_progress`: Search progress `{"query": "...", "completed": n, "total": m}`
+ * - `search_result`: New result `{"title": "...", "url": "..."}`
+ * - `analysis`: Analysis complete `{"summary": "...", "coverage": 0.x}`
+ * - `report`: Final report `{"report": "..."}`
+ * - `done`: Research complete `{"total_results": n}`
+ * - `error`: Error `{"message": "..."}`
+ */
+export const streamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGet = <ThrowOnError extends boolean = false>(options: Options<StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetData, ThrowOnError>) => (options.client ?? client).get<StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetResponses, StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/stream', ...options });
+
+/**
+ * Export Research
+ *
+ * Export research report to a source or note.
+ *
+ * - export_type='source': Creates a new markdown source with the report
+ * - export_type='note': Creates a new note (output) with the report
+ */
+export const exportResearchV1NotebooksNotebookIdResearchResearchIdExportPost = <ThrowOnError extends boolean = false>(options: Options<ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostData, ThrowOnError>) => (options.client ?? client).post<ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostResponses, ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostErrors, ThrowOnError>({
+    url: '/v1/notebooks/{notebook_id}/research/{research_id}/export',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Get Task
  */
 export const getTaskV1TasksTaskIdGet = <ThrowOnError extends boolean = false>(options: Options<GetTaskV1TasksTaskIdGetData, ThrowOnError>) => (options.client ?? client).get<GetTaskV1TasksTaskIdGetResponses, GetTaskV1TasksTaskIdGetErrors, ThrowOnError>({ url: '/v1/tasks/{task_id}', ...options });
@@ -592,6 +564,11 @@ export const getTaskV1TasksTaskIdGet = <ThrowOnError extends boolean = false>(op
  * List Tasks
  */
 export const listTasksV1NotebooksNotebookIdTasksGet = <ThrowOnError extends boolean = false>(options: Options<ListTasksV1NotebooksNotebookIdTasksGetData, ThrowOnError>) => (options.client ?? client).get<ListTasksV1NotebooksNotebookIdTasksGetResponses, ListTasksV1NotebooksNotebookIdTasksGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/tasks', ...options });
+
+/**
+ * Get Slides Config
+ */
+export const getSlidesConfigV1WorkspaceToolsSlidesConfigGet = <ThrowOnError extends boolean = false>(options?: Options<GetSlidesConfigV1WorkspaceToolsSlidesConfigGetData, ThrowOnError>) => (options?.client ?? client).get<GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses, unknown, ThrowOnError>({ url: '/v1/workspace/tools/slides/config', ...options });
 
 /**
  * List Workspace Tools
@@ -604,8 +581,3 @@ export const listWorkspaceToolsV1WorkspaceToolsGet = <ThrowOnError extends boole
  * Get configuration options for a specific tool.
  */
 export const getToolConfigV1WorkspaceToolsToolIdConfigGet = <ThrowOnError extends boolean = false>(options: Options<GetToolConfigV1WorkspaceToolsToolIdConfigGetData, ThrowOnError>) => (options.client ?? client).get<GetToolConfigV1WorkspaceToolsToolIdConfigGetResponses, GetToolConfigV1WorkspaceToolsToolIdConfigGetErrors, ThrowOnError>({ url: '/v1/workspace/tools/{tool_id}/config', ...options });
-
-/**
- * Get Slides Config
- */
-export const getSlidesConfigV1WorkspaceToolsSlidesConfigGet = <ThrowOnError extends boolean = false>(options?: Options<GetSlidesConfigV1WorkspaceToolsSlidesConfigGetData, ThrowOnError>) => (options?.client ?? client).get<GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses, unknown, ThrowOnError>({ url: '/v1/workspace/tools/slides/config', ...options });

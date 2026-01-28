@@ -1,0 +1,48 @@
+from __future__ import annotations
+
+from collections.abc import AsyncGenerator
+from typing import TYPE_CHECKING
+
+from fastapi import Depends, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from cl_sqlalchemyx.mgrs import AsyncDBManager
+
+from crystalith.shared.ai.factory import create_chat_provider, create_embedding_provider
+from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
+from crystalith.shared.config import Settings
+from crystalith.shared.parsers import TranscriptionProvider, create_transcription_provider
+from crystalith.shared.vector_storage import VectorStore
+
+if TYPE_CHECKING:
+    from crystalith.features.tasks.queue import TaskQueue
+
+
+def get_settings(request: Request) -> Settings:
+    return request.app.state.settings
+
+
+async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
+    manager: AsyncDBManager = request.app.state.db
+    async with manager.got_manual_session() as session:
+        yield session
+
+
+def get_embedding_provider(settings: Settings = Depends(get_settings)) -> EmbeddingProvider:
+    return create_embedding_provider(settings)
+
+
+def get_chat_provider(settings: Settings = Depends(get_settings)) -> ChatProvider:
+    return create_chat_provider(settings)
+
+
+def get_transcription_provider(settings: Settings = Depends(get_settings)) -> TranscriptionProvider:
+    return create_transcription_provider(settings)
+
+
+def get_vector_store(request: Request) -> VectorStore:
+    return request.app.state.vector_store
+
+
+def get_task_queue(request: Request) -> "TaskQueue":
+    return request.app.state.task_queue

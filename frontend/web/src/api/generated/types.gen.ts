@@ -173,91 +173,6 @@ export type ContextStatsResponse = {
 };
 
 /**
- * ConvertSessionToOutputRequest
- *
- * Request to convert session messages to an output.
- */
-export type ConvertSessionToOutputRequest = {
-    /**
-     * Message Ids
-     *
-     * Specific message IDs to convert. If null, converts entire session.
-     */
-    message_ids?: Array<number> | null;
-    /**
-     * OutputType
-     *
-     * Type of output to create.
-     *
-     * * `FAQ`: 问答清单
-     * * `GUIDE`: 学习/行动指南
-     * * `TIMELINE`: 关键事件序列
-     * * `MINDMAP`: 主题层级结构
-     * * `QUIZ`: 知识检验
-     * * `BRIEFING`: 高层摘要
-     * * `SLIDES`: 演示文稿
-     * * `PARAGRAPH`: 段落摘要
-     * * `BULLETS`: 要点列表
-     * * `STRUCTURED`: 结构化摘要
-     */
-    output_type?: 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
-};
-
-/**
- * ConvertSessionToOutputResponse
- *
- * Response after converting session to output.
- */
-export type ConvertSessionToOutputResponse = {
-    /**
-     * Output Id
-     */
-    output_id: number;
-    /**
-     * Output Type
-     */
-    output_type: string;
-    /**
-     * Title
-     */
-    title: string;
-};
-
-/**
- * ConvertSessionToSourceRequest
- *
- * Request to convert session messages to a source document.
- */
-export type ConvertSessionToSourceRequest = {
-    /**
-     * Message Ids
-     *
-     * Specific message IDs to convert. If null, converts entire session.
-     */
-    message_ids?: Array<number> | null;
-};
-
-/**
- * ConvertSessionToSourceResponse
- *
- * Response after converting session to source.
- */
-export type ConvertSessionToSourceResponse = {
-    /**
-     * Source Id
-     */
-    source_id: number;
-    /**
-     * Filename
-     */
-    filename: string;
-    /**
-     * Chunk Count
-     */
-    chunk_count: number;
-};
-
-/**
  * ConvertSourceQAToSourceRequest
  *
  * Request to convert source QA conversation to a new source.
@@ -686,25 +601,7 @@ export type OutputRead = {
  * * `BULLETS`: 要点列表
  * * `STRUCTURED`: 结构化摘要
  */
-export type OutputTypeInput = 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
-
-/**
- * OutputType
- *
- * 枚举值:
- *
- * * `FAQ`: 问答清单
- * * `GUIDE`: 学习/行动指南
- * * `TIMELINE`: 关键事件序列
- * * `MINDMAP`: 主题层级结构
- * * `QUIZ`: 知识检验
- * * `BRIEFING`: 高层摘要
- * * `SLIDES`: 演示文稿
- * * `PARAGRAPH`: 段落摘要
- * * `BULLETS`: 要点列表
- * * `STRUCTURED`: 结构化摘要
- */
-export type OutputTypeOutput = 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
+export type OutputType = 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
 
 /**
  * QAMessage
@@ -2223,6 +2120,258 @@ export type UpdateNotebookV1NotebooksNotebookIdPatchResponses = {
 
 export type UpdateNotebookV1NotebooksNotebookIdPatchResponse = UpdateNotebookV1NotebooksNotebookIdPatchResponses[keyof UpdateNotebookV1NotebooksNotebookIdPatchResponses];
 
+export type ListSessionsV1NotebooksNotebookIdSessionsGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: {
+        /**
+         * Offset
+         */
+        offset?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/v1/notebooks/{notebook_id}/sessions';
+};
+
+export type ListSessionsV1NotebooksNotebookIdSessionsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListSessionsV1NotebooksNotebookIdSessionsGetError = ListSessionsV1NotebooksNotebookIdSessionsGetErrors[keyof ListSessionsV1NotebooksNotebookIdSessionsGetErrors];
+
+export type ListSessionsV1NotebooksNotebookIdSessionsGetResponses = {
+    /**
+     * Response List Sessions V1 Notebooks  Notebook Id  Sessions Get
+     *
+     * Successful Response
+     */
+    200: Array<SessionRead>;
+};
+
+export type ListSessionsV1NotebooksNotebookIdSessionsGetResponse = ListSessionsV1NotebooksNotebookIdSessionsGetResponses[keyof ListSessionsV1NotebooksNotebookIdSessionsGetResponses];
+
+export type CreateSessionV1NotebooksNotebookIdSessionsPostData = {
+    body: SessionCreate;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sessions';
+};
+
+export type CreateSessionV1NotebooksNotebookIdSessionsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateSessionV1NotebooksNotebookIdSessionsPostError = CreateSessionV1NotebooksNotebookIdSessionsPostErrors[keyof CreateSessionV1NotebooksNotebookIdSessionsPostErrors];
+
+export type CreateSessionV1NotebooksNotebookIdSessionsPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: SessionRead;
+};
+
+export type CreateSessionV1NotebooksNotebookIdSessionsPostResponse = CreateSessionV1NotebooksNotebookIdSessionsPostResponses[keyof CreateSessionV1NotebooksNotebookIdSessionsPostResponses];
+
+export type DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Session Id
+         */
+        session_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}';
+};
+
+export type DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteError = DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteErrors[keyof DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteErrors];
+
+export type DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteResponse = DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteResponses[keyof DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteResponses];
+
+export type GetSessionV1NotebooksNotebookIdSessionsSessionIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Session Id
+         */
+        session_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}';
+};
+
+export type GetSessionV1NotebooksNotebookIdSessionsSessionIdGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetSessionV1NotebooksNotebookIdSessionsSessionIdGetError = GetSessionV1NotebooksNotebookIdSessionsSessionIdGetErrors[keyof GetSessionV1NotebooksNotebookIdSessionsSessionIdGetErrors];
+
+export type GetSessionV1NotebooksNotebookIdSessionsSessionIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: SessionRead;
+};
+
+export type GetSessionV1NotebooksNotebookIdSessionsSessionIdGetResponse = GetSessionV1NotebooksNotebookIdSessionsSessionIdGetResponses[keyof GetSessionV1NotebooksNotebookIdSessionsSessionIdGetResponses];
+
+export type UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchData = {
+    body: SessionUpdate;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Session Id
+         */
+        session_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}';
+};
+
+export type UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchError = UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchErrors[keyof UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchErrors];
+
+export type UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponses = {
+    /**
+     * Successful Response
+     */
+    200: SessionRead;
+};
+
+export type UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponse = UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponses[keyof UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponses];
+
+export type ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Session Id
+         */
+        session_id: number;
+    };
+    query?: {
+        /**
+         * Offset
+         */
+        offset?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/messages';
+};
+
+export type ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetError = ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetErrors[keyof ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetErrors];
+
+export type ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetResponses = {
+    /**
+     * Response List Messages V1 Notebooks  Notebook Id  Sessions  Session Id  Messages Get
+     *
+     * Successful Response
+     */
+    200: Array<MessageRead>;
+};
+
+export type ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetResponse = ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetResponses[keyof ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetResponses];
+
+export type CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostData = {
+    body: MessageCreate;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Session Id
+         */
+        session_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/messages';
+};
+
+export type CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostError = CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostErrors[keyof CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostErrors];
+
+export type CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: MessageRead;
+};
+
+export type CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponse = CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses[keyof CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses];
+
 export type AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetData = {
     body?: never;
     path: {
@@ -2374,6 +2523,360 @@ export type AskQuestionStreamV1NotebooksNotebookIdQaStreamPostResponses = {
      */
     200: unknown;
 };
+
+export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/extractors';
+};
+
+export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetError = ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetErrors[keyof ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetErrors];
+
+export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ExtractorsListResponse;
+};
+
+export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponse = ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses[keyof ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses];
+
+export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteData = {
+    body: SourceBatchDeleteRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources';
+};
+
+export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteError = BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteErrors[keyof BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteErrors];
+
+export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: SourceBatchDeleteResponse;
+};
+
+export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteResponse = BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteResponses[keyof BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteResponses];
+
+export type ListSourcesV1NotebooksNotebookIdSourcesGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources';
+};
+
+export type ListSourcesV1NotebooksNotebookIdSourcesGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListSourcesV1NotebooksNotebookIdSourcesGetError = ListSourcesV1NotebooksNotebookIdSourcesGetErrors[keyof ListSourcesV1NotebooksNotebookIdSourcesGetErrors];
+
+export type ListSourcesV1NotebooksNotebookIdSourcesGetResponses = {
+    /**
+     * Response List Sources V1 Notebooks  Notebook Id  Sources Get
+     *
+     * Successful Response
+     */
+    200: Array<SourceRead>;
+};
+
+export type ListSourcesV1NotebooksNotebookIdSourcesGetResponse = ListSourcesV1NotebooksNotebookIdSourcesGetResponses[keyof ListSourcesV1NotebooksNotebookIdSourcesGetResponses];
+
+export type UploadSourceV1NotebooksNotebookIdSourcesPostData = {
+    body: BodyUploadSourceV1NotebooksNotebookIdSourcesPost;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources';
+};
+
+export type UploadSourceV1NotebooksNotebookIdSourcesPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UploadSourceV1NotebooksNotebookIdSourcesPostError = UploadSourceV1NotebooksNotebookIdSourcesPostErrors[keyof UploadSourceV1NotebooksNotebookIdSourcesPostErrors];
+
+export type UploadSourceV1NotebooksNotebookIdSourcesPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: SourceRead;
+};
+
+export type UploadSourceV1NotebooksNotebookIdSourcesPostResponse = UploadSourceV1NotebooksNotebookIdSourcesPostResponses[keyof UploadSourceV1NotebooksNotebookIdSourcesPostResponses];
+
+export type SearchSourcesV1NotebooksNotebookIdSourcesSearchPostData = {
+    body: SourceSearchRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/search';
+};
+
+export type SearchSourcesV1NotebooksNotebookIdSourcesSearchPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SearchSourcesV1NotebooksNotebookIdSourcesSearchPostError = SearchSourcesV1NotebooksNotebookIdSourcesSearchPostErrors[keyof SearchSourcesV1NotebooksNotebookIdSourcesSearchPostErrors];
+
+export type SearchSourcesV1NotebooksNotebookIdSourcesSearchPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: SourceSearchResponse;
+};
+
+export type SearchSourcesV1NotebooksNotebookIdSourcesSearchPostResponse = SearchSourcesV1NotebooksNotebookIdSourcesSearchPostResponses[keyof SearchSourcesV1NotebooksNotebookIdSourcesSearchPostResponses];
+
+export type CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostData = {
+    body: SourceFromUrlRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/from-url';
+};
+
+export type CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostError = CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostErrors[keyof CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostErrors];
+
+export type CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: SourceRead;
+};
+
+export type CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponse = CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponses[keyof CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponses];
+
+export type DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Source Id
+         */
+        source_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/{source_id}';
+};
+
+export type DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteError = DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteErrors[keyof DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteErrors];
+
+export type DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponse = DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponses[keyof DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponses];
+
+export type ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Source Id
+         */
+        source_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/{source_id}/chunks';
+};
+
+export type ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetError = ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetErrors[keyof ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetErrors];
+
+export type ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponses = {
+    /**
+     * Response List Source Chunks V1 Notebooks  Notebook Id  Sources  Source Id  Chunks Get
+     *
+     * Successful Response
+     */
+    200: Array<ChunkRead>;
+};
+
+export type ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponse = ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponses[keyof ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponses];
+
+export type GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Source Id
+         */
+        source_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/{source_id}/summary';
+};
+
+export type GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetError = GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetErrors[keyof GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetErrors];
+
+export type GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: SourceSummaryResponse;
+};
+
+export type GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetResponse = GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetResponses[keyof GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetResponses];
+
+export type SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostData = {
+    body: SourceQaRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Source Id
+         */
+        source_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/{source_id}/qa';
+};
+
+export type SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostError = SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostErrors[keyof SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostErrors];
+
+export type SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: SourceQaResponse;
+};
+
+export type SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponse = SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponses[keyof SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponses];
+
+export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostData = {
+    body: ConvertSourceQaToSourceRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Source Id
+         */
+        source_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/{source_id}/qa/convert-to-source';
+};
+
+export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostError = ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostErrors[keyof ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostErrors];
+
+export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponses = {
+    /**
+     * Successful Response
+     */
+    201: ConvertSourceQaToSourceResponse;
+};
+
+export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponse = ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponses[keyof ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponses];
 
 export type CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostData = {
     body: OutputGenerateRequest;
@@ -2624,6 +3127,276 @@ export type RefineBatchV1NotebooksNotebookIdRefineBatchPostResponses = {
 };
 
 export type RefineBatchV1NotebooksNotebookIdRefineBatchPostResponse = RefineBatchV1NotebooksNotebookIdRefineBatchPostResponses[keyof RefineBatchV1NotebooksNotebookIdRefineBatchPostResponses];
+
+export type GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/slides/drafts/latest';
+};
+
+export type GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetError = GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetErrors[keyof GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetErrors];
+
+export type GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: SlideDraftRead;
+};
+
+export type GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponse = GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponses[keyof GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponses];
+
+export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostData = {
+    body: SlideDraftCreate;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/slides/drafts';
+};
+
+export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostError = CreateDraftV1NotebooksNotebookIdSlidesDraftsPostErrors[keyof CreateDraftV1NotebooksNotebookIdSlidesDraftsPostErrors];
+
+export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: SlideDraftRead;
+};
+
+export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponse = CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponses[keyof CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponses];
+
+export type GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Slide Id
+         */
+        slide_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}';
+};
+
+export type GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetError = GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetErrors[keyof GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetErrors];
+
+export type GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: SlideDraftRead;
+};
+
+export type GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponse = GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponses[keyof GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponses];
+
+export type UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchData = {
+    body: SlideDraftUpdate;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Slide Id
+         */
+        slide_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}';
+};
+
+export type UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchError = UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchErrors[keyof UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchErrors];
+
+export type UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponses = {
+    /**
+     * Successful Response
+     */
+    200: SlideDraftRead;
+};
+
+export type UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponse = UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponses[keyof UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponses];
+
+export type UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutData = {
+    body: SlideOutlineUpdate;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Slide Id
+         */
+        slide_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/outline';
+};
+
+export type UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutError = UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutErrors[keyof UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutErrors];
+
+export type UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponses = {
+    /**
+     * Successful Response
+     */
+    200: SlideDraftRead;
+};
+
+export type UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponse = UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponses[keyof UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponses];
+
+export type UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutData = {
+    body: SlideMarkdownUpdate;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Slide Id
+         */
+        slide_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/markdown';
+};
+
+export type UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutError = UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutErrors[keyof UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutErrors];
+
+export type UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponses = {
+    /**
+     * Successful Response
+     */
+    200: SlideDraftRead;
+};
+
+export type UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponse = UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponses[keyof UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponses];
+
+export type GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Slide Id
+         */
+        slide_id: number;
+    };
+    query?: {
+        /**
+         * Model Id
+         */
+        model_id?: string | null;
+    };
+    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/outline/stream';
+};
+
+export type GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetError = GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetErrors[keyof GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetErrors];
+
+export type GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Slide Id
+         */
+        slide_id: number;
+    };
+    query?: {
+        /**
+         * Model Id
+         */
+        model_id?: string | null;
+    };
+    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/markdown/stream';
+};
+
+export type GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetError = GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetErrors[keyof GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetErrors];
+
+export type GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
 
 export type ListResearchSessionsV1NotebooksNotebookIdResearchGetData = {
     body?: never;
@@ -3047,950 +3820,6 @@ export type ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostRespo
 
 export type ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostResponse = ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostResponses[keyof ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostResponses];
 
-export type ListSessionsV1NotebooksNotebookIdSessionsGetData = {
-    body?: never;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-    };
-    query?: {
-        /**
-         * Offset
-         */
-        offset?: number;
-        /**
-         * Limit
-         */
-        limit?: number;
-    };
-    url: '/v1/notebooks/{notebook_id}/sessions';
-};
-
-export type ListSessionsV1NotebooksNotebookIdSessionsGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ListSessionsV1NotebooksNotebookIdSessionsGetError = ListSessionsV1NotebooksNotebookIdSessionsGetErrors[keyof ListSessionsV1NotebooksNotebookIdSessionsGetErrors];
-
-export type ListSessionsV1NotebooksNotebookIdSessionsGetResponses = {
-    /**
-     * Response List Sessions V1 Notebooks  Notebook Id  Sessions Get
-     *
-     * Successful Response
-     */
-    200: Array<SessionRead>;
-};
-
-export type ListSessionsV1NotebooksNotebookIdSessionsGetResponse = ListSessionsV1NotebooksNotebookIdSessionsGetResponses[keyof ListSessionsV1NotebooksNotebookIdSessionsGetResponses];
-
-export type CreateSessionV1NotebooksNotebookIdSessionsPostData = {
-    body: SessionCreate;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sessions';
-};
-
-export type CreateSessionV1NotebooksNotebookIdSessionsPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type CreateSessionV1NotebooksNotebookIdSessionsPostError = CreateSessionV1NotebooksNotebookIdSessionsPostErrors[keyof CreateSessionV1NotebooksNotebookIdSessionsPostErrors];
-
-export type CreateSessionV1NotebooksNotebookIdSessionsPostResponses = {
-    /**
-     * Successful Response
-     */
-    201: SessionRead;
-};
-
-export type CreateSessionV1NotebooksNotebookIdSessionsPostResponse = CreateSessionV1NotebooksNotebookIdSessionsPostResponses[keyof CreateSessionV1NotebooksNotebookIdSessionsPostResponses];
-
-export type DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteData = {
-    body?: never;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Session Id
-         */
-        session_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}';
-};
-
-export type DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteError = DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteErrors[keyof DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteErrors];
-
-export type DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteResponses = {
-    /**
-     * Successful Response
-     */
-    204: void;
-};
-
-export type DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteResponse = DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteResponses[keyof DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteResponses];
-
-export type GetSessionV1NotebooksNotebookIdSessionsSessionIdGetData = {
-    body?: never;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Session Id
-         */
-        session_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}';
-};
-
-export type GetSessionV1NotebooksNotebookIdSessionsSessionIdGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetSessionV1NotebooksNotebookIdSessionsSessionIdGetError = GetSessionV1NotebooksNotebookIdSessionsSessionIdGetErrors[keyof GetSessionV1NotebooksNotebookIdSessionsSessionIdGetErrors];
-
-export type GetSessionV1NotebooksNotebookIdSessionsSessionIdGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: SessionRead;
-};
-
-export type GetSessionV1NotebooksNotebookIdSessionsSessionIdGetResponse = GetSessionV1NotebooksNotebookIdSessionsSessionIdGetResponses[keyof GetSessionV1NotebooksNotebookIdSessionsSessionIdGetResponses];
-
-export type UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchData = {
-    body: SessionUpdate;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Session Id
-         */
-        session_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}';
-};
-
-export type UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchError = UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchErrors[keyof UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchErrors];
-
-export type UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponses = {
-    /**
-     * Successful Response
-     */
-    200: SessionRead;
-};
-
-export type UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponse = UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponses[keyof UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponses];
-
-export type ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostData = {
-    body: ConvertSessionToSourceRequest;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Session Id
-         */
-        session_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/convert-to-source';
-};
-
-export type ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostError = ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostErrors[keyof ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostErrors];
-
-export type ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostResponses = {
-    /**
-     * Successful Response
-     */
-    201: ConvertSessionToSourceResponse;
-};
-
-export type ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostResponse = ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostResponses[keyof ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostResponses];
-
-export type ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostData = {
-    body: ConvertSessionToOutputRequest;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Session Id
-         */
-        session_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/convert-to-output';
-};
-
-export type ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostError = ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostErrors[keyof ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostErrors];
-
-export type ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostResponses = {
-    /**
-     * Successful Response
-     */
-    201: ConvertSessionToOutputResponse;
-};
-
-export type ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostResponse = ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostResponses[keyof ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostResponses];
-
-export type ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetData = {
-    body?: never;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Session Id
-         */
-        session_id: number;
-    };
-    query?: {
-        /**
-         * Offset
-         */
-        offset?: number;
-        /**
-         * Limit
-         */
-        limit?: number;
-    };
-    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/messages';
-};
-
-export type ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetError = ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetErrors[keyof ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetErrors];
-
-export type ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetResponses = {
-    /**
-     * Response List Messages V1 Notebooks  Notebook Id  Sessions  Session Id  Messages Get
-     *
-     * Successful Response
-     */
-    200: Array<MessageRead>;
-};
-
-export type ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetResponse = ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetResponses[keyof ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetResponses];
-
-export type CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostData = {
-    body: MessageCreate;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Session Id
-         */
-        session_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/messages';
-};
-
-export type CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostError = CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostErrors[keyof CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostErrors];
-
-export type CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses = {
-    /**
-     * Successful Response
-     */
-    201: MessageRead;
-};
-
-export type CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponse = CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses[keyof CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses];
-
-export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetData = {
-    body?: never;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sources/extractors';
-};
-
-export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetError = ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetErrors[keyof ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetErrors];
-
-export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: ExtractorsListResponse;
-};
-
-export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponse = ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses[keyof ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses];
-
-export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteData = {
-    body: SourceBatchDeleteRequest;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sources';
-};
-
-export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteError = BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteErrors[keyof BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteErrors];
-
-export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteResponses = {
-    /**
-     * Successful Response
-     */
-    200: SourceBatchDeleteResponse;
-};
-
-export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteResponse = BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteResponses[keyof BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteResponses];
-
-export type ListSourcesV1NotebooksNotebookIdSourcesGetData = {
-    body?: never;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sources';
-};
-
-export type ListSourcesV1NotebooksNotebookIdSourcesGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ListSourcesV1NotebooksNotebookIdSourcesGetError = ListSourcesV1NotebooksNotebookIdSourcesGetErrors[keyof ListSourcesV1NotebooksNotebookIdSourcesGetErrors];
-
-export type ListSourcesV1NotebooksNotebookIdSourcesGetResponses = {
-    /**
-     * Response List Sources V1 Notebooks  Notebook Id  Sources Get
-     *
-     * Successful Response
-     */
-    200: Array<SourceRead>;
-};
-
-export type ListSourcesV1NotebooksNotebookIdSourcesGetResponse = ListSourcesV1NotebooksNotebookIdSourcesGetResponses[keyof ListSourcesV1NotebooksNotebookIdSourcesGetResponses];
-
-export type UploadSourceV1NotebooksNotebookIdSourcesPostData = {
-    body: BodyUploadSourceV1NotebooksNotebookIdSourcesPost;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sources';
-};
-
-export type UploadSourceV1NotebooksNotebookIdSourcesPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type UploadSourceV1NotebooksNotebookIdSourcesPostError = UploadSourceV1NotebooksNotebookIdSourcesPostErrors[keyof UploadSourceV1NotebooksNotebookIdSourcesPostErrors];
-
-export type UploadSourceV1NotebooksNotebookIdSourcesPostResponses = {
-    /**
-     * Successful Response
-     */
-    201: SourceRead;
-};
-
-export type UploadSourceV1NotebooksNotebookIdSourcesPostResponse = UploadSourceV1NotebooksNotebookIdSourcesPostResponses[keyof UploadSourceV1NotebooksNotebookIdSourcesPostResponses];
-
-export type SearchSourcesV1NotebooksNotebookIdSourcesSearchPostData = {
-    body: SourceSearchRequest;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sources/search';
-};
-
-export type SearchSourcesV1NotebooksNotebookIdSourcesSearchPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type SearchSourcesV1NotebooksNotebookIdSourcesSearchPostError = SearchSourcesV1NotebooksNotebookIdSourcesSearchPostErrors[keyof SearchSourcesV1NotebooksNotebookIdSourcesSearchPostErrors];
-
-export type SearchSourcesV1NotebooksNotebookIdSourcesSearchPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: SourceSearchResponse;
-};
-
-export type SearchSourcesV1NotebooksNotebookIdSourcesSearchPostResponse = SearchSourcesV1NotebooksNotebookIdSourcesSearchPostResponses[keyof SearchSourcesV1NotebooksNotebookIdSourcesSearchPostResponses];
-
-export type CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostData = {
-    body: SourceFromUrlRequest;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sources/from-url';
-};
-
-export type CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostError = CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostErrors[keyof CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostErrors];
-
-export type CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponses = {
-    /**
-     * Successful Response
-     */
-    201: SourceRead;
-};
-
-export type CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponse = CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponses[keyof CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponses];
-
-export type DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteData = {
-    body?: never;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Source Id
-         */
-        source_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sources/{source_id}';
-};
-
-export type DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteError = DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteErrors[keyof DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteErrors];
-
-export type DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponses = {
-    /**
-     * Successful Response
-     */
-    204: void;
-};
-
-export type DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponse = DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponses[keyof DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponses];
-
-export type ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetData = {
-    body?: never;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Source Id
-         */
-        source_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sources/{source_id}/chunks';
-};
-
-export type ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetError = ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetErrors[keyof ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetErrors];
-
-export type ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponses = {
-    /**
-     * Response List Source Chunks V1 Notebooks  Notebook Id  Sources  Source Id  Chunks Get
-     *
-     * Successful Response
-     */
-    200: Array<ChunkRead>;
-};
-
-export type ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponse = ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponses[keyof ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponses];
-
-export type GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetData = {
-    body?: never;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Source Id
-         */
-        source_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sources/{source_id}/summary';
-};
-
-export type GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetError = GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetErrors[keyof GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetErrors];
-
-export type GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: SourceSummaryResponse;
-};
-
-export type GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetResponse = GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetResponses[keyof GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetResponses];
-
-export type SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostData = {
-    body: SourceQaRequest;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Source Id
-         */
-        source_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sources/{source_id}/qa';
-};
-
-export type SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostError = SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostErrors[keyof SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostErrors];
-
-export type SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: SourceQaResponse;
-};
-
-export type SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponse = SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponses[keyof SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponses];
-
-export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostData = {
-    body: ConvertSourceQaToSourceRequest;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Source Id
-         */
-        source_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sources/{source_id}/qa/convert-to-source';
-};
-
-export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostError = ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostErrors[keyof ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostErrors];
-
-export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponses = {
-    /**
-     * Successful Response
-     */
-    201: ConvertSourceQaToSourceResponse;
-};
-
-export type ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponse = ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponses[keyof ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponses];
-
-export type GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetData = {
-    body?: never;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/slides/drafts/latest';
-};
-
-export type GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetError = GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetErrors[keyof GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetErrors];
-
-export type GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: SlideDraftRead;
-};
-
-export type GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponse = GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponses[keyof GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponses];
-
-export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostData = {
-    body: SlideDraftCreate;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/slides/drafts';
-};
-
-export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostError = CreateDraftV1NotebooksNotebookIdSlidesDraftsPostErrors[keyof CreateDraftV1NotebooksNotebookIdSlidesDraftsPostErrors];
-
-export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponses = {
-    /**
-     * Successful Response
-     */
-    201: SlideDraftRead;
-};
-
-export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponse = CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponses[keyof CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponses];
-
-export type GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetData = {
-    body?: never;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Slide Id
-         */
-        slide_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}';
-};
-
-export type GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetError = GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetErrors[keyof GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetErrors];
-
-export type GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: SlideDraftRead;
-};
-
-export type GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponse = GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponses[keyof GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponses];
-
-export type UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchData = {
-    body: SlideDraftUpdate;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Slide Id
-         */
-        slide_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}';
-};
-
-export type UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchError = UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchErrors[keyof UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchErrors];
-
-export type UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponses = {
-    /**
-     * Successful Response
-     */
-    200: SlideDraftRead;
-};
-
-export type UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponse = UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponses[keyof UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponses];
-
-export type UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutData = {
-    body: SlideOutlineUpdate;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Slide Id
-         */
-        slide_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/outline';
-};
-
-export type UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutError = UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutErrors[keyof UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutErrors];
-
-export type UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponses = {
-    /**
-     * Successful Response
-     */
-    200: SlideDraftRead;
-};
-
-export type UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponse = UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponses[keyof UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponses];
-
-export type UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutData = {
-    body: SlideMarkdownUpdate;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Slide Id
-         */
-        slide_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/markdown';
-};
-
-export type UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutError = UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutErrors[keyof UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutErrors];
-
-export type UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponses = {
-    /**
-     * Successful Response
-     */
-    200: SlideDraftRead;
-};
-
-export type UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponse = UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponses[keyof UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponses];
-
-export type GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetData = {
-    body?: never;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Slide Id
-         */
-        slide_id: number;
-    };
-    query?: {
-        /**
-         * Model Id
-         */
-        model_id?: string | null;
-    };
-    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/outline/stream';
-};
-
-export type GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetError = GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetErrors[keyof GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetErrors];
-
-export type GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetData = {
-    body?: never;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-        /**
-         * Slide Id
-         */
-        slide_id: number;
-    };
-    query?: {
-        /**
-         * Model Id
-         */
-        model_id?: string | null;
-    };
-    url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/markdown/stream';
-};
-
-export type GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetError = GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetErrors[keyof GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetErrors];
-
-export type GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
 export type GetTaskV1TasksTaskIdGetData = {
     body?: never;
     path: {
@@ -4053,6 +3882,22 @@ export type ListTasksV1NotebooksNotebookIdTasksGetResponses = {
 
 export type ListTasksV1NotebooksNotebookIdTasksGetResponse = ListTasksV1NotebooksNotebookIdTasksGetResponses[keyof ListTasksV1NotebooksNotebookIdTasksGetResponses];
 
+export type GetSlidesConfigV1WorkspaceToolsSlidesConfigGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/workspace/tools/slides/config';
+};
+
+export type GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: SlidesConfigResponse;
+};
+
+export type GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponse = GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses[keyof GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses];
+
 export type ListWorkspaceToolsV1WorkspaceToolsGetData = {
     body?: never;
     path?: never;
@@ -4098,19 +3943,3 @@ export type GetToolConfigV1WorkspaceToolsToolIdConfigGetResponses = {
 };
 
 export type GetToolConfigV1WorkspaceToolsToolIdConfigGetResponse = GetToolConfigV1WorkspaceToolsToolIdConfigGetResponses[keyof GetToolConfigV1WorkspaceToolsToolIdConfigGetResponses];
-
-export type GetSlidesConfigV1WorkspaceToolsSlidesConfigGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/v1/workspace/tools/slides/config';
-};
-
-export type GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: SlidesConfigResponse;
-};
-
-export type GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponse = GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses[keyof GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses];
