@@ -1,15 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
-import {
-  createOutput,
-  createSlidesDraft,
-  deleteOutput as deleteOutputApi,
-  getOutput,
-  listOutputs,
-  listWorkspaceTools,
-  refineBatch,
-} from '../api';
+import { listWorkspaceTools, refineBatch } from '../api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
 import type {
   ApiWorkspaceTool,
@@ -17,331 +9,17 @@ import type {
   OutputTypeId,
   RefineJob,
   RefineMode,
-  RefineTemplate,
-  SlideGenerationConfig,
   WorkspaceTool,
 } from '../types';
 import {
   buildJobTitle,
-  buildRefineOutput,
   createId,
   formatTimestamp,
   normalizeCitation,
-  normalizeOutput,
   resolveTemplateLabel,
 } from '../utils';
-
-const REFINE_FORMATS: RefineMode[] = ['paragraph', 'bullets', 'structured'];
-
-const REFINE_TEMPLATES: RefineTemplate[] = [
-  {
-    id: 'core-insights',
-    label: '关键结论',
-    prompt: '提炼核心结论与决策要点，保持简洁。',
-    group: '决策',
-  },
-  {
-    id: 'action-items',
-    label: '行动清单',
-    prompt: '列出可执行的行动项，并按优先级排序。',
-    group: '行动',
-  },
-  {
-    id: 'role-advice',
-    label: '角色建议',
-    prompt: '按角色（负责人/协作方/风险人）给出建议要点。',
-    group: '行动',
-  },
-  {
-    id: 'risk-gaps',
-    label: '风险盲点',
-    prompt: '找出潜在风险、限制与未覆盖的关键点。',
-    group: '风险',
-  },
-  {
-    id: 'terms',
-    label: '术语速记',
-    prompt: '提炼关键术语并用一句话解释。',
-    group: '洞察',
-  },
-  {
-    id: 'compare',
-    label: '对比差异',
-    prompt: '如果存在多个对象/方案，提炼主要差异与取舍。',
-    group: '分析',
-  },
-  {
-    id: 'compare-analysis',
-    label: '对比分析',
-    prompt: '基于选中引用生成对比分析，输出相同点 / 差异点 / 结论。',
-    group: '分析',
-  },
-  {
-    id: 'questions',
-    label: '问题清单',
-    prompt: '列出尚待验证的问题与需要补充的信息。',
-    group: '洞察',
-  },
-  {
-    id: 'summary-outline',
-    label: '摘要大纲',
-    prompt: '整理成背景 / 洞察 / 下一步的三段式摘要。',
-    group: '表达',
-  },
-  {
-    id: 'highlights',
-    label: '亮点摘录',
-    prompt: '提炼最值得传播的亮点金句，控制在 3-5 条。',
-    group: '表达',
-  },
-];
-
-// Demo mode default tools (only used when backend is not available in demo mode)
-const DEMO_DEFAULT_TOOLS: WorkspaceTool[] = [
-  {
-    id: 'faq',
-    label: '闪卡',
-    description: '问答清单',
-    tone: 'blue',
-    outputType: 'FAQ',
-    prompt: '整理为 FAQ 问答清单。',
-    enabled: true,
-  },
-  {
-    id: 'guide',
-    label: '指南',
-    description: '学习/行动指南',
-    tone: 'green',
-    outputType: 'GUIDE',
-    prompt: '生成结构化学习指南。',
-    enabled: true,
-  },
-  {
-    id: 'timeline',
-    label: '时间轴',
-    description: '关键事件序列',
-    tone: 'rose',
-    outputType: 'TIMELINE',
-    prompt: '按时间轴整理关键事件。',
-    enabled: true,
-  },
-  {
-    id: 'mindmap',
-    label: '思维导图',
-    description: '主题层级结构',
-    tone: 'indigo',
-    outputType: 'MINDMAP',
-    prompt: '生成思维导图层级结构。',
-    enabled: true,
-  },
-  {
-    id: 'quiz',
-    label: '测验',
-    description: '知识检验',
-    tone: 'teal',
-    outputType: 'QUIZ',
-    prompt: '生成小测验题目。',
-    enabled: true,
-  },
-  {
-    id: 'briefing',
-    label: '报告',
-    description: '高层摘要',
-    tone: 'amber',
-    outputType: 'BRIEFING',
-    prompt: '生成简报：背景/发现/建议/下一步。',
-    enabled: true,
-  },
-  {
-    id: 'slides',
-    label: '演示',
-    description: '演示文稿',
-    tone: 'slate',
-    outputType: 'SLIDES',
-    prompt: '生成演示大纲与 Slidev Markdown。',
-    enabled: true,
-  },
-];
-
-type OutputQueueStatus = 'queued' | 'running' | 'done' | 'error';
-
-interface OutputQueueJob {
-  id: string;
-  type: OutputTypeId;
-  prompt: string;
-  chunkIds: number[];
-  status: OutputQueueStatus;
-  createdAt: string;
-  createdAtLabel: string;
-  notebookId: number | null;
-  modelId?: string;
-  draftId?: number | null;
-  title?: string;
-  generationConfig?: SlideGenerationConfig | null;
-}
-
-function buildDemoOutputContent(type: OutputTypeId, prompt: string) {
-  if (type === 'FAQ') {
-    return { items: [{ question: '演示问题', answer: prompt || '示例回答', citations: [] }] };
-  }
-  if (type === 'GUIDE') {
-    return {
-      modules: [
-        {
-          title: '演示模块',
-          objective: { text: prompt || '示例目标', citations: [] },
-          key_points: [{ text: '演示要点', citations: [] }],
-          examples: [],
-          exercises: [],
-        },
-      ],
-    };
-  }
-  if (type === 'TIMELINE') {
-    return {
-      events: [
-        {
-          date: '2024',
-          event: '演示事件',
-          description: prompt || '示例描述',
-          citations: [],
-        },
-      ],
-    };
-  }
-  if (type === 'MINDMAP') {
-    return {
-      root: {
-        label: prompt || '演示主题',
-        citations: [],
-        children: [
-          { label: '子主题 A', citations: [], children: [] },
-          { label: '子主题 B', citations: [], children: [] },
-        ],
-      },
-    };
-  }
-  if (type === 'QUIZ') {
-    return {
-      questions: [
-        {
-          type: 'multiple_choice',
-          question: prompt || '演示题目',
-          options: ['选项 A', '选项 B', '选项 C'],
-          answer: '选项 A',
-          explanation: '示例解析',
-          citations: [],
-        },
-      ],
-    };
-  }
-  if (type === 'BRIEFING') {
-    return {
-      sections: [
-        {
-          heading: '演示简报',
-          points: [{ text: prompt || '示例要点', citations: [] }],
-        },
-      ],
-    };
-  }
-  if (type === 'SLIDES') {
-    return {
-      title: prompt || '演示主题',
-      engine: 'slidev',
-      outline: {
-        title: prompt || '演示主题',
-        slides: [
-          { title: '概览', bullets: ['要点 1', '要点 2'] },
-          { title: '重点', bullets: ['发现 A', '发现 B'] },
-        ],
-      },
-      markdown: `---\ntitle: ${prompt || '演示主题'}\n---\n\n# ${prompt || '演示主题'}\n\n---\n## 概览\n- 要点 1\n- 要点 2\n`,
-    };
-  }
-  if (type === 'PARAGRAPH') {
-    return { text: prompt || '示例段落', citations: [] };
-  }
-  if (type === 'BULLETS') {
-    return { items: [{ text: prompt || '示例要点', citations: [] }] };
-  }
-  if (type === 'STRUCTURED') {
-    return { title: prompt || '示例主题', bullets: [{ text: '示例要点', citations: [] }], terms: [] };
-  }
-  return { summary: prompt || '示例输出' };
-}
-
-function normalizeSlideGenerationConfig(config?: SlideGenerationConfig | null) {
-  if (!config) return undefined;
-  return {
-    quantity: config.quantity ?? undefined,
-    audience: config.audience ?? undefined,
-    structure: config.structure ?? undefined,
-    tone: config.tone ?? undefined,
-    language: config.language ?? undefined,
-    density: config.density ?? undefined,
-    theme_preset: config.themePreset ?? undefined,
-    frontmatter: config.frontmatter ?? undefined,
-  };
-}
-
-function buildSlidesStreamUrl(
-  notebookId: number,
-  slideId: number,
-  stage: 'outline' | 'markdown',
-  modelId?: string,
-) {
-  const base = `/v1/notebooks/${notebookId}/slides/drafts/${slideId}/${stage}/stream`;
-  return modelId ? `${base}?model_id=${encodeURIComponent(modelId)}` : base;
-}
-
-function parseSseMessage(event: Event) {
-  const raw = (event as MessageEvent).data;
-  if (!raw || typeof raw !== 'string') return {};
-  try {
-    return JSON.parse(raw) as Record<string, any>;
-  } catch {
-    return {};
-  }
-}
-
-function runSlidesStream(url: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const eventSource = new EventSource(url);
-
-    const cleanup = () => {
-      eventSource.close();
-    };
-
-    const finalize = (fn: () => void) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      fn();
-    };
-
-    eventSource.addEventListener('done', () => {
-      finalize(resolve);
-    });
-
-    eventSource.addEventListener('busy', (event) => {
-      const data = parseSseMessage(event);
-      const message = typeof data.message === 'string' ? data.message : '演示正在生成中，请稍后重试。';
-      finalize(() => reject(new Error(message)));
-    });
-
-    eventSource.addEventListener('error', (event) => {
-      const data = parseSseMessage(event);
-      const message = typeof data.message === 'string' ? data.message : '生成失败，请稍后重试。';
-      finalize(() => reject(new Error(message)));
-    });
-
-    eventSource.onerror = () => {
-      finalize(() => reject(new Error('生成失败，请稍后重试。')));
-    };
-  });
-}
+import { REFINE_FORMATS, REFINE_TEMPLATES } from '../data/refineTemplates';
+import { useOutputQueue } from './useOutputQueue';
 
 function normalizeTool(tool: ApiWorkspaceTool): WorkspaceTool {
   return {
@@ -359,7 +37,7 @@ function normalizeTool(tool: ApiWorkspaceTool): WorkspaceTool {
 export function useRefine() {
   const state = useWorkspaceState();
   const dispatch = useWorkspaceDispatch();
-  const isDemo = state.connectionState === 'demo';
+  const isConnected = state.connectionState === 'live';
   const refineFormats = useMemo(() => REFINE_FORMATS, []);
   const refineTemplates = useMemo(() => REFINE_TEMPLATES, []);
   const compareTemplate = useMemo(
@@ -368,21 +46,19 @@ export function useRefine() {
   );
 
   const { data: toolsData, error: toolsError, isLoading: toolsLoading } = useSWR(
-    !isDemo ? 'workspace/tools' : null,
+    isConnected ? 'workspace/tools' : null,
     listWorkspaceTools,
     { revalidateOnFocus: false },
   );
 
   const tools = useMemo<WorkspaceTool[]>(() => {
-    // Only use default tools in demo mode
-    if (isDemo) return DEMO_DEFAULT_TOOLS;
     // Return backend data if available
     if (toolsData?.tools?.length) {
       return toolsData.tools.map(normalizeTool);
     }
     // Return empty array while loading or on error (UI should show appropriate state)
     return [];
-  }, [isDemo, toolsData]);
+  }, [toolsData]);
 
   const outputTypeOptions = useMemo(() => {
     const seen = new Set<OutputTypeId>();
@@ -405,10 +81,6 @@ export function useRefine() {
   const refineQueueRef = useRef<RefineJob[]>(state.refineJobs);
   const refineRunningRef = useRef(false);
   const runNextRefineJobRef = useRef<() => void>(() => {});
-  const [outputQueueJobs, setOutputQueueJobs] = useState<OutputQueueJob[]>([]);
-  const outputQueueRef = useRef<OutputQueueJob[]>(outputQueueJobs);
-  const outputRunningRef = useRef(false);
-  const runNextOutputJobRef = useRef<() => void>(() => {});
   const [queueSummary, setQueueSummary] = useState({ total: 0, done: 0 });
 
   useEffect(() => {
@@ -430,19 +102,6 @@ export function useRefine() {
   }, [state.refineJobs]);
 
   useEffect(() => {
-    outputQueueRef.current = outputQueueJobs;
-    if (outputRunningRef.current) return;
-    if (!outputQueueJobs.some((job) => job.status === 'queued')) return;
-    runNextOutputJobRef.current();
-  }, [outputQueueJobs]);
-
-  useEffect(() => {
-    setOutputQueueJobs([]);
-    outputQueueRef.current = [];
-    setQueueSummary({ total: 0, done: 0 });
-  }, [state.activeNotebookId]);
-
-  useEffect(() => {
     if (state.refinePrompt.trim().length > 0) return;
     if (!refineTemplates[0]) return;
     dispatch({ type: 'SET_REFINE_PROMPT', payload: refineTemplates[0].prompt });
@@ -457,14 +116,6 @@ export function useRefine() {
     [state.citations, state.selectedCitationIds],
   );
 
-  const { data: outputsData, error: outputsError, isLoading: outputsLoading, mutate: mutateOutputs } =
-    useSWR(
-      state.activeNotebookId && !isDemo
-        ? ['workspace/outputs', state.activeNotebookId]
-        : null,
-      () => listOutputs(state.activeNotebookId ?? 0),
-      { revalidateOnFocus: false },
-    );
 
   const updateRefineJobs = useCallback(
     (updater: (jobs: RefineJob[]) => RefineJob[]) => {
@@ -474,25 +125,6 @@ export function useRefine() {
     },
     [dispatch],
   );
-
-  const updateOutputQueueJobs = useCallback(
-    (updater: (jobs: OutputQueueJob[]) => OutputQueueJob[]) => {
-      const next = updater(outputQueueRef.current);
-      outputQueueRef.current = next;
-      setOutputQueueJobs(next);
-    },
-    [],
-  );
-
-  const hasPendingJobs = useCallback(() => {
-    const refinePending = refineQueueRef.current.some(
-      (job) => job.status === 'queued' || job.status === 'running',
-    );
-    const outputPending = outputQueueRef.current.some(
-      (job) => job.status === 'queued' || job.status === 'running',
-    );
-    return refinePending || outputPending;
-  }, []);
 
   const resetQueueSummary = useCallback(() => {
     setQueueSummary({ total: 0, done: 0 });
@@ -519,22 +151,43 @@ export function useRefine() {
     [dispatch],
   );
 
+  const hasPendingRefineJobs = useCallback(
+    () =>
+      refineQueueRef.current.some(
+        (job) => job.status === 'queued' || job.status === 'running',
+      ),
+    [],
+  );
+
+  const {
+    outputQueueJobs,
+    enqueueOutputJob,
+    enqueueSlidesJob,
+    hasPendingJobs,
+    outputsLoading,
+    outputsError,
+    retryOutputs,
+    deleteOutput,
+    clearOutputs,
+    fetchOutput,
+  } = useOutputQueue({
+    state,
+    dispatch,
+    isConnected,
+    hasPendingRefineJobs,
+    onQueueReset: resetQueueSummary,
+    onQueueTotal: incrementQueueTotal,
+    onQueueDone: incrementQueueDone,
+    markJobCompleted,
+  });
+
   const processRefineJob = useCallback(
     async (jobId: string, prompt: string, chunkIds: number[], jobNotebookId: number | null) => {
       try {
         let normalizedOutputs = {};
         let response = null;
         let resolvedCitations = null;
-        if (isDemo) {
-          const demoOutput = buildRefineOutput(prompt);
-          normalizedOutputs = refineFormats.reduce<Record<RefineMode, typeof demoOutput>>(
-            (acc, format) => {
-              acc[format] = demoOutput;
-              return acc;
-            },
-            {} as Record<RefineMode, typeof demoOutput>,
-          );
-        } else if (jobNotebookId) {
+        if (jobNotebookId && isConnected) {
           response = await refineBatch(jobNotebookId, prompt, refineFormats, chunkIds);
           resolvedCitations = response?.citations
             ? response.citations.map(normalizeCitation)
@@ -554,7 +207,7 @@ export function useRefine() {
             {} as Record<RefineMode, any>,
           );
         } else {
-          throw new Error('missing notebook');
+          throw new Error('backend unavailable');
         }
 
         const completedAt = new Date().toISOString();
@@ -646,7 +299,7 @@ export function useRefine() {
     },
     [
       dispatch,
-      isDemo,
+      isConnected,
       incrementQueueDone,
       markJobCompleted,
       refineFormats,
@@ -727,249 +380,12 @@ export function useRefine() {
     [outputTypeOptions],
   );
 
-  const enqueueOutputJob = useCallback(
-    ({ type, prompt, chunkIds, modelId }: { type: OutputTypeId; prompt: string; chunkIds: number[]; modelId?: string }) => {
-      const createdAt = new Date().toISOString();
-      if (!hasPendingJobs()) {
-        resetQueueSummary();
-      }
-      incrementQueueTotal();
-      const job: OutputQueueJob = {
-        id: createId(),
-        type,
-        prompt,
-        chunkIds,
-        status: 'queued',
-        createdAt,
-        createdAtLabel: formatTimestamp(createdAt),
-        notebookId: state.activeNotebookId,
-        modelId,
-      };
-      updateOutputQueueJobs((prev) => [job, ...prev]);
-      return job;
-    },
-    [
-      hasPendingJobs,
-      incrementQueueTotal,
-      resetQueueSummary,
-      state.activeNotebookId,
-      updateOutputQueueJobs,
-    ],
-  );
-
-  const enqueueSlidesJob = useCallback(
-    async ({
-      title,
-      prompt,
-      chunkIds,
-      generationConfig,
-      modelId,
-    }: {
-      title: string;
-      prompt: string;
-      chunkIds: number[];
-      generationConfig: SlideGenerationConfig;
-      modelId?: string | null;
-    }) => {
-      if (!state.activeNotebookId && !isDemo) {
-        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先创建笔记本。' } });
-        return null;
-      }
-
-      const createdAt = new Date().toISOString();
-      if (!hasPendingJobs()) {
-        resetQueueSummary();
-      }
-
-      let draftId: number | null = null;
-      if (!isDemo && state.activeNotebookId) {
-        const payload = {
-          title: title.trim() || undefined,
-          prompt: prompt.trim() || undefined,
-          chunk_ids: chunkIds.length ? chunkIds : undefined,
-          generation_config: normalizeSlideGenerationConfig(generationConfig),
-        };
-        const created = await createSlidesDraft(state.activeNotebookId, payload);
-        draftId = created.id;
-      }
-
-      incrementQueueTotal();
-      const job: OutputQueueJob = {
-        id: createId(),
-        type: 'SLIDES',
-        prompt,
-        chunkIds,
-        status: 'queued',
-        createdAt,
-        createdAtLabel: formatTimestamp(createdAt),
-        notebookId: state.activeNotebookId,
-        modelId: modelId ?? undefined,
-        draftId,
-        title,
-        generationConfig,
-      };
-      updateOutputQueueJobs((prev) => [job, ...prev]);
-      return job;
-    },
-    [
-      dispatch,
-      hasPendingJobs,
-      incrementQueueTotal,
-      isDemo,
-      resetQueueSummary,
-      state.activeNotebookId,
-      updateOutputQueueJobs,
-    ],
-  );
-
-  const processOutputJob = useCallback(
-    async (job: OutputQueueJob) => {
-      try {
-        dispatch({ type: 'SET_LOADING', payload: { key: 'outputs', value: true } });
-        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '' } });
-        let normalized: OutputItem[] = [];
-        if (job.type === 'SLIDES') {
-          if (isDemo) {
-            const createdAtRaw = new Date().toISOString();
-            const demoOutput = {
-              id: Date.now(),
-              type: job.type,
-              prompt: job.prompt,
-              chunkIds: job.chunkIds,
-              content: buildDemoOutputContent(job.type, job.prompt),
-              createdAt: formatTimestamp(createdAtRaw),
-              updatedAt: formatTimestamp(createdAtRaw),
-              createdAtRaw,
-              updatedAtRaw: createdAtRaw,
-            };
-            normalized = [demoOutput];
-            dispatch({ type: 'SET_OUTPUTS', payload: [demoOutput, ...state.outputs] });
-          } else if (job.notebookId && job.draftId) {
-            const outlineUrl = buildSlidesStreamUrl(
-              job.notebookId,
-              job.draftId,
-              'outline',
-              job.modelId,
-            );
-            const markdownUrl = buildSlidesStreamUrl(
-              job.notebookId,
-              job.draftId,
-              'markdown',
-              job.modelId,
-            );
-            await runSlidesStream(outlineUrl);
-            await runSlidesStream(markdownUrl);
-            await mutateOutputs();
-          } else {
-            throw new Error('missing slide draft');
-          }
-        } else if (isDemo) {
-          const createdAtRaw = new Date().toISOString();
-          const demoOutput = {
-            id: Date.now(),
-            type: job.type,
-            prompt: job.prompt,
-            chunkIds: job.chunkIds,
-            content: buildDemoOutputContent(job.type, job.prompt),
-            createdAt: formatTimestamp(createdAtRaw),
-            updatedAt: formatTimestamp(createdAtRaw),
-            createdAtRaw,
-            updatedAtRaw: createdAtRaw,
-          };
-          normalized = [demoOutput];
-          dispatch({ type: 'SET_OUTPUTS', payload: [demoOutput, ...state.outputs] });
-        } else if (job.notebookId) {
-          const response = await createOutput(job.notebookId, job.type, {
-            prompt: job.prompt || undefined,
-            chunk_ids: job.chunkIds.length ? job.chunkIds : undefined,
-            model_id: job.modelId || undefined,
-          });
-          normalized = [normalizeOutput(response)];
-          dispatch({ type: 'SET_OUTPUTS', payload: [...normalized, ...state.outputs] });
-          await mutateOutputs();
-        } else {
-          throw new Error('missing notebook');
-        }
-        updateOutputQueueJobs((prev) =>
-          prev.map((item) =>
-            item.id === job.id ? { ...item, status: 'done' } : item,
-          ),
-        );
-        const stillTracked = outputQueueRef.current.some((item) => item.id === job.id);
-        const isCurrentNotebook =
-          job.notebookId != null && job.notebookId === activeNotebookIdRef.current;
-        if ((normalized.length > 0 || job.type === 'SLIDES') && stillTracked && isCurrentNotebook) {
-          markJobCompleted(job.id);
-        }
-        dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
-        if (stillTracked) {
-          incrementQueueDone();
-        }
-      } catch (error) {
-        // Extract meaningful error message
-        let userFacingError = '输出生成失败，请稍后重试。';
-
-        if (error instanceof Error) {
-          const statusError = error as Error & { status?: number };
-
-          if (statusError.status === 503) {
-            userFacingError = 'AI 服务配置错误，请联系管理员。';
-          } else if (statusError.status === 404) {
-            userFacingError = '笔记本已失效，请刷新页面。';
-          } else if (statusError.status === 400) {
-            userFacingError = '请求参数有误，请检查输入。';
-          } else if (statusError.status === 500) {
-            userFacingError = '服务器错误，请稍后重试。';
-          } else if (error.message && error.message.length < 100 && !error.message.includes('fetch')) {
-            userFacingError = error.message;
-          }
-        }
-
-        updateOutputQueueJobs((prev) =>
-          prev.map((item) =>
-            item.id === job.id ? { ...item, status: 'error' } : item,
-          ),
-        );
-        const stillTracked = outputQueueRef.current.some((item) => item.id === job.id);
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'outputs', value: userFacingError },
-        });
-        if (stillTracked) {
-          incrementQueueDone();
-        }
-      } finally {
-        dispatch({ type: 'SET_LOADING', payload: { key: 'outputs', value: false } });
-        outputRunningRef.current = false;
-        runNextOutputJobRef.current();
-      }
-    },
-    [
-      dispatch,
-      incrementQueueDone,
-      isDemo,
-      markJobCompleted,
-      mutateOutputs,
-      state.outputs,
-      updateOutputQueueJobs,
-    ],
-  );
-
-  const runNextOutputJob = useCallback(() => {
-    if (outputRunningRef.current) return;
-    const nextJob = outputQueueRef.current.find((job) => job.status === 'queued');
-    if (!nextJob) return;
-    outputRunningRef.current = true;
-    updateOutputQueueJobs((prev) =>
-      prev.map((job) => (job.id === nextJob.id ? { ...job, status: 'running' } : job)),
-    );
-    void processOutputJob(nextJob);
-  }, [processOutputJob, updateOutputQueueJobs]);
-
-  runNextOutputJobRef.current = runNextOutputJob;
-
   const handleRefineGenerate = useCallback(() => {
-    if (!state.activeNotebookId && !isDemo) {
+    if (!isConnected) {
+      dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '未连接到后端服务。' } });
+      return;
+    }
+    if (!state.activeNotebookId) {
       dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '请先创建笔记本。' } });
       return;
     }
@@ -984,7 +400,7 @@ export function useRefine() {
   }, [
     dispatch,
     enqueueRefineJob,
-    isDemo,
+    isConnected,
     refineTemplates,
     selectedChunkIds,
     state.activeNotebookId,
@@ -993,7 +409,11 @@ export function useRefine() {
 
   const handleCompareSelectedCitations = useCallback(() => {
     if (!selectedChunkIds.length) return;
-    if (!state.activeNotebookId && !isDemo) {
+    if (!isConnected) {
+      dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '未连接到后端服务。' } });
+      return;
+    }
+    if (!state.activeNotebookId) {
       dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '请先创建笔记本。' } });
       return;
     }
@@ -1012,14 +432,18 @@ export function useRefine() {
     compareTemplate?.prompt,
     dispatch,
     enqueueRefineJob,
-    isDemo,
+    isConnected,
     selectedChunkIds,
     state.activeNotebookId,
   ]);
 
   const handleReplayRefineJob = useCallback(
     (job: RefineJob) => {
-      if (!state.activeNotebookId && !isDemo) {
+      if (!isConnected) {
+        dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '未连接到后端服务。' } });
+        return;
+      }
+      if (!state.activeNotebookId) {
         dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '请先创建笔记本。' } });
         return;
       }
@@ -1032,7 +456,7 @@ export function useRefine() {
       });
       dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
     },
-    [dispatch, enqueueRefineJob, isDemo, refineTemplates, state.activeNotebookId],
+    [dispatch, enqueueRefineJob, isConnected, refineTemplates, state.activeNotebookId],
   );
 
   const handleToggleRefinePin = useCallback(
@@ -1068,23 +492,6 @@ export function useRefine() {
     [dispatch, state.refineSettings],
   );
 
-  useEffect(() => {
-    dispatch({ type: 'SET_LOADING', payload: { key: 'outputs', value: outputsLoading } });
-  }, [dispatch, outputsLoading]);
-
-  useEffect(() => {
-    if (outputsError) {
-      dispatch({
-        type: 'SET_ERROR',
-        payload: { key: 'outputs', value: '输出加载失败，请稍后重试。' },
-      });
-      return;
-    }
-    if (!outputsData) return;
-    dispatch({ type: 'SET_OUTPUTS', payload: outputsData.map(normalizeOutput) });
-    dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '' } });
-  }, [dispatch, outputsData, outputsError]);
-
   const setOutputType = useCallback(
     (value: OutputTypeId) => {
       dispatch({ type: 'SET_OUTPUT_TYPE', payload: value });
@@ -1107,7 +514,11 @@ export function useRefine() {
   );
 
   const handleGenerateOutput = useCallback((overrideType?: OutputTypeId, modelId?: string | null) => {
-    if (!state.activeNotebookId && !isDemo) {
+    if (!isConnected) {
+      dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '未连接到后端服务。' } });
+      return;
+    }
+    if (!state.activeNotebookId) {
       dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先创建笔记本。' } });
       return;
     }
@@ -1138,7 +549,7 @@ export function useRefine() {
   }, [
     dispatch,
     enqueueOutputJob,
-    isDemo,
+    isConnected,
     outputTypeOptions,
     resolveOutputPrompt,
     selectedChunkIds,
@@ -1150,7 +561,11 @@ export function useRefine() {
 
   const handleReplayOutput = useCallback(
     (output: OutputItem) => {
-      if (!state.activeNotebookId && !isDemo) {
+      if (!isConnected) {
+        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '未连接到后端服务。' } });
+        return;
+      }
+      if (!state.activeNotebookId) {
         dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先创建笔记本。' } });
         return;
       }
@@ -1170,12 +585,16 @@ export function useRefine() {
       });
       dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
     },
-    [dispatch, enqueueOutputJob, isDemo, resolveOutputPrompt, state.activeNotebookId],
+    [dispatch, enqueueOutputJob, isConnected, resolveOutputPrompt, state.activeNotebookId],
   );
 
   const saveContentAsNote = useCallback(
     (content: string) => {
-      if (!state.activeNotebookId && !isDemo) {
+      if (!isConnected) {
+        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '未连接到后端服务。' } });
+        return;
+      }
+      if (!state.activeNotebookId) {
         dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先创建笔记本。' } });
         return;
       }
@@ -1189,65 +608,7 @@ export function useRefine() {
       }
       dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
     },
-    [dispatch, enqueueOutputJob, isDemo, state.activeNotebookId, state.activePanel],
-  );
-
-  const retryOutputs = useCallback(async () => {
-    dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '' } });
-    await mutateOutputs();
-  }, [dispatch, mutateOutputs]);
-
-  const deleteOutput = useCallback(
-    async (outputId: number) => {
-      if (!state.activeNotebookId) return;
-
-      // Optimistic update: remove from UI immediately
-      dispatch({
-        type: 'SET_OUTPUTS',
-        payload: state.outputs.filter((item) => item.id !== outputId),
-      });
-
-      // Call API (if not demo mode)
-      if (!isDemo) {
-        try {
-          await deleteOutputApi(state.activeNotebookId, outputId);
-        } catch (error) {
-          console.error('Failed to delete output:', error);
-          // Revert optimistic update on error
-          await mutateOutputs();
-        }
-      }
-    },
-    [dispatch, state.outputs, state.activeNotebookId, isDemo, mutateOutputs],
-  );
-
-  const clearOutputs = useCallback(() => {
-    dispatch({ type: 'SET_OUTPUTS', payload: [] });
-  }, [dispatch]);
-
-  const fetchOutput = useCallback(
-    async (outputId: number) => {
-      if (!state.activeNotebookId || isDemo) return null;
-      try {
-        const output = await getOutput(state.activeNotebookId, outputId);
-        const normalized = normalizeOutput(output);
-        // Update the output in the list if it exists
-        dispatch({
-          type: 'SET_OUTPUTS',
-          payload: state.outputs.map((item) =>
-            item.id === outputId ? normalized : item,
-          ),
-        });
-        return normalized;
-      } catch (error) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'outputs', value: '获取输出详情失败。' },
-        });
-        return null;
-      }
-    },
-    [dispatch, isDemo, state.activeNotebookId, state.outputs],
+    [dispatch, enqueueOutputJob, isConnected, state.activeNotebookId, state.activePanel],
   );
 
   return {
@@ -1256,7 +617,7 @@ export function useRefine() {
     compareTemplate,
     tools,
     toolsLoading,
-    toolsError: toolsError ? '工具加载失败' : '',
+    toolsError: !isConnected ? '未连接到后端服务。' : toolsError ? '工具加载失败' : '',
     selectedChunkIds,
     refineMode: state.refineMode,
     setRefineMode,
@@ -1279,8 +640,8 @@ export function useRefine() {
     outputs: state.outputs,
     outputQueueJobs,
     queueSummary,
-    outputsLoading: state.loading.outputs,
-    outputsError: state.errors.outputs,
+    outputsLoading,
+    outputsError,
     onGenerateOutput: handleGenerateOutput,
     onQueueSlides: enqueueSlidesJob,
     onReplayOutput: handleReplayOutput,

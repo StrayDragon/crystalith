@@ -30,7 +30,7 @@ interface SessionSwitcherProps {
   isOpen: boolean;
   isLoading: boolean;
   error: string;
-  isDemo: boolean;
+  isConnected: boolean;
   searchInputRef: RefObject<HTMLInputElement>;
   onToggle: () => void;
   onClose: () => void;
@@ -47,7 +47,7 @@ export default function SessionSwitcher({
   isOpen,
   isLoading,
   error,
-  isDemo,
+  isConnected,
   searchInputRef,
   onToggle,
   onClose,
@@ -265,7 +265,7 @@ export default function SessionSwitcher({
                        </button>
 
                        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-inherit">
-                          {onUpdate && (
+                          {onUpdate && isConnected && (
                              <IconButton
                                size="sm"
                                variant="text"
@@ -278,7 +278,7 @@ export default function SessionSwitcher({
                                 <EditIcon style={{ fontSize: 14 }} />
                              </IconButton>
                           )}
-                          {onDelete && (
+                          {onDelete && isConnected && (
                              <IconButton
                                size="sm"
                                variant="text"
@@ -300,13 +300,6 @@ export default function SessionSwitcher({
             )}
           </div>
 
-          {isDemo && (
-             <div className="p-2 border-t border-gray-200 text-center">
-                <Typography variant="small" className="text-[10px] text-gray-500 font-medium">
-                  演示模式下会话仅在前端保存。
-                </Typography>
-             </div>
-          )}
         </PopoverContent>
       </Popover>
 
@@ -320,6 +313,7 @@ export default function SessionSwitcher({
           await onCreate();
           onClose(); // Close popover if open
         }}
+        disabled={!isConnected}
       >
         <AddIcon style={{ fontSize: 18 }} />
       </IconButton>

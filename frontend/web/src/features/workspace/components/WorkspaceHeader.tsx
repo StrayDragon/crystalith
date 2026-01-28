@@ -14,7 +14,7 @@ interface WorkspaceHeaderProps {
   createName: string;
   createState: AsyncStatus;
   createError: string;
-  isDemo: boolean;
+  isConnected: boolean;
   onCreateNameChange: (value: string) => void;
   onCreateNotebook: () => Promise<boolean>;
   onUpdateNotebook?: (notebookId: number, name: string) => Promise<boolean>;
@@ -31,7 +31,7 @@ export default function WorkspaceHeader({
   createName,
   createState,
   createError,
-  isDemo,
+  isConnected,
   onCreateNameChange,
   onCreateNotebook,
   onUpdateNotebook,
@@ -74,7 +74,7 @@ export default function WorkspaceHeader({
           isOpen={notebookSwitcherOpen}
           isLoading={isNotebooksLoading}
           error={notebooksError}
-          isDemo={isDemo}
+          isConnected={isConnected}
           searchInputRef={notebookSearchRef}
           createName={createName}
           createState={createState}

@@ -351,7 +351,7 @@ export default function WorkspaceLayout() {
     setViewerOutputId(refine.outputs[0].id);
   }, [isViewerOpen, refine.outputs, viewerOutputId]);
 
-  const isDemo = notebooks.connectionState === 'demo';
+  const isConnected = notebooks.isConnected;
 
   // NOTE: Mobile responsive layout is deferred - keeping 3-column horizontal layout always
   // TODO: Add mobile/tablet responsive layout when adapting for mobile devices
@@ -365,7 +365,7 @@ export default function WorkspaceLayout() {
         createName={notebooks.createName}
         createState={notebooks.createState}
         createError={notebooks.createError}
-        isDemo={notebooks.isDemo}
+        isConnected={isConnected}
         onCreateNameChange={notebooks.setCreateName}
         onCreateNotebook={notebooks.createNotebook}
         onUpdateNotebook={notebooks.updateNotebook}
@@ -428,7 +428,7 @@ export default function WorkspaceLayout() {
             onAddSourceFromUrl={sources.addSourceFromUrl}
             onRemoveSources={sources.removeSources}
             onRemoveSource={sources.removeSource}
-            isDemo={sources.isDemo}
+            isConnected={sources.isConnected}
             isLoading={sources.isLoading}
             removeState={sources.removeState}
             isFullscreen={expandedPanel === 'sources'}
@@ -488,7 +488,7 @@ export default function WorkspaceLayout() {
                 isOpen={isSessionSwitcherOpen}
                 isLoading={sessions.isLoading}
                 error={sessions.error}
-                isDemo={sessions.isDemo}
+                isConnected={sessions.isConnected}
                 searchInputRef={sessionSearchRef}
                 onToggle={() => setIsSessionSwitcherOpen((prev) => !prev)}
                 onClose={() => setIsSessionSwitcherOpen(false)}
@@ -524,7 +524,7 @@ export default function WorkspaceLayout() {
             isSending={chat.isSending}
             notice={chat.sendError}
             isBlocked={!notebooks.activeNotebookId}
-            isDemo={isDemo}
+            isConnected={isConnected}
             inputRef={chatInputRef}
             citations={sources.citations}
             isLoadingMessages={chat.isLoadingMessages}
@@ -608,7 +608,7 @@ export default function WorkspaceLayout() {
             onSelectOutputFullscreen={handleOpenOutputViewerFullscreen}
             onSaveNote={refine.saveContentAsNote}
             onConvertToSource={sources.convertOutputToSource}
-            isDemo={isDemo}
+            isConnected={isConnected}
             isFullscreen={expandedPanel === 'studio'}
           />
         </section>
@@ -639,7 +639,7 @@ export default function WorkspaceLayout() {
         }}
         notebookId={state.activeNotebookId}
         selectedChunkIds={selectedChunkIds}
-        isDemo={isDemo}
+        isConnected={isConnected}
         onOutputsUpdated={refine.retryOutputs}
         openMode={slidesOpenMode}
         draftId={slidesDraftId}
@@ -662,7 +662,7 @@ export default function WorkspaceLayout() {
           onSourceClick={handleGraphSourceClick}
           onOutputClick={(output) => handleOpenOutputViewer(output.id, true)}
           onSessionClick={handleGraphSessionClick}
-          isDemo={analysis.isDemo}
+          isConnected={analysis.isConnected}
         />
       )}
 

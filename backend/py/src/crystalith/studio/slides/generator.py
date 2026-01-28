@@ -11,6 +11,16 @@ from crystalith.agents.deps import StudioDeps
 from crystalith.agents.models import build_chat_model, build_chat_model_from_model_id
 from crystalith.db import Chunk, Source
 from .schemas import SlideGenerationConfig, SlideMarkdown, SlideOutline, SlideOutlineItem
+from .config import (
+    AUDIENCE_HINTS,
+    DEFAULT_CONFIG,
+    DENSITY_BULLETS,
+    LANGUAGE_HINTS,
+    QUANTITY_RANGES,
+    STRUCTURE_TEMPLATES,
+    THEME_PRESET_TEMPLATES,
+    TONE_HINTS,
+)
 from crystalith.utils import format_context, format_context_from_chunk_ids
 
 
@@ -28,106 +38,6 @@ SLIDES_MARKDOWN_SYSTEM = (
     "You are a presentation designer. Convert the outline into Slidev Markdown. "
     "Keep slides concise and easy to present."
 )
-
-DEFAULT_CONFIG = SlideGenerationConfig(
-    quantity="standard",
-    audience="general",
-    structure="standard",
-    tone="professional",
-    language="zh",
-    density="standard",
-    theme_preset="minimal-clean",
-)
-
-QUANTITY_RANGES: dict[str, tuple[int, int]] = {
-    "short": (6, 8),
-    "standard": (8, 12),
-    "detailed": (12, 18),
-}
-
-DENSITY_BULLETS: dict[str, tuple[int, int]] = {
-    "sparse": (2, 3),
-    "standard": (3, 5),
-    "dense": (5, 7),
-}
-
-STRUCTURE_TEMPLATES: dict[str, str] = {
-    "standard": "封面 / 议程 / 背景 / 关键发现 / 结论 / 下一步",
-    "problem-solution": "背景 / 问题 / 影响 / 方案 / 实施计划 / 收益 / 下一步",
-    "story": "起点 / 冲突 / 转折 / 洞察 / 行动 / 结尾",
-    "project-review": "目标 / 过程 / 结果 / 复盘 / 行动计划",
-    "training": "目标 / 核心概念 / 示例 / 练习 / 总结",
-}
-
-AUDIENCE_HINTS: dict[str, str] = {
-    "general": "通俗易懂，避免过多术语",
-    "executive": "强调结论与决策要点，简洁直达",
-    "technical": "保留必要技术细节与定义",
-    "external": "强调价值与故事性，避免内部术语",
-}
-
-TONE_HINTS: dict[str, str] = {
-    "professional": "正式、专业",
-    "friendly": "亲和、易读",
-    "inspiring": "鼓舞、强调愿景",
-    "serious": "严谨、客观",
-}
-
-LANGUAGE_HINTS: dict[str, str] = {
-    "zh": "中文",
-    "en": "英文",
-}
-
-THEME_PRESET_TEMPLATES: dict[str, dict[str, object]] = {
-    "minimal-clean": {
-        "theme": "default",
-        "colorSchema": "light",
-        "fonts": {"sans": "Manrope", "serif": "Noto Serif SC", "mono": "Fira Code"},
-        "transition": "fade",
-        "background": "#F8FAFC",
-        "class": "text-left",
-    },
-    "business-brief": {
-        "theme": "default",
-        "colorSchema": "light",
-        "fonts": {"sans": "IBM Plex Sans", "serif": "Noto Serif SC", "mono": "JetBrains Mono"},
-        "transition": "slide-left",
-        "background": "linear-gradient(180deg, #F8FAFC 0%, #EEF2FF 100%)",
-        "class": "text-left",
-    },
-    "product-launch": {
-        "theme": "default",
-        "colorSchema": "light",
-        "fonts": {"sans": "Space Grotesk", "serif": "Noto Serif SC", "mono": "Fira Code"},
-        "transition": "fade-out",
-        "background": "radial-gradient(circle at 20% 20%, #FDE68A 0%, #FFFFFF 45%, #EEF2FF 100%)",
-        "class": "text-center",
-    },
-    "research-paper": {
-        "theme": "default",
-        "colorSchema": "light",
-        "fonts": {"sans": "Source Sans 3", "serif": "Source Serif 4", "mono": "Source Code Pro"},
-        "transition": "slide-up",
-        "background": "#FFFBF5",
-        "class": "text-left",
-    },
-    "data-insight": {
-        "theme": "default",
-        "colorSchema": "light",
-        "fonts": {"sans": "Inter", "serif": "Noto Serif SC", "mono": "JetBrains Mono"},
-        "transition": "slide-right",
-        "background": "repeating-linear-gradient(0deg, #F8FAFC 0px, #F8FAFC 24px, #E5E7EB 25px)",
-        "class": "text-left",
-    },
-    "creative-visual": {
-        "theme": "default",
-        "colorSchema": "dark",
-        "fonts": {"sans": "Bebas Neue", "serif": "Noto Serif SC", "mono": "Fira Code"},
-        "transition": "zoom",
-        "background": "linear-gradient(135deg, #0F172A 0%, #111827 50%, #1F2937 100%)",
-        "class": "text-white text-left",
-    },
-}
 
 
 @dataclass

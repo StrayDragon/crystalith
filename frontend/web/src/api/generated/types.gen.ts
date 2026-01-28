@@ -1488,6 +1488,79 @@ export type SlideStage = 'input' | 'outline' | 'markdown';
 export type SlideStatus = 'idle' | 'running' | 'error';
 
 /**
+ * SlidesConfigOption
+ */
+export type SlidesConfigOption = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Is Default
+     */
+    is_default?: boolean;
+};
+
+/**
+ * SlidesConfigResponse
+ */
+export type SlidesConfigResponse = {
+    defaults: SlideGenerationConfig;
+    /**
+     * Quantity Options
+     */
+    quantity_options: Array<SlidesConfigOption>;
+    /**
+     * Audience Options
+     */
+    audience_options: Array<SlidesConfigOption>;
+    /**
+     * Structure Options
+     */
+    structure_options: Array<SlidesConfigOption>;
+    /**
+     * Tone Options
+     */
+    tone_options: Array<SlidesConfigOption>;
+    /**
+     * Language Options
+     */
+    language_options: Array<SlidesConfigOption>;
+    /**
+     * Density Options
+     */
+    density_options: Array<SlidesConfigOption>;
+    /**
+     * Theme Preset Options
+     */
+    theme_preset_options: Array<SlidesThemePreset>;
+};
+
+/**
+ * SlidesThemePreset
+ */
+export type SlidesThemePreset = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Template
+     */
+    template: {
+        [key: string]: unknown;
+    };
+};
+
+/**
  * SourceBatchDeleteRequest
  */
 export type SourceBatchDeleteRequest = {
@@ -4025,3 +4098,19 @@ export type GetToolConfigV1WorkspaceToolsToolIdConfigGetResponses = {
 };
 
 export type GetToolConfigV1WorkspaceToolsToolIdConfigGetResponse = GetToolConfigV1WorkspaceToolsToolIdConfigGetResponses[keyof GetToolConfigV1WorkspaceToolsToolIdConfigGetResponses];
+
+export type GetSlidesConfigV1WorkspaceToolsSlidesConfigGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/workspace/tools/slides/config';
+};
+
+export type GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: SlidesConfigResponse;
+};
+
+export type GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponse = GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses[keyof GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses];

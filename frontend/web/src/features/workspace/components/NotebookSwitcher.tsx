@@ -29,7 +29,7 @@ interface NotebookSwitcherProps {
   isOpen: boolean;
   isLoading: boolean;
   error: string;
-  isDemo: boolean;
+  isConnected: boolean;
   searchInputRef?: RefObject<HTMLInputElement>;
   createName: string;
   createState: AsyncStatus;
@@ -49,7 +49,7 @@ export default function NotebookSwitcher({
   isOpen,
   isLoading,
   error,
-  isDemo,
+  isConnected,
   searchInputRef,
   createName,
   createState,
@@ -72,7 +72,7 @@ export default function NotebookSwitcher({
   const editInputRef = useRef<HTMLInputElement | null>(null);
 
   const createLoading = createState === 'loading';
-  const createDisabled = isDemo || createLoading || createName.trim().length === 0;
+  const createDisabled = !isConnected || createLoading || createName.trim().length === 0;
 
   async function handleCreate() {
     if (createDisabled) return;
@@ -153,9 +153,7 @@ export default function NotebookSwitcher({
     setDeletingNotebookId(null);
   }, [isOpen]);
 
-  const displayTitle = isDemo
-    ? 'Modern Strategies for Male Hair Loss and Restoration'
-    : activeNotebook?.title ?? '未命名笔记本';
+  const displayTitle = activeNotebook?.title ?? '未命名笔记本';
 
   return (
     <div className="flex items-center border border-gray-300 rounded-lg bg-white overflow-hidden h-8">
@@ -315,7 +313,7 @@ export default function NotebookSwitcher({
                       </Typography>
                     </button>
 
-                    {!isDemo && (
+                    {isConnected && (
                       <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-inherit">
                         {onUpdate && (
                           <IconButton
@@ -353,13 +351,6 @@ export default function NotebookSwitcher({
           )}
         </div>
 
-        {isDemo && (
-          <div className="p-2 border-t border-gray-200 text-center">
-            <Typography variant="small" className="text-[10px] text-gray-500 font-medium">
-              演示模式下笔记本仅在前端显示。
-            </Typography>
-          </div>
-        )}
       </PopoverContent>
     </Popover>
 
@@ -377,7 +368,7 @@ export default function NotebookSwitcher({
             variant="text"
             size="sm"
             className="rounded-none h-full w-8 hover:bg-gray-100"
-            disabled={isDemo}
+            disabled={!isConnected}
           >
             {createLoading ? <Spinner className="h-3 w-3" /> : <AddIcon style={{ fontSize: 18 }} />}
           </IconButton>
@@ -393,8 +384,8 @@ export default function NotebookSwitcher({
             containerProps={{ className: "min-w-0" }}
             value={createName}
             onChange={(e) => onCreateNameChange(e.target.value)}
-            placeholder={isDemo ? '演示模式不可创建' : '输入名称'}
-            disabled={isDemo || createLoading}
+            placeholder={isConnected ? '输入名称' : '未连接到后端'}
+            disabled={!isConnected || createLoading}
             autoFocus
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -406,11 +397,6 @@ export default function NotebookSwitcher({
           {createError && (
             <Typography variant="small" color="red" className="mt-1 text-[10px]">
               {createError}
-            </Typography>
-          )}
-          {isDemo && (
-            <Typography variant="small" className="mt-1 text-[10px] text-gray-500 font-medium">
-              演示模式下无法创建笔记本。
             </Typography>
           )}
           <div className="flex justify-end gap-2 mt-3">

@@ -5,6 +5,22 @@ from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
+async def test_slides_config_endpoint(test_client: AsyncClient) -> None:
+    response = await test_client.get("/v1/workspace/tools/slides/config")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["defaults"]["theme_preset"] == "minimal-clean"
+    assert payload["quantity_options"]
+    assert payload["theme_preset_options"]
+    minimal = next(
+        (item for item in payload["theme_preset_options"] if item["id"] == "minimal-clean"),
+        None,
+    )
+    assert minimal is not None
+    assert "fonts" in minimal["template"]
+
+
+@pytest.mark.asyncio
 async def test_slides_draft_generation_config_roundtrip(test_client: AsyncClient) -> None:
     create = await test_client.post("/v1/notebooks", json={"name": "Slides"})
     assert create.status_code == 201

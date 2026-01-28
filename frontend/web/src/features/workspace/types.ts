@@ -1,5 +1,5 @@
 export type PanelId = 'sources' | 'chat' | 'refine';
-export type ConnectionState = 'connecting' | 'demo' | 'live';
+export type ConnectionState = 'connecting' | 'error' | 'live';
 export type RefineMode = 'paragraph' | 'bullets' | 'structured';
 export type RefineStatus = 'queued' | 'running' | 'done' | 'error';
 export type OutputTypeId =
@@ -165,7 +165,7 @@ export interface OutputItem {
 
 export interface StatusLabel {
   text: string;
-  tone: 'isLoading' | 'isDemo' | 'isLive';
+  tone: 'isLoading' | 'isError' | 'isLive';
   tooltip: string;
 }
 

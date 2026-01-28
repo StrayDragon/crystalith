@@ -31,6 +31,7 @@ import {
   refineV1NotebooksNotebookIdRefinePost,
   refineBatchV1NotebooksNotebookIdRefineBatchPost,
   listWorkspaceToolsV1WorkspaceToolsGet,
+  getSlidesConfigV1WorkspaceToolsSlidesConfigGet,
   getLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGet,
   createDraftV1NotebooksNotebookIdSlidesDraftsPost,
   getDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGet,
@@ -80,6 +81,7 @@ import type {
   SlideDraftCreate,
   SlideDraftRead,
   SlideDraftUpdate,
+  SlidesConfigResponse,
   SlideOutlineUpdate,
   SlideMarkdownUpdate,
 } from './generated';
@@ -101,6 +103,7 @@ export type {
   Citation,
   ContextStatsResponse,
   SlideDraftRead,
+  SlidesConfigResponse,
   SlideOutlineUpdate,
   SlideMarkdownUpdate,
 };
@@ -768,7 +771,12 @@ export async function listWorkspaceTools(): Promise<WorkspaceToolsResponse> {
   return handleResponse(result);
 }
 
-// Tool Configuration (not yet in generated SDK)
+export async function getSlidesConfig(): Promise<SlidesConfigResponse> {
+  const result = await getSlidesConfigV1WorkspaceToolsSlidesConfigGet();
+  return handleResponse(result);
+}
+
+// Tool Configuration (manual fetch wrapper)
 export interface ToolConfigOption {
   id: string;
   label: string;

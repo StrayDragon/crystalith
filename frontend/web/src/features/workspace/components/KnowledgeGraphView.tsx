@@ -96,7 +96,7 @@ interface KnowledgeGraphViewProps {
   onSourceClick: (source: SourceItem) => void;
   onOutputClick?: (output: OutputItem) => void;
   onSessionClick?: (session: SessionSummary) => void;
-  isDemo: boolean;
+  isConnected: boolean;
 }
 
 interface KnowledgeNodeData {
@@ -506,7 +506,7 @@ function KnowledgeGraphView({
   onSourceClick,
   onOutputClick,
   onSessionClick,
-  isDemo,
+  isConnected,
 }: KnowledgeGraphViewProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<SelectedItem>(null);
@@ -687,13 +687,6 @@ function KnowledgeGraphView({
               知识图谱
             </Typography>
           </div>
-          {isDemo && (
-            <Chip
-              value="演示模式"
-              size="sm"
-              className="bg-amber-500/20 text-amber-300 text-xs"
-            />
-          )}
 
           {/* Stats */}
           <div className="flex items-center gap-2 ml-4">
@@ -778,7 +771,7 @@ function KnowledgeGraphView({
               variant="text"
               size="sm"
               onClick={onRefresh}
-              disabled={isLoading}
+              disabled={isLoading || !isConnected}
               className="text-gray-300 hover:text-white hover:bg-gray-700"
             >
               <RefreshIcon className={isLoading ? 'animate-spin' : ''} />
@@ -826,6 +819,7 @@ function KnowledgeGraphView({
               variant="outlined"
               size="sm"
               onClick={onRefresh}
+              disabled={!isConnected}
               className="border-gray-600 text-gray-300 hover:bg-gray-700"
             >
               重试

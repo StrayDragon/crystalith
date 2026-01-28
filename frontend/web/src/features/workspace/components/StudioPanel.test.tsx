@@ -31,7 +31,7 @@ function renderPanel(overrides: Partial<ComponentProps<typeof StudioPanel>> = {}
       onOpenSlides={onOpenSlides}
       onDeleteOutput={() => {}}
       onSelectOutput={() => {}}
-      isDemo
+      isConnected
       {...overrides}
     />,
   );

@@ -93,4 +93,4 @@ async def test_source_search_returns_stubbed_results(test_client: AsyncClient) -
     payload = response.json()
     assert payload["status"] == "ok"
     assert payload["results"]
-    assert payload["message"]
+    assert "TODO" not in payload["message"]

@@ -1,36 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import useSWR from 'swr';
 
 import { createSession, deleteSession, listSessions, updateSession } from '../api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
-import type { ApiSession, SessionSummary } from '../types';
+import type { ApiSession } from '../types';
 import { normalizeSession } from '../utils';
 
 export function useSessions() {
   const state = useWorkspaceState();
   const dispatch = useWorkspaceDispatch();
-  const isDemo = state.connectionState === 'demo';
-  const demoSessions = useMemo<SessionSummary[]>(
-    () => [
-      {
-        id: 101,
-        title: '演示：需求梳理',
-        createdAt: '刚刚',
-        updatedAt: '刚刚',
-      },
-      {
-        id: 102,
-        title: '演示：竞品分析',
-        createdAt: '昨天',
-        updatedAt: '昨天',
-      },
-    ],
-    [],
-  );
-  const lastNotebookIdRef = useRef<number | null>(null);
+  const isConnected = state.connectionState === 'live';
 
   const { data, error, isLoading, mutate } = useSWR(
-    state.activeNotebookId && !isDemo
+    state.activeNotebookId && isConnected
       ? ['workspace/sessions', state.activeNotebookId]
       : null,
     () => listSessions(state.activeNotebookId ?? 0),
@@ -46,12 +28,9 @@ export function useSessions() {
       dispatch({ type: 'SET_SESSIONS', payload: [] });
       return;
     }
-    if (isDemo) {
-      if (lastNotebookIdRef.current !== state.activeNotebookId) {
-        dispatch({ type: 'SET_SESSIONS', payload: demoSessions });
-        dispatch({ type: 'SET_ACTIVE_SESSION', payload: demoSessions[0]?.id ?? null });
-        lastNotebookIdRef.current = state.activeNotebookId;
-      }
+    if (!isConnected) {
+      dispatch({ type: 'SET_SESSIONS', payload: [] });
+      dispatch({ type: 'SET_ACTIVE_SESSION', payload: null });
       return;
     }
     if (error) {
@@ -72,15 +51,7 @@ export function useSessions() {
         dispatch({ type: 'SET_ACTIVE_SESSION', payload: nextActive });
       }
     }
-  }, [
-    data,
-    demoSessions,
-    dispatch,
-    error,
-    isDemo,
-    state.activeNotebookId,
-    state.activeSessionId,
-  ]);
+  }, [data, dispatch, error, isConnected, state.activeNotebookId, state.activeSessionId]);
 
   const setActiveSessionId = useCallback(
     (sessionId: number | null) => {
@@ -93,17 +64,12 @@ export function useSessions() {
   const handleCreateSession = useCallback(
     async (title?: string | null) => {
       if (!state.activeNotebookId) return null;
-      if (isDemo) {
-        const nextId = Date.now();
-        const demoSession: SessionSummary = {
-          id: nextId,
-          title: title?.trim() || '新的会话',
-          createdAt: '刚刚',
-          updatedAt: '刚刚',
-        };
-        dispatch({ type: 'SET_SESSIONS', payload: [demoSession, ...state.sessions] });
-        dispatch({ type: 'SET_ACTIVE_SESSION', payload: demoSession.id });
-        return demoSession.id;
+      if (!isConnected) {
+        dispatch({
+          type: 'SET_ERROR',
+          payload: { key: 'sessions', value: '未连接到后端服务，无法创建会话。' },
+        });
+        return null;
       }
       dispatch({ type: 'SET_ERROR', payload: { key: 'sessions', value: '' } });
       try {
@@ -124,7 +90,7 @@ export function useSessions() {
         return null;
       }
     },
-    [dispatch, isDemo, mutate, state.activeNotebookId, state.sessions],
+    [dispatch, isConnected, mutate, state.activeNotebookId],
   );
 
   const ensureSession = useCallback(
@@ -147,15 +113,12 @@ export function useSessions() {
   const handleUpdateSession = useCallback(
     async (sessionId: number, title: string) => {
       if (!state.activeNotebookId) return false;
-      if (isDemo) {
-        const trimmed = title.trim() || '未命名会话';
+      if (!isConnected) {
         dispatch({
-          type: 'SET_SESSIONS',
-          payload: state.sessions.map((item) =>
-            item.id === sessionId ? { ...item, title: trimmed } : item,
-          ),
+          type: 'SET_ERROR',
+          payload: { key: 'sessions', value: '未连接到后端服务，无法更新会话。' },
         });
-        return true;
+        return false;
       }
       dispatch({ type: 'SET_ERROR', payload: { key: 'sessions', value: '' } });
       try {
@@ -183,19 +146,18 @@ export function useSessions() {
         return false;
       }
     },
-    [dispatch, isDemo, mutate, state.activeNotebookId, state.sessions],
+    [dispatch, isConnected, mutate, state.activeNotebookId, state.sessions],
   );
 
   const handleDeleteSession = useCallback(
     async (sessionId: number) => {
       if (!state.activeNotebookId) return false;
-      if (isDemo) {
-        const remaining = state.sessions.filter((item) => item.id !== sessionId);
-        dispatch({ type: 'SET_SESSIONS', payload: remaining });
-        if (state.activeSessionId === sessionId) {
-          dispatch({ type: 'SET_ACTIVE_SESSION', payload: remaining[0]?.id ?? null });
-        }
-        return true;
+      if (!isConnected) {
+        dispatch({
+          type: 'SET_ERROR',
+          payload: { key: 'sessions', value: '未连接到后端服务，无法删除会话。' },
+        });
+        return false;
       }
       dispatch({ type: 'SET_ERROR', payload: { key: 'sessions', value: '' } });
       try {
@@ -219,7 +181,7 @@ export function useSessions() {
         return false;
       }
     },
-    [dispatch, isDemo, mutate, state.activeNotebookId, state.activeSessionId, state.sessions],
+    [dispatch, isConnected, mutate, state.activeNotebookId, state.activeSessionId, state.sessions],
   );
 
   return {
@@ -234,6 +196,6 @@ export function useSessions() {
     error: state.errors.sessions,
     retrySessions,
     refreshSessions,
-    isDemo,
+    isConnected,
   };
 }

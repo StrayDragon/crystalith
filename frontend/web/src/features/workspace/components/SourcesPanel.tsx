@@ -69,7 +69,7 @@ interface SourcesPanelProps {
   ) => Promise<unknown>;
   onRemoveSources: (sourceIds: number[]) => Promise<boolean>;
   onRemoveSource: (sourceId: number) => Promise<boolean>;
-  isDemo: boolean;
+  isConnected: boolean;
   isLoading: boolean;
   removeState: AsyncStatus;
   isFullscreen?: boolean;
@@ -102,7 +102,7 @@ function SourcesPanel({
   onAddSourceFromUrl,
   onRemoveSources,
   onRemoveSource,
-  isDemo,
+  isConnected,
   isLoading,
   removeState,
   isFullscreen = false,
@@ -114,7 +114,7 @@ function SourcesPanel({
   onConvertSourceQAToSource,
   notebookId,
 }: SourcesPanelProps) {
-  const uploadDisabled = isDemo || uploadState === 'loading';
+  const uploadDisabled = !isConnected || uploadState === 'loading';
   const isSearching = searchState === 'loading';
   const [searchQuery, setSearchQuery] = useState('');
   const [engine, setEngine] = useState('Web');
@@ -255,7 +255,7 @@ function SourcesPanel({
     () => sources.filter((source) => selectedSourceIds[source.id]).map((source) => source.id),
     [sources, selectedSourceIds],
   );
-  const removeDisabled = isDemo || removeState === 'loading' || selectedIds.length === 0;
+  const removeDisabled = !isConnected || removeState === 'loading' || selectedIds.length === 0;
 
   function handleToggleAll() {
     if (allSelected) {
@@ -279,8 +279,8 @@ function SourcesPanel({
   const handleSearch = async () => {
     // Deep Research mode
     if (mode === 'Deep Research') {
-      if (isDemo) {
-        toast.error('演示模式暂不支持深度研究');
+      if (!isConnected) {
+        toast.error('未连接到后端服务，暂不支持深度研究');
         return;
       }
       if (!notebookId) {
@@ -662,11 +662,11 @@ function SourcesPanel({
                            </MenuItem>
                            <MenuItem
                               onClick={async () => {
-                                 if (isDemo || removeState === 'loading') return;
+                                 if (!isConnected || removeState === 'loading') return;
                                  if (!window.confirm(`确定要删除「${source.title}」吗？此操作不可撤销。`)) return;
                                  await onRemoveSource(source.id);
                               }}
-                              disabled={isDemo || removeState === 'loading'}
+                              disabled={!isConnected || removeState === 'loading'}
                               className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
                            >
                               <DeleteIcon style={{ fontSize: 16 }} />
