@@ -97,6 +97,7 @@ export default function WorkspaceHeader({
             <button
               type="button"
               onClick={onOpenKnowledgeGraph}
+              aria-label="打开知识图谱"
               className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 text-gray-600 hover:text-blue-600 transition-colors"
             >
               <HubIcon style={{ fontSize: 18 }} />

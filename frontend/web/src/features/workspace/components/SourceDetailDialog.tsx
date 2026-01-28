@@ -429,7 +429,13 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
               )}
             </IconButton>
           )}
-          <IconButton variant="text" size="sm" onClick={onClose} className="rounded-full">
+          <IconButton
+            variant="text"
+            size="sm"
+            onClick={onClose}
+            className="rounded-full"
+            aria-label="关闭来源详情"
+          >
             <CloseIcon className="h-4 w-4" />
           </IconButton>
         </div>
@@ -699,6 +705,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                         size="sm"
                         className={`rounded-full w-7 h-7 ${!inputValue.trim() || isLoading ? 'bg-gray-200 text-gray-400' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
                         onClick={handleSend}
+                        aria-label="发送问题"
                         disabled={!inputValue.trim() || isLoading}
                       >
                         <SendIcon style={{ fontSize: 14 }} />
