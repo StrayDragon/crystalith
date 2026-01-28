@@ -15,7 +15,7 @@ test: test-backend test-frontend
 
 # Run backend tests only
 test-backend:
-    cd backend/py && uv run pytest tests/ -v
+    cd backend/py && just test
 
 # Run frontend tests only
 test-frontend:

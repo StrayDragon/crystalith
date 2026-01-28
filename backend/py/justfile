@@ -11,7 +11,7 @@ packages-test:
     done
 
 test: packages-test
-    uv run pytest
+    uv run pytest tests/ -v
 
 db-init:
     uv run scripts/db_init.py
