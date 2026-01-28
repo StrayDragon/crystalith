@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import datetime
 import json
 from collections.abc import AsyncGenerator
@@ -30,6 +31,8 @@ from crystalith.studio.slides import (
 log = get_logger(__name__)
 
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/slides", tags=["slides"])
+
+SLIDE_RUNNING_STALE_AFTER = datetime.timedelta(minutes=10)
 
 
 class SlideDraftCreate(BaseModel):
@@ -78,6 +81,26 @@ class SlideDraftRead(BaseModel):
 
 def _sse_event(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _coerce_utc(value: datetime.datetime) -> datetime.datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=datetime.UTC)
+    return value.astimezone(datetime.UTC)
+
+
+async def _clear_stale_running_status(session: AsyncSession, slide: StudioSlide) -> bool:
+    if slide.status != SlideStatus.RUNNING or slide.updated_at is None:
+        return False
+    now = datetime.datetime.now(datetime.UTC)
+    if now - _coerce_utc(slide.updated_at) <= SLIDE_RUNNING_STALE_AFTER:
+        return False
+    slide.status = SlideStatus.IDLE
+    slide.error_message = None
+    await session.commit()
+    await session.refresh(slide)
+    log.warning("cleared stale slide generation status", slide_id=slide.id)
+    return True
 
 
 async def _get_notebook(session: AsyncSession, notebook_id: int) -> Notebook:
@@ -258,8 +281,10 @@ async def generate_outline_stream(
 
     async def event_stream() -> AsyncGenerator[str, None]:
         if slide.status == SlideStatus.RUNNING:
-            yield _sse_event("busy", {"message": "演示正在生成中，请稍后重试。"})
-            return
+            stale_cleared = await _clear_stale_running_status(session, slide)
+            if not stale_cleared:
+                yield _sse_event("busy", {"message": "演示正在生成中，请稍后重试。"})
+                return
 
         slide.status = SlideStatus.RUNNING
         slide.error_message = None
@@ -294,6 +319,13 @@ async def generate_outline_stream(
 
             yield _sse_event("progress", {"stage": "outline", "message": "大纲生成完成", "progress": 100})
             yield _sse_event("done", {"slide_id": slide.id})
+        except asyncio.CancelledError:
+            if slide.status == SlideStatus.RUNNING:
+                slide.status = SlideStatus.IDLE
+                slide.error_message = "Generation cancelled."
+                await asyncio.shield(session.commit())
+            log.info("slide generation cancelled", slide_id=slide.id, stage="outline")
+            raise
         except ModelConfigurationError as exc:
             slide.status = SlideStatus.ERROR
             slide.error_message = str(exc)[:500]
@@ -322,8 +354,10 @@ async def generate_markdown_stream(
 
     async def event_stream() -> AsyncGenerator[str, None]:
         if slide.status == SlideStatus.RUNNING:
-            yield _sse_event("busy", {"message": "演示正在生成中，请稍后重试。"})
-            return
+            stale_cleared = await _clear_stale_running_status(session, slide)
+            if not stale_cleared:
+                yield _sse_event("busy", {"message": "演示正在生成中，请稍后重试。"})
+                return
         if not slide.outline:
             yield _sse_event("error", {"message": "尚未生成大纲，无法生成 Markdown。"})
             return
@@ -367,6 +401,13 @@ async def generate_markdown_stream(
 
             yield _sse_event("progress", {"stage": "markdown", "message": "Markdown 生成完成", "progress": 100})
             yield _sse_event("done", {"slide_id": slide.id})
+        except asyncio.CancelledError:
+            if slide.status == SlideStatus.RUNNING:
+                slide.status = SlideStatus.IDLE
+                slide.error_message = "Generation cancelled."
+                await asyncio.shield(session.commit())
+            log.info("slide generation cancelled", slide_id=slide.id, stage="markdown")
+            raise
         except ModelConfigurationError as exc:
             slide.status = SlideStatus.ERROR
             slide.error_message = str(exc)[:500]

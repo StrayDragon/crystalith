@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
-import { createOutput, deleteOutput as deleteOutputApi, getOutput, listOutputs, listWorkspaceTools, refineBatch } from '../api';
+import {
+  createOutput,
+  createSlidesDraft,
+  deleteOutput as deleteOutputApi,
+  getOutput,
+  listOutputs,
+  listWorkspaceTools,
+  refineBatch,
+} from '../api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../context/WorkspaceContext';
 import type {
   ApiWorkspaceTool,
@@ -10,6 +18,7 @@ import type {
   RefineJob,
   RefineMode,
   RefineTemplate,
+  SlideGenerationConfig,
   WorkspaceTool,
 } from '../types';
 import {
@@ -166,6 +175,9 @@ interface OutputQueueJob {
   createdAtLabel: string;
   notebookId: number | null;
   modelId?: string;
+  draftId?: number | null;
+  title?: string;
+  generationConfig?: SlideGenerationConfig | null;
 }
 
 function buildDemoOutputContent(type: OutputTypeId, prompt: string) {
@@ -257,6 +269,78 @@ function buildDemoOutputContent(type: OutputTypeId, prompt: string) {
     return { title: prompt || '示例主题', bullets: [{ text: '示例要点', citations: [] }], terms: [] };
   }
   return { summary: prompt || '示例输出' };
+}
+
+function normalizeSlideGenerationConfig(config?: SlideGenerationConfig | null) {
+  if (!config) return undefined;
+  return {
+    quantity: config.quantity ?? undefined,
+    audience: config.audience ?? undefined,
+    structure: config.structure ?? undefined,
+    tone: config.tone ?? undefined,
+    language: config.language ?? undefined,
+    density: config.density ?? undefined,
+    theme_preset: config.themePreset ?? undefined,
+    frontmatter: config.frontmatter ?? undefined,
+  };
+}
+
+function buildSlidesStreamUrl(
+  notebookId: number,
+  slideId: number,
+  stage: 'outline' | 'markdown',
+  modelId?: string,
+) {
+  const base = `/v1/notebooks/${notebookId}/slides/drafts/${slideId}/${stage}/stream`;
+  return modelId ? `${base}?model_id=${encodeURIComponent(modelId)}` : base;
+}
+
+function parseSseMessage(event: Event) {
+  const raw = (event as MessageEvent).data;
+  if (!raw || typeof raw !== 'string') return {};
+  try {
+    return JSON.parse(raw) as Record<string, any>;
+  } catch {
+    return {};
+  }
+}
+
+function runSlidesStream(url: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const eventSource = new EventSource(url);
+
+    const cleanup = () => {
+      eventSource.close();
+    };
+
+    const finalize = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      fn();
+    };
+
+    eventSource.addEventListener('done', () => {
+      finalize(resolve);
+    });
+
+    eventSource.addEventListener('busy', (event) => {
+      const data = parseSseMessage(event);
+      const message = typeof data.message === 'string' ? data.message : '演示正在生成中，请稍后重试。';
+      finalize(() => reject(new Error(message)));
+    });
+
+    eventSource.addEventListener('error', (event) => {
+      const data = parseSseMessage(event);
+      const message = typeof data.message === 'string' ? data.message : '生成失败，请稍后重试。';
+      finalize(() => reject(new Error(message)));
+    });
+
+    eventSource.onerror = () => {
+      finalize(() => reject(new Error('生成失败，请稍后重试。')));
+    };
+  });
 }
 
 function normalizeTool(tool: ApiWorkspaceTool): WorkspaceTool {
@@ -673,13 +757,113 @@ export function useRefine() {
     ],
   );
 
+  const enqueueSlidesJob = useCallback(
+    async ({
+      title,
+      prompt,
+      chunkIds,
+      generationConfig,
+      modelId,
+    }: {
+      title: string;
+      prompt: string;
+      chunkIds: number[];
+      generationConfig: SlideGenerationConfig;
+      modelId?: string | null;
+    }) => {
+      if (!state.activeNotebookId && !isDemo) {
+        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先创建笔记本。' } });
+        return null;
+      }
+
+      const createdAt = new Date().toISOString();
+      if (!hasPendingJobs()) {
+        resetQueueSummary();
+      }
+
+      let draftId: number | null = null;
+      if (!isDemo && state.activeNotebookId) {
+        const payload = {
+          title: title.trim() || undefined,
+          prompt: prompt.trim() || undefined,
+          chunk_ids: chunkIds.length ? chunkIds : undefined,
+          generation_config: normalizeSlideGenerationConfig(generationConfig),
+        };
+        const created = await createSlidesDraft(state.activeNotebookId, payload);
+        draftId = created.id;
+      }
+
+      incrementQueueTotal();
+      const job: OutputQueueJob = {
+        id: createId(),
+        type: 'SLIDES',
+        prompt,
+        chunkIds,
+        status: 'queued',
+        createdAt,
+        createdAtLabel: formatTimestamp(createdAt),
+        notebookId: state.activeNotebookId,
+        modelId: modelId ?? undefined,
+        draftId,
+        title,
+        generationConfig,
+      };
+      updateOutputQueueJobs((prev) => [job, ...prev]);
+      return job;
+    },
+    [
+      dispatch,
+      hasPendingJobs,
+      incrementQueueTotal,
+      isDemo,
+      resetQueueSummary,
+      state.activeNotebookId,
+      updateOutputQueueJobs,
+    ],
+  );
+
   const processOutputJob = useCallback(
     async (job: OutputQueueJob) => {
       try {
         dispatch({ type: 'SET_LOADING', payload: { key: 'outputs', value: true } });
         dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '' } });
         let normalized: OutputItem[] = [];
-        if (isDemo) {
+        if (job.type === 'SLIDES') {
+          if (isDemo) {
+            const createdAtRaw = new Date().toISOString();
+            const demoOutput = {
+              id: Date.now(),
+              type: job.type,
+              prompt: job.prompt,
+              chunkIds: job.chunkIds,
+              content: buildDemoOutputContent(job.type, job.prompt),
+              createdAt: formatTimestamp(createdAtRaw),
+              updatedAt: formatTimestamp(createdAtRaw),
+              createdAtRaw,
+              updatedAtRaw: createdAtRaw,
+            };
+            normalized = [demoOutput];
+            dispatch({ type: 'SET_OUTPUTS', payload: [demoOutput, ...state.outputs] });
+          } else if (job.notebookId && job.draftId) {
+            const outlineUrl = buildSlidesStreamUrl(
+              job.notebookId,
+              job.draftId,
+              'outline',
+              job.modelId,
+            );
+            const markdownUrl = buildSlidesStreamUrl(
+              job.notebookId,
+              job.draftId,
+              'markdown',
+              job.modelId,
+            );
+            await runSlidesStream(outlineUrl);
+            await runSlidesStream(markdownUrl);
+            await mutateOutputs();
+          } else {
+            throw new Error('missing slide draft');
+          }
+        } else if (isDemo) {
           const createdAtRaw = new Date().toISOString();
           const demoOutput = {
             id: Date.now(),
@@ -714,7 +898,7 @@ export function useRefine() {
         const stillTracked = outputQueueRef.current.some((item) => item.id === job.id);
         const isCurrentNotebook =
           job.notebookId != null && job.notebookId === activeNotebookIdRef.current;
-        if (normalized.length > 0 && stillTracked && isCurrentNotebook) {
+        if ((normalized.length > 0 || job.type === 'SLIDES') && stillTracked && isCurrentNotebook) {
           markJobCompleted(job.id);
         }
         dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
@@ -1098,6 +1282,7 @@ export function useRefine() {
     outputsLoading: state.loading.outputs,
     outputsError: state.errors.outputs,
     onGenerateOutput: handleGenerateOutput,
+    onQueueSlides: enqueueSlidesJob,
     onReplayOutput: handleReplayOutput,
     onDeleteOutput: deleteOutput,
     saveContentAsNote,
