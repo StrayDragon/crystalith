@@ -8,7 +8,8 @@ const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
 const liveBaseURL = process.env.E2E_LIVE_BASE_URL ?? baseURL;
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: 'e2e',
+  testMatch: '**/*.spec.ts',
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -26,18 +27,19 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
+    chromiumSandbox: false,
   },
 
   /* Configure projects for major browsers */
   projects: [
     {
       name: 'mock',
-      testMatch: /.*\\.mock\\.spec\\.ts/,
+      testMatch: '**/*.mock.spec.ts',
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'live',
-      testMatch: /.*\\.live\\.spec\\.ts/,
+      testMatch: '**/*.live.spec.ts',
       use: { ...devices['Desktop Chrome'], baseURL: liveBaseURL },
     },
   ],

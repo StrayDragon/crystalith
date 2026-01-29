@@ -10,6 +10,25 @@ This folder contains Playwright E2E tests for the workspace baseline.
   pnpm dev
   ```
 
+## Optional: Start full stack with isolated E2E DB
+
+From repo root:
+
+```bash
+overmind s -f Procfile.e2e
+```
+
+This starts:
+- backend on `http://127.0.0.1:8032` with a temporary sqlite DB (`data/e2e.db`)
+- frontend on `http://127.0.0.1:3000`
+
+Seed a notebook (optional, runs against the live backend):
+
+```bash
+cd backend/py
+E2E_API_URL=http://127.0.0.1:8032 uv run scripts/e2e_seed.py
+```
+
 ## Run mock profile
 
 Mock tests stub all `/v1/*` API calls with Playwright fixtures.
