@@ -23,4 +23,3 @@ TBD - created by archiving change add-research-workspace. Update Purpose after a
 #### Scenario: 枚举字段出现在 Schema
 - **WHEN** 枚举字段参与 OpenAPI schema 生成
 - **THEN** schema 中包含该枚举的可选值列表
-

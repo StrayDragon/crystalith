@@ -17,4 +17,3 @@ TBD - created by archiving change add-research-workspace. Update Purpose after a
 #### Scenario: 删除 Notebook
 - **WHEN** 用户删除一个 Notebook
 - **THEN** 该 Notebook 及其来源不再可访问
-

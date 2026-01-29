@@ -34,4 +34,3 @@ TBD - created by archiving change add-research-workspace. Update Purpose after a
 #### Scenario: 配置默认 embedding
 - **WHEN** 配置中设置 embedding_model 为 bge-m3
 - **THEN** 摄取流程使用该模型生成向量
-
