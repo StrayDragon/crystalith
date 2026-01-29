@@ -33,6 +33,7 @@ import type { SSEEvent } from './useResearch';
 import { toast } from '../../../../shared/toast';
 import ResearchExportDialog from './ResearchExportDialog';
 import { useLayer } from '../../../../shared/layer';
+import { copyToClipboard } from '../../../../shared/clipboard';
 
 // Typewriter component for streaming text effect
 interface TypewriterTextProps {
@@ -853,8 +854,13 @@ function ResearchDetailPanel({
                   className="flex-1"
                   onClick={() => {
                     if (session.final_report) {
-                      navigator.clipboard.writeText(session.final_report);
-                      toast.success('报告已复制到剪贴板');
+                      void copyToClipboard(session.final_report).then((success) => {
+                        if (success) {
+                          toast.success('报告已复制到剪贴板');
+                        } else {
+                          toast.error('复制失败，请稍后重试');
+                        }
+                      });
                     }
                   }}
                 >
@@ -941,8 +947,13 @@ function ResultsDialogContent({
     const selectedUrls = Array.from(selectedResults).map(
       (i) => session.aggregated_results![i].url
     );
-    navigator.clipboard.writeText(selectedUrls.join('\n'));
-    toast.success(`已复制 ${selectedUrls.length} 个链接`);
+    void copyToClipboard(selectedUrls.join('\n')).then((success) => {
+      if (success) {
+        toast.success(`已复制 ${selectedUrls.length} 个链接`);
+      } else {
+        toast.error('复制失败，请稍后重试');
+      }
+    });
   };
 
   const handleAddSources = async () => {
