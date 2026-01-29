@@ -62,6 +62,6 @@
 
 # Remaining Verification (not yet completed)
 
-- [ ] Studio item menus: rename/share still not found; menu shows 放大查看/转换为来源/复制内容/删除; delete not exercised.
+- [x] Studio item menus: confirmed menu contains 放大查看/转换为来源/复制内容/删除 (no rename/share in UI), and delete flow works with confirm popover.
 - [x] "查看研究历史" flow: history dialog opens and lists completed session.
 - [x] Deep Research iteration counter update: new session reaches iteration 2; UI shows "第 2/2 轮" and `current_iteration=2`.
