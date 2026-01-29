@@ -1,21 +1,15 @@
 import { act, waitFor } from '@testing-library/react';
 import { useReducer } from 'react';
-import { expect, test, vi } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
+import useSWR from 'swr';
 
 import { renderHook } from '../../../test-utils/renderHook';
 import { initialWorkspaceState, workspaceReducer } from '../context/workspaceReducer';
 import { useOutputQueue } from './useOutputQueue';
 import { createOutput } from '../api';
 
-const swrMock = vi.fn(() => ({
-  data: undefined,
-  error: null,
-  isLoading: false,
-  mutate: vi.fn(),
-}));
-
 vi.mock('swr', () => ({
-  default: swrMock,
+  default: vi.fn(),
 }));
 
 vi.mock('../api', () => ({
@@ -25,6 +19,17 @@ vi.mock('../api', () => ({
   getOutput: vi.fn(),
   listOutputs: vi.fn(),
 }));
+
+const swrMock = vi.mocked(useSWR);
+
+beforeEach(() => {
+  swrMock.mockReturnValue({
+    data: undefined,
+    error: null,
+    isLoading: false,
+    mutate: vi.fn(),
+  });
+});
 
 const onQueueReset = vi.fn();
 const onQueueTotal = vi.fn();
