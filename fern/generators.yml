@@ -1,0 +1,15 @@
+api:
+  specs:
+    - openapi: ../frontend/web/openapi.json
+
+groups:
+  python-sdk:
+    generators:
+      - name: fernapi/fern-python-sdk
+        version: 4.53.1
+        output:
+          location: local-file-system
+          path: ../sdk/client/python
+        config:
+          package_name: crystalith
+          client_class_name: CrystalithClient

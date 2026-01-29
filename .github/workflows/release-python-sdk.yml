@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'SDK version (x.y.z) expected in sdk/client/python/pyproject.toml'
+        description: 'SDK version (x.y.z) expected in sdk/client/python/.sdk-version'
         required: true
 
 jobs:
@@ -17,6 +17,8 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    env:
+      SDK_PATH: sdk/client/python
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,21 +47,17 @@ jobs:
 
           expected = os.environ["SDK_VERSION"]
           backend_pyproject = Path("backend/py/pyproject.toml")
-          pyproject = Path("sdk/client/python/pyproject.toml")
+          version_file = Path(os.environ["SDK_PATH"]) / ".sdk-version"
           if not backend_pyproject.exists():
             raise SystemExit("backend/py/pyproject.toml not found")
-          if not pyproject.exists():
-            raise SystemExit("sdk/client/python/pyproject.toml not found")
+          if not version_file.exists():
+            raise SystemExit(f"{os.environ['SDK_PATH']}/.sdk-version not found")
           backend_data = backend_pyproject.read_text()
-          data = pyproject.read_text()
-          backend_match = re.search(r'^version\\s*=\\s*\"([^\"]+)\"', backend_data, re.MULTILINE)
-          match = re.search(r'^version\\s*=\\s*\"([^\"]+)\"', data, re.MULTILINE)
+          backend_match = re.search(r'^version\s*=\s*"([^"]+)"', backend_data, re.MULTILINE)
           if not backend_match:
             raise SystemExit("version not found in backend/py/pyproject.toml")
-          if not match:
-            raise SystemExit("version not found in sdk/client/python/pyproject.toml")
           backend_version = backend_match.group(1)
-          version = match.group(1)
+          version = version_file.read_text().strip()
           if backend_version != expected:
             raise SystemExit(
               f"Backend version mismatch: expected {expected}, got {backend_version}"
@@ -69,16 +67,23 @@ jobs:
           print(f\"SDK version verified: {version}\")
           PY
 
+      - name: Ensure SDK packaging files exist
+        run: |
+          if [[ ! -f "${SDK_PATH}/pyproject.toml" ]]; then
+            echo "${SDK_PATH}/pyproject.toml not found. Enable packaging in Fern generator config before release." >&2
+            exit 1
+          fi
+
       - name: Build dist
         run: |
-          cd sdk/client/python
+          cd "${SDK_PATH}"
           python -m pip install -U uv
           uv build
 
       - name: Publish to PyPI (Trusted Publishing)
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: sdk/client/python/dist
+          packages-dir: ${{ env.SDK_PATH }}/dist
         continue-on-error: true
 
       - name: Publish to PyPI (API token fallback)
@@ -86,4 +91,4 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
-          packages-dir: sdk/client/python/dist
+          packages-dir: ${{ env.SDK_PATH }}/dist
