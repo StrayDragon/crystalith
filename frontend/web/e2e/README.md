@@ -29,18 +29,15 @@ cd backend/py
 E2E_API_URL=http://127.0.0.1:8032 uv run scripts/e2e_seed.py
 ```
 
-## Run mock profile
-
-Mock tests stub all `/v1/*` API calls with Playwright fixtures.
-
-```bash
-cd frontend/web
-pnpm test:e2e --project=mock
-```
-
 ## Run live profile
 
-Live tests hit a real backend and use slow timeouts + `expect.poll`.
+Use the root script to start the full stack, seed data, and run live E2E:
+
+```bash
+./scripts/run-e2e.sh
+```
+
+Or run manually:
 
 ```bash
 cd frontend/web
@@ -49,12 +46,5 @@ E2E_LIVE=1 pnpm test:e2e --project=live
 
 Optional base URLs:
 
-- `E2E_BASE_URL` overrides the default base URL (mock + live fallback).
+- `E2E_BASE_URL` overrides the default base URL.
 - `E2E_LIVE_BASE_URL` overrides the live base URL only.
-
-## Run both profiles
-
-```bash
-cd frontend/web
-E2E_LIVE=1 pnpm test:e2e
-```

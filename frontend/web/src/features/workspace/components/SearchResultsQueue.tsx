@@ -211,12 +211,15 @@ export default function SearchResultsQueue({
               ? 'border-red-200 bg-red-50/50'
               : 'border-blue-200 bg-blue-50/50'
         }`}
+        data-testid="search-queue-item"
+        data-queue-query={queueItem.query}
       >
         {/* Header */}
         <button
           type="button"
           onClick={() => toggleQueueItemExpanded(queueItem.id)}
           className="flex items-center justify-between w-full px-3 py-2 hover:bg-blue-100/50 transition-colors"
+          data-testid="search-queue-toggle"
         >
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <div className={`flex items-center justify-center w-5 h-5 rounded border flex-shrink-0 ${
@@ -407,7 +410,7 @@ export default function SearchResultsQueue({
     <>
       {/* 搜索队列项列表 */}
       {searchQueue.length > 0 ? (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2" data-testid="search-queue-list">
           {searchQueue.map(renderQueueItem)}
         </div>
       ) : (

@@ -199,7 +199,10 @@ export default function NotebookSwitcher({
           )}
         </div>
 
-        <div className="max-h-[300px] overflow-y-auto p-2 flex flex-col gap-1">
+        <div
+          className="max-h-[300px] overflow-y-auto p-2 flex flex-col gap-1"
+          data-testid="notebook-list"
+        >
           {isLoading ? (
             <div className="flex justify-center py-4">
               <Spinner className="h-5 w-5" />
@@ -263,6 +266,7 @@ export default function NotebookSwitcher({
                   <>
                     <button
                       className="w-full text-left p-2 pr-16"
+                      data-testid="notebook-option"
                       onClick={() => {
                         onSelect(item.id);
                         onClose();
