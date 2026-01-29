@@ -1,6 +1,7 @@
 import { act, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { expect, test, vi } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
+import useSWR from 'swr';
 
 import { renderHook } from '../../../test-utils/renderHook';
 import { useWorkspaceDispatch, useWorkspaceState, WorkspaceProvider } from '../context/WorkspaceContext';
@@ -8,14 +9,8 @@ import { REFINE_TEMPLATES } from '../data/refineTemplates';
 import { useRefine } from './useRefine';
 import { refineBatch } from '../api';
 
-const swrMock = vi.fn(() => ({
-  data: { tools: [] },
-  error: null,
-  isLoading: false,
-}));
-
 vi.mock('swr', () => ({
-  default: swrMock,
+  default: vi.fn(),
 }));
 
 vi.mock('./useOutputQueue', () => ({
@@ -37,6 +32,16 @@ vi.mock('../api', () => ({
   listWorkspaceTools: vi.fn(),
   refineBatch: vi.fn(),
 }));
+
+const swrMock = vi.mocked(useSWR);
+
+beforeEach(() => {
+  swrMock.mockReturnValue({
+    data: { tools: [] },
+    error: null,
+    isLoading: false,
+  });
+});
 
 function useRefineHarness() {
   const refine = useRefine();

@@ -1,21 +1,15 @@
 import { act, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { expect, test, vi } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
+import useSWR from 'swr';
 
 import { renderHook } from '../../../test-utils/renderHook';
 import { useWorkspaceDispatch, useWorkspaceState, WorkspaceProvider } from '../context/WorkspaceContext';
 import { useChat } from './useChat';
 import { askQuestion } from '../api';
 
-const swrMock = vi.fn(() => ({
-  data: undefined,
-  error: null,
-  isLoading: false,
-  mutate: vi.fn(),
-}));
-
 vi.mock('swr', () => ({
-  default: swrMock,
+  default: vi.fn(),
 }));
 
 vi.mock('../api', () => ({
@@ -25,6 +19,17 @@ vi.mock('../api', () => ({
   convertSessionToSource: vi.fn(),
   listMessages: vi.fn(),
 }));
+
+const swrMock = vi.mocked(useSWR);
+
+beforeEach(() => {
+  swrMock.mockReturnValue({
+    data: undefined,
+    error: null,
+    isLoading: false,
+    mutate: vi.fn(),
+  });
+});
 
 function useChatHarness(options: Parameters<typeof useChat>[0]) {
   const chat = useChat(options);

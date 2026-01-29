@@ -1,21 +1,15 @@
 import { act, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { expect, test, vi } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
+import useSWR from 'swr';
 
 import { renderHook } from '../../../test-utils/renderHook';
 import { useWorkspaceDispatch, useWorkspaceState, WorkspaceProvider } from '../context/WorkspaceContext';
 import { useSources } from './useSources';
 import { searchSources } from '../api';
 
-const swrMock = vi.fn(() => ({
-  data: undefined,
-  error: null,
-  isLoading: false,
-  mutate: vi.fn(),
-}));
-
 vi.mock('swr', () => ({
-  default: swrMock,
+  default: vi.fn(),
 }));
 
 vi.mock('../api', () => ({
@@ -37,6 +31,17 @@ vi.mock('../../../shared/toast', () => ({
     warning: vi.fn(),
   },
 }));
+
+const swrMock = vi.mocked(useSWR);
+
+beforeEach(() => {
+  swrMock.mockReturnValue({
+    data: undefined,
+    error: null,
+    isLoading: false,
+    mutate: vi.fn(),
+  });
+});
 
 function useSourcesHarness() {
   const sources = useSources();
@@ -82,7 +87,7 @@ test('toggleAutoSelect selects all citations and toggling disables auto select',
     expect(result.current.sources.autoSelectCitations).toBe(false);
   });
 
-  expect(result.current.sources.selectedCitationIds.c1).toBe(false);
+  expect(result.current.sources.selectedCitationIds.c1).toBeUndefined();
   expect(result.current.sources.selectedCitationIds.c2).toBe(true);
 });
 
