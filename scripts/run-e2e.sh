@@ -18,7 +18,56 @@ if ! command -v curl >/dev/null 2>&1; then
   exit 1
 fi
 
-BACKEND_URL="${E2E_API_URL:-http://127.0.0.1:8032}"
+is_port_free() {
+  local port="$1"
+  python - "$port" <<'PY'
+import socket
+import sys
+
+port = int(sys.argv[1])
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+try:
+    sock.bind(("127.0.0.1", port))
+except OSError:
+    sys.exit(1)
+finally:
+    sock.close()
+sys.exit(0)
+PY
+}
+
+select_backend_port() {
+  local preferred="${E2E_BACKEND_PORT:-8032}"
+  if is_port_free "$preferred"; then
+    echo "$preferred"
+    return 0
+  fi
+  for port in 8033 8034 8035 18032 18033; do
+    if is_port_free "$port"; then
+      echo "$port"
+      return 0
+    fi
+  done
+  return 1
+}
+
+BACKEND_HOST="${E2E_BACKEND_HOST:-127.0.0.1}"
+BACKEND_URL="${E2E_API_URL:-}"
+if [[ -z "$BACKEND_URL" ]]; then
+  BACKEND_PORT="$(select_backend_port)"
+  if [[ -z "$BACKEND_PORT" ]]; then
+    echo "Error: no available backend port for E2E (tried 8032-8035, 18032-18033)." >&2
+    exit 1
+  fi
+  if [[ "${E2E_BACKEND_PORT:-8032}" != "$BACKEND_PORT" ]]; then
+    echo "Port ${E2E_BACKEND_PORT:-8032} is in use; using ${BACKEND_PORT} for E2E."
+  fi
+  export E2E_BACKEND_PORT="$BACKEND_PORT"
+  BACKEND_URL="http://${BACKEND_HOST}:${BACKEND_PORT}"
+fi
+export E2E_API_URL="$BACKEND_URL"
+
 FRONTEND_URL="${E2E_BASE_URL:-http://localhost:3000}"
 FRONTEND_FALLBACK="http://127.0.0.1:3000"
 
