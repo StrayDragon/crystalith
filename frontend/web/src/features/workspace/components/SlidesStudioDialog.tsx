@@ -1391,7 +1391,13 @@ export default function SlidesStudioDialog({
           >
             {isFullscreen ? <CloseFullscreenIcon className="h-4 w-4" /> : <OpenInFullIcon className="h-4 w-4" />}
           </IconButton>
-          <IconButton variant="text" size="sm" onClick={onClose} className="rounded-full">
+          <IconButton
+            variant="text"
+            size="sm"
+            onClick={onClose}
+            className="rounded-full"
+            aria-label="关闭演示配置"
+          >
             <CloseIcon className="h-4 w-4" />
           </IconButton>
         </div>
