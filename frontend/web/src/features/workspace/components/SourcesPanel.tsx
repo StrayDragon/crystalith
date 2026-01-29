@@ -629,6 +629,7 @@ function SourcesPanel({
                   <button
                     className="flex flex-1 items-center gap-3 p-2 text-left min-w-0"
                     onClick={() => handleOpenDetail(source)}
+                    aria-label={`打开来源 ${source.title}`}
                   >
                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-200 text-gray-600 flex-shrink-0">
                         <DescriptionIcon style={{ fontSize: 18 }} />

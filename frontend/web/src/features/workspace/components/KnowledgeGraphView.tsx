@@ -782,6 +782,7 @@ function KnowledgeGraphView({
               variant="text"
               size="sm"
               onClick={onClose}
+              aria-label="关闭知识图谱"
               className="text-gray-300 hover:text-white hover:bg-gray-700"
             >
               <CloseIcon />

@@ -4,6 +4,9 @@ import { defineConfig, devices } from '@playwright/test';
  * Playwright configuration for E2E tests
  * @see https://playwright.dev/docs/test-configuration
  */
+const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
+const liveBaseURL = process.env.E2E_LIVE_BASE_URL ?? baseURL;
+
 export default defineConfig({
   testDir: './e2e',
   /* Run tests in files in parallel */
@@ -19,7 +22,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3000',
+    baseURL,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -28,8 +31,14 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     {
-      name: 'chromium',
+      name: 'mock',
+      testMatch: /.*\\.mock\\.spec\\.ts/,
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'live',
+      testMatch: /.*\\.live\\.spec\\.ts/,
+      use: { ...devices['Desktop Chrome'], baseURL: liveBaseURL },
     },
   ],
 

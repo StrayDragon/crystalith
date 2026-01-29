@@ -272,6 +272,7 @@ export default function SearchResultsQueue({
                   setIsFullscreen(true);
                 }}
                 className="p-1 rounded-lg hover:bg-blue-200 transition-colors"
+                aria-label="全屏查看搜索结果"
                 title="全屏查看"
               >
                 <OpenInFullIcon style={{ fontSize: 14 }} className="text-blue-600" />
@@ -283,6 +284,7 @@ export default function SearchResultsQueue({
                 onRemoveQueueItem?.(queueItem.id);
               }}
               className="p-1 rounded-lg hover:bg-blue-200 transition-colors"
+              aria-label="移除此搜索"
               title="移除此搜索"
             >
               <CloseIcon style={{ fontSize: 14 }} className="text-blue-600" />
@@ -344,6 +346,7 @@ export default function SearchResultsQueue({
                   containerProps={{ className: 'p-0' }}
                   className="h-3.5 w-3.5 rounded border-gray-300 bg-white checked:bg-blue-600 checked:border-blue-600"
                   iconProps={{ className: 'text-white' }}
+                  aria-label="全选此搜索结果"
                 />
                 <Typography variant="small" className="text-[10px] text-blue-800 font-medium">
                   全选
@@ -362,6 +365,7 @@ export default function SearchResultsQueue({
                         }
                       }}
                       disabled={isAdding}
+                      aria-label="作为链接导入"
                       className="w-6 h-6 min-w-[24px] border-blue-300 text-blue-700 bg-white"
                     >
                       <LinkIcon style={{ fontSize: 14 }} />
@@ -377,6 +381,7 @@ export default function SearchResultsQueue({
                         }
                       }}
                       disabled={isAdding}
+                      aria-label="作为全文导入"
                       className="w-6 h-6 min-w-[24px] bg-blue-600 text-white"
                     >
                       <DownloadIcon style={{ fontSize: 14 }} />
@@ -441,6 +446,7 @@ export default function SearchResultsQueue({
                   setIsFullscreen(true);
                 }}
                 className="p-1 rounded-lg hover:bg-blue-200 transition-colors"
+                aria-label="全屏查看搜索结果"
                 title="全屏查看"
               >
                 <OpenInFullIcon style={{ fontSize: 14 }} className="text-blue-600" />
@@ -451,6 +457,7 @@ export default function SearchResultsQueue({
                   handleClear();
                 }}
                 className="p-1 rounded-lg hover:bg-blue-200 transition-colors"
+                aria-label="清空搜索结果"
                 title="清空搜索结果"
               >
                 <CloseIcon style={{ fontSize: 14 }} className="text-blue-600" />
@@ -491,6 +498,7 @@ export default function SearchResultsQueue({
                     containerProps={{ className: 'p-0' }}
                     className="h-3.5 w-3.5 rounded border-gray-300 bg-white checked:bg-blue-600 checked:border-blue-600"
                     iconProps={{ className: 'text-white' }}
+                    aria-label="全选搜索结果"
                   />
                   <Typography variant="small" className="text-[10px] text-blue-800 font-medium">
                     全选
@@ -504,6 +512,7 @@ export default function SearchResultsQueue({
                         variant="outlined"
                         onClick={handleAddAsLink}
                         disabled={isAdding}
+                        aria-label="作为链接导入"
                         className="w-6 h-6 min-w-[24px] border-blue-300 text-blue-700 bg-white"
                       >
                         <LinkIcon style={{ fontSize: 14 }} />
@@ -514,6 +523,7 @@ export default function SearchResultsQueue({
                         size="sm"
                         onClick={handleAddWithFetch}
                         disabled={isAdding}
+                        aria-label="作为全文导入"
                         className="w-6 h-6 min-w-[24px] bg-blue-600 text-white"
                       >
                         <DownloadIcon style={{ fontSize: 14 }} />
@@ -763,6 +773,7 @@ export default function SearchResultsQueue({
               containerProps={{ className: 'p-0' }}
               className="h-5 w-5 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
               iconProps={{ className: 'text-white' }}
+              aria-label="全选搜索结果"
             />
             <Typography className="text-gray-700 text-sm font-medium">
               全选 ({effectiveResults.length})
