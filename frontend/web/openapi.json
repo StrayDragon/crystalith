@@ -4339,6 +4339,20 @@
             "minLength": 1,
             "title": "Question"
           },
+          "chunk_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Ids"
+          },
           "top_k": {
             "type": "integer",
             "maximum": 20.0,

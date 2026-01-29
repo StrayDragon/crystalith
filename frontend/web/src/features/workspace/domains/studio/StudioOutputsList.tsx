@@ -17,12 +17,12 @@ import {
   OpenInFull as OpenInFullIcon,
 } from '@mui/icons-material';
 
-import type { OutputItem, OutputTypeId } from '../../shared/types';
+import type { Citation, OutputItem, OutputTypeId } from '../../shared/types';
 import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { copyToClipboard } from '../../../../shared/clipboard';
-import { formatStructuredOutputForCopy } from '../../shared/utils';
+import { collectOutputCitations, formatStructuredOutputForCopy } from '../../shared/utils';
 import {
   getToolIcon,
   resolveNoteMeta,
@@ -42,6 +42,7 @@ interface StudioOutputsListProps {
   onSelectOutput: (outputId: number) => void;
   onSelectOutputFullscreen?: (outputId: number) => void;
   onConvertToSource?: (outputId: number) => void;
+  onJumpToCitation?: (citation: Citation, citations: Citation[]) => void;
   onOpenSlides?: (options?: {
     mode: 'config' | 'preview';
     slideId?: number | null;
@@ -58,6 +59,7 @@ type StudioNote = {
   title: string;
   meta: string;
   type: OutputTypeId;
+  citations: Citation[];
 };
 
 type PendingNote = {
@@ -80,6 +82,7 @@ export default function StudioOutputsList({
   onSelectOutput,
   onSelectOutputFullscreen,
   onConvertToSource,
+  onJumpToCitation,
   onOpenSlides,
   typeLabelMap,
 }: StudioOutputsListProps) {
@@ -126,6 +129,7 @@ export default function StudioOutputsList({
         title: resolveOutputTitle(output),
         meta: resolveNoteMeta(output),
         type: output.type,
+        citations: collectOutputCitations(output.content),
       })),
     [outputs],
   );

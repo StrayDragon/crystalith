@@ -6,6 +6,8 @@ import type {
   ApiSession,
   ApiSource,
   Citation,
+  CitationScopeMode,
+  CitationScopeSnapshot,
   ChatMessage,
   Notebook,
   OutputItem,
@@ -265,12 +267,15 @@ export function normalizeMessage(row: ApiMessage): ChatMessage {
   const citations = Array.isArray(row.citations)
     ? row.citations.map(normalizeCitation)
     : [];
+  const role = row.role === 'assistant' ? 'assistant' : 'user';
   return {
     id: `${row.id}`,
-    role: row.role === 'assistant' ? 'assistant' : 'user',
+    role,
     content: row.content ?? '',
     citations,
     citationChunkIds: collectChunkIds(citations ?? []),
+    citationScope:
+      role === 'assistant' ? buildCitationScopeSnapshot(citations, 'auto') : undefined,
   };
 }
 
@@ -337,4 +342,79 @@ export function collectChunkIds(citations: Citation[]): number[] {
   return (citations ?? [])
     .map((citation) => citation.chunkId)
     .filter((value): value is number => Number.isFinite(value) && value > 0);
+}
+
+export function collectOutputCitations(content: unknown): Citation[] {
+  const seen = new Map<number, Citation>();
+  const pushCitation = (raw: unknown) => {
+    if (!raw || typeof raw !== 'object') return;
+    const record = raw as Record<string, unknown>;
+    const chunkId =
+      typeof record.chunk_id === 'number'
+        ? record.chunk_id
+        : typeof record.chunkId === 'number'
+          ? record.chunkId
+          : null;
+    if (!chunkId || seen.has(chunkId)) return;
+    const mapped = {
+      source_id: record.source_id ?? record.sourceId,
+      source_name: record.source_name ?? record.sourceName,
+      chunk_id: record.chunk_id ?? record.chunkId,
+      chunk_index: record.chunk_index ?? record.chunkIndex,
+      page_number: record.page_number ?? record.pageNumber,
+      paragraph_index: record.paragraph_index ?? record.paragraphIndex,
+      snippet: record.snippet,
+      score: record.score,
+    } as ApiCitation;
+    const normalized = normalizeCitation(mapped);
+    if (normalized.chunkId && !seen.has(normalized.chunkId)) {
+      seen.set(normalized.chunkId, normalized);
+    }
+  };
+  const walk = (value: unknown) => {
+    if (!value) return;
+    if (Array.isArray(value)) {
+      value.forEach(walk);
+      return;
+    }
+    if (typeof value !== 'object') return;
+    const record = value as Record<string, unknown>;
+    if (Array.isArray(record.citations)) {
+      record.citations.forEach(pushCitation);
+    }
+    Object.values(record).forEach(walk);
+  };
+  walk(content);
+  return Array.from(seen.values());
+}
+
+export function buildCitationScopeSnapshot(
+  citations: Citation[],
+  mode: CitationScopeMode,
+): CitationScopeSnapshot {
+  const sources = Array.from(
+    new Set(
+      (citations ?? [])
+        .map((citation) => citation.sourceTitle)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+  return {
+    mode,
+    kind: 'citations',
+    count: citations?.length ?? 0,
+    sources,
+  };
+}
+
+export function buildSourceScopeSnapshot(
+  sources: string[],
+  mode: CitationScopeMode,
+): CitationScopeSnapshot {
+  return {
+    mode,
+    kind: 'sources',
+    count: sources.length,
+    sources,
+  };
 }
