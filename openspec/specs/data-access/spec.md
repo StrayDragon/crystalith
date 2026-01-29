@@ -20,4 +20,3 @@ TBD - created by archiving change add-research-workspace. Update Purpose after a
 #### Scenario: 使用 PostgreSQL
 - **WHEN** 配置为 PostgreSQL 数据库
 - **THEN** 系统正常读写 Notebook 与来源数据
-
