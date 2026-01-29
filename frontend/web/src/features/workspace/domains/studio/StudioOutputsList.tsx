@@ -21,6 +21,8 @@ import type { OutputItem, OutputTypeId } from '../../shared/types';
 import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../shared/layer';
+import { copyToClipboard } from '../../../../shared/clipboard';
+import { formatStructuredOutputForCopy } from '../../shared/utils';
 import {
   getToolIcon,
   resolveNoteMeta,
@@ -81,9 +83,17 @@ export default function StudioOutputsList({
   onOpenSlides,
   typeLabelMap,
 }: StudioOutputsListProps) {
-  const handleCopyNote = useCallback(() => {
-    // TODO: Implement copy to clipboard
-  }, []);
+  const handleCopyNote = useCallback(
+    async (note: StudioNote) => {
+      if (!note.outputId) return;
+      const output = outputs.find((item) => item.id === note.outputId);
+      if (!output) return;
+      const formatted = formatStructuredOutputForCopy(output);
+      const text = formatted || output.prompt || note.title;
+      await copyToClipboard(text);
+    },
+    [outputs],
+  );
 
   const handleDeleteNote = useCallback(
     (id: string) => {
@@ -255,6 +265,7 @@ export default function StudioOutputsList({
                 <button
                   type="button"
                   className="flex flex-1 items-center gap-2 p-2 text-left min-w-0"
+                  data-testid="studio-output-item"
                   onClick={() => {
                     if (note.type === 'SLIDES' && note.slideId) {
                       onOpenSlides?.({ mode: 'preview', slideId: note.slideId });
@@ -325,7 +336,7 @@ export default function StudioOutputsList({
                         <span>转换为来源</span>
                       </MenuItem>
                       <MenuItem
-                        onClick={() => handleCopyNote()}
+                        onClick={() => handleCopyNote(note)}
                         className="flex items-center gap-2 py-2 px-3 text-xs"
                       >
                         <CopyIcon className="h-3.5 w-3.5" />

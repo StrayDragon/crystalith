@@ -10,6 +10,7 @@ import type {
   RefineTemplate,
 } from '../../shared/types';
 import { formatOutputForCopy, formatRelativeTime, formatStructuredOutputForCopy } from '../../shared/utils';
+import { copyToClipboard } from '../../../../shared/clipboard';
 
 
 interface RefinePanelProps {
@@ -728,26 +729,12 @@ export default function RefinePanel({
     const content = formatOutputForCopy(output, mode);
     if (!content) return;
     const text = `${job.title}\n${content}`.trim();
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.top = '-1000px';
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-      }
+    const success = await copyToClipboard(text);
+    if (success) {
       setCopiedJobId(job.id);
       window.setTimeout(() => {
         setCopiedJobId((current) => (current === job.id ? null : current));
       }, 1500);
-    } catch (error) {
-      // noop: clipboard may be blocked
     }
   }
 
@@ -756,26 +743,12 @@ export default function RefinePanel({
     if (!content) return;
     const label = outputTypeLabelMap.get(output.type) ?? output.type;
     const text = `${label}\n${content}`.trim();
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.top = '-1000px';
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-      }
+    const success = await copyToClipboard(text);
+    if (success) {
       setCopiedOutputId(output.id);
       window.setTimeout(() => {
         setCopiedOutputId((current) => (current === output.id ? null : current));
       }, 1500);
-    } catch (error) {
-      // noop
     }
   }
 

@@ -3,6 +3,7 @@ import useSWR from 'swr';
 
 import type { AsyncStatus } from '../../../../shared/types';
 import { toast } from '../../../../shared/toast';
+import { copyToClipboard } from '../../../../shared/clipboard';
 import { addSourceFromUrl, convertOutputToSource, convertSourceQAToSource, deleteSource, deleteSources, listExtractors, listSources, searchSources, uploadSource } from '../../shared/api';
 import type { QAMessage } from '../../shared/api';
 import type { ExtractorInfo, ExtractorsListResponse, ExtractorType, SourceFromUrlMode } from '../../../../api/client';
@@ -413,23 +414,7 @@ export function useSources() {
       })
       .join('\n');
 
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-        return;
-      }
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.setAttribute('readonly', 'true');
-      textarea.style.position = 'absolute';
-      textarea.style.left = '-9999px';
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-    } catch (error) {
-      // noop
-    }
+    await copyToClipboard(text);
   }, [state.citations, state.selectedCitationIds]);
 
   const handleConvertOutputToSource = useCallback(

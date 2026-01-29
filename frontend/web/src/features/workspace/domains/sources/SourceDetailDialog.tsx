@@ -41,6 +41,7 @@ import { useWorkspaceState } from '../../app/WorkspaceContext';
 import type { SourceItem } from '../../shared/types';
 import { toast } from '../../../../shared/toast';
 import { useLayer } from '../../../../shared/layer';
+import { copyToClipboard } from '../../../../shared/clipboard';
 
 interface SourceDetailDialogProps {
   open: boolean;
@@ -356,10 +357,10 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     const content = generateQAContent();
     if (!content) return;
 
-    try {
-      await navigator.clipboard.writeText(content);
+    const success = await copyToClipboard(content);
+    if (success) {
       toast.success('问答内容已复制到剪贴板');
-    } catch {
+    } else {
       toast.error('复制失败，请尝试下载文件');
     }
   }, [generateQAContent]);
