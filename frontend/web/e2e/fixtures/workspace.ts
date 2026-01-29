@@ -638,7 +638,7 @@ async function installWorkspaceMocks(page: Page, state: WorkspaceMockState) {
       return json(latest);
     }
 
-    const slidesDraftMatch = path.match(/^\/v1\/notebooks\/(\d+)\/slides\/drafts\/(\d+)(?:\\/(.*))?$/);
+    const slidesDraftMatch = path.match(/^\/v1\/notebooks\/(\d+)\/slides\/drafts\/(\d+)(?:\/(.*))?$/);
     if (slidesDraftMatch) {
       const draftId = Number(slidesDraftMatch[2]);
       const action = slidesDraftMatch[3];
