@@ -1,4 +1,4 @@
-import WorkspacePage from '../features/workspace/WorkspacePage';
+import WorkspacePage from '../features/workspace/app/WorkspacePage';
 import { ToastContainer } from '../shared/toast';
 import { LayerProvider } from '../shared/layer';
 
