@@ -57,11 +57,7 @@ if [[ ! -S "$ROOT_DIR/.overmind.sock" ]]; then
     echo "Starting backend manually..."
     (
       cd "$ROOT_DIR"
-      HOST=0.0.0.0 PORT=8032 RELOAD=1 AUTO_DB_INIT=1 \
-        CRYSTALITH_DATABASE__URL=sqlite+aiosqlite:///./data/e2e.db \
-        CRYSTALITH_VECTOR_STORAGE__PROVIDER=sqlite \
-        CRYSTALITH_VECTOR_STORAGE__SQLITE__PATH=./data/vectors-e2e.db \
-        uv run --project backend/py python backend/py/main.py
+      just -f backend/py/justfile e2e-dev
     ) >/tmp/e2e-backend.log 2>&1 &
     BACKEND_PID=$!
 
