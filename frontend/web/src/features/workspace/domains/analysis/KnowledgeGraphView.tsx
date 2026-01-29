@@ -36,7 +36,7 @@ import {
   CenterFocusStrong as ResetLayoutIcon,
 } from '@mui/icons-material';
 
-import type { AnalysisResult } from '../../../../api/client';
+import type { AnalysisResult } from '../../../../api/generated';
 import type { SourceItem, OutputItem, SessionSummary, ChatMessage } from '../../shared/types';
 import { useLayer } from '../../../../shared/layer';
 

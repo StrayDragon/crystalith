@@ -4,9 +4,25 @@ import useSWR from 'swr';
 import type { AsyncStatus } from '../../../../shared/types';
 import { toast } from '../../../../shared/toast';
 import { copyToClipboard } from '../../../../shared/clipboard';
-import { addSourceFromUrl, convertOutputToSource, convertSourceQAToSource, deleteSource, deleteSources, listExtractors, listSources, searchSources, uploadSource, reembedSource } from '../../shared/api';
-import type { QAMessage } from '../../shared/api';
-import type { ExtractorInfo, ExtractorsListResponse, ExtractorType, SourceFromUrlMode } from '../../../../api/client';
+import {
+  createSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPost as addSourceFromUrl,
+  convertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePost as convertOutputToSource,
+  convertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePost as convertSourceQAToSource,
+  deleteSourceV1NotebooksNotebookIdSourcesSourceIdDelete as deleteSource,
+  batchDeleteSourcesV1NotebooksNotebookIdSourcesDelete as deleteSources,
+  listExtractorsV1NotebooksNotebookIdSourcesExtractorsGet as listExtractors,
+  listSourcesV1NotebooksNotebookIdSourcesGet as listSources,
+  searchSourcesV1NotebooksNotebookIdSourcesSearchPost as searchSources,
+  uploadSourceV1NotebooksNotebookIdSourcesPost as uploadSource,
+  reembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPost as reembedSource,
+  type QaMessage,
+} from '../../../../api/generated';
+import type {
+  ExtractorInfoResponse as ExtractorInfo,
+  ExtractorsListResponse,
+  ExtractorType,
+  SourceFromUrlMode,
+} from '../../../../api/generated';
 import { useWorkspaceDispatch, useWorkspaceState } from '../../app/WorkspaceContext';
 import type { ApiSource, ApiSourceSearchResult } from '../../shared/types';
 import { normalizeSource } from '../../shared/utils';
@@ -41,7 +57,7 @@ export function useSources() {
     state.activeNotebookId && isConnected
       ? ['workspace/sources', state.activeNotebookId]
       : null,
-    () => listSources(state.activeNotebookId ?? 0),
+    () => listSources({ path: { notebook_id: state.activeNotebookId ?? 0 } }),
     { revalidateOnFocus: false },
   );
 
@@ -223,7 +239,10 @@ export function useSources() {
       }
       dispatch({ type: 'SET_UPLOAD_STATE', payload: 'loading' });
       try {
-        await uploadSource(state.activeNotebookId, file);
+        await uploadSource({
+          path: { notebook_id: state.activeNotebookId },
+          body: { file },
+        });
         await mutate();
         toast.success('来源上传成功');
       } catch (error) {
@@ -281,10 +300,9 @@ export function useSources() {
       setSearchNotice('');
 
       try {
-        const response = await searchSources(state.activeNotebookId, {
-          query: trimmed,
-          engine,
-          mode,
+        const response = await searchSources({
+          path: { notebook_id: state.activeNotebookId },
+          body: { query: trimmed, engine, mode },
         });
         const results = response.results ?? [];
         let notice = '';
@@ -360,7 +378,10 @@ export function useSources() {
       }
       setRemoveState('loading');
       try {
-        await deleteSources(state.activeNotebookId, sourceIds);
+        await deleteSources({
+          path: { notebook_id: state.activeNotebookId },
+          body: { source_ids: sourceIds },
+        });
         await mutate();
         toast.success('来源删除成功');
         return true;
@@ -386,7 +407,9 @@ export function useSources() {
       }
       setRemoveState('loading');
       try {
-        await deleteSource(state.activeNotebookId, sourceId);
+        await deleteSource({
+          path: { notebook_id: state.activeNotebookId, source_id: sourceId },
+        });
         await mutate();
         toast.success('来源删除成功');
         return true;
@@ -425,7 +448,9 @@ export function useSources() {
         return;
       }
       try {
-        const result = await convertOutputToSource(state.activeNotebookId, outputId);
+        const result = await convertOutputToSource({
+          path: { notebook_id: state.activeNotebookId, output_id: outputId },
+        });
         // Refresh sources list to show the new source
         await mutate();
         toast.success(`已转换为来源：${result.filename}（${result.chunk_count} 个分块）`);
@@ -454,12 +479,15 @@ export function useSources() {
       if (!state.activeNotebookId) {
         throw new Error('请先创建笔记本');
       }
-      const result = await addSourceFromUrl(state.activeNotebookId, {
-        url,
-        mode,
-        title: options?.title,
-        snippet: options?.snippet,
-        extractor: options?.extractor,
+      const result = await addSourceFromUrl({
+        path: { notebook_id: state.activeNotebookId },
+        body: {
+          url,
+          mode,
+          title: options?.title,
+          snippet: options?.snippet,
+          extractor: options?.extractor,
+        },
       });
       await mutate();
       return result;
@@ -475,7 +503,7 @@ export function useSources() {
     state.activeNotebookId && isConnected
       ? ['workspace/extractors', state.activeNotebookId]
       : null,
-    () => listExtractors(state.activeNotebookId ?? 0),
+    () => listExtractors({ path: { notebook_id: state.activeNotebookId ?? 0 } }),
     { revalidateOnFocus: false },
   );
 
@@ -493,18 +521,17 @@ export function useSources() {
 
   // Convert source QA to source
   const handleConvertSourceQAToSource = useCallback(
-    async (sourceId: number, messages: QAMessage[]) => {
+    async (sourceId: number, messages: QaMessage[]) => {
       if (!isConnected) {
         throw new Error('未连接到后端服务，暂不支持此功能');
       }
       if (!state.activeNotebookId) {
         throw new Error('请先创建笔记本');
       }
-      const result = await convertSourceQAToSource(
-        state.activeNotebookId,
-        sourceId,
-        messages,
-      );
+      const result = await convertSourceQAToSource({
+        path: { notebook_id: state.activeNotebookId, source_id: sourceId },
+        body: { messages },
+      });
       await mutate();
       return result;
     },
@@ -522,7 +549,9 @@ export function useSources() {
         return;
       }
       try {
-        await reembedSource(state.activeNotebookId, sourceId);
+        await reembedSource({
+          path: { notebook_id: state.activeNotebookId, source_id: sourceId },
+        });
         toast.success('已重新嵌入来源');
         await mutate();
       } catch (error) {

@@ -28,7 +28,7 @@ import {
   KeyboardArrowDown as KeyboardArrowDownIcon,
   Download as DownloadIcon,
 } from '@mui/icons-material';
-import type { ResearchSessionResponse, ResearchStepResponse } from '../../../../api/client';
+import type { ResearchSessionResponse, ResearchStepResponse } from '../../../../api/generated';
 import type { SSEEvent } from './useResearch';
 import { toast } from '../../../../shared/toast';
 import ResearchExportDialog from './ResearchExportDialog';

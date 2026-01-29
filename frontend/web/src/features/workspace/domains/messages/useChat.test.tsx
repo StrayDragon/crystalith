@@ -6,18 +6,17 @@ import useSWR from 'swr';
 import { renderHook } from '../../../../test-utils/renderHook';
 import { useWorkspaceDispatch, useWorkspaceState, WorkspaceProvider } from '../../app/WorkspaceContext';
 import { useChat } from './useChat';
-import { askQuestion } from '../../shared/api';
+import { askQuestionV1NotebooksNotebookIdQaPost as askQuestion } from '../../../../api/generated';
 
 vi.mock('swr', () => ({
   default: vi.fn(),
 }));
 
-vi.mock('../../shared/api', () => ({
-  askQuestion: vi.fn(),
-  askQuestionStream: vi.fn(),
-  convertSessionToOutput: vi.fn(),
-  convertSessionToSource: vi.fn(),
-  listMessages: vi.fn(),
+vi.mock('../../../../api/generated', () => ({
+  askQuestionV1NotebooksNotebookIdQaPost: vi.fn(),
+  convertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPost: vi.fn(),
+  convertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePost: vi.fn(),
+  listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet: vi.fn(),
 }));
 
 const swrMock = vi.mocked(useSWR);
@@ -101,7 +100,15 @@ test('sendMessage non-streaming path stores assistant message and citations', as
   const assistant = result.current.chat.messages[1];
   expect(assistant.content).toBe('Answer');
   expect(result.current.chat.citations).toHaveLength(1);
-  expect(askQuestion).toHaveBeenCalledWith(1, 'Hello', 123, undefined, []);
+  expect(askQuestion).toHaveBeenCalledWith({
+    path: { notebook_id: 1 },
+    body: {
+      question: 'Hello',
+      session_id: 123,
+      chunk_ids: undefined,
+      source_ids: undefined,
+    },
+  });
 });
 
 test('sendMessage passes selected source ids', async () => {
@@ -136,7 +143,15 @@ test('sendMessage passes selected source ids', async () => {
     await result.current.chat.sendMessage();
   });
 
-  expect(askQuestion).toHaveBeenCalledWith(1, 'Hello', 456, undefined, [101, 102]);
+  expect(askQuestion).toHaveBeenCalledWith({
+    path: { notebook_id: 1 },
+    body: {
+      question: 'Hello',
+      session_id: 456,
+      chunk_ids: undefined,
+      source_ids: [101, 102],
+    },
+  });
 });
 
 test('sendMessage uses selected source ids when provided', async () => {
@@ -173,5 +188,13 @@ test('sendMessage uses selected source ids when provided', async () => {
     await result.current.chat.sendMessage();
   });
 
-  expect(askQuestion).toHaveBeenCalledWith(1, 'Hello', 789, undefined, [101]);
+  expect(askQuestion).toHaveBeenCalledWith({
+    path: { notebook_id: 1 },
+    body: {
+      question: 'Hello',
+      session_id: 789,
+      chunk_ids: undefined,
+      source_ids: [101],
+    },
+  });
 });

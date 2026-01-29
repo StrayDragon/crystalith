@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
-import { listWorkspaceTools, refineBatch } from '../../shared/api';
+import {
+  listWorkspaceToolsV1WorkspaceToolsGet as listWorkspaceTools,
+  refineBatchV1NotebooksNotebookIdRefineBatchPost as refineBatch,
+} from '../../../../api/generated';
 import { useWorkspaceDispatch, useWorkspaceState } from '../../app/WorkspaceContext';
 import type {
   ApiWorkspaceTool,
@@ -48,7 +51,7 @@ export function useRefine() {
 
   const { data: toolsData, error: toolsError, isLoading: toolsLoading } = useSWR(
     isConnected ? 'workspace/tools' : null,
-    listWorkspaceTools,
+    () => listWorkspaceTools(),
     { revalidateOnFocus: false },
   );
 
@@ -191,7 +194,15 @@ export function useRefine() {
         let response = null;
         let resolvedCitations = null;
         if (jobNotebookId && isConnected) {
-          response = await refineBatch(jobNotebookId, prompt, refineFormats, undefined, sourceIds);
+          response = await refineBatch({
+            path: { notebook_id: jobNotebookId },
+            body: {
+              prompt,
+              formats: refineFormats,
+              chunk_ids: undefined,
+              source_ids: sourceIds,
+            },
+          });
           resolvedCitations = response?.citations
             ? response.citations.map(normalizeCitation)
             : null;

@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState, type Dispatch } from 'react';
 import useSWR from 'swr';
 
 import {
-  createOutput,
-  createSlidesDraft,
-  deleteOutput as deleteOutputApi,
-  getOutput,
-  listOutputs,
-} from '../api';
+  createDraftV1NotebooksNotebookIdSlidesDraftsPost as createSlidesDraft,
+  createOutputV1NotebooksNotebookIdOutputsOutputTypePost as createOutput,
+  deleteOutputV1NotebooksNotebookIdOutputsOutputIdDelete as deleteOutputApi,
+  getOutputV1NotebooksNotebookIdOutputsOutputIdGet as getOutput,
+  listOutputsV1NotebooksNotebookIdOutputsGet as listOutputs,
+} from '../../../../api/generated';
 import type { OutputItem, OutputTypeId, SlideGenerationConfig } from '../types';
 import type { WorkspaceAction, WorkspaceState } from '../state/workspaceReducer';
 import { createId, formatTimestamp, normalizeOutput } from '../utils';
@@ -131,10 +131,13 @@ export function useOutputQueue({
 
   const { data: outputsData, error: outputsError, isLoading: outputsLoading, mutate: mutateOutputs } =
     useSWR(
-      state.activeNotebookId && isConnected
-        ? ['workspace/outputs', state.activeNotebookId]
-        : null,
-      () => listOutputs(state.activeNotebookId ?? 0),
+    state.activeNotebookId && isConnected
+      ? ['workspace/outputs', state.activeNotebookId]
+      : null,
+      () =>
+        listOutputs({
+          path: { notebook_id: state.activeNotebookId ?? 0 },
+        }),
       { revalidateOnFocus: false },
     );
 
@@ -252,7 +255,10 @@ export function useOutputQueue({
         source_ids: sourceIds.length ? sourceIds : undefined,
         generation_config: normalizeSlideGenerationConfig(generationConfig),
       };
-      const created = await createSlidesDraft(state.activeNotebookId, payload);
+      const created = await createSlidesDraft({
+        path: { notebook_id: state.activeNotebookId },
+        body: payload,
+      });
       const draftId = created.id;
 
       onQueueTotal();
@@ -314,10 +320,13 @@ export function useOutputQueue({
             throw new Error('missing slide draft');
           }
         } else if (job.notebookId) {
-          const response = await createOutput(job.notebookId, job.type, {
-            prompt: job.prompt || undefined,
-            source_ids: job.sourceIds.length ? job.sourceIds : undefined,
-            model_id: job.modelId || undefined,
+          const response = await createOutput({
+            path: { notebook_id: job.notebookId, output_type: job.type },
+            body: {
+              prompt: job.prompt || undefined,
+              source_ids: job.sourceIds.length ? job.sourceIds : undefined,
+              model_id: job.modelId || undefined,
+            },
           });
           normalized = [normalizeOutput(response)];
           dispatch({ type: 'SET_OUTPUTS', payload: [...normalized, ...state.outputs] });
@@ -421,7 +430,9 @@ export function useOutputQueue({
       });
 
       try {
-        await deleteOutputApi(state.activeNotebookId, outputId);
+        await deleteOutputApi({
+          path: { notebook_id: state.activeNotebookId, output_id: outputId },
+        });
       } catch (error) {
         console.error('Failed to delete output:', error);
         await mutateOutputs();
@@ -438,7 +449,9 @@ export function useOutputQueue({
     async (outputId: number) => {
       if (!state.activeNotebookId || !isConnected) return null;
       try {
-        const output = await getOutput(state.activeNotebookId, outputId);
+        const output = await getOutput({
+          path: { notebook_id: state.activeNotebookId, output_id: outputId },
+        });
         const normalized = normalizeOutput(output);
         dispatch({
           type: 'SET_OUTPUTS',

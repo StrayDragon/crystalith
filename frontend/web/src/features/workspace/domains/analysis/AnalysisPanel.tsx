@@ -18,7 +18,7 @@ import {
   Circle as CircleIcon,
 } from '@mui/icons-material';
 
-import type { AnalysisResult, Topic, Relation } from '../../../../api/client';
+import type { AnalysisResult, Topic, Relation } from '../../../../api/generated';
 
 interface AnalysisPanelProps {
   analysis: AnalysisResult | null;

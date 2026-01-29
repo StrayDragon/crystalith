@@ -6,18 +6,18 @@ import useSWR from 'swr';
 import { renderHook } from '../../../../test-utils/renderHook';
 import { initialWorkspaceState, workspaceReducer } from '../state/workspaceReducer';
 import { useOutputQueue } from './useOutputQueue';
-import { createOutput } from '../api';
+import { createOutputV1NotebooksNotebookIdOutputsOutputTypePost as createOutput } from '../../../../api/generated';
 
 vi.mock('swr', () => ({
   default: vi.fn(),
 }));
 
-vi.mock('../api', () => ({
-  createOutput: vi.fn(),
-  createSlidesDraft: vi.fn(),
-  deleteOutput: vi.fn(),
-  getOutput: vi.fn(),
-  listOutputs: vi.fn(),
+vi.mock('../../../../api/generated', () => ({
+  createOutputV1NotebooksNotebookIdOutputsOutputTypePost: vi.fn(),
+  createDraftV1NotebooksNotebookIdSlidesDraftsPost: vi.fn(),
+  deleteOutputV1NotebooksNotebookIdOutputsOutputIdDelete: vi.fn(),
+  getOutputV1NotebooksNotebookIdOutputsOutputIdGet: vi.fn(),
+  listOutputsV1NotebooksNotebookIdOutputsGet: vi.fn(),
 }));
 
 const swrMock = vi.mocked(useSWR);
@@ -94,10 +94,13 @@ test('enqueueOutputJob processes and updates outputs', async () => {
     expect(result.current.state.outputs).toHaveLength(1);
   });
 
-  expect(createOutput).toHaveBeenCalledWith(1, 'FAQ', {
-    prompt: 'hello',
-    source_ids: [1],
-    model_id: undefined,
+  expect(createOutput).toHaveBeenCalledWith({
+    path: { notebook_id: 1, output_type: 'FAQ' },
+    body: {
+      prompt: 'hello',
+      source_ids: [1],
+      model_id: undefined,
+    },
   });
 });
 

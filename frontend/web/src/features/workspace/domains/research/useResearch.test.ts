@@ -7,9 +7,9 @@ import {
   createResearchSessionV1NotebooksNotebookIdResearchPost,
   deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete,
   listResearchSessionsV1NotebooksNotebookIdResearchGet,
-} from '../../../../api/client';
+} from '../../../../api/generated';
 
-vi.mock('../../../../api/client', () => ({
+vi.mock('../../../../api/generated', () => ({
   createResearchSessionV1NotebooksNotebookIdResearchPost: vi.fn(),
   deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete: vi.fn(),
   listResearchSessionsV1NotebooksNotebookIdResearchGet: vi.fn(),
@@ -18,6 +18,7 @@ vi.mock('../../../../api/client', () => ({
   approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost: vi.fn(),
   finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost: vi.fn(),
   skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost: vi.fn(),
+  cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost: vi.fn(),
 }));
 
 beforeEach(() => {
@@ -25,20 +26,18 @@ beforeEach(() => {
 });
 
 test('fetchSessions stores list data', async () => {
-  vi.mocked(listResearchSessionsV1NotebooksNotebookIdResearchGet).mockResolvedValue({
-    data: [
-      {
-        id: 1,
-        notebook_id: 1,
-        topic: 'Topic',
-        status: 'planning',
-        current_iteration: 0,
-        max_iterations: 3,
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01',
-      },
-    ],
-  } as any);
+  vi.mocked(listResearchSessionsV1NotebooksNotebookIdResearchGet).mockResolvedValue([
+    {
+      id: 1,
+      notebook_id: 1,
+      topic: 'Topic',
+      status: 'planning',
+      current_iteration: 0,
+      max_iterations: 3,
+      created_at: '2024-01-01',
+      updated_at: '2024-01-01',
+    },
+  ] as any);
 
   const { result } = renderHook(() => useResearch(1));
 
@@ -54,16 +53,14 @@ test('fetchSessions stores list data', async () => {
 
 test('createSession updates sessions and activeSession', async () => {
   vi.mocked(createResearchSessionV1NotebooksNotebookIdResearchPost).mockResolvedValue({
-    data: {
-      id: 2,
-      notebook_id: 1,
-      topic: 'New Topic',
-      status: 'planning',
-      current_iteration: 0,
-      max_iterations: 4,
-      created_at: '2024-01-02',
-      updated_at: '2024-01-02',
-    },
+    id: 2,
+    notebook_id: 1,
+    topic: 'New Topic',
+    status: 'planning',
+    current_iteration: 0,
+    max_iterations: 4,
+    created_at: '2024-01-02',
+    updated_at: '2024-01-02',
   } as any);
 
   const { result } = renderHook(() => useResearch(1));
@@ -82,16 +79,14 @@ test('createSession updates sessions and activeSession', async () => {
 
 test('deleteSession removes session and clears active session', async () => {
   vi.mocked(createResearchSessionV1NotebooksNotebookIdResearchPost).mockResolvedValue({
-    data: {
-      id: 22,
-      notebook_id: 1,
-      topic: 'Topic',
-      status: 'planning',
-      current_iteration: 0,
-      max_iterations: 4,
-      created_at: '2024-01-01',
-      updated_at: '2024-01-01',
-    },
+    id: 22,
+    notebook_id: 1,
+    topic: 'Topic',
+    status: 'planning',
+    current_iteration: 0,
+    max_iterations: 4,
+    created_at: '2024-01-01',
+    updated_at: '2024-01-01',
   } as any);
 
   vi.mocked(deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete).mockResolvedValue(

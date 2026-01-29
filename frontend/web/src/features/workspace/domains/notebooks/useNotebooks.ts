@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import useSWR from 'swr';
 
-import { createNotebook, deleteNotebook, listNotebooks, updateNotebook } from '../../shared/api';
+import {
+  createNotebookV1NotebooksPost as createNotebook,
+  deleteNotebookV1NotebooksNotebookIdDelete as deleteNotebook,
+  listNotebooksV1NotebooksGet as listNotebooks,
+  updateNotebookV1NotebooksNotebookIdPatch as updateNotebook,
+} from '../../../../api/generated';
 import { useWorkspaceDispatch, useWorkspaceState } from '../../app/WorkspaceContext';
 import type { StatusLabel } from '../../shared/types';
 import { normalizeNotebook } from '../../shared/utils';
@@ -67,7 +72,9 @@ export function useNotebooks() {
     const autoCreateNotebook = async () => {
       dispatch({ type: 'SET_CREATE_STATE', payload: 'loading' });
       try {
-        const created = await createNotebook(DEFAULT_NOTEBOOK_NAME);
+        const created = await createNotebook({
+          body: { name: DEFAULT_NOTEBOOK_NAME },
+        });
         const normalized = normalizeNotebook(created);
         dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: normalized.id });
         await mutate(
@@ -106,7 +113,9 @@ export function useNotebooks() {
     dispatch({ type: 'SET_CREATE_STATE', payload: 'loading' });
     dispatch({ type: 'SET_ERROR', payload: { key: 'create', value: '' } });
     try {
-      const created = await createNotebook(name);
+      const created = await createNotebook({
+        body: { name },
+      });
       const normalized = normalizeNotebook(created);
       dispatch({ type: 'SET_CREATE_NAME', payload: '' });
       dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: normalized.id });
@@ -138,7 +147,10 @@ export function useNotebooks() {
       const trimmed = name.trim();
       if (!trimmed) return false;
       try {
-        const updated = await updateNotebook(notebookId, { name: trimmed });
+        const updated = await updateNotebook({
+          path: { notebook_id: notebookId },
+          body: { name: trimmed },
+        });
         const normalized = normalizeNotebook(updated);
         await mutate(
           async (current) =>
@@ -167,7 +179,9 @@ export function useNotebooks() {
     async (notebookId: number) => {
       if (state.connectionState !== 'live') return false;
       try {
-        await deleteNotebook(notebookId);
+        await deleteNotebook({
+          path: { notebook_id: notebookId },
+        });
         await mutate(
           async (current) => current?.filter((item) => item.id !== notebookId) ?? [],
           { revalidate: false },

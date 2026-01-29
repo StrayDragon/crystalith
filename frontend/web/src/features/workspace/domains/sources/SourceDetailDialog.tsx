@@ -35,8 +35,12 @@ import {
   NoteAdd as NoteAddIcon,
 } from '@mui/icons-material';
 
-import { getSourceSummary, askSourceQuestion, listSourceChunks } from '../../shared/api';
-import type { ChunkRead } from '../../shared/api';
+import {
+  getSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGet as getSourceSummary,
+  sourceQaV1NotebooksNotebookIdSourcesSourceIdQaPost as askSourceQuestion,
+  listSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGet as listSourceChunks,
+  type ChunkRead,
+} from '../../../../api/generated';
 import { useWorkspaceState } from '../../app/WorkspaceContext';
 import type { SourceItem } from '../../shared/types';
 import { toast } from '../../../../shared/toast';
@@ -183,7 +187,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     // Call real API
     setIsBriefLoading(true);
     setBriefError('');
-    getSourceSummary(notebookId, source.id)
+    getSourceSummary({ path: { notebook_id: notebookId, source_id: source.id } })
       .then((response) => {
         const newBrief: SourceBrief = {
           summary: response.summary,
@@ -225,7 +229,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     // Call real API
     setIsChunksLoading(true);
     setChunksError('');
-    listSourceChunks(notebookId, source.id)
+    listSourceChunks({ path: { notebook_id: notebookId, source_id: source.id } })
       .then((response) => {
         chunksCache.set(source.id, response);
         setChunks(response);
@@ -279,7 +283,10 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
 
     // Call real API
     try {
-      const response = await askSourceQuestion(notebookId, source.id, userMessage.content);
+      const response = await askSourceQuestion({
+        path: { notebook_id: notebookId, source_id: source.id },
+        body: { question: userMessage.content },
+      });
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
@@ -314,7 +321,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     }
 
     // Call real API
-    getSourceSummary(notebookId, source.id)
+    getSourceSummary({ path: { notebook_id: notebookId, source_id: source.id } })
       .then((response) => {
         const newBrief: SourceBrief = {
           summary: response.summary,

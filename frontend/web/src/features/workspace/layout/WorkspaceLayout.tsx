@@ -19,7 +19,7 @@ import { useSessions } from '../domains/sessions/useSessions';
 import { useSources } from '../domains/sources/useSources';
 import type { ChatMessage, Citation, SourceItem } from '../shared/types';
 import { normalizeMessage } from '../shared/utils';
-import { listMessages } from '../shared/api';
+import { listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet as listMessages } from '../../../api/generated';
 import { IconFullscreen, IconExitFullscreen } from '../shared/components/Icons';
 import { toast } from '../../../shared/toast';
 
@@ -433,7 +433,9 @@ export default function WorkspaceLayout() {
     if (notebooks.activeNotebookId) {
       setGraphSessionMessagesLoading(true);
       try {
-        const response = await listMessages(notebooks.activeNotebookId, session.id);
+        const response = await listMessages({
+          path: { notebook_id: notebooks.activeNotebookId, session_id: session.id },
+        });
         const normalizedMessages = response.map(normalizeMessage);
         setGraphSessionMessages(normalizedMessages);
       } catch {

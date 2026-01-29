@@ -18,7 +18,10 @@ import {
   FilterList as FilterIcon,
   SelectAll as SelectAllIcon,
 } from '@mui/icons-material';
-import type { ResearchSessionResponse } from '../../../../api/client';
+import {
+  exportResearchV1NotebooksNotebookIdResearchResearchIdExportPost as exportResearch,
+  type ResearchSessionResponse,
+} from '../../../../api/generated';
 import { toast } from '../../../../shared/toast';
 import { useLayer } from '../../../../shared/layer';
 
@@ -130,29 +133,25 @@ function ResearchExportDialog({
         .map(item => item.url)
         .filter(Boolean);
 
-      const response = await fetch(
-        `/v1/notebooks/${session.notebook_id}/research/${session.id}/export`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            export_type: exportTarget,
-            include_report: includeReport,
-            include_results: selectedRefs.length > 0,
-          }),
-        }
-      );
+      const data = await exportResearch({
+        path: { notebook_id: session.notebook_id, research_id: session.id },
+        body: {
+          export_type: exportTarget,
+          include_report: includeReport,
+          include_results: selectedRefs.length > 0,
+        },
+      });
 
-      const data = await response.json();
-      if (data.success) {
+      if (data?.success) {
         toast.success(data.message);
         onExportComplete?.();
         onClose();
       } else {
-        toast.error(data.detail || '导出失败');
+        toast.error(data?.message || '导出失败');
       }
     } catch (err) {
-      toast.error('导出失败');
+      const message = err instanceof Error ? err.message : '导出失败';
+      toast.error(message);
     } finally {
       setIsExporting(false);
     }

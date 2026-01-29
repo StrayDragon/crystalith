@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { getTask, listNotebookTasks, type ApiTask } from '../api';
+import {
+  getTaskV1TasksTaskIdGet as getTask,
+  listTasksV1NotebooksNotebookIdTasksGet as listNotebookTasks,
+  type TaskRead,
+} from '../../../../api/generated';
 import { useWorkspaceState } from '../../app/WorkspaceContext';
 
 interface TaskState {
-  tasks: ApiTask[];
+  tasks: TaskRead[];
   isLoading: boolean;
   error: string;
 }
@@ -38,7 +42,9 @@ export function useTasks() {
     if (!state.activeNotebookId || !isConnected) return [];
     setTaskState((prev) => ({ ...prev, isLoading: true, error: '' }));
     try {
-      const tasks = await listNotebookTasks(state.activeNotebookId);
+      const tasks = await listNotebookTasks({
+        path: { notebook_id: state.activeNotebookId },
+      });
       setTaskState({ tasks, isLoading: false, error: '' });
       return tasks;
     } catch (error) {
@@ -55,7 +61,9 @@ export function useTasks() {
     async (taskId: string) => {
       if (!isConnected) return null;
       try {
-        const task = await getTask(taskId);
+        const task = await getTask({
+          path: { task_id: taskId },
+        });
         setTaskState((prev) => ({
           ...prev,
           tasks: prev.tasks.map((t) => (t.id === taskId ? task : t)),
@@ -71,7 +79,7 @@ export function useTasks() {
   const pollTask = useCallback(
     (
       taskId: string,
-      onComplete?: (task: ApiTask) => void,
+      onComplete?: (task: TaskRead) => void,
       onError?: (error: string) => void,
       intervalMs = 2000,
       maxAttempts = 60,
