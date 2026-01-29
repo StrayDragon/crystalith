@@ -24,9 +24,20 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "Starting E2E stack via Procfile.e2e..."
-overmind s -f Procfile.e2e >/tmp/overmind-e2e.log 2>&1 &
-OVERMIND_PID=$!
+if [[ -S "$ROOT_DIR/.overmind.sock" ]]; then
+  if overmind status >/dev/null 2>&1; then
+    echo "Overmind already running; reusing existing session."
+  else
+    echo "Stale overmind socket found; removing and restarting."
+    rm -f "$ROOT_DIR/.overmind.sock"
+  fi
+fi
+
+if [[ ! -S "$ROOT_DIR/.overmind.sock" ]]; then
+  echo "Starting E2E stack via Procfile.e2e..."
+  overmind s -f Procfile.e2e >/tmp/overmind-e2e.log 2>&1 &
+  OVERMIND_PID=$!
+fi
 
 echo "Waiting for backend: ${BACKEND_URL}/v1/notebooks"
 for _ in {1..60}; do
