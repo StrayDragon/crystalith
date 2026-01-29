@@ -44,12 +44,22 @@ export interface Citation {
   score?: number;
 }
 
+export type CitationScopeMode = 'selected' | 'auto';
+
+export interface CitationScopeSnapshot {
+  mode: CitationScopeMode;
+  kind: 'citations' | 'sources';
+  count: number;
+  sources: string[];
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   citationChunkIds?: number[];
   citations?: Citation[];
+  citationScope?: CitationScopeSnapshot;
 }
 
 export interface WorkspaceTool {

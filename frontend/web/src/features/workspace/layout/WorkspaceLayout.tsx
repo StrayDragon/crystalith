@@ -10,14 +10,14 @@ import SourcesPanel from '../domains/sources/SourcesPanel';
 import StudioPanel from '../domains/studio/StudioPanel';
 import SlidesStudioDialog from '../domains/studio/SlidesStudioDialog';
 import WorkspaceHeader from './WorkspaceHeader';
-import { useWorkspaceState } from '../app/WorkspaceContext';
+import { useWorkspaceDispatch, useWorkspaceState } from '../app/WorkspaceContext';
 import { useAnalysis } from '../domains/analysis/useAnalysis';
 import { useChat } from '../domains/messages/useChat';
 import { useNotebooks } from '../domains/notebooks/useNotebooks';
 import { useRefine } from '../domains/refine/useRefine';
 import { useSessions } from '../domains/sessions/useSessions';
 import { useSources } from '../domains/sources/useSources';
-import type { ChatMessage, SourceItem } from '../shared/types';
+import type { ChatMessage, Citation, SourceItem } from '../shared/types';
 import { buildSourceSummaryPrompt, normalizeMessage } from '../shared/utils';
 import { listMessages } from '../shared/api';
 import { IconFullscreen, IconExitFullscreen } from '../shared/components/Icons';
@@ -67,6 +67,7 @@ function resolveRightWidth(right: number, left: number, containerWidth: number) 
 
 export default function WorkspaceLayout() {
   const state = useWorkspaceState();
+  const dispatch = useWorkspaceDispatch();
   const [pendingChatFocus, setPendingChatFocus] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
@@ -126,6 +127,59 @@ export default function WorkspaceLayout() {
         .map((citation) => citation.chunkId ?? Number(citation.id))
         .filter((value): value is number => Number.isFinite(value) && value > 0),
     [state.citations, state.selectedCitationIds],
+  );
+
+  const selectedSourceIds = useMemo(
+    () =>
+      Object.entries(state.selectedSourceIds)
+        .filter(([, selected]) => selected)
+        .map(([id]) => Number(id))
+        .filter((value) => Number.isFinite(value) && value > 0),
+    [state.selectedSourceIds],
+  );
+
+  const handleSelectedSourceIdsChange = useCallback(
+    (selected: Record<number, boolean>) => {
+      dispatch({ type: 'SET_SELECTED_SOURCES', payload: selected });
+    },
+    [dispatch],
+  );
+
+  const handleChatCitationHover = useCallback(
+    (chunkId: number | null) => {
+      if (chunkId == null) {
+        sources.setHoveredMessageChunkIds(null);
+        return;
+      }
+      sources.setHoveredMessageChunkIds([chunkId]);
+    },
+    [sources],
+  );
+
+  const handleChatCitationJump = useCallback(
+    (citation: Citation, message: ChatMessage) => {
+      const preserveSelection = !sources.autoSelectCitations && sources.selectedCount > 0;
+      if (!preserveSelection && message.citations && message.citations.length > 0) {
+        dispatch({ type: 'SET_CITATIONS', payload: message.citations });
+      }
+      if (citation.chunkId != null) {
+        sources.setJumpToCitationChunkId(citation.chunkId);
+      }
+    },
+    [dispatch, sources],
+  );
+
+  const handleOutputCitationJump = useCallback(
+    (citation: Citation, citations: Citation[]) => {
+      const preserveSelection = !sources.autoSelectCitations && sources.selectedCount > 0;
+      if (!preserveSelection && citations.length > 0) {
+        dispatch({ type: 'SET_CITATIONS', payload: citations });
+      }
+      if (citation.chunkId != null) {
+        sources.setJumpToCitationChunkId(citation.chunkId);
+      }
+    },
+    [dispatch, sources],
   );
 
   const applySizes = useCallback((left: number, right: number) => {
@@ -417,6 +471,11 @@ export default function WorkspaceLayout() {
           </div>
           <SourcesPanel
             sources={sources.sources}
+            citations={sources.citations}
+            selectedCitationIds={sources.selectedCitationIds}
+            selectedCitationCount={sources.selectedCount}
+            highlightedChunkIds={sources.highlightedChunkIds}
+            jumpToCitationChunkId={sources.jumpToCitationChunkId}
             onSourceClick={handleSourceClick}
             onUpload={sources.handleUpload}
             uploadState={sources.uploadState}
@@ -439,6 +498,14 @@ export default function WorkspaceLayout() {
             defaultExtractor={sources.defaultExtractor}
             onConvertSourceQAToSource={sources.convertSourceQAToSource}
             notebookId={state.activeNotebookId ?? undefined}
+            onSelectedSourceIdsChange={handleSelectedSourceIdsChange}
+            onToggleCitation={sources.toggleCitation}
+            onSelectAllCitations={sources.selectAllCitations}
+            onClearCitationSelection={sources.clearCitationSelection}
+            onCopySelectedCitations={sources.copySelectedCitations}
+            onCompareSelectedCitations={refine.onCompareSelected}
+            onSendSelectedCitations={refine.onGenerateRefine}
+            onCitationHover={sources.setHoveredCitationChunkId}
           />
         </section>
         )}
@@ -522,11 +589,15 @@ export default function WorkspaceLayout() {
             onDraftChange={chat.setDraft}
             onSend={chat.sendMessage}
             isSending={chat.isSending}
+            isStreaming={chat.isStreaming}
+            streamingMessageId={chat.streamingMessageId}
             notice={chat.sendError}
             isBlocked={!notebooks.activeNotebookId}
             isConnected={isConnected}
             inputRef={chatInputRef}
             citations={sources.citations}
+            onCitationHover={handleChatCitationHover}
+            onCitationJump={handleChatCitationJump}
             isLoadingMessages={chat.isLoadingMessages}
             messagesError={state.errors.messages}
             onRetryMessages={chat.retryMessages}
@@ -608,6 +679,7 @@ export default function WorkspaceLayout() {
             onSelectOutputFullscreen={handleOpenOutputViewerFullscreen}
             onSaveNote={refine.saveContentAsNote}
             onConvertToSource={sources.convertOutputToSource}
+            onJumpToCitation={handleOutputCitationJump}
             isConnected={isConnected}
             isFullscreen={expandedPanel === 'studio'}
           />
@@ -625,6 +697,8 @@ export default function WorkspaceLayout() {
           onToggleFullscreen={handleToggleOutputViewer}
           onSelectOutput={handleSelectOutput}
           onDeleteOutput={refine.onDeleteOutput}
+          onJumpToCitation={handleOutputCitationJump}
+          onCitationHover={handleChatCitationHover}
           elevated={isViewerElevated}
         />
       </Suspense>
@@ -639,6 +713,7 @@ export default function WorkspaceLayout() {
         }}
         notebookId={state.activeNotebookId}
         selectedChunkIds={selectedChunkIds}
+        selectedSourceIds={selectedSourceIds}
         isConnected={isConnected}
         onOutputsUpdated={refine.retryOutputs}
         openMode={slidesOpenMode}
