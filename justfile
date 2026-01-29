@@ -1,6 +1,8 @@
 default:
     @just -l
 
+SDK_PATH := "sdk/client/python"
+
 
 # Sync frontend API SDK with backend schema
 api-sync: api-check
@@ -10,16 +12,16 @@ api-sync: api-check
 api-check:
     cd backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.json
 
-# Generate Python SDK (manual)
+# Generate Python SDK (manual, Fern)
 sdk-gen VERSION='':
     cd backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.json
-    SDK_VERSION={{VERSION}} ./scripts/sdk/generate_python_sdk.sh
+    SDK_VERSION={{VERSION}} SDK_PATH={{SDK_PATH}} ./scripts/sdk/generate_python_sdk.sh
 
 # Check Python SDK is up to date (for pre-commit)
 sdk-check:
     cd backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.json
-    ./scripts/sdk/generate_python_sdk.sh
-    git add sdk/client/python
+    SDK_PATH={{SDK_PATH}} ./scripts/sdk/generate_python_sdk.sh
+    git add {{SDK_PATH}}
     git diff --staged --exit-code
 
 # Run pre-commit checks
