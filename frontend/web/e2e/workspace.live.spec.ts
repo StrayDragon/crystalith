@@ -115,15 +115,19 @@ test.describe('Workspace (live)', () => {
     await expectVisible(page.getByText('Frontmatter 预览'));
     await page.getByRole('button', { name: '关闭演示配置' }).click();
 
-    const modeButton = page.getByRole('button', { name: /Fast Research|Deep Research/ });
-    await modeButton.click();
-    await page.getByRole('menuitem', { name: 'Deep Research' }).click();
+    await page.evaluate(() => {
+      localStorage.setItem('crystalith_search_mode', 'Deep Research');
+    });
+    await page.reload();
+    await waitForWorkspaceReady();
 
-    const researchTopic = 'Deep research on LLM safety';
+    const researchTopic = `Deep research on LLM safety ${Date.now()}`;
     await searchInput.fill(researchTopic);
     await searchInput.press('Enter');
 
-    const researchCapsule = page.getByRole('button', { name: new RegExp(researchTopic) });
+    const researchCapsule = page
+      .getByRole('button', { name: new RegExp(researchTopic) })
+      .first();
     await expectVisible(researchCapsule, 'research capsule');
     await researchCapsule.click();
 

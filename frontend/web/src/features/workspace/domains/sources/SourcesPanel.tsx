@@ -489,15 +489,21 @@ function SourcesPanel({
               </Button>
             </MenuHandler>
             <MenuList className="min-w-[120px] p-1">
-              {['Fast Research', 'Deep Research'].map((opt) => (
+              {['Fast Research', 'Deep Research'].map((opt) => {
+                const modeTestId = opt === 'Deep Research'
+                  ? 'mode-deep-research'
+                  : 'mode-fast-research';
+                return (
                 <MenuItem
                   key={opt}
+                  data-testid={modeTestId}
                   className={`py-1.5 px-3 text-xs ${mode === opt ? 'bg-gray-100 font-medium' : ''}`}
                   onClick={() => setMode(opt)}
                 >
                   {opt}
                 </MenuItem>
-              ))}
+              );
+              })}
             </MenuList>
           </Menu>
         </div>

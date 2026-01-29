@@ -14,10 +14,12 @@ Frontend (from repo root):
 - `pnpm test` — run Vitest and React Testing Library.
 - `pnpm run build` — create a production build.
 - `pnpm preview` — serve the production build locally.
+  - Vite proxy uses `E2E_API_URL` or `VITE_API_PROXY_TARGET` when set; defaults to `http://127.0.0.1:8032`.
 
 Backend (from repo root):
 - `cd backend/py && uv sync` — install Python deps.
 - `just dev` — run the API server (uvicorn wrapper).
+- `just e2e-dev` — run the backend with E2E settings (port + SQLite paths).
 - `just test` — run pytest.
 
 Tip: `just -l` lists available tasks in each directory.
