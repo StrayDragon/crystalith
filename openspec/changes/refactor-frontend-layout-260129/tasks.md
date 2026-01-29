@@ -18,21 +18,21 @@
 - [x] 2.4 运行并记录 `cd frontend/web && pnpm test` 结果。
 
 ## 3. Workspace 内部分域重构（小步验证）
-- [ ] 3.1 定义目标目录结构（`features/workspace/domains/<domain>`、`features/workspace/shared`、`features/workspace/app`/`layout`），域名尽量对齐后端（notebooks/sessions/messages/analysis/sources/outputs/refine/studio/research）。
-- [ ] 3.2 盘点可抽离的共享组件（dialog header/empty state/toolbar 等），并迁移到 `features/workspace/shared` 或 `src/shared`。
-- [ ] 3.3 迁移 Workspace 入口与布局相关组件到 `app/` 或 `layout/`（保持行为不变）。
-- [ ] 3.4 迁移 notebooks 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
-- [ ] 3.5 迁移 sessions 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
-- [ ] 3.6 迁移 messages 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
-- [ ] 3.7 迁移 analysis 子域（含 graph）并执行 `pnpm test` + `./scripts/run-e2e.sh`。
-- [ ] 3.8 迁移 sources 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
-- [ ] 3.9 迁移 outputs 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
-- [ ] 3.10 迁移 refine 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
-- [ ] 3.11 迁移 studio 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
-- [ ] 3.12 迁移 research 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
-- [ ] 3.13 整理 types/utils：优先移动到对应子域，其次放入 `features/workspace/shared`，跨 feature 复用放入 `src/shared`。
-- [ ] 3.14 更新 import 路径并移除旧路径（不保留 re-export/别名）。
+- [x] 3.1 定义目标目录结构（`features/workspace/domains/<domain>`、`features/workspace/shared`、`features/workspace/app`/`layout`），域名尽量对齐后端（notebooks/sessions/messages/analysis/sources/outputs/refine/studio/research）。
+- [x] 3.2 盘点可抽离的共享组件（dialog header/empty state/toolbar 等），并迁移到 `features/workspace/shared` 或 `src/shared`。
+- [x] 3.3 迁移 Workspace 入口与布局相关组件到 `app/` 或 `layout/`（保持行为不变）。
+- [x] 3.4 迁移 notebooks 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
+- [x] 3.5 迁移 sessions 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
+- [x] 3.6 迁移 messages 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
+- [x] 3.7 迁移 analysis 子域（含 graph）并执行 `pnpm test` + `./scripts/run-e2e.sh`。
+- [x] 3.8 迁移 sources 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
+- [x] 3.9 迁移 outputs 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
+- [x] 3.10 迁移 refine 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
+- [x] 3.11 迁移 studio 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
+- [x] 3.12 迁移 research 子域并执行 `pnpm test` + `./scripts/run-e2e.sh`。
+- [x] 3.13 整理 types/utils：优先移动到对应子域，其次放入 `features/workspace/shared`，跨 feature 复用放入 `src/shared`。
+- [x] 3.14 更新 import 路径并移除旧路径（不保留 re-export/别名）。
 
 ## 4. Documentation & Validation
-- [ ] 4.1 更新前端结构说明（如 `frontend/web/README.md` 或 `frontend/web/AGENTS.md`）。
-- [ ] 4.2 `openspec validate refactor-frontend-layout-260129 --strict --no-interactive`。
+- [x] 4.1 更新前端结构说明（如 `frontend/web/README.md` 或 `frontend/web/AGENTS.md`）。
+- [x] 4.2 `openspec validate refactor-frontend-layout-260129 --strict --no-interactive`。

@@ -2,6 +2,7 @@
 
 ## Project Structure & Module Organization
 - `frontend/web/` is the Vite + React + TypeScript UI; source code lives in `frontend/web/src/`, static assets in `frontend/web/public/`.
+- `frontend/web/src/features/workspace/` groups the workspace feature into `app/`, `layout/`, `shared/`, and `domains/` (notebooks/sessions/messages/analysis/sources/outputs/refine/studio/research).
 - `backend/py/` contains the FastAPI service with app code in `backend/py/src/crystalith/` and tests in `backend/py/tests/`.
 - `backend/py/packages/` hosts workspace Python libraries, each with its own `pyproject.toml` and `tests/`.
 - `config/` stores runtime config (`config/app.yaml`) and the generated schema (`config/schema.json`).
