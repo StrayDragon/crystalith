@@ -9,7 +9,7 @@ const liveBaseURL = process.env.E2E_LIVE_BASE_URL ?? baseURL;
 
 export default defineConfig({
   testDir: 'e2e',
-  testMatch: '**/*.spec.ts',
+  testMatch: '**/*.live.spec.ts',
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -32,11 +32,6 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
-    {
-      name: 'mock',
-      testMatch: '**/*.mock.spec.ts',
-      use: { ...devices['Desktop Chrome'] },
-    },
     {
       name: 'live',
       testMatch: '**/*.live.spec.ts',
