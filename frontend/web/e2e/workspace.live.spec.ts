@@ -12,7 +12,7 @@ async function expectVisible(locator: Locator, label?: string) {
 test.describe('Workspace (live)', () => {
   test('workspace baseline flows', async ({ page, waitForWorkspaceReady }) => {
     test.slow();
-    test.setTimeout(240_000);
+    test.setTimeout(360_000);
 
     await page.goto('/');
     await waitForWorkspaceReady();
@@ -88,11 +88,49 @@ test.describe('Workspace (live)', () => {
       }, pollDefaults)
       .toBe(true);
 
+    const outputItems = page.getByTestId('studio-output-item');
+    const outputCount = await outputItems.count();
+
+    const convertMenuTrigger = page.getByRole('button', { name: '转换' }).last();
+    await convertMenuTrigger.click();
+    await page.getByRole('menuitem', { name: '段落' }).click();
+
+    await expect
+      .poll(async () => (await outputItems.count()) > outputCount, pollDefaults)
+      .toBe(true);
+    const studioOutputItem = outputItems.first();
+    await expectVisible(studioOutputItem, 'studio output item');
+    await studioOutputItem.click();
+
+    const outputDialog = page.getByRole('dialog', { name: 'Studio 输出详情' });
+    await expectVisible(outputDialog, 'studio output viewer');
+    await outputDialog.click({ position: { x: 10, y: 10 } });
+    await expect
+      .poll(() => outputDialog.isVisible(), pollDefaults)
+      .toBe(false);
+
     await page.getByRole('button', { name: '演示' }).first().click();
     await expectVisible(page.getByText('演示生成'));
     await page.getByRole('button', { name: /高级设置/ }).click();
     await expectVisible(page.getByText('Frontmatter 预览'));
     await page.getByRole('button', { name: '关闭演示配置' }).click();
+
+    const modeButton = page.getByRole('button', { name: /Fast Research|Deep Research/ });
+    await modeButton.click();
+    await page.getByRole('menuitem', { name: 'Deep Research' }).click();
+
+    const researchTopic = 'Deep research on LLM safety';
+    await searchInput.fill(researchTopic);
+    await searchInput.press('Enter');
+
+    const researchCapsule = page.getByRole('button', { name: new RegExp(researchTopic) });
+    await expectVisible(researchCapsule, 'research capsule');
+    await researchCapsule.click();
+
+    const researchDialog = page.getByRole('dialog');
+    await expectVisible(researchDialog, 'research dialog');
+    await expectVisible(researchDialog.getByText(researchTopic), 'research topic');
+    await researchDialog.getByRole('button', { name: '关闭' }).click();
 
     await page.getByRole('button', { name: '打开知识图谱' }).click();
     await expectVisible(page.getByRole('button', { name: '关闭知识图谱' }));

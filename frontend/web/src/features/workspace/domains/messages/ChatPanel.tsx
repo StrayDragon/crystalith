@@ -20,6 +20,7 @@ import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
 import CitationMark from '../../shared/components/citations/CitationMark';
 import { IconCopy, IconSave, IconSend } from '../../shared/components/Icons';
 import { LAYER_LEVELS } from '../../../../shared/layer';
+import { copyToClipboard } from '../../../../shared/clipboard';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -73,18 +74,8 @@ function ChatPanel({
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleCopy = useCallback(async (messageId: string, content: string) => {
-    try {
-      await navigator.clipboard.writeText(content);
-      setCopiedId(messageId);
-      setTimeout(() => setCopiedId(null), 2000);
-    } catch {
-      // Fallback for older browsers
-      const textarea = document.createElement('textarea');
-      textarea.value = content;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
+    const success = await copyToClipboard(content);
+    if (success) {
       setCopiedId(messageId);
       setTimeout(() => setCopiedId(null), 2000);
     }
