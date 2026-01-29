@@ -348,6 +348,26 @@ export async function listSourceChunks(
   return handleResponse(result);
 }
 
+/**
+ * Re-embed a failed source using existing chunks.
+ * @param notebookId - Notebook ID
+ * @param sourceId - Source ID
+ */
+export async function reembedSource(
+  notebookId: number,
+  sourceId: number,
+): Promise<SourceRead> {
+  const response = await fetch(
+    `/v1/notebooks/${notebookId}/sources/${sourceId}/re-embed`,
+    { method: 'POST' },
+  );
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, err.detail || 'Failed to re-embed source');
+  }
+  return response.json();
+}
+
 // Sessions
 export async function listSessions(notebookId: number): Promise<SessionRead[]> {
   const result = await listSessionsV1NotebooksNotebookIdSessionsGet({
@@ -487,6 +507,7 @@ export async function askQuestion(
   question: string,
   sessionId?: number | null,
   chunkIds?: number[],
+  sourceIds?: number[],
 ): Promise<QaResponse> {
   const result = await askQuestionV1NotebooksNotebookIdQaPost({
     path: { notebook_id: notebookId },
@@ -494,6 +515,7 @@ export async function askQuestion(
       question,
       session_id: sessionId ?? undefined,
       chunk_ids: chunkIds && chunkIds.length ? chunkIds : undefined,
+      source_ids: sourceIds && sourceIds.length ? sourceIds : undefined,
     },
   });
   return handleResponse(result);
@@ -535,6 +557,7 @@ export async function askQuestionStream(
   question: string,
   sessionId?: number | null,
   chunkIds?: number[],
+  sourceIds?: number[],
   callbacks?: QAStreamCallbacks,
 ): Promise<{ fullAnswer: string; done: QAStreamDoneEvent | null }> {
   const response = await fetch(`/v1/notebooks/${notebookId}/qa/stream`, {
@@ -547,6 +570,7 @@ export async function askQuestionStream(
       question,
       session_id: sessionId ?? undefined,
       chunk_ids: chunkIds && chunkIds.length ? chunkIds : undefined,
+      source_ids: sourceIds && sourceIds.length ? sourceIds : undefined,
     }),
   });
 
@@ -616,6 +640,7 @@ export async function createOutput(
   payload: {
     prompt?: string | null;
     chunk_ids?: number[];
+    source_ids?: number[];
     top_k?: number;
     min_score?: number;
     model_id?: string | null;
@@ -758,6 +783,7 @@ export async function refineBatch(
   prompt: string,
   formats: string[],
   chunkIds?: number[],
+  sourceIds?: number[],
 ): Promise<RefineBatchResponse> {
   const result = await refineBatchV1NotebooksNotebookIdRefineBatchPost({
     path: { notebook_id: notebookId },
@@ -765,6 +791,7 @@ export async function refineBatch(
       prompt,
       formats,
       chunk_ids: chunkIds,
+      source_ids: sourceIds,
     },
   });
   return handleResponse(result);

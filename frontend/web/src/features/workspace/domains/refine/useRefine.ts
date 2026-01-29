@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
-import { listSourceChunks, listWorkspaceTools, refineBatch } from '../../shared/api';
+import { listWorkspaceTools, refineBatch } from '../../shared/api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../../app/WorkspaceContext';
 import type {
   ApiWorkspaceTool,
@@ -13,6 +13,7 @@ import type {
 } from '../../shared/types';
 import {
   buildJobTitle,
+  collectOutputCitations,
   createId,
   formatTimestamp,
   normalizeCitation,
@@ -107,22 +108,6 @@ export function useRefine() {
     dispatch({ type: 'SET_REFINE_PROMPT', payload: refineTemplates[0].prompt });
   }, [dispatch, refineTemplates, state.refinePrompt]);
 
-  const selectedCitations = useMemo(
-    () => state.citations.filter((citation) => state.selectedCitationIds[citation.id]),
-    [state.citations, state.selectedCitationIds],
-  );
-
-  const selectedChunkIds = useMemo(
-    () =>
-      selectedCitations
-        .map((citation) => citation.chunkId ?? Number(citation.id))
-        .filter((value): value is number => Number.isFinite(value) && value > 0),
-    [selectedCitations],
-  );
-
-  const preserveSelectedCitations =
-    selectedCitations.length > 0 && !state.autoSelectCitations;
-
   const selectedSourceIds = useMemo(
     () =>
       Object.entries(state.selectedSourceIds)
@@ -132,37 +117,7 @@ export function useRefine() {
     [state.selectedSourceIds],
   );
 
-  const resolveSelectedChunkIds = useCallback(async () => {
-    if (selectedChunkIds.length) return selectedChunkIds;
-    if (!selectedSourceIds.length) return [];
-    if (!state.activeNotebookId || !isConnected) return [];
-    try {
-      const chunksPerSource = await Promise.all(
-        selectedSourceIds.map((sourceId) =>
-          listSourceChunks(state.activeNotebookId ?? 0, sourceId),
-        ),
-      );
-      return Array.from(
-        new Set(
-          chunksPerSource.flatMap((chunks) =>
-            chunks.map((chunk) => Number(chunk.id)).filter((id) => id > 0),
-          ),
-        ),
-      );
-    } catch (error) {
-      dispatch({
-        type: 'SET_ERROR',
-        payload: { key: 'send', value: '选中来源引用获取失败，请稍后重试。' },
-      });
-      return [];
-    }
-  }, [
-    dispatch,
-    isConnected,
-    selectedChunkIds,
-    selectedSourceIds,
-    state.activeNotebookId,
-  ]);
+  const resolveSelectedSourceIds = useCallback(async () => selectedSourceIds, [selectedSourceIds]);
 
 
   const updateRefineJobs = useCallback(
@@ -230,13 +185,13 @@ export function useRefine() {
   });
 
   const processRefineJob = useCallback(
-    async (jobId: string, prompt: string, chunkIds: number[], jobNotebookId: number | null) => {
+    async (jobId: string, prompt: string, sourceIds: number[], jobNotebookId: number | null) => {
       try {
         let normalizedOutputs = {};
         let response = null;
         let resolvedCitations = null;
         if (jobNotebookId && isConnected) {
-          response = await refineBatch(jobNotebookId, prompt, refineFormats, chunkIds);
+          response = await refineBatch(jobNotebookId, prompt, refineFormats, undefined, sourceIds);
           resolvedCitations = response?.citations
             ? response.citations.map(normalizeCitation)
             : null;
@@ -283,7 +238,7 @@ export function useRefine() {
         if (isCurrentNotebook && stillTracked) {
           markJobCompleted(jobId);
         }
-        if (resolvedCitations && isCurrentNotebook && stillTracked && !preserveSelectedCitations) {
+        if (resolvedCitations && isCurrentNotebook && stillTracked) {
           dispatch({
             type: 'SET_CITATIONS',
             payload: resolvedCitations,
@@ -351,7 +306,6 @@ export function useRefine() {
       incrementQueueDone,
       markJobCompleted,
       refineFormats,
-      preserveSelectedCitations,
       updateRefineJobs,
     ],
   );
@@ -368,7 +322,7 @@ export function useRefine() {
     void processRefineJob(
       nextJob.id,
       nextJob.prompt,
-      nextJob.chunkIds ?? [],
+      nextJob.sourceIds ?? [],
       nextJob.notebookId,
     );
   }, [processRefineJob, updateRefineJobs]);
@@ -378,11 +332,11 @@ export function useRefine() {
   const enqueueRefineJob = useCallback(
     ({
       prompt: jobPrompt,
-      chunkIds,
+      sourceIds,
       label,
     }: {
       prompt: string;
-      chunkIds?: number[];
+      sourceIds?: number[];
       label?: string;
     }) => {
       const createdAt = new Date().toISOString();
@@ -395,7 +349,7 @@ export function useRefine() {
         id: createId(),
         prompt: jobPrompt,
         status: 'queued',
-        chunkIds,
+        sourceIds,
         outputs: null,
         error: '',
         createdAt,
@@ -440,10 +394,10 @@ export function useRefine() {
     }
     const trimmed = state.refinePrompt.trim();
     if (!trimmed) return;
-    const resolvedChunkIds = await resolveSelectedChunkIds();
+    const resolvedSourceIds = await resolveSelectedSourceIds();
     enqueueRefineJob({
       prompt: trimmed,
-      chunkIds: resolvedChunkIds.length ? [...resolvedChunkIds] : [],
+      sourceIds: resolvedSourceIds.length ? [...resolvedSourceIds] : [],
       label: resolveTemplateLabel(trimmed, refineTemplates),
     });
     dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
@@ -452,7 +406,7 @@ export function useRefine() {
     enqueueRefineJob,
     isConnected,
     refineTemplates,
-    resolveSelectedChunkIds,
+    resolveSelectedSourceIds,
     state.activeNotebookId,
     state.refinePrompt,
   ]);
@@ -466,15 +420,14 @@ export function useRefine() {
       dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '请先创建笔记本。' } });
       return;
     }
-    const resolvedChunkIds = await resolveSelectedChunkIds();
-    if (!resolvedChunkIds.length) return;
+    const resolvedSourceIds = await resolveSelectedSourceIds();
     const promptText =
       compareTemplate?.prompt ??
-      '基于选中引用生成对比分析，输出相同点 / 差异点 / 结论。';
+      '基于选中来源生成对比分析，输出相同点 / 差异点 / 结论。';
     dispatch({ type: 'SET_REFINE_PROMPT', payload: promptText });
     enqueueRefineJob({
       prompt: promptText,
-      chunkIds: [...resolvedChunkIds],
+      sourceIds: [...resolvedSourceIds],
       label: compareTemplate?.label ?? '对比分析',
     });
     dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
@@ -484,7 +437,7 @@ export function useRefine() {
     dispatch,
     enqueueRefineJob,
     isConnected,
-    resolveSelectedChunkIds,
+    resolveSelectedSourceIds,
     state.activeNotebookId,
   ]);
 
@@ -502,7 +455,7 @@ export function useRefine() {
       dispatch({ type: 'SET_REFINE_PROMPT', payload: job.prompt });
       enqueueRefineJob({
         prompt: job.prompt,
-        chunkIds: job.chunkIds ?? [],
+        sourceIds: job.sourceIds ?? [],
         label: resolveTemplateLabel(job.prompt, refineTemplates),
       });
       dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
@@ -587,11 +540,11 @@ export function useRefine() {
     if (overrideType) {
       dispatch({ type: 'SET_OUTPUT_TYPE', payload: selectedType });
     }
-    const resolvedChunkIds = await resolveSelectedChunkIds();
+    const resolvedSourceIds = await resolveSelectedSourceIds();
     enqueueOutputJob({
       type: selectedType,
       prompt,
-      chunkIds: resolvedChunkIds.length ? resolvedChunkIds : [],
+      sourceIds: resolvedSourceIds.length ? resolvedSourceIds : [],
       modelId: modelId ?? undefined,
     });
     if (state.activePanel !== 'refine') {
@@ -604,7 +557,7 @@ export function useRefine() {
     isConnected,
     outputTypeOptions,
     resolveOutputPrompt,
-    resolveSelectedChunkIds,
+    resolveSelectedSourceIds,
     state.activeNotebookId,
     state.activePanel,
     state.outputType,
@@ -630,10 +583,17 @@ export function useRefine() {
       if (prompt) {
         dispatch({ type: 'SET_REFINE_PROMPT', payload: prompt });
       }
+      const outputSourceIds = Array.from(
+        new Set(
+          collectOutputCitations(output.content)
+            .map((citation) => citation.sourceId)
+            .filter((value): value is number => Number.isFinite(value) && value > 0),
+        ),
+      );
       enqueueOutputJob({
         type: output.type,
         prompt,
-        chunkIds: output.chunkIds ?? [],
+        sourceIds: outputSourceIds,
       });
       dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
     },
@@ -653,7 +613,7 @@ export function useRefine() {
       enqueueOutputJob({
         type: 'PARAGRAPH',
         prompt: content,
-        chunkIds: [],
+        sourceIds: [],
       });
       if (state.activePanel !== 'refine') {
         dispatch({ type: 'SET_HAS_NEW_OUTPUT', payload: true });
@@ -670,7 +630,7 @@ export function useRefine() {
     tools,
     toolsLoading,
     toolsError: !isConnected ? '未连接到后端服务。' : toolsError ? '工具加载失败' : '',
-    selectedChunkIds,
+    selectedSourceIds,
     refineMode: state.refineMode,
     setRefineMode,
     refinePrompt: state.refinePrompt,

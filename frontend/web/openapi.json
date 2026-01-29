@@ -1174,6 +1174,58 @@
         }
       }
     },
+    "/v1/notebooks/{notebook_id}/sources/{source_id}/re-embed": {
+      "post": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "Reembed Source",
+        "description": "Retry embedding for a failed source using existing chunks.",
+        "operationId": "reembed_source_v1_notebooks__notebook_id__sources__source_id__re_embed_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/notebooks/{notebook_id}/sources/search": {
       "post": {
         "tags": [
@@ -4157,6 +4209,20 @@
             ],
             "title": "Chunk Ids"
           },
+          "source_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ids"
+          },
           "top_k": {
             "type": "integer",
             "maximum": 20.0,
@@ -4353,6 +4419,20 @@
             ],
             "title": "Chunk Ids"
           },
+          "source_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ids"
+          },
           "top_k": {
             "type": "integer",
             "maximum": 20.0,
@@ -4502,6 +4582,20 @@
             ],
             "title": "Chunk Ids"
           },
+          "source_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ids"
+          },
           "top_k": {
             "type": "integer",
             "maximum": 20.0,
@@ -4583,6 +4677,20 @@
               }
             ],
             "title": "Chunk Ids"
+          },
+          "source_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ids"
           },
           "top_k": {
             "type": "integer",
@@ -5216,6 +5324,20 @@
             ],
             "title": "Chunk Ids"
           },
+          "source_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ids"
+          },
           "generation_config": {
             "anyOf": [
               {
@@ -5290,6 +5412,20 @@
               }
             ],
             "title": "Chunk Ids"
+          },
+          "source_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ids"
           },
           "outline": {
             "anyOf": [
@@ -5377,6 +5513,7 @@
           "prompt",
           "engine",
           "chunk_ids",
+          "source_ids",
           "outline",
           "markdown",
           "generation_config",
@@ -5436,6 +5573,20 @@
               }
             ],
             "title": "Chunk Ids"
+          },
+          "source_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ids"
           },
           "generation_config": {
             "anyOf": [

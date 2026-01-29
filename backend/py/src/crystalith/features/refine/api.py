@@ -45,6 +45,7 @@ class RefineRequest(BaseModel):
     prompt: str = Field(..., min_length=1)
     format: str = Field("paragraph")
     chunk_ids: list[int] | None = None
+    source_ids: list[int] | None = None
     top_k: int = Field(5, ge=1, le=20)
     min_score: float = Field(0.2, ge=0.0, le=1.0)
 
@@ -53,6 +54,7 @@ class RefineBatchRequest(BaseModel):
     prompt: str = Field(..., min_length=1)
     formats: list[str] | None = None
     chunk_ids: list[int] | None = None
+    source_ids: list[int] | None = None
     top_k: int = Field(5, ge=1, le=20)
     min_score: float = Field(0.2, ge=0.0, le=1.0)
 
@@ -124,6 +126,34 @@ def _resolve_formats(settings: RefineSettings, formats: list[str] | None) -> lis
     return resolved
 
 
+def _normalize_source_ids(source_ids: list[int] | None) -> list[int]:
+    if not source_ids:
+        return []
+    normalized = [int(value) for value in source_ids]
+    if any(value <= 0 for value in normalized):
+        raise HTTPException(status_code=400, detail="Unknown source_id in source_ids")
+    return list(dict.fromkeys(normalized))
+
+
+async def _validate_source_ids(
+    session: AsyncSession,
+    notebook_id: int,
+    source_ids: list[int],
+) -> None:
+    if not source_ids:
+        return
+    rows = await session.execute(
+        select(Source.id).where(
+            Source.notebook_id == notebook_id,
+            Source.id.in_(source_ids),
+        )
+    )
+    found = {row[0] for row in rows.all()}
+    missing = [source_id for source_id in source_ids if source_id not in found]
+    if missing:
+        raise HTTPException(status_code=400, detail="Unknown source_id in source_ids")
+
+
 def _build_messages(format_name: str, prompt: str, context: str) -> list[ChatMessage]:
     format_prompt = FORMAT_PROMPTS.get(format_name, FORMAT_PROMPTS["paragraph"])
     return [
@@ -177,6 +207,7 @@ async def refine(
 
     format_name = _normalize_format(settings.refine, payload.format)
     explicit_chunk_ids = [int(value) for value in (payload.chunk_ids or []) if int(value) > 0]
+    source_ids: list[int] = []
     if explicit_chunk_ids:
         rows = await session.execute(
             select(Chunk, Source)
@@ -189,10 +220,15 @@ async def refine(
         missing = [chunk_id for chunk_id in explicit_chunk_ids if chunk_id not in chunk_map]
         if missing:
             raise HTTPException(status_code=400, detail="Unknown chunk_id in chunk_ids")
+    else:
+        source_ids = _normalize_source_ids(payload.source_ids)
+        if source_ids:
+            await _validate_source_ids(session, notebook_id, source_ids)
     task_payload = {
         "prompt": payload.prompt,
         "format": format_name,
         "chunk_ids": payload.chunk_ids,
+        "source_ids": source_ids,
         "top_k": payload.top_k,
         "min_score": payload.min_score,
     }
@@ -224,6 +260,7 @@ async def refine_batch(
     created_at = datetime.datetime.now(datetime.UTC)
 
     explicit_chunk_ids = [int(value) for value in (payload.chunk_ids or []) if int(value) > 0]
+    evidence = True
     if explicit_chunk_ids:
         rows = await session.execute(
             select(Chunk, Source)
@@ -256,55 +293,59 @@ async def refine_batch(
 
         context = format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
     else:
-        embeddings = await embedder.embed([payload.prompt])
-        if not embeddings:
-            return RefineBatchResponse(
-                outputs={},
-                citations=[],
-                evidence=False,
-                created_at=created_at,
-            )
-        query_vector = embeddings[0]
-        results = await vector_store.search(
-            notebook_id=notebook_id,
-            query_vector=query_vector,
-            top_k=payload.top_k,
-            min_score=payload.min_score,
-        )
-        if not results:
-            return RefineBatchResponse(
-                outputs={},
-                citations=[],
-                evidence=False,
-                created_at=created_at,
-            )
-
-        chunk_ids = [result.entry.chunk_id for result in results]
-        rows = await session.execute(
-            select(Chunk, Source)
-            .join(Source, Source.id == Chunk.source_id)
-            .where(Chunk.id.in_(chunk_ids))
-        )
-        chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
-
-        citations: list[Citation] = []
-        for result in results:
-            chunk, source = chunk_map[result.entry.chunk_id]
-            snippet = chunk.text.strip()[:200]
-            citations.append(
-                Citation(
-                    source_id=source.id,
-                    source_name=source.filename,
-                    chunk_id=chunk.id,
-                    chunk_index=chunk.chunk_index,
-                    page_number=extract_page_number(chunk),
-                    paragraph_index=extract_paragraph_index(chunk),
-                    snippet=snippet,
-                    score=result.score,
+        source_ids = _normalize_source_ids(payload.source_ids)
+        if source_ids:
+            await _validate_source_ids(session, notebook_id, source_ids)
+        if not source_ids:
+            citations = []
+            context = ""
+            evidence = False
+        else:
+            embeddings = await embedder.embed([payload.prompt])
+            if not embeddings:
+                citations = []
+                context = ""
+                evidence = False
+            else:
+                query_vector = embeddings[0]
+                results = await vector_store.search(
+                    notebook_id=notebook_id,
+                    query_vector=query_vector,
+                    top_k=payload.top_k,
+                    min_score=payload.min_score,
+                    source_ids=source_ids,
                 )
-            )
+                if not results:
+                    citations = []
+                    context = ""
+                    evidence = False
+                else:
+                    chunk_ids = [result.entry.chunk_id for result in results]
+                    rows = await session.execute(
+                        select(Chunk, Source)
+                        .join(Source, Source.id == Chunk.source_id)
+                        .where(Chunk.id.in_(chunk_ids))
+                    )
+                    chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
 
-        context = format_context(results, chunk_map)
+                    citations = []
+                    for result in results:
+                        chunk, source = chunk_map[result.entry.chunk_id]
+                        snippet = chunk.text.strip()[:200]
+                        citations.append(
+                            Citation(
+                                source_id=source.id,
+                                source_name=source.filename,
+                                chunk_id=chunk.id,
+                                chunk_index=chunk.chunk_index,
+                                page_number=extract_page_number(chunk),
+                                paragraph_index=extract_paragraph_index(chunk),
+                                snippet=snippet,
+                                score=result.score,
+                            )
+                        )
+
+                    context = format_context(results, chunk_map)
 
     outputs: dict[str, RefineBatchOutput] = {}
     for format_name in formats:
@@ -315,6 +356,6 @@ async def refine_batch(
     return RefineBatchResponse(
         outputs=outputs,
         citations=citations,
-        evidence=True,
+        evidence=evidence,
         created_at=created_at,
     )

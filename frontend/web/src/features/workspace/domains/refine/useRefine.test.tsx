@@ -62,7 +62,7 @@ test('sets default refine prompt when empty', async () => {
   });
 });
 
-test('onGenerateRefine enqueues job with selected chunk ids', async () => {
+test('onGenerateRefine enqueues job with selected source ids', async () => {
   vi.mocked(refineBatch).mockResolvedValue({
     outputs: { paragraph: { paragraph: 'Answer', bullets: [], structured: null } },
     citations: [{ chunk_id: 9, chunk_index: 1, source_name: 'Doc', snippet: 'S' }],
@@ -75,14 +75,8 @@ test('onGenerateRefine enqueues job with selected chunk ids', async () => {
     result.current.dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: 1 });
     result.current.dispatch({ type: 'SET_REFINE_PROMPT', payload: '提炼核心结论' });
     result.current.dispatch({
-      type: 'SET_CITATIONS',
-      payload: [
-        { id: 'c1', chunkId: 9, sourceTitle: 'Doc', snippet: '', chunkIndex: 1 } as any,
-      ],
-    });
-    result.current.dispatch({
-      type: 'SET_SELECTED_CITATIONS',
-      payload: { c1: true },
+      type: 'SET_SELECTED_SOURCES',
+      payload: { 101: true, 102: true },
     });
   });
 
@@ -94,9 +88,15 @@ test('onGenerateRefine enqueues job with selected chunk ids', async () => {
     expect(result.current.refine.refineJobs).toHaveLength(1);
   });
 
-  expect(result.current.refine.refineJobs[0].chunkIds).toEqual([9]);
+  expect(result.current.refine.refineJobs[0].sourceIds).toEqual([101, 102]);
   expect(result.current.state.activePanel).toBe('refine');
   await waitFor(() => {
-    expect(refineBatch).toHaveBeenCalledWith(1, '提炼核心结论', expect.any(Array), [9]);
+    expect(refineBatch).toHaveBeenCalledWith(
+      1,
+      '提炼核心结论',
+      expect.any(Array),
+      undefined,
+      [101, 102],
+    );
   });
 });

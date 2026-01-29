@@ -103,6 +103,7 @@ export interface SlideDraft {
   prompt?: string | null;
   engine: string;
   chunkIds?: number[] | null;
+  sourceIds?: number[] | null;
   outline?: SlideOutline | null;
   markdown?: string | null;
   generationConfig?: SlideGenerationConfig | null;
@@ -130,7 +131,7 @@ export interface RefineJob {
   id: string;
   prompt: string;
   status: RefineStatus;
-  chunkIds?: number[];
+  sourceIds?: number[];
   outputs: Partial<Record<RefineMode, RefineOutput>> | null;
   error: string;
   citations?: Citation[];

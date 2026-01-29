@@ -45,6 +45,7 @@ class OutputGraphState:
     output_type: OutputType
     prompt: str
     chunk_ids: list[int] | None = None
+    source_ids: list[int] | None = None
     top_k: int = 10
     min_score: float = 0.0
     context: str = ""
@@ -127,6 +128,34 @@ def _resolve_citations(
     if not resolved and fallback:
         resolved = fallback[:1]
     return [item.model_dump() for item in resolved]
+
+
+def _normalize_source_ids(source_ids: list[int] | None) -> list[int]:
+    if not source_ids:
+        return []
+    normalized = [int(value) for value in source_ids]
+    if any(value <= 0 for value in normalized):
+        raise ValueError("Unknown source_id in source_ids")
+    return list(dict.fromkeys(normalized))
+
+
+async def _validate_source_ids(
+    session,
+    notebook_id: int,
+    source_ids: list[int],
+) -> None:
+    if not source_ids:
+        return
+    rows = await session.execute(
+        select(Source.id).where(
+            Source.notebook_id == notebook_id,
+            Source.id.in_(source_ids),
+        )
+    )
+    found = {row[0] for row in rows.all()}
+    missing = [source_id for source_id in source_ids if source_id not in found]
+    if missing:
+        raise ValueError("Unknown source_id in source_ids")
 
 
 def _map_citations(
@@ -356,6 +385,7 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
             notebook_id=state.notebook_id,
             prompt_length=len(state.prompt),
             explicit_chunk_ids_count=len(state.chunk_ids or []),
+            source_ids_count=len(state.source_ids or []),
         )
 
         explicit_chunk_ids = [int(v) for v in (state.chunk_ids or []) if int(v) > 0]
@@ -380,6 +410,15 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
             state.resolved_chunk_ids = explicit_chunk_ids
             return GenerateOutput()
 
+        normalized_source_ids = _normalize_source_ids(state.source_ids)
+        if not normalized_source_ids:
+            state.context = ""
+            state.citations = []
+            state.resolved_chunk_ids = []
+            return GenerateOutput()
+
+        await _validate_source_ids(deps.session, state.notebook_id, normalized_source_ids)
+
         seed = state.prompt or "Summarize the notebook sources."
         embeddings = await deps.embedder.embed([seed])
         if not embeddings:
@@ -394,6 +433,7 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
             query_vector=query_vector,
             top_k=state.top_k,
             min_score=state.min_score,
+            source_ids=normalized_source_ids,
         )
         if not results:
             state.context = ""
@@ -540,6 +580,7 @@ async def run_output_graph(
     deps: StudioDeps,
     *,
     chunk_ids: list[int] | None = None,
+    source_ids: list[int] | None = None,
     top_k: int = 10,
     min_score: float = 0.0,
     model_id: str | None = None,
@@ -552,6 +593,7 @@ async def run_output_graph(
         prompt: User prompt for generation
         deps: Studio dependencies
         chunk_ids: Optional specific chunk IDs to use as context
+        source_ids: Optional source IDs to constrain retrieval
         top_k: Number of chunks to retrieve if chunk_ids not specified
         min_score: Minimum similarity score for chunk retrieval
         model_id: Optional model ID to use (overrides default from settings)
@@ -561,6 +603,7 @@ async def run_output_graph(
         output_type=output_type,
         prompt=prompt,
         chunk_ids=chunk_ids,
+        source_ids=source_ids,
         top_k=top_k,
         min_score=min_score,
         model_id=model_id,

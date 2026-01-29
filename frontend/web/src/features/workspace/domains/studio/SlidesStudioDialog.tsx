@@ -26,7 +26,6 @@ import {
   getLatestSlidesDraft,
   getSlidesConfig,
   getSlidesDraft,
-  listSourceChunks,
   updateSlidesDraft,
   updateSlidesOutline,
   updateSlidesMarkdown,
@@ -116,6 +115,7 @@ function normalizeDraft(raw: any): SlideDraft {
     prompt: raw.prompt ?? null,
     engine: raw.engine ?? 'slidev',
     chunkIds: raw.chunk_ids ?? raw.chunkIds ?? null,
+    sourceIds: raw.source_ids ?? raw.sourceIds ?? null,
     outline: raw.outline ?? null,
     markdown: raw.markdown ?? null,
     generationConfig: normalizeGenerationConfig(raw.generation_config ?? raw.generationConfig),
@@ -146,7 +146,6 @@ interface SlidesStudioDialogProps {
   open: boolean;
   onClose: () => void;
   notebookId: number | null;
-  selectedChunkIds: number[];
   selectedSourceIds?: number[];
   isConnected: boolean;
   onOutputsUpdated: () => void;
@@ -156,7 +155,7 @@ interface SlidesStudioDialogProps {
   onQueueSlides?: (payload: {
     title: string;
     prompt: string;
-    chunkIds: number[];
+    sourceIds: number[];
     generationConfig: SlideGenerationConfig;
     modelId?: string | null;
   }) => Promise<{ draftId?: number | null } | null>;
@@ -166,7 +165,6 @@ export default function SlidesStudioDialog({
   open,
   onClose,
   notebookId,
-  selectedChunkIds,
   selectedSourceIds = [],
   isConnected,
   onOutputsUpdated,
@@ -224,15 +222,17 @@ export default function SlidesStudioDialog({
       : '';
 
   const selectionLabel = useMemo(() => {
-    const chunkIds = isPreviewMode && draft?.chunkIds?.length ? draft.chunkIds : selectedChunkIds;
-    if (!chunkIds.length) {
-      if (selectedSourceIds.length) {
-        return `已选择 ${selectedSourceIds.length} 个来源，将仅基于选中来源生成。`;
-      }
-      return '将基于当前笔记本自动检索。';
+    const draftSourceIds = isPreviewMode ? draft?.sourceIds ?? [] : [];
+    const activeSourceIds = draftSourceIds.length ? draftSourceIds : selectedSourceIds;
+    if (activeSourceIds.length) {
+      return `已选择 ${activeSourceIds.length} 个来源，将仅基于选中来源生成。`;
     }
-    return `已选择 ${chunkIds.length} 条引用，将仅基于选中引用生成。`;
-  }, [draft?.chunkIds, isPreviewMode, selectedChunkIds, selectedSourceIds]);
+    const legacyChunkIds = isPreviewMode && draft?.chunkIds?.length ? draft.chunkIds : [];
+    if (legacyChunkIds.length) {
+      return `该草稿基于历史引用（${legacyChunkIds.length} 条）生成。`;
+    }
+    return '未选择来源，将在空上下文生成。';
+  }, [draft?.chunkIds, draft?.sourceIds, isPreviewMode, selectedSourceIds]);
 
   const selectedThemePreset = useMemo(() => {
     const options = slidesConfig?.themePresetOptions ?? [];
@@ -267,25 +267,7 @@ export default function SlidesStudioDialog({
     }
   }, []);
 
-  const resolveChunkIds = useCallback(async () => {
-    if (selectedChunkIds.length) return selectedChunkIds;
-    if (!selectedSourceIds.length || !notebookId) return [];
-    try {
-      const chunksPerSource = await Promise.all(
-        selectedSourceIds.map((sourceId) => listSourceChunks(notebookId, sourceId)),
-      );
-      return Array.from(
-        new Set(
-          chunksPerSource.flatMap((chunks) =>
-            chunks.map((chunk) => Number(chunk.id)).filter((id) => id > 0),
-          ),
-        ),
-      );
-    } catch {
-      toast.error('选中来源引用获取失败，请稍后重试。');
-      return [];
-    }
-  }, [notebookId, selectedChunkIds, selectedSourceIds]);
+  const resolveSourceIds = useCallback(async () => selectedSourceIds, [selectedSourceIds]);
 
   const resetDraftState = useCallback(() => {
     const defaults = configDefaults;
@@ -542,11 +524,12 @@ export default function SlidesStudioDialog({
       return null;
     }
     setError('');
-    const resolvedChunkIds = await resolveChunkIds();
+    const resolvedSourceIds = await resolveSourceIds();
     const payload = {
       title: title.trim() || undefined,
       prompt: prompt.trim() || undefined,
-      chunk_ids: resolvedChunkIds,
+      chunk_ids: [],
+      source_ids: resolvedSourceIds,
       generation_config: buildGenerationConfigPayload(),
     };
     if (!draft) {
@@ -565,7 +548,7 @@ export default function SlidesStudioDialog({
     isConnected,
     notebookId,
     prompt,
-    resolveChunkIds,
+    resolveSourceIds,
     syncFromDraft,
     title,
   ]);
@@ -584,11 +567,11 @@ export default function SlidesStudioDialog({
     setError('');
     setIsQueueing(true);
     try {
-      const resolvedChunkIds = await resolveChunkIds();
+      const resolvedSourceIds = await resolveSourceIds();
       const job = await onQueueSlides({
         title: title.trim(),
         prompt: prompt.trim(),
-        chunkIds: resolvedChunkIds,
+        sourceIds: resolvedSourceIds,
         generationConfig: buildGenerationConfig(),
         modelId: configModelId ?? undefined,
       });
@@ -612,7 +595,7 @@ export default function SlidesStudioDialog({
     onClose,
     onQueueSlides,
     prompt,
-    resolveChunkIds,
+    resolveSourceIds,
     title,
   ]);
 

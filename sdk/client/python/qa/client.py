@@ -32,6 +32,7 @@ class QaClient:
         *,
         question: str,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
@@ -45,6 +46,8 @@ class QaClient:
         question : str
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
 
@@ -76,6 +79,7 @@ class QaClient:
             notebook_id,
             question=question,
             chunk_ids=chunk_ids,
+            source_ids=source_ids,
             top_k=top_k,
             min_score=min_score,
             session_id=session_id,
@@ -89,6 +93,7 @@ class QaClient:
         *,
         question: str,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
@@ -109,6 +114,8 @@ class QaClient:
         question : str
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
 
@@ -140,6 +147,7 @@ class QaClient:
             notebook_id,
             question=question,
             chunk_ids=chunk_ids,
+            source_ids=source_ids,
             top_k=top_k,
             min_score=min_score,
             session_id=session_id,
@@ -169,6 +177,7 @@ class AsyncQaClient:
         *,
         question: str,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
@@ -182,6 +191,8 @@ class AsyncQaClient:
         question : str
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
 
@@ -221,6 +232,7 @@ class AsyncQaClient:
             notebook_id,
             question=question,
             chunk_ids=chunk_ids,
+            source_ids=source_ids,
             top_k=top_k,
             min_score=min_score,
             session_id=session_id,
@@ -234,6 +246,7 @@ class AsyncQaClient:
         *,
         question: str,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
@@ -254,6 +267,8 @@ class AsyncQaClient:
         question : str
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
 
@@ -293,6 +308,7 @@ class AsyncQaClient:
             notebook_id,
             question=question,
             chunk_ids=chunk_ids,
+            source_ids=source_ids,
             top_k=top_k,
             min_score=min_score,
             session_id=session_id,

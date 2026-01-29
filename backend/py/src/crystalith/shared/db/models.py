@@ -305,6 +305,7 @@ class StudioSlide(AsyncSqlATableBase):
         server_default=sa.text("'slidev'"),
     )
     chunk_ids: Mapped[list[int] | None] = mapped_column(sa.JSON, nullable=True)
+    source_ids: Mapped[list[int] | None] = mapped_column(sa.JSON, nullable=True)
     outline: Mapped[dict[str, Any] | None] = mapped_column(sa.JSON, nullable=True)
     markdown: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     generation_config: Mapped[dict[str, Any] | None] = mapped_column(sa.JSON, nullable=True)

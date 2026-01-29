@@ -179,6 +179,41 @@ class SourcesClient:
         )
         return _response.data
 
+    def reembed_source(
+        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> SourceRead:
+        """
+        Retry embedding for a failed source using existing chunks.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceRead
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.reembed_source(
+            notebook_id=1,
+            source_id=1,
+        )
+        """
+        _response = self._raw_client.reembed_source(notebook_id, source_id, request_options=request_options)
+        return _response.data
+
     def search_sources(
         self,
         notebook_id: int,
@@ -692,6 +727,49 @@ class AsyncSourcesClient:
         _response = await self._raw_client.batch_delete_sources(
             notebook_id, source_ids=source_ids, request_options=request_options
         )
+        return _response.data
+
+    async def reembed_source(
+        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> SourceRead:
+        """
+        Retry embedding for a failed source using existing chunks.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceRead
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.reembed_source(
+                notebook_id=1,
+                source_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.reembed_source(notebook_id, source_id, request_options=request_options)
         return _response.data
 
     async def search_sources(

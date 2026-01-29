@@ -7,13 +7,11 @@ import {
   convertSessionToOutput,
   convertSessionToSource,
   listMessages,
-  listSourceChunks,
 } from '../../shared/api';
 import type { OutputType } from '../../shared/api';
 import { toast } from '../../../../shared/toast';
 import { useWorkspaceDispatch, useWorkspaceState } from '../../app/WorkspaceContext';
 import {
-  buildCitationScopeSnapshot,
   buildSourceScopeSnapshot,
   collectChunkIds,
   createId,
@@ -112,27 +110,12 @@ export function useChat({
       .filter(([, selected]) => selected)
       .map(([id]) => Number(id))
       .filter((value) => Number.isFinite(value) && value > 0);
-    const explicitSourceIds =
-      selectedSourceIds.length > 0 && selectedSourceIds.length < state.sources.length
-        ? selectedSourceIds
-        : [];
+    const explicitSourceIds = selectedSourceIds;
     const selectedSourceTitles = state.sources
       .filter((source) => explicitSourceIds.includes(source.id))
       .map((source) => source.title);
 
-    const selectedCitations = state.citations.filter(
-      (citation) => state.selectedCitationIds[citation.id],
-    );
-    const hasSelectedCitations = selectedCitations.length > 0;
-    const selectedChunkIds = selectedCitations
-      .map((citation) => citation.chunkId ?? Number(citation.id))
-      .filter((value): value is number => Number.isFinite(value) && value > 0);
-    const preserveSelectedCitations = hasSelectedCitations && !state.autoSelectCitations;
-    const selectedScope = hasSelectedCitations
-      ? buildCitationScopeSnapshot(selectedCitations, 'selected')
-      : explicitSourceIds.length > 0
-        ? buildSourceScopeSnapshot(selectedSourceTitles, 'selected')
-        : null;
+    const selectedScope = buildSourceScopeSnapshot(selectedSourceTitles, 'selected');
 
     const userMessage = { id: createId(), role: 'user', content: text };
     const pendingMessages = [...state.messages, userMessage];
@@ -147,38 +130,7 @@ export function useChat({
       return;
     }
 
-    const resolveChunkIdsForRequest = async (): Promise<number[] | null> => {
-      if (selectedChunkIds.length) return selectedChunkIds;
-      if (!explicitSourceIds.length) return [];
-      if (!state.activeNotebookId) return null;
-      try {
-        const chunksPerSource = await Promise.all(
-          explicitSourceIds.map((sourceId) =>
-            listSourceChunks(state.activeNotebookId ?? 0, sourceId),
-          ),
-        );
-        const resolved = Array.from(
-          new Set(
-            chunksPerSource.flatMap((chunks) =>
-              chunks.map((chunk) => Number(chunk.id)).filter((id) => id > 0),
-            ),
-          ),
-        );
-        return resolved;
-      } catch (error) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'send', value: '选中来源引用获取失败，请稍后重试。' },
-        });
-        return null;
-      }
-    };
-
-    const resolvedChunkIds = await resolveChunkIdsForRequest();
-    if (resolvedChunkIds === null) {
-      dispatch({ type: 'SET_LOADING', payload: { key: 'send', value: false } });
-      return;
-    }
+    const resolvedChunkIds: number[] | undefined = undefined;
 
     // Use streaming if enabled
     if (enableStreaming) {
@@ -201,6 +153,7 @@ export function useChat({
           text,
           sessionId,
           resolvedChunkIds,
+          explicitSourceIds,
           {
             onChunk: (chunkText) => {
               dispatch({
@@ -210,8 +163,7 @@ export function useChat({
             },
             onDone: (doneData) => {
               const normalizedCitations = doneData.citations?.map(normalizeCitation) ?? [];
-              const scope =
-                selectedScope ?? buildCitationScopeSnapshot(normalizedCitations, 'auto');
+              const scope = selectedScope;
               dispatch({
                 type: 'UPDATE_MESSAGE',
                 payload: {
@@ -223,9 +175,7 @@ export function useChat({
                   },
                 },
               });
-              if (!preserveSelectedCitations) {
-                dispatch({ type: 'SET_CITATIONS', payload: normalizedCitations });
-              }
+              dispatch({ type: 'SET_CITATIONS', payload: normalizedCitations });
             },
             onError: (errorMessage) => {
               dispatch({
@@ -281,9 +231,10 @@ export function useChat({
         text,
         sessionId,
         resolvedChunkIds,
+        explicitSourceIds,
       );
       const normalizedCitations = qaResult.citations?.map(normalizeCitation) ?? [];
-      const scope = selectedScope ?? buildCitationScopeSnapshot(normalizedCitations, 'auto');
+      const scope = selectedScope;
       const assistantMessage = {
         id: createId(),
         role: 'assistant',
@@ -296,9 +247,7 @@ export function useChat({
         type: 'SET_MESSAGES',
         payload: [...pendingMessages, assistantMessage],
       });
-      if (!preserveSelectedCitations) {
-        dispatch({ type: 'SET_CITATIONS', payload: normalizedCitations });
-      }
+      dispatch({ type: 'SET_CITATIONS', payload: normalizedCitations });
       void mutate();
       if (refreshSessions) {
         void refreshSessions();
@@ -351,11 +300,8 @@ export function useChat({
     mutate,
     refreshSessions,
     state.activeNotebookId,
-    state.autoSelectCitations,
-    state.citations,
     state.draft,
     state.messages,
-    state.selectedCitationIds,
     state.selectedSourceIds,
     state.sources,
   ]);

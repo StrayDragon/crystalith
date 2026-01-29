@@ -18,7 +18,7 @@ export interface OutputQueueJob {
   id: string;
   type: OutputTypeId;
   prompt: string;
-  chunkIds: number[];
+  sourceIds: number[];
   status: OutputQueueStatus;
   createdAt: string;
   createdAtLabel: string;
@@ -188,12 +188,12 @@ export function useOutputQueue({
     ({
       type,
       prompt,
-      chunkIds,
+      sourceIds,
       modelId,
     }: {
       type: OutputTypeId;
       prompt: string;
-      chunkIds: number[];
+      sourceIds: number[];
       modelId?: string;
     }) => {
       const createdAt = new Date().toISOString();
@@ -205,7 +205,7 @@ export function useOutputQueue({
         id: createId(),
         type,
         prompt,
-        chunkIds,
+        sourceIds,
         status: 'queued',
         createdAt,
         createdAtLabel: formatTimestamp(createdAt),
@@ -222,13 +222,13 @@ export function useOutputQueue({
     async ({
       title,
       prompt,
-      chunkIds,
+      sourceIds,
       generationConfig,
       modelId,
     }: {
       title: string;
       prompt: string;
-      chunkIds: number[];
+      sourceIds: number[];
       generationConfig: SlideGenerationConfig;
       modelId?: string | null;
     }) => {
@@ -249,7 +249,7 @@ export function useOutputQueue({
       const payload = {
         title: title.trim() || undefined,
         prompt: prompt.trim() || undefined,
-        chunk_ids: chunkIds.length ? chunkIds : undefined,
+        source_ids: sourceIds.length ? sourceIds : undefined,
         generation_config: normalizeSlideGenerationConfig(generationConfig),
       };
       const created = await createSlidesDraft(state.activeNotebookId, payload);
@@ -260,7 +260,7 @@ export function useOutputQueue({
         id: createId(),
         type: 'SLIDES',
         prompt,
-        chunkIds,
+        sourceIds,
         status: 'queued',
         createdAt,
         createdAtLabel: formatTimestamp(createdAt),
@@ -316,7 +316,7 @@ export function useOutputQueue({
         } else if (job.notebookId) {
           const response = await createOutput(job.notebookId, job.type, {
             prompt: job.prompt || undefined,
-            chunk_ids: job.chunkIds.length ? job.chunkIds : undefined,
+            source_ids: job.sourceIds.length ? job.sourceIds : undefined,
             model_id: job.modelId || undefined,
           });
           normalized = [normalizeOutput(response)];

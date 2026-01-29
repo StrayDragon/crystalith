@@ -316,6 +316,75 @@ async def list_sources(
     return [_source_to_read(source, chunk_count=len(source.chunks)) for source in sources]
 
 
+@router.post("/{source_id}/re-embed", response_model=SourceRead)
+async def reembed_source(
+    notebook_id: int,
+    source_id: int,
+    session: AsyncSession = Depends(get_db_session),
+    embedder: EmbeddingProvider = Depends(get_embedding_provider),
+    vector_store: VectorStore = Depends(get_vector_store),
+) -> SourceRead:
+    """Retry embedding for a failed source using existing chunks."""
+    source = await session.get(Source, source_id)
+    if source is None or source.notebook_id != notebook_id:
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    if source.status != SourceStatus.FAILED:
+        raise HTTPException(status_code=400, detail="Source is not failed")
+
+    # Load existing chunks for re-embedding
+    result = await session.execute(
+        select(Chunk)
+        .where(Chunk.source_id == source_id)
+        .order_by(Chunk.chunk_index.asc())
+    )
+    chunks = result.scalars().all()
+    if not chunks:
+        raise HTTPException(
+            status_code=400,
+            detail="Source has no chunks to re-embed",
+        )
+
+    source.status = SourceStatus.PROCESSING
+    source.error_message = None
+    session.add(source)
+    await session.commit()
+    await session.refresh(source)
+
+    try:
+        embeddings = await embedder.embed([chunk.text for chunk in chunks])
+        if len(embeddings) != len(chunks):
+            raise ValueError("embedding count mismatch")
+
+        chunk_ids = [chunk.id for chunk in chunks]
+        await vector_store.remove_source(source_id)
+        await vector_store.add(
+            notebook_id=notebook_id,
+            source_id=source_id,
+            chunk_ids=chunk_ids,
+            vectors=embeddings,
+        )
+    except Exception as exc:
+        await session.rollback()
+        source.status = SourceStatus.FAILED
+        error_detail = str(exc)[:512]
+        source.error_message = error_detail
+        session.add(source)
+        await session.commit()
+        logger.exception(
+            "Source re-embed failed",
+            source_id=source_id,
+            error=error_detail,
+        )
+        raise HTTPException(status_code=500, detail=f"Re-embed failed: {error_detail}") from exc
+
+    source.status = SourceStatus.READY
+    source.error_message = None
+    await session.commit()
+    await session.refresh(source)
+    return _source_to_read(source, chunk_count=len(chunks))
+
+
 @router.post("/search", response_model=SourceSearchResponse)
 async def search_sources(
     notebook_id: int,

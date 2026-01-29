@@ -41,6 +41,7 @@ class SlideDraftCreate(BaseModel):
     prompt: str | None = None
     engine: str = Field("slidev", description="Rendering engine (default: slidev)")
     chunk_ids: list[int] | None = None
+    source_ids: list[int] | None = None
     generation_config: SlideGenerationConfig | None = None
 
 
@@ -49,6 +50,7 @@ class SlideDraftUpdate(BaseModel):
     prompt: str | None = None
     engine: str | None = None
     chunk_ids: list[int] | None = None
+    source_ids: list[int] | None = None
     generation_config: SlideGenerationConfig | None = None
 
 
@@ -70,6 +72,7 @@ class SlideDraftRead(BaseModel):
     prompt: str | None
     engine: str
     chunk_ids: list[int] | None
+    source_ids: list[int] | None
     outline: SlideOutline | None
     markdown: str | None
     generation_config: SlideGenerationConfig | None
@@ -187,6 +190,7 @@ async def create_draft(
         prompt=payload.prompt,
         engine=payload.engine,
         chunk_ids=payload.chunk_ids or None,
+        source_ids=payload.source_ids or None,
         generation_config=payload.generation_config.model_dump() if payload.generation_config else None,
         stage=SlideStage.INPUT,
         status=SlideStatus.IDLE,
@@ -223,6 +227,8 @@ async def update_draft(
         slide.engine = payload.engine
     if payload.chunk_ids is not None:
         slide.chunk_ids = payload.chunk_ids
+    if payload.source_ids is not None:
+        slide.source_ids = payload.source_ids
     if payload.generation_config is not None:
         slide.generation_config = payload.generation_config.model_dump()
     slide.error_message = None
@@ -308,13 +314,14 @@ async def generate_outline_stream(
                 title=slide.title,
                 prompt=slide.prompt,
                 chunk_ids=slide.chunk_ids,
+                source_ids=slide.source_ids,
                 generation_config=slide.generation_config,
                 model_id=model_id,
             )
             slide.outline = outline.model_dump()
             slide.stage = SlideStage.OUTLINE
             slide.status = SlideStatus.IDLE
-            slide.chunk_ids = resolved_chunk_ids or slide.chunk_ids
+            slide.chunk_ids = resolved_chunk_ids
             await session.commit()
             await session.refresh(slide)
 
@@ -387,13 +394,14 @@ async def generate_markdown_stream(
                 prompt=slide.prompt,
                 outline=outline,
                 chunk_ids=slide.chunk_ids,
+                source_ids=slide.source_ids,
                 generation_config=slide.generation_config,
                 model_id=model_id,
             )
             slide.markdown = markdown
             slide.stage = SlideStage.MARKDOWN
             slide.status = SlideStatus.IDLE
-            slide.chunk_ids = resolved_chunk_ids or slide.chunk_ids
+            slide.chunk_ids = resolved_chunk_ids
             await session.commit()
             write_slide_markdown(slide.notebook_id, slide.id, slide.markdown or "")
             write_preview_markdown(slide.markdown or "")

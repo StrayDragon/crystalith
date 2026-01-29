@@ -145,22 +145,6 @@ function ChatPanel({
                     (entry): entry is { citation: Citation; index: number } =>
                       Boolean(entry),
                   );
-          const scope = message.citationScope;
-          const scopeLabel = scope
-            ? `${scope.mode === 'selected' ? '选中引用' : '自动检索'} · ${scope.count} 条`
-            : '';
-          const scopeSources = scope
-            ? scope.sources.length > 0
-              ? `来源：${scope.sources.join('、')}`
-              : '来源：未找到'
-            : '';
-          const scopeModeLabel =
-            scope?.mode === 'selected'
-              ? scope.kind === 'sources'
-                ? '选中来源'
-                : '选中引用'
-              : '自动检索';
-          const scopeSummary = scope ? `${scopeModeLabel} · ${scope.count} 条` : '';
           return (
             <div
               key={message.id}

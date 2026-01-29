@@ -19,6 +19,7 @@ async def create_slide(
     prompt: str | None,
     engine: str,
     chunk_ids: list[int] | None,
+    source_ids: list[int] | None,
     generation_config: dict | None,
 ) -> StudioSlide:
     return await repo.create_slide(
@@ -28,6 +29,7 @@ async def create_slide(
         prompt=prompt,
         engine=engine,
         chunk_ids=chunk_ids,
+        source_ids=source_ids,
         generation_config=generation_config,
     )
 
@@ -48,6 +50,7 @@ async def update_slide(
     prompt: str | None,
     engine: str | None,
     chunk_ids: list[int] | None,
+    source_ids: list[int] | None,
     generation_config: dict | None,
 ) -> StudioSlide:
     return await repo.update_slide(
@@ -57,6 +60,7 @@ async def update_slide(
         prompt=prompt,
         engine=engine,
         chunk_ids=chunk_ids,
+        source_ids=source_ids,
         generation_config=generation_config,
     )
 

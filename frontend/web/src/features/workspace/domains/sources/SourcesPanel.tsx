@@ -29,6 +29,7 @@ import {
   OpenInFull as OpenInFullIcon,
   History as HistoryIcon,
   Close as CloseIcon,
+  Replay as ReplayIcon,
 } from '@mui/icons-material';
 
 import type { AsyncStatus } from '../../../../shared/types';
@@ -81,6 +82,8 @@ interface SourcesPanelProps {
   defaultExtractor?: ExtractorType | null;
   /** 将来源问答转换为新来源 */
   onConvertSourceQAToSource?: (sourceId: number, messages: QAMessage[]) => Promise<unknown>;
+  /** 重新嵌入失败来源 */
+  onReembedSource?: (sourceId: number) => Promise<unknown>;
   /** 当前 notebook ID，用于深度研究功能 */
   notebookId?: number;
   onSelectedSourceIdsChange?: (selected: Record<number, boolean>) => void;
@@ -109,6 +112,7 @@ function SourcesPanel({
   availableExtractors = [],
   defaultExtractor = null,
   onConvertSourceQAToSource,
+  onReembedSource,
   notebookId,
   onSelectedSourceIdsChange,
 }: SourcesPanelProps) {
@@ -234,13 +238,14 @@ function SourcesPanel({
       setSelectedSourceIds({});
       return;
     }
-    // Default to all sources selected
+    // Default to all ready sources selected
     setSelectedSourceIds((prev) => {
       const next: Record<number, boolean> = {};
       const hasExistingSelection = Object.keys(prev).length > 0;
       sources.forEach((source) => {
-        // If user has made selections before, preserve them; otherwise select all by default
-        next[source.id] = hasExistingSelection ? Boolean(prev[source.id]) : true;
+        const isSelectable = source.statusTone === 'READY';
+        // If user has made selections before, preserve them for ready sources; otherwise select all ready by default
+        next[source.id] = hasExistingSelection ? (isSelectable ? Boolean(prev[source.id]) : false) : isSelectable;
       });
       return next;
     });
@@ -261,9 +266,15 @@ function SourcesPanel({
     return () => window.clearTimeout(timer);
   }, [jumpToSource]);
 
+  const selectableSources = useMemo(
+    () => sources.filter((source) => source.statusTone === 'READY'),
+    [sources],
+  );
   const allSelected = useMemo(
-    () => sources.length > 0 && sources.every((source) => selectedSourceIds[source.id]),
-    [sources, selectedSourceIds],
+    () =>
+      selectableSources.length > 0 &&
+      selectableSources.every((source) => selectedSourceIds[source.id]),
+    [selectableSources, selectedSourceIds],
   );
   const selectedIds = useMemo(
     () => sources.filter((source) => selectedSourceIds[source.id]).map((source) => source.id),
@@ -277,13 +288,15 @@ function SourcesPanel({
       return;
     }
     const next: Record<number, boolean> = {};
-    sources.forEach((source) => {
+    selectableSources.forEach((source) => {
       next[source.id] = true;
     });
     setSelectedSourceIds(next);
   }
 
   function handleToggleSource(id: number) {
+    const source = sources.find((item) => item.id === id);
+    if (!source || source.statusTone !== 'READY') return;
     setSelectedSourceIds((prev) => ({
       ...prev,
       [id]: !prev[id],
@@ -668,6 +681,13 @@ function SourcesPanel({
           <div className="flex flex-col gap-1.5">
             {sources.map((source) => {
               const isHighlighted = highlightedSourceId === source.id;
+              const isSelectable = source.statusTone === 'READY';
+              const statusColor =
+                source.statusTone === 'READY'
+                  ? 'green'
+                  : source.statusTone === 'PROCESSING'
+                    ? 'amber'
+                    : 'red';
               return (
                <div
                  key={source.id}
@@ -686,12 +706,21 @@ function SourcesPanel({
                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-200 text-gray-600 flex-shrink-0">
                         <DescriptionIcon style={{ fontSize: 18 }} />
                      </div>
-                     <Typography
-                       variant="small"
-                       className="font-semibold text-gray-900 text-xs truncate"
-                     >
-                        {source.title}
-                     </Typography>
+                     <div className="flex items-center gap-2 min-w-0 flex-1">
+                       <Typography
+                         variant="small"
+                         className="font-semibold text-gray-900 text-xs truncate"
+                       >
+                         {source.title}
+                       </Typography>
+                       <Chip
+                         value={source.status}
+                         size="sm"
+                         variant="ghost"
+                         color={statusColor}
+                         className="h-5 px-2 py-0 text-[10px] font-medium flex-shrink-0"
+                       />
+                     </div>
                   </button>
 
                   <div className="flex items-center gap-1 pr-2">
@@ -737,16 +766,43 @@ function SourcesPanel({
                                  <span>{removeState === 'loading' ? '删除中…' : '删除来源'}</span>
                               </MenuItem>
                            </ConfirmPopover>
+                           {source.statusTone === 'FAILED' && onReembedSource && (
+                             <MenuItem
+                               onClick={async () => {
+                                 if (!isConnected) return;
+                                 await onReembedSource(source.id);
+                               }}
+                               className="flex items-center gap-2 py-2 px-3 text-xs"
+                             >
+                               <ReplayIcon style={{ fontSize: 16 }} />
+                               <span>重新嵌入</span>
+                             </MenuItem>
+                           )}
                         </MenuList>
                      </Menu>
 
-                     <Checkbox
-                       checked={Boolean(selectedSourceIds[source.id])}
-                       onChange={() => handleToggleSource(source.id)}
-                       containerProps={{ className: "p-1" }}
-                       className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
-                       iconProps={{ className: "text-white" }}
-                     />
+                     {!isSelectable ? (
+                       <Tooltip content="未完成索引，暂不可用">
+                         <span>
+                           <Checkbox
+                             checked={false}
+                             onChange={() => handleToggleSource(source.id)}
+                             containerProps={{ className: "p-1" }}
+                             className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
+                             iconProps={{ className: "text-white" }}
+                             disabled
+                           />
+                         </span>
+                       </Tooltip>
+                     ) : (
+                       <Checkbox
+                         checked={Boolean(selectedSourceIds[source.id])}
+                         onChange={() => handleToggleSource(source.id)}
+                         containerProps={{ className: "p-1" }}
+                         className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
+                         iconProps={{ className: "text-white" }}
+                       />
+                     )}
                   </div>
                </div>
             );

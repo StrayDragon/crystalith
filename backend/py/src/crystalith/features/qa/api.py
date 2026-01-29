@@ -41,6 +41,7 @@ router = APIRouter(prefix="/v1/notebooks/{notebook_id}/qa", tags=["qa"])
 class QARequest(BaseModel):
     question: str = Field(..., min_length=1)
     chunk_ids: list[int] | None = None
+    source_ids: list[int] | None = None
     top_k: int = Field(5, ge=1, le=20)
     min_score: float = Field(0.2, ge=0.0, le=1.0)
     session_id: int | None = None
@@ -113,6 +114,35 @@ def _normalize_chunk_ids(chunk_ids: list[int] | None) -> list[int]:
     if any(value <= 0 for value in normalized):
         raise HTTPException(status_code=400, detail="Unknown chunk_id in chunk_ids")
     return normalized
+
+
+def _normalize_source_ids(source_ids: list[int] | None) -> list[int]:
+    if not source_ids:
+        return []
+    normalized = [int(value) for value in source_ids]
+    if any(value <= 0 for value in normalized):
+        raise HTTPException(status_code=400, detail="Unknown source_id in source_ids")
+    # Deduplicate while preserving order
+    return list(dict.fromkeys(normalized))
+
+
+async def _validate_source_ids(
+    session: AsyncSession,
+    notebook_id: int,
+    source_ids: list[int],
+) -> None:
+    if not source_ids:
+        return
+    rows = await session.execute(
+        select(Source.id).where(
+            Source.notebook_id == notebook_id,
+            Source.id.in_(source_ids),
+        )
+    )
+    found = {row[0] for row in rows.all()}
+    missing = [source_id for source_id in source_ids if source_id not in found]
+    if missing:
+        raise HTTPException(status_code=400, detail="Unknown source_id in source_ids")
 
 
 async def _load_explicit_chunks(
@@ -259,6 +289,31 @@ async def ask_question(
             context=ContextStatsResponse.model_validate(stats),
         )
 
+    source_ids = _normalize_source_ids(payload.source_ids)
+    if not source_ids:
+        created_at = datetime.datetime.now(datetime.UTC)
+        _, stats = _build_context_window(
+            settings=settings,
+            history_messages=history_messages,
+            question=payload.question,
+            context="",
+        )
+        await _persist_session_messages(
+            answer=NO_EVIDENCE_ANSWER,
+            citations=[],
+            created_at=created_at,
+        )
+        return QAResponse(
+            answer=NO_EVIDENCE_ANSWER,
+            citations=[],
+            evidence=False,
+            confidence=0.0,
+            created_at=created_at,
+            context=ContextStatsResponse.model_validate(stats),
+        )
+
+    await _validate_source_ids(session, notebook_id, source_ids)
+
     embeddings = await embedder.embed([payload.question])
     if not embeddings:
         created_at = datetime.datetime.now(datetime.UTC)
@@ -287,6 +342,7 @@ async def ask_question(
         query_vector=query_vector,
         top_k=payload.top_k,
         min_score=payload.min_score,
+        source_ids=source_ids,
     )
 
     if not results:
@@ -541,6 +597,7 @@ async def ask_question_stream(
 
     explicit_chunk_ids = _normalize_chunk_ids(payload.chunk_ids)
     explicit_context: tuple[list[Citation], list[ChatMessage], ContextStats, float] | None = None
+    source_ids: list[int] = []
     if explicit_chunk_ids:
         chunk_map = await _load_explicit_chunks(session, notebook_id, explicit_chunk_ids)
         citations = _build_explicit_citations(explicit_chunk_ids, chunk_map)
@@ -565,6 +622,10 @@ async def ask_question_stream(
             citation_ratio=citation_ratio,
         )
         explicit_context = (citations, messages, stats, confidence)
+    else:
+        source_ids = _normalize_source_ids(payload.source_ids)
+        if source_ids:
+            await _validate_source_ids(session, notebook_id, source_ids)
 
     async def generate_stream() -> AsyncGenerator[str, None]:
         if explicit_context is not None:
@@ -591,6 +652,32 @@ async def ask_question_stream(
                     citations=citations,
                     evidence=True,
                     confidence=confidence,
+                    created_at=created_at,
+                    context=ContextStatsResponse.model_validate(stats),
+                ).model_dump(mode="json"),
+            )
+            return
+
+        if not source_ids:
+            created_at = datetime.datetime.now(datetime.UTC)
+            _, stats = _build_context_window(
+                settings=settings,
+                history_messages=history_messages,
+                question=payload.question,
+                context="",
+            )
+            await _persist_session_messages_stream(
+                answer=NO_EVIDENCE_ANSWER,
+                citations=[],
+                created_at=created_at,
+            )
+            yield _sse_event("chunk", {"text": NO_EVIDENCE_ANSWER})
+            yield _sse_event(
+                "done",
+                QAStreamDoneData(
+                    citations=[],
+                    evidence=False,
+                    confidence=0.0,
                     created_at=created_at,
                     context=ContextStatsResponse.model_validate(stats),
                 ).model_dump(mode="json"),
@@ -638,6 +725,7 @@ async def ask_question_stream(
             query_vector=query_vector,
             top_k=payload.top_k,
             min_score=payload.min_score,
+            source_ids=source_ids,
         )
 
         if not results:

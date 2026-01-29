@@ -126,15 +126,6 @@ export default function WorkspaceLayout() {
     return job?.status ?? null;
   }, [refine.outputQueueJobs, slidesQueueJobId]);
 
-  const selectedChunkIds = useMemo(
-    () =>
-      state.citations
-        .filter((citation) => state.selectedCitationIds[citation.id])
-        .map((citation) => citation.chunkId ?? Number(citation.id))
-        .filter((value): value is number => Number.isFinite(value) && value > 0),
-    [state.citations, state.selectedCitationIds],
-  );
-
   const selectedSourceIds = useMemo(
     () =>
       Object.entries(state.selectedSourceIds)
@@ -566,6 +557,7 @@ export default function WorkspaceLayout() {
             availableExtractors={sources.availableExtractors}
             defaultExtractor={sources.defaultExtractor}
             onConvertSourceQAToSource={sources.convertSourceQAToSource}
+            onReembedSource={sources.reembedSource}
             notebookId={state.activeNotebookId ?? undefined}
             onSelectedSourceIdsChange={handleSelectedSourceIdsChange}
           />
@@ -776,7 +768,6 @@ export default function WorkspaceLayout() {
           setSlidesQueueJobId(null);
         }}
         notebookId={state.activeNotebookId}
-        selectedChunkIds={selectedChunkIds}
         selectedSourceIds={selectedSourceIds}
         isConnected={isConnected}
         onOutputsUpdated={refine.retryOutputs}

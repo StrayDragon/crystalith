@@ -14,6 +14,7 @@ async def create_slide(
     prompt: str | None,
     engine: str,
     chunk_ids: list[int] | None,
+    source_ids: list[int] | None,
     generation_config: dict | None,
 ) -> StudioSlide:
     slide = StudioSlide(
@@ -22,6 +23,7 @@ async def create_slide(
         prompt=prompt,
         engine=engine,
         chunk_ids=chunk_ids,
+        source_ids=source_ids,
         generation_config=generation_config,
     )
     session.add(slide)
@@ -51,6 +53,7 @@ async def update_slide(
     prompt: str | None,
     engine: str | None,
     chunk_ids: list[int] | None,
+    source_ids: list[int] | None,
     generation_config: dict | None,
 ) -> StudioSlide:
     if title is not None:
@@ -61,6 +64,8 @@ async def update_slide(
         slide.engine = engine
     if chunk_ids is not None:
         slide.chunk_ids = chunk_ids
+    if source_ids is not None:
+        slide.source_ids = source_ids
     if generation_config is not None:
         slide.generation_config = generation_config
     await session.commit()

@@ -19,6 +19,7 @@ class SlideDraftRead(UniversalBaseModel):
     prompt: typing.Optional[str] = None
     engine: str
     chunk_ids: typing.Optional[typing.List[int]] = None
+    source_ids: typing.Optional[typing.List[int]] = None
     outline: typing.Optional[SlideOutline] = None
     markdown: typing.Optional[str] = None
     generation_config: typing.Optional[SlideGenerationConfig] = None

@@ -34,6 +34,7 @@ class RefineClient:
         prompt: str,
         format: typing.Optional[str] = OMIT,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
@@ -48,6 +49,8 @@ class RefineClient:
         format : typing.Optional[str]
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
 
@@ -78,6 +81,7 @@ class RefineClient:
             prompt=prompt,
             format=format,
             chunk_ids=chunk_ids,
+            source_ids=source_ids,
             top_k=top_k,
             min_score=min_score,
             request_options=request_options,
@@ -91,6 +95,7 @@ class RefineClient:
         prompt: str,
         formats: typing.Optional[typing.Sequence[str]] = OMIT,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
@@ -105,6 +110,8 @@ class RefineClient:
         formats : typing.Optional[typing.Sequence[str]]
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
 
@@ -135,6 +142,7 @@ class RefineClient:
             prompt=prompt,
             formats=formats,
             chunk_ids=chunk_ids,
+            source_ids=source_ids,
             top_k=top_k,
             min_score=min_score,
             request_options=request_options,
@@ -164,6 +172,7 @@ class AsyncRefineClient:
         prompt: str,
         format: typing.Optional[str] = OMIT,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
@@ -178,6 +187,8 @@ class AsyncRefineClient:
         format : typing.Optional[str]
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
 
@@ -216,6 +227,7 @@ class AsyncRefineClient:
             prompt=prompt,
             format=format,
             chunk_ids=chunk_ids,
+            source_ids=source_ids,
             top_k=top_k,
             min_score=min_score,
             request_options=request_options,
@@ -229,6 +241,7 @@ class AsyncRefineClient:
         prompt: str,
         formats: typing.Optional[typing.Sequence[str]] = OMIT,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
@@ -243,6 +256,8 @@ class AsyncRefineClient:
         formats : typing.Optional[typing.Sequence[str]]
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
 
@@ -281,6 +296,7 @@ class AsyncRefineClient:
             prompt=prompt,
             formats=formats,
             chunk_ids=chunk_ids,
+            source_ids=source_ids,
             top_k=top_k,
             min_score=min_score,
             request_options=request_options,

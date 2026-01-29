@@ -33,6 +33,7 @@ router = APIRouter(prefix="/v1/notebooks/{notebook_id}/outputs", tags=["outputs"
 class OutputGenerateRequest(BaseModel):
     prompt: str | None = None
     chunk_ids: list[int] | None = None
+    source_ids: list[int] | None = None
     top_k: int = Field(5, ge=1, le=20)
     min_score: float = Field(0.2, ge=0.0, le=1.0)
     model_id: str | None = Field(None, description="Optional model ID to use for generation")
@@ -98,6 +99,7 @@ async def create_output(
             prompt=payload.prompt or "",
             deps=deps,
             chunk_ids=payload.chunk_ids,
+            source_ids=payload.source_ids,
             top_k=payload.top_k,
             min_score=payload.min_score,
             model_id=payload.model_id,

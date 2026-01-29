@@ -144,9 +144,9 @@ export default function StudioOutputsList({
       .filter((job) => job.status === 'queued' || job.status === 'running' || job.status === 'error')
       .map((job) => {
         const typeLabel = resolveTypeLabel(job.type, typeLabelMap);
-        const sourceLabel = job.chunkIds.length
-          ? `基于 ${job.chunkIds.length} 个来源`
-          : '自动生成';
+        const sourceLabel = job.sourceIds.length
+          ? `基于 ${job.sourceIds.length} 个来源`
+          : '未选择来源';
         const statusLabel = statusLabels[job.status as PendingNote['status']] || job.status;
         return {
           id: `pending-${job.id}`,

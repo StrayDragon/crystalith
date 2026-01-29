@@ -83,6 +83,34 @@ FORMAT_PROMPTS = {
 }
 
 
+def _normalize_source_ids(source_ids: list[int] | None) -> list[int]:
+    if not source_ids:
+        return []
+    normalized = [int(value) for value in source_ids]
+    if any(value <= 0 for value in normalized):
+        raise ValueError("Unknown source_id in source_ids")
+    return list(dict.fromkeys(normalized))
+
+
+async def _validate_source_ids(
+    session: AsyncSession,
+    notebook_id: int,
+    source_ids: list[int],
+) -> None:
+    if not source_ids:
+        return
+    rows = await session.execute(
+        select(Source.id).where(
+            Source.notebook_id == notebook_id,
+            Source.id.in_(source_ids),
+        )
+    )
+    found = {row[0] for row in rows.all()}
+    missing = [source_id for source_id in source_ids if source_id not in found]
+    if missing:
+        raise ValueError("Unknown source_id in source_ids")
+
+
 async def execute_task(
     task: Task,
     session: AsyncSession,
@@ -151,55 +179,62 @@ async def _execute_refine(
             )
 
         context = format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
+        evidence = True
     else:
-        embedder = embedder_factory(settings)
-        embeddings = await embedder.embed([prompt])
-        if not embeddings:
-            return {
-                "format": format_name,
-                "citations": [],
-                "evidence": False,
-                "created_at": created_at,
-            }
-        query_vector = embeddings[0]
-        results = await vector_store.search(
-            notebook_id=notebook_id,
-            query_vector=query_vector,
-            top_k=int(payload.get("top_k", 5)),
-            min_score=float(payload.get("min_score", 0.2)),
-        )
-        if not results:
-            return {
-                "format": format_name,
-                "citations": [],
-                "evidence": False,
-                "created_at": created_at,
-            }
+        source_ids = _normalize_source_ids(payload.get("source_ids"))
+        if source_ids:
+            await _validate_source_ids(session, notebook_id, source_ids)
 
-        chunk_ids = [result.entry.chunk_id for result in results]
-        rows = await session.execute(
-            select(Chunk, Source)
-            .join(Source, Source.id == Chunk.source_id)
-            .where(Chunk.id.in_(chunk_ids))
-        )
-        chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
+        if not source_ids:
+            citations = []
+            context = ""
+            evidence = False
+        else:
+            embedder = embedder_factory(settings)
+            embeddings = await embedder.embed([prompt])
+            if not embeddings:
+                citations = []
+                context = ""
+                evidence = False
+            else:
+                query_vector = embeddings[0]
+                results = await vector_store.search(
+                    notebook_id=notebook_id,
+                    query_vector=query_vector,
+                    top_k=int(payload.get("top_k", 5)),
+                    min_score=float(payload.get("min_score", 0.2)),
+                    source_ids=source_ids,
+                )
+                if not results:
+                    citations = []
+                    context = ""
+                    evidence = False
+                else:
+                    chunk_ids = [result.entry.chunk_id for result in results]
+                    rows = await session.execute(
+                        select(Chunk, Source)
+                        .join(Source, Source.id == Chunk.source_id)
+                        .where(Chunk.id.in_(chunk_ids))
+                    )
+                    chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
 
-        citations = []
-        for result in results:
-            chunk, source = chunk_map[result.entry.chunk_id]
-            snippet = chunk.text.strip()[:200]
-            citations.append(
-                {
-                    "source_id": source.id,
-                    "source_name": source.filename,
-                    "chunk_id": chunk.id,
-                    "chunk_index": chunk.chunk_index,
-                    "snippet": snippet,
-                    "score": result.score,
-                }
-            )
+                    citations = []
+                    for result in results:
+                        chunk, source = chunk_map[result.entry.chunk_id]
+                        snippet = chunk.text.strip()[:200]
+                        citations.append(
+                            {
+                                "source_id": source.id,
+                                "source_name": source.filename,
+                                "chunk_id": chunk.id,
+                                "chunk_index": chunk.chunk_index,
+                                "snippet": snippet,
+                                "score": result.score,
+                            }
+                        )
 
-        context = format_context(results, chunk_map)
+                    context = format_context(results, chunk_map)
+                    evidence = True
 
     chat_provider = chat_factory(settings)
     messages = _build_messages(format_name, prompt, context)
@@ -208,7 +243,7 @@ async def _execute_refine(
     response = {
         "format": format_name,
         "citations": citations,
-        "evidence": True,
+        "evidence": evidence,
         "created_at": created_at,
     }
     response.update(formatted)

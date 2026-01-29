@@ -6,7 +6,7 @@ import useSWR from 'swr';
 import { renderHook } from '../../../../test-utils/renderHook';
 import { useWorkspaceDispatch, useWorkspaceState, WorkspaceProvider } from '../../app/WorkspaceContext';
 import { useChat } from './useChat';
-import { askQuestion, listSourceChunks } from '../../shared/api';
+import { askQuestion } from '../../shared/api';
 
 vi.mock('swr', () => ({
   default: vi.fn(),
@@ -18,7 +18,6 @@ vi.mock('../../shared/api', () => ({
   convertSessionToOutput: vi.fn(),
   convertSessionToSource: vi.fn(),
   listMessages: vi.fn(),
-  listSourceChunks: vi.fn(),
 }));
 
 const swrMock = vi.mocked(useSWR);
@@ -102,10 +101,10 @@ test('sendMessage non-streaming path stores assistant message and citations', as
   const assistant = result.current.chat.messages[1];
   expect(assistant.content).toBe('Answer');
   expect(result.current.chat.citations).toHaveLength(1);
-  expect(askQuestion).toHaveBeenCalledWith(1, 'Hello', 123, []);
+  expect(askQuestion).toHaveBeenCalledWith(1, 'Hello', 123, undefined, []);
 });
 
-test('sendMessage passes selected citation chunk ids when available', async () => {
+test('sendMessage passes selected source ids', async () => {
   vi.mocked(askQuestion).mockResolvedValue({
     answer: 'Answer',
     citations: [
@@ -127,20 +126,8 @@ test('sendMessage passes selected citation chunk ids when available', async () =
     result.current.dispatch({ type: 'SET_CONNECTION_STATE', payload: 'live' });
     result.current.dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: 1 });
     result.current.dispatch({
-      type: 'SET_CITATIONS',
-      payload: [
-        {
-          id: '5',
-          chunkId: 5,
-          sourceTitle: 'Doc',
-          snippet: 'S',
-          chunkIndex: 1,
-        },
-      ],
-    });
-    result.current.dispatch({
-      type: 'SET_SELECTED_CITATIONS',
-      payload: { '5': true },
+      type: 'SET_SELECTED_SOURCES',
+      payload: { 101: true, 102: true },
     });
     result.current.dispatch({ type: 'SET_DRAFT', payload: 'Hello' });
   });
@@ -149,18 +136,14 @@ test('sendMessage passes selected citation chunk ids when available', async () =
     await result.current.chat.sendMessage();
   });
 
-  expect(askQuestion).toHaveBeenCalledWith(1, 'Hello', 456, [5]);
+  expect(askQuestion).toHaveBeenCalledWith(1, 'Hello', 456, undefined, [101, 102]);
 });
 
-test('sendMessage uses selected source chunk ids when no citations selected', async () => {
+test('sendMessage uses selected source ids when provided', async () => {
   vi.mocked(askQuestion).mockResolvedValue({
     answer: 'Answer',
     citations: [],
   } as any);
-  vi.mocked(listSourceChunks).mockResolvedValue([
-    { id: 11, chunk_index: 0, text: 'A' },
-    { id: 12, chunk_index: 1, text: 'B' },
-  ] as any);
 
   const ensureSession = vi.fn().mockResolvedValue(789);
   const { result } = renderHook(
@@ -190,6 +173,5 @@ test('sendMessage uses selected source chunk ids when no citations selected', as
     await result.current.chat.sendMessage();
   });
 
-  expect(listSourceChunks).toHaveBeenCalledWith(1, 101);
-  expect(askQuestion).toHaveBeenCalledWith(1, 'Hello', 789, [11, 12]);
+  expect(askQuestion).toHaveBeenCalledWith(1, 'Hello', 789, undefined, [101]);
 });
