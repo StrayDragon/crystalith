@@ -45,6 +45,7 @@ const CitationItem = forwardRef<HTMLLIElement, CitationItemProps>(
           checked={isSelected}
           onChange={onToggle}
           aria-label={`选择引用：${citation.sourceTitle} #${citation.chunkIndex}`}
+          name={`citation-${citation.id ?? citation.chunkId ?? 'item'}`}
         />
         <div className="CitationContent">
           <div className="CitationMeta">

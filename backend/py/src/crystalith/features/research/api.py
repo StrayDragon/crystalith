@@ -1127,7 +1127,7 @@ async def export_research(
             )
 
         except Exception as e:
-            source.status = SourceStatus.ERROR
+            source.status = SourceStatus.FAILED
             await session.commit()
             log.error("failed to export research to source", error=str(e))
             raise HTTPException(status_code=500, detail=f"导出失败：{e!s}")

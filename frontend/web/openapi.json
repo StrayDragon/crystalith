@@ -465,6 +465,128 @@
         }
       }
     },
+    "/v1/notebooks/{notebook_id}/sessions/{session_id}/convert-to-source": {
+      "post": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Convert Session To Source",
+        "operationId": "convert_session_to_source_v1_notebooks__notebook_id__sessions__session_id__convert_to_source_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertSessionToSourceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvertSessionToSourceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sessions/{session_id}/convert-to-output": {
+      "post": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Convert Session To Output",
+        "operationId": "convert_session_to_output_v1_notebooks__notebook_id__sessions__session_id__convert_to_output_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertSessionToOutputRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvertSessionToOutputResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/notebooks/{notebook_id}/sessions/{session_id}/messages": {
       "post": {
         "tags": [
@@ -1471,7 +1593,8 @@
               "type": "string",
               "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
               "x-enum-module": "crystalith.shared.types",
-              "x-enum-class": "OutputType"
+              "x-enum-class": "OutputType",
+              "default": "PARAGRAPH"
             },
             "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要"
           }
@@ -3409,6 +3532,118 @@
         ],
         "title": "ContextStatsResponse"
       },
+      "ConvertSessionToOutputRequest": {
+        "properties": {
+          "message_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Ids",
+            "description": "Specific message IDs to convert. If null, converts entire session."
+          },
+          "output_type": {
+            "type": "string",
+            "enum": [
+              "FAQ",
+              "GUIDE",
+              "TIMELINE",
+              "MINDMAP",
+              "QUIZ",
+              "BRIEFING",
+              "SLIDES",
+              "PARAGRAPH",
+              "BULLETS",
+              "STRUCTURED"
+            ],
+            "title": "OutputType",
+            "description": "Type of output to create.\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+            "default": "PARAGRAPH",
+            "x-enum-class": "OutputType",
+            "x-enum-module": "crystalith.shared.types"
+          }
+        },
+        "type": "object",
+        "title": "ConvertSessionToOutputRequest",
+        "description": "Request to convert session messages to an output."
+      },
+      "ConvertSessionToOutputResponse": {
+        "properties": {
+          "output_id": {
+            "type": "integer",
+            "title": "Output Id"
+          },
+          "output_type": {
+            "type": "string",
+            "title": "Output Type"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "output_id",
+          "output_type",
+          "title"
+        ],
+        "title": "ConvertSessionToOutputResponse",
+        "description": "Response after converting session to output."
+      },
+      "ConvertSessionToSourceRequest": {
+        "properties": {
+          "message_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Ids",
+            "description": "Specific message IDs to convert. If null, converts entire session."
+          }
+        },
+        "type": "object",
+        "title": "ConvertSessionToSourceRequest",
+        "description": "Request to convert session messages to a source document."
+      },
+      "ConvertSessionToSourceResponse": {
+        "properties": {
+          "source_id": {
+            "type": "integer",
+            "title": "Source Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "chunk_count": {
+            "type": "integer",
+            "title": "Chunk Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "filename",
+          "chunk_count"
+        ],
+        "title": "ConvertSessionToSourceResponse",
+        "description": "Response after converting session to source."
+      },
       "ConvertSourceQAToSourceRequest": {
         "properties": {
           "messages": {
@@ -4035,7 +4270,27 @@
         ],
         "title": "OutputRead"
       },
-      "OutputType": {
+      "OutputType-Input": {
+        "type": "string",
+        "enum": [
+          "FAQ",
+          "GUIDE",
+          "TIMELINE",
+          "MINDMAP",
+          "QUIZ",
+          "BRIEFING",
+          "SLIDES",
+          "PARAGRAPH",
+          "BULLETS",
+          "STRUCTURED"
+        ],
+        "title": "OutputType",
+        "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+        "default": "PARAGRAPH",
+        "x-enum-class": "OutputType",
+        "x-enum-module": "crystalith.shared.types"
+      },
+      "OutputType-Output": {
         "type": "string",
         "enum": [
           "FAQ",

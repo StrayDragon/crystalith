@@ -173,6 +173,91 @@ export type ContextStatsResponse = {
 };
 
 /**
+ * ConvertSessionToOutputRequest
+ *
+ * Request to convert session messages to an output.
+ */
+export type ConvertSessionToOutputRequest = {
+    /**
+     * Message Ids
+     *
+     * Specific message IDs to convert. If null, converts entire session.
+     */
+    message_ids?: Array<number> | null;
+    /**
+     * OutputType
+     *
+     * Type of output to create.
+     *
+     * * `FAQ`: 问答清单
+     * * `GUIDE`: 学习/行动指南
+     * * `TIMELINE`: 关键事件序列
+     * * `MINDMAP`: 主题层级结构
+     * * `QUIZ`: 知识检验
+     * * `BRIEFING`: 高层摘要
+     * * `SLIDES`: 演示文稿
+     * * `PARAGRAPH`: 段落摘要
+     * * `BULLETS`: 要点列表
+     * * `STRUCTURED`: 结构化摘要
+     */
+    output_type?: 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
+};
+
+/**
+ * ConvertSessionToOutputResponse
+ *
+ * Response after converting session to output.
+ */
+export type ConvertSessionToOutputResponse = {
+    /**
+     * Output Id
+     */
+    output_id: number;
+    /**
+     * Output Type
+     */
+    output_type: string;
+    /**
+     * Title
+     */
+    title: string;
+};
+
+/**
+ * ConvertSessionToSourceRequest
+ *
+ * Request to convert session messages to a source document.
+ */
+export type ConvertSessionToSourceRequest = {
+    /**
+     * Message Ids
+     *
+     * Specific message IDs to convert. If null, converts entire session.
+     */
+    message_ids?: Array<number> | null;
+};
+
+/**
+ * ConvertSessionToSourceResponse
+ *
+ * Response after converting session to source.
+ */
+export type ConvertSessionToSourceResponse = {
+    /**
+     * Source Id
+     */
+    source_id: number;
+    /**
+     * Filename
+     */
+    filename: string;
+    /**
+     * Chunk Count
+     */
+    chunk_count: number;
+};
+
+/**
  * ConvertSourceQAToSourceRequest
  *
  * Request to convert source QA conversation to a new source.
@@ -601,7 +686,25 @@ export type OutputRead = {
  * * `BULLETS`: 要点列表
  * * `STRUCTURED`: 结构化摘要
  */
-export type OutputType = 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
+export type OutputTypeInput = 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
+
+/**
+ * OutputType
+ *
+ * 枚举值:
+ *
+ * * `FAQ`: 问答清单
+ * * `GUIDE`: 学习/行动指南
+ * * `TIMELINE`: 关键事件序列
+ * * `MINDMAP`: 主题层级结构
+ * * `QUIZ`: 知识检验
+ * * `BRIEFING`: 高层摘要
+ * * `SLIDES`: 演示文稿
+ * * `PARAGRAPH`: 段落摘要
+ * * `BULLETS`: 要点列表
+ * * `STRUCTURED`: 结构化摘要
+ */
+export type OutputTypeOutput = 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
 
 /**
  * QAMessage
@@ -2292,6 +2395,74 @@ export type UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponses = 
 };
 
 export type UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponse = UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponses[keyof UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponses];
+
+export type ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostData = {
+    body: ConvertSessionToSourceRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Session Id
+         */
+        session_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/convert-to-source';
+};
+
+export type ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostError = ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostErrors[keyof ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostErrors];
+
+export type ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostResponses = {
+    /**
+     * Successful Response
+     */
+    201: ConvertSessionToSourceResponse;
+};
+
+export type ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostResponse = ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostResponses[keyof ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostResponses];
+
+export type ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostData = {
+    body: ConvertSessionToOutputRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Session Id
+         */
+        session_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/convert-to-output';
+};
+
+export type ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostError = ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostErrors[keyof ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostErrors];
+
+export type ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: ConvertSessionToOutputResponse;
+};
+
+export type ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostResponse = ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostResponses[keyof ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostResponses];
 
 export type ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetData = {
     body?: never;

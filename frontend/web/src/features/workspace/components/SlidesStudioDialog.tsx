@@ -1001,6 +1001,7 @@ export default function SlidesStudioDialog({
                   className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700"
                   value={configQuantity}
                   onChange={(event) => setConfigQuantity(event.target.value)}
+                  name="slideQuantity"
                 >
                   {quantityOptions.map((option) => (
                     <option key={option.id} value={option.id}>{option.label}</option>
@@ -1013,6 +1014,7 @@ export default function SlidesStudioDialog({
                   className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700"
                   value={configStructure}
                   onChange={(event) => setConfigStructure(event.target.value)}
+                  name="slideStructure"
                 >
                   {structureOptions.map((option) => (
                     <option key={option.id} value={option.id}>{option.label}</option>
@@ -1025,6 +1027,7 @@ export default function SlidesStudioDialog({
                   className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700"
                   value={configAudience}
                   onChange={(event) => setConfigAudience(event.target.value)}
+                  name="slideAudience"
                 >
                   {audienceOptions.map((option) => (
                     <option key={option.id} value={option.id}>{option.label}</option>
@@ -1037,6 +1040,7 @@ export default function SlidesStudioDialog({
                   className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700"
                   value={configTone}
                   onChange={(event) => setConfigTone(event.target.value)}
+                  name="slideTone"
                 >
                   {toneOptions.map((option) => (
                     <option key={option.id} value={option.id}>{option.label}</option>
@@ -1049,6 +1053,7 @@ export default function SlidesStudioDialog({
                   className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700"
                   value={configLanguage}
                   onChange={(event) => setConfigLanguage(event.target.value)}
+                  name="slideLanguage"
                 >
                   {languageOptions.map((option) => (
                     <option key={option.id} value={option.id}>{option.label}</option>
@@ -1061,6 +1066,7 @@ export default function SlidesStudioDialog({
                   className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700"
                   value={configDensity}
                   onChange={(event) => setConfigDensity(event.target.value)}
+                  name="slideDensity"
                 >
                   {densityOptions.map((option) => (
                     <option key={option.id} value={option.id}>{option.label}</option>
@@ -1073,6 +1079,7 @@ export default function SlidesStudioDialog({
                   className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700"
                   value={configThemePreset}
                   onChange={(event) => setConfigThemePreset(event.target.value)}
+                  name="slideThemePreset"
                 >
                   {themePresetOptions.map((option) => (
                     <option key={option.id} value={option.id}>{option.label}</option>

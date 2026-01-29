@@ -243,6 +243,7 @@ class PlanSearches(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]):
         research = await deps.session.get(ResearchSession, state.session_id)
         if research:
             research.status = ResearchStatus.WAITING_USER
+            research.current_iteration = state.current_iteration
             await deps.session.commit()
 
         # Notify progress
@@ -302,6 +303,10 @@ class WaitForApproval(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]
             if not research:
                 log.error("research session not found", session_id=state.session_id)
                 return GenerateReport()
+            # Ensure we see latest status/steps from other sessions.
+            deps.session.expire(research)
+            await deps.session.refresh(research)
+            _ = research.steps
 
             # Check if user has taken action (status changed from WAITING_USER)
             if research.status != ResearchStatus.WAITING_USER:

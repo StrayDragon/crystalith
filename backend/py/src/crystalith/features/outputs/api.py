@@ -448,9 +448,9 @@ async def convert_output_to_source(
         # Create embeddings
         embeddings = await embedder.embed(chunk_texts)
 
-        # Create chunks and store in vector store
+        # Create chunks
         db_chunks: list[Chunk] = []
-        for idx, (chunk_text, embedding) in enumerate(zip(chunk_texts, embeddings)):
+        for idx, chunk_text in enumerate(chunk_texts):
             chunk = Chunk(
                 source_id=source.id,
                 chunk_index=idx,
@@ -458,17 +458,17 @@ async def convert_output_to_source(
                 metadata_={"source_type": "converted_output"},
             )
             session.add(chunk)
-            await session.flush()
-
-            # Add to vector store
-            await vector_store.upsert(
-                source_id=source.id,
-                chunk_id=chunk.id,
-                chunk_index=idx,
-                text=chunk_text,
-                embedding=embedding,
-            )
             db_chunks.append(chunk)
+
+        await session.flush()
+
+        # Add to vector store
+        await vector_store.add(
+            notebook_id=notebook_id,
+            source_id=source.id,
+            chunk_ids=[chunk.id for chunk in db_chunks],
+            vectors=embeddings,
+        )
 
         # Update source status
         source.status = SourceStatus.READY

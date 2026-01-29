@@ -13,6 +13,7 @@ import { MoreVert as MoreVertIcon, Delete as DeleteIcon } from '@mui/icons-mater
 import type { OutputItem } from '../types';
 import { formatRelativeTime } from '../utils';
 import OutputContent from './OutputContent';
+import ConfirmPopover from '../../../shared/ConfirmPopover';
 import { useLayer } from '../../../shared/layer';
 
 interface StudioOutputViewerProps {
@@ -70,13 +71,10 @@ export default function StudioOutputViewer({
 
   const handleDelete = useCallback((outputId: number) => {
     if (outputId && onDeleteOutput) {
-      const output = outputs.find((o) => o.id === outputId);
-      if (output && window.confirm(`确定要删除「${resolveOutputTitle(output)}」吗？此操作不可撤销。`)) {
-        onDeleteOutput(outputId);
-        // If deleting currently selected, close viewer if no more outputs
-        if (outputId === selectedOutputId && outputs.length <= 1) {
-          onClose();
-        }
+      onDeleteOutput(outputId);
+      // If deleting currently selected, close viewer if no more outputs
+      if (outputId === selectedOutputId && outputs.length <= 1) {
+        onClose();
       }
     }
     setActiveMenuId(null);
@@ -203,13 +201,16 @@ export default function StudioOutputViewer({
                               </IconButton>
                             </MenuHandler>
                             <MenuList className="p-1 min-w-[120px]">
-                              <MenuItem
-                                onClick={() => handleDelete(output.id)}
-                                className="flex items-center gap-2 text-red-500 hover:bg-red-50 hover:text-red-700 py-2"
+                              <ConfirmPopover
+                                message={`确定要删除「${resolveOutputTitle(output)}」吗？此操作不可撤销。`}
+                                onConfirm={() => handleDelete(output.id)}
+                                placement="left"
                               >
-                                <DeleteIcon style={{ fontSize: 16 }} />
-                                <span className="text-xs font-medium">删除</span>
-                              </MenuItem>
+                                <MenuItem className="flex items-center gap-2 text-red-500 hover:bg-red-50 hover:text-red-700 py-2">
+                                  <DeleteIcon style={{ fontSize: 16 }} />
+                                  <span className="text-xs font-medium">删除</span>
+                                </MenuItem>
+                              </ConfirmPopover>
                             </MenuList>
                           </Menu>
                         </div>

@@ -19,6 +19,7 @@ import {
 
 import type { OutputItem, OutputTypeId } from '../types';
 import type { OutputQueueJob } from '../hooks/useOutputQueue';
+import ConfirmPopover from '../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../shared/layer';
 import {
   getToolIcon,
@@ -89,9 +90,6 @@ export default function StudioOutputsList({
       if (!id) return;
       const outputId = parseInt(id, 10);
       if (!isNaN(outputId)) {
-        if (!window.confirm('确定要删除此输出吗？此操作不可撤销。')) {
-          return;
-        }
         onDeleteOutput(outputId);
       }
     },
@@ -333,13 +331,16 @@ export default function StudioOutputsList({
                         <CopyIcon className="h-3.5 w-3.5" />
                         <span>复制内容</span>
                       </MenuItem>
-                      <MenuItem
-                        onClick={() => handleDeleteNote(note.id)}
-                        className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                      <ConfirmPopover
+                        message="确定要删除此输出吗？此操作不可撤销。"
+                        onConfirm={() => handleDeleteNote(note.id)}
+                        placement="left"
                       >
-                        <DeleteIcon className="h-3.5 w-3.5" />
-                        <span>删除</span>
-                      </MenuItem>
+                        <MenuItem className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700">
+                          <DeleteIcon className="h-3.5 w-3.5" />
+                          <span>删除</span>
+                        </MenuItem>
+                      </ConfirmPopover>
                     </MenuList>
                   </Menu>
                 </div>

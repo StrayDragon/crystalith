@@ -21,6 +21,7 @@ import {
 
 import type { AsyncStatus } from '../../../shared/types';
 import type { Notebook } from '../types';
+import ConfirmPopover from '../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../shared/layer';
 
 interface NotebookSwitcherProps {
@@ -65,7 +66,6 @@ export default function NotebookSwitcher({
   const [searchValue, setSearchValue] = useState('');
   const [editingNotebookId, setEditingNotebookId] = useState<number | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
-  const [deletingNotebookId, setDeletingNotebookId] = useState<number | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -98,20 +98,12 @@ export default function NotebookSwitcher({
       setSearchValue('');
       setEditingNotebookId(null);
       setEditingTitle('');
-      setDeletingNotebookId(null);
     }
   };
 
   function startEditing(notebook: Notebook) {
     setEditingNotebookId(notebook.id);
     setEditingTitle(notebook.title);
-    setDeletingNotebookId(null);
-  }
-
-  function startDeleting(notebook: Notebook) {
-    setDeletingNotebookId(notebook.id);
-    setEditingNotebookId(null);
-    setEditingTitle('');
   }
 
   async function handleSaveEdit() {
@@ -128,12 +120,11 @@ export default function NotebookSwitcher({
     }
   }
 
-  async function handleConfirmDelete() {
-    if (!deletingNotebookId || !onDelete || isDeleting) return;
+  async function handleDelete(notebookId: number) {
+    if (!onDelete || isDeleting) return;
     setIsDeleting(true);
     try {
-      await onDelete(deletingNotebookId);
-      setDeletingNotebookId(null);
+      await onDelete(notebookId);
     } finally {
       setIsDeleting(false);
     }
@@ -150,7 +141,6 @@ export default function NotebookSwitcher({
     setSearchValue('');
     setEditingNotebookId(null);
     setEditingTitle('');
-    setDeletingNotebookId(null);
   }, [isOpen]);
 
   const displayTitle = activeNotebook?.title ?? '未命名笔记本';
@@ -194,6 +184,9 @@ export default function NotebookSwitcher({
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               autoFocus
+              id="notebook-search-input"
+              name="notebookSearch"
+              aria-label="搜索笔记本"
             />
           </div>
           {/* Error State */}
@@ -241,6 +234,8 @@ export default function NotebookSwitcher({
                         }
                       }}
                       disabled={isUpdating}
+                      name="notebookTitle"
+                      aria-label="编辑笔记本标题"
                     />
                     <IconButton
                       size="sm"
@@ -259,30 +254,6 @@ export default function NotebookSwitcher({
                         setEditingNotebookId(null);
                         setEditingTitle('');
                       }}
-                    >
-                      <CloseIcon style={{ fontSize: 16 }} />
-                    </IconButton>
-                  </div>
-                ) : deletingNotebookId === item.id ? (
-                  // 删除确认模式
-                  <div className="flex items-center gap-2 p-2">
-                    <Typography variant="small" className="flex-1 text-xs text-red-600">
-                      确定删除「{item.title}」？
-                    </Typography>
-                    <IconButton
-                      size="sm"
-                      variant="text"
-                      className="w-6 h-6 min-w-[24px] rounded text-red-500 hover:bg-red-50"
-                      onClick={handleConfirmDelete}
-                      disabled={isDeleting}
-                    >
-                      {isDeleting ? <Spinner className="h-3 w-3" /> : <CheckIcon style={{ fontSize: 16 }} />}
-                    </IconButton>
-                    <IconButton
-                      size="sm"
-                      variant="text"
-                      className="w-6 h-6 min-w-[24px] rounded text-gray-600 hover:bg-gray-200"
-                      onClick={() => setDeletingNotebookId(null)}
                     >
                       <CloseIcon style={{ fontSize: 16 }} />
                     </IconButton>
@@ -329,18 +300,24 @@ export default function NotebookSwitcher({
                           </IconButton>
                         )}
                         {onDelete && (
-                          <IconButton
-                            size="sm"
-                            variant="text"
-                            className="w-6 h-6 min-w-[24px] rounded hover:bg-red-50 text-gray-500 hover:text-red-600"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              startDeleting(item);
-                            }}
+                          <ConfirmPopover
+                            message={`确定删除「${item.title}」？此操作不可撤销。`}
+                            onConfirm={() => handleDelete(item.id)}
+                            placement="left"
                             disabled={isDeleting}
                           >
-                            <DeleteIcon style={{ fontSize: 14 }} />
-                          </IconButton>
+                            <IconButton
+                              size="sm"
+                              variant="text"
+                              className="w-6 h-6 min-w-[24px] rounded hover:bg-red-50 text-gray-500 hover:text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                              disabled={isDeleting}
+                            >
+                              <DeleteIcon style={{ fontSize: 14 }} />
+                            </IconButton>
+                          </ConfirmPopover>
                         )}
                       </div>
                     )}

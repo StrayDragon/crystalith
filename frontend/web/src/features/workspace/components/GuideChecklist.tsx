@@ -73,6 +73,8 @@ export default function GuideChecklist({ modules, className }: GuideChecklistPro
                         return next;
                       });
                     }}
+                    name={`guide-module-${index}-done`}
+                    aria-label={`${module.title || `模块 ${index + 1}`} 完成状态`}
                   />
                   {isDone ? '已完成' : '未完成'}
                 </label>
