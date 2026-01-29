@@ -26,6 +26,7 @@ class RawQaClient:
         notebook_id: int,
         *,
         question: str,
+        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
@@ -37,6 +38,8 @@ class RawQaClient:
         notebook_id : int
 
         question : str
+
+        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
 
@@ -57,6 +60,7 @@ class RawQaClient:
             method="POST",
             json={
                 "question": question,
+                "chunk_ids": chunk_ids,
                 "top_k": top_k,
                 "min_score": min_score,
                 "session_id": session_id,
@@ -98,6 +102,7 @@ class RawQaClient:
         notebook_id: int,
         *,
         question: str,
+        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
@@ -116,6 +121,8 @@ class RawQaClient:
         notebook_id : int
 
         question : str
+
+        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
 
@@ -136,6 +143,7 @@ class RawQaClient:
             method="POST",
             json={
                 "question": question,
+                "chunk_ids": chunk_ids,
                 "top_k": top_k,
                 "min_score": min_score,
                 "session_id": session_id,
@@ -184,6 +192,7 @@ class AsyncRawQaClient:
         notebook_id: int,
         *,
         question: str,
+        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
@@ -195,6 +204,8 @@ class AsyncRawQaClient:
         notebook_id : int
 
         question : str
+
+        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
 
@@ -215,6 +226,7 @@ class AsyncRawQaClient:
             method="POST",
             json={
                 "question": question,
+                "chunk_ids": chunk_ids,
                 "top_k": top_k,
                 "min_score": min_score,
                 "session_id": session_id,
@@ -256,6 +268,7 @@ class AsyncRawQaClient:
         notebook_id: int,
         *,
         question: str,
+        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
@@ -274,6 +287,8 @@ class AsyncRawQaClient:
         notebook_id : int
 
         question : str
+
+        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
 
@@ -294,6 +309,7 @@ class AsyncRawQaClient:
             method="POST",
             json={
                 "question": question,
+                "chunk_ids": chunk_ids,
                 "top_k": top_k,
                 "min_score": min_score,
                 "session_id": session_id,

@@ -1,7 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import type { RefObject } from 'react';
 import {
-  Button,
   IconButton,
   Menu,
   MenuHandler,
@@ -14,10 +13,11 @@ import {
   Notes as NotesIcon,
   Source as SourceIcon,
   ExpandMore as ExpandMoreIcon,
+  FormatQuote as QuoteIcon,
 } from '@mui/icons-material';
 
 import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
-import CitationMark from '../../shared/components/citations/CitationMark';
+import CitationPopover from '../../shared/components/citations/CitationPopover';
 import { IconCopy, IconSave, IconSend } from '../../shared/components/Icons';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { copyToClipboard } from '../../../../shared/clipboard';
@@ -80,6 +80,8 @@ function ChatPanel({
   }, [citations]);
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [popoverMessageId, setPopoverMessageId] = useState<string | null>(null);
+  const [popoverAnchorRect, setPopoverAnchorRect] = useState<DOMRect | null>(null);
 
   const handleCopy = useCallback(async (messageId: string, content: string) => {
     const success = await copyToClipboard(content);
@@ -175,28 +177,40 @@ function ChatPanel({
                 streamingMessageId === message.id ? (
                   <span className="TypingCursor" aria-hidden="true" />
                 ) : null}
-                {message.role === 'assistant' && messageCitationEntries.length > 0 ? (
-                  <div className="mt-2 flex flex-wrap gap-1" aria-label="引用">
-                    {messageCitationEntries.map((entry) => (
-                      <CitationMark
-                        key={`${message.id}-${entry.citation.id}`}
-                        index={entry.index}
-                        citation={entry.citation}
-                        onHover={(chunkId) => onCitationHover?.(chunkId, message)}
-                        onJump={(_chunkId) => onCitationJump?.(entry.citation, message)}
-                      />
-                    ))}
-                  </div>
-                ) : null}
               </div>
-              {message.role === 'assistant' && scope ? (
-                <div className="text-[11px] text-gray-500 px-1" aria-label="引用范围">
-                  引用范围（发送时）：{scopeSummary || scopeLabel}
-                  {scopeSources ? ` · ${scopeSources}` : ''}
-                </div>
-              ) : null}
+              {/* Action buttons for assistant messages */}
               {message.role === 'assistant' && message.content ? (
                 <div className="flex items-center gap-1 mt-1 flex-wrap">
+                  {/* Citation button - first in the row */}
+                  {messageCitationEntries.length > 0 && (
+                    <>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
+                        onClick={(e) => {
+                          setPopoverAnchorRect(e.currentTarget.getBoundingClientRect());
+                          setPopoverMessageId(message.id);
+                        }}
+                        aria-label={`查看全部 ${messageCitationEntries.length} 条引用`}
+                      >
+                        <QuoteIcon style={{ fontSize: 14 }} />
+                        查看引用 ({messageCitationEntries.length})
+                      </button>
+                      {popoverMessageId === message.id && (
+                        <CitationPopover
+                          citations={messageCitationEntries.map((e) => e.citation)}
+                          isOpen={true}
+                          onClose={() => {
+                            setPopoverMessageId(null);
+                            setPopoverAnchorRect(null);
+                          }}
+                          anchorRect={popoverAnchorRect}
+                          onJumpToCitation={(citation) => onCitationJump?.(citation, message)}
+                          onCitationHover={(chunkId) => onCitationHover?.(chunkId, message)}
+                        />
+                      )}
+                    </>
+                  )}
                   <button
                     type="button"
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"

@@ -25,7 +25,7 @@ sdk-check:
     git diff --staged --exit-code
 
 # Run pre-commit checks
-sdk-prek:
+check-pre-commit-hooks:
     prek run --all-files
 
 # Run all tests

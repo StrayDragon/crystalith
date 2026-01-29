@@ -8,11 +8,11 @@ import {
   Typography,
   Tooltip,
 } from '@material-tailwind/react';
-import { MoreVert as MoreVertIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { MoreVert as MoreVertIcon, Delete as DeleteIcon, FormatQuote as QuoteIcon } from '@mui/icons-material';
 
 import type { Citation, OutputItem } from '../../shared/types';
 import { collectOutputCitations, formatRelativeTime } from '../../shared/utils';
-import CitationMark from '../../shared/components/citations/CitationMark';
+import CitationPopover from '../../shared/components/citations/CitationPopover';
 import OutputContent from './OutputContent';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { useLayer } from '../../../../shared/layer';
@@ -68,6 +68,8 @@ export default function StudioOutputViewer({
   elevated = false,
 }: StudioOutputViewerProps) {
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
+  const [citationPopoverOpen, setCitationPopoverOpen] = useState(false);
+  const [citationAnchorRect, setCitationAnchorRect] = useState<DOMRect | null>(null);
 
   const selectedOutput = useMemo(() => {
     if (!selectedOutputId) return outputs[0] ?? null;
@@ -238,21 +240,33 @@ export default function StudioOutputViewer({
                   <Typography variant="small" className="text-xs font-semibold text-gray-600">
                     引用
                   </Typography>
-                  <span className="text-[11px] text-gray-500 font-medium">
-                    {outputCitations.length} 条
-                  </span>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 rounded-full border border-gray-200 bg-white hover:bg-gray-50 hover:text-gray-700 transition-colors cursor-pointer"
+                    onClick={(e) => {
+                      setCitationAnchorRect(e.currentTarget.getBoundingClientRect());
+                      setCitationPopoverOpen(true);
+                    }}
+                    aria-label={`查看全部 ${outputCitations.length} 条引用`}
+                  >
+                    <QuoteIcon style={{ fontSize: 14 }} />
+                    查看全部 ({outputCitations.length})
+                  </button>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {outputCitations.map((citation, index) => (
-                    <CitationMark
-                      key={`${selectedOutput?.id ?? 'output'}-${citation.id}`}
-                      index={index + 1}
-                      citation={citation}
-                      onHover={(chunkId) => onCitationHover?.(chunkId)}
-                      onJump={() => onJumpToCitation?.(citation, outputCitations)}
-                    />
-                  ))}
-                </div>
+                {citationPopoverOpen && (
+                  <CitationPopover
+                    citations={outputCitations}
+                    isOpen={true}
+                    onClose={() => {
+                      setCitationPopoverOpen(false);
+                      setCitationAnchorRect(null);
+                    }}
+                    anchorRect={citationAnchorRect}
+                    onJumpToCitation={(citation) => onJumpToCitation?.(citation, outputCitations)}
+                    onCitationHover={onCitationHover}
+                    elevated
+                  />
+                )}
               </div>
             ) : null}
           </section>

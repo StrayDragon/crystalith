@@ -8,6 +8,7 @@ import {
   approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost,
   finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost,
   skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost,
+  cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost,
 } from '../../../../api/client';
 import type { ResearchSessionResponse, ResearchSessionListItem, ResearchStatus } from '../../../../api/client';
 
@@ -283,18 +284,23 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     [notebookId]
   );
 
-  // Cancel research - uses finish endpoint for now (cancel endpoint requires backend restart)
+  // Cancel research - marks as cancelled without generating report
   const cancelResearch = useCallback(
     async (researchId: number) => {
       if (!notebookId) return;
       setError('');
       try {
-        // Use finish endpoint to cancel
-        const response = await finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost({
+        const response = await cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost({
           path: { notebook_id: notebookId, research_id: researchId },
         });
         if (response.data) {
           setActiveSession(response.data);
+          // Update sessions list
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === researchId ? { ...s, status: response.data!.status } : s
+            )
+          );
           // Close SSE connection when cancelled
           if (reconnectTimeoutRef.current) {
             clearTimeout(reconnectTimeoutRef.current);
