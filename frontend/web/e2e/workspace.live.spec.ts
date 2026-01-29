@@ -1,8 +1,6 @@
 import type { Locator } from '@playwright/test';
 import { test, expect } from './fixtures/workspace';
 
-const liveEnabled = process.env.E2E_LIVE === '1' || process.env.E2E_LIVE === 'true';
-
 const pollDefaults = { timeout: 180_000, intervals: [1000, 2000, 5000] } as const;
 
 async function expectVisible(locator: Locator, label?: string) {
@@ -12,8 +10,6 @@ async function expectVisible(locator: Locator, label?: string) {
 }
 
 test.describe('Workspace (live)', () => {
-  test.skip(!liveEnabled, 'Set E2E_LIVE=1 to enable live workspace checks');
-
   test('workspace baseline flows', async ({ page, waitForWorkspaceReady }) => {
     test.slow();
     test.setTimeout(240_000);
@@ -27,26 +23,27 @@ test.describe('Workspace (live)', () => {
 
     await page.getByRole('button', { name: /笔记本/ }).click();
     await expectVisible(page.getByRole('textbox', { name: '搜索笔记本' }));
-    await page.getByRole('main', { name: '三栏工作区' }).click({ position: { x: 10, y: 10 } });
+    await expectVisible(page.getByTestId('notebook-list'));
+    await page.keyboard.press('Escape');
 
     await page.getByRole('button', { name: /会话/ }).click();
     await expectVisible(page.getByRole('textbox', { name: '搜索会话' }));
-    await page.getByRole('main', { name: '三栏工作区' }).click({ position: { x: 10, y: 10 } });
+    await page.keyboard.press('Escape');
 
     const query = 'OpenAI';
     const searchInput = page.getByLabel('在网络中搜索新来源');
     await searchInput.fill(query);
     await searchInput.press('Enter');
 
-    const queueHeader = page.getByRole('button', { name: new RegExp(query) });
-    await expectVisible(queueHeader);
-    await queueHeader.click();
+    const queueItem = page.getByTestId('search-queue-item').filter({ hasText: query }).first();
+    await expectVisible(queueItem, 'queue item visible');
+    await queueItem.getByTestId('search-queue-toggle').click();
 
-    const selectAll = page.getByRole('checkbox', { name: '全选此搜索结果' }).first();
-    await expectVisible(selectAll);
+    const selectAll = queueItem.getByRole('checkbox', { name: '全选此搜索结果' });
+    await expectVisible(selectAll, 'select all visible');
     await selectAll.click();
 
-    await page.getByRole('button', { name: /作为链接导入/ }).first().click();
+    await queueItem.getByRole('button', { name: /作为链接导入/ }).click();
     await expect
       .poll(() => page.getByText('添加完成').isVisible(), pollDefaults)
       .toBe(true);
@@ -57,7 +54,8 @@ test.describe('Workspace (live)', () => {
       .getByRole('button', { name: /打开来源/ })
       .first();
     await expectVisible(sourceButton);
-    await sourceButton.click();
+    await sourceButton.focus();
+    await page.keyboard.press('Enter');
 
     const qaInput = page.getByRole('textbox', { name: '基于来源内容提问' });
     await expectVisible(qaInput);
