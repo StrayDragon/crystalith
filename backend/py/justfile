@@ -21,3 +21,6 @@ db-init:
 
 vector-migrate:
     uv run scripts/vector_migrate.py
+
+e2e-seed:
+    uv run scripts/e2e_seed.py

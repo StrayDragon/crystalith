@@ -20,3 +20,13 @@ test-backend:
 # Run frontend tests only
 test-frontend:
     cd frontend/web && pnpm test
+
+# E2E helpers
+e2e-up:
+    overmind s -f Procfile.e2e
+
+e2e-mock:
+    cd frontend/web && pnpm test:e2e --project=mock
+
+e2e-live:
+    cd frontend/web && E2E_LIVE=1 pnpm test:e2e --project=live
