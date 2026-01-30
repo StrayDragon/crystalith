@@ -334,6 +334,21 @@ function SourcesPanel({
         return;
       }
 
+      // 检查是否正在加载
+      if (research.isLoading) {
+        toast.error('请稍候，操作正在进行中');
+        return;
+      }
+
+      // 检查是否有正在运行的研究任务（包括 planning 状态，因为用户可能还没点击开始）
+      const hasActiveResearch = research.sessions.some(
+        (s) => ['planning', 'searching', 'analyzing', 'waiting_user'].includes(s.status)
+      );
+      if (hasActiveResearch) {
+        toast.error('已有研究任务正在进行中，请等待完成或取消后再创建新研究');
+        return;
+      }
+
       try {
         const session = await research.createSession(searchQuery.trim());
         if (session) {
@@ -392,6 +407,14 @@ function SourcesPanel({
   const handleResearchFinish = useCallback(async () => {
     if (research.activeSession?.id) {
       await research.finishResearch(research.activeSession.id);
+    }
+  }, [research]);
+
+  const handleResearchCancel = useCallback(async () => {
+    if (research.activeSession?.id) {
+      await research.cancelResearch(research.activeSession.id);
+      // Close the detail panel after cancelling
+      setResearchDetailOpen(false);
     }
   }, [research]);
 
@@ -831,6 +854,7 @@ function SourcesPanel({
               onApprove={handleResearchApprove}
               onSkip={handleResearchSkip}
               onFinish={handleResearchFinish}
+              onCancel={handleResearchCancel}
               onStart={() => handleResearchStart(research.activeSession!.id)}
               isFullscreen={researchFullscreen}
               onToggleFullscreen={() => setResearchFullscreen(!researchFullscreen)}

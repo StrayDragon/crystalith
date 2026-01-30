@@ -51,6 +51,7 @@ import {
   modifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPost,
   skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost,
   finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost,
+  cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost,
 } from './generated';
 
 import type {
@@ -883,6 +884,7 @@ export {
   modifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPost,
   skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost,
   finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost,
+  cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost,
 };
 
 // Re-export research types
