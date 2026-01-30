@@ -170,6 +170,7 @@ interface ResearchDetailPanelProps {
   onApprove: (feedback?: string) => Promise<void>;
   onSkip: () => Promise<void>;
   onFinish: () => Promise<void>;
+  onCancel: () => Promise<void>;
   onStart: () => Promise<void>;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
@@ -202,6 +203,7 @@ function ResearchDetailPanel({
   onApprove,
   onSkip,
   onFinish,
+  onCancel,
   onStart,
   isFullscreen = true, // Default to fullscreen
   onToggleFullscreen,
@@ -507,12 +509,25 @@ function ResearchDetailPanel({
     }
   }, [onStart]);
 
+  const handleCancel = useCallback(async () => {
+    setIsProcessing(true);
+    try {
+      await onCancel();
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [onCancel]);
+
   // Status helpers
   const isWaiting = session.status === 'waiting_user';
   const isCompleted = session.status === 'completed';
-  const isPlanning = session.status === 'planning';
+  const isCancelled = session.status === 'cancelled';
   const isSearching = session.status === 'searching';
   const isAnalyzing = session.status === 'analyzing';
+  // 只有当状态是 planning 且没有任何 steps 时才显示"开始研究"按钮
+  // 如果有 steps，说明研究已经开始过，即使状态是 planning 也不应该显示
+  const hasSteps = session.steps && session.steps.length > 0;
+  const isPlanning = session.status === 'planning' && !hasSteps;
   const statusColors = STATUS_COLORS[session.status] || STATUS_COLORS.planning;
 
   // Get completed steps for this session
@@ -674,7 +689,7 @@ function ResearchDetailPanel({
           </div>
 
           <div className="p-5 space-y-4 flex-1 overflow-y-auto">
-          {/* Planning State - Show Start Button */}
+          {/* Planning State - Show Start Button (only when no steps exist) */}
           {isPlanning && (
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-5">
               <div className="flex items-start gap-4">
@@ -696,6 +711,63 @@ function ResearchDetailPanel({
                     {isProcessing ? <Spinner className="h-4 w-4" /> : <PlayIcon className="w-4 h-4" />}
                     开始研究
                   </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Interrupted State - Research has steps but status is planning (connection lost) */}
+          {session.status === 'planning' && hasSteps && (
+            <div className="bg-amber-50 border border-amber-100 rounded-xl p-5">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <ScienceIcon className="w-5 h-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900 mb-1">研究已中断</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    此研究因连接中断而暂停。您可以基于已收集的数据重新生成报告，或停止并归档此研究。
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      color="blue"
+                      onClick={handleFinish}
+                      disabled={isProcessing}
+                      className="flex items-center gap-2"
+                    >
+                      {isProcessing ? <Spinner className="h-4 w-4" /> : <AssignmentIcon className="w-4 h-4" />}
+                      重新生成
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outlined"
+                      color="gray"
+                      onClick={handleCancel}
+                      disabled={isProcessing}
+                      className="flex items-center gap-2"
+                    >
+                      {isProcessing ? <Spinner className="h-4 w-4" /> : <StopIcon className="w-4 h-4" />}
+                      停止并归档
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Cancelled State */}
+          {isCancelled && (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <StopIcon className="w-5 h-5 text-gray-500" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900 mb-1">研究已取消</h3>
+                  <p className="text-sm text-gray-600">
+                    此研究已被取消。您可以在左侧查看已完成的步骤记录。
+                  </p>
                 </div>
               </div>
             </div>
