@@ -4,7 +4,7 @@ import useSWR from 'swr';
 import type { AsyncStatus } from '../../../../shared/types';
 import { toast } from '../../../../shared/toast';
 import { copyToClipboard } from '../../../../shared/clipboard';
-import { addSourceFromUrl, convertOutputToSource, convertSourceQAToSource, deleteSource, deleteSources, listExtractors, listSources, searchSources, uploadSource } from '../../shared/api';
+import { addSourceFromUrl, convertOutputToSource, convertSourceQAToSource, deleteSource, deleteSources, listExtractors, listSources, searchSources, uploadSource, reembedSource } from '../../shared/api';
 import type { QAMessage } from '../../shared/api';
 import type { ExtractorInfo, ExtractorsListResponse, ExtractorType, SourceFromUrlMode } from '../../../../api/client';
 import { useWorkspaceDispatch, useWorkspaceState } from '../../app/WorkspaceContext';
@@ -511,6 +511,28 @@ export function useSources() {
     [isConnected, state.activeNotebookId, mutate],
   );
 
+  const handleReembedSource = useCallback(
+    async (sourceId: number) => {
+      if (!isConnected) {
+        toast.error('未连接到后端服务，无法重新嵌入。');
+        return;
+      }
+      if (!state.activeNotebookId) {
+        toast.error('请先创建笔记本。');
+        return;
+      }
+      try {
+        await reembedSource(state.activeNotebookId, sourceId);
+        toast.success('已重新嵌入来源');
+        await mutate();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '重新嵌入失败';
+        toast.error(message);
+      }
+    },
+    [isConnected, mutate, state.activeNotebookId],
+  );
+
   return {
     sources: state.sources,
     citations: state.citations,
@@ -556,5 +578,6 @@ export function useSources() {
     extractorsLoading,
     // Source QA 转换
     convertSourceQAToSource: handleConvertSourceQAToSource,
+    reembedSource: handleReembedSource,
   };
 }

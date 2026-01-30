@@ -64,4 +64,3 @@ TBD - created by archiving change refactor-frontend-layout-260129. Update Purpos
 #### Scenario: 结构重构验证
 - **WHEN** 迁移 workspace 子域或调整目录结构
 - **THEN** 必须运行 `./scripts/run-e2e.sh` 并通过
-

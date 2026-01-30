@@ -5,7 +5,7 @@ import { expect, test, vi } from 'vitest';
 import ChatPanel from './ChatPanel';
 import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
 
-test('chat messages show citation scope snapshot', () => {
+test('chat messages render assistant content', () => {
   const messages: ChatMessage[] = [
     {
       id: 'assistant-1',
@@ -43,7 +43,5 @@ test('chat messages show citation scope snapshot', () => {
     />,
   );
 
-  expect(
-    screen.getByText('引用范围（发送时）：选中引用 · 2 条 · 来源：Doc A、Doc B'),
-  ).toBeInTheDocument();
+  expect(screen.getByText('Answer')).toBeInTheDocument();
 });

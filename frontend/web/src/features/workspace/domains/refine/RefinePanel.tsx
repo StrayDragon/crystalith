@@ -652,7 +652,7 @@ export default function RefinePanel({
         ? `${sourceNames.length} 个来源`
         : output.chunkIds?.length
           ? `${output.chunkIds.length} 条引用`
-          : '自动检索';
+          : '未选择来源';
       items.push({
         key: `output-${output.id}`,
         kind: 'output',
@@ -677,8 +677,8 @@ export default function RefinePanel({
   const studioHint = isBlocked
     ? '请先创建笔记本后再生成输出。'
     : selectedCitationCount > 0
-      ? `已选 ${selectedCitationCount} 条引用，将仅基于选中引用生成输出。`
-      : '将基于当前笔记本自动检索。';
+      ? `已选 ${selectedCitationCount} 个来源，将仅基于选中来源生成输出。`
+      : '未选择来源，将在空上下文生成。';
 
   useEffect(() => {
     if (!isConfigOpen) return undefined;
@@ -965,9 +965,9 @@ export default function RefinePanel({
                   const refineTitle = formatSourceTitle(refineSources) || job.title;
                   const refineSourceLabel = refineSources.length
                     ? `${refineSources.length} 个来源`
-                    : job.chunkIds?.length
-                      ? `${job.chunkIds.length} 条引用`
-                      : '自动检索';
+                    : job.sourceIds?.length
+                      ? `${job.sourceIds.length} 个来源`
+                      : '未选择来源';
                   const isPending = job.status === 'queued' || job.status === 'running';
                   const metaItems: { label: string; status?: RefineJob['status'] }[] = [
                     ...(job.status !== 'done'
@@ -1168,7 +1168,7 @@ export default function RefinePanel({
             <div className="RefineCard__title">智能提炼</div>
             <div className="RefineCard__subtitle">
               {selectedCitationCount > 0
-                ? `已选 ${selectedCitationCount} 条引用，将仅基于选中引用生成输出。`
+                ? `已选 ${selectedCitationCount} 个来源，将仅基于选中来源生成输出。`
                 : '选择模板或自定义提示词，点击提炼生成输出。'}
             </div>
           </div>

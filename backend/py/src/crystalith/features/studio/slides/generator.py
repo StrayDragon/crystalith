@@ -289,6 +289,7 @@ async def _resolve_context(
     notebook_id: int,
     prompt: str | None,
     chunk_ids: list[int] | None,
+    source_ids: list[int] | None,
     *,
     top_k: int = DEFAULT_TOP_K,
     min_score: float = DEFAULT_MIN_SCORE,
@@ -311,6 +312,21 @@ async def _resolve_context(
             resolved_chunk_ids=explicit_chunk_ids,
         )
 
+    normalized_source_ids = [int(v) for v in (source_ids or []) if int(v) > 0]
+    if not normalized_source_ids:
+        return SlidesContext(context="", resolved_chunk_ids=[])
+
+    rows = await deps.session.execute(
+        select(Source.id).where(
+            Source.notebook_id == notebook_id,
+            Source.id.in_(normalized_source_ids),
+        )
+    )
+    found = {row[0] for row in rows.all()}
+    missing = [source_id for source_id in normalized_source_ids if source_id not in found]
+    if missing:
+        raise ValueError("Unknown source_id in source_ids")
+
     seed = (prompt or "").strip() or "Summarize the notebook sources."
     embeddings = await deps.embedder.embed([seed])
     if not embeddings:
@@ -322,6 +338,7 @@ async def _resolve_context(
         query_vector=query_vector,
         top_k=top_k,
         min_score=min_score,
+        source_ids=normalized_source_ids,
     )
     if not results:
         return SlidesContext(context="", resolved_chunk_ids=[])
@@ -346,6 +363,7 @@ async def generate_slides_outline(
     title: str | None,
     prompt: str | None,
     chunk_ids: list[int] | None,
+    source_ids: list[int] | None,
     generation_config: SlideGenerationConfig | dict[str, object] | None = None,
     model_id: str | None = None,
 ) -> tuple[SlideOutline, list[int]]:
@@ -354,6 +372,7 @@ async def generate_slides_outline(
         notebook_id,
         prompt,
         chunk_ids,
+        source_ids,
     )
 
     if model_id:
@@ -390,6 +409,7 @@ async def generate_slides_markdown(
     prompt: str | None,
     outline: SlideOutline,
     chunk_ids: list[int] | None,
+    source_ids: list[int] | None,
     generation_config: SlideGenerationConfig | dict[str, object] | None = None,
     model_id: str | None = None,
 ) -> tuple[str, list[int]]:
@@ -398,6 +418,7 @@ async def generate_slides_markdown(
         notebook_id,
         prompt,
         chunk_ids,
+        source_ids,
     )
 
     if model_id:

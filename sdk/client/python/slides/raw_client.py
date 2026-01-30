@@ -79,6 +79,7 @@ class RawSlidesClient:
         prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SlideDraftRead]:
@@ -95,6 +96,8 @@ class RawSlidesClient:
             Rendering engine (default: slidev)
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         generation_config : typing.Optional[SlideGenerationConfig]
 
@@ -114,6 +117,7 @@ class RawSlidesClient:
                 "prompt": prompt,
                 "engine": engine,
                 "chunk_ids": chunk_ids,
+                "source_ids": source_ids,
                 "generation_config": convert_and_respect_annotation_metadata(
                     object_=generation_config, annotation=typing.Optional[SlideGenerationConfig], direction="write"
                 ),
@@ -208,6 +212,7 @@ class RawSlidesClient:
         prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SlideDraftRead]:
@@ -225,6 +230,8 @@ class RawSlidesClient:
         engine : typing.Optional[str]
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         generation_config : typing.Optional[SlideGenerationConfig]
 
@@ -244,6 +251,7 @@ class RawSlidesClient:
                 "prompt": prompt,
                 "engine": engine,
                 "chunk_ids": chunk_ids,
+                "source_ids": source_ids,
                 "generation_config": convert_and_respect_annotation_metadata(
                     object_=generation_config, annotation=typing.Optional[SlideGenerationConfig], direction="write"
                 ),
@@ -585,6 +593,7 @@ class AsyncRawSlidesClient:
         prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SlideDraftRead]:
@@ -601,6 +610,8 @@ class AsyncRawSlidesClient:
             Rendering engine (default: slidev)
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         generation_config : typing.Optional[SlideGenerationConfig]
 
@@ -620,6 +631,7 @@ class AsyncRawSlidesClient:
                 "prompt": prompt,
                 "engine": engine,
                 "chunk_ids": chunk_ids,
+                "source_ids": source_ids,
                 "generation_config": convert_and_respect_annotation_metadata(
                     object_=generation_config, annotation=typing.Optional[SlideGenerationConfig], direction="write"
                 ),
@@ -714,6 +726,7 @@ class AsyncRawSlidesClient:
         prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SlideDraftRead]:
@@ -731,6 +744,8 @@ class AsyncRawSlidesClient:
         engine : typing.Optional[str]
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         generation_config : typing.Optional[SlideGenerationConfig]
 
@@ -750,6 +765,7 @@ class AsyncRawSlidesClient:
                 "prompt": prompt,
                 "engine": engine,
                 "chunk_ids": chunk_ids,
+                "source_ids": source_ids,
                 "generation_config": convert_and_respect_annotation_metadata(
                     object_=generation_config, annotation=typing.Optional[SlideGenerationConfig], direction="write"
                 ),

@@ -82,7 +82,7 @@ test('enqueueOutputJob processes and updates outputs', async () => {
     result.current.enqueueOutputJob({
       type: 'FAQ',
       prompt: 'hello',
-      chunkIds: [1],
+      sourceIds: [1],
     });
   });
 
@@ -96,7 +96,7 @@ test('enqueueOutputJob processes and updates outputs', async () => {
 
   expect(createOutput).toHaveBeenCalledWith(1, 'FAQ', {
     prompt: 'hello',
-    chunk_ids: [1],
+    source_ids: [1],
     model_id: undefined,
   });
 });
@@ -111,7 +111,7 @@ test('enqueueSlidesJob returns null when disconnected', async () => {
     created = await result.current.enqueueSlidesJob({
       title: 'Deck',
       prompt: 'Outline',
-      chunkIds: [],
+      sourceIds: [],
       generationConfig: {},
     } as any);
   });
