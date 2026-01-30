@@ -6,22 +6,23 @@ import useSWR from 'swr';
 import { renderHook } from '../../../../test-utils/renderHook';
 import { useWorkspaceDispatch, useWorkspaceState, WorkspaceProvider } from '../../app/WorkspaceContext';
 import { useSources } from './useSources';
-import { searchSources } from '../../shared/api';
+import { searchSourcesV1NotebooksNotebookIdSourcesSearchPost as searchSources } from '../../../../api/generated';
 
 vi.mock('swr', () => ({
   default: vi.fn(),
 }));
 
-vi.mock('../../shared/api', () => ({
-  addSourceFromUrl: vi.fn(),
-  convertOutputToSource: vi.fn(),
-  convertSourceQAToSource: vi.fn(),
-  deleteSource: vi.fn(),
-  deleteSources: vi.fn(),
-  listExtractors: vi.fn(),
-  listSources: vi.fn(),
-  searchSources: vi.fn(),
-  uploadSource: vi.fn(),
+vi.mock('../../../../api/generated', () => ({
+  createSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPost: vi.fn(),
+  convertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePost: vi.fn(),
+  convertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePost: vi.fn(),
+  deleteSourceV1NotebooksNotebookIdSourcesSourceIdDelete: vi.fn(),
+  batchDeleteSourcesV1NotebooksNotebookIdSourcesDelete: vi.fn(),
+  listExtractorsV1NotebooksNotebookIdSourcesExtractorsGet: vi.fn(),
+  listSourcesV1NotebooksNotebookIdSourcesGet: vi.fn(),
+  searchSourcesV1NotebooksNotebookIdSourcesSearchPost: vi.fn(),
+  uploadSourceV1NotebooksNotebookIdSourcesPost: vi.fn(),
+  reembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPost: vi.fn(),
 }));
 
 vi.mock('../../../../shared/toast', () => ({
@@ -111,10 +112,13 @@ test('handleSearch updates queue status and notice on success', async () => {
     });
   });
 
-  expect(searchSources).toHaveBeenCalledWith(1, {
-    query: 'hello',
-    engine: 'bing',
-    mode: 'web',
+  expect(searchSources).toHaveBeenCalledWith({
+    path: { notebook_id: 1 },
+    body: {
+      query: 'hello',
+      engine: 'bing',
+      mode: 'web',
+    },
   });
 
   await waitFor(() => {

@@ -6,7 +6,7 @@ import {
   Delete as DeleteIcon,
   MoreVert as MoreVertIcon,
 } from '@mui/icons-material';
-import type { ResearchSessionListItem, ResearchStatus } from '../../../../api/client';
+import type { ResearchSessionListItem, ResearchStatus } from '../../../../api/generated';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 
 interface ResearchCapsuleProps {

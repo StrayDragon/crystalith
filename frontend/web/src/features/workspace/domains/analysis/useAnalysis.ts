@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { analyzeNotebook, type AnalysisResult } from '../../shared/api';
+import { analyzeNotebookV1NotebooksNotebookIdAnalysisGet as analyzeNotebook, type AnalysisResult } from '../../../../api/generated';
 import { useWorkspaceState } from '../../app/WorkspaceContext';
 
 interface AnalysisState {
@@ -41,7 +41,9 @@ export function useAnalysis() {
 
     setAnalysisState((prev) => ({ ...prev, isLoading: true, error: '' }));
     try {
-      const analysis = await analyzeNotebook(state.activeNotebookId);
+      const analysis = await analyzeNotebook({
+        path: { notebook_id: state.activeNotebookId },
+      });
       setAnalysisState({ analysis, isLoading: false, error: '' });
       return analysis;
     } catch (error) {

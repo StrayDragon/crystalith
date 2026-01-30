@@ -16,7 +16,7 @@ import {
 
 import SearchResultCard, { type SearchResultItem } from './SearchResultCard';
 import type { SearchQueueItem } from './useSources';
-import type { ExtractorInfo, ExtractorType } from '../../../../api/client';
+import type { ExtractorInfoResponse as ExtractorInfo, ExtractorType } from '../../../../api/generated';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 
 interface SearchResultsQueueProps {

@@ -22,14 +22,14 @@ import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import { ModelSelector } from './ModelSelector';
 import type { SlideDraft, SlideGenerationConfig, SlideOutline, SlideOutlineItem, SlideStage } from '../../shared/types';
 import {
-  createSlidesDraft,
-  getLatestSlidesDraft,
-  getSlidesConfig,
-  getSlidesDraft,
-  updateSlidesDraft,
-  updateSlidesOutline,
-  updateSlidesMarkdown,
-} from '../../shared/api';
+  createDraftV1NotebooksNotebookIdSlidesDraftsPost as createSlidesDraft,
+  getLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGet as getLatestSlidesDraft,
+  getSlidesConfigV1WorkspaceToolsSlidesConfigGet as getSlidesConfig,
+  getDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGet as getSlidesDraft,
+  updateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatch as updateSlidesDraft,
+  updateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePut as updateSlidesOutline,
+  updateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPut as updateSlidesMarkdown,
+} from '../../../../api/generated';
 import { buildSlidevPreviewUrl } from '@crystalith-slidev';
 import { toast } from '../../../../shared/toast';
 import { buildFrontmatterPreview, normalizeGenerationConfig } from './utils/slides';
@@ -211,7 +211,7 @@ export default function SlidesStudioDialog({
     data: slidesConfigData,
     error: slidesConfigError,
     isLoading: slidesConfigLoading,
-  } = useSWR(open && isConnected ? 'workspace/slides-config' : null, getSlidesConfig, {
+  } = useSWR(open && isConnected ? 'workspace/slides-config' : null, () => getSlidesConfig(), {
     revalidateOnFocus: false,
   });
   const slidesConfig = useMemo(() => normalizeSlidesConfig(slidesConfigData), [slidesConfigData]);
@@ -368,8 +368,8 @@ export default function SlidesStudioDialog({
     setError('');
     try {
       const latest = draftId
-        ? await getSlidesDraft(notebookId, draftId)
-        : await getLatestSlidesDraft(notebookId);
+        ? await getSlidesDraft({ path: { notebook_id: notebookId, slide_id: draftId } })
+        : await getLatestSlidesDraft({ path: { notebook_id: notebookId } });
       syncFromDraft(normalizeDraft(latest));
     } catch (err: any) {
       const status = resolveErrorStatus(err);
@@ -387,7 +387,7 @@ export default function SlidesStudioDialog({
     if (!notebookId || !isConnected) return;
     const targetId = slideId ?? draft?.id;
     if (!targetId) return;
-    const latest = await getSlidesDraft(notebookId, targetId);
+    const latest = await getSlidesDraft({ path: { notebook_id: notebookId, slide_id: targetId } });
     syncFromDraft(normalizeDraft(latest));
   }, [draft?.id, isConnected, notebookId, syncFromDraft]);
 
@@ -533,12 +533,18 @@ export default function SlidesStudioDialog({
       generation_config: buildGenerationConfigPayload(),
     };
     if (!draft) {
-      const created = await createSlidesDraft(notebookId, payload);
+      const created = await createSlidesDraft({
+        path: { notebook_id: notebookId },
+        body: payload,
+      });
       const normalized = normalizeDraft(created);
       syncFromDraft(normalized);
       return normalized;
     }
-    const updated = await updateSlidesDraft(notebookId, draft.id, payload);
+    const updated = await updateSlidesDraft({
+      path: { notebook_id: notebookId, slide_id: draft.id },
+      body: payload,
+    });
     const normalized = normalizeDraft(updated);
     syncFromDraft(normalized);
     return normalized;
@@ -612,7 +618,10 @@ export default function SlidesStudioDialog({
         bullets: item.bullets.map((bullet) => bullet.trim()).filter(Boolean),
       })),
     };
-    const updated = await updateSlidesOutline(notebookId, draft.id, { outline });
+    const updated = await updateSlidesOutline({
+      path: { notebook_id: notebookId, slide_id: draft.id },
+      body: { outline },
+    });
     syncFromDraft(normalizeDraft(updated));
   }, [draft, isConnected, notebookId, outlineItems, outlineTitle, syncFromDraft, title]);
 
@@ -622,8 +631,9 @@ export default function SlidesStudioDialog({
       setError('未连接到后端服务。');
       return;
     }
-    const updated = await updateSlidesMarkdown(notebookId, draft.id, {
-      markdown: markdown,
+    const updated = await updateSlidesMarkdown({
+      path: { notebook_id: notebookId, slide_id: draft.id },
+      body: { markdown: markdown },
     });
     syncFromDraft(normalizeDraft(updated));
     onOutputsUpdated();

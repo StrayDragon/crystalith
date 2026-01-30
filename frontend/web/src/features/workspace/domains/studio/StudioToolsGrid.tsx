@@ -12,7 +12,7 @@ import {
 } from '@material-tailwind/react';
 import { Close as CloseIcon, Edit as EditIcon } from '@mui/icons-material';
 
-import { getToolConfig, type ToolConfigResponse } from '../../shared/api';
+import { getToolConfigV1WorkspaceToolsToolIdConfigGet as getToolConfig, type ToolConfigResponse } from '../../../../api/generated';
 import { ModelSelector } from './ModelSelector';
 import type { OutputTypeId, WorkspaceTool } from '../../shared/types';
 import { getToolIcon, resolveTypeLabel, type StudioTone, TONE_COLORS } from './studioUtils';
@@ -63,7 +63,7 @@ export default function StudioToolsGrid({
 
     const toolId = activeToolType.toLowerCase();
     setToolConfigLoading(true);
-    getToolConfig(toolId)
+    getToolConfig({ path: { tool_id: toolId } })
       .then((config) => {
         setToolConfig(config);
         const defaultQuantity =

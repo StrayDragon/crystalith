@@ -1,7 +1,12 @@
 import { useCallback, useEffect } from 'react';
 import useSWR from 'swr';
 
-import { createSession, deleteSession, listSessions, updateSession } from '../../shared/api';
+import {
+  createSessionV1NotebooksNotebookIdSessionsPost as createSession,
+  deleteSessionV1NotebooksNotebookIdSessionsSessionIdDelete as deleteSession,
+  listSessionsV1NotebooksNotebookIdSessionsGet as listSessions,
+  updateSessionV1NotebooksNotebookIdSessionsSessionIdPatch as updateSession,
+} from '../../../../api/generated';
 import { useWorkspaceDispatch, useWorkspaceState } from '../../app/WorkspaceContext';
 import type { ApiSession } from '../../shared/types';
 import { normalizeSession } from '../../shared/utils';
@@ -15,7 +20,7 @@ export function useSessions() {
     state.activeNotebookId && isConnected
       ? ['workspace/sessions', state.activeNotebookId]
       : null,
-    () => listSessions(state.activeNotebookId ?? 0),
+    () => listSessions({ path: { notebook_id: state.activeNotebookId ?? 0 } }),
     { revalidateOnFocus: false },
   );
 
@@ -73,7 +78,10 @@ export function useSessions() {
       }
       dispatch({ type: 'SET_ERROR', payload: { key: 'sessions', value: '' } });
       try {
-        const created = await createSession(state.activeNotebookId, title ?? null);
+        const created = await createSession({
+          path: { notebook_id: state.activeNotebookId },
+          body: { title: title ?? null },
+        });
         const normalized = normalizeSession(created);
         dispatch({ type: 'SET_ACTIVE_SESSION', payload: normalized.id });
         await mutate(
@@ -122,8 +130,9 @@ export function useSessions() {
       }
       dispatch({ type: 'SET_ERROR', payload: { key: 'sessions', value: '' } });
       try {
-        const updated = await updateSession(state.activeNotebookId, sessionId, {
-          title: title.trim() || undefined,
+        const updated = await updateSession({
+          path: { notebook_id: state.activeNotebookId, session_id: sessionId },
+          body: { title: title.trim() || undefined },
         });
         const normalized = normalizeSession(updated);
         dispatch({
@@ -161,7 +170,9 @@ export function useSessions() {
       }
       dispatch({ type: 'SET_ERROR', payload: { key: 'sessions', value: '' } });
       try {
-        await deleteSession(state.activeNotebookId, sessionId);
+        await deleteSession({
+          path: { notebook_id: state.activeNotebookId, session_id: sessionId },
+        });
         const remaining = state.sessions.filter((item) => item.id !== sessionId);
         dispatch({ type: 'SET_SESSIONS', payload: remaining });
         if (state.activeSessionId === sessionId) {
