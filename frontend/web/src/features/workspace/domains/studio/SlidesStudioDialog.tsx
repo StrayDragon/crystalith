@@ -227,12 +227,8 @@ export default function SlidesStudioDialog({
     if (activeSourceIds.length) {
       return `已选择 ${activeSourceIds.length} 个来源，将仅基于选中来源生成。`;
     }
-    const legacyChunkIds = isPreviewMode && draft?.chunkIds?.length ? draft.chunkIds : [];
-    if (legacyChunkIds.length) {
-      return `该草稿基于历史引用（${legacyChunkIds.length} 条）生成。`;
-    }
-    return '未选择来源，将在空上下文生成。';
-  }, [draft?.chunkIds, draft?.sourceIds, isPreviewMode, selectedSourceIds]);
+    return '未选择来源，无法生成演示。';
+  }, [draft?.sourceIds, isPreviewMode, selectedSourceIds]);
 
   const selectedThemePreset = useMemo(() => {
     const options = slidesConfig?.themePresetOptions ?? [];
@@ -258,6 +254,10 @@ export default function SlidesStudioDialog({
   const previewReady = Boolean(previewMarkdown);
   const previewUrl = useMemo(() => buildSlidevPreviewUrl(previewKey), [previewKey]);
   const previewStatus = isPreviewSyncing ? '同步中' : previewReady ? '已同步' : '未同步';
+  const hasSelectedSources = useMemo(() => {
+    const draftSourceIds = draft?.sourceIds ?? [];
+    return draftSourceIds.length > 0 || selectedSourceIds.length > 0;
+  }, [draft?.sourceIds, selectedSourceIds]);
   const previewStatusTone = isPreviewSyncing ? 'blue' : previewReady ? 'green' : 'gray';
 
   const closeEventSource = useCallback(() => {
@@ -525,10 +525,13 @@ export default function SlidesStudioDialog({
     }
     setError('');
     const resolvedSourceIds = await resolveSourceIds();
+    if (resolvedSourceIds.length === 0) {
+      setError('请先选择来源。');
+      return null;
+    }
     const payload = {
       title: title.trim() || undefined,
       prompt: prompt.trim() || undefined,
-      chunk_ids: [],
       source_ids: resolvedSourceIds,
       generation_config: buildGenerationConfigPayload(),
     };
@@ -574,6 +577,11 @@ export default function SlidesStudioDialog({
     setIsQueueing(true);
     try {
       const resolvedSourceIds = await resolveSourceIds();
+      if (resolvedSourceIds.length === 0) {
+        setError('请先选择来源。');
+        toast.error('请先选择来源。');
+        return;
+      }
       const job = await onQueueSlides({
         title: title.trim(),
         prompt: prompt.trim(),
@@ -730,6 +738,10 @@ export default function SlidesStudioDialog({
     if (!notebookId || !draft) return;
     if (!isConnected) {
       setError('未连接到后端服务。');
+      return;
+    }
+    if (!draft.sourceIds || draft.sourceIds.length === 0) {
+      setError('请先选择来源。');
       return;
     }
     await handleSaveOutline();
@@ -1368,7 +1380,8 @@ export default function SlidesStudioDialog({
     }
     return null;
   })();
-  const configActionsDisabled = !isConnected || slidesConfigLoading || Boolean(slidesConfigError);
+  const configActionsDisabled =
+    !isConnected || slidesConfigLoading || Boolean(slidesConfigError) || !hasSelectedSources;
 
   const quantityOptions = slidesConfig?.quantityOptions ?? [];
   const structureOptions = slidesConfig?.structureOptions ?? [];

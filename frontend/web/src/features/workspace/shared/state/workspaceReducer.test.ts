@@ -11,8 +11,6 @@ test('SET_ACTIVE_NOTEBOOK resets notebook-scoped state and clears errors', () =>
     messages: [{ id: 'm1', role: 'user', content: 'hi' } as any],
     outputs: [{ id: 9 } as any],
     citations: [{ id: 'c1' } as any],
-    selectedCitationIds: { c1: true },
-    autoSelectCitations: true,
     hoveredCitationChunkId: 3,
     hoveredMessageChunkIds: [1, 2],
     jumpToCitationChunkId: 4,
@@ -39,8 +37,6 @@ test('SET_ACTIVE_NOTEBOOK resets notebook-scoped state and clears errors', () =>
   expect(next.messages).toEqual([]);
   expect(next.outputs).toEqual([]);
   expect(next.citations).toEqual([]);
-  expect(next.selectedCitationIds).toEqual({});
-  expect(next.autoSelectCitations).toBe(false);
   expect(next.hoveredCitationChunkId).toBeNull();
   expect(next.hoveredMessageChunkIds).toEqual([]);
   expect(next.jumpToCitationChunkId).toBeNull();
@@ -61,8 +57,6 @@ test('SET_ACTIVE_SESSION clears session-scoped state', () => {
     activeSessionId: 2,
     messages: [{ id: 'm1', role: 'user', content: 'hi' } as any],
     citations: [{ id: 'c1' } as any],
-    selectedCitationIds: { c1: true },
-    autoSelectCitations: true,
     hoveredCitationChunkId: 3,
     hoveredMessageChunkIds: [1, 2],
     jumpToCitationChunkId: 4,
@@ -74,8 +68,6 @@ test('SET_ACTIVE_SESSION clears session-scoped state', () => {
   expect(next.activeSessionId).toBe(55);
   expect(next.messages).toEqual([]);
   expect(next.citations).toEqual([]);
-  expect(next.selectedCitationIds).toEqual({});
-  expect(next.autoSelectCitations).toBe(false);
   expect(next.hoveredCitationChunkId).toBeNull();
   expect(next.hoveredMessageChunkIds).toEqual([]);
   expect(next.jumpToCitationChunkId).toBeNull();

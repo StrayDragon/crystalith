@@ -32,7 +32,6 @@ router = APIRouter(prefix="/v1/notebooks/{notebook_id}/outputs", tags=["outputs"
 
 class OutputGenerateRequest(BaseModel):
     prompt: str | None = None
-    chunk_ids: list[int] | None = None
     source_ids: list[int] | None = None
     top_k: int = Field(5, ge=1, le=20)
     min_score: float = Field(0.2, ge=0.0, le=1.0)
@@ -88,9 +87,11 @@ async def create_output(
         notebook_id=notebook_id,
         output_type=output_type.value,
         prompt_length=len(payload.prompt) if payload.prompt else 0,
-        chunk_ids_count=len(payload.chunk_ids) if payload.chunk_ids else 0,
         model_id=payload.model_id,
     )
+
+    if not payload.source_ids:
+        raise HTTPException(status_code=400, detail="source_ids must not be empty")
 
     try:
         db_output = await run_output_graph(
@@ -98,7 +99,6 @@ async def create_output(
             output_type=output_type,
             prompt=payload.prompt or "",
             deps=deps,
-            chunk_ids=payload.chunk_ids,
             source_ids=payload.source_ids,
             top_k=payload.top_k,
             min_score=payload.min_score,

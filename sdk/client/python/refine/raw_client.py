@@ -28,7 +28,6 @@ class RawRefineClient:
         *,
         prompt: str,
         format: typing.Optional[str] = OMIT,
-        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
@@ -42,8 +41,6 @@ class RawRefineClient:
         prompt : str
 
         format : typing.Optional[str]
-
-        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
@@ -65,7 +62,6 @@ class RawRefineClient:
             json={
                 "prompt": prompt,
                 "format": format,
-                "chunk_ids": chunk_ids,
                 "source_ids": source_ids,
                 "top_k": top_k,
                 "min_score": min_score,
@@ -108,7 +104,6 @@ class RawRefineClient:
         *,
         prompt: str,
         formats: typing.Optional[typing.Sequence[str]] = OMIT,
-        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
@@ -122,8 +117,6 @@ class RawRefineClient:
         prompt : str
 
         formats : typing.Optional[typing.Sequence[str]]
-
-        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
@@ -145,7 +138,6 @@ class RawRefineClient:
             json={
                 "prompt": prompt,
                 "formats": formats,
-                "chunk_ids": chunk_ids,
                 "source_ids": source_ids,
                 "top_k": top_k,
                 "min_score": min_score,
@@ -193,7 +185,6 @@ class AsyncRawRefineClient:
         *,
         prompt: str,
         format: typing.Optional[str] = OMIT,
-        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
@@ -207,8 +198,6 @@ class AsyncRawRefineClient:
         prompt : str
 
         format : typing.Optional[str]
-
-        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
@@ -230,7 +219,6 @@ class AsyncRawRefineClient:
             json={
                 "prompt": prompt,
                 "format": format,
-                "chunk_ids": chunk_ids,
                 "source_ids": source_ids,
                 "top_k": top_k,
                 "min_score": min_score,
@@ -273,7 +261,6 @@ class AsyncRawRefineClient:
         *,
         prompt: str,
         formats: typing.Optional[typing.Sequence[str]] = OMIT,
-        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
@@ -287,8 +274,6 @@ class AsyncRawRefineClient:
         prompt : str
 
         formats : typing.Optional[typing.Sequence[str]]
-
-        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
@@ -310,7 +295,6 @@ class AsyncRawRefineClient:
             json={
                 "prompt": prompt,
                 "formats": formats,
-                "chunk_ids": chunk_ids,
                 "source_ids": source_ids,
                 "top_k": top_k,
                 "min_score": min_score,

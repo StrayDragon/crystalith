@@ -27,9 +27,7 @@ export interface WorkspaceState {
   activePanel: PanelId;
   draft: string;
   citations: Citation[];
-  selectedCitationIds: Record<string, boolean>;
   selectedSourceIds: Record<number, boolean>;
-  autoSelectCitations: boolean;
   hoveredCitationChunkId: number | null;
   hoveredMessageChunkIds: number[];
   jumpToCitationChunkId: number | null;
@@ -59,9 +57,7 @@ export type WorkspaceAction =
   | { type: 'SET_ACTIVE_PANEL'; payload: PanelId }
   | { type: 'SET_DRAFT'; payload: string }
   | { type: 'SET_CITATIONS'; payload: Citation[] }
-  | { type: 'SET_SELECTED_CITATIONS'; payload: Record<string, boolean> }
   | { type: 'SET_SELECTED_SOURCES'; payload: Record<number, boolean> }
-  | { type: 'SET_AUTO_SELECT_CITATIONS'; payload: boolean }
   | { type: 'SET_HOVERED_CITATION'; payload: number | null }
   | { type: 'SET_HOVERED_MESSAGE_CHUNKS'; payload: number[] }
   | { type: 'SET_JUMP_TO_CITATION'; payload: number | null }
@@ -93,9 +89,7 @@ export const initialWorkspaceState: WorkspaceState = {
   activePanel: 'chat',
   draft: '',
   citations: [],
-  selectedCitationIds: {},
   selectedSourceIds: {},
-  autoSelectCitations: false,
   hoveredCitationChunkId: null,
   hoveredMessageChunkIds: [],
   jumpToCitationChunkId: null,
@@ -157,9 +151,7 @@ export function workspaceReducer(
         messages: [],
         outputs: [],
         citations: [],
-        selectedCitationIds: {},
         selectedSourceIds: {},
-        autoSelectCitations: false,
         hoveredCitationChunkId: null,
         hoveredMessageChunkIds: [],
         jumpToCitationChunkId: null,
@@ -181,9 +173,7 @@ export function workspaceReducer(
         activeSessionId: action.payload,
         messages: [],
         citations: [],
-        selectedCitationIds: {},
         selectedSourceIds: state.selectedSourceIds,
-        autoSelectCitations: false,
         hoveredCitationChunkId: null,
         hoveredMessageChunkIds: [],
         jumpToCitationChunkId: null,
@@ -199,12 +189,8 @@ export function workspaceReducer(
       return { ...state, draft: action.payload };
     case 'SET_CITATIONS':
       return { ...state, citations: action.payload };
-    case 'SET_SELECTED_CITATIONS':
-      return { ...state, selectedCitationIds: action.payload };
     case 'SET_SELECTED_SOURCES':
       return { ...state, selectedSourceIds: action.payload };
-    case 'SET_AUTO_SELECT_CITATIONS':
-      return { ...state, autoSelectCitations: action.payload };
     case 'SET_HOVERED_CITATION':
       return { ...state, hoveredCitationChunkId: action.payload };
     case 'SET_HOVERED_MESSAGE_CHUNKS':

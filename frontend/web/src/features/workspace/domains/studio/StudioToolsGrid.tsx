@@ -30,6 +30,7 @@ interface StudioToolsGridProps {
   }) => void;
   isConnected: boolean;
   isFullscreen?: boolean;
+  hasSelectedSources: boolean;
 }
 
 export default function StudioToolsGrid({
@@ -40,6 +41,7 @@ export default function StudioToolsGrid({
   onOpenSlides,
   isConnected,
   isFullscreen = false,
+  hasSelectedSources,
 }: StudioToolsGridProps) {
   const [toolConfigOpen, setToolConfigOpen] = useState(false);
   const [activeToolType, setActiveToolType] = useState<OutputTypeId | null>(null);
@@ -147,15 +149,19 @@ export default function StudioToolsGrid({
     <>
       <div className={`grid gap-2 ${isFullscreen ? 'grid-cols-3 sm:grid-cols-4' : 'grid-cols-2'}`}>
         {tools.map((tool) => {
-          const isDisabled = !tool.enabled || !tool.outputType;
+          const isDisabled = !tool.enabled || !tool.outputType || !hasSelectedSources;
           const isSlidesTool = tool.outputType === 'SLIDES';
           const tone = (tool.tone as StudioTone) || 'slate';
           const colors = TONE_COLORS[tone];
 
+          const tooltipContent = !hasSelectedSources
+            ? '请先选择来源'
+            : (tool.description || tool.label);
+
           return (
             <Tooltip
               key={tool.id}
-              content={tool.description || tool.label}
+              content={tooltipContent}
               placement="top"
               className="max-w-[200px] text-xs bg-gray-900 text-white px-2 py-1 rounded"
               animate={{

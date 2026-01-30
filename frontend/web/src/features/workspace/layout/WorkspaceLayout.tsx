@@ -183,6 +183,11 @@ export default function WorkspaceLayout() {
     [dispatch],
   );
 
+  const hasSelectedSources = useMemo(
+    () => Object.values(state.selectedSourceIds).some(Boolean),
+    [state.selectedSourceIds],
+  );
+
   const handleChatCitationHover = useCallback(
     (chunkId: number | null) => {
       if (chunkId == null) {
@@ -240,8 +245,7 @@ export default function WorkspaceLayout() {
 
   const handleChatCitationJump = useCallback(
     (citation: Citation, message: ChatMessage) => {
-      const preserveSelection = !sources.autoSelectCitations && sources.selectedCount > 0;
-      if (!preserveSelection && message.citations && message.citations.length > 0) {
+      if (message.citations && message.citations.length > 0) {
         dispatch({ type: 'SET_CITATIONS', payload: message.citations });
       }
       if (citation.chunkId != null) {
@@ -254,8 +258,7 @@ export default function WorkspaceLayout() {
 
   const handleOutputCitationJump = useCallback(
     (citation: Citation, citations: Citation[]) => {
-      const preserveSelection = !sources.autoSelectCitations && sources.selectedCount > 0;
-      if (!preserveSelection && citations.length > 0) {
+      if (citations.length > 0) {
         dispatch({ type: 'SET_CITATIONS', payload: citations });
       }
       if (citation.chunkId != null) {
@@ -739,6 +742,7 @@ export default function WorkspaceLayout() {
             onJumpToCitation={handleOutputCitationJump}
             isConnected={isConnected}
             isFullscreen={expandedPanel === 'studio'}
+            hasSelectedSources={hasSelectedSources}
           />
         </section>
         )}

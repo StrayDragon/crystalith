@@ -96,7 +96,6 @@ test('onGenerateRefine enqueues job with selected source ids', async () => {
       body: {
         prompt: '提炼核心结论',
         formats: expect.any(Array),
-        chunk_ids: undefined,
         source_ids: [101, 102],
       },
     });

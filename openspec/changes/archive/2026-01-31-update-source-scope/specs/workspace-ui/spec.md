@@ -7,6 +7,14 @@
 - **THEN** 仅显示来源级复选框
 - **AND** 不出现引用列表或引用多选控件
 
+### Requirement: Studio 输出需至少选择来源
+系统 MUST 在用户未选择任何来源时禁用 Studio 输出触发，并提示需要先选择来源。
+
+#### Scenario: 禁用空来源输出
+- **WHEN** 用户未选中任何来源
+- **THEN** Studio 输出入口为不可用状态
+- **AND** 提示用户需先选择来源
+
 ### Requirement: 来源索引状态可见
 系统 MUST 在来源列表中明确展示每个来源的 embedding/索引状态。
 

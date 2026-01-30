@@ -74,3 +74,16 @@ TBD - created by archiving change add-research-workspace. Update Purpose after a
 
 - **WHEN** 代理 URL 格式无效
 - **THEN** 系统启动时报告配置错误
+
+### Requirement: 失败来源重嵌入
+系统 MUST 支持对索引失败的来源触发重嵌入，以重新进行分块与向量化。
+
+#### Scenario: 触发重嵌入
+- **WHEN** 用户在来源列表中点击“重新嵌入”
+- **THEN** 系统重新启动该来源的索引流程
+- **AND** 来源状态切换为“处理中”
+
+#### Scenario: 非失败来源不可重嵌入
+- **WHEN** 来源未处于失败状态
+- **THEN** 系统不展示重嵌入入口
+- **AND** 不允许触发重嵌入

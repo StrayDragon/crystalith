@@ -16,7 +16,7 @@ from cl_logs.logging import get_logger
 from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.models import ModelConfigurationError
 from crystalith.shared.deps import get_db_session, get_embedding_provider, get_settings, get_vector_store
-from crystalith.shared.db import Notebook, Output, StudioSlide
+from crystalith.shared.db import Notebook, Output, Source, StudioSlide
 from crystalith.shared.types import SlideStage, SlideStatus
 from crystalith.shared.types import OutputType
 from .slides import (
@@ -40,7 +40,6 @@ class SlideDraftCreate(BaseModel):
     title: str | None = None
     prompt: str | None = None
     engine: str = Field("slidev", description="Rendering engine (default: slidev)")
-    chunk_ids: list[int] | None = None
     source_ids: list[int] | None = None
     generation_config: SlideGenerationConfig | None = None
 
@@ -49,7 +48,6 @@ class SlideDraftUpdate(BaseModel):
     title: str | None = None
     prompt: str | None = None
     engine: str | None = None
-    chunk_ids: list[int] | None = None
     source_ids: list[int] | None = None
     generation_config: SlideGenerationConfig | None = None
 
@@ -121,6 +119,34 @@ async def _get_slide(session: AsyncSession, notebook_id: int, slide_id: int) -> 
     return slide
 
 
+def _normalize_source_ids(source_ids: list[int] | None) -> list[int]:
+    if not source_ids:
+        return []
+    normalized = [int(value) for value in source_ids]
+    if any(value <= 0 for value in normalized):
+        raise HTTPException(status_code=400, detail="Unknown source_id in source_ids")
+    return list(dict.fromkeys(normalized))
+
+
+async def _validate_source_ids(
+    session: AsyncSession,
+    notebook_id: int,
+    source_ids: list[int],
+) -> None:
+    if not source_ids:
+        return
+    rows = await session.execute(
+        select(Source.id).where(
+            Source.notebook_id == notebook_id,
+            Source.id.in_(source_ids),
+        )
+    )
+    found = {row[0] for row in rows.all()}
+    missing = [source_id for source_id in source_ids if source_id not in found]
+    if missing:
+        raise HTTPException(status_code=400, detail="Unknown source_id in source_ids")
+
+
 async def _sync_output(session: AsyncSession, slide: StudioSlide) -> Output:
     title = slide.title or "演示"
     outline = slide.outline or {}
@@ -184,13 +210,16 @@ async def create_draft(
     session: AsyncSession = Depends(get_db_session),
 ) -> SlideDraftRead:
     await _get_notebook(session, notebook_id)
+    normalized_source_ids = _normalize_source_ids(payload.source_ids)
+    if not normalized_source_ids:
+        raise HTTPException(status_code=400, detail="source_ids must not be empty")
+    await _validate_source_ids(session, notebook_id, normalized_source_ids)
     slide = StudioSlide(
         notebook_id=notebook_id,
         title=payload.title,
         prompt=payload.prompt,
         engine=payload.engine,
-        chunk_ids=payload.chunk_ids or None,
-        source_ids=payload.source_ids or None,
+        source_ids=normalized_source_ids,
         generation_config=payload.generation_config.model_dump() if payload.generation_config else None,
         stage=SlideStage.INPUT,
         status=SlideStatus.IDLE,
@@ -225,10 +254,12 @@ async def update_draft(
         slide.prompt = payload.prompt
     if payload.engine is not None:
         slide.engine = payload.engine
-    if payload.chunk_ids is not None:
-        slide.chunk_ids = payload.chunk_ids
     if payload.source_ids is not None:
-        slide.source_ids = payload.source_ids
+        normalized_source_ids = _normalize_source_ids(payload.source_ids)
+        if not normalized_source_ids:
+            raise HTTPException(status_code=400, detail="source_ids must not be empty")
+        await _validate_source_ids(session, notebook_id, normalized_source_ids)
+        slide.source_ids = normalized_source_ids
     if payload.generation_config is not None:
         slide.generation_config = payload.generation_config.model_dump()
     slide.error_message = None
@@ -285,6 +316,10 @@ async def generate_outline_stream(
     model_id: str | None = None,
 ) -> StreamingResponse:
     slide = await _get_slide(session, notebook_id, slide_id)
+    normalized_source_ids = _normalize_source_ids(slide.source_ids)
+    if not normalized_source_ids:
+        raise HTTPException(status_code=400, detail="source_ids must not be empty")
+    await _validate_source_ids(session, notebook_id, normalized_source_ids)
 
     async def event_stream() -> AsyncGenerator[str, None]:
         if slide.status == SlideStatus.RUNNING:
@@ -313,8 +348,7 @@ async def generate_outline_stream(
                 notebook_id=notebook_id,
                 title=slide.title,
                 prompt=slide.prompt,
-                chunk_ids=slide.chunk_ids,
-                source_ids=slide.source_ids,
+                source_ids=normalized_source_ids,
                 generation_config=slide.generation_config,
                 model_id=model_id,
             )
@@ -359,6 +393,10 @@ async def generate_markdown_stream(
     model_id: str | None = None,
 ) -> StreamingResponse:
     slide = await _get_slide(session, notebook_id, slide_id)
+    normalized_source_ids = _normalize_source_ids(slide.source_ids)
+    if not normalized_source_ids:
+        raise HTTPException(status_code=400, detail="source_ids must not be empty")
+    await _validate_source_ids(session, notebook_id, normalized_source_ids)
 
     async def event_stream() -> AsyncGenerator[str, None]:
         if slide.status == SlideStatus.RUNNING:
@@ -393,8 +431,7 @@ async def generate_markdown_stream(
                 title=slide.title,
                 prompt=slide.prompt,
                 outline=outline,
-                chunk_ids=slide.chunk_ids,
-                source_ids=slide.source_ids,
+                source_ids=normalized_source_ids,
                 generation_config=slide.generation_config,
                 model_id=model_id,
             )

@@ -25,12 +25,7 @@ from crystalith.shared.agents.output_schemas import (
 from crystalith.shared.db import Chunk, Output, Source
 from crystalith.shared.types import OutputType
 from crystalith.shared.schemas.citations import Citation
-from crystalith.shared.utils import (
-    extract_page_number,
-    extract_paragraph_index,
-    format_context,
-    format_context_from_chunk_ids,
-)
+from crystalith.shared.utils import extract_page_number, extract_paragraph_index, format_context
 from crystalith.shared.vector_storage import VectorSearchResult
 
 
@@ -44,7 +39,6 @@ class OutputGraphState:
     notebook_id: int
     output_type: OutputType
     prompt: str
-    chunk_ids: list[int] | None = None
     source_ids: list[int] | None = None
     top_k: int = 10
     min_score: float = 0.0
@@ -384,38 +378,12 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
             "resolving context",
             notebook_id=state.notebook_id,
             prompt_length=len(state.prompt),
-            explicit_chunk_ids_count=len(state.chunk_ids or []),
             source_ids_count=len(state.source_ids or []),
         )
 
-        explicit_chunk_ids = [int(v) for v in (state.chunk_ids or []) if int(v) > 0]
-        if explicit_chunk_ids:
-            rows = await deps.session.execute(
-                select(Chunk, Source)
-                .join(Source, Source.id == Chunk.source_id)
-                .where(Chunk.id.in_(explicit_chunk_ids), Source.notebook_id == state.notebook_id)
-            )
-            chunk_map: dict[int, tuple[Chunk, Source]] = {
-                chunk.id: (chunk, source) for chunk, source in rows.all()
-            }
-            missing = [cid for cid in explicit_chunk_ids if cid not in chunk_map]
-            if missing:
-                raise ValueError("Unknown chunk_id in chunk_ids")
-
-            state.citations = [
-                _build_citation(chunk_map[cid][0], chunk_map[cid][1], 1.0)
-                for cid in explicit_chunk_ids
-            ]
-            state.context = format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
-            state.resolved_chunk_ids = explicit_chunk_ids
-            return GenerateOutput()
-
         normalized_source_ids = _normalize_source_ids(state.source_ids)
         if not normalized_source_ids:
-            state.context = ""
-            state.citations = []
-            state.resolved_chunk_ids = []
-            return GenerateOutput()
+            raise ValueError("source_ids must not be empty")
 
         await _validate_source_ids(deps.session, state.notebook_id, normalized_source_ids)
 
@@ -579,7 +547,6 @@ async def run_output_graph(
     prompt: str,
     deps: StudioDeps,
     *,
-    chunk_ids: list[int] | None = None,
     source_ids: list[int] | None = None,
     top_k: int = 10,
     min_score: float = 0.0,
@@ -592,9 +559,8 @@ async def run_output_graph(
         output_type: Type of output to generate
         prompt: User prompt for generation
         deps: Studio dependencies
-        chunk_ids: Optional specific chunk IDs to use as context
         source_ids: Optional source IDs to constrain retrieval
-        top_k: Number of chunks to retrieve if chunk_ids not specified
+        top_k: Number of chunks to retrieve from the selected sources
         min_score: Minimum similarity score for chunk retrieval
         model_id: Optional model ID to use (overrides default from settings)
     """
@@ -602,7 +568,6 @@ async def run_output_graph(
         notebook_id=notebook_id,
         output_type=output_type,
         prompt=prompt,
-        chunk_ids=chunk_ids,
         source_ids=source_ids,
         top_k=top_k,
         min_score=min_score,

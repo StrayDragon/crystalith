@@ -12,7 +12,7 @@ class SlideDraftCreate(BaseModel):
     title: str | None = None
     prompt: str | None = None
     engine: str = Field("slidev", description="Rendering engine (default: slidev)")
-    chunk_ids: list[int] | None = None
+    source_ids: list[int] | None = None
     generation_config: dict[str, Any] | None = None
 
 
@@ -20,7 +20,7 @@ class SlideDraftUpdate(BaseModel):
     title: str | None = None
     prompt: str | None = None
     engine: str | None = None
-    chunk_ids: list[int] | None = None
+    source_ids: list[int] | None = None
     generation_config: dict[str, Any] | None = None
 
 
