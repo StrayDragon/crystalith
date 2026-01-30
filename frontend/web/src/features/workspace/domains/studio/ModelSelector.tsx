@@ -16,7 +16,7 @@ import {
   Computer as LocalIcon,
 } from '@mui/icons-material';
 
-import { listModels, type ModelRead, type ModelsListResponse } from '../../shared/api';
+import { listModelsV1ModelsGet as listModels, type ModelRead, type ModelsListResponse } from '../../../../api/generated';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 
 export interface ModelSelectorProps {
@@ -60,7 +60,9 @@ export function ModelSelector({
       try {
         setLoading(true);
         setError(null);
-        const data = await listModels(capability);
+        const data = await listModels({
+          query: capability ? { capability } : undefined,
+        });
         if (!cancelled) {
           setModelsData(data);
           // Set default value if not already set

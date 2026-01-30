@@ -9,8 +9,10 @@ import {
   finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost,
   skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost,
   cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost,
-} from '../../../../api/client';
-import type { ResearchSessionResponse, ResearchSessionListItem, ResearchStatus } from '../../../../api/client';
+  type ResearchSessionResponse,
+  type ResearchSessionListItem,
+  type ResearchStatus,
+} from '../../../../api/generated';
 
 // SSE Event types
 interface SSEStatusEvent {
@@ -119,8 +121,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       const response = await listResearchSessionsV1NotebooksNotebookIdResearchGet({
         path: { notebook_id: notebookId },
       });
-      if (response.data) {
-        setSessions(response.data);
+      if (Array.isArray(response)) {
+        setSessions(response);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : '获取研究列表失败');
@@ -138,8 +140,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
         const response = await getResearchSessionV1NotebooksNotebookIdResearchResearchIdGet({
           path: { notebook_id: notebookId, research_id: researchId },
         });
-        if (response.data) {
-          setActiveSession(response.data);
+        if (response) {
+          setActiveSession(response);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : '获取研究详情失败');
@@ -160,8 +162,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           path: { notebook_id: notebookId },
           body: { topic, max_iterations: maxIterations },
         });
-        if (response.data) {
-          const data = response.data;
+        if (response) {
+          const data = response;
           setSessions((prev) => [
             {
               id: data.id,
@@ -219,8 +221,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
         const response = await startResearchV1NotebooksNotebookIdResearchResearchIdStartPost({
           path: { notebook_id: notebookId, research_id: researchId },
         });
-        if (response.data) {
-          setActiveSession(response.data);
+        if (response) {
+          setActiveSession(response);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : '启动研究失败');
@@ -238,8 +240,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           path: { notebook_id: notebookId, research_id: researchId },
           body: { feedback },
         });
-        if (response.data) {
-          setActiveSession(response.data);
+        if (response) {
+          setActiveSession(response);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : '批准计划失败');
@@ -256,8 +258,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
         const response = await skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost({
           path: { notebook_id: notebookId, research_id: researchId },
         });
-        if (response.data) {
-          setActiveSession(response.data);
+        if (response) {
+          setActiveSession(response);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : '跳过迭代失败');
@@ -274,8 +276,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
         const response = await finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost({
           path: { notebook_id: notebookId, research_id: researchId },
         });
-        if (response.data) {
-          setActiveSession(response.data);
+        if (response) {
+          setActiveSession(response);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : '结束研究失败');
@@ -293,12 +295,12 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
         const response = await cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost({
           path: { notebook_id: notebookId, research_id: researchId },
         });
-        if (response.data) {
-          setActiveSession(response.data);
+        if (response) {
+          setActiveSession(response);
           // Update sessions list
           setSessions((prev) =>
             prev.map((s) =>
-              s.id === researchId ? { ...s, status: response.data!.status } : s
+              s.id === researchId ? { ...s, status: response.status } : s
             )
           );
           // Close SSE connection when cancelled

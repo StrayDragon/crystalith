@@ -7,7 +7,7 @@ import { renderHook } from '../../../../test-utils/renderHook';
 import { useWorkspaceDispatch, useWorkspaceState, WorkspaceProvider } from '../../app/WorkspaceContext';
 import { REFINE_TEMPLATES } from './data/refineTemplates';
 import { useRefine } from './useRefine';
-import { refineBatch } from '../../shared/api';
+import { refineBatchV1NotebooksNotebookIdRefineBatchPost as refineBatch } from '../../../../api/generated';
 
 vi.mock('swr', () => ({
   default: vi.fn(),
@@ -28,9 +28,9 @@ vi.mock('../../shared/hooks/useOutputQueue', () => ({
   }),
 }));
 
-vi.mock('../../shared/api', () => ({
-  listWorkspaceTools: vi.fn(),
-  refineBatch: vi.fn(),
+vi.mock('../../../../api/generated', () => ({
+  listWorkspaceToolsV1WorkspaceToolsGet: vi.fn(),
+  refineBatchV1NotebooksNotebookIdRefineBatchPost: vi.fn(),
 }));
 
 const swrMock = vi.mocked(useSWR);
@@ -91,12 +91,14 @@ test('onGenerateRefine enqueues job with selected source ids', async () => {
   expect(result.current.refine.refineJobs[0].sourceIds).toEqual([101, 102]);
   expect(result.current.state.activePanel).toBe('refine');
   await waitFor(() => {
-    expect(refineBatch).toHaveBeenCalledWith(
-      1,
-      '提炼核心结论',
-      expect.any(Array),
-      undefined,
-      [101, 102],
-    );
+    expect(refineBatch).toHaveBeenCalledWith({
+      path: { notebook_id: 1 },
+      body: {
+        prompt: '提炼核心结论',
+        formats: expect.any(Array),
+        chunk_ids: undefined,
+        source_ids: [101, 102],
+      },
+    });
   });
 });

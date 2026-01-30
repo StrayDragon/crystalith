@@ -33,7 +33,12 @@ import {
 } from '@mui/icons-material';
 
 import type { AsyncStatus } from '../../../../shared/types';
-import type { ExtractorInfo, ExtractorType, QAMessage, SourceFromUrlMode } from '../../../../api/client';
+import type {
+  ExtractorInfoResponse as ExtractorInfo,
+  ExtractorType,
+  QaMessage,
+  SourceFromUrlMode,
+} from '../../../../api/generated';
 import type { ApiSourceSearchResult, SourceItem } from '../../shared/types';
 import type { SearchQueueItem } from './useSources';
 import { useResearch } from '../research/useResearch';
@@ -81,7 +86,7 @@ interface SourcesPanelProps {
   /** 默认提取器 */
   defaultExtractor?: ExtractorType | null;
   /** 将来源问答转换为新来源 */
-  onConvertSourceQAToSource?: (sourceId: number, messages: QAMessage[]) => Promise<unknown>;
+  onConvertSourceQAToSource?: (sourceId: number, messages: QaMessage[]) => Promise<unknown>;
   /** 重新嵌入失败来源 */
   onReembedSource?: (sourceId: number) => Promise<unknown>;
   /** 当前 notebook ID，用于深度研究功能 */
@@ -191,8 +196,8 @@ function SourcesPanel({
   const handleSaveQAAsSource = useCallback(
     async (sourceTitle: string, messages: ChatMessage[]) => {
       if (!selectedSource || !onConvertSourceQAToSource) return;
-      // Convert ChatMessage to QAMessage format
-      const qaMessages: QAMessage[] = messages.map((msg) => ({
+      // Convert ChatMessage to QaMessage format
+      const qaMessages: QaMessage[] = messages.map((msg) => ({
         role: msg.role,
         content: msg.content,
       }));

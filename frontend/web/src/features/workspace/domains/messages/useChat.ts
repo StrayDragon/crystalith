@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 
 import {
-  askQuestion,
-  askQuestionStream,
-  convertSessionToOutput,
-  convertSessionToSource,
-  listMessages,
-} from '../../shared/api';
-import type { OutputType } from '../../shared/api';
+  askQuestionV1NotebooksNotebookIdQaPost as askQuestion,
+  convertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPost as convertSessionToOutput,
+  convertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePost as convertSessionToSource,
+  listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet as listMessages,
+  type OutputTypeInput,
+} from '../../../../api/generated';
+import { client } from '../../../../api/generated/client.gen';
 import { toast } from '../../../../shared/toast';
 import { useWorkspaceDispatch, useWorkspaceState } from '../../app/WorkspaceContext';
 import {
@@ -45,7 +45,12 @@ export function useChat({
     state.activeNotebookId && state.activeSessionId && isConnected
       ? ['workspace/messages', state.activeNotebookId, state.activeSessionId]
       : null,
-    () => listMessages(state.activeNotebookId ?? 0, state.activeSessionId ?? 0),
+    () => listMessages({
+      path: {
+        notebook_id: state.activeNotebookId ?? 0,
+        session_id: state.activeSessionId ?? 0,
+      },
+    }),
     { revalidateOnFocus: false },
   );
 
@@ -148,20 +153,31 @@ export function useChat({
       dispatch({ type: 'ADD_STREAMING_MESSAGE', payload: assistantMessage });
 
       try {
-        const { done } = await askQuestionStream(
-          state.activeNotebookId,
-          text,
-          sessionId,
-          resolvedChunkIds,
-          explicitSourceIds,
-          {
-            onChunk: (chunkText) => {
+        const { stream } = await client.sse.post({
+          url: '/v1/notebooks/{notebook_id}/qa/stream',
+          path: { notebook_id: state.activeNotebookId },
+          body: {
+            question: text,
+            session_id: sessionId ?? undefined,
+            chunk_ids: resolvedChunkIds,
+            source_ids: explicitSourceIds.length ? explicitSourceIds : undefined,
+          },
+          headers: {
+            Accept: 'text/event-stream',
+          },
+          onSseEvent: (event) => {
+            const { event: eventType, data } = event;
+            if (eventType === 'chunk' && data && typeof data === 'object' && 'text' in data) {
+              const chunkText = String((data as { text?: unknown }).text ?? '');
+              if (!chunkText) return;
               dispatch({
                 type: 'APPEND_MESSAGE_CONTENT',
                 payload: { messageId: assistantMessageId, text: chunkText },
               });
-            },
-            onDone: (doneData) => {
+              return;
+            }
+            if (eventType === 'done' && data && typeof data === 'object') {
+              const doneData = data as { citations?: unknown[] };
               const normalizedCitations = doneData.citations?.map(normalizeCitation) ?? [];
               const scope = selectedScope;
               dispatch({
@@ -176,8 +192,15 @@ export function useChat({
                 },
               });
               dispatch({ type: 'SET_CITATIONS', payload: normalizedCitations });
-            },
-            onError: (errorMessage) => {
+              return;
+            }
+            if (eventType === 'error') {
+              const errorMessage =
+                data && typeof data === 'object' && 'message' in data
+                  ? String((data as { message?: unknown }).message ?? '请求失败')
+                  : typeof data === 'string'
+                    ? data
+                    : '请求失败';
               dispatch({
                 type: 'UPDATE_MESSAGE',
                 payload: {
@@ -186,9 +209,13 @@ export function useChat({
                 },
               });
               dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: errorMessage } });
-            },
+            }
           },
-        );
+        });
+
+        for await (const _event of stream) {
+          // handled via onSseEvent
+        }
 
         void mutate();
         if (refreshSessions) {
@@ -226,13 +253,15 @@ export function useChat({
 
     // Non-streaming fallback
     try {
-      const qaResult = await askQuestion(
-        state.activeNotebookId,
-        text,
-        sessionId,
-        resolvedChunkIds,
-        explicitSourceIds,
-      );
+      const qaResult = await askQuestion({
+        path: { notebook_id: state.activeNotebookId },
+        body: {
+          question: text,
+          session_id: sessionId ?? undefined,
+          chunk_ids: resolvedChunkIds,
+          source_ids: explicitSourceIds.length ? explicitSourceIds : undefined,
+        },
+      });
       const normalizedCitations = qaResult.citations?.map(normalizeCitation) ?? [];
       const scope = selectedScope;
       const assistantMessage = {
@@ -322,11 +351,10 @@ export function useChat({
     }
     setIsConverting(true);
     try {
-      const result = await convertSessionToSource(
-        state.activeNotebookId,
-        state.activeSessionId,
-        null, // Convert entire session
-      );
+      const result = await convertSessionToSource({
+        path: { notebook_id: state.activeNotebookId, session_id: state.activeSessionId },
+        body: { message_ids: null },
+      });
       // Refresh sources list to show the new source
       if (refreshSources) {
         await refreshSources();
@@ -341,7 +369,7 @@ export function useChat({
   }, [state.activeNotebookId, state.activeSessionId, isConnected, refreshSources]);
 
   const handleConvertSessionToOutput = useCallback(
-    async (outputType: OutputType) => {
+    async (outputType: OutputTypeInput) => {
       if (!state.activeNotebookId || !state.activeSessionId) return;
       if (!isConnected) {
         toast.warning('未连接到后端服务，暂不支持转换。');
@@ -349,12 +377,10 @@ export function useChat({
       }
       setIsConverting(true);
       try {
-        const result = await convertSessionToOutput(
-          state.activeNotebookId,
-          state.activeSessionId,
-          outputType,
-          null, // Convert entire session
-        );
+        const result = await convertSessionToOutput({
+          path: { notebook_id: state.activeNotebookId, session_id: state.activeSessionId },
+          body: { message_ids: null, output_type: outputType },
+        });
         // Refresh outputs list to show the new output
         if (refreshOutputs) {
           await refreshOutputs();

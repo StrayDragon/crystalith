@@ -1,7 +1,8 @@
-# frontend-api-client Specification (Change: simplify-api-client)
+# frontend-api-client Specification
 
-## ADDED Requirements
-
+## Purpose
+TBD - created by archiving change simplify-api-client. Update Purpose after archive.
+## Requirements
 ### Requirement: Generated client is the default API surface
 系统 MUST 使用 OpenAPI 生成的前端客户端作为新增 API 调用的首选方式，仅在生成客户端无法覆盖时才允许手写 `fetch` 调用。
 
