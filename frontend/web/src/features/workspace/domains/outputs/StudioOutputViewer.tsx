@@ -10,8 +10,9 @@ import {
 } from '@material-tailwind/react';
 import { MoreVert as MoreVertIcon, Delete as DeleteIcon } from '@mui/icons-material';
 
-import type { OutputItem } from '../../shared/types';
-import { formatRelativeTime } from '../../shared/utils';
+import type { Citation, OutputItem } from '../../shared/types';
+import { collectOutputCitations, formatRelativeTime } from '../../shared/utils';
+import CitationMark from '../../shared/components/citations/CitationMark';
 import OutputContent from './OutputContent';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { useLayer } from '../../../../shared/layer';
@@ -25,6 +26,8 @@ interface StudioOutputViewerProps {
   onToggleFullscreen: () => void;
   onSelectOutput: (outputId: number) => void;
   onDeleteOutput?: (outputId: number) => void;
+  onJumpToCitation?: (citation: Citation, citations: Citation[]) => void;
+  onCitationHover?: (chunkId: number | null) => void;
   /** 是否提升 z-index（用于从其他 modal 如知识图谱中打开时） */
   elevated?: boolean;
 }
@@ -60,6 +63,8 @@ export default function StudioOutputViewer({
   onToggleFullscreen,
   onSelectOutput,
   onDeleteOutput,
+  onJumpToCitation,
+  onCitationHover,
   elevated = false,
 }: StudioOutputViewerProps) {
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
@@ -68,6 +73,10 @@ export default function StudioOutputViewer({
     if (!selectedOutputId) return outputs[0] ?? null;
     return outputs.find((item) => item.id === selectedOutputId) ?? outputs[0] ?? null;
   }, [outputs, selectedOutputId]);
+  const outputCitations = useMemo(
+    () => (selectedOutput ? collectOutputCitations(selectedOutput.content) : []),
+    [selectedOutput],
+  );
 
   const handleDelete = useCallback((outputId: number) => {
     if (outputId && onDeleteOutput) {
@@ -223,6 +232,29 @@ export default function StudioOutputViewer({
           </aside>
           <section className="flex-1 overflow-y-auto p-6 bg-white">
             {selectedOutput ? <OutputContent output={selectedOutput} /> : null}
+            {outputCitations.length > 0 ? (
+              <div className="mt-6 border-t border-gray-100 pt-4">
+                <div className="flex items-center justify-between">
+                  <Typography variant="small" className="text-xs font-semibold text-gray-600">
+                    引用
+                  </Typography>
+                  <span className="text-[11px] text-gray-500 font-medium">
+                    {outputCitations.length} 条
+                  </span>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {outputCitations.map((citation, index) => (
+                    <CitationMark
+                      key={`${selectedOutput?.id ?? 'output'}-${citation.id}`}
+                      index={index + 1}
+                      citation={citation}
+                      onHover={(chunkId) => onCitationHover?.(chunkId)}
+                      onJump={() => onJumpToCitation?.(citation, outputCitations)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </section>
         </div>
       </div>

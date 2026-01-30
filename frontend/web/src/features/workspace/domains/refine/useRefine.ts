@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
-import { listWorkspaceTools, refineBatch } from '../../shared/api';
+import { listSourceChunks, listWorkspaceTools, refineBatch } from '../../shared/api';
 import { useWorkspaceDispatch, useWorkspaceState } from '../../app/WorkspaceContext';
 import type {
   ApiWorkspaceTool,
@@ -107,14 +107,62 @@ export function useRefine() {
     dispatch({ type: 'SET_REFINE_PROMPT', payload: refineTemplates[0].prompt });
   }, [dispatch, refineTemplates, state.refinePrompt]);
 
-  const selectedChunkIds = useMemo(
-    () =>
-      state.citations
-        .filter((citation) => state.selectedCitationIds[citation.id])
-        .map((citation) => citation.chunkId ?? Number(citation.id))
-        .filter((value): value is number => Number.isFinite(value) && value > 0),
+  const selectedCitations = useMemo(
+    () => state.citations.filter((citation) => state.selectedCitationIds[citation.id]),
     [state.citations, state.selectedCitationIds],
   );
+
+  const selectedChunkIds = useMemo(
+    () =>
+      selectedCitations
+        .map((citation) => citation.chunkId ?? Number(citation.id))
+        .filter((value): value is number => Number.isFinite(value) && value > 0),
+    [selectedCitations],
+  );
+
+  const preserveSelectedCitations =
+    selectedCitations.length > 0 && !state.autoSelectCitations;
+
+  const selectedSourceIds = useMemo(
+    () =>
+      Object.entries(state.selectedSourceIds)
+        .filter(([, selected]) => selected)
+        .map(([id]) => Number(id))
+        .filter((value) => Number.isFinite(value) && value > 0),
+    [state.selectedSourceIds],
+  );
+
+  const resolveSelectedChunkIds = useCallback(async () => {
+    if (selectedChunkIds.length) return selectedChunkIds;
+    if (!selectedSourceIds.length) return [];
+    if (!state.activeNotebookId || !isConnected) return [];
+    try {
+      const chunksPerSource = await Promise.all(
+        selectedSourceIds.map((sourceId) =>
+          listSourceChunks(state.activeNotebookId ?? 0, sourceId),
+        ),
+      );
+      return Array.from(
+        new Set(
+          chunksPerSource.flatMap((chunks) =>
+            chunks.map((chunk) => Number(chunk.id)).filter((id) => id > 0),
+          ),
+        ),
+      );
+    } catch (error) {
+      dispatch({
+        type: 'SET_ERROR',
+        payload: { key: 'send', value: '选中来源引用获取失败，请稍后重试。' },
+      });
+      return [];
+    }
+  }, [
+    dispatch,
+    isConnected,
+    selectedChunkIds,
+    selectedSourceIds,
+    state.activeNotebookId,
+  ]);
 
 
   const updateRefineJobs = useCallback(
@@ -235,7 +283,7 @@ export function useRefine() {
         if (isCurrentNotebook && stillTracked) {
           markJobCompleted(jobId);
         }
-        if (resolvedCitations && isCurrentNotebook && stillTracked) {
+        if (resolvedCitations && isCurrentNotebook && stillTracked && !preserveSelectedCitations) {
           dispatch({
             type: 'SET_CITATIONS',
             payload: resolvedCitations,
@@ -303,6 +351,7 @@ export function useRefine() {
       incrementQueueDone,
       markJobCompleted,
       refineFormats,
+      preserveSelectedCitations,
       updateRefineJobs,
     ],
   );
@@ -380,7 +429,7 @@ export function useRefine() {
     [outputTypeOptions],
   );
 
-  const handleRefineGenerate = useCallback(() => {
+  const handleRefineGenerate = useCallback(async () => {
     if (!isConnected) {
       dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '未连接到后端服务。' } });
       return;
@@ -391,9 +440,10 @@ export function useRefine() {
     }
     const trimmed = state.refinePrompt.trim();
     if (!trimmed) return;
+    const resolvedChunkIds = await resolveSelectedChunkIds();
     enqueueRefineJob({
       prompt: trimmed,
-      chunkIds: selectedChunkIds.length ? [...selectedChunkIds] : [],
+      chunkIds: resolvedChunkIds.length ? [...resolvedChunkIds] : [],
       label: resolveTemplateLabel(trimmed, refineTemplates),
     });
     dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
@@ -402,13 +452,12 @@ export function useRefine() {
     enqueueRefineJob,
     isConnected,
     refineTemplates,
-    selectedChunkIds,
+    resolveSelectedChunkIds,
     state.activeNotebookId,
     state.refinePrompt,
   ]);
 
-  const handleCompareSelectedCitations = useCallback(() => {
-    if (!selectedChunkIds.length) return;
+  const handleCompareSelectedCitations = useCallback(async () => {
     if (!isConnected) {
       dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '未连接到后端服务。' } });
       return;
@@ -417,13 +466,15 @@ export function useRefine() {
       dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '请先创建笔记本。' } });
       return;
     }
+    const resolvedChunkIds = await resolveSelectedChunkIds();
+    if (!resolvedChunkIds.length) return;
     const promptText =
       compareTemplate?.prompt ??
       '基于选中引用生成对比分析，输出相同点 / 差异点 / 结论。';
     dispatch({ type: 'SET_REFINE_PROMPT', payload: promptText });
     enqueueRefineJob({
       prompt: promptText,
-      chunkIds: [...selectedChunkIds],
+      chunkIds: [...resolvedChunkIds],
       label: compareTemplate?.label ?? '对比分析',
     });
     dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
@@ -433,7 +484,7 @@ export function useRefine() {
     dispatch,
     enqueueRefineJob,
     isConnected,
-    selectedChunkIds,
+    resolveSelectedChunkIds,
     state.activeNotebookId,
   ]);
 
@@ -513,7 +564,7 @@ export function useRefine() {
     [dispatch],
   );
 
-  const handleGenerateOutput = useCallback((overrideType?: OutputTypeId, modelId?: string | null) => {
+  const handleGenerateOutput = useCallback(async (overrideType?: OutputTypeId, modelId?: string | null) => {
     if (!isConnected) {
       dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '未连接到后端服务。' } });
       return;
@@ -536,10 +587,11 @@ export function useRefine() {
     if (overrideType) {
       dispatch({ type: 'SET_OUTPUT_TYPE', payload: selectedType });
     }
+    const resolvedChunkIds = await resolveSelectedChunkIds();
     enqueueOutputJob({
       type: selectedType,
       prompt,
-      chunkIds: selectedChunkIds.length ? selectedChunkIds : [],
+      chunkIds: resolvedChunkIds.length ? resolvedChunkIds : [],
       modelId: modelId ?? undefined,
     });
     if (state.activePanel !== 'refine') {
@@ -552,7 +604,7 @@ export function useRefine() {
     isConnected,
     outputTypeOptions,
     resolveOutputPrompt,
-    selectedChunkIds,
+    resolveSelectedChunkIds,
     state.activeNotebookId,
     state.activePanel,
     state.outputType,

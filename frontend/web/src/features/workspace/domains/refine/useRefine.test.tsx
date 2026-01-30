@@ -86,8 +86,8 @@ test('onGenerateRefine enqueues job with selected chunk ids', async () => {
     });
   });
 
-  act(() => {
-    result.current.refine.onGenerateRefine();
+  await act(async () => {
+    await result.current.refine.onGenerateRefine();
   });
 
   await waitFor(() => {

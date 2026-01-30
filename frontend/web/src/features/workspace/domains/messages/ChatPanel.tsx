@@ -28,11 +28,15 @@ interface ChatPanelProps {
   onDraftChange: (value: string) => void;
   onSend: () => void;
   isSending: boolean;
+  isStreaming?: boolean;
+  streamingMessageId?: string | null;
   notice: string;
   isBlocked: boolean;
   isConnected: boolean;
   inputRef: RefObject<HTMLTextAreaElement>;
   citations: Citation[];
+  onCitationHover?: (chunkId: number | null, message: ChatMessage) => void;
+  onCitationJump?: (citation: Citation, message: ChatMessage) => void;
   isLoadingMessages: boolean;
   messagesError: string;
   onRetryMessages: () => void;
@@ -49,11 +53,15 @@ function ChatPanel({
   onDraftChange,
   onSend,
   isSending,
+  isStreaming = false,
+  streamingMessageId = null,
   notice,
   isBlocked,
   isConnected,
   inputRef,
   citations,
+  onCitationHover,
+  onCitationJump,
   isLoadingMessages,
   messagesError,
   onRetryMessages,
@@ -133,6 +141,22 @@ function ChatPanel({
                     (entry): entry is { citation: Citation; index: number } =>
                       Boolean(entry),
                   );
+          const scope = message.citationScope;
+          const scopeLabel = scope
+            ? `${scope.mode === 'selected' ? '选中引用' : '自动检索'} · ${scope.count} 条`
+            : '';
+          const scopeSources = scope
+            ? scope.sources.length > 0
+              ? `来源：${scope.sources.join('、')}`
+              : '来源：未找到'
+            : '';
+          const scopeModeLabel =
+            scope?.mode === 'selected'
+              ? scope.kind === 'sources'
+                ? '选中来源'
+                : '选中引用'
+              : '自动检索';
+          const scopeSummary = scope ? `${scopeModeLabel} · ${scope.count} 条` : '';
           return (
             <div
               key={message.id}
@@ -146,6 +170,11 @@ function ChatPanel({
                 }`}
               >
                 {message.content}
+                {message.role === 'assistant' &&
+                isStreaming &&
+                streamingMessageId === message.id ? (
+                  <span className="TypingCursor" aria-hidden="true" />
+                ) : null}
                 {message.role === 'assistant' && messageCitationEntries.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-1" aria-label="引用">
                     {messageCitationEntries.map((entry) => (
@@ -153,13 +182,19 @@ function ChatPanel({
                         key={`${message.id}-${entry.citation.id}`}
                         index={entry.index}
                         citation={entry.citation}
-                        onHover={() => undefined}
-                        onJump={() => undefined}
+                        onHover={(chunkId) => onCitationHover?.(chunkId, message)}
+                        onJump={(_chunkId) => onCitationJump?.(entry.citation, message)}
                       />
                     ))}
                   </div>
                 ) : null}
               </div>
+              {message.role === 'assistant' && scope ? (
+                <div className="text-[11px] text-gray-500 px-1" aria-label="引用范围">
+                  引用范围（发送时）：{scopeSummary || scopeLabel}
+                  {scopeSources ? ` · ${scopeSources}` : ''}
+                </div>
+              ) : null}
               {message.role === 'assistant' && message.content ? (
                 <div className="flex items-center gap-1 mt-1 flex-wrap">
                   <button

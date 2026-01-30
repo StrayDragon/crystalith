@@ -16,7 +16,7 @@ import {
   Save as SaveIcon,
 } from '@mui/icons-material';
 
-import type { OutputItem, OutputTypeId, WorkspaceTool } from '../../shared/types';
+import type { Citation, OutputItem, OutputTypeId, WorkspaceTool } from '../../shared/types';
 import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
 import StudioOutputsList from './StudioOutputsList';
 import StudioToolsGrid from './StudioToolsGrid';
@@ -42,6 +42,7 @@ interface StudioPanelProps {
   onSelectOutputFullscreen?: (outputId: number) => void;
   onSaveNote?: (content: string) => void;
   onConvertToSource?: (outputId: number) => void;
+  onJumpToCitation?: (citation: Citation, citations: Citation[]) => void;
   isConnected: boolean;
   isFullscreen?: boolean;
 }
@@ -62,6 +63,7 @@ function StudioPanel({
   onSelectOutputFullscreen,
   onSaveNote,
   onConvertToSource,
+  onJumpToCitation,
   isConnected,
   isFullscreen = false,
 }: StudioPanelProps) {
@@ -115,6 +117,7 @@ function StudioPanel({
         onSelectOutput={onSelectOutput}
         onSelectOutputFullscreen={onSelectOutputFullscreen}
         onConvertToSource={onConvertToSource}
+        onJumpToCitation={onJumpToCitation}
         onOpenSlides={onOpenSlides}
         typeLabelMap={typeLabelMap}
       />

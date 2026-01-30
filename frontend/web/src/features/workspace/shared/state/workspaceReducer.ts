@@ -28,6 +28,7 @@ export interface WorkspaceState {
   draft: string;
   citations: Citation[];
   selectedCitationIds: Record<string, boolean>;
+  selectedSourceIds: Record<number, boolean>;
   autoSelectCitations: boolean;
   hoveredCitationChunkId: number | null;
   hoveredMessageChunkIds: number[];
@@ -59,6 +60,7 @@ export type WorkspaceAction =
   | { type: 'SET_DRAFT'; payload: string }
   | { type: 'SET_CITATIONS'; payload: Citation[] }
   | { type: 'SET_SELECTED_CITATIONS'; payload: Record<string, boolean> }
+  | { type: 'SET_SELECTED_SOURCES'; payload: Record<number, boolean> }
   | { type: 'SET_AUTO_SELECT_CITATIONS'; payload: boolean }
   | { type: 'SET_HOVERED_CITATION'; payload: number | null }
   | { type: 'SET_HOVERED_MESSAGE_CHUNKS'; payload: number[] }
@@ -92,6 +94,7 @@ export const initialWorkspaceState: WorkspaceState = {
   draft: '',
   citations: [],
   selectedCitationIds: {},
+  selectedSourceIds: {},
   autoSelectCitations: false,
   hoveredCitationChunkId: null,
   hoveredMessageChunkIds: [],
@@ -155,6 +158,7 @@ export function workspaceReducer(
         outputs: [],
         citations: [],
         selectedCitationIds: {},
+        selectedSourceIds: {},
         autoSelectCitations: false,
         hoveredCitationChunkId: null,
         hoveredMessageChunkIds: [],
@@ -178,6 +182,7 @@ export function workspaceReducer(
         messages: [],
         citations: [],
         selectedCitationIds: {},
+        selectedSourceIds: state.selectedSourceIds,
         autoSelectCitations: false,
         hoveredCitationChunkId: null,
         hoveredMessageChunkIds: [],
@@ -196,6 +201,8 @@ export function workspaceReducer(
       return { ...state, citations: action.payload };
     case 'SET_SELECTED_CITATIONS':
       return { ...state, selectedCitationIds: action.payload };
+    case 'SET_SELECTED_SOURCES':
+      return { ...state, selectedSourceIds: action.payload };
     case 'SET_AUTO_SELECT_CITATIONS':
       return { ...state, autoSelectCitations: action.payload };
     case 'SET_HOVERED_CITATION':

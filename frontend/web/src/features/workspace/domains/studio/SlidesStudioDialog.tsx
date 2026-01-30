@@ -26,6 +26,7 @@ import {
   getLatestSlidesDraft,
   getSlidesConfig,
   getSlidesDraft,
+  listSourceChunks,
   updateSlidesDraft,
   updateSlidesOutline,
   updateSlidesMarkdown,
@@ -146,6 +147,7 @@ interface SlidesStudioDialogProps {
   onClose: () => void;
   notebookId: number | null;
   selectedChunkIds: number[];
+  selectedSourceIds?: number[];
   isConnected: boolean;
   onOutputsUpdated: () => void;
   openMode?: 'config' | 'preview';
@@ -165,6 +167,7 @@ export default function SlidesStudioDialog({
   onClose,
   notebookId,
   selectedChunkIds,
+  selectedSourceIds = [],
   isConnected,
   onOutputsUpdated,
   openMode = 'config',
@@ -222,9 +225,14 @@ export default function SlidesStudioDialog({
 
   const selectionLabel = useMemo(() => {
     const chunkIds = isPreviewMode && draft?.chunkIds?.length ? draft.chunkIds : selectedChunkIds;
-    if (!chunkIds.length) return '将基于当前笔记本自动检索。';
+    if (!chunkIds.length) {
+      if (selectedSourceIds.length) {
+        return `已选择 ${selectedSourceIds.length} 个来源，将仅基于选中来源生成。`;
+      }
+      return '将基于当前笔记本自动检索。';
+    }
     return `已选择 ${chunkIds.length} 条引用，将仅基于选中引用生成。`;
-  }, [draft?.chunkIds, isPreviewMode, selectedChunkIds]);
+  }, [draft?.chunkIds, isPreviewMode, selectedChunkIds, selectedSourceIds]);
 
   const selectedThemePreset = useMemo(() => {
     const options = slidesConfig?.themePresetOptions ?? [];
@@ -258,6 +266,26 @@ export default function SlidesStudioDialog({
       eventSourceRef.current = null;
     }
   }, []);
+
+  const resolveChunkIds = useCallback(async () => {
+    if (selectedChunkIds.length) return selectedChunkIds;
+    if (!selectedSourceIds.length || !notebookId) return [];
+    try {
+      const chunksPerSource = await Promise.all(
+        selectedSourceIds.map((sourceId) => listSourceChunks(notebookId, sourceId)),
+      );
+      return Array.from(
+        new Set(
+          chunksPerSource.flatMap((chunks) =>
+            chunks.map((chunk) => Number(chunk.id)).filter((id) => id > 0),
+          ),
+        ),
+      );
+    } catch {
+      toast.error('选中来源引用获取失败，请稍后重试。');
+      return [];
+    }
+  }, [notebookId, selectedChunkIds, selectedSourceIds]);
 
   const resetDraftState = useCallback(() => {
     const defaults = configDefaults;
@@ -514,10 +542,11 @@ export default function SlidesStudioDialog({
       return null;
     }
     setError('');
+    const resolvedChunkIds = await resolveChunkIds();
     const payload = {
       title: title.trim() || undefined,
       prompt: prompt.trim() || undefined,
-      chunk_ids: selectedChunkIds,
+      chunk_ids: resolvedChunkIds,
       generation_config: buildGenerationConfigPayload(),
     };
     if (!draft) {
@@ -536,7 +565,7 @@ export default function SlidesStudioDialog({
     isConnected,
     notebookId,
     prompt,
-    selectedChunkIds,
+    resolveChunkIds,
     syncFromDraft,
     title,
   ]);
@@ -555,10 +584,11 @@ export default function SlidesStudioDialog({
     setError('');
     setIsQueueing(true);
     try {
+      const resolvedChunkIds = await resolveChunkIds();
       const job = await onQueueSlides({
         title: title.trim(),
         prompt: prompt.trim(),
-        chunkIds: selectedChunkIds,
+        chunkIds: resolvedChunkIds,
         generationConfig: buildGenerationConfig(),
         modelId: configModelId ?? undefined,
       });
@@ -582,7 +612,7 @@ export default function SlidesStudioDialog({
     onClose,
     onQueueSlides,
     prompt,
-    selectedChunkIds,
+    resolveChunkIds,
     title,
   ]);
 

@@ -39,7 +39,7 @@ import {
 
 import type { AsyncStatus } from '../../../../shared/types';
 import type { ExtractorInfo, ExtractorType, QAMessage, SourceFromUrlMode } from '../../../../api/client';
-import type { ApiSourceSearchResult, SourceItem } from '../../shared/types';
+import type { ApiSourceSearchResult, Citation, SourceItem } from '../../shared/types';
 import type { SearchQueueItem } from './useSources';
 import { useResearch } from '../research/useResearch';
 import { toast } from '../../../../shared/toast';
@@ -52,9 +52,16 @@ import AddSearchResultDialog from './AddSearchResultDialog';
 import ResearchCapsule from '../research/ResearchCapsule';
 import ResearchDetailPanel from '../research/ResearchDetailPanel';
 import type { SearchResultItem } from './SearchResultCard';
+import CitationList from '../../shared/components/citations/CitationList';
+import CitationActions from '../../shared/components/citations/CitationActions';
 
 interface SourcesPanelProps {
   sources: SourceItem[];
+  citations?: Citation[];
+  selectedCitationIds?: Record<string, boolean>;
+  selectedCitationCount?: number;
+  highlightedChunkIds?: Set<number>;
+  jumpToCitationChunkId?: number | null;
   onSourceClick: (source: SourceItem) => void;
   onUpload: (file: File | null) => void;
   uploadState: AsyncStatus;
@@ -88,10 +95,23 @@ interface SourcesPanelProps {
   onConvertSourceQAToSource?: (sourceId: number, messages: QAMessage[]) => Promise<unknown>;
   /** 当前 notebook ID，用于深度研究功能 */
   notebookId?: number;
+  onSelectedSourceIdsChange?: (selected: Record<number, boolean>) => void;
+  onToggleCitation?: (citationId: string) => void;
+  onSelectAllCitations?: () => void;
+  onClearCitationSelection?: () => void;
+  onCopySelectedCitations?: () => void;
+  onCompareSelectedCitations?: () => void;
+  onSendSelectedCitations?: () => void;
+  onCitationHover?: (chunkId: number | null) => void;
 }
 
 function SourcesPanel({
   sources,
+  citations = [],
+  selectedCitationIds = {},
+  selectedCitationCount = 0,
+  highlightedChunkIds = new Set(),
+  jumpToCitationChunkId = null,
   onSourceClick,
   onUpload,
   uploadState,
@@ -114,6 +134,14 @@ function SourcesPanel({
   defaultExtractor = null,
   onConvertSourceQAToSource,
   notebookId,
+  onSelectedSourceIdsChange,
+  onToggleCitation,
+  onSelectAllCitations,
+  onClearCitationSelection,
+  onCopySelectedCitations,
+  onCompareSelectedCitations,
+  onSendSelectedCitations,
+  onCitationHover,
 }: SourcesPanelProps) {
   const uploadDisabled = !isConnected || uploadState === 'loading';
   const isSearching = searchState === 'loading';
@@ -248,6 +276,10 @@ function SourcesPanel({
     });
   }, [sources]);
 
+  useEffect(() => {
+    onSelectedSourceIdsChange?.(selectedSourceIds);
+  }, [onSelectedSourceIdsChange, selectedSourceIds]);
+
   const allSelected = useMemo(
     () => sources.length > 0 && sources.every((source) => selectedSourceIds[source.id]),
     [sources, selectedSourceIds],
@@ -257,6 +289,15 @@ function SourcesPanel({
     [sources, selectedSourceIds],
   );
   const removeDisabled = !isConnected || removeState === 'loading' || selectedIds.length === 0;
+  const selectedCitationIdSet = useMemo(() => {
+    const next = new Set<string>();
+    for (const [id, selected] of Object.entries(selectedCitationIds)) {
+      if (selected) {
+        next.add(id);
+      }
+    }
+    return next;
+  }, [selectedCitationIds]);
 
   function handleToggleAll() {
     if (allSelected) {
@@ -382,7 +423,8 @@ function SourcesPanel({
   };
 
   return (
-    <div className={`flex flex-1 flex-col gap-3 p-3 sm:p-4 min-h-0 ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''}`}>
+    <div className={`flex flex-1 flex-col min-h-0 ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''}`}>
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-col gap-3">
       {/* Upload Button */}
       <Tooltip content="支持文本(.txt)和Markdown(.md)文件">
         <Button
@@ -612,7 +654,7 @@ function SourcesPanel({
       </div>
 
       {/* Sources List */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div>
         {isLoading ? (
           <div className="flex flex-col gap-2">
             <div className="h-10 rounded-lg bg-gray-100 animate-pulse" />
@@ -709,6 +751,37 @@ function SourcesPanel({
         )}
       </div>
 
+      {citations.length > 0 && (
+        <div className="flex flex-col gap-2 pt-2">
+          <div className="flex items-center justify-between px-1">
+            <Typography variant="small" className="text-[11px] text-gray-600 font-medium">
+              引用
+            </Typography>
+            <span className="text-[11px] text-gray-500 font-medium">
+              {citations.length} 条
+            </span>
+          </div>
+          <CitationActions
+            selectedCount={selectedCitationCount}
+            totalCount={citations.length}
+            onSendSelected={onSendSelectedCitations ?? (() => undefined)}
+            onCompareSelected={onCompareSelectedCitations ?? (() => undefined)}
+            onCopySelected={onCopySelectedCitations ?? (() => undefined)}
+            onSelectAll={onSelectAllCitations ?? (() => undefined)}
+            onClearSelection={onClearCitationSelection ?? (() => undefined)}
+          />
+          <CitationList
+            citations={citations}
+            selectedCitationIds={selectedCitationIdSet}
+            highlightedChunkIds={highlightedChunkIds}
+            jumpToCitationChunkId={jumpToCitationChunkId}
+            onToggleCitation={onToggleCitation ?? (() => undefined)}
+            onCitationHover={onCitationHover ?? (() => undefined)}
+          />
+        </div>
+      )}
+
+      </div>
       {/* Source Detail Dialog */}
       <SourceDetailDialog
         open={detailDialogOpen}

@@ -731,6 +731,10 @@ export type QaRequest = {
      */
     question: string;
     /**
+     * Chunk Ids
+     */
+    chunk_ids?: Array<number> | null;
+    /**
      * Top K
      */
     top_k?: number;

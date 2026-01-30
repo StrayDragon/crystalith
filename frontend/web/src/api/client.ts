@@ -485,12 +485,14 @@ export async function askQuestion(
   notebookId: number,
   question: string,
   sessionId?: number | null,
+  chunkIds?: number[],
 ): Promise<QaResponse> {
   const result = await askQuestionV1NotebooksNotebookIdQaPost({
     path: { notebook_id: notebookId },
     body: {
       question,
       session_id: sessionId ?? undefined,
+      chunk_ids: chunkIds && chunkIds.length ? chunkIds : undefined,
     },
   });
   return handleResponse(result);
@@ -531,6 +533,7 @@ export async function askQuestionStream(
   notebookId: number,
   question: string,
   sessionId?: number | null,
+  chunkIds?: number[],
   callbacks?: QAStreamCallbacks,
 ): Promise<{ fullAnswer: string; done: QAStreamDoneEvent | null }> {
   const response = await fetch(`/v1/notebooks/${notebookId}/qa/stream`, {
@@ -542,6 +545,7 @@ export async function askQuestionStream(
     body: JSON.stringify({
       question,
       session_id: sessionId ?? undefined,
+      chunk_ids: chunkIds && chunkIds.length ? chunkIds : undefined,
     }),
   });
 

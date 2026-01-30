@@ -1,3 +1,105 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  .TypingCursor {
+    display: inline-block;
+    width: 8px;
+    height: 1.1em;
+    margin-left: 4px;
+    vertical-align: -2px;
+    border-radius: 2px;
+    background-color: currentColor;
+    animation: typing-cursor-blink 0.9s steps(1) infinite;
+  }
+}
+
+@layer components {
+  .CitationGroups {
+    @apply flex flex-col gap-3;
+  }
+  .CitationGroup {
+    @apply rounded-xl border border-gray-200 bg-white overflow-hidden;
+  }
+  .CitationGroupHeader {
+    @apply flex items-center justify-between px-3 py-2 border-b border-gray-100 bg-gray-50;
+  }
+  .CitationGroupTitle {
+    @apply flex items-center gap-2 text-xs font-semibold text-gray-700;
+  }
+  .CitationGroupIcon {
+    @apply inline-flex h-6 w-6 items-center justify-center rounded-lg bg-gray-100 text-gray-500;
+  }
+  .CitationGroupName {
+    @apply truncate;
+  }
+  .CitationGroupCount {
+    @apply text-[11px] text-gray-500 font-medium;
+  }
+  .CitationGroupList {
+    @apply flex flex-col;
+  }
+  .CitationItem {
+    @apply relative flex gap-3 px-3 py-2 text-xs text-gray-700;
+  }
+  .CitationItem.isHighlighted {
+    @apply bg-amber-50;
+  }
+  .CitationHighlight {
+    @apply absolute left-2 top-3 text-amber-400 opacity-0 transition-opacity;
+  }
+  .CitationHighlight.isActive {
+    @apply opacity-100;
+  }
+  .CitationHighlight__icon {
+    @apply h-3 w-3;
+  }
+  .WorkspaceCheckbox {
+    @apply h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900;
+  }
+  .CitationCheckbox {
+    @apply h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900;
+  }
+  .CitationContent {
+    @apply flex flex-1 flex-col gap-1 min-w-0;
+  }
+  .CitationMeta {
+    @apply flex items-center gap-2 text-[10px] text-gray-500;
+  }
+  .CitationSnippet {
+    @apply text-[11px] text-gray-700 leading-relaxed line-clamp-2;
+  }
+  .CitationSnippet.isExpanded {
+    @apply line-clamp-none;
+  }
+  .CitationExpand {
+    @apply self-start text-[11px] font-medium text-gray-500 hover:text-gray-700;
+  }
+  .CitationActionBar {
+    @apply sticky bottom-0 flex flex-col gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm;
+  }
+  .CitationActionMeta {
+    @apply text-[11px] text-gray-500 font-medium;
+  }
+  .CitationActionButtons {
+    @apply flex flex-wrap gap-1;
+  }
+  .ActionButton {
+    @apply text-[11px] px-2 py-1 rounded-md border border-gray-200 text-gray-600 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .ActionButton.isPrimary {
+    @apply border-gray-900 text-gray-900;
+  }
+}
+
+@keyframes typing-cursor-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}

@@ -29,11 +29,18 @@ const STATUS_CONFIG: Record<
   cancelled: { label: '已取消', color: 'gray' },
 };
 
-function ResearchCapsule({ session, onClick, onStart, onDelete, isExpanded }: ResearchCapsuleProps) {
+function ResearchCapsule({
+  session,
+  onClick,
+  onStart,
+  onDelete,
+  isExpanded,
+}: ResearchCapsuleProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const config = STATUS_CONFIG[session.status] || { label: session.status, color: 'gray' };
   const progress = Math.round((session.current_iteration / session.max_iterations) * 100);
   const isActive = ['planning', 'searching', 'analyzing', 'waiting_user'].includes(session.status);
+  const shouldAnimate = config.animate;
 
   const handleStart = useCallback(
     (e: React.MouseEvent) => {
@@ -63,7 +70,7 @@ function ResearchCapsule({ session, onClick, onStart, onDelete, isExpanded }: Re
         group relative p-3 rounded-lg border transition-all duration-200
         cursor-pointer hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500
         ${isExpanded ? 'border-blue-400 bg-blue-50/50' : 'border-gray-200 bg-white hover:border-blue-300'}
-        ${config.animate ? 'animate-pulse' : ''}
+        ${shouldAnimate ? 'animate-pulse' : ''}
       `}
     >
       {/* Header */}
