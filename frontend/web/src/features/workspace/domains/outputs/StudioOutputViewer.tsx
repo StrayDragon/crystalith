@@ -28,6 +28,7 @@ interface StudioOutputViewerProps {
   onDeleteOutput?: (outputId: number) => void;
   onJumpToCitation?: (citation: Citation, citations: Citation[]) => void;
   onCitationHover?: (chunkId: number | null) => void;
+  onLocateSource?: (citation: Citation) => void;
   /** 是否提升 z-index（用于从其他 modal 如知识图谱中打开时） */
   elevated?: boolean;
 }
@@ -65,6 +66,7 @@ export default function StudioOutputViewer({
   onDeleteOutput,
   onJumpToCitation,
   onCitationHover,
+  onLocateSource,
   elevated = false,
 }: StudioOutputViewerProps) {
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
@@ -264,6 +266,7 @@ export default function StudioOutputViewer({
                     anchorRect={citationAnchorRect}
                     onJumpToCitation={(citation) => onJumpToCitation?.(citation, outputCitations)}
                     onCitationHover={onCitationHover}
+                    onLocateSource={onLocateSource}
                     elevated
                   />
                 )}

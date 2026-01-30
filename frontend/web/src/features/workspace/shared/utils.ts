@@ -329,6 +329,7 @@ export function normalizeCitation(row: ApiCitation): Citation {
   return {
     id: `${row.chunk_id ?? row.chunk_index ?? ''}`,
     chunkId: Number.isFinite(chunkId) ? chunkId : null,
+    sourceId: row.source_id ?? null,
     sourceTitle: row.source_name ?? '未知来源',
     snippet: row.snippet ?? '',
     chunkIndex: row.chunk_index ?? 0,
