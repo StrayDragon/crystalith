@@ -5,7 +5,7 @@ import ChatPanel from '../domains/messages/ChatPanel';
 import KnowledgeGraphView from '../domains/analysis/KnowledgeGraphView';
 import SessionDetailDialog from '../domains/sessions/SessionDetailDialog';
 import SessionSwitcher from '../domains/sessions/SessionSwitcher';
-import SourceDetailDialog from '../domains/sources/SourceDetailDialog';
+import SourceDetailDialog, { type ChatMessage as SourceDialogMessage } from '../domains/sources/SourceDetailDialog';
 import SourcesPanel from '../domains/sources/SourcesPanel';
 import StudioPanel from '../domains/studio/StudioPanel';
 import SlidesStudioDialog from '../domains/studio/SlidesStudioDialog';
@@ -18,9 +18,10 @@ import { useRefine } from '../domains/refine/useRefine';
 import { useSessions } from '../domains/sessions/useSessions';
 import { useSources } from '../domains/sources/useSources';
 import type { ChatMessage, Citation, SourceItem } from '../shared/types';
-import { buildSourceSummaryPrompt, normalizeMessage } from '../shared/utils';
+import { normalizeMessage } from '../shared/utils';
 import { listMessages } from '../shared/api';
 import { IconFullscreen, IconExitFullscreen } from '../shared/components/Icons';
+import { toast } from '../../../shared/toast';
 
 const StudioOutputViewer = lazy(() => import('../domains/outputs/StudioOutputViewer'));
 
@@ -68,7 +69,6 @@ function resolveRightWidth(right: number, left: number, containerWidth: number) 
 export default function WorkspaceLayout() {
   const state = useWorkspaceState();
   const dispatch = useWorkspaceDispatch();
-  const [pendingChatFocus, setPendingChatFocus] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [isViewerFullscreen, setIsViewerFullscreen] = useState(false);
@@ -91,6 +91,12 @@ export default function WorkspaceLayout() {
   const [graphSourceDetailOpen, setGraphSourceDetailOpen] = useState(false);
   const [graphSelectedSource, setGraphSelectedSource] = useState<SourceItem | null>(null);
   const [graphSourceDetailFullscreen, setGraphSourceDetailFullscreen] = useState(false);
+
+  // Source detail dialog state for citation popovers
+  const [citationSourceDetailOpen, setCitationSourceDetailOpen] = useState(false);
+  const [citationSelectedSource, setCitationSelectedSource] = useState<SourceItem | null>(null);
+  const [citationSourceDetailFullscreen, setCitationSourceDetailFullscreen] = useState(false);
+  const [jumpToSource, setJumpToSource] = useState<{ id: number; token: number } | null>(null);
 
   // Session detail dialog state for graph view
   const [graphSessionDetailOpen, setGraphSessionDetailOpen] = useState(false);
@@ -138,6 +144,47 @@ export default function WorkspaceLayout() {
     [state.selectedSourceIds],
   );
 
+  const sourceById = useMemo(() => {
+    const map = new Map<number, SourceItem>();
+    sources.sources.forEach((source) => {
+      map.set(source.id, source);
+    });
+    return map;
+  }, [sources.sources]);
+
+  const chunkToSourceId = useMemo(() => {
+    const map = new Map<number, number>();
+    let chunkOffset = 0;
+    for (const source of sources.sources) {
+      for (let i = 0; i < source.chunks; i++) {
+        map.set(chunkOffset + i + 1, source.id);
+      }
+      chunkOffset += source.chunks;
+    }
+    return map;
+  }, [sources.sources]);
+
+  const resolveCitationSource = useCallback(
+    (citation: Citation) => {
+      if (citation.sourceId != null) {
+        return sourceById.get(citation.sourceId) ?? null;
+      }
+      if (citation.chunkId != null) {
+        const sourceId = chunkToSourceId.get(citation.chunkId);
+        if (sourceId != null) {
+          return sourceById.get(sourceId) ?? null;
+        }
+      }
+      const title = citation.sourceTitle?.trim();
+      if (title) {
+        const match = sources.sources.find((source) => source.title === title);
+        if (match) return match;
+      }
+      return null;
+    },
+    [chunkToSourceId, sourceById, sources.sources],
+  );
+
   const handleSelectedSourceIdsChange = useCallback(
     (selected: Record<number, boolean>) => {
       dispatch({ type: 'SET_SELECTED_SOURCES', payload: selected });
@@ -156,6 +203,50 @@ export default function WorkspaceLayout() {
     [sources],
   );
 
+  const handleOpenCitationSourceDetail = useCallback(
+    (citation: Citation) => {
+      const source = resolveCitationSource(citation);
+      if (!source) {
+        toast.error('未找到对应来源，请先同步来源列表。');
+        return;
+      }
+      setCitationSelectedSource(source);
+      setCitationSourceDetailOpen(true);
+      setCitationSourceDetailFullscreen(false);
+    },
+    [resolveCitationSource],
+  );
+
+  const handleLocateCitationSource = useCallback(
+    (citation: Citation) => {
+      const source = resolveCitationSource(citation);
+      if (!source) {
+        toast.error('未找到对应来源，请先同步来源列表。');
+        return;
+      }
+      if (expandedPanel && expandedPanel !== 'sources') {
+        setExpandedPanel('sources');
+      }
+      setJumpToSource((prev) => ({
+        id: source.id,
+        token: (prev?.token ?? 0) + 1,
+      }));
+    },
+    [expandedPanel, resolveCitationSource],
+  );
+
+  const handleCitationSaveQAAsSource = useCallback(
+    async (_sourceTitle: string, messages: SourceDialogMessage[]) => {
+      if (!citationSelectedSource || !sources.convertSourceQAToSource) return;
+      const qaMessages = messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+      await sources.convertSourceQAToSource(citationSelectedSource.id, qaMessages);
+    },
+    [citationSelectedSource, sources.convertSourceQAToSource],
+  );
+
   const handleChatCitationJump = useCallback(
     (citation: Citation, message: ChatMessage) => {
       const preserveSelection = !sources.autoSelectCitations && sources.selectedCount > 0;
@@ -165,8 +256,9 @@ export default function WorkspaceLayout() {
       if (citation.chunkId != null) {
         sources.setJumpToCitationChunkId(citation.chunkId);
       }
+      handleOpenCitationSourceDetail(citation);
     },
-    [dispatch, sources],
+    [dispatch, handleOpenCitationSourceDetail, sources],
   );
 
   const handleOutputCitationJump = useCallback(
@@ -178,8 +270,9 @@ export default function WorkspaceLayout() {
       if (citation.chunkId != null) {
         sources.setJumpToCitationChunkId(citation.chunkId);
       }
+      handleOpenCitationSourceDetail(citation);
     },
-    [dispatch, sources],
+    [dispatch, handleOpenCitationSourceDetail, sources],
   );
 
   const applySizes = useCallback((left: number, right: number) => {
@@ -247,25 +340,6 @@ export default function WorkspaceLayout() {
       document.body.style.userSelect = '';
     };
   }, [applySizes, isResizing]);
-
-  useEffect(() => {
-    if (!pendingChatFocus) return;
-    const input = chatInputRef.current;
-    if (input) {
-      input.focus();
-      const length = input.value.length;
-      input.setSelectionRange(length, length);
-    }
-    setPendingChatFocus(false);
-  }, [pendingChatFocus]);
-
-  const handleSourceClick = useCallback(
-    (source: SourceItem) => {
-      chat.setDraft(buildSourceSummaryPrompt(source.title));
-      setPendingChatFocus(true);
-    },
-    [chat.setDraft],
-  );
 
   const handleRetrySources = useCallback(() => {
     if (notebooks.notebooksError) {
@@ -471,12 +545,7 @@ export default function WorkspaceLayout() {
           </div>
           <SourcesPanel
             sources={sources.sources}
-            citations={sources.citations}
-            selectedCitationIds={sources.selectedCitationIds}
-            selectedCitationCount={sources.selectedCount}
-            highlightedChunkIds={sources.highlightedChunkIds}
-            jumpToCitationChunkId={sources.jumpToCitationChunkId}
-            onSourceClick={handleSourceClick}
+            jumpToSource={jumpToSource}
             onUpload={sources.handleUpload}
             uploadState={sources.uploadState}
             searchState={sources.searchState}
@@ -499,13 +568,6 @@ export default function WorkspaceLayout() {
             onConvertSourceQAToSource={sources.convertSourceQAToSource}
             notebookId={state.activeNotebookId ?? undefined}
             onSelectedSourceIdsChange={handleSelectedSourceIdsChange}
-            onToggleCitation={sources.toggleCitation}
-            onSelectAllCitations={sources.selectAllCitations}
-            onClearCitationSelection={sources.clearCitationSelection}
-            onCopySelectedCitations={sources.copySelectedCitations}
-            onCompareSelectedCitations={refine.onCompareSelected}
-            onSendSelectedCitations={refine.onGenerateRefine}
-            onCitationHover={sources.setHoveredCitationChunkId}
           />
         </section>
         )}
@@ -598,6 +660,7 @@ export default function WorkspaceLayout() {
             citations={sources.citations}
             onCitationHover={handleChatCitationHover}
             onCitationJump={handleChatCitationJump}
+            onCitationLocate={handleLocateCitationSource}
             isLoadingMessages={chat.isLoadingMessages}
             messagesError={state.errors.messages}
             onRetryMessages={chat.retryMessages}
@@ -699,6 +762,7 @@ export default function WorkspaceLayout() {
           onDeleteOutput={refine.onDeleteOutput}
           onJumpToCitation={handleOutputCitationJump}
           onCitationHover={handleChatCitationHover}
+          onLocateSource={handleLocateCitationSource}
           elevated={isViewerElevated}
         />
       </Suspense>
@@ -759,6 +823,20 @@ export default function WorkspaceLayout() {
           }));
           await sources.convertSourceQAToSource(graphSelectedSource.id, qaMessages);
         } : undefined}
+      />
+
+      {/* Source Detail Dialog for Citation Popovers */}
+      <SourceDetailDialog
+        open={citationSourceDetailOpen}
+        source={citationSelectedSource}
+        onClose={() => {
+          setCitationSourceDetailOpen(false);
+          setCitationSelectedSource(null);
+          setCitationSourceDetailFullscreen(false);
+        }}
+        isFullscreen={citationSourceDetailFullscreen}
+        onToggleFullscreen={() => setCitationSourceDetailFullscreen((prev) => !prev)}
+        onSaveQAAsSource={sources.convertSourceQAToSource ? handleCitationSaveQAAsSource : undefined}
       />
 
       {/* Session Detail Dialog for Graph View */}

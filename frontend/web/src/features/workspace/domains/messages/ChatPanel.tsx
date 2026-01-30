@@ -37,6 +37,7 @@ interface ChatPanelProps {
   citations: Citation[];
   onCitationHover?: (chunkId: number | null, message: ChatMessage) => void;
   onCitationJump?: (citation: Citation, message: ChatMessage) => void;
+  onCitationLocate?: (citation: Citation, message: ChatMessage) => void;
   isLoadingMessages: boolean;
   messagesError: string;
   onRetryMessages: () => void;
@@ -62,6 +63,7 @@ function ChatPanel({
   citations,
   onCitationHover,
   onCitationJump,
+  onCitationLocate,
   isLoadingMessages,
   messagesError,
   onRetryMessages,
@@ -207,6 +209,7 @@ function ChatPanel({
                           anchorRect={popoverAnchorRect}
                           onJumpToCitation={(citation) => onCitationJump?.(citation, message)}
                           onCitationHover={(chunkId) => onCitationHover?.(chunkId, message)}
+                          onLocateSource={(citation) => onCitationLocate?.(citation, message)}
                         />
                       )}
                     </>

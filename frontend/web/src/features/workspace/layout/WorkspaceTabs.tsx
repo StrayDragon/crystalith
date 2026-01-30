@@ -6,7 +6,7 @@ interface WorkspaceTabsProps {
 }
 
 const tabs: { id: PanelId; label: string }[] = [
-  { id: 'sources', label: '来源与引用' },
+  { id: 'sources', label: '来源' },
   { id: 'chat', label: '聊天' },
   { id: 'refine', label: '输出中心' },
 ];

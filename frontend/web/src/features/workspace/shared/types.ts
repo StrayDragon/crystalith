@@ -36,6 +36,7 @@ export interface SourceItem {
 export interface Citation {
   id: string;
   chunkId: number | null;
+  sourceId?: number | null;
   sourceTitle: string;
   snippet: string;
   chunkIndex: number;
