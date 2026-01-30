@@ -2,19 +2,13 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
   IconButton,
-  Input,
   Typography,
-  List,
-  ListItem,
-  ListItemPrefix,
-  ListItemSuffix,
   Checkbox,
   Menu,
   MenuHandler,
   MenuList,
   MenuItem,
   Chip,
-  Card,
   Spinner,
   Tooltip,
 } from '@material-tailwind/react';
@@ -39,7 +33,7 @@ import {
 
 import type { AsyncStatus } from '../../../../shared/types';
 import type { ExtractorInfo, ExtractorType, QAMessage, SourceFromUrlMode } from '../../../../api/client';
-import type { ApiSourceSearchResult, Citation, SourceItem } from '../../shared/types';
+import type { ApiSourceSearchResult, SourceItem } from '../../shared/types';
 import type { SearchQueueItem } from './useSources';
 import { useResearch } from '../research/useResearch';
 import { toast } from '../../../../shared/toast';
@@ -52,17 +46,11 @@ import AddSearchResultDialog from './AddSearchResultDialog';
 import ResearchCapsule from '../research/ResearchCapsule';
 import ResearchDetailPanel from '../research/ResearchDetailPanel';
 import type { SearchResultItem } from './SearchResultCard';
-import CitationList from '../../shared/components/citations/CitationList';
-import CitationActions from '../../shared/components/citations/CitationActions';
 
 interface SourcesPanelProps {
   sources: SourceItem[];
-  citations?: Citation[];
-  selectedCitationIds?: Record<string, boolean>;
-  selectedCitationCount?: number;
-  highlightedChunkIds?: Set<number>;
-  jumpToCitationChunkId?: number | null;
-  onSourceClick: (source: SourceItem) => void;
+  /** 外部触发定位/高亮某个来源 */
+  jumpToSource?: { id: number; token: number } | null;
   onUpload: (file: File | null) => void;
   uploadState: AsyncStatus;
   searchState: AsyncStatus;
@@ -96,23 +84,11 @@ interface SourcesPanelProps {
   /** 当前 notebook ID，用于深度研究功能 */
   notebookId?: number;
   onSelectedSourceIdsChange?: (selected: Record<number, boolean>) => void;
-  onToggleCitation?: (citationId: string) => void;
-  onSelectAllCitations?: () => void;
-  onClearCitationSelection?: () => void;
-  onCopySelectedCitations?: () => void;
-  onCompareSelectedCitations?: () => void;
-  onSendSelectedCitations?: () => void;
-  onCitationHover?: (chunkId: number | null) => void;
 }
 
 function SourcesPanel({
   sources,
-  citations = [],
-  selectedCitationIds = {},
-  selectedCitationCount = 0,
-  highlightedChunkIds = new Set(),
-  jumpToCitationChunkId = null,
-  onSourceClick,
+  jumpToSource = null,
   onUpload,
   uploadState,
   searchState,
@@ -135,13 +111,6 @@ function SourcesPanel({
   onConvertSourceQAToSource,
   notebookId,
   onSelectedSourceIdsChange,
-  onToggleCitation,
-  onSelectAllCitations,
-  onClearCitationSelection,
-  onCopySelectedCitations,
-  onCompareSelectedCitations,
-  onSendSelectedCitations,
-  onCitationHover,
 }: SourcesPanelProps) {
   const uploadDisabled = !isConnected || uploadState === 'loading';
   const isSearching = searchState === 'loading';
@@ -160,10 +129,11 @@ function SourcesPanel({
     localStorage.setItem('crystalith_search_mode', mode);
   }, [mode]);
   const [selectedSourceIds, setSelectedSourceIds] = useState<Record<number, boolean>>({});
-  const [activeSourceId, setActiveSourceId] = useState<number | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedSource, setSelectedSource] = useState<SourceItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sourceRefs = useRef(new Map<number, HTMLDivElement | null>());
+  const [highlightedSourceId, setHighlightedSourceId] = useState<number | null>(null);
 
   // Add search results dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -280,6 +250,17 @@ function SourcesPanel({
     onSelectedSourceIdsChange?.(selectedSourceIds);
   }, [onSelectedSourceIdsChange, selectedSourceIds]);
 
+  useEffect(() => {
+    if (!jumpToSource) return;
+    const node = sourceRefs.current.get(jumpToSource.id);
+    if (node) {
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedSourceId(jumpToSource.id);
+    }
+    const timer = window.setTimeout(() => setHighlightedSourceId(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [jumpToSource]);
+
   const allSelected = useMemo(
     () => sources.length > 0 && sources.every((source) => selectedSourceIds[source.id]),
     [sources, selectedSourceIds],
@@ -289,15 +270,6 @@ function SourcesPanel({
     [sources, selectedSourceIds],
   );
   const removeDisabled = !isConnected || removeState === 'loading' || selectedIds.length === 0;
-  const selectedCitationIdSet = useMemo(() => {
-    const next = new Set<string>();
-    for (const [id, selected] of Object.entries(selectedCitationIds)) {
-      if (selected) {
-        next.add(id);
-      }
-    }
-    return next;
-  }, [selectedCitationIds]);
 
   function handleToggleAll() {
     if (allSelected) {
@@ -624,55 +596,57 @@ function SourcesPanel({
       />
 
       {/* Select All & Batch Actions */}
-      <div className="flex items-center justify-between px-1">
-        <Typography variant="small" className="text-[11px] text-gray-600 font-medium">
-          选择所有来源
-        </Typography>
-        <div className="flex items-center gap-1">
-          <Checkbox
-            checked={allSelected}
-            onChange={handleToggleAll}
-            containerProps={{ className: "p-1" }}
-            className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
-            iconProps={{ className: "text-white" }}
-          />
-          <Menu placement="bottom-end">
-             <MenuHandler>
-               <IconButton
-                 size="sm"
-                 variant="outlined"
-                 className="w-6 h-6 min-w-[24px] rounded border-gray-200"
-                 disabled={removeDisabled}
-               >
-                 <MoreHorizIcon style={{ fontSize: 16 }} />
-               </IconButton>
-             </MenuHandler>
-             <MenuList className="p-1 min-w-[160px]">
-                <div className="px-3 py-2 text-[11px] font-semibold text-gray-500 border-b border-gray-100 mb-1">
-                  已选择 {selectedIds.length} 个来源
-                </div>
-                <ConfirmPopover
-                  message={
-                    selectedIds.length === 1
-                      ? '确定要移除已选的 1 个来源吗？'
-                      : `确定要移除已选的 ${selectedIds.length} 个来源吗？`
-                  }
-                  onConfirm={async () => {
-                    const success = await onRemoveSources(selectedIds);
-                    if (success) {
-                      setSelectedSourceIds({});
+      <div className="sticky top-0 z-10 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 bg-white/95 backdrop-blur border-b border-gray-100">
+        <div className="flex items-center justify-between px-1">
+          <Typography variant="small" className="text-[11px] text-gray-600 font-medium">
+            选择所有来源
+          </Typography>
+          <div className="flex items-center gap-1">
+            <Checkbox
+              checked={allSelected}
+              onChange={handleToggleAll}
+              containerProps={{ className: "p-1" }}
+              className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
+              iconProps={{ className: "text-white" }}
+            />
+            <Menu placement="bottom-end">
+               <MenuHandler>
+                 <IconButton
+                   size="sm"
+                   variant="outlined"
+                   className="w-6 h-6 min-w-[24px] rounded border-gray-200"
+                   disabled={removeDisabled}
+                 >
+                   <MoreHorizIcon style={{ fontSize: 16 }} />
+                 </IconButton>
+               </MenuHandler>
+               <MenuList className="p-1 min-w-[160px]">
+                  <div className="px-3 py-2 text-[11px] font-semibold text-gray-500 border-b border-gray-100 mb-1">
+                    已选择 {selectedIds.length} 个来源
+                  </div>
+                  <ConfirmPopover
+                    message={
+                      selectedIds.length === 1
+                        ? '确定要移除已选的 1 个来源吗？'
+                        : `确定要移除已选的 ${selectedIds.length} 个来源吗？`
                     }
-                  }}
-                  placement="left"
-                  disabled={removeDisabled || selectedIds.length === 0}
-                >
-                  <MenuItem className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700">
-                    <DeleteIcon style={{ fontSize: 16 }} />
-                    <span>删除已选来源</span>
-                  </MenuItem>
-                </ConfirmPopover>
-             </MenuList>
-          </Menu>
+                    onConfirm={async () => {
+                      const success = await onRemoveSources(selectedIds);
+                      if (success) {
+                        setSelectedSourceIds({});
+                      }
+                    }}
+                    placement="left"
+                    disabled={removeDisabled || selectedIds.length === 0}
+                  >
+                    <MenuItem className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700">
+                      <DeleteIcon style={{ fontSize: 16 }} />
+                      <span>删除已选来源</span>
+                    </MenuItem>
+                  </ConfirmPopover>
+               </MenuList>
+            </Menu>
+          </div>
         </div>
       </div>
 
@@ -692,10 +666,17 @@ function SourcesPanel({
           </div>
         ) : (
           <div className="flex flex-col gap-1.5">
-            {sources.map((source) => (
+            {sources.map((source) => {
+              const isHighlighted = highlightedSourceId === source.id;
+              return (
                <div
                  key={source.id}
-                 className="group relative flex items-center rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:border-gray-300 hover:shadow"
+                 ref={(node) => sourceRefs.current.set(source.id, node)}
+                 className={`group relative flex items-center rounded-xl border bg-white shadow-sm transition-all hover:border-gray-300 hover:shadow ${
+                   isHighlighted
+                     ? 'border-blue-200 ring-2 ring-blue-300 bg-blue-50/70'
+                     : 'border-gray-200'
+                 }`}
                >
                   <button
                     className="flex flex-1 items-center gap-3 p-2 text-left min-w-0"
@@ -722,7 +703,6 @@ function SourcesPanel({
                               className="w-6 h-6 min-w-[24px] rounded-full text-gray-500 opacity-0 group-hover:opacity-100 hover:bg-gray-200"
                               onClick={(e) => {
                                  e.stopPropagation(); // Stop propagation to avoid clicking the item
-                                 setActiveSourceId(source.id);
                               }}
                            >
                               <MoreHorizIcon style={{ fontSize: 16 }} />
@@ -769,40 +749,11 @@ function SourcesPanel({
                      />
                   </div>
                </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
-
-      {citations.length > 0 && (
-        <div className="flex flex-col gap-2 pt-2">
-          <div className="flex items-center justify-between px-1">
-            <Typography variant="small" className="text-[11px] text-gray-600 font-medium">
-              引用
-            </Typography>
-            <span className="text-[11px] text-gray-500 font-medium">
-              {citations.length} 条
-            </span>
-          </div>
-          <CitationActions
-            selectedCount={selectedCitationCount}
-            totalCount={citations.length}
-            onSendSelected={onSendSelectedCitations ?? (() => undefined)}
-            onCompareSelected={onCompareSelectedCitations ?? (() => undefined)}
-            onCopySelected={onCopySelectedCitations ?? (() => undefined)}
-            onSelectAll={onSelectAllCitations ?? (() => undefined)}
-            onClearSelection={onClearCitationSelection ?? (() => undefined)}
-          />
-          <CitationList
-            citations={citations}
-            selectedCitationIds={selectedCitationIdSet}
-            highlightedChunkIds={highlightedChunkIds}
-            jumpToCitationChunkId={jumpToCitationChunkId}
-            onToggleCitation={onToggleCitation ?? (() => undefined)}
-            onCitationHover={onCitationHover ?? (() => undefined)}
-          />
-        </div>
-      )}
 
       </div>
       {/* Source Detail Dialog */}

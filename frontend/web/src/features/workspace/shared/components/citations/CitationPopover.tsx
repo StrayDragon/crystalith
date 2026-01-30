@@ -1,5 +1,6 @@
-import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useCallback, useMemo, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { MyLocation as LocateIcon } from '@mui/icons-material';
 
 import type { Citation } from '../../types';
 import { useLayer } from '../../../../../shared/layer';
@@ -18,7 +19,7 @@ interface CitationPopoverProps {
   /** 悬停引用回调 */
   onCitationHover?: (chunkId: number | null) => void;
   /** 定位到来源回调（在来源列表中高亮） */
-  onLocateSource?: (sourceId: number) => void;
+  onLocateSource?: (citation: Citation) => void;
   /** 是否提升 z-index（用于从 modal 中打开时） */
   elevated?: boolean;
 }
@@ -129,8 +130,9 @@ export default function CitationPopover({
   const handleItemClick = useCallback(
     (citation: Citation) => {
       onJumpToCitation?.(citation);
+      onClose();
     },
-    [onJumpToCitation]
+    [onJumpToCitation, onClose]
   );
 
   const handleItemHover = useCallback(
@@ -141,9 +143,9 @@ export default function CitationPopover({
   );
 
   const handleLocateSource = useCallback(
-    (e: React.MouseEvent, sourceId: number) => {
+    (e: MouseEvent<HTMLButtonElement>, citation: Citation) => {
       e.stopPropagation();
-      onLocateSource?.(sourceId);
+      onLocateSource?.(citation);
       onClose();
     },
     [onLocateSource, onClose]
@@ -233,11 +235,24 @@ export default function CitationPopover({
                 </div>
 
                 {/* Arrow Icon */}
-                <span className="flex-shrink-0 w-4 h-4 flex items-center justify-center text-gray-300 group-hover:text-gray-500 transition-colors">
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
+                <div className="flex-shrink-0 flex flex-col items-center gap-2">
+                  {onLocateSource && (
+                    <button
+                      type="button"
+                      className="w-6 h-6 rounded-full border border-gray-200 text-gray-400 flex items-center justify-center hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors opacity-70 group-hover:opacity-100"
+                      onClick={(e) => handleLocateSource(e, citation)}
+                      aria-label={`定位来源：${citation.sourceTitle}`}
+                      title="定位来源"
+                    >
+                      <LocateIcon style={{ fontSize: 14 }} />
+                    </button>
+                  )}
+                  <span className="w-4 h-4 flex items-center justify-center text-gray-300 group-hover:text-gray-500 transition-colors">
+                    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                </div>
               </li>
             );
           })}
