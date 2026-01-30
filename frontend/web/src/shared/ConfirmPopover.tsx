@@ -5,6 +5,11 @@ import { useLayer } from './layer';
 
 type Placement = 'top' | 'bottom' | 'left' | 'right';
 
+// Popover dimensions (width: 220px, estimated height: ~125px)
+const POPOVER_WIDTH = 220;
+const POPOVER_HEIGHT = 125;
+const OFFSET = 8;
+
 interface ConfirmPopoverProps {
   message: string;
   onConfirm: () => void;
@@ -13,6 +18,76 @@ interface ConfirmPopoverProps {
   cancelText?: string;
   placement?: Placement;
   disabled?: boolean;
+}
+
+/**
+ * Calculate the best placement to avoid overflow
+ */
+function calculateBestPlacement(anchorRect: DOMRect, preferredPlacement: Placement): Placement {
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
+  // Check if each placement would overflow
+  const wouldOverflow = {
+    top: anchorRect.top - POPOVER_HEIGHT - OFFSET < 0,
+    bottom: anchorRect.bottom + POPOVER_HEIGHT + OFFSET > viewportHeight,
+    left: anchorRect.left - POPOVER_WIDTH - OFFSET < 0,
+    right: anchorRect.right + POPOVER_WIDTH + OFFSET > viewportWidth,
+  };
+
+  // Also check horizontal centering for top/bottom placements
+  const centerX = anchorRect.left + anchorRect.width / 2;
+  const wouldOverflowHorizontalCenter = {
+    leftSide: centerX - POPOVER_WIDTH / 2 < 0,
+    rightSide: centerX + POPOVER_WIDTH / 2 > viewportWidth,
+  };
+
+  // Also check vertical centering for left/right placements
+  const centerY = anchorRect.top + anchorRect.height / 2;
+  const wouldOverflowVerticalCenter = {
+    topSide: centerY - POPOVER_HEIGHT / 2 < 0,
+    bottomSide: centerY + POPOVER_HEIGHT / 2 > viewportHeight,
+  };
+
+  // If preferred placement works, use it
+  if (preferredPlacement === 'top' && !wouldOverflow.top && !wouldOverflowHorizontalCenter.leftSide && !wouldOverflowHorizontalCenter.rightSide) {
+    return 'top';
+  }
+  if (preferredPlacement === 'bottom' && !wouldOverflow.bottom && !wouldOverflowHorizontalCenter.leftSide && !wouldOverflowHorizontalCenter.rightSide) {
+    return 'bottom';
+  }
+  if (preferredPlacement === 'left' && !wouldOverflow.left && !wouldOverflowVerticalCenter.topSide && !wouldOverflowVerticalCenter.bottomSide) {
+    return 'left';
+  }
+  if (preferredPlacement === 'right' && !wouldOverflow.right && !wouldOverflowVerticalCenter.topSide && !wouldOverflowVerticalCenter.bottomSide) {
+    return 'right';
+  }
+
+  // Try opposite placement first
+  const opposites: Record<Placement, Placement> = {
+    top: 'bottom',
+    bottom: 'top',
+    left: 'right',
+    right: 'left',
+  };
+  const opposite = opposites[preferredPlacement];
+
+  if (opposite === 'top' && !wouldOverflow.top) return 'top';
+  if (opposite === 'bottom' && !wouldOverflow.bottom) return 'bottom';
+  if (opposite === 'left' && !wouldOverflow.left) return 'left';
+  if (opposite === 'right' && !wouldOverflow.right) return 'right';
+
+  // Try all placements in order of preference
+  const fallbackOrder: Placement[] = ['bottom', 'top', 'right', 'left'];
+  for (const p of fallbackOrder) {
+    if (p === 'top' && !wouldOverflow.top) return 'top';
+    if (p === 'bottom' && !wouldOverflow.bottom) return 'bottom';
+    if (p === 'left' && !wouldOverflow.left) return 'left';
+    if (p === 'right' && !wouldOverflow.right) return 'right';
+  }
+
+  // If all overflow, prefer bottom (most common fallback)
+  return 'bottom';
 }
 
 export default function ConfirmPopover({
@@ -75,9 +150,15 @@ export default function ConfirmPopover({
     };
   }, [open, updateAnchor]);
 
+  // Calculate the actual placement based on available space
+  const actualPlacement = useMemo(() => {
+    if (!anchorRect) return placement;
+    return calculateBestPlacement(anchorRect, placement);
+  }, [anchorRect, placement]);
+
   const anchor = useMemo(() => {
     if (!anchorRect) return null;
-    switch (placement) {
+    switch (actualPlacement) {
       case 'bottom':
         return { x: anchorRect.left + anchorRect.width / 2, y: anchorRect.bottom };
       case 'left':
@@ -88,21 +169,75 @@ export default function ConfirmPopover({
       default:
         return { x: anchorRect.left + anchorRect.width / 2, y: anchorRect.top };
     }
-  }, [anchorRect, placement]);
+  }, [anchorRect, actualPlacement]);
 
+  // Calculate transform with boundary checking for centered placements
   const transform = useMemo(() => {
-    switch (placement) {
-      case 'bottom':
-        return 'translate(-50%, 8px)';
-      case 'left':
-        return 'translate(calc(-100% - 8px), -50%)';
-      case 'right':
-        return 'translate(8px, -50%)';
-      case 'top':
-      default:
-        return 'translate(-50%, calc(-100% - 8px))';
+    if (!anchorRect) {
+      switch (actualPlacement) {
+        case 'bottom':
+          return 'translate(-50%, 8px)';
+        case 'left':
+          return 'translate(calc(-100% - 8px), -50%)';
+        case 'right':
+          return 'translate(8px, -50%)';
+        case 'top':
+        default:
+          return 'translate(-50%, calc(-100% - 8px))';
+      }
     }
-  }, [placement]);
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // For top/bottom placements, adjust horizontal position if needed
+    if (actualPlacement === 'top' || actualPlacement === 'bottom') {
+      const centerX = anchorRect.left + anchorRect.width / 2;
+      const leftEdge = centerX - POPOVER_WIDTH / 2;
+      const rightEdge = centerX + POPOVER_WIDTH / 2;
+
+      let translateX = '-50%';
+      if (leftEdge < 8) {
+        // Would overflow left, align to left edge with padding
+        const offsetX = -centerX + POPOVER_WIDTH / 2 + 8;
+        translateX = `calc(-50% + ${offsetX}px)`;
+      } else if (rightEdge > viewportWidth - 8) {
+        // Would overflow right, align to right edge with padding
+        const offsetX = viewportWidth - 8 - centerX - POPOVER_WIDTH / 2;
+        translateX = `calc(-50% + ${offsetX}px)`;
+      }
+
+      if (actualPlacement === 'bottom') {
+        return `translate(${translateX}, 8px)`;
+      }
+      return `translate(${translateX}, calc(-100% - 8px))`;
+    }
+
+    // For left/right placements, adjust vertical position if needed
+    if (actualPlacement === 'left' || actualPlacement === 'right') {
+      const centerY = anchorRect.top + anchorRect.height / 2;
+      const topEdge = centerY - POPOVER_HEIGHT / 2;
+      const bottomEdge = centerY + POPOVER_HEIGHT / 2;
+
+      let translateY = '-50%';
+      if (topEdge < 8) {
+        // Would overflow top, align to top edge with padding
+        const offsetY = -centerY + POPOVER_HEIGHT / 2 + 8;
+        translateY = `calc(-50% + ${offsetY}px)`;
+      } else if (bottomEdge > viewportHeight - 8) {
+        // Would overflow bottom, align to bottom edge with padding
+        const offsetY = viewportHeight - 8 - centerY - POPOVER_HEIGHT / 2;
+        translateY = `calc(-50% + ${offsetY}px)`;
+      }
+
+      if (actualPlacement === 'left') {
+        return `translate(calc(-100% - 8px), ${translateY})`;
+      }
+      return `translate(8px, ${translateY})`;
+    }
+
+    return 'translate(-50%, calc(-100% - 8px))';
+  }, [anchorRect, actualPlacement]);
 
   return (
     <>

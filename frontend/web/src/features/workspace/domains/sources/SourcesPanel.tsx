@@ -437,133 +437,137 @@ function SourcesPanel({
 
   return (
     <div className={`flex flex-1 flex-col min-h-0 ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''}`}>
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-col gap-3">
-      {/* Upload Button */}
-      <Tooltip content="支持文本(.txt)和Markdown(.md)文件">
-        <Button
-          variant="outlined"
-          fullWidth
-          size="sm"
-          disabled={uploadDisabled}
-          className="flex items-center justify-center gap-2 py-2 rounded-full border-dashed border-gray-400 normal-case font-normal text-gray-700 hover:bg-gray-100 hover:border-gray-500"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          {uploadState === 'loading' ? (
-            <Spinner className="h-3 w-3" />
-          ) : (
-            <CloudUploadIcon style={{ fontSize: 18 }} />
-          )}
-          {uploadState === 'loading' ? '上传中…' : '添加来源'}
-          <input
-            ref={fileInputRef}
-            type="file"
-            hidden
-            accept=".txt,.md,.markdown,text/plain,text/markdown"
-            onChange={(event) => onUpload(event.target.files?.[0] ?? null)}
+      {/* Fixed Header: Upload & Search - Always visible */}
+      <div className="flex-shrink-0 px-3 sm:px-4 pt-3 sm:pt-4 pb-2 flex flex-col gap-3 border-b border-gray-100">
+        {/* Upload Button */}
+        <Tooltip content="支持文本(.txt)和Markdown(.md)文件">
+          <Button
+            variant="outlined"
+            fullWidth
+            size="sm"
             disabled={uploadDisabled}
-            id="source-upload-input"
-            name="sourceUpload"
-            aria-label="上传来源文件"
-          />
-        </Button>
-      </Tooltip>
-
-      {/* Search Section */}
-      <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
-        <div className="p-2">
-          <div className="relative flex w-full">
-            <div className="absolute top-2/4 left-3 -translate-y-2/4 text-gray-500">
-               <SearchIcon style={{ fontSize: 20 }} />
-            </div>
+            className="flex items-center justify-center gap-2 py-2 rounded-full border-dashed border-gray-400 normal-case font-normal text-gray-700 hover:bg-gray-100 hover:border-gray-500"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploadState === 'loading' ? (
+              <Spinner className="h-3 w-3" />
+            ) : (
+              <CloudUploadIcon style={{ fontSize: 18 }} />
+            )}
+            {uploadState === 'loading' ? '上传中…' : '添加来源'}
             <input
-              className="w-full h-9 pl-10 pr-10 rounded-lg bg-transparent border-none outline-none text-sm text-gray-800 placeholder-gray-500 focus:ring-0"
-              placeholder="在网络中搜索新来源"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSearch();
-                }
-              }}
-              id="source-search-input"
-              name="sourceSearch"
-              aria-label="在网络中搜索新来源"
+              ref={fileInputRef}
+              type="file"
+              hidden
+              accept=".txt,.md,.markdown,text/plain,text/markdown"
+              onChange={(event) => onUpload(event.target.files?.[0] ?? null)}
+              disabled={uploadDisabled}
+              id="source-upload-input"
+              name="sourceUpload"
+              aria-label="上传来源文件"
             />
-            <div className="absolute top-2/4 right-1 -translate-y-2/4">
-               <IconButton
-                 size="sm"
-                 className="rounded-full w-7 h-7 bg-blue-500 hover:bg-blue-600"
-                 onClick={handleSearch}
-               >
-                 <ArrowForwardIcon style={{ fontSize: 16 }} />
-               </IconButton>
+          </Button>
+        </Tooltip>
+
+        {/* Search Section */}
+        <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
+          <div className="p-2">
+            <div className="relative flex w-full">
+              <div className="absolute top-2/4 left-3 -translate-y-2/4 text-gray-500">
+                 <SearchIcon style={{ fontSize: 20 }} />
+              </div>
+              <input
+                className="w-full h-9 pl-10 pr-10 rounded-lg bg-transparent border-none outline-none text-sm text-gray-800 placeholder-gray-500 focus:ring-0"
+                placeholder="在网络中搜索新来源"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSearch();
+                  }
+                }}
+                id="source-search-input"
+                name="sourceSearch"
+                aria-label="在网络中搜索新来源"
+              />
+              <div className="absolute top-2/4 right-1 -translate-y-2/4">
+                 <IconButton
+                   size="sm"
+                   className="rounded-full w-7 h-7 bg-blue-500 hover:bg-blue-600"
+                   onClick={handleSearch}
+                 >
+                   <ArrowForwardIcon style={{ fontSize: 16 }} />
+                 </IconButton>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Search Options */}
-        <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 border-t border-gray-200">
-          {/* Engine Select */}
-          <Menu placement="bottom-start">
-            <MenuHandler>
-              <Button
-                variant="outlined"
-                size="sm"
-                className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border-gray-300 bg-white text-gray-800 normal-case font-normal text-[11px] hover:bg-gray-100"
-              >
-                {getEngineIcon()}
-                {engine}
-                <ExpandMoreIcon style={{ fontSize: 12 }} />
-              </Button>
-            </MenuHandler>
-            <MenuList className="min-w-[100px] p-1">
-              {['Web', 'Scholar', 'Docs'].map((opt) => (
-                <MenuItem
-                  key={opt}
-                  className={`py-1.5 px-3 text-xs ${engine === opt ? 'bg-gray-100 font-medium' : ''}`}
-                  onClick={() => setEngine(opt)}
+          {/* Search Options */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 border-t border-gray-200">
+            {/* Engine Select */}
+            <Menu placement="bottom-start">
+              <MenuHandler>
+                <Button
+                  variant="outlined"
+                  size="sm"
+                  className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border-gray-300 bg-white text-gray-800 normal-case font-normal text-[11px] hover:bg-gray-100"
                 >
-                  {opt}
-                </MenuItem>
-              ))}
-            </MenuList>
-          </Menu>
+                  {getEngineIcon()}
+                  {engine}
+                  <ExpandMoreIcon style={{ fontSize: 12 }} />
+                </Button>
+              </MenuHandler>
+              <MenuList className="min-w-[100px] p-1">
+                {['Web', 'Scholar', 'Docs'].map((opt) => (
+                  <MenuItem
+                    key={opt}
+                    className={`py-1.5 px-3 text-xs ${engine === opt ? 'bg-gray-100 font-medium' : ''}`}
+                    onClick={() => setEngine(opt)}
+                  >
+                    {opt}
+                  </MenuItem>
+                ))}
+              </MenuList>
+            </Menu>
 
-          {/* Mode Select */}
-          <Menu placement="bottom-start">
-            <MenuHandler>
-              <Button
-                variant="outlined"
-                size="sm"
-                className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border-gray-300 bg-white text-gray-800 normal-case font-normal text-[11px] hover:bg-gray-100"
-              >
-                {getModeIcon()}
-                {mode}
-                <ExpandMoreIcon style={{ fontSize: 12 }} />
-              </Button>
-            </MenuHandler>
-            <MenuList className="min-w-[120px] p-1">
-              {['Fast Research', 'Deep Research'].map((opt) => {
-                const modeTestId = opt === 'Deep Research'
-                  ? 'mode-deep-research'
-                  : 'mode-fast-research';
-                return (
-                <MenuItem
-                  key={opt}
-                  data-testid={modeTestId}
-                  className={`py-1.5 px-3 text-xs ${mode === opt ? 'bg-gray-100 font-medium' : ''}`}
-                  onClick={() => setMode(opt)}
+            {/* Mode Select */}
+            <Menu placement="bottom-start">
+              <MenuHandler>
+                <Button
+                  variant="outlined"
+                  size="sm"
+                  className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border-gray-300 bg-white text-gray-800 normal-case font-normal text-[11px] hover:bg-gray-100"
                 >
-                  {opt}
-                </MenuItem>
-              );
-              })}
-            </MenuList>
-          </Menu>
+                  {getModeIcon()}
+                  {mode}
+                  <ExpandMoreIcon style={{ fontSize: 12 }} />
+                </Button>
+              </MenuHandler>
+              <MenuList className="min-w-[120px] p-1">
+                {['Fast Research', 'Deep Research'].map((opt) => {
+                  const modeTestId = opt === 'Deep Research'
+                    ? 'mode-deep-research'
+                    : 'mode-fast-research';
+                  return (
+                  <MenuItem
+                    key={opt}
+                    data-testid={modeTestId}
+                    className={`py-1.5 px-3 text-xs ${mode === opt ? 'bg-gray-100 font-medium' : ''}`}
+                    onClick={() => setMode(opt)}
+                  >
+                    {opt}
+                  </MenuItem>
+                );
+                })}
+              </MenuList>
+            </Menu>
+          </div>
         </div>
       </div>
 
+      {/* Scrollable Content Area */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-3 flex flex-col gap-3">
       {/* Search Status - only show loading state */}
       {isSearching && (
         <Typography variant="small" className="text-[11px] text-gray-600 font-medium px-1">
@@ -614,7 +618,7 @@ function SourcesPanel({
       />
 
       {/* Select All & Batch Actions */}
-      <div className="sticky top-0 z-10 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 bg-white/95 backdrop-blur border-b border-gray-100">
+      <div className="sticky top-0 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 bg-white/95 backdrop-blur border-b border-gray-100">
         <div className="flex items-center justify-between px-1">
           <Typography variant="small" className="text-[11px] text-gray-600 font-medium">
             选择所有来源
