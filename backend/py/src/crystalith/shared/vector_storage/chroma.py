@@ -96,9 +96,15 @@ class ChromaVectorStore:
         if dimension is None or len(query) != dimension:
             return []
 
-        where: dict[str, Any] = {"notebook_id": notebook_id}
         if source_ids:
-            where["source_id"] = {"$in": list(source_ids)}
+            where: dict[str, Any] = {
+                "$and": [
+                    {"notebook_id": notebook_id},
+                    {"source_id": {"$in": list(source_ids)}},
+                ]
+            }
+        else:
+            where = {"notebook_id": notebook_id}
 
         results = self._collection.query(
             query_embeddings=[query],
