@@ -32,6 +32,7 @@ class RawOutputsClient:
         *,
         prompt: typing.Optional[str] = OMIT,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         model_id: typing.Optional[str] = OMIT,
@@ -60,6 +61,8 @@ class RawOutputsClient:
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
 
+        source_ids : typing.Optional[typing.Sequence[int]]
+
         top_k : typing.Optional[int]
 
         min_score : typing.Optional[float]
@@ -81,6 +84,7 @@ class RawOutputsClient:
             json={
                 "prompt": prompt,
                 "chunk_ids": chunk_ids,
+                "source_ids": source_ids,
                 "top_k": top_k,
                 "min_score": min_score,
                 "model_id": model_id,
@@ -332,6 +336,7 @@ class AsyncRawOutputsClient:
         *,
         prompt: typing.Optional[str] = OMIT,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         model_id: typing.Optional[str] = OMIT,
@@ -360,6 +365,8 @@ class AsyncRawOutputsClient:
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
 
+        source_ids : typing.Optional[typing.Sequence[int]]
+
         top_k : typing.Optional[int]
 
         min_score : typing.Optional[float]
@@ -381,6 +388,7 @@ class AsyncRawOutputsClient:
             json={
                 "prompt": prompt,
                 "chunk_ids": chunk_ids,
+                "source_ids": source_ids,
                 "top_k": top_k,
                 "min_score": min_score,
                 "model_id": model_id,

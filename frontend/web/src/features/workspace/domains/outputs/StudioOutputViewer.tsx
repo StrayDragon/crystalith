@@ -52,7 +52,7 @@ function resolveOutputMeta(output: OutputItem): string {
   if (count > 0) {
     return `基于 ${count} 个来源 · ${relative}`;
   }
-  return `自动生成 · ${relative}`;
+  return `未选择来源 · ${relative}`;
 }
 
 export default function StudioOutputViewer({

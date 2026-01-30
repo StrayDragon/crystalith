@@ -56,7 +56,7 @@ export function resolveNoteMeta(output: OutputItem): string {
   if (count > 0) {
     return `${count} 个来源 · ${relative}`;
   }
-  return `自动生成 · ${relative}`;
+  return `未选择来源 · ${relative}`;
 }
 
 export function resolveTone(type: OutputTypeId): StudioTone {

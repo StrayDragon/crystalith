@@ -602,6 +602,10 @@ export type OutputGenerateRequest = {
      */
     chunk_ids?: Array<number> | null;
     /**
+     * Source Ids
+     */
+    source_ids?: Array<number> | null;
+    /**
      * Top K
      */
     top_k?: number;
@@ -735,6 +739,10 @@ export type QaRequest = {
      */
     chunk_ids?: Array<number> | null;
     /**
+     * Source Ids
+     */
+    source_ids?: Array<number> | null;
+    /**
      * Top K
      */
     top_k?: number;
@@ -807,6 +815,10 @@ export type RefineBatchRequest = {
      */
     chunk_ids?: Array<number> | null;
     /**
+     * Source Ids
+     */
+    source_ids?: Array<number> | null;
+    /**
      * Top K
      */
     top_k?: number;
@@ -856,6 +868,10 @@ export type RefineRequest = {
      * Chunk Ids
      */
     chunk_ids?: Array<number> | null;
+    /**
+     * Source Ids
+     */
+    source_ids?: Array<number> | null;
     /**
      * Top K
      */
@@ -1287,6 +1303,10 @@ export type SlideDraftCreate = {
      * Chunk Ids
      */
     chunk_ids?: Array<number> | null;
+    /**
+     * Source Ids
+     */
+    source_ids?: Array<number> | null;
     generation_config?: SlideGenerationConfig | null;
 };
 
@@ -1322,6 +1342,10 @@ export type SlideDraftRead = {
      * Chunk Ids
      */
     chunk_ids: Array<number> | null;
+    /**
+     * Source Ids
+     */
+    source_ids: Array<number> | null;
     outline: SlideOutline | null;
     /**
      * Markdown
@@ -1382,6 +1406,10 @@ export type SlideDraftUpdate = {
      * Chunk Ids
      */
     chunk_ids?: Array<number> | null;
+    /**
+     * Source Ids
+     */
+    source_ids?: Array<number> | null;
     generation_config?: SlideGenerationConfig | null;
 };
 
@@ -2820,6 +2848,40 @@ export type UploadSourceV1NotebooksNotebookIdSourcesPostResponses = {
 };
 
 export type UploadSourceV1NotebooksNotebookIdSourcesPostResponse = UploadSourceV1NotebooksNotebookIdSourcesPostResponses[keyof UploadSourceV1NotebooksNotebookIdSourcesPostResponses];
+
+export type ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Source Id
+         */
+        source_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/{source_id}/re-embed';
+};
+
+export type ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostError = ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostErrors[keyof ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostErrors];
+
+export type ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: SourceRead;
+};
+
+export type ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostResponse = ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostResponses[keyof ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostResponses];
 
 export type SearchSourcesV1NotebooksNotebookIdSourcesSearchPostData = {
     body: SourceSearchRequest;

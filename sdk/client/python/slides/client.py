@@ -66,6 +66,7 @@ class SlidesClient:
         prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SlideDraftRead:
@@ -82,6 +83,8 @@ class SlidesClient:
             Rendering engine (default: slidev)
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         generation_config : typing.Optional[SlideGenerationConfig]
 
@@ -110,6 +113,7 @@ class SlidesClient:
             prompt=prompt,
             engine=engine,
             chunk_ids=chunk_ids,
+            source_ids=source_ids,
             generation_config=generation_config,
             request_options=request_options,
         )
@@ -157,6 +161,7 @@ class SlidesClient:
         prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SlideDraftRead:
@@ -174,6 +179,8 @@ class SlidesClient:
         engine : typing.Optional[str]
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         generation_config : typing.Optional[SlideGenerationConfig]
 
@@ -204,6 +211,7 @@ class SlidesClient:
             prompt=prompt,
             engine=engine,
             chunk_ids=chunk_ids,
+            source_ids=source_ids,
             generation_config=generation_config,
             request_options=request_options,
         )
@@ -443,6 +451,7 @@ class AsyncSlidesClient:
         prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SlideDraftRead:
@@ -459,6 +468,8 @@ class AsyncSlidesClient:
             Rendering engine (default: slidev)
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         generation_config : typing.Optional[SlideGenerationConfig]
 
@@ -495,6 +506,7 @@ class AsyncSlidesClient:
             prompt=prompt,
             engine=engine,
             chunk_ids=chunk_ids,
+            source_ids=source_ids,
             generation_config=generation_config,
             request_options=request_options,
         )
@@ -550,6 +562,7 @@ class AsyncSlidesClient:
         prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
         chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SlideDraftRead:
@@ -567,6 +580,8 @@ class AsyncSlidesClient:
         engine : typing.Optional[str]
 
         chunk_ids : typing.Optional[typing.Sequence[int]]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
 
         generation_config : typing.Optional[SlideGenerationConfig]
 
@@ -605,6 +620,7 @@ class AsyncSlidesClient:
             prompt=prompt,
             engine=engine,
             chunk_ids=chunk_ids,
+            source_ids=source_ids,
             generation_config=generation_config,
             request_options=request_options,
         )

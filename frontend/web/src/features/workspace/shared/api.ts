@@ -25,6 +25,7 @@ export {
   askSourceQuestion,
   listSourceChunks,
   convertSourceQAToSource,
+  reembedSource,
   // Sessions
   listSessions,
   createSession,

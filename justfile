@@ -15,7 +15,12 @@ api-check:
 # Generate Python SDK (manual, Fern)
 sdk-gen VERSION='':
     cd backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.json
+    just sdk-gen-web
     SDK_VERSION={{VERSION}} SDK_PATH={{SDK_PATH}} ./scripts/sdk/generate_python_sdk.sh
+
+# Generate frontend SDK (OpenAPI)
+sdk-gen-web:
+    cd frontend/web && pnpm run api:generate
 
 # Check Python SDK is up to date (for pre-commit)
 sdk-check:
