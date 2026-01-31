@@ -21,10 +21,10 @@ TBD - created by archiving change add-studio-ppt. Update Purpose after archive.
 
 系统 **MUST** 以“输入 → 大纲 → Markdown”的三阶段流程生成演示，并由后端持久化各阶段状态与内容。
 
-#### Scenario: 选中引用的生成范围
-- **WHEN** 用户在工作区已选择引用并触发演示生成
-- **THEN** 后端仅使用选中引用作为生成上下文
-- **AND** 未选择引用时使用当前 notebook 的检索上下文
+#### Scenario: 选中来源的生成范围
+- **WHEN** 用户在工作区已选择来源并触发演示生成
+- **THEN** 后端仅使用选中来源作为生成上下文
+- **AND** 未选择来源时拒绝生成并返回 400
 
 #### Scenario: 状态恢复
 - **WHEN** 用户重新进入演示流程
@@ -89,7 +89,8 @@ TBD - created by archiving change add-studio-ppt. Update Purpose after archive.
 #### Scenario: 一键生成演示
 
 - **WHEN** 用户点击“演示”卡片
-- **THEN** 系统为当前 notebook 创建或更新演示草稿并记录选中的引用
+- **THEN** 系统为当前 notebook 创建或更新演示草稿并记录解析后的 source_ids
+- **AND** 未选择来源时阻止生成并提示需要选择来源
 - **AND** 自动依次触发大纲与 Markdown 生成的 SSE 流
 - **AND** 前端展示生成进度并在完成后进入 Markdown 阶段
 

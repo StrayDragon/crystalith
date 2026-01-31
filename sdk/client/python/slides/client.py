@@ -65,7 +65,6 @@ class SlidesClient:
         title: typing.Optional[str] = OMIT,
         prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
-        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
@@ -81,8 +80,6 @@ class SlidesClient:
 
         engine : typing.Optional[str]
             Rendering engine (default: slidev)
-
-        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
@@ -112,7 +109,6 @@ class SlidesClient:
             title=title,
             prompt=prompt,
             engine=engine,
-            chunk_ids=chunk_ids,
             source_ids=source_ids,
             generation_config=generation_config,
             request_options=request_options,
@@ -160,7 +156,6 @@ class SlidesClient:
         title: typing.Optional[str] = OMIT,
         prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
-        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
@@ -177,8 +172,6 @@ class SlidesClient:
         prompt : typing.Optional[str]
 
         engine : typing.Optional[str]
-
-        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
@@ -210,7 +203,6 @@ class SlidesClient:
             title=title,
             prompt=prompt,
             engine=engine,
-            chunk_ids=chunk_ids,
             source_ids=source_ids,
             generation_config=generation_config,
             request_options=request_options,
@@ -450,7 +442,6 @@ class AsyncSlidesClient:
         title: typing.Optional[str] = OMIT,
         prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
-        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
@@ -466,8 +457,6 @@ class AsyncSlidesClient:
 
         engine : typing.Optional[str]
             Rendering engine (default: slidev)
-
-        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
@@ -505,7 +494,6 @@ class AsyncSlidesClient:
             title=title,
             prompt=prompt,
             engine=engine,
-            chunk_ids=chunk_ids,
             source_ids=source_ids,
             generation_config=generation_config,
             request_options=request_options,
@@ -561,7 +549,6 @@ class AsyncSlidesClient:
         title: typing.Optional[str] = OMIT,
         prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
-        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
@@ -578,8 +565,6 @@ class AsyncSlidesClient:
         prompt : typing.Optional[str]
 
         engine : typing.Optional[str]
-
-        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
@@ -619,7 +604,6 @@ class AsyncSlidesClient:
             title=title,
             prompt=prompt,
             engine=engine,
-            chunk_ids=chunk_ids,
             source_ids=source_ids,
             generation_config=generation_config,
             request_options=request_options,

@@ -13,7 +13,7 @@ from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.shared.ai.types import ChatMessage
 from crystalith.shared.config import RefineSettings, Settings
 from crystalith.shared.db import Chunk, Notebook, Source
-from crystalith.shared.utils import format_context, format_context_from_chunk_ids, parse_bullets
+from crystalith.shared.utils import format_context, parse_bullets
 from crystalith.shared.vector_storage import VectorSearchResult, VectorStore
 
 from .models import Task
@@ -147,94 +147,61 @@ async def _execute_refine(
 
     format_name = _normalize_format(settings.refine, str(payload.get("format", "paragraph")))
     created_at = datetime.datetime.now(datetime.UTC).isoformat()
-    explicit_chunk_ids = [int(value) for value in (payload.get("chunk_ids") or []) if int(value) > 0]
+    source_ids = _normalize_source_ids(payload.get("source_ids"))
+    if source_ids:
+        await _validate_source_ids(session, notebook_id, source_ids)
 
     citations: list[dict[str, Any]]
-    if explicit_chunk_ids:
-        rows = await session.execute(
-            select(Chunk, Source)
-            .join(Source, Source.id == Chunk.source_id)
-            .where(Chunk.id.in_(explicit_chunk_ids), Source.notebook_id == notebook_id)
-        )
-        chunk_map: dict[int, tuple[Chunk, Source]] = {
-            chunk.id: (chunk, source) for chunk, source in rows.all()
-        }
-        missing = [chunk_id for chunk_id in explicit_chunk_ids if chunk_id not in chunk_map]
-        if missing:
-            raise ValueError("Unknown chunk_id in chunk_ids")
-
+    if not source_ids:
         citations = []
-        for chunk_id in explicit_chunk_ids:
-            chunk, source = chunk_map[chunk_id]
-            snippet = chunk.text.strip()[:200]
-            citations.append(
-                {
-                    "source_id": source.id,
-                    "source_name": source.filename,
-                    "chunk_id": chunk.id,
-                    "chunk_index": chunk.chunk_index,
-                    "snippet": snippet,
-                    "score": 1.0,
-                }
-            )
-
-        context = format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
-        evidence = True
+        context = ""
+        evidence = False
     else:
-        source_ids = _normalize_source_ids(payload.get("source_ids"))
-        if source_ids:
-            await _validate_source_ids(session, notebook_id, source_ids)
-
-        if not source_ids:
+        embedder = embedder_factory(settings)
+        embeddings = await embedder.embed([prompt])
+        if not embeddings:
             citations = []
             context = ""
             evidence = False
         else:
-            embedder = embedder_factory(settings)
-            embeddings = await embedder.embed([prompt])
-            if not embeddings:
+            query_vector = embeddings[0]
+            results = await vector_store.search(
+                notebook_id=notebook_id,
+                query_vector=query_vector,
+                top_k=int(payload.get("top_k", 5)),
+                min_score=float(payload.get("min_score", 0.2)),
+                source_ids=source_ids,
+            )
+            if not results:
                 citations = []
                 context = ""
                 evidence = False
             else:
-                query_vector = embeddings[0]
-                results = await vector_store.search(
-                    notebook_id=notebook_id,
-                    query_vector=query_vector,
-                    top_k=int(payload.get("top_k", 5)),
-                    min_score=float(payload.get("min_score", 0.2)),
-                    source_ids=source_ids,
+                chunk_ids = [result.entry.chunk_id for result in results]
+                rows = await session.execute(
+                    select(Chunk, Source)
+                    .join(Source, Source.id == Chunk.source_id)
+                    .where(Chunk.id.in_(chunk_ids))
                 )
-                if not results:
-                    citations = []
-                    context = ""
-                    evidence = False
-                else:
-                    chunk_ids = [result.entry.chunk_id for result in results]
-                    rows = await session.execute(
-                        select(Chunk, Source)
-                        .join(Source, Source.id == Chunk.source_id)
-                        .where(Chunk.id.in_(chunk_ids))
+                chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
+
+                citations = []
+                for result in results:
+                    chunk, source = chunk_map[result.entry.chunk_id]
+                    snippet = chunk.text.strip()[:200]
+                    citations.append(
+                        {
+                            "source_id": source.id,
+                            "source_name": source.filename,
+                            "chunk_id": chunk.id,
+                            "chunk_index": chunk.chunk_index,
+                            "snippet": snippet,
+                            "score": result.score,
+                        }
                     )
-                    chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
 
-                    citations = []
-                    for result in results:
-                        chunk, source = chunk_map[result.entry.chunk_id]
-                        snippet = chunk.text.strip()[:200]
-                        citations.append(
-                            {
-                                "source_id": source.id,
-                                "source_name": source.filename,
-                                "chunk_id": chunk.id,
-                                "chunk_index": chunk.chunk_index,
-                                "snippet": snippet,
-                                "score": result.score,
-                            }
-                        )
-
-                    context = format_context(results, chunk_map)
-                    evidence = True
+                context = format_context(results, chunk_map)
+                evidence = True
 
     chat_provider = chat_factory(settings)
     messages = _build_messages(format_name, prompt, context)

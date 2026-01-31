@@ -199,6 +199,10 @@ export function useOutputQueue({
       sourceIds: number[];
       modelId?: string;
     }) => {
+      if (sourceIds.length === 0) {
+        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先选择来源。' } });
+        return null;
+      }
       const createdAt = new Date().toISOString();
       if (!hasPendingJobs()) {
         onQueueReset();
@@ -241,6 +245,10 @@ export function useOutputQueue({
       }
       if (!state.activeNotebookId) {
         dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先创建笔记本。' } });
+        return null;
+      }
+      if (sourceIds.length === 0) {
+        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先选择来源。' } });
         return null;
       }
 
@@ -298,6 +306,9 @@ export function useOutputQueue({
         let normalized: OutputItem[] = [];
         if (!isConnected) {
           throw new Error('backend unavailable');
+        }
+        if (job.sourceIds.length === 0) {
+          throw new Error('请先选择来源。');
         }
         if (job.type === 'SLIDES') {
           if (job.notebookId && job.draftId) {

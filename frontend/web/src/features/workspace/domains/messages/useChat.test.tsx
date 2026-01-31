@@ -105,7 +105,6 @@ test('sendMessage non-streaming path stores assistant message and citations', as
     body: {
       question: 'Hello',
       session_id: 123,
-      chunk_ids: undefined,
       source_ids: undefined,
     },
   });
@@ -148,7 +147,6 @@ test('sendMessage passes selected source ids', async () => {
     body: {
       question: 'Hello',
       session_id: 456,
-      chunk_ids: undefined,
       source_ids: [101, 102],
     },
   });
@@ -193,7 +191,6 @@ test('sendMessage uses selected source ids when provided', async () => {
     body: {
       question: 'Hello',
       session_id: 789,
-      chunk_ids: undefined,
       source_ids: [101],
     },
   });

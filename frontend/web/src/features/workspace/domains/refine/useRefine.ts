@@ -199,7 +199,6 @@ export function useRefine() {
             body: {
               prompt,
               formats: refineFormats,
-              chunk_ids: undefined,
               source_ids: sourceIds,
             },
           });
@@ -552,6 +551,10 @@ export function useRefine() {
       dispatch({ type: 'SET_OUTPUT_TYPE', payload: selectedType });
     }
     const resolvedSourceIds = await resolveSelectedSourceIds();
+    if (resolvedSourceIds.length === 0) {
+      dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先选择来源。' } });
+      return;
+    }
     enqueueOutputJob({
       type: selectedType,
       prompt,
@@ -601,6 +604,10 @@ export function useRefine() {
             .filter((value): value is number => Number.isFinite(value) && value > 0),
         ),
       );
+      if (outputSourceIds.length === 0) {
+        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先选择来源。' } });
+        return;
+      }
       enqueueOutputJob({
         type: output.type,
         prompt,

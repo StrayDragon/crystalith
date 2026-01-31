@@ -8,7 +8,6 @@ from ..core.pydantic_utilities import IS_PYDANTIC_V2, UniversalBaseModel
 
 class QaRequest(UniversalBaseModel):
     question: str
-    chunk_ids: typing.Optional[typing.List[int]] = None
     source_ids: typing.Optional[typing.List[int]] = None
     top_k: typing.Optional[int] = None
     min_score: typing.Optional[float] = None

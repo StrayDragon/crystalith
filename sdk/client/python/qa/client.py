@@ -31,7 +31,6 @@ class QaClient:
         notebook_id: int,
         *,
         question: str,
-        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
@@ -44,8 +43,6 @@ class QaClient:
         notebook_id : int
 
         question : str
-
-        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
@@ -78,7 +75,6 @@ class QaClient:
         _response = self._raw_client.ask_question(
             notebook_id,
             question=question,
-            chunk_ids=chunk_ids,
             source_ids=source_ids,
             top_k=top_k,
             min_score=min_score,
@@ -92,7 +88,6 @@ class QaClient:
         notebook_id: int,
         *,
         question: str,
-        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
@@ -112,8 +107,6 @@ class QaClient:
         notebook_id : int
 
         question : str
-
-        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
@@ -146,7 +139,6 @@ class QaClient:
         _response = self._raw_client.ask_question_stream(
             notebook_id,
             question=question,
-            chunk_ids=chunk_ids,
             source_ids=source_ids,
             top_k=top_k,
             min_score=min_score,
@@ -176,7 +168,6 @@ class AsyncQaClient:
         notebook_id: int,
         *,
         question: str,
-        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
@@ -189,8 +180,6 @@ class AsyncQaClient:
         notebook_id : int
 
         question : str
-
-        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
@@ -231,7 +220,6 @@ class AsyncQaClient:
         _response = await self._raw_client.ask_question(
             notebook_id,
             question=question,
-            chunk_ids=chunk_ids,
             source_ids=source_ids,
             top_k=top_k,
             min_score=min_score,
@@ -245,7 +233,6 @@ class AsyncQaClient:
         notebook_id: int,
         *,
         question: str,
-        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
@@ -265,8 +252,6 @@ class AsyncQaClient:
         notebook_id : int
 
         question : str
-
-        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
@@ -307,7 +292,6 @@ class AsyncQaClient:
         _response = await self._raw_client.ask_question_stream(
             notebook_id,
             question=question,
-            chunk_ids=chunk_ids,
             source_ids=source_ids,
             top_k=top_k,
             min_score=min_score,
