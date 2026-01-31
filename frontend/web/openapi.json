@@ -4195,20 +4195,6 @@
             ],
             "title": "Prompt"
           },
-          "chunk_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "integer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Chunk Ids"
-          },
           "source_ids": {
             "anyOf": [
               {
@@ -4405,20 +4391,6 @@
             "minLength": 1,
             "title": "Question"
           },
-          "chunk_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "integer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Chunk Ids"
-          },
           "source_ids": {
             "anyOf": [
               {
@@ -4568,20 +4540,6 @@
             ],
             "title": "Formats"
           },
-          "chunk_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "integer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Chunk Ids"
-          },
           "source_ids": {
             "anyOf": [
               {
@@ -4663,20 +4621,6 @@
             "type": "string",
             "title": "Format",
             "default": "paragraph"
-          },
-          "chunk_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "integer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Chunk Ids"
           },
           "source_ids": {
             "anyOf": [
@@ -5310,20 +5254,6 @@
             "description": "Rendering engine (default: slidev)",
             "default": "slidev"
           },
-          "chunk_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "integer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Chunk Ids"
-          },
           "source_ids": {
             "anyOf": [
               {
@@ -5559,20 +5489,6 @@
               }
             ],
             "title": "Engine"
-          },
-          "chunk_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "integer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Chunk Ids"
           },
           "source_ids": {
             "anyOf": [

@@ -18,12 +18,7 @@ from crystalith.shared.context import ContextStats, ContextWindow, TokenCounter
 from crystalith.shared.db import Chunk, Message, Notebook, Session, Source
 from crystalith.shared.schemas.citations import Citation
 from crystalith.shared.types import SourceStatus
-from crystalith.shared.utils import (
-    extract_page_number,
-    extract_paragraph_index,
-    format_context,
-    format_context_from_chunk_ids,
-)
+from crystalith.shared.utils import extract_page_number, extract_paragraph_index, format_context
 from crystalith.shared.vector_storage import VectorSearchResult, VectorStore
 
 from crystalith.shared.deps import (
@@ -40,7 +35,6 @@ router = APIRouter(prefix="/v1/notebooks/{notebook_id}/qa", tags=["qa"])
 
 class QARequest(BaseModel):
     question: str = Field(..., min_length=1)
-    chunk_ids: list[int] | None = None
     source_ids: list[int] | None = None
     top_k: int = Field(5, ge=1, le=20)
     min_score: float = Field(0.2, ge=0.0, le=1.0)
@@ -107,15 +101,6 @@ def _ensure_inline_citations(answer: str, citations: list[Citation]) -> str:
     return f"{answer} [1]"
 
 
-def _normalize_chunk_ids(chunk_ids: list[int] | None) -> list[int]:
-    if not chunk_ids:
-        return []
-    normalized = [int(value) for value in chunk_ids]
-    if any(value <= 0 for value in normalized):
-        raise HTTPException(status_code=400, detail="Unknown chunk_id in chunk_ids")
-    return normalized
-
-
 def _normalize_source_ids(source_ids: list[int] | None) -> list[int]:
     if not source_ids:
         return []
@@ -143,54 +128,6 @@ async def _validate_source_ids(
     missing = [source_id for source_id in source_ids if source_id not in found]
     if missing:
         raise HTTPException(status_code=400, detail="Unknown source_id in source_ids")
-
-
-async def _load_explicit_chunks(
-    session: AsyncSession,
-    notebook_id: int,
-    chunk_ids: list[int],
-) -> dict[int, tuple[Chunk, Source]]:
-    rows = await session.execute(
-        select(Chunk, Source)
-        .join(Source, Source.id == Chunk.source_id)
-        .where(
-            Chunk.id.in_(chunk_ids),
-            Source.notebook_id == notebook_id,
-            Source.status == SourceStatus.READY,
-        )
-    )
-    chunk_map: dict[int, tuple[Chunk, Source]] = {
-        chunk.id: (chunk, source) for chunk, source in rows.all()
-    }
-    missing = [chunk_id for chunk_id in chunk_ids if chunk_id not in chunk_map]
-    if missing:
-        raise HTTPException(status_code=400, detail="Unknown chunk_id in chunk_ids")
-    return chunk_map
-
-
-def _build_explicit_citations(
-    chunk_ids: list[int],
-    chunk_map: dict[int, tuple[Chunk, Source]],
-    *,
-    score: float = 1.0,
-) -> list[Citation]:
-    citations: list[Citation] = []
-    for chunk_id in chunk_ids:
-        chunk, source = chunk_map[chunk_id]
-        snippet = chunk.text.strip()[:200]
-        citations.append(
-            Citation(
-                source_id=source.id,
-                source_name=source.filename,
-                chunk_id=chunk.id,
-                chunk_index=chunk.chunk_index,
-                page_number=extract_page_number(chunk),
-                paragraph_index=extract_paragraph_index(chunk),
-                snippet=snippet,
-                score=score,
-            )
-        )
-    return citations
 
 
 @router.post("", response_model=QAResponse)
@@ -250,44 +187,6 @@ async def ask_question(
             )
         )
         await session.commit()
-
-    explicit_chunk_ids = _normalize_chunk_ids(payload.chunk_ids)
-    if explicit_chunk_ids:
-        chunk_map = await _load_explicit_chunks(session, notebook_id, explicit_chunk_ids)
-        citations = _build_explicit_citations(explicit_chunk_ids, chunk_map)
-        context = format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
-        messages, stats = _build_context_window(
-            settings=settings,
-            history_messages=history_messages,
-            question=payload.question,
-            context=context,
-        )
-
-        total_sources = await session.scalar(
-            select(sa.func.count(Source.id)).where(Source.notebook_id == notebook_id)
-        )
-        total_sources = total_sources or 0
-        unique_sources = len({citation.source_id for citation in citations})
-        coverage_ratio = unique_sources / total_sources if total_sources else 0.0
-        citation_ratio = min(1.0, len(citations) / payload.top_k)
-        confidence = _confidence_score(
-            similarity_avg=1.0,
-            coverage_ratio=coverage_ratio,
-            citation_ratio=citation_ratio,
-        )
-
-        answer = await chatter.chat(messages)
-        answer = _ensure_inline_citations(answer, citations)
-        created_at = datetime.datetime.now(datetime.UTC)
-        await _persist_session_messages(answer=answer, citations=citations, created_at=created_at)
-        return QAResponse(
-            answer=answer,
-            citations=citations,
-            evidence=True,
-            confidence=confidence,
-            created_at=created_at,
-            context=ContextStatsResponse.model_validate(stats),
-        )
 
     source_ids = _normalize_source_ids(payload.source_ids)
     if not source_ids:
@@ -595,69 +494,11 @@ async def ask_question_stream(
         )
         await session.commit()
 
-    explicit_chunk_ids = _normalize_chunk_ids(payload.chunk_ids)
-    explicit_context: tuple[list[Citation], list[ChatMessage], ContextStats, float] | None = None
-    source_ids: list[int] = []
-    if explicit_chunk_ids:
-        chunk_map = await _load_explicit_chunks(session, notebook_id, explicit_chunk_ids)
-        citations = _build_explicit_citations(explicit_chunk_ids, chunk_map)
-        context = format_context_from_chunk_ids(explicit_chunk_ids, chunk_map)
-        messages, stats = _build_context_window(
-            settings=settings,
-            history_messages=history_messages,
-            question=payload.question,
-            context=context,
-        )
-
-        total_sources = await session.scalar(
-            select(sa.func.count(Source.id)).where(Source.notebook_id == notebook_id)
-        )
-        total_sources = total_sources or 0
-        unique_sources = len({citation.source_id for citation in citations})
-        coverage_ratio = unique_sources / total_sources if total_sources else 0.0
-        citation_ratio = min(1.0, len(citations) / payload.top_k)
-        confidence = _confidence_score(
-            similarity_avg=1.0,
-            coverage_ratio=coverage_ratio,
-            citation_ratio=citation_ratio,
-        )
-        explicit_context = (citations, messages, stats, confidence)
-    else:
-        source_ids = _normalize_source_ids(payload.source_ids)
-        if source_ids:
-            await _validate_source_ids(session, notebook_id, source_ids)
+    source_ids = _normalize_source_ids(payload.source_ids)
+    if source_ids:
+        await _validate_source_ids(session, notebook_id, source_ids)
 
     async def generate_stream() -> AsyncGenerator[str, None]:
-        if explicit_context is not None:
-            citations, messages, stats, confidence = explicit_context
-            # Stream the answer
-            answer_chunks: list[str] = []
-            try:
-                async for chunk in chatter.chat_stream(messages):
-                    answer_chunks.append(chunk)
-                    yield _sse_event("chunk", {"text": chunk})
-            except Exception as e:  # noqa: BLE001
-                yield _sse_event("error", {"message": str(e)})
-                return
-
-            answer = "".join(answer_chunks)
-            answer = _ensure_inline_citations(answer, citations)
-            created_at = datetime.datetime.now(datetime.UTC)
-            await _persist_session_messages_stream(
-                answer=answer, citations=citations, created_at=created_at
-            )
-            yield _sse_event(
-                "done",
-                QAStreamDoneData(
-                    citations=citations,
-                    evidence=True,
-                    confidence=confidence,
-                    created_at=created_at,
-                    context=ContextStatsResponse.model_validate(stats),
-                ).model_dump(mode="json"),
-            )
-            return
-
         if not source_ids:
             created_at = datetime.datetime.now(datetime.UTC)
             _, stats = _build_context_window(

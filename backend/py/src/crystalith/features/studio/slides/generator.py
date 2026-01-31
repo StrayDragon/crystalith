@@ -21,7 +21,7 @@ from .config import (
     THEME_PRESET_TEMPLATES,
     TONE_HINTS,
 )
-from crystalith.shared.utils import format_context, format_context_from_chunk_ids
+from crystalith.shared.utils import format_context
 
 
 log = get_logger(__name__)
@@ -288,33 +288,14 @@ async def _resolve_context(
     deps: StudioDeps,
     notebook_id: int,
     prompt: str | None,
-    chunk_ids: list[int] | None,
     source_ids: list[int] | None,
     *,
     top_k: int = DEFAULT_TOP_K,
     min_score: float = DEFAULT_MIN_SCORE,
 ) -> SlidesContext:
-    explicit_chunk_ids = [int(v) for v in (chunk_ids or []) if int(v) > 0]
-    if explicit_chunk_ids:
-        rows = await deps.session.execute(
-            select(Chunk, Source)
-            .join(Source, Source.id == Chunk.source_id)
-            .where(Chunk.id.in_(explicit_chunk_ids), Source.notebook_id == notebook_id)
-        )
-        chunk_map: dict[int, tuple[Chunk, Source]] = {
-            chunk.id: (chunk, source) for chunk, source in rows.all()
-        }
-        missing = [cid for cid in explicit_chunk_ids if cid not in chunk_map]
-        if missing:
-            raise ValueError("Unknown chunk_id in chunk_ids")
-        return SlidesContext(
-            context=format_context_from_chunk_ids(explicit_chunk_ids, chunk_map),
-            resolved_chunk_ids=explicit_chunk_ids,
-        )
-
     normalized_source_ids = [int(v) for v in (source_ids or []) if int(v) > 0]
     if not normalized_source_ids:
-        return SlidesContext(context="", resolved_chunk_ids=[])
+        raise ValueError("source_ids must not be empty")
 
     rows = await deps.session.execute(
         select(Source.id).where(
@@ -362,7 +343,6 @@ async def generate_slides_outline(
     notebook_id: int,
     title: str | None,
     prompt: str | None,
-    chunk_ids: list[int] | None,
     source_ids: list[int] | None,
     generation_config: SlideGenerationConfig | dict[str, object] | None = None,
     model_id: str | None = None,
@@ -371,7 +351,6 @@ async def generate_slides_outline(
         deps,
         notebook_id,
         prompt,
-        chunk_ids,
         source_ids,
     )
 
@@ -408,7 +387,6 @@ async def generate_slides_markdown(
     title: str | None,
     prompt: str | None,
     outline: SlideOutline,
-    chunk_ids: list[int] | None,
     source_ids: list[int] | None,
     generation_config: SlideGenerationConfig | dict[str, object] | None = None,
     model_id: str | None = None,
@@ -417,7 +395,6 @@ async def generate_slides_markdown(
         deps,
         notebook_id,
         prompt,
-        chunk_ids,
         source_ids,
     )
 

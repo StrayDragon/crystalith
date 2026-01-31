@@ -104,6 +104,24 @@ test('enqueueOutputJob processes and updates outputs', async () => {
   });
 });
 
+test('enqueueOutputJob returns null when no sources selected', async () => {
+  const { result } = renderHook(() =>
+    useOutputQueueHarness({ isConnected: true, activeNotebookId: 1 }),
+  );
+
+  let created: any = null;
+  act(() => {
+    created = result.current.enqueueOutputJob({
+      type: 'FAQ',
+      prompt: 'hello',
+      sourceIds: [],
+    });
+  });
+
+  expect(created).toBeNull();
+  expect(result.current.state.errors.outputs).toBe('请先选择来源。');
+});
+
 test('enqueueSlidesJob returns null when disconnected', async () => {
   const { result } = renderHook(() =>
     useOutputQueueHarness({ isConnected: false, activeNotebookId: 1 }),

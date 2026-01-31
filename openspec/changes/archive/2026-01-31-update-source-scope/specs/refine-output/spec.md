@@ -9,9 +9,13 @@
 #### Scenario: 有选中来源
 - **WHEN** 用户选中来源并触发输出生成
 - **THEN** 系统仅使用选中来源作为上下文
-- **AND** 输出记录保存所用的 resolved chunk_ids（由后端解析）
+- **AND** 输出记录（若创建）保存解析后的 chunk_ids
 
-#### Scenario: 未选中来源
-- **WHEN** 用户未选中任何来源触发输出生成
+#### Scenario: 未选中来源触发提炼
+- **WHEN** 用户未选中任何来源触发提炼
 - **THEN** 系统以空上下文生成输出且不执行自动检索
-- **AND** 输出记录的 chunk_ids 为空
+- **AND** citations 为空或 evidence=false
+
+#### Scenario: 未选中来源触发 Studio 输出
+- **WHEN** 用户未选中任何来源触发 Studio 输出
+- **THEN** 系统返回 400 并拒绝生成

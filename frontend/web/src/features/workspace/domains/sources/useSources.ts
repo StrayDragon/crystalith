@@ -3,7 +3,6 @@ import useSWR from 'swr';
 
 import type { AsyncStatus } from '../../../../shared/types';
 import { toast } from '../../../../shared/toast';
-import { copyToClipboard } from '../../../../shared/clipboard';
 import {
   createSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPost as addSourceFromUrl,
   convertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePost as convertOutputToSource,
@@ -103,88 +102,6 @@ export function useSources() {
     }, 1800);
     return () => window.clearTimeout(timer);
   }, [dispatch, state.jumpToCitationChunkId]);
-
-  useEffect(() => {
-    const nextSelected: Record<string, boolean> = {};
-    for (const citation of state.citations) {
-      if (state.autoSelectCitations) {
-        nextSelected[citation.id] = true;
-      } else if (state.selectedCitationIds[citation.id]) {
-        nextSelected[citation.id] = true;
-      }
-    }
-    const currentKeys = Object.keys(state.selectedCitationIds);
-    const nextKeys = Object.keys(nextSelected);
-    const isSame =
-      currentKeys.length === nextKeys.length &&
-      nextKeys.every((key) => state.selectedCitationIds[key] === nextSelected[key]);
-    if (!isSame) {
-      dispatch({ type: 'SET_SELECTED_CITATIONS', payload: nextSelected });
-    }
-  }, [dispatch, state.autoSelectCitations, state.citations, state.selectedCitationIds]);
-
-  const selectedChunkIds = useMemo(
-    () =>
-      state.citations
-        .filter((citation) => state.selectedCitationIds[citation.id])
-        .map((citation) => citation.chunkId ?? Number(citation.id))
-        .filter((value): value is number => Number.isFinite(value) && value > 0),
-    [state.citations, state.selectedCitationIds],
-  );
-
-  const selectedCount = useMemo(
-    () =>
-      state.citations.reduce(
-        (count, citation) => count + (state.selectedCitationIds[citation.id] ? 1 : 0),
-        0,
-      ),
-    [state.citations, state.selectedCitationIds],
-  );
-
-  const toggleCitation = useCallback(
-    (citationId: string) => {
-      const wasSelected = Boolean(state.selectedCitationIds[citationId]);
-      if (state.autoSelectCitations && wasSelected) {
-        dispatch({ type: 'SET_AUTO_SELECT_CITATIONS', payload: false });
-      }
-      dispatch({
-        type: 'SET_SELECTED_CITATIONS',
-        payload: {
-          ...state.selectedCitationIds,
-          [citationId]: !wasSelected,
-        },
-      });
-    },
-    [dispatch, state.autoSelectCitations, state.selectedCitationIds],
-  );
-
-  const selectAllCitations = useCallback(() => {
-    const nextSelection: Record<string, boolean> = {};
-    for (const citation of state.citations) {
-      nextSelection[citation.id] = true;
-    }
-    dispatch({ type: 'SET_AUTO_SELECT_CITATIONS', payload: true });
-    dispatch({ type: 'SET_SELECTED_CITATIONS', payload: nextSelection });
-  }, [dispatch, state.citations]);
-
-  const clearCitationSelection = useCallback(() => {
-    dispatch({ type: 'SET_AUTO_SELECT_CITATIONS', payload: false });
-    dispatch({ type: 'SET_SELECTED_CITATIONS', payload: {} });
-  }, [dispatch]);
-
-  const toggleAutoSelect = useCallback(() => {
-    const next = !state.autoSelectCitations;
-    dispatch({ type: 'SET_AUTO_SELECT_CITATIONS', payload: next });
-    if (!next) {
-      dispatch({ type: 'SET_SELECTED_CITATIONS', payload: {} });
-      return;
-    }
-    const selection: Record<string, boolean> = {};
-    for (const citation of state.citations) {
-      selection[citation.id] = true;
-    }
-    dispatch({ type: 'SET_SELECTED_CITATIONS', payload: selection });
-  }, [dispatch, state.autoSelectCitations, state.citations]);
 
   const setHoveredCitationChunkId = useCallback(
     (chunkId: number | null) => {
@@ -423,23 +340,6 @@ export function useSources() {
     [isConnected, mutate, state.activeNotebookId],
   );
 
-  const copySelectedCitations = useCallback(async () => {
-    const selected = state.citations.filter(
-      (citation) => state.selectedCitationIds[citation.id],
-    );
-    if (selected.length === 0) return;
-    const text = selected
-      .map((citation) => {
-        const pageLabel = citation.pageNumber
-          ? `第 ${citation.pageNumber} 页`
-          : '页码未知';
-        return `- ${citation.sourceTitle} (${pageLabel} · #${citation.chunkIndex}) ${citation.snippet}`;
-      })
-      .join('\n');
-
-    await copyToClipboard(text);
-  }, [state.citations, state.selectedCitationIds]);
-
   const handleConvertOutputToSource = useCallback(
     async (outputId: number) => {
       if (!state.activeNotebookId) return;
@@ -565,24 +465,15 @@ export function useSources() {
   return {
     sources: state.sources,
     citations: state.citations,
-    selectedCitationIds: state.selectedCitationIds,
-    autoSelectCitations: state.autoSelectCitations,
     hoveredCitationChunkId: state.hoveredCitationChunkId,
     hoveredMessageChunkIds: state.hoveredMessageChunkIds,
     jumpToCitationChunkId: state.jumpToCitationChunkId,
     uploadState: state.uploadState,
     isLoading: state.loading.sources,
-    selectedChunkIds,
-    selectedCount,
     highlightedChunkIds,
-    toggleCitation,
-    selectAllCitations,
-    clearCitationSelection,
-    toggleAutoSelect,
     setHoveredCitationChunkId,
     setHoveredMessageChunkIds,
     setJumpToCitationChunkId,
-    copySelectedCitations,
     handleUpload,
     retrySources,
     searchState,

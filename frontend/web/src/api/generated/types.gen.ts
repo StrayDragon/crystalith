@@ -598,10 +598,6 @@ export type OutputGenerateRequest = {
      */
     prompt?: string | null;
     /**
-     * Chunk Ids
-     */
-    chunk_ids?: Array<number> | null;
-    /**
      * Source Ids
      */
     source_ids?: Array<number> | null;
@@ -735,10 +731,6 @@ export type QaRequest = {
      */
     question: string;
     /**
-     * Chunk Ids
-     */
-    chunk_ids?: Array<number> | null;
-    /**
      * Source Ids
      */
     source_ids?: Array<number> | null;
@@ -811,10 +803,6 @@ export type RefineBatchRequest = {
      */
     formats?: Array<string> | null;
     /**
-     * Chunk Ids
-     */
-    chunk_ids?: Array<number> | null;
-    /**
      * Source Ids
      */
     source_ids?: Array<number> | null;
@@ -864,10 +852,6 @@ export type RefineRequest = {
      * Format
      */
     format?: string;
-    /**
-     * Chunk Ids
-     */
-    chunk_ids?: Array<number> | null;
     /**
      * Source Ids
      */
@@ -1300,10 +1284,6 @@ export type SlideDraftCreate = {
      */
     engine?: string;
     /**
-     * Chunk Ids
-     */
-    chunk_ids?: Array<number> | null;
-    /**
      * Source Ids
      */
     source_ids?: Array<number> | null;
@@ -1402,10 +1382,6 @@ export type SlideDraftUpdate = {
      * Engine
      */
     engine?: string | null;
-    /**
-     * Chunk Ids
-     */
-    chunk_ids?: Array<number> | null;
     /**
      * Source Ids
      */

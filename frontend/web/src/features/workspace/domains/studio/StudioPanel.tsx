@@ -45,6 +45,7 @@ interface StudioPanelProps {
   onJumpToCitation?: (citation: Citation, citations: Citation[]) => void;
   isConnected: boolean;
   isFullscreen?: boolean;
+  hasSelectedSources: boolean;
 }
 
 function StudioPanel({
@@ -66,6 +67,7 @@ function StudioPanel({
   onJumpToCitation,
   isConnected,
   isFullscreen = false,
+  hasSelectedSources,
 }: StudioPanelProps) {
   const [noteEditorOpen, setNoteEditorOpen] = useState(false);
   const [noteEditorContent, setNoteEditorContent] = useState('');
@@ -97,6 +99,11 @@ function StudioPanel({
 
   return (
     <div className={`flex flex-1 flex-col gap-3 p-3 sm:p-4 min-h-0 ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''}`}>
+      {!hasSelectedSources ? (
+        <div className="rounded-xl border border-dashed border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700">
+          未选择来源，无法生成输出。请先在左侧勾选来源。
+        </div>
+      ) : null}
       <StudioToolsGrid
         tools={tools}
         toolsLoading={toolsLoading}
@@ -105,6 +112,7 @@ function StudioPanel({
         onOpenSlides={onOpenSlides}
         isConnected={isConnected}
         isFullscreen={isFullscreen}
+        hasSelectedSources={hasSelectedSources}
       />
 
       <StudioOutputsList

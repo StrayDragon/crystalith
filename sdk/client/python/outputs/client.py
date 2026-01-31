@@ -36,7 +36,6 @@ class OutputsClient:
         output_type: CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostRequestOutputType,
         *,
         prompt: typing.Optional[str] = OMIT,
-        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
@@ -63,8 +62,6 @@ class OutputsClient:
             * `STRUCTURED`: 结构化摘要
 
         prompt : typing.Optional[str]
-
-        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
@@ -99,7 +96,6 @@ class OutputsClient:
             notebook_id,
             output_type,
             prompt=prompt,
-            chunk_ids=chunk_ids,
             source_ids=source_ids,
             top_k=top_k,
             min_score=min_score,
@@ -273,7 +269,6 @@ class AsyncOutputsClient:
         output_type: CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostRequestOutputType,
         *,
         prompt: typing.Optional[str] = OMIT,
-        chunk_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
@@ -300,8 +295,6 @@ class AsyncOutputsClient:
             * `STRUCTURED`: 结构化摘要
 
         prompt : typing.Optional[str]
-
-        chunk_ids : typing.Optional[typing.Sequence[int]]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
@@ -344,7 +337,6 @@ class AsyncOutputsClient:
             notebook_id,
             output_type,
             prompt=prompt,
-            chunk_ids=chunk_ids,
             source_ids=source_ids,
             top_k=top_k,
             min_score=min_score,

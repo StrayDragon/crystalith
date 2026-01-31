@@ -135,8 +135,6 @@ export function useChat({
       return;
     }
 
-    const resolvedChunkIds: number[] | undefined = undefined;
-
     // Use streaming if enabled
     if (enableStreaming) {
       const assistantMessageId = createId();
@@ -159,7 +157,6 @@ export function useChat({
           body: {
             question: text,
             session_id: sessionId ?? undefined,
-            chunk_ids: resolvedChunkIds,
             source_ids: explicitSourceIds.length ? explicitSourceIds : undefined,
           },
           headers: {
@@ -258,7 +255,6 @@ export function useChat({
         body: {
           question: text,
           session_id: sessionId ?? undefined,
-          chunk_ids: resolvedChunkIds,
           source_ids: explicitSourceIds.length ? explicitSourceIds : undefined,
         },
       });

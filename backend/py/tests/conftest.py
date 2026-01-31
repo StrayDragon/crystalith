@@ -18,7 +18,7 @@ class DummyEmbeddingProvider:
     model = "dummy"
 
     async def embed(self, texts):
-        return [[0.0, 0.0, 0.0] for _ in texts]
+        return [[1.0, 0.0, 0.0] for _ in texts]
 
 
 class DummyChatProvider:
