@@ -114,6 +114,7 @@ function ThinkingBlock({ item, isLatest, isCollapsed, onToggle, onTypewriterComp
     report_complete: { bg: 'bg-emerald-50', border: 'border-emerald-200' },
     waiting_user: { bg: 'bg-gray-50', border: 'border-gray-200' },
     completed: { bg: 'bg-green-50', border: 'border-green-200' },
+    connection: { bg: 'bg-gray-50', border: 'border-gray-200' },
   };
 
   const style = typeStyles[item.type] || { bg: 'bg-gray-50', border: 'border-gray-200' };
@@ -225,9 +226,13 @@ function ResearchDetailPanel({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showThinking, setShowThinking] = useState(true);
   const [showAllThinking, setShowAllThinking] = useState(false);
+  const [showAllConfirmOpen, setShowAllConfirmOpen] = useState(false);
   const maxVisibleThinking = 80;
+  const maxExpandedThinking = 500;
+  const maxThinkingRenderCount = 300;
   const renderBatchSize = 40;
   const [visibleThinkingCount, setVisibleThinkingCount] = useState(maxVisibleThinking);
+  const [thinkingWindowStart, setThinkingWindowStart] = useState(0);
   // Track which thinking blocks are collapsed (all except latest)
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<number>>(new Set());
   // Track if latest typewriter is complete
@@ -236,6 +241,7 @@ function ResearchDetailPanel({
   const thinkingScrollRef = useRef<HTMLDivElement>(null);
   // Export dialog state
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const { style: confirmModalStyle } = useLayer('modal', 1);
 
   // Extract latest search progress from SSE events
   const searchProgress = useMemo(() => {
@@ -320,6 +326,13 @@ function ResearchDetailPanel({
             timestamp: index,
             iteration: event.data.iteration,
             queries: event.data.queries,
+          });
+        }
+        if (event.type === 'connection') {
+          timeline.push({
+            type: 'connection',
+            message: `🔌 ${event.data.message}`,
+            timestamp: index,
           });
         }
       });
@@ -439,17 +452,53 @@ function ResearchDetailPanel({
 
     return timeline;
   }, [sseEvents, session.steps, session.topic, session.max_iterations, session.status]);
-  const visibleThinking = useMemo(() => {
+  const thinkingWindow = useMemo(() => {
     const total = thinkingTimeline.length;
-    const visibleLimit = Math.min(visibleThinkingCount, total);
-    const startIndex = Math.max(0, total - visibleLimit);
+    const expandedCap = total > maxExpandedThinking ? maxExpandedThinking : total;
+    const desiredVisibleCount = showAllThinking
+      ? Math.min(visibleThinkingCount, expandedCap)
+      : Math.min(visibleThinkingCount, total);
+    const isVirtualized = total > maxThinkingRenderCount;
+    const renderLimit = isVirtualized
+      ? Math.min(maxThinkingRenderCount, desiredVisibleCount)
+      : desiredVisibleCount;
+    const minStart = showAllThinking ? Math.max(0, total - expandedCap) : Math.max(0, total - desiredVisibleCount);
+    const maxStart = Math.max(0, total - renderLimit);
+    const clampedStart = Math.min(Math.max(thinkingWindowStart, minStart), maxStart);
+    const endIndex = Math.min(total, clampedStart + renderLimit);
+
     return {
-      items: thinkingTimeline.slice(startIndex),
-      offset: startIndex,
+      total,
+      expandedCap,
+      desiredVisibleCount,
+      renderLimit,
+      minStart,
+      maxStart,
+      start: clampedStart,
+      end: endIndex,
+      isVirtualized,
     };
-  }, [thinkingTimeline, visibleThinkingCount]);
-  const hiddenThinkingCount = thinkingTimeline.length - visibleThinking.items.length;
-  const isExpandingThinking = showAllThinking && visibleThinkingCount < thinkingTimeline.length;
+  }, [
+    thinkingTimeline.length,
+    showAllThinking,
+    visibleThinkingCount,
+    thinkingWindowStart,
+    maxExpandedThinking,
+    maxThinkingRenderCount,
+  ]);
+
+  const visibleThinking = useMemo(() => {
+    return {
+      items: thinkingTimeline.slice(thinkingWindow.start, thinkingWindow.end),
+      offset: thinkingWindow.start,
+    };
+  }, [thinkingTimeline, thinkingWindow.start, thinkingWindow.end]);
+
+  const hiddenThinkingCount = showAllThinking
+    ? 0
+    : Math.max(0, thinkingWindow.total - visibleThinking.items.length);
+  const isExpandingThinking = showAllThinking && visibleThinkingCount < thinkingWindow.expandedCap;
+  const loadMoreCap = Math.min(thinkingWindow.total, maxThinkingRenderCount);
 
   // Progressive rendering when showing all thinking entries (prevents long render spikes)
   useEffect(() => {
@@ -457,14 +506,14 @@ function ResearchDetailPanel({
       setVisibleThinkingCount((prev) => Math.min(prev, maxVisibleThinking));
       return;
     }
-    if (visibleThinkingCount >= thinkingTimeline.length) return;
+    if (visibleThinkingCount >= thinkingWindow.expandedCap) return;
 
     let cancelled = false;
     let handle: number | null = null;
     const expand = () => {
       if (cancelled) return;
       setVisibleThinkingCount((prev) =>
-        Math.min(prev + renderBatchSize, thinkingTimeline.length)
+        Math.min(prev + renderBatchSize, thinkingWindow.expandedCap)
       );
     };
 
@@ -484,23 +533,41 @@ function ResearchDetailPanel({
         }
       }
     };
-  }, [showAllThinking, thinkingTimeline.length, visibleThinkingCount, maxVisibleThinking, renderBatchSize]);
+  }, [
+    showAllThinking,
+    thinkingWindow.expandedCap,
+    visibleThinkingCount,
+    maxVisibleThinking,
+    renderBatchSize,
+  ]);
+
+  useEffect(() => {
+    if (showAllThinking && visibleThinkingCount > thinkingWindow.expandedCap) {
+      setVisibleThinkingCount(thinkingWindow.expandedCap);
+    }
+  }, [showAllThinking, visibleThinkingCount, thinkingWindow.expandedCap]);
+
+  useEffect(() => {
+    setThinkingWindowStart((prev) => {
+      const base = showAllThinking ? prev : thinkingWindow.maxStart;
+      const clamped = Math.min(Math.max(base, thinkingWindow.minStart), thinkingWindow.maxStart);
+      return clamped;
+    });
+  }, [showAllThinking, thinkingWindow.minStart, thinkingWindow.maxStart]);
 
   // Auto-collapse previous blocks when new thinking arrives
   useEffect(() => {
     if (thinkingTimeline.length > 1) {
       // Collapse all blocks except the latest (within current display window)
       const newCollapsed = new Set<number>();
-      const startIndex = showAllThinking
-        ? 0
-        : Math.max(0, thinkingTimeline.length - Math.min(visibleThinkingCount, thinkingTimeline.length));
+      const startIndex = thinkingWindow.start;
       for (let i = startIndex; i < thinkingTimeline.length - 1; i++) {
         newCollapsed.add(i);
       }
       setCollapsedBlocks(newCollapsed);
       setLatestTypewriterComplete(false);
     }
-  }, [thinkingTimeline.length, showAllThinking, visibleThinkingCount]);
+  }, [thinkingTimeline.length, thinkingWindow.start]);
 
   // Auto-scroll to bottom when new content arrives
   useEffect(() => {
@@ -525,6 +592,41 @@ function ResearchDetailPanel({
       return next;
     });
   }, []);
+
+  const handleToggleShowAll = useCallback(() => {
+    if (!showAllThinking) {
+      if (thinkingWindow.total > maxExpandedThinking) {
+        setShowAllConfirmOpen(true);
+        return;
+      }
+      setShowAllThinking(true);
+      return;
+    }
+    setShowAllThinking(false);
+  }, [showAllThinking, thinkingWindow.total, maxExpandedThinking]);
+
+  const handleConfirmShowAll = useCallback(() => {
+    setShowAllConfirmOpen(false);
+    setShowAllThinking(true);
+  }, []);
+
+  const handleCancelShowAll = useCallback(() => {
+    setShowAllConfirmOpen(false);
+  }, []);
+
+  const shiftThinkingWindow = useCallback(
+    (delta: number) => {
+      setThinkingWindowStart((prev) => {
+        const next = prev + delta;
+        return Math.min(Math.max(next, thinkingWindow.minStart), thinkingWindow.maxStart);
+      });
+    },
+    [thinkingWindow.minStart, thinkingWindow.maxStart]
+  );
+
+  const jumpToLatestThinking = useCallback(() => {
+    setThinkingWindowStart(thinkingWindow.maxStart);
+  }, [thinkingWindow.maxStart]);
 
   const handleTypewriterComplete = useCallback(() => {
     setLatestTypewriterComplete(true);
@@ -714,7 +816,7 @@ function ResearchDetailPanel({
               <div className="flex items-center gap-1">
                 {thinkingTimeline.length > maxVisibleThinking && showThinking && (
                   <button
-                    onClick={() => setShowAllThinking((prev) => !prev)}
+                    onClick={handleToggleShowAll}
                     className="text-[11px] text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100"
                   >
                     {showAllThinking ? '仅显示最新' : '显示全部'}
@@ -733,13 +835,38 @@ function ResearchDetailPanel({
                 ref={thinkingScrollRef}
                 className="flex-1 overflow-y-auto p-3 space-y-2 scroll-smooth"
               >
+                {showAllThinking && thinkingWindow.total > 0 && (
+                  <div className="flex items-center justify-between text-[11px] text-gray-500 bg-gray-100 rounded px-2 py-1">
+                    <span>
+                      已展示 {thinkingWindow.start + 1}-{thinkingWindow.end} / {thinkingWindow.total} 条
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {thinkingWindow.start > thinkingWindow.minStart && (
+                        <button
+                          onClick={() => shiftThinkingWindow(-renderBatchSize)}
+                          className="text-[11px] text-purple-600 hover:text-purple-700"
+                        >
+                          更早
+                        </button>
+                      )}
+                      {thinkingWindow.start < thinkingWindow.maxStart && (
+                        <button
+                          onClick={jumpToLatestThinking}
+                          className="text-[11px] text-purple-600 hover:text-purple-700"
+                        >
+                          最新
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {!showAllThinking && hiddenThinkingCount > 0 && (
                   <div className="flex items-center justify-between text-[11px] text-gray-500 bg-gray-100 rounded px-2 py-1">
                     <span>已隐藏 {hiddenThinkingCount} 条较早记录</span>
                     <button
                       onClick={() =>
                         setVisibleThinkingCount((prev) =>
-                          Math.min(prev + maxVisibleThinking, thinkingTimeline.length)
+                          Math.min(prev + maxVisibleThinking, loadMoreCap)
                         )
                       }
                       className="text-[11px] text-purple-600 hover:text-purple-700"
@@ -751,7 +878,7 @@ function ResearchDetailPanel({
                 {showAllThinking && isExpandingThinking && (
                   <div className="flex items-center justify-between text-[11px] text-gray-500 bg-gray-100 rounded px-2 py-1">
                     <span>
-                      正在展开 {visibleThinkingCount}/{thinkingTimeline.length} 条记录
+                      正在展开 {Math.min(visibleThinkingCount, thinkingWindow.expandedCap)}/{thinkingWindow.expandedCap} 条记录
                     </span>
                     <span className="text-purple-600">...</span>
                   </div>
@@ -1113,24 +1240,70 @@ function ResearchDetailPanel({
             <span className="font-medium text-gray-900">{completedIterations}</span> 轮完成
           </span>
         </div>
-        {totalResults > 0 && (
-          <button
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-            onClick={() => {
-              setShowResultsDialog(true);
-              setSelectedResults(new Set());
-            }}
-          >
-            查看所有结果
-          </button>
-        )}
-      </div>
+      {totalResults > 0 && (
+        <button
+          className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+          onClick={() => {
+            setShowResultsDialog(true);
+            setSelectedResults(new Set());
+          }}
+        >
+          查看所有结果
+        </button>
+      )}
+    </div>
 
-      {/* Results Dialog */}
-      {showResultsDialog && session.aggregated_results && (
-        <ResultsDialogContent
-          session={session}
-          selectedResults={selectedResults}
+    {showAllConfirmOpen && (
+      <div
+        className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4"
+        style={confirmModalStyle}
+        onClick={handleCancelShowAll}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 className="font-semibold text-gray-900">展开全部思考记录？</h3>
+            <button
+              onClick={handleCancelShowAll}
+              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <CloseIcon className="w-5 h-5 text-gray-400" />
+            </button>
+          </div>
+          <div className="px-5 py-4 text-sm text-gray-600 space-y-2">
+            <p>思考记录已超过 {maxExpandedThinking} 条，全部展开可能影响性能。</p>
+            <p>默认仅展示最近 {maxExpandedThinking} 条，是否继续？</p>
+          </div>
+          <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+            <Button
+              variant="text"
+              size="sm"
+              color="gray"
+              onClick={handleCancelShowAll}
+            >
+              取消
+            </Button>
+            <Button
+              size="sm"
+              color="blue"
+              onClick={handleConfirmShowAll}
+            >
+              继续展开
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Results Dialog */}
+    {showResultsDialog && session.aggregated_results && (
+      <ResultsDialogContent
+        session={session}
+        selectedResults={selectedResults}
           setSelectedResults={setSelectedResults}
           onClose={() => setShowResultsDialog(false)}
           onAddSourceFromUrl={onAddSourceFromUrl}
