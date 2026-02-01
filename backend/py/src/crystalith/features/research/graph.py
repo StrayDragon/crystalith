@@ -308,6 +308,11 @@ class WaitForApproval(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]
             await deps.session.refresh(research)
             _ = research.steps
 
+            # Check if session was cancelled
+            if research.status == ResearchStatus.CANCELLED:
+                log.info("research cancelled by user", session_id=state.session_id)
+                return GenerateReport()
+
             # Check if user has taken action (status changed from WAITING_USER)
             if research.status != ResearchStatus.WAITING_USER:
                 # Find the latest user input step
@@ -349,6 +354,15 @@ class WaitForApproval(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]
                             })
                         return GenerateReport()
 
+                    if action == "cancel":
+                        if deps.on_thinking:
+                            await deps.on_thinking({
+                                "type": "user_action",
+                                "message": "🛑 用户取消了研究",
+                                "iteration": state.current_iteration,
+                            })
+                        return GenerateReport()
+
                     if action == "modify":
                         # Get modified plan from step data
                         modified_plan = latest_step.input_data.get("plan") if latest_step.input_data else None
@@ -377,11 +391,6 @@ class WaitForApproval(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]
                 # Continue with search
                 state.waiting_for_user = False
                 return ExecuteSearches()
-
-            # Check if session was cancelled
-            if research.status == ResearchStatus.CANCELLED:
-                log.info("research cancelled by user", session_id=state.session_id)
-                return GenerateReport()
 
         # Timeout - auto-approve and continue
         log.warning(
@@ -561,6 +570,21 @@ class ExecuteSearches(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]
             status=ResearchStepStatus.COMPLETED,
         )
         deps.session.add(step)
+
+        # Persist aggregated results so sessions can resume mid-run.
+        research = await deps.session.get(ResearchSession, state.session_id)
+        if research:
+            research.aggregated_results = [
+                {
+                    "title": r.title,
+                    "url": r.url,
+                    "snippet": r.snippet,
+                    "source": r.source,
+                    "iteration": r.iteration,
+                }
+                for r in state.all_results
+            ]
+            research.current_iteration = state.current_iteration
         await deps.session.commit()
 
         return AnalyzeResults()
@@ -710,6 +734,17 @@ class GenerateReport(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]])
         state = ctx.state
         deps = ctx.deps
 
+        # If the user cancelled, stop without generating or overwriting status.
+        research = await deps.session.get(ResearchSession, state.session_id)
+        if research and research.status == ResearchStatus.CANCELLED:
+            log.info("research cancelled, skipping report", session_id=state.session_id)
+            return End({
+                "session_id": state.session_id,
+                "status": ResearchStatus.CANCELLED.value,
+                "total_results": len(state.all_results),
+                "report_length": 0,
+            })
+
         log.info(
             "generating report",
             session_id=state.session_id,
@@ -821,6 +856,149 @@ class GenerateReport(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]])
 RESEARCH_GRAPH: Graph[ResearchGraphState, ResearchDeps, dict[str, Any]] = Graph(
     nodes=[PlanSearches, WaitForApproval, ExecuteSearches, AnalyzeResults, GenerateReport]
 )
+
+
+def _parse_search_plan(plan_data: dict[str, Any], fallback_iteration: int) -> SearchPlan | None:
+    queries_raw = plan_data.get("queries") if isinstance(plan_data, dict) else None
+    if not isinstance(queries_raw, list):
+        return None
+
+    queries: list[SearchQuery] = []
+    for query_data in queries_raw:
+        if not isinstance(query_data, dict):
+            continue
+        query_text = str(query_data.get("query") or "").strip()
+        if not query_text:
+            continue
+        try:
+            priority = int(query_data.get("priority", 1))
+        except (TypeError, ValueError):
+            priority = 1
+        queries.append(
+            SearchQuery(
+                query=query_text,
+                engine=str(query_data.get("engine") or "Web"),
+                priority=priority,
+                reason=str(query_data.get("reason") or ""),
+            )
+        )
+
+    if not queries:
+        return None
+
+    try:
+        iteration = int(plan_data.get("iteration") or fallback_iteration)
+    except (TypeError, ValueError):
+        iteration = fallback_iteration
+
+    try:
+        estimated_results = int(plan_data.get("estimated_results", 10))
+    except (TypeError, ValueError):
+        estimated_results = 10
+
+    return SearchPlan(
+        iteration=iteration,
+        queries=queries,
+        reasoning=str(plan_data.get("reasoning") or ""),
+        estimated_results=estimated_results,
+    )
+
+
+def _extract_plan_from_steps(
+    steps: list[ResearchStep] | None,
+    iteration: int,
+) -> SearchPlan | None:
+    if not steps:
+        return None
+
+    # Prefer user-modified plan if present for this iteration.
+    for step in reversed(steps):
+        if step.iteration != iteration:
+            continue
+        if step.type == ResearchStepType.USER_INPUT and step.input_data:
+            action = step.input_data.get("action")
+            if action == "modify" and isinstance(step.input_data.get("plan"), dict):
+                plan = _parse_search_plan(step.input_data["plan"], iteration)
+                if plan:
+                    return plan
+
+    # Fall back to the latest generated plan for this iteration.
+    for step in reversed(steps):
+        if step.iteration != iteration:
+            continue
+        if step.type == ResearchStepType.PLAN and step.output_data:
+            plan = _parse_search_plan(step.output_data, iteration)
+            if plan:
+                return plan
+
+    return None
+
+
+def _build_state_from_session(research: ResearchSession) -> ResearchGraphState:
+    state = ResearchGraphState(
+        session_id=research.id,
+        notebook_id=research.notebook_id,
+        topic=research.topic,
+        current_iteration=research.current_iteration,
+        max_iterations=research.max_iterations,
+    )
+
+    if research.aggregated_results:
+        for raw in research.aggregated_results:
+            if not isinstance(raw, dict):
+                continue
+            state.all_results.append(
+                SearchResult(
+                    title=str(raw.get("title") or ""),
+                    url=str(raw.get("url") or ""),
+                    snippet=str(raw.get("snippet") or ""),
+                    source=str(raw.get("source") or ""),
+                    iteration=int(raw.get("iteration") or research.current_iteration),
+                )
+            )
+
+    state.search_plan = _extract_plan_from_steps(research.steps, research.current_iteration)
+    return state
+
+
+def _start_node_for_status(
+    status: ResearchStatus,
+    *,
+    has_plan: bool,
+) -> BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]] | None:
+    if status == ResearchStatus.PLANNING:
+        return PlanSearches()
+    if status == ResearchStatus.WAITING_USER:
+        return WaitForApproval() if has_plan else PlanSearches()
+    if status == ResearchStatus.SEARCHING:
+        return ExecuteSearches() if has_plan else PlanSearches()
+    if status == ResearchStatus.ANALYZING:
+        return AnalyzeResults()
+    if status in (ResearchStatus.COMPLETED, ResearchStatus.CANCELLED):
+        return None
+    return PlanSearches()
+
+
+async def run_research_graph_from_session(
+    research: ResearchSession,
+    deps: ResearchDeps,
+) -> dict[str, Any]:
+    """Resume research graph based on existing session state."""
+    start_node = _start_node_for_status(
+        research.status,
+        has_plan=bool(_extract_plan_from_steps(research.steps, research.current_iteration)),
+    )
+    if start_node is None:
+        return {
+            "session_id": research.id,
+            "status": research.status.value,
+            "total_results": len(research.aggregated_results or []),
+            "report_length": len(research.final_report or ""),
+        }
+
+    state = _build_state_from_session(research)
+    result = await RESEARCH_GRAPH.run(start_node, state=state, deps=deps)
+    return result.output
 
 
 async def run_research_graph(

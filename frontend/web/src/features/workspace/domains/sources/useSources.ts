@@ -52,6 +52,7 @@ export function useSources() {
   // 搜索队列状态
   const [searchQueue, setSearchQueue] = useState<SearchQueueItem[]>([]);
   const searchIdRef = useRef(0);
+  const maxSearchQueueItems = 20;
   const { data, error, isLoading, mutate } = useSWR(
     state.activeNotebookId && isConnected
       ? ['workspace/sources', state.activeNotebookId]
@@ -210,7 +211,10 @@ export function useSources() {
         notice: '',
         createdAt: Date.now(),
       };
-      setSearchQueue((prev) => [...prev, newQueueItem]);
+      setSearchQueue((prev) => {
+        const next = [...prev, newQueueItem];
+        return next.length > maxSearchQueueItems ? next.slice(-maxSearchQueueItems) : next;
+      });
 
       // 同时更新旧的状态以保持向后兼容
       setSearchState('loading');

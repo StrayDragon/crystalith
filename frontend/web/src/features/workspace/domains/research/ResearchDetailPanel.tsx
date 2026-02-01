@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState, useRef, type CSSProperties } from 'react';
 import {
   Button,
   Typography,
@@ -90,6 +90,11 @@ interface ThinkingBlockProps {
   onTypewriterComplete: () => void;
 }
 
+const THINKING_BLOCK_VISIBILITY_STYLE: CSSProperties = {
+  contentVisibility: 'auto',
+  containIntrinsicSize: '120px 80px',
+};
+
 function ThinkingBlock({ item, isLatest, isCollapsed, onToggle, onTypewriterComplete }: ThinkingBlockProps) {
   // Style based on type - no icon needed since backend message already includes emoji
   const typeStyles: Record<string, { bg: string; border: string }> = {
@@ -119,6 +124,7 @@ function ThinkingBlock({ item, isLatest, isCollapsed, onToggle, onTypewriterComp
       <button
         onClick={onToggle}
         className={`w-full text-left text-sm p-2 rounded-lg border ${style.bg} ${style.border} hover:brightness-95 transition-all flex items-center gap-2 group`}
+        style={THINKING_BLOCK_VISIBILITY_STYLE}
       >
         <span className="text-gray-600 truncate flex-1 text-xs">
           {item.message.split('\n')[0].slice(0, 50)}...
@@ -129,8 +135,10 @@ function ThinkingBlock({ item, isLatest, isCollapsed, onToggle, onTypewriterComp
   }
 
   return (
-    <div className={`text-sm p-3 rounded-lg border ${style.bg} ${style.border} transition-all ${!isLatest ? 'cursor-pointer hover:brightness-95' : ''}`}
-         onClick={!isLatest ? onToggle : undefined}
+    <div
+      className={`text-sm p-3 rounded-lg border ${style.bg} ${style.border} transition-all ${!isLatest ? 'cursor-pointer hover:brightness-95' : ''}`}
+      style={THINKING_BLOCK_VISIBILITY_STYLE}
+      onClick={!isLatest ? onToggle : undefined}
     >
       <div className="flex-1 min-w-0">
         <p className="text-gray-700 leading-relaxed break-words whitespace-pre-wrap">
@@ -171,6 +179,8 @@ interface ResearchDetailPanelProps {
   onSkip: () => Promise<void>;
   onFinish: () => Promise<void>;
   onCancel: () => Promise<void>;
+  onResume: () => Promise<void>;
+  onRetry: () => Promise<void>;
   onStart: () => Promise<void>;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
@@ -204,6 +214,8 @@ function ResearchDetailPanel({
   onSkip,
   onFinish,
   onCancel,
+  onResume,
+  onRetry,
   onStart,
   isFullscreen = true, // Default to fullscreen
   onToggleFullscreen,
@@ -212,6 +224,10 @@ function ResearchDetailPanel({
   const [selectedQueries, setSelectedQueries] = useState<Set<number>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
   const [showThinking, setShowThinking] = useState(true);
+  const [showAllThinking, setShowAllThinking] = useState(false);
+  const maxVisibleThinking = 80;
+  const renderBatchSize = 40;
+  const [visibleThinkingCount, setVisibleThinkingCount] = useState(maxVisibleThinking);
   // Track which thinking blocks are collapsed (all except latest)
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<number>>(new Set());
   // Track if latest typewriter is complete
@@ -241,6 +257,13 @@ function ResearchDetailPanel({
       return latest.data;
     }
     return null;
+  }, [sseEvents]);
+  const latestErrorEvent = useMemo(() => {
+    const errorEvents = sseEvents.filter(
+      (event): event is Extract<SSEEvent, { type: 'error' }> => event.type === 'error'
+    );
+    if (errorEvents.length === 0) return null;
+    return errorEvents[errorEvents.length - 1];
   }, [sseEvents]);
   // Show results dialog
   const [showResultsDialog, setShowResultsDialog] = useState(false);
@@ -415,21 +438,69 @@ function ResearchDetailPanel({
     }
 
     return timeline;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sseEvents.length, session.steps, session.topic, session.max_iterations, session.status]);
+  }, [sseEvents, session.steps, session.topic, session.max_iterations, session.status]);
+  const visibleThinking = useMemo(() => {
+    const total = thinkingTimeline.length;
+    const visibleLimit = Math.min(visibleThinkingCount, total);
+    const startIndex = Math.max(0, total - visibleLimit);
+    return {
+      items: thinkingTimeline.slice(startIndex),
+      offset: startIndex,
+    };
+  }, [thinkingTimeline, visibleThinkingCount]);
+  const hiddenThinkingCount = thinkingTimeline.length - visibleThinking.items.length;
+  const isExpandingThinking = showAllThinking && visibleThinkingCount < thinkingTimeline.length;
+
+  // Progressive rendering when showing all thinking entries (prevents long render spikes)
+  useEffect(() => {
+    if (!showAllThinking) {
+      setVisibleThinkingCount((prev) => Math.min(prev, maxVisibleThinking));
+      return;
+    }
+    if (visibleThinkingCount >= thinkingTimeline.length) return;
+
+    let cancelled = false;
+    let handle: number | null = null;
+    const expand = () => {
+      if (cancelled) return;
+      setVisibleThinkingCount((prev) =>
+        Math.min(prev + renderBatchSize, thinkingTimeline.length)
+      );
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      handle = window.requestIdleCallback(expand, { timeout: 200 });
+    } else {
+      handle = window.setTimeout(expand, 50);
+    }
+
+    return () => {
+      cancelled = true;
+      if (handle !== null) {
+        if (typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
+          window.cancelIdleCallback(handle);
+        } else {
+          window.clearTimeout(handle);
+        }
+      }
+    };
+  }, [showAllThinking, thinkingTimeline.length, visibleThinkingCount, maxVisibleThinking, renderBatchSize]);
 
   // Auto-collapse previous blocks when new thinking arrives
   useEffect(() => {
     if (thinkingTimeline.length > 1) {
-      // Collapse all blocks except the latest
+      // Collapse all blocks except the latest (within current display window)
       const newCollapsed = new Set<number>();
-      for (let i = 0; i < thinkingTimeline.length - 1; i++) {
+      const startIndex = showAllThinking
+        ? 0
+        : Math.max(0, thinkingTimeline.length - Math.min(visibleThinkingCount, thinkingTimeline.length));
+      for (let i = startIndex; i < thinkingTimeline.length - 1; i++) {
         newCollapsed.add(i);
       }
       setCollapsedBlocks(newCollapsed);
       setLatestTypewriterComplete(false);
     }
-  }, [thinkingTimeline.length]);
+  }, [thinkingTimeline.length, showAllThinking, visibleThinkingCount]);
 
   // Auto-scroll to bottom when new content arrives
   useEffect(() => {
@@ -437,6 +508,11 @@ function ResearchDetailPanel({
       thinkingScrollRef.current.scrollTop = thinkingScrollRef.current.scrollHeight;
     }
   }, [thinkingTimeline.length, latestTypewriterComplete]);
+  useEffect(() => {
+    if (thinkingScrollRef.current) {
+      thinkingScrollRef.current.scrollTop = thinkingScrollRef.current.scrollHeight;
+    }
+  }, [showAllThinking]);
 
   const toggleBlockCollapse = useCallback((index: number) => {
     setCollapsedBlocks(prev => {
@@ -517,6 +593,24 @@ function ResearchDetailPanel({
       setIsProcessing(false);
     }
   }, [onCancel]);
+
+  const handleResume = useCallback(async () => {
+    setIsProcessing(true);
+    try {
+      await onResume();
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [onResume]);
+
+  const handleRetry = useCallback(async () => {
+    setIsProcessing(true);
+    try {
+      await onRetry();
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [onRetry]);
 
   // Status helpers
   const isWaiting = session.status === 'waiting_user';
@@ -617,18 +711,51 @@ function ResearchDetailPanel({
                   </span>
                 )}
               </div>
-              <button
-                onClick={() => setShowThinking(!showThinking)}
-                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100"
-              >
-                {showThinking ? '收起' : '展开'}
-              </button>
+              <div className="flex items-center gap-1">
+                {thinkingTimeline.length > maxVisibleThinking && showThinking && (
+                  <button
+                    onClick={() => setShowAllThinking((prev) => !prev)}
+                    className="text-[11px] text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100"
+                  >
+                    {showAllThinking ? '仅显示最新' : '显示全部'}
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowThinking(!showThinking)}
+                  className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100"
+                >
+                  {showThinking ? '收起' : '展开'}
+                </button>
+              </div>
             </div>
             {showThinking && (
               <div
                 ref={thinkingScrollRef}
                 className="flex-1 overflow-y-auto p-3 space-y-2 scroll-smooth"
               >
+                {!showAllThinking && hiddenThinkingCount > 0 && (
+                  <div className="flex items-center justify-between text-[11px] text-gray-500 bg-gray-100 rounded px-2 py-1">
+                    <span>已隐藏 {hiddenThinkingCount} 条较早记录</span>
+                    <button
+                      onClick={() =>
+                        setVisibleThinkingCount((prev) =>
+                          Math.min(prev + maxVisibleThinking, thinkingTimeline.length)
+                        )
+                      }
+                      className="text-[11px] text-purple-600 hover:text-purple-700"
+                    >
+                      加载更多
+                    </button>
+                  </div>
+                )}
+                {showAllThinking && isExpandingThinking && (
+                  <div className="flex items-center justify-between text-[11px] text-gray-500 bg-gray-100 rounded px-2 py-1">
+                    <span>
+                      正在展开 {visibleThinkingCount}/{thinkingTimeline.length} 条记录
+                    </span>
+                    <span className="text-purple-600">...</span>
+                  </div>
+                )}
                 {thinkingTimeline.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                     <AutoAwesomeIcon className="w-8 h-8 mb-2 animate-pulse opacity-50" />
@@ -636,17 +763,18 @@ function ResearchDetailPanel({
                   </div>
                 ) : (
                   <>
-                    {thinkingTimeline.map((item, index) => {
-                      const isLatest = index === thinkingTimeline.length - 1;
-                      const isCollapsed = collapsedBlocks.has(index);
+                    {visibleThinking.items.map((item, index) => {
+                      const globalIndex = index + visibleThinking.offset;
+                      const isLatest = globalIndex === thinkingTimeline.length - 1;
+                      const isCollapsed = collapsedBlocks.has(globalIndex);
 
                       return (
                         <ThinkingBlock
-                          key={index}
+                          key={globalIndex}
                           item={item}
                           isLatest={isLatest}
                           isCollapsed={isCollapsed}
-                          onToggle={() => toggleBlockCollapse(index)}
+                          onToggle={() => toggleBlockCollapse(globalIndex)}
                           onTypewriterComplete={handleTypewriterComplete}
                         />
                       );
@@ -686,6 +814,12 @@ function ResearchDetailPanel({
                 第 {displayIteration}/{session.max_iterations} 轮
               </span>
             </div>
+            {latestErrorEvent && !isCompleted && !isCancelled && (
+              <div className="mt-3 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-100 px-3 py-2 rounded-lg">
+                <WarningIcon className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{latestErrorEvent.data.message}</span>
+              </div>
+            )}
           </div>
 
           <div className="p-5 space-y-4 flex-1 overflow-y-auto">
@@ -768,6 +902,29 @@ function ResearchDetailPanel({
                   <p className="text-sm text-gray-600">
                     此研究已被取消。您可以在左侧查看已完成的步骤记录。
                   </p>
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      size="sm"
+                      color="blue"
+                      onClick={handleResume}
+                      disabled={isProcessing}
+                      className="flex items-center gap-2"
+                    >
+                      {isProcessing ? <Spinner className="h-4 w-4" /> : <PlayIcon className="w-4 h-4" />}
+                      继续研究
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outlined"
+                      color="gray"
+                      onClick={handleRetry}
+                      disabled={isProcessing}
+                      className="flex items-center gap-2"
+                    >
+                      {isProcessing ? <Spinner className="h-4 w-4" /> : <AutoAwesomeIcon className="w-4 h-4" />}
+                      重新开始
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

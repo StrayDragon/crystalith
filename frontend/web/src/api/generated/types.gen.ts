@@ -3933,6 +3933,40 @@ export type CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostRespo
 
 export type CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostResponse = CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostResponses[keyof CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostResponses];
 
+export type ResumeResearchV1NotebooksNotebookIdResearchResearchIdResumePostData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Research Id
+         */
+        research_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/research/{research_id}/resume';
+};
+
+export type ResumeResearchV1NotebooksNotebookIdResearchResearchIdResumePostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ResumeResearchV1NotebooksNotebookIdResearchResearchIdResumePostError = ResumeResearchV1NotebooksNotebookIdResearchResearchIdResumePostErrors[keyof ResumeResearchV1NotebooksNotebookIdResearchResearchIdResumePostErrors];
+
+export type ResumeResearchV1NotebooksNotebookIdResearchResearchIdResumePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ResearchSessionResponse;
+};
+
+export type ResumeResearchV1NotebooksNotebookIdResearchResearchIdResumePostResponse = ResumeResearchV1NotebooksNotebookIdResearchResearchIdResumePostResponses[keyof ResumeResearchV1NotebooksNotebookIdResearchResearchIdResumePostResponses];
+
 export type StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostData = {
     body?: never;
     path: {
