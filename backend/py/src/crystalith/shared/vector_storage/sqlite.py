@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import heapq
 import json
 from pathlib import Path
 from typing import Iterable, Sequence
@@ -28,6 +29,17 @@ def _norm(vector: Sequence[float]) -> float:
 
 def _cosine_similarity(left: Sequence[float], right: Sequence[float]) -> float:
     left_norm = _norm(left)
+    right_norm = _norm(right)
+    if left_norm == 0 or right_norm == 0:
+        return 0.0
+    return _dot(left, right) / (left_norm * right_norm)
+
+
+def _cosine_similarity_with_norm(
+    left: Sequence[float],
+    left_norm: float,
+    right: Sequence[float],
+) -> float:
     right_norm = _norm(right)
     if left_norm == 0 or right_norm == 0:
         return 0.0
@@ -149,17 +161,26 @@ class SQLiteVectorStore:
         source_id_set: set[int] | None,
     ) -> list[VectorSearchResult]:
         """Perform brute-force vector search using cosine similarity."""
-        entries = [entry for entry in await self.entries() if entry.notebook_id == notebook_id]
-        if source_id_set is not None:
-            entries = [entry for entry in entries if entry.source_id in source_id_set]
-        results: list[VectorSearchResult] = []
+        entries = await self.entries(
+            notebook_id=notebook_id,
+            source_id_set=source_id_set,
+        )
+        results_heap: list[tuple[float, VectorEntry]] = []
+        query_norm = _norm(query)
         for entry in entries:
-            score = _cosine_similarity(query, entry.vector)
+            score = _cosine_similarity_with_norm(query, query_norm, entry.vector)
             if score < min_score:
                 continue
-            results.append(VectorSearchResult(entry=entry, score=score))
-        results.sort(key=lambda item: item.score, reverse=True)
-        return results[:top_k]
+            if len(results_heap) < top_k:
+                heapq.heappush(results_heap, (score, entry))
+                continue
+            if results_heap[0][0] < score:
+                heapq.heapreplace(results_heap, (score, entry))
+        results = [
+            VectorSearchResult(entry=entry, score=score)
+            for score, entry in sorted(results_heap, key=lambda item: item[0], reverse=True)
+        ]
+        return results
 
     async def remove_source(self, source_id: int) -> None:
         await self._ensure_schema()
@@ -177,17 +198,38 @@ class SQLiteVectorStore:
                 {"notebook_id": notebook_id},
             )
 
-    async def entries(self) -> Iterable[VectorEntry]:
+    async def entries(
+        self,
+        *,
+        notebook_id: int | None = None,
+        source_id_set: set[int] | None = None,
+    ) -> Iterable[VectorEntry]:
         await self._ensure_schema()
+        params: dict[str, int] = {}
+        where_clauses = []
+        if notebook_id is not None:
+            where_clauses.append("notebook_id = :notebook_id")
+            params["notebook_id"] = notebook_id
+        if source_id_set:
+            placeholders = []
+            for idx, source_id in enumerate(sorted(source_id_set)):
+                key = f"source_id_{idx}"
+                placeholders.append(f":{key}")
+                params[key] = source_id
+            where_clauses.append(f"source_id IN ({', '.join(placeholders)})")
+        where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
         async with self._engine.connect() as conn:
             result = await conn.execute(
                 text(
                     f"""
                     SELECT notebook_id, source_id, chunk_id, vector
                     FROM {_ENTRIES_TABLE}
+                    {where_sql}
                     ORDER BY id
                     """
                 )
+                ,
+                params,
             )
             rows = result.fetchall()
 

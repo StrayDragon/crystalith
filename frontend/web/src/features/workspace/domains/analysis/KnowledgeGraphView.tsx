@@ -91,6 +91,7 @@ interface KnowledgeGraphViewProps {
   analysis: AnalysisResult | null;
   isLoading: boolean;
   error: string;
+  activeSessionId?: number | null;
   onClose: () => void;
   onRefresh: () => void;
   onSourceClick: (source: SourceItem) => void;
@@ -230,26 +231,45 @@ function buildGraphData(
   onSourceClick: (source: SourceItem) => void,
   onOutputClick?: (output: OutputItem) => void,
   onSessionClick?: (session: SessionSummary) => void,
+  activeSessionId?: number | null,
 ): { nodes: Node<KnowledgeNodeData>[]; edges: Edge[] } {
   const nodes: Node<KnowledgeNodeData>[] = [];
   const edges: Edge[] = [];
 
-  // Map chunk_id to source_id
-  const chunkToSource = new Map<number, number>();
+  // Map chunk_id to source_id using ranges to avoid large maps.
+  const chunkRanges: Array<{ start: number; end: number; sourceId: number }> = [];
   let chunkOffset = 0;
   for (const source of sources) {
-    for (let i = 0; i < source.chunks; i++) {
-      chunkToSource.set(chunkOffset + i + 1, source.id);
+    const start = chunkOffset + 1;
+    const end = chunkOffset + source.chunks;
+    if (source.chunks > 0) {
+      chunkRanges.push({ start, end, sourceId: source.id });
     }
-    chunkOffset += source.chunks;
+    chunkOffset = end;
   }
+  const findSourceForChunk = (chunkId: number): number | undefined => {
+    let low = 0;
+    let high = chunkRanges.length - 1;
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      const range = chunkRanges[mid];
+      if (chunkId < range.start) {
+        high = mid - 1;
+      } else if (chunkId > range.end) {
+        low = mid + 1;
+      } else {
+        return range.sourceId;
+      }
+    }
+    return undefined;
+  };
 
   // Calculate topic assignment for each source
   const sourceToTopic = new Map<number, number>();
   if (analysis?.topics) {
     analysis.topics.forEach((topic, index) => {
       for (const chunkId of topic.chunk_ids) {
-        const sourceId = chunkToSource.get(chunkId);
+        const sourceId = findSourceForChunk(chunkId);
         if (sourceId !== undefined && !sourceToTopic.has(sourceId)) {
           sourceToTopic.set(sourceId, index);
         }
@@ -264,8 +284,8 @@ function buildGraphData(
 
   if (analysis?.relations) {
     for (const relation of analysis.relations) {
-      const sourceA = chunkToSource.get(relation.source_chunk_id);
-      const sourceB = chunkToSource.get(relation.target_chunk_id);
+      const sourceA = findSourceForChunk(relation.source_chunk_id);
+      const sourceB = findSourceForChunk(relation.target_chunk_id);
       if (sourceA !== undefined && sourceB !== undefined && sourceA !== sourceB) {
         const key = [Math.min(sourceA, sourceB), Math.max(sourceA, sourceB)].join('-');
         const existing = sourceRelations.get(key);
@@ -282,8 +302,8 @@ function buildGraphData(
 
   if (analysis?.contradictions) {
     for (const c of analysis.contradictions) {
-      const sourceA = chunkToSource.get(c.source_chunk_id);
-      const sourceB = chunkToSource.get(c.target_chunk_id);
+      const sourceA = findSourceForChunk(c.source_chunk_id);
+      const sourceB = findSourceForChunk(c.target_chunk_id);
       if (sourceA !== undefined) sourceHasContradiction.add(sourceA);
       if (sourceB !== undefined) sourceHasContradiction.add(sourceB);
     }
@@ -295,7 +315,7 @@ function buildGraphData(
     if (output.chunkIds && output.chunkIds.length > 0) {
       const sourceIds = new Set<number>();
       for (const chunkId of output.chunkIds) {
-        const sourceId = chunkToSource.get(chunkId);
+        const sourceId = findSourceForChunk(chunkId);
         if (sourceId !== undefined) {
           sourceIds.add(sourceId);
         }
@@ -308,22 +328,23 @@ function buildGraphData(
 
   // Calculate session → source relations (via messages with citations)
   const sessionSourceRelations = new Map<number, Set<number>>();
-  for (const message of messages) {
-    if (message.citations && message.citations.length > 0) {
-      for (const citation of message.citations) {
-        if (citation.chunkId !== null) {
-          const sourceId = chunkToSource.get(citation.chunkId);
-          if (sourceId !== undefined) {
-            // Find which session this message belongs to (simplified - use first active session)
-            for (const session of sessions) {
-              if (!sessionSourceRelations.has(session.id)) {
-                sessionSourceRelations.set(session.id, new Set());
-              }
-              sessionSourceRelations.get(session.id)!.add(sourceId);
+  const targetSessionId = activeSessionId ?? sessions[0]?.id ?? null;
+  if (targetSessionId !== null) {
+    const sourceIds = new Set<number>();
+    for (const message of messages) {
+      if (message.citations && message.citations.length > 0) {
+        for (const citation of message.citations) {
+          if (citation.chunkId !== null) {
+            const sourceId = findSourceForChunk(citation.chunkId);
+            if (sourceId !== undefined) {
+              sourceIds.add(sourceId);
             }
           }
         }
       }
+    }
+    if (sourceIds.size > 0) {
+      sessionSourceRelations.set(targetSessionId, sourceIds);
     }
   }
 
@@ -501,6 +522,7 @@ function KnowledgeGraphView({
   analysis,
   isLoading,
   error,
+  activeSessionId,
   onClose,
   onRefresh,
   onSourceClick,
@@ -578,13 +600,14 @@ function KnowledgeGraphView({
       selectedId,
       handleSourceClick,
       handleOutputClick,
-      handleSessionClick
+      handleSessionClick,
+      activeSessionId
     );
     // Apply cached positions to initial nodes
     return { nodes: applyPositionsFromCache(nodes), edges };
     // Only regenerate initial layout when data actually changes, not just selectedId
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sources, outputs, sessions, messages, analysis, visibility, handleSourceClick, handleOutputClick, handleSessionClick, applyPositionsFromCache]);
+  }, [sources, outputs, sessions, messages, analysis, visibility, handleSourceClick, handleOutputClick, handleSessionClick, activeSessionId, applyPositionsFromCache]);
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -615,11 +638,12 @@ function KnowledgeGraphView({
       selectedId,
       handleSourceClick,
       handleOutputClick,
-      handleSessionClick
+      handleSessionClick,
+      activeSessionId
     );
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [sources, outputs, sessions, messages, analysis, visibility, selectedId, handleSourceClick, handleOutputClick, handleSessionClick, setNodes, setEdges]);
+  }, [sources, outputs, sessions, messages, analysis, visibility, selectedId, handleSourceClick, handleOutputClick, handleSessionClick, activeSessionId, setNodes, setEdges]);
 
   // Track if we need full rebuild (data changed) vs just selection update
   const prevDataRef = useRef({ sources, outputs, sessions, analysis, visibility });
@@ -645,7 +669,8 @@ function KnowledgeGraphView({
         selectedId,
         handleSourceClick,
         handleOutputClick,
-        handleSessionClick
+        handleSessionClick,
+        activeSessionId
       );
       setNodes(applyPositionsFromCache(newNodes));
       setEdges(newEdges);
@@ -662,7 +687,7 @@ function KnowledgeGraphView({
         }))
       );
     }
-  }, [sources, outputs, sessions, messages, analysis, visibility, selectedId, handleSourceClick, handleOutputClick, handleSessionClick, setNodes, setEdges, applyPositionsFromCache]);
+  }, [sources, outputs, sessions, messages, analysis, visibility, selectedId, handleSourceClick, handleOutputClick, handleSessionClick, activeSessionId, setNodes, setEdges, applyPositionsFromCache]);
 
   const toggleVisibility = (type: keyof VisibilityState) => {
     setVisibility((prev) => ({ ...prev, [type]: !prev[type] }));

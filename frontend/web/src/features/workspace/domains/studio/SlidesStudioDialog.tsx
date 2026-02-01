@@ -205,6 +205,7 @@ export default function SlidesStudioDialog({
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const autoPreviewRef = useRef<number | null>(null);
+  const maxEvents = 200;
   const isConfigOnly = openMode === 'config';
   const isPreviewMode = openMode === 'preview';
   const {
@@ -689,12 +690,18 @@ export default function SlidesStudioDialog({
 
       eventSource.addEventListener('progress', (event) => {
         const data = JSON.parse((event as MessageEvent).data || '{}');
-        setEvents((prev) => [...prev, { type: 'progress', message: data.message || '生成中...' }]);
+        setEvents((prev) => {
+          const next = [...prev, { type: 'progress', message: data.message || '生成中...' }];
+          return next.length > maxEvents ? next.slice(-maxEvents) : next;
+        });
       });
 
       eventSource.addEventListener('toolcall', (event) => {
         const data = JSON.parse((event as MessageEvent).data || '{}');
-        setEvents((prev) => [...prev, { type: 'toolcall', message: data.name || '调用生成工具' }]);
+        setEvents((prev) => {
+          const next = [...prev, { type: 'toolcall', message: data.name || '调用生成工具' }];
+          return next.length > maxEvents ? next.slice(-maxEvents) : next;
+        });
       });
 
       eventSource.addEventListener('busy', (event) => {

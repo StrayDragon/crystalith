@@ -8,9 +8,8 @@ import httpx
 from cl_logs import get_logger
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 logger = get_logger(__name__)
 
@@ -307,13 +306,17 @@ async def list_sources(
         raise HTTPException(status_code=404, detail="Notebook not found")
 
     result = await session.execute(
-        select(Source)
+        select(Source, func.count(Chunk.id))
+        .outerjoin(Chunk, Chunk.source_id == Source.id)
         .where(Source.notebook_id == notebook_id)
+        .group_by(Source.id)
         .order_by(Source.created_at.desc())
-        .options(selectinload(Source.chunks))
     )
-    sources = result.scalars().all()
-    return [_source_to_read(source, chunk_count=len(source.chunks)) for source in sources]
+    rows = result.all()
+    return [
+        _source_to_read(source, chunk_count=count or 0)
+        for source, count in rows
+    ]
 
 
 @router.post("/{source_id}/re-embed", response_model=SourceRead)

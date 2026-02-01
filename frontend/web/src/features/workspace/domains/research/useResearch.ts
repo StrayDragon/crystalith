@@ -9,6 +9,7 @@ import {
   finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost,
   skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost,
   cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost,
+  resumeResearchV1NotebooksNotebookIdResearchResearchIdResumePost,
   type ResearchSessionResponse,
   type ResearchSessionListItem,
   type ResearchStatus,
@@ -86,7 +87,7 @@ interface UseResearchResult {
 
   // Actions
   fetchSessions: () => Promise<void>;
-  fetchSession: (researchId: number) => Promise<void>;
+  fetchSession: (researchId: number) => Promise<ResearchSessionResponse | null>;
   createSession: (topic: string, maxIterations?: number) => Promise<ResearchSessionResponse | null>;
   deleteSession: (researchId: number) => Promise<void>;
   startResearch: (researchId: number) => Promise<void>;
@@ -94,6 +95,7 @@ interface UseResearchResult {
   skipIteration: (researchId: number) => Promise<void>;
   finishResearch: (researchId: number) => Promise<void>;
   cancelResearch: (researchId: number) => Promise<void>;
+  resumeResearch: (researchId: number) => Promise<ResearchSessionResponse | null>;
   subscribeToSSE: (researchId: number) => void;
   unsubscribeFromSSE: () => void;
   clearEvents: () => void;
@@ -109,9 +111,14 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const staleCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastEventAtRef = useRef<number>(Date.now());
   const reconnectAttemptRef = useRef(0);
   const maxReconnectAttempts = 5;
   const baseReconnectDelay = 1000; // 1 second
+  const maxSseEvents = 500;
+  const staleConnectionMs = 45000;
+  const staleCheckIntervalMs = 5000;
 
   const fetchSessions = useCallback(async () => {
     if (!notebookId) return;
@@ -132,8 +139,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
   }, [notebookId]);
 
   const fetchSession = useCallback(
-    async (researchId: number) => {
-      if (!notebookId) return;
+    async (researchId: number): Promise<ResearchSessionResponse | null> => {
+      if (!notebookId) return null;
       setIsLoading(true);
       setError('');
       try {
@@ -142,9 +149,12 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
         });
         if (response) {
           setActiveSession(response);
+          return response;
         }
+        return null;
       } catch (err) {
         setError(err instanceof Error ? err.message : '获取研究详情失败');
+        return null;
       } finally {
         setIsLoading(false);
       }
@@ -320,6 +330,38 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     [notebookId]
   );
 
+  const resumeResearch = useCallback(
+    async (researchId: number): Promise<ResearchSessionResponse | null> => {
+      if (!notebookId) return null;
+      setError('');
+      try {
+        const response = await resumeResearchV1NotebooksNotebookIdResearchResearchIdResumePost({
+          path: { notebook_id: notebookId, research_id: researchId },
+        });
+        if (response) {
+          setActiveSession(response);
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === researchId
+                ? {
+                    ...s,
+                    status: response.status,
+                    current_iteration: response.current_iteration,
+                  }
+                : s
+            )
+          );
+          return response;
+        }
+        return null;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '继续研究失败');
+        return null;
+      }
+    },
+    [notebookId]
+  );
+
   const subscribeToSSE = useCallback(
     (researchId: number, isReconnect = false) => {
       if (!notebookId) return;
@@ -328,6 +370,10 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
+      }
+      if (staleCheckIntervalRef.current) {
+        clearInterval(staleCheckIntervalRef.current);
+        staleCheckIntervalRef.current = null;
       }
 
       // Close existing connection
@@ -343,17 +389,53 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       const url = `/v1/notebooks/${notebookId}/research/${researchId}/stream`;
       const eventSource = new EventSource(url);
       eventSourceRef.current = eventSource;
+      lastEventAtRef.current = Date.now();
 
       // Track current research ID for reconnection
       const currentResearchId = researchId;
 
+      const scheduleReconnect = (message: string) => {
+        // Check if we should attempt reconnection
+        if (reconnectAttemptRef.current < maxReconnectAttempts) {
+          reconnectAttemptRef.current += 1;
+          const delay = baseReconnectDelay * Math.pow(2, reconnectAttemptRef.current - 1);
+
+          setSSEEvents((prev) => {
+            const next = [
+              ...prev,
+              { type: 'error', data: { message: `${message}${Math.round(delay / 1000)}秒后重连...` } },
+            ] as SSEEvent[];
+            return next.length > maxSseEvents ? next.slice(-maxSseEvents) : next;
+          });
+
+          reconnectTimeoutRef.current = setTimeout(() => {
+            const session = sessions.find(s => s.id === currentResearchId);
+            if (session && ['planning', 'searching', 'analyzing', 'waiting_user'].includes(session.status)) {
+              subscribeToSSE(currentResearchId, true);
+            }
+          }, delay);
+        } else {
+          setSSEEvents((prev) => {
+            const next = [
+              ...prev,
+              { type: 'error', data: { message: '连接失败，请刷新页面重试' } },
+            ] as SSEEvent[];
+            return next.length > maxSseEvents ? next.slice(-maxSseEvents) : next;
+          });
+        }
+      };
+
       const handleEvent = (eventType: SSEEvent['type']) => (event: MessageEvent) => {
         // Reset reconnect attempts on successful event
         reconnectAttemptRef.current = 0;
+        lastEventAtRef.current = Date.now();
 
         try {
           const data = JSON.parse(event.data);
-          setSSEEvents((prev) => [...prev, { type: eventType, data } as SSEEvent]);
+          setSSEEvents((prev) => {
+            const next = [...prev, { type: eventType, data } as SSEEvent];
+            return next.length > maxSseEvents ? next.slice(-maxSseEvents) : next;
+          });
 
           // Update session state from SSE events for real-time progress
           if (eventType === 'status' && data.status) {
@@ -435,46 +517,35 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       eventSource.addEventListener('done', handleEvent('done'));
       eventSource.addEventListener('waiting', handleEvent('waiting'));
       eventSource.addEventListener('thinking', handleEvent('thinking'));
+      eventSource.addEventListener('heartbeat', () => {
+        lastEventAtRef.current = Date.now();
+      });
 
       eventSource.onerror = () => {
         eventSource.close();
         eventSourceRef.current = null;
-
-        // Check if we should attempt reconnection
-        if (reconnectAttemptRef.current < maxReconnectAttempts) {
-          reconnectAttemptRef.current += 1;
-          const delay = baseReconnectDelay * Math.pow(2, reconnectAttemptRef.current - 1);
-
-          console.log(`SSE connection lost, attempting reconnect ${reconnectAttemptRef.current}/${maxReconnectAttempts} in ${delay}ms`);
-
-          setSSEEvents((prev) => [...prev, {
-            type: 'error',
-            data: { message: `连接中断，${Math.round(delay / 1000)}秒后重连...` }
-          }]);
-
-          reconnectTimeoutRef.current = setTimeout(() => {
-            // Check if session is still active before reconnecting
-            const session = sessions.find(s => s.id === currentResearchId);
-            if (session && ['planning', 'searching', 'analyzing', 'waiting_user'].includes(session.status)) {
-              subscribeToSSE(currentResearchId, true);
-            }
-          }, delay);
-        } else {
-          setSSEEvents((prev) => [...prev, {
-            type: 'error',
-            data: { message: '连接失败，请刷新页面重试' }
-          }]);
-        }
+        scheduleReconnect('连接中断，');
       };
 
       // Handle successful connection
       eventSource.onopen = () => {
+        lastEventAtRef.current = Date.now();
         if (isReconnect) {
           console.log('SSE reconnected successfully');
           // Refresh session data after reconnect
           fetchSession(researchId);
         }
       };
+
+      staleCheckIntervalRef.current = setInterval(() => {
+        if (!eventSourceRef.current) return;
+        const elapsed = Date.now() - lastEventAtRef.current;
+        if (elapsed > staleConnectionMs) {
+          eventSourceRef.current.close();
+          eventSourceRef.current = null;
+          scheduleReconnect('连接超时，');
+        }
+      }, staleCheckIntervalMs);
     },
     [notebookId, fetchSession, fetchSessions, sessions]
   );
@@ -484,6 +555,10 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
+    }
+    if (staleCheckIntervalRef.current) {
+      clearInterval(staleCheckIntervalRef.current);
+      staleCheckIntervalRef.current = null;
     }
     // Reset reconnect attempts
     reconnectAttemptRef.current = 0;
@@ -499,6 +574,9 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (staleCheckIntervalRef.current) {
+        clearInterval(staleCheckIntervalRef.current);
       }
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
@@ -525,6 +603,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     skipIteration,
     finishResearch,
     cancelResearch,
+    resumeResearch,
     subscribeToSSE,
     unsubscribeFromSSE,
     clearEvents,

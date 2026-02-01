@@ -2985,6 +2985,58 @@
         }
       }
     },
+    "/v1/notebooks/{notebook_id}/research/{research_id}/resume": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Resume Research",
+        "description": "Resume a cancelled research session.",
+        "operationId": "resume_research_v1_notebooks__notebook_id__research__research_id__resume_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "research_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Research Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/notebooks/{notebook_id}/research/{research_id}/start": {
       "post": {
         "tags": [

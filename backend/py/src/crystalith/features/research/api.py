@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cl_logs.logging import get_logger
@@ -37,6 +37,15 @@ log = get_logger(__name__)
 LOCK_TIMEOUT_SECONDS = 600
 
 
+def _lock_now() -> datetime.datetime:
+    # Use naive UTC timestamps to match DB storage.
+    return datetime.datetime.utcnow()
+
+
+def _strip_tz(dt: datetime.datetime) -> datetime.datetime:
+    return dt.replace(tzinfo=None) if dt.tzinfo else dt
+
+
 async def acquire_lock(
     session: AsyncSession,
     research: ResearchSession,
@@ -46,11 +55,11 @@ async def acquire_lock(
 
     Returns True if lock acquired, False if already locked by another process.
     """
-    now = datetime.datetime.now(datetime.UTC)
+    now = _lock_now()
 
     # Check if there's an existing valid lock
     if research.locked_at and research.lock_expires_at:
-        if research.lock_expires_at > now:
+        if _strip_tz(research.lock_expires_at) > now:
             log.warning(
                 "research session already locked",
                 session_id=research.id,
@@ -90,7 +99,7 @@ async def extend_lock(
 
     Returns True if extended, False if lock was not held.
     """
-    now = datetime.datetime.now(datetime.UTC)
+    now = _lock_now()
 
     if not research.locked_at:
         return False
@@ -102,7 +111,7 @@ async def extend_lock(
 
 async def check_and_cleanup_expired_locks(session: AsyncSession) -> int:
     """Clean up expired locks. Returns count of cleaned locks."""
-    now = datetime.datetime.now(datetime.UTC)
+    now = _lock_now()
 
     # Find sessions with expired locks
     stmt = select(ResearchSession).where(
@@ -137,6 +146,71 @@ async def check_and_cleanup_expired_locks(session: AsyncSession) -> int:
         log.info("cleaned up expired locks", count=count)
 
     return count
+
+
+def _lock_active(research: ResearchSession) -> bool:
+    if not research.locked_at or not research.lock_expires_at:
+        return False
+    now = _lock_now()
+    return _strip_tz(research.lock_expires_at) > now
+
+
+def _should_resume_research(research: ResearchSession) -> bool:
+    if research.status not in (
+        ResearchStatus.PLANNING,
+        ResearchStatus.SEARCHING,
+        ResearchStatus.ANALYZING,
+        ResearchStatus.WAITING_USER,
+    ):
+        return False
+    return not _lock_active(research)
+
+
+def _infer_resume_state(research: ResearchSession) -> tuple[ResearchStatus | None, int]:
+    steps = research.steps or []
+    if not steps:
+        return ResearchStatus.PLANNING, research.current_iteration
+
+    last_step = steps[-1]
+
+    if last_step.type == ResearchStepType.PLAN:
+        return ResearchStatus.WAITING_USER, last_step.iteration
+
+    if last_step.type == ResearchStepType.USER_INPUT:
+        action = None
+        if isinstance(last_step.input_data, dict):
+            action = last_step.input_data.get("action")
+
+        if action == "cancel":
+            return None, research.current_iteration
+
+        if action == "finish":
+            return ResearchStatus.COMPLETED, research.current_iteration
+
+        if action == "skip":
+            if research.current_iteration >= research.max_iterations:
+                return ResearchStatus.COMPLETED, research.current_iteration
+            return ResearchStatus.PLANNING, research.current_iteration
+
+        # approve / modify or unknown action => continue searching
+        return ResearchStatus.SEARCHING, last_step.iteration
+
+    if last_step.type == ResearchStepType.SEARCH:
+        return ResearchStatus.ANALYZING, last_step.iteration
+
+    if last_step.type == ResearchStepType.ANALYZE:
+        need_more = False
+        if isinstance(last_step.output_data, dict):
+            need_more = bool(last_step.output_data.get("need_more_search"))
+        if need_more and last_step.iteration < research.max_iterations:
+            return ResearchStatus.PLANNING, last_step.iteration + 1
+        # Re-run analysis to move toward report
+        return ResearchStatus.ANALYZING, last_step.iteration
+
+    if last_step.type == ResearchStepType.SUMMARY:
+        return ResearchStatus.COMPLETED, last_step.iteration
+
+    return ResearchStatus.PLANNING, research.current_iteration
 
 
 # =============================================================================
@@ -395,7 +469,9 @@ async def approve_search_plan(
     notebook_id: int,
     research_id: int,
     payload: ApproveRequest,
+    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
 ) -> ResearchSessionResponse:
     """Approve the current search plan and continue research."""
     research = await _get_research_session(session, notebook_id, research_id)
@@ -428,6 +504,17 @@ async def approve_search_plan(
         iteration=research.current_iteration,
     )
 
+    if _should_resume_research(research):
+        background_tasks.add_task(
+            _run_research_background,
+            session_id=research.id,
+            notebook_id=notebook_id,
+            topic=research.topic,
+            max_iterations=research.max_iterations,
+            settings=settings,
+            resume=True,
+        )
+
     return ResearchSessionResponse.model_validate(research)
 
 
@@ -436,7 +523,9 @@ async def modify_search_plan(
     notebook_id: int,
     research_id: int,
     payload: ModifyRequest,
+    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
 ) -> ResearchSessionResponse:
     """Modify the current search plan."""
     research = await _get_research_session(session, notebook_id, research_id)
@@ -469,6 +558,17 @@ async def modify_search_plan(
         iteration=research.current_iteration,
     )
 
+    if _should_resume_research(research):
+        background_tasks.add_task(
+            _run_research_background,
+            session_id=research.id,
+            notebook_id=notebook_id,
+            topic=research.topic,
+            max_iterations=research.max_iterations,
+            settings=settings,
+            resume=True,
+        )
+
     return ResearchSessionResponse.model_validate(research)
 
 
@@ -476,7 +576,9 @@ async def modify_search_plan(
 async def skip_iteration(
     notebook_id: int,
     research_id: int,
+    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
 ) -> ResearchSessionResponse:
     """Skip the current iteration."""
     research = await _get_research_session(session, notebook_id, research_id)
@@ -514,6 +616,17 @@ async def skip_iteration(
         new_iteration=research.current_iteration,
         new_status=research.status.value,
     )
+
+    if _should_resume_research(research):
+        background_tasks.add_task(
+            _run_research_background,
+            session_id=research.id,
+            notebook_id=notebook_id,
+            topic=research.topic,
+            max_iterations=research.max_iterations,
+            settings=settings,
+            resume=True,
+        )
 
     return ResearchSessionResponse.model_validate(research)
 
@@ -600,6 +713,66 @@ async def cancel_research(
     return ResearchSessionResponse.model_validate(research)
 
 
+@router.post("/{research_id}/resume", response_model=ResearchSessionResponse)
+async def resume_research(
+    notebook_id: int,
+    research_id: int,
+    background_tasks: BackgroundTasks,
+    session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
+) -> ResearchSessionResponse:
+    """Resume a cancelled research session."""
+    research = await _get_research_session(session, notebook_id, research_id)
+
+    if research.status == ResearchStatus.COMPLETED:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot resume: session is already 'completed'",
+        )
+
+    if research.status != ResearchStatus.CANCELLED:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot resume: session is in '{research.status.value}' state",
+        )
+
+    # Ensure steps are loaded for inference
+    await session.refresh(research)
+    _ = research.steps
+
+    resume_status, resume_iteration = _infer_resume_state(research)
+    if resume_status is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot resume: session was cancelled by user",
+        )
+
+    if resume_status == ResearchStatus.COMPLETED:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot resume: session is already 'completed'",
+        )
+
+    research.status = resume_status
+    research.current_iteration = resume_iteration
+    research.locked_at = None
+    research.lock_expires_at = None
+    await session.commit()
+    await session.refresh(research)
+
+    background_tasks.add_task(
+        _run_research_background,
+        session_id=research.id,
+        notebook_id=notebook_id,
+        topic=research.topic,
+        max_iterations=research.max_iterations,
+        settings=settings,
+        resume=True,
+    )
+
+    return ResearchSessionResponse.model_validate(research)
+
+
 # =============================================================================
 # Research Execution
 # =============================================================================
@@ -611,10 +784,13 @@ async def _run_research_background(
     topic: str,
     max_iterations: int,
     settings: Settings,
+    *,
+    resume: bool = False,
 ) -> None:
     """Run research graph in background with lock management."""
     from crystalith.shared.db import create_db_manager
     from . import ResearchDeps, run_research_graph
+    from .graph import run_research_graph_from_session
 
     log.info("starting background research", session_id=session_id)
 
@@ -646,13 +822,18 @@ async def _run_research_background(
                 )
 
                 try:
-                    result = await run_research_graph(
-                        session_id=session_id,
-                        notebook_id=notebook_id,
-                        topic=topic,
-                        deps=deps,
-                        max_iterations=max_iterations,
-                    )
+                    if resume:
+                        await db_session.refresh(research)
+                        _ = research.steps
+                        result = await run_research_graph_from_session(research, deps)
+                    else:
+                        result = await run_research_graph(
+                            session_id=session_id,
+                            notebook_id=notebook_id,
+                            topic=topic,
+                            deps=deps,
+                            max_iterations=max_iterations,
+                        )
 
                     log.info(
                         "background research completed",
@@ -760,6 +941,7 @@ async def stream_research_progress(
     notebook_id: int,
     research_id: int,
     session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
 ) -> StreamingResponse:
     """Stream research progress using Server-Sent Events.
 
@@ -774,12 +956,23 @@ async def stream_research_progress(
     - `error`: Error `{"message": "..."}`
     """
     research = await _get_research_session(session, notebook_id, research_id)
+    if _should_resume_research(research):
+        asyncio.create_task(
+            _run_research_background(
+                session_id=research.id,
+                notebook_id=notebook_id,
+                topic=research.topic,
+                max_iterations=research.max_iterations,
+                settings=settings,
+                resume=True,
+            )
+        )
 
     async def generate_stream() -> AsyncGenerator[str, None]:
         """Generate SSE events by polling research status."""
         last_status = research.status
         last_iteration = research.current_iteration
-        last_step_count = len(research.steps) if research.steps else 0
+        last_step_id = research.steps[-1].id if research.steps else 0
 
         # Send initial status
         yield _sse_event("status", {
@@ -796,8 +989,8 @@ async def stream_research_progress(
         })
 
         # Poll for updates
-        poll_interval = 0.5  # Faster polling for more responsive updates
-        max_polls = 1200  # 10 minutes max
+        poll_interval = 1.0  # Balance responsiveness and DB load
+        max_polls = 3600  # 1 hour max
         heartbeat_interval = 30  # Send heartbeat every 30 seconds
         polls_since_heartbeat = 0
 
@@ -812,14 +1005,15 @@ async def stream_research_progress(
 
             # Expire all to force fresh data from database
             session.expire(research)
-            # Re-fetch to get fresh data including steps
+            # Re-fetch to get fresh data
             await session.refresh(research)
-            # Explicitly access steps to trigger lazy load
-            _ = research.steps
 
             current_status = research.status
             current_iteration = research.current_iteration
-            current_step_count = len(research.steps) if research.steps else 0
+            result = await session.execute(
+                select(func.max(ResearchStep.id)).where(ResearchStep.session_id == research.id)
+            )
+            current_step_id = result.scalar() or 0
 
             # Check for status change and emit thinking events
             if current_status != last_status:
@@ -859,8 +1053,17 @@ async def stream_research_progress(
                 last_iteration = current_iteration
 
             # Check for new steps and emit detailed thinking events
-            if current_step_count > last_step_count:
-                for step in research.steps[last_step_count:]:
+            if current_step_id > last_step_id:
+                step_result = await session.execute(
+                    select(ResearchStep)
+                    .where(
+                        ResearchStep.session_id == research.id,
+                        ResearchStep.id > last_step_id,
+                    )
+                    .order_by(ResearchStep.id)
+                )
+                new_steps = step_result.scalars().all()
+                for step in new_steps:
                     if step.type == ResearchStepType.PLAN and step.output_data:
                         queries = step.output_data.get("queries", [])
                         reasoning = step.output_data.get("reasoning", "")
@@ -946,7 +1149,7 @@ async def stream_research_progress(
                             "report_length": report_length,
                         })
 
-                last_step_count = current_step_count
+                last_step_id = current_step_id
 
             # Check for completion
             if current_status in (ResearchStatus.COMPLETED, ResearchStatus.CANCELLED):

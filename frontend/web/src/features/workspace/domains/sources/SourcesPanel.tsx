@@ -168,13 +168,15 @@ function SourcesPanel({
 
   // Subscribe to SSE for active research session
   useEffect(() => {
-    const sessionId = research.activeSession?.id;
-    if (sessionId) {
-      research.subscribeToSSE(sessionId);
+    const session = research.activeSession;
+    if (!session) return;
+    if (['planning', 'searching', 'analyzing', 'waiting_user'].includes(session.status)) {
+      research.subscribeToSSE(session.id);
       return () => research.unsubscribeFromSSE();
     }
+    research.unsubscribeFromSSE();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [research.activeSession?.id]);
+  }, [research.activeSession?.id, research.activeSession?.status]);
 
   const handleOpenDetail = useCallback((source: SourceItem) => {
     setSelectedSource(source);
@@ -363,13 +365,12 @@ function SourcesPanel({
     // Unsubscribe from any existing SSE connection and clear events
     research.unsubscribeFromSSE();
     research.clearEvents();
-    await research.fetchSession(sessionId);
-    setResearchDetailOpen(true);
-    // Subscribe to SSE for active sessions only
-    const session = research.sessions.find(s => s.id === sessionId);
-    if (session && ['searching', 'analyzing', 'waiting_user'].includes(session.status)) {
-      research.subscribeToSSE(sessionId);
+    const session = await research.fetchSession(sessionId);
+    if (!session) {
+      toast.error('获取研究详情失败');
+      return;
     }
+    setResearchDetailOpen(true);
   }, [research]);
 
   // Handle research actions
@@ -405,6 +406,30 @@ function SourcesPanel({
       await research.cancelResearch(research.activeSession.id);
       // Close the detail panel after cancelling
       setResearchDetailOpen(false);
+    }
+  }, [research]);
+
+  const handleResearchResume = useCallback(async () => {
+    if (!research.activeSession?.id) return;
+    research.unsubscribeFromSSE();
+    research.clearEvents();
+    const resumed = await research.resumeResearch(research.activeSession.id);
+    if (!resumed) {
+      toast.error('继续研究失败');
+    }
+  }, [research]);
+
+  const handleResearchRetry = useCallback(async () => {
+    if (!research.activeSession) return;
+    research.unsubscribeFromSSE();
+    research.clearEvents();
+    const session = await research.createSession(
+      research.activeSession.topic,
+      research.activeSession.max_iterations
+    );
+    if (session) {
+      await research.startResearch(session.id);
+      setResearchDetailOpen(true);
     }
   }, [research]);
 
@@ -591,16 +616,21 @@ function SourcesPanel({
                 isExpanded={research.activeSession?.id === session.id}
               />
             ))}
-          {/* History entry - show if there are completed sessions */}
-          {research.sessions.some((s) => s.status === 'completed') && (
+          {(() => {
+            const historySessions = research.sessions.filter((s) =>
+              ['completed', 'cancelled'].includes(s.status)
+            );
+            if (historySessions.length === 0) return null;
+            return (
             <button
               onClick={() => setShowResearchHistory(true)}
               className="text-xs text-gray-500 hover:text-blue-600 py-1.5 px-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1.5"
             >
               <HistoryIcon style={{ fontSize: 14 }} />
-              查看研究历史 ({research.sessions.filter((s) => s.status === 'completed').length})
+              查看研究历史 ({historySessions.length})
             </button>
-          )}
+            );
+          })()}
         </div>
       )}
 
@@ -871,6 +901,8 @@ function SourcesPanel({
               onSkip={handleResearchSkip}
               onFinish={handleResearchFinish}
               onCancel={handleResearchCancel}
+              onResume={handleResearchResume}
+              onRetry={handleResearchRetry}
               onStart={() => handleResearchStart(research.activeSession!.id)}
               isFullscreen={researchFullscreen}
               onToggleFullscreen={() => setResearchFullscreen(!researchFullscreen)}
@@ -910,7 +942,7 @@ function SourcesPanel({
             {/* History List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {research.sessions
-                .filter((s) => s.status === 'completed')
+                .filter((s) => ['completed', 'cancelled'].includes(s.status))
                 .map((session) => (
                   <button
                     key={session.id}
@@ -928,8 +960,8 @@ function SourcesPanel({
                         </p>
                       </div>
                       <Chip
-                        value="已完成"
-                        color="green"
+                        value={session.status === 'completed' ? '已完成' : '已取消'}
+                        color={session.status === 'completed' ? 'green' : 'gray'}
                         size="sm"
                         className="text-xs"
                       />
@@ -939,7 +971,7 @@ function SourcesPanel({
                     </p>
                   </button>
                 ))}
-              {research.sessions.filter((s) => s.status === 'completed').length === 0 && (
+              {research.sessions.filter((s) => ['completed', 'cancelled'].includes(s.status)).length === 0 && (
                 <div className="text-center py-8 text-gray-400">
                   <HistoryIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
                   <p>暂无已完成的研究</p>

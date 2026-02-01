@@ -793,6 +793,7 @@ export default function WorkspaceLayout() {
           analysis={analysis.analysis}
           isLoading={analysis.isLoading}
           error={analysis.error}
+          activeSessionId={state.activeSessionId}
           onClose={() => setIsGraphViewOpen(false)}
           onRefresh={analysis.fetchAnalysis}
           onSourceClick={handleGraphSourceClick}

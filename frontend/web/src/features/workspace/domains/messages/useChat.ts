@@ -40,6 +40,8 @@ export function useChat({
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const messagesRef = useRef(state.messages);
+  const streamingBufferRef = useRef('');
+  const streamingFlushTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data, error, isLoading, mutate } = useSWR(
     state.activeNotebookId && state.activeSessionId && isConnected
@@ -57,6 +59,15 @@ export function useChat({
   useEffect(() => {
     messagesRef.current = state.messages;
   }, [state.messages]);
+
+  useEffect(() => {
+    return () => {
+      if (streamingFlushTimerRef.current) {
+        clearTimeout(streamingFlushTimerRef.current);
+        streamingFlushTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (error) {
@@ -167,13 +178,34 @@ export function useChat({
             if (eventType === 'chunk' && data && typeof data === 'object' && 'text' in data) {
               const chunkText = String((data as { text?: unknown }).text ?? '');
               if (!chunkText) return;
-              dispatch({
-                type: 'APPEND_MESSAGE_CONTENT',
-                payload: { messageId: assistantMessageId, text: chunkText },
-              });
+              streamingBufferRef.current += chunkText;
+              if (!streamingFlushTimerRef.current) {
+                streamingFlushTimerRef.current = setTimeout(() => {
+                  streamingFlushTimerRef.current = null;
+                  if (!streamingBufferRef.current) return;
+                  const buffered = streamingBufferRef.current;
+                  streamingBufferRef.current = '';
+                  dispatch({
+                    type: 'APPEND_MESSAGE_CONTENT',
+                    payload: { messageId: assistantMessageId, text: buffered },
+                  });
+                }, 50);
+              }
               return;
             }
             if (eventType === 'done' && data && typeof data === 'object') {
+              if (streamingFlushTimerRef.current) {
+                clearTimeout(streamingFlushTimerRef.current);
+                streamingFlushTimerRef.current = null;
+              }
+              if (streamingBufferRef.current) {
+                const buffered = streamingBufferRef.current;
+                streamingBufferRef.current = '';
+                dispatch({
+                  type: 'APPEND_MESSAGE_CONTENT',
+                  payload: { messageId: assistantMessageId, text: buffered },
+                });
+              }
               const doneData = data as { citations?: unknown[] };
               const normalizedCitations = doneData.citations?.map(normalizeCitation) ?? [];
               const scope = selectedScope;
@@ -192,6 +224,18 @@ export function useChat({
               return;
             }
             if (eventType === 'error') {
+              if (streamingFlushTimerRef.current) {
+                clearTimeout(streamingFlushTimerRef.current);
+                streamingFlushTimerRef.current = null;
+              }
+              if (streamingBufferRef.current) {
+                const buffered = streamingBufferRef.current;
+                streamingBufferRef.current = '';
+                dispatch({
+                  type: 'APPEND_MESSAGE_CONTENT',
+                  payload: { messageId: assistantMessageId, text: buffered },
+                });
+              }
               const errorMessage =
                 data && typeof data === 'object' && 'message' in data
                   ? String((data as { message?: unknown }).message ?? '请求失败')
