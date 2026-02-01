@@ -66,6 +66,11 @@ interface SSEThinkingEvent {
   queries?: string[];
 }
 
+interface SSEConnectionEvent {
+  status: 'reconnecting' | 'reconnected' | 'failed';
+  message: string;
+}
+
 export type SSEEvent =
   | { type: 'status'; data: SSEStatusEvent }
   | { type: 'plan_ready'; data: SSEPlanEvent }
@@ -75,6 +80,7 @@ export type SSEEvent =
   | { type: 'done'; data: SSEDoneEvent }
   | { type: 'waiting'; data: SSEWaitingEvent }
   | { type: 'thinking'; data: SSEThinkingEvent }
+  | { type: 'connection'; data: SSEConnectionEvent }
   | { type: 'error'; data: { message: string } };
 
 interface UseResearchResult {
@@ -403,7 +409,13 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           setSSEEvents((prev) => {
             const next = [
               ...prev,
-              { type: 'error', data: { message: `${message}${Math.round(delay / 1000)}秒后重连...` } },
+              {
+                type: 'connection',
+                data: {
+                  status: 'reconnecting',
+                  message: `${message}${Math.round(delay / 1000)}秒后重连...`,
+                },
+              },
             ] as SSEEvent[];
             return next.length > maxSseEvents ? next.slice(-maxSseEvents) : next;
           });
@@ -418,7 +430,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           setSSEEvents((prev) => {
             const next = [
               ...prev,
-              { type: 'error', data: { message: '连接失败，请刷新页面重试' } },
+              { type: 'connection', data: { status: 'failed', message: '连接失败，请刷新页面重试' } },
             ] as SSEEvent[];
             return next.length > maxSseEvents ? next.slice(-maxSseEvents) : next;
           });
@@ -532,6 +544,13 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
         lastEventAtRef.current = Date.now();
         if (isReconnect) {
           console.log('SSE reconnected successfully');
+          setSSEEvents((prev) => {
+            const next = [
+              ...prev,
+              { type: 'connection', data: { status: 'reconnected', message: '连接已恢复' } },
+            ] as SSEEvent[];
+            return next.length > maxSseEvents ? next.slice(-maxSseEvents) : next;
+          });
           // Refresh session data after reconnect
           fetchSession(researchId);
         }
