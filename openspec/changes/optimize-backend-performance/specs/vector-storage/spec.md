@@ -1,0 +1,38 @@
+## MODIFIED Requirements
+
+### Requirement: Local Chroma Vector Storage
+系统 MUST 提供基于 Chroma 的本地持久化向量存储（嵌入式模式），不依赖 sqlite-vss。搜索 MUST 使用 Chroma 原生 HNSW 索引，不在应用层做暴力遍历。
+
+#### Scenario: 使用 Chroma 本地存储
+- **WHEN** 配置 `vector_storage.provider` 为 `chroma`
+- **THEN** 系统使用 Chroma 持久化存储向量
+- **AND** 重启后数据仍可检索
+
+#### Scenario: 不加载 sqlite-vss
+- **WHEN** 系统以本地 Chroma 模式启动
+- **THEN** 不尝试加载 sqlite-vss 扩展
+- **AND** 不出现 sqlite-vss fallback 警告
+
+#### Scenario: 持久化路径不可写
+- **WHEN** `vector_storage.chroma.path` 指向不可写目录
+- **THEN** 启动失败并给出明确错误信息
+
+#### Scenario: 默认禁用遥测
+- **WHEN** `vector_storage.chroma.telemetry` 未设置或为 false
+- **THEN** Chroma 遥测保持关闭
+
+#### Scenario: 使用 ANN 索引搜索
+- **WHEN** 调用 Chroma 向量存储的 `search` 方法
+- **THEN** 系统使用 Chroma 原生 `collection.query()` 执行 ANN 搜索
+- **AND** 不加载全量条目到内存
+- **AND** 支持 `source_id_set` 过滤条件通过 Chroma where 子句实现
+
+## ADDED Requirements
+
+### Requirement: 向量搜索来源排除
+系统 MUST 支持在向量搜索时排除指定来源的条目，用于跨文档分析等场景。
+
+#### Scenario: 排除同一来源的搜索结果
+- **WHEN** 调用 `search` 时传入 `exclude_source_ids` 参数
+- **THEN** 返回结果不包含指定来源的条目
+- **AND** 其他来源的条目正常返回
