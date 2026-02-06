@@ -7,15 +7,24 @@ import {
   listNotebooksV1NotebooksGet as listNotebooks,
   updateNotebookV1NotebooksNotebookIdPatch as updateNotebook,
 } from '../../../../api/generated';
-import { useWorkspaceDispatch, useWorkspaceState } from '../../app/WorkspaceContext';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { StatusLabel } from '../../shared/types';
 import { normalizeNotebook } from '../../shared/utils';
 
 const DEFAULT_NOTEBOOK_NAME = '未命名笔记本';
 
 export function useNotebooks() {
-  const state = useWorkspaceState();
-  const dispatch = useWorkspaceDispatch();
+  const notebooks = useWorkspaceStore((s) => s.notebooks);
+  const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
+  const connectionState = useWorkspaceStore((s) => s.connectionState);
+  const createStateCurrent = useWorkspaceStore((s) => s.createState);
+  const createNameCurrent = useWorkspaceStore((s) => s.createName);
+  const loadingNotebooks = useWorkspaceStore((s) => s.loading.notebooks);
+  const errNotebooks = useWorkspaceStore((s) => s.errors.notebooks);
+  const errCreate = useWorkspaceStore((s) => s.errors.create);
+
+  const store = useWorkspaceStore;
+
   // Track if we've already attempted to auto-create a notebook
   const autoCreateAttemptedRef = useRef(false);
   const {
@@ -28,35 +37,34 @@ export function useNotebooks() {
   });
 
   useEffect(() => {
-    dispatch({ type: 'SET_LOADING', payload: { key: 'notebooks', value: isLoading } });
-  }, [dispatch, isLoading]);
+    store.getState().setLoading('notebooks', isLoading);
+  }, [isLoading]);
 
   useEffect(() => {
     if (notebookError) {
-      dispatch({ type: 'SET_CONNECTION_STATE', payload: 'error' });
-      dispatch({ type: 'SET_NOTEBOOKS', payload: [] });
-      if (state.activeNotebookId !== null) {
-        dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: null });
+      const s = store.getState();
+      s.setConnectionState('error');
+      s.setNotebooks([]);
+      if (activeNotebookId !== null) {
+        s.setActiveNotebook(null);
       }
-      dispatch({
-        type: 'SET_ERROR',
-        payload: { key: 'notebooks', value: '未连接到后端服务，请检查后重试。' },
-      });
+      s.setError('notebooks', '未连接到后端服务，请检查后重试。');
       return;
     }
 
     if (!notebookData) return;
     const normalized = notebookData.map(normalizeNotebook);
-    const currentActive = state.activeNotebookId;
+    const currentActive = activeNotebookId;
     const nextActive =
       normalized.find((item) => item.id === currentActive)?.id ?? normalized[0]?.id ?? null;
-    dispatch({ type: 'SET_NOTEBOOKS', payload: normalized });
-    dispatch({ type: 'SET_CONNECTION_STATE', payload: 'live' });
-    dispatch({ type: 'SET_ERROR', payload: { key: 'notebooks', value: '' } });
+    const s = store.getState();
+    s.setNotebooks(normalized);
+    s.setConnectionState('live');
+    s.setError('notebooks', '');
     if (nextActive !== currentActive) {
-      dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: nextActive });
+      s.setActiveNotebook(nextActive);
     }
-  }, [dispatch, notebookData, notebookError, state.activeNotebookId]);
+  }, [notebookData, notebookError, activeNotebookId]);
 
   // Auto-create a default notebook when there are no notebooks
   useEffect(() => {
@@ -70,13 +78,13 @@ export function useNotebooks() {
     autoCreateAttemptedRef.current = true;
 
     const autoCreateNotebook = async () => {
-      dispatch({ type: 'SET_CREATE_STATE', payload: 'loading' });
+      store.getState().setCreateState('loading');
       try {
         const created = await createNotebook({
           body: { name: DEFAULT_NOTEBOOK_NAME },
         });
         const normalized = normalizeNotebook(created);
-        dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: normalized.id });
+        store.getState().setActiveNotebook(normalized.id);
         await mutate(
           async (current) => (current ? [...current, created] : [created]),
           { revalidate: false },
@@ -85,65 +93,65 @@ export function useNotebooks() {
         // Silent fail - user can manually create a notebook
         console.error('Failed to auto-create notebook:', error);
       } finally {
-        dispatch({ type: 'SET_CREATE_STATE', payload: 'idle' });
+        store.getState().setCreateState('idle');
       }
     };
 
     autoCreateNotebook();
-  }, [dispatch, isLoading, mutate, notebookData, notebookError]);
+  }, [isLoading, mutate, notebookData, notebookError]);
 
   const setActiveNotebookId = useCallback(
     (value: number | null) => {
-      if (value === state.activeNotebookId) return;
-      dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: value });
+      if (value === activeNotebookId) return;
+      store.getState().setActiveNotebook(value);
     },
-    [dispatch, state.activeNotebookId],
+    [activeNotebookId],
   );
 
   const setCreateName = useCallback(
     (value: string) => {
-      dispatch({ type: 'SET_CREATE_NAME', payload: value });
+      store.getState().setCreateName(value);
     },
-    [dispatch],
+    [],
   );
 
   const handleCreateNotebook = useCallback(async () => {
-    const name = state.createName.trim();
-    if (!name || state.connectionState !== 'live') return false;
-    dispatch({ type: 'SET_CREATE_STATE', payload: 'loading' });
-    dispatch({ type: 'SET_ERROR', payload: { key: 'create', value: '' } });
+    const name = createNameCurrent.trim();
+    if (!name || connectionState !== 'live') return false;
+    const s = store.getState();
+    s.setCreateState('loading');
+    s.setError('create', '');
     try {
       const created = await createNotebook({
         body: { name },
       });
       const normalized = normalizeNotebook(created);
-      dispatch({ type: 'SET_CREATE_NAME', payload: '' });
-      dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: normalized.id });
+      const s2 = store.getState();
+      s2.setCreateName('');
+      s2.setActiveNotebook(normalized.id);
       await mutate(
         async (current) => (current ? [...current, created] : [created]),
         { revalidate: false },
       );
       return true;
     } catch (error) {
-      dispatch({
-        type: 'SET_ERROR',
-        payload: { key: 'create', value: '创建失败，请检查后端状态。' },
-      });
+      store.getState().setError('create', '创建失败，请检查后端状态。');
       return false;
     } finally {
-      dispatch({ type: 'SET_CREATE_STATE', payload: 'idle' });
+      store.getState().setCreateState('idle');
     }
-  }, [dispatch, mutate, state.connectionState, state.createName]);
+  }, [mutate, connectionState, createNameCurrent]);
 
   const retryNotebooks = useCallback(async () => {
-    dispatch({ type: 'SET_CONNECTION_STATE', payload: 'connecting' });
-    dispatch({ type: 'SET_ERROR', payload: { key: 'notebooks', value: '' } });
+    const s = store.getState();
+    s.setConnectionState('connecting');
+    s.setError('notebooks', '');
     await mutate();
-  }, [dispatch, mutate]);
+  }, [mutate]);
 
   const handleUpdateNotebook = useCallback(
     async (notebookId: number, name: string) => {
-      if (state.connectionState !== 'live') return false;
+      if (connectionState !== 'live') return false;
       const trimmed = name.trim();
       if (!trimmed) return false;
       try {
@@ -157,27 +165,23 @@ export function useNotebooks() {
             current?.map((item) => (item.id === notebookId ? updated : item)) ?? [updated],
           { revalidate: false },
         );
-        dispatch({
-          type: 'SET_NOTEBOOKS',
-          payload: state.notebooks.map((item) =>
+        store.getState().setNotebooks(
+          store.getState().notebooks.map((item) =>
             item.id === notebookId ? normalized : item,
           ),
-        });
+        );
         return true;
       } catch (error) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'notebooks', value: '更新笔记本失败，请稍后重试。' },
-        });
+        store.getState().setError('notebooks', '更新笔记本失败，请稍后重试。');
         return false;
       }
     },
-    [dispatch, mutate, state.connectionState, state.notebooks],
+    [mutate, connectionState],
   );
 
   const handleDeleteNotebook = useCallback(
     async (notebookId: number) => {
-      if (state.connectionState !== 'live') return false;
+      if (connectionState !== 'live') return false;
       try {
         await deleteNotebook({
           path: { notebook_id: notebookId },
@@ -186,49 +190,47 @@ export function useNotebooks() {
           async (current) => current?.filter((item) => item.id !== notebookId) ?? [],
           { revalidate: false },
         );
-        const remaining = state.notebooks.filter((item) => item.id !== notebookId);
-        dispatch({ type: 'SET_NOTEBOOKS', payload: remaining });
-        if (state.activeNotebookId === notebookId) {
-          dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: remaining[0]?.id ?? null });
+        const s = store.getState();
+        const remaining = s.notebooks.filter((item) => item.id !== notebookId);
+        s.setNotebooks(remaining);
+        if (s.activeNotebookId === notebookId) {
+          s.setActiveNotebook(remaining[0]?.id ?? null);
         }
         return true;
       } catch (error) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'notebooks', value: '删除笔记本失败，请稍后重试。' },
-        });
+        store.getState().setError('notebooks', '删除笔记本失败，请稍后重试。');
         return false;
       }
     },
-    [dispatch, mutate, state.activeNotebookId, state.connectionState, state.notebooks],
+    [mutate, connectionState],
   );
 
   const statusLabel = useMemo<StatusLabel>(() => {
-    if (state.connectionState === 'connecting') {
+    if (connectionState === 'connecting') {
       return { text: '连接中', tone: 'isLoading', tooltip: '正在连接后端服务' };
     }
-    if (state.connectionState === 'error') {
+    if (connectionState === 'error') {
       return { text: '连接失败', tone: 'isError', tooltip: '未连接到后端服务' };
     }
     return { text: '已连接', tone: 'isLive', tooltip: '已连接到后端服务' };
-  }, [state.connectionState]);
-  const isConnected = state.connectionState === 'live';
+  }, [connectionState]);
+  const isConnected = connectionState === 'live';
 
   return {
-    notebooks: state.notebooks,
-    activeNotebookId: state.activeNotebookId,
+    notebooks,
+    activeNotebookId,
     setActiveNotebookId,
-    createName: state.createName,
+    createName: createNameCurrent,
     setCreateName,
-    createState: state.createState,
+    createState: createStateCurrent,
     createNotebook: handleCreateNotebook,
     updateNotebook: handleUpdateNotebook,
     deleteNotebook: handleDeleteNotebook,
     statusLabel,
-    connectionState: state.connectionState,
-    notebooksError: state.errors.notebooks,
-    createError: state.errors.create,
-    isLoading: state.loading.notebooks,
+    connectionState,
+    notebooksError: errNotebooks,
+    createError: errCreate,
+    isLoading: loadingNotebooks,
     retryNotebooks,
     isConnected,
   };

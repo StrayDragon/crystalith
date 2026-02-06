@@ -1,10 +1,9 @@
 import { act, waitFor } from '@testing-library/react';
-import { useReducer } from 'react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import useSWR from 'swr';
 
 import { renderHook } from '../../../../test-utils/renderHook';
-import { initialWorkspaceState, workspaceReducer } from '../state/workspaceReducer';
+import { useWorkspaceStore } from '../state/workspaceStore';
 import { useOutputQueue } from './useOutputQueue';
 import { createOutputV1NotebooksNotebookIdOutputsOutputTypePost as createOutput } from '../../../../api/generated';
 
@@ -22,19 +21,55 @@ vi.mock('../../../../api/generated', () => ({
 
 const swrMock = vi.mocked(useSWR);
 
+const onQueueReset = vi.fn();
+const onQueueTotal = vi.fn();
+const onQueueDone = vi.fn();
+const markJobCompleted = vi.fn();
+
 beforeEach(() => {
+  // Reset Zustand store
+  useWorkspaceStore.setState({
+    notebooks: [],
+    activeNotebookId: null,
+    sessions: [],
+    activeSessionId: null,
+    sources: [],
+    selectedSourceIds: {},
+    messages: [],
+    draft: '',
+    citations: [],
+    hoveredCitationChunkId: null,
+    hoveredMessageChunkIds: [],
+    jumpToCitationChunkId: null,
+    outputs: [],
+    outputType: 'FAQ',
+    refineMode: 'paragraph',
+    refinePrompt: '',
+    refineJobs: [],
+    refineSettings: { autoTrigger: false, asyncQueue: true },
+    hasNewOutput: false,
+    recentCompletedJobId: null,
+    activePanel: 'chat',
+    createState: 'idle',
+    createName: '',
+    connectionState: 'connecting',
+    uploadState: 'idle',
+    loading: { notebooks: false, sources: false, sessions: false, messages: false, outputs: false, send: false },
+    errors: { notebooks: '', sources: '', sessions: '', messages: '', outputs: '', send: '', create: '' },
+  });
+
   swrMock.mockReturnValue({
     data: undefined,
     error: null,
     isLoading: false,
     mutate: vi.fn(),
   });
-});
 
-const onQueueReset = vi.fn();
-const onQueueTotal = vi.fn();
-const onQueueDone = vi.fn();
-const markJobCompleted = vi.fn();
+  onQueueReset.mockClear();
+  onQueueTotal.mockClear();
+  onQueueDone.mockClear();
+  markJobCompleted.mockClear();
+});
 
 function useOutputQueueHarness({
   isConnected,
@@ -43,15 +78,13 @@ function useOutputQueueHarness({
   isConnected: boolean;
   activeNotebookId: number | null;
 }) {
-  const [state, dispatch] = useReducer(workspaceReducer, {
-    ...initialWorkspaceState,
+  // Set Zustand store state
+  useWorkspaceStore.setState({
     activeNotebookId,
     connectionState: isConnected ? 'live' : 'connecting',
   });
 
   const queue = useOutputQueue({
-    state,
-    dispatch,
     isConnected,
     hasPendingRefineJobs: () => false,
     onQueueReset,
@@ -60,7 +93,7 @@ function useOutputQueueHarness({
     markJobCompleted,
   });
 
-  return { state, dispatch, ...queue };
+  return { ...queue };
 }
 
 test('enqueueOutputJob processes and updates outputs', async () => {
@@ -91,7 +124,7 @@ test('enqueueOutputJob processes and updates outputs', async () => {
   });
 
   await waitFor(() => {
-    expect(result.current.state.outputs).toHaveLength(1);
+    expect(useWorkspaceStore.getState().outputs).toHaveLength(1);
   });
 
   expect(createOutput).toHaveBeenCalledWith({
@@ -119,7 +152,7 @@ test('enqueueOutputJob returns null when no sources selected', async () => {
   });
 
   expect(created).toBeNull();
-  expect(result.current.state.errors.outputs).toBe('请先选择来源。');
+  expect(useWorkspaceStore.getState().errors.outputs).toBe('请先选择来源。');
 });
 
 test('enqueueSlidesJob returns null when disconnected', async () => {
@@ -138,5 +171,5 @@ test('enqueueSlidesJob returns null when disconnected', async () => {
   });
 
   expect(created).toBeNull();
-  expect(result.current.state.errors.outputs).toBe('未连接到后端服务。');
+  expect(useWorkspaceStore.getState().errors.outputs).toBe('未连接到后端服务。');
 });

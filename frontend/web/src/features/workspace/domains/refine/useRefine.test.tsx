@@ -1,10 +1,9 @@
 import { act, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import useSWR from 'swr';
 
 import { renderHook } from '../../../../test-utils/renderHook';
-import { useWorkspaceDispatch, useWorkspaceState, WorkspaceProvider } from '../../app/WorkspaceContext';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { REFINE_TEMPLATES } from './data/refineTemplates';
 import { useRefine } from './useRefine';
 import { refineBatchV1NotebooksNotebookIdRefineBatchPost as refineBatch } from '../../../../api/generated';
@@ -36,6 +35,37 @@ vi.mock('../../../../api/generated', () => ({
 const swrMock = vi.mocked(useSWR);
 
 beforeEach(() => {
+  // Reset Zustand store
+  useWorkspaceStore.setState({
+    notebooks: [],
+    activeNotebookId: null,
+    sessions: [],
+    activeSessionId: null,
+    sources: [],
+    selectedSourceIds: {},
+    messages: [],
+    draft: '',
+    citations: [],
+    hoveredCitationChunkId: null,
+    hoveredMessageChunkIds: [],
+    jumpToCitationChunkId: null,
+    outputs: [],
+    outputType: 'FAQ',
+    refineMode: 'paragraph',
+    refinePrompt: '',
+    refineJobs: [],
+    refineSettings: { autoTrigger: false, asyncQueue: true },
+    hasNewOutput: false,
+    recentCompletedJobId: null,
+    activePanel: 'chat',
+    createState: 'idle',
+    createName: '',
+    connectionState: 'connecting',
+    uploadState: 'idle',
+    loading: { notebooks: false, sources: false, sessions: false, messages: false, outputs: false, send: false },
+    errors: { notebooks: '', sources: '', sessions: '', messages: '', outputs: '', send: '', create: '' },
+  });
+
   swrMock.mockReturnValue({
     data: { tools: [] },
     error: null,
@@ -43,22 +73,11 @@ beforeEach(() => {
   });
 });
 
-function useRefineHarness() {
-  const refine = useRefine();
-  const state = useWorkspaceState();
-  const dispatch = useWorkspaceDispatch();
-  return { refine, state, dispatch };
-}
-
-const wrapper = ({ children }: { children: ReactNode }) => (
-  <WorkspaceProvider>{children}</WorkspaceProvider>
-);
-
 test('sets default refine prompt when empty', async () => {
-  const { result } = renderHook(() => useRefineHarness(), { wrapper });
+  const { result } = renderHook(() => useRefine());
 
   await waitFor(() => {
-    expect(result.current.refine.refinePrompt).toBe(REFINE_TEMPLATES[0].prompt);
+    expect(result.current.refinePrompt).toBe(REFINE_TEMPLATES[0].prompt);
   });
 });
 
@@ -68,28 +87,26 @@ test('onGenerateRefine enqueues job with selected source ids', async () => {
     citations: [{ chunk_id: 9, chunk_index: 1, source_name: 'Doc', snippet: 'S' }],
   } as any);
 
-  const { result } = renderHook(() => useRefineHarness(), { wrapper });
+  const { result } = renderHook(() => useRefine());
 
   act(() => {
-    result.current.dispatch({ type: 'SET_CONNECTION_STATE', payload: 'live' });
-    result.current.dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: 1 });
-    result.current.dispatch({ type: 'SET_REFINE_PROMPT', payload: '提炼核心结论' });
-    result.current.dispatch({
-      type: 'SET_SELECTED_SOURCES',
-      payload: { 101: true, 102: true },
-    });
+    const s = useWorkspaceStore.getState();
+    s.setConnectionState('live');
+    s.setActiveNotebook(1);
+    s.setRefinePrompt('提炼核心结论');
+    s.setSelectedSources({ 101: true, 102: true });
   });
 
   await act(async () => {
-    await result.current.refine.onGenerateRefine();
+    await result.current.onGenerateRefine();
   });
 
   await waitFor(() => {
-    expect(result.current.refine.refineJobs).toHaveLength(1);
+    expect(result.current.refineJobs).toHaveLength(1);
   });
 
-  expect(result.current.refine.refineJobs[0].sourceIds).toEqual([101, 102]);
-  expect(result.current.state.activePanel).toBe('refine');
+  expect(result.current.refineJobs[0].sourceIds).toEqual([101, 102]);
+  expect(useWorkspaceStore.getState().activePanel).toBe('refine');
   await waitFor(() => {
     expect(refineBatch).toHaveBeenCalledWith({
       path: { notebook_id: 1 },

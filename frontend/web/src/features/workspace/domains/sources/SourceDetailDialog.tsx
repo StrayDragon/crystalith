@@ -41,7 +41,7 @@ import {
   listSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGet as listSourceChunks,
   type ChunkRead,
 } from '../../../../api/generated';
-import { useWorkspaceState } from '../../app/WorkspaceContext';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { SourceItem } from '../../shared/types';
 import { toast } from '../../../../shared/toast';
 import { useLayer } from '../../../../shared/layer';
@@ -137,9 +137,9 @@ function ChunkItem({ chunk, index }: { chunk: ChunkRead; index: number }) {
 }
 
 export default function SourceDetailDialog({ open, source, onClose, isFullscreen = false, onToggleFullscreen, onSaveQAAsSource }: SourceDetailDialogProps) {
-  const state = useWorkspaceState();
-  const notebookId = state.activeNotebookId;
-  const isConnected = state.connectionState === 'live';
+  const notebookId = useWorkspaceStore((s) => s.activeNotebookId);
+  const connectionState = useWorkspaceStore((s) => s.connectionState);
+  const isConnected = connectionState === 'live';
 
   const [activeTab, setActiveTab] = useState<TabValue>('overview');
   const [messages, setMessages] = useState<ChatMessage[]>([]);

@@ -10,7 +10,7 @@ import {
 } from '../../../../api/generated';
 import { client } from '../../../../api/generated/client.gen';
 import { toast } from '../../../../shared/toast';
-import { useWorkspaceDispatch, useWorkspaceState } from '../../app/WorkspaceContext';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import {
   buildSourceScopeSnapshot,
   collectChunkIds,
@@ -34,31 +34,43 @@ export function useChat({
   refreshOutputs,
   enableStreaming = true,
 }: UseChatOptions) {
-  const state = useWorkspaceState();
-  const dispatch = useWorkspaceDispatch();
-  const isConnected = state.connectionState === 'live';
+  const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
+  const activeSessionId = useWorkspaceStore((s) => s.activeSessionId);
+  const connectionState = useWorkspaceStore((s) => s.connectionState);
+  const messages = useWorkspaceStore((s) => s.messages);
+  const draft = useWorkspaceStore((s) => s.draft);
+  const selectedSourceIds = useWorkspaceStore((s) => s.selectedSourceIds);
+  const sourcesForScope = useWorkspaceStore((s) => s.sources);
+  const citationsCurrent = useWorkspaceStore((s) => s.citations);
+  const loadingSend = useWorkspaceStore((s) => s.loading.send);
+  const errSend = useWorkspaceStore((s) => s.errors.send);
+  const errMessages = useWorkspaceStore((s) => s.errors.messages);
+
+  const store = useWorkspaceStore;
+  const isConnected = connectionState === 'live';
+
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
-  const messagesRef = useRef(state.messages);
+  const messagesRef = useRef(messages);
   const streamingBufferRef = useRef('');
   const streamingFlushTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data, error, isLoading, mutate } = useSWR(
-    state.activeNotebookId && state.activeSessionId && isConnected
-      ? ['workspace/messages', state.activeNotebookId, state.activeSessionId]
+    activeNotebookId && activeSessionId && isConnected
+      ? ['workspace/messages', activeNotebookId, activeSessionId]
       : null,
     () => listMessages({
       path: {
-        notebook_id: state.activeNotebookId ?? 0,
-        session_id: state.activeSessionId ?? 0,
+        notebook_id: activeNotebookId ?? 0,
+        session_id: activeSessionId ?? 0,
       },
     }),
     { revalidateOnFocus: false },
   );
 
   useEffect(() => {
-    messagesRef.current = state.messages;
-  }, [state.messages]);
+    messagesRef.current = messages;
+  }, [messages]);
 
   useEffect(() => {
     return () => {
@@ -71,10 +83,7 @@ export function useChat({
 
   useEffect(() => {
     if (error) {
-      dispatch({
-        type: 'SET_ERROR',
-        payload: { key: 'messages', value: '会话消息加载失败，请稍后重试。' },
-      });
+      store.getState().setError('messages', '会话消息加载失败，请稍后重试。');
       return;
     }
     if (!data) return;
@@ -97,52 +106,53 @@ export function useChat({
       const preservedScope = scopeMap.get(key);
       return preservedScope ? { ...message, citationScope: preservedScope } : message;
     });
-    dispatch({ type: 'SET_MESSAGES', payload: merged });
-    dispatch({ type: 'SET_ERROR', payload: { key: 'messages', value: '' } });
-  }, [data, dispatch, error]);
+    const s = store.getState();
+    s.setMessages(merged);
+    s.setError('messages', '');
+  }, [data, error]);
 
   const setDraft = useCallback(
-    (value: string) => dispatch({ type: 'SET_DRAFT', payload: value }),
-    [dispatch],
+    (value: string) => store.getState().setDraft(value),
+    [],
   );
 
   const sendMessage = useCallback(async () => {
-    const text = state.draft.trim();
+    const s = store.getState();
+    const text = s.draft.trim();
     if (!text) return;
-    if (!state.activeNotebookId) {
-      dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '请先创建笔记本。' } });
+    if (!s.activeNotebookId) {
+      s.setError('send', '请先创建笔记本。');
       return;
     }
-    if (!isConnected) {
-      dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '未连接到后端服务。' } });
+    if (s.connectionState !== 'live') {
+      s.setError('send', '未连接到后端服务。');
       return;
     }
 
-    dispatch({ type: 'SET_LOADING', payload: { key: 'send', value: true } });
-    dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '' } });
-    dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'chat' });
+    s.setLoading('send', true);
+    s.setError('send', '');
+    s.setActivePanel('chat');
 
-    const selectedSourceIds = Object.entries(state.selectedSourceIds)
+    const explicitSourceIds = Object.entries(s.selectedSourceIds)
       .filter(([, selected]) => selected)
       .map(([id]) => Number(id))
       .filter((value) => Number.isFinite(value) && value > 0);
-    const explicitSourceIds = selectedSourceIds;
-    const selectedSourceTitles = state.sources
+    const selectedSourceTitles = s.sources
       .filter((source) => explicitSourceIds.includes(source.id))
       .map((source) => source.title);
 
     const selectedScope = buildSourceScopeSnapshot(selectedSourceTitles, 'selected');
 
     const userMessage = { id: createId(), role: 'user', content: text };
-    const pendingMessages = [...state.messages, userMessage];
-    dispatch({ type: 'SET_MESSAGES', payload: pendingMessages });
-    dispatch({ type: 'SET_DRAFT', payload: '' });
+    const pendingMessages = [...s.messages, userMessage];
+    s.setMessages(pendingMessages);
+    s.setDraft('');
 
     const sessionId = await ensureSession();
 
     if (!sessionId) {
-      dispatch({ type: 'SET_LOADING', payload: { key: 'send', value: false } });
-      dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '会话创建失败。' } });
+      store.getState().setLoading('send', false);
+      store.getState().setError('send', '会话创建失败。');
       return;
     }
 
@@ -159,12 +169,12 @@ export function useChat({
         content: '',
         citationScope: selectedScope ?? undefined,
       };
-      dispatch({ type: 'ADD_STREAMING_MESSAGE', payload: assistantMessage });
+      store.getState().addStreamingMessage(assistantMessage);
 
       try {
         const { stream } = await client.sse.post({
           url: '/v1/notebooks/{notebook_id}/qa/stream',
-          path: { notebook_id: state.activeNotebookId },
+          path: { notebook_id: s.activeNotebookId },
           body: {
             question: text,
             session_id: sessionId ?? undefined,
@@ -185,10 +195,7 @@ export function useChat({
                   if (!streamingBufferRef.current) return;
                   const buffered = streamingBufferRef.current;
                   streamingBufferRef.current = '';
-                  dispatch({
-                    type: 'APPEND_MESSAGE_CONTENT',
-                    payload: { messageId: assistantMessageId, text: buffered },
-                  });
+                  store.getState().appendMessageContent(assistantMessageId, buffered);
                 }, 50);
               }
               return;
@@ -201,26 +208,18 @@ export function useChat({
               if (streamingBufferRef.current) {
                 const buffered = streamingBufferRef.current;
                 streamingBufferRef.current = '';
-                dispatch({
-                  type: 'APPEND_MESSAGE_CONTENT',
-                  payload: { messageId: assistantMessageId, text: buffered },
-                });
+                store.getState().appendMessageContent(assistantMessageId, buffered);
               }
               const doneData = data as { citations?: unknown[] };
               const normalizedCitations = doneData.citations?.map(normalizeCitation) ?? [];
               const scope = selectedScope;
-              dispatch({
-                type: 'UPDATE_MESSAGE',
-                payload: {
-                  messageId: assistantMessageId,
-                  updates: {
-                    citationChunkIds: collectChunkIds(normalizedCitations),
-                    citations: normalizedCitations,
-                    citationScope: scope,
-                  },
-                },
+              const s2 = store.getState();
+              s2.updateMessage(assistantMessageId, {
+                citationChunkIds: collectChunkIds(normalizedCitations),
+                citations: normalizedCitations,
+                citationScope: scope,
               });
-              dispatch({ type: 'SET_CITATIONS', payload: normalizedCitations });
+              s2.setCitations(normalizedCitations);
               return;
             }
             if (eventType === 'error') {
@@ -231,10 +230,7 @@ export function useChat({
               if (streamingBufferRef.current) {
                 const buffered = streamingBufferRef.current;
                 streamingBufferRef.current = '';
-                dispatch({
-                  type: 'APPEND_MESSAGE_CONTENT',
-                  payload: { messageId: assistantMessageId, text: buffered },
-                });
+                store.getState().appendMessageContent(assistantMessageId, buffered);
               }
               const errorMessage =
                 data && typeof data === 'object' && 'message' in data
@@ -242,14 +238,9 @@ export function useChat({
                   : typeof data === 'string'
                     ? data
                     : '请求失败';
-              dispatch({
-                type: 'UPDATE_MESSAGE',
-                payload: {
-                  messageId: assistantMessageId,
-                  updates: { content: errorMessage },
-                },
-              });
-              dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: errorMessage } });
+              const s2 = store.getState();
+              s2.updateMessage(assistantMessageId, { content: errorMessage });
+              s2.setError('send', errorMessage);
             }
           },
         });
@@ -276,18 +267,13 @@ export function useChat({
             errorMessage = error.message;
           }
         }
-        dispatch({
-          type: 'UPDATE_MESSAGE',
-          payload: {
-            messageId: assistantMessageId,
-            updates: { content: errorMessage },
-          },
-        });
-        dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: errorMessage } });
+        const s2 = store.getState();
+        s2.updateMessage(assistantMessageId, { content: errorMessage });
+        s2.setError('send', errorMessage);
       } finally {
         setIsStreaming(false);
         setStreamingMessageId(null);
-        dispatch({ type: 'SET_LOADING', payload: { key: 'send', value: false } });
+        store.getState().setLoading('send', false);
       }
       return;
     }
@@ -295,7 +281,7 @@ export function useChat({
     // Non-streaming fallback
     try {
       const qaResult = await askQuestion({
-        path: { notebook_id: state.activeNotebookId },
+        path: { notebook_id: s.activeNotebookId },
         body: {
           question: text,
           session_id: sessionId ?? undefined,
@@ -312,11 +298,9 @@ export function useChat({
         citations: normalizedCitations,
         citationScope: scope,
       };
-      dispatch({
-        type: 'SET_MESSAGES',
-        payload: [...pendingMessages, assistantMessage],
-      });
-      dispatch({ type: 'SET_CITATIONS', payload: normalizedCitations });
+      const s2 = store.getState();
+      s2.setMessages([...pendingMessages, assistantMessage]);
+      s2.setCitations(normalizedCitations);
       void mutate();
       if (refreshSessions) {
         void refreshSessions();
@@ -353,46 +337,38 @@ export function useChat({
         role: 'assistant',
         content: errorMessage,
       };
-      dispatch({
-        type: 'SET_MESSAGES',
-        payload: [...pendingMessages, assistantMessage],
-      });
-      dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: userFacingError } });
+      const s2 = store.getState();
+      s2.setMessages([...pendingMessages, assistantMessage]);
+      s2.setError('send', userFacingError);
     } finally {
-      dispatch({ type: 'SET_LOADING', payload: { key: 'send', value: false } });
+      store.getState().setLoading('send', false);
     }
   }, [
-    dispatch,
     enableStreaming,
     ensureSession,
-    isConnected,
     mutate,
     refreshSessions,
-    state.activeNotebookId,
-    state.draft,
-    state.messages,
-    state.selectedSourceIds,
-    state.sources,
   ]);
 
   const retryMessages = useCallback(async () => {
-    dispatch({ type: 'SET_ERROR', payload: { key: 'messages', value: '' } });
+    store.getState().setError('messages', '');
     await mutate();
-  }, [dispatch, mutate]);
+  }, [mutate]);
 
   // --- Session Conversion Methods ---
   const [isConverting, setIsConverting] = useState(false);
 
   const handleConvertSessionToSource = useCallback(async () => {
-    if (!state.activeNotebookId || !state.activeSessionId) return;
-    if (!isConnected) {
+    const s = store.getState();
+    if (!s.activeNotebookId || !s.activeSessionId) return;
+    if (s.connectionState !== 'live') {
       toast.warning('未连接到后端服务，暂不支持转换。');
       return;
     }
     setIsConverting(true);
     try {
       const result = await convertSessionToSource({
-        path: { notebook_id: state.activeNotebookId, session_id: state.activeSessionId },
+        path: { notebook_id: s.activeNotebookId, session_id: s.activeSessionId },
         body: { message_ids: null },
       });
       // Refresh sources list to show the new source
@@ -406,19 +382,20 @@ export function useChat({
     } finally {
       setIsConverting(false);
     }
-  }, [state.activeNotebookId, state.activeSessionId, isConnected, refreshSources]);
+  }, [refreshSources]);
 
   const handleConvertSessionToOutput = useCallback(
     async (outputType: OutputTypeInput) => {
-      if (!state.activeNotebookId || !state.activeSessionId) return;
-      if (!isConnected) {
+      const s = store.getState();
+      if (!s.activeNotebookId || !s.activeSessionId) return;
+      if (s.connectionState !== 'live') {
         toast.warning('未连接到后端服务，暂不支持转换。');
         return;
       }
       setIsConverting(true);
       try {
         const result = await convertSessionToOutput({
-          path: { notebook_id: state.activeNotebookId, session_id: state.activeSessionId },
+          path: { notebook_id: s.activeNotebookId, session_id: s.activeSessionId },
           body: { message_ids: null, output_type: outputType },
         });
         // Refresh outputs list to show the new output
@@ -433,22 +410,22 @@ export function useChat({
         setIsConverting(false);
       }
     },
-    [state.activeNotebookId, state.activeSessionId, isConnected, refreshOutputs],
+    [refreshOutputs],
   );
 
   return {
-    messages: state.messages,
-    draft: state.draft,
+    messages,
+    draft,
     setDraft,
     sendMessage,
-    isSending: state.loading.send,
+    isSending: loadingSend,
     isStreaming,
     streamingMessageId,
-    sendError: state.errors.send,
-    citations: state.citations,
+    sendError: errSend,
+    citations: citationsCurrent,
     retryMessages,
     isLoadingMessages: isLoading,
-    messagesError: state.errors.messages,
+    messagesError: errMessages,
     // Conversion
     isConverting,
     convertSessionToSource: handleConvertSessionToSource,

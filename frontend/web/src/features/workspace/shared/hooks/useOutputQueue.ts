@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type Dispatch } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 
 import {
@@ -9,7 +9,7 @@ import {
   listOutputsV1NotebooksNotebookIdOutputsGet as listOutputs,
 } from '../../../../api/generated';
 import type { OutputItem, OutputTypeId, SlideGenerationConfig } from '../types';
-import type { WorkspaceAction, WorkspaceState } from '../state/workspaceReducer';
+import { useWorkspaceStore } from '../state/workspaceStore';
 import { createId, formatTimestamp, normalizeOutput } from '../utils';
 
 type OutputQueueStatus = 'queued' | 'running' | 'done' | 'error';
@@ -30,8 +30,6 @@ export interface OutputQueueJob {
 }
 
 interface UseOutputQueueOptions {
-  state: WorkspaceState;
-  dispatch: Dispatch<WorkspaceAction>;
   isConnected: boolean;
   hasPendingRefineJobs: () => boolean;
   onQueueReset: () => void;
@@ -115,8 +113,6 @@ function runSlidesStream(url: string): Promise<void> {
 }
 
 export function useOutputQueue({
-  state,
-  dispatch,
   isConnected,
   hasPendingRefineJobs,
   onQueueReset,
@@ -124,6 +120,12 @@ export function useOutputQueue({
   onQueueDone,
   markJobCompleted,
 }: UseOutputQueueOptions) {
+  const store = useWorkspaceStore;
+  const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
+  const outputs = useWorkspaceStore((s) => s.outputs);
+  const loadingOutputs = useWorkspaceStore((s) => s.loading.outputs);
+  const errOutputs = useWorkspaceStore((s) => s.errors.outputs);
+
   const [outputQueueJobs, setOutputQueueJobs] = useState<OutputQueueJob[]>([]);
   const outputQueueRef = useRef<OutputQueueJob[]>(outputQueueJobs);
   const outputRunningRef = useRef(false);
@@ -131,32 +133,30 @@ export function useOutputQueue({
 
   const { data: outputsData, error: outputsError, isLoading: outputsLoading, mutate: mutateOutputs } =
     useSWR(
-    state.activeNotebookId && isConnected
-      ? ['workspace/outputs', state.activeNotebookId]
+    activeNotebookId && isConnected
+      ? ['workspace/outputs', activeNotebookId]
       : null,
       () =>
         listOutputs({
-          path: { notebook_id: state.activeNotebookId ?? 0 },
+          path: { notebook_id: activeNotebookId ?? 0 },
         }),
       { revalidateOnFocus: false },
     );
 
   useEffect(() => {
-    dispatch({ type: 'SET_LOADING', payload: { key: 'outputs', value: outputsLoading } });
-  }, [dispatch, outputsLoading]);
+    store.getState().setLoading('outputs', outputsLoading);
+  }, [outputsLoading]);
 
   useEffect(() => {
     if (outputsError) {
-      dispatch({
-        type: 'SET_ERROR',
-        payload: { key: 'outputs', value: '输出加载失败，请稍后重试。' },
-      });
+      store.getState().setError('outputs', '输出加载失败，请稍后重试。');
       return;
     }
     if (!outputsData) return;
-    dispatch({ type: 'SET_OUTPUTS', payload: outputsData.map(normalizeOutput) });
-    dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '' } });
-  }, [dispatch, outputsData, outputsError]);
+    const s = store.getState();
+    s.setOutputs(outputsData.map(normalizeOutput));
+    s.setError('outputs', '');
+  }, [outputsData, outputsError]);
 
   const updateOutputQueueJobs = useCallback(
     (updater: (jobs: OutputQueueJob[]) => OutputQueueJob[]) => {
@@ -185,7 +185,7 @@ export function useOutputQueue({
     setOutputQueueJobs([]);
     outputQueueRef.current = [];
     onQueueReset();
-  }, [onQueueReset, state.activeNotebookId]);
+  }, [onQueueReset, activeNotebookId]);
 
   const enqueueOutputJob = useCallback(
     ({
@@ -200,7 +200,7 @@ export function useOutputQueue({
       modelId?: string;
     }) => {
       if (sourceIds.length === 0) {
-        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先选择来源。' } });
+        store.getState().setError('outputs', '请先选择来源。');
         return null;
       }
       const createdAt = new Date().toISOString();
@@ -216,13 +216,13 @@ export function useOutputQueue({
         status: 'queued',
         createdAt,
         createdAtLabel: formatTimestamp(createdAt),
-        notebookId: state.activeNotebookId,
+        notebookId: activeNotebookId,
         modelId,
       };
       updateOutputQueueJobs((prev) => [job, ...prev]);
       return job;
     },
-    [hasPendingJobs, onQueueReset, onQueueTotal, state.activeNotebookId, updateOutputQueueJobs],
+    [hasPendingJobs, onQueueReset, onQueueTotal, activeNotebookId, updateOutputQueueJobs],
   );
 
   const enqueueSlidesJob = useCallback(
@@ -240,15 +240,15 @@ export function useOutputQueue({
       modelId?: string | null;
     }) => {
       if (!isConnected) {
-        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '未连接到后端服务。' } });
+        store.getState().setError('outputs', '未连接到后端服务。');
         return null;
       }
-      if (!state.activeNotebookId) {
-        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先创建笔记本。' } });
+      if (!activeNotebookId) {
+        store.getState().setError('outputs', '请先创建笔记本。');
         return null;
       }
       if (sourceIds.length === 0) {
-        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先选择来源。' } });
+        store.getState().setError('outputs', '请先选择来源。');
         return null;
       }
 
@@ -264,7 +264,7 @@ export function useOutputQueue({
         generation_config: normalizeSlideGenerationConfig(generationConfig),
       };
       const created = await createSlidesDraft({
-        path: { notebook_id: state.activeNotebookId },
+        path: { notebook_id: activeNotebookId },
         body: payload,
       });
       const draftId = created.id;
@@ -278,7 +278,7 @@ export function useOutputQueue({
         status: 'queued',
         createdAt,
         createdAtLabel: formatTimestamp(createdAt),
-        notebookId: state.activeNotebookId,
+        notebookId: activeNotebookId,
         modelId: modelId ?? undefined,
         draftId,
         title,
@@ -288,12 +288,11 @@ export function useOutputQueue({
       return job;
     },
     [
-      dispatch,
       hasPendingJobs,
       isConnected,
       onQueueReset,
       onQueueTotal,
-      state.activeNotebookId,
+      activeNotebookId,
       updateOutputQueueJobs,
     ],
   );
@@ -301,8 +300,8 @@ export function useOutputQueue({
   const processOutputJob = useCallback(
     async (job: OutputQueueJob) => {
       try {
-        dispatch({ type: 'SET_LOADING', payload: { key: 'outputs', value: true } });
-        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '' } });
+        store.getState().setLoading('outputs', true);
+        store.getState().setError('outputs', '');
         let normalized: OutputItem[] = [];
         if (!isConnected) {
           throw new Error('backend unavailable');
@@ -340,7 +339,8 @@ export function useOutputQueue({
             },
           });
           normalized = [normalizeOutput(response)];
-          dispatch({ type: 'SET_OUTPUTS', payload: [...normalized, ...state.outputs] });
+          const s = store.getState();
+          s.setOutputs([...normalized, ...s.outputs]);
           await mutateOutputs();
         } else {
           throw new Error('missing notebook');
@@ -350,11 +350,11 @@ export function useOutputQueue({
         );
         const stillTracked = outputQueueRef.current.some((item) => item.id === job.id);
         const isCurrentNotebook =
-          job.notebookId != null && job.notebookId === state.activeNotebookId;
+          job.notebookId != null && job.notebookId === store.getState().activeNotebookId;
         if ((normalized.length > 0 || job.type === 'SLIDES') && stillTracked && isCurrentNotebook) {
           markJobCompleted(job.id);
         }
-        dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
+        store.getState().setActivePanel('refine');
         if (stillTracked) {
           onQueueDone();
         }
@@ -381,27 +381,21 @@ export function useOutputQueue({
           prev.map((item) => (item.id === job.id ? { ...item, status: 'error' } : item)),
         );
         const stillTracked = outputQueueRef.current.some((item) => item.id === job.id);
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'outputs', value: userFacingError },
-        });
+        store.getState().setError('outputs', userFacingError);
         if (stillTracked) {
           onQueueDone();
         }
       } finally {
-        dispatch({ type: 'SET_LOADING', payload: { key: 'outputs', value: false } });
+        store.getState().setLoading('outputs', false);
         outputRunningRef.current = false;
         runNextOutputJobRef.current();
       }
     },
     [
-      dispatch,
       isConnected,
       markJobCompleted,
       mutateOutputs,
       onQueueDone,
-      state.activeNotebookId,
-      state.outputs,
       updateOutputQueueJobs,
     ],
   );
@@ -420,66 +414,59 @@ export function useOutputQueue({
   runNextOutputJobRef.current = runNextOutputJob;
 
   const retryOutputs = useCallback(async () => {
-    dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '' } });
+    store.getState().setError('outputs', '');
     await mutateOutputs();
-  }, [dispatch, mutateOutputs]);
+  }, [mutateOutputs]);
 
   const deleteOutput = useCallback(
     async (outputId: number) => {
-      if (!state.activeNotebookId) return;
+      const s = store.getState();
+      if (!s.activeNotebookId) return;
       if (!isConnected) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'outputs', value: '未连接到后端服务，无法删除输出。' },
-        });
+        s.setError('outputs', '未连接到后端服务，无法删除输出。');
         return;
       }
 
-      dispatch({
-        type: 'SET_OUTPUTS',
-        payload: state.outputs.filter((item) => item.id !== outputId),
-      });
+      s.setOutputs(s.outputs.filter((item) => item.id !== outputId));
 
       try {
         await deleteOutputApi({
-          path: { notebook_id: state.activeNotebookId, output_id: outputId },
+          path: { notebook_id: s.activeNotebookId, output_id: outputId },
         });
       } catch (error) {
         console.error('Failed to delete output:', error);
         await mutateOutputs();
       }
     },
-    [dispatch, isConnected, mutateOutputs, state.activeNotebookId, state.outputs],
+    [isConnected, mutateOutputs],
   );
 
   const clearOutputs = useCallback(() => {
-    dispatch({ type: 'SET_OUTPUTS', payload: [] });
-  }, [dispatch]);
+    store.getState().setOutputs([]);
+  }, []);
 
   const fetchOutput = useCallback(
     async (outputId: number) => {
-      if (!state.activeNotebookId || !isConnected) return null;
+      const s = store.getState();
+      if (!s.activeNotebookId || !isConnected) return null;
       try {
         const output = await getOutput({
-          path: { notebook_id: state.activeNotebookId, output_id: outputId },
+          path: { notebook_id: s.activeNotebookId, output_id: outputId },
         });
         const normalized = normalizeOutput(output);
-        dispatch({
-          type: 'SET_OUTPUTS',
-          payload: state.outputs.map((item) =>
+        const s2 = store.getState();
+        s2.setOutputs(
+          s2.outputs.map((item) =>
             item.id === outputId ? normalized : item,
           ),
-        });
+        );
         return normalized;
       } catch (error) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'outputs', value: '获取输出详情失败。' },
-        });
+        store.getState().setError('outputs', '获取输出详情失败。');
         return null;
       }
     },
-    [dispatch, isConnected, state.activeNotebookId, state.outputs],
+    [isConnected],
   );
 
   return {
@@ -487,8 +474,8 @@ export function useOutputQueue({
     enqueueOutputJob,
     enqueueSlidesJob,
     hasPendingJobs,
-    outputsLoading: state.loading.outputs,
-    outputsError: state.errors.outputs,
+    outputsLoading: loadingOutputs,
+    outputsError: errOutputs,
     retryOutputs,
     deleteOutput,
     clearOutputs,

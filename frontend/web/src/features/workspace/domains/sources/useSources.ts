@@ -22,8 +22,8 @@ import type {
   ExtractorType,
   SourceFromUrlMode,
 } from '../../../../api/generated';
-import { useWorkspaceDispatch, useWorkspaceState } from '../../app/WorkspaceContext';
-import type { ApiSource, ApiSourceSearchResult } from '../../shared/types';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
+import type { ApiSourceSearchResult } from '../../shared/types';
 import { normalizeSource } from '../../shared/utils';
 
 /** 搜索队列项状态 */
@@ -42,9 +42,19 @@ export interface SearchQueueItem {
 }
 
 export function useSources() {
-  const state = useWorkspaceState();
-  const dispatch = useWorkspaceDispatch();
-  const isConnected = state.connectionState === 'live';
+  const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
+  const sources = useWorkspaceStore((s) => s.sources);
+  const citations = useWorkspaceStore((s) => s.citations);
+  const hoveredCitationChunkId = useWorkspaceStore((s) => s.hoveredCitationChunkId);
+  const hoveredMessageChunkIds = useWorkspaceStore((s) => s.hoveredMessageChunkIds);
+  const jumpToCitationChunkId = useWorkspaceStore((s) => s.jumpToCitationChunkId);
+  const uploadStateCurrent = useWorkspaceStore((s) => s.uploadState);
+  const connectionState = useWorkspaceStore((s) => s.connectionState);
+  const loadingSources = useWorkspaceStore((s) => s.loading.sources);
+
+  const store = useWorkspaceStore;
+  const isConnected = connectionState === 'live';
+
   const [searchState, setSearchState] = useState<AsyncStatus>('idle');
   const [removeState, setRemoveState] = useState<AsyncStatus>('idle');
   const [searchNotice, setSearchNotice] = useState('');
@@ -54,24 +64,24 @@ export function useSources() {
   const searchIdRef = useRef(0);
   const maxSearchQueueItems = 20;
   const { data, error, isLoading, mutate } = useSWR(
-    state.activeNotebookId && isConnected
-      ? ['workspace/sources', state.activeNotebookId]
+    activeNotebookId && isConnected
+      ? ['workspace/sources', activeNotebookId]
       : null,
-    () => listSources({ path: { notebook_id: state.activeNotebookId ?? 0 } }),
+    () => listSources({ path: { notebook_id: activeNotebookId ?? 0 } }),
     { revalidateOnFocus: false },
   );
 
   useEffect(() => {
-    dispatch({ type: 'SET_LOADING', payload: { key: 'sources', value: isLoading } });
-  }, [dispatch, isLoading]);
+    store.getState().setLoading('sources', isLoading);
+  }, [isLoading]);
 
   useEffect(() => {
-    if (!state.activeNotebookId) {
-      dispatch({ type: 'SET_SOURCES', payload: [] });
+    if (!activeNotebookId) {
+      store.getState().setSources([]);
       return;
     }
     if (!isConnected) {
-      dispatch({ type: 'SET_SOURCES', payload: [] });
+      store.getState().setSources([]);
       return;
     }
     if (error) {
@@ -79,14 +89,15 @@ export function useSources() {
       return;
     }
     if (data) {
-      dispatch({ type: 'SET_ERROR', payload: { key: 'sources', value: '' } });
-      dispatch({ type: 'SET_SOURCES', payload: data.map(normalizeSource) });
+      const s = store.getState();
+      s.setError('sources', '');
+      s.setSources(data.map(normalizeSource));
     }
-  }, [data, dispatch, error, isConnected, state.activeNotebookId]);
+  }, [data, error, isConnected, activeNotebookId]);
 
   useEffect(() => {
-    dispatch({ type: 'SET_HOVERED_CITATION', payload: null });
-  }, [dispatch, state.citations]);
+    store.getState().setHoveredCitation(null);
+  }, [citations]);
 
   useEffect(() => {
     setSearchState('idle');
@@ -94,71 +105,71 @@ export function useSources() {
     setSearchResults([]);
     setRemoveState('idle');
     setSearchQueue([]);
-  }, [state.activeNotebookId]);
+  }, [activeNotebookId]);
 
   useEffect(() => {
-    if (state.jumpToCitationChunkId == null) return undefined;
+    if (jumpToCitationChunkId == null) return undefined;
     const timer = window.setTimeout(() => {
-      dispatch({ type: 'SET_JUMP_TO_CITATION', payload: null });
+      store.getState().setJumpToCitation(null);
     }, 1800);
     return () => window.clearTimeout(timer);
-  }, [dispatch, state.jumpToCitationChunkId]);
+  }, [jumpToCitationChunkId]);
 
   const setHoveredCitationChunkId = useCallback(
     (chunkId: number | null) => {
-      dispatch({ type: 'SET_HOVERED_CITATION', payload: chunkId });
+      store.getState().setHoveredCitation(chunkId);
     },
-    [dispatch],
+    [],
   );
 
   const setHoveredMessageChunkIds = useCallback(
     (chunkIds: number[] | null) => {
       const normalized =
         chunkIds?.filter((chunkId) => Number.isFinite(chunkId)) ?? [];
-      dispatch({ type: 'SET_HOVERED_MESSAGE_CHUNKS', payload: normalized });
+      store.getState().setHoveredMessageChunks(normalized);
     },
-    [dispatch],
+    [],
   );
 
   const setJumpToCitationChunkId = useCallback(
     (chunkId: number | null) => {
-      dispatch({ type: 'SET_JUMP_TO_CITATION', payload: chunkId });
+      store.getState().setJumpToCitation(chunkId);
     },
-    [dispatch],
+    [],
   );
 
   const highlightedChunkIds = useMemo(() => {
     const highlighted = new Set<number>();
-    if (state.hoveredCitationChunkId != null) {
-      highlighted.add(state.hoveredCitationChunkId);
+    if (hoveredCitationChunkId != null) {
+      highlighted.add(hoveredCitationChunkId);
     }
-    if (state.jumpToCitationChunkId != null) {
-      highlighted.add(state.jumpToCitationChunkId);
+    if (jumpToCitationChunkId != null) {
+      highlighted.add(jumpToCitationChunkId);
     }
-    for (const chunkId of state.hoveredMessageChunkIds) {
+    for (const chunkId of hoveredMessageChunkIds) {
       if (Number.isFinite(chunkId)) {
         highlighted.add(chunkId);
       }
     }
     return highlighted;
   }, [
-    state.hoveredCitationChunkId,
-    state.jumpToCitationChunkId,
-    state.hoveredMessageChunkIds,
+    hoveredCitationChunkId,
+    jumpToCitationChunkId,
+    hoveredMessageChunkIds,
   ]);
 
   const handleUpload = useCallback(
     async (file: File | null) => {
-      if (!file || !state.activeNotebookId || !isConnected) {
+      if (!file || !activeNotebookId || !isConnected) {
         if (!isConnected) {
           toast.error('未连接到后端服务，无法上传来源。');
         }
         return;
       }
-      dispatch({ type: 'SET_UPLOAD_STATE', payload: 'loading' });
+      store.getState().setUploadState('loading');
       try {
         await uploadSource({
-          path: { notebook_id: state.activeNotebookId },
+          path: { notebook_id: activeNotebookId },
           body: { file },
         });
         await mutate();
@@ -166,16 +177,16 @@ export function useSources() {
       } catch (error) {
         toast.error('上传失败，请检查文件格式或后端状态。');
       } finally {
-        dispatch({ type: 'SET_UPLOAD_STATE', payload: 'idle' });
+        store.getState().setUploadState('idle');
       }
     },
-    [dispatch, isConnected, mutate, state.activeNotebookId],
+    [isConnected, mutate, activeNotebookId],
   );
 
   const retrySources = useCallback(async () => {
-    dispatch({ type: 'SET_ERROR', payload: { key: 'sources', value: '' } });
+    store.getState().setError('sources', '');
     await mutate();
-  }, [dispatch, mutate]);
+  }, [mutate]);
 
   const handleSearch = useCallback(
     async ({ query, engine, mode }: { query: string; engine: string; mode: string }) => {
@@ -184,7 +195,7 @@ export function useSources() {
         setSearchResults([]);
         return;
       }
-      if (!state.activeNotebookId) {
+      if (!activeNotebookId) {
         setSearchNotice('请先创建笔记本后搜索。');
         setSearchResults([]);
         return;
@@ -222,7 +233,7 @@ export function useSources() {
 
       try {
         const response = await searchSources({
-          path: { notebook_id: state.activeNotebookId },
+          path: { notebook_id: activeNotebookId },
           body: { query: trimmed, engine, mode },
         });
         const results = response.results ?? [];
@@ -263,7 +274,7 @@ export function useSources() {
         setSearchState('idle');
       }
     },
-    [isConnected, state.activeNotebookId],
+    [isConnected, activeNotebookId],
   );
 
   // 移除单个搜索队列项
@@ -290,7 +301,7 @@ export function useSources() {
         toast.warning('未连接到后端服务，暂不支持删除来源。');
         return false;
       }
-      if (!state.activeNotebookId) {
+      if (!activeNotebookId) {
         toast.warning('请先创建笔记本后再删除来源。');
         return false;
       }
@@ -300,7 +311,7 @@ export function useSources() {
       setRemoveState('loading');
       try {
         await deleteSources({
-          path: { notebook_id: state.activeNotebookId },
+          path: { notebook_id: activeNotebookId },
           body: { source_ids: sourceIds },
         });
         await mutate();
@@ -313,7 +324,7 @@ export function useSources() {
         setRemoveState('idle');
       }
     },
-    [isConnected, mutate, state.activeNotebookId],
+    [isConnected, mutate, activeNotebookId],
   );
 
   const removeSource = useCallback(
@@ -322,14 +333,14 @@ export function useSources() {
         toast.warning('未连接到后端服务，暂不支持删除来源。');
         return false;
       }
-      if (!state.activeNotebookId) {
+      if (!activeNotebookId) {
         toast.warning('请先创建笔记本后再删除来源。');
         return false;
       }
       setRemoveState('loading');
       try {
         await deleteSource({
-          path: { notebook_id: state.activeNotebookId, source_id: sourceId },
+          path: { notebook_id: activeNotebookId, source_id: sourceId },
         });
         await mutate();
         toast.success('来源删除成功');
@@ -341,19 +352,19 @@ export function useSources() {
         setRemoveState('idle');
       }
     },
-    [isConnected, mutate, state.activeNotebookId],
+    [isConnected, mutate, activeNotebookId],
   );
 
   const handleConvertOutputToSource = useCallback(
     async (outputId: number) => {
-      if (!state.activeNotebookId) return;
+      if (!activeNotebookId) return;
       if (!isConnected) {
         toast.warning('未连接到后端服务，暂不支持此功能。');
         return;
       }
       try {
         const result = await convertOutputToSource({
-          path: { notebook_id: state.activeNotebookId, output_id: outputId },
+          path: { notebook_id: activeNotebookId, output_id: outputId },
         });
         // Refresh sources list to show the new source
         await mutate();
@@ -363,7 +374,7 @@ export function useSources() {
         toast.error(`转换失败：${message}`);
       }
     },
-    [state.activeNotebookId, isConnected, mutate],
+    [activeNotebookId, isConnected, mutate],
   );
 
   const clearSearchResults = useCallback(() => {
@@ -380,11 +391,11 @@ export function useSources() {
       if (!isConnected) {
         throw new Error('未连接到后端服务，暂不支持此功能');
       }
-      if (!state.activeNotebookId) {
+      if (!activeNotebookId) {
         throw new Error('请先创建笔记本');
       }
       const result = await addSourceFromUrl({
-        path: { notebook_id: state.activeNotebookId },
+        path: { notebook_id: activeNotebookId },
         body: {
           url,
           mode,
@@ -396,7 +407,7 @@ export function useSources() {
       await mutate();
       return result;
     },
-    [isConnected, state.activeNotebookId, mutate],
+    [isConnected, activeNotebookId, mutate],
   );
 
   // Fetch available extractors
@@ -404,10 +415,10 @@ export function useSources() {
     data: extractorsData,
     isLoading: extractorsLoading,
   } = useSWR<ExtractorsListResponse>(
-    state.activeNotebookId && isConnected
-      ? ['workspace/extractors', state.activeNotebookId]
+    activeNotebookId && isConnected
+      ? ['workspace/extractors', activeNotebookId]
       : null,
-    () => listExtractors({ path: { notebook_id: state.activeNotebookId ?? 0 } }),
+    () => listExtractors({ path: { notebook_id: activeNotebookId ?? 0 } }),
     { revalidateOnFocus: false },
   );
 
@@ -429,17 +440,17 @@ export function useSources() {
       if (!isConnected) {
         throw new Error('未连接到后端服务，暂不支持此功能');
       }
-      if (!state.activeNotebookId) {
+      if (!activeNotebookId) {
         throw new Error('请先创建笔记本');
       }
       const result = await convertSourceQAToSource({
-        path: { notebook_id: state.activeNotebookId, source_id: sourceId },
+        path: { notebook_id: activeNotebookId, source_id: sourceId },
         body: { messages },
       });
       await mutate();
       return result;
     },
-    [isConnected, state.activeNotebookId, mutate],
+    [isConnected, activeNotebookId, mutate],
   );
 
   const handleReembedSource = useCallback(
@@ -448,13 +459,13 @@ export function useSources() {
         toast.error('未连接到后端服务，无法重新嵌入。');
         return;
       }
-      if (!state.activeNotebookId) {
+      if (!activeNotebookId) {
         toast.error('请先创建笔记本。');
         return;
       }
       try {
         await reembedSource({
-          path: { notebook_id: state.activeNotebookId, source_id: sourceId },
+          path: { notebook_id: activeNotebookId, source_id: sourceId },
         });
         toast.success('已重新嵌入来源');
         await mutate();
@@ -463,17 +474,17 @@ export function useSources() {
         toast.error(message);
       }
     },
-    [isConnected, mutate, state.activeNotebookId],
+    [isConnected, mutate, activeNotebookId],
   );
 
   return {
-    sources: state.sources,
-    citations: state.citations,
-    hoveredCitationChunkId: state.hoveredCitationChunkId,
-    hoveredMessageChunkIds: state.hoveredMessageChunkIds,
-    jumpToCitationChunkId: state.jumpToCitationChunkId,
-    uploadState: state.uploadState,
-    isLoading: state.loading.sources,
+    sources,
+    citations,
+    hoveredCitationChunkId,
+    hoveredMessageChunkIds,
+    jumpToCitationChunkId,
+    uploadState: uploadStateCurrent,
+    isLoading: loadingSources,
     highlightedChunkIds,
     setHoveredCitationChunkId,
     setHoveredMessageChunkIds,

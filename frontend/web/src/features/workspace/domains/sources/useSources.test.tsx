@@ -1,10 +1,9 @@
 import { act, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import useSWR from 'swr';
 
 import { renderHook } from '../../../../test-utils/renderHook';
-import { useWorkspaceDispatch, useWorkspaceState, WorkspaceProvider } from '../../app/WorkspaceContext';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { useSources } from './useSources';
 import { searchSourcesV1NotebooksNotebookIdSourcesSearchPost as searchSources } from '../../../../api/generated';
 
@@ -36,6 +35,37 @@ vi.mock('../../../../shared/toast', () => ({
 const swrMock = vi.mocked(useSWR);
 
 beforeEach(() => {
+  // Reset Zustand store to initial state
+  useWorkspaceStore.setState({
+    notebooks: [],
+    activeNotebookId: null,
+    sessions: [],
+    activeSessionId: null,
+    sources: [],
+    selectedSourceIds: {},
+    messages: [],
+    draft: '',
+    citations: [],
+    hoveredCitationChunkId: null,
+    hoveredMessageChunkIds: [],
+    jumpToCitationChunkId: null,
+    outputs: [],
+    outputType: 'FAQ',
+    refineMode: 'paragraph',
+    refinePrompt: '',
+    refineJobs: [],
+    refineSettings: { autoTrigger: false, asyncQueue: true },
+    hasNewOutput: false,
+    recentCompletedJobId: null,
+    activePanel: 'chat',
+    createState: 'idle',
+    createName: '',
+    connectionState: 'connecting',
+    uploadState: 'idle',
+    loading: { notebooks: false, sources: false, sessions: false, messages: false, outputs: false, send: false },
+    errors: { notebooks: '', sources: '', sessions: '', messages: '', outputs: '', send: '', create: '' },
+  });
+
   swrMock.mockReturnValue({
     data: undefined,
     error: null,
@@ -44,31 +74,20 @@ beforeEach(() => {
   });
 });
 
-function useSourcesHarness() {
-  const sources = useSources();
-  const state = useWorkspaceState();
-  const dispatch = useWorkspaceDispatch();
-  return { sources, state, dispatch };
-}
-
-const wrapper = ({ children }: { children: ReactNode }) => (
-  <WorkspaceProvider>{children}</WorkspaceProvider>
-);
-
 test('handleSearch updates queue status and notice on success', async () => {
   vi.mocked(searchSources).mockResolvedValue({
     results: [{ url: 'https://example.com', title: 'Example' }],
   } as any);
 
-  const { result } = renderHook(() => useSourcesHarness(), { wrapper });
+  const { result } = renderHook(() => useSources());
 
   act(() => {
-    result.current.dispatch({ type: 'SET_CONNECTION_STATE', payload: 'live' });
-    result.current.dispatch({ type: 'SET_ACTIVE_NOTEBOOK', payload: 1 });
+    useWorkspaceStore.getState().setConnectionState('live');
+    useWorkspaceStore.getState().setActiveNotebook(1);
   });
 
   await act(async () => {
-    await result.current.sources.handleSearch({
+    await result.current.handleSearch({
       query: 'hello',
       engine: 'bing',
       mode: 'web',
@@ -85,9 +104,9 @@ test('handleSearch updates queue status and notice on success', async () => {
   });
 
   await waitFor(() => {
-    expect(result.current.sources.searchQueue).toHaveLength(1);
-    expect(result.current.sources.searchQueue[0].status).toBe('success');
+    expect(result.current.searchQueue).toHaveLength(1);
+    expect(result.current.searchQueue[0].status).toBe('success');
   });
 
-  expect(result.current.sources.searchNotice).toBe('已找到 1 条结果。');
+  expect(result.current.searchNotice).toBe('已找到 1 条结果。');
 });
