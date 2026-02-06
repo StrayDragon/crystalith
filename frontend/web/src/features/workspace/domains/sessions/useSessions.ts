@@ -7,83 +7,85 @@ import {
   listSessionsV1NotebooksNotebookIdSessionsGet as listSessions,
   updateSessionV1NotebooksNotebookIdSessionsSessionIdPatch as updateSession,
 } from '../../../../api/generated';
-import { useWorkspaceDispatch, useWorkspaceState } from '../../app/WorkspaceContext';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { ApiSession } from '../../shared/types';
 import { normalizeSession } from '../../shared/utils';
 
 export function useSessions() {
-  const state = useWorkspaceState();
-  const dispatch = useWorkspaceDispatch();
-  const isConnected = state.connectionState === 'live';
+  const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
+  const activeSessionId = useWorkspaceStore((s) => s.activeSessionId);
+  const sessions = useWorkspaceStore((s) => s.sessions);
+  const connectionState = useWorkspaceStore((s) => s.connectionState);
+  const loadingSessions = useWorkspaceStore((s) => s.loading.sessions);
+  const errSessions = useWorkspaceStore((s) => s.errors.sessions);
+
+  const store = useWorkspaceStore;
+  const isConnected = connectionState === 'live';
 
   const { data, error, isLoading, mutate } = useSWR(
-    state.activeNotebookId && isConnected
-      ? ['workspace/sessions', state.activeNotebookId]
+    activeNotebookId && isConnected
+      ? ['workspace/sessions', activeNotebookId]
       : null,
-    () => listSessions({ path: { notebook_id: state.activeNotebookId ?? 0 } }),
+    () => listSessions({ path: { notebook_id: activeNotebookId ?? 0 } }),
     { revalidateOnFocus: false },
   );
 
   useEffect(() => {
-    dispatch({ type: 'SET_LOADING', payload: { key: 'sessions', value: isLoading } });
-  }, [dispatch, isLoading]);
+    store.getState().setLoading('sessions', isLoading);
+  }, [isLoading]);
 
   useEffect(() => {
-    if (!state.activeNotebookId) {
-      dispatch({ type: 'SET_SESSIONS', payload: [] });
+    if (!activeNotebookId) {
+      store.getState().setSessions([]);
       return;
     }
     if (!isConnected) {
-      dispatch({ type: 'SET_SESSIONS', payload: [] });
-      dispatch({ type: 'SET_ACTIVE_SESSION', payload: null });
+      const s = store.getState();
+      s.setSessions([]);
+      s.setActiveSession(null);
       return;
     }
     if (error) {
-      dispatch({
-        type: 'SET_ERROR',
-        payload: { key: 'sessions', value: '会话加载失败，请稍后重试。' },
-      });
+      store.getState().setError('sessions', '会话加载失败，请稍后重试。');
       return;
     }
     if (data) {
       const normalized = data.map(normalizeSession);
-      const activeId = state.activeSessionId;
+      const activeId = activeSessionId;
       const nextActive =
         normalized.find((item) => item.id === activeId)?.id ?? normalized[0]?.id ?? null;
-      dispatch({ type: 'SET_SESSIONS', payload: normalized });
-      dispatch({ type: 'SET_ERROR', payload: { key: 'sessions', value: '' } });
+      const s = store.getState();
+      s.setSessions(normalized);
+      s.setError('sessions', '');
       if (nextActive !== activeId) {
-        dispatch({ type: 'SET_ACTIVE_SESSION', payload: nextActive });
+        s.setActiveSession(nextActive);
       }
     }
-  }, [data, dispatch, error, isConnected, state.activeNotebookId, state.activeSessionId]);
+  }, [data, error, isConnected, activeNotebookId, activeSessionId]);
 
   const setActiveSessionId = useCallback(
     (sessionId: number | null) => {
-      if (sessionId === state.activeSessionId) return;
-      dispatch({ type: 'SET_ACTIVE_SESSION', payload: sessionId });
+      if (sessionId === activeSessionId) return;
+      store.getState().setActiveSession(sessionId);
     },
-    [dispatch, state.activeSessionId],
+    [activeSessionId],
   );
 
   const handleCreateSession = useCallback(
     async (title?: string | null) => {
-      if (!state.activeNotebookId) return null;
+      if (!activeNotebookId) return null;
       if (!isConnected) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'sessions', value: '未连接到后端服务，无法创建会话。' },
-        });
+        store.getState().setError('sessions', '未连接到后端服务，无法创建会话。');
         return null;
       }
-      dispatch({ type: 'SET_ERROR', payload: { key: 'sessions', value: '' } });
+      store.getState().setError('sessions', '');
       try {
         const created = await createSession({
-          path: { notebook_id: state.activeNotebookId },
+          path: { notebook_id: activeNotebookId },
           body: { title: title ?? null },
         });
         const normalized = normalizeSession(created);
-        dispatch({ type: 'SET_ACTIVE_SESSION', payload: normalized.id });
+        store.getState().setActiveSession(normalized.id);
         await mutate(
           async (current: ApiSession[] | undefined) =>
             current ? [created, ...current] : [created],
@@ -91,28 +93,25 @@ export function useSessions() {
         );
         return normalized.id;
       } catch (error) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'sessions', value: '创建会话失败，请检查后端状态。' },
-        });
+        store.getState().setError('sessions', '创建会话失败，请检查后端状态。');
         return null;
       }
     },
-    [dispatch, isConnected, mutate, state.activeNotebookId],
+    [isConnected, mutate, activeNotebookId],
   );
 
   const ensureSession = useCallback(
     async (title?: string | null) => {
-      if (state.activeSessionId) return state.activeSessionId;
+      if (activeSessionId) return activeSessionId;
       return handleCreateSession(title ?? null);
     },
-    [handleCreateSession, state.activeSessionId],
+    [handleCreateSession, activeSessionId],
   );
 
   const retrySessions = useCallback(async () => {
-    dispatch({ type: 'SET_ERROR', payload: { key: 'sessions', value: '' } });
+    store.getState().setError('sessions', '');
     await mutate();
-  }, [dispatch, mutate]);
+  }, [mutate]);
 
   const refreshSessions = useCallback(async () => {
     await mutate();
@@ -120,27 +119,23 @@ export function useSessions() {
 
   const handleUpdateSession = useCallback(
     async (sessionId: number, title: string) => {
-      if (!state.activeNotebookId) return false;
+      if (!activeNotebookId) return false;
       if (!isConnected) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'sessions', value: '未连接到后端服务，无法更新会话。' },
-        });
+        store.getState().setError('sessions', '未连接到后端服务，无法更新会话。');
         return false;
       }
-      dispatch({ type: 'SET_ERROR', payload: { key: 'sessions', value: '' } });
+      store.getState().setError('sessions', '');
       try {
         const updated = await updateSession({
-          path: { notebook_id: state.activeNotebookId, session_id: sessionId },
+          path: { notebook_id: activeNotebookId, session_id: sessionId },
           body: { title: title.trim() || undefined },
         });
         const normalized = normalizeSession(updated);
-        dispatch({
-          type: 'SET_SESSIONS',
-          payload: state.sessions.map((item) =>
+        store.getState().setSessions(
+          store.getState().sessions.map((item) =>
             item.id === sessionId ? normalized : item,
           ),
-        });
+        );
         await mutate(
           async (current: ApiSession[] | undefined) =>
             current?.map((item) => (item.id === sessionId ? updated : item)) ?? [],
@@ -148,35 +143,30 @@ export function useSessions() {
         );
         return true;
       } catch (error) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'sessions', value: '更新会话失败，请稍后重试。' },
-        });
+        store.getState().setError('sessions', '更新会话失败，请稍后重试。');
         return false;
       }
     },
-    [dispatch, isConnected, mutate, state.activeNotebookId, state.sessions],
+    [isConnected, mutate, activeNotebookId],
   );
 
   const handleDeleteSession = useCallback(
     async (sessionId: number) => {
-      if (!state.activeNotebookId) return false;
+      if (!activeNotebookId) return false;
       if (!isConnected) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'sessions', value: '未连接到后端服务，无法删除会话。' },
-        });
+        store.getState().setError('sessions', '未连接到后端服务，无法删除会话。');
         return false;
       }
-      dispatch({ type: 'SET_ERROR', payload: { key: 'sessions', value: '' } });
+      store.getState().setError('sessions', '');
       try {
         await deleteSession({
-          path: { notebook_id: state.activeNotebookId, session_id: sessionId },
+          path: { notebook_id: activeNotebookId, session_id: sessionId },
         });
-        const remaining = state.sessions.filter((item) => item.id !== sessionId);
-        dispatch({ type: 'SET_SESSIONS', payload: remaining });
-        if (state.activeSessionId === sessionId) {
-          dispatch({ type: 'SET_ACTIVE_SESSION', payload: remaining[0]?.id ?? null });
+        const s = store.getState();
+        const remaining = s.sessions.filter((item) => item.id !== sessionId);
+        s.setSessions(remaining);
+        if (s.activeSessionId === sessionId) {
+          s.setActiveSession(remaining[0]?.id ?? null);
         }
         await mutate(
           async (current: ApiSession[] | undefined) =>
@@ -185,26 +175,23 @@ export function useSessions() {
         );
         return true;
       } catch (error) {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: { key: 'sessions', value: '删除会话失败，请稍后重试。' },
-        });
+        store.getState().setError('sessions', '删除会话失败，请稍后重试。');
         return false;
       }
     },
-    [dispatch, isConnected, mutate, state.activeNotebookId, state.activeSessionId, state.sessions],
+    [isConnected, mutate, activeNotebookId],
   );
 
   return {
-    sessions: state.sessions,
-    activeSessionId: state.activeSessionId,
+    sessions,
+    activeSessionId,
     setActiveSessionId,
     createSession: handleCreateSession,
     updateSession: handleUpdateSession,
     deleteSession: handleDeleteSession,
     ensureSession,
-    isLoading: state.loading.sessions,
-    error: state.errors.sessions,
+    isLoading: loadingSessions,
+    error: errSessions,
     retrySessions,
     refreshSessions,
     isConnected,

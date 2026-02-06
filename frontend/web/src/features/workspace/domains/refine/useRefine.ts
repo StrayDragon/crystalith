@@ -5,7 +5,7 @@ import {
   listWorkspaceToolsV1WorkspaceToolsGet as listWorkspaceTools,
   refineBatchV1NotebooksNotebookIdRefineBatchPost as refineBatch,
 } from '../../../../api/generated';
-import { useWorkspaceDispatch, useWorkspaceState } from '../../app/WorkspaceContext';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type {
   ApiWorkspaceTool,
   OutputItem,
@@ -39,9 +39,22 @@ function normalizeTool(tool: ApiWorkspaceTool): WorkspaceTool {
 }
 
 export function useRefine() {
-  const state = useWorkspaceState();
-  const dispatch = useWorkspaceDispatch();
-  const isConnected = state.connectionState === 'live';
+  const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
+  const activePanel = useWorkspaceStore((s) => s.activePanel);
+  const connectionState = useWorkspaceStore((s) => s.connectionState);
+  const refineModeCurrent = useWorkspaceStore((s) => s.refineMode);
+  const refinePromptCurrent = useWorkspaceStore((s) => s.refinePrompt);
+  const refineJobsCurrent = useWorkspaceStore((s) => s.refineJobs);
+  const refineSettingsCurrent = useWorkspaceStore((s) => s.refineSettings);
+  const hasNewOutputCurrent = useWorkspaceStore((s) => s.hasNewOutput);
+  const recentCompletedJobIdCurrent = useWorkspaceStore((s) => s.recentCompletedJobId);
+  const selectedSourceIdsCurrent = useWorkspaceStore((s) => s.selectedSourceIds);
+  const outputsCurrent = useWorkspaceStore((s) => s.outputs);
+  const outputTypeCurrent = useWorkspaceStore((s) => s.outputType);
+
+  const store = useWorkspaceStore;
+  const isConnected = connectionState === 'live';
+
   const refineFormats = useMemo(() => REFINE_FORMATS, []);
   const refineTemplates = useMemo(() => REFINE_TEMPLATES, []);
   const compareTemplate = useMemo(
@@ -80,44 +93,44 @@ export function useRefine() {
     return options;
   }, [tools]);
 
-  const activePanelRef = useRef(state.activePanel);
-  const activeNotebookIdRef = useRef(state.activeNotebookId);
-  const refineQueueRef = useRef<RefineJob[]>(state.refineJobs);
+  const activePanelRef = useRef(activePanel);
+  const activeNotebookIdRef = useRef(activeNotebookId);
+  const refineQueueRef = useRef<RefineJob[]>(refineJobsCurrent);
   const refineRunningRef = useRef(false);
   const runNextRefineJobRef = useRef<() => void>(() => {});
   const [queueSummary, setQueueSummary] = useState({ total: 0, done: 0 });
 
   useEffect(() => {
-    activePanelRef.current = state.activePanel;
-    if (state.activePanel === 'refine') {
-      dispatch({ type: 'SET_HAS_NEW_OUTPUT', payload: false });
+    activePanelRef.current = activePanel;
+    if (activePanel === 'refine') {
+      store.getState().setHasNewOutput(false);
     }
-  }, [dispatch, state.activePanel]);
+  }, [activePanel]);
 
   useEffect(() => {
-    activeNotebookIdRef.current = state.activeNotebookId;
-  }, [state.activeNotebookId]);
+    activeNotebookIdRef.current = activeNotebookId;
+  }, [activeNotebookId]);
 
   useEffect(() => {
-    refineQueueRef.current = state.refineJobs;
+    refineQueueRef.current = refineJobsCurrent;
     if (refineRunningRef.current) return;
-    if (!state.refineJobs.some((job) => job.status === 'queued')) return;
+    if (!refineJobsCurrent.some((job) => job.status === 'queued')) return;
     runNextRefineJobRef.current();
-  }, [state.refineJobs]);
+  }, [refineJobsCurrent]);
 
   useEffect(() => {
-    if (state.refinePrompt.trim().length > 0) return;
+    if (refinePromptCurrent.trim().length > 0) return;
     if (!refineTemplates[0]) return;
-    dispatch({ type: 'SET_REFINE_PROMPT', payload: refineTemplates[0].prompt });
-  }, [dispatch, refineTemplates, state.refinePrompt]);
+    store.getState().setRefinePrompt(refineTemplates[0].prompt);
+  }, [refineTemplates, refinePromptCurrent]);
 
   const selectedSourceIds = useMemo(
     () =>
-      Object.entries(state.selectedSourceIds)
+      Object.entries(selectedSourceIdsCurrent)
         .filter(([, selected]) => selected)
         .map(([id]) => Number(id))
         .filter((value) => Number.isFinite(value) && value > 0),
-    [state.selectedSourceIds],
+    [selectedSourceIdsCurrent],
   );
 
   const resolveSelectedSourceIds = useCallback(async () => selectedSourceIds, [selectedSourceIds]);
@@ -127,9 +140,9 @@ export function useRefine() {
     (updater: (jobs: RefineJob[]) => RefineJob[]) => {
       const next = updater(refineQueueRef.current);
       refineQueueRef.current = next;
-      dispatch({ type: 'SET_REFINE_JOBS', payload: next });
+      store.getState().setRefineJobs(next);
     },
-    [dispatch],
+    [],
   );
 
   const resetQueueSummary = useCallback(() => {
@@ -147,14 +160,14 @@ export function useRefine() {
   const markJobCompleted = useCallback(
     (jobId: string) => {
       if (activePanelRef.current !== 'refine') {
-        dispatch({ type: 'SET_HAS_NEW_OUTPUT', payload: true });
+        store.getState().setHasNewOutput(true);
       }
-      dispatch({ type: 'SET_RECENT_COMPLETED_JOB', payload: jobId });
+      store.getState().setRecentCompletedJob(jobId);
       window.setTimeout(() => {
-        dispatch({ type: 'SET_RECENT_COMPLETED_JOB', payload: null });
+        store.getState().setRecentCompletedJob(null);
       }, 2000);
     },
-    [dispatch],
+    [],
   );
 
   const hasPendingRefineJobs = useCallback(
@@ -177,8 +190,6 @@ export function useRefine() {
     clearOutputs,
     fetchOutput,
   } = useOutputQueue({
-    state,
-    dispatch,
     isConnected,
     hasPendingRefineJobs,
     onQueueReset: resetQueueSummary,
@@ -249,10 +260,7 @@ export function useRefine() {
           markJobCompleted(jobId);
         }
         if (resolvedCitations && isCurrentNotebook && stillTracked) {
-          dispatch({
-            type: 'SET_CITATIONS',
-            payload: resolvedCitations,
-          });
+          store.getState().setCitations(resolvedCitations);
         }
       } catch (error) {
         const completedAt = new Date().toISOString();
@@ -303,7 +311,7 @@ export function useRefine() {
         }
         if (isCurrentNotebook && stillTracked) {
           markJobCompleted(jobId);
-          dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: userFacingError } });
+          store.getState().setError('send', userFacingError);
         }
       } finally {
         refineRunningRef.current = false;
@@ -311,7 +319,6 @@ export function useRefine() {
       }
     },
     [
-      dispatch,
       isConnected,
       incrementQueueDone,
       markJobCompleted,
@@ -368,7 +375,7 @@ export function useRefine() {
         completedAtLabel: '',
         pinned: false,
         title: buildJobTitle(jobLabel, createdAt),
-        notebookId: state.activeNotebookId,
+        notebookId: activeNotebookId,
       };
       updateRefineJobs((prev) => [job, ...prev]);
       return job;
@@ -378,7 +385,7 @@ export function useRefine() {
       incrementQueueTotal,
       refineTemplates,
       resetQueueSummary,
-      state.activeNotebookId,
+      activeNotebookId,
       updateRefineJobs,
     ],
   );
@@ -394,15 +401,16 @@ export function useRefine() {
   );
 
   const handleRefineGenerate = useCallback(async () => {
+    const s = store.getState();
     if (!isConnected) {
-      dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '未连接到后端服务。' } });
+      s.setError('send', '未连接到后端服务。');
       return;
     }
-    if (!state.activeNotebookId) {
-      dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '请先创建笔记本。' } });
+    if (!s.activeNotebookId) {
+      s.setError('send', '请先创建笔记本。');
       return;
     }
-    const trimmed = state.refinePrompt.trim();
+    const trimmed = s.refinePrompt.trim();
     if (!trimmed) return;
     const resolvedSourceIds = await resolveSelectedSourceIds();
     enqueueRefineJob({
@@ -410,67 +418,64 @@ export function useRefine() {
       sourceIds: resolvedSourceIds.length ? [...resolvedSourceIds] : [],
       label: resolveTemplateLabel(trimmed, refineTemplates),
     });
-    dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
+    s.setActivePanel('refine');
   }, [
-    dispatch,
     enqueueRefineJob,
     isConnected,
     refineTemplates,
     resolveSelectedSourceIds,
-    state.activeNotebookId,
-    state.refinePrompt,
   ]);
 
   const handleCompareSelectedCitations = useCallback(async () => {
+    const s = store.getState();
     if (!isConnected) {
-      dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '未连接到后端服务。' } });
+      s.setError('send', '未连接到后端服务。');
       return;
     }
-    if (!state.activeNotebookId) {
-      dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '请先创建笔记本。' } });
+    if (!s.activeNotebookId) {
+      s.setError('send', '请先创建笔记本。');
       return;
     }
     const resolvedSourceIds = await resolveSelectedSourceIds();
     const promptText =
       compareTemplate?.prompt ??
       '基于选中来源生成对比分析，输出相同点 / 差异点 / 结论。';
-    dispatch({ type: 'SET_REFINE_PROMPT', payload: promptText });
+    s.setRefinePrompt(promptText);
     enqueueRefineJob({
       prompt: promptText,
       sourceIds: [...resolvedSourceIds],
       label: compareTemplate?.label ?? '对比分析',
     });
-    dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
+    s.setActivePanel('refine');
   }, [
     compareTemplate?.label,
     compareTemplate?.prompt,
-    dispatch,
     enqueueRefineJob,
     isConnected,
     resolveSelectedSourceIds,
-    state.activeNotebookId,
   ]);
 
   const handleReplayRefineJob = useCallback(
     (job: RefineJob) => {
+      const s = store.getState();
       if (!isConnected) {
-        dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '未连接到后端服务。' } });
+        s.setError('send', '未连接到后端服务。');
         return;
       }
-      if (!state.activeNotebookId) {
-        dispatch({ type: 'SET_ERROR', payload: { key: 'send', value: '请先创建笔记本。' } });
+      if (!s.activeNotebookId) {
+        s.setError('send', '请先创建笔记本。');
         return;
       }
       if (!job.prompt.trim()) return;
-      dispatch({ type: 'SET_REFINE_PROMPT', payload: job.prompt });
+      s.setRefinePrompt(job.prompt);
       enqueueRefineJob({
         prompt: job.prompt,
         sourceIds: job.sourceIds ?? [],
         label: resolveTemplateLabel(job.prompt, refineTemplates),
       });
-      dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
+      s.setActivePanel('refine');
     },
-    [dispatch, enqueueRefineJob, isConnected, refineTemplates, state.activeNotebookId],
+    [enqueueRefineJob, isConnected, refineTemplates],
   );
 
   const handleToggleRefinePin = useCallback(
@@ -492,67 +497,67 @@ export function useRefine() {
   const handleClearRefineJobs = useCallback(() => {
     refineRunningRef.current = false;
     updateRefineJobs(() => []);
-    dispatch({ type: 'SET_HAS_NEW_OUTPUT', payload: false });
-    dispatch({ type: 'SET_RECENT_COMPLETED_JOB', payload: null });
-  }, [dispatch, updateRefineJobs]);
+    const s = store.getState();
+    s.setHasNewOutput(false);
+    s.setRecentCompletedJob(null);
+  }, [updateRefineJobs]);
 
   const handleToggleRefineSetting = useCallback(
-    (key: keyof typeof state.refineSettings) => {
-      dispatch({
-        type: 'SET_REFINE_SETTINGS',
-        payload: { ...state.refineSettings, [key]: !state.refineSettings[key] },
-      });
+    (key: keyof typeof refineSettingsCurrent) => {
+      const s = store.getState();
+      s.setRefineSettings({ ...s.refineSettings, [key]: !s.refineSettings[key] });
     },
-    [dispatch, state.refineSettings],
+    [],
   );
 
   const setOutputType = useCallback(
     (value: OutputTypeId) => {
-      dispatch({ type: 'SET_OUTPUT_TYPE', payload: value });
+      store.getState().setOutputType(value);
     },
-    [dispatch],
+    [],
   );
 
   const setRefineMode = useCallback(
     (mode: RefineMode) => {
-      dispatch({ type: 'SET_REFINE_MODE', payload: mode });
+      store.getState().setRefineMode(mode);
     },
-    [dispatch],
+    [],
   );
 
   const setRefinePrompt = useCallback(
     (value: string) => {
-      dispatch({ type: 'SET_REFINE_PROMPT', payload: value });
+      store.getState().setRefinePrompt(value);
     },
-    [dispatch],
+    [],
   );
 
   const handleGenerateOutput = useCallback(async (overrideType?: OutputTypeId, modelId?: string | null) => {
+    const s = store.getState();
     if (!isConnected) {
-      dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '未连接到后端服务。' } });
+      s.setError('outputs', '未连接到后端服务。');
       return;
     }
-    if (!state.activeNotebookId) {
-      dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先创建笔记本。' } });
+    if (!s.activeNotebookId) {
+      s.setError('outputs', '请先创建笔记本。');
       return;
     }
-    const selectedType = overrideType ?? state.outputType;
+    const selectedType = overrideType ?? s.outputType;
     if (selectedType === 'SLIDES') {
-      dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请使用演示工具进行生成。' } });
+      s.setError('outputs', '请使用演示工具进行生成。');
       return;
     }
     const selectedOption = outputTypeOptions.find((item) => item.id === selectedType);
-    const promptSource = overrideType ? selectedOption?.prompt : state.refinePrompt || selectedOption?.prompt;
+    const promptSource = overrideType ? selectedOption?.prompt : s.refinePrompt || selectedOption?.prompt;
     const prompt = resolveOutputPrompt(selectedType, promptSource);
     if (!overrideType && prompt) {
-      dispatch({ type: 'SET_REFINE_PROMPT', payload: prompt });
+      s.setRefinePrompt(prompt);
     }
     if (overrideType) {
-      dispatch({ type: 'SET_OUTPUT_TYPE', payload: selectedType });
+      s.setOutputType(selectedType);
     }
     const resolvedSourceIds = await resolveSelectedSourceIds();
     if (resolvedSourceIds.length === 0) {
-      dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先选择来源。' } });
+      s.setError('outputs', '请先选择来源。');
       return;
     }
     enqueueOutputJob({
@@ -561,41 +566,37 @@ export function useRefine() {
       sourceIds: resolvedSourceIds.length ? resolvedSourceIds : [],
       modelId: modelId ?? undefined,
     });
-    if (state.activePanel !== 'refine') {
-      dispatch({ type: 'SET_HAS_NEW_OUTPUT', payload: true });
+    if (s.activePanel !== 'refine') {
+      s.setHasNewOutput(true);
     }
-    dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
+    s.setActivePanel('refine');
   }, [
-    dispatch,
     enqueueOutputJob,
     isConnected,
     outputTypeOptions,
     resolveOutputPrompt,
     resolveSelectedSourceIds,
-    state.activeNotebookId,
-    state.activePanel,
-    state.outputType,
-    state.refinePrompt,
   ]);
 
   const handleReplayOutput = useCallback(
     (output: OutputItem) => {
+      const s = store.getState();
       if (!isConnected) {
-        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '未连接到后端服务。' } });
+        s.setError('outputs', '未连接到后端服务。');
         return;
       }
-      if (!state.activeNotebookId) {
-        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先创建笔记本。' } });
+      if (!s.activeNotebookId) {
+        s.setError('outputs', '请先创建笔记本。');
         return;
       }
       if (output.type === 'SLIDES') {
-        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请使用演示工具进行生成。' } });
+        s.setError('outputs', '请使用演示工具进行生成。');
         return;
       }
       const prompt = resolveOutputPrompt(output.type, output.prompt);
-      dispatch({ type: 'SET_OUTPUT_TYPE', payload: output.type });
+      s.setOutputType(output.type);
       if (prompt) {
-        dispatch({ type: 'SET_REFINE_PROMPT', payload: prompt });
+        s.setRefinePrompt(prompt);
       }
       const outputSourceIds = Array.from(
         new Set(
@@ -605,7 +606,7 @@ export function useRefine() {
         ),
       );
       if (outputSourceIds.length === 0) {
-        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先选择来源。' } });
+        s.setError('outputs', '请先选择来源。');
         return;
       }
       enqueueOutputJob({
@@ -613,19 +614,20 @@ export function useRefine() {
         prompt,
         sourceIds: outputSourceIds,
       });
-      dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
+      s.setActivePanel('refine');
     },
-    [dispatch, enqueueOutputJob, isConnected, resolveOutputPrompt, state.activeNotebookId],
+    [enqueueOutputJob, isConnected, resolveOutputPrompt],
   );
 
   const saveContentAsNote = useCallback(
     (content: string) => {
+      const s = store.getState();
       if (!isConnected) {
-        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '未连接到后端服务。' } });
+        s.setError('outputs', '未连接到后端服务。');
         return;
       }
-      if (!state.activeNotebookId) {
-        dispatch({ type: 'SET_ERROR', payload: { key: 'outputs', value: '请先创建笔记本。' } });
+      if (!s.activeNotebookId) {
+        s.setError('outputs', '请先创建笔记本。');
         return;
       }
       enqueueOutputJob({
@@ -633,12 +635,12 @@ export function useRefine() {
         prompt: content,
         sourceIds: [],
       });
-      if (state.activePanel !== 'refine') {
-        dispatch({ type: 'SET_HAS_NEW_OUTPUT', payload: true });
+      if (s.activePanel !== 'refine') {
+        s.setHasNewOutput(true);
       }
-      dispatch({ type: 'SET_ACTIVE_PANEL', payload: 'refine' });
+      s.setActivePanel('refine');
     },
-    [dispatch, enqueueOutputJob, isConnected, state.activeNotebookId, state.activePanel],
+    [enqueueOutputJob, isConnected],
   );
 
   return {
@@ -649,14 +651,14 @@ export function useRefine() {
     toolsLoading,
     toolsError: !isConnected ? '未连接到后端服务。' : toolsError ? '工具加载失败' : '',
     selectedSourceIds,
-    refineMode: state.refineMode,
+    refineMode: refineModeCurrent,
     setRefineMode,
-    refinePrompt: state.refinePrompt,
+    refinePrompt: refinePromptCurrent,
     setRefinePrompt,
-    refineJobs: state.refineJobs,
-    refineSettings: state.refineSettings,
-    hasNewOutput: state.hasNewOutput,
-    recentCompletedJobId: state.recentCompletedJobId,
+    refineJobs: refineJobsCurrent,
+    refineSettings: refineSettingsCurrent,
+    hasNewOutput: hasNewOutputCurrent,
+    recentCompletedJobId: recentCompletedJobIdCurrent,
     onGenerateRefine: handleRefineGenerate,
     onCompareSelected: handleCompareSelectedCitations,
     onReplayRefineJob: handleReplayRefineJob,
@@ -665,9 +667,9 @@ export function useRefine() {
     onClearJobs: handleClearRefineJobs,
     onToggleSetting: handleToggleRefineSetting,
     outputTypeOptions,
-    outputType: state.outputType,
+    outputType: outputTypeCurrent,
     setOutputType,
-    outputs: state.outputs,
+    outputs: outputsCurrent,
     outputQueueJobs,
     queueSummary,
     outputsLoading,
