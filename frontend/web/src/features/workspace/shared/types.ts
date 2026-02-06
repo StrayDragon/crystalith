@@ -31,6 +31,9 @@ export interface SourceItem {
   status: string;
   statusTone: string;
   chunks: number;
+  tags: string[];
+  createdAt: string;
+  createdAtRaw?: string;
 }
 
 export interface Citation {
@@ -257,6 +260,7 @@ export interface ApiSource {
   mime_type?: string | null;
   status?: string | null;
   chunk_count?: number | null;
+  tags?: string[] | null;
   created_at?: string | null;
   updated_at?: string | null;
 }

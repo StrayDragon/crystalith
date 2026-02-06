@@ -1593,6 +1593,38 @@ export type SourceBatchDeleteResponse = {
 };
 
 /**
+ * SourceBatchReembedRequest
+ */
+export type SourceBatchReembedRequest = {
+    /**
+     * Source Ids
+     */
+    source_ids: Array<number>;
+};
+
+/**
+ * SourceBatchReembedResponse
+ */
+export type SourceBatchReembedResponse = {
+    /**
+     * Reembedded Ids
+     */
+    reembedded_ids: Array<number>;
+    /**
+     * Failed Ids
+     */
+    failed_ids: Array<number>;
+    /**
+     * Reembedded Count
+     */
+    reembedded_count: number;
+    /**
+     * Failed Count
+     */
+    failed_count: number;
+};
+
+/**
  * SourceFromUrlMode
  *
  * 枚举值:
@@ -1715,6 +1747,10 @@ export type SourceRead = {
      * Chunk Count
      */
     chunk_count?: number;
+    /**
+     * Tags
+     */
+    tags?: Array<string>;
     /**
      * Created At
      */
@@ -1855,6 +1891,80 @@ export type SourceSummaryResponse = {
      * Generated At
      */
     generated_at: string;
+};
+
+/**
+ * SourceTagCreateRequest
+ */
+export type SourceTagCreateRequest = {
+    /**
+     * Name
+     */
+    name: string;
+};
+
+/**
+ * SourceTagRead
+ */
+export type SourceTagRead = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Notebook Id
+     */
+    notebook_id: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+};
+
+/**
+ * SourceTagSourceBindingRequest
+ */
+export type SourceTagSourceBindingRequest = {
+    /**
+     * Source Ids
+     */
+    source_ids: Array<number>;
+};
+
+/**
+ * SourceTagSourceBindingResponse
+ */
+export type SourceTagSourceBindingResponse = {
+    /**
+     * Tag Id
+     */
+    tag_id: number;
+    /**
+     * Source Ids
+     */
+    source_ids: Array<number>;
+    /**
+     * Count
+     */
+    count: number;
+};
+
+/**
+ * SourceTagUpdateRequest
+ */
+export type SourceTagUpdateRequest = {
+    /**
+     * Name
+     */
+    name: string;
 };
 
 /**
@@ -2733,36 +2843,6 @@ export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses = {
 
 export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponse = ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses[keyof ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses];
 
-export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteData = {
-    body: SourceBatchDeleteRequest;
-    path: {
-        /**
-         * Notebook Id
-         */
-        notebook_id: number;
-    };
-    query?: never;
-    url: '/v1/notebooks/{notebook_id}/sources';
-};
-
-export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteError = BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteErrors[keyof BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteErrors];
-
-export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteResponses = {
-    /**
-     * Successful Response
-     */
-    200: SourceBatchDeleteResponse;
-};
-
-export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteResponse = BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteResponses[keyof BatchDeleteSourcesV1NotebooksNotebookIdSourcesDeleteResponses];
-
 export type ListSourcesV1NotebooksNotebookIdSourcesGetData = {
     body?: never;
     path: {
@@ -2771,7 +2851,20 @@ export type ListSourcesV1NotebooksNotebookIdSourcesGetData = {
          */
         notebook_id: number;
     };
-    query?: never;
+    query?: {
+        /**
+         * Tag
+         */
+        tag?: string | null;
+        /**
+         * Sort By
+         */
+        sort_by?: 'date' | 'name' | 'size' | 'type';
+        /**
+         * Sort Order
+         */
+        sort_order?: 'asc' | 'desc';
+    };
     url: '/v1/notebooks/{notebook_id}/sources';
 };
 
@@ -2825,6 +2918,36 @@ export type UploadSourceV1NotebooksNotebookIdSourcesPostResponses = {
 
 export type UploadSourceV1NotebooksNotebookIdSourcesPostResponse = UploadSourceV1NotebooksNotebookIdSourcesPostResponses[keyof UploadSourceV1NotebooksNotebookIdSourcesPostResponses];
 
+export type BatchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPostData = {
+    body: SourceBatchReembedRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/batch/re-embed';
+};
+
+export type BatchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type BatchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPostError = BatchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPostErrors[keyof BatchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPostErrors];
+
+export type BatchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: SourceBatchReembedResponse;
+};
+
+export type BatchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPostResponse = BatchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPostResponses[keyof BatchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPostResponses];
+
 export type ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostData = {
     body?: never;
     path: {
@@ -2858,6 +2981,204 @@ export type ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostResponse
 };
 
 export type ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostResponse = ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostResponses[keyof ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostResponses];
+
+export type ListSourceTagsV1NotebooksNotebookIdSourcesTagsGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/tags';
+};
+
+export type ListSourceTagsV1NotebooksNotebookIdSourcesTagsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListSourceTagsV1NotebooksNotebookIdSourcesTagsGetError = ListSourceTagsV1NotebooksNotebookIdSourcesTagsGetErrors[keyof ListSourceTagsV1NotebooksNotebookIdSourcesTagsGetErrors];
+
+export type ListSourceTagsV1NotebooksNotebookIdSourcesTagsGetResponses = {
+    /**
+     * Response List Source Tags V1 Notebooks  Notebook Id  Sources Tags Get
+     *
+     * Successful Response
+     */
+    200: Array<SourceTagRead>;
+};
+
+export type ListSourceTagsV1NotebooksNotebookIdSourcesTagsGetResponse = ListSourceTagsV1NotebooksNotebookIdSourcesTagsGetResponses[keyof ListSourceTagsV1NotebooksNotebookIdSourcesTagsGetResponses];
+
+export type CreateSourceTagV1NotebooksNotebookIdSourcesTagsPostData = {
+    body: SourceTagCreateRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/tags';
+};
+
+export type CreateSourceTagV1NotebooksNotebookIdSourcesTagsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateSourceTagV1NotebooksNotebookIdSourcesTagsPostError = CreateSourceTagV1NotebooksNotebookIdSourcesTagsPostErrors[keyof CreateSourceTagV1NotebooksNotebookIdSourcesTagsPostErrors];
+
+export type CreateSourceTagV1NotebooksNotebookIdSourcesTagsPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: SourceTagRead;
+};
+
+export type CreateSourceTagV1NotebooksNotebookIdSourcesTagsPostResponse = CreateSourceTagV1NotebooksNotebookIdSourcesTagsPostResponses[keyof CreateSourceTagV1NotebooksNotebookIdSourcesTagsPostResponses];
+
+export type DeleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Tag Id
+         */
+        tag_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/tags/{tag_id}';
+};
+
+export type DeleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDeleteError = DeleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDeleteErrors[keyof DeleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDeleteErrors];
+
+export type DeleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDeleteResponse = DeleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDeleteResponses[keyof DeleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDeleteResponses];
+
+export type UpdateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatchData = {
+    body: SourceTagUpdateRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Tag Id
+         */
+        tag_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/tags/{tag_id}';
+};
+
+export type UpdateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatchError = UpdateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatchErrors[keyof UpdateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatchErrors];
+
+export type UpdateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatchResponses = {
+    /**
+     * Successful Response
+     */
+    200: SourceTagRead;
+};
+
+export type UpdateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatchResponse = UpdateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatchResponses[keyof UpdateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatchResponses];
+
+export type RemoveTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDeleteData = {
+    body: SourceTagSourceBindingRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Tag Id
+         */
+        tag_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/tags/{tag_id}/sources';
+};
+
+export type RemoveTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RemoveTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDeleteError = RemoveTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDeleteErrors[keyof RemoveTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDeleteErrors];
+
+export type RemoveTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: SourceTagSourceBindingResponse;
+};
+
+export type RemoveTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDeleteResponse = RemoveTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDeleteResponses[keyof RemoveTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDeleteResponses];
+
+export type AssignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPostData = {
+    body: SourceTagSourceBindingRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Tag Id
+         */
+        tag_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/tags/{tag_id}/sources';
+};
+
+export type AssignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AssignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPostError = AssignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPostErrors[keyof AssignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPostErrors];
+
+export type AssignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: SourceTagSourceBindingResponse;
+};
+
+export type AssignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPostResponse = AssignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPostResponses[keyof AssignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPostResponses];
 
 export type SearchSourcesV1NotebooksNotebookIdSourcesSearchPostData = {
     body: SourceSearchRequest;
@@ -2918,6 +3239,36 @@ export type CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponses 
 };
 
 export type CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponse = CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponses[keyof CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponses];
+
+export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteData = {
+    body: SourceBatchDeleteRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/batch';
+};
+
+export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteError = BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteErrors[keyof BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteErrors];
+
+export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: SourceBatchDeleteResponse;
+};
+
+export type BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteResponse = BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteResponses[keyof BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteResponses];
 
 export type DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteData = {
     body?: never;

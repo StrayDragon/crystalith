@@ -51,6 +51,12 @@ class Notebook(AsyncSqlATableBase):
         passive_deletes=True,
         lazy="selectin",
     )
+    source_tags: Mapped[list["SourceTag"]] = relationship(
+        back_populates="notebook",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        lazy="selectin",
+    )
     sessions: Mapped[list["Session"]] = relationship(
         back_populates="notebook",
         cascade="all, delete-orphan",
@@ -196,6 +202,18 @@ class Source(AsyncSqlATableBase):
         order_by="Chunk.chunk_index",
         lazy="selectin",
     )
+    tag_links: Mapped[list["SourceTagMap"]] = relationship(
+        back_populates="source",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        lazy="selectin",
+    )
+    tags: Mapped[list["SourceTag"]] = relationship(
+        secondary="source_tag_map",
+        back_populates="sources",
+        lazy="selectin",
+        viewonly=True,
+    )
 
     __table_args__ = (sa.Index("ix_sources_notebook_id_status", "notebook_id", "status"),)
 
@@ -242,6 +260,85 @@ class Chunk(AsyncSqlATableBase):
         sa.UniqueConstraint("source_id", "chunk_index", name="uq_chunks_source_id_chunk_index"),
         sa.Index("ix_chunks_source_id_chunk_index", "source_id", "chunk_index"),
     )
+
+
+class SourceTag(AsyncSqlATableBase):
+    __tablename__ = "source_tags"
+
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True, autoincrement=True)
+    notebook_id: Mapped[int] = mapped_column(
+        sa.Integer,
+        sa.ForeignKey("notebooks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+        onupdate=sa.sql.func.now(),
+    )
+
+    notebook: Mapped["Notebook"] = relationship(
+        back_populates="source_tags",
+        lazy="selectin",
+    )
+    source_links: Mapped[list["SourceTagMap"]] = relationship(
+        back_populates="tag",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        lazy="selectin",
+    )
+    sources: Mapped[list["Source"]] = relationship(
+        secondary="source_tag_map",
+        back_populates="tags",
+        lazy="selectin",
+        viewonly=True,
+    )
+
+    __table_args__ = (
+        sa.UniqueConstraint("notebook_id", "name", name="uq_source_tags_notebook_id_name"),
+        sa.Index("ix_source_tags_notebook_id_name", "notebook_id", "name"),
+    )
+
+
+class SourceTagMap(AsyncSqlATableBase):
+    __tablename__ = "source_tag_map"
+
+    source_id: Mapped[int] = mapped_column(
+        sa.Integer,
+        sa.ForeignKey("sources.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    tag_id: Mapped[int] = mapped_column(
+        sa.Integer,
+        sa.ForeignKey("source_tags.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+    )
+
+    source: Mapped["Source"] = relationship(
+        back_populates="tag_links",
+        lazy="selectin",
+    )
+    tag: Mapped["SourceTag"] = relationship(
+        back_populates="source_links",
+        lazy="selectin",
+    )
+
+    __table_args__ = (sa.Index("ix_source_tag_map_tag_id", "tag_id"),)
 
 
 class Output(AsyncSqlATableBase):

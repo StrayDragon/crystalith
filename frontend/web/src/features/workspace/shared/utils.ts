@@ -321,6 +321,11 @@ export function normalizeSource(row: ApiSource): SourceItem {
     status: statusLabel,
     statusTone: statusKey,
     chunks: row.chunk_count ?? 0,
+    tags: Array.isArray((row as any).tags)
+      ? (row as any).tags.filter((tag: unknown): tag is string => typeof tag === 'string' && tag.length > 0)
+      : [],
+    createdAt: formatTimestamp(row.created_at ?? undefined),
+    createdAtRaw: row.created_at ?? undefined,
   };
 }
 
