@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { analyzeNotebookV1NotebooksNotebookIdAnalysisGet as analyzeNotebook, type AnalysisResult } from '../../../../api/generated';
-import { useWorkspaceState } from '../../app/WorkspaceContext';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 
 interface AnalysisState {
   analysis: AnalysisResult | null;
@@ -10,8 +10,10 @@ interface AnalysisState {
 }
 
 export function useAnalysis() {
-  const state = useWorkspaceState();
-  const isConnected = state.connectionState === 'live';
+  const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
+  const connectionState = useWorkspaceStore((s) => s.connectionState);
+  const isConnected = connectionState === 'live';
+
   const [analysisState, setAnalysisState] = useState<AnalysisState>({
     analysis: null,
     isLoading: false,
@@ -21,10 +23,10 @@ export function useAnalysis() {
   // Clear analysis when notebook changes
   useEffect(() => {
     setAnalysisState({ analysis: null, isLoading: false, error: '' });
-  }, [state.activeNotebookId]);
+  }, [activeNotebookId]);
 
   const fetchAnalysis = useCallback(async () => {
-    if (!state.activeNotebookId) {
+    if (!activeNotebookId) {
       setAnalysisState((prev) => ({
         ...prev,
         error: '请先选择笔记本。',
@@ -42,7 +44,7 @@ export function useAnalysis() {
     setAnalysisState((prev) => ({ ...prev, isLoading: true, error: '' }));
     try {
       const analysis = await analyzeNotebook({
-        path: { notebook_id: state.activeNotebookId },
+        path: { notebook_id: activeNotebookId },
       });
       setAnalysisState({ analysis, isLoading: false, error: '' });
       return analysis;
@@ -54,7 +56,7 @@ export function useAnalysis() {
       }));
       return null;
     }
-  }, [isConnected, state.activeNotebookId]);
+  }, [isConnected, activeNotebookId]);
 
   const clearAnalysis = useCallback(() => {
     setAnalysisState({ analysis: null, isLoading: false, error: '' });

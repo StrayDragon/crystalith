@@ -10,7 +10,7 @@ import SourcesPanel from '../domains/sources/SourcesPanel';
 import StudioPanel from '../domains/studio/StudioPanel';
 import SlidesStudioDialog from '../domains/studio/SlidesStudioDialog';
 import WorkspaceHeader from './WorkspaceHeader';
-import { useWorkspaceDispatch, useWorkspaceState } from '../app/WorkspaceContext';
+import { useWorkspaceStore } from '../shared/state/workspaceStore';
 import { useAnalysis } from '../domains/analysis/useAnalysis';
 import { useChat } from '../domains/messages/useChat';
 import { useNotebooks } from '../domains/notebooks/useNotebooks';
@@ -67,8 +67,11 @@ function resolveRightWidth(right: number, left: number, containerWidth: number) 
 }
 
 export default function WorkspaceLayout() {
-  const state = useWorkspaceState();
-  const dispatch = useWorkspaceDispatch();
+  const selectedSourceIds_raw = useWorkspaceStore((s) => s.selectedSourceIds);
+  const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
+  const activeSessionId = useWorkspaceStore((s) => s.activeSessionId);
+  const errMessages = useWorkspaceStore((s) => s.errors.messages);
+  const store = useWorkspaceStore;
   const [isResizing, setIsResizing] = useState(false);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [isViewerFullscreen, setIsViewerFullscreen] = useState(false);
@@ -128,11 +131,11 @@ export default function WorkspaceLayout() {
 
   const selectedSourceIds = useMemo(
     () =>
-      Object.entries(state.selectedSourceIds)
+      Object.entries(selectedSourceIds_raw)
         .filter(([, selected]) => selected)
         .map(([id]) => Number(id))
         .filter((value) => Number.isFinite(value) && value > 0),
-    [state.selectedSourceIds],
+    [selectedSourceIds_raw],
   );
 
   const sourceById = useMemo(() => {
@@ -178,14 +181,14 @@ export default function WorkspaceLayout() {
 
   const handleSelectedSourceIdsChange = useCallback(
     (selected: Record<number, boolean>) => {
-      dispatch({ type: 'SET_SELECTED_SOURCES', payload: selected });
+      store.getState().setSelectedSources(selected);
     },
-    [dispatch],
+    [],
   );
 
   const hasSelectedSources = useMemo(
-    () => Object.values(state.selectedSourceIds).some(Boolean),
-    [state.selectedSourceIds],
+    () => Object.values(selectedSourceIds_raw).some(Boolean),
+    [selectedSourceIds_raw],
   );
 
   const handleChatCitationHover = useCallback(
@@ -246,27 +249,27 @@ export default function WorkspaceLayout() {
   const handleChatCitationJump = useCallback(
     (citation: Citation, message: ChatMessage) => {
       if (message.citations && message.citations.length > 0) {
-        dispatch({ type: 'SET_CITATIONS', payload: message.citations });
+        store.getState().setCitations(message.citations);
       }
       if (citation.chunkId != null) {
         sources.setJumpToCitationChunkId(citation.chunkId);
       }
       handleOpenCitationSourceDetail(citation);
     },
-    [dispatch, handleOpenCitationSourceDetail, sources],
+    [handleOpenCitationSourceDetail, sources],
   );
 
   const handleOutputCitationJump = useCallback(
     (citation: Citation, citations: Citation[]) => {
       if (citations.length > 0) {
-        dispatch({ type: 'SET_CITATIONS', payload: citations });
+        store.getState().setCitations(citations);
       }
       if (citation.chunkId != null) {
         sources.setJumpToCitationChunkId(citation.chunkId);
       }
       handleOpenCitationSourceDetail(citation);
     },
-    [dispatch, handleOpenCitationSourceDetail, sources],
+    [handleOpenCitationSourceDetail, sources],
   );
 
   const applySizes = useCallback((left: number, right: number) => {
@@ -563,7 +566,7 @@ export default function WorkspaceLayout() {
             defaultExtractor={sources.defaultExtractor}
             onConvertSourceQAToSource={sources.convertSourceQAToSource}
             onReembedSource={sources.reembedSource}
-            notebookId={state.activeNotebookId ?? undefined}
+            notebookId={activeNotebookId ?? undefined}
             onSelectedSourceIdsChange={handleSelectedSourceIdsChange}
           />
         </section>
@@ -659,7 +662,7 @@ export default function WorkspaceLayout() {
             onCitationJump={handleChatCitationJump}
             onCitationLocate={handleLocateCitationSource}
             isLoadingMessages={chat.isLoadingMessages}
-            messagesError={state.errors.messages}
+            messagesError={errMessages}
             onRetryMessages={chat.retryMessages}
             onSaveToNote={refine.saveContentAsNote}
             onConvertToSource={chat.convertSessionToSource}
@@ -773,7 +776,7 @@ export default function WorkspaceLayout() {
           setSlidesDraftId(null);
           setSlidesQueueJobId(null);
         }}
-        notebookId={state.activeNotebookId}
+        notebookId={activeNotebookId}
         selectedSourceIds={selectedSourceIds}
         isConnected={isConnected}
         onOutputsUpdated={refine.retryOutputs}
@@ -793,7 +796,7 @@ export default function WorkspaceLayout() {
           analysis={analysis.analysis}
           isLoading={analysis.isLoading}
           error={analysis.error}
-          activeSessionId={state.activeSessionId}
+          activeSessionId={activeSessionId}
           onClose={() => setIsGraphViewOpen(false)}
           onRefresh={analysis.fetchAnalysis}
           onSourceClick={handleGraphSourceClick}

@@ -5,7 +5,7 @@ import {
   listTasksV1NotebooksNotebookIdTasksGet as listNotebookTasks,
   type TaskRead,
 } from '../../../../api/generated';
-import { useWorkspaceState } from '../../app/WorkspaceContext';
+import { useWorkspaceStore } from '../state/workspaceStore';
 
 interface TaskState {
   tasks: TaskRead[];
@@ -14,8 +14,9 @@ interface TaskState {
 }
 
 export function useTasks() {
-  const state = useWorkspaceState();
-  const isConnected = state.connectionState === 'live';
+  const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
+  const connectionState = useWorkspaceStore((s) => s.connectionState);
+  const isConnected = connectionState === 'live';
   const [taskState, setTaskState] = useState<TaskState>({
     tasks: [],
     isLoading: false,
@@ -36,14 +37,14 @@ export function useTasks() {
     setTaskState({ tasks: [], isLoading: false, error: '' });
     pollingRef.current.forEach((timer) => clearTimeout(timer));
     pollingRef.current.clear();
-  }, [state.activeNotebookId]);
+  }, [activeNotebookId]);
 
   const fetchTasks = useCallback(async () => {
-    if (!state.activeNotebookId || !isConnected) return [];
+    if (!activeNotebookId || !isConnected) return [];
     setTaskState((prev) => ({ ...prev, isLoading: true, error: '' }));
     try {
       const tasks = await listNotebookTasks({
-        path: { notebook_id: state.activeNotebookId },
+        path: { notebook_id: activeNotebookId },
       });
       setTaskState({ tasks, isLoading: false, error: '' });
       return tasks;
@@ -55,7 +56,7 @@ export function useTasks() {
       }));
       return [];
     }
-  }, [isConnected, state.activeNotebookId]);
+  }, [isConnected, activeNotebookId]);
 
   const fetchTask = useCallback(
     async (taskId: string) => {
