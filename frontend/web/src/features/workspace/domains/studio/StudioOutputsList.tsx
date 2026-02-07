@@ -15,6 +15,7 @@ import {
   DriveFileMove as ConvertIcon,
   MoreHoriz as MoreHorizIcon,
   OpenInFull as OpenInFullIcon,
+  Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { Virtuoso } from 'react-virtuoso';
 
@@ -41,6 +42,7 @@ interface StudioOutputsListProps {
   outputsError: string;
   onRetryOutputs: () => void;
   onRetryOutputJob?: (jobId: string) => void;
+  onCancelOutputJob?: (jobId: string) => void;
   onDeleteOutput: (outputId: number) => void;
   onSelectOutput: (outputId: number) => void;
   onSelectOutputFullscreen?: (outputId: number) => void;
@@ -49,7 +51,7 @@ interface StudioOutputsListProps {
   onOpenSlides?: (options?: {
     mode: 'config' | 'preview';
     slideId?: number | null;
-    queueStatus?: 'queued' | 'running' | 'error' | 'done' | null;
+    queueStatus?: 'queued' | 'running' | 'error' | 'done' | 'cancelled' | null;
     queueJobId?: string | null;
   }) => void;
   typeLabelMap: Map<OutputTypeId, string>;
@@ -70,7 +72,7 @@ type PendingNote = {
   title: string;
   meta: string;
   type: OutputTypeId;
-  status: 'queued' | 'running' | 'error';
+  status: 'queued' | 'running' | 'error' | 'cancelled';
   slideId?: number | null;
   queueJobId?: string;
 };
@@ -86,6 +88,7 @@ export default function StudioOutputsList({
   outputsError,
   onRetryOutputs,
   onRetryOutputJob,
+  onCancelOutputJob,
   onDeleteOutput,
   onSelectOutput,
   onSelectOutputFullscreen,
@@ -147,9 +150,10 @@ export default function StudioOutputsList({
       queued: '排队中',
       running: '生成中',
       error: '生成失败',
+      cancelled: '已取消',
     } satisfies Record<PendingNote['status'], string>;
     return outputQueueJobs
-      .filter((job) => job.status === 'queued' || job.status === 'running' || job.status === 'error')
+      .filter((job) => job.status === 'queued' || job.status === 'running' || job.status === 'error' || job.status === 'cancelled')
       .map((job) => {
         const typeLabel = resolveTypeLabel(job.type, typeLabelMap);
         const sourceLabel = job.sourceIds.length
@@ -158,7 +162,12 @@ export default function StudioOutputsList({
         const statusLabel = statusLabels[job.status as PendingNote['status']] || job.status;
         return {
           id: `pending-${job.id}`,
-          title: job.status === 'error' ? `${typeLabel} 生成失败` : `生成${typeLabel}...`,
+          title:
+            job.status === 'error'
+              ? `${typeLabel} 生成失败`
+              : job.status === 'cancelled'
+                ? `${typeLabel} 已取消`
+                : `生成${typeLabel}...`,
           meta: `${sourceLabel} · ${statusLabel}`,
           type: job.type,
           status: job.status as PendingNote['status'],
@@ -191,8 +200,11 @@ export default function StudioOutputsList({
 
       {showEmpty && (
         <div className="p-4 text-center border border-dashed border-gray-300 rounded-xl bg-gray-100">
-          <Typography variant="small" className="text-gray-600 font-medium">
-            暂无笔记
+          <Typography variant="small" className="text-gray-700 font-semibold">
+            选择来源 → 点击工具卡片生成
+          </Typography>
+          <Typography variant="small" className="text-[11px] text-gray-500 mt-1">
+            生成后的内容会显示在这里，可继续转换为来源或导出。
           </Typography>
         </div>
       )}
@@ -208,18 +220,25 @@ export default function StudioOutputsList({
               const tone = resolveTone(note.type);
               const colors = TONE_COLORS[tone];
               const isError = note.status === 'error';
+              const isCancelled = note.status === 'cancelled';
               const canOpenSlides = note.type === 'SLIDES' && note.slideId;
 
               const content = (
                 <>
                   <div
                     className={`flex items-center justify-center w-6 h-6 rounded-md border border-dashed flex-shrink-0 ${
-                      isError ? 'bg-red-50 border-red-300 text-red-500' : ''
+                      isError
+                        ? 'bg-red-50 border-red-300 text-red-500'
+                        : isCancelled
+                          ? 'bg-gray-50 border-gray-300 text-gray-400'
+                          : ''
                     }`}
                     style={!isError ? { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text } : undefined}
                   >
                     {isError ? (
                       <span className="text-xs font-bold">!</span>
+                    ) : isCancelled ? (
+                      <CancelIcon className="h-3 w-3" />
                     ) : (
                       <Spinner className="h-3 w-3" />
                     )}
@@ -227,13 +246,17 @@ export default function StudioOutputsList({
                   <div className="flex-1 min-w-0">
                     <Typography
                       variant="small"
-                      className={`font-medium leading-snug truncate ${isError ? 'text-red-700' : 'text-gray-900'}`}
+                      className={`font-medium leading-snug truncate ${
+                        isError ? 'text-red-700' : isCancelled ? 'text-gray-600' : 'text-gray-900'
+                      }`}
                     >
                       {note.title}
                     </Typography>
                     <Typography
                       variant="small"
-                      className={`text-[10px] font-medium leading-tight ${isError ? 'text-red-500' : 'text-gray-600'}`}
+                      className={`text-[10px] font-medium leading-tight ${
+                        isError ? 'text-red-500' : isCancelled ? 'text-gray-500' : 'text-gray-600'
+                      }`}
                     >
                       {note.meta}
                     </Typography>
@@ -243,33 +266,46 @@ export default function StudioOutputsList({
 
               if (canOpenSlides && !isError) {
                 return (
-                  <button
-                    type="button"
-                    className={`flex items-center gap-2 p-2 rounded-lg border border-dashed w-full text-left transition-colors hover:bg-white/70 mb-2 ${
-                      isError ? 'bg-red-50/80 border-red-200' : ''
+                  <div
+                    className={`flex items-center gap-2 p-2 rounded-lg border border-dashed mb-2 ux-slide-in ${
+                      isCancelled ? 'bg-gray-50 border-gray-200' : ''
                     }`}
-                    style={!isError ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border } : undefined}
-                    onClick={() => {
-                      if (!note.slideId) return;
-                      onOpenSlides?.({
-                        mode: 'preview',
-                        slideId: note.slideId,
-                        queueStatus: note.status,
-                        queueJobId: note.queueJobId ?? null,
-                      });
-                    }}
+                    style={!isCancelled ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border } : undefined}
                   >
-                    {content}
-                  </button>
+                    <button
+                      type="button"
+                      className="flex flex-1 items-center gap-2 text-left transition-colors hover:bg-white/70 rounded"
+                      onClick={() => {
+                        if (!note.slideId) return;
+                        onOpenSlides?.({
+                          mode: 'preview',
+                          slideId: note.slideId,
+                          queueStatus: note.status,
+                          queueJobId: note.queueJobId ?? null,
+                        });
+                      }}
+                    >
+                      {content}
+                    </button>
+                    {!isCancelled && onCancelOutputJob && note.queueJobId ? (
+                      <button
+                        type="button"
+                        className="flex-shrink-0 rounded-md border border-gray-300 bg-white px-2 py-1 text-[10px] font-semibold text-gray-700 hover:bg-gray-100"
+                        onClick={() => onCancelOutputJob(note.queueJobId!)}
+                      >
+                        取消
+                      </button>
+                    ) : null}
+                  </div>
                 );
               }
 
               return (
                 <div
-                  className={`flex items-center gap-2 p-2 rounded-lg border border-dashed mb-2 ${
-                    isError ? 'bg-red-50/80 border-red-200' : ''
+                  className={`flex items-center gap-2 p-2 rounded-lg border border-dashed mb-2 ux-slide-in ${
+                    isError ? 'bg-red-50/80 border-red-200' : isCancelled ? 'bg-gray-50 border-gray-200' : ''
                   }`}
-                  style={!isError ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border } : undefined}
+                  style={!isError && !isCancelled ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border } : undefined}
                 >
                   {content}
                   {isError && onRetryOutputJob && note.queueJobId ? (
@@ -281,6 +317,15 @@ export default function StudioOutputsList({
                       重试
                     </button>
                   ) : null}
+                  {!isError && !isCancelled && onCancelOutputJob && note.queueJobId ? (
+                    <button
+                      type="button"
+                      className="flex-shrink-0 rounded-md border border-gray-300 bg-white px-2 py-1 text-[10px] font-semibold text-gray-700 hover:bg-gray-100"
+                      onClick={() => onCancelOutputJob(note.queueJobId!)}
+                    >
+                      取消
+                    </button>
+                  ) : null}
                 </div>
               );
             }
@@ -290,7 +335,7 @@ export default function StudioOutputsList({
             const colors = TONE_COLORS[tone];
 
             return (
-              <div className="group relative flex items-center rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:bg-gray-50 hover:border-gray-300 mb-2">
+              <div className="group relative flex items-center rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:bg-gray-50 hover:border-gray-300 mb-2 ux-slide-in">
                 <button
                   type="button"
                   className="flex flex-1 items-center gap-2 p-2 text-left min-w-0"

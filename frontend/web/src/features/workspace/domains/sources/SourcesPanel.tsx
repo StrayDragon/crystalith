@@ -50,6 +50,7 @@ import type {
 } from './useSources';
 import { useResearch } from '../research/useResearch';
 import { toast } from '../../../../shared/toast';
+import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { SkeletonCard, SkeletonList } from '../../shared/components/Skeleton';
@@ -61,6 +62,31 @@ import type { SearchResultItem } from './SearchResultCard';
 
 const SourceDetailDialog = lazy(() => import('./SourceDetailDialog'));
 const ResearchDetailPanel = lazy(() => import('../research/ResearchDetailPanel'));
+
+
+const SUPPORTED_UPLOAD_EXTENSIONS = new Set(['txt', 'md', 'markdown']);
+
+function splitUploadFiles(files: File[]) {
+  const supported: File[] = [];
+  const unsupported: File[] = [];
+
+  files.forEach((file) => {
+    const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const type = (file.type || '').toLowerCase();
+    const isSupported =
+      SUPPORTED_UPLOAD_EXTENSIONS.has(extension) ||
+      type === 'text/plain' ||
+      type === 'text/markdown';
+
+    if (isSupported) {
+      supported.push(file);
+    } else {
+      unsupported.push(file);
+    }
+  });
+
+  return { supported, unsupported };
+}
 
 interface SourcesPanelProps {
   sources: SourceItem[];
@@ -184,10 +210,12 @@ function SourcesPanel({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sourceListRef = useRef<VirtuosoHandle | null>(null);
   const sourceRefs = useRef(new Map<number, HTMLDivElement | null>());
+  const researchModalRef = useRef<HTMLDivElement | null>(null);
   const fastSearchDebounceTimerRef = useRef<number | null>(null);
   const [highlightedSourceId, setHighlightedSourceId] = useState<number | null>(null);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   const [uploadDragActive, setUploadDragActive] = useState(false);
+  const [uploadHint, setUploadHint] = useState('支持拖拽多个文件到上传按钮区域');
 
   // Add search results dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -608,6 +636,12 @@ function SourcesPanel({
     }
   }, [research]);
 
+  useFocusTrap({
+    active: researchDetailOpen && Boolean(research.activeSession),
+    containerRef: researchModalRef,
+    onEscape: handleCloseResearchDetail,
+  });
+
   const getEngineIcon = () => {
     switch (engine) {
       case 'Scholar':
@@ -648,7 +682,22 @@ function SourcesPanel({
               event.preventDefault();
               setUploadDragActive(false);
               if (uploadDisabled) return;
-              onUpload(event.dataTransfer.files);
+              const droppedFiles = Array.from(event.dataTransfer.files ?? []);
+              if (!droppedFiles.length) return;
+              const { supported, unsupported } = splitUploadFiles(droppedFiles);
+              if (unsupported.length > 0) {
+                toast.warning(`已忽略 ${unsupported.length} 个不支持的文件，仅支持 .txt/.md/.markdown`);
+              }
+              if (supported.length === 0) {
+                setUploadHint('仅支持 .txt / .md / .markdown 文件');
+                return;
+              }
+              setUploadHint(
+                unsupported.length > 0
+                  ? `已过滤 ${unsupported.length} 个文件，准备上传 ${supported.length} 个文件`
+                  : '支持拖拽多个文件到上传按钮区域',
+              );
+              onUpload(supported);
             }}
           >
             <Button
@@ -664,7 +713,11 @@ function SourcesPanel({
               ) : (
                 <CloudUploadIcon style={{ fontSize: 18 }} />
               )}
-              {uploadState === 'loading' ? '上传中…' : '添加来源（可多选）'}
+              {uploadDragActive
+                ? '拖放文件到此处'
+                : uploadState === 'loading'
+                  ? '上传中…'
+                  : '添加来源（可多选）'}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -672,7 +725,14 @@ function SourcesPanel({
                 multiple
                 accept=".txt,.md,.markdown,text/plain,text/markdown"
                 onChange={(event) => {
-                  onUpload(event.target.files);
+                  const selectedFiles = Array.from(event.target.files ?? []);
+                  const { supported, unsupported } = splitUploadFiles(selectedFiles);
+                  if (unsupported.length > 0) {
+                    toast.warning(`已忽略 ${unsupported.length} 个不支持的文件，仅支持 .txt/.md/.markdown`);
+                  }
+                  if (supported.length > 0) {
+                    onUpload(supported);
+                  }
                   if (event.target) {
                     event.target.value = '';
                   }
@@ -687,7 +747,7 @@ function SourcesPanel({
         </Tooltip>
 
         <Typography variant="small" className="text-[10px] text-gray-500 px-1">
-          支持拖拽多个文件到上传按钮区域
+          {uploadDragActive ? '拖放文件到此处' : uploadHint}
         </Typography>
 
         {uploadError ? (
@@ -1052,8 +1112,11 @@ function SourcesPanel({
           <SkeletonList items={3} />
         ) : sources.length === 0 ? (
           <div className="p-3 text-center border border-dashed border-gray-300 rounded-lg bg-gray-100">
-            <Typography variant="small" className="text-gray-600 text-[11px] font-medium">
-              暂无来源。添加文档后这里会展示来源列表。
+            <Typography variant="small" className="text-gray-700 text-[11px] font-semibold">
+              添加文档开始分析
+            </Typography>
+            <Typography variant="small" className="text-gray-500 text-[10px] mt-1">
+              上传文档后，可在中间面板提问并在右侧生成输出。
             </Typography>
           </div>
         ) : (
@@ -1065,6 +1128,12 @@ function SourcesPanel({
             itemContent={(_index, source) => {
               const isHighlighted = highlightedSourceId === source.id;
               const isSelectable = source.statusTone === 'READY';
+              const statusProgress =
+                source.statusTone === 'PROCESSING' && typeof source.indexProgress === 'number'
+                  ? Math.min(100, Math.max(0, Math.round(source.indexProgress)))
+                  : null;
+              const statusLabel =
+                statusProgress != null ? `索引中 (${statusProgress}%)` : source.status;
               const statusColor =
                 source.statusTone === 'READY'
                   ? 'green'
@@ -1074,7 +1143,7 @@ function SourcesPanel({
               return (
                 <div
                   ref={(node) => sourceRefs.current.set(source.id, node)}
-                  className={`group relative flex items-center rounded-xl border bg-white shadow-sm transition-all hover:border-gray-300 hover:shadow mb-1.5 ${
+                  className={`group relative flex items-center rounded-xl border bg-white shadow-sm transition-all hover:border-gray-300 hover:shadow mb-1.5 ux-slide-in ${
                     isHighlighted
                       ? 'border-blue-200 ring-2 ring-blue-300 bg-blue-50/70'
                       : 'border-gray-200'
@@ -1103,7 +1172,7 @@ function SourcesPanel({
                           {source.title}
                         </Typography>
                         <Chip
-                          value={source.status}
+                          value={statusLabel}
                           size="sm"
                           variant="ghost"
                           color={statusColor}
@@ -1255,7 +1324,9 @@ function SourcesPanel({
           tabIndex={-1}
         >
           <div
-            className={`bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200 transition-all ${
+            ref={researchModalRef}
+            tabIndex={-1}
+            className={`bg-white rounded-2xl shadow-2xl overflow-hidden ux-modal-in transition-all ${
               researchFullscreen
                 ? 'w-full max-w-5xl'
                 : 'w-full max-w-lg'
@@ -1292,7 +1363,7 @@ function SourcesPanel({
           onClick={() => setShowResearchHistory(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200 w-full max-w-lg max-h-[70vh] flex flex-col"
+            className="bg-white rounded-2xl shadow-2xl overflow-hidden ux-modal-in w-full max-w-lg max-h-[70vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}

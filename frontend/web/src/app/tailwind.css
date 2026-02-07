@@ -13,6 +13,18 @@
     background-color: currentColor;
     animation: typing-cursor-blink 0.9s steps(1) infinite;
   }
+
+  .ux-fade-in {
+    animation: ux-fade-in 150ms ease-out;
+  }
+
+  .ux-slide-in {
+    animation: ux-slide-in 180ms ease-out;
+  }
+
+  .ux-modal-in {
+    animation: ux-modal-in 180ms cubic-bezier(0.2, 0, 0, 1);
+  }
 }
 
 @keyframes typing-cursor-blink {
@@ -23,5 +35,46 @@
   50.01%,
   100% {
     opacity: 0;
+  }
+}
+
+@keyframes ux-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ux-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ux-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .TypingCursor,
+  .ux-fade-in,
+  .ux-slide-in,
+  .ux-modal-in {
+    animation: none !important;
+    transition-duration: 0ms !important;
   }
 }

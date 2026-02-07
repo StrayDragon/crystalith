@@ -134,6 +134,54 @@ test('enqueueOutputJob processes and updates outputs', async () => {
       source_ids: [1],
       model_id: undefined,
     },
+    signal: expect.any(AbortSignal),
+  });
+});
+
+test('cancelOutputJob aborts running output job', async () => {
+  vi.mocked(createOutput).mockImplementation(({ signal }: any) =>
+    new Promise((resolve, reject) => {
+      signal.addEventListener('abort', () => {
+        const error = new Error('aborted');
+        error.name = 'AbortError';
+        reject(error);
+      });
+      setTimeout(() => {
+        resolve({
+          id: 11,
+          type: 'FAQ',
+          prompt: 'hello',
+          chunk_ids: [1],
+          content: {},
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        } as any);
+      }, 200);
+    }),
+  );
+
+  const { result } = renderHook(() =>
+    useOutputQueueHarness({ isConnected: true, activeNotebookId: 1 }),
+  );
+
+  act(() => {
+    result.current.enqueueOutputJob({
+      type: 'FAQ',
+      prompt: 'hello',
+      sourceIds: [1],
+    });
+  });
+
+  await waitFor(() => {
+    expect(result.current.outputQueueJobs[0]?.status).toBe('running');
+  });
+
+  act(() => {
+    result.current.cancelOutputJob(result.current.outputQueueJobs[0].id);
+  });
+
+  await waitFor(() => {
+    expect(result.current.outputQueueJobs[0]?.status).toBe('cancelled');
   });
 });
 

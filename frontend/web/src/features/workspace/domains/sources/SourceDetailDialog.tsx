@@ -45,6 +45,7 @@ import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { SourceItem } from '../../shared/types';
 import { toast } from '../../../../shared/toast';
 import { useLayer } from '../../../../shared/layer';
+import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { copyToClipboard } from '../../../../shared/clipboard';
 
 interface SourceDetailDialogProps {
@@ -155,6 +156,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
   const [isSavingAsSource, setIsSavingAsSource] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
 
   // Scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {
@@ -403,6 +405,12 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     }
   }, [source, messages, onSaveQAAsSource]);
 
+  useFocusTrap({
+    active: open,
+    containerRef: dialogRef,
+    onEscape: onClose,
+  });
+
   if (!source) return null;
 
   return (
@@ -410,8 +418,9 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
       open={open}
       handler={onClose}
       size={isFullscreen ? 'xxl' : 'xl'}
-      className={`rounded-xl overflow-hidden flex flex-col ${isFullscreen ? 'h-[95vh] max-h-[95vh]' : 'h-[80vh] max-h-[80vh]'}`}
+      className={`rounded-xl overflow-hidden flex flex-col ${isFullscreen ? 'h-[95vh] max-h-[95vh]' : 'h-[80vh] max-h-[80vh]'} ux-modal-in`}
     >
+      <div ref={dialogRef} tabIndex={-1} className="flex flex-col flex-1 min-h-0">
       {/* Header */}
       <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 p-4">
         <div className="flex items-center gap-3 min-w-0">
@@ -769,6 +778,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
           </TabsBody>
         </Tabs>
       </DialogBody>
+      </div>
     </Dialog>
   );
 }

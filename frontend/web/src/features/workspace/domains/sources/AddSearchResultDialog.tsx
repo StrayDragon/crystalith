@@ -17,6 +17,7 @@ import {
 
 import type { SearchResultItem } from './SearchResultCard';
 import { useLayer } from '../../../../shared/layer';
+import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 
 interface AddSearchResultDialogProps {
   open: boolean;
@@ -139,6 +140,10 @@ export default function AddSearchResultDialog({
   const processedCount = completedCount + errorCount + cancelledCount;
   const progress = statuses.length > 0 ? processedCount / statuses.length * 100 : 0;
   const allDone = processedCount === statuses.length && statuses.length > 0;
+  const loadingIndex = statuses.findIndex((item) => item.status === 'loading');
+  const activeProgressCount = isProcessing
+    ? (loadingIndex >= 0 ? loadingIndex + 1 : Math.max(processedCount, 1))
+    : processedCount;
 
   const handleCancel = useCallback(() => {
     cancelledRef.current = true;
@@ -197,6 +202,13 @@ export default function AddSearchResultDialog({
   const modeLabel = mode === 'fetch' ? '获取内容' : '保存链接';
   const ModeIcon = mode === 'fetch' ? CloudDownloadIcon : LinkIcon;
   const { style: modalStyle } = useLayer('modal');
+  const modalRef = useRef<HTMLDivElement | null>(null);
+
+  useFocusTrap({
+    active: open,
+    containerRef: modalRef,
+    onEscape: handleClose,
+  });
 
   // 不渲染如果不是打开状态
   if (!open) return null;
@@ -216,7 +228,7 @@ export default function AddSearchResultDialog({
       />
 
       {/* Dialog Content */}
-      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 animate-in fade-in zoom-in-95 duration-200">
+      <div ref={modalRef} tabIndex={-1} className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 ux-modal-in">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
@@ -225,7 +237,7 @@ export default function AddSearchResultDialog({
               {isCancelled
                 ? '已取消'
                 : isProcessing
-                  ? '正在添加来源…'
+                  ? `正在添加 ${activeProgressCount}/${statuses.length} 个来源`
                   : allDone
                     ? '添加完成'
                     : `${modeLabel} - ${results.length} 项`}
@@ -251,7 +263,9 @@ export default function AddSearchResultDialog({
                 className="h-2"
               />
               <Typography variant="small" className="text-[11px] text-gray-500 mt-1">
-                {completedCount} / {statuses.length} 完成
+                {isProcessing
+                  ? `正在添加 ${activeProgressCount}/${statuses.length} 个来源`
+                  : `${completedCount} / ${statuses.length} 完成`}
                 {errorCount > 0 && ` · ${errorCount} 失败`}
                 {cancelledCount > 0 && ` · ${cancelledCount} 已取消`}
               </Typography>
@@ -265,7 +279,7 @@ export default function AddSearchResultDialog({
               return (
                 <div
                   key={result.url}
-                  className={`flex items-center gap-2 p-2 rounded-lg ${
+                  className={`flex items-center gap-2 p-2 rounded-lg ux-slide-in ${
                     status?.status === 'error'
                       ? 'bg-red-50'
                       : status?.status === 'success'

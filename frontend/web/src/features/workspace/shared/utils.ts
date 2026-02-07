@@ -305,6 +305,15 @@ export function formatSourceType(row: ApiSource): string {
 
 export function normalizeSource(row: ApiSource): SourceItem {
   const statusKey = String(row.status ?? 'READY').toUpperCase();
+  const metadata =
+    row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+      ? (row.metadata as Record<string, unknown>)
+      : null;
+  const rawIndexProgress = metadata?.index_progress;
+  const indexProgress =
+    typeof rawIndexProgress === 'number' && Number.isFinite(rawIndexProgress)
+      ? rawIndexProgress
+      : null;
   const statusLabel =
     {
       READY: '已索引',
@@ -320,6 +329,7 @@ export function normalizeSource(row: ApiSource): SourceItem {
     type: formatSourceType(row),
     status: statusLabel,
     statusTone: statusKey,
+    indexProgress,
     chunks: row.chunk_count ?? 0,
     tags: Array.isArray((row as any).tags)
       ? (row as any).tags.filter((tag: unknown): tag is string => typeof tag === 'string' && tag.length > 0)
