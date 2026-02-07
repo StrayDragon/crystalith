@@ -23,6 +23,7 @@ interface WorkspaceHeaderProps {
   isConnected: boolean;
   onCreateNameChange: (value: string) => void;
   onCreateNotebook: () => Promise<boolean>;
+  onCreateNotebookFromTemplate?: (templateId: number, name: string) => Promise<boolean>;
   onUpdateNotebook?: (notebookId: number, name: string) => Promise<boolean>;
   onDeleteNotebook?: (notebookId: number) => Promise<boolean>;
   onSelectNotebook: (notebookId: number | null) => void;
@@ -50,6 +51,7 @@ export default function WorkspaceHeader({
   isConnected,
   onCreateNameChange,
   onCreateNotebook,
+  onCreateNotebookFromTemplate,
   onUpdateNotebook,
   onDeleteNotebook,
   onSelectNotebook,
@@ -104,6 +106,7 @@ export default function WorkspaceHeader({
           onDelete={onDeleteNotebook}
           onCreateNameChange={onCreateNameChange}
           onCreateNotebook={onCreateNotebook}
+          onCreateNotebookFromTemplate={onCreateNotebookFromTemplate}
         />
       </div>
 

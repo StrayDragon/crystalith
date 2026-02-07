@@ -709,6 +709,7 @@ export default function WorkspaceLayout() {
         isConnected={isConnected}
         onCreateNameChange={notebooks.setCreateName}
         onCreateNotebook={notebooks.createNotebook}
+        onCreateNotebookFromTemplate={notebooks.createNotebookFromTemplate}
         onUpdateNotebook={notebooks.updateNotebook}
         onDeleteNotebook={notebooks.deleteNotebook}
         onSelectNotebook={notebooks.setActiveNotebookId}

@@ -12,7 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from scalar_fastapi import get_scalar_api_reference
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 
 from cl_fastapix import FastAPIX
 from cl_sqlalchemyx.mgrs import AsyncDBManager
@@ -106,6 +106,20 @@ def create_app(
     async def lifespan(app: FastAPIX):
         if _env_bool("AUTO_DB_INIT", False):
             await asyncio.to_thread(upgrade_head, app.state.settings.database.url)
+
+        async with app.state.db.got_manual_session() as session:
+            try:
+                if app.state.db.async_engine.dialect.name == "sqlite":
+                    await session.execute(
+                        text("UPDATE sources SET status = lower(status) WHERE status != lower(status)")
+                    )
+                    await session.commit()
+
+                from crystalith.features.templates.service import ensure_builtin_templates
+
+                await ensure_builtin_templates(session)
+            except Exception:  # noqa: BLE001
+                logger.exception("Failed to initialize built-in templates")
 
         if _env_bool("AUTO_CLEANUP_FAILED_SOURCES", True):
             async with app.state.db.got_manual_session() as session:

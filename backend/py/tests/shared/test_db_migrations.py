@@ -35,7 +35,7 @@ async def test_alembic_upgrade_and_downgrade_roundtrip(tmp_path) -> None:
     assert "notebooks" in tables_after_upgrade
     assert "sources" in tables_after_upgrade
 
-    await asyncio.to_thread(downgrade, db_url, "-1")
+    await asyncio.to_thread(downgrade, db_url, "base")
     tables_after_downgrade = await _table_names(db_url)
     assert "notebooks" not in tables_after_downgrade
 
