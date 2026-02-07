@@ -1,5 +1,28 @@
 {
   "$defs": {
+    "AISettings": {
+      "description": "AI provider runtime settings.",
+      "properties": {
+        "timeout": {
+          "default": 60,
+          "description": "Provider request timeout in seconds",
+          "maximum": 600,
+          "minimum": 1,
+          "title": "Timeout",
+          "type": "integer"
+        },
+        "max_retries": {
+          "default": 3,
+          "description": "Maximum retries for retryable provider errors",
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Max Retries",
+          "type": "integer"
+        }
+      },
+      "title": "AISettings",
+      "type": "object"
+    },
     "AppSettings": {
       "description": "Application settings.",
       "properties": {
@@ -1141,6 +1164,9 @@
     },
     "embedding": {
       "$ref": "#/$defs/EmbeddingSettings"
+    },
+    "ai": {
+      "$ref": "#/$defs/AISettings"
     },
     "chat": {
       "$ref": "#/$defs/ChatSettings"

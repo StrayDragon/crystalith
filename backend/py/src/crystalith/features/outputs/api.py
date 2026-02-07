@@ -448,7 +448,7 @@ async def convert_output_to_source(
             chunk_texts = [text_content]
 
         # Create embeddings
-        embeddings = await embedder.embed(chunk_texts)
+        embeddings = await embedder.embed_batch(chunk_texts)
 
         # Create chunks
         db_chunks: list[Chunk] = []

@@ -85,6 +85,7 @@ class InMemoryVectorStore:
         top_k: int = 5,
         min_score: float = 0.2,
         source_ids: Sequence[int] | None = None,
+        exclude_source_ids: Sequence[int] | None = None,
     ) -> list[VectorSearchResult]:
         query_len = len(query_vector)
         if query_len == 0:
@@ -94,6 +95,7 @@ class InMemoryVectorStore:
             return []
 
         source_id_set = set(source_ids) if source_ids else None
+        exclude_source_id_set = set(exclude_source_ids) if exclude_source_ids else None
 
         results: list[VectorSearchResult] = []
         for stored in self._entries:
@@ -101,6 +103,8 @@ class InMemoryVectorStore:
             if entry.notebook_id != notebook_id:
                 continue
             if source_id_set is not None and entry.source_id not in source_id_set:
+                continue
+            if exclude_source_id_set is not None and entry.source_id in exclude_source_id_set:
                 continue
             if len(entry.vector) != query_len:
                 continue

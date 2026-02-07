@@ -81,3 +81,52 @@ async def test_qa_source_ids_invalid_returns_400(client):
         json={"question": "测试", "source_ids": [9999]},
     )
     assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_qa_with_session_id_keeps_answer_and_citations_consistent(client, db_session, app):
+    create_resp = await client.post("/v1/notebooks", json={"name": "QA Session Notebook"})
+    assert create_resp.status_code == 201
+    notebook_id = create_resp.json()["id"]
+
+    source = Source(
+        notebook_id=notebook_id,
+        filename="Doc-Session.md",
+        status=SourceStatus.READY,
+    )
+    db_session.add(source)
+    await db_session.flush()
+    chunk = Chunk(source_id=source.id, chunk_index=1, text="Session QA chunk")
+    db_session.add(chunk)
+    await db_session.commit()
+
+    await app.state.vector_store.add(
+        notebook_id=notebook_id,
+        source_id=source.id,
+        chunk_ids=[chunk.id],
+        vectors=[[1.0, 0.0, 0.0]],
+    )
+
+    session_resp = await client.post(
+        f"/v1/notebooks/{notebook_id}/sessions",
+        json={"title": "session"},
+    )
+    assert session_resp.status_code == 201
+    session_id = session_resp.json()["id"]
+
+    payload = {"question": "测试 session", "source_ids": [source.id]}
+    base_resp = await client.post(f"/v1/notebooks/{notebook_id}/qa", json=payload)
+    assert base_resp.status_code == 200
+
+    session_resp = await client.post(
+        f"/v1/notebooks/{notebook_id}/qa",
+        json={**payload, "session_id": session_id},
+    )
+    assert session_resp.status_code == 200
+
+    base_body = base_resp.json()
+    session_body = session_resp.json()
+
+    assert session_body["answer"] == base_body["answer"]
+    assert session_body["evidence"] == base_body["evidence"]
+    assert session_body["citations"] == base_body["citations"]

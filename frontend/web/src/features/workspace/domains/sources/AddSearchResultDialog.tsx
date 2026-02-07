@@ -145,6 +145,44 @@ export default function AddSearchResultDialog({
     setIsCancelled(true);
   }, []);
 
+  const handleRetryResult = useCallback(
+    async (result: SearchResultItem) => {
+      if (processingState === 'running') return;
+
+      setStatuses((prev) =>
+        prev.map((item) =>
+          item.url === result.url
+            ? { ...item, status: 'loading', error: undefined }
+            : item,
+        ),
+      );
+
+      try {
+        await onAddSource(result, mode);
+        setStatuses((prev) =>
+          prev.map((item) =>
+            item.url === result.url
+              ? { ...item, status: 'success', error: undefined }
+              : item,
+          ),
+        );
+      } catch (error) {
+        setStatuses((prev) =>
+          prev.map((item) =>
+            item.url === result.url
+              ? {
+                  ...item,
+                  status: 'error',
+                  error: error instanceof Error ? error.message : '添加失败',
+                }
+              : item,
+          ),
+        );
+      }
+    },
+    [mode, onAddSource, processingState],
+  );
+
   const handleClose = useCallback(() => {
     // 如果正在处理，先取消
     if (isProcessing && !isCancelled) {
@@ -271,12 +309,22 @@ export default function AddSearchResultDialog({
                       {new URL(result.url).hostname}
                     </Typography>
                     {status?.error && (
-                      <Typography
-                        variant="small"
-                        className="text-[10px] text-red-600 mt-0.5"
-                      >
-                        {status.error}
-                      </Typography>
+                      <>
+                        <Typography
+                          variant="small"
+                          className="text-[10px] text-red-600 mt-0.5"
+                        >
+                          {status.error}
+                        </Typography>
+                        <button
+                          type="button"
+                          className="mt-1 text-[10px] font-semibold text-red-700 hover:underline"
+                          onClick={() => handleRetryResult(result)}
+                          disabled={status.status === 'loading'}
+                        >
+                          重试
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>

@@ -20,6 +20,9 @@ class DummyEmbeddingProvider:
     async def embed(self, texts):
         return [[1.0, 0.0, 0.0] for _ in texts]
 
+    async def embed_batch(self, texts, *, batch_size=100):
+        return await self.embed(texts)
+
 
 class DummyChatProvider:
     provider = "test"
