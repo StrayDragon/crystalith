@@ -13,7 +13,6 @@ import {
   Tooltip,
 } from '@material-tailwind/react';
 import {
-  Add as AddIcon,
   Search as SearchIcon,
   MoreHoriz as MoreHorizIcon,
   Delete as DeleteIcon,
@@ -40,9 +39,15 @@ import type {
   ExtractorType,
   QaMessage,
   SourceFromUrlMode,
+  SourceTagRead,
 } from '../../../../api/generated';
 import type { ApiSourceSearchResult, SourceItem } from '../../shared/types';
-import type { SearchQueueItem } from './useSources';
+import type {
+  SearchQueueItem,
+  SourceSortBy,
+  SourceSortOrder,
+  SourceUploadItem,
+} from './useSources';
 import { useResearch } from '../research/useResearch';
 import { toast } from '../../../../shared/toast';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
@@ -61,10 +66,12 @@ interface SourcesPanelProps {
   sources: SourceItem[];
   /** 外部触发定位/高亮某个来源 */
   jumpToSource?: { id: number; token: number } | null;
-  onUpload: (file: File | null) => void;
+  onUpload: (input: File | File[] | FileList | null) => void;
   uploadState: AsyncStatus;
   uploadError?: string;
+  uploadQueue?: SourceUploadItem[];
   onRetryUpload?: () => void;
+  onClearUploadQueue?: () => void;
   searchState: AsyncStatus;
   searchNotice: string;
   searchResults: ApiSourceSearchResult[];
@@ -77,6 +84,18 @@ interface SourcesPanelProps {
   ) => Promise<unknown>;
   onRemoveSources: (sourceIds: number[]) => Promise<boolean>;
   onRemoveSource: (sourceId: number) => Promise<boolean>;
+  onBatchReembedSources?: (sourceIds: number[]) => Promise<boolean>;
+  sourceTags?: SourceTagRead[];
+  tagMutationState?: AsyncStatus;
+  onCreateSourceTag?: (name: string) => Promise<SourceTagRead | null>;
+  onAssignTagToSources?: (tagId: number, sourceIds: number[]) => Promise<boolean>;
+  onRemoveTagFromSources?: (tagId: number, sourceIds: number[]) => Promise<boolean>;
+  sortBy?: SourceSortBy;
+  sortOrder?: SourceSortOrder;
+  tagFilter?: string;
+  onSortByChange?: (value: SourceSortBy) => void;
+  onSortOrderChange?: (value: SourceSortOrder) => void;
+  onTagFilterChange?: (value: string) => void;
   isConnected: boolean;
   isLoading: boolean;
   removeState: AsyncStatus;
@@ -106,7 +125,9 @@ function SourcesPanel({
   onUpload,
   uploadState,
   uploadError = '',
+  uploadQueue = [],
   onRetryUpload,
+  onClearUploadQueue,
   searchState,
   searchNotice,
   searchResults,
@@ -115,6 +136,18 @@ function SourcesPanel({
   onAddSourceFromUrl,
   onRemoveSources,
   onRemoveSource,
+  onBatchReembedSources,
+  sourceTags = [],
+  tagMutationState = 'idle',
+  onCreateSourceTag,
+  onAssignTagToSources,
+  onRemoveTagFromSources,
+  sortBy = 'date',
+  sortOrder = 'desc',
+  tagFilter = '',
+  onSortByChange,
+  onSortOrderChange,
+  onTagFilterChange,
   isConnected,
   isLoading,
   removeState,
@@ -153,6 +186,8 @@ function SourcesPanel({
   const sourceRefs = useRef(new Map<number, HTMLDivElement | null>());
   const fastSearchDebounceTimerRef = useRef<number | null>(null);
   const [highlightedSourceId, setHighlightedSourceId] = useState<number | null>(null);
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
+  const [uploadDragActive, setUploadDragActive] = useState(false);
 
   // Add search results dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -253,16 +288,17 @@ function SourcesPanel({
   useEffect(() => {
     if (!sources.length) {
       setSelectedSourceIds({});
+      setLastSelectedIndex(null);
       return;
     }
-    // Default to all ready sources selected
     setSelectedSourceIds((prev) => {
       const next: Record<number, boolean> = {};
-      const hasExistingSelection = Object.keys(prev).length > 0;
+      const hasExistingSelection = Object.values(prev).some(Boolean);
       sources.forEach((source) => {
         const isSelectable = source.statusTone === 'READY';
-        // If user has made selections before, preserve them for ready sources; otherwise select all ready by default
-        next[source.id] = hasExistingSelection ? (isSelectable ? Boolean(prev[source.id]) : false) : isSelectable;
+        next[source.id] = hasExistingSelection
+          ? (isSelectable ? Boolean(prev[source.id]) : false)
+          : isSelectable;
       });
       return next;
     });
@@ -319,11 +355,36 @@ function SourcesPanel({
     () => sources.filter((source) => selectedSourceIds[source.id]).map((source) => source.id),
     [sources, selectedSourceIds],
   );
-  const removeDisabled = !isConnected || removeState === 'loading' || selectedIds.length === 0;
+  const selectedTagNames = useMemo(() => {
+    const tagSet = new Set<string>();
+    sources
+      .filter((source) => selectedSourceIds[source.id])
+      .forEach((source) => {
+        source.tags.forEach((tag) => tagSet.add(tag));
+      });
+    return Array.from(tagSet).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+  }, [sources, selectedSourceIds]);
+
+  const mutationBusy =
+    removeState === 'loading' ||
+    tagMutationState === 'loading' ||
+    uploadState === 'loading';
+  const removeDisabled = !isConnected || mutationBusy || selectedIds.length === 0;
+  const batchReembedDisabled =
+    !isConnected ||
+    !onBatchReembedSources ||
+    selectedIds.length === 0 ||
+    mutationBusy;
+  const batchTagDisabled =
+    !isConnected ||
+    (!onAssignTagToSources && !onRemoveTagFromSources) ||
+    selectedIds.length === 0 ||
+    mutationBusy;
 
   function handleToggleAll() {
     if (allSelected) {
       setSelectedSourceIds({});
+      setLastSelectedIndex(null);
       return;
     }
     const next: Record<number, boolean> = {};
@@ -331,16 +392,85 @@ function SourcesPanel({
       next[source.id] = true;
     });
     setSelectedSourceIds(next);
+    if (selectableSources.length > 0) {
+      const firstIndex = sourceIdToIndex.get(selectableSources[0].id);
+      setLastSelectedIndex(firstIndex ?? null);
+    }
   }
 
-  function handleToggleSource(id: number) {
+  const handleToggleSource = useCallback((
+    id: number,
+    event?: Pick<MouseEvent, 'shiftKey' | 'ctrlKey' | 'metaKey'>,
+  ) => {
     const source = sources.find((item) => item.id === id);
     if (!source || source.statusTone !== 'READY') return;
-    setSelectedSourceIds((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  }
+
+    const index = sourceIdToIndex.get(id);
+    if (index == null) return;
+
+    const shiftPressed = Boolean(event?.shiftKey);
+    const togglePressed = Boolean(event?.ctrlKey || event?.metaKey);
+
+    setSelectedSourceIds((prev) => {
+      const next = { ...prev };
+
+      if (shiftPressed && lastSelectedIndex != null) {
+        const start = Math.min(lastSelectedIndex, index);
+        const end = Math.max(lastSelectedIndex, index);
+        for (let cursor = start; cursor <= end; cursor += 1) {
+          const item = sources[cursor];
+          if (item?.statusTone === 'READY') {
+            next[item.id] = true;
+          }
+        }
+        return next;
+      }
+
+      if (togglePressed) {
+        next[id] = !prev[id];
+        return next;
+      }
+
+      next[id] = !prev[id];
+      return next;
+    });
+
+    setLastSelectedIndex(index);
+  }, [sources, sourceIdToIndex, lastSelectedIndex]);
+
+  const handleBatchDelete = useCallback(async () => {
+    if (!selectedIds.length) return;
+    const success = await onRemoveSources(selectedIds);
+    if (success) {
+      setSelectedSourceIds({});
+      setLastSelectedIndex(null);
+    }
+  }, [onRemoveSources, selectedIds]);
+
+  const handleBatchReembed = useCallback(async () => {
+    if (!onBatchReembedSources || !selectedIds.length) return;
+    await onBatchReembedSources(selectedIds);
+  }, [onBatchReembedSources, selectedIds]);
+
+  const handleBatchCreateAndAssignTag = useCallback(async () => {
+    if (!onCreateSourceTag || !onAssignTagToSources || selectedIds.length === 0) return;
+    const rawName = window.prompt('输入新标签名称（会分配给已选来源）');
+    const name = rawName?.trim();
+    if (!name) return;
+    const tag = await onCreateSourceTag(name);
+    if (!tag) return;
+    await onAssignTagToSources(tag.id, selectedIds);
+  }, [onCreateSourceTag, onAssignTagToSources, selectedIds]);
+
+  const handleAssignExistingTag = useCallback(async (tagId: number) => {
+    if (!onAssignTagToSources || selectedIds.length === 0) return;
+    await onAssignTagToSources(tagId, selectedIds);
+  }, [onAssignTagToSources, selectedIds]);
+
+  const handleRemoveExistingTag = useCallback(async (tagId: number) => {
+    if (!onRemoveTagFromSources || selectedIds.length === 0) return;
+    await onRemoveTagFromSources(tagId, selectedIds);
+  }, [onRemoveTagFromSources, selectedIds]);
 
   const handleSearch = async () => {
     // Deep Research mode
@@ -502,34 +632,63 @@ function SourcesPanel({
       {/* Fixed Header: Upload & Search - Always visible */}
       <div className="flex-shrink-0 px-3 sm:px-4 pt-3 sm:pt-4 pb-2 flex flex-col gap-3 border-b border-gray-100">
         {/* Upload Button */}
-        <Tooltip content="支持文本(.txt)和Markdown(.md)文件">
-          <Button
-            variant="outlined"
-            fullWidth
-            size="sm"
-            disabled={uploadDisabled}
-            className="flex items-center justify-center gap-2 py-2 rounded-full border-dashed border-gray-400 normal-case font-normal text-gray-700 hover:bg-gray-100 hover:border-gray-500"
-            onClick={() => fileInputRef.current?.click()}
+        <Tooltip content="支持文本(.txt)和Markdown(.md)文件，可多选与拖拽">
+          <div
+            className={`rounded-full ${uploadDragActive ? 'ring-2 ring-blue-200' : ''}`}
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (uploadDisabled) return;
+              setUploadDragActive(true);
+            }}
+            onDragLeave={(event) => {
+              event.preventDefault();
+              setUploadDragActive(false);
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              setUploadDragActive(false);
+              if (uploadDisabled) return;
+              onUpload(event.dataTransfer.files);
+            }}
           >
-            {uploadState === 'loading' ? (
-              <Spinner className="h-3 w-3" />
-            ) : (
-              <CloudUploadIcon style={{ fontSize: 18 }} />
-            )}
-            {uploadState === 'loading' ? '上传中…' : '添加来源'}
-            <input
-              ref={fileInputRef}
-              type="file"
-              hidden
-              accept=".txt,.md,.markdown,text/plain,text/markdown"
-              onChange={(event) => onUpload(event.target.files?.[0] ?? null)}
+            <Button
+              variant="outlined"
+              fullWidth
+              size="sm"
               disabled={uploadDisabled}
-              id="source-upload-input"
-              name="sourceUpload"
-              aria-label="上传来源文件"
-            />
-          </Button>
+              className="flex items-center justify-center gap-2 py-2 rounded-full border-dashed border-gray-400 normal-case font-normal text-gray-700 hover:bg-gray-100 hover:border-gray-500"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploadState === 'loading' ? (
+                <Spinner className="h-3 w-3" />
+              ) : (
+                <CloudUploadIcon style={{ fontSize: 18 }} />
+              )}
+              {uploadState === 'loading' ? '上传中…' : '添加来源（可多选）'}
+              <input
+                ref={fileInputRef}
+                type="file"
+                hidden
+                multiple
+                accept=".txt,.md,.markdown,text/plain,text/markdown"
+                onChange={(event) => {
+                  onUpload(event.target.files);
+                  if (event.target) {
+                    event.target.value = '';
+                  }
+                }}
+                disabled={uploadDisabled}
+                id="source-upload-input"
+                name="sourceUpload"
+                aria-label="上传来源文件"
+              />
+            </Button>
+          </div>
         </Tooltip>
+
+        <Typography variant="small" className="text-[10px] text-gray-500 px-1">
+          支持拖拽多个文件到上传按钮区域
+        </Typography>
 
         {uploadError ? (
           <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
@@ -543,6 +702,49 @@ function SourcesPanel({
                 重试上传
               </button>
             ) : null}
+          </div>
+        ) : null}
+
+        {uploadQueue.length > 0 ? (
+          <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+            <div className="mb-1 flex items-center justify-between">
+              <Typography variant="small" className="text-[11px] font-semibold text-gray-600">
+                上传队列
+              </Typography>
+              {onClearUploadQueue ? (
+                <button
+                  type="button"
+                  className="text-[10px] text-gray-500 hover:text-gray-700"
+                  onClick={onClearUploadQueue}
+                >
+                  清空
+                </button>
+              ) : null}
+            </div>
+            <div className="space-y-1">
+              {uploadQueue.slice(0, 6).map((item) => (
+                <div key={item.id} className="flex items-center justify-between text-[11px] text-gray-600">
+                  <span className="truncate pr-2">{item.name}</span>
+                  <span
+                    className={
+                      item.status === 'error'
+                        ? 'text-red-600'
+                        : item.status === 'success'
+                          ? 'text-green-600'
+                          : 'text-blue-600'
+                    }
+                  >
+                    {item.status === 'queued'
+                      ? '等待中'
+                      : item.status === 'uploading'
+                        ? '上传中'
+                        : item.status === 'success'
+                          ? '完成'
+                          : '失败'}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         ) : null}
 
@@ -699,58 +901,148 @@ function SourcesPanel({
         defaultExtractor={defaultExtractor}
       />
 
-      {/* Select All & Batch Actions */}
-      <div className="sticky top-0 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 bg-white/95 backdrop-blur border-b border-gray-100">
-        <div className="flex items-center justify-between px-1">
-          <Typography variant="small" className="text-[11px] text-gray-600 font-medium">
-            选择所有来源
-          </Typography>
+      {/* Sorting / Filter / Batch Actions */}
+      <div className="sticky top-0 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 bg-white/95 backdrop-blur border-b border-gray-100 space-y-2">
+        <div className="grid grid-cols-3 gap-2">
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] text-gray-500">排序字段</span>
+            <select
+              aria-label="来源排序字段"
+              value={sortBy}
+              onChange={(event) => onSortByChange?.(event.target.value as SourceSortBy)}
+              className="h-7 rounded border border-gray-200 bg-white px-2 text-[11px] text-gray-700"
+            >
+              <option value="date">日期</option>
+              <option value="name">名称</option>
+              <option value="size">大小</option>
+              <option value="type">类型</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] text-gray-500">排序方向</span>
+            <select
+              aria-label="来源排序方向"
+              value={sortOrder}
+              onChange={(event) => onSortOrderChange?.(event.target.value as SourceSortOrder)}
+              className="h-7 rounded border border-gray-200 bg-white px-2 text-[11px] text-gray-700"
+            >
+              <option value="desc">降序</option>
+              <option value="asc">升序</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[10px] text-gray-500">标签筛选</span>
+            <select
+              aria-label="来源标签筛选"
+              value={tagFilter}
+              onChange={(event) => onTagFilterChange?.(event.target.value)}
+              className="h-7 rounded border border-gray-200 bg-white px-2 text-[11px] text-gray-700"
+            >
+              <option value="">全部标签</option>
+              {sourceTags.map((tag) => (
+                <option key={tag.id} value={tag.name}>
+                  {tag.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
           <div className="flex items-center gap-1">
             <Checkbox
               checked={allSelected}
               onChange={handleToggleAll}
-              containerProps={{ className: "p-1" }}
+              containerProps={{ className: 'p-1' }}
               className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
-              iconProps={{ className: "text-white" }}
+              iconProps={{ className: 'text-white' }}
             />
-            <Menu placement="bottom-end">
-               <MenuHandler>
-                 <IconButton
-                   size="sm"
-                   variant="outlined"
-                   className="w-6 h-6 min-w-[24px] rounded border-gray-200"
-                   disabled={removeDisabled}
-                 >
-                   <MoreHorizIcon style={{ fontSize: 16 }} />
-                 </IconButton>
-               </MenuHandler>
-               <MenuList className="p-1 min-w-[160px]">
-                  <div className="px-3 py-2 text-[11px] font-semibold text-gray-500 border-b border-gray-100 mb-1">
-                    已选择 {selectedIds.length} 个来源
-                  </div>
-                  <ConfirmPopover
-                    message={
-                      selectedIds.length === 1
-                        ? '确定要移除已选的 1 个来源吗？'
-                        : `确定要移除已选的 ${selectedIds.length} 个来源吗？`
-                    }
-                    onConfirm={async () => {
-                      const success = await onRemoveSources(selectedIds);
-                      if (success) {
-                        setSelectedSourceIds({});
-                      }
-                    }}
-                    placement="left"
-                    disabled={removeDisabled || selectedIds.length === 0}
-                  >
-                    <MenuItem className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700">
-                      <DeleteIcon style={{ fontSize: 16 }} />
-                      <span>删除已选来源</span>
-                    </MenuItem>
-                  </ConfirmPopover>
-               </MenuList>
-            </Menu>
+            <Typography variant="small" className="text-[11px] text-gray-600 font-medium">
+              已选择 {selectedIds.length} 个来源
+            </Typography>
           </div>
+
+          {selectedIds.length > 0 ? (
+            <div className="flex items-center gap-1">
+              <ConfirmPopover
+                message={
+                  selectedIds.length === 1
+                    ? '确定要移除已选的 1 个来源吗？'
+                    : `确定要移除已选的 ${selectedIds.length} 个来源吗？`
+                }
+                onConfirm={handleBatchDelete}
+                placement="left"
+                disabled={removeDisabled}
+              >
+                <Button
+                  size="sm"
+                  variant="outlined"
+                  disabled={removeDisabled}
+                  className="h-7 px-2 py-0 text-[11px] normal-case border-red-200 text-red-600"
+                >
+                  删除
+                </Button>
+              </ConfirmPopover>
+
+              <Button
+                size="sm"
+                variant="outlined"
+                disabled={batchReembedDisabled}
+                onClick={handleBatchReembed}
+                className="h-7 px-2 py-0 text-[11px] normal-case border-gray-200 text-gray-700"
+              >
+                批量 re-embed
+              </Button>
+
+              <Menu placement="bottom-end">
+                <MenuHandler>
+                  <Button
+                    size="sm"
+                    variant="outlined"
+                    disabled={batchTagDisabled}
+                    className="h-7 px-2 py-0 text-[11px] normal-case border-gray-200 text-gray-700"
+                  >
+                    标签
+                  </Button>
+                </MenuHandler>
+                <MenuList className="p-1 min-w-[180px]">
+                  <MenuItem
+                    onClick={handleBatchCreateAndAssignTag}
+                    disabled={!onCreateSourceTag || !onAssignTagToSources || tagMutationState === 'loading'}
+                    className="text-xs"
+                  >
+                    新建并分配标签
+                  </MenuItem>
+                  {sourceTags.length > 0 ? <div className="my-1 border-t border-gray-100" /> : null}
+                  {sourceTags.map((tag) => (
+                    <MenuItem
+                      key={`assign-${tag.id}`}
+                      onClick={() => handleAssignExistingTag(tag.id)}
+                      disabled={!onAssignTagToSources || tagMutationState === 'loading'}
+                      className="text-xs"
+                    >
+                      添加标签：{tag.name}
+                    </MenuItem>
+                  ))}
+                  {selectedTagNames.length > 0 ? <div className="my-1 border-t border-gray-100" /> : null}
+                  {selectedTagNames.map((tagName) => {
+                    const tag = sourceTags.find((item) => item.name === tagName);
+                    if (!tag) return null;
+                    return (
+                      <MenuItem
+                        key={`remove-${tag.id}`}
+                        onClick={() => handleRemoveExistingTag(tag.id)}
+                        disabled={!onRemoveTagFromSources || tagMutationState === 'loading'}
+                        className="text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                      >
+                        移除标签：{tag.name}
+                      </MenuItem>
+                    );
+                  })}
+                </MenuList>
+              </Menu>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -790,26 +1082,47 @@ function SourcesPanel({
                 >
                   <button
                     className="flex flex-1 items-center gap-3 p-2 text-left min-w-0"
-                    onClick={() => handleOpenDetail(source)}
+                    onClick={(event) => {
+                      if (event.shiftKey || event.ctrlKey || event.metaKey) {
+                        handleToggleSource(source.id, event.nativeEvent);
+                        return;
+                      }
+                      handleOpenDetail(source);
+                    }}
                     aria-label={`打开来源 ${source.title}`}
                   >
                     <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-200 text-gray-600 flex-shrink-0">
                       <DescriptionIcon style={{ fontSize: 18 }} />
                     </div>
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Typography
-                        variant="small"
-                        className="font-semibold text-gray-900 text-xs truncate"
-                      >
-                        {source.title}
-                      </Typography>
-                      <Chip
-                        value={source.status}
-                        size="sm"
-                        variant="ghost"
-                        color={statusColor}
-                        className="h-5 px-2 py-0 text-[10px] font-medium flex-shrink-0"
-                      />
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Typography
+                          variant="small"
+                          className="font-semibold text-gray-900 text-xs truncate"
+                        >
+                          {source.title}
+                        </Typography>
+                        <Chip
+                          value={source.status}
+                          size="sm"
+                          variant="ghost"
+                          color={statusColor}
+                          className="h-5 px-2 py-0 text-[10px] font-medium flex-shrink-0"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <span className="text-[10px] text-gray-500 whitespace-nowrap">
+                          {source.type}
+                        </span>
+                        <span className="text-[10px] text-gray-400 whitespace-nowrap">
+                          {source.createdAt}
+                        </span>
+                        {source.tags.length > 0 ? (
+                          <span className="truncate text-[10px] text-blue-600">
+                            {source.tags.map((tag) => `#${tag}`).join(' ')}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   </button>
 
@@ -876,7 +1189,7 @@ function SourcesPanel({
                         <span>
                           <Checkbox
                             checked={false}
-                            onChange={() => handleToggleSource(source.id)}
+                            onChange={(event) => handleToggleSource(source.id, event.nativeEvent as MouseEvent)}
                             containerProps={{ className: 'p-1' }}
                             className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
                             iconProps={{ className: 'text-white' }}
@@ -887,7 +1200,7 @@ function SourcesPanel({
                     ) : (
                       <Checkbox
                         checked={Boolean(selectedSourceIds[source.id])}
-                        onChange={() => handleToggleSource(source.id)}
+                        onChange={(event) => handleToggleSource(source.id, event.nativeEvent as MouseEvent)}
                         containerProps={{ className: 'p-1' }}
                         className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
                         iconProps={{ className: 'text-white' }}

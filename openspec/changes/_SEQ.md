@@ -118,8 +118,9 @@ Week 3-5:  Phase 2  ─── [2a: Obsidian] ─────────
 | 0b | `optimize-backend-performance` | ✅ 已归档 | 2026-02-07 归档至 `archive/2026-02-07-optimize-backend-performance` |
 | 1a | `optimize-frontend-performance` | 🚧 进行中（21/23） | 剩余构建拆分/LCP 验收项（2.5/2.6 暂缓） |
 | 1b | `add-error-resilience` | ✅ 已归档 | 2026-02-07 归档至 `archive/2026-02-07-add-error-resilience` |
+| 2c | `enhance-source-batch-ops` | ✅ 已归档 | 2026-02-07 归档至 `archive/2026-02-07-enhance-source-batch-ops` |
 
-**下一优先级**: 在保留 `optimize-frontend-performance` 两项延后验收（2.5/2.6）的前提下，优先进入 Phase 2 的 `enhance-source-batch-ops`（暂不推进 Obsidian）。
+**下一优先级**: 在保留 `optimize-frontend-performance` 两项延后验收（2.5/2.6）且继续暂缓 Obsidian 的前提下，优先推进 Phase 2 的 `enhance-ux-polish`，随后并行评估 `add-dark-mode-v2` / `add-keyboard-shortcuts`。
 
 ## 被排除/暂缓的提案
 
