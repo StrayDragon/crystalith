@@ -29,6 +29,7 @@ interface ChatPanelProps {
   draft: string;
   onDraftChange: (value: string) => void;
   onSend: () => void;
+  onStopStreaming?: () => void;
   isSending: boolean;
   isStreaming?: boolean;
   streamingMessageId?: string | null;
@@ -44,6 +45,7 @@ interface ChatPanelProps {
   isLoadingMessages: boolean;
   messagesError: string;
   onRetryMessages: () => void;
+  hasSources?: boolean;
   onSaveToNote?: (content: string) => void;
   // Conversion callbacks
   onConvertToSource?: () => Promise<void>;
@@ -56,6 +58,7 @@ function ChatPanel({
   draft,
   onDraftChange,
   onSend,
+  onStopStreaming,
   isSending,
   isStreaming = false,
   streamingMessageId = null,
@@ -71,6 +74,7 @@ function ChatPanel({
   isLoadingMessages,
   messagesError,
   onRetryMessages,
+  hasSources = false,
   onSaveToNote,
   onConvertToSource,
   onConvertToOutput,
@@ -303,7 +307,9 @@ function ChatPanel({
           </div>
         ) : messages.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-xs text-gray-500">
-            开始对话吧：输入问题或指令，NotebookLM 会生成总结与要点。
+            {hasSources
+              ? '选择来源后提问：输入问题即可基于文档生成回答。'
+              : '添加文档开始分析：上传来源后即可开始提问。'}
           </div>
         ) : null}
 
@@ -350,15 +356,26 @@ function ChatPanel({
             }}
             rows={1}
           />
-          <IconButton
-            type="submit"
-            size="sm"
-            className="rounded-full bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
-            aria-label="发送"
-            disabled={draft.trim().length === 0 || isSending || isBlocked}
-          >
-            <IconSend className="w-4 h-4" />
-          </IconButton>
+          {isStreaming ? (
+            <button
+              type="button"
+              className="px-3 py-1.5 rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-medium hover:bg-red-100 transition-colors"
+              aria-label="停止生成"
+              onClick={onStopStreaming}
+            >
+              停止生成
+            </button>
+          ) : (
+            <IconButton
+              type="submit"
+              size="sm"
+              className="rounded-full bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
+              aria-label="发送"
+              disabled={draft.trim().length === 0 || isSending || isBlocked}
+            >
+              <IconSend className="w-4 h-4" />
+            </IconButton>
+          )}
         </div>
       </form>
     </div>

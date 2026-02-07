@@ -32,6 +32,7 @@ import {
 } from '../../../../api/generated';
 import { buildSlidevPreviewUrl } from '@crystalith-slidev';
 import { toast } from '../../../../shared/toast';
+import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { buildFrontmatterPreview, normalizeGenerationConfig } from './utils/slides';
 
 const STAGES: { id: SlideStage; label: string }[] = [
@@ -205,6 +206,7 @@ export default function SlidesStudioDialog({
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const autoPreviewRef = useRef<number | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   const maxEvents = 200;
   const isConfigOnly = openMode === 'config';
   const isPreviewMode = openMode === 'preview';
@@ -1398,17 +1400,24 @@ export default function SlidesStudioDialog({
   const densityOptions = slidesConfig?.densityOptions ?? [];
   const themePresetOptions = slidesConfig?.themePresetOptions ?? [];
 
+  useFocusTrap({
+    active: open,
+    containerRef: dialogRef,
+    onEscape: onClose,
+  });
+
   return (
     <Dialog
       open={open}
       handler={onClose}
       size="xxl"
-      className={`rounded-xl overflow-hidden flex flex-col bg-white ${
+      className={`rounded-xl overflow-hidden flex flex-col bg-white ux-modal-in ${
         isFullscreen
           ? 'absolute inset-0 min-w-[100vw] min-h-[100vh] h-[100vh] max-h-[100vh] w-[100vw] max-w-[100vw]'
           : 'absolute left-[5vw] top-[5vh] min-w-[90vw] min-h-[90vh] h-[90vh] max-h-[90vh] w-[90vw] max-w-[90vw]'
       }`}
     >
+      <div ref={dialogRef} tabIndex={-1} className="flex flex-col flex-1 min-h-0">
       <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 p-4">
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 text-gray-600 flex-shrink-0">
@@ -1616,6 +1625,7 @@ export default function SlidesStudioDialog({
       <DialogFooter className="flex items-center justify-end border-t border-gray-100 p-4">
         {stageActions()}
       </DialogFooter>
+      </div>
     </Dialog>
   );
 }

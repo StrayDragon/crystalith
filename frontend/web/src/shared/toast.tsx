@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { useEffect } from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
@@ -22,20 +21,28 @@ interface ToastStore {
   removeToast: (id: string) => void;
 }
 
+const DEFAULT_TOAST_DURATION: Record<ToastType, number> = {
+  success: 3000,
+  error: 5000,
+  info: 4000,
+  warning: 4000,
+};
+
 export const useToastStore = create<ToastStore>((set) => ({
   toasts: [],
-  addToast: (message: string, type: ToastType = 'info', duration: number = 4000) => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  addToast: (message: string, type: ToastType = 'info', duration?: number) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    const resolvedDuration = duration ?? DEFAULT_TOAST_DURATION[type];
     set((state) => ({
-      toasts: [...state.toasts, { id, message, type, duration }],
+      toasts: [...state.toasts, { id, message, type, duration: resolvedDuration }],
     }));
-    // Auto-remove after duration
-    if (duration > 0) {
+
+    if (resolvedDuration > 0) {
       setTimeout(() => {
         set((state) => ({
           toasts: state.toasts.filter((t) => t.id !== id),
         }));
-      }, duration);
+      }, resolvedDuration);
     }
   },
   removeToast: (id: string) =>
@@ -44,7 +51,6 @@ export const useToastStore = create<ToastStore>((set) => ({
     })),
 }));
 
-// Helper functions for easy usage
 export const toast = {
   success: (message: string, duration?: number) =>
     useToastStore.getState().addToast(message, 'success', duration),
@@ -73,16 +79,9 @@ const colorMap = {
 function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
   const Icon = iconMap[toast.type];
 
-  useEffect(() => {
-    if (toast.duration && toast.duration > 0) {
-      const timer = setTimeout(onClose, toast.duration);
-      return () => clearTimeout(timer);
-    }
-  }, [toast.duration, onClose]);
-
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white ${colorMap[toast.type]} animate-slide-in`}
+      className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white ${colorMap[toast.type]} ux-slide-in`}
       role="alert"
     >
       <Icon className="h-5 w-5 flex-shrink-0" />

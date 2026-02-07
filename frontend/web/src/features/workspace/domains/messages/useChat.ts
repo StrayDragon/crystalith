@@ -55,6 +55,7 @@ export function useChat({
   const messagesRef = useRef(messages);
   const streamingBufferRef = useRef('');
   const streamingFlushTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const streamingAbortControllerRef = useRef<AbortController | null>(null);
 
   const { data, error, isLoading, mutate } = useSWR(
     activeNotebookId && activeSessionId && isConnected
@@ -79,6 +80,8 @@ export function useChat({
         clearTimeout(streamingFlushTimerRef.current);
         streamingFlushTimerRef.current = null;
       }
+      streamingAbortControllerRef.current?.abort();
+      streamingAbortControllerRef.current = null;
     };
   }, []);
 
@@ -161,6 +164,8 @@ export function useChat({
     // Use streaming if enabled
     if (enableStreaming) {
       const assistantMessageId = createId();
+      const abortController = new AbortController();
+      streamingAbortControllerRef.current = abortController;
       setIsStreaming(true);
       setStreamingMessageId(assistantMessageId);
 
@@ -185,6 +190,7 @@ export function useChat({
           headers: {
             Accept: 'text/event-stream',
           },
+          signal: abortController.signal,
           onSseEvent: (event) => {
             const { event: eventType, data } = event;
             if (eventType === 'chunk' && data && typeof data === 'object' && 'text' in data) {
@@ -257,24 +263,37 @@ export function useChat({
         }
         setLastFailedDraft('');
       } catch (error) {
-        let errorMessage = '请求失败，请检查后端服务或稍后重试。';
-        if (error instanceof Error) {
-          const statusError = error as Error & { status?: number };
-          if (statusError.status === 503) {
-            errorMessage = 'AI 服务暂时不可用，请检查模型配置或稍后重试。';
-          } else if (statusError.status === 404) {
-            errorMessage = '会话或笔记本不存在。';
-          } else if (statusError.status === 500) {
-            errorMessage = '服务器内部错误，请稍后重试。';
-          } else if (error.message && error.message.length < 100) {
-            errorMessage = error.message;
+        const isAborted =
+          abortController.signal.aborted ||
+          (error instanceof DOMException && error.name === 'AbortError') ||
+          (error instanceof Error && error.name === 'AbortError');
+
+        if (isAborted) {
+          store.getState().setError('send', '');
+          setLastFailedDraft('');
+        } else {
+          let errorMessage = '请求失败，请检查后端服务或稍后重试。';
+          if (error instanceof Error) {
+            const statusError = error as Error & { status?: number };
+            if (statusError.status === 503) {
+              errorMessage = 'AI 服务暂时不可用，请检查模型配置或稍后重试。';
+            } else if (statusError.status === 404) {
+              errorMessage = '会话或笔记本不存在。';
+            } else if (statusError.status === 500) {
+              errorMessage = '服务器内部错误，请稍后重试。';
+            } else if (error.message && error.message.length < 100) {
+              errorMessage = error.message;
+            }
           }
+          const s2 = store.getState();
+          s2.updateMessage(assistantMessageId, { content: errorMessage });
+          s2.setError('send', errorMessage);
+          setLastFailedDraft(text);
         }
-        const s2 = store.getState();
-        s2.updateMessage(assistantMessageId, { content: errorMessage });
-        s2.setError('send', errorMessage);
-        setLastFailedDraft(text);
       } finally {
+        if (streamingAbortControllerRef.current === abortController) {
+          streamingAbortControllerRef.current = null;
+        }
         setIsStreaming(false);
         setStreamingMessageId(null);
         store.getState().setLoading('send', false);
@@ -368,6 +387,11 @@ export function useChat({
     await sendMessage();
   }, [lastFailedDraft, sendMessage]);
 
+  const stopStreaming = useCallback(() => {
+    streamingAbortControllerRef.current?.abort();
+    streamingAbortControllerRef.current = null;
+  }, []);
+
   // --- Session Conversion Methods ---
   const [isConverting, setIsConverting] = useState(false);
 
@@ -434,6 +458,7 @@ export function useChat({
     isSending: loadingSend,
     isStreaming,
     streamingMessageId,
+    stopStreaming,
     sendError: errSend,
     citations: citationsCurrent,
     retryMessages,

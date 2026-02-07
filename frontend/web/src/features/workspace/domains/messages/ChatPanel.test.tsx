@@ -96,3 +96,18 @@ test('chat panel shows retry send button when notice exists', () => {
   fireEvent.click(retryButton);
   expect(onRetrySend).toHaveBeenCalledTimes(1);
 });
+
+test('chat panel shows stop streaming button', () => {
+  const onStopStreaming = vi.fn();
+
+  renderChatPanel({
+    isStreaming: true,
+    onStopStreaming,
+  });
+
+  const stopButton = screen.getByRole('button', { name: '停止生成' });
+  expect(stopButton).toBeInTheDocument();
+
+  fireEvent.click(stopButton);
+  expect(onStopStreaming).toHaveBeenCalledTimes(1);
+});

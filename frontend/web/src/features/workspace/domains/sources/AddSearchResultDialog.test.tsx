@@ -43,3 +43,45 @@ test('dialog supports retrying failed source import', async () => {
     expect(onAddSource).toHaveBeenCalledTimes(2);
   });
 });
+
+test('dialog shows progress text while batch adding sources', async () => {
+  let releaseFirst: (() => void) | null = null;
+  const onAddSource = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseFirst = resolve;
+        }),
+    )
+    .mockResolvedValue(undefined);
+
+  render(
+    <LayerProvider>
+      <AddSearchResultDialog
+        open
+        onClose={vi.fn()}
+        results={[
+          sampleResult,
+          { ...sampleResult, url: 'https://example.com/article-2', title: 'Title 2' },
+          { ...sampleResult, url: 'https://example.com/article-3', title: 'Title 3' },
+        ]}
+        mode="fetch"
+        onAddSource={onAddSource}
+        onComplete={vi.fn()}
+      />
+    </LayerProvider>,
+  );
+
+  await waitFor(() => {
+    expect(onAddSource).toHaveBeenCalledTimes(1);
+  });
+
+  expect(screen.getAllByText('正在添加 1/3 个来源').length).toBeGreaterThan(0);
+
+  releaseFirst?.();
+
+  await waitFor(() => {
+    expect(screen.getByText('3 / 3 完成')).toBeInTheDocument();
+  });
+});

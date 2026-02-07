@@ -6,6 +6,7 @@ import { renderHook } from '../../../../test-utils/renderHook';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { useChat } from './useChat';
 import { askQuestionV1NotebooksNotebookIdQaPost as askQuestion } from '../../../../api/generated';
+import { client } from '../../../../api/generated/client.gen';
 
 vi.mock('swr', () => ({
   default: vi.fn(),
@@ -18,7 +19,16 @@ vi.mock('../../../../api/generated', () => ({
   listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet: vi.fn(),
 }));
 
+vi.mock('../../../../api/generated/client.gen', () => ({
+  client: {
+    sse: {
+      post: vi.fn(),
+    },
+  },
+}));
+
 const swrMock = vi.mocked(useSWR);
+const ssePostMock = vi.mocked(client.sse.post);
 
 beforeEach(() => {
   // Reset Zustand store
@@ -58,6 +68,8 @@ beforeEach(() => {
     isLoading: false,
     mutate: vi.fn(),
   });
+
+  ssePostMock.mockReset();
 });
 
 test('sendMessage returns error when no notebook is active', async () => {
@@ -186,5 +198,52 @@ test('sendMessage uses selected source ids when provided', async () => {
       session_id: 789,
       source_ids: [101],
     },
+  });
+});
+
+test('stopStreaming aborts active stream generation', async () => {
+  let capturedSignal: AbortSignal | undefined;
+
+  ssePostMock.mockImplementation(async ({ signal }: any) => {
+    capturedSignal = signal;
+    return {
+      stream: (async function* streamEvents() {
+        while (!signal.aborted) {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      })(),
+    } as any;
+  });
+
+  const ensureSession = vi.fn().mockResolvedValue(1001);
+  const { result } = renderHook(() =>
+    useChat({ ensureSession, enableStreaming: true }),
+  );
+
+  act(() => {
+    const s = useWorkspaceStore.getState();
+    s.setConnectionState('live');
+    s.setActiveNotebook(1);
+    s.setDraft('Hello streaming');
+  });
+
+  await act(async () => {
+    void result.current.sendMessage();
+  });
+
+  await waitFor(() => {
+    expect(result.current.isStreaming).toBe(true);
+  });
+
+  act(() => {
+    result.current.stopStreaming();
+  });
+
+  await waitFor(() => {
+    expect(capturedSignal?.aborted).toBe(true);
+  });
+
+  await waitFor(() => {
+    expect(result.current.isStreaming).toBe(false);
   });
 });

@@ -565,7 +565,7 @@ export default function WorkspaceLayout() {
         {/* Sources Panel */}
         {(!expandedPanel || expandedPanel === 'sources') && (
         <section
-          className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden ux-fade-in"
           style={{
             animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
           }}
@@ -669,7 +669,7 @@ export default function WorkspaceLayout() {
         {/* Chat Panel */}
         {(!expandedPanel || expandedPanel === 'chat') && (
         <section
-          className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden ux-fade-in"
           style={{
             animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
           }}
@@ -721,6 +721,7 @@ export default function WorkspaceLayout() {
               draft={chat.draft}
               onDraftChange={chat.setDraft}
               onSend={chat.sendMessage}
+              onStopStreaming={chat.stopStreaming}
               isSending={chat.isSending}
               isStreaming={chat.isStreaming}
               streamingMessageId={chat.streamingMessageId}
@@ -736,6 +737,7 @@ export default function WorkspaceLayout() {
               isLoadingMessages={chat.isLoadingMessages}
               messagesError={errMessages}
               onRetryMessages={chat.retryMessages}
+              hasSources={sources.sources.length > 0}
               onSaveToNote={refine.saveContentAsNote}
               onConvertToSource={chat.convertSessionToSource}
               onConvertToOutput={chat.convertSessionToOutput}
@@ -773,7 +775,7 @@ export default function WorkspaceLayout() {
         {/* Studio Panel */}
         {(!expandedPanel || expandedPanel === 'studio') && (
         <section
-          className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden ux-fade-in"
           style={{
             animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
           }}
@@ -810,6 +812,7 @@ export default function WorkspaceLayout() {
               outputsError={refine.outputsError}
               onRetryOutputs={refine.retryOutputs}
               onRetryOutputJob={refine.retryOutputJob}
+              onCancelOutputJob={refine.cancelOutputJob}
               onGenerateOutput={refine.onGenerateOutput}
               onOpenSlides={(options) => {
                 const mode = options?.mode ?? 'config';

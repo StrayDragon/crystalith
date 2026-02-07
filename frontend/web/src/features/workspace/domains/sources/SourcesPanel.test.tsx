@@ -1,9 +1,10 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { expect, test, vi } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { SourceItem } from '../../shared/types';
 import { LayerProvider } from '../../../../shared/layer';
 import SourcesPanel from './SourcesPanel';
+import { toast } from '../../../../shared/toast';
 
 vi.mock('react-virtuoso', () => ({
   Virtuoso: ({ data, itemContent }: any) => (
@@ -48,6 +49,19 @@ vi.mock('./AddSearchResultDialog', () => ({
 vi.mock('../research/ResearchCapsule', () => ({
   default: () => null,
 }));
+
+vi.mock('../../../../shared/toast', () => ({
+  toast: {
+    warning: vi.fn(),
+    error: vi.fn(),
+    success: vi.fn(),
+    info: vi.fn(),
+  },
+}));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 const baseSources: SourceItem[] = [
   {
@@ -195,4 +209,26 @@ test('supports sort/filter controls and multi-file upload', async () => {
   expect(sortBySpy).toHaveBeenCalledWith('name');
   expect(sortOrderSpy).toHaveBeenCalledWith('asc');
   expect(tagFilterSpy).toHaveBeenCalledWith('论文');
+});
+
+test('filters unsupported upload files and shows warning', () => {
+  const uploadSpy = vi.fn();
+  const props = createProps({ onUpload: uploadSpy });
+
+  render(
+    <LayerProvider>
+      <SourcesPanel {...props} />
+    </LayerProvider>,
+  );
+
+  const supported = new File(['ok'], 'doc.md', { type: 'text/markdown' });
+  const unsupported = new File(['bin'], 'archive.pdf', { type: 'application/pdf' });
+
+  fireEvent.change(screen.getByLabelText('上传来源文件'), {
+    target: { files: [supported, unsupported] },
+  });
+
+  expect(uploadSpy).toHaveBeenCalledTimes(1);
+  expect(uploadSpy).toHaveBeenCalledWith([supported]);
+  expect(toast.warning).toHaveBeenCalledTimes(1);
 });
