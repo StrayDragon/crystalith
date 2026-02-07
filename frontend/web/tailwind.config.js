@@ -4,6 +4,7 @@ const scrollbar = require("tailwind-scrollbar");
 
 /** @type {import('tailwindcss').Config} */
 module.exports = withMT({
+  darkMode: 'class',
   content: [
     './src/**/*.{js,jsx,ts,tsx}',
     '../packages/crystalith-slidev/src/**/*.{js,jsx,ts,tsx}',

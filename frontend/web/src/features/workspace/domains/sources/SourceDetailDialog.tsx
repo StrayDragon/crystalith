@@ -87,7 +87,7 @@ function ChunkItem({ chunk, index }: { chunk: ChunkRead; index: number }) {
   const needsTruncate = chunk.text.length > previewLength;
 
   return (
-    <div className="border border-gray-200 rounded-lg bg-white hover:border-gray-300 transition-colors">
+    <div className="border border-gray-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 hover:border-gray-300 dark:border-slate-600 transition-colors">
       <button
         type="button"
         className="w-full p-3 text-left"
@@ -95,12 +95,12 @@ function ChunkItem({ chunk, index }: { chunk: ChunkRead; index: number }) {
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-gray-100 text-gray-600 text-xs font-medium">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-xs font-medium">
               #{chunk.chunk_index + 1}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <Typography variant="small" className="text-xs text-gray-700 leading-relaxed">
+            <Typography variant="small" className="text-xs text-gray-700 dark:text-slate-200 leading-relaxed">
               {expanded || !needsTruncate
                 ? chunk.text
                 : `${chunk.text.slice(0, previewLength)}...`}
@@ -109,14 +109,14 @@ function ChunkItem({ chunk, index }: { chunk: ChunkRead; index: number }) {
           <div className="flex items-center gap-1 flex-shrink-0">
             {needsTruncate && (
               expanded ? (
-                <ExpandLessIcon className="h-4 w-4 text-gray-400" />
+                <ExpandLessIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
               ) : (
-                <ExpandMoreIcon className="h-4 w-4 text-gray-400" />
+                <ExpandMoreIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
               )
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400">
+        <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400 dark:text-slate-500">
           <span>{charCount} 字符</span>
           {chunk.start_offset !== null && chunk.end_offset !== null && (
             <span>位置: {chunk.start_offset}-{chunk.end_offset}</span>
@@ -128,7 +128,7 @@ function ChunkItem({ chunk, index }: { chunk: ChunkRead; index: number }) {
       </button>
       {expanded && chunk.metadata && Object.keys(chunk.metadata).length > 0 && (
         <div className="px-3 pb-3 pt-0">
-          <div className="p-2 bg-gray-50 rounded text-[10px] font-mono text-gray-500 overflow-x-auto">
+          <div className="p-2 bg-gray-50 dark:bg-slate-800 rounded text-[10px] font-mono text-gray-500 dark:text-slate-400 overflow-x-auto">
             {JSON.stringify(chunk.metadata, null, 2)}
           </div>
         </div>
@@ -422,16 +422,16 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     >
       <div ref={dialogRef} tabIndex={-1} className="flex flex-col flex-1 min-h-0">
       {/* Header */}
-      <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 p-4">
+      <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-slate-700 p-4">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 text-gray-500 flex-shrink-0">
+          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 flex-shrink-0">
             <DescriptionIcon fontSize="small" />
           </div>
           <div className="min-w-0">
-            <Typography variant="h6" className="text-[15px] font-semibold text-gray-900 truncate">
+            <Typography variant="h6" className="text-[15px] font-semibold text-gray-900 dark:text-slate-100 truncate">
               {source.title}
             </Typography>
-            <Typography variant="small" className="text-gray-500 text-xs font-medium">
+            <Typography variant="small" className="text-gray-500 dark:text-slate-400 text-xs font-medium">
               来源详情 · 支持 RAG 问答
             </Typography>
           </div>
@@ -462,7 +462,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
         <Tabs value={activeTab} className="flex flex-col flex-1 min-h-0 overflow-hidden">
           {/* Tab Header */}
           <TabsHeader
-            className="bg-transparent border-b border-gray-100 rounded-none p-0"
+            className="bg-transparent border-b border-gray-100 dark:border-slate-700 rounded-none p-0"
             indicatorProps={{
               className: 'bg-blue-500/10 shadow-none rounded-none border-b-2 border-blue-500',
             }}
@@ -470,7 +470,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
             <Tab
               value="overview"
               onClick={() => setActiveTab('overview')}
-              className={`py-3 px-4 text-xs font-medium ${activeTab === 'overview' ? 'text-blue-500' : 'text-gray-500'}`}
+              className={`py-3 px-4 text-xs font-medium ${activeTab === 'overview' ? 'text-blue-500' : 'text-gray-500 dark:text-slate-400'}`}
             >
               <div className="flex items-center gap-1.5">
                 <AutoAwesomeIcon style={{ fontSize: 14 }} />
@@ -480,13 +480,13 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
             <Tab
               value="raw"
               onClick={() => setActiveTab('raw')}
-              className={`py-3 px-4 text-xs font-medium ${activeTab === 'raw' ? 'text-blue-500' : 'text-gray-500'}`}
+              className={`py-3 px-4 text-xs font-medium ${activeTab === 'raw' ? 'text-blue-500' : 'text-gray-500 dark:text-slate-400'}`}
             >
               <div className="flex items-center gap-1.5">
                 <DataObjectIcon style={{ fontSize: 14 }} />
                 <span>原始数据</span>
                 {source.chunkCount > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 bg-gray-100 rounded text-[10px] text-gray-500">
+                  <span className="ml-1 px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded text-[10px] text-gray-500 dark:text-slate-400">
                     {source.chunkCount}
                   </span>
                 )}
@@ -498,10 +498,10 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
             {/* Overview Tab - Summary + QA combined */}
             <TabPanel value="overview" className="p-0 h-full flex flex-col overflow-hidden">
               {/* Summary Section - Collapsible */}
-              <div className="bg-gray-50/50 border-b border-gray-100 flex-shrink-0">
+              <div className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
                 <button
                   type="button"
-                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-100/50 transition-colors"
+                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-800/50 transition-colors"
                   onClick={() => setSummaryCollapsed(!summaryCollapsed)}
                 >
                   <div className="flex items-center gap-2 text-blue-500">
@@ -510,7 +510,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                       自动摘要
                     </Typography>
                     {summaryCollapsed && brief && (
-                      <Typography variant="small" className="text-xs text-gray-400 font-normal ml-2 truncate max-w-[300px]">
+                      <Typography variant="small" className="text-xs text-gray-400 dark:text-slate-500 font-normal ml-2 truncate max-w-[300px]">
                         {brief.summary.slice(0, 50)}...
                       </Typography>
                     )}
@@ -525,15 +525,15 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                           handleRefreshBrief();
                         }}
                         disabled={isBriefLoading}
-                        className={`rounded-full w-6 h-6 text-gray-400 hover:text-gray-700 ${isBriefLoading ? 'animate-spin' : ''}`}
+                        className={`rounded-full w-6 h-6 text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:text-slate-200 ${isBriefLoading ? 'animate-spin' : ''}`}
                       >
                         <RefreshIcon style={{ fontSize: 16 }} />
                       </IconButton>
                     )}
                     {summaryCollapsed ? (
-                      <ExpandMoreIcon className="h-4 w-4 text-gray-400" />
+                      <ExpandMoreIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                     ) : (
-                      <ExpandLessIcon className="h-4 w-4 text-gray-400" />
+                      <ExpandLessIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                     )}
                   </div>
                 </button>
@@ -552,19 +552,19 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                       </Typography>
                     ) : brief ? (
                       <div className="space-y-3">
-                        <Typography variant="small" className="text-xs text-gray-600 leading-relaxed">
+                        <Typography variant="small" className="text-xs text-gray-600 dark:text-slate-300 leading-relaxed">
                           {brief.summary}
                         </Typography>
                         <div className="h-px bg-gray-200" />
                         <div>
-                          <Typography variant="small" className="text-xs font-semibold text-gray-500 mb-1.5">
+                          <Typography variant="small" className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">
                             关键要点
                           </Typography>
                           <div className="space-y-1">
                             {brief.keyPoints.map((point, index) => (
                               <div key={index} className="flex items-start gap-1.5">
-                                <span className="text-gray-400 text-xs">•</span>
-                                <Typography variant="small" className="text-[11px] text-gray-600 font-medium leading-tight">
+                                <span className="text-gray-400 dark:text-slate-500 text-xs">•</span>
+                                <Typography variant="small" className="text-[11px] text-gray-600 dark:text-slate-300 font-medium leading-tight">
                                   {point}
                                 </Typography>
                               </div>
@@ -574,10 +574,10 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                         <div className="flex items-center justify-between pt-1">
                           <div className="flex gap-1">
                             {brief.topics.map((topic) => (
-                              <Chip key={topic} value={topic} size="sm" variant="ghost" className="h-5 px-2 py-0 text-[10px] bg-gray-100 text-gray-600 normal-case font-normal" />
+                              <Chip key={topic} value={topic} size="sm" variant="ghost" className="h-5 px-2 py-0 text-[10px] bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 normal-case font-normal" />
                             ))}
                           </div>
-                          <Typography variant="small" className="text-[10px] text-gray-500 font-medium">
+                          <Typography variant="small" className="text-[10px] text-gray-500 dark:text-slate-400 font-medium">
                             约 {brief.wordCount.toLocaleString()} 字
                           </Typography>
                         </div>
@@ -588,10 +588,10 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
               </div>
 
               {/* QA Section */}
-              <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-white">
+              <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-white dark:bg-slate-900">
                 {/* QA Header */}
-                <div className="px-4 py-2 border-b border-gray-100 flex-shrink-0">
-                  <div className="flex items-center gap-2 text-gray-500">
+                <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
+                  <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400">
                     <QuestionAnswerIcon style={{ fontSize: 14 }} />
                     <Typography variant="small" className="font-medium text-xs">
                       基于来源问答
@@ -603,7 +603,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {messages.length === 0 ? (
                     <div className="text-center py-4">
-                      <Typography variant="small" className="text-gray-400 text-xs">
+                      <Typography variant="small" className="text-gray-400 dark:text-slate-500 text-xs">
                         在下方输入问题，获取基于此来源的针对性回答
                       </Typography>
                     </div>
@@ -617,7 +617,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                           className={`max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed whitespace-pre-wrap ${
                             message.role === 'user'
                               ? 'bg-blue-500 text-white'
-                              : 'bg-gray-100 text-gray-800'
+                              : 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200'
                           }`}
                         >
                           {message.content}
@@ -634,7 +634,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                                 <IconButton
                                   variant="text"
                                   size="sm"
-                                  className="rounded-full w-5 h-5 min-w-[20px] text-gray-400 hover:text-gray-700 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                                  className="rounded-full w-5 h-5 min-w-[20px] text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:text-slate-200 opacity-0 group-hover:opacity-100 hover:opacity-100"
                                   title="导出问答记录"
                                   disabled={isSavingAsSource}
                                   style={{ opacity: 1 }}
@@ -689,9 +689,9 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                   )}
                   {isLoading && (
                     <div className="flex justify-start">
-                      <div className="bg-gray-100 px-3 py-2 rounded-xl flex items-center gap-2">
+                      <div className="bg-gray-100 dark:bg-slate-800 px-3 py-2 rounded-xl flex items-center gap-2">
                         <Spinner className="h-3 w-3" />
-                        <span className="text-xs text-gray-500">思考中...</span>
+                        <span className="text-xs text-gray-500 dark:text-slate-400">思考中...</span>
                       </div>
                     </div>
                   )}
@@ -699,10 +699,10 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                 </div>
 
                 {/* Input */}
-                <div className="p-3 border-t border-gray-100 bg-white flex-shrink-0">
+                <div className="p-3 border-t border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-900 flex-shrink-0">
                   <div className="relative">
                     <input
-                      className="w-full h-9 pl-3 pr-10 rounded-full bg-gray-50 border border-transparent focus:bg-white focus:border-gray-200 focus:ring-0 text-sm outline-none transition-all placeholder:text-gray-400"
+                      className="w-full h-9 pl-3 pr-10 rounded-full bg-gray-50 dark:bg-slate-800 border border-transparent focus:bg-white dark:bg-slate-900 focus:border-gray-200 dark:border-slate-700 focus:ring-0 text-sm outline-none transition-all placeholder:text-gray-400 dark:text-slate-500"
                       placeholder="基于此来源内容提问..."
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
@@ -720,7 +720,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                     <div className="absolute right-1 top-1/2 -translate-y-1/2">
                       <IconButton
                         size="sm"
-                        className={`rounded-full w-7 h-7 ${!inputValue.trim() || isLoading ? 'bg-gray-200 text-gray-400' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
+                        className={`rounded-full w-7 h-7 ${!inputValue.trim() || isLoading ? 'bg-gray-200 text-gray-400 dark:text-slate-500' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
                         onClick={handleSend}
                         aria-label="发送问题"
                         disabled={!inputValue.trim() || isLoading}
@@ -739,7 +739,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                 {isChunksLoading ? (
                   <div className="space-y-3">
                     {[1, 2, 3].map((i) => (
-                      <div key={i} className="border border-gray-200 rounded-lg p-3 animate-pulse">
+                      <div key={i} className="border border-gray-200 dark:border-slate-700 rounded-lg p-3 animate-pulse">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="w-6 h-6 bg-gray-200 rounded" />
                           <div className="h-4 bg-gray-200 rounded w-3/4" />
@@ -757,14 +757,14 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                 ) : chunks.length === 0 ? (
                   <div className="text-center py-8">
                     <DataObjectIcon className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                    <Typography variant="small" className="text-gray-500 text-xs">
+                    <Typography variant="small" className="text-gray-500 dark:text-slate-400 text-xs">
                       暂无原始数据
                     </Typography>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between mb-3">
-                      <Typography variant="small" className="text-xs text-gray-500 font-medium">
+                      <Typography variant="small" className="text-xs text-gray-500 dark:text-slate-400 font-medium">
                         共 {chunks.length} 个片段
                       </Typography>
                     </div>

@@ -120,8 +120,9 @@ Week 3-5:  Phase 2  ─── [2a: Obsidian] ─────────
 | 1b | `add-error-resilience` | ✅ 已归档 | 2026-02-07 归档至 `archive/2026-02-07-add-error-resilience` |
 | 2b | `enhance-ux-polish` | 🚧 进行中（32/34） | 已完成主流程开发 + 测试 + DevTools 验收；3.3/3.4（source 索引百分比 SSE 链路）暂缓 |
 | 2c | `enhance-source-batch-ops` | ✅ 已归档 | 2026-02-07 归档至 `archive/2026-02-07-enhance-source-batch-ops` |
+| 2d | `add-dark-mode-v2` | 🚧 进行中（22/26） | 已完成主题基础设施、切换控件与核心面板适配；剩余 Output/知识图谱深色适配与 WCAG 对比度验收 |
 
-**下一优先级**: 在保留 `optimize-frontend-performance` 两项延后验收（2.5/2.6）并继续暂缓 Obsidian、`enhance-ux-polish` 的 3.3/3.4 的前提下，按 Phase 2 顺序准备推进 `add-dark-mode-v2`，随后是 `add-keyboard-shortcuts`。
+**下一优先级**: 在保留 `optimize-frontend-performance` 两项延后验收（2.5/2.6）并继续暂缓 Obsidian、`enhance-ux-polish` 的 3.3/3.4 的前提下，先完成 `add-dark-mode-v2` 剩余项，再推进 `add-keyboard-shortcuts`。
 
 ## 被排除/暂缓的提案
 

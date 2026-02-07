@@ -11,9 +11,26 @@
     />
     <link rel="apple-touch-icon" href="/logo192.png" />
     <link rel="manifest" href="/manifest.json" />
+    <script>
+      (function () {
+        var storageKey = 'crystalith_theme';
+        var mode = localStorage.getItem(storageKey) || 'system';
+        if (mode !== 'light' && mode !== 'dark' && mode !== 'system') {
+          mode = 'system';
+        }
+        var resolved = mode;
+        if (mode === 'system') {
+          resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        var root = document.documentElement;
+        root.classList.toggle('dark', resolved === 'dark');
+        root.setAttribute('data-theme', resolved);
+        root.setAttribute('data-theme-mode', mode);
+      })();
+    </script>
     <title>研究工作台</title>
   </head>
-  <body class="h-full font-sans text-gray-900 bg-gray-100 m-0 antialiased">
+  <body class="h-full font-sans text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-slate-950 m-0 antialiased">
     <noscript>需要启用 JavaScript 才能运行此应用。</noscript>
     <div id="root" class="h-full"></div>
     <script type="module" src="/src/app/main.tsx"></script>

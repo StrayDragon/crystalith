@@ -909,8 +909,8 @@ export default function SlidesStudioDialog({
 
     if (!notebookId) {
       return (
-        <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center">
-          <Typography variant="small" className="text-gray-600">
+        <div className="rounded-lg border border-dashed border-gray-300 dark:border-slate-600 p-6 text-center">
+          <Typography variant="small" className="text-gray-600 dark:text-slate-300">
             请先创建或选择笔记本。
           </Typography>
         </div>
@@ -941,10 +941,10 @@ export default function SlidesStudioDialog({
                 <Typography variant="small" className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">
                   演示信息
                 </Typography>
-                <Typography variant="h6" className="text-base font-semibold text-gray-900 truncate">
+                <Typography variant="h6" className="text-base font-semibold text-gray-900 dark:text-slate-100 truncate">
                   {previewTitle}
                 </Typography>
-                <Typography variant="small" className="text-xs text-gray-600 font-medium">
+                <Typography variant="small" className="text-xs text-gray-600 dark:text-slate-300 font-medium">
                   {slideCount ? `${slideCount} 张幻灯片` : '尚未生成大纲'}
                 </Typography>
               </div>
@@ -952,17 +952,17 @@ export default function SlidesStudioDialog({
                 variant="text"
                 size="sm"
                 onClick={() => setShowMarkdownEditor((prev) => !prev)}
-                className="px-2 py-1 text-xs text-gray-600"
+                className="px-2 py-1 text-xs text-gray-600 dark:text-slate-300"
               >
                 {showMarkdownEditor ? '隐藏 Markdown' : '查看 Markdown'}
               </Button>
             </div>
             {outlinePreview.length > 0 && (
-              <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
-                <Typography variant="small" className="text-[11px] text-gray-500 font-semibold">
+              <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2">
+                <Typography variant="small" className="text-[11px] text-gray-500 dark:text-slate-400 font-semibold">
                   大纲速览
                 </Typography>
-                <ul className="mt-2 space-y-1 text-xs text-gray-700">
+                <ul className="mt-2 space-y-1 text-xs text-gray-700 dark:text-slate-200">
                   {outlinePreview.map((item, index) => (
                     <li key={`preview-${index}`} className="flex items-center gap-2">
                       <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
@@ -971,17 +971,17 @@ export default function SlidesStudioDialog({
                   ))}
                 </ul>
                 {outlineItems.length > outlinePreview.length && (
-                  <Typography variant="small" className="mt-2 text-[11px] text-gray-500">
+                  <Typography variant="small" className="mt-2 text-[11px] text-gray-500 dark:text-slate-400">
                     还有 {outlineItems.length - outlinePreview.length} 张幻灯片
                   </Typography>
                 )}
               </div>
             )}
-            <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
-              <div className="rounded-lg border border-gray-200 bg-white px-2 py-1">
+            <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-slate-300">
+              <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1">
                 引擎：{draft?.engine || 'slidev'}
               </div>
-              <div className="rounded-lg border border-gray-200 bg-white px-2 py-1">
+              <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1">
                 状态：{queueLabel || '就绪'}
               </div>
             </div>
@@ -995,13 +995,13 @@ export default function SlidesStudioDialog({
                 rows={12}
                 className="font-mono text-xs"
               />
-              <Typography variant="small" className="text-gray-600">
+              <Typography variant="small" className="text-gray-600 dark:text-slate-300">
                 {selectionLabel}
               </Typography>
             </div>
           )}
           {!showMarkdownEditor && (
-            <Typography variant="small" className="text-gray-600">
+            <Typography variant="small" className="text-gray-600 dark:text-slate-300">
               {selectionLabel}
             </Typography>
           )}
@@ -1024,25 +1024,25 @@ export default function SlidesStudioDialog({
             onChange={(event) => setPrompt(event.target.value)}
             rows={5}
           />
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3">
+          <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 p-3 space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <Typography variant="small" className="text-gray-700 font-semibold">
+              <Typography variant="small" className="text-gray-700 dark:text-slate-200 font-semibold">
                 生成设置
               </Typography>
               <Button
                 variant="text"
                 size="sm"
-                className="px-2 py-1 text-xs text-gray-600"
+                className="px-2 py-1 text-xs text-gray-600 dark:text-slate-300"
                 onClick={() => setShowAdvanced((prev) => !prev)}
               >
                 {showAdvanced ? '收起高级设置' : '高级设置'}
               </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1 text-xs text-gray-600 font-medium">
+              <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-slate-300 font-medium">
                 幻灯片数量
                 <select
-                  className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700"
+                  className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
                   value={configQuantity}
                   onChange={(event) => setConfigQuantity(event.target.value)}
                   name="slideQuantity"
@@ -1052,10 +1052,10 @@ export default function SlidesStudioDialog({
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-600 font-medium">
+              <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-slate-300 font-medium">
                 结构模板
                 <select
-                  className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700"
+                  className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
                   value={configStructure}
                   onChange={(event) => setConfigStructure(event.target.value)}
                   name="slideStructure"
@@ -1065,10 +1065,10 @@ export default function SlidesStudioDialog({
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-600 font-medium">
+              <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-slate-300 font-medium">
                 受众定位
                 <select
-                  className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700"
+                  className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
                   value={configAudience}
                   onChange={(event) => setConfigAudience(event.target.value)}
                   name="slideAudience"
@@ -1078,10 +1078,10 @@ export default function SlidesStudioDialog({
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-600 font-medium">
+              <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-slate-300 font-medium">
                 语气风格
                 <select
-                  className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700"
+                  className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
                   value={configTone}
                   onChange={(event) => setConfigTone(event.target.value)}
                   name="slideTone"
@@ -1091,10 +1091,10 @@ export default function SlidesStudioDialog({
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-600 font-medium">
+              <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-slate-300 font-medium">
                 输出语言
                 <select
-                  className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700"
+                  className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
                   value={configLanguage}
                   onChange={(event) => setConfigLanguage(event.target.value)}
                   name="slideLanguage"
@@ -1104,10 +1104,10 @@ export default function SlidesStudioDialog({
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-600 font-medium">
+              <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-slate-300 font-medium">
                 排版密度
                 <select
-                  className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700"
+                  className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
                   value={configDensity}
                   onChange={(event) => setConfigDensity(event.target.value)}
                   name="slideDensity"
@@ -1117,10 +1117,10 @@ export default function SlidesStudioDialog({
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col gap-1 text-xs text-gray-600 font-medium">
+              <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-slate-300 font-medium">
                 主题预设
                 <select
-                  className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700"
+                  className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
                   value={configThemePreset}
                   onChange={(event) => setConfigThemePreset(event.target.value)}
                   name="slideThemePreset"
@@ -1134,7 +1134,7 @@ export default function SlidesStudioDialog({
             {showAdvanced && (
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Typography variant="small" className="text-gray-600 text-xs font-medium">
+                  <Typography variant="small" className="text-gray-600 dark:text-slate-300 text-xs font-medium">
                     Frontmatter 覆盖（YAML，可选）
                   </Typography>
                   <Textarea
@@ -1144,21 +1144,21 @@ export default function SlidesStudioDialog({
                     className="font-mono text-[11px]"
                     placeholder={'theme: default\ncolorSchema: light\nfonts:\n  sans: "Manrope"\ntransition: fade'}
                   />
-                  <Typography variant="small" className="text-gray-500 text-[11px]">
+                  <Typography variant="small" className="text-gray-500 dark:text-slate-400 text-[11px]">
                     留空将使用主题预设自动生成；如需覆盖请填写 YAML（不需要 --- 包裹）。
                   </Typography>
                 </div>
                 <div className="space-y-1">
-                  <Typography variant="small" className="text-gray-600 text-xs font-medium">
+                  <Typography variant="small" className="text-gray-600 dark:text-slate-300 text-xs font-medium">
                     Frontmatter 预览
                   </Typography>
-                  <pre className="rounded-lg border border-gray-200 bg-white p-2 text-[11px] text-gray-700 whitespace-pre-wrap">
+                  <pre className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 text-[11px] text-gray-700 dark:text-slate-200 whitespace-pre-wrap">
                     {frontmatterPreview}
                   </pre>
                 </div>
                 {isConnected && (
                   <div className="space-y-1">
-                    <Typography variant="small" className="text-gray-600 text-xs font-medium">
+                    <Typography variant="small" className="text-gray-600 dark:text-slate-300 text-xs font-medium">
                       AI 模型
                     </Typography>
                     <ModelSelector
@@ -1173,7 +1173,7 @@ export default function SlidesStudioDialog({
               </div>
             )}
           </div>
-          <Typography variant="small" className="text-gray-600">
+          <Typography variant="small" className="text-gray-600 dark:text-slate-300">
             {selectionLabel}
           </Typography>
         </div>
@@ -1191,12 +1191,12 @@ export default function SlidesStudioDialog({
           />
           <div className="space-y-4">
             {outlineItems.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-sm text-gray-500">
+              <div className="rounded-lg border border-dashed border-gray-300 dark:border-slate-600 p-4 text-center text-sm text-gray-500 dark:text-slate-400">
                 暂无大纲内容，请先生成或添加幻灯片。
               </div>
             ) : (
               outlineItems.map((item, index) => (
-                <div key={`outline-${index}`} className="rounded-lg border border-gray-200 p-3 space-y-2">
+                <div key={`outline-${index}`} className="rounded-lg border border-gray-200 dark:border-slate-700 p-3 space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <Input
                       label={`幻灯片 ${index + 1} 标题`}
@@ -1226,7 +1226,7 @@ export default function SlidesStudioDialog({
           <Button variant="outlined" color="blue" onClick={handleAddSlide}>
             添加幻灯片
           </Button>
-          <Typography variant="small" className="text-gray-600">
+          <Typography variant="small" className="text-gray-600 dark:text-slate-300">
             {selectionLabel}
           </Typography>
         </div>
@@ -1242,7 +1242,7 @@ export default function SlidesStudioDialog({
           rows={16}
           className="font-mono text-xs"
         />
-        <Typography variant="small" className="text-gray-600">
+        <Typography variant="small" className="text-gray-600 dark:text-slate-300">
           {selectionLabel}
         </Typography>
       </div>
@@ -1411,23 +1411,23 @@ export default function SlidesStudioDialog({
       open={open}
       handler={onClose}
       size="xxl"
-      className={`rounded-xl overflow-hidden flex flex-col bg-white ux-modal-in ${
+      className={`rounded-xl overflow-hidden flex flex-col bg-white dark:bg-slate-900 ux-modal-in ${
         isFullscreen
           ? 'absolute inset-0 min-w-[100vw] min-h-[100vh] h-[100vh] max-h-[100vh] w-[100vw] max-w-[100vw]'
           : 'absolute left-[5vw] top-[5vh] min-w-[90vw] min-h-[90vh] h-[90vh] max-h-[90vh] w-[90vw] max-w-[90vw]'
       }`}
     >
       <div ref={dialogRef} tabIndex={-1} className="flex flex-col flex-1 min-h-0">
-      <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 p-4">
+      <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-slate-700 p-4">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 text-gray-600 flex-shrink-0">
+          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 flex-shrink-0">
             <SlideshowIcon fontSize="small" />
           </div>
           <div className="min-w-0">
-            <Typography variant="h6" className="text-[15px] font-semibold text-gray-900 truncate">
+            <Typography variant="h6" className="text-[15px] font-semibold text-gray-900 dark:text-slate-100 truncate">
               演示生成
             </Typography>
-            <Typography variant="small" className="text-gray-500 text-xs font-medium">
+            <Typography variant="small" className="text-gray-500 dark:text-slate-400 text-xs font-medium">
               {headerSubtitle}
             </Typography>
           </div>
@@ -1473,7 +1473,7 @@ export default function SlidesStudioDialog({
                 ))}
               </div>
             )}
-            <Typography variant="small" className="text-gray-500 text-xs">
+            <Typography variant="small" className="text-gray-500 dark:text-slate-400 text-xs">
               {draft ? `草稿 ${draft.id}` : isConfigOnly ? '新建演示' : '暂无草稿'}
             </Typography>
           </div>
@@ -1495,7 +1495,7 @@ export default function SlidesStudioDialog({
                       ? 'border-red-200 bg-red-50 text-red-700'
                       : statusMessage.tone === 'blue'
                         ? 'border-blue-100 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 bg-gray-50 text-gray-700'
+                        : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-200'
                   }`}
                 >
                   {statusMessage.message}
@@ -1506,7 +1506,7 @@ export default function SlidesStudioDialog({
                   {events.map((event, index) => (
                     <div
                       key={`${event.type}-${index}`}
-                      className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700 flex items-start gap-2"
+                      className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-3 py-2 text-xs text-gray-700 dark:text-slate-200 flex items-start gap-2"
                     >
                       <span
                         className={`mt-1 h-1.5 w-1.5 rounded-full ${
@@ -1518,15 +1518,15 @@ export default function SlidesStudioDialog({
                   ))}
                 </div>
               )}
-              <div className="rounded-xl border border-gray-200 bg-white p-4 flex-1 min-h-0 overflow-auto">
+              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 flex-1 min-h-0 overflow-auto">
                 {stageContent()}
               </div>
             </div>
             {showPreviewPanel && (
-              <div className={`rounded-xl border border-gray-200 bg-gradient-to-br from-white via-white to-slate-50 p-3 flex flex-col min-h-0 shadow-sm ${isPreviewMode ? 'order-1 lg:order-2' : ''}`}>
-                <div className="flex items-center justify-between gap-2 border-b border-gray-200 pb-2">
+              <div className={`rounded-xl border border-gray-200 dark:border-slate-700 bg-gradient-to-br from-white via-white to-slate-50 p-3 flex flex-col min-h-0 shadow-sm ${isPreviewMode ? 'order-1 lg:order-2' : ''}`}>
+                <div className="flex items-center justify-between gap-2 border-b border-gray-200 dark:border-slate-700 pb-2">
                   <div className="flex items-center gap-2">
-                    <Typography variant="small" className="text-gray-700 font-semibold">
+                    <Typography variant="small" className="text-gray-700 dark:text-slate-200 font-semibold">
                       幻灯片预览
                     </Typography>
                     <Chip value={previewStatus} size="sm" variant="ghost" color={previewStatusTone} />
@@ -1574,7 +1574,7 @@ export default function SlidesStudioDialog({
                   )}
                 </div>
                 {isPreviewMode && !previewReady && canBuildPreview && (
-                  <Typography variant="small" className="text-xs text-gray-500 mt-2">
+                  <Typography variant="small" className="text-xs text-gray-500 dark:text-slate-400 mt-2">
                     自动同步预览已开启，如未更新可点击“同步预览”。
                   </Typography>
                 )}
@@ -1604,14 +1604,14 @@ export default function SlidesStudioDialog({
                       />
                     </div>
                   ) : isPreviewSyncing || isGenerating || queueStatus === 'running' || draft?.status === 'running' ? (
-                    <div className="w-full max-w-full aspect-video rounded-lg border border-dashed border-slate-300 bg-white/70 flex flex-col items-center justify-center gap-2 text-xs text-gray-500">
+                    <div className="w-full max-w-full aspect-video rounded-lg border border-dashed border-slate-300 bg-white dark:bg-slate-900/70 flex flex-col items-center justify-center gap-2 text-xs text-gray-500 dark:text-slate-400">
                       <Spinner className="h-4 w-4" />
                       <span>预览同步中...</span>
                     </div>
                   ) : (
-                    <div className="h-full w-full flex flex-col items-center justify-center gap-2 text-xs text-gray-500 px-6 text-center">
+                    <div className="h-full w-full flex flex-col items-center justify-center gap-2 text-xs text-gray-500 dark:text-slate-400 px-6 text-center">
                       <span>暂无预览，请先生成 Markdown 或点击“同步预览”。</span>
-                      <span className="text-[11px] text-gray-400">
+                      <span className="text-[11px] text-gray-400 dark:text-slate-500">
                         预览基于本地 Slidev 服务（默认 http://localhost:3030）。
                       </span>
                     </div>
@@ -1622,7 +1622,7 @@ export default function SlidesStudioDialog({
           </div>
         </div>
       </DialogBody>
-      <DialogFooter className="flex items-center justify-end border-t border-gray-100 p-4">
+      <DialogFooter className="flex items-center justify-end border-t border-gray-100 dark:border-slate-700 p-4">
         {stageActions()}
       </DialogFooter>
       </div>

@@ -529,7 +529,7 @@ export default function WorkspaceLayout() {
   // NOTE: Mobile responsive layout is deferred - keeping 3-column horizontal layout always
   // TODO: Add mobile/tablet responsive layout when adapting for mobile devices
   return (
-    <div className="flex flex-col h-screen bg-gray-50/50 gap-4 p-4 overflow-hidden text-gray-900">
+    <div className="flex flex-col h-screen bg-gray-50/50 dark:bg-slate-950 gap-4 p-4 overflow-hidden text-gray-900 dark:text-gray-100">
       <WorkspaceHeader
         notebooks={notebooks.notebooks}
         activeNotebookId={notebooks.activeNotebookId}
@@ -565,19 +565,19 @@ export default function WorkspaceLayout() {
         {/* Sources Panel */}
         {(!expandedPanel || expandedPanel === 'sources') && (
         <section
-          className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden ux-fade-in"
+          className="flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden ux-fade-in"
           style={{
             animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
           }}
           aria-label="来源"
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-800/70">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">来源</h2>
             <Tooltip content={expandedPanel === 'sources' ? '收起' : '展开'}>
               <IconButton
                 variant="text"
                 size="sm"
-                className="w-7 h-7 rounded-full text-gray-500 hover:bg-gray-200"
+                className="w-7 h-7 rounded-full text-gray-500 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700"
                 onClick={() => handleToggleExpand('sources')}
               >
                 {expandedPanel === 'sources' ? (
@@ -669,13 +669,13 @@ export default function WorkspaceLayout() {
         {/* Chat Panel */}
         {(!expandedPanel || expandedPanel === 'chat') && (
         <section
-          className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden ux-fade-in"
+          className="flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden ux-fade-in"
           style={{
             animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
           }}
           aria-label="对话"
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex-wrap gap-2">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-800/70 flex-wrap gap-2">
             <div className="flex items-center gap-3">
               <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">对话</h2>
               <SessionSwitcher
@@ -701,7 +701,7 @@ export default function WorkspaceLayout() {
               <IconButton
                 variant="text"
                 size="sm"
-                className="w-7 h-7 rounded-full text-gray-500 hover:bg-gray-200"
+                className="w-7 h-7 rounded-full text-gray-500 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700"
                 onClick={() => handleToggleExpand('chat')}
               >
                 {expandedPanel === 'chat' ? (
@@ -775,19 +775,19 @@ export default function WorkspaceLayout() {
         {/* Studio Panel */}
         {(!expandedPanel || expandedPanel === 'studio') && (
         <section
-          className="flex flex-col min-h-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden ux-fade-in"
+          className="flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden ux-fade-in"
           style={{
             animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
           }}
           aria-label="Studio"
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-800/70">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Studio</h2>
             <Tooltip content={expandedPanel === 'studio' ? '收起' : '展开'}>
               <IconButton
                 variant="text"
                 size="sm"
-                className="w-7 h-7 rounded-full text-gray-500 hover:bg-gray-200"
+                className="w-7 h-7 rounded-full text-gray-500 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700"
                 onClick={() => handleToggleExpand('studio')}
               >
                 {expandedPanel === 'studio' ? (
@@ -851,7 +851,7 @@ export default function WorkspaceLayout() {
       </Suspense>
 
       {isSlidesDialogOpen && (
-        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20"><div className="w-[420px]"><SkeletonCard lines={6} /></div></div>}>
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[420px]"><SkeletonCard lines={6} /></div></div>}>
           <SlidesStudioDialog
             open={isSlidesDialogOpen}
             onClose={() => {
@@ -874,7 +874,7 @@ export default function WorkspaceLayout() {
 
       {/* Knowledge Graph View (Full Screen Overlay) */}
       {isGraphViewOpen && (
-        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20"><div className="w-[520px]"><SkeletonCard lines={6} /></div></div>}>
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[520px]"><SkeletonCard lines={6} /></div></div>}>
           <KnowledgeGraphView
             sources={sources.sources}
             outputs={refine.outputs}
@@ -896,7 +896,7 @@ export default function WorkspaceLayout() {
 
       {/* Source Detail Dialog for Graph View */}
       {graphSourceDetailOpen && (
-        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20"><div className="w-[520px]"><SkeletonCard lines={5} /></div></div>}>
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[520px]"><SkeletonCard lines={5} /></div></div>}>
           <SourceDetailDialog
             open={graphSourceDetailOpen}
             source={graphSelectedSource}
@@ -920,7 +920,7 @@ export default function WorkspaceLayout() {
 
       {/* Source Detail Dialog for Citation Popovers */}
       {citationSourceDetailOpen && (
-        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20"><div className="w-[520px]"><SkeletonCard lines={5} /></div></div>}>
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[520px]"><SkeletonCard lines={5} /></div></div>}>
           <SourceDetailDialog
             open={citationSourceDetailOpen}
             source={citationSelectedSource}

@@ -664,7 +664,7 @@ function SourcesPanel({
   return (
     <div className={`flex flex-1 flex-col min-h-0 ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''}`}>
       {/* Fixed Header: Upload & Search - Always visible */}
-      <div className="flex-shrink-0 px-3 sm:px-4 pt-3 sm:pt-4 pb-2 flex flex-col gap-3 border-b border-gray-100">
+      <div className="flex-shrink-0 px-3 sm:px-4 pt-3 sm:pt-4 pb-2 flex flex-col gap-3 border-b border-gray-100 dark:border-slate-700">
         {/* Upload Button */}
         <Tooltip content="支持文本(.txt)和Markdown(.md)文件，可多选与拖拽">
           <div
@@ -705,7 +705,7 @@ function SourcesPanel({
               fullWidth
               size="sm"
               disabled={uploadDisabled}
-              className="flex items-center justify-center gap-2 py-2 rounded-full border-dashed border-gray-400 normal-case font-normal text-gray-700 hover:bg-gray-100 hover:border-gray-500"
+              className="flex items-center justify-center gap-2 py-2 rounded-full border-dashed border-gray-400 normal-case font-normal text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 hover:border-gray-500"
               onClick={() => fileInputRef.current?.click()}
             >
               {uploadState === 'loading' ? (
@@ -746,7 +746,7 @@ function SourcesPanel({
           </div>
         </Tooltip>
 
-        <Typography variant="small" className="text-[10px] text-gray-500 px-1">
+        <Typography variant="small" className="text-[10px] text-gray-500 dark:text-slate-400 px-1">
           {uploadDragActive ? '拖放文件到此处' : uploadHint}
         </Typography>
 
@@ -766,7 +766,7 @@ function SourcesPanel({
         ) : null}
 
         {uploadQueue.length > 0 ? (
-          <div className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+          <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2">
             <div className="mb-1 flex items-center justify-between">
               <Typography variant="small" className="text-[11px] font-semibold text-gray-600">
                 上传队列
@@ -774,7 +774,7 @@ function SourcesPanel({
               {onClearUploadQueue ? (
                 <button
                   type="button"
-                  className="text-[10px] text-gray-500 hover:text-gray-700"
+                  className="text-[10px] text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:text-slate-200"
                   onClick={onClearUploadQueue}
                 >
                   清空
@@ -809,10 +809,10 @@ function SourcesPanel({
         ) : null}
 
         {/* Search Section */}
-        <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
+        <div className="border border-gray-300 rounded-lg bg-white dark:bg-slate-900 overflow-hidden">
           <div className="p-2">
             <div className="relative flex w-full">
-              <div className="absolute top-2/4 left-3 -translate-y-2/4 text-gray-500">
+              <div className="absolute top-2/4 left-3 -translate-y-2/4 text-gray-500 dark:text-slate-400">
                  <SearchIcon style={{ fontSize: 20 }} />
               </div>
               <input
@@ -843,14 +843,14 @@ function SourcesPanel({
           </div>
 
           {/* Search Options */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 border-t border-gray-200">
+          <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700">
             {/* Engine Select */}
             <Menu placement="bottom-start">
               <MenuHandler>
                 <Button
                   variant="outlined"
                   size="sm"
-                  className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border-gray-300 bg-white text-gray-800 normal-case font-normal text-[11px] hover:bg-gray-100"
+                  className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border-gray-300 bg-white dark:bg-slate-900 text-gray-800 normal-case font-normal text-[11px] hover:bg-gray-100 dark:hover:bg-slate-700"
                 >
                   {getEngineIcon()}
                   {engine}
@@ -861,7 +861,7 @@ function SourcesPanel({
                 {['Web', 'Scholar', 'Docs'].map((opt) => (
                   <MenuItem
                     key={opt}
-                    className={`py-1.5 px-3 text-xs ${engine === opt ? 'bg-gray-100 font-medium' : ''}`}
+                    className={`py-1.5 px-3 text-xs ${engine === opt ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
                     onClick={() => setEngine(opt)}
                   >
                     {opt}
@@ -876,7 +876,7 @@ function SourcesPanel({
                 <Button
                   variant="outlined"
                   size="sm"
-                  className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border-gray-300 bg-white text-gray-800 normal-case font-normal text-[11px] hover:bg-gray-100"
+                  className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border-gray-300 bg-white dark:bg-slate-900 text-gray-800 normal-case font-normal text-[11px] hover:bg-gray-100 dark:hover:bg-slate-700"
                 >
                   {getModeIcon()}
                   {mode}
@@ -892,7 +892,7 @@ function SourcesPanel({
                   <MenuItem
                     key={opt}
                     data-testid={modeTestId}
-                    className={`py-1.5 px-3 text-xs ${mode === opt ? 'bg-gray-100 font-medium' : ''}`}
+                    className={`py-1.5 px-3 text-xs ${mode === opt ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
                     onClick={() => setMode(opt)}
                   >
                     {opt}
@@ -938,7 +938,7 @@ function SourcesPanel({
             return (
             <button
               onClick={() => setShowResearchHistory(true)}
-              className="text-xs text-gray-500 hover:text-blue-600 py-1.5 px-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+              className="text-xs text-gray-500 dark:text-slate-400 hover:text-blue-600 py-1.5 px-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1.5"
             >
               <HistoryIcon style={{ fontSize: 14 }} />
               查看研究历史 ({historySessions.length})
@@ -962,15 +962,15 @@ function SourcesPanel({
       />
 
       {/* Sorting / Filter / Batch Actions */}
-      <div className="sticky top-0 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 bg-white/95 backdrop-blur border-b border-gray-100 space-y-2">
+      <div className="sticky top-0 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 bg-white dark:bg-slate-900/95 backdrop-blur border-b border-gray-100 dark:border-slate-700 space-y-2">
         <div className="grid grid-cols-3 gap-2">
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] text-gray-500">排序字段</span>
+            <span className="text-[10px] text-gray-500 dark:text-slate-400">排序字段</span>
             <select
               aria-label="来源排序字段"
               value={sortBy}
               onChange={(event) => onSortByChange?.(event.target.value as SourceSortBy)}
-              className="h-7 rounded border border-gray-200 bg-white px-2 text-[11px] text-gray-700"
+              className="h-7 rounded border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-[11px] text-gray-700 dark:text-slate-200"
             >
               <option value="date">日期</option>
               <option value="name">名称</option>
@@ -979,24 +979,24 @@ function SourcesPanel({
             </select>
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] text-gray-500">排序方向</span>
+            <span className="text-[10px] text-gray-500 dark:text-slate-400">排序方向</span>
             <select
               aria-label="来源排序方向"
               value={sortOrder}
               onChange={(event) => onSortOrderChange?.(event.target.value as SourceSortOrder)}
-              className="h-7 rounded border border-gray-200 bg-white px-2 text-[11px] text-gray-700"
+              className="h-7 rounded border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-[11px] text-gray-700 dark:text-slate-200"
             >
               <option value="desc">降序</option>
               <option value="asc">升序</option>
             </select>
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[10px] text-gray-500">标签筛选</span>
+            <span className="text-[10px] text-gray-500 dark:text-slate-400">标签筛选</span>
             <select
               aria-label="来源标签筛选"
               value={tagFilter}
               onChange={(event) => onTagFilterChange?.(event.target.value)}
-              className="h-7 rounded border border-gray-200 bg-white px-2 text-[11px] text-gray-700"
+              className="h-7 rounded border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-[11px] text-gray-700 dark:text-slate-200"
             >
               <option value="">全部标签</option>
               {sourceTags.map((tag) => (
@@ -1014,7 +1014,7 @@ function SourcesPanel({
               checked={allSelected}
               onChange={handleToggleAll}
               containerProps={{ className: 'p-1' }}
-              className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
+              className="h-4 w-4 rounded border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
               iconProps={{ className: 'text-white' }}
             />
             <Typography variant="small" className="text-[11px] text-gray-600 font-medium">
@@ -1049,7 +1049,7 @@ function SourcesPanel({
                 variant="outlined"
                 disabled={batchReembedDisabled}
                 onClick={handleBatchReembed}
-                className="h-7 px-2 py-0 text-[11px] normal-case border-gray-200 text-gray-700"
+                className="h-7 px-2 py-0 text-[11px] normal-case border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200"
               >
                 批量 re-embed
               </Button>
@@ -1060,7 +1060,7 @@ function SourcesPanel({
                     size="sm"
                     variant="outlined"
                     disabled={batchTagDisabled}
-                    className="h-7 px-2 py-0 text-[11px] normal-case border-gray-200 text-gray-700"
+                    className="h-7 px-2 py-0 text-[11px] normal-case border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200"
                   >
                     标签
                   </Button>
@@ -1073,7 +1073,7 @@ function SourcesPanel({
                   >
                     新建并分配标签
                   </MenuItem>
-                  {sourceTags.length > 0 ? <div className="my-1 border-t border-gray-100" /> : null}
+                  {sourceTags.length > 0 ? <div className="my-1 border-t border-gray-100 dark:border-slate-700" /> : null}
                   {sourceTags.map((tag) => (
                     <MenuItem
                       key={`assign-${tag.id}`}
@@ -1084,7 +1084,7 @@ function SourcesPanel({
                       添加标签：{tag.name}
                     </MenuItem>
                   ))}
-                  {selectedTagNames.length > 0 ? <div className="my-1 border-t border-gray-100" /> : null}
+                  {selectedTagNames.length > 0 ? <div className="my-1 border-t border-gray-100 dark:border-slate-700" /> : null}
                   {selectedTagNames.map((tagName) => {
                     const tag = sourceTags.find((item) => item.name === tagName);
                     if (!tag) return null;
@@ -1111,11 +1111,11 @@ function SourcesPanel({
         {isLoading ? (
           <SkeletonList items={3} />
         ) : sources.length === 0 ? (
-          <div className="p-3 text-center border border-dashed border-gray-300 rounded-lg bg-gray-100">
-            <Typography variant="small" className="text-gray-700 text-[11px] font-semibold">
+          <div className="p-3 text-center border border-dashed border-gray-300 rounded-lg bg-gray-100 dark:bg-slate-800">
+            <Typography variant="small" className="text-gray-700 dark:text-slate-200 text-[11px] font-semibold">
               添加文档开始分析
             </Typography>
-            <Typography variant="small" className="text-gray-500 text-[10px] mt-1">
+            <Typography variant="small" className="text-gray-500 dark:text-slate-400 text-[10px] mt-1">
               上传文档后，可在中间面板提问并在右侧生成输出。
             </Typography>
           </div>
@@ -1143,10 +1143,10 @@ function SourcesPanel({
               return (
                 <div
                   ref={(node) => sourceRefs.current.set(source.id, node)}
-                  className={`group relative flex items-center rounded-xl border bg-white shadow-sm transition-all hover:border-gray-300 hover:shadow mb-1.5 ux-slide-in ${
+                  className={`group relative flex items-center rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all hover:border-gray-300 hover:shadow mb-1.5 ux-slide-in ${
                     isHighlighted
                       ? 'border-blue-200 ring-2 ring-blue-300 bg-blue-50/70'
-                      : 'border-gray-200'
+                      : 'border-gray-200 dark:border-slate-700'
                   }`}
                 >
                   <button
@@ -1167,7 +1167,7 @@ function SourcesPanel({
                       <div className="flex items-center gap-2 min-w-0">
                         <Typography
                           variant="small"
-                          className="font-semibold text-gray-900 text-xs truncate"
+                          className="font-semibold text-gray-900 dark:text-slate-100 text-xs truncate"
                         >
                           {source.title}
                         </Typography>
@@ -1180,7 +1180,7 @@ function SourcesPanel({
                         />
                       </div>
                       <div className="flex items-center gap-2 overflow-hidden">
-                        <span className="text-[10px] text-gray-500 whitespace-nowrap">
+                        <span className="text-[10px] text-gray-500 dark:text-slate-400 whitespace-nowrap">
                           {source.type}
                         </span>
                         <span className="text-[10px] text-gray-400 whitespace-nowrap">
@@ -1201,7 +1201,7 @@ function SourcesPanel({
                         <IconButton
                           size="sm"
                           variant="text"
-                          className="w-6 h-6 min-w-[24px] rounded-full text-gray-500 opacity-0 group-hover:opacity-100 hover:bg-gray-200"
+                          className="w-6 h-6 min-w-[24px] rounded-full text-gray-500 dark:text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-gray-200"
                           onClick={(e) => {
                             e.stopPropagation();
                           }}
@@ -1260,7 +1260,7 @@ function SourcesPanel({
                             checked={false}
                             onChange={(event) => handleToggleSource(source.id, event.nativeEvent as MouseEvent)}
                             containerProps={{ className: 'p-1' }}
-                            className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
+                            className="h-4 w-4 rounded border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
                             iconProps={{ className: 'text-white' }}
                             disabled
                           />
@@ -1271,7 +1271,7 @@ function SourcesPanel({
                         checked={Boolean(selectedSourceIds[source.id])}
                         onChange={(event) => handleToggleSource(source.id, event.nativeEvent as MouseEvent)}
                         containerProps={{ className: 'p-1' }}
-                        className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
+                        className="h-4 w-4 rounded border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
                         iconProps={{ className: 'text-white' }}
                       />
                     )}
@@ -1326,7 +1326,7 @@ function SourcesPanel({
           <div
             ref={researchModalRef}
             tabIndex={-1}
-            className={`bg-white rounded-2xl shadow-2xl overflow-hidden ux-modal-in transition-all ${
+            className={`bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden ux-modal-in transition-all ${
               researchFullscreen
                 ? 'w-full max-w-5xl'
                 : 'w-full max-w-lg'
@@ -1363,18 +1363,18 @@ function SourcesPanel({
           onClick={() => setShowResearchHistory(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl overflow-hidden ux-modal-in w-full max-w-lg max-h-[70vh] flex flex-col"
+            className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden ux-modal-in w-full max-w-lg max-h-[70vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+            <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-2">
-                <HistoryIcon className="w-5 h-5 text-gray-500" />
-                <h3 className="font-semibold text-gray-900">研究历史</h3>
+                <HistoryIcon className="w-5 h-5 text-gray-500 dark:text-slate-400" />
+                <h3 className="font-semibold text-gray-900 dark:text-slate-100">研究历史</h3>
               </div>
               <button
                 onClick={() => setShowResearchHistory(false)}
-                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
               >
                 <CloseIcon className="w-5 h-5 text-gray-400" />
               </button>
@@ -1391,12 +1391,12 @@ function SourcesPanel({
                       handleResearchClick(session.id);
                       setShowResearchHistory(false);
                     }}
-                    className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors"
+                    className="w-full text-left p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:border-blue-300 hover:bg-blue-50/50 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 truncate">{session.topic}</h4>
-                        <p className="text-xs text-gray-500 mt-0.5">
+                        <h4 className="font-medium text-gray-900 dark:text-slate-100 truncate">{session.topic}</h4>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
                           {session.max_iterations} 轮研究 · {session.result_count || 0} 条结果
                         </p>
                       </div>
