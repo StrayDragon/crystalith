@@ -6,7 +6,7 @@
 - [x] 1.4 将 StudioPanel 的输出历史列表替换为 `<Virtuoso>`
 - [x] 1.5 将 SearchResultsQueue 的搜索结果列表替换为 `<Virtuoso>`
 - [x] 1.6 编写测试：渲染 500 条消息，验证仅可见区域的 DOM 节点被挂载
-- [ ] 1.7 验证：Chrome DevTools Performance 面板录制，100+ 消息场景下滚动帧率 > 30fps
+- [x] 1.7 验证：Chrome DevTools Performance 面板录制，100+ 消息场景下滚动帧率 > 30fps
 
 ## 2. 代码分割与懒加载
 
@@ -31,4 +31,4 @@
 - [x] 4.1 来源列表搜索输入添加 300ms debounce
 - [x] 4.2 面板 resize 事件添加 requestAnimationFrame 节流
 - [x] 4.3 窗口 resize 事件处理添加 debounce
-- [ ] 4.4 验证：快速输入搜索关键词时，不出现卡顿或闪烁
+- [x] 4.4 验证：快速输入搜索关键词时，不出现卡顿或闪烁
