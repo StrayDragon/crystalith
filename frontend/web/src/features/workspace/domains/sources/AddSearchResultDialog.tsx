@@ -228,12 +228,12 @@ export default function AddSearchResultDialog({
       />
 
       {/* Dialog Content */}
-      <div ref={modalRef} tabIndex={-1} className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 ux-modal-in">
+      <div ref={modalRef} tabIndex={-1} className="relative bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-md mx-4 ux-modal-in">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
           <div className="flex items-center gap-2">
-            <ModeIcon style={{ fontSize: 20 }} className="text-gray-700" />
-            <span className="text-base font-semibold text-gray-900">
+            <ModeIcon style={{ fontSize: 20 }} className="text-gray-700 dark:text-slate-200" />
+            <span className="text-base font-semibold text-gray-900 dark:text-slate-100">
               {isCancelled
                 ? '已取消'
                 : isProcessing
@@ -245,10 +245,10 @@ export default function AddSearchResultDialog({
           </div>
           <button
             onClick={handleClose}
-            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+            className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
             title="关闭"
           >
-            <CloseIcon style={{ fontSize: 18 }} className="text-gray-500" />
+            <CloseIcon style={{ fontSize: 18 }} className="text-gray-500 dark:text-slate-400" />
           </button>
         </div>
 
@@ -262,7 +262,7 @@ export default function AddSearchResultDialog({
                 color={errorCount > 0 ? 'amber' : 'gray'}
                 className="h-2"
               />
-              <Typography variant="small" className="text-[11px] text-gray-500 mt-1">
+              <Typography variant="small" className="text-[11px] text-gray-500 dark:text-slate-400 mt-1">
                 {isProcessing
                   ? `正在添加 ${activeProgressCount}/${statuses.length} 个来源`
                   : `${completedCount} / ${statuses.length} 完成`}
@@ -285,14 +285,14 @@ export default function AddSearchResultDialog({
                       : status?.status === 'success'
                         ? 'bg-green-50'
                         : status?.status === 'cancelled'
-                          ? 'bg-gray-100'
-                          : 'bg-gray-50'
+                          ? 'bg-gray-100 dark:bg-slate-800'
+                          : 'bg-gray-50 dark:bg-slate-800'
                   }`}
                 >
                   {/* Status Icon */}
                   <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
                     {status?.status === 'loading' && (
-                      <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-gray-300 dark:border-slate-600 border-t-gray-900 rounded-full animate-spin" />
                     )}
                     {status?.status === 'success' && (
                       <CheckCircleIcon style={{ fontSize: 20 }} className="text-green-600" />
@@ -301,7 +301,7 @@ export default function AddSearchResultDialog({
                       <ErrorIcon style={{ fontSize: 20 }} className="text-red-500" />
                     )}
                     {status?.status === 'cancelled' && (
-                      <CancelIcon style={{ fontSize: 20 }} className="text-gray-400" />
+                      <CancelIcon style={{ fontSize: 20 }} className="text-gray-400 dark:text-slate-500" />
                     )}
                     {status?.status === 'pending' && (
                       <PendingIcon style={{ fontSize: 18 }} className="text-gray-300" />
@@ -312,13 +312,13 @@ export default function AddSearchResultDialog({
                   <div className="flex-1 min-w-0">
                     <Typography
                       variant="small"
-                      className="font-semibold text-xs text-gray-900 line-clamp-1"
+                      className="font-semibold text-xs text-gray-900 dark:text-slate-100 line-clamp-1"
                     >
                       {result.title}
                     </Typography>
                     <Typography
                       variant="small"
-                      className="text-[10px] text-gray-500 truncate"
+                      className="text-[10px] text-gray-500 dark:text-slate-400 truncate"
                     >
                       {new URL(result.url).hostname}
                     </Typography>
@@ -348,7 +348,7 @@ export default function AddSearchResultDialog({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 p-4 border-t border-gray-200">
+        <div className="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-slate-700">
           {isProcessing && !isCancelled && (
             <Button
               variant="text"
@@ -361,7 +361,7 @@ export default function AddSearchResultDialog({
           <Button
             variant={allDone || isCancelled ? 'filled' : 'text'}
             onClick={handleClose}
-            className={allDone || isCancelled ? 'bg-gray-900' : 'text-gray-600'}
+            className={allDone || isCancelled ? 'bg-gray-900' : 'text-gray-600 dark:text-slate-300'}
           >
             {allDone ? '完成' : isCancelled ? '关闭' : '取消'}
           </Button>

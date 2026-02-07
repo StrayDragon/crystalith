@@ -153,7 +153,7 @@ function StudioPanel({
         size="sm"
         className="rounded-xl"
       >
-        <DialogHeader className="flex items-center justify-between p-4 border-b border-gray-200">
+        <DialogHeader className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
           <div className="flex items-center gap-2">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-700">
               <EditIcon fontSize="small" />
@@ -179,7 +179,7 @@ function StudioPanel({
               className: "before:content-none after:content-none",
             }}
           />
-          <Typography variant="small" className="mt-2 text-xs text-gray-500">
+          <Typography variant="small" className="mt-2 text-xs text-gray-500 dark:text-slate-400">
             支持 Markdown 格式
           </Typography>
         </DialogBody>
@@ -188,7 +188,7 @@ function StudioPanel({
           <Button
             variant="text"
             onClick={handleCloseNoteEditor}
-            className="rounded-full text-gray-600 normal-case"
+            className="rounded-full text-gray-600 dark:text-slate-300 normal-case"
           >
             取消
           </Button>
