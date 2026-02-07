@@ -116,7 +116,7 @@ Week 3-5:  Phase 2  ─── [2a: Obsidian] ─────────
 |---|---|---|---|
 | 0a | `refactor-state-to-zustand` | ✅ 完成 | `openspec list` 显示 Complete |
 | 0b | `optimize-backend-performance` | 🚧 进行中（27/35） | 剩余基准、验收与部分测试任务 |
-| 1a | `optimize-frontend-performance` | 🚧 进行中（19/23） | 主要剩余 DevTools 相关验收项 |
+| 1a | `optimize-frontend-performance` | 🚧 进行中（21/23） | 主要剩余 DevTools 相关验收项 |
 | 1b | `add-error-resilience` | ✅ 已归档 | 2026-02-07 归档至 `archive/2026-02-07-add-error-resilience` |
 
 **下一优先级**: 先收敛 `optimize-backend-performance` 与 `optimize-frontend-performance` 的剩余项，再进入 Phase 2。
