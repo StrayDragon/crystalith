@@ -30,6 +30,7 @@ interface StudioPanelProps {
   outputsLoading: boolean;
   outputsError: string;
   onRetryOutputs: () => void;
+  onRetryOutputJob?: (jobId: string) => void;
   onGenerateOutput: (type?: OutputTypeId, modelId?: string | null) => void;
   onOpenSlides?: (options?: {
     mode: 'config' | 'preview';
@@ -57,6 +58,7 @@ function StudioPanel({
   outputsLoading,
   outputsError,
   onRetryOutputs,
+  onRetryOutputJob,
   onGenerateOutput,
   onOpenSlides,
   onDeleteOutput,
@@ -121,6 +123,7 @@ function StudioPanel({
         outputsLoading={outputsLoading}
         outputsError={outputsError}
         onRetryOutputs={onRetryOutputs}
+        onRetryOutputJob={onRetryOutputJob}
         onDeleteOutput={onDeleteOutput}
         onSelectOutput={onSelectOutput}
         onSelectOutputFullscreen={onSelectOutputFullscreen}

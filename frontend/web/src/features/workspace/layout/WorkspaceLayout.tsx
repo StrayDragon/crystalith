@@ -2,13 +2,11 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { IconButton, Tooltip } from '@material-tailwind/react';
 
 import ChatPanel from '../domains/messages/ChatPanel';
-import KnowledgeGraphView from '../domains/analysis/KnowledgeGraphView';
 import SessionDetailDialog from '../domains/sessions/SessionDetailDialog';
 import SessionSwitcher from '../domains/sessions/SessionSwitcher';
-import SourceDetailDialog, { type ChatMessage as SourceDialogMessage } from '../domains/sources/SourceDetailDialog';
+import type { ChatMessage as SourceDialogMessage } from '../domains/sources/SourceDetailDialog';
 import SourcesPanel from '../domains/sources/SourcesPanel';
 import StudioPanel from '../domains/studio/StudioPanel';
-import SlidesStudioDialog from '../domains/studio/SlidesStudioDialog';
 import WorkspaceHeader from './WorkspaceHeader';
 import { useWorkspaceStore } from '../shared/state/workspaceStore';
 import { useAnalysis } from '../domains/analysis/useAnalysis';
@@ -21,9 +19,14 @@ import type { ChatMessage, Citation, SourceItem } from '../shared/types';
 import { normalizeMessage } from '../shared/utils';
 import { listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet as listMessages } from '../../../api/generated';
 import { IconFullscreen, IconExitFullscreen } from '../shared/components/Icons';
+import { SkeletonCard } from '../shared/components/Skeleton';
+import ErrorBoundary from '../shared/components/ErrorBoundary';
 import { toast } from '../../../shared/toast';
 
 const StudioOutputViewer = lazy(() => import('../domains/outputs/StudioOutputViewer'));
+const KnowledgeGraphView = lazy(() => import('../domains/analysis/KnowledgeGraphView'));
+const SlidesStudioDialog = lazy(() => import('../domains/studio/SlidesStudioDialog'));
+const SourceDetailDialog = lazy(() => import('../domains/sources/SourceDetailDialog'));
 
 type ExpandedPanel = 'sources' | 'chat' | 'studio' | null;
 
@@ -87,6 +90,8 @@ export default function WorkspaceLayout() {
     left: DEFAULT_SOURCES_WIDTH,
     right: DEFAULT_STUDIO_WIDTH,
   });
+  const resizeDebounceRef = useRef<number | null>(null);
+  const dragRafRef = useRef<number | null>(null);
 
   const [isGraphViewOpen, setIsGraphViewOpen] = useState(false);
 
@@ -285,7 +290,7 @@ export default function WorkspaceLayout() {
   }, [applySizes]);
 
   useEffect(() => {
-    const handleResize = () => {
+    const applyResize = () => {
       const main = mainRef.current;
       if (!main) return;
       const { width } = main.getBoundingClientRect();
@@ -293,46 +298,87 @@ export default function WorkspaceLayout() {
       const nextRight = resolveRightWidth(sizesRef.current.right, nextLeft, width);
       applySizes(nextLeft, nextRight);
     };
+
+    const handleResize = () => {
+      if (resizeDebounceRef.current != null) {
+        window.clearTimeout(resizeDebounceRef.current);
+      }
+      resizeDebounceRef.current = window.setTimeout(() => {
+        applyResize();
+      }, 120);
+    };
+
     window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
+    applyResize();
+
+    return () => {
+      if (resizeDebounceRef.current != null) {
+        window.clearTimeout(resizeDebounceRef.current);
+      }
+      window.removeEventListener('resize', handleResize);
+    };
   }, [applySizes]);
 
   useEffect(() => {
     if (!isResizing) return;
+
     const handleMove = (event: PointerEvent) => {
       const dragState = dragStateRef.current;
       if (!dragState) return;
-      const delta = event.clientX - dragState.startX;
-      if (dragState.side === 'left') {
-        const nextLeft = resolveLeftWidth(
-          dragState.startLeft + delta,
-          dragState.startRight,
-          dragState.containerWidth,
-        );
-        applySizes(nextLeft, dragState.startRight);
-      } else {
-        const nextRight = resolveRightWidth(
-          dragState.startRight - delta,
-          dragState.startLeft,
-          dragState.containerWidth,
-        );
-        applySizes(dragState.startLeft, nextRight);
+      const pointerX = event.clientX;
+
+      if (dragRafRef.current != null) {
+        window.cancelAnimationFrame(dragRafRef.current);
       }
+
+      dragRafRef.current = window.requestAnimationFrame(() => {
+        const latestDragState = dragStateRef.current;
+        if (!latestDragState) return;
+        const delta = pointerX - latestDragState.startX;
+
+        if (latestDragState.side === 'left') {
+          const nextLeft = resolveLeftWidth(
+            latestDragState.startLeft + delta,
+            latestDragState.startRight,
+            latestDragState.containerWidth,
+          );
+          applySizes(nextLeft, latestDragState.startRight);
+        } else {
+          const nextRight = resolveRightWidth(
+            latestDragState.startRight - delta,
+            latestDragState.startLeft,
+            latestDragState.containerWidth,
+          );
+          applySizes(latestDragState.startLeft, nextRight);
+        }
+
+        dragRafRef.current = null;
+      });
     };
+
     const handleUp = () => {
       dragStateRef.current = null;
       setIsResizing(false);
+      if (dragRafRef.current != null) {
+        window.cancelAnimationFrame(dragRafRef.current);
+        dragRafRef.current = null;
+      }
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
+
     window.addEventListener('pointermove', handleMove);
     window.addEventListener('pointerup', handleUp);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
+
     return () => {
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleUp);
+      if (dragRafRef.current != null) {
+        window.cancelAnimationFrame(dragRafRef.current);
+        dragRafRef.current = null;
+      }
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
@@ -542,33 +588,40 @@ export default function WorkspaceLayout() {
               </IconButton>
             </Tooltip>
           </div>
-          <SourcesPanel
-            sources={sources.sources}
-            jumpToSource={jumpToSource}
-            onUpload={sources.handleUpload}
-            uploadState={sources.uploadState}
-            searchState={sources.searchState}
-            searchNotice={sources.searchNotice}
-            searchResults={sources.searchResults}
-            onSearch={sources.handleSearch}
-            onClearSearchResults={sources.clearSearchResults}
-            onAddSourceFromUrl={sources.addSourceFromUrl}
-            onRemoveSources={sources.removeSources}
-            onRemoveSource={sources.removeSource}
-            isConnected={sources.isConnected}
-            isLoading={sources.isLoading}
-            removeState={sources.removeState}
-            isFullscreen={expandedPanel === 'sources'}
-            searchQueue={sources.searchQueue}
-            onRemoveSearchQueueItem={sources.removeSearchQueueItem}
-            onRemoveResultsFromQueue={sources.removeResultsFromQueue}
-            availableExtractors={sources.availableExtractors}
-            defaultExtractor={sources.defaultExtractor}
-            onConvertSourceQAToSource={sources.convertSourceQAToSource}
-            onReembedSource={sources.reembedSource}
-            notebookId={activeNotebookId ?? undefined}
-            onSelectedSourceIdsChange={handleSelectedSourceIdsChange}
-          />
+          <ErrorBoundary
+            title="来源面板异常"
+            description="来源面板渲染失败，请重试。"
+          >
+            <SourcesPanel
+              sources={sources.sources}
+              jumpToSource={jumpToSource}
+              onUpload={sources.handleUpload}
+              uploadState={sources.uploadState}
+              uploadError={sources.uploadError}
+              onRetryUpload={sources.retryUpload}
+              searchState={sources.searchState}
+              searchNotice={sources.searchNotice}
+              searchResults={sources.searchResults}
+              onSearch={sources.handleSearch}
+              onClearSearchResults={sources.clearSearchResults}
+              onAddSourceFromUrl={sources.addSourceFromUrl}
+              onRemoveSources={sources.removeSources}
+              onRemoveSource={sources.removeSource}
+              isConnected={sources.isConnected}
+              isLoading={sources.isLoading}
+              removeState={sources.removeState}
+              isFullscreen={expandedPanel === 'sources'}
+              searchQueue={sources.searchQueue}
+              onRemoveSearchQueueItem={sources.removeSearchQueueItem}
+              onRemoveResultsFromQueue={sources.removeResultsFromQueue}
+              availableExtractors={sources.availableExtractors}
+              defaultExtractor={sources.defaultExtractor}
+              onConvertSourceQAToSource={sources.convertSourceQAToSource}
+              onReembedSource={sources.reembedSource}
+              notebookId={activeNotebookId ?? undefined}
+              onSelectedSourceIdsChange={handleSelectedSourceIdsChange}
+            />
+          </ErrorBoundary>
         </section>
         )}
 
@@ -645,30 +698,36 @@ export default function WorkspaceLayout() {
               </IconButton>
             </Tooltip>
           </div>
-          <ChatPanel
-            messages={chat.messages}
-            draft={chat.draft}
-            onDraftChange={chat.setDraft}
-            onSend={chat.sendMessage}
-            isSending={chat.isSending}
-            isStreaming={chat.isStreaming}
-            streamingMessageId={chat.streamingMessageId}
-            notice={chat.sendError}
-            isBlocked={!notebooks.activeNotebookId}
-            isConnected={isConnected}
-            inputRef={chatInputRef}
-            citations={sources.citations}
-            onCitationHover={handleChatCitationHover}
-            onCitationJump={handleChatCitationJump}
-            onCitationLocate={handleLocateCitationSource}
-            isLoadingMessages={chat.isLoadingMessages}
-            messagesError={errMessages}
-            onRetryMessages={chat.retryMessages}
-            onSaveToNote={refine.saveContentAsNote}
-            onConvertToSource={chat.convertSessionToSource}
-            onConvertToOutput={chat.convertSessionToOutput}
-            isConverting={chat.isConverting}
-          />
+          <ErrorBoundary
+            title="对话面板异常"
+            description="对话面板渲染失败，请重试。"
+          >
+            <ChatPanel
+              messages={chat.messages}
+              draft={chat.draft}
+              onDraftChange={chat.setDraft}
+              onSend={chat.sendMessage}
+              isSending={chat.isSending}
+              isStreaming={chat.isStreaming}
+              streamingMessageId={chat.streamingMessageId}
+              notice={chat.sendError}
+              onRetrySend={chat.retrySend}
+              isBlocked={!notebooks.activeNotebookId}
+              isConnected={isConnected}
+              inputRef={chatInputRef}
+              citations={sources.citations}
+              onCitationHover={handleChatCitationHover}
+              onCitationJump={handleChatCitationJump}
+              onCitationLocate={handleLocateCitationSource}
+              isLoadingMessages={chat.isLoadingMessages}
+              messagesError={errMessages}
+              onRetryMessages={chat.retryMessages}
+              onSaveToNote={refine.saveContentAsNote}
+              onConvertToSource={chat.convertSessionToSource}
+              onConvertToOutput={chat.convertSessionToOutput}
+              isConverting={chat.isConverting}
+            />
+          </ErrorBoundary>
         </section>
         )}
 
@@ -723,35 +782,41 @@ export default function WorkspaceLayout() {
               </IconButton>
             </Tooltip>
           </div>
-          <StudioPanel
-            tools={refine.tools}
-            toolsLoading={refine.toolsLoading}
-            toolsError={refine.toolsError}
-            outputs={refine.outputs}
-            outputQueueJobs={refine.outputQueueJobs}
-            outputsLoading={refine.outputsLoading}
-            outputsError={refine.outputsError}
-            onRetryOutputs={refine.retryOutputs}
-            onGenerateOutput={refine.onGenerateOutput}
-            onOpenSlides={(options) => {
-              const mode = options?.mode ?? 'config';
-              openSlidesDialog(mode, options?.slideId ?? null, options?.queueJobId ?? null);
-            }}
-            onDeleteOutput={refine.onDeleteOutput}
-            onSelectOutput={handleOpenOutputViewer}
-            onSelectOutputFullscreen={handleOpenOutputViewerFullscreen}
-            onSaveNote={refine.saveContentAsNote}
-            onConvertToSource={sources.convertOutputToSource}
-            onJumpToCitation={handleOutputCitationJump}
-            isConnected={isConnected}
-            isFullscreen={expandedPanel === 'studio'}
-            hasSelectedSources={hasSelectedSources}
-          />
+          <ErrorBoundary
+            title="Studio 面板异常"
+            description="输出面板渲染失败，请重试。"
+          >
+            <StudioPanel
+              tools={refine.tools}
+              toolsLoading={refine.toolsLoading}
+              toolsError={refine.toolsError}
+              outputs={refine.outputs}
+              outputQueueJobs={refine.outputQueueJobs}
+              outputsLoading={refine.outputsLoading}
+              outputsError={refine.outputsError}
+              onRetryOutputs={refine.retryOutputs}
+              onRetryOutputJob={refine.retryOutputJob}
+              onGenerateOutput={refine.onGenerateOutput}
+              onOpenSlides={(options) => {
+                const mode = options?.mode ?? 'config';
+                openSlidesDialog(mode, options?.slideId ?? null, options?.queueJobId ?? null);
+              }}
+              onDeleteOutput={refine.onDeleteOutput}
+              onSelectOutput={handleOpenOutputViewer}
+              onSelectOutputFullscreen={handleOpenOutputViewerFullscreen}
+              onSaveNote={refine.saveContentAsNote}
+              onConvertToSource={sources.convertOutputToSource}
+              onJumpToCitation={handleOutputCitationJump}
+              isConnected={isConnected}
+              isFullscreen={expandedPanel === 'studio'}
+              hasSelectedSources={hasSelectedSources}
+            />
+          </ErrorBoundary>
         </section>
         )}
       </main>
 
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="fixed bottom-4 right-4 w-72"><SkeletonCard lines={3} /></div>}>
         <StudioOutputViewer
           outputs={refine.outputs}
           selectedOutputId={viewerOutputId}
@@ -768,77 +833,91 @@ export default function WorkspaceLayout() {
         />
       </Suspense>
 
-      <SlidesStudioDialog
-        open={isSlidesDialogOpen}
-        onClose={() => {
-          setIsSlidesDialogOpen(false);
-          setSlidesOpenMode('config');
-          setSlidesDraftId(null);
-          setSlidesQueueJobId(null);
-        }}
-        notebookId={activeNotebookId}
-        selectedSourceIds={selectedSourceIds}
-        isConnected={isConnected}
-        onOutputsUpdated={refine.retryOutputs}
-        openMode={slidesOpenMode}
-        draftId={slidesDraftId}
-        queueStatus={slidesQueueStatus}
-        onQueueSlides={refine.onQueueSlides}
-      />
+      {isSlidesDialogOpen && (
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20"><div className="w-[420px]"><SkeletonCard lines={6} /></div></div>}>
+          <SlidesStudioDialog
+            open={isSlidesDialogOpen}
+            onClose={() => {
+              setIsSlidesDialogOpen(false);
+              setSlidesOpenMode('config');
+              setSlidesDraftId(null);
+              setSlidesQueueJobId(null);
+            }}
+            notebookId={activeNotebookId}
+            selectedSourceIds={selectedSourceIds}
+            isConnected={isConnected}
+            onOutputsUpdated={refine.retryOutputs}
+            openMode={slidesOpenMode}
+            draftId={slidesDraftId}
+            queueStatus={slidesQueueStatus}
+            onQueueSlides={refine.onQueueSlides}
+          />
+        </Suspense>
+      )}
 
       {/* Knowledge Graph View (Full Screen Overlay) */}
       {isGraphViewOpen && (
-        <KnowledgeGraphView
-          sources={sources.sources}
-          outputs={refine.outputs}
-          sessions={sessions.sessions}
-          messages={chat.messages}
-          analysis={analysis.analysis}
-          isLoading={analysis.isLoading}
-          error={analysis.error}
-          activeSessionId={activeSessionId}
-          onClose={() => setIsGraphViewOpen(false)}
-          onRefresh={analysis.fetchAnalysis}
-          onSourceClick={handleGraphSourceClick}
-          onOutputClick={(output) => handleOpenOutputViewer(output.id, true)}
-          onSessionClick={handleGraphSessionClick}
-          isConnected={analysis.isConnected}
-        />
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20"><div className="w-[520px]"><SkeletonCard lines={6} /></div></div>}>
+          <KnowledgeGraphView
+            sources={sources.sources}
+            outputs={refine.outputs}
+            sessions={sessions.sessions}
+            messages={chat.messages}
+            analysis={analysis.analysis}
+            isLoading={analysis.isLoading}
+            error={analysis.error}
+            activeSessionId={activeSessionId}
+            onClose={() => setIsGraphViewOpen(false)}
+            onRefresh={analysis.fetchAnalysis}
+            onSourceClick={handleGraphSourceClick}
+            onOutputClick={(output) => handleOpenOutputViewer(output.id, true)}
+            onSessionClick={handleGraphSessionClick}
+            isConnected={analysis.isConnected}
+          />
+        </Suspense>
       )}
 
       {/* Source Detail Dialog for Graph View */}
-      <SourceDetailDialog
-        open={graphSourceDetailOpen}
-        source={graphSelectedSource}
-        onClose={() => {
-          setGraphSourceDetailOpen(false);
-          setGraphSourceDetailFullscreen(false);
-        }}
-        isFullscreen={graphSourceDetailFullscreen}
-        onToggleFullscreen={() => setGraphSourceDetailFullscreen((prev) => !prev)}
-        onSaveQAAsSource={sources.convertSourceQAToSource ? async (sourceTitle: string, messages) => {
-          if (!graphSelectedSource) return;
-          const qaMessages = messages.map((msg) => ({
-            role: msg.role,
-            content: msg.content,
-          }));
-          await sources.convertSourceQAToSource(graphSelectedSource.id, qaMessages);
-        } : undefined}
-      />
+      {graphSourceDetailOpen && (
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20"><div className="w-[520px]"><SkeletonCard lines={5} /></div></div>}>
+          <SourceDetailDialog
+            open={graphSourceDetailOpen}
+            source={graphSelectedSource}
+            onClose={() => {
+              setGraphSourceDetailOpen(false);
+              setGraphSourceDetailFullscreen(false);
+            }}
+            isFullscreen={graphSourceDetailFullscreen}
+            onToggleFullscreen={() => setGraphSourceDetailFullscreen((prev) => !prev)}
+            onSaveQAAsSource={sources.convertSourceQAToSource ? async (sourceTitle: string, messages) => {
+              if (!graphSelectedSource) return;
+              const qaMessages = messages.map((msg) => ({
+                role: msg.role,
+                content: msg.content,
+              }));
+              await sources.convertSourceQAToSource(graphSelectedSource.id, qaMessages);
+            } : undefined}
+          />
+        </Suspense>
+      )}
 
       {/* Source Detail Dialog for Citation Popovers */}
-      <SourceDetailDialog
-        open={citationSourceDetailOpen}
-        source={citationSelectedSource}
-        onClose={() => {
-          setCitationSourceDetailOpen(false);
-          setCitationSelectedSource(null);
-          setCitationSourceDetailFullscreen(false);
-        }}
-        isFullscreen={citationSourceDetailFullscreen}
-        onToggleFullscreen={() => setCitationSourceDetailFullscreen((prev) => !prev)}
-        onSaveQAAsSource={sources.convertSourceQAToSource ? handleCitationSaveQAAsSource : undefined}
-      />
+      {citationSourceDetailOpen && (
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/20"><div className="w-[520px]"><SkeletonCard lines={5} /></div></div>}>
+          <SourceDetailDialog
+            open={citationSourceDetailOpen}
+            source={citationSelectedSource}
+            onClose={() => {
+              setCitationSourceDetailOpen(false);
+              setCitationSelectedSource(null);
+              setCitationSourceDetailFullscreen(false);
+            }}
+            isFullscreen={citationSourceDetailFullscreen}
+            onToggleFullscreen={() => setCitationSourceDetailFullscreen((prev) => !prev)}
+            onSaveQAAsSource={sources.convertSourceQAToSource ? handleCitationSaveQAAsSource : undefined}
+          />
+        </Suspense>
+      )}
 
       {/* Session Detail Dialog for Graph View */}
       <SessionDetailDialog

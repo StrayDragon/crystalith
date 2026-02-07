@@ -51,6 +51,7 @@ export function useChat({
 
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [lastFailedDraft, setLastFailedDraft] = useState('');
   const messagesRef = useRef(messages);
   const streamingBufferRef = useRef('');
   const streamingFlushTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -151,6 +152,7 @@ export function useChat({
     const sessionId = await ensureSession();
 
     if (!sessionId) {
+      setLastFailedDraft(text);
       store.getState().setLoading('send', false);
       store.getState().setError('send', '会话创建失败。');
       return;
@@ -253,6 +255,7 @@ export function useChat({
         if (refreshSessions) {
           void refreshSessions();
         }
+        setLastFailedDraft('');
       } catch (error) {
         let errorMessage = '请求失败，请检查后端服务或稍后重试。';
         if (error instanceof Error) {
@@ -270,6 +273,7 @@ export function useChat({
         const s2 = store.getState();
         s2.updateMessage(assistantMessageId, { content: errorMessage });
         s2.setError('send', errorMessage);
+        setLastFailedDraft(text);
       } finally {
         setIsStreaming(false);
         setStreamingMessageId(null);
@@ -305,6 +309,7 @@ export function useChat({
       if (refreshSessions) {
         void refreshSessions();
       }
+      setLastFailedDraft('');
     } catch (error) {
       // Extract meaningful error message from different error types
       let errorMessage = '请求失败，请检查后端服务或稍后重试。';
@@ -340,6 +345,7 @@ export function useChat({
       const s2 = store.getState();
       s2.setMessages([...pendingMessages, assistantMessage]);
       s2.setError('send', userFacingError);
+      setLastFailedDraft(text);
     } finally {
       store.getState().setLoading('send', false);
     }
@@ -354,6 +360,13 @@ export function useChat({
     store.getState().setError('messages', '');
     await mutate();
   }, [mutate]);
+
+  const retrySend = useCallback(async () => {
+    const text = lastFailedDraft.trim();
+    if (!text) return;
+    store.getState().setDraft(text);
+    await sendMessage();
+  }, [lastFailedDraft, sendMessage]);
 
   // --- Session Conversion Methods ---
   const [isConverting, setIsConverting] = useState(false);
@@ -424,6 +437,7 @@ export function useChat({
     sendError: errSend,
     citations: citationsCurrent,
     retryMessages,
+    retrySend,
     isLoadingMessages: isLoading,
     messagesError: errMessages,
     // Conversion

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import asyncio
 from time import perf_counter
 from typing import Any, Iterable, Literal
 
@@ -355,7 +356,7 @@ async def reembed_source(
     await session.refresh(source)
 
     try:
-        embeddings = await embedder.embed([chunk.text for chunk in chunks])
+        embeddings = await embedder.embed_batch([chunk.text for chunk in chunks])
         if len(embeddings) != len(chunks):
             raise ValueError("embedding count mismatch")
 
@@ -472,7 +473,13 @@ async def create_source_from_url(
         parse_time_ms = 0
     else:
         # Fetch mode: use the extraction system
-        from crystalith.shared.extraction import ExtractorFactory, ExtractionError
+        from crystalith.shared.ai.retry import run_with_retry
+        from crystalith.shared.extraction import (
+            ExtractionError,
+            ExtractorFactory,
+            NetworkError,
+            ServiceUnavailableError,
+        )
         from crystalith.shared.extraction.types import ExtractorType
         from crystalith.shared.utils.chunker import chunk_text
 
@@ -493,11 +500,31 @@ async def create_source_from_url(
                 )
 
         # Extract content
-        try:
-            extracted = await factory.extract(
+        async def _extract_once():
+            return await factory.extract(
                 url,
                 preferred_extractor=preferred_extractor,
                 enable_fallback=web_extraction_settings.enable_fallback,
+            )
+
+        def _is_retryable_extraction_error(error: Exception) -> bool:
+            if isinstance(error, (NetworkError, ServiceUnavailableError, TimeoutError, asyncio.TimeoutError)):
+                return True
+            if isinstance(error, ExtractionError):
+                message = error.message.lower()
+                return (
+                    "timeout" in message
+                    or "temporarily unavailable" in message
+                    or "connection" in message
+                )
+            return False
+
+        try:
+            extracted = await run_with_retry(
+                _extract_once,
+                timeout=None,
+                max_retries=settings.ai.max_retries,
+                retry_if=_is_retryable_extraction_error,
             )
         except ExtractionError as exc:
             logger.warning(
@@ -523,8 +550,9 @@ async def create_source_from_url(
         if extracted.title and not payload.title:
             title = extracted.title
 
-        # Chunk the extracted text
-        chunks = chunk_text(extracted.text)
+        # Chunk the extracted text in executor to avoid blocking event loop
+        loop = asyncio.get_running_loop()
+        chunks = await loop.run_in_executor(None, chunk_text, extracted.text)
 
         if not chunks:
             raise HTTPException(status_code=400, detail="网页中未提取到有效内容")
@@ -565,7 +593,7 @@ async def create_source_from_url(
             source.metadata_.update(extraction_metadata)
 
         # Embed chunks
-        embeddings = await embedder.embed([chunk.text for chunk in chunks])
+        embeddings = await embedder.embed_batch([chunk.text for chunk in chunks])
         if len(embeddings) != len(chunks):
             raise ValueError("embedding count mismatch")
 
@@ -650,7 +678,8 @@ async def upload_source(
     try:
         raw = await file.read()
         parse_started = perf_counter()
-        chunks = parser.parse(raw)
+        loop = asyncio.get_running_loop()
+        chunks = await loop.run_in_executor(None, parser.parse, raw)
         parse_time_ms = int((perf_counter() - parse_started) * 1000)
         if not chunks:
             raise ValueError("empty document")
@@ -665,7 +694,7 @@ async def upload_source(
             page_count=page_count,
         )
 
-        embeddings = await embedder.embed([chunk.text for chunk in chunks])
+        embeddings = await embedder.embed_batch([chunk.text for chunk in chunks])
         if len(embeddings) != len(chunks):
             raise ValueError("embedding count mismatch")
 
@@ -973,7 +1002,7 @@ async def source_qa(
         raise HTTPException(status_code=400, detail="Source is not ready")
 
     # Embed the question
-    embeddings = await embedder.embed([payload.question])
+    embeddings = await embedder.embed_batch([payload.question])
     if not embeddings:
         return SourceQAResponse(
             source_id=source_id,
@@ -1203,7 +1232,7 @@ async def convert_source_qa_to_source(
             chunk_texts = [text_content]
 
         # Create embeddings
-        embeddings = await embedder.embed(chunk_texts)
+        embeddings = await embedder.embed_batch(chunk_texts)
 
         # Create chunks and store in vector store
         db_chunks: list[Chunk] = []

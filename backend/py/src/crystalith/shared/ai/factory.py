@@ -7,6 +7,7 @@ from openai import AsyncOpenAI
 
 from crystalith.shared.config import ModelConfig, OpenAIProviderSettings, OllamaProviderSettings, Settings
 
+from .cache import EmbeddingCache
 from .interfaces import ChatProvider, EmbeddingProvider
 from .ollama_provider import OllamaChatProvider, OllamaEmbeddingProvider
 from .openai_provider import OpenAIChatProvider, OpenAIEmbeddingProvider
@@ -16,6 +17,17 @@ from .openai_provider import OpenAIChatProvider, OpenAIEmbeddingProvider
 class Providers:
     embedding: EmbeddingProvider
     chat: ChatProvider
+
+
+_EMBEDDING_CACHE = EmbeddingCache(maxsize=10_000)
+
+
+def _resolve_ai_timeout(settings: Settings) -> float:
+    return float(settings.ai.timeout)
+
+
+def _resolve_ai_retries(settings: Settings) -> int:
+    return int(settings.ai.max_retries)
 
 
 def get_model_config_by_id(settings: Settings, model_id: str) -> ModelConfig | None:
@@ -128,11 +140,15 @@ def create_chat_provider_by_model_id(
             return OpenAIChatProvider(
                 model=model_config.model,
                 client=_create_openai_client(model_config, reason=f"model:{model_id}"),
+                timeout=_resolve_ai_timeout(settings),
+                max_retries=_resolve_ai_retries(settings),
             )
         case "ollama":
             return OllamaChatProvider(
                 model=model_config.model,
                 client=_create_ollama_client(model_config),
+                timeout=_resolve_ai_timeout(settings),
+                max_retries=_resolve_ai_retries(settings),
             )
         case provider:
             raise ValueError(f"Unsupported provider for model {model_id}: {provider}")
@@ -161,6 +177,9 @@ def create_embedding_provider_by_model_id(
             return OpenAIEmbeddingProvider(
                 model=model_config.model,
                 client=_create_openai_client(model_config, reason=f"embedding:{model_id}"),
+                timeout=_resolve_ai_timeout(settings),
+                max_retries=_resolve_ai_retries(settings),
+                cache=_EMBEDDING_CACHE,
             )
         case "ollama":
             # Use model's ollama_options if specified
@@ -172,6 +191,9 @@ def create_embedding_provider_by_model_id(
                 model=model_config.model,
                 client=_create_ollama_client(model_config),
                 options=options,
+                timeout=_resolve_ai_timeout(settings),
+                max_retries=_resolve_ai_retries(settings),
+                cache=_EMBEDDING_CACHE,
             )
         case provider:
             raise ValueError(f"Unsupported provider for model {model_id}: {provider}")

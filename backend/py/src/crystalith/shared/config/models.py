@@ -368,6 +368,13 @@ class EmbeddingSettings(BaseModel):
     batch_size: int = Field(32, ge=1, description="Batch size for embedding requests")
 
 
+class AISettings(BaseModel):
+    """AI provider runtime settings."""
+
+    timeout: int = Field(60, ge=1, le=600, description="Provider request timeout in seconds")
+    max_retries: int = Field(3, ge=0, le=10, description="Maximum retries for retryable provider errors")
+
+
 class ChatSettings(BaseModel):
     """
     Chat settings.
@@ -654,6 +661,7 @@ class Settings(BaseSettings):
 
     # === Feature Settings ===
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
+    ai: AISettings = Field(default_factory=AISettings)
     chat: ChatSettings = Field(default_factory=ChatSettings)
     refine: RefineSettings = Field(default_factory=RefineSettings)
     context_window: ContextWindowSettings = Field(default_factory=ContextWindowSettings)
