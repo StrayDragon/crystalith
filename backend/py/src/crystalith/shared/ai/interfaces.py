@@ -13,6 +13,13 @@ class Provider(Protocol):
 class EmbeddingProvider(Provider, Protocol):
     async def embed(self, texts: Sequence[str]) -> list[list[float]]: ...
 
+    async def embed_batch(
+        self,
+        texts: Sequence[str],
+        *,
+        batch_size: int = 100,
+    ) -> list[list[float]]: ...
+
 
 class ChatProvider(Provider, Protocol):
     async def chat(self, messages: Sequence[ChatMessage]) -> str: ...

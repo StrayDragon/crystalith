@@ -13,6 +13,7 @@ import {
   Error as ErrorIcon,
   Settings as SettingsIcon,
 } from '@mui/icons-material';
+import { Virtuoso } from 'react-virtuoso';
 
 import SearchResultCard, { type SearchResultItem } from './SearchResultCard';
 import type { SearchQueueItem } from './useSources';
@@ -306,10 +307,13 @@ export default function SearchResultsQueue({
         {!isLoading && isItemExpanded && itemResults.length > 0 && (
           <>
             {/* Results List - compact cards */}
-            <div className="flex flex-col px-1.5 pb-1.5 max-h-[150px] overflow-y-auto scrollbar-thin">
-              {itemResults.map((result) => (
+            <Virtuoso
+              className="px-1.5 pb-1.5"
+              style={{ height: 150 }}
+              data={itemResults}
+              computeItemKey={(_index, result) => result.url}
+              itemContent={(_index, result) => (
                 <SearchResultCard
-                  key={result.url}
                   result={result}
                   isSelected={selectedUrls.has(result.url)}
                   onToggle={handleToggle}
@@ -318,8 +322,8 @@ export default function SearchResultsQueue({
                   onAddWithFetch={handleAddSingleWithFetch}
                   compact
                 />
-              ))}
-            </div>
+              )}
+            />
 
             {/* Actions Footer */}
             <div className="flex items-center justify-between px-2 py-1.5 border-t border-blue-200 bg-blue-100/50">
@@ -477,10 +481,13 @@ export default function SearchResultsQueue({
           {isExpanded && (
             <>
               {/* Results List - compact cards */}
-              <div className="flex flex-col px-1.5 pb-1.5 max-h-[200px] overflow-y-auto scrollbar-thin">
-                {results.map((result) => (
+              <Virtuoso
+                className="px-1.5 pb-1.5"
+                style={{ height: 200 }}
+                data={results}
+                computeItemKey={(_index, result) => result.url}
+                itemContent={(_index, result) => (
                   <SearchResultCard
-                    key={result.url}
                     result={result}
                     isSelected={selectedUrls.has(result.url)}
                     onToggle={handleToggle}
@@ -489,8 +496,8 @@ export default function SearchResultsQueue({
                     onAddWithFetch={handleAddSingleWithFetch}
                     compact
                   />
-                ))}
-              </div>
+                )}
+              />
 
               {/* Actions Footer - simplified */}
               <div className="flex items-center justify-between px-2 py-1.5 border-t border-blue-200 bg-blue-100/50">
@@ -664,7 +671,7 @@ export default function SearchResultsQueue({
             <CloseIcon />
           </IconButton>
         </DialogHeader>
-        <DialogBody className="flex-1 overflow-y-auto p-4">
+        <DialogBody className="flex-1 p-4 min-h-0">
           {/* Search Summary */}
           {searchSummary && (
             <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -673,18 +680,24 @@ export default function SearchResultsQueue({
               </Typography>
             </div>
           )}
-          <div className="flex flex-col gap-3">
-            {effectiveResults.map((result) => {
+          <Virtuoso
+            style={{ height: '56vh' }}
+            data={effectiveResults}
+            computeItemKey={(_index, result) => result.url}
+            itemContent={(_index, result) => {
               const hostname = (() => {
-                try { return new URL(result.url).hostname; } catch { return result.url; }
+                try {
+                  return new URL(result.url).hostname;
+                } catch {
+                  return result.url;
+                }
               })();
               const isSelected = selectedUrls.has(result.url);
 
               return (
                 <div
-                  key={result.url}
                   className={`
-                    flex gap-3 p-4 rounded-xl border transition-all
+                    flex gap-3 p-4 rounded-xl border transition-all mb-3
                     ${isSelected
                       ? 'bg-blue-50 border-blue-300 shadow-sm'
                       : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
@@ -715,7 +728,6 @@ export default function SearchResultsQueue({
                         <Chip value={result.source} size="sm" className="bg-gray-200 text-gray-600 text-[9px] h-4 py-0 px-1.5" />
                       )}
                     </div>
-                    {/* Action buttons */}
                     <div className="flex items-center gap-2">
                       <Tooltip content="仅保存标题、摘要和链接作为来源引用" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
                         <Button
@@ -764,8 +776,8 @@ export default function SearchResultsQueue({
                   </div>
                 </div>
               );
-            })}
-          </div>
+            }}
+          />
         </DialogBody>
         {/* Footer Actions */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">

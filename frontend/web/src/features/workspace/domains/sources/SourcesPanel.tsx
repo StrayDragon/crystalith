@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
   IconButton,
@@ -31,6 +31,8 @@ import {
   Close as CloseIcon,
   Replay as ReplayIcon,
 } from '@mui/icons-material';
+import { Virtuoso } from 'react-virtuoso';
+import type { VirtuosoHandle } from 'react-virtuoso';
 
 import type { AsyncStatus } from '../../../../shared/types';
 import type {
@@ -45,13 +47,15 @@ import { useResearch } from '../research/useResearch';
 import { toast } from '../../../../shared/toast';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../shared/layer';
-import SourceDetailDialog from './SourceDetailDialog';
+import { SkeletonCard, SkeletonList } from '../../shared/components/Skeleton';
 import type { ChatMessage } from './SourceDetailDialog';
 import SearchResultsQueue from './SearchResultsQueue';
 import AddSearchResultDialog from './AddSearchResultDialog';
 import ResearchCapsule from '../research/ResearchCapsule';
-import ResearchDetailPanel from '../research/ResearchDetailPanel';
 import type { SearchResultItem } from './SearchResultCard';
+
+const SourceDetailDialog = lazy(() => import('./SourceDetailDialog'));
+const ResearchDetailPanel = lazy(() => import('../research/ResearchDetailPanel'));
 
 interface SourcesPanelProps {
   sources: SourceItem[];
@@ -59,6 +63,8 @@ interface SourcesPanelProps {
   jumpToSource?: { id: number; token: number } | null;
   onUpload: (file: File | null) => void;
   uploadState: AsyncStatus;
+  uploadError?: string;
+  onRetryUpload?: () => void;
   searchState: AsyncStatus;
   searchNotice: string;
   searchResults: ApiSourceSearchResult[];
@@ -99,6 +105,8 @@ function SourcesPanel({
   jumpToSource = null,
   onUpload,
   uploadState,
+  uploadError = '',
+  onRetryUpload,
   searchState,
   searchNotice,
   searchResults,
@@ -141,7 +149,9 @@ function SourcesPanel({
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedSource, setSelectedSource] = useState<SourceItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sourceListRef = useRef<VirtuosoHandle | null>(null);
   const sourceRefs = useRef(new Map<number, HTMLDivElement | null>());
+  const fastSearchDebounceTimerRef = useRef<number | null>(null);
   const [highlightedSourceId, setHighlightedSourceId] = useState<number | null>(null);
 
   // Add search results dialog state
@@ -259,19 +269,41 @@ function SourcesPanel({
   }, [sources]);
 
   useEffect(() => {
+    return () => {
+      if (fastSearchDebounceTimerRef.current != null) {
+        window.clearTimeout(fastSearchDebounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     onSelectedSourceIdsChange?.(selectedSourceIds);
   }, [onSelectedSourceIdsChange, selectedSourceIds]);
 
+  const sourceIdToIndex = useMemo(() => {
+    const map = new Map<number, number>();
+    sources.forEach((source, index) => {
+      map.set(source.id, index);
+    });
+    return map;
+  }, [sources]);
+
   useEffect(() => {
     if (!jumpToSource) return;
-    const node = sourceRefs.current.get(jumpToSource.id);
-    if (node) {
-      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setHighlightedSourceId(jumpToSource.id);
+    const targetIndex = sourceIdToIndex.get(jumpToSource.id);
+    if (targetIndex != null) {
+      sourceListRef.current?.scrollToIndex({
+        index: targetIndex,
+        align: 'center',
+        behavior: 'smooth',
+      });
     }
+    const node = sourceRefs.current.get(jumpToSource.id);
+    if (node) node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setHighlightedSourceId(jumpToSource.id);
     const timer = window.setTimeout(() => setHighlightedSourceId(null), 1800);
     return () => window.clearTimeout(timer);
-  }, [jumpToSource]);
+  }, [jumpToSource, sourceIdToIndex]);
 
   const selectableSources = useMemo(
     () => sources.filter((source) => source.statusTone === 'READY'),
@@ -357,7 +389,12 @@ function SourcesPanel({
     }
 
     // Fast Research mode - use existing search
-    onSearch({ query: searchQuery, engine, mode });
+    if (fastSearchDebounceTimerRef.current != null) {
+      window.clearTimeout(fastSearchDebounceTimerRef.current);
+    }
+    fastSearchDebounceTimerRef.current = window.setTimeout(() => {
+      onSearch({ query: searchQuery, engine, mode });
+    }, 300);
   };
 
   // Handle research session click
@@ -493,6 +530,21 @@ function SourcesPanel({
             />
           </Button>
         </Tooltip>
+
+        {uploadError ? (
+          <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+            <span className="flex-1">{uploadError}</span>
+            {onRetryUpload ? (
+              <button
+                type="button"
+                className="font-semibold text-red-800 hover:underline"
+                onClick={onRetryUpload}
+              >
+                重试上传
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* Search Section */}
         <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
@@ -705,11 +757,7 @@ function SourcesPanel({
       {/* Sources List */}
       <div>
         {isLoading ? (
-          <div className="flex flex-col gap-2">
-            <div className="h-10 rounded-lg bg-gray-100 animate-pulse" />
-            <div className="h-10 rounded-lg bg-gray-100 animate-pulse" />
-            <div className="h-10 w-2/3 rounded-lg bg-gray-100 animate-pulse" />
-          </div>
+          <SkeletonList items={3} />
         ) : sources.length === 0 ? (
           <div className="p-3 text-center border border-dashed border-gray-300 rounded-lg bg-gray-100">
             <Typography variant="small" className="text-gray-600 text-[11px] font-medium">
@@ -717,8 +765,12 @@ function SourcesPanel({
             </Typography>
           </div>
         ) : (
-          <div className="flex flex-col gap-1.5">
-            {sources.map((source) => {
+          <Virtuoso
+            ref={sourceListRef}
+            style={{ height: isFullscreen ? 560 : 360 }}
+            data={sources}
+            computeItemKey={(_index, source) => source.id}
+            itemContent={(_index, source) => {
               const isHighlighted = highlightedSourceId === source.id;
               const isSelectable = source.statusTone === 'READY';
               const statusColor =
@@ -728,138 +780,141 @@ function SourcesPanel({
                     ? 'amber'
                     : 'red';
               return (
-               <div
-                 key={source.id}
-                 ref={(node) => sourceRefs.current.set(source.id, node)}
-                 className={`group relative flex items-center rounded-xl border bg-white shadow-sm transition-all hover:border-gray-300 hover:shadow ${
-                   isHighlighted
-                     ? 'border-blue-200 ring-2 ring-blue-300 bg-blue-50/70'
-                     : 'border-gray-200'
-                 }`}
-               >
+                <div
+                  ref={(node) => sourceRefs.current.set(source.id, node)}
+                  className={`group relative flex items-center rounded-xl border bg-white shadow-sm transition-all hover:border-gray-300 hover:shadow mb-1.5 ${
+                    isHighlighted
+                      ? 'border-blue-200 ring-2 ring-blue-300 bg-blue-50/70'
+                      : 'border-gray-200'
+                  }`}
+                >
                   <button
                     className="flex flex-1 items-center gap-3 p-2 text-left min-w-0"
                     onClick={() => handleOpenDetail(source)}
                     aria-label={`打开来源 ${source.title}`}
                   >
-                     <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-200 text-gray-600 flex-shrink-0">
-                        <DescriptionIcon style={{ fontSize: 18 }} />
-                     </div>
-                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                       <Typography
-                         variant="small"
-                         className="font-semibold text-gray-900 text-xs truncate"
-                       >
-                         {source.title}
-                       </Typography>
-                       <Chip
-                         value={source.status}
-                         size="sm"
-                         variant="ghost"
-                         color={statusColor}
-                         className="h-5 px-2 py-0 text-[10px] font-medium flex-shrink-0"
-                       />
-                     </div>
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-200 text-gray-600 flex-shrink-0">
+                      <DescriptionIcon style={{ fontSize: 18 }} />
+                    </div>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Typography
+                        variant="small"
+                        className="font-semibold text-gray-900 text-xs truncate"
+                      >
+                        {source.title}
+                      </Typography>
+                      <Chip
+                        value={source.status}
+                        size="sm"
+                        variant="ghost"
+                        color={statusColor}
+                        className="h-5 px-2 py-0 text-[10px] font-medium flex-shrink-0"
+                      />
+                    </div>
                   </button>
 
                   <div className="flex items-center gap-1 pr-2">
-                     <Menu placement="bottom-end">
-                        <MenuHandler>
-                           <IconButton
-                              size="sm"
-                              variant="text"
-                              className="w-6 h-6 min-w-[24px] rounded-full text-gray-500 opacity-0 group-hover:opacity-100 hover:bg-gray-200"
-                              onClick={(e) => {
-                                 e.stopPropagation(); // Stop propagation to avoid clicking the item
-                              }}
-                           >
-                              <MoreHorizIcon style={{ fontSize: 16 }} />
-                           </IconButton>
-                        </MenuHandler>
-                        <MenuList className="p-1 min-w-[140px]">
-                           <MenuItem
-                              onClick={() => {
-                                setSelectedSource(source);
-                                setDetailDialogOpen(true);
-                                setIsDetailFullscreen(true);
-                              }}
-                              className="flex items-center gap-2 py-2 px-3 text-xs"
-                           >
-                              <OpenInFullIcon style={{ fontSize: 16 }} />
-                              <span>放大查看</span>
-                           </MenuItem>
-                           <ConfirmPopover
-                              message={`确定要删除「${source.title}」吗？此操作不可撤销。`}
-                              onConfirm={async () => {
-                                 if (!isConnected || removeState === 'loading') return;
-                                 await onRemoveSource(source.id);
-                              }}
-                              placement="left"
-                              disabled={!isConnected || removeState === 'loading'}
-                           >
-                              <MenuItem
-                                 disabled={!isConnected || removeState === 'loading'}
-                                 className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
-                              >
-                                 <DeleteIcon style={{ fontSize: 16 }} />
-                                 <span>{removeState === 'loading' ? '删除中…' : '删除来源'}</span>
-                              </MenuItem>
-                           </ConfirmPopover>
-                           {source.statusTone === 'FAILED' && onReembedSource && (
-                             <MenuItem
-                               onClick={async () => {
-                                 if (!isConnected) return;
-                                 await onReembedSource(source.id);
-                               }}
-                               className="flex items-center gap-2 py-2 px-3 text-xs"
-                             >
-                               <ReplayIcon style={{ fontSize: 16 }} />
-                               <span>重新嵌入</span>
-                             </MenuItem>
-                           )}
-                        </MenuList>
-                     </Menu>
+                    <Menu placement="bottom-end">
+                      <MenuHandler>
+                        <IconButton
+                          size="sm"
+                          variant="text"
+                          className="w-6 h-6 min-w-[24px] rounded-full text-gray-500 opacity-0 group-hover:opacity-100 hover:bg-gray-200"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          <MoreHorizIcon style={{ fontSize: 16 }} />
+                        </IconButton>
+                      </MenuHandler>
+                      <MenuList className="p-1 min-w-[140px]">
+                        <MenuItem
+                          onClick={() => {
+                            setSelectedSource(source);
+                            setDetailDialogOpen(true);
+                            setIsDetailFullscreen(true);
+                          }}
+                          className="flex items-center gap-2 py-2 px-3 text-xs"
+                        >
+                          <OpenInFullIcon style={{ fontSize: 16 }} />
+                          <span>放大查看</span>
+                        </MenuItem>
+                        <ConfirmPopover
+                          message={`确定要删除「${source.title}」吗？此操作不可撤销。`}
+                          onConfirm={async () => {
+                            if (!isConnected || removeState === 'loading') return;
+                            await onRemoveSource(source.id);
+                          }}
+                          placement="left"
+                          disabled={!isConnected || removeState === 'loading'}
+                        >
+                          <MenuItem
+                            disabled={!isConnected || removeState === 'loading'}
+                            className="flex items-center gap-2 py-2 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                          >
+                            <DeleteIcon style={{ fontSize: 16 }} />
+                            <span>{removeState === 'loading' ? '删除中…' : '删除来源'}</span>
+                          </MenuItem>
+                        </ConfirmPopover>
+                        {source.statusTone === 'FAILED' && onReembedSource && (
+                          <MenuItem
+                            onClick={async () => {
+                              if (!isConnected) return;
+                              await onReembedSource(source.id);
+                            }}
+                            className="flex items-center gap-2 py-2 px-3 text-xs"
+                          >
+                            <ReplayIcon style={{ fontSize: 16 }} />
+                            <span>重新嵌入</span>
+                          </MenuItem>
+                        )}
+                      </MenuList>
+                    </Menu>
 
-                     {!isSelectable ? (
-                       <Tooltip content="未完成索引，暂不可用">
-                         <span>
-                           <Checkbox
-                             checked={false}
-                             onChange={() => handleToggleSource(source.id)}
-                             containerProps={{ className: "p-1" }}
-                             className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
-                             iconProps={{ className: "text-white" }}
-                             disabled
-                           />
-                         </span>
-                       </Tooltip>
-                     ) : (
-                       <Checkbox
-                         checked={Boolean(selectedSourceIds[source.id])}
-                         onChange={() => handleToggleSource(source.id)}
-                         containerProps={{ className: "p-1" }}
-                         className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
-                         iconProps={{ className: "text-white" }}
-                       />
-                     )}
+                    {!isSelectable ? (
+                      <Tooltip content="未完成索引，暂不可用">
+                        <span>
+                          <Checkbox
+                            checked={false}
+                            onChange={() => handleToggleSource(source.id)}
+                            containerProps={{ className: 'p-1' }}
+                            className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
+                            iconProps={{ className: 'text-white' }}
+                            disabled
+                          />
+                        </span>
+                      </Tooltip>
+                    ) : (
+                      <Checkbox
+                        checked={Boolean(selectedSourceIds[source.id])}
+                        onChange={() => handleToggleSource(source.id)}
+                        containerProps={{ className: 'p-1' }}
+                        className="h-4 w-4 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
+                        iconProps={{ className: 'text-white' }}
+                      />
+                    )}
                   </div>
-               </div>
-            );
-            })}
-          </div>
+                </div>
+              );
+            }}
+          />
         )}
       </div>
 
       </div>
       {/* Source Detail Dialog */}
-      <SourceDetailDialog
-        open={detailDialogOpen}
-        source={selectedSource}
-        onClose={handleCloseDetail}
-        isFullscreen={isDetailFullscreen}
-        onToggleFullscreen={handleToggleDetailFullscreen}
-        onSaveQAAsSource={onConvertSourceQAToSource ? handleSaveQAAsSource : undefined}
-      />
+      {detailDialogOpen && (
+        <Suspense fallback={<div className="p-4"><SkeletonCard /></div>}>
+          <SourceDetailDialog
+            open={detailDialogOpen}
+            source={selectedSource}
+            onClose={handleCloseDetail}
+            isFullscreen={isDetailFullscreen}
+            onToggleFullscreen={handleToggleDetailFullscreen}
+            onSaveQAAsSource={onConvertSourceQAToSource ? handleSaveQAAsSource : undefined}
+          />
+        </Suspense>
+      )}
 
       {/* Add Search Results Dialog */}
       <AddSearchResultDialog
@@ -893,23 +948,25 @@ function SourcesPanel({
                 : 'w-full max-w-lg'
             }`}
           >
-            <ResearchDetailPanel
-              session={research.activeSession}
-              sseEvents={research.sseEvents}
-              onClose={handleCloseResearchDetail}
-              onApprove={handleResearchApprove}
-              onSkip={handleResearchSkip}
-              onFinish={handleResearchFinish}
-              onCancel={handleResearchCancel}
-              onResume={handleResearchResume}
-              onRetry={handleResearchRetry}
-              onStart={() => handleResearchStart(research.activeSession!.id)}
-              isFullscreen={researchFullscreen}
-              onToggleFullscreen={() => setResearchFullscreen(!researchFullscreen)}
-              onAddSourceFromUrl={async (url) => {
-                await onAddSourceFromUrl(url, 'link');
-              }}
-            />
+            <Suspense fallback={<div className="p-4"><SkeletonCard lines={6} /></div>}>
+              <ResearchDetailPanel
+                session={research.activeSession}
+                sseEvents={research.sseEvents}
+                onClose={handleCloseResearchDetail}
+                onApprove={handleResearchApprove}
+                onSkip={handleResearchSkip}
+                onFinish={handleResearchFinish}
+                onCancel={handleResearchCancel}
+                onResume={handleResearchResume}
+                onRetry={handleResearchRetry}
+                onStart={() => handleResearchStart(research.activeSession!.id)}
+                isFullscreen={researchFullscreen}
+                onToggleFullscreen={() => setResearchFullscreen(!researchFullscreen)}
+                onAddSourceFromUrl={async (url) => {
+                  await onAddSourceFromUrl(url, 'link');
+                }}
+              />
+            </Suspense>
           </div>
         </div>
       )}

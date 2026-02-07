@@ -309,7 +309,7 @@ async def _resolve_context(
         raise ValueError("Unknown source_id in source_ids")
 
     seed = (prompt or "").strip() or "Summarize the notebook sources."
-    embeddings = await deps.embedder.embed([seed])
+    embeddings = await deps.embedder.embed_batch([seed])
     if not embeddings:
         return SlidesContext(context="", resolved_chunk_ids=[])
 

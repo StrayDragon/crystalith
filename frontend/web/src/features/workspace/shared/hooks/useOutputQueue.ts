@@ -418,6 +418,25 @@ export function useOutputQueue({
     await mutateOutputs();
   }, [mutateOutputs]);
 
+  const retryOutputJob = useCallback(
+    (jobId: string) => {
+      const target = outputQueueRef.current.find((item) => item.id === jobId);
+      if (!target || target.status !== 'error') return;
+
+      onQueueTotal();
+      updateOutputQueueJobs((prev) =>
+        prev.map((item) =>
+          item.id === jobId
+            ? { ...item, status: 'queued' }
+            : item,
+        ),
+      );
+      store.getState().setError('outputs', '');
+      runNextOutputJobRef.current();
+    },
+    [onQueueTotal, updateOutputQueueJobs],
+  );
+
   const deleteOutput = useCallback(
     async (outputId: number) => {
       const s = store.getState();
@@ -477,6 +496,7 @@ export function useOutputQueue({
     outputsLoading: loadingOutputs,
     outputsError: errOutputs,
     retryOutputs,
+    retryOutputJob,
     deleteOutput,
     clearOutputs,
     fetchOutput,

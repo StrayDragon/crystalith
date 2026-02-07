@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import asyncio
 
 from typing import TYPE_CHECKING
 
@@ -94,6 +95,8 @@ FORMAT_PROMPTS = {
         "terms (list of strings). Keep bullets concise."
     ),
 }
+
+REFINE_BATCH_CONCURRENCY = 3
 
 
 def _fallback_structured(
@@ -249,7 +252,7 @@ async def refine_batch(
         context = ""
         evidence = False
     else:
-        embeddings = await embedder.embed([payload.prompt])
+        embeddings = await embedder.embed_batch([payload.prompt])
         if not embeddings:
             citations = []
             context = ""
@@ -295,11 +298,16 @@ async def refine_batch(
 
                 context = format_context(results, chunk_map)
 
-    outputs: dict[str, RefineBatchOutput] = {}
-    for format_name in formats:
+    semaphore = asyncio.Semaphore(REFINE_BATCH_CONCURRENCY)
+
+    async def _generate_output(format_name: str) -> tuple[str, RefineBatchOutput]:
         messages = _build_messages(format_name, payload.prompt, context)
-        answer = await chatter.chat(messages)
-        outputs[format_name] = _apply_format(format_name, answer, payload.prompt, citations)
+        async with semaphore:
+            answer = await chatter.chat(messages)
+        return format_name, _apply_format(format_name, answer, payload.prompt, citations)
+
+    generated = await asyncio.gather(*[_generate_output(format_name) for format_name in formats])
+    outputs: dict[str, RefineBatchOutput] = {name: output for name, output in generated}
 
     return RefineBatchResponse(
         outputs=outputs,

@@ -1,6 +1,7 @@
 from .manager import ConfigManager
 from .models import (
     AppSettings,
+    AISettings,
     ChatSettings,
     CompletionOptions,
     ContextWindowSettings,
@@ -27,6 +28,7 @@ from .models import (
 
 __all__ = [
     "AppSettings",
+    "AISettings",
     "ChatSettings",
     "CompletionOptions",
     "ConfigManager",

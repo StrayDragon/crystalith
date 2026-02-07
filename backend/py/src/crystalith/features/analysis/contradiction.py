@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import asyncio
 from collections.abc import Mapping, Sequence
 
 from crystalith.shared.ai.interfaces import ChatProvider
@@ -61,6 +62,7 @@ async def detect_contradictions(
     chatter: ChatProvider,
     *,
     max_checks: int = 12,
+    concurrency_limit: int = 5,
 ) -> list[Relation]:
     if max_checks <= 0:
         return []
@@ -68,22 +70,26 @@ async def detect_contradictions(
     candidates = [relation for relation in relations if relation.relation_type == "similar"]
     candidates.sort(key=lambda item: item.score, reverse=True)
 
-    contradictions: list[Relation] = []
-    for relation in candidates[:max_checks]:
+    semaphore = asyncio.Semaphore(max(concurrency_limit, 1))
+
+    async def _detect_for_relation(relation: Relation) -> Relation | None:
         left_text = chunk_texts.get(relation.source_chunk_id)
         right_text = chunk_texts.get(relation.target_chunk_id)
         if not left_text or not right_text:
-            continue
+            return None
         messages = _build_messages(_truncate(left_text), _truncate(right_text))
-        response = await chatter.chat(messages)
+        async with semaphore:
+            response = await chatter.chat(messages)
         if _is_contradiction(response):
-            contradictions.append(
-                Relation(
-                    source_chunk_id=relation.source_chunk_id,
-                    target_chunk_id=relation.target_chunk_id,
-                    relation_type="contradicts",
-                    score=relation.score,
-                )
+            return Relation(
+                source_chunk_id=relation.source_chunk_id,
+                target_chunk_id=relation.target_chunk_id,
+                relation_type="contradicts",
+                score=relation.score,
             )
+        return None
+
+    detections = await asyncio.gather(*[_detect_for_relation(item) for item in candidates[:max_checks]])
+    contradictions = [item for item in detections if item is not None]
 
     return contradictions

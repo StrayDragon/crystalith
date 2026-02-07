@@ -46,7 +46,11 @@ async def analyze_notebook(
     chunks = rows.scalars().all()
     chunk_texts = {chunk.id: chunk.text for chunk in chunks}
 
-    relations = detect_relations(entries)
+    relations = await detect_relations(
+        entries,
+        notebook_id=notebook_id,
+        vector_store=vector_store,
+    )
     topics = cluster_topics(entries, chunk_texts)
     contradictions = await detect_contradictions(relations, chunk_texts, chatter)
     return AnalysisResult(

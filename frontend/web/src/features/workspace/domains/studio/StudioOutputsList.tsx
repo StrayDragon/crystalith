@@ -16,6 +16,7 @@ import {
   MoreHoriz as MoreHorizIcon,
   OpenInFull as OpenInFullIcon,
 } from '@mui/icons-material';
+import { Virtuoso } from 'react-virtuoso';
 
 import type { Citation, OutputItem, OutputTypeId } from '../../shared/types';
 import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
@@ -23,6 +24,7 @@ import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { copyToClipboard } from '../../../../shared/clipboard';
 import { collectOutputCitations, formatStructuredOutputForCopy } from '../../shared/utils';
+import { SkeletonCard } from '../../shared/components/Skeleton';
 import {
   getToolIcon,
   resolveNoteMeta,
@@ -38,6 +40,7 @@ interface StudioOutputsListProps {
   outputsLoading: boolean;
   outputsError: string;
   onRetryOutputs: () => void;
+  onRetryOutputJob?: (jobId: string) => void;
   onDeleteOutput: (outputId: number) => void;
   onSelectOutput: (outputId: number) => void;
   onSelectOutputFullscreen?: (outputId: number) => void;
@@ -72,12 +75,17 @@ type PendingNote = {
   queueJobId?: string;
 };
 
+type StudioListItem =
+  | { kind: 'pending'; key: string; note: PendingNote }
+  | { kind: 'output'; key: string; note: StudioNote };
+
 export default function StudioOutputsList({
   outputs,
   outputQueueJobs,
   outputsLoading,
   outputsError,
   onRetryOutputs,
+  onRetryOutputJob,
   onDeleteOutput,
   onSelectOutput,
   onSelectOutputFullscreen,
@@ -164,12 +172,20 @@ export default function StudioOutputsList({
   const showSkeleton = outputsLoading && notes.length === 0 && pendingNotes.length === 0;
   const showEmpty = !outputsLoading && notes.length === 0 && pendingNotes.length === 0;
 
+  const listItems = useMemo<StudioListItem[]>(
+    () => [
+      ...pendingNotes.map((note) => ({ kind: 'pending' as const, key: note.id, note })),
+      ...notes.map((note) => ({ kind: 'output' as const, key: note.id, note })),
+    ],
+    [notes, pendingNotes],
+  );
+
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+    <div className="flex-1 min-h-0 pr-1">
       {showSkeleton && (
         <div className="flex flex-col gap-2">
-          <div className="h-10 rounded-lg bg-gray-100 animate-pulse" />
-          <div className="h-10 w-2/3 rounded-lg bg-gray-100 animate-pulse" />
+          <SkeletonCard lines={3} />
+          <SkeletonCard lines={2} />
         </div>
       )}
 
@@ -182,90 +198,99 @@ export default function StudioOutputsList({
       )}
 
       {!showSkeleton && !showEmpty && (
-        <div className="flex flex-col gap-2">
-          {pendingNotes.map((note) => {
-            const tone = resolveTone(note.type);
-            const colors = TONE_COLORS[tone];
-            const isError = note.status === 'error';
-            const canOpenSlides = note.type === 'SLIDES' && note.slideId;
+        <Virtuoso
+          className="h-full"
+          data={listItems}
+          computeItemKey={(_index, item) => item.key}
+          itemContent={(_index, item) => {
+            if (item.kind === 'pending') {
+              const note = item.note;
+              const tone = resolveTone(note.type);
+              const colors = TONE_COLORS[tone];
+              const isError = note.status === 'error';
+              const canOpenSlides = note.type === 'SLIDES' && note.slideId;
 
-            const content = (
-              <>
-                <div
-                  className={`flex items-center justify-center w-6 h-6 rounded-md border border-dashed flex-shrink-0 ${
-                    isError ? 'bg-red-50 border-red-300 text-red-500' : ''
-                  }`}
-                  style={!isError ? { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text } : undefined}
-                >
-                  {isError ? (
-                    <span className="text-xs font-bold">!</span>
-                  ) : (
-                    <Spinner className="h-3 w-3" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <Typography
-                    variant="small"
-                    className={`font-medium leading-snug truncate ${isError ? 'text-red-700' : 'text-gray-900'}`}
+              const content = (
+                <>
+                  <div
+                    className={`flex items-center justify-center w-6 h-6 rounded-md border border-dashed flex-shrink-0 ${
+                      isError ? 'bg-red-50 border-red-300 text-red-500' : ''
+                    }`}
+                    style={!isError ? { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text } : undefined}
                   >
-                    {note.title}
-                  </Typography>
-                  <Typography
-                    variant="small"
-                    className={`text-[10px] font-medium leading-tight ${isError ? 'text-red-500' : 'text-gray-600'}`}
-                  >
-                    {note.meta}
-                  </Typography>
-                </div>
-              </>
-            );
+                    {isError ? (
+                      <span className="text-xs font-bold">!</span>
+                    ) : (
+                      <Spinner className="h-3 w-3" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Typography
+                      variant="small"
+                      className={`font-medium leading-snug truncate ${isError ? 'text-red-700' : 'text-gray-900'}`}
+                    >
+                      {note.title}
+                    </Typography>
+                    <Typography
+                      variant="small"
+                      className={`text-[10px] font-medium leading-tight ${isError ? 'text-red-500' : 'text-gray-600'}`}
+                    >
+                      {note.meta}
+                    </Typography>
+                  </div>
+                </>
+              );
 
-            if (canOpenSlides) {
+              if (canOpenSlides && !isError) {
+                return (
+                  <button
+                    type="button"
+                    className={`flex items-center gap-2 p-2 rounded-lg border border-dashed w-full text-left transition-colors hover:bg-white/70 mb-2 ${
+                      isError ? 'bg-red-50/80 border-red-200' : ''
+                    }`}
+                    style={!isError ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border } : undefined}
+                    onClick={() => {
+                      if (!note.slideId) return;
+                      onOpenSlides?.({
+                        mode: 'preview',
+                        slideId: note.slideId,
+                        queueStatus: note.status,
+                        queueJobId: note.queueJobId ?? null,
+                      });
+                    }}
+                  >
+                    {content}
+                  </button>
+                );
+              }
+
               return (
-                <button
-                  key={note.id}
-                  type="button"
-                  className={`flex items-center gap-2 p-2 rounded-lg border border-dashed w-full text-left transition-colors hover:bg-white/70 ${
+                <div
+                  className={`flex items-center gap-2 p-2 rounded-lg border border-dashed mb-2 ${
                     isError ? 'bg-red-50/80 border-red-200' : ''
                   }`}
                   style={!isError ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border } : undefined}
-                  onClick={() => {
-                    if (!note.slideId) return;
-                    onOpenSlides?.({
-                      mode: 'preview',
-                      slideId: note.slideId,
-                      queueStatus: note.status,
-                      queueJobId: note.queueJobId ?? null,
-                    });
-                  }}
                 >
                   {content}
-                </button>
+                  {isError && onRetryOutputJob && note.queueJobId ? (
+                    <button
+                      type="button"
+                      className="flex-shrink-0 rounded-md border border-red-300 bg-white px-2 py-1 text-[10px] font-semibold text-red-700 hover:bg-red-100"
+                      onClick={() => onRetryOutputJob(note.queueJobId!)}
+                    >
+                      重试
+                    </button>
+                  ) : null}
+                </div>
               );
             }
 
-            return (
-              <div
-                key={note.id}
-                className={`flex items-center gap-2 p-2 rounded-lg border border-dashed ${
-                  isError ? 'bg-red-50/80 border-red-200' : ''
-                }`}
-                style={!isError ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border } : undefined}
-              >
-                {content}
-              </div>
-            );
-          })}
-
-          {notes.map((note) => {
+            const note = item.note;
             const tone = resolveTone(note.type);
             const colors = TONE_COLORS[tone];
 
             return (
-              <div
-                key={note.id}
-                className="group relative flex items-center rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:bg-gray-50 hover:border-gray-300"
-              >
+              <div className="group relative flex items-center rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:bg-gray-50 hover:border-gray-300 mb-2">
                 <button
                   type="button"
                   className="flex flex-1 items-center gap-2 p-2 text-left min-w-0"
@@ -361,8 +386,8 @@ export default function StudioOutputsList({
                 </div>
               </div>
             );
-          })}
-        </div>
+          }}
+        />
       )}
 
       {outputsError && (

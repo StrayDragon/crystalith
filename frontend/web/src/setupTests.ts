@@ -11,3 +11,33 @@ if (!Element.prototype.animate) {
       finished: Promise.resolve(),
     }) as unknown as Animation;
 }
+
+if (typeof window !== 'undefined' && !window.ResizeObserver) {
+  window.ResizeObserver = class ResizeObserver {
+    observe() {}
+
+    unobserve() {}
+
+    disconnect() {}
+  } as typeof ResizeObserver;
+}
+
+if (typeof window !== 'undefined' && !window.IntersectionObserver) {
+  window.IntersectionObserver = class IntersectionObserver {
+    readonly root = null;
+
+    readonly rootMargin = '0px';
+
+    readonly thresholds = [0];
+
+    disconnect() {}
+
+    observe() {}
+
+    takeRecords() {
+      return [];
+    }
+
+    unobserve() {}
+  } as typeof IntersectionObserver;
+}

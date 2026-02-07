@@ -110,6 +110,17 @@ Week 3-5:  Phase 2  ─── [2a: Obsidian] ─────────
 
 **总预估**: 4-5 周（假设 1 名全栈开发），2-3 周（假设前后端各 1 人并行）。
 
+## 当前实施状态（2026-02-07）
+
+| 阶段 | 提案 | 状态 | 备注 |
+|---|---|---|---|
+| 0a | `refactor-state-to-zustand` | ✅ 完成 | `openspec list` 显示 Complete |
+| 0b | `optimize-backend-performance` | 🚧 进行中（27/35） | 剩余基准、验收与部分测试任务 |
+| 1a | `optimize-frontend-performance` | 🚧 进行中（19/23） | 主要剩余 DevTools 相关验收项 |
+| 1b | `add-error-resilience` | ✅ 已归档 | 2026-02-07 归档至 `archive/2026-02-07-add-error-resilience` |
+
+**下一优先级**: 先收敛 `optimize-backend-performance` 与 `optimize-frontend-performance` 的剩余项，再进入 Phase 2。
+
 ## 被排除/暂缓的提案
 
 | 提案 | 分类 | 暂缓原因 |

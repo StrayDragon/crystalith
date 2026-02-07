@@ -87,6 +87,7 @@ class ChromaVectorStore:
         top_k: int = 5,
         min_score: float = 0.2,
         source_ids: Sequence[int] | None = None,
+        exclude_source_ids: Sequence[int] | None = None,
     ) -> list[VectorSearchResult]:
         query = list(query_vector)
         if not query:
@@ -96,15 +97,17 @@ class ChromaVectorStore:
         if dimension is None or len(query) != dimension:
             return []
 
+        clauses: list[dict[str, Any]] = [{"notebook_id": notebook_id}]
         if source_ids:
-            where: dict[str, Any] = {
-                "$and": [
-                    {"notebook_id": notebook_id},
-                    {"source_id": {"$in": list(source_ids)}},
-                ]
-            }
+            clauses.append({"source_id": {"$in": list(source_ids)}})
+        if exclude_source_ids:
+            clauses.append({"source_id": {"$nin": list(exclude_source_ids)}})
+
+        where: dict[str, Any]
+        if len(clauses) == 1:
+            where = clauses[0]
         else:
-            where = {"notebook_id": notebook_id}
+            where = {"$and": clauses}
 
         results = self._collection.query(
             query_embeddings=[query],

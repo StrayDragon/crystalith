@@ -130,6 +130,7 @@ class SQLiteVectorStore:
         top_k: int = 5,
         min_score: float = 0.2,
         source_ids: Sequence[int] | None = None,
+        exclude_source_ids: Sequence[int] | None = None,
     ) -> list[VectorSearchResult]:
         query = list(query_vector)
         if not query:
@@ -142,6 +143,7 @@ class SQLiteVectorStore:
             return []
 
         source_id_set = set(source_ids) if source_ids else None
+        exclude_source_id_set = set(exclude_source_ids) if exclude_source_ids else None
 
         return await self._brute_force_search(
             notebook_id=notebook_id,
@@ -149,6 +151,7 @@ class SQLiteVectorStore:
             top_k=top_k,
             min_score=min_score,
             source_id_set=source_id_set,
+            exclude_source_id_set=exclude_source_id_set,
         )
 
     async def _brute_force_search(
@@ -159,6 +162,7 @@ class SQLiteVectorStore:
         top_k: int,
         min_score: float,
         source_id_set: set[int] | None,
+        exclude_source_id_set: set[int] | None,
     ) -> list[VectorSearchResult]:
         """Perform brute-force vector search using cosine similarity."""
         entries = await self.entries(
@@ -168,6 +172,8 @@ class SQLiteVectorStore:
         results_heap: list[tuple[float, VectorEntry]] = []
         query_norm = _norm(query)
         for entry in entries:
+            if exclude_source_id_set is not None and entry.source_id in exclude_source_id_set:
+                continue
             score = _cosine_similarity_with_norm(query, query_norm, entry.vector)
             if score < min_score:
                 continue

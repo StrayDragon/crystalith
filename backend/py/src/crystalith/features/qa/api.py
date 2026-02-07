@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import asyncio
 from collections.abc import AsyncGenerator
 
 import sqlalchemy as sa
@@ -144,9 +145,9 @@ async def ask_question(
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
 
-    db_session: Session | None = None
-    history_messages: list[ChatMessage] = []
-    if payload.session_id is not None:
+    async def _load_history() -> tuple[Session | None, list[ChatMessage]]:
+        if payload.session_id is None:
+            return None, []
         db_session = await session.get(Session, payload.session_id)
         if db_session is None or db_session.notebook_id != notebook_id:
             raise HTTPException(status_code=404, detail="Session not found")
@@ -159,6 +160,10 @@ async def ask_question(
             ChatMessage(role=message.role, content=message.content)
             for message in history_rows.scalars().all()
         ]
+        return db_session, history_messages
+
+    db_session: Session | None = None
+    history_messages: list[ChatMessage] = []
 
     async def _persist_session_messages(
         answer: str,
@@ -190,6 +195,8 @@ async def ask_question(
 
     source_ids = _normalize_source_ids(payload.source_ids)
     if not source_ids:
+        if payload.session_id is not None:
+            db_session, history_messages = await _load_history()
         created_at = datetime.datetime.now(datetime.UTC)
         _, stats = _build_context_window(
             settings=settings,
@@ -213,7 +220,15 @@ async def ask_question(
 
     await _validate_source_ids(session, notebook_id, source_ids)
 
-    embeddings = await embedder.embed([payload.question])
+    if payload.session_id is None:
+        embeddings = await embedder.embed_batch([payload.question])
+        db_session = None
+        history_messages = []
+    else:
+        embedding_task = embedder.embed_batch([payload.question])
+        history_task = _load_history()
+        embeddings, history_payload = await asyncio.gather(embedding_task, history_task)
+        db_session, history_messages = history_payload
     if not embeddings:
         created_at = datetime.datetime.now(datetime.UTC)
         _, stats = _build_context_window(
@@ -450,9 +465,9 @@ async def ask_question_stream(
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
 
-    db_session: Session | None = None
-    history_messages: list[ChatMessage] = []
-    if payload.session_id is not None:
+    async def _load_history() -> tuple[Session | None, list[ChatMessage]]:
+        if payload.session_id is None:
+            return None, []
         db_session = await session.get(Session, payload.session_id)
         if db_session is None or db_session.notebook_id != notebook_id:
             raise HTTPException(status_code=404, detail="Session not found")
@@ -465,6 +480,10 @@ async def ask_question_stream(
             ChatMessage(role=message.role, content=message.content)
             for message in history_rows.scalars().all()
         ]
+        return db_session, history_messages
+
+    db_session: Session | None = None
+    history_messages: list[ChatMessage] = []
 
     async def _persist_session_messages_stream(
         answer: str,
@@ -499,7 +518,12 @@ async def ask_question_stream(
         await _validate_source_ids(session, notebook_id, source_ids)
 
     async def generate_stream() -> AsyncGenerator[str, None]:
+        nonlocal db_session
+        nonlocal history_messages
+
         if not source_ids:
+            if payload.session_id is not None and db_session is None:
+                db_session, history_messages = await _load_history()
             created_at = datetime.datetime.now(datetime.UTC)
             _, stats = _build_context_window(
                 settings=settings,
@@ -527,7 +551,14 @@ async def ask_question_stream(
 
         # Embed the question
         try:
-            embeddings = await embedder.embed([payload.question])
+            if payload.session_id is None:
+                embeddings = await embedder.embed_batch([payload.question])
+            else:
+                embeddings, history_payload = await asyncio.gather(
+                    embedder.embed_batch([payload.question]),
+                    _load_history(),
+                )
+                db_session, history_messages = history_payload
         except Exception as embed_error:
             # Handle embedding service errors (e.g., Ollama 503)
             error_msg = f"Embedding 服务暂时不可用: {embed_error}"

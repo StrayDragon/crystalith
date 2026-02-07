@@ -158,7 +158,7 @@ async def _execute_refine(
         evidence = False
     else:
         embedder = embedder_factory(settings)
-        embeddings = await embedder.embed([prompt])
+        embeddings = await embedder.embed_batch([prompt])
         if not embeddings:
             citations = []
             context = ""

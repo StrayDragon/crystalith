@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import type { RefObject } from 'react';
+import { Virtuoso } from 'react-virtuoso';
 import {
   IconButton,
   Menu,
@@ -19,6 +20,7 @@ import {
 import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
 import CitationPopover from '../../shared/components/citations/CitationPopover';
 import { IconCopy, IconSave, IconSend } from '../../shared/components/Icons';
+import { SkeletonList } from '../../shared/components/Skeleton';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { copyToClipboard } from '../../../../shared/clipboard';
 
@@ -31,6 +33,7 @@ interface ChatPanelProps {
   isStreaming?: boolean;
   streamingMessageId?: string | null;
   notice: string;
+  onRetrySend?: () => void;
   isBlocked: boolean;
   isConnected: boolean;
   inputRef: RefObject<HTMLTextAreaElement>;
@@ -57,6 +60,7 @@ function ChatPanel({
   isStreaming = false,
   streamingMessageId = null,
   notice,
+  onRetrySend,
   isBlocked,
   isConnected,
   inputRef,
@@ -85,6 +89,13 @@ function ChatPanel({
   const [popoverMessageId, setPopoverMessageId] = useState<string | null>(null);
   const [popoverAnchorRect, setPopoverAnchorRect] = useState<DOMRect | null>(null);
 
+  const shouldRenderMessageList =
+    isConnected &&
+    !isBlocked &&
+    !isLoadingMessages &&
+    !messagesError &&
+    messages.length > 0;
+
   const handleCopy = useCallback(async (messageId: string, content: string) => {
     const success = await copyToClipboard(content);
     if (success) {
@@ -93,9 +104,182 @@ function ChatPanel({
     }
   }, []);
 
+  const renderMessage = (message: ChatMessage) => {
+    const messageCitationEntries =
+      message.citations && message.citations.length > 0
+        ? message.citations.map((citation, index) => {
+            const chunkId = citation.chunkId ?? null;
+            const mapped = chunkId != null ? citationIndexMap.get(chunkId) ?? null : null;
+            return {
+              citation,
+              index: mapped?.index ?? index + 1,
+            };
+          })
+        : (message.citationChunkIds ?? [])
+            .map((chunkId) => citationIndexMap.get(chunkId))
+            .filter(
+              (entry): entry is { citation: Citation; index: number } =>
+                Boolean(entry),
+            );
+
+    return (
+      <div
+        className={`flex flex-col gap-2 pb-4 ${message.role === 'user' ? 'items-end' : 'items-start'}`}
+        data-testid="chat-message-item"
+      >
+        <div
+          className={`text-sm leading-relaxed whitespace-pre-wrap ${
+            message.role === 'user'
+              ? 'rounded-2xl bg-gray-100 px-4 py-2 text-gray-700'
+              : 'text-gray-800'
+          }`}
+        >
+          {message.content}
+          {message.role === 'assistant' &&
+          isStreaming &&
+          streamingMessageId === message.id ? (
+            <span className="TypingCursor" aria-hidden="true" />
+          ) : null}
+        </div>
+        {message.role === 'assistant' && message.content ? (
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            {messageCitationEntries.length > 0 && (
+              <>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
+                  onClick={(e) => {
+                    setPopoverAnchorRect(e.currentTarget.getBoundingClientRect());
+                    setPopoverMessageId(message.id);
+                  }}
+                  aria-label={`查看全部 ${messageCitationEntries.length} 条引用`}
+                >
+                  <QuoteIcon style={{ fontSize: 14 }} />
+                  查看引用 ({messageCitationEntries.length})
+                </button>
+                {popoverMessageId === message.id && (
+                  <CitationPopover
+                    citations={messageCitationEntries.map((entry) => entry.citation)}
+                    isOpen={true}
+                    onClose={() => {
+                      setPopoverMessageId(null);
+                      setPopoverAnchorRect(null);
+                    }}
+                    anchorRect={popoverAnchorRect}
+                    onJumpToCitation={(citation) => onCitationJump?.(citation, message)}
+                    onCitationHover={(chunkId) => onCitationHover?.(chunkId, message)}
+                    onLocateSource={(citation) => onCitationLocate?.(citation, message)}
+                  />
+                )}
+              </>
+            )}
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
+              onClick={() => onSaveToNote?.(message.content)}
+            >
+              <IconSave className="w-3.5 h-3.5" />
+              保存到笔记
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
+              onClick={() => handleCopy(message.id, message.content)}
+            >
+              <IconCopy className="w-3.5 h-3.5" />
+              {copiedId === message.id ? '已复制' : '复制'}
+            </button>
+
+            {isConnected && (onConvertToSource || onConvertToOutput) && (
+              <Menu placement="bottom-start">
+                <MenuHandler>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
+                    disabled={isConverting}
+                  >
+                    {isConverting ? (
+                      <Spinner className="w-3.5 h-3.5" />
+                    ) : (
+                      <ConvertIcon style={{ fontSize: 14 }} />
+                    )}
+                    转换
+                    <ExpandMoreIcon style={{ fontSize: 12 }} />
+                  </button>
+                </MenuHandler>
+                <MenuList className="p-1 min-w-[160px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
+                  {onConvertToSource && (
+                    <MenuItem
+                      onClick={() => onConvertToSource()}
+                      className="flex items-center gap-2 py-2 px-3 text-xs"
+                      disabled={isConverting}
+                    >
+                      <SourceIcon style={{ fontSize: 14 }} />
+                      <span>转为来源</span>
+                    </MenuItem>
+                  )}
+                  {onConvertToOutput && (
+                    <>
+                      <div className="px-3 py-1 text-[10px] text-gray-400 font-medium">
+                        转为笔记
+                      </div>
+                      <MenuItem
+                        onClick={() => onConvertToOutput('PARAGRAPH')}
+                        className="flex items-center gap-2 py-2 px-3 text-xs"
+                        disabled={isConverting}
+                      >
+                        <NotesIcon style={{ fontSize: 14 }} />
+                        <span>段落</span>
+                      </MenuItem>
+                      <MenuItem
+                        onClick={() => onConvertToOutput('BULLETS')}
+                        className="flex items-center gap-2 py-2 px-3 text-xs"
+                        disabled={isConverting}
+                      >
+                        <NotesIcon style={{ fontSize: 14 }} />
+                        <span>要点</span>
+                      </MenuItem>
+                      <MenuItem
+                        onClick={() => onConvertToOutput('STRUCTURED')}
+                        className="flex items-center gap-2 py-2 px-3 text-xs"
+                        disabled={isConverting}
+                      >
+                        <NotesIcon style={{ fontSize: 14 }} />
+                        <span>结构化</span>
+                      </MenuItem>
+                    </>
+                  )}
+                </MenuList>
+              </Menu>
+            )}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  const renderNotice = useMemo(() => {
+    if (!notice) return null;
+
+    return (
+      <div className="mt-2 flex items-center gap-2 text-xs text-amber-700">
+        <span>{notice}</span>
+        {onRetrySend ? (
+          <button
+            type="button"
+            className="text-xs font-semibold text-gray-900 hover:underline cursor-pointer"
+            onClick={onRetrySend}
+          >
+            重试发送
+          </button>
+        ) : null}
+      </div>
+    );
+  }, [notice, onRetrySend]);
+
   return (
     <div className="flex flex-1 flex-col min-h-0 p-0 gap-0">
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-5 lg:px-6 py-3 sm:py-4 flex flex-col gap-4" role="log" aria-label="对话内容">
+      <div className="flex-1 min-h-0 px-4 sm:px-5 lg:px-6 py-3 sm:py-4" role="log" aria-label="对话内容">
         {!isConnected ? (
           <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-xs text-gray-500">
             未连接到后端服务，请检查服务状态后重试。
@@ -105,11 +289,7 @@ function ChatPanel({
             请先创建笔记本，再开始对话。
           </div>
         ) : isLoadingMessages ? (
-          <div className="flex flex-col gap-2" aria-label="加载会话">
-            <div className="h-10 rounded-2xl bg-gray-100 animate-pulse" />
-            <div className="h-10 w-2/3 rounded-2xl bg-gray-100 animate-pulse" />
-            <div className="h-10 rounded-2xl bg-gray-100 animate-pulse" />
-          </div>
+          <SkeletonList items={3} className="py-1" />
         ) : messagesError ? (
           <div className="text-xs text-red-600">
             {messagesError}
@@ -127,163 +307,21 @@ function ChatPanel({
           </div>
         ) : null}
 
-        {messages.map((message) => {
-          const messageCitationEntries =
-            message.citations && message.citations.length > 0
-              ? message.citations.map((citation, index) => {
-                  const chunkId = citation.chunkId ?? null;
-                  const mapped =
-                    chunkId != null ? citationIndexMap.get(chunkId) ?? null : null;
-                  return {
-                    citation,
-                    index: mapped?.index ?? index + 1,
-                  };
-                })
-              : (message.citationChunkIds ?? [])
-                  .map((chunkId) => citationIndexMap.get(chunkId))
-                  .filter(
-                    (entry): entry is { citation: Citation; index: number } =>
-                      Boolean(entry),
-                  );
-          return (
-            <div
-              key={message.id}
-              className={`flex flex-col gap-2 ${message.role === 'user' ? 'items-end' : 'items-start'}`}
-            >
-              <div
-                className={`text-sm leading-relaxed whitespace-pre-wrap ${
-                  message.role === 'user'
-                    ? 'rounded-2xl bg-gray-100 px-4 py-2 text-gray-700'
-                    : 'text-gray-800'
-                }`}
-              >
-                {message.content}
-                {message.role === 'assistant' &&
-                isStreaming &&
-                streamingMessageId === message.id ? (
-                  <span className="TypingCursor" aria-hidden="true" />
-                ) : null}
-              </div>
-              {/* Action buttons for assistant messages */}
-              {message.role === 'assistant' && message.content ? (
-                <div className="flex items-center gap-1 mt-1 flex-wrap">
-                  {/* Citation button - first in the row */}
-                  {messageCitationEntries.length > 0 && (
-                    <>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
-                        onClick={(e) => {
-                          setPopoverAnchorRect(e.currentTarget.getBoundingClientRect());
-                          setPopoverMessageId(message.id);
-                        }}
-                        aria-label={`查看全部 ${messageCitationEntries.length} 条引用`}
-                      >
-                        <QuoteIcon style={{ fontSize: 14 }} />
-                        查看引用 ({messageCitationEntries.length})
-                      </button>
-                      {popoverMessageId === message.id && (
-                        <CitationPopover
-                          citations={messageCitationEntries.map((e) => e.citation)}
-                          isOpen={true}
-                          onClose={() => {
-                            setPopoverMessageId(null);
-                            setPopoverAnchorRect(null);
-                          }}
-                          anchorRect={popoverAnchorRect}
-                          onJumpToCitation={(citation) => onCitationJump?.(citation, message)}
-                          onCitationHover={(chunkId) => onCitationHover?.(chunkId, message)}
-                          onLocateSource={(citation) => onCitationLocate?.(citation, message)}
-                        />
-                      )}
-                    </>
-                  )}
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
-                    onClick={() => onSaveToNote?.(message.content)}
-                  >
-                    <IconSave className="w-3.5 h-3.5" />
-                    保存到笔记
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
-                    onClick={() => handleCopy(message.id, message.content)}
-                  >
-                    <IconCopy className="w-3.5 h-3.5" />
-                    {copiedId === message.id ? '已复制' : '复制'}
-                  </button>
-
-                  {/* Conversion menu - only show if conversion callbacks are provided and connected */}
-                  {isConnected && (onConvertToSource || onConvertToOutput) && (
-                    <Menu placement="bottom-start">
-                      <MenuHandler>
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
-                          disabled={isConverting}
-                        >
-                          {isConverting ? (
-                            <Spinner className="w-3.5 h-3.5" />
-                          ) : (
-                            <ConvertIcon style={{ fontSize: 14 }} />
-                          )}
-                          转换
-                          <ExpandMoreIcon style={{ fontSize: 12 }} />
-                        </button>
-                      </MenuHandler>
-                      <MenuList className="p-1 min-w-[160px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
-                        {onConvertToSource && (
-                          <MenuItem
-                            onClick={() => onConvertToSource()}
-                            className="flex items-center gap-2 py-2 px-3 text-xs"
-                            disabled={isConverting}
-                          >
-                            <SourceIcon style={{ fontSize: 14 }} />
-                            <span>转为来源</span>
-                          </MenuItem>
-                        )}
-                        {onConvertToOutput && (
-                          <>
-                            <div className="px-3 py-1 text-[10px] text-gray-400 font-medium">
-                              转为笔记
-                            </div>
-                            <MenuItem
-                              onClick={() => onConvertToOutput('PARAGRAPH')}
-                              className="flex items-center gap-2 py-2 px-3 text-xs"
-                              disabled={isConverting}
-                            >
-                              <NotesIcon style={{ fontSize: 14 }} />
-                              <span>段落</span>
-                            </MenuItem>
-                            <MenuItem
-                              onClick={() => onConvertToOutput('BULLETS')}
-                              className="flex items-center gap-2 py-2 px-3 text-xs"
-                              disabled={isConverting}
-                            >
-                              <NotesIcon style={{ fontSize: 14 }} />
-                              <span>要点</span>
-                            </MenuItem>
-                            <MenuItem
-                              onClick={() => onConvertToOutput('STRUCTURED')}
-                              className="flex items-center gap-2 py-2 px-3 text-xs"
-                              disabled={isConverting}
-                            >
-                              <NotesIcon style={{ fontSize: 14 }} />
-                              <span>结构化</span>
-                            </MenuItem>
-                          </>
-                        )}
-                      </MenuList>
-                    </Menu>
-                  )}
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
-        {notice ? <div className="text-xs text-amber-600">{notice}</div> : null}
+        {shouldRenderMessageList ? (
+          <Virtuoso
+            className="h-full"
+            data={messages}
+            computeItemKey={(index, message) => message?.id ?? `chat-message-${index}`}
+            initialItemCount={20}
+            followOutput={(isAtBottom) => (isAtBottom ? 'smooth' : false)}
+            itemContent={(_index, message) => (message ? renderMessage(message) : <div className="pb-4" />)}
+            components={{
+              Footer: () => (renderNotice ? <div className="pt-1">{renderNotice}</div> : null),
+            }}
+          />
+        ) : renderNotice ? (
+          renderNotice
+        ) : null}
       </div>
 
       <form

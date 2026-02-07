@@ -57,6 +57,8 @@ export function useSources() {
 
   const [searchState, setSearchState] = useState<AsyncStatus>('idle');
   const [removeState, setRemoveState] = useState<AsyncStatus>('idle');
+  const [uploadError, setUploadError] = useState('');
+  const [lastFailedUploadFile, setLastFailedUploadFile] = useState<File | null>(null);
   const [searchNotice, setSearchNotice] = useState('');
   const [searchResults, setSearchResults] = useState<ApiSourceSearchResult[]>([]);
   // 搜索队列状态
@@ -105,6 +107,8 @@ export function useSources() {
     setSearchResults([]);
     setRemoveState('idle');
     setSearchQueue([]);
+    setUploadError('');
+    setLastFailedUploadFile(null);
   }, [activeNotebookId]);
 
   useEffect(() => {
@@ -158,30 +162,51 @@ export function useSources() {
     hoveredMessageChunkIds,
   ]);
 
-  const handleUpload = useCallback(
-    async (file: File | null) => {
-      if (!file || !activeNotebookId || !isConnected) {
+  const uploadFile = useCallback(
+    async (file: File) => {
+      if (!activeNotebookId || !isConnected) {
         if (!isConnected) {
           toast.error('未连接到后端服务，无法上传来源。');
         }
-        return;
+        return false;
       }
+
       store.getState().setUploadState('loading');
+      setUploadError('');
       try {
         await uploadSource({
           path: { notebook_id: activeNotebookId },
           body: { file },
         });
         await mutate();
+        setLastFailedUploadFile(null);
         toast.success('来源上传成功');
+        return true;
       } catch (error) {
-        toast.error('上传失败，请检查文件格式或后端状态。');
+        const message = '上传失败，请检查文件格式或后端状态。';
+        setUploadError(message);
+        setLastFailedUploadFile(file);
+        toast.error(message);
+        return false;
       } finally {
         store.getState().setUploadState('idle');
       }
     },
-    [isConnected, mutate, activeNotebookId],
+    [activeNotebookId, isConnected, mutate],
   );
+
+  const handleUpload = useCallback(
+    async (file: File | null) => {
+      if (!file) return;
+      await uploadFile(file);
+    },
+    [uploadFile],
+  );
+
+  const retryUpload = useCallback(async () => {
+    if (!lastFailedUploadFile) return;
+    await uploadFile(lastFailedUploadFile);
+  }, [lastFailedUploadFile, uploadFile]);
 
   const retrySources = useCallback(async () => {
     store.getState().setError('sources', '');
@@ -484,12 +509,14 @@ export function useSources() {
     hoveredMessageChunkIds,
     jumpToCitationChunkId,
     uploadState: uploadStateCurrent,
+    uploadError,
     isLoading: loadingSources,
     highlightedChunkIds,
     setHoveredCitationChunkId,
     setHoveredMessageChunkIds,
     setJumpToCitationChunkId,
     handleUpload,
+    retryUpload,
     retrySources,
     searchState,
     searchNotice,

@@ -1292,7 +1292,7 @@ async def export_research(
                 chunk_texts = [text_content]
 
             log.info("creating embeddings", chunk_count=len(chunk_texts))
-            embeddings = await embedder.embed(chunk_texts)
+            embeddings = await embedder.embed_batch(chunk_texts)
             log.info("embeddings created", embedding_count=len(embeddings))
 
             db_chunks: list[Chunk] = []

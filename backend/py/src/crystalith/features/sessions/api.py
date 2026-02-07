@@ -293,7 +293,7 @@ async def convert_session_to_source(
         if not chunk_texts:
             chunk_texts = [text_content]
 
-        embeddings = await embedder.embed(chunk_texts)
+        embeddings = await embedder.embed_batch(chunk_texts)
 
         db_chunks: list[Chunk] = []
         for idx, chunk_text in enumerate(chunk_texts):

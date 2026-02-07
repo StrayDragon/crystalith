@@ -388,7 +388,7 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
         await _validate_source_ids(deps.session, state.notebook_id, normalized_source_ids)
 
         seed = state.prompt or "Summarize the notebook sources."
-        embeddings = await deps.embedder.embed([seed])
+        embeddings = await deps.embedder.embed_batch([seed])
         if not embeddings:
             state.context = ""
             state.citations = []

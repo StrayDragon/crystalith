@@ -6,8 +6,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
+from fastapi import HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from scalar_fastapi import get_scalar_api_reference
 from sqlalchemy import delete, select
 
@@ -16,6 +18,11 @@ from cl_sqlalchemyx.mgrs import AsyncDBManager
 
 from crystalith.shared.config import ConfigManager, Settings
 from crystalith.shared.db import Source, create_all, create_db_manager
+from crystalith.shared.schemas.errors import (
+    build_error_response,
+    build_error_response_from_exception,
+    status_code_from_exception,
+)
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore, create_vector_store
 
@@ -128,6 +135,51 @@ def create_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.exception_handler(HTTPException)
+    async def handle_http_exception(_: Request, exc: HTTPException) -> JSONResponse:
+        payload = build_error_response(
+            status_code=exc.status_code,
+            detail=exc.detail,
+            headers=exc.headers,
+        )
+        headers = dict(exc.headers or {})
+        if payload.retry_after is not None and "Retry-After" not in headers:
+            headers["Retry-After"] = str(payload.retry_after)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=payload.model_dump(exclude_none=True),
+            headers=headers or None,
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def handle_validation_exception(_: Request, exc: RequestValidationError) -> JSONResponse:
+        payload = build_error_response(
+            status_code=422,
+            detail={
+                "error_code": "VALIDATION_ERROR",
+                "message": "请求参数验证失败",
+                "details": exc.errors(),
+            },
+        )
+        return JSONResponse(
+            status_code=422,
+            content=payload.model_dump(exclude_none=True),
+        )
+
+    @app.exception_handler(Exception)
+    async def handle_unexpected_exception(_: Request, exc: Exception) -> JSONResponse:
+        resolved_status = status_code_from_exception(exc) or 500
+        payload = build_error_response_from_exception(exc, status_code=resolved_status)
+        headers: dict[str, str] = {}
+        if payload.retry_after is not None:
+            headers["Retry-After"] = str(payload.retry_after)
+        logger.exception("Unhandled exception during request", exc_info=exc)
+        return JSONResponse(
+            status_code=resolved_status,
+            content=payload.model_dump(exclude_none=True),
+            headers=headers or None,
+        )
 
     @app.get(resolved.app.openapi_ui_path, include_in_schema=False)
     def scalar_docs() -> Response:
