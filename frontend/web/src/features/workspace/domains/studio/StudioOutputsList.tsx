@@ -199,11 +199,11 @@ export default function StudioOutputsList({
       )}
 
       {showEmpty && (
-        <div className="p-4 text-center border border-dashed border-gray-300 rounded-xl bg-gray-100">
-          <Typography variant="small" className="text-gray-700 font-semibold">
+        <div className="p-4 text-center border border-dashed border-gray-300 dark:border-slate-600 rounded-xl bg-gray-100 dark:bg-slate-800">
+          <Typography variant="small" className="text-gray-700 dark:text-slate-200 font-semibold">
             选择来源 → 点击工具卡片生成
           </Typography>
-          <Typography variant="small" className="text-[11px] text-gray-500 mt-1">
+          <Typography variant="small" className="text-[11px] text-gray-500 dark:text-slate-400 mt-1">
             生成后的内容会显示在这里，可继续转换为来源或导出。
           </Typography>
         </div>
@@ -230,7 +230,7 @@ export default function StudioOutputsList({
                       isError
                         ? 'bg-red-50 border-red-300 text-red-500'
                         : isCancelled
-                          ? 'bg-gray-50 border-gray-300 text-gray-400'
+                          ? 'bg-gray-50 dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-400 dark:text-slate-500'
                           : ''
                     }`}
                     style={!isError ? { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text } : undefined}
@@ -247,7 +247,7 @@ export default function StudioOutputsList({
                     <Typography
                       variant="small"
                       className={`font-medium leading-snug truncate ${
-                        isError ? 'text-red-700' : isCancelled ? 'text-gray-600' : 'text-gray-900'
+                        isError ? 'text-red-700' : isCancelled ? 'text-gray-600 dark:text-slate-300' : 'text-gray-900 dark:text-slate-100'
                       }`}
                     >
                       {note.title}
@@ -255,7 +255,7 @@ export default function StudioOutputsList({
                     <Typography
                       variant="small"
                       className={`text-[10px] font-medium leading-tight ${
-                        isError ? 'text-red-500' : isCancelled ? 'text-gray-500' : 'text-gray-600'
+                        isError ? 'text-red-500' : isCancelled ? 'text-gray-500 dark:text-slate-400' : 'text-gray-600 dark:text-slate-300'
                       }`}
                     >
                       {note.meta}
@@ -268,13 +268,13 @@ export default function StudioOutputsList({
                 return (
                   <div
                     className={`flex items-center gap-2 p-2 rounded-lg border border-dashed mb-2 ux-slide-in ${
-                      isCancelled ? 'bg-gray-50 border-gray-200' : ''
+                      isCancelled ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700' : ''
                     }`}
                     style={!isCancelled ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border } : undefined}
                   >
                     <button
                       type="button"
-                      className="flex flex-1 items-center gap-2 text-left transition-colors hover:bg-white/70 rounded"
+                      className="flex flex-1 items-center gap-2 text-left transition-colors hover:bg-white/70 dark:hover:bg-slate-800 rounded"
                       onClick={() => {
                         if (!note.slideId) return;
                         onOpenSlides?.({
@@ -290,7 +290,7 @@ export default function StudioOutputsList({
                     {!isCancelled && onCancelOutputJob && note.queueJobId ? (
                       <button
                         type="button"
-                        className="flex-shrink-0 rounded-md border border-gray-300 bg-white px-2 py-1 text-[10px] font-semibold text-gray-700 hover:bg-gray-100"
+                        className="flex-shrink-0 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-[10px] font-semibold text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700"
                         onClick={() => onCancelOutputJob(note.queueJobId!)}
                       >
                         取消
@@ -303,7 +303,7 @@ export default function StudioOutputsList({
               return (
                 <div
                   className={`flex items-center gap-2 p-2 rounded-lg border border-dashed mb-2 ux-slide-in ${
-                    isError ? 'bg-red-50/80 border-red-200' : isCancelled ? 'bg-gray-50 border-gray-200' : ''
+                    isError ? 'bg-red-50/80 border-red-200' : isCancelled ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700' : ''
                   }`}
                   style={!isError && !isCancelled ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border } : undefined}
                 >
@@ -311,7 +311,7 @@ export default function StudioOutputsList({
                   {isError && onRetryOutputJob && note.queueJobId ? (
                     <button
                       type="button"
-                      className="flex-shrink-0 rounded-md border border-red-300 bg-white px-2 py-1 text-[10px] font-semibold text-red-700 hover:bg-red-100"
+                      className="flex-shrink-0 rounded-md border border-red-300 bg-white dark:bg-slate-900 px-2 py-1 text-[10px] font-semibold text-red-700 hover:bg-red-100"
                       onClick={() => onRetryOutputJob(note.queueJobId!)}
                     >
                       重试
@@ -320,7 +320,7 @@ export default function StudioOutputsList({
                   {!isError && !isCancelled && onCancelOutputJob && note.queueJobId ? (
                     <button
                       type="button"
-                      className="flex-shrink-0 rounded-md border border-gray-300 bg-white px-2 py-1 text-[10px] font-semibold text-gray-700 hover:bg-gray-100"
+                      className="flex-shrink-0 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1 text-[10px] font-semibold text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700"
                       onClick={() => onCancelOutputJob(note.queueJobId!)}
                     >
                       取消
@@ -335,7 +335,7 @@ export default function StudioOutputsList({
             const colors = TONE_COLORS[tone];
 
             return (
-              <div className="group relative flex items-center rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:bg-gray-50 hover:border-gray-300 mb-2 ux-slide-in">
+              <div className="group relative flex items-center rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 mb-2 ux-slide-in">
                 <button
                   type="button"
                   className="flex flex-1 items-center gap-2 p-2 text-left min-w-0"
@@ -363,13 +363,13 @@ export default function StudioOutputsList({
                   <div className="flex-1 min-w-0">
                     <Typography
                       variant="small"
-                      className="font-medium text-gray-900 leading-snug truncate text-[11px]"
+                      className="font-medium text-gray-900 dark:text-slate-100 leading-snug truncate text-[11px]"
                     >
                       {note.title}
                     </Typography>
                     <Typography
                       variant="small"
-                      className="text-[10px] text-gray-500 font-medium leading-tight truncate"
+                      className="text-[10px] text-gray-500 dark:text-slate-400 font-medium leading-tight truncate"
                     >
                       {note.meta}
                     </Typography>
@@ -386,7 +386,7 @@ export default function StudioOutputsList({
                       <IconButton
                         variant="text"
                         size="sm"
-                        className="opacity-0 group-hover:opacity-100 w-7 h-7 min-w-[28px] rounded-full hover:bg-gray-200 text-gray-500 transition-opacity"
+                        className="opacity-0 group-hover:opacity-100 w-7 h-7 min-w-[28px] rounded-full hover:bg-gray-200 text-gray-500 dark:text-slate-400 transition-opacity"
                         onClick={(e: React.MouseEvent) => e.stopPropagation()}
                       >
                         <MoreHorizIcon fontSize="small" />
@@ -444,7 +444,7 @@ export default function StudioOutputsList({
             variant="text"
             size="sm"
             onClick={onRetryOutputs}
-            className="px-2 py-1 h-6 min-h-0 text-[11px] text-gray-800"
+            className="px-2 py-1 h-6 min-h-0 text-[11px] text-gray-800 dark:text-slate-200"
           >
             重试
           </Button>

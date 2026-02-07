@@ -134,8 +134,8 @@ function ChatPanel({
         <div
           className={`text-sm leading-relaxed whitespace-pre-wrap ${
             message.role === 'user'
-              ? 'rounded-2xl bg-gray-100 px-4 py-2 text-gray-700'
-              : 'text-gray-800'
+              ? 'rounded-2xl bg-gray-100 dark:bg-slate-800 px-4 py-2 text-gray-700 dark:text-slate-100'
+              : 'text-gray-800 dark:text-slate-100'
           }`}
         >
           {message.content}
@@ -151,7 +151,7 @@ function ChatPanel({
               <>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
                   onClick={(e) => {
                     setPopoverAnchorRect(e.currentTarget.getBoundingClientRect());
                     setPopoverMessageId(message.id);
@@ -179,7 +179,7 @@ function ChatPanel({
             )}
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
               onClick={() => onSaveToNote?.(message.content)}
             >
               <IconSave className="w-3.5 h-3.5" />
@@ -187,7 +187,7 @@ function ChatPanel({
             </button>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
               onClick={() => handleCopy(message.id, message.content)}
             >
               <IconCopy className="w-3.5 h-3.5" />
@@ -199,7 +199,7 @@ function ChatPanel({
                 <MenuHandler>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
                     disabled={isConverting}
                   >
                     {isConverting ? (
@@ -224,7 +224,7 @@ function ChatPanel({
                   )}
                   {onConvertToOutput && (
                     <>
-                      <div className="px-3 py-1 text-[10px] text-gray-400 font-medium">
+                      <div className="px-3 py-1 text-[10px] text-gray-400 dark:text-slate-400 font-medium">
                         转为笔记
                       </div>
                       <MenuItem
@@ -266,12 +266,12 @@ function ChatPanel({
     if (!notice) return null;
 
     return (
-      <div className="mt-2 flex items-center gap-2 text-xs text-amber-700">
+      <div className="mt-2 flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300">
         <span>{notice}</span>
         {onRetrySend ? (
           <button
             type="button"
-            className="text-xs font-semibold text-gray-900 hover:underline cursor-pointer"
+            className="text-xs font-semibold text-gray-900 dark:text-slate-100 hover:underline cursor-pointer"
             onClick={onRetrySend}
           >
             重试发送
@@ -285,17 +285,17 @@ function ChatPanel({
     <div className="flex flex-1 flex-col min-h-0 p-0 gap-0">
       <div className="flex-1 min-h-0 px-4 sm:px-5 lg:px-6 py-3 sm:py-4" role="log" aria-label="对话内容">
         {!isConnected ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-xs text-gray-500">
+          <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-6 text-xs text-gray-500 dark:text-slate-300">
             未连接到后端服务，请检查服务状态后重试。
           </div>
         ) : isBlocked ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-xs text-gray-500">
+          <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-6 text-xs text-gray-500 dark:text-slate-300">
             请先创建笔记本，再开始对话。
           </div>
         ) : isLoadingMessages ? (
           <SkeletonList items={3} className="py-1" />
         ) : messagesError ? (
-          <div className="text-xs text-red-600">
+          <div className="text-xs text-red-600 dark:text-red-300">
             {messagesError}
             <button
               type="button"
@@ -306,7 +306,7 @@ function ChatPanel({
             </button>
           </div>
         ) : messages.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-xs text-gray-500">
+          <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-6 text-xs text-gray-500 dark:text-slate-300">
             {hasSources
               ? '选择来源后提问：输入问题即可基于文档生成回答。'
               : '添加文档开始分析：上传来源后即可开始提问。'}
@@ -337,9 +337,9 @@ function ChatPanel({
           onSend();
         }}
       >
-        <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 sm:px-4 py-2 shadow-sm transition-all duration-200 focus-within:border-gray-400 focus-within:ring-2 focus-within:ring-gray-100">
+        <div className="flex items-center gap-2 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 sm:px-4 py-2 shadow-sm transition-all duration-200 focus-within:border-gray-400 dark:focus-within:border-slate-500 focus-within:ring-2 focus-within:ring-gray-100 dark:focus-within:ring-slate-700">
           <textarea
-            className="flex-1 bg-transparent text-sm text-gray-700 outline-none resize-none border-none focus:ring-0 min-h-[32px] sm:min-h-[44px]"
+            className="flex-1 bg-transparent text-sm text-gray-700 dark:text-slate-100 outline-none resize-none border-none focus:ring-0 min-h-[32px] sm:min-h-[44px]"
             name="chatPrompt"
             ref={inputRef}
             value={draft}
@@ -359,7 +359,7 @@ function ChatPanel({
           {isStreaming ? (
             <button
               type="button"
-              className="px-3 py-1.5 rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-medium hover:bg-red-100 transition-colors"
+              className="px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700/50 text-xs font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
               aria-label="停止生成"
               onClick={onStopStreaming}
             >
@@ -369,7 +369,7 @@ function ChatPanel({
             <IconButton
               type="submit"
               size="sm"
-              className="rounded-full bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="rounded-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200 disabled:opacity-60 disabled:cursor-not-allowed"
               aria-label="发送"
               disabled={draft.trim().length === 0 || isSending || isBlocked}
             >
