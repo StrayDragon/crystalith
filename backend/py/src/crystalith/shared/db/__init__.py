@@ -8,6 +8,8 @@ from .models import (
     ResearchStep,
     Session,
     Source,
+    SourceTag,
+    SourceTagMap,
     StudioSlide,
     Task,
 )
@@ -22,6 +24,8 @@ __all__ = [
     "ResearchStep",
     "Session",
     "Source",
+    "SourceTag",
+    "SourceTagMap",
     "StudioSlide",
     "Task",
     "create_all",

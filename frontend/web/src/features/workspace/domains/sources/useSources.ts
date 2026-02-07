@@ -4,17 +4,25 @@ import useSWR from 'swr';
 import type { AsyncStatus } from '../../../../shared/types';
 import { toast } from '../../../../shared/toast';
 import {
-  createSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPost as addSourceFromUrl,
+  assignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPost as assignTagToSources,
+  batchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDelete as deleteSources,
+  batchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPost as batchReembedSources,
   convertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePost as convertOutputToSource,
   convertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePost as convertSourceQAToSource,
+  createSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPost as addSourceFromUrl,
+  createSourceTagV1NotebooksNotebookIdSourcesTagsPost as createSourceTag,
   deleteSourceV1NotebooksNotebookIdSourcesSourceIdDelete as deleteSource,
-  batchDeleteSourcesV1NotebooksNotebookIdSourcesDelete as deleteSources,
+  deleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDelete as deleteSourceTag,
   listExtractorsV1NotebooksNotebookIdSourcesExtractorsGet as listExtractors,
+  listSourceTagsV1NotebooksNotebookIdSourcesTagsGet as listSourceTags,
   listSourcesV1NotebooksNotebookIdSourcesGet as listSources,
-  searchSourcesV1NotebooksNotebookIdSourcesSearchPost as searchSources,
-  uploadSourceV1NotebooksNotebookIdSourcesPost as uploadSource,
   reembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPost as reembedSource,
+  removeTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDelete as removeTagFromSources,
+  searchSourcesV1NotebooksNotebookIdSourcesSearchPost as searchSources,
+  updateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatch as updateSourceTag,
+  uploadSourceV1NotebooksNotebookIdSourcesPost as uploadSource,
   type QaMessage,
+  type SourceTagRead,
 } from '../../../../api/generated';
 import type {
   ExtractorInfoResponse as ExtractorInfo,
@@ -41,6 +49,24 @@ export interface SearchQueueItem {
   createdAt: number;
 }
 
+export interface SourceUploadItem {
+  id: string;
+  name: string;
+  status: 'queued' | 'uploading' | 'success' | 'error';
+  message?: string;
+}
+
+export type SourceSortBy = 'date' | 'name' | 'size' | 'type';
+export type SourceSortOrder = 'asc' | 'desc';
+
+function normalizeUploadInput(input: File | File[] | FileList | null): File[] {
+  if (!input) return [];
+  if (input instanceof File) return [input];
+  if (input instanceof FileList) return Array.from(input);
+  if (Array.isArray(input)) return input.filter((item): item is File => item instanceof File);
+  return [];
+}
+
 export function useSources() {
   const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
   const sources = useWorkspaceStore((s) => s.sources);
@@ -57,19 +83,55 @@ export function useSources() {
 
   const [searchState, setSearchState] = useState<AsyncStatus>('idle');
   const [removeState, setRemoveState] = useState<AsyncStatus>('idle');
+  const [batchReembedState, setBatchReembedState] = useState<AsyncStatus>('idle');
+  const [tagMutationState, setTagMutationState] = useState<AsyncStatus>('idle');
   const [uploadError, setUploadError] = useState('');
-  const [lastFailedUploadFile, setLastFailedUploadFile] = useState<File | null>(null);
+  const [lastFailedUploadFiles, setLastFailedUploadFiles] = useState<File[]>([]);
+  const [uploadQueue, setUploadQueue] = useState<SourceUploadItem[]>([]);
   const [searchNotice, setSearchNotice] = useState('');
   const [searchResults, setSearchResults] = useState<ApiSourceSearchResult[]>([]);
-  // 搜索队列状态
   const [searchQueue, setSearchQueue] = useState<SearchQueueItem[]>([]);
+  const [sortBy, setSortBy] = useState<SourceSortBy>('date');
+  const [sortOrder, setSortOrder] = useState<SourceSortOrder>('desc');
+  const [tagFilter, setTagFilter] = useState('');
+
   const searchIdRef = useRef(0);
   const maxSearchQueueItems = 20;
-  const { data, error, isLoading, mutate } = useSWR(
+
+  const sourceListQuery = useMemo(
+    () => ({
+      sort_by: sortBy,
+      sort_order: sortOrder,
+      tag: tagFilter.trim() || undefined,
+    }),
+    [sortBy, sortOrder, tagFilter],
+  );
+
+  const {
+    data,
+    error,
+    isLoading,
+    mutate,
+  } = useSWR(
     activeNotebookId && isConnected
-      ? ['workspace/sources', activeNotebookId]
+      ? ['workspace/sources', activeNotebookId, sourceListQuery.sort_by, sourceListQuery.sort_order, sourceListQuery.tag ?? '']
       : null,
-    () => listSources({ path: { notebook_id: activeNotebookId ?? 0 } }),
+    () =>
+      listSources({
+        path: { notebook_id: activeNotebookId ?? 0 },
+        query: sourceListQuery,
+      }),
+    { revalidateOnFocus: false },
+  );
+
+  const {
+    data: tagsData,
+    mutate: mutateTags,
+  } = useSWR<SourceTagRead[]>(
+    activeNotebookId && isConnected
+      ? ['workspace/source-tags', activeNotebookId]
+      : null,
+    () => listSourceTags({ path: { notebook_id: activeNotebookId ?? 0 } }),
     { revalidateOnFocus: false },
   );
 
@@ -106,9 +168,13 @@ export function useSources() {
     setSearchNotice('');
     setSearchResults([]);
     setRemoveState('idle');
+    setBatchReembedState('idle');
+    setTagMutationState('idle');
     setSearchQueue([]);
     setUploadError('');
-    setLastFailedUploadFile(null);
+    setLastFailedUploadFiles([]);
+    setUploadQueue([]);
+    setTagFilter('');
   }, [activeNotebookId]);
 
   useEffect(() => {
@@ -162,32 +228,78 @@ export function useSources() {
     hoveredMessageChunkIds,
   ]);
 
-  const uploadFile = useCallback(
-    async (file: File) => {
+  const handleUpload = useCallback(
+    async (input: File | File[] | FileList | null) => {
+      const files = normalizeUploadInput(input);
+      if (!files.length) return;
       if (!activeNotebookId || !isConnected) {
         if (!isConnected) {
           toast.error('未连接到后端服务，无法上传来源。');
         }
-        return false;
+        return;
       }
 
-      store.getState().setUploadState('loading');
+      const timestamp = Date.now();
+      const queueItems = files.map((file, index) => ({
+        id: `${timestamp}-${index}-${file.name}`,
+        name: file.name,
+        status: 'queued' as const,
+      }));
+      setUploadQueue((prev) => [...queueItems, ...prev].slice(0, 30));
       setUploadError('');
+      store.getState().setUploadState('loading');
+
+      const failedFiles: File[] = [];
+      let successCount = 0;
+
       try {
-        await uploadSource({
-          path: { notebook_id: activeNotebookId },
-          body: { file },
-        });
-        await mutate();
-        setLastFailedUploadFile(null);
-        toast.success('来源上传成功');
-        return true;
-      } catch (error) {
-        const message = '上传失败，请检查文件格式或后端状态。';
-        setUploadError(message);
-        setLastFailedUploadFile(file);
-        toast.error(message);
-        return false;
+        for (let index = 0; index < files.length; index += 1) {
+          const file = files[index];
+          const queueId = queueItems[index].id;
+          setUploadQueue((prev) =>
+            prev.map((item) =>
+              item.id === queueId ? { ...item, status: 'uploading', message: undefined } : item,
+            ),
+          );
+          try {
+            await uploadSource({
+              path: { notebook_id: activeNotebookId },
+              body: { file },
+            });
+            successCount += 1;
+            setUploadQueue((prev) =>
+              prev.map((item) =>
+                item.id === queueId ? { ...item, status: 'success' } : item,
+              ),
+            );
+          } catch (error) {
+            failedFiles.push(file);
+            setUploadQueue((prev) =>
+              prev.map((item) =>
+                item.id === queueId
+                  ? { ...item, status: 'error', message: '上传失败' }
+                  : item,
+              ),
+            );
+          }
+        }
+
+        if (successCount > 0) {
+          await mutate();
+        }
+
+        if (failedFiles.length > 0) {
+          const message =
+            failedFiles.length === files.length
+              ? '上传失败，请检查文件格式或后端状态。'
+              : `部分上传失败（${failedFiles.length}/${files.length}）。`;
+          setUploadError(message);
+          setLastFailedUploadFiles(failedFiles);
+          toast.error(message);
+        } else {
+          setLastFailedUploadFiles([]);
+          toast.success(`已上传 ${successCount} 个来源`);
+        }
       } finally {
         store.getState().setUploadState('idle');
       }
@@ -195,18 +307,14 @@ export function useSources() {
     [activeNotebookId, isConnected, mutate],
   );
 
-  const handleUpload = useCallback(
-    async (file: File | null) => {
-      if (!file) return;
-      await uploadFile(file);
-    },
-    [uploadFile],
-  );
-
   const retryUpload = useCallback(async () => {
-    if (!lastFailedUploadFile) return;
-    await uploadFile(lastFailedUploadFile);
-  }, [lastFailedUploadFile, uploadFile]);
+    if (!lastFailedUploadFiles.length) return;
+    await handleUpload(lastFailedUploadFiles);
+  }, [lastFailedUploadFiles, handleUpload]);
+
+  const clearUploadQueue = useCallback(() => {
+    setUploadQueue([]);
+  }, []);
 
   const retrySources = useCallback(async () => {
     store.getState().setError('sources', '');
@@ -232,11 +340,9 @@ export function useSources() {
         return;
       }
 
-      // 生成唯一的搜索 ID
       searchIdRef.current += 1;
       const searchId = `search-${searchIdRef.current}-${Date.now()}`;
 
-      // 立即创建 loading 状态的队列项
       const newQueueItem: SearchQueueItem = {
         id: searchId,
         query: trimmed,
@@ -252,7 +358,6 @@ export function useSources() {
         return next.length > maxSearchQueueItems ? next.slice(-maxSearchQueueItems) : next;
       });
 
-      // 同时更新旧的状态以保持向后兼容
       setSearchState('loading');
       setSearchNotice('');
 
@@ -271,7 +376,6 @@ export function useSources() {
           notice = `已找到 ${results.length} 条结果。`;
         }
 
-        // 更新队列项状态
         setSearchQueue((prev) =>
           prev.map((item) =>
             item.id === searchId
@@ -280,12 +384,10 @@ export function useSources() {
           ),
         );
 
-        // 同时更新旧的状态
         setSearchResults(results);
         setSearchNotice(notice);
       } catch (error) {
         const errorNotice = '搜索失败，请稍后重试。';
-        // 更新队列项状态为错误
         setSearchQueue((prev) =>
           prev.map((item) =>
             item.id === searchId
@@ -302,12 +404,10 @@ export function useSources() {
     [isConnected, activeNotebookId],
   );
 
-  // 移除单个搜索队列项
   const removeSearchQueueItem = useCallback((queueItemId: string) => {
     setSearchQueue((prev) => prev.filter((item) => item.id !== queueItemId));
   }, []);
 
-  // 从搜索队列项中移除已添加的结果
   const removeResultsFromQueue = useCallback((urls: string[]) => {
     const urlSet = new Set(urls);
     setSearchQueue((prev) =>
@@ -380,6 +480,158 @@ export function useSources() {
     [isConnected, mutate, activeNotebookId],
   );
 
+  const handleBatchReembedSources = useCallback(
+    async (sourceIds: number[]) => {
+      if (!isConnected) {
+        toast.warning('未连接到后端服务，暂不支持重新嵌入。');
+        return false;
+      }
+      if (!activeNotebookId) {
+        toast.warning('请先创建笔记本后再重试。');
+        return false;
+      }
+      if (!sourceIds.length) return false;
+
+      setBatchReembedState('loading');
+      try {
+        const result = await batchReembedSources({
+          path: { notebook_id: activeNotebookId },
+          body: { source_ids: sourceIds },
+        });
+        await mutate();
+        if (result.failed_count > 0) {
+          toast.warning(`部分来源重新嵌入失败（${result.failed_count} 个）。`);
+        } else {
+          toast.success(`已重新嵌入 ${result.reembedded_count} 个来源`);
+        }
+        return result.failed_count === 0;
+      } catch (error) {
+        toast.error('批量重新嵌入失败，请稍后重试。');
+        return false;
+      } finally {
+        setBatchReembedState('idle');
+      }
+    },
+    [isConnected, activeNotebookId, mutate],
+  );
+
+  const handleCreateSourceTag = useCallback(
+    async (name: string) => {
+      if (!isConnected || !activeNotebookId) return null;
+      setTagMutationState('loading');
+      try {
+        const tag = await createSourceTag({
+          path: { notebook_id: activeNotebookId },
+          body: { name },
+        });
+        await mutateTags();
+        await mutate();
+        toast.success('标签创建成功');
+        return tag;
+      } catch (error) {
+        toast.error('创建标签失败');
+        return null;
+      } finally {
+        setTagMutationState('idle');
+      }
+    },
+    [isConnected, activeNotebookId, mutateTags, mutate],
+  );
+
+  const handleRenameSourceTag = useCallback(
+    async (tagId: number, name: string) => {
+      if (!isConnected || !activeNotebookId) return null;
+      setTagMutationState('loading');
+      try {
+        const tag = await updateSourceTag({
+          path: { notebook_id: activeNotebookId, tag_id: tagId },
+          body: { name },
+        });
+        await mutateTags();
+        await mutate();
+        toast.success('标签已更新');
+        return tag;
+      } catch (error) {
+        toast.error('更新标签失败');
+        return null;
+      } finally {
+        setTagMutationState('idle');
+      }
+    },
+    [isConnected, activeNotebookId, mutateTags, mutate],
+  );
+
+  const handleDeleteSourceTag = useCallback(
+    async (tagId: number) => {
+      if (!isConnected || !activeNotebookId) return false;
+      setTagMutationState('loading');
+      try {
+        await deleteSourceTag({
+          path: { notebook_id: activeNotebookId, tag_id: tagId },
+        });
+        await mutateTags();
+        await mutate();
+        if (tagFilter && tagsData?.some((item) => item.id === tagId && item.name === tagFilter)) {
+          setTagFilter('');
+        }
+        toast.success('标签已删除');
+        return true;
+      } catch (error) {
+        toast.error('删除标签失败');
+        return false;
+      } finally {
+        setTagMutationState('idle');
+      }
+    },
+    [isConnected, activeNotebookId, mutateTags, mutate, tagFilter, tagsData],
+  );
+
+  const handleAssignTagToSources = useCallback(
+    async (tagId: number, sourceIds: number[]) => {
+      if (!isConnected || !activeNotebookId || !sourceIds.length) return false;
+      setTagMutationState('loading');
+      try {
+        await assignTagToSources({
+          path: { notebook_id: activeNotebookId, tag_id: tagId },
+          body: { source_ids: sourceIds },
+        });
+        await mutateTags();
+        await mutate();
+        toast.success('标签已分配');
+        return true;
+      } catch (error) {
+        toast.error('标签分配失败');
+        return false;
+      } finally {
+        setTagMutationState('idle');
+      }
+    },
+    [isConnected, activeNotebookId, mutateTags, mutate],
+  );
+
+  const handleRemoveTagFromSources = useCallback(
+    async (tagId: number, sourceIds: number[]) => {
+      if (!isConnected || !activeNotebookId || !sourceIds.length) return false;
+      setTagMutationState('loading');
+      try {
+        await removeTagFromSources({
+          path: { notebook_id: activeNotebookId, tag_id: tagId },
+          body: { source_ids: sourceIds },
+        });
+        await mutateTags();
+        await mutate();
+        toast.success('标签已移除');
+        return true;
+      } catch (error) {
+        toast.error('移除标签失败');
+        return false;
+      } finally {
+        setTagMutationState('idle');
+      }
+    },
+    [isConnected, activeNotebookId, mutateTags, mutate],
+  );
+
   const handleConvertOutputToSource = useCallback(
     async (outputId: number) => {
       if (!activeNotebookId) return;
@@ -391,7 +643,6 @@ export function useSources() {
         const result = await convertOutputToSource({
           path: { notebook_id: activeNotebookId, output_id: outputId },
         });
-        // Refresh sources list to show the new source
         await mutate();
         toast.success(`已转换为来源：${result.filename}（${result.chunk_count} 个分块）`);
       } catch (error) {
@@ -435,7 +686,6 @@ export function useSources() {
     [isConnected, activeNotebookId, mutate],
   );
 
-  // Fetch available extractors
   const {
     data: extractorsData,
     isLoading: extractorsLoading,
@@ -459,7 +709,8 @@ export function useSources() {
     return extractorsData?.default_extractor ?? null;
   }, [extractorsData]);
 
-  // Convert source QA to source
+  const sourceTags = useMemo<SourceTagRead[]>(() => tagsData ?? [], [tagsData]);
+
   const handleConvertSourceQAToSource = useCallback(
     async (sourceId: number, messages: QaMessage[]) => {
       if (!isConnected) {
@@ -510,6 +761,7 @@ export function useSources() {
     jumpToCitationChunkId,
     uploadState: uploadStateCurrent,
     uploadError,
+    uploadQueue,
     isLoading: loadingSources,
     highlightedChunkIds,
     setHoveredCitationChunkId,
@@ -517,6 +769,7 @@ export function useSources() {
     setJumpToCitationChunkId,
     handleUpload,
     retryUpload,
+    clearUploadQueue,
     retrySources,
     searchState,
     searchNotice,
@@ -529,17 +782,29 @@ export function useSources() {
     clearSearchResults,
     addSourceFromUrl: handleAddSourceFromUrl,
     isConnected,
-    // 搜索队列相关
     searchQueue,
     removeSearchQueueItem,
     removeResultsFromQueue,
-    // 提取器相关
     extractors,
     availableExtractors,
     defaultExtractor,
     extractorsLoading,
-    // Source QA 转换
     convertSourceQAToSource: handleConvertSourceQAToSource,
     reembedSource: handleReembedSource,
+    batchReembedSources: handleBatchReembedSources,
+    batchReembedState,
+    sourceTags,
+    tagMutationState,
+    createSourceTag: handleCreateSourceTag,
+    renameSourceTag: handleRenameSourceTag,
+    deleteSourceTag: handleDeleteSourceTag,
+    assignTagToSources: handleAssignTagToSources,
+    removeTagFromSources: handleRemoveTagFromSources,
+    sortBy,
+    sortOrder,
+    tagFilter,
+    setSortBy,
+    setSortOrder,
+    setTagFilter,
   };
 }

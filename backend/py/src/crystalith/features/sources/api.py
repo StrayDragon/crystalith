@@ -21,7 +21,7 @@ from crystalith.shared.ai.types import ChatMessage
 from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.search_graph import run_search_graph
 from crystalith.shared.config import Settings
-from crystalith.shared.db import Chunk, Notebook, Source
+from crystalith.shared.db import Chunk, Notebook, Source, SourceTag, SourceTagMap
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.parsers import Parser, ParserFactory, TranscriptionProvider, UnsupportedDocumentError
 from crystalith.shared.parsers.html import HTMLParser
@@ -56,6 +56,7 @@ class SourceRead(BaseModel):
     status: SourceStatus
     error_message: str | None
     chunk_count: int = 0
+    tags: list[str] = Field(default_factory=list)
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
@@ -126,6 +127,53 @@ class SourceBatchDeleteRequest(BaseModel):
 class SourceBatchDeleteResponse(BaseModel):
     deleted_ids: list[int]
     deleted_count: int
+
+
+class SourceBatchReembedRequest(BaseModel):
+    source_ids: list[int] = Field(..., min_length=1)
+
+
+class SourceBatchReembedResponse(BaseModel):
+    reembedded_ids: list[int]
+    failed_ids: list[int]
+    reembedded_count: int
+    failed_count: int
+
+
+class SourceTagRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    notebook_id: int
+    name: str
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+
+class SourceTagCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=64)
+
+    @field_validator("name")
+    @classmethod
+    def _normalize_name(cls, value: str) -> str:
+        trimmed = " ".join(value.strip().split())
+        if not trimmed:
+            raise ValueError("tag name must not be empty")
+        return trimmed
+
+
+class SourceTagUpdateRequest(SourceTagCreateRequest):
+    pass
+
+
+class SourceTagSourceBindingRequest(BaseModel):
+    source_ids: list[int] = Field(..., min_length=1)
+
+
+class SourceTagSourceBindingResponse(BaseModel):
+    tag_id: int
+    source_ids: list[int]
+    count: int
 
 
 class SourceFromUrlMode(MetaInfoStrEnum):
@@ -237,10 +285,144 @@ def _build_source_metadata(
     }
 
 
-def _source_to_read(source: Source, *, chunk_count: int) -> SourceRead:
-    return SourceRead.model_validate(source).model_copy(
-        update={"chunk_count": chunk_count, "metadata": source.metadata_}
+def _source_to_read(
+    source: Source,
+    *,
+    chunk_count: int,
+    tags: list[str] | None = None,
+) -> SourceRead:
+    if tags is None:
+        tags = sorted(
+            {
+                tag.name
+                for tag in getattr(source, "tags", [])
+                if isinstance(getattr(tag, "name", None), str) and tag.name
+            }
+        )
+
+    return SourceRead(
+        id=source.id,
+        notebook_id=source.notebook_id,
+        filename=source.filename,
+        mime_type=source.mime_type,
+        parser_type=source.parser_type,
+        metadata=source.metadata_,
+        status=source.status,
+        error_message=source.error_message,
+        chunk_count=chunk_count,
+        tags=tags,
+        created_at=source.created_at,
+        updated_at=source.updated_at,
     )
+
+
+async def _load_tag_names_for_sources(
+    session: AsyncSession,
+    *,
+    source_ids: list[int],
+) -> dict[int, list[str]]:
+    if not source_ids:
+        return {}
+
+    result = await session.execute(
+        select(SourceTagMap.source_id, SourceTag.name)
+        .join(SourceTag, SourceTag.id == SourceTagMap.tag_id)
+        .where(SourceTagMap.source_id.in_(source_ids))
+    )
+    tag_map: dict[int, list[str]] = {}
+    for source_id, tag_name in result.all():
+        if not isinstance(tag_name, str) or not tag_name:
+            continue
+        tag_map.setdefault(source_id, []).append(tag_name)
+
+    for source_id in tag_map:
+        tag_map[source_id] = sorted(set(tag_map[source_id]))
+
+    return tag_map
+
+
+async def _fetch_sources_or_404(
+    session: AsyncSession,
+    *,
+    notebook_id: int,
+    source_ids: list[int],
+) -> list[Source]:
+    unique_ids = list(dict.fromkeys(source_ids))
+    result = await session.execute(
+        select(Source).where(Source.notebook_id == notebook_id, Source.id.in_(unique_ids))
+    )
+    sources = result.scalars().all()
+    found_ids = {source.id for source in sources}
+    missing_ids = [source_id for source_id in unique_ids if source_id not in found_ids]
+    if missing_ids:
+        raise HTTPException(status_code=404, detail="Source not found")
+    return sources
+
+
+async def _reembed_existing_source(
+    *,
+    notebook_id: int,
+    source: Source,
+    session: AsyncSession,
+    embedder: EmbeddingProvider,
+    vector_store: VectorStore,
+    require_failed: bool,
+) -> int:
+    if require_failed and source.status != SourceStatus.FAILED:
+        raise HTTPException(status_code=400, detail="Source is not failed")
+    if source.status == SourceStatus.PROCESSING:
+        raise HTTPException(status_code=400, detail="Source is processing")
+
+    result = await session.execute(
+        select(Chunk)
+        .where(Chunk.source_id == source.id)
+        .order_by(Chunk.chunk_index.asc())
+    )
+    chunks = result.scalars().all()
+    if not chunks:
+        raise HTTPException(status_code=400, detail="Source has no chunks to re-embed")
+
+    source.status = SourceStatus.PROCESSING
+    source.error_message = None
+    session.add(source)
+    await session.commit()
+    await session.refresh(source)
+
+    try:
+        embeddings = await embedder.embed_batch([chunk.text for chunk in chunks])
+        if len(embeddings) != len(chunks):
+            raise ValueError("embedding count mismatch")
+
+        chunk_ids = [chunk.id for chunk in chunks]
+        await vector_store.remove_source(source.id)
+        await vector_store.add(
+            notebook_id=notebook_id,
+            source_id=source.id,
+            chunk_ids=chunk_ids,
+            vectors=embeddings,
+        )
+    except Exception as exc:
+        await session.rollback()
+        source.status = SourceStatus.FAILED
+        error_detail = str(exc)[:512]
+        source.error_message = error_detail
+        session.add(source)
+        await session.commit()
+        await session.refresh(source)
+        logger.exception(
+            "Source re-embed failed",
+            source_id=source.id,
+            error=error_detail,
+        )
+        raise HTTPException(status_code=500, detail=f"Re-embed failed: {error_detail}") from exc
+
+    source.status = SourceStatus.READY
+    source.error_message = None
+    session.add(source)
+    await session.commit()
+    await session.refresh(source)
+
+    return len(chunks)
 
 
 @router.get("/extractors", response_model=ExtractorsListResponse)
@@ -300,24 +482,108 @@ async def list_extractors(
 @router.get("", response_model=list[SourceRead])
 async def list_sources(
     notebook_id: int,
+    tag: str | None = None,
+    sort_by: Literal["date", "name", "size", "type"] = "date",
+    sort_order: Literal["asc", "desc"] = "desc",
     session: AsyncSession = Depends(get_db_session),
 ) -> list[SourceRead]:
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
 
-    result = await session.execute(
-        select(Source, func.count(Chunk.id))
+    normalized_tag = " ".join((tag or "").strip().split())
+    if not normalized_tag:
+        normalized_tag = None
+
+    chunk_count = func.count(Chunk.id)
+    statement = (
+        select(Source, chunk_count)
         .outerjoin(Chunk, Chunk.source_id == Source.id)
         .where(Source.notebook_id == notebook_id)
-        .group_by(Source.id)
-        .order_by(Source.created_at.desc())
     )
+
+    if normalized_tag is not None:
+        statement = (
+            statement
+            .join(SourceTagMap, SourceTagMap.source_id == Source.id)
+            .join(SourceTag, SourceTag.id == SourceTagMap.tag_id)
+            .where(SourceTag.name == normalized_tag)
+        )
+
+    statement = statement.group_by(Source.id)
+
+    if sort_by == "name":
+        sort_column = func.lower(Source.filename)
+    elif sort_by == "size":
+        sort_column = chunk_count
+    elif sort_by == "type":
+        sort_column = func.lower(func.coalesce(Source.mime_type, ""))
+    else:
+        sort_column = Source.created_at
+
+    if sort_order == "asc":
+        statement = statement.order_by(sort_column.asc(), Source.id.asc())
+    else:
+        statement = statement.order_by(sort_column.desc(), Source.id.desc())
+
+    result = await session.execute(statement)
     rows = result.all()
+
+    source_ids = [source.id for source, _ in rows]
+    tags_by_source = await _load_tag_names_for_sources(session, source_ids=source_ids)
+
     return [
-        _source_to_read(source, chunk_count=count or 0)
+        _source_to_read(source, chunk_count=count or 0, tags=tags_by_source.get(source.id, []))
         for source, count in rows
     ]
+
+
+@router.post("/batch/re-embed", response_model=SourceBatchReembedResponse)
+async def batch_reembed_sources(
+    notebook_id: int,
+    payload: SourceBatchReembedRequest,
+    session: AsyncSession = Depends(get_db_session),
+    embedder: EmbeddingProvider = Depends(get_embedding_provider),
+    vector_store: VectorStore = Depends(get_vector_store),
+) -> SourceBatchReembedResponse:
+    notebook = await session.get(Notebook, notebook_id)
+    if notebook is None:
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
+    source_ids = list(dict.fromkeys(payload.source_ids))
+    sources = await _fetch_sources_or_404(
+        session,
+        notebook_id=notebook_id,
+        source_ids=source_ids,
+    )
+    source_map = {source.id: source for source in sources}
+
+    reembedded_ids: list[int] = []
+    failed_ids: list[int] = []
+
+    for source_id in source_ids:
+        source = source_map[source_id]
+        try:
+            await _reembed_existing_source(
+                notebook_id=notebook_id,
+                source=source,
+                session=session,
+                embedder=embedder,
+                vector_store=vector_store,
+                require_failed=False,
+            )
+            reembedded_ids.append(source_id)
+        except HTTPException:
+            failed_ids.append(source_id)
+        except Exception:
+            failed_ids.append(source_id)
+
+    return SourceBatchReembedResponse(
+        reembedded_ids=reembedded_ids,
+        failed_ids=failed_ids,
+        reembedded_count=len(reembedded_ids),
+        failed_count=len(failed_ids),
+    )
 
 
 @router.post("/{source_id}/re-embed", response_model=SourceRead)
@@ -333,60 +599,165 @@ async def reembed_source(
     if source is None or source.notebook_id != notebook_id:
         raise HTTPException(status_code=404, detail="Source not found")
 
-    if source.status != SourceStatus.FAILED:
-        raise HTTPException(status_code=400, detail="Source is not failed")
-
-    # Load existing chunks for re-embedding
-    result = await session.execute(
-        select(Chunk)
-        .where(Chunk.source_id == source_id)
-        .order_by(Chunk.chunk_index.asc())
+    chunk_count = await _reembed_existing_source(
+        notebook_id=notebook_id,
+        source=source,
+        session=session,
+        embedder=embedder,
+        vector_store=vector_store,
+        require_failed=True,
     )
-    chunks = result.scalars().all()
-    if not chunks:
-        raise HTTPException(
-            status_code=400,
-            detail="Source has no chunks to re-embed",
-        )
+    tags_by_source = await _load_tag_names_for_sources(session, source_ids=[source.id])
+    return _source_to_read(source, chunk_count=chunk_count, tags=tags_by_source.get(source.id, []))
 
-    source.status = SourceStatus.PROCESSING
-    source.error_message = None
-    session.add(source)
+
+@router.get("/tags", response_model=list[SourceTagRead])
+async def list_source_tags(
+    notebook_id: int,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[SourceTagRead]:
+    notebook = await session.get(Notebook, notebook_id)
+    if notebook is None:
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
+    result = await session.execute(
+        select(SourceTag)
+        .where(SourceTag.notebook_id == notebook_id)
+        .order_by(func.lower(SourceTag.name).asc(), SourceTag.id.asc())
+    )
+    return [SourceTagRead.model_validate(tag) for tag in result.scalars().all()]
+
+
+@router.post("/tags", response_model=SourceTagRead, status_code=status.HTTP_201_CREATED)
+async def create_source_tag(
+    notebook_id: int,
+    payload: SourceTagCreateRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> SourceTagRead:
+    notebook = await session.get(Notebook, notebook_id)
+    if notebook is None:
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
+    result = await session.execute(
+        select(SourceTag.id).where(
+            SourceTag.notebook_id == notebook_id,
+            func.lower(SourceTag.name) == payload.name.lower(),
+        )
+    )
+    if result.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="Tag already exists")
+
+    tag = SourceTag(notebook_id=notebook_id, name=payload.name)
+    session.add(tag)
     await session.commit()
-    await session.refresh(source)
+    await session.refresh(tag)
+    return SourceTagRead.model_validate(tag)
 
-    try:
-        embeddings = await embedder.embed_batch([chunk.text for chunk in chunks])
-        if len(embeddings) != len(chunks):
-            raise ValueError("embedding count mismatch")
 
-        chunk_ids = [chunk.id for chunk in chunks]
-        await vector_store.remove_source(source_id)
-        await vector_store.add(
-            notebook_id=notebook_id,
-            source_id=source_id,
-            chunk_ids=chunk_ids,
-            vectors=embeddings,
+@router.patch("/tags/{tag_id}", response_model=SourceTagRead)
+async def update_source_tag(
+    notebook_id: int,
+    tag_id: int,
+    payload: SourceTagUpdateRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> SourceTagRead:
+    tag = await session.get(SourceTag, tag_id)
+    if tag is None or tag.notebook_id != notebook_id:
+        raise HTTPException(status_code=404, detail="Tag not found")
+
+    result = await session.execute(
+        select(SourceTag.id).where(
+            SourceTag.notebook_id == notebook_id,
+            SourceTag.id != tag_id,
+            func.lower(SourceTag.name) == payload.name.lower(),
         )
-    except Exception as exc:
-        await session.rollback()
-        source.status = SourceStatus.FAILED
-        error_detail = str(exc)[:512]
-        source.error_message = error_detail
-        session.add(source)
-        await session.commit()
-        logger.exception(
-            "Source re-embed failed",
-            source_id=source_id,
-            error=error_detail,
-        )
-        raise HTTPException(status_code=500, detail=f"Re-embed failed: {error_detail}") from exc
+    )
+    if result.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="Tag already exists")
 
-    source.status = SourceStatus.READY
-    source.error_message = None
+    tag.name = payload.name
+    session.add(tag)
     await session.commit()
-    await session.refresh(source)
-    return _source_to_read(source, chunk_count=len(chunks))
+    await session.refresh(tag)
+    return SourceTagRead.model_validate(tag)
+
+
+@router.delete("/tags/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_source_tag(
+    notebook_id: int,
+    tag_id: int,
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    tag = await session.get(SourceTag, tag_id)
+    if tag is None or tag.notebook_id != notebook_id:
+        raise HTTPException(status_code=404, detail="Tag not found")
+
+    await session.delete(tag)
+    await session.commit()
+
+
+@router.post("/tags/{tag_id}/sources", response_model=SourceTagSourceBindingResponse)
+async def assign_tag_to_sources(
+    notebook_id: int,
+    tag_id: int,
+    payload: SourceTagSourceBindingRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> SourceTagSourceBindingResponse:
+    tag = await session.get(SourceTag, tag_id)
+    if tag is None or tag.notebook_id != notebook_id:
+        raise HTTPException(status_code=404, detail="Tag not found")
+
+    source_ids = list(dict.fromkeys(payload.source_ids))
+    await _fetch_sources_or_404(session, notebook_id=notebook_id, source_ids=source_ids)
+
+    existing_result = await session.execute(
+        select(SourceTagMap.source_id)
+        .where(SourceTagMap.tag_id == tag_id, SourceTagMap.source_id.in_(source_ids))
+    )
+    existing_ids = {source_id for source_id, in existing_result.all()}
+
+    for source_id in source_ids:
+        if source_id in existing_ids:
+            continue
+        session.add(SourceTagMap(source_id=source_id, tag_id=tag_id))
+
+    await session.commit()
+
+    return SourceTagSourceBindingResponse(
+        tag_id=tag_id,
+        source_ids=source_ids,
+        count=len(source_ids),
+    )
+
+
+@router.delete("/tags/{tag_id}/sources", response_model=SourceTagSourceBindingResponse)
+async def remove_tag_from_sources(
+    notebook_id: int,
+    tag_id: int,
+    payload: SourceTagSourceBindingRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> SourceTagSourceBindingResponse:
+    tag = await session.get(SourceTag, tag_id)
+    if tag is None or tag.notebook_id != notebook_id:
+        raise HTTPException(status_code=404, detail="Tag not found")
+
+    source_ids = list(dict.fromkeys(payload.source_ids))
+    await _fetch_sources_or_404(session, notebook_id=notebook_id, source_ids=source_ids)
+
+    mappings_result = await session.execute(
+        select(SourceTagMap)
+        .where(SourceTagMap.tag_id == tag_id, SourceTagMap.source_id.in_(source_ids))
+    )
+    mappings = mappings_result.scalars().all()
+    for mapping in mappings:
+        await session.delete(mapping)
+    await session.commit()
+
+    return SourceTagSourceBindingResponse(
+        tag_id=tag_id,
+        source_ids=source_ids,
+        count=len(mappings),
+    )
 
 
 @router.post("/search", response_model=SourceSearchResponse)
@@ -746,6 +1117,50 @@ async def upload_source(
     return _source_to_read(source, chunk_count=len(chunk_ids))
 
 
+@router.delete("/batch", response_model=SourceBatchDeleteResponse)
+async def batch_delete_sources(
+    notebook_id: int,
+    payload: SourceBatchDeleteRequest,
+    session: AsyncSession = Depends(get_db_session),
+    vector_store: VectorStore = Depends(get_vector_store),
+) -> SourceBatchDeleteResponse:
+    notebook = await session.get(Notebook, notebook_id)
+    if notebook is None:
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
+    source_ids = list(dict.fromkeys(payload.source_ids))
+    sources = await _fetch_sources_or_404(
+        session,
+        notebook_id=notebook_id,
+        source_ids=source_ids,
+    )
+    source_map = {source.id: source for source in sources}
+
+    for source_id in source_ids:
+        await session.delete(source_map[source_id])
+    await session.commit()
+
+    for source_id in source_ids:
+        await vector_store.remove_source(source_id)
+
+    return SourceBatchDeleteResponse(deleted_ids=source_ids, deleted_count=len(source_ids))
+
+
+@router.delete("", response_model=SourceBatchDeleteResponse, include_in_schema=False)
+async def batch_delete_sources_legacy(
+    notebook_id: int,
+    payload: SourceBatchDeleteRequest,
+    session: AsyncSession = Depends(get_db_session),
+    vector_store: VectorStore = Depends(get_vector_store),
+) -> SourceBatchDeleteResponse:
+    return await batch_delete_sources(
+        notebook_id=notebook_id,
+        payload=payload,
+        session=session,
+        vector_store=vector_store,
+    )
+
+
 @router.delete("/{source_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_source(
     notebook_id: int,
@@ -760,36 +1175,6 @@ async def delete_source(
     await session.delete(source)
     await session.commit()
     await vector_store.remove_source(source_id)
-
-
-@router.delete("", response_model=SourceBatchDeleteResponse)
-async def batch_delete_sources(
-    notebook_id: int,
-    payload: SourceBatchDeleteRequest,
-    session: AsyncSession = Depends(get_db_session),
-    vector_store: VectorStore = Depends(get_vector_store),
-) -> SourceBatchDeleteResponse:
-    notebook = await session.get(Notebook, notebook_id)
-    if notebook is None:
-        raise HTTPException(status_code=404, detail="Notebook not found")
-
-    source_ids = list(dict.fromkeys(payload.source_ids))
-    result = await session.execute(
-        select(Source).where(Source.notebook_id == notebook_id, Source.id.in_(source_ids))
-    )
-    sources = result.scalars().all()
-    found_ids = [source.id for source in sources]
-    if len(found_ids) != len(source_ids):
-        raise HTTPException(status_code=404, detail="Source not found")
-
-    for source in sources:
-        await session.delete(source)
-    await session.commit()
-
-    for source_id in found_ids:
-        await vector_store.remove_source(source_id)
-
-    return SourceBatchDeleteResponse(deleted_ids=found_ids, deleted_count=len(found_ids))
 
 
 @router.get("/{source_id}/chunks", response_model=list[ChunkRead])
