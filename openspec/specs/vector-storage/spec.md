@@ -4,7 +4,7 @@
 TBD - created by archiving change update-vector-storage. Update Purpose after archive.
 ## Requirements
 ### Requirement: Local Chroma Vector Storage
-系统 MUST 提供基于 Chroma 的本地持久化向量存储（嵌入式模式），不依赖 sqlite-vss。
+系统 MUST 提供基于 Chroma 的本地持久化向量存储（嵌入式模式），不依赖 sqlite-vss。搜索 MUST 使用 Chroma 原生 HNSW 索引，不在应用层做暴力遍历。
 
 #### Scenario: 使用 Chroma 本地存储
 - **WHEN** 配置 `vector_storage.provider` 为 `chroma`
@@ -24,6 +24,12 @@ TBD - created by archiving change update-vector-storage. Update Purpose after ar
 - **WHEN** `vector_storage.chroma.telemetry` 未设置或为 false
 - **THEN** Chroma 遥测保持关闭
 
+#### Scenario: 使用 ANN 索引搜索
+- **WHEN** 调用 Chroma 向量存储的 `search` 方法
+- **THEN** 系统使用 Chroma 原生 `collection.query()` 执行 ANN 搜索
+- **AND** 不加载全量条目到内存
+- **AND** 支持 `source_id_set` 过滤条件通过 Chroma where 子句实现
+
 ### Requirement: Vector Storage Provider Configuration
 系统 MUST 支持通过 `vector_storage.provider` 选择向量后端，并支持 `memory` 与 `chroma`；`sqlite` 作为兼容别名映射到本地 Chroma。
 
@@ -42,3 +48,11 @@ TBD - created by archiving change update-vector-storage. Update Purpose after ar
 #### Scenario: 迁移旧数据
 - **WHEN** 迁移工具执行
 - **THEN** 旧库中的向量在 Chroma 中可检索
+
+### Requirement: 向量搜索来源排除
+系统 MUST 支持在向量搜索时排除指定来源的条目，用于跨文档分析等场景。
+
+#### Scenario: 排除同一来源的搜索结果
+- **WHEN** 调用 `search` 时传入 `exclude_source_ids` 参数
+- **THEN** 返回结果不包含指定来源的条目
+- **AND** 其他来源的条目正常返回

@@ -102,3 +102,48 @@ async def test_upload_source_parse_runs_in_executor_without_blocking_requests(cl
     assert quick_resp.status_code == 201
     assert total_elapsed >= 0.3
     assert quick_elapsed < 0.25
+
+
+@pytest.mark.asyncio
+async def test_upload_three_sources_concurrently_keeps_response_times_stable(client, monkeypatch):
+    notebook_resp = await client.post("/v1/notebooks", json={"name": "Concurrent Upload Notebook"})
+    assert notebook_resp.status_code == 201
+    notebook_id = notebook_resp.json()["id"]
+
+    def _from_file(
+        cls,  # noqa: ANN001
+        *,
+        filename: str | None,
+        mime_type: str | None,
+        transcriber=None,  # noqa: ANN001
+        media_fetcher=None,  # noqa: ANN001
+    ):
+        return _SlowParser()
+
+    monkeypatch.setattr(ParserFactory, "from_file", classmethod(_from_file))
+
+    async def _upload(index: int) -> tuple[float, int]:
+        started = perf_counter()
+        response = await client.post(
+            f"/v1/notebooks/{notebook_id}/sources",
+            files={"file": (f"slow-{index}.txt", b"B" * 2048, "text/plain")},
+        )
+        elapsed = perf_counter() - started
+        return elapsed, response.status_code
+
+    tasks = [asyncio.create_task(_upload(index)) for index in range(3)]
+
+    await asyncio.sleep(0.02)
+    quick_started = perf_counter()
+    quick_resp = await client.post("/v1/notebooks", json={"name": "Quick Notebook 2"})
+    quick_elapsed = perf_counter() - quick_started
+
+    upload_results = await asyncio.gather(*tasks)
+    upload_durations = [duration for duration, _ in upload_results]
+    upload_statuses = [status for _, status in upload_results]
+
+    assert all(status_code == 201 for status_code in upload_statuses)
+    assert quick_resp.status_code == 201
+    assert quick_elapsed < 0.3
+    assert max(upload_durations) < 1.0
+    assert max(upload_durations) - min(upload_durations) < 0.45

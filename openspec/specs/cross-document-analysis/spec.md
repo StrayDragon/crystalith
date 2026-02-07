@@ -5,18 +5,16 @@ TBD - created by archiving change add-cross-document-analysis. Update Purpose af
 ## Requirements
 ### Requirement: Source Correlation Detection
 
-系统必须（SHALL）检测多个来源之间的关联关系。
+系统必须（SHALL）使用向量存储的 top-k 搜索检测多个来源之间的关联关系，替代全对暴力比较。
 
 #### Scenario: 检测来源关联
-
 - **WHEN** 笔记本包含 2 个以上来源
 - **AND** 用户触发分析
-- **THEN** 系统检测来源之间的语义关联
+- **THEN** 系统对每个条目执行 top-k 跨来源搜索检测语义关联
 - **AND** 显示关联强度评分
 - **AND** 列出共享的主要概念
 
 #### Scenario: 关联可视化
-
 - **WHEN** 关联分析完成
 - **THEN** 以网络图形式展示来源关系
 - **AND** 节点大小反映来源重要性
@@ -41,17 +39,15 @@ TBD - created by archiving change add-cross-document-analysis. Update Purpose af
 
 ### Requirement: Contradiction Detection
 
-系统必须（SHALL）检测不同来源之间的潜在矛盾。
+系统必须（SHALL）并行检测不同来源之间的潜在矛盾，使用并发控制限制 LLM 调用。
 
 #### Scenario: 检测语义矛盾
-
 - **WHEN** 多个来源包含相关但可能矛盾的信息
-- **THEN** 系统标记潜在矛盾点
+- **THEN** 系统并行标记潜在矛盾点（并发限制为 5）
 - **AND** 显示矛盾的来源和具体内容
 - **AND** 提供 AI 生成的矛盾分析
 
 #### Scenario: 矛盾列表展示
-
 - **WHEN** 检测到矛盾点
 - **THEN** 以列表形式展示所有矛盾
 - **AND** 每条矛盾可展开查看详情
