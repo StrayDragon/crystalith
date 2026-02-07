@@ -6,7 +6,7 @@ import asyncio
 from collections.abc import AsyncGenerator
 
 import sqlalchemy as sa
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
@@ -447,6 +447,7 @@ class QAStreamDoneData(BaseModel):
 async def ask_question_stream(
     notebook_id: int,
     payload: QARequest,
+    request: Request,
     session: AsyncSession = Depends(get_db_session),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     chatter: ChatProvider = Depends(get_chat_provider),
@@ -522,6 +523,8 @@ async def ask_question_stream(
         nonlocal history_messages
 
         if not source_ids:
+            if await request.is_disconnected():
+                return
             if payload.session_id is not None and db_session is None:
                 db_session, history_messages = await _load_history()
             created_at = datetime.datetime.now(datetime.UTC)
@@ -551,6 +554,8 @@ async def ask_question_stream(
 
         # Embed the question
         try:
+            if await request.is_disconnected():
+                return
             if payload.session_id is None:
                 embeddings = await embedder.embed_batch([payload.question])
             else:
@@ -592,6 +597,8 @@ async def ask_question_stream(
             return
 
         query_vector = embeddings[0]
+        if await request.is_disconnected():
+            return
         results = await vector_store.search(
             notebook_id=notebook_id,
             query_vector=query_vector,
@@ -741,10 +748,15 @@ async def ask_question_stream(
         answer_chunks: list[str] = []
         try:
             async for chunk in chatter.chat_stream(messages):
+                if await request.is_disconnected():
+                    return
                 answer_chunks.append(chunk)
                 yield _sse_event("chunk", {"text": chunk})
         except Exception as e:  # noqa: BLE001
             yield _sse_event("error", {"message": str(e)})
+            return
+
+        if await request.is_disconnected():
             return
 
         answer = "".join(answer_chunks)

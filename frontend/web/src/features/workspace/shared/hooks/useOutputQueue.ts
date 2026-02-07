@@ -12,7 +12,7 @@ import type { OutputItem, OutputTypeId, SlideGenerationConfig } from '../types';
 import { useWorkspaceStore } from '../state/workspaceStore';
 import { createId, formatTimestamp, normalizeOutput } from '../utils';
 
-type OutputQueueStatus = 'queued' | 'running' | 'done' | 'error';
+type OutputQueueStatus = 'queued' | 'running' | 'done' | 'error' | 'cancelled';
 
 export interface OutputQueueJob {
   id: string;
@@ -72,13 +72,16 @@ function parseSseMessage(event: Event) {
   }
 }
 
-function runSlidesStream(url: string): Promise<void> {
+function runSlidesStream(url: string, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     let settled = false;
     const eventSource = new EventSource(url);
 
     const cleanup = () => {
       eventSource.close();
+      if (signal) {
+        signal.removeEventListener('abort', handleAbort);
+      }
     };
 
     const finalize = (fn: () => void) => {
@@ -87,6 +90,19 @@ function runSlidesStream(url: string): Promise<void> {
       cleanup();
       fn();
     };
+
+    const handleAbort = () => {
+      const abortError = new Error('aborted');
+      abortError.name = 'AbortError';
+      finalize(() => reject(abortError));
+    };
+
+    if (signal?.aborted) {
+      handleAbort();
+      return;
+    }
+
+    signal?.addEventListener('abort', handleAbort);
 
     eventSource.addEventListener('done', () => {
       finalize(resolve);
@@ -130,6 +146,7 @@ export function useOutputQueue({
   const outputQueueRef = useRef<OutputQueueJob[]>(outputQueueJobs);
   const outputRunningRef = useRef(false);
   const runNextOutputJobRef = useRef<() => void>(() => {});
+  const outputAbortControllersRef = useRef(new Map<string, AbortController>());
 
   const { data: outputsData, error: outputsError, isLoading: outputsLoading, mutate: mutateOutputs } =
     useSWR(
@@ -182,8 +199,11 @@ export function useOutputQueue({
   }, [outputQueueJobs]);
 
   useEffect(() => {
+    outputAbortControllersRef.current.forEach((controller) => controller.abort());
+    outputAbortControllersRef.current.clear();
     setOutputQueueJobs([]);
     outputQueueRef.current = [];
+    outputRunningRef.current = false;
     onQueueReset();
   }, [onQueueReset, activeNotebookId]);
 
@@ -299,16 +319,31 @@ export function useOutputQueue({
 
   const processOutputJob = useCallback(
     async (job: OutputQueueJob) => {
+      const abortController = new AbortController();
+      outputAbortControllersRef.current.set(job.id, abortController);
+
+      const isCancelled = () => {
+        const current = outputQueueRef.current.find((item) => item.id === job.id);
+        return abortController.signal.aborted || current?.status === 'cancelled';
+      };
+
       try {
         store.getState().setLoading('outputs', true);
         store.getState().setError('outputs', '');
         let normalized: OutputItem[] = [];
+
         if (!isConnected) {
           throw new Error('backend unavailable');
         }
         if (job.sourceIds.length === 0) {
           throw new Error('请先选择来源。');
         }
+        if (isCancelled()) {
+          const abortError = new Error('aborted');
+          abortError.name = 'AbortError';
+          throw abortError;
+        }
+
         if (job.type === 'SLIDES') {
           if (job.notebookId && job.draftId) {
             const outlineUrl = buildSlidesStreamUrl(
@@ -323,9 +358,11 @@ export function useOutputQueue({
               'markdown',
               job.modelId,
             );
-            await runSlidesStream(outlineUrl);
-            await runSlidesStream(markdownUrl);
-            await mutateOutputs();
+            await runSlidesStream(outlineUrl, abortController.signal);
+            await runSlidesStream(markdownUrl, abortController.signal);
+            if (!isCancelled()) {
+              await mutateOutputs();
+            }
           } else {
             throw new Error('missing slide draft');
           }
@@ -337,7 +374,13 @@ export function useOutputQueue({
               source_ids: job.sourceIds.length ? job.sourceIds : undefined,
               model_id: job.modelId || undefined,
             },
+            signal: abortController.signal,
           });
+          if (isCancelled()) {
+            const abortError = new Error('aborted');
+            abortError.name = 'AbortError';
+            throw abortError;
+          }
           normalized = [normalizeOutput(response)];
           const s = store.getState();
           s.setOutputs([...normalized, ...s.outputs]);
@@ -345,6 +388,18 @@ export function useOutputQueue({
         } else {
           throw new Error('missing notebook');
         }
+
+        if (isCancelled()) {
+          updateOutputQueueJobs((prev) =>
+            prev.map((item) => (item.id === job.id ? { ...item, status: 'cancelled' } : item)),
+          );
+          const stillTracked = outputQueueRef.current.some((item) => item.id === job.id);
+          if (stillTracked) {
+            onQueueDone();
+          }
+          return;
+        }
+
         updateOutputQueueJobs((prev) =>
           prev.map((item) => (item.id === job.id ? { ...item, status: 'done' } : item)),
         );
@@ -359,6 +414,18 @@ export function useOutputQueue({
           onQueueDone();
         }
       } catch (error) {
+        const cancelled = isCancelled() || (error instanceof Error && error.name === 'AbortError');
+        if (cancelled) {
+          updateOutputQueueJobs((prev) =>
+            prev.map((item) => (item.id === job.id ? { ...item, status: 'cancelled' } : item)),
+          );
+          const stillTracked = outputQueueRef.current.some((item) => item.id === job.id);
+          if (stillTracked) {
+            onQueueDone();
+          }
+          return;
+        }
+
         let userFacingError = '输出生成失败，请稍后重试。';
 
         if (error instanceof Error) {
@@ -386,6 +453,7 @@ export function useOutputQueue({
           onQueueDone();
         }
       } finally {
+        outputAbortControllersRef.current.delete(job.id);
         store.getState().setLoading('outputs', false);
         outputRunningRef.current = false;
         runNextOutputJobRef.current();
@@ -412,6 +480,30 @@ export function useOutputQueue({
   }, [processOutputJob, updateOutputQueueJobs]);
 
   runNextOutputJobRef.current = runNextOutputJob;
+
+  const cancelOutputJob = useCallback(
+    (jobId: string) => {
+      const target = outputQueueRef.current.find((item) => item.id === jobId);
+      if (!target) return;
+      if (target.status === 'done' || target.status === 'error' || target.status === 'cancelled') {
+        return;
+      }
+
+      if (target.status === 'queued') {
+        updateOutputQueueJobs((prev) =>
+          prev.map((item) => (item.id === jobId ? { ...item, status: 'cancelled' } : item)),
+        );
+        onQueueDone();
+        return;
+      }
+
+      outputAbortControllersRef.current.get(jobId)?.abort();
+      updateOutputQueueJobs((prev) =>
+        prev.map((item) => (item.id === jobId ? { ...item, status: 'cancelled' } : item)),
+      );
+    },
+    [onQueueDone, updateOutputQueueJobs],
+  );
 
   const retryOutputs = useCallback(async () => {
     store.getState().setError('outputs', '');
@@ -497,6 +589,7 @@ export function useOutputQueue({
     outputsError: errOutputs,
     retryOutputs,
     retryOutputJob,
+    cancelOutputJob,
     deleteOutput,
     clearOutputs,
     fetchOutput,

@@ -4480,6 +4480,36 @@ export type ListTasksV1NotebooksNotebookIdTasksGetResponses = {
 
 export type ListTasksV1NotebooksNotebookIdTasksGetResponse = ListTasksV1NotebooksNotebookIdTasksGetResponses[keyof ListTasksV1NotebooksNotebookIdTasksGetResponses];
 
+export type CancelTaskV1TasksTaskIdCancelPostData = {
+    body?: never;
+    path: {
+        /**
+         * Task Id
+         */
+        task_id: number;
+    };
+    query?: never;
+    url: '/v1/tasks/{task_id}/cancel';
+};
+
+export type CancelTaskV1TasksTaskIdCancelPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CancelTaskV1TasksTaskIdCancelPostError = CancelTaskV1TasksTaskIdCancelPostErrors[keyof CancelTaskV1TasksTaskIdCancelPostErrors];
+
+export type CancelTaskV1TasksTaskIdCancelPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: TaskRead;
+};
+
+export type CancelTaskV1TasksTaskIdCancelPostResponse = CancelTaskV1TasksTaskIdCancelPostResponses[keyof CancelTaskV1TasksTaskIdCancelPostResponses];
+
 export type GetSlidesConfigV1WorkspaceToolsSlidesConfigGetData = {
     body?: never;
     path?: never;

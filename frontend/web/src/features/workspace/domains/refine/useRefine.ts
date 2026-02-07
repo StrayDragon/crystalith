@@ -187,6 +187,7 @@ export function useRefine() {
     outputsError,
     retryOutputs,
     retryOutputJob,
+    cancelOutputJob,
     deleteOutput,
     clearOutputs,
     fetchOutput,
@@ -682,6 +683,7 @@ export function useRefine() {
     saveContentAsNote,
     retryOutputs,
     retryOutputJob,
+    cancelOutputJob,
     onClearOutputs: clearOutputs,
     fetchOutput,
   };

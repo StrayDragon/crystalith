@@ -3709,6 +3709,48 @@
         }
       }
     },
+    "/v1/tasks/{task_id}/cancel": {
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "summary": "Cancel Task",
+        "operationId": "cancel_task_v1_tasks__task_id__cancel_post",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspace/tools/slides/config": {
       "get": {
         "tags": [

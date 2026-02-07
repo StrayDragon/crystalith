@@ -30,6 +30,7 @@ export interface SourceItem {
   type: string;
   status: string;
   statusTone: string;
+  indexProgress?: number | null;
   chunks: number;
   tags: string[];
   createdAt: string;
@@ -260,6 +261,7 @@ export interface ApiSource {
   mime_type?: string | null;
   status?: string | null;
   chunk_count?: number | null;
+  metadata?: Record<string, unknown> | null;
   tags?: string[] | null;
   created_at?: string | null;
   updated_at?: string | null;
