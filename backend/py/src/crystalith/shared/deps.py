@@ -10,6 +10,7 @@ from cl_sqlalchemyx.mgrs import AsyncDBManager
 
 from crystalith.shared.ai.factory import create_chat_provider, create_embedding_provider
 from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
+from crystalith.shared.cache import CacheProvider, create_cache_provider
 from crystalith.shared.config import Settings
 from crystalith.shared.parsers import TranscriptionProvider, create_transcription_provider
 from crystalith.shared.vector_storage import VectorStore
@@ -20,6 +21,14 @@ if TYPE_CHECKING:
 
 def get_settings(request: Request) -> Settings:
     return request.app.state.settings
+
+
+def get_cache_provider(request: Request) -> CacheProvider:
+    provider = getattr(request.app.state, "cache", None)
+    if provider is None:
+        provider = create_cache_provider(request.app.state.settings)
+        request.app.state.cache = provider
+    return provider
 
 
 async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]:

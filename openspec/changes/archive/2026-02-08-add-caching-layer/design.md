@@ -47,12 +47,12 @@ flowchart TD
 
 以下验收项基于现有代码结构验证：
 
-- [ ] **AC-1**: `CacheProvider` Protocol 定义在 `shared/` 下，与 `VectorStore`（`shared/vector_storage/interfaces.py`）和 `EmbeddingProvider`（`shared/ai/interfaces.py`）遵循相同的 Protocol 模式
-- [ ] **AC-2**: 缓存 key 生成规则覆盖 `features/notebooks/service.py`、`features/sources/service.py` 的列表查询
-- [ ] **AC-3**: Source 的 CRUD 操作（`features/sources/service.py` 中的 create/delete）触发缓存失效
-- [ ] **AC-4**: `config/schema.json` 更新包含 cache 配置段的 JSON Schema
-- [ ] **AC-5**: `just test` 通过，无缓存相关回归
-- [ ] **AC-6**: 缓存命中率可通过 `log.info("cache_hit", key=...) / log.info("cache_miss", key=...)` 日志观察（使用现有 `cl-logs` 的 structlog 风格）
+- [x] **AC-1**: `CacheProvider` Protocol 定义在 `shared/` 下，与 `VectorStore`（`shared/vector_storage/interfaces.py`）和 `EmbeddingProvider`（`shared/ai/interfaces.py`）遵循相同的 Protocol 模式
+- [x] **AC-2**: 缓存 key 生成规则覆盖 `features/notebooks/service.py`、`features/sources/service.py` 的列表查询
+- [x] **AC-3**: Source 的 CRUD 操作（`features/sources/service.py` 中的 create/delete）触发缓存失效
+- [x] **AC-4**: `config/schema.json` 更新包含 cache 配置段的 JSON Schema
+- [x] **AC-5**: `just test` 通过，无缓存相关回归
+- [x] **AC-6**: 缓存命中率可通过 `log.info("cache_hit", key=...) / log.info("cache_miss", key=...)` 日志观察（使用现有 `cl-logs` 的 structlog 风格）
 
 ## Open Questions
 

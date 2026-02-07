@@ -938,6 +938,9 @@ dependencies = [
 browserless = [
     { name = "playwright" },
 ]
+redis = [
+    { name = "redis" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -975,13 +978,14 @@ requires-dist = [
     { name = "pypdf", specifier = ">=4.3.1" },
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "pyyaml", specifier = ">=6.0.2" },
+    { name = "redis", marker = "extra == 'redis'", specifier = ">=5.0.0" },
     { name = "scalar-fastapi", specifier = ">=1.6.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.43" },
     { name = "tiktoken", specifier = ">=0.12.0" },
     { name = "trafilatura", specifier = ">=2.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0" },
 ]
-provides-extras = ["browserless"]
+provides-extras = ["browserless", "redis"]
 
 [package.metadata.requires-dev]
 dev = [

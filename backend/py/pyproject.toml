@@ -44,6 +44,9 @@ dependencies = [
 browserless = [
     "playwright>=1.40.0",
 ]
+redis = [
+    "redis>=5.0.0",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.24,<0.10.0"]

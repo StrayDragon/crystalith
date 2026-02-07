@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import datetime
 import asyncio
+import hashlib
+import json
 from time import perf_counter
 from typing import Any, Iterable, Literal
 
@@ -20,15 +22,17 @@ from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.shared.ai.types import ChatMessage
 from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.search_graph import run_search_graph
+from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import Settings
 from crystalith.shared.db import Chunk, Notebook, Source, SourceTag, SourceTagMap
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.parsers import Parser, ParserFactory, TranscriptionProvider, UnsupportedDocumentError
 from crystalith.shared.parsers.html import HTMLParser
-from crystalith.shared.vector_storage import VectorStore
+from crystalith.shared.vector_storage import VectorStore, cached_vector_search
 
 from crystalith.shared.deps import (
     get_ai_provider,
+    get_cache_provider,
     get_db_session,
     get_embedding_provider,
     get_settings,
@@ -38,6 +42,23 @@ from crystalith.shared.deps import (
 
 
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/sources", tags=["sources"])
+
+
+def _sources_list_cache_key(
+    *,
+    notebook_id: int,
+    tag: str | None,
+    sort_by: str,
+    sort_order: str,
+) -> str:
+    payload = {"tag": tag, "sort_by": sort_by, "sort_order": sort_order}
+    digest = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:16]
+    return f"notebook:{notebook_id}:sources:list:{digest}"
+
+
+async def _invalidate_notebook_source_caches(cache: CacheProvider, *, notebook_id: int) -> None:
+    await cache.invalidate_pattern(f"notebook:{notebook_id}:sources:*")
+    await cache.invalidate_pattern(f"notebook:{notebook_id}:vector_search:*")
 
 
 class SourceRead(BaseModel):
@@ -486,6 +507,7 @@ async def list_sources(
     sort_by: Literal["date", "name", "size", "type"] = "date",
     sort_order: Literal["asc", "desc"] = "desc",
     session: AsyncSession = Depends(get_db_session),
+    cache: CacheProvider = Depends(get_cache_provider),
 ) -> list[SourceRead]:
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
@@ -494,6 +516,18 @@ async def list_sources(
     normalized_tag = " ".join((tag or "").strip().split())
     if not normalized_tag:
         normalized_tag = None
+
+    cache_key = _sources_list_cache_key(
+        notebook_id=notebook_id,
+        tag=normalized_tag,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        logger.info("cache_hit", key=cache_key)
+        return [SourceRead.model_validate(item) for item in cached]
+    logger.info("cache_miss", key=cache_key)
 
     chunk_count = func.count(Chunk.id)
     statement = (
@@ -532,10 +566,13 @@ async def list_sources(
     source_ids = [source.id for source, _ in rows]
     tags_by_source = await _load_tag_names_for_sources(session, source_ids=source_ids)
 
-    return [
+    payload = [
         _source_to_read(source, chunk_count=count or 0, tags=tags_by_source.get(source.id, []))
         for source, count in rows
     ]
+
+    await cache.set(cache_key, [item.model_dump(mode="json") for item in payload])
+    return payload
 
 
 @router.post("/batch/re-embed", response_model=SourceBatchReembedResponse)
@@ -545,6 +582,7 @@ async def batch_reembed_sources(
     session: AsyncSession = Depends(get_db_session),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     vector_store: VectorStore = Depends(get_vector_store),
+    cache: CacheProvider = Depends(get_cache_provider),
 ) -> SourceBatchReembedResponse:
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
@@ -578,6 +616,9 @@ async def batch_reembed_sources(
         except Exception:
             failed_ids.append(source_id)
 
+    if reembedded_ids:
+        await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
+
     return SourceBatchReembedResponse(
         reembedded_ids=reembedded_ids,
         failed_ids=failed_ids,
@@ -593,6 +634,7 @@ async def reembed_source(
     session: AsyncSession = Depends(get_db_session),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     vector_store: VectorStore = Depends(get_vector_store),
+    cache: CacheProvider = Depends(get_cache_provider),
 ) -> SourceRead:
     """Retry embedding for a failed source using existing chunks."""
     source = await session.get(Source, source_id)
@@ -608,6 +650,7 @@ async def reembed_source(
         require_failed=True,
     )
     tags_by_source = await _load_tag_names_for_sources(session, source_ids=[source.id])
+    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
     return _source_to_read(source, chunk_count=chunk_count, tags=tags_by_source.get(source.id, []))
 
 
@@ -660,6 +703,7 @@ async def update_source_tag(
     tag_id: int,
     payload: SourceTagUpdateRequest,
     session: AsyncSession = Depends(get_db_session),
+    cache: CacheProvider = Depends(get_cache_provider),
 ) -> SourceTagRead:
     tag = await session.get(SourceTag, tag_id)
     if tag is None or tag.notebook_id != notebook_id:
@@ -679,6 +723,7 @@ async def update_source_tag(
     session.add(tag)
     await session.commit()
     await session.refresh(tag)
+    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
     return SourceTagRead.model_validate(tag)
 
 
@@ -687,6 +732,7 @@ async def delete_source_tag(
     notebook_id: int,
     tag_id: int,
     session: AsyncSession = Depends(get_db_session),
+    cache: CacheProvider = Depends(get_cache_provider),
 ) -> None:
     tag = await session.get(SourceTag, tag_id)
     if tag is None or tag.notebook_id != notebook_id:
@@ -694,6 +740,7 @@ async def delete_source_tag(
 
     await session.delete(tag)
     await session.commit()
+    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
 
 
 @router.post("/tags/{tag_id}/sources", response_model=SourceTagSourceBindingResponse)
@@ -702,6 +749,7 @@ async def assign_tag_to_sources(
     tag_id: int,
     payload: SourceTagSourceBindingRequest,
     session: AsyncSession = Depends(get_db_session),
+    cache: CacheProvider = Depends(get_cache_provider),
 ) -> SourceTagSourceBindingResponse:
     tag = await session.get(SourceTag, tag_id)
     if tag is None or tag.notebook_id != notebook_id:
@@ -722,6 +770,7 @@ async def assign_tag_to_sources(
         session.add(SourceTagMap(source_id=source_id, tag_id=tag_id))
 
     await session.commit()
+    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
 
     return SourceTagSourceBindingResponse(
         tag_id=tag_id,
@@ -736,6 +785,7 @@ async def remove_tag_from_sources(
     tag_id: int,
     payload: SourceTagSourceBindingRequest,
     session: AsyncSession = Depends(get_db_session),
+    cache: CacheProvider = Depends(get_cache_provider),
 ) -> SourceTagSourceBindingResponse:
     tag = await session.get(SourceTag, tag_id)
     if tag is None or tag.notebook_id != notebook_id:
@@ -752,6 +802,7 @@ async def remove_tag_from_sources(
     for mapping in mappings:
         await session.delete(mapping)
     await session.commit()
+    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
 
     return SourceTagSourceBindingResponse(
         tag_id=tag_id,
@@ -808,6 +859,7 @@ async def create_source_from_url(
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     vector_store: VectorStore = Depends(get_vector_store),
     settings: Settings = Depends(get_settings),
+    cache: CacheProvider = Depends(get_cache_provider),
 ) -> SourceRead:
     """Create a source from a URL.
 
@@ -1015,6 +1067,7 @@ async def create_source_from_url(
             detail=f"Ingestion failed: {error_detail}",
         ) from exc
 
+    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
     return _source_to_read(source, chunk_count=len(chunk_models))
 
 
@@ -1026,6 +1079,7 @@ async def upload_source(
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     transcriber: TranscriptionProvider = Depends(get_transcription_provider),
     vector_store: VectorStore = Depends(get_vector_store),
+    cache: CacheProvider = Depends(get_cache_provider),
 ) -> SourceRead:
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
@@ -1114,6 +1168,7 @@ async def upload_source(
             detail=f"Ingestion failed: {error_detail}",
         ) from exc
 
+    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
     return _source_to_read(source, chunk_count=len(chunk_ids))
 
 
@@ -1123,6 +1178,7 @@ async def batch_delete_sources(
     payload: SourceBatchDeleteRequest,
     session: AsyncSession = Depends(get_db_session),
     vector_store: VectorStore = Depends(get_vector_store),
+    cache: CacheProvider = Depends(get_cache_provider),
 ) -> SourceBatchDeleteResponse:
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
@@ -1143,6 +1199,7 @@ async def batch_delete_sources(
     for source_id in source_ids:
         await vector_store.remove_source(source_id)
 
+    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
     return SourceBatchDeleteResponse(deleted_ids=source_ids, deleted_count=len(source_ids))
 
 
@@ -1152,12 +1209,14 @@ async def batch_delete_sources_legacy(
     payload: SourceBatchDeleteRequest,
     session: AsyncSession = Depends(get_db_session),
     vector_store: VectorStore = Depends(get_vector_store),
+    cache: CacheProvider = Depends(get_cache_provider),
 ) -> SourceBatchDeleteResponse:
     return await batch_delete_sources(
         notebook_id=notebook_id,
         payload=payload,
         session=session,
         vector_store=vector_store,
+        cache=cache,
     )
 
 
@@ -1167,6 +1226,7 @@ async def delete_source(
     source_id: int,
     session: AsyncSession = Depends(get_db_session),
     vector_store: VectorStore = Depends(get_vector_store),
+    cache: CacheProvider = Depends(get_cache_provider),
 ) -> None:
     source = await session.get(Source, source_id)
     if source is None or source.notebook_id != notebook_id:
@@ -1175,6 +1235,7 @@ async def delete_source(
     await session.delete(source)
     await session.commit()
     await vector_store.remove_source(source_id)
+    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
 
 
 @router.get("/{source_id}/chunks", response_model=list[ChunkRead])
@@ -1182,6 +1243,7 @@ async def list_source_chunks(
     notebook_id: int,
     source_id: int,
     session: AsyncSession = Depends(get_db_session),
+    cache: CacheProvider = Depends(get_cache_provider),
 ) -> list[ChunkRead]:
     """获取来源的所有文本片段（chunks）。
 
@@ -1198,6 +1260,13 @@ async def list_source_chunks(
     if source is None or source.notebook_id != notebook_id:
         raise HTTPException(status_code=404, detail="Source not found")
 
+    cache_key = f"notebook:{notebook_id}:sources:{source_id}:chunks"
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        logger.info("cache_hit", key=cache_key)
+        return [ChunkRead.model_validate(item) for item in cached]
+    logger.info("cache_miss", key=cache_key)
+
     result = await session.execute(
         select(Chunk)
         .where(Chunk.source_id == source_id)
@@ -1205,7 +1274,7 @@ async def list_source_chunks(
     )
     chunks = result.scalars().all()
 
-    return [
+    payload = [
         ChunkRead(
             id=chunk.id,
             chunk_index=chunk.chunk_index,
@@ -1216,6 +1285,9 @@ async def list_source_chunks(
         )
         for chunk in chunks
     ]
+
+    await cache.set(cache_key, [item.model_dump(mode="json") for item in payload])
+    return payload
 
 
 # --- Source Summary and QA endpoints ---
@@ -1377,6 +1449,7 @@ async def source_qa(
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     chatter: ChatProvider = Depends(get_ai_provider),
     vector_store: VectorStore = Depends(get_vector_store),
+    cache: CacheProvider = Depends(get_cache_provider),
 ) -> SourceQAResponse:
     """Answer a question based on a specific source's content."""
     source = await session.get(Source, source_id)
@@ -1398,7 +1471,9 @@ async def source_qa(
     query_vector = embeddings[0]
 
     # Search only within this source's chunks
-    results = await vector_store.search(
+    results = await cached_vector_search(
+        cache=cache,
+        vector_store=vector_store,
         notebook_id=notebook_id,
         query_vector=query_vector,
         top_k=5,
@@ -1561,6 +1636,7 @@ async def convert_source_qa_to_source(
     session: AsyncSession = Depends(get_db_session),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     vector_store: VectorStore = Depends(get_vector_store),
+    cache: CacheProvider = Depends(get_cache_provider),
 ) -> ConvertSourceQAToSourceResponse:
     """Convert source QA conversation to a new source document for RAG queries."""
     # Verify source exists
@@ -1650,6 +1726,7 @@ async def convert_source_qa_to_source(
             chunk_count=len(db_chunks),
         )
 
+        await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
         return ConvertSourceQAToSourceResponse(
             source_id=source.id,
             filename=filename,

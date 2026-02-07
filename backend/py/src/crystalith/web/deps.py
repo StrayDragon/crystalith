@@ -1,4 +1,5 @@
 from crystalith.shared.deps import (
+    get_cache_provider,
     get_ai_provider,
     get_chat_provider,
     get_db_session,
@@ -9,6 +10,7 @@ from crystalith.shared.deps import (
 )
 
 __all__ = [
+    "get_cache_provider",
     "get_ai_provider",
     "get_chat_provider",
     "get_db_session",
