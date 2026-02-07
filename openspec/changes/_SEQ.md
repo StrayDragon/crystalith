@@ -115,16 +115,17 @@ Week 3-5:  Phase 2  ─── [2a: Obsidian] ─────────
 | 阶段 | 提案 | 状态 | 备注 |
 |---|---|---|---|
 | 0a | `refactor-state-to-zustand` | ✅ 完成 | `openspec list` 显示 Complete |
-| 0b | `optimize-backend-performance` | 🚧 进行中（27/35） | 剩余基准、验收与部分测试任务 |
-| 1a | `optimize-frontend-performance` | 🚧 进行中（21/23） | 主要剩余 DevTools 相关验收项 |
+| 0b | `optimize-backend-performance` | ✅ 已归档 | 2026-02-07 归档至 `archive/2026-02-07-optimize-backend-performance` |
+| 1a | `optimize-frontend-performance` | 🚧 进行中（21/23） | 剩余构建拆分/LCP 验收项（2.5/2.6 暂缓） |
 | 1b | `add-error-resilience` | ✅ 已归档 | 2026-02-07 归档至 `archive/2026-02-07-add-error-resilience` |
 
-**下一优先级**: 先收敛 `optimize-backend-performance` 与 `optimize-frontend-performance` 的剩余项，再进入 Phase 2。
+**下一优先级**: 在保留 `optimize-frontend-performance` 两项延后验收（2.5/2.6）的前提下，优先进入 Phase 2 的 `enhance-source-batch-ops`（暂不推进 Obsidian）。
 
 ## 被排除/暂缓的提案
 
 | 提案 | 分类 | 暂缓原因 |
 |------|------|---------|
+| `add-obsidian-integration` | 外部集成 | 按当前迭代策略暂缓，优先补齐内置基础能力（上传/同步基础链路） |
 | `optimize-batch-embedding` | 性能 | 已被 `optimize-backend-performance` 任务 2 吸收 |
 | `add-caching-layer` | 基础设施 | 可在 Phase 0b 嵌入缓存验证后再决定是否需要通用缓存层 |
 | `add-database-migration` | 基础设施 | 独立推进，不影响体验优化 |

@@ -5,8 +5,9 @@ import asyncio
 import pytest
 
 from crystalith.shared.ai.cache import EmbeddingCache
-from crystalith.shared.ai.openai_provider import OpenAIEmbeddingProvider
+from crystalith.shared.ai.openai_provider import OpenAIChatProvider, OpenAIEmbeddingProvider
 from crystalith.shared.ai.retry import run_with_retry, with_retry
+from crystalith.shared.ai.types import ChatMessage
 
 
 class _EmbeddingResponse:
@@ -131,3 +132,46 @@ async def test_with_retry_decorator_supports_async_method() -> None:
 
     assert result == "done"
     assert worker.calls == 3
+
+
+class _ChatResponse:
+    def __init__(self, content: str) -> None:
+        self.choices = [
+            type(
+                "Choice",
+                (),
+                {"message": type("Message", (), {"content": content})()},
+            )
+        ]
+
+
+class _ChatCompletionsClient:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def create(self, *, model, messages):  # noqa: ANN001
+        self.calls += 1
+        if self.calls == 1:
+            raise asyncio.TimeoutError("timeout")
+        return _ChatResponse("chat-ok")
+
+
+class _OpenAIChatClient:
+    def __init__(self) -> None:
+        self.chat = type("Chat", (), {"completions": _ChatCompletionsClient()})()
+
+
+@pytest.mark.asyncio
+async def test_openai_chat_provider_retries_timeout_and_returns_success() -> None:
+    client = _OpenAIChatClient()
+    provider = OpenAIChatProvider(
+        model="chat-model",
+        client=client,
+        timeout=1,
+        max_retries=2,
+    )
+
+    result = await provider.chat([ChatMessage(role="user", content="hello")])
+
+    assert result == "chat-ok"
+    assert client.chat.completions.calls == 2
