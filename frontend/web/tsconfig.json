@@ -12,8 +12,8 @@
     "jsx": "react-jsx",
     "strict": true,
     "types": ["vitest/globals"],
-    "baseUrl": ".",
     "paths": {
+      "*": ["./*"],
       "@crystalith-slidev": ["../packages/crystalith-slidev/src/index.ts"],
       "@crystalith-slidev/*": ["../packages/crystalith-slidev/src/*"]
     }
