@@ -4,7 +4,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from crystalith.shared.db import Chunk, Source
-from crystalith.shared.deps import get_chat_provider
+from crystalith.shared.deps import get_ai_provider
 from crystalith.shared.types import SourceStatus
 
 
@@ -87,7 +87,7 @@ async def test_provider_rate_limit_includes_retry_after(db_session, app):
             vectors=[[1.0, 0.0, 0.0]],
         )
 
-        app.dependency_overrides[get_chat_provider] = lambda: _FailingChatProvider()
+        app.dependency_overrides[get_ai_provider] = lambda: _FailingChatProvider()
 
         try:
             resp = await http_client.post(
@@ -95,7 +95,7 @@ async def test_provider_rate_limit_includes_retry_after(db_session, app):
                 json={"question": "test", "source_ids": [source.id]},
             )
         finally:
-            app.dependency_overrides.pop(get_chat_provider, None)
+            app.dependency_overrides.pop(get_ai_provider, None)
 
         assert resp.status_code == 429
         payload = resp.json()

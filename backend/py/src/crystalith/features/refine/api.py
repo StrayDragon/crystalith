@@ -26,7 +26,7 @@ from crystalith.shared.utils import (
 from crystalith.shared.vector_storage import VectorSearchResult, VectorStore
 
 from crystalith.shared.deps import (
-    get_chat_provider,
+    get_ai_provider,
     get_db_session,
     get_embedding_provider,
     get_settings,
@@ -232,7 +232,7 @@ async def refine_batch(
     payload: RefineBatchRequest,
     session: AsyncSession = Depends(get_db_session),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
-    chatter: ChatProvider = Depends(get_chat_provider),
+    chatter: ChatProvider = Depends(get_ai_provider),
     vector_store: VectorStore = Depends(get_vector_store),
     settings: Settings = Depends(get_settings),
 ) -> RefineBatchResponse:

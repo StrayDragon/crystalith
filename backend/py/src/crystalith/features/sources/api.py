@@ -28,7 +28,7 @@ from crystalith.shared.parsers.html import HTMLParser
 from crystalith.shared.vector_storage import VectorStore
 
 from crystalith.shared.deps import (
-    get_chat_provider,
+    get_ai_provider,
     get_db_session,
     get_embedding_provider,
     get_settings,
@@ -1308,7 +1308,7 @@ async def get_source_summary(
     notebook_id: int,
     source_id: int,
     session: AsyncSession = Depends(get_db_session),
-    chatter: ChatProvider = Depends(get_chat_provider),
+    chatter: ChatProvider = Depends(get_ai_provider),
 ) -> SourceSummaryResponse:
     """Generate or retrieve summary for a specific source."""
     source = await session.get(Source, source_id)
@@ -1375,7 +1375,7 @@ async def source_qa(
     payload: SourceQARequest,
     session: AsyncSession = Depends(get_db_session),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
-    chatter: ChatProvider = Depends(get_chat_provider),
+    chatter: ChatProvider = Depends(get_ai_provider),
     vector_store: VectorStore = Depends(get_vector_store),
 ) -> SourceQAResponse:
     """Answer a question based on a specific source's content."""

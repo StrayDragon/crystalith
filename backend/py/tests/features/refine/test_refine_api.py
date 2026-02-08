@@ -5,7 +5,7 @@ import asyncio
 import pytest
 
 from crystalith.shared.db import Chunk, Source
-from crystalith.shared.deps import get_chat_provider
+from crystalith.shared.deps import get_ai_provider
 from crystalith.shared.types import SourceStatus
 
 
@@ -63,7 +63,7 @@ async def test_refine_batch_generates_all_formats_with_parallel_calls(client, db
     )
 
     chatter = _BatchChatSpy()
-    app.dependency_overrides[get_chat_provider] = lambda: chatter
+    app.dependency_overrides[get_ai_provider] = lambda: chatter
 
     try:
         resp = await client.post(
@@ -75,7 +75,7 @@ async def test_refine_batch_generates_all_formats_with_parallel_calls(client, db
             },
         )
     finally:
-        app.dependency_overrides.pop(get_chat_provider, None)
+        app.dependency_overrides.pop(get_ai_provider, None)
 
     assert resp.status_code == 200
     payload = resp.json()
