@@ -16,6 +16,7 @@ import {
   MoreHoriz as MoreHorizIcon,
   OpenInFull as OpenInFullIcon,
   Cancel as CancelIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import { Virtuoso } from 'react-virtuoso';
 
@@ -25,6 +26,8 @@ import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { copyToClipboard } from '../../../../shared/clipboard';
 import { collectOutputCitations, formatStructuredOutputForCopy } from '../../shared/utils';
+import { EXPORT_FORMAT_LABELS } from '../outputs/exporters';
+import { useExport } from '../outputs/useExport';
 import { SkeletonCard } from '../../shared/components/Skeleton';
 import {
   getToolIcon,
@@ -130,6 +133,8 @@ export default function StudioOutputsList({
     },
     [onConvertToSource],
   );
+
+  const { isExporting, activeFormat, getSupportedFormats, exportOutput } = useExport();
 
   const outputNotes = useMemo<StudioNote[]>(
     () =>
@@ -333,6 +338,10 @@ export default function StudioOutputsList({
             const note = item.note;
             const tone = resolveTone(note.type);
             const colors = TONE_COLORS[tone];
+            const output = note.outputId
+              ? outputs.find((candidate) => candidate.id === note.outputId) ?? null
+              : null;
+            const exportFormats = output ? getSupportedFormats(output.type) : [];
 
             return (
               <div className="group relative flex items-center rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm transition-all hover:bg-gray-50 dark:hover:bg-slate-800 hover:border-gray-300 dark:hover:border-slate-600 mb-2 ux-slide-in">
@@ -402,6 +411,22 @@ export default function StudioOutputsList({
                           <span>放大查看</span>
                         </MenuItem>
                       )}
+                      {output && exportFormats.map((format) => (
+                        <MenuItem
+                          key={`${note.id}-${format}`}
+                          onClick={() => {
+                            void exportOutput(output, format);
+                          }}
+                          className="flex items-center justify-between gap-2 py-2 px-3 text-xs"
+                          disabled={isExporting}
+                        >
+                          <span className="inline-flex items-center gap-2">
+                            <DownloadIcon className="h-3.5 w-3.5" />
+                            导出为 {EXPORT_FORMAT_LABELS[format]}
+                          </span>
+                          {isExporting && activeFormat === format ? <Spinner className="h-3.5 w-3.5" /> : null}
+                        </MenuItem>
+                      ))}
                       <MenuItem
                         onClick={() => handleConvertToSource(note.id)}
                         className="flex items-center gap-2 py-2 px-3 text-xs"
