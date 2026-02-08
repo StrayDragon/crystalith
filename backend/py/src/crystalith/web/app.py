@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -17,7 +18,8 @@ from cl_fastapix import FastAPIX
 from cl_sqlalchemyx.mgrs import AsyncDBManager
 
 from crystalith.shared.config import ConfigManager, Settings
-from crystalith.shared.db import Source, create_all, create_db_manager
+from crystalith.shared.db import Source, create_db_manager
+from crystalith.shared.db.migrations import upgrade_head
 from crystalith.shared.schemas.errors import (
     build_error_response,
     build_error_response_from_exception,
@@ -85,7 +87,7 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPIX):
         if _env_bool("AUTO_DB_INIT", False):
-            await create_all(app.state.db.async_engine)
+            await asyncio.to_thread(upgrade_head, app.state.settings.database.url)
 
         if _env_bool("AUTO_CLEANUP_FAILED_SOURCES", True):
             async with app.state.db.got_manual_session() as session:

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 import tempfile
 from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from crystalith.shared.db import create_all, create_db_manager
+from crystalith.shared.db import create_db_manager
+from crystalith.shared.db.migrations import upgrade_head
 from crystalith.shared.deps import get_ai_provider, get_chat_provider, get_embedding_provider
 from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.vector_storage import InMemoryVectorStore
@@ -39,8 +41,9 @@ class DummyChatProvider:
 async def app():
     tempdir = tempfile.TemporaryDirectory()
     db_path = Path(tempdir.name) / "test.db"
-    manager = create_db_manager(f"sqlite+aiosqlite:///{db_path}")
-    await create_all(manager.async_engine)
+    db_url = f"sqlite+aiosqlite:///{db_path}"
+    await asyncio.to_thread(upgrade_head, db_url)
+    manager = create_db_manager(db_url)
     vector_store = InMemoryVectorStore()
     app = create_app(db_manager=manager, vector_store=vector_store)
     app.dependency_overrides[get_embedding_provider] = lambda: DummyEmbeddingProvider()  # type: ignore[assignment]
