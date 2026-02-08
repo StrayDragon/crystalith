@@ -1,10 +1,11 @@
 # NEXT - 续做接力记录
 
-更新时间：2026-02-08 13:17 CST
+更新时间：2026-02-08 13:41 CST
 分支：`main`
 
 ## 1) 当前总状态（下次开工先看这里）
 
+- `refactor-state-to-zustand` 已完成并归档：`openspec/changes/archive/2026-02-08-refactor-state-to-zustand/`
 - `optimize-frontend-performance` 已完成并归档：`openspec/changes/archive/2026-02-08-optimize-frontend-performance/`
 - `enhance-ux-polish` 已完成并归档：`openspec/changes/archive/2026-02-08-enhance-ux-polish/`（Source 索引百分比 SSE 相关项移出本变更）
 - `add-dark-mode-v2` 已归档：`openspec/changes/archive/2026-02-08-add-dark-mode-v2/`
@@ -13,7 +14,7 @@
 - `add-backend-dependency-injection` 已完成并归档：`openspec/changes/archive/2026-02-08-add-backend-dependency-injection/`
 - `add-database-migration` 已完成并归档：`openspec/changes/archive/2026-02-08-add-database-migration/`
 - `add-caching-layer` 已完成并归档：`openspec/changes/archive/2026-02-08-add-caching-layer/`
-- `_SEQ` 已更新：补齐 caching 归档状态；下一步整理后续提案
+- `_SEQ` 已更新：补齐 zustand 归档状态；下一步整理后续提案
 
 ## 2) 本轮已完成（开发 -> 测试 -> 验收）
 
