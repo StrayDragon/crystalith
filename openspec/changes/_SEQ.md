@@ -126,6 +126,7 @@ Week 3-5:  Phase 2  ─── [2a: Obsidian] ─────────
 | LC | `add-backend-dependency-injection` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-backend-dependency-injection` |
 | LC | `add-database-migration` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-database-migration` |
 | LC | `add-caching-layer` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-caching-layer` |
+| LC | `add-production-docker` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-production-docker` |
 
 **下一优先级**: 在继续暂缓 Obsidian 的前提下，下一步可整理/推进剩余基础设施提案或新建 SSE 进度链路 change。
 
@@ -136,5 +137,4 @@ Week 3-5:  Phase 2  ─── [2a: Obsidian] ─────────
 | `add-obsidian-integration` | 外部集成 | 按当前迭代策略暂缓，优先补齐内置基础能力（上传/同步基础链路） |
 | `optimize-batch-embedding` | 性能 | 已被 `optimize-backend-performance` 任务 2 吸收 |
 | `add-plugin-architecture` | 新功能 | 架构复杂度高，暂缓 |
-| `add-production-docker` | 基础设施 | 生产部署时推进 |
 | `add-workspace-templates` | 新功能 | 锦上添花，暂缓 |

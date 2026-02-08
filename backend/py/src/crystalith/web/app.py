@@ -46,10 +46,25 @@ def _find_config_path() -> Path | None:
 
 
 def _load_settings() -> Settings:
-    config_path = _find_config_path()
+    config_path_value = os.environ.get("CRYSTALITH_CONFIG_PATH")
+    if config_path_value:
+        config_path = Path(config_path_value)
+        if not config_path.is_file():
+            raise FileNotFoundError(f"Config file not found: {config_path}")
+    else:
+        config_dir_value = os.environ.get("CRYSTALITH_CONFIG_DIR")
+        if config_dir_value:
+            config_path = Path(config_dir_value) / "app.yaml"
+            if not config_path.is_file():
+                raise FileNotFoundError(f"Config file not found: {config_path}")
+        else:
+            config_path = _find_config_path()
+
     if config_path is not None:
         schema_path = config_path.parent / "schema.json"
-        manager = ConfigManager(config_path, schema_path)
+        secrets_path_value = os.environ.get("CRYSTALITH_SECRETS_PATH")
+        secrets_path = Path(secrets_path_value) if secrets_path_value else None
+        manager = ConfigManager(config_path, schema_path, secrets_path=secrets_path)
         if not schema_path.exists():
             manager.write_schema()
         return manager.load()
@@ -137,6 +152,10 @@ def create_app(
     app.state.vector_store = store
     app.state.cache = cache
     app.state.task_queue = queue
+
+    @app.get("/health", include_in_schema=False)
+    async def health() -> dict[str, str]:
+        return {"status": "ok"}
 
     app.add_middleware(
         CORSMiddleware,
