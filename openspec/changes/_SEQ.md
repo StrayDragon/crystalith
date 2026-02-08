@@ -1,6 +1,6 @@
 # 提案实施拓扑路径
 
-> 仅覆盖"体验优化 + 外部集成"方向的提案。新功能类（auth、collaborative、plugin、templates）和纯基础设施类（docker、observability、ci-pipeline）已排除。
+> 主要覆盖"体验优化 + 外部集成"方向的提案。新功能类/基础设施类变更不在拓扑图中展开，但会在「当前实施状态」里记录归档情况。
 
 ## 重叠与边界澄清
 
@@ -127,8 +127,9 @@ Week 3-5:  Phase 2  ─── [2a: Obsidian] ─────────
 | LC | `add-database-migration` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-database-migration` |
 | LC | `add-caching-layer` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-caching-layer` |
 | LC | `add-production-docker` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-production-docker` |
+| LC | `add-workspace-templates` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-workspace-templates` |
 
-**下一优先级**: 在继续暂缓 Obsidian 的前提下，下一步可整理/推进剩余基础设施提案或新建 SSE 进度链路 change。
+**下一优先级**: 在继续暂缓 Obsidian 的前提下，下一步推进 `add-plugin-architecture`（插件架构），其余 UI/SSE 优化建议拆为独立 change。
 
 ## 被排除/暂缓的提案
 
@@ -136,5 +137,3 @@ Week 3-5:  Phase 2  ─── [2a: Obsidian] ─────────
 |------|------|---------|
 | `add-obsidian-integration` | 外部集成 | 按当前迭代策略暂缓，优先补齐内置基础能力（上传/同步基础链路） |
 | `optimize-batch-embedding` | 性能 | 已被 `optimize-backend-performance` 任务 2 吸收 |
-| `add-plugin-architecture` | 新功能 | 架构复杂度高，暂缓 |
-| `add-workspace-templates` | 新功能 | 锦上添花，暂缓 |
