@@ -142,6 +142,34 @@ export function useNotebooks() {
     }
   }, [mutate, connectionState, createNameCurrent]);
 
+  const handleCreateNotebookQuick = useCallback(async (name?: string) => {
+    const finalName = name?.trim() || DEFAULT_NOTEBOOK_NAME;
+    if (!finalName || connectionState !== 'live') return false;
+
+    const s = store.getState();
+    s.setCreateState('loading');
+    s.setError('create', '');
+
+    try {
+      const created = await createNotebook({
+        body: { name: finalName },
+      });
+      const normalized = normalizeNotebook(created);
+      const s2 = store.getState();
+      s2.setActiveNotebook(normalized.id);
+      await mutate(
+        async (current) => (current ? [...current, created] : [created]),
+        { revalidate: false },
+      );
+      return true;
+    } catch {
+      store.getState().setError('create', '创建失败，请检查后端状态。');
+      return false;
+    } finally {
+      store.getState().setCreateState('idle');
+    }
+  }, [mutate, connectionState]);
+
   const retryNotebooks = useCallback(async () => {
     const s = store.getState();
     s.setConnectionState('connecting');
@@ -224,6 +252,7 @@ export function useNotebooks() {
     setCreateName,
     createState: createStateCurrent,
     createNotebook: handleCreateNotebook,
+    createNotebookQuick: handleCreateNotebookQuick,
     updateNotebook: handleUpdateNotebook,
     deleteNotebook: handleDeleteNotebook,
     statusLabel,

@@ -8,7 +8,10 @@ import type { ChatMessage as SourceDialogMessage } from '../domains/sources/Sour
 import SourcesPanel from '../domains/sources/SourcesPanel';
 import StudioPanel from '../domains/studio/StudioPanel';
 import WorkspaceHeader from './WorkspaceHeader';
+import ShortcutHelpPanel from './ShortcutHelpPanel';
 import { useWorkspaceStore } from '../shared/state/workspaceStore';
+import { useKeyboardShortcuts, type KeyboardShortcutBinding } from '../shared/hooks/useKeyboardShortcuts';
+import { WORKSPACE_SHORTCUTS } from '../shared/shortcuts';
 import { useAnalysis } from '../domains/analysis/useAnalysis';
 import { useChat } from '../domains/messages/useChat';
 import { useNotebooks } from '../domains/notebooks/useNotebooks';
@@ -81,9 +84,13 @@ export default function WorkspaceLayout() {
   const [viewerOutputId, setViewerOutputId] = useState<number | null>(null);
   const [isViewerElevated, setIsViewerElevated] = useState(false);
   const [isSessionSwitcherOpen, setIsSessionSwitcherOpen] = useState(false);
+  const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
   const [expandedPanel, setExpandedPanel] = useState<ExpandedPanel>(null);
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const sessionSearchRef = useRef<HTMLInputElement | null>(null);
+  const sourcesPanelRef = useRef<HTMLElement | null>(null);
+  const chatPanelRef = useRef<HTMLElement | null>(null);
+  const studioPanelRef = useRef<HTMLElement | null>(null);
   const mainRef = useRef<HTMLElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
   const sizesRef = useRef({
@@ -462,6 +469,179 @@ export default function WorkspaceLayout() {
     setExpandedPanel((prev) => (prev === panel ? null : panel));
   }, []);
 
+  const focusPanel = useCallback((panel: Exclude<ExpandedPanel, null>) => {
+    if (expandedPanel && expandedPanel !== panel) {
+      setExpandedPanel(null);
+    }
+
+    const nextActivePanel = panel === 'studio' ? 'refine' : panel;
+    store.getState().setActivePanel(nextActivePanel);
+
+    window.requestAnimationFrame(() => {
+      const target = panel === 'sources'
+        ? sourcesPanelRef.current
+        : panel === 'chat'
+          ? chatPanelRef.current
+          : studioPanelRef.current;
+      target?.focus();
+    });
+  }, [expandedPanel, store]);
+
+  const openSessionSearch = useCallback(() => {
+    setIsSessionSwitcherOpen(true);
+    window.requestAnimationFrame(() => {
+      sessionSearchRef.current?.focus();
+      sessionSearchRef.current?.select();
+    });
+  }, []);
+
+  const createNotebookByShortcut = useCallback(() => {
+    void notebooks.createNotebookQuick('未命名笔记本');
+  }, [notebooks]);
+
+  const closeActiveOverlay = useCallback(() => {
+    if (isShortcutHelpOpen) {
+      setIsShortcutHelpOpen(false);
+      return true;
+    }
+
+    if (graphSessionDetailOpen) {
+      setGraphSessionDetailOpen(false);
+      setGraphSessionDetailFullscreen(false);
+      setGraphSessionMessages([]);
+      return true;
+    }
+
+    if (citationSourceDetailOpen) {
+      setCitationSourceDetailOpen(false);
+      setCitationSelectedSource(null);
+      setCitationSourceDetailFullscreen(false);
+      return true;
+    }
+
+    if (graphSourceDetailOpen) {
+      setGraphSourceDetailOpen(false);
+      setGraphSourceDetailFullscreen(false);
+      return true;
+    }
+
+    if (isSlidesDialogOpen) {
+      setIsSlidesDialogOpen(false);
+      setSlidesOpenMode('config');
+      setSlidesDraftId(null);
+      setSlidesQueueJobId(null);
+      return true;
+    }
+
+    if (isViewerOpen) {
+      handleCloseOutputViewer();
+      return true;
+    }
+
+    if (isGraphViewOpen) {
+      setIsGraphViewOpen(false);
+      return true;
+    }
+
+    if (isSessionSwitcherOpen) {
+      setIsSessionSwitcherOpen(false);
+      return true;
+    }
+
+    if (expandedPanel) {
+      setExpandedPanel(null);
+      return true;
+    }
+
+    return false;
+  }, [
+    citationSourceDetailOpen,
+    expandedPanel,
+    graphSessionDetailOpen,
+    graphSourceDetailOpen,
+    isGraphViewOpen,
+    isSessionSwitcherOpen,
+    isShortcutHelpOpen,
+    isSlidesDialogOpen,
+    isViewerOpen,
+    handleCloseOutputViewer,
+  ]);
+
+  const shortcutBindings = useMemo<KeyboardShortcutBinding[]>(() => [
+    {
+      id: 'open-search',
+      combo: 'Ctrl+K',
+      handler: () => {
+        openSessionSearch();
+      },
+    },
+    {
+      id: 'create-notebook',
+      combo: 'Ctrl+N',
+      handler: () => {
+        createNotebookByShortcut();
+      },
+    },
+    {
+      id: 'focus-sources',
+      combo: 'Ctrl+1',
+      handler: () => {
+        focusPanel('sources');
+      },
+    },
+    {
+      id: 'focus-chat',
+      combo: 'Ctrl+2',
+      handler: () => {
+        focusPanel('chat');
+      },
+    },
+    {
+      id: 'focus-studio',
+      combo: 'Ctrl+3',
+      handler: () => {
+        focusPanel('studio');
+      },
+    },
+    {
+      id: 'send-message',
+      combo: 'Ctrl+Enter',
+      allowInInput: true,
+      handler: () => {
+        if (!notebooks.activeNotebookId || chat.isSending) return;
+        void chat.sendMessage();
+      },
+    },
+    {
+      id: 'close-overlay',
+      combo: 'Escape',
+      allowInInput: true,
+      preventDefault: false,
+      handler: (event) => {
+        if (closeActiveOverlay()) {
+          event.preventDefault();
+        }
+      },
+    },
+    {
+      id: 'open-shortcut-help',
+      combo: 'Ctrl+?',
+      handler: () => {
+        setIsShortcutHelpOpen(true);
+      },
+    },
+  ], [
+    chat.isSending,
+    chat.sendMessage,
+    closeActiveOverlay,
+    createNotebookByShortcut,
+    focusPanel,
+    notebooks.activeNotebookId,
+    openSessionSearch,
+  ]);
+
+  useKeyboardShortcuts(shortcutBindings);
+
   // Handle source click from graph view - open source detail dialog
   const handleGraphSourceClick = useCallback((source: SourceItem) => {
     setGraphSelectedSource(source);
@@ -498,18 +678,6 @@ export default function WorkspaceLayout() {
       }
     }
   }, [notebooks.activeNotebookId]);
-
-  // ESC key to collapse expanded panel
-  useEffect(() => {
-    if (!expandedPanel) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setExpandedPanel(null);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [expandedPanel]);
 
   useEffect(() => {
     if (!isViewerOpen) return;
@@ -565,7 +733,9 @@ export default function WorkspaceLayout() {
         {/* Sources Panel */}
         {(!expandedPanel || expandedPanel === 'sources') && (
         <section
-          className="flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden ux-fade-in"
+          ref={sourcesPanelRef}
+          tabIndex={-1}
+          className="flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden ux-fade-in focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 dark:focus-visible:ring-blue-500"
           style={{
             animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
           }}
@@ -669,7 +839,9 @@ export default function WorkspaceLayout() {
         {/* Chat Panel */}
         {(!expandedPanel || expandedPanel === 'chat') && (
         <section
-          className="flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden ux-fade-in"
+          ref={chatPanelRef}
+          tabIndex={-1}
+          className="flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden ux-fade-in focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 dark:focus-visible:ring-blue-500"
           style={{
             animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
           }}
@@ -775,7 +947,9 @@ export default function WorkspaceLayout() {
         {/* Studio Panel */}
         {(!expandedPanel || expandedPanel === 'studio') && (
         <section
-          className="flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden ux-fade-in"
+          ref={studioPanelRef}
+          tabIndex={-1}
+          className="flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden ux-fade-in focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 dark:focus-visible:ring-blue-500"
           style={{
             animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
           }}
@@ -832,6 +1006,12 @@ export default function WorkspaceLayout() {
         </section>
         )}
       </main>
+
+      <ShortcutHelpPanel
+        open={isShortcutHelpOpen}
+        shortcuts={WORKSPACE_SHORTCUTS}
+        onClose={() => setIsShortcutHelpOpen(false)}
+      />
 
       <Suspense fallback={<div className="fixed bottom-4 right-4 w-72"><SkeletonCard lines={3} /></div>}>
         <StudioOutputViewer

@@ -121,8 +121,9 @@ Week 3-5:  Phase 2  ─── [2a: Obsidian] ─────────
 | 2b | `enhance-ux-polish` | 🚧 进行中（32/34） | 已完成主流程开发 + 测试 + DevTools 验收；3.3/3.4（source 索引百分比 SSE 链路）暂缓 |
 | 2c | `enhance-source-batch-ops` | ✅ 已归档 | 2026-02-07 归档至 `archive/2026-02-07-enhance-source-batch-ops` |
 | 2d | `add-dark-mode-v2` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-dark-mode-v2` |
+| 2e | `add-keyboard-shortcuts` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-keyboard-shortcuts` |
 
-**下一优先级**: 在保留 `optimize-frontend-performance` 两项延后验收（2.5/2.6）并继续暂缓 Obsidian、`enhance-ux-polish` 的 3.3/3.4 的前提下，优先推进 `add-keyboard-shortcuts`，随后评估 `add-output-export-v2`。
+**下一优先级**: 在保留 `optimize-frontend-performance` 两项延后验收（2.5/2.6）并继续暂缓 Obsidian、`enhance-ux-polish` 的 3.3/3.4 的前提下，优先推进 `add-output-export-v2`，随后再评估其余低优先级提案。
 
 ## 被排除/暂缓的提案
 
