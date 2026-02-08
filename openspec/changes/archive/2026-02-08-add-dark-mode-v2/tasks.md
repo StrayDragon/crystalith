@@ -10,9 +10,9 @@
 - [x] 2.2 WorkspaceLayout 和面板容器适配
 - [x] 2.3 ChatPanel（消息气泡、输入框）适配
 - [x] 2.4 SourcesPanel（列表项、详情面板）适配
-- [ ] 2.5 OutputContent 和各类输出查看器适配
+- [x] 2.5 OutputContent 和各类输出查看器适配
 - [x] 2.6 对话框、弹窗、toast 组件适配
-- [ ] 2.7 图表/知识图谱组件适配
+- [x] 2.7 图表/知识图谱组件适配
 
 ## 3. 主题切换控件
 - [x] 3.1 WorkspaceHeader 添加主题切换按钮（太阳/月亮图标）
@@ -20,7 +20,7 @@
 - [x] 3.3 切换时平滑过渡动画
 
 ## 4. 验证
-- [ ] 4.1 所有页面在深色模式下无可读性问题
+- [x] 4.1 所有页面在深色模式下无可读性问题
 - [x] 4.2 主题切换时无闪烁（Flash of Wrong Theme）
 - [x] 4.3 刷新后主题偏好正确恢复
 - [x] 4.4 系统偏好变化时自动响应
@@ -57,4 +57,4 @@ flowchart TD
 - [x] **AC-4**: 主题切换按钮在 `WorkspaceHeader`（`features/workspace/layout/WorkspaceHeader.tsx`）中
 - [x] **AC-5**: 页面加载脚本在 `<head>` 中执行（防止 Flash of Wrong Theme），在 `index.html` 中添加
 - [x] **AC-6**: `pnpm run build` 成功，`pnpm test` 通过
-- [ ] **AC-7**: 手动验证：5 个以上页面/面板在深色模式下文本对比度满足 WCAG AA 标准（4.5:1）
+- [x] **AC-7**: 手动验证：5 个以上页面/面板在深色模式下文本对比度满足 WCAG AA 标准（4.5:1）

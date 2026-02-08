@@ -63,7 +63,7 @@ export default function FlashcardViewer({ items, className }: FlashcardViewerPro
   }, [handleFlip, handleNext, handlePrev]);
 
   if (total === 0) {
-    return <div className="text-sm text-gray-500">暂无闪卡内容。</div>;
+    return <div className="text-sm text-gray-500 dark:text-slate-400">暂无闪卡内容。</div>;
   }
 
   return (
@@ -73,7 +73,7 @@ export default function FlashcardViewer({ items, className }: FlashcardViewerPro
         <div className="relative h-56 w-full [perspective:1200px]">
           <button
             type="button"
-            className="absolute inset-0 h-full w-full rounded-2xl border border-gray-200 bg-white shadow-sm"
+            className="absolute inset-0 h-full w-full rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:shadow-none"
             onClick={handleFlip}
             aria-pressed={flipped}
             aria-label={flipped ? '查看问题' : '查看答案'}
@@ -90,8 +90,8 @@ export default function FlashcardViewer({ items, className }: FlashcardViewerPro
                 style={{ backfaceVisibility: 'hidden' }}
               >
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-widest text-gray-400">问题</div>
-                  <div className="mt-2 text-lg font-semibold text-gray-900">
+                  <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-400">问题</div>
+                  <div className="mt-2 text-lg font-semibold text-gray-900 dark:text-slate-100">
                     {card.question || '暂无问题'}
                   </div>
                 </div>
@@ -104,8 +104,8 @@ export default function FlashcardViewer({ items, className }: FlashcardViewerPro
                 }}
               >
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-widest text-gray-400">答案</div>
-                  <div className="mt-2 text-lg font-semibold text-gray-900">
+                  <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-400">答案</div>
+                  <div className="mt-2 text-lg font-semibold text-gray-900 dark:text-slate-100">
                     {card.answer || '暂无答案'}
                   </div>
                 </div>
@@ -114,11 +114,11 @@ export default function FlashcardViewer({ items, className }: FlashcardViewerPro
           </button>
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-          <div className="text-xs text-gray-500">空格翻转 · 左右键切换</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">空格翻转 · 左右键切换</div>
           <div className="flex gap-2">
             <button
               type="button"
-              className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 disabled:opacity-40"
+              className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 disabled:opacity-40 dark:border-slate-600 dark:text-slate-200"
               onClick={handlePrev}
               disabled={index === 0}
             >
@@ -126,14 +126,14 @@ export default function FlashcardViewer({ items, className }: FlashcardViewerPro
             </button>
             <button
               type="button"
-              className="rounded-full border border-gray-900 bg-gray-900 px-3 py-1 text-xs font-semibold text-white"
+              className="rounded-full border border-gray-900 bg-gray-900 px-3 py-1 text-xs font-semibold text-white dark:border-sky-500 dark:bg-sky-500 dark:text-slate-950"
               onClick={handleFlip}
             >
               翻转
             </button>
             <button
               type="button"
-              className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 disabled:opacity-40"
+              className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 disabled:opacity-40 dark:border-slate-600 dark:text-slate-200"
               onClick={handleNext}
               disabled={index === total - 1}
             >

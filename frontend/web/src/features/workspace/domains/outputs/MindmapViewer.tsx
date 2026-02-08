@@ -28,6 +28,8 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
+import { useTheme } from '../../shared/hooks/useTheme';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -235,9 +237,10 @@ function getAutoCollapsed(node: MindmapNode, depth: number, prefix: string, maxD
 interface InnerFlowProps {
   data: MindmapData;
   autoCollapseDepth: number;
+  isDarkTheme: boolean;
 }
 
-function InnerFlow({ data, autoCollapseDepth }: InnerFlowProps) {
+function InnerFlow({ data, autoCollapseDepth, isDarkTheme }: InnerFlowProps) {
   const { fitView } = useReactFlow();
 
   const [collapsed, setCollapsed] = useState(() =>
@@ -284,8 +287,8 @@ function InnerFlow({ data, autoCollapseDepth }: InnerFlowProps) {
     <>
       {/* Toolbar */}
       <div style={toolbarStyle}>
-        <button type="button" onClick={expandAll} style={btnStyle}>展开</button>
-        <button type="button" onClick={collapseAll} style={btnStyle}>折叠</button>
+        <button type="button" onClick={expandAll} style={isDarkTheme ? btnStyleDark : btnStyle}>展开</button>
+        <button type="button" onClick={collapseAll} style={isDarkTheme ? btnStyleDark : btnStyle}>折叠</button>
       </div>
       <ReactFlow
         nodes={nodes}
@@ -310,8 +313,12 @@ function InnerFlow({ data, autoCollapseDepth }: InnerFlowProps) {
         nodesFocusable={false}
         edgesReconnectable={false}
       >
-        <Controls position="top-right" showInteractive={false} />
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#e0e0e0" />
+        <Controls
+          position="top-right"
+          showInteractive={false}
+          className={isDarkTheme ? "!bg-slate-800 !border-slate-700 !shadow-lg [&_button]:!bg-slate-700 [&_button]:!border-slate-600 [&_button]:!text-slate-300 [&_button:hover]:!bg-slate-600" : "!bg-white !border-gray-200 !shadow-md [&_button]:!bg-white [&_button]:!border-gray-200 [&_button]:!text-gray-600 [&_button:hover]:!bg-gray-100"}
+        />
+        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color={isDarkTheme ? "#334155" : "#e0e0e0"} />
       </ReactFlow>
     </>
   );
@@ -322,14 +329,20 @@ function InnerFlow({ data, autoCollapseDepth }: InnerFlowProps) {
 // ============================================================================
 
 export function MindmapViewer({ data, className, autoCollapseDepth = 3 }: MindmapViewerProps) {
+  const { resolvedTheme } = useTheme();
+  const isDarkTheme = resolvedTheme === "dark";
+
   if (!data?.root) {
-    return <div className={className} style={{ padding: 16, color: '#666' }}>无效的思维导图数据</div>;
+    return <div className={className} style={{ padding: 16, color: isDarkTheme ? "#94a3b8" : "#666" }}>无效的思维导图数据</div>;
   }
 
   return (
-    <div className={className} style={{ width: '100%', height: 400, minHeight: 300, position: 'relative' }}>
+    <div
+      className={`rounded-lg border border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-900 ${className ?? ""}`.trim()}
+      style={{ width: "100%", height: 400, minHeight: 300, position: "relative" }}
+    >
       <ReactFlowProvider>
-        <InnerFlow data={data} autoCollapseDepth={autoCollapseDepth} />
+        <InnerFlow data={data} autoCollapseDepth={autoCollapseDepth} isDarkTheme={isDarkTheme} />
       </ReactFlowProvider>
     </div>
   );
@@ -356,6 +369,16 @@ const btnStyle: React.CSSProperties = {
   background: '#fff',
   cursor: 'pointer',
   color: '#333',
+};
+
+const btnStyleDark: React.CSSProperties = {
+  padding: '4px 8px',
+  fontSize: 12,
+  borderRadius: 4,
+  border: '1px solid #475569',
+  background: '#1e293b',
+  cursor: 'pointer',
+  color: '#cbd5e1',
 };
 
 export default MindmapViewer;

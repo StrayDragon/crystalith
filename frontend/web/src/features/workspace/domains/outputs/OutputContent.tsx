@@ -26,6 +26,6 @@ export default function OutputContent({ output }: OutputContentProps) {
 
   // Fallback: render as JSON
   return (
-    <pre className="StructuredOutputRaw">{JSON.stringify(output.content ?? {}, null, 2)}</pre>
+    <pre className="StructuredOutputRaw rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700 whitespace-pre-wrap dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200">{JSON.stringify(output.content ?? {}, null, 2)}</pre>
   );
 }

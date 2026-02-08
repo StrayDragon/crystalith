@@ -27,14 +27,26 @@ import TimelineViewer from '../TimelineViewer';
 
 function FallbackWarning() {
   return (
-    <div className="OutputFallbackWarning">
-      <span className="OutputFallbackIcon">⚠️</span>
-      <span>AI 模型生成失败。这可能是因为模型能力不足或响应格式不正确。建议：</span>
-      <ul>
-        <li>稍后重试</li>
-        <li>使用更强大的 AI 模型（如 GPT-4、Claude 等）</li>
-        <li>简化提示内容</li>
-      </ul>
+    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+      <div className="flex items-start gap-2">
+        <span aria-hidden="true">⚠️</span>
+        <div className="space-y-1">
+          <div>AI 模型生成失败。这可能是因为模型能力不足或响应格式不正确。建议：</div>
+          <ul className="list-disc pl-4">
+            <li>稍后重试</li>
+            <li>使用更强大的 AI 模型（如 GPT-4、Claude 等）</li>
+            <li>简化提示内容</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OutputError({ message }: { message: string }) {
+  return (
+    <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+      {message}
     </div>
   );
 }
@@ -60,7 +72,7 @@ export const faqPlugin: OutputPlugin = {
   enabled: true,
   render: (content, isFallback) => {
     const items = (content as any).items;
-    if (!Array.isArray(items)) return <div className="OutputError">无效的闪卡数据</div>;
+    if (!Array.isArray(items)) return <OutputError message="无效的闪卡数据" />;
     return (
       <div className="StructuredOutputFaq">
         {isFallback && <FallbackWarning />}
@@ -97,7 +109,7 @@ export const guidePlugin: OutputPlugin = {
   enabled: true,
   render: (content, isFallback) => {
     const modules = (content as any).modules;
-    if (!Array.isArray(modules)) return <div className="OutputError">无效的指南数据</div>;
+    if (!Array.isArray(modules)) return <OutputError message="无效的指南数据" />;
     return (
       <div className="StructuredOutputGuide">
         {isFallback && <FallbackWarning />}
@@ -129,7 +141,7 @@ export const timelinePlugin: OutputPlugin = {
   enabled: true,
   render: (content, isFallback) => {
     const events = (content as any).events;
-    if (!Array.isArray(events)) return <div className="OutputError">无效的时间轴数据</div>;
+    if (!Array.isArray(events)) return <OutputError message="无效的时间轴数据" />;
     return (
       <div className="StructuredOutputTimeline">
         {isFallback && <FallbackWarning />}
@@ -161,7 +173,7 @@ export const mindmapPlugin: OutputPlugin = {
   enabled: true,
   render: (content, isFallback) => {
     const root = (content as any).root;
-    if (!root) return <div className="OutputError">无效的思维导图数据</div>;
+    if (!root) return <OutputError message="无效的思维导图数据" />;
     return (
       <>
         {isFallback && <FallbackWarning />}
@@ -198,7 +210,7 @@ export const quizPlugin: OutputPlugin = {
   enabled: true,
   render: (content, isFallback) => {
     const questions = (content as any).questions;
-    if (!Array.isArray(questions)) return <div className="OutputError">无效的测验数据</div>;
+    if (!Array.isArray(questions)) return <OutputError message="无效的测验数据" />;
     return (
       <div className="StructuredOutputQuiz">
         {isFallback && <FallbackWarning />}
@@ -230,7 +242,7 @@ export const briefingPlugin: OutputPlugin = {
   enabled: true,
   render: (content, isFallback) => {
     const sections = (content as any).sections;
-    if (!Array.isArray(sections)) return <div className="OutputError">无效的报告数据</div>;
+    if (!Array.isArray(sections)) return <OutputError message="无效的报告数据" />;
     return (
       <div className="StructuredOutputBriefing">
         {isFallback && <FallbackWarning />}
@@ -268,20 +280,20 @@ export const slidesPlugin: OutputPlugin = {
       <div className="space-y-4">
         {isFallback && <FallbackWarning />}
         <div>
-          <div className="text-lg font-semibold text-gray-900">{title}</div>
-          <div className="text-xs text-gray-500">
+          <div className="text-lg font-semibold text-gray-900 dark:text-slate-100">{title}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">
             引擎：{(content as any).engine || 'slidev'}
           </div>
         </div>
         {outline?.slides ? (
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-            <div className="text-xs font-semibold text-gray-600 mb-2">大纲</div>
-            <div className="space-y-2 text-sm text-gray-800">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-slate-700 dark:bg-slate-900">
+            <div className="text-xs font-semibold text-gray-600 mb-2 dark:text-slate-300">大纲</div>
+            <div className="space-y-2 text-sm text-gray-800 dark:text-slate-200">
               {outline.slides.map((slide: any, index: number) => (
                 <div key={`${slide.title}-${index}`}>
                   <div className="font-semibold">{slide.title || `幻灯片 ${index + 1}`}</div>
                   {Array.isArray(slide.bullets) && slide.bullets.length > 0 && (
-                    <ul className="list-disc pl-5 text-xs text-gray-600">
+                    <ul className="list-disc pl-5 text-xs text-gray-600 dark:text-slate-400">
                       {slide.bullets.map((bullet: string, idx: number) => (
                         <li key={`${bullet}-${idx}`}>{bullet}</li>
                       ))}
@@ -293,11 +305,11 @@ export const slidesPlugin: OutputPlugin = {
           </div>
         ) : null}
         {markdown ? (
-          <pre className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700 whitespace-pre-wrap">
+          <pre className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700 whitespace-pre-wrap dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
             {markdown}
           </pre>
         ) : (
-          <div className="text-xs text-gray-500">尚未生成 Markdown。</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">尚未生成 Markdown。</div>
         )}
       </div>
     );

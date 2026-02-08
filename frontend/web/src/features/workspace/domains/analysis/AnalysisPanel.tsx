@@ -31,14 +31,14 @@ interface AnalysisPanelProps {
 
 // Color palette for topics
 const TOPIC_COLORS = [
-  { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', dot: 'bg-blue-500' },
-  { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', dot: 'bg-green-500' },
-  { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', dot: 'bg-amber-500' },
-  { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', dot: 'bg-purple-500' },
-  { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', dot: 'bg-rose-500' },
-  { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700', dot: 'bg-teal-500' },
-  { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700', dot: 'bg-indigo-500' },
-  { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', dot: 'bg-orange-500' },
+  { bg: 'bg-blue-50 dark:bg-blue-500/10', border: 'border-blue-200 dark:border-blue-500/30', text: 'text-blue-700 dark:text-blue-300', dot: 'bg-blue-500' },
+  { bg: 'bg-green-50 dark:bg-green-500/10', border: 'border-green-200 dark:border-green-500/30', text: 'text-green-700 dark:text-green-300', dot: 'bg-green-500' },
+  { bg: 'bg-amber-50 dark:bg-amber-500/10', border: 'border-amber-200 dark:border-amber-500/30', text: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' },
+  { bg: 'bg-purple-50 dark:bg-purple-500/10', border: 'border-purple-200 dark:border-purple-500/30', text: 'text-purple-700 dark:text-purple-300', dot: 'bg-purple-500' },
+  { bg: 'bg-rose-50 dark:bg-rose-500/10', border: 'border-rose-200 dark:border-rose-500/30', text: 'text-rose-700 dark:text-rose-300', dot: 'bg-rose-500' },
+  { bg: 'bg-teal-50 dark:bg-teal-500/10', border: 'border-teal-200 dark:border-teal-500/30', text: 'text-teal-700 dark:text-teal-300', dot: 'bg-teal-500' },
+  { bg: 'bg-indigo-50 dark:bg-indigo-500/10', border: 'border-indigo-200 dark:border-indigo-500/30', text: 'text-indigo-700 dark:text-indigo-300', dot: 'bg-indigo-500' },
+  { bg: 'bg-orange-50 dark:bg-orange-500/10', border: 'border-orange-200 dark:border-orange-500/30', text: 'text-orange-700 dark:text-orange-300', dot: 'bg-orange-500' },
 ];
 
 function getTopicColor(index: number) {
@@ -70,25 +70,25 @@ function TopicCard({ topic, index }: { topic: Topic; index: number }) {
             <Chip
               value={`${topic.chunk_ids.length} 片段`}
               size="sm"
-              className="bg-white/80 text-gray-600 text-[10px] h-5 py-0 px-1.5 font-medium"
+              className="bg-white/80 text-gray-600 text-[10px] h-5 py-0 px-1.5 font-medium dark:bg-slate-900/70 dark:text-slate-200"
             />
             {topic.keywords.length > 0 && (
               expanded ? (
-                <ExpandLessIcon className="h-4 w-4 text-gray-400" />
+                <ExpandLessIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
               ) : (
-                <ExpandMoreIcon className="h-4 w-4 text-gray-400" />
+                <ExpandMoreIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
               )
             )}
           </div>
         </div>
       </button>
       {expanded && topic.keywords.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-gray-200/50">
+        <div className="mt-2 pt-2 border-t border-gray-200/50 dark:border-slate-600/60">
           <div className="flex flex-wrap gap-1">
             {topic.keywords.map((keyword, i) => (
               <span
                 key={i}
-                className="px-1.5 py-0.5 bg-white/60 rounded text-[10px] text-gray-600 font-medium"
+                className="px-1.5 py-0.5 bg-white/60 rounded text-[10px] text-gray-600 font-medium dark:bg-slate-800/80 dark:text-slate-200"
               >
                 {keyword}
               </span>
@@ -109,26 +109,26 @@ function RelationItem({ relation, type }: { relation: Relation; type: 'similar' 
     <div
       className={`flex items-center gap-2 p-2 rounded-lg border ${
         isContradiction
-          ? 'bg-red-50/50 border-red-200'
-          : 'bg-gray-50 border-gray-200'
+          ? 'bg-red-50/50 border-red-200 dark:bg-red-500/10 dark:border-red-500/30'
+          : 'bg-gray-50 border-gray-200 dark:bg-slate-800/70 dark:border-slate-700'
       }`}
     >
       <div className="flex items-center gap-1.5 min-w-0 flex-1">
-        <span className="text-[10px] text-gray-500 font-mono">#{relation.source_chunk_id}</span>
-        <span className={`text-[10px] ${isContradiction ? 'text-red-400' : 'text-gray-400'}`}>
+        <span className="text-[10px] text-gray-500 font-mono dark:text-slate-400">#{relation.source_chunk_id}</span>
+        <span className={`text-[10px] ${isContradiction ? 'text-red-500 dark:text-red-300' : 'text-gray-400 dark:text-slate-500'}`}>
           {isContradiction ? '⚡' : '↔'}
         </span>
-        <span className="text-[10px] text-gray-500 font-mono">#{relation.target_chunk_id}</span>
+        <span className="text-[10px] text-gray-500 font-mono dark:text-slate-400">#{relation.target_chunk_id}</span>
       </div>
       <Tooltip content={`相似度: ${scorePercent}%`}>
         <div className="flex items-center gap-1">
-          <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+          <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden dark:bg-slate-700">
             <div
               className={`h-full rounded-full ${isContradiction ? 'bg-red-400' : 'bg-blue-400'}`}
               style={{ width: `${scorePercent}%` }}
             />
           </div>
-          <span className="text-[10px] text-gray-500 font-medium w-8 text-right">
+          <span className="text-[10px] text-gray-500 font-medium w-8 text-right dark:text-slate-400">
             {scorePercent}%
           </span>
         </div>
@@ -156,41 +156,41 @@ function Section({
   const [collapsed, setCollapsed] = useState(false);
 
   const colorClasses = {
-    gray: 'text-gray-600',
-    blue: 'text-blue-600',
-    red: 'text-red-600',
+    gray: 'text-gray-600 dark:text-slate-300',
+    blue: 'text-blue-600 dark:text-blue-300',
+    red: 'text-red-600 dark:text-red-300',
   };
 
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
+    <div className="border border-gray-200 rounded-xl overflow-hidden dark:border-slate-700">
       <button
         type="button"
-        className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors dark:bg-slate-800 dark:hover:bg-slate-700"
         onClick={() => setCollapsed(!collapsed)}
       >
         <div className="flex items-center gap-2">
           <span className={colorClasses[color]}>{icon}</span>
-          <Typography variant="small" className="font-semibold text-xs text-gray-800">
+          <Typography variant="small" className="font-semibold text-xs text-gray-800 dark:text-slate-100">
             {title}
           </Typography>
           <Chip
             value={count}
             size="sm"
             className={`${
-              color === 'red' ? 'bg-red-100 text-red-700' : 'bg-gray-200 text-gray-700'
+              color === 'red' ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300' : 'bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-slate-200'
             } text-[10px] h-5 py-0 px-1.5 font-semibold`}
           />
         </div>
         {collapsed ? (
-          <ExpandMoreIcon className="h-4 w-4 text-gray-400" />
+          <ExpandMoreIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
         ) : (
-          <ExpandLessIcon className="h-4 w-4 text-gray-400" />
+          <ExpandLessIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
         )}
       </button>
       {!collapsed && (
         <div className="p-3">
           {count === 0 ? (
-            <Typography variant="small" className="text-gray-400 text-xs text-center py-2">
+            <Typography variant="small" className="text-gray-400 text-xs text-center py-2 dark:text-slate-500">
               {emptyMessage}
             </Typography>
           ) : (
@@ -218,11 +218,11 @@ function AnalysisPanel({
   if (sourceCount === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-        <HubIcon className="h-12 w-12 text-gray-300 mb-3" />
-        <Typography variant="small" className="text-gray-500 font-medium">
+        <HubIcon className="h-12 w-12 text-gray-300 mb-3 dark:text-slate-600" />
+        <Typography variant="small" className="text-gray-500 font-medium dark:text-slate-300">
           添加来源后可进行跨文档分析
         </Typography>
-        <Typography variant="small" className="text-gray-400 text-xs mt-1">
+        <Typography variant="small" className="text-gray-400 text-xs mt-1 dark:text-slate-500">
           系统将自动发现来源之间的关联、主题和潜在矛盾
         </Typography>
       </div>
@@ -233,8 +233,8 @@ function AnalysisPanel({
   if (isLoading && !analysis) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6">
-        <Spinner className="h-8 w-8 text-gray-400" />
-        <Typography variant="small" className="text-gray-500 mt-3 font-medium">
+        <Spinner className="h-8 w-8 text-gray-400 dark:text-slate-500" />
+        <Typography variant="small" className="text-gray-500 mt-3 font-medium dark:text-slate-300">
           正在分析来源...
         </Typography>
       </div>
@@ -253,7 +253,7 @@ function AnalysisPanel({
           variant="text"
           size="sm"
           onClick={handleRefresh}
-          className="mt-3 normal-case text-gray-600"
+          className="mt-3 normal-case text-gray-600 dark:text-slate-300"
         >
           重试
         </Button>
@@ -265,11 +265,11 @@ function AnalysisPanel({
   if (!analysis) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-        <HubIcon className="h-12 w-12 text-gray-300 mb-3" />
-        <Typography variant="small" className="text-gray-500 font-medium">
+        <HubIcon className="h-12 w-12 text-gray-300 mb-3 dark:text-slate-600" />
+        <Typography variant="small" className="text-gray-500 font-medium dark:text-slate-300">
           点击下方按钮开始分析
         </Typography>
-        <Typography variant="small" className="text-gray-400 text-xs mt-1 mb-4">
+        <Typography variant="small" className="text-gray-400 text-xs mt-1 mb-4 dark:text-slate-500">
           分析 {sourceCount} 个来源的关联和主题
         </Typography>
         <Button
@@ -277,7 +277,7 @@ function AnalysisPanel({
           size="sm"
           onClick={handleRefresh}
           disabled={isLoading}
-          className="flex items-center gap-2 bg-gray-900 normal-case"
+          className="flex items-center gap-2 bg-gray-900 normal-case dark:bg-sky-500 dark:text-slate-950"
         >
           {isLoading ? <Spinner className="h-4 w-4" /> : <HubIcon style={{ fontSize: 16 }} />}
           开始分析
@@ -293,10 +293,10 @@ function AnalysisPanel({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700">
         <div className="flex items-center gap-2">
-          <HubIcon style={{ fontSize: 18 }} className="text-gray-500" />
-          <Typography variant="small" className="font-semibold text-gray-800 text-xs">
+          <HubIcon style={{ fontSize: 18 }} className="text-gray-500 dark:text-slate-400" />
+          <Typography variant="small" className="font-semibold text-gray-800 text-xs dark:text-slate-100">
             跨文档分析
           </Typography>
         </div>
@@ -310,7 +310,7 @@ function AnalysisPanel({
           >
             <RefreshIcon
               style={{ fontSize: 16 }}
-              className={`text-gray-500 ${isLoading ? 'animate-spin' : ''}`}
+              className={`text-gray-500 dark:text-slate-400 ${isLoading ? 'animate-spin' : ''}`}
             />
           </Button>
         </Tooltip>
@@ -345,7 +345,7 @@ function AnalysisPanel({
               <RelationItem key={index} relation={relation} type="similar" />
             ))}
             {similarRelations.length > 20 && (
-              <Typography variant="small" className="text-gray-400 text-[10px] text-center pt-1">
+              <Typography variant="small" className="text-gray-400 text-[10px] text-center pt-1 dark:text-slate-500">
                 还有 {similarRelations.length - 20} 个关联...
               </Typography>
             )}
@@ -368,30 +368,30 @@ function AnalysisPanel({
         </Section>
 
         {/* Summary Stats */}
-        <Card className="bg-gray-50 border border-gray-200 shadow-none">
+        <Card className="bg-gray-50 border border-gray-200 shadow-none dark:bg-slate-800 dark:border-slate-700">
           <CardBody className="p-3">
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
-                <Typography variant="h6" className="text-lg font-bold text-gray-800">
+                <Typography variant="h6" className="text-lg font-bold text-gray-800 dark:text-slate-100">
                   {topics.length}
                 </Typography>
-                <Typography variant="small" className="text-[10px] text-gray-500 font-medium">
+                <Typography variant="small" className="text-[10px] text-gray-500 font-medium dark:text-slate-400">
                   主题
                 </Typography>
               </div>
               <div>
-                <Typography variant="h6" className="text-lg font-bold text-gray-800">
+                <Typography variant="h6" className="text-lg font-bold text-gray-800 dark:text-slate-100">
                   {similarRelations.length}
                 </Typography>
-                <Typography variant="small" className="text-[10px] text-gray-500 font-medium">
+                <Typography variant="small" className="text-[10px] text-gray-500 font-medium dark:text-slate-400">
                   关联
                 </Typography>
               </div>
               <div>
-                <Typography variant="h6" className="text-lg font-bold text-red-600">
+                <Typography variant="h6" className="text-lg font-bold text-red-600 dark:text-red-300">
                   {contradictions.length}
                 </Typography>
-                <Typography variant="small" className="text-[10px] text-gray-500 font-medium">
+                <Typography variant="small" className="text-[10px] text-gray-500 font-medium dark:text-slate-400">
                   矛盾
                 </Typography>
               </div>
