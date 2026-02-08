@@ -19,8 +19,6 @@ import {
   Description as DescriptionIcon,
   CloudUpload as CloudUploadIcon,
   Language as LanguageIcon,
-  School as ScholarIcon,
-  Article as ArticleIcon,
   Speed as SpeedIcon,
   Psychology as PsychologyIcon,
   ExpandMore as ExpandMoreIcon,
@@ -636,21 +634,9 @@ function SourcesPanel({
     }
   }, [research]);
 
-  useFocusTrap({
-    active: researchDetailOpen && Boolean(research.activeSession),
-    containerRef: researchModalRef,
-    onEscape: handleCloseResearchDetail,
-  });
-
+  // Engine is now fixed to 'Web' only (Scholar/Docs removed for now)
   const getEngineIcon = () => {
-    switch (engine) {
-      case 'Scholar':
-        return <ScholarIcon style={{ fontSize: 16 }} />;
-      case 'Docs':
-        return <ArticleIcon style={{ fontSize: 16 }} />;
-      default:
-        return <LanguageIcon style={{ fontSize: 16 }} />;
-    }
+    return <LanguageIcon style={{ fontSize: 16 }} />;
   };
 
   const getModeIcon = () => {
@@ -843,32 +829,12 @@ function SourcesPanel({
           </div>
 
           {/* Search Options */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700">
-            {/* Engine Select */}
-            <Menu placement="bottom-start">
-              <MenuHandler>
-                <Button
-                  variant="outlined"
-                  size="sm"
-                  className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border-gray-300 bg-white dark:bg-slate-900 text-gray-800 normal-case font-normal text-[11px] hover:bg-gray-100 dark:hover:bg-slate-700"
-                >
-                  {getEngineIcon()}
-                  {engine}
-                  <ExpandMoreIcon style={{ fontSize: 12 }} />
-                </Button>
-              </MenuHandler>
-              <MenuList className="min-w-[100px] p-1">
-                {['Web', 'Scholar', 'Docs'].map((opt) => (
-                  <MenuItem
-                    key={opt}
-                    className={`py-1.5 px-3 text-xs ${engine === opt ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
-                    onClick={() => setEngine(opt)}
-                  >
-                    {opt}
-                  </MenuItem>
-                ))}
-              </MenuList>
-            </Menu>
+          <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 border-t border-gray-200">
+            {/* Engine indicator (Web only, Scholar/Docs removed for now) */}
+            <div className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border border-gray-300 bg-white text-gray-800 text-[11px]">
+              {getEngineIcon()}
+              <span>Web</span>
+            </div>
 
             {/* Mode Select */}
             <Menu placement="bottom-start">

@@ -22,10 +22,9 @@ log = get_logger(__name__)
 
 
 # Engine mappings for different search modes
+# Note: Scholar and Docs modes removed for now (frontend only supports Web)
 MODE_ENGINE_MAP: dict[str, list[str]] = {
     "Web": ["google", "bing", "duckduckgo"],
-    "Scholar": ["google_scholar", "arxiv"],
-    "Docs": ["github", "gitlab"],
 }
 
 
