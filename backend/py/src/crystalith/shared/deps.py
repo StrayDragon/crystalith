@@ -28,12 +28,24 @@ async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]
         yield session
 
 
-def get_embedding_provider(settings: Settings = Depends(get_settings)) -> EmbeddingProvider:
-    return create_embedding_provider(settings)
+def get_embedding_provider(request: Request) -> EmbeddingProvider:
+    provider = getattr(request.app.state, "embedding_provider", None)
+    if provider is None:
+        provider = create_embedding_provider(request.app.state.settings)
+        request.app.state.embedding_provider = provider
+    return provider
 
 
-def get_chat_provider(settings: Settings = Depends(get_settings)) -> ChatProvider:
-    return create_chat_provider(settings)
+def get_ai_provider(request: Request) -> ChatProvider:
+    provider = getattr(request.app.state, "ai_provider", None)
+    if provider is None:
+        provider = create_chat_provider(request.app.state.settings)
+        request.app.state.ai_provider = provider
+    return provider
+
+
+def get_chat_provider(request: Request) -> ChatProvider:
+    return get_ai_provider(request)
 
 
 def get_transcription_provider(settings: Settings = Depends(get_settings)) -> TranscriptionProvider:

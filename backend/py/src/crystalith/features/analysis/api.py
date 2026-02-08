@@ -12,7 +12,7 @@ from .clustering import cluster_topics
 from .contradiction import detect_contradictions
 from .correlation import detect_relations
 from .types import AnalysisResult
-from crystalith.shared.deps import get_chat_provider, get_db_session, get_vector_store
+from crystalith.shared.deps import get_ai_provider, get_db_session, get_vector_store
 
 
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/analysis", tags=["analysis"])
@@ -27,7 +27,7 @@ async def analyze_notebook(
     notebook_id: int,
     session: AsyncSession = Depends(get_db_session),
     vector_store: VectorStore = Depends(get_vector_store),
-    chatter: ChatProvider = Depends(get_chat_provider),
+    chatter: ChatProvider = Depends(get_ai_provider),
 ) -> AnalysisResult:
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:

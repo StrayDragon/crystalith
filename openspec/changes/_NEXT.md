@@ -1,6 +1,6 @@
 # NEXT - 续做接力记录
 
-更新时间：2026-02-08 11:56 CST
+更新时间：2026-02-08 12:38 CST
 分支：`main`
 
 ## 1) 当前总状态（下次开工先看这里）
@@ -10,7 +10,8 @@
 - `add-dark-mode-v2` 已归档：`openspec/changes/archive/2026-02-08-add-dark-mode-v2/`
 - `add-keyboard-shortcuts` 已完成并归档：`openspec/changes/archive/2026-02-08-add-keyboard-shortcuts/`
 - `add-output-export-v2` 已完成并归档：`openspec/changes/archive/2026-02-08-add-output-export-v2/`（`workspace-ui` spec 已更新）
-- `_SEQ` 已更新：补齐 `1a/2b/2f` 归档状态；下一步评估新提案
+- `add-backend-dependency-injection` 已完成并归档：`openspec/changes/archive/2026-02-08-add-backend-dependency-injection/`
+- `_SEQ` 已更新：补齐 DI 归档状态；下一步推进 migration / caching
 
 ## 2) 本轮已完成（开发 -> 测试 -> 验收）
 
@@ -75,7 +76,7 @@
 ## 3) 下一步（按 _SEQ）
 
 1. Obsidian 相关继续暂缓。
-2. 若继续推进新提案：优先从 `add-database-migration` / `add-backend-dependency-injection` 等低耦合项开始。
+2. 低耦合项按顺序推进：`add-database-migration` → `add-caching-layer`。
 3. 若要补齐 SSE 进度链路：建议新建独立 change（从 `source-ingestion` / `workspace-ui` 两端拆分任务）。
 
 ## 4) 备注

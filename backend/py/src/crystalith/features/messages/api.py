@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from crystalith.shared.db.deps import get_db_session
+from crystalith.shared.deps import get_db_session
 
 from . import service
 from .schemas import MessageCreate, MessageRead
