@@ -122,8 +122,9 @@ Week 3-5:  Phase 2  ─── [2a: Obsidian] ─────────
 | 2c | `enhance-source-batch-ops` | ✅ 已归档 | 2026-02-07 归档至 `archive/2026-02-07-enhance-source-batch-ops` |
 | 2d | `add-dark-mode-v2` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-dark-mode-v2` |
 | 2e | `add-keyboard-shortcuts` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-keyboard-shortcuts` |
+| 2f | `add-output-export-v2` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-output-export-v2` |
 
-**下一优先级**: 在保留 `optimize-frontend-performance` 两项延后验收（2.5/2.6）并继续暂缓 Obsidian、`enhance-ux-polish` 的 3.3/3.4 的前提下，优先推进 `add-output-export-v2`，随后再评估其余低优先级提案。
+**下一优先级**: 在继续暂缓 Obsidian、并保留 `optimize-frontend-performance` 的 2.5/2.6 与 `enhance-ux-polish` 的 3.3/3.4 延后项的前提下，下一步优先评估是否要收尾上述延后项或启动新的低优先级提案（例如 `add-database-migration`）。
 
 ## 被排除/暂缓的提案
 
