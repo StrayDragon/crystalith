@@ -357,6 +357,28 @@ class VectorStorageSettings(BaseModel):
     chroma: VectorStorageChromaSettings = Field(default_factory=VectorStorageChromaSettings)
 
 
+class CacheSettings(BaseModel):
+    """Cache settings."""
+
+    provider: Literal["memory", "redis"] = "memory"
+    ttl: int = Field(60, description="Default cache TTL in seconds (0 disables TTL)")
+    max_size: int = Field(2048, description="Maximum number of cached keys for in-memory cache")
+    redis_url: str | None = Field(None, description="Redis connection URL when provider=redis")
+
+    @field_validator("ttl", "max_size")
+    @classmethod
+    def _non_negative(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("must be >= 0")
+        return value
+
+    @model_validator(mode="after")
+    def _validate_redis_url(self) -> "CacheSettings":
+        if self.provider == "redis" and (self.redis_url is None or not self.redis_url.strip()):
+            raise ValueError("redis_url is required when cache.provider is 'redis'")
+        return self
+
+
 class EmbeddingSettings(BaseModel):
     """
     Embedding settings.
@@ -658,6 +680,7 @@ class Settings(BaseSettings):
     app: AppSettings = Field(default_factory=AppSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     vector_storage: VectorStorageSettings = Field(default_factory=VectorStorageSettings)
+    cache: CacheSettings = Field(default_factory=CacheSettings)
 
     # === Feature Settings ===
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)

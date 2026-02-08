@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.shared.ai.types import ChatMessage
+from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import RefineSettings, Settings
 from crystalith.shared.db import Chunk, Notebook, Source
 from crystalith.shared.schemas.citations import Citation
@@ -23,10 +24,11 @@ from crystalith.shared.utils import (
     format_context,
     parse_bullets,
 )
-from crystalith.shared.vector_storage import VectorSearchResult, VectorStore
+from crystalith.shared.vector_storage import VectorSearchResult, VectorStore, cached_vector_search
 
 from crystalith.shared.deps import (
     get_ai_provider,
+    get_cache_provider,
     get_db_session,
     get_embedding_provider,
     get_settings,
@@ -234,6 +236,7 @@ async def refine_batch(
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     chatter: ChatProvider = Depends(get_ai_provider),
     vector_store: VectorStore = Depends(get_vector_store),
+    cache: CacheProvider = Depends(get_cache_provider),
     settings: Settings = Depends(get_settings),
 ) -> RefineBatchResponse:
     notebook = await session.get(Notebook, notebook_id)
@@ -259,7 +262,9 @@ async def refine_batch(
             evidence = False
         else:
             query_vector = embeddings[0]
-            results = await vector_store.search(
+            results = await cached_vector_search(
+                cache=cache,
+                vector_store=vector_store,
                 notebook_id=notebook_id,
                 query_vector=query_vector,
                 top_k=payload.top_k,
