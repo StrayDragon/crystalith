@@ -125,8 +125,9 @@ Week 3-5:  Phase 2  ─── [2a: Obsidian] ─────────
 | 2f | `add-output-export-v2` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-output-export-v2` |
 | LC | `add-backend-dependency-injection` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-backend-dependency-injection` |
 | LC | `add-database-migration` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-database-migration` |
+| LC | `add-caching-layer` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-caching-layer` |
 
-**下一优先级**: 在继续暂缓 Obsidian 的前提下，下一步优先推进低耦合提案：`add-caching-layer`。
+**下一优先级**: 在继续暂缓 Obsidian 的前提下，下一步可整理/推进剩余基础设施提案或新建 SSE 进度链路 change。
 
 ## 被排除/暂缓的提案
 

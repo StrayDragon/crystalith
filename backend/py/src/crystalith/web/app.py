@@ -17,6 +17,7 @@ from sqlalchemy import delete, select
 from cl_fastapix import FastAPIX
 from cl_sqlalchemyx.mgrs import AsyncDBManager
 
+from crystalith.shared.cache import CacheProvider, create_cache_provider
 from crystalith.shared.config import ConfigManager, Settings
 from crystalith.shared.db import Source, create_db_manager
 from crystalith.shared.db.migrations import upgrade_head
@@ -74,10 +75,12 @@ def create_app(
     db_manager: AsyncDBManager | None = None,
     vector_store: VectorStore | None = None,
     task_queue: TaskQueue | None = None,
+    cache_provider: CacheProvider | None = None,
 ) -> FastAPIX:
     resolved = settings or _load_settings()
     db = db_manager or create_db_manager(resolved.database.url)
     store = vector_store if vector_store is not None else create_vector_store(resolved)
+    cache = cache_provider or create_cache_provider(resolved)
     queue = task_queue or TaskQueue(
         db_manager=db,
         settings=resolved,
@@ -113,6 +116,10 @@ def create_app(
             close_vector_store = getattr(app.state.vector_store, "close", None)
             if close_vector_store is not None:
                 await close_vector_store()
+            cache_provider_instance = getattr(app.state, "cache", None)
+            close_cache = getattr(cache_provider_instance, "close", None) if cache_provider_instance else None
+            if close_cache is not None:
+                await close_cache()
             stop_worker = getattr(app.state.task_queue, "stop_worker", None)
             if stop_worker is not None:
                 await stop_worker()
@@ -128,6 +135,7 @@ def create_app(
     app.state.settings = resolved
     app.state.db = db
     app.state.vector_store = store
+    app.state.cache = cache
     app.state.task_queue = queue
 
     app.add_middleware(

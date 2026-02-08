@@ -96,6 +96,47 @@
       "title": "BrowserlessSettings",
       "type": "object"
     },
+    "CacheSettings": {
+      "description": "Cache settings.",
+      "properties": {
+        "provider": {
+          "default": "memory",
+          "enum": [
+            "memory",
+            "redis"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "ttl": {
+          "default": 60,
+          "description": "Default cache TTL in seconds (0 disables TTL)",
+          "title": "Ttl",
+          "type": "integer"
+        },
+        "max_size": {
+          "default": 2048,
+          "description": "Maximum number of cached keys for in-memory cache",
+          "title": "Max Size",
+          "type": "integer"
+        },
+        "redis_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Redis connection URL when provider=redis",
+          "title": "Redis Url"
+        }
+      },
+      "title": "CacheSettings",
+      "type": "object"
+    },
     "ChatSettings": {
       "description": "Chat settings.\n\nUse models.defaults.chat to specify the default chat model.\nThis section only contains chat-specific options.",
       "properties": {},
@@ -1161,6 +1202,9 @@
     },
     "vector_storage": {
       "$ref": "#/$defs/VectorStorageSettings"
+    },
+    "cache": {
+      "$ref": "#/$defs/CacheSettings"
     },
     "embedding": {
       "$ref": "#/$defs/EmbeddingSettings"

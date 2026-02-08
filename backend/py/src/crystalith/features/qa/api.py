@@ -14,16 +14,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.shared.ai.types import ChatMessage
+from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import Settings
 from crystalith.shared.context import ContextStats, ContextWindow, TokenCounter
 from crystalith.shared.db import Chunk, Message, Notebook, Session, Source
 from crystalith.shared.schemas.citations import Citation
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.utils import extract_page_number, extract_paragraph_index, format_context
-from crystalith.shared.vector_storage import VectorSearchResult, VectorStore
+from crystalith.shared.vector_storage import VectorSearchResult, VectorStore, cached_vector_search
 
 from crystalith.shared.deps import (
     get_ai_provider,
+    get_cache_provider,
     get_db_session,
     get_embedding_provider,
     get_settings,
@@ -139,6 +141,7 @@ async def ask_question(
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     chatter: ChatProvider = Depends(get_ai_provider),
     vector_store: VectorStore = Depends(get_vector_store),
+    cache: CacheProvider = Depends(get_cache_provider),
     settings: Settings = Depends(get_settings),
 ) -> QAResponse:
     notebook = await session.get(Notebook, notebook_id)
@@ -251,7 +254,9 @@ async def ask_question(
             context=ContextStatsResponse.model_validate(stats),
         )
     query_vector = embeddings[0]
-    results = await vector_store.search(
+    results = await cached_vector_search(
+        cache=cache,
+        vector_store=vector_store,
         notebook_id=notebook_id,
         query_vector=query_vector,
         top_k=payload.top_k,
@@ -452,6 +457,7 @@ async def ask_question_stream(
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     chatter: ChatProvider = Depends(get_ai_provider),
     vector_store: VectorStore = Depends(get_vector_store),
+    cache: CacheProvider = Depends(get_cache_provider),
     settings: Settings = Depends(get_settings),
 ) -> StreamingResponse:
     """
@@ -599,7 +605,9 @@ async def ask_question_stream(
         query_vector = embeddings[0]
         if await request.is_disconnected():
             return
-        results = await vector_store.search(
+        results = await cached_vector_search(
+            cache=cache,
+            vector_store=vector_store,
             notebook_id=notebook_id,
             query_vector=query_vector,
             top_k=payload.top_k,
