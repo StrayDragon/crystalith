@@ -39,6 +39,7 @@ import {
 import type { AnalysisResult } from '../../../../api/generated';
 import type { SourceItem, OutputItem, SessionSummary, ChatMessage } from '../../shared/types';
 import { useLayer } from '../../../../shared/layer';
+import { useTheme } from '../../shared/hooks/useTheme';
 
 // Cache for node positions (survives component unmount within session)
 const nodePositionsCache = new Map<string, { x: number; y: number }>();
@@ -187,7 +188,7 @@ function KnowledgeNode({ data }: NodeProps<Node<KnowledgeNodeData>>) {
         {subtitle && (
           <Typography
             variant="small"
-            className="text-[10px] text-gray-500 truncate pl-2"
+            className="text-[10px] text-gray-500 truncate pl-2 dark:text-gray-400"
           >
             {subtitle}
           </Typography>
@@ -199,7 +200,7 @@ function KnowledgeNode({ data }: NodeProps<Node<KnowledgeNodeData>>) {
             <Chip
               value={`${relationCount} 关联`}
               size="sm"
-              className="bg-white/80 text-gray-600 text-[8px] h-4 py-0 px-1 font-medium"
+              className="bg-white/80 text-gray-600 text-[8px] h-4 py-0 px-1 font-medium dark:bg-slate-900/70 dark:text-slate-200"
             />
           </div>
         )}
@@ -700,15 +701,17 @@ function KnowledgeGraphView({
   const totalNodes = sources.length + outputs.length + sessions.length;
 
   const { style: modalStyle } = useLayer('modal');
+  const { resolvedTheme } = useTheme();
+  const isDarkTheme = resolvedTheme === 'dark';
 
   return (
-    <div className="fixed inset-0 bg-gray-900/95 flex flex-col" style={modalStyle}>
+    <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900/95 flex flex-col" style={modalStyle}>
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 bg-gray-800/90 backdrop-blur-sm">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white/90 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/90">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <HubIcon className="text-blue-400" style={{ fontSize: 24 }} />
-            <Typography variant="h6" className="text-white font-semibold">
+            <Typography variant="h6" className="text-gray-900 dark:text-white font-semibold">
               知识图谱
             </Typography>
           </div>
@@ -745,12 +748,12 @@ function KnowledgeGraphView({
 
         <div className="flex items-center gap-2">
           {/* Visibility toggles */}
-          <div className="flex items-center gap-1 mr-4 bg-gray-700/50 rounded-lg p-1">
+          <div className="flex items-center gap-1 mr-4 bg-gray-100/80 rounded-lg p-1 dark:bg-gray-700/50">
             <Tooltip content={visibility.sources ? '隐藏来源' : '显示来源'}>
               <button
                 type="button"
                 className={`p-1.5 rounded transition-colors ${
-                  visibility.sources ? 'bg-blue-500/30 text-blue-400' : 'text-gray-500 hover:text-gray-300'
+                  visibility.sources ? 'bg-blue-500/20 text-blue-500 dark:bg-blue-500/30 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
                 }`}
                 onClick={() => toggleVisibility('sources')}
               >
@@ -761,7 +764,7 @@ function KnowledgeGraphView({
               <button
                 type="button"
                 className={`p-1.5 rounded transition-colors ${
-                  visibility.outputs ? 'bg-purple-500/30 text-purple-400' : 'text-gray-500 hover:text-gray-300'
+                  visibility.outputs ? 'bg-purple-500/20 text-purple-500 dark:bg-purple-500/30 dark:text-purple-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
                 }`}
                 onClick={() => toggleVisibility('outputs')}
               >
@@ -772,7 +775,7 @@ function KnowledgeGraphView({
               <button
                 type="button"
                 className={`p-1.5 rounded transition-colors ${
-                  visibility.sessions ? 'bg-green-500/30 text-green-400' : 'text-gray-500 hover:text-gray-300'
+                  visibility.sessions ? 'bg-green-500/20 text-green-500 dark:bg-green-500/30 dark:text-green-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
                 }`}
                 onClick={() => toggleVisibility('sessions')}
               >
@@ -786,7 +789,7 @@ function KnowledgeGraphView({
               variant="text"
               size="sm"
               onClick={handleResetPositions}
-              className="text-gray-300 hover:text-white hover:bg-gray-700"
+              className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
             >
               <ResetLayoutIcon />
             </IconButton>
@@ -797,7 +800,7 @@ function KnowledgeGraphView({
               size="sm"
               onClick={onRefresh}
               disabled={isLoading || !isConnected}
-              className="text-gray-300 hover:text-white hover:bg-gray-700"
+              className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
             >
               <RefreshIcon className={isLoading ? 'animate-spin' : ''} />
             </IconButton>
@@ -808,7 +811,7 @@ function KnowledgeGraphView({
               size="sm"
               onClick={onClose}
               aria-label="关闭知识图谱"
-              className="text-gray-300 hover:text-white hover:bg-gray-700"
+              className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
             >
               <CloseIcon />
             </IconButton>
@@ -820,18 +823,18 @@ function KnowledgeGraphView({
       <div className="flex-1 relative">
         {totalNodes === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <HubIcon className="h-16 w-16 text-gray-600 mb-4" />
-            <Typography variant="h6" className="text-gray-400 mb-2">
+            <HubIcon className="h-16 w-16 text-gray-400 dark:text-gray-600 mb-4" />
+            <Typography variant="h6" className="text-gray-600 dark:text-gray-400 mb-2">
               暂无内容
             </Typography>
-            <Typography variant="small" className="text-gray-500">
+            <Typography variant="small" className="text-gray-600 dark:text-gray-500">
               添加来源、创建产出或开始对话后可查看知识图谱
             </Typography>
           </div>
         ) : isLoading && !analysis ? (
           <div className="flex flex-col items-center justify-center h-full">
             <Spinner className="h-10 w-10 text-blue-400 mb-4" />
-            <Typography variant="small" className="text-gray-400">
+            <Typography variant="small" className="text-gray-500 dark:text-gray-400">
               正在分析知识关联...
             </Typography>
           </div>
@@ -846,7 +849,7 @@ function KnowledgeGraphView({
               size="sm"
               onClick={onRefresh}
               disabled={!isConnected}
-              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+              className="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               重试
             </Button>
@@ -865,12 +868,14 @@ function KnowledgeGraphView({
             maxZoom={2}
             proOptions={{ hideAttribution: true }}
           >
-            <Background color="#374151" gap={20} size={1} />
+            <Background color={isDarkTheme ? "#374151" : "#cbd5e1"} gap={20} size={1} />
             <Controls
               showZoom={true}
               showFitView={true}
               showInteractive={false}
-              className="!bg-gray-800 !border-gray-700 !shadow-lg [&_button]:!bg-gray-700 [&_button]:!border-gray-600 [&_button]:!text-gray-300 [&_button:hover]:!bg-gray-600"
+              className={isDarkTheme
+                ? "!bg-gray-800 !border-gray-700 !shadow-lg [&_button]:!bg-gray-700 [&_button]:!border-gray-600 [&_button]:!text-gray-300 [&_button:hover]:!bg-gray-600"
+                : "!bg-white !border-gray-200 !shadow-lg [&_button]:!bg-white [&_button]:!border-gray-200 [&_button]:!text-gray-600 [&_button:hover]:!bg-gray-100"}
             />
             <MiniMap
               nodeColor={(node) => {
@@ -878,47 +883,47 @@ function KnowledgeGraphView({
                 if (data.hasContradiction) return '#F87171';
                 return NODE_COLORS[data.nodeType]?.node || '#6B7280';
               }}
-              maskColor="rgba(0,0,0,0.8)"
-              className="!bg-gray-800 !border-gray-700"
+              maskColor={isDarkTheme ? "rgba(0,0,0,0.8)" : "rgba(148, 163, 184, 0.35)"}
+              className={isDarkTheme ? "!bg-gray-800 !border-gray-700" : "!bg-white !border-gray-200"}
             />
 
             {/* Legend Panel */}
             <Panel position="bottom-left" className="!m-4">
-              <div className="bg-gray-800/90 backdrop-blur-sm rounded-lg p-3 border border-gray-700 space-y-2">
-                <Typography variant="small" className="text-gray-400 text-xs font-medium mb-2">
+              <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-lg p-3 border border-gray-200 dark:border-gray-700 space-y-2">
+                <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-2">
                   图例
                 </Typography>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: NODE_COLORS.source.node }} />
-                  <span className="text-gray-300 text-xs">来源</span>
+                  <span className="text-gray-700 dark:text-gray-300 text-xs">来源</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: NODE_COLORS.output.node }} />
-                  <span className="text-gray-300 text-xs">产出</span>
+                  <span className="text-gray-700 dark:text-gray-300 text-xs">产出</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: NODE_COLORS.session.node }} />
-                  <span className="text-gray-300 text-xs">对话</span>
+                  <span className="text-gray-700 dark:text-gray-300 text-xs">对话</span>
                 </div>
-                <div className="flex items-center gap-2 pt-1 border-t border-gray-700">
+                <div className="flex items-center gap-2 pt-1 border-t border-gray-200 dark:border-gray-700">
                   <div className="w-8 h-0.5 bg-gray-400" />
-                  <span className="text-gray-300 text-xs">语义关联</span>
+                  <span className="text-gray-700 dark:text-gray-300 text-xs">语义关联</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-0.5 bg-red-400" style={{ animation: 'pulse 1s infinite' }} />
-                  <span className="text-gray-300 text-xs">潜在矛盾</span>
+                  <span className="text-gray-700 dark:text-gray-300 text-xs">潜在矛盾</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-0.5 border-t-2 border-dashed" style={{ borderColor: NODE_COLORS.output.node }} />
-                  <span className="text-gray-300 text-xs">引用关系</span>
+                  <span className="text-gray-700 dark:text-gray-300 text-xs">引用关系</span>
                 </div>
               </div>
             </Panel>
 
             {/* Tips Panel */}
             <Panel position="top-left" className="!m-4">
-              <div className="bg-gray-800/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-700">
-                <Typography variant="small" className="text-gray-400 text-xs">
+              <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-700">
+                <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs">
                   💡 拖拽节点 · 滚轮缩放 · 点击选中节点 · 顶部切换显示类型
                 </Typography>
               </div>
@@ -927,17 +932,17 @@ function KnowledgeGraphView({
             {/* Detail Panel */}
             {selectedItem && (
               <Panel position="top-right" className="!m-4 !mr-6">
-                <div className="bg-gray-800/95 backdrop-blur-sm rounded-xl border border-gray-600 shadow-xl w-72 overflow-hidden">
+                <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-600 shadow-xl w-72 overflow-hidden">
                   {/* Detail Header */}
                   <div
-                    className="px-4 py-3 border-b border-gray-700 flex items-center justify-between"
+                    className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
                     style={{ backgroundColor: `${NODE_COLORS[selectedItem.type].node}20` }}
                   >
                     <div className="flex items-center gap-2">
                       {selectedItem.type === 'source' && <DescriptionIcon style={{ fontSize: 18, color: NODE_COLORS.source.node }} />}
                       {selectedItem.type === 'output' && <OutputIcon style={{ fontSize: 18, color: NODE_COLORS.output.node }} />}
                       {selectedItem.type === 'session' && <ChatIcon style={{ fontSize: 18, color: NODE_COLORS.session.node }} />}
-                      <Typography variant="small" className="font-semibold text-white text-sm">
+                      <Typography variant="small" className="font-semibold text-gray-900 dark:text-white text-sm">
                         {NODE_COLORS[selectedItem.type].label}详情
                       </Typography>
                     </div>
@@ -948,7 +953,7 @@ function KnowledgeGraphView({
                         setSelectedId(null);
                         setSelectedItem(null);
                       }}
-                      className="w-6 h-6 min-w-0 p-0 text-gray-400 hover:text-white hover:bg-gray-700"
+                      className="w-6 h-6 min-w-0 p-0 text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700"
                     >
                       <CloseIcon style={{ fontSize: 16 }} />
                     </IconButton>
@@ -959,19 +964,19 @@ function KnowledgeGraphView({
                     {selectedItem.type === 'source' && (
                       <>
                         <div>
-                          <Typography variant="small" className="text-gray-400 text-xs mb-1">标题</Typography>
-                          <Typography variant="small" className="text-white font-medium">
+                          <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">标题</Typography>
+                          <Typography variant="small" className="text-gray-900 dark:text-white font-medium">
                             {selectedItem.data.title}
                           </Typography>
                         </div>
                         <div className="flex gap-4">
                           <div>
-                            <Typography variant="small" className="text-gray-400 text-xs mb-1">类型</Typography>
-                            <Chip value={selectedItem.data.type} size="sm" className="bg-gray-700 text-gray-200 text-xs" />
+                            <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">类型</Typography>
+                            <Chip value={selectedItem.data.type} size="sm" className="bg-gray-200 text-gray-700 text-xs dark:bg-gray-700 dark:text-gray-200" />
                           </div>
                           <div>
-                            <Typography variant="small" className="text-gray-400 text-xs mb-1">片段</Typography>
-                            <Typography variant="small" className="text-white">{selectedItem.data.chunks}</Typography>
+                            <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">片段</Typography>
+                            <Typography variant="small" className="text-gray-900 dark:text-white">{selectedItem.data.chunks}</Typography>
                           </div>
                         </div>
                       </>
@@ -979,19 +984,19 @@ function KnowledgeGraphView({
                     {selectedItem.type === 'output' && (
                       <>
                         <div>
-                          <Typography variant="small" className="text-gray-400 text-xs mb-1">提示词</Typography>
-                          <Typography variant="small" className="text-white font-medium line-clamp-3">
+                          <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">提示词</Typography>
+                          <Typography variant="small" className="text-gray-900 dark:text-white font-medium line-clamp-3">
                             {selectedItem.data.prompt}
                           </Typography>
                         </div>
                         <div className="flex gap-4">
                           <div>
-                            <Typography variant="small" className="text-gray-400 text-xs mb-1">类型</Typography>
-                            <Chip value={selectedItem.data.type} size="sm" className="bg-purple-500/30 text-purple-200 text-xs" />
+                            <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">类型</Typography>
+                            <Chip value={selectedItem.data.type} size="sm" className="bg-purple-100 text-purple-700 text-xs dark:bg-purple-500/30 dark:text-purple-200" />
                           </div>
                           <div>
-                            <Typography variant="small" className="text-gray-400 text-xs mb-1">引用</Typography>
-                            <Typography variant="small" className="text-white">{selectedItem.data.chunkIds?.length || 0} 片段</Typography>
+                            <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">引用</Typography>
+                            <Typography variant="small" className="text-gray-900 dark:text-white">{selectedItem.data.chunkIds?.length || 0} 片段</Typography>
                           </div>
                         </div>
                       </>
@@ -999,14 +1004,14 @@ function KnowledgeGraphView({
                     {selectedItem.type === 'session' && (
                       <>
                         <div>
-                          <Typography variant="small" className="text-gray-400 text-xs mb-1">标题</Typography>
-                          <Typography variant="small" className="text-white font-medium">
+                          <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">标题</Typography>
+                          <Typography variant="small" className="text-gray-900 dark:text-white font-medium">
                             {selectedItem.data.title || '未命名会话'}
                           </Typography>
                         </div>
                         <div>
-                          <Typography variant="small" className="text-gray-400 text-xs mb-1">创建时间</Typography>
-                          <Typography variant="small" className="text-gray-300 text-xs">
+                          <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">创建时间</Typography>
+                          <Typography variant="small" className="text-gray-600 dark:text-gray-300 text-xs">
                             {selectedItem.data.createdAt}
                           </Typography>
                         </div>
@@ -1015,7 +1020,7 @@ function KnowledgeGraphView({
                   </div>
 
                   {/* Detail Actions */}
-                  <div className="px-4 py-3 border-t border-gray-700 bg-gray-800/50">
+                  <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                     <Button
                       variant="filled"
                       size="sm"

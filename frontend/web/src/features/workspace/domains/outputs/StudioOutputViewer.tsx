@@ -108,19 +108,19 @@ export default function StudioOutputViewer({
       onClick={onClose}
     >
       <div
-        className={`flex flex-col overflow-hidden bg-white shadow-2xl transition-all ${
+        className={`flex flex-col overflow-hidden bg-white shadow-2xl transition-all dark:bg-slate-900 ${
           isFullscreen
             ? 'h-full w-full rounded-none'
-            : 'h-[85vh] w-[90vw] max-w-6xl rounded-2xl border border-gray-300'
+            : 'h-[85vh] w-[90vw] max-w-6xl rounded-2xl border border-gray-300 dark:border-slate-700'
         }`}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 sm:px-6">
+        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 sm:px-6 dark:border-slate-700">
           <div className="flex flex-col min-w-0">
-            <Typography variant="h6" className="text-lg font-semibold text-gray-900 truncate">
+            <Typography variant="h6" className="text-lg font-semibold text-gray-900 truncate dark:text-slate-100">
               {selectedOutput ? resolveOutputTitle(selectedOutput) : '暂无输出'}
             </Typography>
-            <Typography variant="small" className="text-gray-600 font-medium">
+            <Typography variant="small" className="text-gray-600 font-medium dark:text-slate-300">
               {selectedOutput ? resolveOutputMeta(selectedOutput) : '请先生成输出内容'}
             </Typography>
           </div>
@@ -128,7 +128,7 @@ export default function StudioOutputViewer({
             <Tooltip content={isFullscreen ? '退出全屏' : '进入全屏'}>
               <IconButton
                 variant="text"
-                className="rounded-full"
+                className="rounded-full text-gray-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800"
                 onClick={onToggleFullscreen}
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="h-5 w-5">
@@ -144,7 +144,7 @@ export default function StudioOutputViewer({
             <Tooltip content="关闭">
               <IconButton
                 variant="text"
-                className="rounded-full"
+                className="rounded-full text-gray-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800"
                 onClick={onClose}
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="h-5 w-5">
@@ -160,13 +160,13 @@ export default function StudioOutputViewer({
           </div>
         </div>
         <div className="flex flex-1 min-h-0">
-          <aside className="flex flex-col w-64 border-r border-gray-200 bg-gray-100/50 p-3 flex-shrink-0">
-            <Typography variant="small" className="mb-2 font-semibold text-gray-600 text-xs px-2">
+          <aside className="flex flex-col w-64 border-r border-gray-200 bg-gray-100/50 p-3 flex-shrink-0 dark:border-slate-700 dark:bg-slate-800/60">
+            <Typography variant="small" className="mb-2 font-semibold text-gray-600 text-xs px-2 dark:text-slate-300">
               输出预览
             </Typography>
             {outputs.length === 0 ? (
-              <div className="p-4 text-center border border-dashed border-gray-300 rounded-lg">
-                <Typography variant="small" className="text-gray-500">暂无输出</Typography>
+              <div className="p-4 text-center border border-dashed border-gray-300 rounded-lg dark:border-slate-600">
+                <Typography variant="small" className="text-gray-500 dark:text-slate-400">暂无输出</Typography>
               </div>
             ) : (
               <div className="flex flex-col gap-1 overflow-y-auto flex-1">
@@ -176,7 +176,7 @@ export default function StudioOutputViewer({
                     <div
                       key={output.id}
                       className={`group relative flex items-center rounded-lg transition-colors ${
-                        isActive ? 'bg-white shadow-sm border border-gray-300' : 'hover:bg-gray-200 border border-gray-200'
+                        isActive ? 'bg-white shadow-sm border border-gray-300 dark:bg-slate-800 dark:border-slate-600' : 'hover:bg-gray-200 border border-gray-200 dark:hover:bg-slate-800 dark:border-slate-700'
                       }`}
                     >
                       <button
@@ -187,11 +187,11 @@ export default function StudioOutputViewer({
                       >
                         <Typography
                           variant="small"
-                          className={`truncate text-sm ${isActive ? 'font-semibold text-gray-900' : 'font-medium text-gray-800'}`}
+                          className={`truncate text-sm ${isActive ? 'font-semibold text-gray-900 dark:text-slate-100' : 'font-medium text-gray-800 dark:text-slate-300'}`}
                         >
                           {resolveOutputTitle(output)}
                         </Typography>
-                        <Typography variant="small" className="text-[10px] text-gray-500 font-medium mt-0.5 truncate">
+                        <Typography variant="small" className="text-[10px] text-gray-500 font-medium mt-0.5 truncate dark:text-slate-400">
                           {resolveOutputMeta(output)}
                         </Typography>
                       </button>
@@ -202,7 +202,7 @@ export default function StudioOutputViewer({
                               <IconButton
                                 variant="text"
                                 size="sm"
-                                className={`rounded-full w-7 h-7 text-gray-500 opacity-0 transition-opacity ${
+                                className={`rounded-full w-7 h-7 text-gray-500 opacity-0 transition-opacity dark:text-slate-300 dark:hover:bg-slate-700 ${
                                   isActive || activeMenuId === output.id ? 'opacity-100' : 'group-hover:opacity-100'
                                 }`}
                                 onClick={(e) => {
@@ -213,13 +213,13 @@ export default function StudioOutputViewer({
                                 <MoreVertIcon style={{ fontSize: 16 }} />
                               </IconButton>
                             </MenuHandler>
-                            <MenuList className="p-1 min-w-[120px]">
+                            <MenuList className="p-1 min-w-[120px] dark:bg-slate-900 dark:border-slate-700">
                               <ConfirmPopover
                                 message={`确定要删除「${resolveOutputTitle(output)}」吗？此操作不可撤销。`}
                                 onConfirm={() => handleDelete(output.id)}
                                 placement="left"
                               >
-                                <MenuItem className="flex items-center gap-2 text-red-500 hover:bg-red-50 hover:text-red-700 py-2">
+                                <MenuItem className="flex items-center gap-2 text-red-500 hover:bg-red-50 hover:text-red-700 py-2 dark:hover:bg-red-500/20 dark:hover:text-red-300">
                                   <DeleteIcon style={{ fontSize: 16 }} />
                                   <span className="text-xs font-medium">删除</span>
                                 </MenuItem>
@@ -234,17 +234,17 @@ export default function StudioOutputViewer({
               </div>
             )}
           </aside>
-          <section className="flex-1 overflow-y-auto p-6 bg-white">
+          <section className="flex-1 overflow-y-auto p-6 bg-white dark:bg-slate-900">
             {selectedOutput ? <OutputContent output={selectedOutput} /> : null}
             {outputCitations.length > 0 ? (
-              <div className="mt-6 border-t border-gray-100 pt-4">
+              <div className="mt-6 border-t border-gray-100 pt-4 dark:border-slate-700">
                 <div className="flex items-center justify-between">
-                  <Typography variant="small" className="text-xs font-semibold text-gray-600">
+                  <Typography variant="small" className="text-xs font-semibold text-gray-600 dark:text-slate-300">
                     引用
                   </Typography>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 rounded-full border border-gray-200 bg-white hover:bg-gray-50 hover:text-gray-700 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 rounded-full border border-gray-200 bg-white hover:bg-gray-50 hover:text-gray-700 transition-colors cursor-pointer dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-slate-100"
                     onClick={(e) => {
                       setCitationAnchorRect(e.currentTarget.getBoundingClientRect());
                       setCitationPopoverOpen(true);

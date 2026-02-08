@@ -83,20 +83,20 @@ export default function QuizRunner({ questions, className }: QuizRunnerProps) {
   }, [questions]);
 
   if (total === 0) {
-    return <div className="text-sm text-gray-500">暂无测验内容。</div>;
+    return <div className="text-sm text-gray-500 dark:text-slate-400">暂无测验内容。</div>;
   }
 
   if (completedCount === total) {
     const accuracy = total ? Math.round((score / total) * 100) : 0;
     return (
       <div className={className}>
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center">
-          <div className="text-xs font-semibold uppercase tracking-widest text-gray-400">测验结果</div>
-          <div className="mt-2 text-2xl font-semibold text-gray-900">正确率 {accuracy}%</div>
-          <div className="mt-1 text-sm text-gray-600">答对 {score} / {total} 题</div>
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center dark:border-slate-700 dark:bg-slate-900">
+          <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-400">测验结果</div>
+          <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-slate-100">正确率 {accuracy}%</div>
+          <div className="mt-1 text-sm text-gray-600 dark:text-slate-300">答对 {score} / {total} 题</div>
           <button
             type="button"
-            className="mt-4 rounded-full bg-gray-900 px-4 py-2 text-xs font-semibold text-white"
+            className="mt-4 rounded-full bg-gray-900 px-4 py-2 text-xs font-semibold text-white dark:bg-sky-500 dark:text-slate-950"
             onClick={resetQuiz}
           >
             再做一次
@@ -109,9 +109,9 @@ export default function QuizRunner({ questions, className }: QuizRunnerProps) {
   return (
     <div className={className}>
       <ProgressIndicator current={currentIndex + 1} total={total} label="测验进度" />
-      <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-6">
-        <div className="text-xs font-semibold uppercase tracking-widest text-gray-400">题目 {currentIndex + 1}</div>
-        <div className="mt-2 text-lg font-semibold text-gray-900">
+      <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-900">
+        <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-400">题目 {currentIndex + 1}</div>
+        <div className="mt-2 text-lg font-semibold text-gray-900 dark:text-slate-100">
           {current?.question || '暂无题目'}
         </div>
         {Array.isArray(current?.options) && current.options.length > 0 ? (
@@ -123,7 +123,7 @@ export default function QuizRunner({ questions, className }: QuizRunnerProps) {
                   key={option}
                   type="button"
                   className={`w-full rounded-lg border px-4 py-2 text-left text-sm transition ${
-                    selected ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                    selected ? 'border-gray-900 bg-gray-900 text-white dark:border-sky-500 dark:bg-sky-500 dark:text-slate-950' : 'border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800'
                   }`}
                   onClick={() => handleSelect(option)}
                   disabled={currentAnswer.submitted}
@@ -137,7 +137,7 @@ export default function QuizRunner({ questions, className }: QuizRunnerProps) {
           <div className="mt-4">
             <input
               type="text"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               placeholder="输入你的答案"
               value={currentAnswer.selected ?? ''}
               onChange={(event) => handleSelect(event.target.value)}
@@ -148,22 +148,22 @@ export default function QuizRunner({ questions, className }: QuizRunnerProps) {
           </div>
         )}
         {currentAnswer.submitted ? (
-          <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
+          <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-slate-600 dark:bg-slate-800">
             <div className={`font-semibold ${currentAnswer.isCorrect ? 'text-green-600' : 'text-rose-600'}`}>
               {currentAnswer.isCorrect ? '回答正确' : '回答错误'}
             </div>
             {!currentAnswer.isCorrect && correctAnswers.length > 0 ? (
-              <div className="mt-1 text-gray-700">正确答案：{correctAnswers.join(' / ')}</div>
+              <div className="mt-1 text-gray-700 dark:text-slate-200">正确答案：{correctAnswers.join(' / ')}</div>
             ) : null}
             {current?.explanation ? (
-              <div className="mt-1 text-gray-500">解析：{current.explanation}</div>
+              <div className="mt-1 text-gray-500 dark:text-slate-400">解析：{current.explanation}</div>
             ) : null}
           </div>
         ) : null}
         <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
           <button
             type="button"
-            className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 disabled:opacity-40"
+            className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 disabled:opacity-40 dark:border-slate-600 dark:text-slate-200"
             onClick={goPrev}
             disabled={currentIndex === 0}
           >
@@ -172,7 +172,7 @@ export default function QuizRunner({ questions, className }: QuizRunnerProps) {
           {currentAnswer.submitted ? (
             <button
               type="button"
-              className="rounded-full bg-gray-900 px-4 py-2 text-xs font-semibold text-white"
+              className="rounded-full bg-gray-900 px-4 py-2 text-xs font-semibold text-white dark:bg-sky-500 dark:text-slate-950"
               onClick={goNext}
               disabled={currentIndex === total - 1}
             >
@@ -181,7 +181,7 @@ export default function QuizRunner({ questions, className }: QuizRunnerProps) {
           ) : (
             <button
               type="button"
-              className="rounded-full bg-gray-900 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+              className="rounded-full bg-gray-900 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40 dark:bg-sky-500 dark:text-slate-950"
               onClick={handleSubmit}
               disabled={!currentAnswer.selected}
             >
@@ -190,7 +190,7 @@ export default function QuizRunner({ questions, className }: QuizRunnerProps) {
           )}
         </div>
         {currentIndex === total - 1 && currentAnswer.submitted ? (
-          <div className="mt-2 text-xs text-gray-500">完成后将自动显示结果。</div>
+          <div className="mt-2 text-xs text-gray-500 dark:text-slate-400">完成后将自动显示结果。</div>
         ) : null}
       </div>
     </div>
