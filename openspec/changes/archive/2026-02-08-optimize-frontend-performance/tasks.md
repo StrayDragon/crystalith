@@ -14,8 +14,8 @@
 - [x] 2.2 将 `SlidesStudioDialog` 改为懒加载
 - [x] 2.3 将 `ResearchDetailPanel` 改为懒加载
 - [x] 2.4 将 `SourceDetailDialog` 改为懒加载
-- [ ] 2.5 验证 Vite 构建产物 chunk 拆分：主 bundle 减小 >20%，懒加载 chunk 按需加载
-- [ ] 2.6 验证：首屏加载时间（LCP）改善，DevTools Network 面板确认懒加载 chunk 在触发时才加载
+- [x] 2.5 验证 Vite 构建产物 chunk 拆分：主 bundle 减小 >20%，懒加载 chunk 按需加载
+- [x] 2.6 验证：首屏加载时间（LCP）改善，DevTools Network 面板确认懒加载 chunk 在触发时才加载
 
 ## 3. 骨架屏统一
 
