@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""Initialize database tables based on current settings."""
+"""Initialize database schema by running Alembic migrations."""
 
 from __future__ import annotations
 
 import argparse
-import asyncio
 import os
 from pathlib import Path
 from typing import Iterable
 
-from crystalith.config import ConfigManager, Settings
-from crystalith.db import create_all, create_db_manager
+from crystalith.shared.config import ConfigManager, Settings
+from crystalith.shared.db.migrations import upgrade_head
 
 
 def _find_config_path(candidates: Iterable[Path]) -> Path | None:
@@ -92,15 +91,14 @@ def _load_settings(args: argparse.Namespace) -> Settings:
     return manager.load(validate_schema=not args.no_schema_validate)
 
 
-async def _run(settings: Settings) -> None:
-    manager = create_db_manager(settings.database.url)
-    await create_all(manager.async_engine)
+def _run(settings: Settings) -> None:
+    upgrade_head(settings.database.url)
 
 
 def main() -> int:
     args = _parse_args()
     settings = _load_settings(args)
-    asyncio.run(_run(settings))
+    _run(settings)
     return 0
 
 

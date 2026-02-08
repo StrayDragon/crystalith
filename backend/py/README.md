@@ -12,14 +12,15 @@ Backend source lives in `backend/py/src/crystalith`:
 
 Dependency direction is enforced as `web -> features -> shared` via `just check-imports`.
 
-### Option A: create_all (MVP / local dev)
+### Database migrations (Alembic)
 
 ```bash
 cd backend/py
 just db-init
 ```
 
-This creates the `notebooks`, `sources`, and `chunks` tables.
+This runs `alembic upgrade head` (and will auto-stamp legacy databases that
+were created before Alembic was introduced).
 
 You can override config discovery when running `db-init`:
 
@@ -35,9 +36,19 @@ Optional flags:
 uv run scripts/db_init.py --config-path /app/config/app.yaml --schema-path /app/config/schema.json
 ```
 
-### Option B: migrations (recommended for production)
+Create a new migration (autogenerate):
 
-This repo does not yet include a migration tool (e.g. Alembic). If you add migrations, wire them to the same metadata used by `crystalith.db` models.
+```bash
+cd backend/py
+just db-migrate "add new field"
+```
+
+Rollback the last migration:
+
+```bash
+cd backend/py
+just db-rollback
+```
 
 ## Vector storage migration (SQLite -> Chroma)
 

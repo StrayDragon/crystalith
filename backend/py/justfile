@@ -23,6 +23,12 @@ check-imports:
 db-init:
     uv run scripts/db_init.py
 
+db-migrate MESSAGE:
+    uv run alembic revision --autogenerate -m "{{MESSAGE}}"
+
+db-rollback:
+    uv run alembic downgrade -1
+
 vector-migrate:
     uv run scripts/vector_migrate.py
 
