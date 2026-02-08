@@ -11,6 +11,7 @@ from .pdf import PDFParser
 from .text import TextParser
 from .transcription import DisabledTranscriber, TranscriptionProvider
 from .video import VideoParser
+from crystalith.shared.plugins import PluginRegistry
 
 _YOUTUBE_HOSTS = {"youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"}
 
@@ -35,6 +36,7 @@ class ParserFactory:
         mime_type: str | None,
         transcriber: TranscriptionProvider | None = None,
         media_fetcher: MediaFetcher | None = None,
+        plugins: PluginRegistry | None = None,
     ) -> Parser:
         extension = Path(filename or "").suffix.lower()
         normalized_mime = (mime_type or "").split(";")[0].strip()
@@ -89,5 +91,22 @@ class ParserFactory:
                 return PDFParser()
             if extension in HTMLParser.supported_extensions:
                 return HTMLParser()
+
+        if plugins is not None:
+            for plugin in plugins.parsers.values():
+                if normalized_mime and normalized_mime in plugin.supported_mime_types:
+                    return plugin.create_parser(
+                        filename=filename,
+                        mime_type=normalized_mime or None,
+                        transcriber=resolved_transcriber,
+                        media_fetcher=resolved_fetcher,
+                    )
+                if extension and extension in plugin.supported_extensions:
+                    return plugin.create_parser(
+                        filename=filename,
+                        mime_type=normalized_mime or None,
+                        transcriber=resolved_transcriber,
+                        media_fetcher=resolved_fetcher,
+                    )
 
         raise UnsupportedDocumentError("Unsupported file type")

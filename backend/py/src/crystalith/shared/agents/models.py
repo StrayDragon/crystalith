@@ -132,4 +132,4 @@ def _build_chat_model_with_config(model_config: ModelConfig) -> OpenAIChatModel:
             provider=OllamaProvider(base_url=base_url),
         )
 
-    raise ValueError(f"Unsupported chat provider: {provider}")
+    raise ModelConfigurationError(f"Unsupported chat provider: {provider}")

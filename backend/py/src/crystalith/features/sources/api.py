@@ -35,10 +35,12 @@ from crystalith.shared.deps import (
     get_cache_provider,
     get_db_session,
     get_embedding_provider,
+    get_plugin_registry,
     get_settings,
     get_transcription_provider,
     get_vector_store,
 )
+from crystalith.shared.plugins import PluginRegistry
 
 
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/sources", tags=["sources"])
@@ -265,13 +267,23 @@ class SourceFromUrlRequest(BaseModel):
 
 
 
-def _resolve_parser(file: UploadFile, transcriber: TranscriptionProvider) -> Parser:
+def _resolve_parser(file: UploadFile, transcriber: TranscriptionProvider, plugins: PluginRegistry) -> Parser:
     try:
-        return ParserFactory.from_file(
-            filename=file.filename,
-            mime_type=file.content_type,
-            transcriber=transcriber,
-        )
+        try:
+            return ParserFactory.from_file(
+                filename=file.filename,
+                mime_type=file.content_type,
+                transcriber=transcriber,
+                plugins=plugins,
+            )
+        except TypeError as exc:
+            if "plugins" not in str(exc):
+                raise
+            return ParserFactory.from_file(
+                filename=file.filename,
+                mime_type=file.content_type,
+                transcriber=transcriber,
+            )
     except UnsupportedDocumentError as exc:
         raise HTTPException(status_code=415, detail="Unsupported file type") from exc
 
@@ -1080,12 +1092,13 @@ async def upload_source(
     transcriber: TranscriptionProvider = Depends(get_transcription_provider),
     vector_store: VectorStore = Depends(get_vector_store),
     cache: CacheProvider = Depends(get_cache_provider),
+    plugins: PluginRegistry = Depends(get_plugin_registry),
 ) -> SourceRead:
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
 
-    parser = _resolve_parser(file, transcriber)
+    parser = _resolve_parser(file, transcriber, plugins)
     filename = file.filename or "upload.txt"
     mime_type = file.content_type
 

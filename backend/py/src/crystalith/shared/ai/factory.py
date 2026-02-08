@@ -6,6 +6,7 @@ import ollama
 from openai import AsyncOpenAI
 
 from crystalith.shared.config import ModelConfig, OpenAIProviderSettings, OllamaProviderSettings, Settings
+from crystalith.shared.plugins import PluginRegistry
 
 from .cache import EmbeddingCache
 from .interfaces import ChatProvider, EmbeddingProvider
@@ -77,7 +78,7 @@ def _create_ollama_client(model_config: ModelConfig) -> ollama.AsyncClient:
     return ollama.AsyncClient(host=ollama_settings.host)
 
 
-def create_embedding_provider(settings: Settings) -> EmbeddingProvider:
+def create_embedding_provider(settings: Settings, *, plugins: PluginRegistry | None = None) -> EmbeddingProvider:
     """
     Create the default embedding provider from settings.
 
@@ -90,10 +91,10 @@ def create_embedding_provider(settings: Settings) -> EmbeddingProvider:
             "Set models.defaults.embedding or add a model with role 'embed'."
         )
 
-    return create_embedding_provider_by_model_id(settings, model_config.id)
+    return create_embedding_provider_by_model_id(settings, model_config.id, plugins=plugins)
 
 
-def create_chat_provider(settings: Settings) -> ChatProvider:
+def create_chat_provider(settings: Settings, *, plugins: PluginRegistry | None = None) -> ChatProvider:
     """
     Create the default chat provider from settings.
 
@@ -106,20 +107,22 @@ def create_chat_provider(settings: Settings) -> ChatProvider:
             "Set models.defaults.chat or add a model with role 'chat'."
         )
 
-    return create_chat_provider_by_model_id(settings, model_config.id)
+    return create_chat_provider_by_model_id(settings, model_config.id, plugins=plugins)
 
 
-def create_providers(settings: Settings) -> Providers:
+def create_providers(settings: Settings, *, plugins: PluginRegistry | None = None) -> Providers:
     """Create both embedding and chat providers using default models."""
     return Providers(
-        embedding=create_embedding_provider(settings),
-        chat=create_chat_provider(settings),
+        embedding=create_embedding_provider(settings, plugins=plugins),
+        chat=create_chat_provider(settings, plugins=plugins),
     )
 
 
 def create_chat_provider_by_model_id(
     settings: Settings,
     model_id: str,
+    *,
+    plugins: PluginRegistry | None = None,
 ) -> ChatProvider:
     """
     Create a chat provider for a specific model ID.
@@ -151,12 +154,21 @@ def create_chat_provider_by_model_id(
                 max_retries=_resolve_ai_retries(settings),
             )
         case provider:
-            raise ValueError(f"Unsupported provider for model {model_id}: {provider}")
+            if plugins is None:
+                raise ValueError(f"Unsupported provider for model {model_id}: {provider}")
+
+            plugin = plugins.ai_providers.get(provider)
+            if plugin is None:
+                raise ValueError(f"Unsupported provider for model {model_id}: {provider}")
+
+            return plugin.create_chat_provider(settings, model_config)
 
 
 def create_embedding_provider_by_model_id(
     settings: Settings,
     model_id: str,
+    *,
+    plugins: PluginRegistry | None = None,
 ) -> EmbeddingProvider:
     """
     Create an embedding provider for a specific model ID.
@@ -196,4 +208,11 @@ def create_embedding_provider_by_model_id(
                 cache=_EMBEDDING_CACHE,
             )
         case provider:
-            raise ValueError(f"Unsupported provider for model {model_id}: {provider}")
+            if plugins is None:
+                raise ValueError(f"Unsupported provider for model {model_id}: {provider}")
+
+            plugin = plugins.ai_providers.get(provider)
+            if plugin is None:
+                raise ValueError(f"Unsupported provider for model {model_id}: {provider}")
+
+            return plugin.create_embedding_provider(settings, model_config)

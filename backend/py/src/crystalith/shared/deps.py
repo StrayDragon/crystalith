@@ -13,6 +13,7 @@ from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.shared.cache import CacheProvider, create_cache_provider
 from crystalith.shared.config import Settings
 from crystalith.shared.parsers import TranscriptionProvider, create_transcription_provider
+from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.vector_storage import VectorStore
 
 if TYPE_CHECKING:
@@ -21,6 +22,10 @@ if TYPE_CHECKING:
 
 def get_settings(request: Request) -> Settings:
     return request.app.state.settings
+
+
+def get_plugin_registry(request: Request) -> PluginRegistry:
+    return request.app.state.plugins
 
 
 def get_cache_provider(request: Request) -> CacheProvider:
@@ -40,7 +45,13 @@ async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]
 def get_embedding_provider(request: Request) -> EmbeddingProvider:
     provider = getattr(request.app.state, "embedding_provider", None)
     if provider is None:
-        provider = create_embedding_provider(request.app.state.settings)
+        try:
+            provider = create_embedding_provider(
+                request.app.state.settings,
+                plugins=request.app.state.plugins,
+            )
+        except TypeError:
+            provider = create_embedding_provider(request.app.state.settings)
         request.app.state.embedding_provider = provider
     return provider
 
@@ -48,7 +59,13 @@ def get_embedding_provider(request: Request) -> EmbeddingProvider:
 def get_ai_provider(request: Request) -> ChatProvider:
     provider = getattr(request.app.state, "ai_provider", None)
     if provider is None:
-        provider = create_chat_provider(request.app.state.settings)
+        try:
+            provider = create_chat_provider(
+                request.app.state.settings,
+                plugins=request.app.state.plugins,
+            )
+        except TypeError:
+            provider = create_chat_provider(request.app.state.settings)
         request.app.state.ai_provider = provider
     return provider
 

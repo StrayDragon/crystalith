@@ -1,0 +1,9 @@
+{
+  "package_name": "crystalith-my-plugin",
+  "module_name": "crystalith_my_plugin",
+  "plugin_id": "my-plugin",
+  "description": "My Crystalith plugin",
+  "author_name": "Your Name",
+  "author_email": "you@example.com",
+  "version": "0.1.0"
+}

@@ -128,8 +128,9 @@ Week 3-5:  Phase 2  ─── [2a: Obsidian] ─────────
 | LC | `add-caching-layer` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-caching-layer` |
 | LC | `add-production-docker` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-production-docker` |
 | LC | `add-workspace-templates` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-workspace-templates` |
+| LC | `add-plugin-architecture` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-plugin-architecture` |
 
-**下一优先级**: 在继续暂缓 Obsidian 的前提下，下一步推进 `add-plugin-architecture`（插件架构），其余 UI/SSE 优化建议拆为独立 change。
+**下一优先级**: 暂无（仅剩 `add-obsidian-integration`，继续暂缓）。
 
 ## 被排除/暂缓的提案
 
