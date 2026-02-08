@@ -2076,6 +2076,125 @@ export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cance
 export type TaskType = 'refine' | 'document_parse';
 
 /**
+ * TemplateConfig
+ */
+export type TemplateConfigInput = {
+    /**
+     * Session Titles
+     *
+     * Notebook sessions to create when using the template.
+     */
+    session_titles?: Array<string>;
+    /**
+     * Preferred default output type for the notebook.
+     */
+    output_type?: 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED' | null;
+    /**
+     * Source Tags
+     *
+     * Source tag names to create when using the template.
+     */
+    source_tags?: Array<string>;
+};
+
+/**
+ * TemplateConfig
+ */
+export type TemplateConfigOutput = {
+    /**
+     * Session Titles
+     *
+     * Notebook sessions to create when using the template.
+     */
+    session_titles?: Array<string>;
+    /**
+     * Preferred default output type for the notebook.
+     */
+    output_type?: 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED' | null;
+    /**
+     * Source Tags
+     *
+     * Source tag names to create when using the template.
+     */
+    source_tags?: Array<string>;
+};
+
+/**
+ * TemplateCreate
+ */
+export type TemplateCreate = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Description
+     */
+    description?: string | null;
+    config_json: TemplateConfigInput;
+};
+
+/**
+ * TemplateFromNotebookCreate
+ */
+export type TemplateFromNotebookCreate = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Preferred default output type for the template.
+     */
+    output_type?: 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED' | null;
+};
+
+/**
+ * TemplateRead
+ */
+export type TemplateRead = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Description
+     */
+    description: string | null;
+    config_json: TemplateConfigOutput;
+    /**
+     * Is Builtin
+     */
+    is_builtin: boolean;
+    /**
+     * Created At
+     */
+    created_at: string;
+};
+
+/**
+ * TemplateUpdate
+ */
+export type TemplateUpdate = {
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Description
+     */
+    description?: string | null;
+    config_json?: TemplateConfigInput | null;
+};
+
+/**
  * ToolConfigResponse
  *
  * Configuration options for a specific tool.
@@ -2229,7 +2348,12 @@ export type ListNotebooksV1NotebooksGetResponse = ListNotebooksV1NotebooksGetRes
 export type CreateNotebookV1NotebooksPostData = {
     body: NotebookCreate;
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Template Id
+         */
+        template_id?: number | null;
+    };
     url: '/v1/notebooks';
 };
 
@@ -4509,6 +4633,169 @@ export type CancelTaskV1TasksTaskIdCancelPostResponses = {
 };
 
 export type CancelTaskV1TasksTaskIdCancelPostResponse = CancelTaskV1TasksTaskIdCancelPostResponses[keyof CancelTaskV1TasksTaskIdCancelPostResponses];
+
+export type ListTemplatesV1TemplatesGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/templates';
+};
+
+export type ListTemplatesV1TemplatesGetResponses = {
+    /**
+     * Response List Templates V1 Templates Get
+     *
+     * Successful Response
+     */
+    200: Array<TemplateRead>;
+};
+
+export type ListTemplatesV1TemplatesGetResponse = ListTemplatesV1TemplatesGetResponses[keyof ListTemplatesV1TemplatesGetResponses];
+
+export type CreateTemplateV1TemplatesPostData = {
+    body: TemplateCreate;
+    path?: never;
+    query?: never;
+    url: '/v1/templates';
+};
+
+export type CreateTemplateV1TemplatesPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateTemplateV1TemplatesPostError = CreateTemplateV1TemplatesPostErrors[keyof CreateTemplateV1TemplatesPostErrors];
+
+export type CreateTemplateV1TemplatesPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: TemplateRead;
+};
+
+export type CreateTemplateV1TemplatesPostResponse = CreateTemplateV1TemplatesPostResponses[keyof CreateTemplateV1TemplatesPostResponses];
+
+export type DeleteTemplateV1TemplatesTemplateIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Template Id
+         */
+        template_id: number;
+    };
+    query?: never;
+    url: '/v1/templates/{template_id}';
+};
+
+export type DeleteTemplateV1TemplatesTemplateIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteTemplateV1TemplatesTemplateIdDeleteError = DeleteTemplateV1TemplatesTemplateIdDeleteErrors[keyof DeleteTemplateV1TemplatesTemplateIdDeleteErrors];
+
+export type DeleteTemplateV1TemplatesTemplateIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteTemplateV1TemplatesTemplateIdDeleteResponse = DeleteTemplateV1TemplatesTemplateIdDeleteResponses[keyof DeleteTemplateV1TemplatesTemplateIdDeleteResponses];
+
+export type GetTemplateV1TemplatesTemplateIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Template Id
+         */
+        template_id: number;
+    };
+    query?: never;
+    url: '/v1/templates/{template_id}';
+};
+
+export type GetTemplateV1TemplatesTemplateIdGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetTemplateV1TemplatesTemplateIdGetError = GetTemplateV1TemplatesTemplateIdGetErrors[keyof GetTemplateV1TemplatesTemplateIdGetErrors];
+
+export type GetTemplateV1TemplatesTemplateIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: TemplateRead;
+};
+
+export type GetTemplateV1TemplatesTemplateIdGetResponse = GetTemplateV1TemplatesTemplateIdGetResponses[keyof GetTemplateV1TemplatesTemplateIdGetResponses];
+
+export type UpdateTemplateV1TemplatesTemplateIdPatchData = {
+    body: TemplateUpdate;
+    path: {
+        /**
+         * Template Id
+         */
+        template_id: number;
+    };
+    query?: never;
+    url: '/v1/templates/{template_id}';
+};
+
+export type UpdateTemplateV1TemplatesTemplateIdPatchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateTemplateV1TemplatesTemplateIdPatchError = UpdateTemplateV1TemplatesTemplateIdPatchErrors[keyof UpdateTemplateV1TemplatesTemplateIdPatchErrors];
+
+export type UpdateTemplateV1TemplatesTemplateIdPatchResponses = {
+    /**
+     * Successful Response
+     */
+    200: TemplateRead;
+};
+
+export type UpdateTemplateV1TemplatesTemplateIdPatchResponse = UpdateTemplateV1TemplatesTemplateIdPatchResponses[keyof UpdateTemplateV1TemplatesTemplateIdPatchResponses];
+
+export type SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostData = {
+    body: TemplateFromNotebookCreate;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/templates';
+};
+
+export type SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostError = SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostErrors[keyof SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostErrors];
+
+export type SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: TemplateRead;
+};
+
+export type SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostResponse = SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostResponses[keyof SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostResponses];
 
 export type GetSlidesConfigV1WorkspaceToolsSlidesConfigGetData = {
     body?: never;

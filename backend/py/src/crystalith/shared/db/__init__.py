@@ -11,6 +11,7 @@ from .models import (
     SourceTag,
     SourceTagMap,
     StudioSlide,
+    Template,
     Task,
 )
 from .schema import create_all
@@ -27,6 +28,7 @@ __all__ = [
     "SourceTag",
     "SourceTagMap",
     "StudioSlide",
+    "Template",
     "Task",
     "create_all",
     "create_db_manager",

@@ -6,44 +6,40 @@
   },
   "paths": {
     "/v1/notebooks": {
-      "get": {
-        "tags": [
-          "notebooks"
-        ],
-        "summary": "List Notebooks",
-        "operationId": "list_notebooks_v1_notebooks_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/NotebookRead"
-                  },
-                  "type": "array",
-                  "title": "Response List Notebooks V1 Notebooks Get"
-                }
-              }
-            }
-          }
-        }
-      },
       "post": {
         "tags": [
           "notebooks"
         ],
         "summary": "Create Notebook",
         "operationId": "create_notebook_v1_notebooks_post",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Template Id"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/NotebookCreate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -62,6 +58,29 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "notebooks"
+        ],
+        "summary": "List Notebooks",
+        "operationId": "list_notebooks_v1_notebooks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotebookRead"
+                  },
+                  "title": "Response List Notebooks V1 Notebooks Get"
                 }
               }
             }
@@ -3751,6 +3770,247 @@
         }
       }
     },
+    "/v1/templates": {
+      "get": {
+        "tags": [
+          "templates"
+        ],
+        "summary": "List Templates",
+        "operationId": "list_templates_v1_templates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TemplateRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Templates V1 Templates Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "templates"
+        ],
+        "summary": "Create Template",
+        "operationId": "create_template_v1_templates_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/templates/{template_id}": {
+      "get": {
+        "tags": [
+          "templates"
+        ],
+        "summary": "Get Template",
+        "operationId": "get_template_v1_templates__template_id__get",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "templates"
+        ],
+        "summary": "Update Template",
+        "operationId": "update_template_v1_templates__template_id__patch",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "templates"
+        ],
+        "summary": "Delete Template",
+        "operationId": "delete_template_v1_templates__template_id__delete",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/templates": {
+      "post": {
+        "tags": [
+          "templates"
+        ],
+        "summary": "Save Notebook As Template",
+        "operationId": "save_notebook_as_template_v1_notebooks__notebook_id__templates_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateFromNotebookCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspace/tools/slides/config": {
       "get": {
         "tags": [
@@ -7097,6 +7357,277 @@
         "description": "枚举值:\n\n* `refine`: 内容精炼任务\n* `document_parse`: 文档解析任务",
         "x-enum-class": "TaskType",
         "x-enum-module": "crystalith.shared.types"
+      },
+      "TemplateConfig-Input": {
+        "properties": {
+          "session_titles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Session Titles",
+            "description": "Notebook sessions to create when using the template."
+          },
+          "output_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "FAQ",
+                  "GUIDE",
+                  "TIMELINE",
+                  "MINDMAP",
+                  "QUIZ",
+                  "BRIEFING",
+                  "SLIDES",
+                  "PARAGRAPH",
+                  "BULLETS",
+                  "STRUCTURED"
+                ],
+                "title": "OutputType",
+                "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+                "default": "PARAGRAPH",
+                "x-enum-class": "OutputType",
+                "x-enum-module": "crystalith.shared.types"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Preferred default output type for the notebook."
+          },
+          "source_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Source Tags",
+            "description": "Source tag names to create when using the template."
+          }
+        },
+        "type": "object",
+        "title": "TemplateConfig"
+      },
+      "TemplateConfig-Output": {
+        "properties": {
+          "session_titles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Session Titles",
+            "description": "Notebook sessions to create when using the template."
+          },
+          "output_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "FAQ",
+                  "GUIDE",
+                  "TIMELINE",
+                  "MINDMAP",
+                  "QUIZ",
+                  "BRIEFING",
+                  "SLIDES",
+                  "PARAGRAPH",
+                  "BULLETS",
+                  "STRUCTURED"
+                ],
+                "title": "OutputType",
+                "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+                "x-enum-class": "OutputType",
+                "x-enum-module": "crystalith.shared.types"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Preferred default output type for the notebook."
+          },
+          "source_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Source Tags",
+            "description": "Source tag names to create when using the template."
+          }
+        },
+        "type": "object",
+        "title": "TemplateConfig"
+      },
+      "TemplateCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "config_json": {
+            "$ref": "#/components/schemas/TemplateConfig-Input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "config_json"
+        ],
+        "title": "TemplateCreate"
+      },
+      "TemplateFromNotebookCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "output_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "FAQ",
+                  "GUIDE",
+                  "TIMELINE",
+                  "MINDMAP",
+                  "QUIZ",
+                  "BRIEFING",
+                  "SLIDES",
+                  "PARAGRAPH",
+                  "BULLETS",
+                  "STRUCTURED"
+                ],
+                "title": "OutputType",
+                "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+                "default": "PARAGRAPH",
+                "x-enum-class": "OutputType",
+                "x-enum-module": "crystalith.shared.types"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Preferred default output type for the template."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "TemplateFromNotebookCreate"
+      },
+      "TemplateRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "config_json": {
+            "$ref": "#/components/schemas/TemplateConfig-Output"
+          },
+          "is_builtin": {
+            "type": "boolean",
+            "title": "Is Builtin"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "config_json",
+          "is_builtin",
+          "created_at"
+        ],
+        "title": "TemplateRead"
+      },
+      "TemplateUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "config_json": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TemplateConfig-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "TemplateUpdate"
       },
       "ToolConfigResponse": {
         "properties": {

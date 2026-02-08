@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from cl_logs.logging import get_logger
 
 from crystalith.shared.cache.interfaces import CacheProvider
-from crystalith.shared.db import Notebook
+from crystalith.features.templates.schemas import TemplateConfig
+from crystalith.shared.db import Notebook, Session, SourceTag, Template
 
 from . import repo
 from .schemas import NotebookRead
@@ -19,9 +20,33 @@ async def create_notebook(
     session: AsyncSession,
     *,
     name: str,
+    template_id: int | None = None,
     cache: CacheProvider | None = None,
 ) -> Notebook:
-    notebook = await repo.create_notebook(session, name=name)
+    if template_id is None:
+        notebook = await repo.create_notebook(session, name=name)
+        if cache is not None:
+            await cache.delete(_NOTEBOOKS_LIST_CACHE_KEY)
+        return notebook
+
+    template = await session.get(Template, template_id)
+    if template is None:
+        raise ValueError("Template not found")
+
+    config = TemplateConfig.model_validate(template.config_json)
+
+    notebook = Notebook(name=name)
+    session.add(notebook)
+    await session.flush()
+
+    for title in config.session_titles:
+        session.add(Session(notebook_id=notebook.id, title=title))
+
+    for tag_name in config.source_tags:
+        session.add(SourceTag(notebook_id=notebook.id, name=tag_name))
+
+    await session.commit()
+    await session.refresh(notebook)
     if cache is not None:
         await cache.delete(_NOTEBOOKS_LIST_CACHE_KEY)
     return notebook

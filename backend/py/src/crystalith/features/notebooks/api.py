@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.cache import CacheProvider
@@ -16,10 +16,19 @@ router = APIRouter(prefix="/v1/notebooks", tags=["notebooks"])
 @router.post("", response_model=NotebookRead, status_code=status.HTTP_201_CREATED)
 async def create_notebook(
     payload: NotebookCreate,
+    template_id: int | None = Query(None, ge=1),
     session: AsyncSession = Depends(get_db_session),
     cache: CacheProvider = Depends(get_cache_provider),
 ) -> NotebookRead:
-    notebook = await service.create_notebook(session, name=payload.name, cache=cache)
+    try:
+        notebook = await service.create_notebook(
+            session,
+            name=payload.name,
+            template_id=template_id,
+            cache=cache,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return NotebookRead.model_validate(notebook)
 
 

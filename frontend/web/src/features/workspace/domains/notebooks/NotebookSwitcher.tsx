@@ -17,12 +17,21 @@ import {
   Check as CheckIcon,
   Close as CloseIcon,
   Add as AddIcon,
+  BookmarkAdd as BookmarkAddIcon,
+  Layers as TemplateIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 
 import type { AsyncStatus } from '../../../shared/types';
 import type { Notebook } from '../../shared/types';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../shared/layer';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
+import TemplatePickerDialog from '../templates/TemplatePickerDialog';
+import TemplateManagerDialog from '../templates/TemplateManagerDialog';
+import SaveTemplateDialog from '../templates/SaveTemplateDialog';
+import { useTemplates } from '../templates/useTemplates';
+import type { WorkspaceTemplate } from '../templates/types';
 
 interface NotebookSwitcherProps {
   notebooks: Notebook[];
@@ -42,6 +51,7 @@ interface NotebookSwitcherProps {
   onDelete?: (notebookId: number) => Promise<boolean>;
   onCreateNameChange: (value: string) => void;
   onCreateNotebook: () => Promise<boolean>;
+  onCreateNotebookFromTemplate?: (templateId: number, name: string) => Promise<boolean>;
 }
 
 export default function NotebookSwitcher({
@@ -62,6 +72,7 @@ export default function NotebookSwitcher({
   onDelete,
   onCreateNameChange,
   onCreateNotebook,
+  onCreateNotebookFromTemplate,
 }: NotebookSwitcherProps) {
   const [searchValue, setSearchValue] = useState('');
   const [editingNotebookId, setEditingNotebookId] = useState<number | null>(null);
@@ -69,10 +80,25 @@ export default function NotebookSwitcher({
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [saveTemplateNotebookId, setSaveTemplateNotebookId] = useState<number | null>(null);
+  const [saveTemplateDefaultName, setSaveTemplateDefaultName] = useState('');
   const editInputRef = useRef<HTMLInputElement | null>(null);
 
   const createLoading = createState === 'loading';
   const createDisabled = !isConnected || createLoading || createName.trim().length === 0;
+  const outputType = useWorkspaceStore((s) => s.outputType);
+
+  const {
+    templates,
+    isLoading: templatesLoading,
+    error: templatesError,
+    updateTemplateDescription,
+    removeTemplate,
+    saveCurrentNotebookAsTemplate,
+  } = useTemplates();
 
   async function handleCreate() {
     if (createDisabled) return;
@@ -80,6 +106,15 @@ export default function NotebookSwitcher({
     if (created) {
       setCreateOpen(false);
     }
+  }
+
+  async function handleCreateFromTemplate(template: WorkspaceTemplate, notebookName: string) {
+    if (!onCreateNotebookFromTemplate) return false;
+    const ok = await onCreateNotebookFromTemplate(template.id, notebookName);
+    if (ok && template.config.outputType) {
+      useWorkspaceStore.getState().setOutputType(template.config.outputType);
+    }
+    return ok;
   }
 
   const activeNotebook = notebooks.find((item) => item.id === activeNotebookId) ?? null;
@@ -147,6 +182,54 @@ export default function NotebookSwitcher({
 
   return (
     <div className="flex items-center border border-gray-300 rounded-lg bg-white overflow-hidden h-8">
+      <TemplatePickerDialog
+        open={templatePickerOpen}
+        templates={templates}
+        isLoading={templatesLoading}
+        error={templatesError}
+        onClose={() => setTemplatePickerOpen(false)}
+        onOpenManager={() => {
+          setTemplatePickerOpen(false);
+          setTemplateManagerOpen(true);
+        }}
+        onCreate={handleCreateFromTemplate}
+      />
+
+      <TemplateManagerDialog
+        open={templateManagerOpen}
+        templates={templates}
+        isLoading={templatesLoading}
+        error={templatesError}
+        onClose={() => setTemplateManagerOpen(false)}
+        onUpdateDescription={async (templateId, description) => {
+          await updateTemplateDescription(templateId, description);
+        }}
+        onDelete={async (templateId) => {
+          await removeTemplate(templateId);
+        }}
+      />
+
+      <SaveTemplateDialog
+        open={saveTemplateOpen}
+        notebookId={saveTemplateNotebookId}
+        defaultName={saveTemplateDefaultName}
+        defaultOutputType={outputType}
+        onClose={() => setSaveTemplateOpen(false)}
+        onSave={async ({ notebookId, name, description, outputType }) => {
+          try {
+            await saveCurrentNotebookAsTemplate({
+              notebookId,
+              name,
+              description,
+              outputType,
+            });
+            return true;
+          } catch {
+            return false;
+          }
+        }}
+      />
+
       <Popover
         open={isOpen}
         handler={handlePopoverHandler}
@@ -303,6 +386,21 @@ export default function NotebookSwitcher({
                             <EditIcon style={{ fontSize: 14 }} />
                           </IconButton>
                         )}
+                        <IconButton
+                          size="sm"
+                          variant="text"
+                          className="w-6 h-6 min-w-[24px] rounded hover:bg-gray-300 text-gray-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSaveTemplateNotebookId(item.id);
+                            setSaveTemplateDefaultName(item.title);
+                            setSaveTemplateOpen(true);
+                            onClose();
+                          }}
+                          aria-label="保存为模板"
+                        >
+                          <BookmarkAddIcon style={{ fontSize: 14 }} />
+                        </IconButton>
                         {onDelete && (
                           <ConfirmPopover
                             message={`确定删除「${item.title}」？此操作不可撤销。`}
@@ -397,6 +495,35 @@ export default function NotebookSwitcher({
               onClick={handleCreate}
             >
               创建
+            </Button>
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between gap-2">
+            <Button
+              size="sm"
+              variant="text"
+              className="rounded-full px-3 py-1.5 normal-case font-normal text-gray-700 text-[11px] flex items-center gap-1"
+              disabled={!isConnected || !onCreateNotebookFromTemplate}
+              onClick={() => {
+                setCreateOpen(false);
+                setTemplatePickerOpen(true);
+              }}
+            >
+              <TemplateIcon style={{ fontSize: 14 }} />
+              从模板
+            </Button>
+            <Button
+              size="sm"
+              variant="text"
+              className="rounded-full px-3 py-1.5 normal-case font-normal text-gray-700 text-[11px] flex items-center gap-1"
+              disabled={!isConnected}
+              onClick={() => {
+                setCreateOpen(false);
+                setTemplateManagerOpen(true);
+              }}
+            >
+              <SettingsIcon style={{ fontSize: 14 }} />
+              管理模板
             </Button>
           </div>
         </PopoverContent>

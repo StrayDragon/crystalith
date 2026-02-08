@@ -1,6 +1,6 @@
 # NEXT - 续做接力记录
 
-更新时间：2026-02-08 14:55 CST
+更新时间：2026-02-08 16:23 CST
 分支：`main`
 
 ## 1) 当前总状态（下次开工先看这里）
@@ -15,7 +15,8 @@
 - `add-database-migration` 已完成并归档：`openspec/changes/archive/2026-02-08-add-database-migration/`
 - `add-caching-layer` 已完成并归档：`openspec/changes/archive/2026-02-08-add-caching-layer/`
 - `add-production-docker` 已完成并归档：`openspec/changes/archive/2026-02-08-add-production-docker/`
-- `_SEQ` 已更新：补齐 Docker 归档状态；下一步推进剩余 changes
+- `add-workspace-templates` 已完成并归档：`openspec/changes/archive/2026-02-08-add-workspace-templates/`
+- `_SEQ` 已更新：补齐 Templates 归档状态；下一步推进 `add-plugin-architecture`
 
 ## 2) 本轮已完成（开发 -> 测试 -> 验收）
 
@@ -96,10 +97,26 @@
   - Postgres 持久化验证：`docker compose down && up -d` 后 notebook 仍存在
   - DevTools（MCP）验收：Workspace UI 可正常加载/浏览 notebook、source、session、output
 
+### G. 工作区模板（add-workspace-templates）
+
+- 后端：新增 `templates` feature slice（CRUD + 保存 notebook 为模板），并支持 `POST /v1/notebooks?template_id=...` 从模板创建 notebook
+- 数据库：新增 `templates` 表 + Alembic 迁移（并修复本地 DB 漂移导致的 `table templates already exists` 升级失败）
+- 前端：NotebookSwitcher 集成“从模板创建 / 保存为模板 / 模板管理”，并新增 `useTemplates` 单测
+- 已通过命令：
+  - `cd backend/py && just test`
+  - `pnpm -C frontend/web test --run src/features/workspace/domains/templates/useTemplates.test.tsx`
+  - `pnpm -C frontend/web run build`
+  - `openspec validate add-workspace-templates --strict --no-interactive`
+  - `openspec archive add-workspace-templates --yes`
+- DevTools（MCP）验收：
+  - 模板列表包含 3 个内置模板
+  - 从模板创建 notebook 后 session/tag 预配置生效
+  - 保存为模板 + 模板管理（内置不可编辑/删除，自定义可编辑/删除）
+
 ## 3) 下一步（按 _SEQ）
 
 1. Obsidian 相关继续暂缓。
-2. 下一优先级 changes：`add-workspace-templates` → `add-plugin-architecture`（都在 `openspec/changes/` 下）。
+2. 下一优先级 changes：`add-plugin-architecture`（在 `openspec/changes/` 下）。
 3. 若要补齐 Source 索引百分比 SSE 链路：建议新建独立 change（从 `source-ingestion` / `workspace-ui` 两端拆分任务）。
 
 ## 4) 备注

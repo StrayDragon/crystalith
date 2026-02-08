@@ -75,6 +75,28 @@ class Notebook(AsyncSqlATableBase):
     __table_args__ = (sa.Index("ix_notebooks_name", "name"),)
 
 
+class Template(AsyncSqlATableBase):
+    __tablename__ = "templates"
+
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(sa.String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    config_json: Mapped[dict[str, Any]] = mapped_column(sa.JSON, nullable=False)
+    is_builtin: Mapped[bool] = mapped_column(
+        sa.Boolean,
+        nullable=False,
+        server_default=sa.false(),
+    )
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+    )
+
+    __table_args__ = (sa.Index("ix_templates_is_builtin", "is_builtin"),)
+
+
 class Session(AsyncSqlATableBase):
     __tablename__ = "sessions"
 
