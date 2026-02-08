@@ -27,7 +27,7 @@ async def create_message(
 ) -> Message:
     db_session = await get_session(session, session_id)
     if db_session is not None:
-        db_session.updated_at = datetime.datetime.now(datetime.UTC)
+        db_session.updated_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
     return await repo.create_message(
         session,
         session_id=session_id,
