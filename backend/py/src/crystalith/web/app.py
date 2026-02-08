@@ -26,6 +26,7 @@ from crystalith.shared.schemas.errors import (
     build_error_response_from_exception,
     status_code_from_exception,
 )
+from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore, create_vector_store
 
@@ -96,16 +97,27 @@ def create_app(
     db = db_manager or create_db_manager(resolved.database.url)
     store = vector_store if vector_store is not None else create_vector_store(resolved)
     cache = cache_provider or create_cache_provider(resolved)
+    plugins = PluginRegistry()
     queue = task_queue or TaskQueue(
         db_manager=db,
         settings=resolved,
         vector_store=store,
+        plugins=plugins,
     )
 
     @asynccontextmanager
     async def lifespan(app: FastAPIX):
         if _env_bool("AUTO_DB_INIT", False):
             await asyncio.to_thread(upgrade_head, app.state.settings.database.url)
+
+        try:
+            report = app.state.plugins.load_from_entry_points(app.state.settings)
+            logger.info(
+                "Loaded plugins on startup",
+                extra={"loaded": report.loaded, "skipped": report.skipped},
+            )
+        except Exception:  # noqa: BLE001 - plugin boundary
+            logger.exception("Failed to load plugins")
 
         async with app.state.db.got_manual_session() as session:
             try:
@@ -166,6 +178,7 @@ def create_app(
     app.state.vector_store = store
     app.state.cache = cache
     app.state.task_queue = queue
+    app.state.plugins = plugins
 
     @app.get("/health", include_in_schema=False)
     async def health() -> dict[str, str]:

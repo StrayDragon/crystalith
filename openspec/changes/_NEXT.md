@@ -1,6 +1,6 @@
 # NEXT - 续做接力记录
 
-更新时间：2026-02-08 16:23 CST
+更新时间：2026-02-08 17:18 CST
 分支：`main`
 
 ## 1) 当前总状态（下次开工先看这里）
@@ -16,7 +16,8 @@
 - `add-caching-layer` 已完成并归档：`openspec/changes/archive/2026-02-08-add-caching-layer/`
 - `add-production-docker` 已完成并归档：`openspec/changes/archive/2026-02-08-add-production-docker/`
 - `add-workspace-templates` 已完成并归档：`openspec/changes/archive/2026-02-08-add-workspace-templates/`
-- `_SEQ` 已更新：补齐 Templates 归档状态；下一步推进 `add-plugin-architecture`
+- `add-plugin-architecture` 已完成并归档：`openspec/changes/archive/2026-02-08-add-plugin-architecture/`
+- `_SEQ` 已更新：补齐 `add-plugin-architecture` 归档状态；下一步暂无（Obsidian 暂缓）
 
 ## 2) 本轮已完成（开发 -> 测试 -> 验收）
 
@@ -113,10 +114,35 @@
   - 从模板创建 notebook 后 session/tag 预配置生效
   - 保存为模板 + 模板管理（内置不可编辑/删除，自定义可编辑/删除）
 
+### H. 插件架构（add-plugin-architecture）
+
+- 新增插件系统骨架（entry_points: `crystalith.plugins`）：
+  - `backend/py/src/crystalith/shared/plugins/interfaces.py`
+  - `backend/py/src/crystalith/shared/plugins/registry.py`
+- 支持配置 enable/disable（`plugins.enabled`/`plugins.disabled`）并写入 schema：
+  - `backend/py/src/crystalith/shared/config/models.py`
+  - `config/schema.json`
+- 接入点：
+  - AI provider 工厂：`backend/py/src/crystalith/shared/ai/factory.py`
+  - Parser 工厂：`backend/py/src/crystalith/shared/parsers/factory.py` + Sources 上传链路注入 registry
+  - Output generator：`backend/py/src/crystalith/shared/agents/output_graph.py`（允许插件覆盖既有 OutputType 的 schema/prompt）
+- `/v1/models` 返回包含插件 provider（新增 `providers` 字段），并过滤掉 disabled/missing provider：
+  - `backend/py/src/crystalith/features/models/api.py`
+  - `frontend/web` OpenAPI/TS client 已重新生成
+- 开发者支持：
+  - 文档：`docs/plugins.md`
+  - Cookiecutter 模板：`backend/py/tools/cookiecutter-crystalith-plugin/`
+  - 示例插件：`backend/py/examples/crystalith-echo-plugin/`
+  - 合规性检查工具：`backend/py/scripts/check_plugins.py`
+- 测试与验收：
+  - `cd backend/py && just test`
+  - `pnpm -C frontend/web test` + `pnpm -C frontend/web run build`
+  - DevTools 验收：在 `http://localhost:3000/` 执行 `fetch('/v1/models')`，`providers` 包含 `echo`
+
 ## 3) 下一步（按 _SEQ）
 
 1. Obsidian 相关继续暂缓。
-2. 下一优先级 changes：`add-plugin-architecture`（在 `openspec/changes/` 下）。
+2. 目前 `openspec/changes/` 下仅剩 `add-obsidian-integration`（继续暂缓）；如需继续推进，建议新建独立 change 先补齐内置基础链路。
 3. 若要补齐 Source 索引百分比 SSE 链路：建议新建独立 change（从 `source-ingestion` / `workspace-ui` 两端拆分任务）。
 
 ## 4) 备注

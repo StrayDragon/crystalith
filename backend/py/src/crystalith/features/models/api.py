@@ -14,6 +14,8 @@ from pydantic import BaseModel, Field
 from crystalith.shared.config import ModelConfig, ModelRole, Settings
 
 from crystalith.shared.deps import get_settings
+from crystalith.shared.deps import get_plugin_registry
+from crystalith.shared.plugins import PluginRegistry
 
 
 router = APIRouter(prefix="/v1/models", tags=["models"])
@@ -23,7 +25,7 @@ class ModelRead(BaseModel):
     """Response model for a single AI model."""
 
     id: str
-    provider: Literal["openai", "ollama"]
+    provider: str
     model: str
     display_name: str
     description: str
@@ -35,6 +37,7 @@ class ModelsListResponse(BaseModel):
     """Response model for the models list endpoint."""
 
     models: list[ModelRead]
+    providers: list[str] = Field(default_factory=list, description="Available provider ids (built-in + plugins)")
     default_chat: str | None = None
     default_embedding: str | None = None
 
@@ -55,6 +58,7 @@ def _model_config_to_read(config: ModelConfig) -> ModelRead:
 @router.get("", response_model=ModelsListResponse)
 async def list_models(
     settings: Settings = Depends(get_settings),
+    plugins: PluginRegistry = Depends(get_plugin_registry),
     role: Literal["chat", "embed", "edit", "autocomplete"] | None = None,
     capability: str | None = None,
 ) -> ModelsListResponse:
@@ -74,8 +78,12 @@ async def list_models(
     if capability:
         available = [m for m in available if m.has_capability(capability)]
 
+    # Filter out models whose provider is disabled/missing.
+    available = [m for m in available if plugins.is_provider_available(m.provider)]
+
     return ModelsListResponse(
         models=[_model_config_to_read(m) for m in available],
+        providers=sorted({"openai", "ollama", *plugins.list_ai_providers()}),
         default_chat=models_settings.defaults.chat,
         default_embedding=models_settings.defaults.embedding,
     )
@@ -85,10 +93,11 @@ async def list_models(
 async def get_model(
     model_id: str,
     settings: Settings = Depends(get_settings),
+    plugins: PluginRegistry = Depends(get_plugin_registry),
 ) -> ModelRead:
     """Get a specific model by ID."""
     model = settings.get_model_config(model_id)
-    if model:
+    if model and plugins.is_provider_available(model.provider):
         return _model_config_to_read(model)
 
     raise HTTPException(status_code=404, detail=f"Model not found: {model_id}")

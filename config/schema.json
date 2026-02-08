@@ -472,11 +472,7 @@
           "type": "string"
         },
         "provider": {
-          "description": "Provider type",
-          "enum": [
-            "openai",
-            "ollama"
-          ],
+          "description": "Provider id (built-in: openai/ollama, or a plugin provider id)",
           "title": "Provider",
           "type": "string"
         },
@@ -839,6 +835,37 @@
         }
       },
       "title": "OpenAIProviderSettings",
+      "type": "object"
+    },
+    "PluginsSettings": {
+      "description": "Plugin loading configuration.\n\nPlugins are discovered via Python entry points (group: `crystalith.plugins`).\nThis section controls which discovered plugins are enabled.",
+      "properties": {
+        "enabled": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "If set, only plugins in this list are loaded (allowlist).",
+          "title": "Enabled"
+        },
+        "disabled": {
+          "description": "Plugins to skip loading (denylist).",
+          "items": {
+            "type": "string"
+          },
+          "title": "Disabled",
+          "type": "array"
+        }
+      },
+      "title": "PluginsSettings",
       "type": "object"
     },
     "RefineSettings": {
@@ -1224,6 +1251,10 @@
     "search": {
       "$ref": "#/$defs/SearchSettings",
       "description": "Web search settings"
+    },
+    "plugins": {
+      "$ref": "#/$defs/PluginsSettings",
+      "description": "插件加载配置"
     },
     "source_ingestion": {
       "$ref": "#/$defs/SourceIngestionSettings",

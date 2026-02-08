@@ -488,7 +488,7 @@ export type ModelRead = {
     /**
      * Provider
      */
-    provider: 'openai' | 'ollama';
+    provider: string;
     /**
      * Model
      */
@@ -525,6 +525,12 @@ export type ModelsListResponse = {
      * Models
      */
     models: Array<ModelRead>;
+    /**
+     * Providers
+     *
+     * Available provider ids (built-in + plugins)
+     */
+    providers?: Array<string>;
     /**
      * Default Chat
      */

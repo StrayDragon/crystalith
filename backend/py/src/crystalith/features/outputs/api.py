@@ -21,7 +21,14 @@ from crystalith.shared.db import Chunk, Notebook, Output, Source
 from crystalith.shared.types import OutputType, SourceStatus
 from crystalith.shared.vector_storage import VectorStore
 
-from crystalith.shared.deps import get_db_session, get_embedding_provider, get_settings, get_vector_store
+from crystalith.shared.deps import (
+    get_db_session,
+    get_embedding_provider,
+    get_plugin_registry,
+    get_settings,
+    get_vector_store,
+)
+from crystalith.shared.plugins import PluginRegistry
 
 
 log = get_logger(__name__)
@@ -68,6 +75,7 @@ async def create_output(
     settings: Settings = Depends(get_settings),
     embedder=Depends(get_embedding_provider),
     vector_store=Depends(get_vector_store),
+    plugins: PluginRegistry = Depends(get_plugin_registry),
 ) -> OutputRead:
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
@@ -80,6 +88,7 @@ async def create_output(
         session=session,
         vector_store=vector_store,
         embedder=embedder,
+        plugins=plugins,
     )
 
     log.info(
