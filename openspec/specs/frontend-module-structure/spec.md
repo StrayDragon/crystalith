@@ -64,3 +64,11 @@ TBD - created by archiving change refactor-frontend-layout-260129. Update Purpos
 #### Scenario: 结构重构验证
 - **WHEN** 迁移 workspace 子域或调整目录结构
 - **THEN** 必须运行 `./scripts/run-e2e.sh` 并通过
+
+### Requirement: 共享骨架屏组件
+系统 MUST 在 `src/shared/` 中提供统一的骨架屏组件库（SkeletonLine、SkeletonCard、SkeletonList），供所有 feature 复用。
+
+#### Scenario: feature 使用共享骨架屏
+- **WHEN** 任一 feature 需要展示加载状态
+- **THEN** 使用 `src/shared/` 中的骨架屏组件
+- **AND** 不在 feature 内部维护独立的骨架屏实现

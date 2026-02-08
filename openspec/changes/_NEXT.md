@@ -1,14 +1,16 @@
 # NEXT - 续做接力记录
 
-更新时间：2026-02-08 11:47 CST
+更新时间：2026-02-08 11:56 CST
 分支：`main`
 
 ## 1) 当前总状态（下次开工先看这里）
 
+- `optimize-frontend-performance` 已完成并归档：`openspec/changes/archive/2026-02-08-optimize-frontend-performance/`
+- `enhance-ux-polish` 已完成并归档：`openspec/changes/archive/2026-02-08-enhance-ux-polish/`（Source 索引百分比 SSE 相关项移出本变更）
 - `add-dark-mode-v2` 已归档：`openspec/changes/archive/2026-02-08-add-dark-mode-v2/`
 - `add-keyboard-shortcuts` 已完成并归档：`openspec/changes/archive/2026-02-08-add-keyboard-shortcuts/`
 - `add-output-export-v2` 已完成并归档：`openspec/changes/archive/2026-02-08-add-output-export-v2/`（`workspace-ui` spec 已更新）
-- `_SEQ` 已更新：补齐 `2f` 归档状态；下一步回到延后项评估
+- `_SEQ` 已更新：补齐 `1a/2b/2f` 归档状态；下一步评估新提案
 
 ## 2) 本轮已完成（开发 -> 测试 -> 验收）
 
@@ -63,11 +65,18 @@
   - FAQ/Quiz/Briefing/Slides 的导出菜单展示正确（Markdown + 特殊格式）
   - 点击导出可触发浏览器下载（DevTools 通过 `URL.createObjectURL` 计数验证）
 
+### E. 归档收尾（optimize-frontend-performance / enhance-ux-polish）
+
+- `optimize-frontend-performance` 补齐验收项（DevTools Network 观察懒加载 chunk 仅在点击时加载），并已归档：
+  - `openspec archive optimize-frontend-performance --yes`
+- `enhance-ux-polish` 将 3.3/3.4（Source 索引百分比 SSE 链路）移出本变更并已归档：
+  - `openspec archive enhance-ux-polish --yes`
+
 ## 3) 下一步（按 _SEQ）
 
-1. 评估是否继续收尾 `optimize-frontend-performance` 延后项（2.5/2.6）。
-2. 评估是否继续收尾 `enhance-ux-polish` 延后项（3.3/3.4）。
-3. 若继续推进新提案：优先从 `add-database-migration` / `add-backend-dependency-injection` 等低耦合项开始。
+1. Obsidian 相关继续暂缓。
+2. 若继续推进新提案：优先从 `add-database-migration` / `add-backend-dependency-injection` 等低耦合项开始。
+3. 若要补齐 SSE 进度链路：建议新建独立 change（从 `source-ingestion` / `workspace-ui` 两端拆分任务）。
 
 ## 4) 备注
 

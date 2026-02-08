@@ -116,15 +116,15 @@ Week 3-5:  Phase 2  ─── [2a: Obsidian] ─────────
 |---|---|---|---|
 | 0a | `refactor-state-to-zustand` | ✅ 完成 | `openspec list` 显示 Complete |
 | 0b | `optimize-backend-performance` | ✅ 已归档 | 2026-02-07 归档至 `archive/2026-02-07-optimize-backend-performance` |
-| 1a | `optimize-frontend-performance` | 🚧 进行中（21/23） | 剩余构建拆分/LCP 验收项（2.5/2.6 暂缓） |
+| 1a | `optimize-frontend-performance` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-optimize-frontend-performance` |
 | 1b | `add-error-resilience` | ✅ 已归档 | 2026-02-07 归档至 `archive/2026-02-07-add-error-resilience` |
-| 2b | `enhance-ux-polish` | 🚧 进行中（32/34） | 已完成主流程开发 + 测试 + DevTools 验收；3.3/3.4（source 索引百分比 SSE 链路）暂缓 |
+| 2b | `enhance-ux-polish` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-enhance-ux-polish`（Source 索引百分比 SSE 相关项移出本变更） |
 | 2c | `enhance-source-batch-ops` | ✅ 已归档 | 2026-02-07 归档至 `archive/2026-02-07-enhance-source-batch-ops` |
 | 2d | `add-dark-mode-v2` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-dark-mode-v2` |
 | 2e | `add-keyboard-shortcuts` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-keyboard-shortcuts` |
 | 2f | `add-output-export-v2` | ✅ 已归档 | 2026-02-08 归档至 `archive/2026-02-08-add-output-export-v2` |
 
-**下一优先级**: 在继续暂缓 Obsidian、并保留 `optimize-frontend-performance` 的 2.5/2.6 与 `enhance-ux-polish` 的 3.3/3.4 延后项的前提下，下一步优先评估是否要收尾上述延后项或启动新的低优先级提案（例如 `add-database-migration`）。
+**下一优先级**: 在继续暂缓 Obsidian 的前提下，下一步可优先评估低耦合提案（例如 `add-database-migration` / `add-backend-dependency-injection`），或整理/合并当前未进入 _SEQ 的草案提案。
 
 ## 被排除/暂缓的提案
 

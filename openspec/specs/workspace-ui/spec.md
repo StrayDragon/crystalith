@@ -439,3 +439,110 @@ Source 列表 SHALL 支持多维度排序（名称、创建日期、大小、类
 #### Scenario: 导出格式限制
 - **WHEN** 用户查看 Timeline 输出并点击 "导出"
 - **THEN** 仅显示该输出类型支持的导出格式（Markdown）
+
+### Requirement: 列表虚拟化渲染
+系统 MUST 对消息列表、来源列表和输出列表使用虚拟化渲染，仅挂载可见区域的 DOM 节点。
+
+#### Scenario: 大量消息的流畅滚动
+- **WHEN** 会话包含 100+ 条消息
+- **THEN** 页面仅渲染可见区域的消息 DOM 节点
+- **AND** 滚动时帧率保持 >30fps
+- **AND** 新消息到达时自动滚动到底部
+
+#### Scenario: 大量来源的流畅滚动
+- **WHEN** notebook 包含 50+ 个来源
+- **THEN** 来源列表仅渲染可见区域的 DOM 节点
+- **AND** 多选、状态标识等交互功能正常
+
+### Requirement: 重组件懒加载
+系统 MUST 对非首屏必需的重组件使用代码分割和懒加载，减少首屏 bundle 大小。
+
+#### Scenario: 知识图谱按需加载
+- **WHEN** 用户未打开知识图谱视图
+- **THEN** KnowledgeGraphView 的代码不在首屏 bundle 中
+- **AND** 用户首次打开时显示加载骨架屏，代码加载完成后渲染
+
+#### Scenario: Slides Studio 按需加载
+- **WHEN** 用户未打开 Slides Studio
+- **THEN** SlidesStudioDialog 的代码不在首屏 bundle 中
+
+### Requirement: 统一骨架屏加载状态
+系统 MUST 使用统一的骨架屏组件展示各面板的加载状态，保持视觉一致性。
+
+#### Scenario: 面板加载统一样式
+- **WHEN** 任一面板处于数据加载中
+- **THEN** 显示与内容布局匹配的骨架屏动画
+- **AND** 所有面板的骨架屏风格一致（颜色、动画速度、形状）
+
+### Requirement: 拖拽上传文件
+Sources 面板 MUST 支持拖拽文件上传，提供视觉反馈。
+
+#### Scenario: 拖拽文件到 Sources 面板
+- **WHEN** 用户将文件拖拽到 Sources 面板区域
+- **THEN** 面板显示高亮边框和"拖放文件到此处"提示
+- **AND** 用户释放文件后触发上传流程
+
+#### Scenario: 拖拽非支持格式文件
+- **WHEN** 用户拖拽不支持的文件格式
+- **THEN** 面板显示提示说明支持的格式
+- **AND** 不触发上传
+
+### Requirement: AI 操作取消
+系统 MUST 支持取消进行中的 AI 生成操作（QA 流式回答、Studio 输出生成）。
+
+#### Scenario: 取消流式 QA
+- **WHEN** AI 正在生成流式回答
+- **AND** 用户点击"停止生成"按钮
+- **THEN** 系统中断 LLM 生成流
+- **AND** 已接收的部分内容正常显示
+- **AND** 输入框恢复可用状态
+
+#### Scenario: 取消 Studio 输出生成
+- **WHEN** Studio 输出正在生成队列中处理
+- **AND** 用户点击取消按钮
+- **THEN** 任务状态变为"已取消"
+- **AND** 不在输出列表中添加不完整的结果
+
+### Requirement: Modal 焦点陷阱
+系统 MUST 在所有 Modal 对话框中实现焦点陷阱，Tab 键循环在 Modal 内部元素之间。
+
+#### Scenario: Tab 键焦点循环
+- **WHEN** Modal 对话框打开
+- **AND** 用户按 Tab 键
+- **THEN** 焦点在 Modal 内的可交互元素之间循环
+- **AND** 焦点不逃逸到 Modal 外的背景内容
+
+#### Scenario: ESC 关闭 Modal
+- **WHEN** Modal 对话框打开
+- **AND** 用户按 ESC 键
+- **THEN** Modal 关闭
+- **AND** 焦点返回到触发 Modal 的元素
+
+### Requirement: 空状态操作引导
+系统 MUST 在内容为空时提供清晰的操作引导，帮助新用户理解使用流程。
+
+#### Scenario: 无来源时引导
+- **WHEN** notebook 无来源
+- **THEN** Sources 面板显示引导卡片提示添加文档
+
+#### Scenario: 有来源但无会话时引导
+- **WHEN** notebook 有来源但无会话消息
+- **THEN** Chat 面板显示提示选择来源后提问
+
+#### Scenario: Studio 无输出时引导
+- **WHEN** notebook 无 Studio 输出
+- **THEN** Studio 面板显示引导流程：选择来源 → 点击工具卡片
+
+### Requirement: 统一 Toast 通知样式
+系统 MUST 统一所有操作反馈的 Toast 样式、颜色和显示时长。
+
+#### Scenario: 操作成功 Toast
+- **WHEN** 用户操作成功
+- **THEN** 显示绿色 Toast 通知
+- **AND** 3 秒后自动关闭
+
+#### Scenario: 操作失败 Toast
+- **WHEN** 用户操作失败
+- **THEN** 显示红色 Toast 通知
+- **AND** 5 秒后自动关闭
+- **AND** 用户可手动关闭
