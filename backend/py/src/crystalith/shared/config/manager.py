@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -9,7 +10,7 @@ import yaml
 from jsonschema import Draft7Validator, ValidationError as JsonSchemaValidationError
 from pydantic import ValidationError
 
-from .models import Settings
+from .models import OllamaProviderSettings, OpenAIProviderSettings, Settings
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,19 @@ class ConfigManager:
             return self._secrets
 
         if self.secrets_path is None or not self.secrets_path.is_file():
+            if self.secrets_path is not None and self.secrets_path.is_dir():
+                secrets: dict[str, str] = {}
+                for item in self.secrets_path.iterdir():
+                    if not item.is_file():
+                        continue
+                    try:
+                        secrets[item.name] = item.read_text(encoding="utf-8").strip()
+                    except Exception as exc:
+                        logger.warning("Failed to read secret %s: %s", item, exc)
+                self._secrets = secrets
+                logger.info("Loaded %d docker secrets from %s", len(secrets), self.secrets_path.resolve())
+                return self._secrets
+
             self._secrets = {}
             return self._secrets
 
@@ -85,6 +99,121 @@ class ConfigManager:
             self._secrets = {}
 
         return self._secrets
+
+    def _apply_env_overrides(self, settings: Settings, secrets: dict[str, str]) -> None:
+        def _read_text(*names: str) -> str | None:
+            for name in names:
+                value = os.environ.get(name)
+                if value is None:
+                    continue
+                text = value.strip()
+                if text:
+                    return text
+            return None
+
+        def _read_text_with_secrets(*names: str) -> str | None:
+            value = _read_text(*names)
+            if value:
+                return value
+            for name in names:
+                secret_value = secrets.get(name)
+                if secret_value:
+                    return secret_value.strip() or None
+            return None
+
+        def _read_int(*names: str) -> int | None:
+            value = _read_text(*names)
+            if value is None:
+                return None
+            try:
+                return int(value)
+            except ValueError:
+                logger.warning("Invalid int for %s: %s", names[0], value)
+                return None
+
+        database_url = _read_text("DATABASE_URL", "CRYSTALITH_DATABASE__URL")
+        if database_url:
+            settings.database.url = database_url
+
+        chroma_host = _read_text(
+            "CHROMA_HOST",
+            "CRYSTALITH_VECTOR_STORAGE__CHROMA__HOST",
+        )
+        if chroma_host:
+            settings.vector_storage.chroma.host = chroma_host
+
+        chroma_port = _read_int(
+            "CHROMA_PORT",
+            "CRYSTALITH_VECTOR_STORAGE__CHROMA__PORT",
+        )
+        if chroma_port is not None:
+            settings.vector_storage.chroma.port = chroma_port
+
+        chroma_path = _read_text(
+            "CHROMA_PATH",
+            "CRYSTALITH_VECTOR_STORAGE__CHROMA__PATH",
+        )
+        if chroma_path:
+            settings.vector_storage.chroma.path = chroma_path
+
+        cache_provider = _read_text("CACHE_PROVIDER", "CRYSTALITH_CACHE__PROVIDER")
+        redis_url = _read_text("REDIS_URL", "CRYSTALITH_CACHE__REDIS_URL")
+        if cache_provider:
+            normalized = cache_provider.strip().lower()
+            if normalized in {"memory", "redis"}:
+                settings.cache.provider = normalized  # type: ignore[assignment]
+        if redis_url:
+            settings.cache.redis_url = redis_url
+            if settings.cache.provider != "redis":
+                settings.cache.provider = "redis"
+
+        openai_api_key = _read_text_with_secrets("OPENAI_API_KEY")
+        openai_base_url = _read_text("OPENAI_BASE_URL")
+        if openai_api_key or openai_base_url:
+            for model in settings.models.available:
+                if model.provider != "openai":
+                    continue
+                if isinstance(model.provider_config, OpenAIProviderSettings):
+                    if openai_api_key:
+                        model.provider_config.api_key = openai_api_key
+                    if openai_base_url:
+                        model.provider_config.base_url = openai_base_url
+                elif isinstance(model.provider_config, dict):
+                    if openai_api_key:
+                        model.provider_config["api_key"] = openai_api_key
+                    if openai_base_url:
+                        model.provider_config["base_url"] = openai_base_url
+                else:
+                    config: dict[str, Any] = {}
+                    if openai_api_key:
+                        config["api_key"] = openai_api_key
+                    if openai_base_url:
+                        config["base_url"] = openai_base_url
+                    model.provider_config = config
+
+        ollama_host = _read_text("OLLAMA_HOST")
+        if ollama_host:
+            for model in settings.models.available:
+                if model.provider != "ollama":
+                    continue
+                if isinstance(model.provider_config, OllamaProviderSettings):
+                    model.provider_config.host = ollama_host
+                elif isinstance(model.provider_config, dict):
+                    model.provider_config["host"] = ollama_host
+                else:
+                    model.provider_config = {"host": ollama_host}
+
+        default_chat_model = _read_text("CRYSTALITH_DEFAULT_CHAT_MODEL", "DEFAULT_CHAT_MODEL")
+        if default_chat_model:
+            if settings.models.get_model(default_chat_model) is None:
+                raise ValueError(f"Invalid default chat model id: {default_chat_model}")
+            settings.models.defaults.chat = default_chat_model
+
+        default_embedding_model = _read_text("CRYSTALITH_DEFAULT_EMBEDDING_MODEL", "DEFAULT_EMBEDDING_MODEL")
+        if default_embedding_model:
+            if settings.models.get_model(default_embedding_model) is None:
+                raise ValueError(f"Invalid default embedding model id: {default_embedding_model}")
+            settings.models.defaults.embedding = default_embedding_model
 
     def _validate_with_jsonschema(self, data: dict[str, Any]) -> list[str]:
         """
@@ -170,6 +299,7 @@ class ConfigManager:
 
             # Load and validate settings with Pydantic
             settings = Settings.from_yaml(self.config_path, secrets=secrets)
+            self._apply_env_overrides(settings, secrets)
 
         except FileNotFoundError as exc:
             raise FileNotFoundError(f"Config file not found: {self.config_path}") from exc

@@ -1,6 +1,6 @@
 # NEXT - 续做接力记录
 
-更新时间：2026-02-08 13:41 CST
+更新时间：2026-02-08 14:55 CST
 分支：`main`
 
 ## 1) 当前总状态（下次开工先看这里）
@@ -14,7 +14,8 @@
 - `add-backend-dependency-injection` 已完成并归档：`openspec/changes/archive/2026-02-08-add-backend-dependency-injection/`
 - `add-database-migration` 已完成并归档：`openspec/changes/archive/2026-02-08-add-database-migration/`
 - `add-caching-layer` 已完成并归档：`openspec/changes/archive/2026-02-08-add-caching-layer/`
-- `_SEQ` 已更新：补齐 zustand 归档状态；下一步整理后续提案
+- `add-production-docker` 已完成并归档：`openspec/changes/archive/2026-02-08-add-production-docker/`
+- `_SEQ` 已更新：补齐 Docker 归档状态；下一步推进剩余 changes
 
 ## 2) 本轮已完成（开发 -> 测试 -> 验收）
 
@@ -76,11 +77,30 @@
 - `enhance-ux-polish` 将 3.3/3.4（Source 索引百分比 SSE 链路）移出本变更并已归档：
   - `openspec archive enhance-ux-polish --yes`
 
+### F. 生产部署 Docker Compose（add-production-docker）
+
+- 生产 Compose：`docker-compose.prod.yml`（Postgres + Chroma + 可选 Redis + nginx 反代）
+- 后端/前端多阶段 Dockerfile：
+  - `dockers/backend/Dockerfile`
+  - `dockers/frontend/Dockerfile`
+  - `dockers/nginx/default.conf`
+- 环境变量覆盖与 secrets 支持：
+  - `backend/py/src/crystalith/shared/config/manager.py`
+  - `backend/py/src/crystalith/web/app.py`
+- 外置 Chroma HTTP VectorStore（避免 API 镜像携带 chromadb 重依赖）：
+  - `backend/py/src/crystalith/shared/vector_storage/chroma_http.py`
+- 部署文档：`docs/deployment.md`
+- 已通过验收（本机 Docker）：
+  - `docker compose -f docker-compose.prod.yml up -d --build`
+  - `/health`、OpenAPI UI 正常
+  - Postgres 持久化验证：`docker compose down && up -d` 后 notebook 仍存在
+  - DevTools（MCP）验收：Workspace UI 可正常加载/浏览 notebook、source、session、output
+
 ## 3) 下一步（按 _SEQ）
 
 1. Obsidian 相关继续暂缓。
-2. 如需继续推进低耦合/基础设施：建议从 Docker/observability 等独立项评估开始，或新建 SSE 进度链路 change。
-3. 若要补齐 SSE 进度链路：建议新建独立 change（从 `source-ingestion` / `workspace-ui` 两端拆分任务）。
+2. 下一优先级 changes：`add-workspace-templates` → `add-plugin-architecture`（都在 `openspec/changes/` 下）。
+3. 若要补齐 Source 索引百分比 SSE 链路：建议新建独立 change（从 `source-ingestion` / `workspace-ui` 两端拆分任务）。
 
 ## 4) 备注
 
