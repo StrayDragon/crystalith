@@ -439,6 +439,15 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         deps = ctx.deps
 
         schema = OUTPUT_SCHEMAS[state.output_type]
+        default_prompt = DEFAULT_PROMPTS.get(state.output_type, "")
+
+        plugins = getattr(deps, "plugins", None)
+        if plugins is not None:
+            plugin = plugins.output_types.get(state.output_type.value)
+            if plugin is not None:
+                schema = plugin.schema
+                if plugin.default_prompt:
+                    default_prompt = plugin.default_prompt
 
         # Build model: prefer state.model_id, then deps.model, then default from settings
         if state.model_id:
@@ -463,7 +472,8 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
             retries=2,
         )
 
-        user_prompt = _build_output_prompt(state.output_type, state.prompt, state.context)
+        effective_prompt = state.prompt.strip() or default_prompt
+        user_prompt = _build_output_prompt(state.output_type, effective_prompt, state.context)
         try:
             result = await agent.run(user_prompt, deps=deps)
             state.content = result.output.model_dump()
@@ -480,7 +490,7 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                 error=type(error).__name__,
                 model_id=state.model_id,
             )
-            state.content = _fallback_output(state.output_type, state.prompt)
+            state.content = _fallback_output(state.output_type, effective_prompt)
 
         return MapCitations()
 

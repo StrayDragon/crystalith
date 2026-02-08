@@ -165,7 +165,7 @@ class ModelConfig(BaseModel):
             max_tokens: 4096
     """
     id: str = Field(..., description="Unique identifier for the model")
-    provider: Literal["openai", "ollama"] = Field(..., description="Provider type")
+    provider: str = Field(..., description="Provider id (built-in: openai/ollama, or a plugin provider id)")
     model: str = Field(..., description="Model name/identifier used by the provider")
     display_name: str = Field(..., description="Human-readable display name")
     description: str = Field("", description="Optional description")
@@ -436,6 +436,34 @@ class SearchSettings(BaseModel):
     searxng: SearXNGSettings = Field(default_factory=lambda: SearXNGSettings())
 
 
+class PluginsSettings(BaseModel):
+    """
+    Plugin loading configuration.
+
+    Plugins are discovered via Python entry points (group: `crystalith.plugins`).
+    This section controls which discovered plugins are enabled.
+    """
+
+    enabled: list[str] | None = Field(
+        None,
+        description="If set, only plugins in this list are loaded (allowlist).",
+    )
+    disabled: list[str] = Field(
+        default_factory=list,
+        description="Plugins to skip loading (denylist).",
+    )
+
+    def is_enabled(self, plugin_id: str) -> bool:
+        normalized = plugin_id.strip()
+        if not normalized:
+            return False
+
+        if self.enabled:
+            return normalized in set(self.enabled)
+
+        return normalized not in set(self.disabled)
+
+
 # =============================================================================
 # HTTP Proxy Settings (YAML Anchor Support)
 # =============================================================================
@@ -689,6 +717,7 @@ class Settings(BaseSettings):
     refine: RefineSettings = Field(default_factory=RefineSettings)
     context_window: ContextWindowSettings = Field(default_factory=ContextWindowSettings)
     search: SearchSettings = Field(default_factory=lambda: SearchSettings(), description="Web search settings")
+    plugins: PluginsSettings = Field(default_factory=PluginsSettings, description="插件加载配置")
     source_ingestion: SourceIngestionSettings = Field(
         default_factory=SourceIngestionSettings,
         description="来源导入配置（包含 URL 获取和代理设置）",

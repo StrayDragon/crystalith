@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
-
-ProviderType = Literal["openai", "ollama"]
+ProviderType = str
 ChatRole = Literal["system", "user", "assistant"]
 
 

@@ -14,6 +14,7 @@ from cl_sqlalchemyx.mgrs import AsyncDBManager
 from crystalith.shared.ai.factory import create_chat_provider, create_embedding_provider
 from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.shared.config import Settings
+from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.vector_storage import VectorStore
 
 from .models import Task
@@ -33,6 +34,7 @@ class TaskQueue:
         db_manager: AsyncDBManager,
         settings: Settings,
         vector_store: VectorStore,
+        plugins: PluginRegistry | None = None,
         worker: TaskWorker | None = None,
         embedder_factory: Callable[[Settings], EmbeddingProvider] = create_embedding_provider,
         chat_factory: Callable[[Settings], ChatProvider] = create_chat_provider,
@@ -41,14 +43,27 @@ class TaskQueue:
         self._settings = settings
         self._vector_store = vector_store
         self._worker = worker or execute_task
-        self._embedder_factory = embedder_factory
-        self._chat_factory = chat_factory
+        self._embedder_factory = self._wrap_factory(embedder_factory, plugins=plugins)
+        self._chat_factory = self._wrap_factory(chat_factory, plugins=plugins)
         self._queue: asyncio.PriorityQueue[tuple[int, int, int]] = asyncio.PriorityQueue()
         self._counter = itertools.count()
         self._semaphore: asyncio.Semaphore | None = None
         self._worker_task: asyncio.Task[None] | None = None
         self._waiters: dict[int, asyncio.Future[None]] = {}
         self._log = get_logger(__name__)
+
+    @staticmethod
+    def _wrap_factory(factory: Callable[[Settings], Any], *, plugins: PluginRegistry | None) -> Callable[[Settings], Any]:
+        if plugins is None:
+            return factory
+
+        def wrapped(settings: Settings) -> Any:
+            try:
+                return factory(settings, plugins=plugins)
+            except TypeError:
+                return factory(settings)
+
+        return wrapped
 
     async def enqueue(
         self,

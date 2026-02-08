@@ -4796,10 +4796,6 @@
           },
           "provider": {
             "type": "string",
-            "enum": [
-              "openai",
-              "ollama"
-            ],
             "title": "Provider"
           },
           "model": {
@@ -4850,6 +4846,14 @@
             },
             "type": "array",
             "title": "Models"
+          },
+          "providers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Providers",
+            "description": "Available provider ids (built-in + plugins)"
           },
           "default_chat": {
             "anyOf": [
