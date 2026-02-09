@@ -1,0 +1,1 @@
+"""Crystalith QUIZ OutputTypePlugin example."""

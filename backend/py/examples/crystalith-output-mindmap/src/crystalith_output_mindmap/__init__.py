@@ -1,0 +1,1 @@
+"""Crystalith MINDMAP OutputTypePlugin example."""

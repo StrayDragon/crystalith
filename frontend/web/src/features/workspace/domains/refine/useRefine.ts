@@ -10,6 +10,7 @@ import type {
   ApiWorkspaceTool,
   OutputItem,
   OutputTypeId,
+  RenderDescriptor,
   RefineJob,
   RefineMode,
   WorkspaceTool,
@@ -33,6 +34,8 @@ function normalizeTool(tool: ApiWorkspaceTool): WorkspaceTool {
     tone: tool.tone,
     outputType: tool.output_type,
     prompt: tool.prompt,
+    renderDescriptor: tool.render_descriptor ?? null,
+    configSchema: tool.config_schema ?? null,
     badge: tool.badge ?? undefined,
     enabled: tool.enabled !== false,
   };
@@ -76,6 +79,16 @@ export function useRefine() {
     // Return empty array while loading or on error (UI should show appropriate state)
     return [];
   }, [toolsData]);
+
+  useEffect(() => {
+    const descriptors: Partial<Record<OutputTypeId, RenderDescriptor>> = {};
+    for (const tool of tools) {
+      if (tool.outputType && tool.renderDescriptor) {
+        descriptors[tool.outputType] = tool.renderDescriptor;
+      }
+    }
+    store.getState().setOutputTypeRenderDescriptors(descriptors);
+  }, [store, tools]);
 
   const outputTypeOptions = useMemo(() => {
     const seen = new Set<OutputTypeId>();

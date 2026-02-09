@@ -76,6 +76,82 @@ Output plugins currently **override existing** output types (by `OutputType.valu
 - `schema: type[pydantic.BaseModel]`
 - `default_prompt: str | None`
 
+#### Optional extension attributes
+
+The `OutputTypePlugin` Protocol intentionally remains minimal for backward compatibility.
+At registration time, Crystalith uses `getattr()` to detect optional extension attributes:
+
+- `metadata: OutputTypePluginMeta | None` — UI metadata (description, display_text, tone)
+- `render_descriptor: RenderDescriptor | None` — declarative frontend layout descriptor
+- `config_schema: PluginConfigSchema | None` — generation dialog configuration
+
+These Pydantic models live in:
+
+- `backend/py/src/crystalith/shared/plugins/render_types.py`
+
+If an extension attribute is present but has the wrong type, the registry logs a warning and ignores it.
+
+If multiple plugins register the same `output_type`, the last one wins and the registry logs a warning.
+
+#### Example (OutputTypePlugin)
+
+```py
+from pydantic import BaseModel, Field
+
+from crystalith.shared.plugins.render_types import (
+    ConfigOption,
+    FieldDescriptor,
+    ItemSchema,
+    OutputTypePluginMeta,
+    PluginConfigSchema,
+    RenderDescriptor,
+)
+
+
+class MyItem(BaseModel):
+    text: str
+    citations: list[int] = Field(default_factory=list)
+
+
+class MyOutput(BaseModel):
+    items: list[MyItem] = Field(default_factory=list)
+
+
+class MyPlugin:
+    api_version = "v1"
+
+    output_type = "FAQ"
+    schema = MyOutput
+    default_prompt = "Generate a FAQ from the sources."
+
+    metadata = OutputTypePluginMeta(
+        description="问答清单",
+        display_text="闪卡",
+        tone="blue",
+    )
+
+    render_descriptor = RenderDescriptor(
+        layout="list",
+        item_schema=ItemSchema(
+            fields=[
+                FieldDescriptor(key="text", type="text", label="Text"),
+                FieldDescriptor(key="citations", type="citation", label=None),
+            ]
+        ),
+        options={"items_key": "items"},
+    )
+
+    config_schema = PluginConfigSchema(
+        quantity_options=[ConfigOption(id="standard", label="Standard", is_default=True)],
+        difficulty_options=[],
+        topic_placeholder="Topic (optional)",
+        supports_topic=True,
+    )
+
+
+plugin = MyPlugin()
+```
+
 ## 4) Example plugin
 
 See `backend/py/examples/crystalith-echo-plugin/`.
@@ -89,6 +165,12 @@ just dev
 ```
 
 Then add a model using `provider: "echo"` and restart.
+
+For OutputTypePlugin examples, see:
+
+- `backend/py/examples/crystalith-output-quiz/`
+- `backend/py/examples/crystalith-output-timeline/`
+- `backend/py/examples/crystalith-output-mindmap/`
 
 ## 5) Copier template
 

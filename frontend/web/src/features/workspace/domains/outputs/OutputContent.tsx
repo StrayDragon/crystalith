@@ -4,10 +4,12 @@ import { Download as DownloadIcon } from '@mui/icons-material';
 
 import type { OutputItem, OutputTypeId } from '../../shared/types';
 import { LAYER_LEVELS } from '../../../../shared/layer';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { pluginRegistry } from './plugins';
 import { initializePlugins } from './plugins/registerPlugins';
 import { EXPORT_FORMAT_LABELS } from './exporters';
 import { useExport } from './useExport';
+import GenericOutputRenderer from './GenericOutputRenderer';
 
 interface OutputContentProps {
   output: OutputItem;
@@ -21,19 +23,22 @@ export default function OutputContent({ output }: OutputContentProps) {
   const isFallback = (content as any)._fallback === true;
   const typeId = output.type as OutputTypeId;
   const { isExporting, activeFormat, getSupportedFormats, exportOutput } = useExport();
+  const renderDescriptor = useWorkspaceStore((s) => s.outputTypeRenderDescriptors[typeId] ?? null);
 
   const supportedFormats = useMemo(() => getSupportedFormats(typeId), [getSupportedFormats, typeId]);
 
   // Get the plugin for this output type
   const plugin = useMemo(() => pluginRegistry.get(typeId), [typeId]);
 
-  const body = plugin
-    ? plugin.render(content, isFallback)
-    : (
-      <pre className="StructuredOutputRaw rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700 whitespace-pre-wrap dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200">
-        {JSON.stringify(output.content ?? {}, null, 2)}
-      </pre>
-    );
+  const body = plugin ? (
+    plugin.render(content, isFallback)
+  ) : renderDescriptor ? (
+    <GenericOutputRenderer content={content} renderDescriptor={renderDescriptor} />
+  ) : (
+    <pre className="StructuredOutputRaw rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700 whitespace-pre-wrap dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200">
+      {JSON.stringify(output.content ?? {}, null, 2)}
+    </pre>
+  );
 
   return (
     <div className="space-y-3">

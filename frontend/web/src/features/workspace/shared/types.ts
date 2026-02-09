@@ -18,6 +18,47 @@ export type SlideStatus = 'idle' | 'running' | 'error';
 export type SourceSearchStatus = 'ok' | 'not_implemented';
 export type ToolTone = 'slate' | 'blue' | 'green' | 'rose' | 'amber' | 'teal' | 'indigo';
 
+export type RenderLayout = 'list' | 'cards' | 'tree' | 'timeline' | 'sections' | 'table';
+export type RenderFieldType =
+  | 'text'
+  | 'heading'
+  | 'badge'
+  | 'list'
+  | 'tree'
+  | 'date'
+  | 'citation'
+  | 'code';
+
+export interface FieldDescriptor {
+  key: string;
+  type: RenderFieldType;
+  label: string | null;
+  children: FieldDescriptor[];
+}
+
+export interface ItemSchema {
+  fields: FieldDescriptor[];
+}
+
+export interface RenderDescriptor {
+  layout: RenderLayout;
+  item_schema: ItemSchema | null;
+  options: Record<string, unknown>;
+}
+
+export interface ConfigOption {
+  id: string;
+  label: string;
+  is_default?: boolean;
+}
+
+export interface PluginConfigSchema {
+  quantity_options: ConfigOption[];
+  difficulty_options: ConfigOption[];
+  topic_placeholder: string;
+  supports_topic: boolean;
+}
+
 export interface Notebook {
   id: number;
   title: string;
@@ -76,6 +117,8 @@ export interface WorkspaceTool {
   prompt: string;
   badge?: string;
   enabled: boolean;
+  renderDescriptor?: RenderDescriptor | null;
+  configSchema?: PluginConfigSchema | null;
 }
 
 export interface SlideOutlineItem {
@@ -235,6 +278,8 @@ export interface ApiWorkspaceTool {
   tone: ToolTone;
   output_type: OutputTypeId;
   prompt: string;
+  render_descriptor?: RenderDescriptor | null;
+  config_schema?: PluginConfigSchema | null;
   badge?: string | null;
   enabled?: boolean | null;
 }

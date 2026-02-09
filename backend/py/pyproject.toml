@@ -53,14 +53,18 @@ requires = ["uv_build>=0.9.24,<0.10.0"]
 build-backend = "uv_build"
 
 [tool.uv.workspace]
-members = ["packages/*"]
+members = ["packages/*", "examples/crystalith-output-*"]
 
 [tool.uv.sources]
+crystalith = { workspace = true }
 cl-fastapix = { workspace = true }
 cl-logs = { workspace = true }
 cl-pydanticx = { workspace = true }
 cl-sqlalchemyx = { workspace = true }
 cl-stdx = { workspace = true }
+crystalith-output-quiz = { workspace = true }
+crystalith-output-timeline = { workspace = true }
+crystalith-output-mindmap = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -69,6 +73,9 @@ dev = [
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
     "pytest-xdist>=3.5.0",
+    "crystalith-output-quiz",
+    "crystalith-output-timeline",
+    "crystalith-output-mindmap",
 ]
 
 [tool.pytest.ini_options]

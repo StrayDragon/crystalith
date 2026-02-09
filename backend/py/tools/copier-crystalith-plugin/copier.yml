@@ -10,6 +10,14 @@ _exclude:
 
 # ── Questions ──────────────────────────────────────────────────────────
 
+plugin_kind:
+  type: str
+  help: "Which kind of Crystalith plugin?"
+  choices:
+    - "AIProvider"
+    - "OutputType"
+  default: "AIProvider"
+
 package_name:
   type: str
   help: "PyPI-style package name (e.g. crystalith-my-plugin)"
@@ -29,6 +37,24 @@ plugin_id:
   type: str
   help: "Plugin entry-point id (used as provider name in config)"
   default: "{{ package_name | replace('crystalith-', '') }}"
+
+output_type:
+  type: str
+  help: "Output type enum value to override (e.g. QUIZ, TIMELINE). Only used for OutputType plugins."
+  default: "FAQ"
+  when: "{{ plugin_kind == 'OutputType' }}"
+
+display_text:
+  type: str
+  help: "UI display label for the tool (OutputType plugins only)."
+  default: "{{ plugin_id }}"
+  when: "{{ plugin_kind == 'OutputType' }}"
+
+tone:
+  type: str
+  help: "UI tone (slate/blue/green/rose/amber/teal/indigo). OutputType plugins only."
+  default: "slate"
+  when: "{{ plugin_kind == 'OutputType' }}"
 
 description:
   type: str
