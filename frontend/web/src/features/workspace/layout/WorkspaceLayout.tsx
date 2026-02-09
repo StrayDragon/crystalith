@@ -1,5 +1,4 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { IconButton, Tooltip } from '@material-tailwind/react';
 
 import ChatPanel from '../domains/messages/ChatPanel';
 import SessionDetailDialog from '../domains/sessions/SessionDetailDialog';
@@ -21,10 +20,10 @@ import { useSources } from '../domains/sources/useSources';
 import type { ChatMessage, Citation, SourceItem } from '../shared/types';
 import { normalizeMessage } from '../shared/utils';
 import { listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet as listMessages } from '../../../api/generated';
-import { IconFullscreen, IconExitFullscreen } from '../shared/components/Icons';
 import { SkeletonCard } from '../shared/components/Skeleton';
-import ErrorBoundary from '../shared/components/ErrorBoundary';
 import { toast } from '../../../shared/toast';
+import WorkspacePanelShell from './components/WorkspacePanelShell';
+import WorkspaceResizeHandle from './components/WorkspaceResizeHandle';
 
 const StudioOutputViewer = lazy(() => import('../domains/outputs/StudioOutputViewer'));
 const KnowledgeGraphView = lazy(() => import('../domains/analysis/KnowledgeGraphView'));
@@ -733,35 +732,15 @@ export default function WorkspaceLayout() {
       >
         {/* Sources Panel */}
         {(!expandedPanel || expandedPanel === 'sources') && (
-        <section
-          ref={sourcesPanelRef}
-          tabIndex={-1}
-          className="flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden ux-fade-in focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 dark:focus-visible:ring-blue-500"
-          style={{
-            animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
-          aria-label="来源"
-        >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-800/70">
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">来源</h2>
-            <Tooltip content={expandedPanel === 'sources' ? '收起' : '展开'}>
-              <IconButton
-                variant="text"
-                size="sm"
-                className="w-7 h-7 rounded-full text-gray-500 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700"
-                onClick={() => handleToggleExpand('sources')}
-              >
-                {expandedPanel === 'sources' ? (
-                  <IconExitFullscreen className="w-4 h-4" />
-                ) : (
-                  <IconFullscreen className="w-4 h-4" />
-                )}
-              </IconButton>
-            </Tooltip>
-          </div>
-          <ErrorBoundary
-            title="来源面板异常"
-            description="来源面板渲染失败，请重试。"
+          <WorkspacePanelShell
+            panel="sources"
+            title="来源"
+            ariaLabel="来源"
+            expandedPanel={expandedPanel}
+            onToggleExpand={handleToggleExpand}
+            errorTitle="来源面板异常"
+            errorDescription="来源面板渲染失败，请重试。"
+            sectionRef={sourcesPanelRef}
           >
             <SourcesPanel
               sources={sources.sources}
@@ -806,51 +785,40 @@ export default function WorkspaceLayout() {
               notebookId={activeNotebookId ?? undefined}
               onSelectedSourceIdsChange={handleSelectedSourceIdsChange}
             />
-          </ErrorBoundary>
-        </section>
+          </WorkspacePanelShell>
         )}
 
         {/* Left Resize Handle - hidden when any panel is expanded */}
         {!expandedPanel && (
-        <button
-          type="button"
-          className={`items-center justify-center w-3 cursor-col-resize bg-transparent hover:bg-transparent group ${
-            expandedPanel ? 'hidden' : 'flex'
-          }`}
-          aria-label="调整来源宽度"
-          onPointerDown={(event) => {
-            if (window.innerWidth < 1024 || expandedPanel) return;
-            const main = mainRef.current;
-            if (!main) return;
-            const { width } = main.getBoundingClientRect();
-            dragStateRef.current = {
-              side: 'left',
-              startX: event.clientX,
-              startLeft: sizesRef.current.left,
-              startRight: sizesRef.current.right,
-              containerWidth: width,
-            };
-            setIsResizing(true);
-          }}
-        >
-          <div className={`w-0.5 h-12 rounded-full bg-gray-200 transition-colors group-hover:bg-gray-400 ${isResizing ? 'bg-gray-500' : ''}`} />
-        </button>
+          <WorkspaceResizeHandle
+            ariaLabel="调整来源宽度"
+            isResizing={isResizing}
+            onPointerDown={(event) => {
+              if (window.innerWidth < 1024 || expandedPanel) return;
+              const main = mainRef.current;
+              if (!main) return;
+              const { width } = main.getBoundingClientRect();
+              dragStateRef.current = {
+                side: 'left',
+                startX: event.clientX,
+                startLeft: sizesRef.current.left,
+                startRight: sizesRef.current.right,
+                containerWidth: width,
+              };
+              setIsResizing(true);
+            }}
+          />
         )}
 
         {/* Chat Panel */}
         {(!expandedPanel || expandedPanel === 'chat') && (
-        <section
-          ref={chatPanelRef}
-          tabIndex={-1}
-          className="flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden ux-fade-in focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 dark:focus-visible:ring-blue-500"
-          style={{
-            animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
-          aria-label="对话"
-        >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-800/70 flex-wrap gap-2">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">对话</h2>
+          <WorkspacePanelShell
+            panel="chat"
+            title="对话"
+            ariaLabel="对话"
+            expandedPanel={expandedPanel}
+            onToggleExpand={handleToggleExpand}
+            headerExtras={
               <SessionSwitcher
                 sessions={sessions.sessions}
                 activeSessionId={sessions.activeSessionId}
@@ -869,25 +837,10 @@ export default function WorkspaceLayout() {
                 onDelete={sessions.deleteSession}
                 onRetry={sessions.retrySessions}
               />
-            </div>
-            <Tooltip content={expandedPanel === 'chat' ? '收起' : '展开'}>
-              <IconButton
-                variant="text"
-                size="sm"
-                className="w-7 h-7 rounded-full text-gray-500 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700"
-                onClick={() => handleToggleExpand('chat')}
-              >
-                {expandedPanel === 'chat' ? (
-                  <IconExitFullscreen className="w-4 h-4" />
-                ) : (
-                  <IconFullscreen className="w-4 h-4" />
-                )}
-              </IconButton>
-            </Tooltip>
-          </div>
-          <ErrorBoundary
-            title="对话面板异常"
-            description="对话面板渲染失败，请重试。"
+            }
+            errorTitle="对话面板异常"
+            errorDescription="对话面板渲染失败，请重试。"
+            sectionRef={chatPanelRef}
           >
             <ChatPanel
               messages={chat.messages}
@@ -916,66 +869,42 @@ export default function WorkspaceLayout() {
               onConvertToOutput={chat.convertSessionToOutput}
               isConverting={chat.isConverting}
             />
-          </ErrorBoundary>
-        </section>
+          </WorkspacePanelShell>
         )}
 
         {/* Right Resize Handle - hidden when any panel is expanded */}
         {!expandedPanel && (
-        <button
-          type="button"
-          className="items-center justify-center w-3 cursor-col-resize bg-transparent hover:bg-transparent group flex"
-          aria-label="调整 Studio 宽度"
-          onPointerDown={(event) => {
-            if (window.innerWidth < 1024 || expandedPanel) return;
-            const main = mainRef.current;
-            if (!main) return;
-            const { width } = main.getBoundingClientRect();
-            dragStateRef.current = {
-              side: 'right',
-              startX: event.clientX,
-              startLeft: sizesRef.current.left,
-              startRight: sizesRef.current.right,
-              containerWidth: width,
-            };
-            setIsResizing(true);
-          }}
-        >
-          <div className={`w-0.5 h-12 rounded-full bg-gray-200 transition-colors group-hover:bg-gray-400 ${isResizing ? 'bg-gray-500' : ''}`} />
-        </button>
+          <WorkspaceResizeHandle
+            ariaLabel="调整 Studio 宽度"
+            isResizing={isResizing}
+            onPointerDown={(event) => {
+              if (window.innerWidth < 1024 || expandedPanel) return;
+              const main = mainRef.current;
+              if (!main) return;
+              const { width } = main.getBoundingClientRect();
+              dragStateRef.current = {
+                side: 'right',
+                startX: event.clientX,
+                startLeft: sizesRef.current.left,
+                startRight: sizesRef.current.right,
+                containerWidth: width,
+              };
+              setIsResizing(true);
+            }}
+          />
         )}
 
         {/* Studio Panel */}
         {(!expandedPanel || expandedPanel === 'studio') && (
-        <section
-          ref={studioPanelRef}
-          tabIndex={-1}
-          className="flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden ux-fade-in focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 dark:focus-visible:ring-blue-500"
-          style={{
-            animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
-          aria-label="Studio"
-        >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-800/70">
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Studio</h2>
-            <Tooltip content={expandedPanel === 'studio' ? '收起' : '展开'}>
-              <IconButton
-                variant="text"
-                size="sm"
-                className="w-7 h-7 rounded-full text-gray-500 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700"
-                onClick={() => handleToggleExpand('studio')}
-              >
-                {expandedPanel === 'studio' ? (
-                  <IconExitFullscreen className="w-4 h-4" />
-                ) : (
-                  <IconFullscreen className="w-4 h-4" />
-                )}
-              </IconButton>
-            </Tooltip>
-          </div>
-          <ErrorBoundary
-            title="Studio 面板异常"
-            description="输出面板渲染失败，请重试。"
+          <WorkspacePanelShell
+            panel="studio"
+            title="Studio"
+            ariaLabel="Studio"
+            expandedPanel={expandedPanel}
+            onToggleExpand={handleToggleExpand}
+            errorTitle="Studio 面板异常"
+            errorDescription="输出面板渲染失败，请重试。"
+            sectionRef={studioPanelRef}
           >
             <StudioPanel
               tools={refine.tools}
@@ -1003,8 +932,7 @@ export default function WorkspaceLayout() {
               isFullscreen={expandedPanel === 'studio'}
               hasSelectedSources={hasSelectedSources}
             />
-          </ErrorBoundary>
-        </section>
+          </WorkspacePanelShell>
         )}
       </main>
 
