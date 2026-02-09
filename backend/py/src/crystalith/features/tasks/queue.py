@@ -49,6 +49,7 @@ class TaskQueue:
         self._counter = itertools.count()
         self._semaphore: asyncio.Semaphore | None = None
         self._worker_task: asyncio.Task[None] | None = None
+        self._in_flight: set[asyncio.Task[None]] = set()
         self._waiters: dict[int, asyncio.Future[None]] = {}
         self._log = get_logger(__name__)
 
@@ -89,7 +90,6 @@ class TaskQueue:
         except (TypeError, ValueError):
             priority = 0
         await self._queue.put((priority, next(self._counter), task.id))
-        self._waiters.setdefault(task.id, asyncio.get_running_loop().create_future())
         return task.id
 
     async def get_status(self, task_id: int) -> Task:
@@ -114,16 +114,17 @@ class TaskQueue:
         return True
 
     async def wait_for_completion(self, task_id: int) -> None:
+        future = self._waiters.setdefault(task_id, asyncio.get_running_loop().create_future())
+
         async with self._db_manager.got_manual_session() as session:
             task = await session.get(Task, task_id)
             if task is None:
                 raise ValueError("Task not found")
             if task.status in {TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED}:
+                self._notify_waiter(task_id)
                 return
 
-        future = self._waiters.setdefault(task_id, asyncio.get_running_loop().create_future())
         await future
-        self._waiters.pop(task_id, None)
 
     async def start_worker(self, concurrency: int = 3) -> None:
         if self._worker_task is not None:
@@ -141,6 +142,13 @@ class TaskQueue:
         except asyncio.CancelledError:
             pass
         self._worker_task = None
+
+        in_flight = set(self._in_flight)
+        for task in in_flight:
+            task.cancel()
+        if in_flight:
+            await asyncio.gather(*in_flight, return_exceptions=True)
+        self._in_flight.clear()
         self._semaphore = None
         self._log.info("task queue worker stopped")
 
@@ -150,7 +158,9 @@ class TaskQueue:
             if self._semaphore is None:
                 self._semaphore = asyncio.Semaphore(1)
             await self._semaphore.acquire()
-            asyncio.create_task(self._execute_task(task_id))
+            task = asyncio.create_task(self._execute_task(task_id))
+            self._in_flight.add(task)
+            task.add_done_callback(self._in_flight.discard)
 
     async def _execute_task(self, task_id: int) -> None:
         try:
@@ -178,6 +188,13 @@ class TaskQueue:
                     task.result = result
                     task.error = None
                     task.progress = 100
+                except asyncio.CancelledError:
+                    task.status = TaskStatus.CANCELLED
+                    task.error = None
+                    task.result = None
+                    task.progress = 0
+                    await session.commit()
+                    raise
                 except Exception as exc:  # noqa: BLE001
                     task.status = TaskStatus.FAILED
                     task.error = str(exc)
@@ -193,5 +210,11 @@ class TaskQueue:
 
     def _notify_waiter(self, task_id: int) -> None:
         future = self._waiters.get(task_id)
-        if future is not None and not future.done():
+        if future is None:
+            return
+
+        if not future.done():
             future.set_result(None)
+
+        if future.done():
+            self._waiters.pop(task_id, None)
