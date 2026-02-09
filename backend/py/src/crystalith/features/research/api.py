@@ -237,7 +237,7 @@ class SearchQuery(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     query: str = Field(..., description="Search query string")
-    engine: str = Field("Web", description="Search engine: Web, Scholar, Docs")
+    engine: str = Field("Web", description="Search engine: Web")
     priority: int = Field(1, ge=1, le=3, description="Priority: 1=high, 2=medium, 3=low")
     reason: str = Field("", description="Reason for this query")
 
