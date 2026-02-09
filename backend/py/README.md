@@ -22,6 +22,19 @@ just db-init
 This runs `alembic upgrade head` (and will auto-stamp legacy databases that
 were created before Alembic was introduced).
 
+Note: DB paths are resolved relative to the current working directory. When you
+start the backend via the repo-root `Procfile` (`overmind s`), the default
+`sqlite+aiosqlite:///./data/app.db` points to `./data/app.db` under the repo
+root. Running `cd backend/py && just db-init` initializes
+`backend/py/data/app.db` instead.
+
+To initialize the same DB used by `overmind s`:
+
+```bash
+cd <repo-root>
+uv run --project backend/py python backend/py/scripts/db_init.py
+```
+
 You can override config discovery when running `db-init`:
 
 ```bash

@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import tempfile
+from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
 from crystalith.shared.config import ModelConfig, ModelsSettings, Settings
+from crystalith.shared.db import create_db_manager
+from crystalith.shared.db.migrations import upgrade_head
 from crystalith.shared.plugins import PluginRegistry
+from crystalith.shared.vector_storage import InMemoryVectorStore
 
 
 @dataclass(slots=True)
@@ -93,9 +98,15 @@ def test_models_endpoint_includes_plugin_provider(monkeypatch: pytest.MonkeyPatc
         )
     )
 
-    app = create_app(settings=settings)
-    with TestClient(app) as client:
-        payload = client.get("/v1/models").json()
+    with tempfile.TemporaryDirectory() as tempdir:
+        db_path = Path(tempdir) / "test.db"
+        db_url = f"sqlite+aiosqlite:///{db_path}"
+        upgrade_head(db_url)
+        manager = create_db_manager(db_url)
+        vector_store = InMemoryVectorStore()
+        app = create_app(settings=settings, db_manager=manager, vector_store=vector_store)
+        with TestClient(app) as client:
+            payload = client.get("/v1/models").json()
 
     assert "mock" in payload["providers"]
     assert any(model["id"] == "mock-chat" for model in payload["models"])
@@ -128,9 +139,15 @@ def test_models_endpoint_hides_disabled_plugin_provider(monkeypatch: pytest.Monk
         ),
     )
 
-    app = create_app(settings=settings)
-    with TestClient(app) as client:
-        payload = client.get("/v1/models").json()
+    with tempfile.TemporaryDirectory() as tempdir:
+        db_path = Path(tempdir) / "test.db"
+        db_url = f"sqlite+aiosqlite:///{db_path}"
+        upgrade_head(db_url)
+        manager = create_db_manager(db_url)
+        vector_store = InMemoryVectorStore()
+        app = create_app(settings=settings, db_manager=manager, vector_store=vector_store)
+        with TestClient(app) as client:
+            payload = client.get("/v1/models").json()
 
     assert "mock" not in payload["providers"]
     assert payload["models"] == []
