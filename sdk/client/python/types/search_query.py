@@ -18,7 +18,7 @@ class SearchQuery(UniversalBaseModel):
 
     engine: typing.Optional[str] = pydantic.Field(default=None)
     """
-    Search engine: Web, Scholar, Docs
+    Search engine: Web
     """
 
     priority: typing.Optional[int] = pydantic.Field(default=None)

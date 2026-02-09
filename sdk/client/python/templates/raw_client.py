@@ -9,21 +9,24 @@ from ..core.http_response import AsyncHttpResponse, HttpResponse
 from ..core.jsonable_encoder import jsonable_encoder
 from ..core.pydantic_utilities import parse_obj_as
 from ..core.request_options import RequestOptions
+from ..core.serialization import convert_and_respect_annotation_metadata
 from ..errors.unprocessable_entity_error import UnprocessableEntityError
 from ..types.http_validation_error import HttpValidationError
-from ..types.notebook_read import NotebookRead
+from ..types.template_config_input import TemplateConfigInput
+from ..types.template_read import TemplateRead
+from .types.template_from_notebook_create_output_type import TemplateFromNotebookCreateOutputType
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
 
 
-class RawNotebooksClient:
+class RawTemplatesClient:
     def __init__(self, *, client_wrapper: SyncClientWrapper):
         self._client_wrapper = client_wrapper
 
-    def list_notebooks(
+    def list_templates(
         self, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> HttpResponse[typing.List[NotebookRead]]:
+    ) -> HttpResponse[typing.List[TemplateRead]]:
         """
         Parameters
         ----------
@@ -32,20 +35,20 @@ class RawNotebooksClient:
 
         Returns
         -------
-        HttpResponse[typing.List[NotebookRead]]
+        HttpResponse[typing.List[TemplateRead]]
             Successful Response
         """
         _response = self._client_wrapper.httpx_client.request(
-            "v1/notebooks",
+            "v1/templates",
             method="GET",
             request_options=request_options,
         )
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    typing.List[NotebookRead],
+                    typing.List[TemplateRead],
                     parse_obj_as(
-                        type_=typing.List[NotebookRead],  # type: ignore
+                        type_=typing.List[TemplateRead],  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -55,36 +58,40 @@ class RawNotebooksClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    def create_notebook(
+    def create_template(
         self,
         *,
         name: str,
-        template_id: typing.Optional[int] = None,
+        config_json: TemplateConfigInput,
+        description: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[NotebookRead]:
+    ) -> HttpResponse[TemplateRead]:
         """
         Parameters
         ----------
         name : str
 
-        template_id : typing.Optional[int]
+        config_json : TemplateConfigInput
+
+        description : typing.Optional[str]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        HttpResponse[NotebookRead]
+        HttpResponse[TemplateRead]
             Successful Response
         """
         _response = self._client_wrapper.httpx_client.request(
-            "v1/notebooks",
+            "v1/templates",
             method="POST",
-            params={
-                "template_id": template_id,
-            },
             json={
                 "name": name,
+                "description": description,
+                "config_json": convert_and_respect_annotation_metadata(
+                    object_=config_json, annotation=TemplateConfigInput, direction="write"
+                ),
             },
             headers={
                 "content-type": "application/json",
@@ -95,9 +102,9 @@ class RawNotebooksClient:
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    NotebookRead,
+                    TemplateRead,
                     parse_obj_as(
-                        type_=NotebookRead,  # type: ignore
+                        type_=TemplateRead,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -118,33 +125,33 @@ class RawNotebooksClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    def get_notebook(
-        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> HttpResponse[NotebookRead]:
+    def get_template(
+        self, template_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[TemplateRead]:
         """
         Parameters
         ----------
-        notebook_id : int
+        template_id : int
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        HttpResponse[NotebookRead]
+        HttpResponse[TemplateRead]
             Successful Response
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}",
+            f"v1/templates/{jsonable_encoder(template_id)}",
             method="GET",
             request_options=request_options,
         )
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    NotebookRead,
+                    TemplateRead,
                     parse_obj_as(
-                        type_=NotebookRead,  # type: ignore
+                        type_=TemplateRead,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -165,13 +172,13 @@ class RawNotebooksClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    def delete_notebook(
-        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    def delete_template(
+        self, template_id: int, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[None]:
         """
         Parameters
         ----------
-        notebook_id : int
+        template_id : int
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -181,7 +188,7 @@ class RawNotebooksClient:
         HttpResponse[None]
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}",
+            f"v1/templates/{jsonable_encoder(template_id)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -204,29 +211,43 @@ class RawNotebooksClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    def update_notebook(
-        self, notebook_id: int, *, name: str, request_options: typing.Optional[RequestOptions] = None
-    ) -> HttpResponse[NotebookRead]:
+    def update_template(
+        self,
+        template_id: int,
+        *,
+        name: typing.Optional[str] = OMIT,
+        description: typing.Optional[str] = OMIT,
+        config_json: typing.Optional[TemplateConfigInput] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[TemplateRead]:
         """
         Parameters
         ----------
-        notebook_id : int
+        template_id : int
 
-        name : str
+        name : typing.Optional[str]
+
+        description : typing.Optional[str]
+
+        config_json : typing.Optional[TemplateConfigInput]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        HttpResponse[NotebookRead]
+        HttpResponse[TemplateRead]
             Successful Response
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}",
+            f"v1/templates/{jsonable_encoder(template_id)}",
             method="PATCH",
             json={
                 "name": name,
+                "description": description,
+                "config_json": convert_and_respect_annotation_metadata(
+                    object_=config_json, annotation=typing.Optional[TemplateConfigInput], direction="write"
+                ),
             },
             headers={
                 "content-type": "application/json",
@@ -237,9 +258,78 @@ class RawNotebooksClient:
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    NotebookRead,
+                    TemplateRead,
                     parse_obj_as(
-                        type_=NotebookRead,  # type: ignore
+                        type_=TemplateRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def save_notebook_as_template(
+        self,
+        notebook_id: int,
+        *,
+        name: str,
+        description: typing.Optional[str] = OMIT,
+        output_type: typing.Optional[TemplateFromNotebookCreateOutputType] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[TemplateRead]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        name : str
+
+        description : typing.Optional[str]
+
+        output_type : typing.Optional[TemplateFromNotebookCreateOutputType]
+            Preferred default output type for the template.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[TemplateRead]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/templates",
+            method="POST",
+            json={
+                "name": name,
+                "description": description,
+                "output_type": output_type,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    TemplateRead,
+                    parse_obj_as(
+                        type_=TemplateRead,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -261,13 +351,13 @@ class RawNotebooksClient:
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
 
-class AsyncRawNotebooksClient:
+class AsyncRawTemplatesClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
         self._client_wrapper = client_wrapper
 
-    async def list_notebooks(
+    async def list_templates(
         self, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> AsyncHttpResponse[typing.List[NotebookRead]]:
+    ) -> AsyncHttpResponse[typing.List[TemplateRead]]:
         """
         Parameters
         ----------
@@ -276,20 +366,20 @@ class AsyncRawNotebooksClient:
 
         Returns
         -------
-        AsyncHttpResponse[typing.List[NotebookRead]]
+        AsyncHttpResponse[typing.List[TemplateRead]]
             Successful Response
         """
         _response = await self._client_wrapper.httpx_client.request(
-            "v1/notebooks",
+            "v1/templates",
             method="GET",
             request_options=request_options,
         )
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    typing.List[NotebookRead],
+                    typing.List[TemplateRead],
                     parse_obj_as(
-                        type_=typing.List[NotebookRead],  # type: ignore
+                        type_=typing.List[TemplateRead],  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -299,36 +389,40 @@ class AsyncRawNotebooksClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    async def create_notebook(
+    async def create_template(
         self,
         *,
         name: str,
-        template_id: typing.Optional[int] = None,
+        config_json: TemplateConfigInput,
+        description: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[NotebookRead]:
+    ) -> AsyncHttpResponse[TemplateRead]:
         """
         Parameters
         ----------
         name : str
 
-        template_id : typing.Optional[int]
+        config_json : TemplateConfigInput
+
+        description : typing.Optional[str]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        AsyncHttpResponse[NotebookRead]
+        AsyncHttpResponse[TemplateRead]
             Successful Response
         """
         _response = await self._client_wrapper.httpx_client.request(
-            "v1/notebooks",
+            "v1/templates",
             method="POST",
-            params={
-                "template_id": template_id,
-            },
             json={
                 "name": name,
+                "description": description,
+                "config_json": convert_and_respect_annotation_metadata(
+                    object_=config_json, annotation=TemplateConfigInput, direction="write"
+                ),
             },
             headers={
                 "content-type": "application/json",
@@ -339,9 +433,9 @@ class AsyncRawNotebooksClient:
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    NotebookRead,
+                    TemplateRead,
                     parse_obj_as(
-                        type_=NotebookRead,  # type: ignore
+                        type_=TemplateRead,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -362,33 +456,33 @@ class AsyncRawNotebooksClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    async def get_notebook(
-        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> AsyncHttpResponse[NotebookRead]:
+    async def get_template(
+        self, template_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[TemplateRead]:
         """
         Parameters
         ----------
-        notebook_id : int
+        template_id : int
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        AsyncHttpResponse[NotebookRead]
+        AsyncHttpResponse[TemplateRead]
             Successful Response
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}",
+            f"v1/templates/{jsonable_encoder(template_id)}",
             method="GET",
             request_options=request_options,
         )
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    NotebookRead,
+                    TemplateRead,
                     parse_obj_as(
-                        type_=NotebookRead,  # type: ignore
+                        type_=TemplateRead,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -409,13 +503,13 @@ class AsyncRawNotebooksClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    async def delete_notebook(
-        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    async def delete_template(
+        self, template_id: int, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[None]:
         """
         Parameters
         ----------
-        notebook_id : int
+        template_id : int
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -425,7 +519,7 @@ class AsyncRawNotebooksClient:
         AsyncHttpResponse[None]
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}",
+            f"v1/templates/{jsonable_encoder(template_id)}",
             method="DELETE",
             request_options=request_options,
         )
@@ -448,29 +542,43 @@ class AsyncRawNotebooksClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    async def update_notebook(
-        self, notebook_id: int, *, name: str, request_options: typing.Optional[RequestOptions] = None
-    ) -> AsyncHttpResponse[NotebookRead]:
+    async def update_template(
+        self,
+        template_id: int,
+        *,
+        name: typing.Optional[str] = OMIT,
+        description: typing.Optional[str] = OMIT,
+        config_json: typing.Optional[TemplateConfigInput] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[TemplateRead]:
         """
         Parameters
         ----------
-        notebook_id : int
+        template_id : int
 
-        name : str
+        name : typing.Optional[str]
+
+        description : typing.Optional[str]
+
+        config_json : typing.Optional[TemplateConfigInput]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        AsyncHttpResponse[NotebookRead]
+        AsyncHttpResponse[TemplateRead]
             Successful Response
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}",
+            f"v1/templates/{jsonable_encoder(template_id)}",
             method="PATCH",
             json={
                 "name": name,
+                "description": description,
+                "config_json": convert_and_respect_annotation_metadata(
+                    object_=config_json, annotation=typing.Optional[TemplateConfigInput], direction="write"
+                ),
             },
             headers={
                 "content-type": "application/json",
@@ -481,9 +589,78 @@ class AsyncRawNotebooksClient:
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    NotebookRead,
+                    TemplateRead,
                     parse_obj_as(
-                        type_=NotebookRead,  # type: ignore
+                        type_=TemplateRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def save_notebook_as_template(
+        self,
+        notebook_id: int,
+        *,
+        name: str,
+        description: typing.Optional[str] = OMIT,
+        output_type: typing.Optional[TemplateFromNotebookCreateOutputType] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[TemplateRead]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        name : str
+
+        description : typing.Optional[str]
+
+        output_type : typing.Optional[TemplateFromNotebookCreateOutputType]
+            Preferred default output type for the template.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[TemplateRead]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/templates",
+            method="POST",
+            json={
+                "name": name,
+                "description": description,
+                "output_type": output_type,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    TemplateRead,
+                    parse_obj_as(
+                        type_=TemplateRead,  # type: ignore
                         object_=_response.json(),
                     ),
                 )

@@ -50,11 +50,19 @@ class NotebooksClient:
         _response = self._raw_client.list_notebooks(request_options=request_options)
         return _response.data
 
-    def create_notebook(self, *, name: str, request_options: typing.Optional[RequestOptions] = None) -> NotebookRead:
+    def create_notebook(
+        self,
+        *,
+        name: str,
+        template_id: typing.Optional[int] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> NotebookRead:
         """
         Parameters
         ----------
         name : str
+
+        template_id : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -75,7 +83,9 @@ class NotebooksClient:
             name="name",
         )
         """
-        _response = self._raw_client.create_notebook(name=name, request_options=request_options)
+        _response = self._raw_client.create_notebook(
+            name=name, template_id=template_id, request_options=request_options
+        )
         return _response.data
 
     def get_notebook(
@@ -219,12 +229,18 @@ class AsyncNotebooksClient:
         return _response.data
 
     async def create_notebook(
-        self, *, name: str, request_options: typing.Optional[RequestOptions] = None
+        self,
+        *,
+        name: str,
+        template_id: typing.Optional[int] = None,
+        request_options: typing.Optional[RequestOptions] = None,
     ) -> NotebookRead:
         """
         Parameters
         ----------
         name : str
+
+        template_id : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -253,7 +269,9 @@ class AsyncNotebooksClient:
 
         asyncio.run(main())
         """
-        _response = await self._raw_client.create_notebook(name=name, request_options=request_options)
+        _response = await self._raw_client.create_notebook(
+            name=name, template_id=template_id, request_options=request_options
+        )
         return _response.data
 
     async def get_notebook(

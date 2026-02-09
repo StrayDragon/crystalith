@@ -18,10 +18,19 @@ from ..types.extractors_list_response import ExtractorsListResponse
 from ..types.http_validation_error import HttpValidationError
 from ..types.qa_message import QaMessage
 from ..types.source_batch_delete_response import SourceBatchDeleteResponse
+from ..types.source_batch_reembed_response import SourceBatchReembedResponse
 from ..types.source_qa_response import SourceQaResponse
 from ..types.source_read import SourceRead
 from ..types.source_search_response import SourceSearchResponse
 from ..types.source_summary_response import SourceSummaryResponse
+from ..types.source_tag_read import SourceTagRead
+from ..types.source_tag_source_binding_response import SourceTagSourceBindingResponse
+from .types.list_sources_v1notebooks_notebook_id_sources_get_request_sort_by import (
+    ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy,
+)
+from .types.list_sources_v1notebooks_notebook_id_sources_get_request_sort_order import (
+    ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder,
+)
 from .types.source_from_url_request_mode import SourceFromUrlRequestMode
 
 # this is used as the default value for optional parameters
@@ -91,12 +100,24 @@ class RawSourcesClient:
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     def list_sources(
-        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
+        self,
+        notebook_id: int,
+        *,
+        tag: typing.Optional[str] = None,
+        sort_by: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy] = None,
+        sort_order: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder] = None,
+        request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[typing.List[SourceRead]]:
         """
         Parameters
         ----------
         notebook_id : int
+
+        tag : typing.Optional[str]
+
+        sort_by : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy]
+
+        sort_order : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -109,6 +130,11 @@ class RawSourcesClient:
         _response = self._client_wrapper.httpx_client.request(
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources",
             method="GET",
+            params={
+                "tag": tag,
+                "sort_by": sort_by,
+                "sort_order": sort_order,
+            },
             request_options=request_options,
         )
         try:
@@ -193,13 +219,13 @@ class RawSourcesClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    def batch_delete_sources(
+    def batch_reembed_sources(
         self,
         notebook_id: int,
         *,
         source_ids: typing.Sequence[int],
         request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[SourceBatchDeleteResponse]:
+    ) -> HttpResponse[SourceBatchReembedResponse]:
         """
         Parameters
         ----------
@@ -212,12 +238,12 @@ class RawSourcesClient:
 
         Returns
         -------
-        HttpResponse[SourceBatchDeleteResponse]
+        HttpResponse[SourceBatchReembedResponse]
             Successful Response
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources",
-            method="DELETE",
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/batch/re-embed",
+            method="POST",
             json={
                 "source_ids": source_ids,
             },
@@ -230,9 +256,9 @@ class RawSourcesClient:
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    SourceBatchDeleteResponse,
+                    SourceBatchReembedResponse,
                     parse_obj_as(
-                        type_=SourceBatchDeleteResponse,  # type: ignore
+                        type_=SourceBatchReembedResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -284,6 +310,334 @@ class RawSourcesClient:
                     SourceRead,
                     parse_obj_as(
                         type_=SourceRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def list_source_tags(
+        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[typing.List[SourceTagRead]]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[typing.List[SourceTagRead]]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/tags",
+            method="GET",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    typing.List[SourceTagRead],
+                    parse_obj_as(
+                        type_=typing.List[SourceTagRead],  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def create_source_tag(
+        self, notebook_id: int, *, name: str, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[SourceTagRead]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        name : str
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SourceTagRead]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/tags",
+            method="POST",
+            json={
+                "name": name,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceTagRead,
+                    parse_obj_as(
+                        type_=SourceTagRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def delete_source_tag(
+        self, notebook_id: int, tag_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[None]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[None]
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/tags/{jsonable_encoder(tag_id)}",
+            method="DELETE",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                return HttpResponse(response=_response, data=None)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def update_source_tag(
+        self, notebook_id: int, tag_id: int, *, name: str, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[SourceTagRead]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        name : str
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SourceTagRead]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/tags/{jsonable_encoder(tag_id)}",
+            method="PATCH",
+            json={
+                "name": name,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceTagRead,
+                    parse_obj_as(
+                        type_=SourceTagRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def assign_tag_to_sources(
+        self,
+        notebook_id: int,
+        tag_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SourceTagSourceBindingResponse]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SourceTagSourceBindingResponse]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/tags/{jsonable_encoder(tag_id)}/sources",
+            method="POST",
+            json={
+                "source_ids": source_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceTagSourceBindingResponse,
+                    parse_obj_as(
+                        type_=SourceTagSourceBindingResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def remove_tag_from_sources(
+        self,
+        notebook_id: int,
+        tag_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SourceTagSourceBindingResponse]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SourceTagSourceBindingResponse]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/tags/{jsonable_encoder(tag_id)}/sources",
+            method="DELETE",
+            json={
+                "source_ids": source_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceTagSourceBindingResponse,
+                    parse_obj_as(
+                        type_=SourceTagSourceBindingResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -444,6 +798,66 @@ class RawSourcesClient:
                     SourceRead,
                     parse_obj_as(
                         type_=SourceRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def batch_delete_sources(
+        self,
+        notebook_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SourceBatchDeleteResponse]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SourceBatchDeleteResponse]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/batch",
+            method="DELETE",
+            json={
+                "source_ids": source_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceBatchDeleteResponse,
+                    parse_obj_as(
+                        type_=SourceBatchDeleteResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -812,12 +1226,24 @@ class AsyncRawSourcesClient:
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
     async def list_sources(
-        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
+        self,
+        notebook_id: int,
+        *,
+        tag: typing.Optional[str] = None,
+        sort_by: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy] = None,
+        sort_order: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder] = None,
+        request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[typing.List[SourceRead]]:
         """
         Parameters
         ----------
         notebook_id : int
+
+        tag : typing.Optional[str]
+
+        sort_by : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy]
+
+        sort_order : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -830,6 +1256,11 @@ class AsyncRawSourcesClient:
         _response = await self._client_wrapper.httpx_client.request(
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources",
             method="GET",
+            params={
+                "tag": tag,
+                "sort_by": sort_by,
+                "sort_order": sort_order,
+            },
             request_options=request_options,
         )
         try:
@@ -914,13 +1345,13 @@ class AsyncRawSourcesClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    async def batch_delete_sources(
+    async def batch_reembed_sources(
         self,
         notebook_id: int,
         *,
         source_ids: typing.Sequence[int],
         request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[SourceBatchDeleteResponse]:
+    ) -> AsyncHttpResponse[SourceBatchReembedResponse]:
         """
         Parameters
         ----------
@@ -933,12 +1364,12 @@ class AsyncRawSourcesClient:
 
         Returns
         -------
-        AsyncHttpResponse[SourceBatchDeleteResponse]
+        AsyncHttpResponse[SourceBatchReembedResponse]
             Successful Response
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources",
-            method="DELETE",
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/batch/re-embed",
+            method="POST",
             json={
                 "source_ids": source_ids,
             },
@@ -951,9 +1382,9 @@ class AsyncRawSourcesClient:
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    SourceBatchDeleteResponse,
+                    SourceBatchReembedResponse,
                     parse_obj_as(
-                        type_=SourceBatchDeleteResponse,  # type: ignore
+                        type_=SourceBatchReembedResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -1005,6 +1436,334 @@ class AsyncRawSourcesClient:
                     SourceRead,
                     parse_obj_as(
                         type_=SourceRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def list_source_tags(
+        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[typing.List[SourceTagRead]]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[typing.List[SourceTagRead]]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/tags",
+            method="GET",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    typing.List[SourceTagRead],
+                    parse_obj_as(
+                        type_=typing.List[SourceTagRead],  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def create_source_tag(
+        self, notebook_id: int, *, name: str, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[SourceTagRead]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        name : str
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SourceTagRead]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/tags",
+            method="POST",
+            json={
+                "name": name,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceTagRead,
+                    parse_obj_as(
+                        type_=SourceTagRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def delete_source_tag(
+        self, notebook_id: int, tag_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[None]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[None]
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/tags/{jsonable_encoder(tag_id)}",
+            method="DELETE",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                return AsyncHttpResponse(response=_response, data=None)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def update_source_tag(
+        self, notebook_id: int, tag_id: int, *, name: str, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[SourceTagRead]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        name : str
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SourceTagRead]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/tags/{jsonable_encoder(tag_id)}",
+            method="PATCH",
+            json={
+                "name": name,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceTagRead,
+                    parse_obj_as(
+                        type_=SourceTagRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def assign_tag_to_sources(
+        self,
+        notebook_id: int,
+        tag_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SourceTagSourceBindingResponse]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SourceTagSourceBindingResponse]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/tags/{jsonable_encoder(tag_id)}/sources",
+            method="POST",
+            json={
+                "source_ids": source_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceTagSourceBindingResponse,
+                    parse_obj_as(
+                        type_=SourceTagSourceBindingResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def remove_tag_from_sources(
+        self,
+        notebook_id: int,
+        tag_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SourceTagSourceBindingResponse]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SourceTagSourceBindingResponse]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/tags/{jsonable_encoder(tag_id)}/sources",
+            method="DELETE",
+            json={
+                "source_ids": source_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceTagSourceBindingResponse,
+                    parse_obj_as(
+                        type_=SourceTagSourceBindingResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -1165,6 +1924,66 @@ class AsyncRawSourcesClient:
                     SourceRead,
                     parse_obj_as(
                         type_=SourceRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def batch_delete_sources(
+        self,
+        notebook_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SourceBatchDeleteResponse]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SourceBatchDeleteResponse]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/batch",
+            method="DELETE",
+            json={
+                "source_ids": source_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceBatchDeleteResponse,
+                    parse_obj_as(
+                        type_=SourceBatchDeleteResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )

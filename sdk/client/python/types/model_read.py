@@ -4,7 +4,6 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import IS_PYDANTIC_V2, UniversalBaseModel
-from .model_read_provider import ModelReadProvider
 
 
 class ModelRead(UniversalBaseModel):
@@ -13,7 +12,7 @@ class ModelRead(UniversalBaseModel):
     """
 
     id: str
-    provider: ModelReadProvider
+    provider: str
     model: str
     display_name: str
     description: str
