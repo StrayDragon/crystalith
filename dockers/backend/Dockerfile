@@ -18,25 +18,9 @@ COPY backend/py/alembic.ini ./
 COPY backend/py/alembic ./alembic
 COPY backend/py/scripts ./scripts
 
-RUN uv sync --frozen --no-dev --no-editable
-
-# Production docker-compose uses external ChromaDB service; keep the API image
-# smaller by removing embedded-Chroma Python dependencies.
-RUN uv pip uninstall \
-  --python /opt/venv/bin/python \
-  chromadb \
-  chromadb_rust_bindings \
-  onnxruntime \
-  tokenizers \
-  grpcio \
-  kubernetes \
-  numpy \
-  sympy \
-  temporalio \
-  botocore \
-  babel \
-  zstandard \
-  || true
+# Production docker-compose uses external ChromaDB service (HTTP); keep the API
+# image smaller by skipping embedded-Chroma Python dependencies at install time.
+RUN UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable --no-install-package chromadb
 
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS runtime
 
