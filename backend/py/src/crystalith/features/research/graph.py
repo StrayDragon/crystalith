@@ -70,7 +70,7 @@ PLAN_SYSTEM_PROMPT = """You are a research assistant planning search queries.
 Given a research topic and optional previous results, generate 2-4 search queries.
 Each query should target different aspects of the topic.
 Return JSON with 'queries' (list of {query, engine, priority, reason}) and 'reasoning'.
-Engine options: Web, Scholar, Docs. Priority: 1=high, 2=medium, 3=low."""
+Engine options: Web. Priority: 1=high, 2=medium, 3=low."""
 
 
 ANALYSIS_SYSTEM_PROMPT = """You are a research analyst evaluating search results.
