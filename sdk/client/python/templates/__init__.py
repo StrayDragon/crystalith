@@ -6,16 +6,8 @@ import typing
 from importlib import import_module
 
 if typing.TYPE_CHECKING:
-    from .types import (
-        ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy,
-        ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder,
-        SourceFromUrlRequestMode,
-    )
-_dynamic_imports: typing.Dict[str, str] = {
-    "ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy": ".types",
-    "ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder": ".types",
-    "SourceFromUrlRequestMode": ".types",
-}
+    from .types import TemplateFromNotebookCreateOutputType
+_dynamic_imports: typing.Dict[str, str] = {"TemplateFromNotebookCreateOutputType": ".types"}
 
 
 def __getattr__(attr_name: str) -> typing.Any:
@@ -39,8 +31,4 @@ def __dir__():
     return sorted(lazy_attrs)
 
 
-__all__ = [
-    "ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy",
-    "ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder",
-    "SourceFromUrlRequestMode",
-]
+__all__ = ["TemplateFromNotebookCreateOutputType"]

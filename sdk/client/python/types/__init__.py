@@ -22,7 +22,6 @@ if typing.TYPE_CHECKING:
     from .message_read import MessageRead
     from .message_read_role import MessageReadRole
     from .model_read import ModelRead
-    from .model_read_provider import ModelReadProvider
     from .models_list_response import ModelsListResponse
     from .notebook_read import NotebookRead
     from .output_read import OutputRead
@@ -63,6 +62,7 @@ if typing.TYPE_CHECKING:
     from .slides_config_response import SlidesConfigResponse
     from .slides_theme_preset import SlidesThemePreset
     from .source_batch_delete_response import SourceBatchDeleteResponse
+    from .source_batch_reembed_response import SourceBatchReembedResponse
     from .source_from_url_mode import SourceFromUrlMode
     from .source_qa_response import SourceQaResponse
     from .source_read import SourceRead
@@ -73,12 +73,20 @@ if typing.TYPE_CHECKING:
     from .source_search_status import SourceSearchStatus
     from .source_status import SourceStatus
     from .source_summary_response import SourceSummaryResponse
+    from .source_tag_read import SourceTagRead
+    from .source_tag_source_binding_request import SourceTagSourceBindingRequest
+    from .source_tag_source_binding_response import SourceTagSourceBindingResponse
     from .structured_refine import StructuredRefine
     from .task_read import TaskRead
     from .task_read_status import TaskReadStatus
     from .task_read_type import TaskReadType
     from .task_status import TaskStatus
     from .task_type import TaskType
+    from .template_config_input import TemplateConfigInput
+    from .template_config_input_output_type import TemplateConfigInputOutputType
+    from .template_config_output import TemplateConfigOutput
+    from .template_config_output_output_type import TemplateConfigOutputOutputType
+    from .template_read import TemplateRead
     from .tool_config_response import ToolConfigResponse
     from .topic import Topic
     from .validation_error import ValidationError
@@ -104,7 +112,6 @@ _dynamic_imports: typing.Dict[str, str] = {
     "MessageRead": ".message_read",
     "MessageReadRole": ".message_read_role",
     "ModelRead": ".model_read",
-    "ModelReadProvider": ".model_read_provider",
     "ModelsListResponse": ".models_list_response",
     "NotebookRead": ".notebook_read",
     "OutputRead": ".output_read",
@@ -145,6 +152,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SlidesConfigResponse": ".slides_config_response",
     "SlidesThemePreset": ".slides_theme_preset",
     "SourceBatchDeleteResponse": ".source_batch_delete_response",
+    "SourceBatchReembedResponse": ".source_batch_reembed_response",
     "SourceFromUrlMode": ".source_from_url_mode",
     "SourceQaResponse": ".source_qa_response",
     "SourceRead": ".source_read",
@@ -155,12 +163,20 @@ _dynamic_imports: typing.Dict[str, str] = {
     "SourceSearchStatus": ".source_search_status",
     "SourceStatus": ".source_status",
     "SourceSummaryResponse": ".source_summary_response",
+    "SourceTagRead": ".source_tag_read",
+    "SourceTagSourceBindingRequest": ".source_tag_source_binding_request",
+    "SourceTagSourceBindingResponse": ".source_tag_source_binding_response",
     "StructuredRefine": ".structured_refine",
     "TaskRead": ".task_read",
     "TaskReadStatus": ".task_read_status",
     "TaskReadType": ".task_read_type",
     "TaskStatus": ".task_status",
     "TaskType": ".task_type",
+    "TemplateConfigInput": ".template_config_input",
+    "TemplateConfigInputOutputType": ".template_config_input_output_type",
+    "TemplateConfigOutput": ".template_config_output",
+    "TemplateConfigOutputOutputType": ".template_config_output_output_type",
+    "TemplateRead": ".template_read",
     "ToolConfigResponse": ".tool_config_response",
     "Topic": ".topic",
     "ValidationError": ".validation_error",
@@ -210,7 +226,6 @@ __all__ = [
     "MessageRead",
     "MessageReadRole",
     "ModelRead",
-    "ModelReadProvider",
     "ModelsListResponse",
     "NotebookRead",
     "OutputRead",
@@ -251,6 +266,7 @@ __all__ = [
     "SlidesConfigResponse",
     "SlidesThemePreset",
     "SourceBatchDeleteResponse",
+    "SourceBatchReembedResponse",
     "SourceFromUrlMode",
     "SourceQaResponse",
     "SourceRead",
@@ -261,12 +277,20 @@ __all__ = [
     "SourceSearchStatus",
     "SourceStatus",
     "SourceSummaryResponse",
+    "SourceTagRead",
+    "SourceTagSourceBindingRequest",
+    "SourceTagSourceBindingResponse",
     "StructuredRefine",
     "TaskRead",
     "TaskReadStatus",
     "TaskReadType",
     "TaskStatus",
     "TaskType",
+    "TemplateConfigInput",
+    "TemplateConfigInputOutputType",
+    "TemplateConfigOutput",
+    "TemplateConfigOutputOutputType",
+    "TemplateRead",
     "ToolConfigResponse",
     "Topic",
     "ValidationError",

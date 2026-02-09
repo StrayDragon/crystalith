@@ -10,11 +10,20 @@ from ..types.convert_source_qa_to_source_response import ConvertSourceQaToSource
 from ..types.extractors_list_response import ExtractorsListResponse
 from ..types.qa_message import QaMessage
 from ..types.source_batch_delete_response import SourceBatchDeleteResponse
+from ..types.source_batch_reembed_response import SourceBatchReembedResponse
 from ..types.source_qa_response import SourceQaResponse
 from ..types.source_read import SourceRead
 from ..types.source_search_response import SourceSearchResponse
 from ..types.source_summary_response import SourceSummaryResponse
+from ..types.source_tag_read import SourceTagRead
+from ..types.source_tag_source_binding_response import SourceTagSourceBindingResponse
 from .raw_client import AsyncRawSourcesClient, RawSourcesClient
+from .types.list_sources_v1notebooks_notebook_id_sources_get_request_sort_by import (
+    ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy,
+)
+from .types.list_sources_v1notebooks_notebook_id_sources_get_request_sort_order import (
+    ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder,
+)
 from .types.source_from_url_request_mode import SourceFromUrlRequestMode
 
 # this is used as the default value for optional parameters
@@ -78,12 +87,24 @@ class SourcesClient:
         return _response.data
 
     def list_sources(
-        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
+        self,
+        notebook_id: int,
+        *,
+        tag: typing.Optional[str] = None,
+        sort_by: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy] = None,
+        sort_order: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder] = None,
+        request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[SourceRead]:
         """
         Parameters
         ----------
         notebook_id : int
+
+        tag : typing.Optional[str]
+
+        sort_by : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy]
+
+        sort_order : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -104,7 +125,9 @@ class SourcesClient:
             notebook_id=1,
         )
         """
-        _response = self._raw_client.list_sources(notebook_id, request_options=request_options)
+        _response = self._raw_client.list_sources(
+            notebook_id, tag=tag, sort_by=sort_by, sort_order=sort_order, request_options=request_options
+        )
         return _response.data
 
     def upload_source(
@@ -140,13 +163,13 @@ class SourcesClient:
         _response = self._raw_client.upload_source(notebook_id, file=file, request_options=request_options)
         return _response.data
 
-    def batch_delete_sources(
+    def batch_reembed_sources(
         self,
         notebook_id: int,
         *,
         source_ids: typing.Sequence[int],
         request_options: typing.Optional[RequestOptions] = None,
-    ) -> SourceBatchDeleteResponse:
+    ) -> SourceBatchReembedResponse:
         """
         Parameters
         ----------
@@ -159,7 +182,7 @@ class SourcesClient:
 
         Returns
         -------
-        SourceBatchDeleteResponse
+        SourceBatchReembedResponse
             Successful Response
 
         Examples
@@ -169,12 +192,12 @@ class SourcesClient:
         client = CrystalithClient(
             base_url="https://yourhost.com/path/to/api",
         )
-        client.sources.batch_delete_sources(
+        client.sources.batch_reembed_sources(
             notebook_id=1,
             source_ids=[1],
         )
         """
-        _response = self._raw_client.batch_delete_sources(
+        _response = self._raw_client.batch_reembed_sources(
             notebook_id, source_ids=source_ids, request_options=request_options
         )
         return _response.data
@@ -212,6 +235,223 @@ class SourcesClient:
         )
         """
         _response = self._raw_client.reembed_source(notebook_id, source_id, request_options=request_options)
+        return _response.data
+
+    def list_source_tags(
+        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> typing.List[SourceTagRead]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        typing.List[SourceTagRead]
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.list_source_tags(
+            notebook_id=1,
+        )
+        """
+        _response = self._raw_client.list_source_tags(notebook_id, request_options=request_options)
+        return _response.data
+
+    def create_source_tag(
+        self, notebook_id: int, *, name: str, request_options: typing.Optional[RequestOptions] = None
+    ) -> SourceTagRead:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        name : str
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceTagRead
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.create_source_tag(
+            notebook_id=1,
+            name="name",
+        )
+        """
+        _response = self._raw_client.create_source_tag(notebook_id, name=name, request_options=request_options)
+        return _response.data
+
+    def delete_source_tag(
+        self, notebook_id: int, tag_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> None:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.delete_source_tag(
+            notebook_id=1,
+            tag_id=1,
+        )
+        """
+        _response = self._raw_client.delete_source_tag(notebook_id, tag_id, request_options=request_options)
+        return _response.data
+
+    def update_source_tag(
+        self, notebook_id: int, tag_id: int, *, name: str, request_options: typing.Optional[RequestOptions] = None
+    ) -> SourceTagRead:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        name : str
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceTagRead
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.update_source_tag(
+            notebook_id=1,
+            tag_id=1,
+            name="name",
+        )
+        """
+        _response = self._raw_client.update_source_tag(notebook_id, tag_id, name=name, request_options=request_options)
+        return _response.data
+
+    def assign_tag_to_sources(
+        self,
+        notebook_id: int,
+        tag_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SourceTagSourceBindingResponse:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceTagSourceBindingResponse
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.assign_tag_to_sources(
+            notebook_id=1,
+            tag_id=1,
+            source_ids=[1],
+        )
+        """
+        _response = self._raw_client.assign_tag_to_sources(
+            notebook_id, tag_id, source_ids=source_ids, request_options=request_options
+        )
+        return _response.data
+
+    def remove_tag_from_sources(
+        self,
+        notebook_id: int,
+        tag_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SourceTagSourceBindingResponse:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceTagSourceBindingResponse
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.remove_tag_from_sources(
+            notebook_id=1,
+            tag_id=1,
+            source_ids=[1],
+        )
+        """
+        _response = self._raw_client.remove_tag_from_sources(
+            notebook_id, tag_id, source_ids=source_ids, request_options=request_options
+        )
         return _response.data
 
     def search_sources(
@@ -329,6 +569,45 @@ class SourcesClient:
             mode=mode,
             extractor=extractor,
             request_options=request_options,
+        )
+        return _response.data
+
+    def batch_delete_sources(
+        self,
+        notebook_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SourceBatchDeleteResponse:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceBatchDeleteResponse
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.batch_delete_sources(
+            notebook_id=1,
+            source_ids=[1],
+        )
+        """
+        _response = self._raw_client.batch_delete_sources(
+            notebook_id, source_ids=source_ids, request_options=request_options
         )
         return _response.data
 
@@ -604,12 +883,24 @@ class AsyncSourcesClient:
         return _response.data
 
     async def list_sources(
-        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
+        self,
+        notebook_id: int,
+        *,
+        tag: typing.Optional[str] = None,
+        sort_by: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy] = None,
+        sort_order: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder] = None,
+        request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[SourceRead]:
         """
         Parameters
         ----------
         notebook_id : int
+
+        tag : typing.Optional[str]
+
+        sort_by : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy]
+
+        sort_order : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -638,7 +929,9 @@ class AsyncSourcesClient:
 
         asyncio.run(main())
         """
-        _response = await self._raw_client.list_sources(notebook_id, request_options=request_options)
+        _response = await self._raw_client.list_sources(
+            notebook_id, tag=tag, sort_by=sort_by, sort_order=sort_order, request_options=request_options
+        )
         return _response.data
 
     async def upload_source(
@@ -682,13 +975,13 @@ class AsyncSourcesClient:
         _response = await self._raw_client.upload_source(notebook_id, file=file, request_options=request_options)
         return _response.data
 
-    async def batch_delete_sources(
+    async def batch_reembed_sources(
         self,
         notebook_id: int,
         *,
         source_ids: typing.Sequence[int],
         request_options: typing.Optional[RequestOptions] = None,
-    ) -> SourceBatchDeleteResponse:
+    ) -> SourceBatchReembedResponse:
         """
         Parameters
         ----------
@@ -701,7 +994,7 @@ class AsyncSourcesClient:
 
         Returns
         -------
-        SourceBatchDeleteResponse
+        SourceBatchReembedResponse
             Successful Response
 
         Examples
@@ -716,7 +1009,7 @@ class AsyncSourcesClient:
 
 
         async def main() -> None:
-            await client.sources.batch_delete_sources(
+            await client.sources.batch_reembed_sources(
                 notebook_id=1,
                 source_ids=[1],
             )
@@ -724,7 +1017,7 @@ class AsyncSourcesClient:
 
         asyncio.run(main())
         """
-        _response = await self._raw_client.batch_delete_sources(
+        _response = await self._raw_client.batch_reembed_sources(
             notebook_id, source_ids=source_ids, request_options=request_options
         )
         return _response.data
@@ -770,6 +1063,273 @@ class AsyncSourcesClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.reembed_source(notebook_id, source_id, request_options=request_options)
+        return _response.data
+
+    async def list_source_tags(
+        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> typing.List[SourceTagRead]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        typing.List[SourceTagRead]
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.list_source_tags(
+                notebook_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.list_source_tags(notebook_id, request_options=request_options)
+        return _response.data
+
+    async def create_source_tag(
+        self, notebook_id: int, *, name: str, request_options: typing.Optional[RequestOptions] = None
+    ) -> SourceTagRead:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        name : str
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceTagRead
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.create_source_tag(
+                notebook_id=1,
+                name="name",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.create_source_tag(notebook_id, name=name, request_options=request_options)
+        return _response.data
+
+    async def delete_source_tag(
+        self, notebook_id: int, tag_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> None:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.delete_source_tag(
+                notebook_id=1,
+                tag_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.delete_source_tag(notebook_id, tag_id, request_options=request_options)
+        return _response.data
+
+    async def update_source_tag(
+        self, notebook_id: int, tag_id: int, *, name: str, request_options: typing.Optional[RequestOptions] = None
+    ) -> SourceTagRead:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        name : str
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceTagRead
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.update_source_tag(
+                notebook_id=1,
+                tag_id=1,
+                name="name",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.update_source_tag(
+            notebook_id, tag_id, name=name, request_options=request_options
+        )
+        return _response.data
+
+    async def assign_tag_to_sources(
+        self,
+        notebook_id: int,
+        tag_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SourceTagSourceBindingResponse:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceTagSourceBindingResponse
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.assign_tag_to_sources(
+                notebook_id=1,
+                tag_id=1,
+                source_ids=[1],
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.assign_tag_to_sources(
+            notebook_id, tag_id, source_ids=source_ids, request_options=request_options
+        )
+        return _response.data
+
+    async def remove_tag_from_sources(
+        self,
+        notebook_id: int,
+        tag_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SourceTagSourceBindingResponse:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        tag_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceTagSourceBindingResponse
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.remove_tag_from_sources(
+                notebook_id=1,
+                tag_id=1,
+                source_ids=[1],
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.remove_tag_from_sources(
+            notebook_id, tag_id, source_ids=source_ids, request_options=request_options
+        )
         return _response.data
 
     async def search_sources(
@@ -903,6 +1463,53 @@ class AsyncSourcesClient:
             mode=mode,
             extractor=extractor,
             request_options=request_options,
+        )
+        return _response.data
+
+    async def batch_delete_sources(
+        self,
+        notebook_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SourceBatchDeleteResponse:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceBatchDeleteResponse
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.batch_delete_sources(
+                notebook_id=1,
+                source_ids=[1],
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.batch_delete_sources(
+            notebook_id, source_ids=source_ids, request_options=request_options
         )
         return _response.data
 

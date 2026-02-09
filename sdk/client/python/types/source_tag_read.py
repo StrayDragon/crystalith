@@ -5,28 +5,12 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import IS_PYDANTIC_V2, UniversalBaseModel
-from .source_read_status import SourceReadStatus
 
 
-class SourceRead(UniversalBaseModel):
+class SourceTagRead(UniversalBaseModel):
     id: int
     notebook_id: int
-    filename: str
-    mime_type: typing.Optional[str] = None
-    parser_type: str
-    metadata: typing.Optional[typing.Dict[str, typing.Any]] = None
-    status: SourceReadStatus = pydantic.Field()
-    """
-    枚举值:
-
-    * `processing`: 正在处理
-    * `ready`: 处理完成
-    * `failed`: 处理失败
-    """
-
-    error_message: typing.Optional[str] = None
-    chunk_count: typing.Optional[int] = None
-    tags: typing.Optional[typing.List[str]] = None
+    name: str
     created_at: dt.datetime
     updated_at: dt.datetime
 
