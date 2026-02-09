@@ -5,7 +5,7 @@ from typing import Any
 
 
 class MyChatProvider:
-    provider = "{{cookiecutter.plugin_id}}"
+    provider = "{{ plugin_id }}"
 
     def __init__(self, model: str) -> None:
         self.model = model
@@ -15,14 +15,14 @@ class MyChatProvider:
         content = getattr(last, "content", None)
         if content is None and isinstance(last, dict):
             content = last.get("content")
-        return f"{{cookiecutter.plugin_id}}:{content or ''}"
+        return f"{{ plugin_id }}:{% raw %}{content or ''}{% endraw %}"
 
     async def chat_stream(self, messages: Sequence[Any]) -> AsyncIterator[str]:
         yield await self.chat(messages)
 
 
 class MyEmbeddingProvider:
-    provider = "{{cookiecutter.plugin_id}}"
+    provider = "{{ plugin_id }}"
 
     def __init__(self, model: str) -> None:
         self.model = model

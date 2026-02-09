@@ -1,6 +1,6 @@
-# {{cookiecutter.package_name}}
+# {{ package_name }}
 
-{{cookiecutter.description}}
+{{ description }}
 
 ## Install (editable)
 
@@ -14,5 +14,5 @@ This project registers a plugin via:
 
 ```toml
 [project.entry-points."crystalith.plugins"]
-{{cookiecutter.plugin_id}} = "{{cookiecutter.module_name}}.plugin:plugin"
+{{ plugin_id }} = "{{ module_name }}.plugin:plugin"
 ```
