@@ -5898,7 +5898,7 @@
           "engine": {
             "type": "string",
             "title": "Engine",
-            "description": "Search engine: Web, Scholar, Docs",
+            "description": "Search engine: Web",
             "default": "Web"
           },
           "priority": {

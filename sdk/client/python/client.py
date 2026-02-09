@@ -20,6 +20,7 @@ if typing.TYPE_CHECKING:
     from .slides.client import AsyncSlidesClient, SlidesClient
     from .sources.client import AsyncSourcesClient, SourcesClient
     from .tasks.client import AsyncTasksClient, TasksClient
+    from .templates.client import AsyncTemplatesClient, TemplatesClient
     from .workspace_tools.client import AsyncWorkspaceToolsClient, WorkspaceToolsClient
 
 
@@ -87,6 +88,7 @@ class CrystalithClient:
         self._slides: typing.Optional[SlidesClient] = None
         self._research: typing.Optional[ResearchClient] = None
         self._tasks: typing.Optional[TasksClient] = None
+        self._templates: typing.Optional[TemplatesClient] = None
         self._workspace_tools: typing.Optional[WorkspaceToolsClient] = None
 
     @property
@@ -186,6 +188,14 @@ class CrystalithClient:
         return self._tasks
 
     @property
+    def templates(self):
+        if self._templates is None:
+            from .templates.client import TemplatesClient  # noqa: E402
+
+            self._templates = TemplatesClient(client_wrapper=self._client_wrapper)
+        return self._templates
+
+    @property
     def workspace_tools(self):
         if self._workspace_tools is None:
             from .workspace_tools.client import WorkspaceToolsClient  # noqa: E402
@@ -258,6 +268,7 @@ class AsyncCrystalithClient:
         self._slides: typing.Optional[AsyncSlidesClient] = None
         self._research: typing.Optional[AsyncResearchClient] = None
         self._tasks: typing.Optional[AsyncTasksClient] = None
+        self._templates: typing.Optional[AsyncTemplatesClient] = None
         self._workspace_tools: typing.Optional[AsyncWorkspaceToolsClient] = None
 
     @property
@@ -355,6 +366,14 @@ class AsyncCrystalithClient:
 
             self._tasks = AsyncTasksClient(client_wrapper=self._client_wrapper)
         return self._tasks
+
+    @property
+    def templates(self):
+        if self._templates is None:
+            from .templates.client import AsyncTemplatesClient  # noqa: E402
+
+            self._templates = AsyncTemplatesClient(client_wrapper=self._client_wrapper)
+        return self._templates
 
     @property
     def workspace_tools(self):

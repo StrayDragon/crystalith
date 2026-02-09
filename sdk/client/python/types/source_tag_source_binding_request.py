@@ -4,22 +4,10 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import IS_PYDANTIC_V2, UniversalBaseModel
-from .model_read import ModelRead
 
 
-class ModelsListResponse(UniversalBaseModel):
-    """
-    Response model for the models list endpoint.
-    """
-
-    models: typing.List[ModelRead]
-    providers: typing.Optional[typing.List[str]] = pydantic.Field(default=None)
-    """
-    Available provider ids (built-in + plugins)
-    """
-
-    default_chat: typing.Optional[str] = None
-    default_embedding: typing.Optional[str] = None
+class SourceTagSourceBindingRequest(UniversalBaseModel):
+    source_ids: typing.List[int]
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

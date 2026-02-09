@@ -399,6 +399,41 @@ class ResearchClient:
         _response = self._raw_client.cancel_research(notebook_id, research_id, request_options=request_options)
         return _response.data
 
+    def resume_research(
+        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> ResearchSessionResponse:
+        """
+        Resume a cancelled research session.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        research_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        ResearchSessionResponse
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.research.resume_research(
+            notebook_id=1,
+            research_id=1,
+        )
+        """
+        _response = self._raw_client.resume_research(notebook_id, research_id, request_options=request_options)
+        return _response.data
+
     def start_research(
         self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
     ) -> ResearchSessionResponse:
@@ -997,6 +1032,49 @@ class AsyncResearchClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.cancel_research(notebook_id, research_id, request_options=request_options)
+        return _response.data
+
+    async def resume_research(
+        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> ResearchSessionResponse:
+        """
+        Resume a cancelled research session.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        research_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        ResearchSessionResponse
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.research.resume_research(
+                notebook_id=1,
+                research_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.resume_research(notebook_id, research_id, request_options=request_options)
         return _response.data
 
     async def start_research(

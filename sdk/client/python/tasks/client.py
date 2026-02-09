@@ -81,6 +81,34 @@ class TasksClient:
         _response = self._raw_client.list_tasks(notebook_id, request_options=request_options)
         return _response.data
 
+    def cancel_task(self, task_id: int, *, request_options: typing.Optional[RequestOptions] = None) -> TaskRead:
+        """
+        Parameters
+        ----------
+        task_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        TaskRead
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.tasks.cancel_task(
+            task_id=1,
+        )
+        """
+        _response = self._raw_client.cancel_task(task_id, request_options=request_options)
+        return _response.data
+
 
 class AsyncTasksClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
@@ -169,4 +197,40 @@ class AsyncTasksClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.list_tasks(notebook_id, request_options=request_options)
+        return _response.data
+
+    async def cancel_task(self, task_id: int, *, request_options: typing.Optional[RequestOptions] = None) -> TaskRead:
+        """
+        Parameters
+        ----------
+        task_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        TaskRead
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.tasks.cancel_task(
+                task_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.cancel_task(task_id, request_options=request_options)
         return _response.data

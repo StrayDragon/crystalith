@@ -6,17 +6,9 @@ import typing
 from importlib import import_module
 
 if typing.TYPE_CHECKING:
-    from .list_sources_v1notebooks_notebook_id_sources_get_request_sort_by import (
-        ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy,
-    )
-    from .list_sources_v1notebooks_notebook_id_sources_get_request_sort_order import (
-        ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder,
-    )
-    from .source_from_url_request_mode import SourceFromUrlRequestMode
+    from .template_from_notebook_create_output_type import TemplateFromNotebookCreateOutputType
 _dynamic_imports: typing.Dict[str, str] = {
-    "ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy": ".list_sources_v1notebooks_notebook_id_sources_get_request_sort_by",
-    "ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder": ".list_sources_v1notebooks_notebook_id_sources_get_request_sort_order",
-    "SourceFromUrlRequestMode": ".source_from_url_request_mode",
+    "TemplateFromNotebookCreateOutputType": ".template_from_notebook_create_output_type"
 }
 
 
@@ -41,8 +33,4 @@ def __dir__():
     return sorted(lazy_attrs)
 
 
-__all__ = [
-    "ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy",
-    "ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder",
-    "SourceFromUrlRequestMode",
-]
+__all__ = ["TemplateFromNotebookCreateOutputType"]

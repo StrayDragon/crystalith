@@ -112,6 +112,53 @@ class RawTasksClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
+    def cancel_task(
+        self, task_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[TaskRead]:
+        """
+        Parameters
+        ----------
+        task_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[TaskRead]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/tasks/{jsonable_encoder(task_id)}/cancel",
+            method="POST",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    TaskRead,
+                    parse_obj_as(
+                        type_=TaskRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
 
 class AsyncRawTasksClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
@@ -191,6 +238,53 @@ class AsyncRawTasksClient:
                     typing.List[TaskRead],
                     parse_obj_as(
                         type_=typing.List[TaskRead],  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def cancel_task(
+        self, task_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[TaskRead]:
+        """
+        Parameters
+        ----------
+        task_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[TaskRead]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/tasks/{jsonable_encoder(task_id)}/cancel",
+            method="POST",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    TaskRead,
+                    parse_obj_as(
+                        type_=TaskRead,  # type: ignore
                         object_=_response.json(),
                     ),
                 )

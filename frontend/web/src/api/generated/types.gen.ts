@@ -1208,7 +1208,7 @@ export type SearchQuery = {
     /**
      * Engine
      *
-     * Search engine: Web, Scholar, Docs
+     * Search engine: Web
      */
     engine?: string;
     /**
