@@ -90,10 +90,16 @@ just dev
 
 Then add a model using `provider: "echo"` and restart.
 
-## 5) Cookiecutter template
+## 5) Copier template
 
-See `backend/py/tools/cookiecutter-crystalith-plugin/`:
+See `backend/py/tools/copier-crystalith-plugin/`:
 
 ```bash
-cookiecutter backend/py/tools/cookiecutter-crystalith-plugin
+copier copy backend/py/tools/copier-crystalith-plugin path/to/destination
+```
+
+The template will prompt for package name, module name, plugin id, etc. Answers are recorded in `.copier-answers.yml` so you can later update with:
+
+```bash
+copier update path/to/destination
 ```

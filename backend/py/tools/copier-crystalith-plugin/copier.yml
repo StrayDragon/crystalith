@@ -1,0 +1,51 @@
+_min_copier_version: "9.0.0"
+_templates_suffix: .jinja
+_answers_file: .copier-answers.yml
+
+_exclude:
+  - "copier.yml"
+  - "*.pyc"
+  - "__pycache__"
+  - ".git"
+
+# ── Questions ──────────────────────────────────────────────────────────
+
+package_name:
+  type: str
+  help: "PyPI-style package name (e.g. crystalith-my-plugin)"
+  default: "crystalith-my-plugin"
+  validator: "{% if not package_name %}Package name cannot be empty{% endif %}"
+
+module_name:
+  type: str
+  help: "Python module name (snake_case, e.g. crystalith_my_plugin)"
+  default: "{{ package_name | replace('-', '_') }}"
+  validator: >-
+    {% if not module_name %}Module name cannot be empty
+    {% elif not module_name | regex_search('^[a-z_][a-z0-9_]*$') %}Module name must be a valid Python identifier (snake_case)
+    {% endif %}
+
+plugin_id:
+  type: str
+  help: "Plugin entry-point id (used as provider name in config)"
+  default: "{{ package_name | replace('crystalith-', '') }}"
+
+description:
+  type: str
+  help: "Short description of the plugin"
+  default: "My Crystalith plugin"
+
+author_name:
+  type: str
+  help: "Author name"
+  default: "Your Name"
+
+author_email:
+  type: str
+  help: "Author email"
+  default: "you@example.com"
+
+version:
+  type: str
+  help: "Initial package version"
+  default: "0.1.0"
