@@ -73,7 +73,7 @@ export default function WorkspaceHeader({
   const { theme, setTheme } = useTheme();
 
   return (
-    <header className="flex items-center justify-between gap-3 px-3 py-2 sm:px-4 sm:py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-xl shadow-sm flex-wrap">
+    <header className="flex items-center justify-between gap-3 px-3 py-1.5 sm:px-4 sm:py-1.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-xl shadow-sm flex-wrap">
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white dark:bg-slate-800 shadow-sm border border-gray-100 dark:border-slate-700 text-gray-900 dark:text-gray-100">
           <svg viewBox="0 0 24 24" width="18" height="18" focusable="false">

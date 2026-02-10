@@ -47,4 +47,10 @@ export const GRIDSTACK_STYLES = `
 .grid-stack-item.ui-draggable-dragging {
   background: transparent !important;
 }
+
+/* Keep dragged widgets below the fixed header bar (z-10 = 10) */
+.grid-stack-item.ui-draggable-dragging,
+.grid-stack-item.ui-resizable-resizing {
+  z-index: 5 !important;
+}
 `;

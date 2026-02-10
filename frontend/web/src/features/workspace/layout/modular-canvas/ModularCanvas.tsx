@@ -218,7 +218,7 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(
         {/* GridStack style overrides */}
         <style>{GRIDSTACK_STYLES}</style>
 
-        <div className={`flex-1 min-h-0 overflow-hidden p-1.5 ${!locked ? 'mc-editing' : ''}`}>
+        <div className={`flex-1 min-h-0 overflow-x-hidden overflow-y-auto relative p-1.5 ${!locked ? 'mc-editing' : ''}`}>
           <div ref={gridElRef} className="grid-stack" style={{ minHeight: '100%' }} />
         </div>
 
