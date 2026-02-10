@@ -1,0 +1,36 @@
+schema: spec-driven
+
+context: |
+  Tech stack:
+  - Backend: FastAPI (Python) in backend/py/src/crystalith; tests in backend/py/tests; workspace libs in backend/py/packages.
+  - Frontend: Vite + React + TypeScript in frontend/web/src.
+
+  Commands (from repo root):
+  - Backend: cd backend/py && uv sync; just dev; just test; just db-init.
+  - Frontend: cd frontend/web && pnpm install; pnpm dev; pnpm test; pnpm run build.
+
+  Conventions:
+  - Python: 4-space indentation; prefer type hints; snake_case functions/vars; PascalCase classes.
+  - TypeScript/React: 2-space indentation; PascalCase components; hooks named useX.
+  - CSS/Tailwind: global styles in frontend/web/src/app/index.css; feature styles alongside components.
+  - No repo-wide formatter configured; match existing style and avoid unrelated reformatting.
+
+  Testing:
+  - Backend: pytest + pytest-asyncio.
+  - Frontend: Vitest + React Testing Library.
+
+  Git:
+  - Commit prefixes: feat:, fix:, refactor:, doc:, dev:, misc: (optional scope like feat(backend):).
+
+  Notes:
+  - If backend API changes, run frontend `pnpm run api:generate` and verify.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
