@@ -4677,6 +4677,53 @@
         "title": "ExtractorsListResponse",
         "description": "Response for listing available extractors."
       },
+      "FieldDescriptor": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "heading",
+              "badge",
+              "list",
+              "tree",
+              "date",
+              "citation",
+              "code"
+            ],
+            "title": "Type"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/FieldDescriptor"
+            },
+            "type": "array",
+            "title": "Children"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "type"
+        ],
+        "title": "FieldDescriptor"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -4689,6 +4736,20 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "ItemSchema": {
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldDescriptor"
+            },
+            "type": "array",
+            "title": "Fields"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ItemSchema"
       },
       "MessageCreate": {
         "properties": {
@@ -5138,6 +5199,37 @@
         "x-enum-class": "OutputType",
         "x-enum-module": "crystalith.shared.types"
       },
+      "PluginConfigSchema": {
+        "properties": {
+          "quantity_options": {
+            "items": {
+              "$ref": "#/components/schemas/crystalith__shared__plugins__render_types__ConfigOption"
+            },
+            "type": "array",
+            "title": "Quantity Options"
+          },
+          "difficulty_options": {
+            "items": {
+              "$ref": "#/components/schemas/crystalith__shared__plugins__render_types__ConfigOption"
+            },
+            "type": "array",
+            "title": "Difficulty Options"
+          },
+          "topic_placeholder": {
+            "type": "string",
+            "title": "Topic Placeholder",
+            "default": ""
+          },
+          "supports_topic": {
+            "type": "boolean",
+            "title": "Supports Topic",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PluginConfigSchema"
+      },
       "QAMessage": {
         "properties": {
           "role": {
@@ -5533,6 +5625,43 @@
           "score"
         ],
         "title": "Relation"
+      },
+      "RenderDescriptor": {
+        "properties": {
+          "layout": {
+            "type": "string",
+            "enum": [
+              "list",
+              "cards",
+              "tree",
+              "timeline",
+              "sections",
+              "table"
+            ],
+            "title": "Layout"
+          },
+          "item_schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ItemSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "options": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Options"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "layout"
+        ],
+        "title": "RenderDescriptor"
       },
       "ResearchSessionCreate": {
         "properties": {
@@ -7813,6 +7942,26 @@
             "type": "string",
             "title": "Prompt"
           },
+          "render_descriptor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RenderDescriptor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "config_schema": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PluginConfigSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "badge": {
             "anyOf": [
               {
@@ -7856,6 +8005,30 @@
           "tools"
         ],
         "title": "WorkspaceToolsResponse"
+      },
+      "crystalith__shared__plugins__render_types__ConfigOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "is_default": {
+            "type": "boolean",
+            "title": "Is Default",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "ConfigOption"
       }
     }
   }

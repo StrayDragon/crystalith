@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from .interfaces import AIProviderPlugin, OutputTypePlugin, ParserPlugin, PLUGIN_API_VERSION
+from .render_types import OutputTypePluginMeta, PluginConfigSchema, RenderDescriptor
 
 
 def check_plugin(plugin_id: str, plugin: Any) -> list[str]:
@@ -49,6 +50,18 @@ def check_plugin(plugin_id: str, plugin: Any) -> list[str]:
         schema = getattr(plugin, "schema", None)
         if not isinstance(schema, type) or not issubclass(schema, BaseModel):
             issues.append("OutputTypePlugin.schema must be a pydantic BaseModel subclass")
+
+        metadata = getattr(plugin, "metadata", None)
+        if metadata is not None and not isinstance(metadata, OutputTypePluginMeta):
+            issues.append("OutputTypePlugin.metadata must be an OutputTypePluginMeta instance")
+
+        render_descriptor = getattr(plugin, "render_descriptor", None)
+        if render_descriptor is not None and not isinstance(render_descriptor, RenderDescriptor):
+            issues.append("OutputTypePlugin.render_descriptor must be a RenderDescriptor instance")
+
+        config_schema = getattr(plugin, "config_schema", None)
+        if config_schema is not None and not isinstance(config_schema, PluginConfigSchema):
+            issues.append("OutputTypePlugin.config_schema must be a PluginConfigSchema instance")
 
     if not has_interface:
         issues.append("plugin does not implement any supported plugin interfaces")

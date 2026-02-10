@@ -14,6 +14,9 @@ members = [
     "cl-sqlalchemyx",
     "cl-stdx",
     "crystalith",
+    "crystalith-output-mindmap",
+    "crystalith-output-quiz",
+    "crystalith-output-timeline",
 ]
 
 [[package]]
@@ -944,6 +947,9 @@ redis = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "crystalith-output-mindmap" },
+    { name = "crystalith-output-quiz" },
+    { name = "crystalith-output-timeline" },
     { name = "freezegun" },
     { name = "jinja2sql" },
     { name = "pytest" },
@@ -989,11 +995,59 @@ provides-extras = ["browserless", "redis"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "crystalith-output-mindmap", editable = "examples/crystalith-output-mindmap" },
+    { name = "crystalith-output-quiz", editable = "examples/crystalith-output-quiz" },
+    { name = "crystalith-output-timeline", editable = "examples/crystalith-output-timeline" },
     { name = "freezegun", specifier = ">=1.5.1" },
     { name = "jinja2sql", specifier = ">=0.3.4" },
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-asyncio", specifier = ">=1.1.0" },
     { name = "pytest-xdist", specifier = ">=3.5.0" },
+]
+
+[[package]]
+name = "crystalith-output-mindmap"
+version = "0.1.0"
+source = { editable = "examples/crystalith-output-mindmap" }
+dependencies = [
+    { name = "crystalith" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "crystalith", editable = "." },
+    { name = "pydantic", specifier = ">=2.0.0" },
+]
+
+[[package]]
+name = "crystalith-output-quiz"
+version = "0.1.0"
+source = { editable = "examples/crystalith-output-quiz" }
+dependencies = [
+    { name = "crystalith" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "crystalith", editable = "." },
+    { name = "pydantic", specifier = ">=2.0.0" },
+]
+
+[[package]]
+name = "crystalith-output-timeline"
+version = "0.1.0"
+source = { editable = "examples/crystalith-output-timeline" }
+dependencies = [
+    { name = "crystalith" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "crystalith", editable = "." },
+    { name = "pydantic", specifier = ">=2.0.0" },
 ]
 
 [[package]]

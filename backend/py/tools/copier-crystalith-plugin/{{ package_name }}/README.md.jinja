@@ -2,11 +2,21 @@
 
 {{ description }}
 
+{% if plugin_kind == "OutputType" %}
+This is an example **OutputTypePlugin** that overrides an existing `OutputType` value
+in Crystalith (e.g. `FAQ`, `QUIZ`, `TIMELINE`).
+
+It can optionally provide:
+- `metadata` (`OutputTypePluginMeta`)
+- `render_descriptor` (`RenderDescriptor`)
+- `config_schema` (`PluginConfigSchema`)
+{% else %}
 ## Install (editable)
 
 ```bash
 pip install -e .
 ```
+{% endif %}
 
 ## Register
 

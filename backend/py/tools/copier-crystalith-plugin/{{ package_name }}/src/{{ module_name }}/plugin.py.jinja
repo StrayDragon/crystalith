@@ -1,5 +1,64 @@
 from __future__ import annotations
 
+{% if plugin_kind == "OutputType" %}
+
+from pydantic import BaseModel, Field
+
+from crystalith.shared.plugins.render_types import (
+    ConfigOption,
+    FieldDescriptor,
+    ItemSchema,
+    OutputTypePluginMeta,
+    PluginConfigSchema,
+    RenderDescriptor,
+)
+
+
+class MyItem(BaseModel):
+    text: str
+    citations: list[int] = Field(default_factory=list)
+
+
+class MyOutput(BaseModel):
+    items: list[MyItem] = Field(default_factory=list)
+
+
+class MyPlugin:
+    api_version = "v1"
+
+    output_type = "{{ output_type }}"
+    schema = MyOutput
+    default_prompt = "Generate structured output from the sources."
+
+    metadata = OutputTypePluginMeta(
+        description="{{ description }}",
+        display_text="{{ display_text }}",
+        tone="{{ tone }}",
+    )
+
+    render_descriptor = RenderDescriptor(
+        layout="list",
+        item_schema=ItemSchema(
+            fields=[
+                FieldDescriptor(key="text", type="text", label="Text"),
+                FieldDescriptor(key="citations", type="citation", label=None),
+            ]
+        ),
+        options={"items_key": "items"},
+    )
+
+    config_schema = PluginConfigSchema(
+        quantity_options=[ConfigOption(id="standard", label="Standard", is_default=True)],
+        difficulty_options=[],
+        topic_placeholder="Topic (optional)",
+        supports_topic=True,
+    )
+
+
+plugin = MyPlugin()
+
+{% else %}
+
 from collections.abc import AsyncIterator, Sequence
 from typing import Any
 
@@ -52,3 +111,5 @@ class MyPlugin:
 
 
 plugin = MyPlugin()
+
+{% endif %}
