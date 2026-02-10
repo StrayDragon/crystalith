@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
-from crystalith.shared.types import SourceStatus
+from .api_schemas import SourceRead
 
 
 class SourceCreate(BaseModel):
@@ -16,21 +15,7 @@ class SourceCreate(BaseModel):
     metadata: dict[str, Any] | None = None
 
 
-class SourceRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    notebook_id: int
-    filename: str
-    mime_type: str | None
-    parser_type: str
-    metadata: dict[str, Any] | None = Field(
-        default=None,
-        validation_alias="metadata_",
-        serialization_alias="metadata",
-    )
-    status: SourceStatus
-    error_message: str | None
-    chunk_count: int = 0
-    created_at: datetime.datetime
-    updated_at: datetime.datetime
+__all__ = [
+    "SourceCreate",
+    "SourceRead",
+]
