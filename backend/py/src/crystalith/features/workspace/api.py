@@ -3,9 +3,10 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from crystalith.shared.plugins.render_types import PluginConfigSchema, RenderDescriptor
 from crystalith.shared.types import OutputType, OutputTypeMeta
 
 
@@ -22,6 +23,8 @@ class WorkspaceTool(BaseModel):
     tone: ToolTone
     output_type: OutputType
     prompt: str
+    render_descriptor: RenderDescriptor | None = None
+    config_schema: PluginConfigSchema | None = None
     badge: str | None = None
     enabled: bool = True
 
@@ -146,8 +149,23 @@ def _get_tool_by_id(tool_id: str) -> WorkspaceTool | None:
 
 
 @router.get("/tools", response_model=WorkspaceToolsResponse)
-async def list_workspace_tools() -> WorkspaceToolsResponse:
-    return WorkspaceToolsResponse(tools=_build_tools())
+async def list_workspace_tools(request: Request) -> WorkspaceToolsResponse:
+    plugins = getattr(request.app.state, "plugins", None)
+    if plugins is None:
+        return WorkspaceToolsResponse(tools=_build_tools())
+
+    tools: list[WorkspaceTool] = []
+    for tool in _build_tools():
+        tools.append(
+            tool.model_copy(
+                update={
+                    "render_descriptor": plugins.get_render_descriptor(tool.output_type.value),
+                    "config_schema": plugins.get_config_schema(tool.output_type.value),
+                }
+            )
+        )
+
+    return WorkspaceToolsResponse(tools=tools)
 
 
 @router.get("/tools/{tool_id}/config", response_model=ToolConfigResponse)

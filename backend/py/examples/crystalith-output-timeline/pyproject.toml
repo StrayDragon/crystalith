@@ -1,19 +1,17 @@
 [project]
-name = "{{ package_name }}"
-version = "{{ version }}"
-description = "{{ description }}"
+name = "crystalith-output-timeline"
+version = "0.1.0"
+description = "Example Crystalith OutputTypePlugin (TIMELINE)."
 readme = "README.md"
 requires-python = ">=3.12"
-authors = [{ name = "{{ author_name }}", email = "{{ author_email }}" }]
+authors = [{ name = "crystalith", email = "devnull@example.com" }]
 dependencies = [
-{% if plugin_kind == "OutputType" %}
   "crystalith",
   "pydantic>=2.0.0",
-{% endif %}
 ]
 
 [project.entry-points."crystalith.plugins"]
-{{ plugin_id }} = "{{ module_name }}.plugin:plugin"
+output-timeline = "crystalith_output_timeline.plugin:plugin"
 
 [build-system]
 requires = ["uv_build>=0.9.24,<0.10.0"]

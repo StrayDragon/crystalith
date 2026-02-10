@@ -414,6 +414,28 @@ export type ExtractorsListResponse = {
 };
 
 /**
+ * FieldDescriptor
+ */
+export type FieldDescriptor = {
+    /**
+     * Key
+     */
+    key: string;
+    /**
+     * Type
+     */
+    type: 'text' | 'heading' | 'badge' | 'list' | 'tree' | 'date' | 'citation' | 'code';
+    /**
+     * Label
+     */
+    label?: string | null;
+    /**
+     * Children
+     */
+    children?: Array<FieldDescriptor>;
+};
+
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -421,6 +443,16 @@ export type HttpValidationError = {
      * Detail
      */
     detail?: Array<ValidationError>;
+};
+
+/**
+ * ItemSchema
+ */
+export type ItemSchema = {
+    /**
+     * Fields
+     */
+    fields?: Array<FieldDescriptor>;
 };
 
 /**
@@ -713,6 +745,28 @@ export type OutputTypeInput = 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' 
 export type OutputTypeOutput = 'FAQ' | 'GUIDE' | 'TIMELINE' | 'MINDMAP' | 'QUIZ' | 'BRIEFING' | 'SLIDES' | 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED';
 
 /**
+ * PluginConfigSchema
+ */
+export type PluginConfigSchema = {
+    /**
+     * Quantity Options
+     */
+    quantity_options?: Array<CrystalithSharedPluginsRenderTypesConfigOption>;
+    /**
+     * Difficulty Options
+     */
+    difficulty_options?: Array<CrystalithSharedPluginsRenderTypesConfigOption>;
+    /**
+     * Topic Placeholder
+     */
+    topic_placeholder?: string;
+    /**
+     * Supports Topic
+     */
+    supports_topic?: boolean;
+};
+
+/**
  * QAMessage
  *
  * A single QA message.
@@ -923,6 +977,23 @@ export type Relation = {
      * Score
      */
     score: number;
+};
+
+/**
+ * RenderDescriptor
+ */
+export type RenderDescriptor = {
+    /**
+     * Layout
+     */
+    layout: 'list' | 'cards' | 'tree' | 'timeline' | 'sections' | 'table';
+    item_schema?: ItemSchema | null;
+    /**
+     * Options
+     */
+    options?: {
+        [key: string]: unknown;
+    };
 };
 
 /**
@@ -2313,6 +2384,8 @@ export type WorkspaceTool = {
      * Prompt
      */
     prompt: string;
+    render_descriptor?: RenderDescriptor | null;
+    config_schema?: PluginConfigSchema | null;
     /**
      * Badge
      */
@@ -2331,6 +2404,24 @@ export type WorkspaceToolsResponse = {
      * Tools
      */
     tools: Array<WorkspaceTool>;
+};
+
+/**
+ * ConfigOption
+ */
+export type CrystalithSharedPluginsRenderTypesConfigOption = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Is Default
+     */
+    is_default?: boolean;
 };
 
 export type ListNotebooksV1NotebooksGetData = {

@@ -71,19 +71,20 @@ beforeEach(() => {
   markJobCompleted.mockClear();
 });
 
-function useOutputQueueHarness({
+function setWorkspaceStateForOutputQueue({
   isConnected,
   activeNotebookId,
 }: {
   isConnected: boolean;
   activeNotebookId: number | null;
 }) {
-  // Set Zustand store state
   useWorkspaceStore.setState({
     activeNotebookId,
     connectionState: isConnected ? 'live' : 'connecting',
   });
+}
 
+function useOutputQueueHarness({ isConnected }: { isConnected: boolean }) {
   const queue = useOutputQueue({
     isConnected,
     hasPendingRefineJobs: () => false,
@@ -107,8 +108,9 @@ test('enqueueOutputJob processes and updates outputs', async () => {
     updated_at: '2024-01-01T00:00:00Z',
   } as any);
 
+  setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
   const { result } = renderHook(() =>
-    useOutputQueueHarness({ isConnected: true, activeNotebookId: 1 }),
+    useOutputQueueHarness({ isConnected: true }),
   );
 
   act(() => {
@@ -160,8 +162,9 @@ test('cancelOutputJob aborts running output job', async () => {
     }),
   );
 
+  setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
   const { result } = renderHook(() =>
-    useOutputQueueHarness({ isConnected: true, activeNotebookId: 1 }),
+    useOutputQueueHarness({ isConnected: true }),
   );
 
   act(() => {
@@ -186,8 +189,9 @@ test('cancelOutputJob aborts running output job', async () => {
 });
 
 test('enqueueOutputJob returns null when no sources selected', async () => {
+  setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
   const { result } = renderHook(() =>
-    useOutputQueueHarness({ isConnected: true, activeNotebookId: 1 }),
+    useOutputQueueHarness({ isConnected: true }),
   );
 
   let created: any = null;
@@ -204,8 +208,9 @@ test('enqueueOutputJob returns null when no sources selected', async () => {
 });
 
 test('enqueueSlidesJob returns null when disconnected', async () => {
+  setWorkspaceStateForOutputQueue({ isConnected: false, activeNotebookId: 1 });
   const { result } = renderHook(() =>
-    useOutputQueueHarness({ isConnected: false, activeNotebookId: 1 }),
+    useOutputQueueHarness({ isConnected: false }),
   );
 
   let created: any = null;
