@@ -178,6 +178,7 @@ export function useChat({
       };
       store.getState().addStreamingMessage(assistantMessage);
 
+      let hadSseError = false;
       try {
         const { stream } = await client.sse.post({
           url: '/v1/notebooks/{notebook_id}/qa/stream',
@@ -231,6 +232,7 @@ export function useChat({
               return;
             }
             if (eventType === 'error') {
+              hadSseError = true;
               if (streamingFlushTimerRef.current) {
                 clearTimeout(streamingFlushTimerRef.current);
                 streamingFlushTimerRef.current = null;
@@ -261,7 +263,11 @@ export function useChat({
         if (refreshSessions) {
           void refreshSessions();
         }
-        setLastFailedDraft('');
+        if (hadSseError) {
+          setLastFailedDraft(text);
+        } else {
+          setLastFailedDraft('');
+        }
       } catch (error) {
         const isAborted =
           abortController.signal.aborted ||
