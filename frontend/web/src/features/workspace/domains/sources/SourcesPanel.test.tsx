@@ -166,7 +166,8 @@ test('supports ctrl/shift multi-select and batch re-embed', async () => {
     expect(last[3]).toBe(true);
   });
 
-  fireEvent.click(screen.getByRole('button', { name: '批量 re-embed' }));
+  fireEvent.click(screen.getByRole('button', { name: '已选来源操作' }));
+  fireEvent.click(screen.getByText(/重新嵌入/));
 
   await waitFor(() => {
     expect(batchReembedSpy).toHaveBeenCalledWith([1, 2, 3]);
@@ -202,9 +203,10 @@ test('supports sort/filter controls and multi-file upload', async () => {
   expect(uploadSpy).toHaveBeenCalledTimes(1);
   expect(uploadSpy.mock.calls[0][0]).toHaveLength(2);
 
-  fireEvent.change(screen.getByLabelText('来源排序字段'), { target: { value: 'name' } });
-  fireEvent.change(screen.getByLabelText('来源排序方向'), { target: { value: 'asc' } });
-  fireEvent.change(screen.getByLabelText('来源标签筛选'), { target: { value: '论文' } });
+  fireEvent.click(screen.getByRole('button', { name: '来源排序与筛选' }));
+  fireEvent.click(screen.getByText('名称'));
+  fireEvent.click(screen.getByText('升序'));
+  fireEvent.click(screen.getByText('论文'));
 
   expect(sortBySpy).toHaveBeenCalledWith('name');
   expect(sortOrderSpy).toHaveBeenCalledWith('asc');

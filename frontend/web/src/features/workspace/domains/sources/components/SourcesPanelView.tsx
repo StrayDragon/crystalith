@@ -941,6 +941,7 @@ function SourcesPanelView({
               <IconButton
                 size="sm"
                 variant="text"
+                aria-label="来源排序与筛选"
                 className="w-6 h-6 min-w-[24px] rounded-full text-gray-400 dark:text-slate-500 hover:bg-gray-100 dark:hover:bg-slate-800"
               >
                 <ExpandMoreIcon style={{ fontSize: 16 }} />
@@ -999,6 +1000,7 @@ function SourcesPanelView({
                 <IconButton
                   size="sm"
                   variant="text"
+                  aria-label="已选来源操作"
                   className="w-6 h-6 min-w-[24px] rounded-full text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800"
                 >
                   <MoreHorizIcon style={{ fontSize: 16 }} />

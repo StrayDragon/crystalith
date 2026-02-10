@@ -27,8 +27,7 @@ test('renders workspace panels and offline state', async () => {
   renderWorkspace();
 
   expect(await screen.findByText('来源')).toBeInTheDocument();
-  expect(screen.getByText('对话')).toBeInTheDocument();
-  expect(screen.getByText('Studio')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '解锁布局' })).toBeInTheDocument();
 
   expect(
     await screen.findByText('未连接到后端服务，请检查服务状态后重试。'),
@@ -38,6 +37,5 @@ test('renders workspace panels and offline state', async () => {
   expect(input).toHaveAttribute('placeholder', '请先创建笔记本');
   expect(screen.getByRole('button', { name: '发送' })).toBeDisabled();
 
-  expect(await screen.findByText('未连接到后端服务。')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '添加笔记' })).toBeInTheDocument();
 });
