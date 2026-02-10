@@ -871,64 +871,67 @@ function SourcesPanel({
         </div>
       </div>
 
-      {/* Scrollable Content Area */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-3 flex flex-col gap-3">
-      {/* Search Status - only show loading state */}
-      {isSearching && (
-        <Typography variant="small" className="text-[11px] text-gray-600 font-medium px-1">
-          搜索中…
-        </Typography>
-      )}
+      {/* Dynamic Content Area - research sessions & search results (scrollable with max-height) */}
+      {(isSearching || research.sessions.length > 0 || searchResults.length > 0 || searchQueue.length > 0) && (
+        <div className="flex-shrink-0 max-h-[200px] overflow-y-auto overscroll-contain px-3 sm:px-4 py-2 flex flex-col gap-2 border-b border-gray-100 dark:border-slate-700">
+          {/* Search Status - only show loading state */}
+          {isSearching && (
+            <Typography variant="small" className="text-[11px] text-gray-600 font-medium px-1">
+              搜索中…
+            </Typography>
+          )}
 
-      {/* Deep Research Sessions */}
-      {research.sessions.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {/* Active sessions */}
-          {research.sessions
-            .filter((s) => ['planning', 'searching', 'analyzing', 'waiting_user'].includes(s.status))
-            .map((session) => (
-              <ResearchCapsule
-                key={session.id}
-                session={session}
-                onClick={() => handleResearchClick(session.id)}
-                onStart={() => handleResearchStart(session.id)}
-                onDelete={() => handleResearchDelete(session.id)}
-                isExpanded={research.activeSession?.id === session.id}
-              />
-            ))}
-          {(() => {
-            const historySessions = research.sessions.filter((s) =>
-              ['completed', 'cancelled'].includes(s.status)
-            );
-            if (historySessions.length === 0) return null;
-            return (
-            <button
-              onClick={() => setShowResearchHistory(true)}
-              className="text-xs text-gray-500 dark:text-slate-400 hover:text-blue-600 py-1.5 px-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1.5"
-            >
-              <HistoryIcon style={{ fontSize: 14 }} />
-              查看研究历史 ({historySessions.length})
-            </button>
-            );
-          })()}
+          {/* Deep Research Sessions */}
+          {research.sessions.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {/* Active sessions */}
+              {research.sessions
+                .filter((s) => ['planning', 'searching', 'analyzing', 'waiting_user'].includes(s.status))
+                .map((session) => (
+                  <ResearchCapsule
+                    key={session.id}
+                    session={session}
+                    onClick={() => handleResearchClick(session.id)}
+                    onStart={() => handleResearchStart(session.id)}
+                    onDelete={() => handleResearchDelete(session.id)}
+                    isExpanded={research.activeSession?.id === session.id}
+                  />
+                ))}
+              {(() => {
+                const historySessions = research.sessions.filter((s) =>
+                  ['completed', 'cancelled'].includes(s.status)
+                );
+                if (historySessions.length === 0) return null;
+                return (
+                <button
+                  onClick={() => setShowResearchHistory(true)}
+                  className="text-xs text-gray-500 dark:text-slate-400 hover:text-blue-600 py-1.5 px-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+                >
+                  <HistoryIcon style={{ fontSize: 14 }} />
+                  查看研究历史 ({historySessions.length})
+                </button>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Search Results Queue */}
+          <SearchResultsQueue
+            results={searchResults}
+            searchSummary={searchNotice}
+            onClear={onClearSearchResults}
+            onAddToSources={handleAddToSources}
+            isAdding={isAddingFromUrl}
+            searchQueue={searchQueue}
+            onRemoveQueueItem={onRemoveSearchQueueItem}
+            availableExtractors={availableExtractors}
+            defaultExtractor={defaultExtractor}
+          />
         </div>
       )}
 
-      {/* Search Results Queue */}
-      <SearchResultsQueue
-        results={searchResults}
-        searchSummary={searchNotice}
-        onClear={onClearSearchResults}
-        onAddToSources={handleAddToSources}
-        isAdding={isAddingFromUrl}
-        searchQueue={searchQueue}
-        onRemoveQueueItem={onRemoveSearchQueueItem}
-        availableExtractors={availableExtractors}
-        defaultExtractor={defaultExtractor}
-      />
-
-      {/* Sorting / Filter / Batch Actions */}
-      <div className="sticky top-0 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 bg-white dark:bg-slate-900/95 backdrop-blur border-b border-gray-100 dark:border-slate-700 space-y-2">
+      {/* Sorting / Filter / Batch Actions - always visible, fixed position */}
+      <div className="flex-shrink-0 px-3 sm:px-4 py-2 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700 space-y-2">
         <div className="grid grid-cols-3 gap-2">
           <label className="flex flex-col gap-1">
             <span className="text-[10px] text-gray-500 dark:text-slate-400">排序字段</span>
@@ -1072,8 +1075,8 @@ function SourcesPanel({
         </div>
       </div>
 
-      {/* Sources List */}
-      <div>
+      {/* Sources List - fills remaining space */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden px-3 sm:px-4 pt-2 pb-1">
         {isLoading ? (
           <SkeletonList items={3} />
         ) : sources.length === 0 ? (
@@ -1088,7 +1091,7 @@ function SourcesPanel({
         ) : (
           <Virtuoso
             ref={sourceListRef}
-            style={{ height: isFullscreen ? 560 : 360 }}
+            style={{ flex: 1, minHeight: 0 }}
             data={sources}
             computeItemKey={(_index, source) => source.id}
             itemContent={(_index, source) => {
@@ -1247,8 +1250,6 @@ function SourcesPanel({
             }}
           />
         )}
-      </div>
-
       </div>
       {/* Source Detail Dialog */}
       {detailDialogOpen && (
