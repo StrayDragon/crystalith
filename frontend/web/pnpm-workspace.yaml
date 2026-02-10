@@ -1,0 +1,3 @@
+# Local pnpm workspace config for the frontend app.
+onlyBuiltDependencies:
+  - esbuild

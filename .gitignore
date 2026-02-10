@@ -168,7 +168,6 @@ site/
 ### Pnpm ###
 # pnpm package manager specific files
 
-pnpm-workspace.yaml
 .pnpm/
 .pnpm-debug.log
 
