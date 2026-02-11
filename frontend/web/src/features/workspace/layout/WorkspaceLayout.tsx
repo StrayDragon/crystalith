@@ -767,8 +767,8 @@ export default function WorkspaceLayout() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50/50 dark:bg-slate-950 overflow-hidden text-gray-900 dark:text-gray-100">
-      {/* ── Header ── */}
-      <div className="px-4 pt-4">
+      {/* ── Header (fixed top bar – outside GridStack) ── */}
+      <div className="flex-shrink-0 relative z-10 px-4 pt-1">
         <WorkspaceHeader
           notebooks={notebooks.notebooks}
           activeNotebookId={notebooks.activeNotebookId}
