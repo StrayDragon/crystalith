@@ -689,7 +689,7 @@ function SourcesPanelView({
                 ? '拖放文件到此处'
                 : uploadState === 'loading'
                   ? '上传中…'
-                  : '添加来源（可多选）'}
+                  : '添加来源'}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -916,148 +916,167 @@ function SourcesPanelView({
         </div>
       )}
 
-      {/* Sorting / Filter / Batch Actions - always visible, fixed position */}
-      <div className="flex-shrink-0 px-3 sm:px-4 py-2 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700 space-y-2">
-        <div className="grid grid-cols-3 gap-2">
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] text-gray-500 dark:text-slate-400">排序字段</span>
-            <select
-              aria-label="来源排序字段"
-              value={sortBy}
-              onChange={(event) => onSortByChange?.(event.target.value as SourceSortBy)}
-              className="h-7 rounded border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-[11px] text-gray-700 dark:text-slate-200"
-            >
-              <option value="date">日期</option>
-              <option value="name">名称</option>
-              <option value="size">大小</option>
-              <option value="type">类型</option>
-            </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] text-gray-500 dark:text-slate-400">排序方向</span>
-            <select
-              aria-label="来源排序方向"
-              value={sortOrder}
-              onChange={(event) => onSortOrderChange?.(event.target.value as SourceSortOrder)}
-              className="h-7 rounded border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-[11px] text-gray-700 dark:text-slate-200"
-            >
-              <option value="desc">降序</option>
-              <option value="asc">升序</option>
-            </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] text-gray-500 dark:text-slate-400">标签筛选</span>
-            <select
-              aria-label="来源标签筛选"
-              value={tagFilter}
-              onChange={(event) => onTagFilterChange?.(event.target.value)}
-              className="h-7 rounded border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-[11px] text-gray-700 dark:text-slate-200"
-            >
-              <option value="">全部标签</option>
-              {sourceTags.map((tag) => (
-                <option key={tag.id} value={tag.name}>
-                  {tag.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+      {/* Compact toolbar: select-all + sort/filter + batch actions */}
+      <div className="flex-shrink-0 px-3 sm:px-4 py-1.5 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700">
+        <div className="flex items-center gap-1">
+          {/* Select all checkbox */}
+          <Checkbox
+            checked={allSelected}
+            onChange={handleToggleAll}
+            containerProps={{ className: 'p-0.5' }}
+            className="h-4 w-4 rounded border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
+            iconProps={{ className: 'text-white' }}
+          />
+          <Typography variant="small" className="text-[11px] text-gray-500 dark:text-slate-400 whitespace-nowrap">
+            {selectedIds.length > 0
+              ? `已选 ${selectedIds.length}/${sources.length}`
+              : `${sources.length} 个来源`}
+          </Typography>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-          <div className="flex items-center gap-1">
-            <Checkbox
-              checked={allSelected}
-              onChange={handleToggleAll}
-              containerProps={{ className: 'p-1' }}
-              className="h-4 w-4 rounded border-gray-300 bg-white dark:bg-slate-900 checked:bg-gray-900 checked:border-gray-900"
-              iconProps={{ className: 'text-white' }}
-            />
-            <Typography variant="small" className="text-[11px] text-gray-600 font-medium">
-              已选择 {selectedIds.length} 个来源
-            </Typography>
-          </div>
+          <span className="flex-1" />
 
-          {selectedIds.length > 0 ? (
-            <div className="flex items-center gap-1">
-              <ConfirmPopover
-                message={
-                  selectedIds.length === 1
-                    ? '确定要移除已选的 1 个来源吗？'
-                    : `确定要移除已选的 ${selectedIds.length} 个来源吗？`
-                }
-                onConfirm={handleBatchDelete}
-                placement="left"
-                disabled={removeDisabled}
-              >
-                <Button
-                  size="sm"
-                  variant="outlined"
-                  disabled={removeDisabled}
-                  className="h-7 px-2 py-0 text-[11px] normal-case border-red-200 text-red-600"
-                >
-                  删除
-                </Button>
-              </ConfirmPopover>
-
-              <Button
+          {/* Sort & filter dropdown */}
+          <Menu placement="bottom-end">
+            <MenuHandler>
+              <IconButton
                 size="sm"
-                variant="outlined"
-                disabled={batchReembedDisabled}
-                onClick={handleBatchReembed}
-                className="h-7 px-2 py-0 text-[11px] normal-case border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200"
+                variant="text"
+                className="w-6 h-6 min-w-[24px] rounded-full text-gray-400 dark:text-slate-500 hover:bg-gray-100 dark:hover:bg-slate-800"
               >
-                批量 re-embed
-              </Button>
-
-              <Menu placement="bottom-end">
-                <MenuHandler>
-                  <Button
-                    size="sm"
-                    variant="outlined"
-                    disabled={batchTagDisabled}
-                    className="h-7 px-2 py-0 text-[11px] normal-case border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200"
-                  >
-                    标签
-                  </Button>
-                </MenuHandler>
-                <MenuList className="p-1 min-w-[180px]">
+                <ExpandMoreIcon style={{ fontSize: 16 }} />
+              </IconButton>
+            </MenuHandler>
+            <MenuList className="p-1 min-w-[160px] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg">
+              <div className="px-3 py-1 text-[9px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider">排序字段</div>
+              {([['date', '日期'], ['name', '名称'], ['size', '大小'], ['type', '类型']] as const).map(([val, label]) => (
+                <MenuItem
+                  key={val}
+                  onClick={() => onSortByChange?.(val as SourceSortBy)}
+                  className={`py-1.5 px-3 text-xs ${sortBy === val ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
+                >
+                  {sortBy === val ? '✓ ' : '   '}{label}
+                </MenuItem>
+              ))}
+              <div className="my-1 border-t border-gray-100 dark:border-slate-700" />
+              <div className="px-3 py-1 text-[9px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider">排序方向</div>
+              {([['desc', '降序'], ['asc', '升序']] as const).map(([val, label]) => (
+                <MenuItem
+                  key={val}
+                  onClick={() => onSortOrderChange?.(val as SourceSortOrder)}
+                  className={`py-1.5 px-3 text-xs ${sortOrder === val ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
+                >
+                  {sortOrder === val ? '✓ ' : '   '}{label}
+                </MenuItem>
+              ))}
+              {sourceTags.length > 0 && (
+                <>
+                  <div className="my-1 border-t border-gray-100 dark:border-slate-700" />
+                  <div className="px-3 py-1 text-[9px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider">标签筛选</div>
                   <MenuItem
-                    onClick={handleBatchCreateAndAssignTag}
-                    disabled={!onCreateSourceTag || !onAssignTagToSources || tagMutationState === 'loading'}
-                    className="text-xs"
+                    onClick={() => onTagFilterChange?.('')}
+                    className={`py-1.5 px-3 text-xs ${!tagFilter ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
                   >
-                    新建并分配标签
+                    {!tagFilter ? '✓ ' : '   '}全部
                   </MenuItem>
-                  {sourceTags.length > 0 ? <div className="my-1 border-t border-gray-100 dark:border-slate-700" /> : null}
                   {sourceTags.map((tag) => (
                     <MenuItem
-                      key={`assign-${tag.id}`}
-                      onClick={() => handleAssignExistingTag(tag.id)}
-                      disabled={!onAssignTagToSources || tagMutationState === 'loading'}
-                      className="text-xs"
+                      key={tag.id}
+                      onClick={() => onTagFilterChange?.(tag.name)}
+                      className={`py-1.5 px-3 text-xs ${tagFilter === tag.name ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
                     >
-                      添加标签：{tag.name}
+                      {tagFilter === tag.name ? '✓ ' : '   '}{tag.name}
                     </MenuItem>
                   ))}
-                  {selectedTagNames.length > 0 ? <div className="my-1 border-t border-gray-100 dark:border-slate-700" /> : null}
-                  {selectedTagNames.map((tagName) => {
-                    const tag = sourceTags.find((item) => item.name === tagName);
-                    if (!tag) return null;
-                    return (
+                </>
+              )}
+            </MenuList>
+          </Menu>
+
+          {/* Batch actions — only when sources selected */}
+          {selectedIds.length > 0 && (
+            <Menu placement="bottom-end">
+              <MenuHandler>
+                <IconButton
+                  size="sm"
+                  variant="text"
+                  className="w-6 h-6 min-w-[24px] rounded-full text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800"
+                >
+                  <MoreHorizIcon style={{ fontSize: 16 }} />
+                </IconButton>
+              </MenuHandler>
+              <MenuList className="p-1 min-w-[180px] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg">
+                <ConfirmPopover
+                  message={
+                    selectedIds.length === 1
+                      ? '确定要移除已选的 1 个来源吗？'
+                      : `确定要移除已选的 ${selectedIds.length} 个来源吗？`
+                  }
+                  onConfirm={handleBatchDelete}
+                  placement="left"
+                  disabled={removeDisabled}
+                >
+                  <MenuItem
+                    disabled={removeDisabled}
+                    className="flex items-center gap-2 py-1.5 px-3 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    <DeleteIcon style={{ fontSize: 14 }} />
+                    删除已选 ({selectedIds.length})
+                  </MenuItem>
+                </ConfirmPopover>
+
+                {onBatchReembedSources && (
+                  <MenuItem
+                    disabled={batchReembedDisabled}
+                    onClick={handleBatchReembed}
+                    className="flex items-center gap-2 py-1.5 px-3 text-xs"
+                  >
+                    <ReplayIcon style={{ fontSize: 14 }} />
+                    重新嵌入 ({selectedIds.length})
+                  </MenuItem>
+                )}
+
+                {(onAssignTagToSources || onRemoveTagFromSources) && (
+                  <>
+                    <div className="my-1 border-t border-gray-100 dark:border-slate-700" />
+                    <MenuItem
+                      onClick={handleBatchCreateAndAssignTag}
+                      disabled={!onCreateSourceTag || !onAssignTagToSources || tagMutationState === 'loading'}
+                      className="flex items-center gap-2 py-1.5 px-3 text-xs"
+                    >
+                      新建并分配标签
+                    </MenuItem>
+                    {sourceTags.map((tag) => (
                       <MenuItem
-                        key={`remove-${tag.id}`}
-                        onClick={() => handleRemoveExistingTag(tag.id)}
-                        disabled={!onRemoveTagFromSources || tagMutationState === 'loading'}
-                        className="text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                        key={`assign-${tag.id}`}
+                        onClick={() => handleAssignExistingTag(tag.id)}
+                        disabled={!onAssignTagToSources || tagMutationState === 'loading'}
+                        className="py-1.5 px-3 text-xs"
                       >
-                        移除标签：{tag.name}
+                        添加标签：{tag.name}
                       </MenuItem>
-                    );
-                  })}
-                </MenuList>
-              </Menu>
-            </div>
-          ) : null}
+                    ))}
+                    {selectedTagNames.length > 0 && (
+                      <div className="my-1 border-t border-gray-100 dark:border-slate-700" />
+                    )}
+                    {selectedTagNames.map((tagName) => {
+                      const tag = sourceTags.find((item) => item.name === tagName);
+                      if (!tag) return null;
+                      return (
+                        <MenuItem
+                          key={`remove-${tag.id}`}
+                          onClick={() => handleRemoveExistingTag(tag.id)}
+                          disabled={!onRemoveTagFromSources || tagMutationState === 'loading'}
+                          className="py-1.5 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                        >
+                          移除标签：{tag.name}
+                        </MenuItem>
+                      );
+                    })}
+                  </>
+                )}
+              </MenuList>
+            </Menu>
+          )}
         </div>
       </div>
 

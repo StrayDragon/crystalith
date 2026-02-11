@@ -1,4 +1,5 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Button,
   Dialog,
@@ -7,24 +8,20 @@ import {
   DialogHeader,
   IconButton,
   Textarea,
-  Tooltip,
   Typography,
 } from '@material-tailwind/react';
 import {
   Add as AddIcon,
+  Build as ToolsIcon,
   Close as CloseIcon,
   Edit as EditIcon,
   Save as SaveIcon,
-  UnfoldLess as CollapseIcon,
-  UnfoldMore as ExpandIcon,
 } from '@mui/icons-material';
 
 import type { Citation, OutputItem, OutputTypeId, WorkspaceTool } from '../../shared/types';
 import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
 import StudioOutputsList from './StudioOutputsList';
 import StudioToolsGrid from './StudioToolsGrid';
-
-const TOOLS_COLLAPSED_KEY = 'crystalith:studio-tools-collapsed';
 
 interface StudioPanelProps {
   tools: WorkspaceTool[];
@@ -55,6 +52,118 @@ interface StudioPanelProps {
   hasSelectedSources: boolean;
 }
 
+/* ── ToolsPopover: rendered via Portal to escape overflow clipping ── */
+interface ToolsPopoverProps {
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  tools: WorkspaceTool[];
+  toolsLoading?: boolean;
+  toolsError?: string;
+  onGenerateOutput: (type?: OutputTypeId, modelId?: string | null) => void;
+  onOpenSlides?: (options?: {
+    mode: 'config' | 'preview';
+    slideId?: number | null;
+    queueStatus?: 'queued' | 'running' | 'error' | 'done' | null;
+    queueJobId?: string | null;
+  }) => void;
+  isConnected: boolean;
+  isFullscreen?: boolean;
+  hasSelectedSources: boolean;
+}
+
+function ToolsPopover({
+  open,
+  onToggle,
+  onClose,
+  tools,
+  toolsLoading,
+  toolsError,
+  onGenerateOutput,
+  onOpenSlides,
+  isConnected,
+  isFullscreen,
+  hasSelectedSources,
+}: ToolsPopoverProps) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
+
+  useEffect(() => {
+    if (open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPopoverStyle({
+        position: 'fixed',
+        bottom: window.innerHeight - rect.top + 8,
+        right: window.innerWidth - rect.right,
+        minWidth: '280px',
+        width: 'max-content',
+        maxWidth: '360px',
+        zIndex: 9999,
+        animation: 'slideUp 150ms ease-out',
+      });
+    }
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={onToggle}
+        className={`w-full flex items-center justify-center gap-1.5 rounded-full py-2 text-xs font-medium transition-all border ${
+          open
+            ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400'
+            : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600'
+        }`}
+      >
+        <ToolsIcon sx={{ fontSize: 14 }} />
+        <span>生成</span>
+      </button>
+
+      {open && createPortal(
+        <>
+          {/* Click-outside backdrop */}
+          <div
+            className="fixed inset-0"
+            style={{ zIndex: 9998 }}
+            onClick={onClose}
+          />
+          {/* Popover panel — fixed positioning to escape overflow clipping */}
+          <div
+            className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-xl p-3"
+            style={popoverStyle}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+                选择工具
+              </span>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-5 h-5 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-slate-300 dark:hover:bg-slate-700 transition-colors text-xs"
+                aria-label="关闭工具面板"
+              >
+                ✕
+              </button>
+            </div>
+            <StudioToolsGrid
+              tools={tools}
+              toolsLoading={toolsLoading}
+              toolsError={toolsError}
+              onGenerateOutput={onGenerateOutput}
+              onOpenSlides={onOpenSlides}
+              isConnected={isConnected}
+              isFullscreen={isFullscreen}
+              hasSelectedSources={hasSelectedSources}
+            />
+          </div>
+        </>,
+        document.body,
+      )}
+    </>
+  );
+}
+
 function StudioPanel({
   tools,
   toolsLoading,
@@ -80,29 +189,10 @@ function StudioPanel({
 }: StudioPanelProps) {
   const [noteEditorOpen, setNoteEditorOpen] = useState(false);
   const [noteEditorContent, setNoteEditorContent] = useState('');
+  const [toolsPopoverOpen, setToolsPopoverOpen] = useState(false);
 
-  // ─── Tools area collapsible state ───
-  const [toolsCollapsed, setToolsCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(TOOLS_COLLAPSED_KEY) === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  // Persist collapsed state
-  useEffect(() => {
-    try {
-      localStorage.setItem(TOOLS_COLLAPSED_KEY, String(toolsCollapsed));
-    } catch {
-      // ignore storage errors
-    }
-  }, [toolsCollapsed]);
-
-  // Single click does nothing (task 4.4); only double-click toggles
-
-  const handleToolsTitleDoubleClick = useCallback(() => {
-    setToolsCollapsed((prev) => !prev);
+  const handleToggleToolsPopover = useCallback(() => {
+    setToolsPopoverOpen((prev) => !prev);
   }, []);
 
   const typeLabelMap = useMemo(() => {
@@ -138,62 +228,7 @@ function StudioPanel({
         </div>
       ) : null}
 
-      {/* ── Tools area with collapsible header ── */}
-      <div className="flex flex-col flex-shrink-0">
-        {/* Tools title bar — double-click to collapse/expand */}
-        <div
-          className="flex items-center gap-1.5 py-1.5 select-none group"
-          onDoubleClick={handleToolsTitleDoubleClick}
-        >
-          <span className="text-[10px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider">
-            工具
-          </span>
-          <Tooltip content={toolsCollapsed ? '双击展开工具区' : '双击收纳工具区'}>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setToolsCollapsed((prev) => !prev);
-              }}
-              className="w-5 h-5 flex items-center justify-center rounded text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors opacity-0 group-hover:opacity-100"
-              aria-label={toolsCollapsed ? '展开工具区' : '收纳工具区'}
-            >
-              {toolsCollapsed ? (
-                <ExpandIcon sx={{ fontSize: 14 }} />
-              ) : (
-                <CollapseIcon sx={{ fontSize: 14 }} />
-              )}
-            </button>
-          </Tooltip>
-          {toolsCollapsed && (
-            <span className="text-[9px] text-gray-300 dark:text-slate-600 ml-auto">
-              双击展开
-            </span>
-          )}
-        </div>
-
-        {/* Tools grid — animated collapse/expand */}
-        <div
-          className="overflow-hidden transition-all duration-200 ease-in-out"
-          style={{
-            maxHeight: toolsCollapsed ? 0 : 500,
-            opacity: toolsCollapsed ? 0 : 1,
-          }}
-        >
-          <StudioToolsGrid
-            tools={tools}
-            toolsLoading={toolsLoading}
-            toolsError={toolsError}
-            onGenerateOutput={onGenerateOutput}
-            onOpenSlides={onOpenSlides}
-            isConnected={isConnected}
-            isFullscreen={isFullscreen}
-            hasSelectedSources={hasSelectedSources}
-          />
-        </div>
-      </div>
-
-      {/* ── Outputs list — expands to fill when tools are collapsed ── */}
+      {/* ── Outputs list — takes all remaining space ── */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         <StudioOutputsList
           outputs={outputs}
@@ -213,17 +248,42 @@ function StudioPanel({
         />
       </div>
 
-      <Button
-        variant="filled"
-        fullWidth
-        size="sm"
-        className="flex items-center justify-center gap-2 rounded-full py-2 bg-slate-900 text-xs normal-case flex-shrink-0"
-        onClick={handleOpenNoteEditor}
-      >
-        <AddIcon style={{ fontSize: 16 }} />
-        添加笔记
-      </Button>
+      {/* ── Bottom action buttons ── */}
+      <div className="flex flex-col gap-2 flex-shrink-0">
+        <Button
+          variant="filled"
+          fullWidth
+          size="sm"
+          className="flex items-center justify-center gap-2 rounded-full py-2 bg-slate-900 text-xs normal-case"
+          onClick={handleOpenNoteEditor}
+        >
+          <AddIcon style={{ fontSize: 16 }} />
+          添加笔记
+        </Button>
 
+        {/* ── Generate tools trigger ── */}
+        <ToolsPopover
+          open={toolsPopoverOpen}
+          onToggle={handleToggleToolsPopover}
+          onClose={() => setToolsPopoverOpen(false)}
+          tools={tools}
+          toolsLoading={toolsLoading}
+          toolsError={toolsError}
+          onGenerateOutput={(type, modelId) => {
+            onGenerateOutput(type, modelId);
+            setToolsPopoverOpen(false);
+          }}
+          onOpenSlides={(options) => {
+            onOpenSlides?.(options);
+            setToolsPopoverOpen(false);
+          }}
+          isConnected={isConnected}
+          isFullscreen={isFullscreen}
+          hasSelectedSources={hasSelectedSources}
+        />
+      </div>
+
+      {/* ── Note editor dialog ── */}
       <Dialog
         open={noteEditorOpen}
         handler={handleCloseNoteEditor}
