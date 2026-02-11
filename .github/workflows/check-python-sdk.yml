@@ -27,7 +27,7 @@ jobs:
 
       - name: Install generator
         run: |
-          npm install -g fern-api
+          npm install -g fern-api@3.73.1
 
       - name: Export OpenAPI
         run: |

@@ -31,10 +31,35 @@ jobs:
           VERSION="${{ inputs.version }}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Fern CLI (pinned)
+        run: |
+          npm install -g fern-api@3.73.1
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Verify OpenAPI schema is up to date
+        run: |
+          cd backend/py
+          python -m pip install -U uv
+          uv sync --frozen
+          uv run scripts/api_schema.py check -s ../../frontend/web/openapi.json
+
+      - name: SDK freshness check (generate + diff)
+        env:
+          FERN_TOKEN: ${{ secrets.FERN_TOKEN }}
+          SDK_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          ./scripts/sdk/generate_python_sdk.sh
+          git add "${SDK_PATH}"
+          git diff --staged --exit-code
 
       - name: Verify SDK version matches input
         env:

@@ -38,6 +38,12 @@ client = CrystalithClient(base_url="https://your-host")
 models = client.models.list_models()
 ```
 
+## CI constraints
+
+- `frontend/web/openapi.json` must stay in sync with the backend schema (CI runs `uv run scripts/api_schema.py check`).
+- Generated API clients must be committed (CI runs `pnpm run api:generate` and checks for diff).
+- The release workflow runs an SDK freshness check (generate + diff) and will fail if `sdk/client/python` is out of date.
+
 ## Local generation (manual)
 
 ```bash
