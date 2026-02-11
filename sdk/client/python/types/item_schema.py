@@ -6,11 +6,10 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import IS_PYDANTIC_V2, UniversalBaseModel, update_forward_refs
-from .workspace_tool import WorkspaceTool
 
 
-class WorkspaceToolsResponse(UniversalBaseModel):
-    tools: typing.List[WorkspaceTool]
+class ItemSchema(UniversalBaseModel):
+    fields: typing.Optional[typing.List["FieldDescriptor"]] = None
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2
@@ -22,4 +21,6 @@ class WorkspaceToolsResponse(UniversalBaseModel):
             extra = pydantic.Extra.allow
 
 
-update_forward_refs(WorkspaceToolsResponse)
+from .field_descriptor import FieldDescriptor  # noqa: E402, I001
+
+update_forward_refs(ItemSchema, FieldDescriptor=FieldDescriptor)

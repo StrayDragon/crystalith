@@ -4,25 +4,28 @@ default:
 SDK_PATH := "sdk/client/python"
 
 
-# Sync frontend API SDK with backend schema
-api-sync: api-check
-    cd frontend/web && pnpm run api:generate
+# Export latest API schema from backend
+api-export:
+    cd backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.json
 
-# Check if API SDK is up to date
+# Check if API SDK is up to date (for CI/pre-commit)
 api-check:
     cd backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.json
 
-# Generate frontend SDK (OpenAPI)
+# Sync frontend API SDK with backend schema (export + generate)
+api-sync: api-export
+    cd frontend/web && pnpm run api:generate
+
+# Generate frontend SDK (OpenAPI) without re-exporting schema
 sdk-gen-web:
     cd frontend/web && pnpm run api:generate
 
-# Generate Python SDK (manual, Fern)
-sdk-gen VERSION='': api-check sdk-gen-web
+# Generate all SDKs: export schema, generate frontend + Python SDK
+sdk-gen VERSION='': api-export sdk-gen-web
     SDK_VERSION={{VERSION}} SDK_PATH={{SDK_PATH}} ./scripts/sdk/generate_python_sdk.sh
 
 # Check Python SDK is up to date (for pre-commit)
-sdk-check:
-    cd backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.json
+sdk-check: api-export
     SDK_PATH={{SDK_PATH}} ./scripts/sdk/generate_python_sdk.sh
     git add {{SDK_PATH}}
     git diff --staged --exit-code

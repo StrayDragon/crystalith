@@ -206,6 +206,41 @@ export const askQuestionStreamV1NotebooksNotebookIdQaStreamPost = <ThrowOnError 
 export const listExtractorsV1NotebooksNotebookIdSourcesExtractorsGet = <ThrowOnError extends boolean = false>(options: Options<ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetData, ThrowOnError>) => (options.client ?? client).get<ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses, ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sources/extractors', ...options });
 
 /**
+ * Search Sources
+ */
+export const searchSourcesV1NotebooksNotebookIdSourcesSearchPost = <ThrowOnError extends boolean = false>(options: Options<SearchSourcesV1NotebooksNotebookIdSourcesSearchPostData, ThrowOnError>) => (options.client ?? client).post<SearchSourcesV1NotebooksNotebookIdSourcesSearchPostResponses, SearchSourcesV1NotebooksNotebookIdSourcesSearchPostErrors, ThrowOnError>({
+    url: '/v1/notebooks/{notebook_id}/sources/search',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Create Source From Url
+ *
+ * Create a source from a URL.
+ *
+ * Supports two modes:
+ * - `link`: Save URL, title, and snippet as a lightweight source
+ * - `fetch`: Fetch the webpage content and parse it as a full source
+ *
+ * For `fetch` mode, you can optionally specify an extractor:
+ * - `trafilatura`: Local extraction using trafilatura library (default)
+ * - `firecrawl`: External API using Firecrawl service
+ * - `browserless`: Browser rendering using Browserless + Playwright
+ */
+export const createSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPost = <ThrowOnError extends boolean = false>(options: Options<CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostData, ThrowOnError>) => (options.client ?? client).post<CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponses, CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostErrors, ThrowOnError>({
+    url: '/v1/notebooks/{notebook_id}/sources/from-url',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * List Sources
  */
 export const listSourcesV1NotebooksNotebookIdSourcesGet = <ThrowOnError extends boolean = false>(options: Options<ListSourcesV1NotebooksNotebookIdSourcesGetData, ThrowOnError>) => (options.client ?? client).get<ListSourcesV1NotebooksNotebookIdSourcesGetResponses, ListSourcesV1NotebooksNotebookIdSourcesGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sources', ...options });
@@ -241,6 +276,39 @@ export const batchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPost = <
  * Retry embedding for a failed source using existing chunks.
  */
 export const reembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPost = <ThrowOnError extends boolean = false>(options: Options<ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostData, ThrowOnError>) => (options.client ?? client).post<ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostResponses, ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sources/{source_id}/re-embed', ...options });
+
+/**
+ * Batch Delete Sources
+ */
+export const batchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDelete = <ThrowOnError extends boolean = false>(options: Options<BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteData, ThrowOnError>) => (options.client ?? client).delete<BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteResponses, BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteErrors, ThrowOnError>({
+    url: '/v1/notebooks/{notebook_id}/sources/batch',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete Source
+ */
+export const deleteSourceV1NotebooksNotebookIdSourcesSourceIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponses, DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sources/{source_id}', ...options });
+
+/**
+ * List Source Chunks
+ *
+ * 获取来源的所有文本片段（chunks）。
+ *
+ * 返回指定来源的所有文本片段，按 chunk_index 升序排列。
+ * 每个片段包含：
+ * - id: 片段唯一标识
+ * - chunk_index: 片段索引（从0开始）
+ * - text: 片段文本内容
+ * - start_offset: 在原文中的起始位置
+ * - end_offset: 在原文中的结束位置
+ * - metadata: 片段元数据（如页码等）
+ */
+export const listSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGet = <ThrowOnError extends boolean = false>(options: Options<ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetData, ThrowOnError>) => (options.client ?? client).get<ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponses, ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sources/{source_id}/chunks', ...options });
 
 /**
  * List Source Tags
@@ -299,74 +367,6 @@ export const assignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPost 
         ...options.headers
     }
 });
-
-/**
- * Search Sources
- */
-export const searchSourcesV1NotebooksNotebookIdSourcesSearchPost = <ThrowOnError extends boolean = false>(options: Options<SearchSourcesV1NotebooksNotebookIdSourcesSearchPostData, ThrowOnError>) => (options.client ?? client).post<SearchSourcesV1NotebooksNotebookIdSourcesSearchPostResponses, SearchSourcesV1NotebooksNotebookIdSourcesSearchPostErrors, ThrowOnError>({
-    url: '/v1/notebooks/{notebook_id}/sources/search',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Create Source From Url
- *
- * Create a source from a URL.
- *
- * Supports two modes:
- * - `link`: Save URL, title, and snippet as a lightweight source
- * - `fetch`: Fetch the webpage content and parse it as a full source
- *
- * For `fetch` mode, you can optionally specify an extractor:
- * - `trafilatura`: Local extraction using trafilatura library (default)
- * - `firecrawl`: External API using Firecrawl service
- * - `browserless`: Browser rendering using Browserless + Playwright
- */
-export const createSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPost = <ThrowOnError extends boolean = false>(options: Options<CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostData, ThrowOnError>) => (options.client ?? client).post<CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponses, CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostErrors, ThrowOnError>({
-    url: '/v1/notebooks/{notebook_id}/sources/from-url',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Batch Delete Sources
- */
-export const batchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDelete = <ThrowOnError extends boolean = false>(options: Options<BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteData, ThrowOnError>) => (options.client ?? client).delete<BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteResponses, BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteErrors, ThrowOnError>({
-    url: '/v1/notebooks/{notebook_id}/sources/batch',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Delete Source
- */
-export const deleteSourceV1NotebooksNotebookIdSourcesSourceIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponses, DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sources/{source_id}', ...options });
-
-/**
- * List Source Chunks
- *
- * 获取来源的所有文本片段（chunks）。
- *
- * 返回指定来源的所有文本片段，按 chunk_index 升序排列。
- * 每个片段包含：
- * - id: 片段唯一标识
- * - chunk_index: 片段索引（从0开始）
- * - text: 片段文本内容
- * - start_offset: 在原文中的起始位置
- * - end_offset: 在原文中的结束位置
- * - metadata: 片段元数据（如页码等）
- */
-export const listSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGet = <ThrowOnError extends boolean = false>(options: Options<ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetData, ThrowOnError>) => (options.client ?? client).get<ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponses, ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sources/{source_id}/chunks', ...options });
 
 /**
  * Get Source Summary

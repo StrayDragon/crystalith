@@ -15,10 +15,14 @@ if typing.TYPE_CHECKING:
     from .convert_session_to_source_response import ConvertSessionToSourceResponse
     from .convert_source_qa_to_source_response import ConvertSourceQaToSourceResponse
     from .convert_to_source_response import ConvertToSourceResponse
+    from .crystalith_shared_plugins_render_types_config_option import CrystalithSharedPluginsRenderTypesConfigOption
     from .export_research_response import ExportResearchResponse
     from .extractor_info_response import ExtractorInfoResponse
     from .extractors_list_response import ExtractorsListResponse
+    from .field_descriptor import FieldDescriptor
+    from .field_descriptor_type import FieldDescriptorType
     from .http_validation_error import HttpValidationError
+    from .item_schema import ItemSchema
     from .message_read import MessageRead
     from .message_read_role import MessageReadRole
     from .model_read import ModelRead
@@ -28,6 +32,7 @@ if typing.TYPE_CHECKING:
     from .output_read_type import OutputReadType
     from .output_type_input import OutputTypeInput
     from .output_type_output import OutputTypeOutput
+    from .plugin_config_schema import PluginConfigSchema
     from .qa_message import QaMessage
     from .qa_message_role import QaMessageRole
     from .qa_request import QaRequest
@@ -37,6 +42,8 @@ if typing.TYPE_CHECKING:
     from .refine_response import RefineResponse
     from .relation import Relation
     from .relation_relation_type import RelationRelationType
+    from .render_descriptor import RenderDescriptor
+    from .render_descriptor_layout import RenderDescriptorLayout
     from .research_session_list_item import ResearchSessionListItem
     from .research_session_list_item_status import ResearchSessionListItemStatus
     from .research_session_response import ResearchSessionResponse
@@ -105,10 +112,14 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ConvertSessionToSourceResponse": ".convert_session_to_source_response",
     "ConvertSourceQaToSourceResponse": ".convert_source_qa_to_source_response",
     "ConvertToSourceResponse": ".convert_to_source_response",
+    "CrystalithSharedPluginsRenderTypesConfigOption": ".crystalith_shared_plugins_render_types_config_option",
     "ExportResearchResponse": ".export_research_response",
     "ExtractorInfoResponse": ".extractor_info_response",
     "ExtractorsListResponse": ".extractors_list_response",
+    "FieldDescriptor": ".field_descriptor",
+    "FieldDescriptorType": ".field_descriptor_type",
     "HttpValidationError": ".http_validation_error",
+    "ItemSchema": ".item_schema",
     "MessageRead": ".message_read",
     "MessageReadRole": ".message_read_role",
     "ModelRead": ".model_read",
@@ -118,6 +129,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "OutputReadType": ".output_read_type",
     "OutputTypeInput": ".output_type_input",
     "OutputTypeOutput": ".output_type_output",
+    "PluginConfigSchema": ".plugin_config_schema",
     "QaMessage": ".qa_message",
     "QaMessageRole": ".qa_message_role",
     "QaRequest": ".qa_request",
@@ -127,6 +139,8 @@ _dynamic_imports: typing.Dict[str, str] = {
     "RefineResponse": ".refine_response",
     "Relation": ".relation",
     "RelationRelationType": ".relation_relation_type",
+    "RenderDescriptor": ".render_descriptor",
+    "RenderDescriptorLayout": ".render_descriptor_layout",
     "ResearchSessionListItem": ".research_session_list_item",
     "ResearchSessionListItemStatus": ".research_session_list_item_status",
     "ResearchSessionResponse": ".research_session_response",
@@ -219,10 +233,14 @@ __all__ = [
     "ConvertSessionToSourceResponse",
     "ConvertSourceQaToSourceResponse",
     "ConvertToSourceResponse",
+    "CrystalithSharedPluginsRenderTypesConfigOption",
     "ExportResearchResponse",
     "ExtractorInfoResponse",
     "ExtractorsListResponse",
+    "FieldDescriptor",
+    "FieldDescriptorType",
     "HttpValidationError",
+    "ItemSchema",
     "MessageRead",
     "MessageReadRole",
     "ModelRead",
@@ -232,6 +250,7 @@ __all__ = [
     "OutputReadType",
     "OutputTypeInput",
     "OutputTypeOutput",
+    "PluginConfigSchema",
     "QaMessage",
     "QaMessageRole",
     "QaRequest",
@@ -241,6 +260,8 @@ __all__ = [
     "RefineResponse",
     "Relation",
     "RelationRelationType",
+    "RenderDescriptor",
+    "RenderDescriptorLayout",
     "ResearchSessionListItem",
     "ResearchSessionListItemStatus",
     "ResearchSessionResponse",

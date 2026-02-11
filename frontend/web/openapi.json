@@ -1047,7 +1047,162 @@
         }
       }
     },
+    "/v1/notebooks/{notebook_id}/sources/search": {
+      "post": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "Search Sources",
+        "operationId": "search_sources_v1_notebooks__notebook_id__sources_search_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceSearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sources/from-url": {
+      "post": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "Create Source From Url",
+        "description": "Create a source from a URL.\n\nSupports two modes:\n- `link`: Save URL, title, and snippet as a lightweight source\n- `fetch`: Fetch the webpage content and parse it as a full source\n\nFor `fetch` mode, you can optionally specify an extractor:\n- `trafilatura`: Local extraction using trafilatura library (default)\n- `firecrawl`: External API using Firecrawl service\n- `browserless`: Browser rendering using Browserless + Playwright",
+        "operationId": "create_source_from_url_v1_notebooks__notebook_id__sources_from_url_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceFromUrlRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/notebooks/{notebook_id}/sources": {
+      "post": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "Upload Source",
+        "operationId": "upload_source_v1_notebooks__notebook_id__sources_post",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_source_v1_notebooks__notebook_id__sources_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "tags": [
           "sources"
@@ -1122,56 +1277,6 @@
                     "$ref": "#/components/schemas/SourceRead"
                   },
                   "title": "Response List Sources V1 Notebooks  Notebook Id  Sources Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "sources"
-        ],
-        "summary": "Upload Source",
-        "operationId": "upload_source_v1_notebooks__notebook_id__sources_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_upload_source_v1_notebooks__notebook_id__sources_post"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SourceRead"
                 }
               }
             }
@@ -1276,6 +1381,158 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SourceRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sources/batch": {
+      "delete": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "Batch Delete Sources",
+        "operationId": "batch_delete_sources_v1_notebooks__notebook_id__sources_batch_delete",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceBatchDeleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceBatchDeleteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sources/{source_id}": {
+      "delete": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "Delete Source",
+        "operationId": "delete_source_v1_notebooks__notebook_id__sources__source_id__delete",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sources/{source_id}/chunks": {
+      "get": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "List Source Chunks",
+        "description": "获取来源的所有文本片段（chunks）。\n\n返回指定来源的所有文本片段，按 chunk_index 升序排列。\n每个片段包含：\n- id: 片段唯一标识\n- chunk_index: 片段索引（从0开始）\n- text: 片段文本内容\n- start_offset: 在原文中的起始位置\n- end_offset: 在原文中的结束位置\n- metadata: 片段元数据（如页码等）",
+        "operationId": "list_source_chunks_v1_notebooks__notebook_id__sources__source_id__chunks_get",
+        "parameters": [
+          {
+            "name": "notebook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notebook Id"
+            }
+          },
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChunkRead"
+                  },
+                  "title": "Response List Source Chunks V1 Notebooks  Notebook Id  Sources  Source Id  Chunks Get"
                 }
               }
             }
@@ -1595,263 +1852,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SourceTagSourceBindingResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/sources/search": {
-      "post": {
-        "tags": [
-          "sources"
-        ],
-        "summary": "Search Sources",
-        "operationId": "search_sources_v1_notebooks__notebook_id__sources_search_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SourceSearchRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SourceSearchResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/sources/from-url": {
-      "post": {
-        "tags": [
-          "sources"
-        ],
-        "summary": "Create Source From Url",
-        "description": "Create a source from a URL.\n\nSupports two modes:\n- `link`: Save URL, title, and snippet as a lightweight source\n- `fetch`: Fetch the webpage content and parse it as a full source\n\nFor `fetch` mode, you can optionally specify an extractor:\n- `trafilatura`: Local extraction using trafilatura library (default)\n- `firecrawl`: External API using Firecrawl service\n- `browserless`: Browser rendering using Browserless + Playwright",
-        "operationId": "create_source_from_url_v1_notebooks__notebook_id__sources_from_url_post",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SourceFromUrlRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SourceRead"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/sources/batch": {
-      "delete": {
-        "tags": [
-          "sources"
-        ],
-        "summary": "Batch Delete Sources",
-        "operationId": "batch_delete_sources_v1_notebooks__notebook_id__sources_batch_delete",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SourceBatchDeleteRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SourceBatchDeleteResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/sources/{source_id}": {
-      "delete": {
-        "tags": [
-          "sources"
-        ],
-        "summary": "Delete Source",
-        "operationId": "delete_source_v1_notebooks__notebook_id__sources__source_id__delete",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "source_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Source Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/notebooks/{notebook_id}/sources/{source_id}/chunks": {
-      "get": {
-        "tags": [
-          "sources"
-        ],
-        "summary": "List Source Chunks",
-        "description": "获取来源的所有文本片段（chunks）。\n\n返回指定来源的所有文本片段，按 chunk_index 升序排列。\n每个片段包含：\n- id: 片段唯一标识\n- chunk_index: 片段索引（从0开始）\n- text: 片段文本内容\n- start_offset: 在原文中的起始位置\n- end_offset: 在原文中的结束位置\n- metadata: 片段元数据（如页码等）",
-        "operationId": "list_source_chunks_v1_notebooks__notebook_id__sources__source_id__chunks_get",
-        "parameters": [
-          {
-            "name": "notebook_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notebook Id"
-            }
-          },
-          {
-            "name": "source_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Source Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ChunkRead"
-                  },
-                  "title": "Response List Source Chunks V1 Notebooks  Notebook Id  Sources  Source Id  Chunks Get"
                 }
               }
             }

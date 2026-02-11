@@ -99,6 +99,166 @@ class RawSourcesClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
+    def search_sources(
+        self,
+        notebook_id: int,
+        *,
+        query: str,
+        engine: typing.Optional[str] = OMIT,
+        mode: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SourceSearchResponse]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        query : str
+
+        engine : typing.Optional[str]
+
+        mode : typing.Optional[str]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SourceSearchResponse]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/search",
+            method="POST",
+            json={
+                "query": query,
+                "engine": engine,
+                "mode": mode,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceSearchResponse,
+                    parse_obj_as(
+                        type_=SourceSearchResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def create_source_from_url(
+        self,
+        notebook_id: int,
+        *,
+        url: str,
+        title: typing.Optional[str] = OMIT,
+        snippet: typing.Optional[str] = OMIT,
+        mode: typing.Optional[SourceFromUrlRequestMode] = OMIT,
+        extractor: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SourceRead]:
+        """
+        Create a source from a URL.
+
+        Supports two modes:
+        - `link`: Save URL, title, and snippet as a lightweight source
+        - `fetch`: Fetch the webpage content and parse it as a full source
+
+        For `fetch` mode, you can optionally specify an extractor:
+        - `trafilatura`: Local extraction using trafilatura library (default)
+        - `firecrawl`: External API using Firecrawl service
+        - `browserless`: Browser rendering using Browserless + Playwright
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        url : str
+
+        title : typing.Optional[str]
+
+        snippet : typing.Optional[str]
+
+        mode : typing.Optional[SourceFromUrlRequestMode]
+            枚举值:
+
+            * `fetch`: 获取完整内容
+            * `link`: 仅保存链接
+
+        extractor : typing.Optional[str]
+            指定使用的提取器类型 (trafilatura, firecrawl, browserless)。如果不指定，使用默认降级顺序。
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SourceRead]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/from-url",
+            method="POST",
+            json={
+                "url": url,
+                "title": title,
+                "snippet": snippet,
+                "mode": mode,
+                "extractor": extractor,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceRead,
+                    parse_obj_as(
+                        type_=SourceRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
     def list_sources(
         self,
         notebook_id: int,
@@ -310,6 +470,167 @@ class RawSourcesClient:
                     SourceRead,
                     parse_obj_as(
                         type_=SourceRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def batch_delete_sources(
+        self,
+        notebook_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SourceBatchDeleteResponse]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SourceBatchDeleteResponse]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/batch",
+            method="DELETE",
+            json={
+                "source_ids": source_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceBatchDeleteResponse,
+                    parse_obj_as(
+                        type_=SourceBatchDeleteResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def delete_source(
+        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[None]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[None]
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/{jsonable_encoder(source_id)}",
+            method="DELETE",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                return HttpResponse(response=_response, data=None)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def list_source_chunks(
+        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[typing.List[ChunkRead]]:
+        """
+        获取来源的所有文本片段（chunks）。
+
+        返回指定来源的所有文本片段，按 chunk_index 升序排列。
+        每个片段包含：
+        - id: 片段唯一标识
+        - chunk_index: 片段索引（从0开始）
+        - text: 片段文本内容
+        - start_offset: 在原文中的起始位置
+        - end_offset: 在原文中的结束位置
+        - metadata: 片段元数据（如页码等）
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[typing.List[ChunkRead]]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/{jsonable_encoder(source_id)}/chunks",
+            method="GET",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    typing.List[ChunkRead],
+                    parse_obj_as(
+                        type_=typing.List[ChunkRead],  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -658,327 +979,6 @@ class RawSourcesClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    def search_sources(
-        self,
-        notebook_id: int,
-        *,
-        query: str,
-        engine: typing.Optional[str] = OMIT,
-        mode: typing.Optional[str] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[SourceSearchResponse]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        query : str
-
-        engine : typing.Optional[str]
-
-        mode : typing.Optional[str]
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        HttpResponse[SourceSearchResponse]
-            Successful Response
-        """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/search",
-            method="POST",
-            json={
-                "query": query,
-                "engine": engine,
-                "mode": mode,
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    SourceSearchResponse,
-                    parse_obj_as(
-                        type_=SourceSearchResponse,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return HttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    def create_source_from_url(
-        self,
-        notebook_id: int,
-        *,
-        url: str,
-        title: typing.Optional[str] = OMIT,
-        snippet: typing.Optional[str] = OMIT,
-        mode: typing.Optional[SourceFromUrlRequestMode] = OMIT,
-        extractor: typing.Optional[str] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[SourceRead]:
-        """
-        Create a source from a URL.
-
-        Supports two modes:
-        - `link`: Save URL, title, and snippet as a lightweight source
-        - `fetch`: Fetch the webpage content and parse it as a full source
-
-        For `fetch` mode, you can optionally specify an extractor:
-        - `trafilatura`: Local extraction using trafilatura library (default)
-        - `firecrawl`: External API using Firecrawl service
-        - `browserless`: Browser rendering using Browserless + Playwright
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        url : str
-
-        title : typing.Optional[str]
-
-        snippet : typing.Optional[str]
-
-        mode : typing.Optional[SourceFromUrlRequestMode]
-            枚举值:
-
-            * `fetch`: 获取完整内容
-            * `link`: 仅保存链接
-
-        extractor : typing.Optional[str]
-            指定使用的提取器类型 (trafilatura, firecrawl, browserless)。如果不指定，使用默认降级顺序。
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        HttpResponse[SourceRead]
-            Successful Response
-        """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/from-url",
-            method="POST",
-            json={
-                "url": url,
-                "title": title,
-                "snippet": snippet,
-                "mode": mode,
-                "extractor": extractor,
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    SourceRead,
-                    parse_obj_as(
-                        type_=SourceRead,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return HttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    def batch_delete_sources(
-        self,
-        notebook_id: int,
-        *,
-        source_ids: typing.Sequence[int],
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[SourceBatchDeleteResponse]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_ids : typing.Sequence[int]
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        HttpResponse[SourceBatchDeleteResponse]
-            Successful Response
-        """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/batch",
-            method="DELETE",
-            json={
-                "source_ids": source_ids,
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    SourceBatchDeleteResponse,
-                    parse_obj_as(
-                        type_=SourceBatchDeleteResponse,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return HttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    def delete_source(
-        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> HttpResponse[None]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        HttpResponse[None]
-        """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/{jsonable_encoder(source_id)}",
-            method="DELETE",
-            request_options=request_options,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                return HttpResponse(response=_response, data=None)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    def list_source_chunks(
-        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> HttpResponse[typing.List[ChunkRead]]:
-        """
-        获取来源的所有文本片段（chunks）。
-
-        返回指定来源的所有文本片段，按 chunk_index 升序排列。
-        每个片段包含：
-        - id: 片段唯一标识
-        - chunk_index: 片段索引（从0开始）
-        - text: 片段文本内容
-        - start_offset: 在原文中的起始位置
-        - end_offset: 在原文中的结束位置
-        - metadata: 片段元数据（如页码等）
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        HttpResponse[typing.List[ChunkRead]]
-            Successful Response
-        """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/{jsonable_encoder(source_id)}/chunks",
-            method="GET",
-            request_options=request_options,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    typing.List[ChunkRead],
-                    parse_obj_as(
-                        type_=typing.List[ChunkRead],  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return HttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
     def get_source_summary(
         self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[SourceSummaryResponse]:
@@ -1225,6 +1225,166 @@ class AsyncRawSourcesClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
+    async def search_sources(
+        self,
+        notebook_id: int,
+        *,
+        query: str,
+        engine: typing.Optional[str] = OMIT,
+        mode: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SourceSearchResponse]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        query : str
+
+        engine : typing.Optional[str]
+
+        mode : typing.Optional[str]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SourceSearchResponse]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/search",
+            method="POST",
+            json={
+                "query": query,
+                "engine": engine,
+                "mode": mode,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceSearchResponse,
+                    parse_obj_as(
+                        type_=SourceSearchResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def create_source_from_url(
+        self,
+        notebook_id: int,
+        *,
+        url: str,
+        title: typing.Optional[str] = OMIT,
+        snippet: typing.Optional[str] = OMIT,
+        mode: typing.Optional[SourceFromUrlRequestMode] = OMIT,
+        extractor: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SourceRead]:
+        """
+        Create a source from a URL.
+
+        Supports two modes:
+        - `link`: Save URL, title, and snippet as a lightweight source
+        - `fetch`: Fetch the webpage content and parse it as a full source
+
+        For `fetch` mode, you can optionally specify an extractor:
+        - `trafilatura`: Local extraction using trafilatura library (default)
+        - `firecrawl`: External API using Firecrawl service
+        - `browserless`: Browser rendering using Browserless + Playwright
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        url : str
+
+        title : typing.Optional[str]
+
+        snippet : typing.Optional[str]
+
+        mode : typing.Optional[SourceFromUrlRequestMode]
+            枚举值:
+
+            * `fetch`: 获取完整内容
+            * `link`: 仅保存链接
+
+        extractor : typing.Optional[str]
+            指定使用的提取器类型 (trafilatura, firecrawl, browserless)。如果不指定，使用默认降级顺序。
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SourceRead]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/from-url",
+            method="POST",
+            json={
+                "url": url,
+                "title": title,
+                "snippet": snippet,
+                "mode": mode,
+                "extractor": extractor,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceRead,
+                    parse_obj_as(
+                        type_=SourceRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
     async def list_sources(
         self,
         notebook_id: int,
@@ -1436,6 +1596,167 @@ class AsyncRawSourcesClient:
                     SourceRead,
                     parse_obj_as(
                         type_=SourceRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def batch_delete_sources(
+        self,
+        notebook_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SourceBatchDeleteResponse]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SourceBatchDeleteResponse]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/batch",
+            method="DELETE",
+            json={
+                "source_ids": source_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SourceBatchDeleteResponse,
+                    parse_obj_as(
+                        type_=SourceBatchDeleteResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def delete_source(
+        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[None]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[None]
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/{jsonable_encoder(source_id)}",
+            method="DELETE",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                return AsyncHttpResponse(response=_response, data=None)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def list_source_chunks(
+        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[typing.List[ChunkRead]]:
+        """
+        获取来源的所有文本片段（chunks）。
+
+        返回指定来源的所有文本片段，按 chunk_index 升序排列。
+        每个片段包含：
+        - id: 片段唯一标识
+        - chunk_index: 片段索引（从0开始）
+        - text: 片段文本内容
+        - start_offset: 在原文中的起始位置
+        - end_offset: 在原文中的结束位置
+        - metadata: 片段元数据（如页码等）
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[typing.List[ChunkRead]]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/{jsonable_encoder(source_id)}/chunks",
+            method="GET",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    typing.List[ChunkRead],
+                    parse_obj_as(
+                        type_=typing.List[ChunkRead],  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -1764,327 +2085,6 @@ class AsyncRawSourcesClient:
                     SourceTagSourceBindingResponse,
                     parse_obj_as(
                         type_=SourceTagSourceBindingResponse,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return AsyncHttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    async def search_sources(
-        self,
-        notebook_id: int,
-        *,
-        query: str,
-        engine: typing.Optional[str] = OMIT,
-        mode: typing.Optional[str] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[SourceSearchResponse]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        query : str
-
-        engine : typing.Optional[str]
-
-        mode : typing.Optional[str]
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        AsyncHttpResponse[SourceSearchResponse]
-            Successful Response
-        """
-        _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/search",
-            method="POST",
-            json={
-                "query": query,
-                "engine": engine,
-                "mode": mode,
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    SourceSearchResponse,
-                    parse_obj_as(
-                        type_=SourceSearchResponse,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return AsyncHttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    async def create_source_from_url(
-        self,
-        notebook_id: int,
-        *,
-        url: str,
-        title: typing.Optional[str] = OMIT,
-        snippet: typing.Optional[str] = OMIT,
-        mode: typing.Optional[SourceFromUrlRequestMode] = OMIT,
-        extractor: typing.Optional[str] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[SourceRead]:
-        """
-        Create a source from a URL.
-
-        Supports two modes:
-        - `link`: Save URL, title, and snippet as a lightweight source
-        - `fetch`: Fetch the webpage content and parse it as a full source
-
-        For `fetch` mode, you can optionally specify an extractor:
-        - `trafilatura`: Local extraction using trafilatura library (default)
-        - `firecrawl`: External API using Firecrawl service
-        - `browserless`: Browser rendering using Browserless + Playwright
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        url : str
-
-        title : typing.Optional[str]
-
-        snippet : typing.Optional[str]
-
-        mode : typing.Optional[SourceFromUrlRequestMode]
-            枚举值:
-
-            * `fetch`: 获取完整内容
-            * `link`: 仅保存链接
-
-        extractor : typing.Optional[str]
-            指定使用的提取器类型 (trafilatura, firecrawl, browserless)。如果不指定，使用默认降级顺序。
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        AsyncHttpResponse[SourceRead]
-            Successful Response
-        """
-        _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/from-url",
-            method="POST",
-            json={
-                "url": url,
-                "title": title,
-                "snippet": snippet,
-                "mode": mode,
-                "extractor": extractor,
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    SourceRead,
-                    parse_obj_as(
-                        type_=SourceRead,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return AsyncHttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    async def batch_delete_sources(
-        self,
-        notebook_id: int,
-        *,
-        source_ids: typing.Sequence[int],
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[SourceBatchDeleteResponse]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_ids : typing.Sequence[int]
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        AsyncHttpResponse[SourceBatchDeleteResponse]
-            Successful Response
-        """
-        _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/batch",
-            method="DELETE",
-            json={
-                "source_ids": source_ids,
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    SourceBatchDeleteResponse,
-                    parse_obj_as(
-                        type_=SourceBatchDeleteResponse,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return AsyncHttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    async def delete_source(
-        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> AsyncHttpResponse[None]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        AsyncHttpResponse[None]
-        """
-        _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/{jsonable_encoder(source_id)}",
-            method="DELETE",
-            request_options=request_options,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                return AsyncHttpResponse(response=_response, data=None)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    async def list_source_chunks(
-        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> AsyncHttpResponse[typing.List[ChunkRead]]:
-        """
-        获取来源的所有文本片段（chunks）。
-
-        返回指定来源的所有文本片段，按 chunk_index 升序排列。
-        每个片段包含：
-        - id: 片段唯一标识
-        - chunk_index: 片段索引（从0开始）
-        - text: 片段文本内容
-        - start_offset: 在原文中的起始位置
-        - end_offset: 在原文中的结束位置
-        - metadata: 片段元数据（如页码等）
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        AsyncHttpResponse[typing.List[ChunkRead]]
-            Successful Response
-        """
-        _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sources/{jsonable_encoder(source_id)}/chunks",
-            method="GET",
-            request_options=request_options,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    typing.List[ChunkRead],
-                    parse_obj_as(
-                        type_=typing.List[ChunkRead],  # type: ignore
                         object_=_response.json(),
                     ),
                 )
