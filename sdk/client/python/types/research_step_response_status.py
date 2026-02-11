@@ -2,4 +2,4 @@
 
 import typing
 
-ResearchStepResponseStatus = typing.Union[typing.Literal["pending", "running", "completed", "skipped"], typing.Any]
+ResearchStepResponseStatus = typing.Union[typing.Literal["completed", "pending", "running", "skipped"], typing.Any]

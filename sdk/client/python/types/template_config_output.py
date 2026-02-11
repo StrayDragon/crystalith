@@ -8,14 +8,14 @@ from .template_config_output_output_type import TemplateConfigOutputOutputType
 
 
 class TemplateConfigOutput(UniversalBaseModel):
-    session_titles: typing.Optional[typing.List[str]] = pydantic.Field(default=None)
-    """
-    Notebook sessions to create when using the template.
-    """
-
     output_type: typing.Optional[TemplateConfigOutputOutputType] = pydantic.Field(default=None)
     """
     Preferred default output type for the notebook.
+    """
+
+    session_titles: typing.Optional[typing.List[str]] = pydantic.Field(default=None)
+    """
+    Notebook sessions to create when using the template.
     """
 
     source_tags: typing.Optional[typing.List[str]] = pydantic.Field(default=None)

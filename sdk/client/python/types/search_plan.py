@@ -12,6 +12,11 @@ class SearchPlan(UniversalBaseModel):
     A search plan for one iteration.
     """
 
+    estimated_results: typing.Optional[int] = pydantic.Field(default=None)
+    """
+    Estimated number of results
+    """
+
     iteration: int = pydantic.Field()
     """
     Iteration number
@@ -25,11 +30,6 @@ class SearchPlan(UniversalBaseModel):
     reasoning: typing.Optional[str] = pydantic.Field(default=None)
     """
     Agent reasoning for this plan
-    """
-
-    estimated_results: typing.Optional[int] = pydantic.Field(default=None)
-    """
-    Estimated number of results
     """
 
     if IS_PYDANTIC_V2:

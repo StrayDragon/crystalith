@@ -9,9 +9,9 @@ from .topic import Topic
 
 
 class AnalysisResult(UniversalBaseModel):
-    topics: typing.List[Topic]
-    relations: typing.List[Relation]
     contradictions: typing.List[Relation]
+    relations: typing.List[Relation]
+    topics: typing.List[Topic]
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

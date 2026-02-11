@@ -10,14 +10,14 @@ from .slides_theme_preset import SlidesThemePreset
 
 
 class SlidesConfigResponse(UniversalBaseModel):
-    defaults: SlideGenerationConfig
-    quantity_options: typing.List[SlidesConfigOption]
     audience_options: typing.List[SlidesConfigOption]
-    structure_options: typing.List[SlidesConfigOption]
-    tone_options: typing.List[SlidesConfigOption]
-    language_options: typing.List[SlidesConfigOption]
+    defaults: SlideGenerationConfig
     density_options: typing.List[SlidesConfigOption]
+    language_options: typing.List[SlidesConfigOption]
+    quantity_options: typing.List[SlidesConfigOption]
+    structure_options: typing.List[SlidesConfigOption]
     theme_preset_options: typing.List[SlidesThemePreset]
+    tone_options: typing.List[SlidesConfigOption]
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

@@ -33,9 +33,9 @@ class RefineClient:
         *,
         prompt: str,
         format: typing.Optional[str] = OMIT,
+        min_score: typing.Optional[float] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
-        min_score: typing.Optional[float] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> RefineResponse:
         """
@@ -47,11 +47,11 @@ class RefineClient:
 
         format : typing.Optional[str]
 
+        min_score : typing.Optional[float]
+
         source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
-
-        min_score : typing.Optional[float]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -77,9 +77,9 @@ class RefineClient:
             notebook_id,
             prompt=prompt,
             format=format,
+            min_score=min_score,
             source_ids=source_ids,
             top_k=top_k,
-            min_score=min_score,
             request_options=request_options,
         )
         return _response.data
@@ -90,9 +90,9 @@ class RefineClient:
         *,
         prompt: str,
         formats: typing.Optional[typing.Sequence[str]] = OMIT,
+        min_score: typing.Optional[float] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
-        min_score: typing.Optional[float] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> RefineBatchResponse:
         """
@@ -104,11 +104,11 @@ class RefineClient:
 
         formats : typing.Optional[typing.Sequence[str]]
 
+        min_score : typing.Optional[float]
+
         source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
-
-        min_score : typing.Optional[float]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -134,9 +134,9 @@ class RefineClient:
             notebook_id,
             prompt=prompt,
             formats=formats,
+            min_score=min_score,
             source_ids=source_ids,
             top_k=top_k,
-            min_score=min_score,
             request_options=request_options,
         )
         return _response.data
@@ -163,9 +163,9 @@ class AsyncRefineClient:
         *,
         prompt: str,
         format: typing.Optional[str] = OMIT,
+        min_score: typing.Optional[float] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
-        min_score: typing.Optional[float] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> RefineResponse:
         """
@@ -177,11 +177,11 @@ class AsyncRefineClient:
 
         format : typing.Optional[str]
 
+        min_score : typing.Optional[float]
+
         source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
-
-        min_score : typing.Optional[float]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -215,9 +215,9 @@ class AsyncRefineClient:
             notebook_id,
             prompt=prompt,
             format=format,
+            min_score=min_score,
             source_ids=source_ids,
             top_k=top_k,
-            min_score=min_score,
             request_options=request_options,
         )
         return _response.data
@@ -228,9 +228,9 @@ class AsyncRefineClient:
         *,
         prompt: str,
         formats: typing.Optional[typing.Sequence[str]] = OMIT,
+        min_score: typing.Optional[float] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
-        min_score: typing.Optional[float] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> RefineBatchResponse:
         """
@@ -242,11 +242,11 @@ class AsyncRefineClient:
 
         formats : typing.Optional[typing.Sequence[str]]
 
+        min_score : typing.Optional[float]
+
         source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
-
-        min_score : typing.Optional[float]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -280,9 +280,9 @@ class AsyncRefineClient:
             notebook_id,
             prompt=prompt,
             formats=formats,
+            min_score=min_score,
             source_ids=source_ids,
             top_k=top_k,
-            min_score=min_score,
             request_options=request_options,
         )
         return _response.data

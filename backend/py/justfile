@@ -4,10 +4,6 @@ default:
 dev:
     uv run python main.py
 
-e2e-dev:
-    HOST=${E2E_BACKEND_HOST:-0.0.0.0} PORT=${E2E_BACKEND_PORT:-8032} RELOAD=1 AUTO_DB_INIT=1 CRYSTALITH_DATABASE__URL=sqlite+aiosqlite:///./data/e2e.db CRYSTALITH_VECTOR_STORAGE__PROVIDER=sqlite CRYSTALITH_VECTOR_STORAGE__SQLITE__PATH=./data/vectors-e2e.db uv run python main.py
-    # Optional overrides: E2E_BACKEND_HOST (default 0.0.0.0), E2E_BACKEND_PORT (default 8032)
-
 packages-test:
     #!/bin/bash
     for package in packages/*; do
@@ -31,6 +27,3 @@ db-rollback:
 
 vector-migrate:
     uv run scripts/vector_migrate.py
-
-e2e-seed:
-    uv run scripts/e2e_seed.py

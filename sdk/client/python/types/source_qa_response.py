@@ -12,9 +12,9 @@ class SourceQaResponse(UniversalBaseModel):
     Response for source-specific QA.
     """
 
-    source_id: int
     answer: str
     created_at: dt.datetime
+    source_id: int
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

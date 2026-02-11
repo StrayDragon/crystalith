@@ -25,104 +25,12 @@ class RawOutputsClient:
     def __init__(self, *, client_wrapper: SyncClientWrapper):
         self._client_wrapper = client_wrapper
 
-    def create_output(
-        self,
-        notebook_id: int,
-        output_type: CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostRequestOutputType,
-        *,
-        prompt: typing.Optional[str] = OMIT,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        top_k: typing.Optional[int] = OMIT,
-        min_score: typing.Optional[float] = OMIT,
-        model_id: typing.Optional[str] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[OutputRead]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        output_type : CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostRequestOutputType
-            枚举值:
-
-            * `FAQ`: 问答清单
-            * `GUIDE`: 学习/行动指南
-            * `TIMELINE`: 关键事件序列
-            * `MINDMAP`: 主题层级结构
-            * `QUIZ`: 知识检验
-            * `BRIEFING`: 高层摘要
-            * `SLIDES`: 演示文稿
-            * `PARAGRAPH`: 段落摘要
-            * `BULLETS`: 要点列表
-            * `STRUCTURED`: 结构化摘要
-
-        prompt : typing.Optional[str]
-
-        source_ids : typing.Optional[typing.Sequence[int]]
-
-        top_k : typing.Optional[int]
-
-        min_score : typing.Optional[float]
-
-        model_id : typing.Optional[str]
-            Optional model ID to use for generation
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        HttpResponse[OutputRead]
-            Successful Response
-        """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/outputs/{jsonable_encoder(output_type)}",
-            method="POST",
-            json={
-                "prompt": prompt,
-                "source_ids": source_ids,
-                "top_k": top_k,
-                "min_score": min_score,
-                "model_id": model_id,
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    OutputRead,
-                    parse_obj_as(
-                        type_=OutputRead,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return HttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
     def list_outputs(
         self,
         notebook_id: int,
         *,
-        offset: typing.Optional[int] = None,
         limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[typing.List[OutputRead]]:
         """
@@ -130,9 +38,9 @@ class RawOutputsClient:
         ----------
         notebook_id : int
 
-        offset : typing.Optional[int]
-
         limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -146,8 +54,8 @@ class RawOutputsClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/outputs",
             method="GET",
             params={
-                "offset": offset,
                 "limit": limit,
+                "offset": offset,
             },
             request_options=request_options,
         )
@@ -320,23 +228,18 @@ class RawOutputsClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-
-class AsyncRawOutputsClient:
-    def __init__(self, *, client_wrapper: AsyncClientWrapper):
-        self._client_wrapper = client_wrapper
-
-    async def create_output(
+    def create_output(
         self,
         notebook_id: int,
         output_type: CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostRequestOutputType,
         *,
+        min_score: typing.Optional[float] = OMIT,
+        model_id: typing.Optional[str] = OMIT,
         prompt: typing.Optional[str] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
-        min_score: typing.Optional[float] = OMIT,
-        model_id: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[OutputRead]:
+    ) -> HttpResponse[OutputRead]:
         """
         Parameters
         ----------
@@ -356,34 +259,34 @@ class AsyncRawOutputsClient:
             * `BULLETS`: 要点列表
             * `STRUCTURED`: 结构化摘要
 
+        min_score : typing.Optional[float]
+
+        model_id : typing.Optional[str]
+            Optional model ID to use for generation
+
         prompt : typing.Optional[str]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
 
-        min_score : typing.Optional[float]
-
-        model_id : typing.Optional[str]
-            Optional model ID to use for generation
-
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        AsyncHttpResponse[OutputRead]
+        HttpResponse[OutputRead]
             Successful Response
         """
-        _response = await self._client_wrapper.httpx_client.request(
+        _response = self._client_wrapper.httpx_client.request(
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/outputs/{jsonable_encoder(output_type)}",
             method="POST",
             json={
+                "min_score": min_score,
+                "model_id": model_id,
                 "prompt": prompt,
                 "source_ids": source_ids,
                 "top_k": top_k,
-                "min_score": min_score,
-                "model_id": model_id,
             },
             headers={
                 "content-type": "application/json",
@@ -400,7 +303,7 @@ class AsyncRawOutputsClient:
                         object_=_response.json(),
                     ),
                 )
-                return AsyncHttpResponse(response=_response, data=_data)
+                return HttpResponse(response=_response, data=_data)
             if _response.status_code == 422:
                 raise UnprocessableEntityError(
                     headers=dict(_response.headers),
@@ -417,12 +320,17 @@ class AsyncRawOutputsClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
+
+class AsyncRawOutputsClient:
+    def __init__(self, *, client_wrapper: AsyncClientWrapper):
+        self._client_wrapper = client_wrapper
+
     async def list_outputs(
         self,
         notebook_id: int,
         *,
-        offset: typing.Optional[int] = None,
         limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[typing.List[OutputRead]]:
         """
@@ -430,9 +338,9 @@ class AsyncRawOutputsClient:
         ----------
         notebook_id : int
 
-        offset : typing.Optional[int]
-
         limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -446,8 +354,8 @@ class AsyncRawOutputsClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/outputs",
             method="GET",
             params={
-                "offset": offset,
                 "limit": limit,
+                "offset": offset,
             },
             request_options=request_options,
         )
@@ -600,6 +508,98 @@ class AsyncRawOutputsClient:
                     ConvertToSourceResponse,
                     parse_obj_as(
                         type_=ConvertToSourceResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def create_output(
+        self,
+        notebook_id: int,
+        output_type: CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostRequestOutputType,
+        *,
+        min_score: typing.Optional[float] = OMIT,
+        model_id: typing.Optional[str] = OMIT,
+        prompt: typing.Optional[str] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        top_k: typing.Optional[int] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[OutputRead]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        output_type : CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostRequestOutputType
+            枚举值:
+
+            * `FAQ`: 问答清单
+            * `GUIDE`: 学习/行动指南
+            * `TIMELINE`: 关键事件序列
+            * `MINDMAP`: 主题层级结构
+            * `QUIZ`: 知识检验
+            * `BRIEFING`: 高层摘要
+            * `SLIDES`: 演示文稿
+            * `PARAGRAPH`: 段落摘要
+            * `BULLETS`: 要点列表
+            * `STRUCTURED`: 结构化摘要
+
+        min_score : typing.Optional[float]
+
+        model_id : typing.Optional[str]
+            Optional model ID to use for generation
+
+        prompt : typing.Optional[str]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
+
+        top_k : typing.Optional[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[OutputRead]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/outputs/{jsonable_encoder(output_type)}",
+            method="POST",
+            json={
+                "min_score": min_score,
+                "model_id": model_id,
+                "prompt": prompt,
+                "source_ids": source_ids,
+                "top_k": top_k,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    OutputRead,
+                    parse_obj_as(
+                        type_=OutputRead,  # type: ignore
                         object_=_response.json(),
                     ),
                 )

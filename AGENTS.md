@@ -4,7 +4,7 @@
 - `backend/py/` hosts the FastAPI service; app code lives in `backend/py/src/crystalith/` and tests in `backend/py/tests/`.
 - `backend/py/packages/` contains workspace libraries (e.g., `cl-logs`, `cl-fastapix`), each with its own `pyproject.toml` and `tests/`.
 - `frontend/web/` is the Vite + React + TypeScript UI; source is in `frontend/web/src/`, assets in `frontend/web/public/`.
-- `config/` stores runtime config (`app.yaml`) and the generated schema (`schema.json`).
+- `config/` stores runtime config (`app.yaml`) and the generated schema (`app.schema.json`).
 - `openspec/` contains specification/change-tracking docs; consult it for spec-driven work.
 
 ## Build, Test, and Development Commands
@@ -40,6 +40,6 @@ Tip: `just -l` lists available tasks in each directory.
 - PRs should include a clear description, linked issue/spec (if any), test results, and screenshots/GIFs for UI changes.
 
 ## Security, Configuration, and Spec Workflow
-- Local config lives in `config/app.yaml`; `config/schema.json` is generated for YAML validation. Never commit API keys or tokens.
+- Local config lives in `config/app.yaml`; `config/app.schema.json` is generated for YAML validation. Never commit API keys or tokens.
 - If config shape changes, describe required keys in the PR.
 - When work involves a proposal/plan, new features, breaking changes, or ambiguous requirements, read `openspec/AGENTS.md` for spec and change-tracking conventions.

@@ -9,8 +9,12 @@ from .output_read_type import OutputReadType
 
 
 class OutputRead(UniversalBaseModel):
+    chunk_ids: typing.Optional[typing.List[int]] = None
+    content: typing.Dict[str, typing.Any]
+    created_at: dt.datetime
     id: int
     notebook_id: int
+    prompt: typing.Optional[str] = None
     type: OutputReadType = pydantic.Field()
     """
     枚举值:
@@ -27,10 +31,6 @@ class OutputRead(UniversalBaseModel):
     * `STRUCTURED`: 结构化摘要
     """
 
-    prompt: typing.Optional[str] = None
-    chunk_ids: typing.Optional[typing.List[int]] = None
-    content: typing.Dict[str, typing.Any]
-    created_at: dt.datetime
     updated_at: dt.datetime
 
     if IS_PYDANTIC_V2:

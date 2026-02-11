@@ -28,8 +28,8 @@ class ModelsClient:
     def list_models(
         self,
         *,
-        role: typing.Optional[ListModelsV1ModelsGetRequestRole] = None,
         capability: typing.Optional[str] = None,
+        role: typing.Optional[ListModelsV1ModelsGetRequestRole] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ModelsListResponse:
         """
@@ -39,9 +39,9 @@ class ModelsClient:
 
         Parameters
         ----------
-        role : typing.Optional[ListModelsV1ModelsGetRequestRole]
-
         capability : typing.Optional[str]
+
+        role : typing.Optional[ListModelsV1ModelsGetRequestRole]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -60,7 +60,7 @@ class ModelsClient:
         )
         client.models.list_models()
         """
-        _response = self._raw_client.list_models(role=role, capability=capability, request_options=request_options)
+        _response = self._raw_client.list_models(capability=capability, role=role, request_options=request_options)
         return _response.data
 
     def get_model(self, model_id: str, *, request_options: typing.Optional[RequestOptions] = None) -> ModelRead:
@@ -112,8 +112,8 @@ class AsyncModelsClient:
     async def list_models(
         self,
         *,
-        role: typing.Optional[ListModelsV1ModelsGetRequestRole] = None,
         capability: typing.Optional[str] = None,
+        role: typing.Optional[ListModelsV1ModelsGetRequestRole] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> ModelsListResponse:
         """
@@ -123,9 +123,9 @@ class AsyncModelsClient:
 
         Parameters
         ----------
-        role : typing.Optional[ListModelsV1ModelsGetRequestRole]
-
         capability : typing.Optional[str]
+
+        role : typing.Optional[ListModelsV1ModelsGetRequestRole]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -153,7 +153,7 @@ class AsyncModelsClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.list_models(
-            role=role, capability=capability, request_options=request_options
+            capability=capability, role=role, request_options=request_options
         )
         return _response.data
 

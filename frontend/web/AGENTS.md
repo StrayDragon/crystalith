@@ -5,7 +5,7 @@
 - `frontend/web/src/features/workspace/` groups the workspace feature into `app/`, `layout/`, `shared/`, and `domains/` (notebooks/sessions/messages/analysis/sources/outputs/refine/studio/research).
 - `backend/py/` contains the FastAPI service with app code in `backend/py/src/crystalith/` and tests in `backend/py/tests/`.
 - `backend/py/packages/` hosts workspace Python libraries, each with its own `pyproject.toml` and `tests/`.
-- `config/` stores runtime config (`config/app.yaml`) and the generated schema (`config/schema.json`).
+- `config/` stores runtime config (`config/app.yaml`) and the generated schema (`config/app.schema.json`).
 
 ## Build, Test, and Development Commands
 Frontend (from repo root):
@@ -19,7 +19,6 @@ Frontend (from repo root):
 Backend (from repo root):
 - `cd backend/py && uv sync` — install Python deps.
 - `just dev` — run the API server (uvicorn wrapper).
-- `just e2e-dev` — run the backend with E2E settings (port + SQLite paths).
 - `just test` — run pytest.
 
 Tip: `just -l` lists available tasks in each directory.

@@ -2,4 +2,4 @@
 
 import typing
 
-SlideStage = typing.Union[typing.Literal["input", "outline", "markdown"], typing.Any]
+SlideStage = typing.Union[typing.Literal["input", "markdown", "outline"], typing.Any]

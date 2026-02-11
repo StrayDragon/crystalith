@@ -11,9 +11,9 @@ class ConvertSessionToSourceResponse(UniversalBaseModel):
     Response after converting session to source.
     """
 
-    source_id: int
-    filename: str
     chunk_count: int
+    filename: str
+    source_id: int
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

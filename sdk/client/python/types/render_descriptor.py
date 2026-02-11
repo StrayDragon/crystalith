@@ -11,8 +11,8 @@ from .render_descriptor_layout import RenderDescriptorLayout
 
 
 class RenderDescriptor(UniversalBaseModel):
-    layout: RenderDescriptorLayout
     item_schema: typing.Optional[ItemSchema] = None
+    layout: RenderDescriptorLayout
     options: typing.Optional[typing.Dict[str, typing.Any]] = None
 
     if IS_PYDANTIC_V2:

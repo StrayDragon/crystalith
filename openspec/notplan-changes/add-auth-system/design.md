@@ -106,7 +106,7 @@ sequenceDiagram
 - [ ] **AC-1**: user 表在 `shared/db/models/` 下定义，notebook 表新增 owner_id 外键
 - [ ] **AC-2**: 认证 API 在 `features/auth/` 下新建 feature slice
 - [ ] **AC-3**: JWT 中间件作为 FastAPI middleware 或 Depends，在 `shared/auth/` 下定义
-- [ ] **AC-4**: `config/schema.json` 更新包含 `auth` 配置段
+- [ ] **AC-4**: `config/app.schema.json` 更新包含 `auth` 配置段
 - [ ] **AC-5**: 前端 `api/setup.ts` 的 client interceptor 自动附加 Authorization header
 - [ ] **AC-6**: 匿名模式（`auth.enabled=false`）下所有现有功能不受影响
 - [ ] **AC-7**: `just test` 和 `pnpm test` 通过

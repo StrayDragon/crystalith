@@ -8,8 +8,8 @@ from .structured_refine import StructuredRefine
 
 
 class RefineBatchOutput(UniversalBaseModel):
-    paragraph: typing.Optional[str] = None
     bullets: typing.Optional[typing.List[str]] = None
+    paragraph: typing.Optional[str] = None
     structured: typing.Optional[StructuredRefine] = None
 
     if IS_PYDANTIC_V2:

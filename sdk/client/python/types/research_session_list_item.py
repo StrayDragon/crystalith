@@ -13,9 +13,16 @@ class ResearchSessionListItem(UniversalBaseModel):
     Simplified response for listing research sessions.
     """
 
+    created_at: dt.datetime
+    current_iteration: int
     id: int
+    max_iterations: int
     notebook_id: int
-    topic: str
+    result_count: typing.Optional[int] = pydantic.Field(default=None)
+    """
+    Number of aggregated results
+    """
+
     status: ResearchSessionListItemStatus = pydantic.Field()
     """
     枚举值:
@@ -28,14 +35,7 @@ class ResearchSessionListItem(UniversalBaseModel):
     * `cancelled`: 已取消
     """
 
-    current_iteration: int
-    max_iterations: int
-    result_count: typing.Optional[int] = pydantic.Field(default=None)
-    """
-    Number of aggregated results
-    """
-
-    created_at: dt.datetime
+    topic: str
     updated_at: dt.datetime
 
     if IS_PYDANTIC_V2:

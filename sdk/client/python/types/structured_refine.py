@@ -8,10 +8,10 @@ from .citation import Citation
 
 
 class StructuredRefine(UniversalBaseModel):
-    title: str
     bullets: typing.List[str]
-    terms: typing.List[str]
     citations: typing.List[Citation]
+    terms: typing.List[str]
+    title: str
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

@@ -8,10 +8,10 @@ from .relation_relation_type import RelationRelationType
 
 
 class Relation(UniversalBaseModel):
-    source_chunk_id: int
-    target_chunk_id: int
     relation_type: RelationRelationType
     score: float
+    source_chunk_id: int
+    target_chunk_id: int
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

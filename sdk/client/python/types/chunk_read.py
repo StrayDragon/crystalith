@@ -11,12 +11,12 @@ class ChunkRead(UniversalBaseModel):
     Response model for a text chunk.
     """
 
-    id: int
     chunk_index: int
-    text: str
-    start_offset: typing.Optional[int] = None
     end_offset: typing.Optional[int] = None
+    id: int
     metadata: typing.Optional[typing.Dict[str, typing.Any]] = None
+    start_offset: typing.Optional[int] = None
+    text: str
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

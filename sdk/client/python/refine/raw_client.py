@@ -28,9 +28,9 @@ class RawRefineClient:
         *,
         prompt: str,
         format: typing.Optional[str] = OMIT,
+        min_score: typing.Optional[float] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
-        min_score: typing.Optional[float] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[RefineResponse]:
         """
@@ -42,11 +42,11 @@ class RawRefineClient:
 
         format : typing.Optional[str]
 
+        min_score : typing.Optional[float]
+
         source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
-
-        min_score : typing.Optional[float]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -60,11 +60,11 @@ class RawRefineClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/refine",
             method="POST",
             json={
-                "prompt": prompt,
                 "format": format,
+                "min_score": min_score,
+                "prompt": prompt,
                 "source_ids": source_ids,
                 "top_k": top_k,
-                "min_score": min_score,
             },
             headers={
                 "content-type": "application/json",
@@ -104,9 +104,9 @@ class RawRefineClient:
         *,
         prompt: str,
         formats: typing.Optional[typing.Sequence[str]] = OMIT,
+        min_score: typing.Optional[float] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
-        min_score: typing.Optional[float] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[RefineBatchResponse]:
         """
@@ -118,11 +118,11 @@ class RawRefineClient:
 
         formats : typing.Optional[typing.Sequence[str]]
 
+        min_score : typing.Optional[float]
+
         source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
-
-        min_score : typing.Optional[float]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -136,11 +136,11 @@ class RawRefineClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/refine/batch",
             method="POST",
             json={
-                "prompt": prompt,
                 "formats": formats,
+                "min_score": min_score,
+                "prompt": prompt,
                 "source_ids": source_ids,
                 "top_k": top_k,
-                "min_score": min_score,
             },
             headers={
                 "content-type": "application/json",
@@ -185,9 +185,9 @@ class AsyncRawRefineClient:
         *,
         prompt: str,
         format: typing.Optional[str] = OMIT,
+        min_score: typing.Optional[float] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
-        min_score: typing.Optional[float] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[RefineResponse]:
         """
@@ -199,11 +199,11 @@ class AsyncRawRefineClient:
 
         format : typing.Optional[str]
 
+        min_score : typing.Optional[float]
+
         source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
-
-        min_score : typing.Optional[float]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -217,11 +217,11 @@ class AsyncRawRefineClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/refine",
             method="POST",
             json={
-                "prompt": prompt,
                 "format": format,
+                "min_score": min_score,
+                "prompt": prompt,
                 "source_ids": source_ids,
                 "top_k": top_k,
-                "min_score": min_score,
             },
             headers={
                 "content-type": "application/json",
@@ -261,9 +261,9 @@ class AsyncRawRefineClient:
         *,
         prompt: str,
         formats: typing.Optional[typing.Sequence[str]] = OMIT,
+        min_score: typing.Optional[float] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
-        min_score: typing.Optional[float] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[RefineBatchResponse]:
         """
@@ -275,11 +275,11 @@ class AsyncRawRefineClient:
 
         formats : typing.Optional[typing.Sequence[str]]
 
+        min_score : typing.Optional[float]
+
         source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
-
-        min_score : typing.Optional[float]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -293,11 +293,11 @@ class AsyncRawRefineClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/refine/batch",
             method="POST",
             json={
-                "prompt": prompt,
                 "formats": formats,
+                "min_score": min_score,
+                "prompt": prompt,
                 "source_ids": source_ids,
                 "top_k": top_k,
-                "min_score": min_score,
             },
             headers={
                 "content-type": "application/json",

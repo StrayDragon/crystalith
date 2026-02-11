@@ -2,4 +2,4 @@
 
 import typing
 
-SourceSearchResponseStatus = typing.Union[typing.Literal["ok", "not_implemented"], typing.Any]
+SourceSearchResponseStatus = typing.Union[typing.Literal["not_implemented", "ok"], typing.Any]

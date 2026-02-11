@@ -33,8 +33,8 @@ class SessionsClient:
         self,
         notebook_id: int,
         *,
-        offset: typing.Optional[int] = None,
         limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[SessionRead]:
         """
@@ -42,9 +42,9 @@ class SessionsClient:
         ----------
         notebook_id : int
 
-        offset : typing.Optional[int]
-
         limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -66,7 +66,7 @@ class SessionsClient:
         )
         """
         _response = self._raw_client.list_sessions(
-            notebook_id, offset=offset, limit=limit, request_options=request_options
+            notebook_id, limit=limit, offset=offset, request_options=request_options
         )
         return _response.data
 
@@ -213,49 +213,6 @@ class SessionsClient:
         )
         return _response.data
 
-    def convert_session_to_source(
-        self,
-        notebook_id: int,
-        session_id: int,
-        *,
-        message_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> ConvertSessionToSourceResponse:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        session_id : int
-
-        message_ids : typing.Optional[typing.Sequence[int]]
-            Specific message IDs to convert. If null, converts entire session.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        ConvertSessionToSourceResponse
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.sessions.convert_session_to_source(
-            notebook_id=1,
-            session_id=1,
-        )
-        """
-        _response = self._raw_client.convert_session_to_source(
-            notebook_id, session_id, message_ids=message_ids, request_options=request_options
-        )
-        return _response.data
-
     def convert_session_to_output(
         self,
         notebook_id: int,
@@ -314,6 +271,49 @@ class SessionsClient:
         )
         return _response.data
 
+    def convert_session_to_source(
+        self,
+        notebook_id: int,
+        session_id: int,
+        *,
+        message_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> ConvertSessionToSourceResponse:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        session_id : int
+
+        message_ids : typing.Optional[typing.Sequence[int]]
+            Specific message IDs to convert. If null, converts entire session.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        ConvertSessionToSourceResponse
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sessions.convert_session_to_source(
+            notebook_id=1,
+            session_id=1,
+        )
+        """
+        _response = self._raw_client.convert_session_to_source(
+            notebook_id, session_id, message_ids=message_ids, request_options=request_options
+        )
+        return _response.data
+
 
 class AsyncSessionsClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
@@ -334,8 +334,8 @@ class AsyncSessionsClient:
         self,
         notebook_id: int,
         *,
-        offset: typing.Optional[int] = None,
         limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[SessionRead]:
         """
@@ -343,9 +343,9 @@ class AsyncSessionsClient:
         ----------
         notebook_id : int
 
-        offset : typing.Optional[int]
-
         limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -375,7 +375,7 @@ class AsyncSessionsClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.list_sessions(
-            notebook_id, offset=offset, limit=limit, request_options=request_options
+            notebook_id, limit=limit, offset=offset, request_options=request_options
         )
         return _response.data
 
@@ -554,57 +554,6 @@ class AsyncSessionsClient:
         )
         return _response.data
 
-    async def convert_session_to_source(
-        self,
-        notebook_id: int,
-        session_id: int,
-        *,
-        message_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> ConvertSessionToSourceResponse:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        session_id : int
-
-        message_ids : typing.Optional[typing.Sequence[int]]
-            Specific message IDs to convert. If null, converts entire session.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        ConvertSessionToSourceResponse
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.sessions.convert_session_to_source(
-                notebook_id=1,
-                session_id=1,
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.convert_session_to_source(
-            notebook_id, session_id, message_ids=message_ids, request_options=request_options
-        )
-        return _response.data
-
     async def convert_session_to_output(
         self,
         notebook_id: int,
@@ -668,5 +617,56 @@ class AsyncSessionsClient:
         """
         _response = await self._raw_client.convert_session_to_output(
             notebook_id, session_id, message_ids=message_ids, output_type=output_type, request_options=request_options
+        )
+        return _response.data
+
+    async def convert_session_to_source(
+        self,
+        notebook_id: int,
+        session_id: int,
+        *,
+        message_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> ConvertSessionToSourceResponse:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        session_id : int
+
+        message_ids : typing.Optional[typing.Sequence[int]]
+            Specific message IDs to convert. If null, converts entire session.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        ConvertSessionToSourceResponse
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sessions.convert_session_to_source(
+                notebook_id=1,
+                session_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.convert_session_to_source(
+            notebook_id, session_id, message_ids=message_ids, request_options=request_options
         )
         return _response.data

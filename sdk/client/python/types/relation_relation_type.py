@@ -2,4 +2,4 @@
 
 import typing
 
-RelationRelationType = typing.Union[typing.Literal["similar", "references", "contradicts"], typing.Any]
+RelationRelationType = typing.Union[typing.Literal["contradicts", "references", "similar"], typing.Any]

@@ -8,10 +8,10 @@ from ..core.pydantic_utilities import IS_PYDANTIC_V2, UniversalBaseModel
 
 
 class SessionRead(UniversalBaseModel):
+    created_at: dt.datetime
     id: int
     notebook_id: int
     title: typing.Optional[str] = None
-    created_at: dt.datetime
     updated_at: dt.datetime
 
     if IS_PYDANTIC_V2:

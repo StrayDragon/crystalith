@@ -11,8 +11,8 @@ class ConvertSourceQaToSourceResponse(UniversalBaseModel):
     Response after converting source QA to a new source.
     """
 
-    source_id: int
     filename: str
+    source_id: int
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

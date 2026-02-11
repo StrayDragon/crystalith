@@ -11,11 +11,6 @@ class SearchQuery(UniversalBaseModel):
     A single search query in a search plan.
     """
 
-    query: str = pydantic.Field()
-    """
-    Search query string
-    """
-
     engine: typing.Optional[str] = pydantic.Field(default=None)
     """
     Search engine: Web
@@ -24,6 +19,11 @@ class SearchQuery(UniversalBaseModel):
     priority: typing.Optional[int] = pydantic.Field(default=None)
     """
     Priority: 1=high, 2=medium, 3=low
+    """
+
+    query: str = pydantic.Field()
+    """
+    Search query string
     """
 
     reason: typing.Optional[str] = pydantic.Field(default=None)

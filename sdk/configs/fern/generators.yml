@@ -1,6 +1,8 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/refs/heads/main/generators-yml.schema.json
+
 api:
   specs:
-    - openapi: ../frontend/web/openapi.json
+    - openapi: ../../../frontend/web/openapi.json
 
 groups:
   python-sdk:
@@ -9,7 +11,7 @@ groups:
         version: 4.53.1
         output:
           location: local-file-system
-          path: ../sdk/client/python
+          path: ../../client/python
         config:
           package_name: crystalith
           client_class_name: CrystalithClient

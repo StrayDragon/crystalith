@@ -2,4 +2,4 @@
 
 import typing
 
-TaskStatus = typing.Union[typing.Literal["pending", "running", "completed", "failed", "cancelled"], typing.Any]
+TaskStatus = typing.Union[typing.Literal["cancelled", "completed", "failed", "pending", "running"], typing.Any]

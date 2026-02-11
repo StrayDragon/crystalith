@@ -33,8 +33,8 @@ class MessagesClient:
         notebook_id: int,
         session_id: int,
         *,
-        offset: typing.Optional[int] = None,
         limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[MessageRead]:
         """
@@ -44,9 +44,9 @@ class MessagesClient:
 
         session_id : int
 
-        offset : typing.Optional[int]
-
         limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -69,7 +69,7 @@ class MessagesClient:
         )
         """
         _response = self._raw_client.list_messages(
-            notebook_id, session_id, offset=offset, limit=limit, request_options=request_options
+            notebook_id, session_id, limit=limit, offset=offset, request_options=request_options
         )
         return _response.data
 
@@ -78,8 +78,8 @@ class MessagesClient:
         notebook_id: int,
         session_id: int,
         *,
-        role: MessageCreateRole,
         content: str,
+        role: MessageCreateRole,
         citations: typing.Optional[typing.Sequence[Citation]] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> MessageRead:
@@ -90,9 +90,9 @@ class MessagesClient:
 
         session_id : int
 
-        role : MessageCreateRole
-
         content : str
+
+        role : MessageCreateRole
 
         citations : typing.Optional[typing.Sequence[Citation]]
 
@@ -114,12 +114,12 @@ class MessagesClient:
         client.messages.create_message(
             notebook_id=1,
             session_id=1,
-            role="user",
             content="content",
+            role="assistant",
         )
         """
         _response = self._raw_client.create_message(
-            notebook_id, session_id, role=role, content=content, citations=citations, request_options=request_options
+            notebook_id, session_id, content=content, role=role, citations=citations, request_options=request_options
         )
         return _response.data
 
@@ -144,8 +144,8 @@ class AsyncMessagesClient:
         notebook_id: int,
         session_id: int,
         *,
-        offset: typing.Optional[int] = None,
         limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[MessageRead]:
         """
@@ -155,9 +155,9 @@ class AsyncMessagesClient:
 
         session_id : int
 
-        offset : typing.Optional[int]
-
         limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -188,7 +188,7 @@ class AsyncMessagesClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.list_messages(
-            notebook_id, session_id, offset=offset, limit=limit, request_options=request_options
+            notebook_id, session_id, limit=limit, offset=offset, request_options=request_options
         )
         return _response.data
 
@@ -197,8 +197,8 @@ class AsyncMessagesClient:
         notebook_id: int,
         session_id: int,
         *,
-        role: MessageCreateRole,
         content: str,
+        role: MessageCreateRole,
         citations: typing.Optional[typing.Sequence[Citation]] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> MessageRead:
@@ -209,9 +209,9 @@ class AsyncMessagesClient:
 
         session_id : int
 
-        role : MessageCreateRole
-
         content : str
+
+        role : MessageCreateRole
 
         citations : typing.Optional[typing.Sequence[Citation]]
 
@@ -238,14 +238,14 @@ class AsyncMessagesClient:
             await client.messages.create_message(
                 notebook_id=1,
                 session_id=1,
-                role="user",
                 content="content",
+                role="assistant",
             )
 
 
         asyncio.run(main())
         """
         _response = await self._raw_client.create_message(
-            notebook_id, session_id, role=role, content=content, citations=citations, request_options=request_options
+            notebook_id, session_id, content=content, role=role, citations=citations, request_options=request_options
         )
         return _response.data

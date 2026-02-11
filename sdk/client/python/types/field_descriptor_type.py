@@ -3,5 +3,5 @@
 import typing
 
 FieldDescriptorType = typing.Union[
-    typing.Literal["text", "heading", "badge", "list", "tree", "date", "citation", "code"], typing.Any
+    typing.Literal["badge", "citation", "code", "date", "heading", "list", "text", "tree"], typing.Any
 ]

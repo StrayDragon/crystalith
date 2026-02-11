@@ -7,14 +7,14 @@ from ..core.pydantic_utilities import IS_PYDANTIC_V2, UniversalBaseModel
 
 
 class Citation(UniversalBaseModel):
-    source_id: int
-    source_name: str
     chunk_id: int
     chunk_index: int
     page_number: typing.Optional[int] = None
     paragraph_index: typing.Optional[int] = None
-    snippet: str
     score: typing.Optional[float] = None
+    snippet: str
+    source_id: int
+    source_name: str
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

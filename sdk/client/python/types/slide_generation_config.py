@@ -7,14 +7,14 @@ from ..core.pydantic_utilities import IS_PYDANTIC_V2, UniversalBaseModel
 
 
 class SlideGenerationConfig(UniversalBaseModel):
-    quantity: typing.Optional[str] = None
     audience: typing.Optional[str] = None
-    structure: typing.Optional[str] = None
-    tone: typing.Optional[str] = None
-    language: typing.Optional[str] = None
     density: typing.Optional[str] = None
-    theme_preset: typing.Optional[str] = None
     frontmatter: typing.Optional[str] = None
+    language: typing.Optional[str] = None
+    quantity: typing.Optional[str] = None
+    structure: typing.Optional[str] = None
+    theme_preset: typing.Optional[str] = None
+    tone: typing.Optional[str] = None
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

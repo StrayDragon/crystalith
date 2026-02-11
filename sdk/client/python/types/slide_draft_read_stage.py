@@ -2,4 +2,4 @@
 
 import typing
 
-SlideDraftReadStage = typing.Union[typing.Literal["input", "outline", "markdown"], typing.Any]
+SlideDraftReadStage = typing.Union[typing.Literal["input", "markdown", "outline"], typing.Any]

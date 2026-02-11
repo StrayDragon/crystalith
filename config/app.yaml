@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=./schema.json
+# yaml-language-server: $schema=./app.schema.json
 # ============================================================================
 # Crystalith Configuration (safe defaults for public repo)
 # ============================================================================
@@ -208,4 +208,3 @@ source_ingestion:
     browserless:
       enabled: false
       endpoint: "ws://localhost:3000"
-

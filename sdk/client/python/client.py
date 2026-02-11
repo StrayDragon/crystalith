@@ -76,20 +76,28 @@ class CrystalithClient:
             else httpx.Client(timeout=_defaulted_timeout),
             timeout=_defaulted_timeout,
         )
+        self._models: typing.Optional[ModelsClient] = None
         self._notebooks: typing.Optional[NotebooksClient] = None
+        self._analysis: typing.Optional[AnalysisClient] = None
+        self._outputs: typing.Optional[OutputsClient] = None
+        self._qa: typing.Optional[QaClient] = None
+        self._refine: typing.Optional[RefineClient] = None
+        self._research: typing.Optional[ResearchClient] = None
         self._sessions: typing.Optional[SessionsClient] = None
         self._messages: typing.Optional[MessagesClient] = None
-        self._analysis: typing.Optional[AnalysisClient] = None
-        self._models: typing.Optional[ModelsClient] = None
-        self._qa: typing.Optional[QaClient] = None
-        self._sources: typing.Optional[SourcesClient] = None
-        self._outputs: typing.Optional[OutputsClient] = None
-        self._refine: typing.Optional[RefineClient] = None
         self._slides: typing.Optional[SlidesClient] = None
-        self._research: typing.Optional[ResearchClient] = None
+        self._sources: typing.Optional[SourcesClient] = None
         self._tasks: typing.Optional[TasksClient] = None
         self._templates: typing.Optional[TemplatesClient] = None
         self._workspace_tools: typing.Optional[WorkspaceToolsClient] = None
+
+    @property
+    def models(self):
+        if self._models is None:
+            from .models.client import ModelsClient  # noqa: E402
+
+            self._models = ModelsClient(client_wrapper=self._client_wrapper)
+        return self._models
 
     @property
     def notebooks(self):
@@ -98,6 +106,46 @@ class CrystalithClient:
 
             self._notebooks = NotebooksClient(client_wrapper=self._client_wrapper)
         return self._notebooks
+
+    @property
+    def analysis(self):
+        if self._analysis is None:
+            from .analysis.client import AnalysisClient  # noqa: E402
+
+            self._analysis = AnalysisClient(client_wrapper=self._client_wrapper)
+        return self._analysis
+
+    @property
+    def outputs(self):
+        if self._outputs is None:
+            from .outputs.client import OutputsClient  # noqa: E402
+
+            self._outputs = OutputsClient(client_wrapper=self._client_wrapper)
+        return self._outputs
+
+    @property
+    def qa(self):
+        if self._qa is None:
+            from .qa.client import QaClient  # noqa: E402
+
+            self._qa = QaClient(client_wrapper=self._client_wrapper)
+        return self._qa
+
+    @property
+    def refine(self):
+        if self._refine is None:
+            from .refine.client import RefineClient  # noqa: E402
+
+            self._refine = RefineClient(client_wrapper=self._client_wrapper)
+        return self._refine
+
+    @property
+    def research(self):
+        if self._research is None:
+            from .research.client import ResearchClient  # noqa: E402
+
+            self._research = ResearchClient(client_wrapper=self._client_wrapper)
+        return self._research
 
     @property
     def sessions(self):
@@ -116,54 +164,6 @@ class CrystalithClient:
         return self._messages
 
     @property
-    def analysis(self):
-        if self._analysis is None:
-            from .analysis.client import AnalysisClient  # noqa: E402
-
-            self._analysis = AnalysisClient(client_wrapper=self._client_wrapper)
-        return self._analysis
-
-    @property
-    def models(self):
-        if self._models is None:
-            from .models.client import ModelsClient  # noqa: E402
-
-            self._models = ModelsClient(client_wrapper=self._client_wrapper)
-        return self._models
-
-    @property
-    def qa(self):
-        if self._qa is None:
-            from .qa.client import QaClient  # noqa: E402
-
-            self._qa = QaClient(client_wrapper=self._client_wrapper)
-        return self._qa
-
-    @property
-    def sources(self):
-        if self._sources is None:
-            from .sources.client import SourcesClient  # noqa: E402
-
-            self._sources = SourcesClient(client_wrapper=self._client_wrapper)
-        return self._sources
-
-    @property
-    def outputs(self):
-        if self._outputs is None:
-            from .outputs.client import OutputsClient  # noqa: E402
-
-            self._outputs = OutputsClient(client_wrapper=self._client_wrapper)
-        return self._outputs
-
-    @property
-    def refine(self):
-        if self._refine is None:
-            from .refine.client import RefineClient  # noqa: E402
-
-            self._refine = RefineClient(client_wrapper=self._client_wrapper)
-        return self._refine
-
-    @property
     def slides(self):
         if self._slides is None:
             from .slides.client import SlidesClient  # noqa: E402
@@ -172,12 +172,12 @@ class CrystalithClient:
         return self._slides
 
     @property
-    def research(self):
-        if self._research is None:
-            from .research.client import ResearchClient  # noqa: E402
+    def sources(self):
+        if self._sources is None:
+            from .sources.client import SourcesClient  # noqa: E402
 
-            self._research = ResearchClient(client_wrapper=self._client_wrapper)
-        return self._research
+            self._sources = SourcesClient(client_wrapper=self._client_wrapper)
+        return self._sources
 
     @property
     def tasks(self):
@@ -256,20 +256,28 @@ class AsyncCrystalithClient:
             else httpx.AsyncClient(timeout=_defaulted_timeout),
             timeout=_defaulted_timeout,
         )
+        self._models: typing.Optional[AsyncModelsClient] = None
         self._notebooks: typing.Optional[AsyncNotebooksClient] = None
+        self._analysis: typing.Optional[AsyncAnalysisClient] = None
+        self._outputs: typing.Optional[AsyncOutputsClient] = None
+        self._qa: typing.Optional[AsyncQaClient] = None
+        self._refine: typing.Optional[AsyncRefineClient] = None
+        self._research: typing.Optional[AsyncResearchClient] = None
         self._sessions: typing.Optional[AsyncSessionsClient] = None
         self._messages: typing.Optional[AsyncMessagesClient] = None
-        self._analysis: typing.Optional[AsyncAnalysisClient] = None
-        self._models: typing.Optional[AsyncModelsClient] = None
-        self._qa: typing.Optional[AsyncQaClient] = None
-        self._sources: typing.Optional[AsyncSourcesClient] = None
-        self._outputs: typing.Optional[AsyncOutputsClient] = None
-        self._refine: typing.Optional[AsyncRefineClient] = None
         self._slides: typing.Optional[AsyncSlidesClient] = None
-        self._research: typing.Optional[AsyncResearchClient] = None
+        self._sources: typing.Optional[AsyncSourcesClient] = None
         self._tasks: typing.Optional[AsyncTasksClient] = None
         self._templates: typing.Optional[AsyncTemplatesClient] = None
         self._workspace_tools: typing.Optional[AsyncWorkspaceToolsClient] = None
+
+    @property
+    def models(self):
+        if self._models is None:
+            from .models.client import AsyncModelsClient  # noqa: E402
+
+            self._models = AsyncModelsClient(client_wrapper=self._client_wrapper)
+        return self._models
 
     @property
     def notebooks(self):
@@ -278,6 +286,46 @@ class AsyncCrystalithClient:
 
             self._notebooks = AsyncNotebooksClient(client_wrapper=self._client_wrapper)
         return self._notebooks
+
+    @property
+    def analysis(self):
+        if self._analysis is None:
+            from .analysis.client import AsyncAnalysisClient  # noqa: E402
+
+            self._analysis = AsyncAnalysisClient(client_wrapper=self._client_wrapper)
+        return self._analysis
+
+    @property
+    def outputs(self):
+        if self._outputs is None:
+            from .outputs.client import AsyncOutputsClient  # noqa: E402
+
+            self._outputs = AsyncOutputsClient(client_wrapper=self._client_wrapper)
+        return self._outputs
+
+    @property
+    def qa(self):
+        if self._qa is None:
+            from .qa.client import AsyncQaClient  # noqa: E402
+
+            self._qa = AsyncQaClient(client_wrapper=self._client_wrapper)
+        return self._qa
+
+    @property
+    def refine(self):
+        if self._refine is None:
+            from .refine.client import AsyncRefineClient  # noqa: E402
+
+            self._refine = AsyncRefineClient(client_wrapper=self._client_wrapper)
+        return self._refine
+
+    @property
+    def research(self):
+        if self._research is None:
+            from .research.client import AsyncResearchClient  # noqa: E402
+
+            self._research = AsyncResearchClient(client_wrapper=self._client_wrapper)
+        return self._research
 
     @property
     def sessions(self):
@@ -296,54 +344,6 @@ class AsyncCrystalithClient:
         return self._messages
 
     @property
-    def analysis(self):
-        if self._analysis is None:
-            from .analysis.client import AsyncAnalysisClient  # noqa: E402
-
-            self._analysis = AsyncAnalysisClient(client_wrapper=self._client_wrapper)
-        return self._analysis
-
-    @property
-    def models(self):
-        if self._models is None:
-            from .models.client import AsyncModelsClient  # noqa: E402
-
-            self._models = AsyncModelsClient(client_wrapper=self._client_wrapper)
-        return self._models
-
-    @property
-    def qa(self):
-        if self._qa is None:
-            from .qa.client import AsyncQaClient  # noqa: E402
-
-            self._qa = AsyncQaClient(client_wrapper=self._client_wrapper)
-        return self._qa
-
-    @property
-    def sources(self):
-        if self._sources is None:
-            from .sources.client import AsyncSourcesClient  # noqa: E402
-
-            self._sources = AsyncSourcesClient(client_wrapper=self._client_wrapper)
-        return self._sources
-
-    @property
-    def outputs(self):
-        if self._outputs is None:
-            from .outputs.client import AsyncOutputsClient  # noqa: E402
-
-            self._outputs = AsyncOutputsClient(client_wrapper=self._client_wrapper)
-        return self._outputs
-
-    @property
-    def refine(self):
-        if self._refine is None:
-            from .refine.client import AsyncRefineClient  # noqa: E402
-
-            self._refine = AsyncRefineClient(client_wrapper=self._client_wrapper)
-        return self._refine
-
-    @property
     def slides(self):
         if self._slides is None:
             from .slides.client import AsyncSlidesClient  # noqa: E402
@@ -352,12 +352,12 @@ class AsyncCrystalithClient:
         return self._slides
 
     @property
-    def research(self):
-        if self._research is None:
-            from .research.client import AsyncResearchClient  # noqa: E402
+    def sources(self):
+        if self._sources is None:
+            from .sources.client import AsyncSourcesClient  # noqa: E402
 
-            self._research = AsyncResearchClient(client_wrapper=self._client_wrapper)
-        return self._research
+            self._sources = AsyncSourcesClient(client_wrapper=self._client_wrapper)
+        return self._sources
 
     @property
     def tasks(self):

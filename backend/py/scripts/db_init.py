@@ -49,7 +49,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--schema-path",
         default=None,
-        help="Optional schema.json path (defaults to config/schema.json).",
+        help="Optional schema path (defaults to config/app.schema.json).",
     )
     parser.add_argument(
         "--secrets-path",
@@ -77,7 +77,7 @@ def _load_settings(args: argparse.Namespace) -> Settings:
     if explicit and not config_path.is_file():
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
-    schema_path = Path(args.schema_path) if args.schema_path else config_path.parent / "schema.json"
+    schema_path = Path(args.schema_path) if args.schema_path else config_path.parent / "app.schema.json"
     secrets_path_value = args.secrets_path or os.environ.get("CRYSTALITH_SECRETS_PATH")
     secrets_path = Path(secrets_path_value) if secrets_path_value else None
 

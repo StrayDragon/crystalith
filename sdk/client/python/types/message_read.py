@@ -10,12 +10,12 @@ from .message_read_role import MessageReadRole
 
 
 class MessageRead(UniversalBaseModel):
-    id: int
-    session_id: int
-    role: MessageReadRole
-    content: str
     citations: typing.Optional[typing.List[Citation]] = None
+    content: str
     created_at: dt.datetime
+    id: int
+    role: MessageReadRole
+    session_id: int
     updated_at: dt.datetime
 
     if IS_PYDANTIC_V2:

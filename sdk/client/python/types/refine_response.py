@@ -10,13 +10,13 @@ from .structured_refine import StructuredRefine
 
 
 class RefineResponse(UniversalBaseModel):
+    bullets: typing.Optional[typing.List[str]] = None
+    citations: typing.List[Citation]
+    created_at: dt.datetime
+    evidence: bool
     format: str
     paragraph: typing.Optional[str] = None
-    bullets: typing.Optional[typing.List[str]] = None
     structured: typing.Optional[StructuredRefine] = None
-    citations: typing.List[Citation]
-    evidence: bool
-    created_at: dt.datetime
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

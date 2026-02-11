@@ -8,10 +8,10 @@ from ..core.pydantic_utilities import IS_PYDANTIC_V2, UniversalBaseModel
 
 
 class SourceTagRead(UniversalBaseModel):
-    id: int
-    notebook_id: int
-    name: str
     created_at: dt.datetime
+    id: int
+    name: str
+    notebook_id: int
     updated_at: dt.datetime
 
     if IS_PYDANTIC_V2:

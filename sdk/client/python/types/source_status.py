@@ -2,4 +2,4 @@
 
 import typing
 
-SourceStatus = typing.Union[typing.Literal["processing", "ready", "failed"], typing.Any]
+SourceStatus = typing.Union[typing.Literal["failed", "processing", "ready"], typing.Any]

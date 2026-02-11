@@ -3,5 +3,5 @@
 import typing
 
 ResearchSessionListItemStatus = typing.Union[
-    typing.Literal["planning", "searching", "analyzing", "waiting_user", "completed", "cancelled"], typing.Any
+    typing.Literal["analyzing", "cancelled", "completed", "planning", "searching", "waiting_user"], typing.Any
 ]

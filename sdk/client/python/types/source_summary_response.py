@@ -12,12 +12,12 @@ class SourceSummaryResponse(UniversalBaseModel):
     Response for source summary.
     """
 
+    generated_at: dt.datetime
+    key_points: typing.List[str]
     source_id: int
     summary: str
-    key_points: typing.List[str]
     topics: typing.List[str]
     word_count: int
-    generated_at: dt.datetime
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

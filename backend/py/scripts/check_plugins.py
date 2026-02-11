@@ -18,8 +18,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--schema-path",
-        default="config/schema.json",
-        help="Path to config/schema.json (default: config/schema.json)",
+        default="config/app.schema.json",
+        help="Path to config/app.schema.json (default: config/app.schema.json)",
     )
     parser.add_argument(
         "--json",

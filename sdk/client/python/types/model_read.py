@@ -11,19 +11,19 @@ class ModelRead(UniversalBaseModel):
     Response model for a single AI model.
     """
 
-    id: str
-    provider: str
-    model: str
-    display_name: str
-    description: str
-    roles: typing.Optional[typing.List[str]] = pydantic.Field(default=None)
-    """
-    Model roles: chat, embed, edit, etc.
-    """
-
     capabilities: typing.Optional[typing.List[str]] = pydantic.Field(default=None)
     """
     Special capabilities: tool_use, image_input, etc.
+    """
+
+    description: str
+    display_name: str
+    id: str
+    model: str
+    provider: str
+    roles: typing.Optional[typing.List[str]] = pydantic.Field(default=None)
+    """
+    Model roles: chat, embed, edit, etc.
     """
 
     if IS_PYDANTIC_V2:

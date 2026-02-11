@@ -51,11 +51,11 @@ class ConfigManager:
 
         Args:
             config_path: Path to the main YAML config file
-            schema_path: Path to write JSON schema (defaults to config/schema.json)
+            schema_path: Path to write JSON schema (defaults to config/app.schema.json)
             secrets_path: Optional path to secrets YAML file
         """
         self.config_path = config_path
-        self.schema_path = schema_path or Path("config/schema.json")
+        self.schema_path = schema_path or Path("config/app.schema.json")
         self.secrets_path = secrets_path
         self._settings: Settings | None = None
         self._secrets: dict[str, str] | None = None
@@ -342,7 +342,7 @@ class ConfigManager:
 
         The schema can be used for YAML editor validation:
 
-            # yaml-language-server: $schema=./schema.json
+            # yaml-language-server: $schema=./app.schema.json
 
         Returns:
             Path to the generated schema file
@@ -428,7 +428,7 @@ class ConfigManager:
             Example YAML configuration string
         """
         return '''\
-# yaml-language-server: $schema=./schema.json
+# yaml-language-server: $schema=./app.schema.json
 # ============================================================================
 # Crystalith Configuration
 # ============================================================================

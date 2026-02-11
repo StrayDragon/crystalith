@@ -2,4 +2,4 @@
 
 import typing
 
-ResearchStepType = typing.Union[typing.Literal["plan", "search", "analyze", "user_input", "summary"], typing.Any]
+ResearchStepType = typing.Union[typing.Literal["analyze", "plan", "search", "summary", "user_input"], typing.Any]

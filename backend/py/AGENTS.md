@@ -31,7 +31,7 @@ Run from `backend/py`:
 - PRs should include a focused description, linked issue/spec (if any), and test results. Add screenshots/GIFs for UI changes.
 
 ## Security & Configuration Tips
-- Local config lives in `config/app.yaml`; schema in `config/schema.json`.
+- Local config lives in `config/app.yaml`; schema in `config/app.schema.json`.
 - Never commit secrets or API keys. If config shape changes, document required keys.
 
 ## Agent-Specific Instructions
