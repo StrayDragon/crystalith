@@ -1,9 +1,7 @@
-# NOTE: This file is generated from deployments/prod/docker-compose.yml.
-# Run: python scripts/deploy/sync_prod_compose.py
 services:
   web:
     build:
-      context: .
+      context: ../..
       dockerfile: dockers/frontend/Dockerfile
     container_name: crystalith-web
     ports:
@@ -22,7 +20,7 @@ services:
 
   api:
     build:
-      context: .
+      context: ../..
       dockerfile: dockers/backend/Dockerfile
     container_name: crystalith-api
     environment:
@@ -56,7 +54,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - api_data:/app/backend/py/data
-      - ./config:/app/config:ro
+      - ../../config:/app/config:ro
     depends_on:
       postgres:
         condition: service_healthy

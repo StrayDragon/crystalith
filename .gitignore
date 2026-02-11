@@ -23,6 +23,11 @@
 
 # Local configuration that shouldn't be shared
 *.local
+*.local.*
+
+# Crystalith secrets/config overrides
+config/secrets.yaml
+config/secrets.yml
 
 # Local runtime data (databases/uploads)
 data/
