@@ -1,36 +1,36 @@
 # yaml-language-server: $schema=./schema.json
 # ============================================================================
-# Crystalith Configuration
+# Crystalith Configuration (safe defaults for public repo)
 # ============================================================================
-# 支持的特性:
-# - YAML anchors 用于复用配置 (推荐!)
-# - 环境变量: ${{ env.VAR_NAME }}
-# - Secrets: ${{ secrets.SECRET_NAME }} (需要 secrets.yaml)
-#
-# YAML 版本头启用高级特性如 anchors:
+# Notes:
+# - Do NOT commit secrets. Use `.env` (Docker Compose) or `CRYSTALITH_SECRETS_PATH`.
+# - Supports YAML anchors, environment interpolation (${{ env.VAR }}),
+#   and secrets interpolation (${{ secrets.VAR }}).
 %YAML 1.1
 ---
-# 配置元数据
+# ----------------------------------------------------------------------------
+# Metadata
+# ----------------------------------------------------------------------------
 name: "Crystalith"
 version: "1.0.0"
 schema: v1
 
-# ============================================================================
-# Providers (使用 YAML anchors 定义可复用的提供商配置)
-# ============================================================================
+# ----------------------------------------------------------------------------
+# Providers (use YAML anchors for reuse)
+# ----------------------------------------------------------------------------
 providers:
-  # OpenAI 兼容 API (可用于 OpenRouter, Azure 等)
-  openai_proxy: &openai_proxy
-    api_key: "***REMOVED***"
-    base_url: "http://gateway.lan:50256/v1"
+  # OpenAI-compatible API
+  openai_default: &openai_default
+    api_key: "${{ env.OPENAI_API_KEY }}"
+    base_url: "https://api.openai.com/v1"
 
-  # 本地 Ollama
+  # Local Ollama
   ollama_local: &ollama_local
     host: "http://localhost:11434"
 
-# ============================================================================
-# 默认 Ollama 运行时选项 (可复用)
-# ============================================================================
+# ----------------------------------------------------------------------------
+# Optional Ollama defaults (anchor)
+# ----------------------------------------------------------------------------
 ollama_defaults:
   embedding_options: &ollama_embedding_options
     num_ctx: 32768
@@ -41,27 +41,26 @@ ollama_defaults:
     numa: true
     low_vram: false
 
-# ============================================================================
-# Models - 多模型配置 (必需)
-# ============================================================================
+# ----------------------------------------------------------------------------
+# Models (required)
+# ----------------------------------------------------------------------------
 models:
-  # 默认模型选择
   defaults:
+    # One-click default path: OpenAI
     chat: "gpt-5.2"
-    embedding: "bge-m3-local"
+    embedding: "text-embedding-3-small"
 
-  # 可用模型列表
   available:
-    # ==================== OpenAI GPT 系列 ====================
+    # -------------------- OpenAI (chat) --------------------
     - id: "gpt-5.2"
       provider: "openai"
       model: "gpt-5.2"
       display_name: "GPT-5.2"
-      description: "最新 OpenAI 模型，综合能力强"
+      description: "OpenAI chat model"
       roles: [chat, edit]
       capabilities: [tool_use, image_input]
       provider_config:
-        <<: *openai_proxy
+        <<: *openai_default
       completion_options:
         temperature: 0.7
         max_tokens: 4096
@@ -70,64 +69,30 @@ models:
       provider: "openai"
       model: "gpt-5.2-codex"
       display_name: "GPT-5.2 Codex"
-      description: "代码专用模型"
+      description: "Code-focused model"
       roles: [chat, edit, autocomplete]
       capabilities: [tool_use]
       provider_config:
-        <<: *openai_proxy
+        <<: *openai_default
       completion_options:
         temperature: 0.3
 
-    # ==================== DeepSeek 系列 ====================
-    - id: "deepseek-chat"
+    # -------------------- OpenAI (embedding) --------------------
+    - id: "text-embedding-3-small"
       provider: "openai"
-      model: "deepseek-chat"
-      display_name: "DeepSeek Chat"
-      description: "DeepSeek 对话模型，性价比高"
-      roles: [chat]
+      model: "text-embedding-3-small"
+      display_name: "text-embedding-3-small"
+      description: "OpenAI embedding model"
+      roles: [embed]
       provider_config:
-        <<: *openai_proxy
+        <<: *openai_default
 
-    - id: "deepseek-r1"
-      provider: "openai"
-      model: "deepseek-ai/DeepSeek-R1"
-      display_name: "DeepSeek R1"
-      description: "DeepSeek 推理模型，适合复杂任务"
-      roles: [chat]
-      capabilities: [tool_use]
-      provider_config:
-        <<: *openai_proxy
-      completion_options:
-        reasoning: true
-
-    # ==================== Claude ====================
-    - id: "claude-4-sonnet"
-      provider: "openai"
-      model: "anthropic/claude-4-sonnet"
-      display_name: "Claude 4 Sonnet"
-      description: "Anthropic Claude 4 模型"
-      roles: [chat, edit]
-      capabilities: [tool_use, image_input]
-      provider_config:
-        <<: *openai_proxy
-
-    # ==================== Gemini ====================
-    - id: "gemini-2.5-pro"
-      provider: "openai"
-      model: "google/gemini-2.5-pro"
-      display_name: "Gemini 2.5 Pro"
-      description: "Google Gemini Pro 模型"
-      roles: [chat]
-      capabilities: [tool_use, image_input]
-      provider_config:
-        <<: *openai_proxy
-
-    # ==================== 本地模型 ====================
+    # -------------------- Ollama (offline optional) --------------------
     - id: "qwen-local"
       provider: "ollama"
       model: "qwen2.5-coder:1.5b"
-      display_name: "Qwen 2.5 (本地)"
-      description: "本地运行的轻量模型，无需网络"
+      display_name: "Qwen 2.5 (local)"
+      description: "Local chat model via Ollama"
       roles: [chat]
       provider_config:
         <<: *ollama_local
@@ -135,38 +100,40 @@ models:
     - id: "bge-m3-local"
       provider: "ollama"
       model: "bge-m3:567m"
-      display_name: "BGE-M3 (本地)"
-      description: "本地运行的嵌入模型"
+      display_name: "BGE-M3 (local)"
+      description: "Local embedding model via Ollama"
       roles: [embed]
       provider_config:
         <<: *ollama_local
       ollama_options:
         <<: *ollama_embedding_options
 
-# ============================================================================
-# 功能设置
-# ============================================================================
+# ----------------------------------------------------------------------------
+# Feature settings
+# ----------------------------------------------------------------------------
 embedding:
   chunk_size: 512
   batch_size: 32
 
-# ============================================================================
-# 存储
-# ============================================================================
+# ----------------------------------------------------------------------------
+# Storage
+# ----------------------------------------------------------------------------
 vector_storage:
   provider: "chroma"
   chroma:
     path: "./data/chroma"
     telemetry: false
+    host: "localhost"
+    port: 8000
   sqlite:
     path: "./data/vectors.db"
 
 database:
   url: "sqlite+aiosqlite:///./data/app.db"
 
-# ============================================================================
-# 上下文窗口
-# ============================================================================
+# ----------------------------------------------------------------------------
+# Context window
+# ----------------------------------------------------------------------------
 context_window:
   max_tokens: 8000
   compression_strategy: "truncate"
@@ -177,87 +144,68 @@ context_window:
     - recent
     - system
 
-# ============================================================================
-# 搜索引擎
-# ============================================================================
+# ----------------------------------------------------------------------------
+# Search engine (optional)
+# ----------------------------------------------------------------------------
 search:
   searxng:
-    host: "http://gateway.lan:50201"
-    # api_key: ""  # 可选，仅当 SearXNG 实例需要认证时配置
+    host: "http://localhost:8888"
     timeout: 10
     max_results: 10
 
-# ============================================================================
-# 代理设置 (YAML anchor，可被其他功能引用)
-# ============================================================================
-# 定义全局代理配置作为 anchor，其他功能可按需引用或覆盖
+# ----------------------------------------------------------------------------
+# Proxy settings (YAML anchor for optional reuse)
+# ----------------------------------------------------------------------------
 proxy_settings: &default_proxy
-  enabled: true  # 启用代理
-  http_url: "http://127.0.0.1:20171"   # HTTP 代理 URL
-  https_url: "http://127.0.0.1:20171"  # HTTPS 代理 URL（可选，默认使用 http_url）
-  socks5_url: null  # SOCKS5 代理 URL（例如 socks5://127.0.0.1:1080），设置后优先使用
-  no_proxy:  # 不走代理的域名/IP列表
+  enabled: false
+  http_url: null
+  https_url: null
+  socks5_url: null
+  no_proxy:
     - localhost
     - "127.0.0.1"
 
-# ============================================================================
-# 来源导入设置
-# ============================================================================
+# ----------------------------------------------------------------------------
+# Source ingestion
+# ----------------------------------------------------------------------------
 source_ingestion:
   url_fetch:
     proxy:
       <<: *default_proxy
-      # 可在此处覆盖全局代理设置
-    timeout: 30       # 请求超时时间（秒）
-    retry_count: 2    # 重试次数
-    retry_delay: 1.0  # 重试间隔（秒）
+    timeout: 30
+    retry_count: 2
+    retry_delay: 1.0
 
-  # 网页内容提取配置
   web_extraction:
-    # 提取器降级顺序（按优先级排列）
-    # 默认: trafilatura > jina > firecrawl > browserless
     fallback_order:
       - trafilatura
       - jina
       - firecrawl
       - browserless
-    enable_fallback: true  # 是否启用自动降级
+    enable_fallback: true
 
-    # Trafilatura 本地提取器（默认启用）
-    # 使用本地 trafilatura 库提取网页正文，速度快，无需外部服务
     trafilatura:
       enabled: true
       include_tables: true
       include_links: true
-      output_format: "markdown"  # markdown | txt | xml | json
+      output_format: "markdown"
       timeout: 30
       proxy:
         <<: *default_proxy
 
-    # Jina Reader API 提取器（免费，支持 JS 渲染）
-    # 使用 Jina Reader (r.jina.ai) 提取网页内容，返回 Markdown
-    # 免费使用，无需 API 密钥；可选配置 API 密钥获取更高配额
     jina:
       enabled: true
-      api_key: ""  # 可选，用于更高配额
+      api_key: ""
       timeout: 30
       proxy:
         <<: *default_proxy
 
-    # Firecrawl API 提取器（需要 API 密钥）
-    # 使用 Firecrawl API 提取网页内容，功能强大
-    # 获取 API 密钥: https://firecrawl.dev
     firecrawl:
       enabled: false
-      api_key: ""  # 填入你的 Firecrawl API 密钥
+      api_key: "${{ env.FIRECRAWL_API_KEY }}"
       timeout: 60
 
-    # Browserless 浏览器渲染提取器（需要服务）
-    # 使用 Browserless 服务渲染页面后提取，适合复杂动态页面
-    # 部署: docker run -p 3000:3000 ghcr.io/browserless/chromium
     browserless:
       enabled: false
       endpoint: "ws://localhost:3000"
-      token: ""  # 可选认证令牌
-      timeout: 60
-      wait_until: "networkidle"  # load | domcontentloaded | networkidle
+
