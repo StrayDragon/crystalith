@@ -2,7 +2,7 @@
   "name": "crystalith-web",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@10.24.0",
+  "packageManager": "pnpm@10.29.2",
   "dependencies": {
     "@material-tailwind/react": "^2.1.10",
     "@mui/icons-material": "^7.3.7",
