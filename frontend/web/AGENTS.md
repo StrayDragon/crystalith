@@ -14,7 +14,7 @@ Frontend (from repo root):
 - `pnpm test` — run Vitest and React Testing Library.
 - `pnpm run build` — create a production build.
 - `pnpm preview` — serve the production build locally.
-  - Vite proxy uses `E2E_API_URL` or `VITE_API_PROXY_TARGET` when set; defaults to `http://127.0.0.1:8032`.
+  - Vite proxy uses `VITE_API_PROXY_TARGET` when set; defaults to `http://127.0.0.1:8032`.
 
 Backend (from repo root):
 - `cd backend/py && uv sync` — install Python deps.
@@ -71,48 +71,6 @@ import { LAYER_LEVELS } from '../shared/layer';
 - Frontend uses Vitest + React Testing Library; colocate tests under `frontend/web/src/` with `*.test.tsx` naming.
 - Backend uses `pytest` + `pytest-asyncio`; tests live in `backend/py/tests/` and `backend/py/packages/*/tests/`.
 - Run targeted tests for changed areas and note any manual checks in the PR.
-
-### E2E Tests (Playwright)
-E2E tests are located in `frontend/web/e2e/` and use Playwright for browser automation.
-
-**When to write E2E tests:**
-- Large UI/UX interactions that span multiple components
-- Critical user flows (e.g., creating notebooks, adding sources, chat interactions)
-- Layer/z-index behavior verification
-- Cross-component state management
-- Accessibility testing for complex interactions
-
-**Commands:**
-```bash
-cd frontend/web
-pnpm test:e2e          # Run all E2E tests
-pnpm test:e2e:ui       # Run with Playwright UI (interactive mode)
-```
-
-**Writing E2E tests:**
-```typescript
-import { test, expect } from '@playwright/test';
-
-test.describe('Feature Name', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:3000/');
-    await page.waitForSelector('main', { timeout: 10000 });
-  });
-
-  test('should do something', async ({ page }) => {
-    // Interact with the page
-    await page.getByRole('button', { name: /some button/ }).click();
-    // Assert expected behavior
-    await expect(page.locator('[role="dialog"]')).toBeVisible();
-  });
-});
-```
-
-**Best practices:**
-- Use semantic selectors (`getByRole`, `getByText`) over CSS selectors
-- Add appropriate waits for async operations
-- Test both happy path and error scenarios
-- Keep tests independent and isolated
 
 ## Commit & Pull Request Guidelines
 - Commit messages use short type prefixes like `feat:`, `fix:`, `refactor:`, `doc:`, `dev:`, `misc:` with optional scopes (e.g., `feat(frontend): add login form`).

@@ -8,8 +8,6 @@ ARG PNPM_VERSION=10.29.2
 
 WORKDIR /app/frontend/web
 
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-
 RUN set -eux; \
   if [ -n "$NPM_REGISTRY" ]; then \
     npm config set registry "$NPM_REGISTRY"; \
