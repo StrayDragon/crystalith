@@ -88,7 +88,10 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(
       if (!gs || !el) return;
       const parent = el.parentElement;
       if (!parent) return;
-      const available = parent.clientHeight;
+      // Subtract parent padding to get actual content area height
+      const style = getComputedStyle(parent);
+      const paddingY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+      const available = parent.clientHeight - paddingY;
       if (available <= 0) return;
       // margin is 6 on each side → total gap per row = 12
       const ch = Math.floor((available - GRID_ROWS * 12) / GRID_ROWS);

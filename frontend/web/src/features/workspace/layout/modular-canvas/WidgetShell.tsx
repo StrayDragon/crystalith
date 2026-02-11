@@ -19,14 +19,20 @@ export default function WidgetShell({
   onRemove,
 }: WidgetShellProps) {
   return (
-    <div className="flex flex-col h-full">
+    <div
+      className={`flex flex-col h-full rounded-[14px] overflow-hidden bg-white dark:bg-slate-900 border shadow-sm transition-shadow duration-200 ${
+        locked
+          ? 'border-gray-200 dark:border-slate-700 hover:shadow-md'
+          : 'border-dashed border-amber-300/40 dark:border-amber-600/30 hover:shadow-md'
+      }`}
+    >
       {/* Drag handle area */}
       <div
         className={`mc-draghandle flex items-center gap-1.5 px-3 py-2 border-b border-gray-100 dark:border-slate-700 bg-gray-50/60 dark:bg-slate-800/60 flex-shrink-0 select-none ${
           locked ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'
         }`}
       >
-        <span className="text-sm flex-shrink-0">{icon}</span>
+        {icon && <span className="text-sm flex-shrink-0">{icon}</span>}
         <span className="text-[11px] font-semibold text-gray-500 dark:text-slate-400 tracking-wide uppercase">
           {label}
         </span>
