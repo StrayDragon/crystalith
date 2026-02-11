@@ -11,6 +11,23 @@ TBD - created by archiving change refactor-frontend-layout-260129. Update Purpos
 - **THEN** 该子域代码 MUST 放入 `features/workspace/domains/<domain>/`
 - **AND** 不得散落在 `features/workspace` 顶层
 
+#### Scenario: 各功能域可独立注册为 widget
+- **WHEN** 模块化布局需要注册 widget
+- **THEN** 每个功能域 MUST 导出可独立渲染的 widget 入口组件
+- **AND** widget 入口组件封装该域的所有交互逻辑
+
+### Requirement: GridStack 桥接层
+系统 MUST 提供 GridStack 与 React 的桥接层，管理 widget 的生命周期、DOM 同步和 portal 渲染。
+
+#### Scenario: Widget 注册与渲染
+- **WHEN** 一个 widget 被添加到画布
+- **THEN** 桥接层 MUST 在 GridStack 创建的 DOM 容器中通过 React Portal 渲染对应的 React 组件
+- **AND** React 组件的生命周期与 GridStack widget 生命周期同步
+
+#### Scenario: Widget 移除与清理
+- **WHEN** 一个 widget 从画布移除
+- **THEN** 桥接层 MUST 清理对应的 React Portal 和组件状态
+
 ### Requirement: Domain naming alignment
 系统 MUST 使 workspace 子域名称尽量与后端 feature 命名一致，以降低跨端理解成本。
 
