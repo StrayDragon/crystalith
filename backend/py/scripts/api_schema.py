@@ -12,20 +12,58 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 
 def get_openapi_schema() -> dict:
-    """Generate OpenAPI schema from the application."""
+    """Generate OpenAPI schema from the application (deterministic)."""
     from crystalith.app import create_app
 
     app = create_app()
-    return app.openapi()
+    import fastapi._compat.v2 as compat_v2
+    import fastapi.openapi.utils as openapi_utils
+
+    def stable_get_compat_model_name_map(  # type: ignore[override]
+        fields: list[compat_v2.ModelField],
+    ) -> compat_v2.ModelNameMap:
+        v2_model_fields = [field for field in fields if isinstance(field, compat_v2.ModelField)]
+        flat_models = compat_v2.get_flat_models_from_fields(v2_model_fields, known_models=set())
+        ordered_models = sorted(flat_models, key=lambda m: f"{m.__module__}.{m.__qualname__}")
+        return compat_v2.get_model_name_map(ordered_models)
+
+    original = openapi_utils.get_compat_model_name_map
+    openapi_utils.get_compat_model_name_map = stable_get_compat_model_name_map  # type: ignore[assignment]
+    try:
+        return app.openapi()
+    finally:
+        openapi_utils.get_compat_model_name_map = original  # type: ignore[assignment]
+
+
+def _canonicalize_json(value: Any) -> Any:
+    """
+    Canonicalize JSON-like data to make schema exports stable across runs.
+
+    FastAPI's OpenAPI schema can contain lists whose ordering may vary depending on
+    import/registration order. We sort dict keys and also sort lists by a stable
+    JSON representation so that exports and checks are deterministic.
+    """
+    if isinstance(value, dict):
+        return {k: _canonicalize_json(value[k]) for k in sorted(value)}
+
+    if isinstance(value, list):
+        items = [_canonicalize_json(v) for v in value]
+        return sorted(
+            items,
+            key=lambda v: json.dumps(v, sort_keys=True, ensure_ascii=False, separators=(",", ":")),
+        )
+
+    return value
 
 
 def export_schema(output_path: Path | None = None) -> None:
     """Export OpenAPI schema to file or stdout."""
-    schema = get_openapi_schema()
-    schema_json = json.dumps(schema, indent=2, ensure_ascii=False)
+    schema = _canonicalize_json(get_openapi_schema())
+    schema_json = json.dumps(schema, indent=2, ensure_ascii=False, sort_keys=True)
 
     if output_path:
         output_path.write_text(schema_json)
@@ -43,14 +81,10 @@ def check_schema(schema_path: Path) -> bool:
         print(f"⚠️  Schema file not found: {schema_path}", file=sys.stderr)
         return False
 
-    current_schema = get_openapi_schema()
-    existing_schema = json.loads(schema_path.read_text())
+    current_schema = _canonicalize_json(get_openapi_schema())
+    existing_schema = _canonicalize_json(json.loads(schema_path.read_text()))
 
-    # Compare schemas (normalize to avoid formatting differences)
-    current_json = json.dumps(current_schema, sort_keys=True)
-    existing_json = json.dumps(existing_schema, sort_keys=True)
-
-    if current_json == existing_json:
+    if current_schema == existing_schema:
         print("✓ API schema is up to date", file=sys.stderr)
         return True
     else:
