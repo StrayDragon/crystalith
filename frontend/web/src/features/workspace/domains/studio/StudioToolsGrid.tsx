@@ -198,7 +198,7 @@ export default function StudioToolsGrid({
                 >
                   {getToolIcon(tool.outputType)}
                 </div>
-                <span className="leading-tight truncate flex-1 min-w-0">{tool.label}</span>
+                <span className="leading-tight flex-1 min-w-0">{tool.label}</span>
                 {tool.badge && (
                   <span className="h-3 px-1 text-[8px] bg-gray-900 text-white rounded leading-none flex items-center flex-shrink-0">
                     {tool.badge}

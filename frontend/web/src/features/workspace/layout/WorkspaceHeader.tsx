@@ -4,6 +4,8 @@ import {
   DarkMode as DarkModeIcon,
   Hub as HubIcon,
   LightMode as LightModeIcon,
+  Lock as LockIcon,
+  LockOpen as LockOpenIcon,
   SettingsBrightness as SystemThemeIcon,
 } from '@mui/icons-material';
 
@@ -125,23 +127,15 @@ export default function WorkspaceHeader({
               aria-label={locked ? '解锁布局' : '锁定布局'}
               className={`flex items-center justify-center w-7 h-7 rounded-md transition-all ${
                 locked
-                  ? 'text-gray-300 dark:text-slate-600 hover:text-gray-500 dark:hover:text-slate-400'
-                  : 'text-amber-500 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-900/15 hover:bg-amber-100 dark:hover:bg-amber-900/25'
+                  ? 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800'
+                  : 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
               }`}
             >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                {locked ? (
-                  <>
-                    <rect x="3" y="7" width="10" height="7" rx="1.5" />
-                    <path d="M5 7V5a3 3 0 0 1 6 0v2" />
-                  </>
-                ) : (
-                  <>
-                    <rect x="3" y="7" width="10" height="7" rx="1.5" />
-                    <path d="M5 7V5a3 3 0 0 1 6 0" />
-                  </>
-                )}
-              </svg>
+              {locked ? (
+                <LockIcon sx={{ fontSize: 16 }} />
+              ) : (
+                <LockOpenIcon sx={{ fontSize: 16 }} />
+              )}
             </button>
           </Tooltip>
         )}
