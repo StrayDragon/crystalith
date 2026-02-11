@@ -1,21 +1,17 @@
 ---
-name: openspec-ff-change
-description: Fast-forward through OpenSpec artifact creation. Use when the user wants to quickly create all artifacts needed for implementation without stepping through each one individually.
-license: MIT
-compatibility: Requires openspec CLI.
-metadata:
-  author: openspec
-  version: "1.0"
-  generatedBy: "1.1.1"
+name: "OPSX: Fast Forward"
+description: Create a change and generate all artifacts needed for implementation in one go
+category: Workflow
+tags: [workflow, artifacts, experimental]
 ---
 
-快速推进工件创建——一次性生成开始实施所需的一切.
+快速推进工件创建——生成开始实施所需的一切.
 
-**输入**:用户请求应包含变更名称(kebab-case),或对其想要构建内容的描述.
+**输入**:`/opsx:ff` 后面的参数是变更名称(kebab-case),或用户想要构建内容的描述.
 
 **步骤**
 
-1. **如果未提供清晰的输入,询问要构建什么**
+1. **如果未提供输入,询问要构建什么**
 
    使用 **AskUserQuestion 工具**(开放式,无预设选项)询问:
    > "你想要处理什么变更？描述你想构建或修复的内容."
@@ -78,7 +74,7 @@ metadata:
 - 变更名称与位置
 - 已创建工件列表(简短描述)
 - 当前就绪情况:"所有工件已创建!可以开始实施."
-- 提示:"运行 `/opsx:apply` 或让我开始实现来处理任务."
+- 提示:"运行 `/opsx:apply` 开始实施."
 
 **工件创建指南**
 
@@ -91,5 +87,5 @@ metadata:
 - 创建实施所需的全部工件(由 schema 的 `apply.requires` 定义)
 - 在创建新工件之前始终阅读依赖工件
 - 如果上下文关键不清晰,询问用户——但尽量做出合理判断以保持进度
-- 如果已存在同名变更,建议继续该变更
+- 如果已存在同名变更,询问用户是继续还是新建
 - 写入后确认工件文件存在再继续

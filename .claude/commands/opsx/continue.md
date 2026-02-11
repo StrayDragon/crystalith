@@ -1,17 +1,13 @@
 ---
-name: openspec-continue-change
-description: Continue working on an OpenSpec change by creating the next artifact. Use when the user wants to progress their change, create the next artifact, or continue their workflow.
-license: MIT
-compatibility: Requires openspec CLI.
-metadata:
-  author: openspec
-  version: "1.0"
-  generatedBy: "1.1.1"
+name: "OPSX: Continue"
+description: Continue working on a change - create the next artifact (Experimental)
+category: Workflow
+tags: [workflow, artifacts, experimental]
 ---
 
 通过创建下一个工件来继续处理变更.
 
-**输入**:可选择指定变更名称.如果省略,先判断是否可从对话上下文推断;若含糊或不明确,必须提示可用的变更.
+**输入**:可选在 `/opsx:continue` 后指定变更名称(例如 `/opsx:continue add-auth`).如果省略,先判断是否可从对话上下文推断;若含糊或不明确,必须提示可用的变更.
 
 **步骤**
 
@@ -77,7 +73,7 @@ metadata:
 - 创建了哪个工件
 - 当前进度(N/M 完成)
 - 现在解锁的工件
-- 提示:"想要继续吗？只需让我继续或告诉我下一步做什么."
+- 提示:"运行 `/opsx:continue` 创建下一个工件"
 
 **工件创建指南**
 
