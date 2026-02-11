@@ -22,54 +22,21 @@ import { normalizeMessage } from '../shared/utils';
 import { listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet as listMessages } from '../../../api/generated';
 import { SkeletonCard } from '../shared/components/Skeleton';
 import { toast } from '../../../shared/toast';
-import WorkspacePanelShell from './components/WorkspacePanelShell';
-import WorkspaceResizeHandle from './components/WorkspaceResizeHandle';
+
+import {
+  ModularCanvas,
+  type ModularCanvasHandle,
+  CommandPalette,
+  type CommandItem,
+  WidgetCatalog,
+  WIDGET_REGISTRY,
+  DEFAULT_LAYOUT,
+} from './modular-canvas';
 
 const StudioOutputViewer = lazy(() => import('../domains/outputs/StudioOutputViewer'));
 const KnowledgeGraphView = lazy(() => import('../domains/analysis/KnowledgeGraphView'));
 const SlidesStudioDialog = lazy(() => import('../domains/studio/SlidesStudioDialog'));
 const SourceDetailDialog = lazy(() => import('../domains/sources/SourceDetailDialog'));
-
-type ExpandedPanel = 'sources' | 'chat' | 'studio' | null;
-
-type DragSide = 'left' | 'right';
-
-type DragState = {
-  side: DragSide;
-  startX: number;
-  startLeft: number;
-  startRight: number;
-  containerWidth: number;
-};
-
-const DEFAULT_SOURCES_WIDTH = 300;
-const DEFAULT_STUDIO_WIDTH = 320;
-const MIN_SOURCES_WIDTH = 220;
-const MAX_SOURCES_WIDTH = 380;
-const MIN_STUDIO_WIDTH = 240;
-const MAX_STUDIO_WIDTH = 380;
-const MIN_CHAT_WIDTH = 420;
-const RESIZE_HANDLE_WIDTH = 12;
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function resolveLeftWidth(left: number, right: number, containerWidth: number) {
-  const available = Math.max(0, containerWidth - RESIZE_HANDLE_WIDTH * 2);
-  const maxLeftByCenter = available - MIN_CHAT_WIDTH - right;
-  const maxLeft = Math.min(MAX_SOURCES_WIDTH, maxLeftByCenter);
-  const safeMax = Math.max(MIN_SOURCES_WIDTH, maxLeft);
-  return clamp(left, MIN_SOURCES_WIDTH, safeMax);
-}
-
-function resolveRightWidth(right: number, left: number, containerWidth: number) {
-  const available = Math.max(0, containerWidth - RESIZE_HANDLE_WIDTH * 2);
-  const maxRightByCenter = available - MIN_CHAT_WIDTH - left;
-  const maxRight = Math.min(MAX_STUDIO_WIDTH, maxRightByCenter);
-  const safeMax = Math.max(MIN_STUDIO_WIDTH, maxRight);
-  return clamp(right, MIN_STUDIO_WIDTH, safeMax);
-}
 
 export default function WorkspaceLayout() {
   const selectedSourceIds_raw = useWorkspaceStore((s) => s.selectedSourceIds);
@@ -77,27 +44,23 @@ export default function WorkspaceLayout() {
   const activeSessionId = useWorkspaceStore((s) => s.activeSessionId);
   const errMessages = useWorkspaceStore((s) => s.errors.messages);
   const store = useWorkspaceStore;
-  const [isResizing, setIsResizing] = useState(false);
+
+  // ─── Modular Canvas state ───
+  const canvasRef = useRef<ModularCanvasHandle>(null);
+  const [locked, setLocked] = useState(true); // default locked
+  const [showCmdPalette, setShowCmdPalette] = useState(false);
+  const [showCatalog, setShowCatalog] = useState(false);
+  const [activeWidgetIds, setActiveWidgetIds] = useState<string[]>([]);
+
+  // ─── Viewer / dialog state ───
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [isViewerFullscreen, setIsViewerFullscreen] = useState(false);
   const [viewerOutputId, setViewerOutputId] = useState<number | null>(null);
   const [isViewerElevated, setIsViewerElevated] = useState(false);
   const [isSessionSwitcherOpen, setIsSessionSwitcherOpen] = useState(false);
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
-  const [expandedPanel, setExpandedPanel] = useState<ExpandedPanel>(null);
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const sessionSearchRef = useRef<HTMLInputElement | null>(null);
-  const sourcesPanelRef = useRef<HTMLElement | null>(null);
-  const chatPanelRef = useRef<HTMLElement | null>(null);
-  const studioPanelRef = useRef<HTMLElement | null>(null);
-  const mainRef = useRef<HTMLElement | null>(null);
-  const dragStateRef = useRef<DragState | null>(null);
-  const sizesRef = useRef({
-    left: DEFAULT_SOURCES_WIDTH,
-    right: DEFAULT_STUDIO_WIDTH,
-  });
-  const resizeDebounceRef = useRef<number | null>(null);
-  const dragRafRef = useRef<number | null>(null);
 
   const [isGraphViewOpen, setIsGraphViewOpen] = useState(false);
 
@@ -123,6 +86,7 @@ export default function WorkspaceLayout() {
   const [slidesDraftId, setSlidesDraftId] = useState<number | null>(null);
   const [slidesQueueJobId, setSlidesQueueJobId] = useState<string | null>(null);
 
+  // ─── Domain hooks ───
   const notebooks = useNotebooks();
   const sessions = useSessions();
   const sources = useSources();
@@ -140,6 +104,7 @@ export default function WorkspaceLayout() {
     return job?.status ?? null;
   }, [refine.outputQueueJobs, slidesQueueJobId]);
 
+  // ─── Derived state ───
   const selectedSourceIds = useMemo(
     () =>
       Object.entries(selectedSourceIds_raw)
@@ -202,6 +167,7 @@ export default function WorkspaceLayout() {
     [selectedSourceIds_raw],
   );
 
+  // ─── Handlers ───
   const handleChatCitationHover = useCallback(
     (chunkId: number | null) => {
       if (chunkId == null) {
@@ -234,15 +200,12 @@ export default function WorkspaceLayout() {
         toast.error('未找到对应来源，请先同步来源列表。');
         return;
       }
-      if (expandedPanel && expandedPanel !== 'sources') {
-        setExpandedPanel('sources');
-      }
       setJumpToSource((prev) => ({
         id: source.id,
         token: (prev?.token ?? 0) + 1,
       }));
     },
-    [expandedPanel, resolveCitationSource],
+    [resolveCitationSource],
   );
 
   const handleCitationSaveQAAsSource = useCallback(
@@ -282,121 +245,6 @@ export default function WorkspaceLayout() {
     },
     [handleOpenCitationSourceDetail, sources],
   );
-
-  const applySizes = useCallback((left: number, right: number) => {
-    sizesRef.current = { left, right };
-    const main = mainRef.current;
-    if (!main) return;
-    main.style.setProperty('--sources-width', `${left}px`);
-    main.style.setProperty('--studio-width', `${right}px`);
-  }, []);
-
-  useEffect(() => {
-    applySizes(sizesRef.current.left, sizesRef.current.right);
-  }, [applySizes]);
-
-  useEffect(() => {
-    const applyResize = () => {
-      const main = mainRef.current;
-      if (!main) return;
-      const { width } = main.getBoundingClientRect();
-      const nextLeft = resolveLeftWidth(sizesRef.current.left, sizesRef.current.right, width);
-      const nextRight = resolveRightWidth(sizesRef.current.right, nextLeft, width);
-      applySizes(nextLeft, nextRight);
-    };
-
-    const handleResize = () => {
-      if (resizeDebounceRef.current != null) {
-        window.clearTimeout(resizeDebounceRef.current);
-      }
-      resizeDebounceRef.current = window.setTimeout(() => {
-        applyResize();
-      }, 120);
-    };
-
-    window.addEventListener('resize', handleResize);
-    applyResize();
-
-    return () => {
-      if (resizeDebounceRef.current != null) {
-        window.clearTimeout(resizeDebounceRef.current);
-      }
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [applySizes]);
-
-  useEffect(() => {
-    if (!isResizing) return;
-
-    const handleMove = (event: PointerEvent) => {
-      const dragState = dragStateRef.current;
-      if (!dragState) return;
-      const pointerX = event.clientX;
-
-      if (dragRafRef.current != null) {
-        window.cancelAnimationFrame(dragRafRef.current);
-      }
-
-      dragRafRef.current = window.requestAnimationFrame(() => {
-        const latestDragState = dragStateRef.current;
-        if (!latestDragState) return;
-        const delta = pointerX - latestDragState.startX;
-
-        if (latestDragState.side === 'left') {
-          const nextLeft = resolveLeftWidth(
-            latestDragState.startLeft + delta,
-            latestDragState.startRight,
-            latestDragState.containerWidth,
-          );
-          applySizes(nextLeft, latestDragState.startRight);
-        } else {
-          const nextRight = resolveRightWidth(
-            latestDragState.startRight - delta,
-            latestDragState.startLeft,
-            latestDragState.containerWidth,
-          );
-          applySizes(latestDragState.startLeft, nextRight);
-        }
-
-        dragRafRef.current = null;
-      });
-    };
-
-    const handleUp = () => {
-      dragStateRef.current = null;
-      setIsResizing(false);
-      if (dragRafRef.current != null) {
-        window.cancelAnimationFrame(dragRafRef.current);
-        dragRafRef.current = null;
-      }
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-
-    window.addEventListener('pointermove', handleMove);
-    window.addEventListener('pointerup', handleUp);
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-
-    return () => {
-      window.removeEventListener('pointermove', handleMove);
-      window.removeEventListener('pointerup', handleUp);
-      if (dragRafRef.current != null) {
-        window.cancelAnimationFrame(dragRafRef.current);
-        dragRafRef.current = null;
-      }
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-  }, [applySizes, isResizing]);
-
-  const handleRetrySources = useCallback(() => {
-    if (notebooks.notebooksError) {
-      void notebooks.retryNotebooks();
-      return;
-    }
-    void sources.retrySources();
-  }, [notebooks.notebooksError, notebooks.retryNotebooks, sources.retrySources]);
 
   const openSlidesDialog = useCallback(
     (mode: 'config' | 'preview', slideId?: number | null, queueJobId?: string | null) => {
@@ -464,27 +312,10 @@ export default function WorkspaceLayout() {
     setViewerOutputId(outputId);
   }, [openSlidesDialog, resolveSlideDraftId]);
 
-  const handleToggleExpand = useCallback((panel: ExpandedPanel) => {
-    setExpandedPanel((prev) => (prev === panel ? null : panel));
-  }, []);
-
-  const focusPanel = useCallback((panel: Exclude<ExpandedPanel, null>) => {
-    if (expandedPanel && expandedPanel !== panel) {
-      setExpandedPanel(null);
-    }
-
+  const focusPanel = useCallback((panel: 'sources' | 'chat' | 'studio') => {
     const nextActivePanel = panel === 'studio' ? 'refine' : panel;
     store.getState().setActivePanel(nextActivePanel);
-
-    window.requestAnimationFrame(() => {
-      const target = panel === 'sources'
-        ? sourcesPanelRef.current
-        : panel === 'chat'
-          ? chatPanelRef.current
-          : studioPanelRef.current;
-      target?.focus();
-    });
-  }, [expandedPanel, store]);
+  }, [store]);
 
   const openSessionSearch = useCallback(() => {
     setIsSessionSwitcherOpen(true);
@@ -498,7 +329,23 @@ export default function WorkspaceLayout() {
     void notebooks.createNotebookQuick('未命名笔记本');
   }, [notebooks]);
 
+  // ─── Lock toggle ───
+  const toggleLock = useCallback(() => {
+    setLocked((prev) => !prev);
+  }, []);
+
+  // ─── Close overlays ───
   const closeActiveOverlay = useCallback(() => {
+    if (showCmdPalette) {
+      setShowCmdPalette(false);
+      return true;
+    }
+
+    if (showCatalog) {
+      setShowCatalog(false);
+      return true;
+    }
+
     if (isShortcutHelpOpen) {
       setIsShortcutHelpOpen(false);
       return true;
@@ -547,15 +394,11 @@ export default function WorkspaceLayout() {
       return true;
     }
 
-    if (expandedPanel) {
-      setExpandedPanel(null);
-      return true;
-    }
-
     return false;
   }, [
+    showCmdPalette,
+    showCatalog,
     citationSourceDetailOpen,
-    expandedPanel,
     graphSessionDetailOpen,
     graphSourceDetailOpen,
     isGraphViewOpen,
@@ -566,12 +409,13 @@ export default function WorkspaceLayout() {
     handleCloseOutputViewer,
   ]);
 
+  // ─── Keyboard shortcuts ───
   const shortcutBindings = useMemo<KeyboardShortcutBinding[]>(() => [
     {
-      id: 'open-search',
+      id: 'open-command-palette',
       combo: 'Ctrl+K',
       handler: () => {
-        openSessionSearch();
+        setShowCmdPalette((v) => !v);
       },
     },
     {
@@ -636,19 +480,17 @@ export default function WorkspaceLayout() {
     createNotebookByShortcut,
     focusPanel,
     notebooks.activeNotebookId,
-    openSessionSearch,
   ]);
 
   useKeyboardShortcuts(shortcutBindings);
 
-  // Handle source click from graph view - open source detail dialog
+  // ─── Graph view handlers ───
   const handleGraphSourceClick = useCallback((source: SourceItem) => {
     setGraphSelectedSource(source);
     setGraphSourceDetailOpen(true);
     setGraphSourceDetailFullscreen(false);
   }, []);
 
-  // Handle session click from graph view - open session detail dialog
   const handleGraphSessionClick = useCallback(async (session: { id: number; title?: string; createdAt?: string; updatedAt?: string }) => {
     setGraphSelectedSession({
       id: session.id,
@@ -660,7 +502,6 @@ export default function WorkspaceLayout() {
     setGraphSessionDetailFullscreen(false);
     setGraphSessionMessages([]);
 
-    // Fetch messages for the selected session
     if (notebooks.activeNotebookId) {
       setGraphSessionMessagesLoading(true);
       try {
@@ -670,7 +511,6 @@ export default function WorkspaceLayout() {
         const normalizedMessages = response.map(normalizeMessage);
         setGraphSessionMessages(normalizedMessages);
       } catch {
-        // Silently fail - dialog will show empty state
         setGraphSessionMessages([]);
       } finally {
         setGraphSessionMessagesLoading(false);
@@ -693,55 +533,112 @@ export default function WorkspaceLayout() {
 
   const isConnected = notebooks.isConnected;
 
-  // NOTE: Mobile responsive layout is deferred - keeping 3-column horizontal layout always
-  // TODO: Add mobile/tablet responsive layout when adapting for mobile devices
-  return (
-    <div className="flex flex-col h-screen bg-gray-50/50 dark:bg-slate-950 gap-4 p-4 overflow-hidden text-gray-900 dark:text-gray-100">
-      <WorkspaceHeader
-        notebooks={notebooks.notebooks}
-        activeNotebookId={notebooks.activeNotebookId}
-        isNotebooksLoading={notebooks.isLoading}
-        notebooksError={notebooks.notebooksError}
-        createName={notebooks.createName}
-        createState={notebooks.createState}
-        createError={notebooks.createError}
-        isConnected={isConnected}
-        onCreateNameChange={notebooks.setCreateName}
-        onCreateNotebook={notebooks.createNotebook}
-        onCreateNotebookFromTemplate={notebooks.createNotebookFromTemplate}
-        onUpdateNotebook={notebooks.updateNotebook}
-        onDeleteNotebook={notebooks.deleteNotebook}
-        onSelectNotebook={notebooks.setActiveNotebookId}
-        onOpenKnowledgeGraph={() => {
-          setIsGraphViewOpen(true);
-          if (!analysis.analysis && !analysis.isLoading) {
-            analysis.fetchAnalysis();
-          }
-        }}
-      />
+  // ─── Command palette items ───
+  const cmdPaletteCommands = useMemo<CommandItem[]>(() => {
+    const cmds: CommandItem[] = [];
 
-      <main
-        ref={mainRef}
-        className={`flex-1 min-h-0 grid ${isResizing ? 'cursor-col-resize select-none' : ''}`}
-        aria-label="三栏工作区"
-        style={{
-          gridTemplateColumns: expandedPanel
-            ? '1fr' // Single column when expanded
-            : `minmax(220px, var(--sources-width, ${DEFAULT_SOURCES_WIDTH}px)) ${RESIZE_HANDLE_WIDTH}px minmax(0, 1fr) ${RESIZE_HANDLE_WIDTH}px minmax(240px, var(--studio-width, ${DEFAULT_STUDIO_WIDTH}px))`,
+    // Add/remove module commands
+    Object.entries(WIDGET_REGISTRY).forEach(([id, meta]) => {
+      const isActive = activeWidgetIds.includes(id);
+      if (!isActive) {
+        cmds.push({
+          id: `add-${id}`,
+          label: `添加模块: ${meta.label}`,
+          icon: meta.icon,
+          action: () => canvasRef.current?.addWidget(id),
+        });
+      } else {
+        cmds.push({
+          id: `remove-${id}`,
+          label: `移除模块: ${meta.label}`,
+          icon: meta.icon,
+          action: () => canvasRef.current?.removeWidget(id),
+        });
+      }
+    });
+
+    // Lock/unlock
+    cmds.push({
+      id: 'toggle-lock',
+      label: locked ? '解锁布局（进入编辑模式）' : '锁定布局',
+      icon: locked ? '🔓' : '🔒',
+      action: toggleLock,
+    });
+
+    // Session search
+    cmds.push({
+      id: 'session-search',
+      label: '切换会话',
+      icon: '💬',
+      action: openSessionSearch,
+    });
+
+    // Knowledge graph
+    cmds.push({
+      id: 'open-graph',
+      label: '打开知识图谱',
+      icon: '🕸',
+      action: () => {
+        setIsGraphViewOpen(true);
+        if (!analysis.analysis && !analysis.isLoading) {
+          analysis.fetchAnalysis();
+        }
+      },
+    });
+
+    // Shortcut help
+    cmds.push({
+      id: 'shortcut-help',
+      label: '快捷键帮助',
+      icon: '⌨️',
+      action: () => setIsShortcutHelpOpen(true),
+    });
+
+    return cmds;
+  }, [activeWidgetIds, locked, toggleLock, openSessionSearch, analysis]);
+
+  // ─── Widget header extras (e.g., SessionSwitcher in chat widget header) ───
+  const widgetHeaderExtras = useMemo(() => ({
+    chat: (
+      <SessionSwitcher
+        sessions={sessions.sessions}
+        activeSessionId={sessions.activeSessionId}
+        isOpen={isSessionSwitcherOpen}
+        isLoading={sessions.isLoading}
+        error={sessions.error}
+        isConnected={sessions.isConnected}
+        searchInputRef={sessionSearchRef}
+        onToggle={() => setIsSessionSwitcherOpen((prev) => !prev)}
+        onClose={() => setIsSessionSwitcherOpen(false)}
+        onSelect={sessions.setActiveSessionId}
+        onCreate={async () => {
+          await sessions.createSession();
         }}
-      >
-        {/* Sources Panel */}
-        {(!expandedPanel || expandedPanel === 'sources') && (
-          <WorkspacePanelShell
-            panel="sources"
-            title="来源"
-            ariaLabel="来源"
-            expandedPanel={expandedPanel}
-            onToggleExpand={handleToggleExpand}
-            errorTitle="来源面板异常"
-            errorDescription="来源面板渲染失败，请重试。"
-            sectionRef={sourcesPanelRef}
-          >
+        onUpdate={sessions.updateSession}
+        onDelete={sessions.deleteSession}
+        onRetry={sessions.retrySessions}
+      />
+    ),
+  }), [
+    sessions.sessions,
+    sessions.activeSessionId,
+    isSessionSwitcherOpen,
+    sessions.isLoading,
+    sessions.error,
+    sessions.isConnected,
+    sessions.setActiveSessionId,
+    sessions.createSession,
+    sessions.updateSession,
+    sessions.deleteSession,
+    sessions.retrySessions,
+  ]);
+
+  // ─── Render widget content by id ───
+  const renderWidget = useCallback(
+    (widgetId: string) => {
+      switch (widgetId) {
+        case 'sources':
+          return (
             <SourcesPanel
               sources={sources.sources}
               jumpToSource={jumpToSource}
@@ -774,7 +671,7 @@ export default function WorkspaceLayout() {
               isConnected={sources.isConnected}
               isLoading={sources.isLoading}
               removeState={sources.removeState}
-              isFullscreen={expandedPanel === 'sources'}
+              isFullscreen={false}
               searchQueue={sources.searchQueue}
               onRemoveSearchQueueItem={sources.removeSearchQueueItem}
               onRemoveResultsFromQueue={sources.removeResultsFromQueue}
@@ -785,63 +682,10 @@ export default function WorkspaceLayout() {
               notebookId={activeNotebookId ?? undefined}
               onSelectedSourceIdsChange={handleSelectedSourceIdsChange}
             />
-          </WorkspacePanelShell>
-        )}
+          );
 
-        {/* Left Resize Handle - hidden when any panel is expanded */}
-        {!expandedPanel && (
-          <WorkspaceResizeHandle
-            ariaLabel="调整来源宽度"
-            isResizing={isResizing}
-            onPointerDown={(event) => {
-              if (window.innerWidth < 1024 || expandedPanel) return;
-              const main = mainRef.current;
-              if (!main) return;
-              const { width } = main.getBoundingClientRect();
-              dragStateRef.current = {
-                side: 'left',
-                startX: event.clientX,
-                startLeft: sizesRef.current.left,
-                startRight: sizesRef.current.right,
-                containerWidth: width,
-              };
-              setIsResizing(true);
-            }}
-          />
-        )}
-
-        {/* Chat Panel */}
-        {(!expandedPanel || expandedPanel === 'chat') && (
-          <WorkspacePanelShell
-            panel="chat"
-            title="对话"
-            ariaLabel="对话"
-            expandedPanel={expandedPanel}
-            onToggleExpand={handleToggleExpand}
-            headerExtras={
-              <SessionSwitcher
-                sessions={sessions.sessions}
-                activeSessionId={sessions.activeSessionId}
-                isOpen={isSessionSwitcherOpen}
-                isLoading={sessions.isLoading}
-                error={sessions.error}
-                isConnected={sessions.isConnected}
-                searchInputRef={sessionSearchRef}
-                onToggle={() => setIsSessionSwitcherOpen((prev) => !prev)}
-                onClose={() => setIsSessionSwitcherOpen(false)}
-                onSelect={sessions.setActiveSessionId}
-                onCreate={async () => {
-                  await sessions.createSession();
-                }}
-                onUpdate={sessions.updateSession}
-                onDelete={sessions.deleteSession}
-                onRetry={sessions.retrySessions}
-              />
-            }
-            errorTitle="对话面板异常"
-            errorDescription="对话面板渲染失败，请重试。"
-            sectionRef={chatPanelRef}
-          >
+        case 'chat':
+          return (
             <ChatPanel
               messages={chat.messages}
               draft={chat.draft}
@@ -869,43 +713,10 @@ export default function WorkspaceLayout() {
               onConvertToOutput={chat.convertSessionToOutput}
               isConverting={chat.isConverting}
             />
-          </WorkspacePanelShell>
-        )}
+          );
 
-        {/* Right Resize Handle - hidden when any panel is expanded */}
-        {!expandedPanel && (
-          <WorkspaceResizeHandle
-            ariaLabel="调整 Studio 宽度"
-            isResizing={isResizing}
-            onPointerDown={(event) => {
-              if (window.innerWidth < 1024 || expandedPanel) return;
-              const main = mainRef.current;
-              if (!main) return;
-              const { width } = main.getBoundingClientRect();
-              dragStateRef.current = {
-                side: 'right',
-                startX: event.clientX,
-                startLeft: sizesRef.current.left,
-                startRight: sizesRef.current.right,
-                containerWidth: width,
-              };
-              setIsResizing(true);
-            }}
-          />
-        )}
-
-        {/* Studio Panel */}
-        {(!expandedPanel || expandedPanel === 'studio') && (
-          <WorkspacePanelShell
-            panel="studio"
-            title="Studio"
-            ariaLabel="Studio"
-            expandedPanel={expandedPanel}
-            onToggleExpand={handleToggleExpand}
-            errorTitle="Studio 面板异常"
-            errorDescription="输出面板渲染失败，请重试。"
-            sectionRef={studioPanelRef}
-          >
+        case 'studio':
+          return (
             <StudioPanel
               tools={refine.tools}
               toolsLoading={refine.toolsLoading}
@@ -929,19 +740,98 @@ export default function WorkspaceLayout() {
               onConvertToSource={sources.convertOutputToSource}
               onJumpToCitation={handleOutputCitationJump}
               isConnected={isConnected}
-              isFullscreen={expandedPanel === 'studio'}
+              isFullscreen={false}
               hasSelectedSources={hasSelectedSources}
             />
-          </WorkspacePanelShell>
-        )}
-      </main>
+          );
 
+        default:
+          return (
+            <div className="flex items-center justify-center h-full text-sm text-gray-400">
+              未知模块
+            </div>
+          );
+      }
+    },
+    [
+      // sources
+      sources, jumpToSource, activeNotebookId, handleSelectedSourceIdsChange,
+      // chat
+      chat, isConnected, errMessages, notebooks.activeNotebookId,
+      handleChatCitationHover, handleChatCitationJump, handleLocateCitationSource,
+      // studio
+      refine, openSlidesDialog, handleOpenOutputViewer, handleOpenOutputViewerFullscreen,
+      handleOutputCitationJump, hasSelectedSources,
+    ],
+  );
+
+  return (
+    <div className="flex flex-col h-screen bg-gray-50/50 dark:bg-slate-950 overflow-hidden text-gray-900 dark:text-gray-100">
+      {/* ── Header ── */}
+      <div className="px-4 pt-4">
+        <WorkspaceHeader
+          notebooks={notebooks.notebooks}
+          activeNotebookId={notebooks.activeNotebookId}
+          isNotebooksLoading={notebooks.isLoading}
+          notebooksError={notebooks.notebooksError}
+          createName={notebooks.createName}
+          createState={notebooks.createState}
+          createError={notebooks.createError}
+          isConnected={isConnected}
+          onCreateNameChange={notebooks.setCreateName}
+          onCreateNotebook={notebooks.createNotebook}
+          onCreateNotebookFromTemplate={notebooks.createNotebookFromTemplate}
+          onUpdateNotebook={notebooks.updateNotebook}
+          onDeleteNotebook={notebooks.deleteNotebook}
+          onSelectNotebook={notebooks.setActiveNotebookId}
+          onOpenKnowledgeGraph={() => {
+            setIsGraphViewOpen(true);
+            if (!analysis.analysis && !analysis.isLoading) {
+              analysis.fetchAnalysis();
+            }
+          }}
+          locked={locked}
+          onToggleLock={toggleLock}
+          onOpenCatalog={() => setShowCatalog((v) => !v)}
+          onOpenCommandPalette={() => { setShowCmdPalette(true); }}
+        />
+      </div>
+
+      {/* ── Modular Canvas (GridStack layout) ── */}
+      <ModularCanvas
+        ref={canvasRef}
+        defaultLayout={DEFAULT_LAYOUT}
+        locked={locked}
+        widgetMeta={WIDGET_REGISTRY}
+        renderWidget={renderWidget}
+        widgetHeaderExtras={widgetHeaderExtras}
+        onWidgetIdsChange={setActiveWidgetIds}
+      />
+
+      {/* ── Command Palette ── */}
+      <CommandPalette
+        open={showCmdPalette}
+        onClose={() => setShowCmdPalette(false)}
+        commands={cmdPaletteCommands}
+      />
+
+      {/* ── Widget Catalog ── */}
+      <WidgetCatalog
+        open={showCatalog}
+        onClose={() => setShowCatalog(false)}
+        widgetMeta={WIDGET_REGISTRY}
+        activeWidgetIds={activeWidgetIds}
+        onAddWidget={(id) => canvasRef.current?.addWidget(id)}
+      />
+
+      {/* ── Shortcut Help ── */}
       <ShortcutHelpPanel
         open={isShortcutHelpOpen}
         shortcuts={WORKSPACE_SHORTCUTS}
         onClose={() => setIsShortcutHelpOpen(false)}
       />
 
+      {/* ── Output Viewer ── */}
       <Suspense fallback={<div className="fixed bottom-4 right-4 w-72"><SkeletonCard lines={3} /></div>}>
         <StudioOutputViewer
           outputs={refine.outputs}
@@ -959,6 +849,7 @@ export default function WorkspaceLayout() {
         />
       </Suspense>
 
+      {/* ── Slides Dialog ── */}
       {isSlidesDialogOpen && (
         <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[420px]"><SkeletonCard lines={6} /></div></div>}>
           <SlidesStudioDialog
@@ -981,7 +872,7 @@ export default function WorkspaceLayout() {
         </Suspense>
       )}
 
-      {/* Knowledge Graph View (Full Screen Overlay) */}
+      {/* ── Knowledge Graph View ── */}
       {isGraphViewOpen && (
         <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[520px]"><SkeletonCard lines={6} /></div></div>}>
           <KnowledgeGraphView
@@ -1003,7 +894,7 @@ export default function WorkspaceLayout() {
         </Suspense>
       )}
 
-      {/* Source Detail Dialog for Graph View */}
+      {/* ── Source Detail Dialog for Graph View ── */}
       {graphSourceDetailOpen && (
         <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[520px]"><SkeletonCard lines={5} /></div></div>}>
           <SourceDetailDialog
@@ -1027,7 +918,7 @@ export default function WorkspaceLayout() {
         </Suspense>
       )}
 
-      {/* Source Detail Dialog for Citation Popovers */}
+      {/* ── Source Detail Dialog for Citation Popovers ── */}
       {citationSourceDetailOpen && (
         <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[520px]"><SkeletonCard lines={5} /></div></div>}>
           <SourceDetailDialog
@@ -1045,7 +936,7 @@ export default function WorkspaceLayout() {
         </Suspense>
       )}
 
-      {/* Session Detail Dialog for Graph View */}
+      {/* ── Session Detail Dialog for Graph View ── */}
       <SessionDetailDialog
         open={graphSessionDetailOpen}
         session={graphSelectedSession}
