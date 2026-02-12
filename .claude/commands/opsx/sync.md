@@ -1,19 +1,15 @@
 ---
-name: openspec-sync-specs
-description: Sync delta specs from a change to main specs. Use when the user wants to update main specs with changes from a delta spec, without archiving the change.
-license: MIT
-compatibility: Requires openspec CLI.
-metadata:
-  author: openspec
-  version: "1.0"
-  generatedBy: "1.1.1"
+name: "OPSX: Sync"
+description: Sync delta specs from a change to main specs
+category: Workflow
+tags: [workflow, specs, experimental]
 ---
 
 将变更中的 delta 规范同步到主规范.
 
 这是一个 **agent 驱动** 的操作——你将读取 delta 规范并直接编辑主规范以应用变更.这允许智能合并(例如只添加一个场景,而不是复制整个需求).
 
-**输入**:可选指定变更名称.如果省略,先判断是否可从对话上下文推断;若含糊或不明确,必须提示可用的变更.
+**输入**:可选在 `/opsx:sync` 后指定变更名称(例如 `/opsx:sync add-auth`).如果省略,先判断是否可从对话上下文推断;若含糊或不明确,必须提示可用的变更.
 
 **步骤**
 

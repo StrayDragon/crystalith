@@ -1,17 +1,13 @@
 ---
-name: openspec-apply-change
-description: Implement tasks from an OpenSpec change. Use when the user wants to start implementing, continue implementation, or work through tasks.
-license: MIT
-compatibility: Requires openspec CLI.
-metadata:
-  author: openspec
-  version: "1.0"
-  generatedBy: "1.1.1"
+name: "OPSX: Apply"
+description: Implement tasks from an OpenSpec change (Experimental)
+category: Workflow
+tags: [workflow, artifacts, experimental]
 ---
 
 从 OpenSpec 变更实施任务.
 
-**输入**:可选择指定变更名称.如果省略,先判断是否可从对话上下文推断;若含糊或不明确,必须提示可用的变更.
+**输入**:可选在 `/opsx:apply` 后指定变更名称(例如 `/opsx:apply add-auth`).如果省略,先判断是否可从对话上下文推断;若含糊或不明确,必须提示可用的变更.
 
 **步骤**
 
@@ -37,7 +33,7 @@ metadata:
    - 基于当前状态的动态说明
 
    **处理状态:**
-   - 如果 `state: "blocked"`(缺少工件):显示消息,建议使用 openspec-continue-change
+   - 如果 `state: "blocked"`(缺少工件):显示消息,建议使用 `/opsx:continue`
    - 如果 `state: "all_done"`:祝贺,建议归档
    - 否则:继续实施
 
