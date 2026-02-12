@@ -232,20 +232,17 @@ def _cleanup_sqlite_file(path: Path) -> None:
         path.unlink()
     except FileNotFoundError:
         pass
-
-    if path.parent.name != ".tmp":
-        return
-
-    try:
-        path.parent.rmdir()
-    except OSError:
-        pass
+    # NOTE: 不再尝试删除 .tmp 目录，因为在 xdist 并行测试下
+    # 其他 worker 可能仍在使用该目录，删除会导致竞态条件
 
 
 @pytest.fixture
 async def db_manager() -> AsyncGenerator[AsyncSQLiteManager, None]:
     """为 BaseDAL 测试创建数据库管理器"""
     db_uri, sqlite_path = _load_sqlite_test_uri()
+
+    # 在连接前再次确保目录存在（防止并行 worker 间竞态条件）
+    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
 
     manager = AsyncSQLiteManager(
         db_uri,
