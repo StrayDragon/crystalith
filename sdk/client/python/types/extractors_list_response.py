@@ -12,8 +12,8 @@ class ExtractorsListResponse(UniversalBaseModel):
     Response for listing available extractors.
     """
 
-    extractors: typing.List[ExtractorInfoResponse]
     default_extractor: typing.Optional[str] = None
+    extractors: typing.List[ExtractorInfoResponse]
     fallback_enabled: typing.Optional[bool] = None
 
     if IS_PYDANTIC_V2:

@@ -20,7 +20,7 @@ def _is_repo_root(path: Path) -> bool:
     markers = [
         path / ".git",
         path / "config" / "app.yaml",
-        path / "config" / "schema.json",
+        path / "config" / "app.schema.json",
         path / "backend" / "py" / "pyproject.toml",
         path / "backend" / "py" / "src" / "crystalith",
     ]

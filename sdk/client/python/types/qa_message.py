@@ -12,8 +12,8 @@ class QaMessage(UniversalBaseModel):
     A single QA message.
     """
 
-    role: QaMessageRole
     content: str
+    role: QaMessageRole
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

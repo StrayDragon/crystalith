@@ -62,7 +62,7 @@ def _load_settings() -> Settings:
             config_path = _find_config_path()
 
     if config_path is not None:
-        schema_path = config_path.parent / "schema.json"
+        schema_path = config_path.parent / "app.schema.json"
         secrets_path_value = os.environ.get("CRYSTALITH_SECRETS_PATH")
         secrets_path = Path(secrets_path_value) if secrets_path_value else None
         manager = ConfigManager(config_path, schema_path, secrets_path=secrets_path)

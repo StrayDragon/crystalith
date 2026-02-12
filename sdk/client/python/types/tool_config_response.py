@@ -4,7 +4,7 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import IS_PYDANTIC_V2, UniversalBaseModel
-from .config_option import ConfigOption
+from .crystalith_features_workspace_api_config_option import CrystalithFeaturesWorkspaceApiConfigOption
 
 
 class ToolConfigResponse(UniversalBaseModel):
@@ -12,12 +12,12 @@ class ToolConfigResponse(UniversalBaseModel):
     Configuration options for a specific tool.
     """
 
+    difficulty_options: typing.Optional[typing.List[CrystalithFeaturesWorkspaceApiConfigOption]] = None
+    quantity_options: typing.Optional[typing.List[CrystalithFeaturesWorkspaceApiConfigOption]] = None
+    supports_topic: typing.Optional[bool] = None
     tool_id: str
     tool_label: str
-    quantity_options: typing.Optional[typing.List[ConfigOption]] = None
-    difficulty_options: typing.Optional[typing.List[ConfigOption]] = None
     topic_placeholder: typing.Optional[str] = None
-    supports_topic: typing.Optional[bool] = None
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

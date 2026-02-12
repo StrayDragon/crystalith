@@ -10,10 +10,10 @@ from .refine_batch_output import RefineBatchOutput
 
 
 class RefineBatchResponse(UniversalBaseModel):
-    outputs: typing.Dict[str, RefineBatchOutput]
     citations: typing.List[Citation]
-    evidence: bool
     created_at: dt.datetime
+    evidence: bool
+    outputs: typing.Dict[str, RefineBatchOutput]
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

@@ -28,6 +28,52 @@ class TemplatesClient:
         """
         return self._raw_client
 
+    def save_notebook_as_template(
+        self,
+        notebook_id: int,
+        *,
+        name: str,
+        description: typing.Optional[str] = OMIT,
+        output_type: typing.Optional[TemplateFromNotebookCreateOutputType] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> TemplateRead:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        name : str
+
+        description : typing.Optional[str]
+
+        output_type : typing.Optional[TemplateFromNotebookCreateOutputType]
+            Preferred default output type for the template.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        TemplateRead
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.templates.save_notebook_as_template(
+            notebook_id=1,
+            name="name",
+        )
+        """
+        _response = self._raw_client.save_notebook_as_template(
+            notebook_id, name=name, description=description, output_type=output_type, request_options=request_options
+        )
+        return _response.data
+
     def list_templates(self, *, request_options: typing.Optional[RequestOptions] = None) -> typing.List[TemplateRead]:
         """
         Parameters
@@ -55,17 +101,17 @@ class TemplatesClient:
     def create_template(
         self,
         *,
-        name: str,
         config_json: TemplateConfigInput,
+        name: str,
         description: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> TemplateRead:
         """
         Parameters
         ----------
-        name : str
-
         config_json : TemplateConfigInput
+
+        name : str
 
         description : typing.Optional[str]
 
@@ -85,12 +131,12 @@ class TemplatesClient:
             base_url="https://yourhost.com/path/to/api",
         )
         client.templates.create_template(
-            name="name",
             config_json=TemplateConfigInput(),
+            name="name",
         )
         """
         _response = self._raw_client.create_template(
-            name=name, config_json=config_json, description=description, request_options=request_options
+            config_json=config_json, name=name, description=description, request_options=request_options
         )
         return _response.data
 
@@ -155,9 +201,9 @@ class TemplatesClient:
         self,
         template_id: int,
         *,
-        name: typing.Optional[str] = OMIT,
-        description: typing.Optional[str] = OMIT,
         config_json: typing.Optional[TemplateConfigInput] = OMIT,
+        description: typing.Optional[str] = OMIT,
+        name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> TemplateRead:
         """
@@ -165,11 +211,11 @@ class TemplatesClient:
         ----------
         template_id : int
 
-        name : typing.Optional[str]
+        config_json : typing.Optional[TemplateConfigInput]
 
         description : typing.Optional[str]
 
-        config_json : typing.Optional[TemplateConfigInput]
+        name : typing.Optional[str]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -191,11 +237,27 @@ class TemplatesClient:
         )
         """
         _response = self._raw_client.update_template(
-            template_id, name=name, description=description, config_json=config_json, request_options=request_options
+            template_id, config_json=config_json, description=description, name=name, request_options=request_options
         )
         return _response.data
 
-    def save_notebook_as_template(
+
+class AsyncTemplatesClient:
+    def __init__(self, *, client_wrapper: AsyncClientWrapper):
+        self._raw_client = AsyncRawTemplatesClient(client_wrapper=client_wrapper)
+
+    @property
+    def with_raw_response(self) -> AsyncRawTemplatesClient:
+        """
+        Retrieves a raw implementation of this client that returns raw responses.
+
+        Returns
+        -------
+        AsyncRawTemplatesClient
+        """
+        return self._raw_client
+
+    async def save_notebook_as_template(
         self,
         notebook_id: int,
         *,
@@ -226,36 +288,28 @@ class TemplatesClient:
 
         Examples
         --------
-        from crystalith import CrystalithClient
+        import asyncio
 
-        client = CrystalithClient(
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
             base_url="https://yourhost.com/path/to/api",
         )
-        client.templates.save_notebook_as_template(
-            notebook_id=1,
-            name="name",
-        )
+
+
+        async def main() -> None:
+            await client.templates.save_notebook_as_template(
+                notebook_id=1,
+                name="name",
+            )
+
+
+        asyncio.run(main())
         """
-        _response = self._raw_client.save_notebook_as_template(
+        _response = await self._raw_client.save_notebook_as_template(
             notebook_id, name=name, description=description, output_type=output_type, request_options=request_options
         )
         return _response.data
-
-
-class AsyncTemplatesClient:
-    def __init__(self, *, client_wrapper: AsyncClientWrapper):
-        self._raw_client = AsyncRawTemplatesClient(client_wrapper=client_wrapper)
-
-    @property
-    def with_raw_response(self) -> AsyncRawTemplatesClient:
-        """
-        Retrieves a raw implementation of this client that returns raw responses.
-
-        Returns
-        -------
-        AsyncRawTemplatesClient
-        """
-        return self._raw_client
 
     async def list_templates(
         self, *, request_options: typing.Optional[RequestOptions] = None
@@ -294,17 +348,17 @@ class AsyncTemplatesClient:
     async def create_template(
         self,
         *,
-        name: str,
         config_json: TemplateConfigInput,
+        name: str,
         description: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> TemplateRead:
         """
         Parameters
         ----------
-        name : str
-
         config_json : TemplateConfigInput
+
+        name : str
 
         description : typing.Optional[str]
 
@@ -329,15 +383,15 @@ class AsyncTemplatesClient:
 
         async def main() -> None:
             await client.templates.create_template(
-                name="name",
                 config_json=TemplateConfigInput(),
+                name="name",
             )
 
 
         asyncio.run(main())
         """
         _response = await self._raw_client.create_template(
-            name=name, config_json=config_json, description=description, request_options=request_options
+            config_json=config_json, name=name, description=description, request_options=request_options
         )
         return _response.data
 
@@ -420,9 +474,9 @@ class AsyncTemplatesClient:
         self,
         template_id: int,
         *,
-        name: typing.Optional[str] = OMIT,
-        description: typing.Optional[str] = OMIT,
         config_json: typing.Optional[TemplateConfigInput] = OMIT,
+        description: typing.Optional[str] = OMIT,
+        name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> TemplateRead:
         """
@@ -430,11 +484,11 @@ class AsyncTemplatesClient:
         ----------
         template_id : int
 
-        name : typing.Optional[str]
+        config_json : typing.Optional[TemplateConfigInput]
 
         description : typing.Optional[str]
 
-        config_json : typing.Optional[TemplateConfigInput]
+        name : typing.Optional[str]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -464,60 +518,6 @@ class AsyncTemplatesClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.update_template(
-            template_id, name=name, description=description, config_json=config_json, request_options=request_options
-        )
-        return _response.data
-
-    async def save_notebook_as_template(
-        self,
-        notebook_id: int,
-        *,
-        name: str,
-        description: typing.Optional[str] = OMIT,
-        output_type: typing.Optional[TemplateFromNotebookCreateOutputType] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> TemplateRead:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        name : str
-
-        description : typing.Optional[str]
-
-        output_type : typing.Optional[TemplateFromNotebookCreateOutputType]
-            Preferred default output type for the template.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        TemplateRead
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.templates.save_notebook_as_template(
-                notebook_id=1,
-                name="name",
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.save_notebook_as_template(
-            notebook_id, name=name, description=description, output_type=output_type, request_options=request_options
+            template_id, config_json=config_json, description=description, name=name, request_options=request_options
         )
         return _response.data

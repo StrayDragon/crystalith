@@ -2,4 +2,4 @@
 
 import typing
 
-ListModelsV1ModelsGetRequestRole = typing.Union[typing.Literal["chat", "embed", "edit", "autocomplete"], typing.Any]
+ListModelsV1ModelsGetRequestRole = typing.Union[typing.Literal["autocomplete", "chat", "edit", "embed"], typing.Any]

@@ -26,10 +26,10 @@ class RawQaClient:
         notebook_id: int,
         *,
         question: str,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        top_k: typing.Optional[int] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[QaResponse]:
         """
@@ -39,13 +39,13 @@ class RawQaClient:
 
         question : str
 
-        source_ids : typing.Optional[typing.Sequence[int]]
-
-        top_k : typing.Optional[int]
-
         min_score : typing.Optional[float]
 
         session_id : typing.Optional[int]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
+
+        top_k : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -59,11 +59,11 @@ class RawQaClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/qa",
             method="POST",
             json={
+                "min_score": min_score,
                 "question": question,
+                "session_id": session_id,
                 "source_ids": source_ids,
                 "top_k": top_k,
-                "min_score": min_score,
-                "session_id": session_id,
             },
             headers={
                 "content-type": "application/json",
@@ -102,10 +102,10 @@ class RawQaClient:
         notebook_id: int,
         *,
         question: str,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        top_k: typing.Optional[int] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[typing.Any]:
         """
@@ -122,13 +122,13 @@ class RawQaClient:
 
         question : str
 
-        source_ids : typing.Optional[typing.Sequence[int]]
-
-        top_k : typing.Optional[int]
-
         min_score : typing.Optional[float]
 
         session_id : typing.Optional[int]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
+
+        top_k : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -142,11 +142,11 @@ class RawQaClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/qa/stream",
             method="POST",
             json={
+                "min_score": min_score,
                 "question": question,
+                "session_id": session_id,
                 "source_ids": source_ids,
                 "top_k": top_k,
-                "min_score": min_score,
-                "session_id": session_id,
             },
             headers={
                 "content-type": "application/json",
@@ -192,10 +192,10 @@ class AsyncRawQaClient:
         notebook_id: int,
         *,
         question: str,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        top_k: typing.Optional[int] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[QaResponse]:
         """
@@ -205,13 +205,13 @@ class AsyncRawQaClient:
 
         question : str
 
-        source_ids : typing.Optional[typing.Sequence[int]]
-
-        top_k : typing.Optional[int]
-
         min_score : typing.Optional[float]
 
         session_id : typing.Optional[int]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
+
+        top_k : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -225,11 +225,11 @@ class AsyncRawQaClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/qa",
             method="POST",
             json={
+                "min_score": min_score,
                 "question": question,
+                "session_id": session_id,
                 "source_ids": source_ids,
                 "top_k": top_k,
-                "min_score": min_score,
-                "session_id": session_id,
             },
             headers={
                 "content-type": "application/json",
@@ -268,10 +268,10 @@ class AsyncRawQaClient:
         notebook_id: int,
         *,
         question: str,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        top_k: typing.Optional[int] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[typing.Any]:
         """
@@ -288,13 +288,13 @@ class AsyncRawQaClient:
 
         question : str
 
-        source_ids : typing.Optional[typing.Sequence[int]]
-
-        top_k : typing.Optional[int]
-
         min_score : typing.Optional[float]
 
         session_id : typing.Optional[int]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
+
+        top_k : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -308,11 +308,11 @@ class AsyncRawQaClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/qa/stream",
             method="POST",
             json={
+                "min_score": min_score,
                 "question": question,
+                "session_id": session_id,
                 "source_ids": source_ids,
                 "top_k": top_k,
-                "min_score": min_score,
-                "session_id": session_id,
             },
             headers={
                 "content-type": "application/json",

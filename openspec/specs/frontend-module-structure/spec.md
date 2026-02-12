@@ -80,7 +80,7 @@ TBD - created by archiving change refactor-frontend-layout-260129. Update Purpos
 
 #### Scenario: 结构重构验证
 - **WHEN** 迁移 workspace 子域或调整目录结构
-- **THEN** 必须运行 `./scripts/run-e2e.sh` 并通过
+- **THEN** 必须运行 E2E 测试（`cd frontend/web && pnpm test:e2e`）并通过
 
 ### Requirement: 共享骨架屏组件
 系统 MUST 在 `src/shared/` 中提供统一的骨架屏组件库（SkeletonLine、SkeletonCard、SkeletonList），供所有 feature 复用。

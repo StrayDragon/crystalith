@@ -12,17 +12,18 @@ from .slide_outline import SlideOutline
 
 
 class SlideDraftRead(UniversalBaseModel):
-    id: int
-    notebook_id: int
-    output_id: typing.Optional[int] = None
-    title: typing.Optional[str] = None
-    prompt: typing.Optional[str] = None
-    engine: str
     chunk_ids: typing.Optional[typing.List[int]] = None
-    source_ids: typing.Optional[typing.List[int]] = None
-    outline: typing.Optional[SlideOutline] = None
-    markdown: typing.Optional[str] = None
+    created_at: dt.datetime
+    engine: str
+    error_message: typing.Optional[str] = None
     generation_config: typing.Optional[SlideGenerationConfig] = None
+    id: int
+    markdown: typing.Optional[str] = None
+    notebook_id: int
+    outline: typing.Optional[SlideOutline] = None
+    output_id: typing.Optional[int] = None
+    prompt: typing.Optional[str] = None
+    source_ids: typing.Optional[typing.List[int]] = None
     stage: SlideDraftReadStage = pydantic.Field()
     """
     枚举值:
@@ -41,8 +42,7 @@ class SlideDraftRead(UniversalBaseModel):
     * `error`: 失败
     """
 
-    error_message: typing.Optional[str] = None
-    created_at: dt.datetime
+    title: typing.Optional[str] = None
     updated_at: dt.datetime
 
     if IS_PYDANTIC_V2:

@@ -10,16 +10,13 @@ from .task_read_type import TaskReadType
 
 
 class TaskRead(UniversalBaseModel):
+    created_at: dt.datetime
+    error: typing.Optional[str] = None
     id: int
     notebook_id: typing.Optional[int] = None
-    type: TaskReadType = pydantic.Field()
-    """
-    枚举值:
-
-    * `refine`: 内容精炼任务
-    * `document_parse`: 文档解析任务
-    """
-
+    payload: typing.Dict[str, typing.Any]
+    progress: int
+    result: typing.Optional[typing.Dict[str, typing.Any]] = None
     status: TaskReadStatus = pydantic.Field()
     """
     枚举值:
@@ -31,11 +28,14 @@ class TaskRead(UniversalBaseModel):
     * `cancelled`: 已取消
     """
 
-    payload: typing.Dict[str, typing.Any]
-    result: typing.Optional[typing.Dict[str, typing.Any]] = None
-    error: typing.Optional[str] = None
-    progress: int
-    created_at: dt.datetime
+    type: TaskReadType = pydantic.Field()
+    """
+    枚举值:
+
+    * `refine`: 内容精炼任务
+    * `document_parse`: 文档解析任务
+    """
+
     updated_at: dt.datetime
 
     if IS_PYDANTIC_V2:

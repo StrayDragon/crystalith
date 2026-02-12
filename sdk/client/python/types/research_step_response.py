@@ -14,22 +14,12 @@ class ResearchStepResponse(UniversalBaseModel):
     Response model for a research step.
     """
 
+    created_at: dt.datetime
     id: int
-    session_id: int
-    iteration: int
-    type: ResearchStepResponseType = pydantic.Field()
-    """
-    枚举值:
-
-    * `plan`: 搜索计划
-    * `search`: 执行搜索
-    * `analyze`: 分析结果
-    * `user_input`: 用户输入
-    * `summary`: 生成报告
-    """
-
     input_data: typing.Optional[typing.Dict[str, typing.Any]] = None
+    iteration: int
     output_data: typing.Optional[typing.Dict[str, typing.Any]] = None
+    session_id: int
     status: ResearchStepResponseStatus = pydantic.Field()
     """
     枚举值:
@@ -40,7 +30,16 @@ class ResearchStepResponse(UniversalBaseModel):
     * `skipped`: 已跳过
     """
 
-    created_at: dt.datetime
+    type: ResearchStepResponseType = pydantic.Field()
+    """
+    枚举值:
+
+    * `plan`: 搜索计划
+    * `search`: 执行搜索
+    * `analyze`: 分析结果
+    * `user_input`: 用户输入
+    * `summary`: 生成报告
+    """
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

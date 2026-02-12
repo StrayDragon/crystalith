@@ -11,10 +11,10 @@ class ExportResearchResponse(UniversalBaseModel):
     Response model for export operation.
     """
 
-    success: bool
     message: str
-    source_id: typing.Optional[int] = None
     note_id: typing.Optional[int] = None
+    source_id: typing.Optional[int] = None
+    success: bool
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

@@ -1,2 +1,0 @@
-b: just -f backend/py/justfile e2e-dev
-f: just -f frontend/web/justfile dev

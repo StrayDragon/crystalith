@@ -3,5 +3,5 @@
 import typing
 
 RenderDescriptorLayout = typing.Union[
-    typing.Literal["list", "cards", "tree", "timeline", "sections", "table"], typing.Any
+    typing.Literal["cards", "list", "sections", "table", "timeline", "tree"], typing.Any
 ]

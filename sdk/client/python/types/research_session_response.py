@@ -14,9 +14,13 @@ class ResearchSessionResponse(UniversalBaseModel):
     Response model for a research session.
     """
 
+    aggregated_results: typing.Optional[typing.List[typing.Dict[str, typing.Any]]] = None
+    created_at: dt.datetime
+    current_iteration: int
+    final_report: typing.Optional[str] = None
     id: int
+    max_iterations: int
     notebook_id: int
-    topic: str
     status: ResearchSessionResponseStatus = pydantic.Field()
     """
     枚举值:
@@ -29,13 +33,9 @@ class ResearchSessionResponse(UniversalBaseModel):
     * `cancelled`: 已取消
     """
 
-    current_iteration: int
-    max_iterations: int
-    aggregated_results: typing.Optional[typing.List[typing.Dict[str, typing.Any]]] = None
-    final_report: typing.Optional[str] = None
-    created_at: dt.datetime
-    updated_at: dt.datetime
     steps: typing.Optional[typing.List[ResearchStepResponse]] = None
+    topic: str
+    updated_at: dt.datetime
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

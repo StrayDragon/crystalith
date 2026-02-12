@@ -13,10 +13,12 @@ from .workspace_tool_tone import WorkspaceToolTone
 
 
 class WorkspaceTool(UniversalBaseModel):
+    badge: typing.Optional[str] = None
+    config_schema: typing.Optional[PluginConfigSchema] = None
+    description: str
+    enabled: typing.Optional[bool] = None
     id: str
     label: str
-    description: str
-    tone: WorkspaceToolTone
     output_type: WorkspaceToolOutputType = pydantic.Field()
     """
     枚举值:
@@ -35,9 +37,7 @@ class WorkspaceTool(UniversalBaseModel):
 
     prompt: str
     render_descriptor: typing.Optional[RenderDescriptor] = None
-    config_schema: typing.Optional[PluginConfigSchema] = None
-    badge: typing.Optional[str] = None
-    enabled: typing.Optional[bool] = None
+    tone: WorkspaceToolTone
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

@@ -29,8 +29,8 @@ class RawMessagesClient:
         notebook_id: int,
         session_id: int,
         *,
-        offset: typing.Optional[int] = None,
         limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[typing.List[MessageRead]]:
         """
@@ -40,9 +40,9 @@ class RawMessagesClient:
 
         session_id : int
 
-        offset : typing.Optional[int]
-
         limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -56,8 +56,8 @@ class RawMessagesClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/sessions/{jsonable_encoder(session_id)}/messages",
             method="GET",
             params={
-                "offset": offset,
                 "limit": limit,
+                "offset": offset,
             },
             request_options=request_options,
         )
@@ -92,8 +92,8 @@ class RawMessagesClient:
         notebook_id: int,
         session_id: int,
         *,
-        role: MessageCreateRole,
         content: str,
+        role: MessageCreateRole,
         citations: typing.Optional[typing.Sequence[Citation]] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[MessageRead]:
@@ -104,9 +104,9 @@ class RawMessagesClient:
 
         session_id : int
 
-        role : MessageCreateRole
-
         content : str
+
+        role : MessageCreateRole
 
         citations : typing.Optional[typing.Sequence[Citation]]
 
@@ -122,11 +122,11 @@ class RawMessagesClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/sessions/{jsonable_encoder(session_id)}/messages",
             method="POST",
             json={
-                "role": role,
-                "content": content,
                 "citations": convert_and_respect_annotation_metadata(
                     object_=citations, annotation=typing.Optional[typing.Sequence[Citation]], direction="write"
                 ),
+                "content": content,
+                "role": role,
             },
             headers={
                 "content-type": "application/json",
@@ -170,8 +170,8 @@ class AsyncRawMessagesClient:
         notebook_id: int,
         session_id: int,
         *,
-        offset: typing.Optional[int] = None,
         limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[typing.List[MessageRead]]:
         """
@@ -181,9 +181,9 @@ class AsyncRawMessagesClient:
 
         session_id : int
 
-        offset : typing.Optional[int]
-
         limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -197,8 +197,8 @@ class AsyncRawMessagesClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/sessions/{jsonable_encoder(session_id)}/messages",
             method="GET",
             params={
-                "offset": offset,
                 "limit": limit,
+                "offset": offset,
             },
             request_options=request_options,
         )
@@ -233,8 +233,8 @@ class AsyncRawMessagesClient:
         notebook_id: int,
         session_id: int,
         *,
-        role: MessageCreateRole,
         content: str,
+        role: MessageCreateRole,
         citations: typing.Optional[typing.Sequence[Citation]] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[MessageRead]:
@@ -245,9 +245,9 @@ class AsyncRawMessagesClient:
 
         session_id : int
 
-        role : MessageCreateRole
-
         content : str
+
+        role : MessageCreateRole
 
         citations : typing.Optional[typing.Sequence[Citation]]
 
@@ -263,11 +263,11 @@ class AsyncRawMessagesClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/sessions/{jsonable_encoder(session_id)}/messages",
             method="POST",
             json={
-                "role": role,
-                "content": content,
                 "citations": convert_and_respect_annotation_metadata(
                     object_=citations, annotation=typing.Optional[typing.Sequence[Citation]], direction="write"
                 ),
+                "content": content,
+                "role": role,
             },
             headers={
                 "content-type": "application/json",

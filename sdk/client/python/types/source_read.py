@@ -9,12 +9,15 @@ from .source_read_status import SourceReadStatus
 
 
 class SourceRead(UniversalBaseModel):
-    id: int
-    notebook_id: int
+    chunk_count: typing.Optional[int] = None
+    created_at: dt.datetime
+    error_message: typing.Optional[str] = None
     filename: str
-    mime_type: typing.Optional[str] = None
-    parser_type: str
+    id: int
     metadata: typing.Optional[typing.Dict[str, typing.Any]] = None
+    mime_type: typing.Optional[str] = None
+    notebook_id: int
+    parser_type: str
     status: SourceReadStatus = pydantic.Field()
     """
     枚举值:
@@ -24,10 +27,7 @@ class SourceRead(UniversalBaseModel):
     * `failed`: 处理失败
     """
 
-    error_message: typing.Optional[str] = None
-    chunk_count: typing.Optional[int] = None
     tags: typing.Optional[typing.List[str]] = None
-    created_at: dt.datetime
     updated_at: dt.datetime
 
     if IS_PYDANTIC_V2:

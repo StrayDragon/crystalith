@@ -32,9 +32,9 @@ class RawResearchClient:
         self,
         notebook_id: int,
         *,
-        offset: typing.Optional[int] = None,
-        limit: typing.Optional[int] = None,
         status: typing.Optional[ListResearchSessionsV1NotebooksNotebookIdResearchGetRequestStatus] = None,
+        limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[typing.List[ResearchSessionListItem]]:
         """
@@ -43,10 +43,6 @@ class RawResearchClient:
         Parameters
         ----------
         notebook_id : int
-
-        offset : typing.Optional[int]
-
-        limit : typing.Optional[int]
 
         status : typing.Optional[ListResearchSessionsV1NotebooksNotebookIdResearchGetRequestStatus]
             枚举值:
@@ -57,6 +53,10 @@ class RawResearchClient:
             * `waiting_user`: 等待用户确认
             * `completed`: 研究完成
             * `cancelled`: 已取消
+
+        limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -70,9 +70,9 @@ class RawResearchClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/research",
             method="GET",
             params={
-                "offset": offset,
-                "limit": limit,
                 "status": status,
+                "limit": limit,
+                "offset": offset,
             },
             request_options=request_options,
         )
@@ -135,8 +135,8 @@ class RawResearchClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/research",
             method="POST",
             json={
-                "topic": topic,
                 "max_iterations": max_iterations,
+                "topic": topic,
             },
             headers={
                 "content-type": "application/json",
@@ -330,25 +330,17 @@ class RawResearchClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    def modify_search_plan(
-        self,
-        notebook_id: int,
-        research_id: int,
-        *,
-        plan: SearchPlan,
-        request_options: typing.Optional[RequestOptions] = None,
+    def cancel_research(
+        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[ResearchSessionResponse]:
         """
-        Modify the current search plan.
+        Cancel an ongoing research session.
 
         Parameters
         ----------
         notebook_id : int
 
         research_id : int
-
-        plan : SearchPlan
-            Modified search plan
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -359,16 +351,9 @@ class RawResearchClient:
             Successful Response
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/modify",
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/cancel",
             method="POST",
-            json={
-                "plan": convert_and_respect_annotation_metadata(object_=plan, annotation=SearchPlan, direction="write"),
-            },
-            headers={
-                "content-type": "application/json",
-            },
             request_options=request_options,
-            omit=OMIT,
         )
         try:
             if 200 <= _response.status_code < 300:
@@ -396,11 +381,21 @@ class RawResearchClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    def skip_iteration(
-        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> HttpResponse[ResearchSessionResponse]:
+    def export_research(
+        self,
+        notebook_id: int,
+        research_id: int,
+        *,
+        export_type: typing.Optional[str] = OMIT,
+        include_report: typing.Optional[bool] = OMIT,
+        include_results: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[ExportResearchResponse]:
         """
-        Skip the current iteration.
+        Export research report to a source or note.
+
+        - export_type='source': Creates a new markdown source with the report
+        - export_type='note': Creates a new note (output) with the report
 
         Parameters
         ----------
@@ -408,25 +403,43 @@ class RawResearchClient:
 
         research_id : int
 
+        export_type : typing.Optional[str]
+            Export type: 'source' or 'note'
+
+        include_report : typing.Optional[bool]
+            Include final report
+
+        include_results : typing.Optional[bool]
+            Include aggregated results as links
+
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        HttpResponse[ResearchSessionResponse]
+        HttpResponse[ExportResearchResponse]
             Successful Response
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/skip",
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/export",
             method="POST",
+            json={
+                "export_type": export_type,
+                "include_report": include_report,
+                "include_results": include_results,
+            },
+            headers={
+                "content-type": "application/json",
+            },
             request_options=request_options,
+            omit=OMIT,
         )
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    ResearchSessionResponse,
+                    ExportResearchResponse,
                     parse_obj_as(
-                        type_=ResearchSessionResponse,  # type: ignore
+                        type_=ExportResearchResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -498,17 +511,25 @@ class RawResearchClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    def cancel_research(
-        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    def modify_search_plan(
+        self,
+        notebook_id: int,
+        research_id: int,
+        *,
+        plan: SearchPlan,
+        request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[ResearchSessionResponse]:
         """
-        Cancel an ongoing research session.
+        Modify the current search plan.
 
         Parameters
         ----------
         notebook_id : int
 
         research_id : int
+
+        plan : SearchPlan
+            Modified search plan
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -519,9 +540,16 @@ class RawResearchClient:
             Successful Response
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/cancel",
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/modify",
             method="POST",
+            json={
+                "plan": convert_and_respect_annotation_metadata(object_=plan, annotation=SearchPlan, direction="write"),
+            },
+            headers={
+                "content-type": "application/json",
+            },
             request_options=request_options,
+            omit=OMIT,
         )
         try:
             if 200 <= _response.status_code < 300:
@@ -571,6 +599,57 @@ class RawResearchClient:
         """
         _response = self._client_wrapper.httpx_client.request(
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/resume",
+            method="POST",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    ResearchSessionResponse,
+                    parse_obj_as(
+                        type_=ResearchSessionResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def skip_iteration(
+        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[ResearchSessionResponse]:
+        """
+        Skip the current iteration.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        research_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[ResearchSessionResponse]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/skip",
             method="POST",
             request_options=request_options,
         )
@@ -714,85 +793,6 @@ class RawResearchClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    def export_research(
-        self,
-        notebook_id: int,
-        research_id: int,
-        *,
-        export_type: typing.Optional[str] = OMIT,
-        include_report: typing.Optional[bool] = OMIT,
-        include_results: typing.Optional[bool] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[ExportResearchResponse]:
-        """
-        Export research report to a source or note.
-
-        - export_type='source': Creates a new markdown source with the report
-        - export_type='note': Creates a new note (output) with the report
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        research_id : int
-
-        export_type : typing.Optional[str]
-            Export type: 'source' or 'note'
-
-        include_report : typing.Optional[bool]
-            Include final report
-
-        include_results : typing.Optional[bool]
-            Include aggregated results as links
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        HttpResponse[ExportResearchResponse]
-            Successful Response
-        """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/export",
-            method="POST",
-            json={
-                "export_type": export_type,
-                "include_report": include_report,
-                "include_results": include_results,
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    ExportResearchResponse,
-                    parse_obj_as(
-                        type_=ExportResearchResponse,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return HttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
 
 class AsyncRawResearchClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
@@ -802,9 +802,9 @@ class AsyncRawResearchClient:
         self,
         notebook_id: int,
         *,
-        offset: typing.Optional[int] = None,
-        limit: typing.Optional[int] = None,
         status: typing.Optional[ListResearchSessionsV1NotebooksNotebookIdResearchGetRequestStatus] = None,
+        limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[typing.List[ResearchSessionListItem]]:
         """
@@ -813,10 +813,6 @@ class AsyncRawResearchClient:
         Parameters
         ----------
         notebook_id : int
-
-        offset : typing.Optional[int]
-
-        limit : typing.Optional[int]
 
         status : typing.Optional[ListResearchSessionsV1NotebooksNotebookIdResearchGetRequestStatus]
             枚举值:
@@ -827,6 +823,10 @@ class AsyncRawResearchClient:
             * `waiting_user`: 等待用户确认
             * `completed`: 研究完成
             * `cancelled`: 已取消
+
+        limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -840,9 +840,9 @@ class AsyncRawResearchClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/research",
             method="GET",
             params={
-                "offset": offset,
-                "limit": limit,
                 "status": status,
+                "limit": limit,
+                "offset": offset,
             },
             request_options=request_options,
         )
@@ -905,8 +905,8 @@ class AsyncRawResearchClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/research",
             method="POST",
             json={
-                "topic": topic,
                 "max_iterations": max_iterations,
+                "topic": topic,
             },
             headers={
                 "content-type": "application/json",
@@ -1100,25 +1100,17 @@ class AsyncRawResearchClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    async def modify_search_plan(
-        self,
-        notebook_id: int,
-        research_id: int,
-        *,
-        plan: SearchPlan,
-        request_options: typing.Optional[RequestOptions] = None,
+    async def cancel_research(
+        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[ResearchSessionResponse]:
         """
-        Modify the current search plan.
+        Cancel an ongoing research session.
 
         Parameters
         ----------
         notebook_id : int
 
         research_id : int
-
-        plan : SearchPlan
-            Modified search plan
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -1129,16 +1121,9 @@ class AsyncRawResearchClient:
             Successful Response
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/modify",
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/cancel",
             method="POST",
-            json={
-                "plan": convert_and_respect_annotation_metadata(object_=plan, annotation=SearchPlan, direction="write"),
-            },
-            headers={
-                "content-type": "application/json",
-            },
             request_options=request_options,
-            omit=OMIT,
         )
         try:
             if 200 <= _response.status_code < 300:
@@ -1166,11 +1151,21 @@ class AsyncRawResearchClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    async def skip_iteration(
-        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> AsyncHttpResponse[ResearchSessionResponse]:
+    async def export_research(
+        self,
+        notebook_id: int,
+        research_id: int,
+        *,
+        export_type: typing.Optional[str] = OMIT,
+        include_report: typing.Optional[bool] = OMIT,
+        include_results: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[ExportResearchResponse]:
         """
-        Skip the current iteration.
+        Export research report to a source or note.
+
+        - export_type='source': Creates a new markdown source with the report
+        - export_type='note': Creates a new note (output) with the report
 
         Parameters
         ----------
@@ -1178,25 +1173,43 @@ class AsyncRawResearchClient:
 
         research_id : int
 
+        export_type : typing.Optional[str]
+            Export type: 'source' or 'note'
+
+        include_report : typing.Optional[bool]
+            Include final report
+
+        include_results : typing.Optional[bool]
+            Include aggregated results as links
+
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        AsyncHttpResponse[ResearchSessionResponse]
+        AsyncHttpResponse[ExportResearchResponse]
             Successful Response
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/skip",
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/export",
             method="POST",
+            json={
+                "export_type": export_type,
+                "include_report": include_report,
+                "include_results": include_results,
+            },
+            headers={
+                "content-type": "application/json",
+            },
             request_options=request_options,
+            omit=OMIT,
         )
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    ResearchSessionResponse,
+                    ExportResearchResponse,
                     parse_obj_as(
-                        type_=ResearchSessionResponse,  # type: ignore
+                        type_=ExportResearchResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -1268,17 +1281,25 @@ class AsyncRawResearchClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    async def cancel_research(
-        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    async def modify_search_plan(
+        self,
+        notebook_id: int,
+        research_id: int,
+        *,
+        plan: SearchPlan,
+        request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[ResearchSessionResponse]:
         """
-        Cancel an ongoing research session.
+        Modify the current search plan.
 
         Parameters
         ----------
         notebook_id : int
 
         research_id : int
+
+        plan : SearchPlan
+            Modified search plan
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -1289,9 +1310,16 @@ class AsyncRawResearchClient:
             Successful Response
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/cancel",
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/modify",
             method="POST",
+            json={
+                "plan": convert_and_respect_annotation_metadata(object_=plan, annotation=SearchPlan, direction="write"),
+            },
+            headers={
+                "content-type": "application/json",
+            },
             request_options=request_options,
+            omit=OMIT,
         )
         try:
             if 200 <= _response.status_code < 300:
@@ -1341,6 +1369,57 @@ class AsyncRawResearchClient:
         """
         _response = await self._client_wrapper.httpx_client.request(
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/resume",
+            method="POST",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    ResearchSessionResponse,
+                    parse_obj_as(
+                        type_=ResearchSessionResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def skip_iteration(
+        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[ResearchSessionResponse]:
+        """
+        Skip the current iteration.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        research_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[ResearchSessionResponse]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/skip",
             method="POST",
             request_options=request_options,
         )
@@ -1464,85 +1543,6 @@ class AsyncRawResearchClient:
                     typing.Any,
                     parse_obj_as(
                         type_=typing.Any,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return AsyncHttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    async def export_research(
-        self,
-        notebook_id: int,
-        research_id: int,
-        *,
-        export_type: typing.Optional[str] = OMIT,
-        include_report: typing.Optional[bool] = OMIT,
-        include_results: typing.Optional[bool] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[ExportResearchResponse]:
-        """
-        Export research report to a source or note.
-
-        - export_type='source': Creates a new markdown source with the report
-        - export_type='note': Creates a new note (output) with the report
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        research_id : int
-
-        export_type : typing.Optional[str]
-            Export type: 'source' or 'note'
-
-        include_report : typing.Optional[bool]
-            Include final report
-
-        include_results : typing.Optional[bool]
-            Include aggregated results as links
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        AsyncHttpResponse[ExportResearchResponse]
-            Successful Response
-        """
-        _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/research/{jsonable_encoder(research_id)}/export",
-            method="POST",
-            json={
-                "export_type": export_type,
-                "include_report": include_report,
-                "include_results": include_results,
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    ExportResearchResponse,
-                    parse_obj_as(
-                        type_=ExportResearchResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )

@@ -12,14 +12,13 @@ class ModelsListResponse(UniversalBaseModel):
     Response model for the models list endpoint.
     """
 
+    default_chat: typing.Optional[str] = None
+    default_embedding: typing.Optional[str] = None
     models: typing.List[ModelRead]
     providers: typing.Optional[typing.List[str]] = pydantic.Field(default=None)
     """
     Available provider ids (built-in + plugins)
     """
-
-    default_chat: typing.Optional[str] = None
-    default_embedding: typing.Optional[str] = None
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

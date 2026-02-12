@@ -45,6 +45,161 @@ class SourcesClient:
         """
         return self._raw_client
 
+    def list_sources(
+        self,
+        notebook_id: int,
+        *,
+        sort_by: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy] = None,
+        sort_order: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder] = None,
+        tag: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> typing.List[SourceRead]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        sort_by : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy]
+
+        sort_order : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder]
+
+        tag : typing.Optional[str]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        typing.List[SourceRead]
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.list_sources(
+            notebook_id=1,
+        )
+        """
+        _response = self._raw_client.list_sources(
+            notebook_id, sort_by=sort_by, sort_order=sort_order, tag=tag, request_options=request_options
+        )
+        return _response.data
+
+    def upload_source(
+        self, notebook_id: int, *, file: core.File, request_options: typing.Optional[RequestOptions] = None
+    ) -> SourceRead:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        file : core.File
+            See core.File for more documentation
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceRead
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.upload_source(
+            notebook_id=1,
+        )
+        """
+        _response = self._raw_client.upload_source(notebook_id, file=file, request_options=request_options)
+        return _response.data
+
+    def batch_delete_sources(
+        self,
+        notebook_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SourceBatchDeleteResponse:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceBatchDeleteResponse
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.batch_delete_sources(
+            notebook_id=1,
+            source_ids=[1],
+        )
+        """
+        _response = self._raw_client.batch_delete_sources(
+            notebook_id, source_ids=source_ids, request_options=request_options
+        )
+        return _response.data
+
+    def batch_reembed_sources(
+        self,
+        notebook_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SourceBatchReembedResponse:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceBatchReembedResponse
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.batch_reembed_sources(
+            notebook_id=1,
+            source_ids=[1],
+        )
+        """
+        _response = self._raw_client.batch_reembed_sources(
+            notebook_id, source_ids=source_ids, request_options=request_options
+        )
+        return _response.data
+
     def list_extractors(
         self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
     ) -> ExtractorsListResponse:
@@ -84,6 +239,79 @@ class SourcesClient:
         )
         """
         _response = self._raw_client.list_extractors(notebook_id, request_options=request_options)
+        return _response.data
+
+    def create_source_from_url(
+        self,
+        notebook_id: int,
+        *,
+        url: str,
+        extractor: typing.Optional[str] = OMIT,
+        mode: typing.Optional[SourceFromUrlRequestMode] = OMIT,
+        snippet: typing.Optional[str] = OMIT,
+        title: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SourceRead:
+        """
+        Create a source from a URL.
+
+        Supports two modes:
+        - `link`: Save URL, title, and snippet as a lightweight source
+        - `fetch`: Fetch the webpage content and parse it as a full source
+
+        For `fetch` mode, you can optionally specify an extractor:
+        - `trafilatura`: Local extraction using trafilatura library (default)
+        - `firecrawl`: External API using Firecrawl service
+        - `browserless`: Browser rendering using Browserless + Playwright
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        url : str
+
+        extractor : typing.Optional[str]
+            指定使用的提取器类型 (trafilatura, firecrawl, browserless)。如果不指定，使用默认降级顺序。
+
+        mode : typing.Optional[SourceFromUrlRequestMode]
+            枚举值:
+
+            * `fetch`: 获取完整内容
+            * `link`: 仅保存链接
+
+        snippet : typing.Optional[str]
+
+        title : typing.Optional[str]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceRead
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.create_source_from_url(
+            notebook_id=1,
+            url="url",
+        )
+        """
+        _response = self._raw_client.create_source_from_url(
+            notebook_id,
+            url=url,
+            extractor=extractor,
+            mode=mode,
+            snippet=snippet,
+            title=title,
+            request_options=request_options,
+        )
         return _response.data
 
     def search_sources(
@@ -129,345 +357,6 @@ class SourcesClient:
         _response = self._raw_client.search_sources(
             notebook_id, query=query, engine=engine, mode=mode, request_options=request_options
         )
-        return _response.data
-
-    def create_source_from_url(
-        self,
-        notebook_id: int,
-        *,
-        url: str,
-        title: typing.Optional[str] = OMIT,
-        snippet: typing.Optional[str] = OMIT,
-        mode: typing.Optional[SourceFromUrlRequestMode] = OMIT,
-        extractor: typing.Optional[str] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> SourceRead:
-        """
-        Create a source from a URL.
-
-        Supports two modes:
-        - `link`: Save URL, title, and snippet as a lightweight source
-        - `fetch`: Fetch the webpage content and parse it as a full source
-
-        For `fetch` mode, you can optionally specify an extractor:
-        - `trafilatura`: Local extraction using trafilatura library (default)
-        - `firecrawl`: External API using Firecrawl service
-        - `browserless`: Browser rendering using Browserless + Playwright
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        url : str
-
-        title : typing.Optional[str]
-
-        snippet : typing.Optional[str]
-
-        mode : typing.Optional[SourceFromUrlRequestMode]
-            枚举值:
-
-            * `fetch`: 获取完整内容
-            * `link`: 仅保存链接
-
-        extractor : typing.Optional[str]
-            指定使用的提取器类型 (trafilatura, firecrawl, browserless)。如果不指定，使用默认降级顺序。
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SourceRead
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.sources.create_source_from_url(
-            notebook_id=1,
-            url="url",
-        )
-        """
-        _response = self._raw_client.create_source_from_url(
-            notebook_id,
-            url=url,
-            title=title,
-            snippet=snippet,
-            mode=mode,
-            extractor=extractor,
-            request_options=request_options,
-        )
-        return _response.data
-
-    def list_sources(
-        self,
-        notebook_id: int,
-        *,
-        tag: typing.Optional[str] = None,
-        sort_by: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy] = None,
-        sort_order: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder] = None,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> typing.List[SourceRead]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        tag : typing.Optional[str]
-
-        sort_by : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy]
-
-        sort_order : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder]
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        typing.List[SourceRead]
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.sources.list_sources(
-            notebook_id=1,
-        )
-        """
-        _response = self._raw_client.list_sources(
-            notebook_id, tag=tag, sort_by=sort_by, sort_order=sort_order, request_options=request_options
-        )
-        return _response.data
-
-    def upload_source(
-        self, notebook_id: int, *, file: core.File, request_options: typing.Optional[RequestOptions] = None
-    ) -> SourceRead:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        file : core.File
-            See core.File for more documentation
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SourceRead
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.sources.upload_source(
-            notebook_id=1,
-        )
-        """
-        _response = self._raw_client.upload_source(notebook_id, file=file, request_options=request_options)
-        return _response.data
-
-    def batch_reembed_sources(
-        self,
-        notebook_id: int,
-        *,
-        source_ids: typing.Sequence[int],
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> SourceBatchReembedResponse:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_ids : typing.Sequence[int]
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SourceBatchReembedResponse
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.sources.batch_reembed_sources(
-            notebook_id=1,
-            source_ids=[1],
-        )
-        """
-        _response = self._raw_client.batch_reembed_sources(
-            notebook_id, source_ids=source_ids, request_options=request_options
-        )
-        return _response.data
-
-    def reembed_source(
-        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> SourceRead:
-        """
-        Retry embedding for a failed source using existing chunks.
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SourceRead
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.sources.reembed_source(
-            notebook_id=1,
-            source_id=1,
-        )
-        """
-        _response = self._raw_client.reembed_source(notebook_id, source_id, request_options=request_options)
-        return _response.data
-
-    def batch_delete_sources(
-        self,
-        notebook_id: int,
-        *,
-        source_ids: typing.Sequence[int],
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> SourceBatchDeleteResponse:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_ids : typing.Sequence[int]
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SourceBatchDeleteResponse
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.sources.batch_delete_sources(
-            notebook_id=1,
-            source_ids=[1],
-        )
-        """
-        _response = self._raw_client.batch_delete_sources(
-            notebook_id, source_ids=source_ids, request_options=request_options
-        )
-        return _response.data
-
-    def delete_source(
-        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> None:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        None
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.sources.delete_source(
-            notebook_id=1,
-            source_id=1,
-        )
-        """
-        _response = self._raw_client.delete_source(notebook_id, source_id, request_options=request_options)
-        return _response.data
-
-    def list_source_chunks(
-        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> typing.List[ChunkRead]:
-        """
-        获取来源的所有文本片段（chunks）。
-
-        返回指定来源的所有文本片段，按 chunk_index 升序排列。
-        每个片段包含：
-        - id: 片段唯一标识
-        - chunk_index: 片段索引（从0开始）
-        - text: 片段文本内容
-        - start_offset: 在原文中的起始位置
-        - end_offset: 在原文中的结束位置
-        - metadata: 片段元数据（如页码等）
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        typing.List[ChunkRead]
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.sources.list_source_chunks(
-            notebook_id=1,
-            source_id=1,
-        )
-        """
-        _response = self._raw_client.list_source_chunks(notebook_id, source_id, request_options=request_options)
         return _response.data
 
     def list_source_tags(
@@ -687,11 +576,52 @@ class SourcesClient:
         )
         return _response.data
 
-    def get_source_summary(
+    def delete_source(
         self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> SourceSummaryResponse:
+    ) -> None:
         """
-        Generate or retrieve summary for a specific source.
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.delete_source(
+            notebook_id=1,
+            source_id=1,
+        )
+        """
+        _response = self._raw_client.delete_source(notebook_id, source_id, request_options=request_options)
+        return _response.data
+
+    def list_source_chunks(
+        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> typing.List[ChunkRead]:
+        """
+        获取来源的所有文本片段（chunks）。
+
+        返回指定来源的所有文本片段，按 chunk_index 升序排列。
+        每个片段包含：
+        - id: 片段唯一标识
+        - chunk_index: 片段索引（从0开始）
+        - text: 片段文本内容
+        - start_offset: 在原文中的起始位置
+        - end_offset: 在原文中的结束位置
+        - metadata: 片段元数据（如页码等）
 
         Parameters
         ----------
@@ -704,7 +634,7 @@ class SourcesClient:
 
         Returns
         -------
-        SourceSummaryResponse
+        typing.List[ChunkRead]
             Successful Response
 
         Examples
@@ -714,12 +644,12 @@ class SourcesClient:
         client = CrystalithClient(
             base_url="https://yourhost.com/path/to/api",
         )
-        client.sources.get_source_summary(
+        client.sources.list_source_chunks(
             notebook_id=1,
             source_id=1,
         )
         """
-        _response = self._raw_client.get_source_summary(notebook_id, source_id, request_options=request_options)
+        _response = self._raw_client.list_source_chunks(notebook_id, source_id, request_options=request_options)
         return _response.data
 
     def source_qa(
@@ -806,8 +736,8 @@ class SourcesClient:
             source_id=1,
             messages=[
                 QaMessage(
-                    role="user",
                     content="content",
+                    role="assistant",
                 )
             ],
         )
@@ -815,6 +745,76 @@ class SourcesClient:
         _response = self._raw_client.convert_source_qa_to_source(
             notebook_id, source_id, messages=messages, request_options=request_options
         )
+        return _response.data
+
+    def reembed_source(
+        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> SourceRead:
+        """
+        Retry embedding for a failed source using existing chunks.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceRead
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.reembed_source(
+            notebook_id=1,
+            source_id=1,
+        )
+        """
+        _response = self._raw_client.reembed_source(notebook_id, source_id, request_options=request_options)
+        return _response.data
+
+    def get_source_summary(
+        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> SourceSummaryResponse:
+        """
+        Generate or retrieve summary for a specific source.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceSummaryResponse
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.sources.get_source_summary(
+            notebook_id=1,
+            source_id=1,
+        )
+        """
+        _response = self._raw_client.get_source_summary(notebook_id, source_id, request_options=request_options)
         return _response.data
 
 
@@ -832,6 +832,193 @@ class AsyncSourcesClient:
         AsyncRawSourcesClient
         """
         return self._raw_client
+
+    async def list_sources(
+        self,
+        notebook_id: int,
+        *,
+        sort_by: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy] = None,
+        sort_order: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder] = None,
+        tag: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> typing.List[SourceRead]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        sort_by : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy]
+
+        sort_order : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder]
+
+        tag : typing.Optional[str]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        typing.List[SourceRead]
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.list_sources(
+                notebook_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.list_sources(
+            notebook_id, sort_by=sort_by, sort_order=sort_order, tag=tag, request_options=request_options
+        )
+        return _response.data
+
+    async def upload_source(
+        self, notebook_id: int, *, file: core.File, request_options: typing.Optional[RequestOptions] = None
+    ) -> SourceRead:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        file : core.File
+            See core.File for more documentation
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceRead
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.upload_source(
+                notebook_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.upload_source(notebook_id, file=file, request_options=request_options)
+        return _response.data
+
+    async def batch_delete_sources(
+        self,
+        notebook_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SourceBatchDeleteResponse:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceBatchDeleteResponse
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.batch_delete_sources(
+                notebook_id=1,
+                source_ids=[1],
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.batch_delete_sources(
+            notebook_id, source_ids=source_ids, request_options=request_options
+        )
+        return _response.data
+
+    async def batch_reembed_sources(
+        self,
+        notebook_id: int,
+        *,
+        source_ids: typing.Sequence[int],
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SourceBatchReembedResponse:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_ids : typing.Sequence[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceBatchReembedResponse
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.batch_reembed_sources(
+                notebook_id=1,
+                source_ids=[1],
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.batch_reembed_sources(
+            notebook_id, source_ids=source_ids, request_options=request_options
+        )
+        return _response.data
 
     async def list_extractors(
         self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
@@ -880,6 +1067,87 @@ class AsyncSourcesClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.list_extractors(notebook_id, request_options=request_options)
+        return _response.data
+
+    async def create_source_from_url(
+        self,
+        notebook_id: int,
+        *,
+        url: str,
+        extractor: typing.Optional[str] = OMIT,
+        mode: typing.Optional[SourceFromUrlRequestMode] = OMIT,
+        snippet: typing.Optional[str] = OMIT,
+        title: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SourceRead:
+        """
+        Create a source from a URL.
+
+        Supports two modes:
+        - `link`: Save URL, title, and snippet as a lightweight source
+        - `fetch`: Fetch the webpage content and parse it as a full source
+
+        For `fetch` mode, you can optionally specify an extractor:
+        - `trafilatura`: Local extraction using trafilatura library (default)
+        - `firecrawl`: External API using Firecrawl service
+        - `browserless`: Browser rendering using Browserless + Playwright
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        url : str
+
+        extractor : typing.Optional[str]
+            指定使用的提取器类型 (trafilatura, firecrawl, browserless)。如果不指定，使用默认降级顺序。
+
+        mode : typing.Optional[SourceFromUrlRequestMode]
+            枚举值:
+
+            * `fetch`: 获取完整内容
+            * `link`: 仅保存链接
+
+        snippet : typing.Optional[str]
+
+        title : typing.Optional[str]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceRead
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.create_source_from_url(
+                notebook_id=1,
+                url="url",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.create_source_from_url(
+            notebook_id,
+            url=url,
+            extractor=extractor,
+            mode=mode,
+            snippet=snippet,
+            title=title,
+            request_options=request_options,
+        )
         return _response.data
 
     async def search_sources(
@@ -933,409 +1201,6 @@ class AsyncSourcesClient:
         _response = await self._raw_client.search_sources(
             notebook_id, query=query, engine=engine, mode=mode, request_options=request_options
         )
-        return _response.data
-
-    async def create_source_from_url(
-        self,
-        notebook_id: int,
-        *,
-        url: str,
-        title: typing.Optional[str] = OMIT,
-        snippet: typing.Optional[str] = OMIT,
-        mode: typing.Optional[SourceFromUrlRequestMode] = OMIT,
-        extractor: typing.Optional[str] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> SourceRead:
-        """
-        Create a source from a URL.
-
-        Supports two modes:
-        - `link`: Save URL, title, and snippet as a lightweight source
-        - `fetch`: Fetch the webpage content and parse it as a full source
-
-        For `fetch` mode, you can optionally specify an extractor:
-        - `trafilatura`: Local extraction using trafilatura library (default)
-        - `firecrawl`: External API using Firecrawl service
-        - `browserless`: Browser rendering using Browserless + Playwright
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        url : str
-
-        title : typing.Optional[str]
-
-        snippet : typing.Optional[str]
-
-        mode : typing.Optional[SourceFromUrlRequestMode]
-            枚举值:
-
-            * `fetch`: 获取完整内容
-            * `link`: 仅保存链接
-
-        extractor : typing.Optional[str]
-            指定使用的提取器类型 (trafilatura, firecrawl, browserless)。如果不指定，使用默认降级顺序。
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SourceRead
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.sources.create_source_from_url(
-                notebook_id=1,
-                url="url",
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.create_source_from_url(
-            notebook_id,
-            url=url,
-            title=title,
-            snippet=snippet,
-            mode=mode,
-            extractor=extractor,
-            request_options=request_options,
-        )
-        return _response.data
-
-    async def list_sources(
-        self,
-        notebook_id: int,
-        *,
-        tag: typing.Optional[str] = None,
-        sort_by: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy] = None,
-        sort_order: typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder] = None,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> typing.List[SourceRead]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        tag : typing.Optional[str]
-
-        sort_by : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortBy]
-
-        sort_order : typing.Optional[ListSourcesV1NotebooksNotebookIdSourcesGetRequestSortOrder]
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        typing.List[SourceRead]
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.sources.list_sources(
-                notebook_id=1,
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.list_sources(
-            notebook_id, tag=tag, sort_by=sort_by, sort_order=sort_order, request_options=request_options
-        )
-        return _response.data
-
-    async def upload_source(
-        self, notebook_id: int, *, file: core.File, request_options: typing.Optional[RequestOptions] = None
-    ) -> SourceRead:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        file : core.File
-            See core.File for more documentation
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SourceRead
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.sources.upload_source(
-                notebook_id=1,
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.upload_source(notebook_id, file=file, request_options=request_options)
-        return _response.data
-
-    async def batch_reembed_sources(
-        self,
-        notebook_id: int,
-        *,
-        source_ids: typing.Sequence[int],
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> SourceBatchReembedResponse:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_ids : typing.Sequence[int]
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SourceBatchReembedResponse
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.sources.batch_reembed_sources(
-                notebook_id=1,
-                source_ids=[1],
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.batch_reembed_sources(
-            notebook_id, source_ids=source_ids, request_options=request_options
-        )
-        return _response.data
-
-    async def reembed_source(
-        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> SourceRead:
-        """
-        Retry embedding for a failed source using existing chunks.
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SourceRead
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.sources.reembed_source(
-                notebook_id=1,
-                source_id=1,
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.reembed_source(notebook_id, source_id, request_options=request_options)
-        return _response.data
-
-    async def batch_delete_sources(
-        self,
-        notebook_id: int,
-        *,
-        source_ids: typing.Sequence[int],
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> SourceBatchDeleteResponse:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_ids : typing.Sequence[int]
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SourceBatchDeleteResponse
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.sources.batch_delete_sources(
-                notebook_id=1,
-                source_ids=[1],
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.batch_delete_sources(
-            notebook_id, source_ids=source_ids, request_options=request_options
-        )
-        return _response.data
-
-    async def delete_source(
-        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> None:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        None
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.sources.delete_source(
-                notebook_id=1,
-                source_id=1,
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.delete_source(notebook_id, source_id, request_options=request_options)
-        return _response.data
-
-    async def list_source_chunks(
-        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> typing.List[ChunkRead]:
-        """
-        获取来源的所有文本片段（chunks）。
-
-        返回指定来源的所有文本片段，按 chunk_index 升序排列。
-        每个片段包含：
-        - id: 片段唯一标识
-        - chunk_index: 片段索引（从0开始）
-        - text: 片段文本内容
-        - start_offset: 在原文中的起始位置
-        - end_offset: 在原文中的结束位置
-        - metadata: 片段元数据（如页码等）
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        source_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        typing.List[ChunkRead]
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.sources.list_source_chunks(
-                notebook_id=1,
-                source_id=1,
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.list_source_chunks(notebook_id, source_id, request_options=request_options)
         return _response.data
 
     async def list_source_tags(
@@ -1605,11 +1470,60 @@ class AsyncSourcesClient:
         )
         return _response.data
 
-    async def get_source_summary(
+    async def delete_source(
         self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> SourceSummaryResponse:
+    ) -> None:
         """
-        Generate or retrieve summary for a specific source.
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.delete_source(
+                notebook_id=1,
+                source_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.delete_source(notebook_id, source_id, request_options=request_options)
+        return _response.data
+
+    async def list_source_chunks(
+        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> typing.List[ChunkRead]:
+        """
+        获取来源的所有文本片段（chunks）。
+
+        返回指定来源的所有文本片段，按 chunk_index 升序排列。
+        每个片段包含：
+        - id: 片段唯一标识
+        - chunk_index: 片段索引（从0开始）
+        - text: 片段文本内容
+        - start_offset: 在原文中的起始位置
+        - end_offset: 在原文中的结束位置
+        - metadata: 片段元数据（如页码等）
 
         Parameters
         ----------
@@ -1622,7 +1536,7 @@ class AsyncSourcesClient:
 
         Returns
         -------
-        SourceSummaryResponse
+        typing.List[ChunkRead]
             Successful Response
 
         Examples
@@ -1637,7 +1551,7 @@ class AsyncSourcesClient:
 
 
         async def main() -> None:
-            await client.sources.get_source_summary(
+            await client.sources.list_source_chunks(
                 notebook_id=1,
                 source_id=1,
             )
@@ -1645,7 +1559,7 @@ class AsyncSourcesClient:
 
         asyncio.run(main())
         """
-        _response = await self._raw_client.get_source_summary(notebook_id, source_id, request_options=request_options)
+        _response = await self._raw_client.list_source_chunks(notebook_id, source_id, request_options=request_options)
         return _response.data
 
     async def source_qa(
@@ -1745,8 +1659,8 @@ class AsyncSourcesClient:
                 source_id=1,
                 messages=[
                     QaMessage(
-                        role="user",
                         content="content",
+                        role="assistant",
                     )
                 ],
             )
@@ -1757,4 +1671,90 @@ class AsyncSourcesClient:
         _response = await self._raw_client.convert_source_qa_to_source(
             notebook_id, source_id, messages=messages, request_options=request_options
         )
+        return _response.data
+
+    async def reembed_source(
+        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> SourceRead:
+        """
+        Retry embedding for a failed source using existing chunks.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceRead
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.reembed_source(
+                notebook_id=1,
+                source_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.reembed_source(notebook_id, source_id, request_options=request_options)
+        return _response.data
+
+    async def get_source_summary(
+        self, notebook_id: int, source_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> SourceSummaryResponse:
+        """
+        Generate or retrieve summary for a specific source.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        source_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SourceSummaryResponse
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.sources.get_source_summary(
+                notebook_id=1,
+                source_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.get_source_summary(notebook_id, source_id, request_options=request_options)
         return _response.data

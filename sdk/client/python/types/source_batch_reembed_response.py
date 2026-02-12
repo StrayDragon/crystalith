@@ -7,10 +7,10 @@ from ..core.pydantic_utilities import IS_PYDANTIC_V2, UniversalBaseModel
 
 
 class SourceBatchReembedResponse(UniversalBaseModel):
-    reembedded_ids: typing.List[int]
+    failed_count: int
     failed_ids: typing.List[int]
     reembedded_count: int
-    failed_count: int
+    reembedded_ids: typing.List[int]
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2
