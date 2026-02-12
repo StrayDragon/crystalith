@@ -313,7 +313,11 @@ class ModelsSettings(BaseModel):
 
     def get_default_for_role(self, role: ModelRole) -> ModelConfig | None:
         """Get the default model for a role."""
-        default_id = getattr(self.defaults, role, None)
+        # Map role names to ModelDefaults field names
+        # (ModelRole uses "embed" but ModelDefaults field is "embedding")
+        _role_to_field = {"embed": "embedding"}
+        field_name = _role_to_field.get(role, role)
+        default_id = getattr(self.defaults, field_name, None)
         if default_id:
             return self.get_model(default_id)
         # Fallback to first model with this role

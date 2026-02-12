@@ -1594,12 +1594,15 @@ export default function SlidesStudioDialog({
                 )}
                 <div className="mt-3 flex-1 min-h-0 rounded-lg border border-slate-200 bg-slate-900/5 overflow-hidden flex items-center justify-center p-3">
                   {previewReady ? (
-                    <div className="h-full w-auto max-w-full aspect-video rounded-lg overflow-hidden shadow-lg bg-black">
+                    <div className="h-full w-auto max-w-full aspect-video rounded-lg overflow-hidden shadow-lg bg-white dark:bg-slate-800 relative">
+                      <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-800 z-0">
+                        <Spinner className="h-5 w-5 text-gray-400" />
+                      </div>
                       <iframe
                         key={previewKey}
                         title="Slidev 预览"
                         src={previewUrl}
-                        className="h-full w-full border-0 bg-black"
+                        className="h-full w-full border-0 bg-white dark:bg-slate-800 relative z-10"
                         loading="lazy"
                       />
                     </div>

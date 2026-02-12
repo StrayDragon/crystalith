@@ -8,8 +8,13 @@ from .sqlite import SQLiteVectorStore
 
 
 def _is_local_host(host: str) -> bool:
-    normalized = host.strip().lower()
-    return normalized in {"", "localhost", "127.0.0.1"}
+    """Return True only when host is empty (meaning embedded Chroma).
+
+    Any explicit host value — including localhost / 127.0.0.1 — is treated
+    as a remote HTTP endpoint so that the lightweight ``chroma_http`` client
+    is used instead of the heavy ``chromadb`` Python package.
+    """
+    return not host or not host.strip()
 
 
 def create_vector_store(settings: Settings) -> VectorStore:

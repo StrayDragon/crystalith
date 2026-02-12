@@ -2,16 +2,80 @@
 
 This directory is the canonical entrypoint for deployment configs.
 
-## Production (recommended)
-
-From repo root:
+## Quick Start
 
 ```bash
-cp .env.example .env
+cp .env.example .env              # edit .env with your settings
+just docker-compose-up            # build & start all services
+```
+
+Or without `just`:
+
+```bash
 docker compose --env-file .env -f deployments/prod/docker-compose.yml up -d --build
 ```
 
+Open http://localhost:8080 in your browser.
+
+## Services Overview
+
+| Service | Port | Description |
+|---------|------|-------------|
+| **web** (Nginx) | 8080 | Frontend SPA + API reverse proxy |
+| **api** (FastAPI) | — | Backend API (internal, proxied by Nginx) |
+| **slidev** | 3030 | Slide presentation preview (iframe) |
+| **postgres** | — | Database (internal) |
+| **chromadb** | — | Vector storage (internal) |
+| **host-remap** | — | Optional port forwarder for VPN/Tailscale (profile: `host-remap`) |
+| **redis** | — | Optional cache (profile: `redis`) |
+| **ollama** | — | Optional local LLM (profile: `ollama`) |
+
+## Just Commands
+
+By default, `host-remap` profile is enabled (for VPN/Tailscale users).
+Override with `PROFILES`:
+
+```bash
+just docker-compose-up                          # Start all (default: host-remap profile)
+just PROFILES="" docker-compose-up              # Start without optional profiles
+just PROFILES="host-remap ollama" docker-compose-up  # Custom profiles
+just docker-compose-down                        # Stop all services
+just docker-compose-ps                          # Show container status
+just docker-compose-logs                        # Follow logs (all services)
+just docker-compose-logs api                    # Follow logs (specific service)
+just docker-compose-rebuild api                 # Rebuild & restart a single service
+just docker-compose-smoke-test                  # Run smoke tests
+```
+
+## Host Remap (VPN / Tailscale Users)
+
+If your AI services or search engine are on a VPN, Tailscale, or other networks
+that Docker bridge networking cannot reach directly, enable the `host-remap` profile:
+
+```bash
+just docker-compose-up    # host-remap is enabled by default
+```
+
+Configure port forwards in `.env`:
+
+```bash
+# Format: LOCAL_PORT:REMOTE_HOST:REMOTE_PORT (space-separated)
+BRIDGE_FORWARDS=50201:my-server.ts.net:50201 50256:my-server.ts.net:50256
+
+# Other containers reach forwarded ports via host.docker.internal:LOCAL_PORT
+OPENAI_BASE_URL=http://host.docker.internal:50256/v1
+```
+
+The host-remap container runs with `network_mode: host` and uses `socat` to
+forward traffic from the host's ports to remote endpoints.
+
 ## Acceptance (smoke test)
+
+```bash
+just docker-compose-smoke-test
+```
+
+Or manually:
 
 ```bash
 curl -fsS "http://localhost:${CL_WEB_PORT:-8080}/health"
@@ -47,23 +111,6 @@ docker compose -f deployments/prod/docker-compose.yml --profile ollama exec -T o
 docker compose -f deployments/prod/docker-compose.yml --profile ollama exec -T ollama ollama ls
 ```
 
-Offline smoke test (no OpenAI key):
-
-```bash
-curl -fsS "http://localhost:${CL_WEB_PORT:-8080}/health"
-
-curl -fsS "http://localhost:${CL_WEB_PORT:-8080}/v1/models"
-
-curl -fsS -X POST "http://localhost:${CL_WEB_PORT:-8080}/v1/notebooks" \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"offline-smoke"}'
-
-# Use the returned notebook id
-curl -fsS -X POST "http://localhost:${CL_WEB_PORT:-8080}/v1/notebooks/<id>/refine" \
-  -H 'Content-Type: application/json' \
-  -d '{"prompt":"Say hello in one sentence.","format":"paragraph"}'
-```
-
 ## Registry pull proxy (optional)
 
 If pulling images from registries times out, pre-pull them with a local proxy and then run the build without proxy.
@@ -81,6 +128,7 @@ for img in \
   chromadb/chroma:0.5.15 \
   redis:7.4-alpine \
   ollama/ollama:latest \
+  alpine:3.21 \
 ; do docker pull "$img"; done
 
 # Important: unset proxy before building; use China mirrors instead (below).

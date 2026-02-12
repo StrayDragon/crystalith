@@ -74,6 +74,60 @@ test-frontend:
     cd frontend/web && pnpm test
 
 # --------------------------------------------------------------------------
+# Docker Deployment
+#
+# Default PROFILES can be overridden:
+#   just docker-compose-up                       # uses default profiles
+#   just PROFILES="" docker-compose-up            # no optional profiles
+#   just PROFILES="host-remap ollama" docker-compose-up  # custom profiles
+# --------------------------------------------------------------------------
+
+COMPOSE_FILE := "deployments/prod/docker-compose.yml"
+# Default profiles to enable (space-separated). Override with: just PROFILES="..." <cmd>
+PROFILES := "host-remap"
+
+_compose_profiles := if PROFILES == "" { "" } else { replace(trim(PROFILES), " ", " --profile ") }
+_compose_profile_flags := if _compose_profiles == "" { "" } else { "--profile " + _compose_profiles }
+COMPOSE_BASE := "docker compose --env-file .env -f " + COMPOSE_FILE + " " + _compose_profile_flags
+
+# Start all services (build if needed)
+docker-compose-up *ARGS='':
+    {{COMPOSE_BASE}} up -d --build {{ARGS}}
+
+# Stop all services
+docker-compose-down *ARGS='':
+    {{COMPOSE_BASE}} down {{ARGS}}
+
+# Show running container status
+docker-compose-ps:
+    {{COMPOSE_BASE}} ps
+
+# Follow logs (all services or specific: just docker-compose-logs api)
+docker-compose-logs *ARGS='':
+    {{COMPOSE_BASE}} logs -f {{ARGS}}
+
+# Rebuild and restart a specific service (e.g., just docker-compose-rebuild api)
+docker-compose-rebuild SERVICE:
+    {{COMPOSE_BASE}} up -d --build --no-deps {{SERVICE}}
+
+# Smoke test: verify all endpoints
+docker-compose-smoke-test:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    PORT="${CL_WEB_PORT:-8080}"
+    echo "=== Health ==="
+    curl -fsS "http://localhost:$PORT/health"
+    echo
+    echo "=== Models ==="
+    curl -fsS "http://localhost:$PORT/v1/models" | python3 -m json.tool | head -10
+    echo "..."
+    echo "=== Slidev ==="
+    STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:3030/")
+    echo "Slidev: HTTP $STATUS"
+    echo
+    echo "All checks passed."
+
+# --------------------------------------------------------------------------
 # Misc
 # --------------------------------------------------------------------------
 
