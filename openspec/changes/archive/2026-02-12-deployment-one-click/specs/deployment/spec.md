@@ -14,4 +14,3 @@
 #### Scenario: 服务自动恢复
 - **WHEN** 后端服务异常崩溃
 - **THEN** Docker 自动重启该服务（restart: unless-stopped）
-

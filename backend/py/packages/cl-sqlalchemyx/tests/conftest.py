@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-_COMPOSE_FILE = Path(__file__).resolve().parents[5] / "dockers" / "docker-compose.test.yaml"
+_COMPOSE_FILE = Path(__file__).resolve().parents[5] / "deployments" / "test" / "docker-compose.yml"
 _CONTAINER_NAME = "crystalith-postgres-test"
 
 

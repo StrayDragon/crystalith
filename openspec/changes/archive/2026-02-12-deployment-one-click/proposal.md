@@ -31,4 +31,3 @@
 - 配置：`config/app.yaml`（消除敏感默认值、引导通过 env/secrets 配置），必要时涉及 `config/schema.json` 的同步更新。
 - 文档：`docs/deployment.md`（对齐新目录结构与最佳实践），以及 docs-site（若已引入）中的部署章节。
 - 非目标：不在此变更中引入云厂商特定部署（K8s/Helm/Terraform 等）；不实现完整“发布到公网”的运维体系（监控/日志/备份策略可后续拆分）。
-

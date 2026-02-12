@@ -1,11 +1,11 @@
 services:
   postgres_test:
-    image: postgres:18.1-trixie
+    image: ${CL_POSTGRES_TEST_IMAGE:-postgres:18.1-trixie}
     container_name: crystalith-postgres-test
     environment:
-      POSTGRES_USER: crystalith
-      POSTGRES_PASSWORD: crystalith
-      POSTGRES_DB: crystalith_test
+      POSTGRES_USER: ${CL_POSTGRES_TEST_USER:-crystalith}
+      POSTGRES_PASSWORD: ${CL_POSTGRES_TEST_PASSWORD:-crystalith}
+      POSTGRES_DB: ${CL_POSTGRES_TEST_DB:-crystalith_test}
     ports:
       - "${CL_POSTGRES_TEST_PORT:-5433}:5432"
     volumes:
