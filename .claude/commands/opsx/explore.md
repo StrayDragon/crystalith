@@ -1,12 +1,8 @@
 ---
-name: openspec-explore
-description: Enter explore mode - a thinking partner for exploring ideas, investigating problems, and clarifying requirements. Use when the user wants to think through something before or during a change.
-license: MIT
-compatibility: Requires openspec CLI.
-metadata:
-  author: openspec
-  version: "1.0"
-  generatedBy: "1.1.1"
+name: "OPSX: Explore"
+description: "Enter explore mode - think through ideas, investigate problems, clarify requirements"
+category: Workflow
+tags: [workflow, explore, experimental, thinking]
 ---
 
 进入探索模式.深入思考,自由可视化,跟随对话推进.
@@ -14,6 +10,13 @@ metadata:
 **重要:探索模式用于思考,不用于实现.** 你可以阅读文件、检索代码、调查现有实现,但**不要**直接编写功能代码或落地实现.如果用户要求直接实现,请先提醒其退出探索模式(例如使用 `/opsx:new` 或 `/opsx:ff`).如果用户要求,你可以创建 OpenSpec 工件(proposal/design/spec/tasks)来沉淀思考结果.
 
 **这是工作姿态,不是固定流程.** 没有强制步骤、固定顺序或必交付输出.
+
+**输入**:`/opsx:explore` 后的参数可以是任何要探索的问题,例如:
+- 模糊方向("实时协作")
+- 具体痛点("鉴权模块越来越难维护")
+- 某个 change 名称(结合上下文探索)
+- 方案比较("Postgres vs SQLite")
+- 不带参数(直接进入探索)
 
 ---
 

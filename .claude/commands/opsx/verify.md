@@ -1,17 +1,13 @@
 ---
-name: openspec-verify-change
-description: Verify implementation matches change artifacts. Use when the user wants to validate that implementation is complete, correct, and coherent before archiving.
-license: MIT
-compatibility: Requires openspec CLI.
-metadata:
-  author: openspec
-  version: "1.0"
-  generatedBy: "1.1.1"
+name: "OPSX: Verify"
+description: Verify implementation matches change artifacts before archiving
+category: Workflow
+tags: [workflow, verify, experimental]
 ---
 
 验证实现是否与变更工件(specs、tasks、design)一致.
 
-**输入**:可选指定变更名称.如果省略,先判断是否可从对话上下文推断;若含糊或不明确,必须提示可用的变更.
+**输入**:可选在 `/opsx:verify` 后指定变更名称(例如 `/opsx:verify add-auth`).如果省略,先判断是否可从对话上下文推断;若含糊或不明确,必须提示可用的变更.
 
 **步骤**
 
