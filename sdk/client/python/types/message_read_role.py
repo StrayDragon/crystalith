@@ -2,4 +2,4 @@
 
 import typing
 
-MessageReadRole = typing.Union[typing.Literal["user", "assistant", "system"], typing.Any]
+MessageReadRole = typing.Union[typing.Literal["assistant", "system", "user"], typing.Any]

@@ -2,4 +2,4 @@
 
 import typing
 
-SlideDraftReadStatus = typing.Union[typing.Literal["idle", "running", "error"], typing.Any]
+SlideDraftReadStatus = typing.Union[typing.Literal["error", "idle", "running"], typing.Any]

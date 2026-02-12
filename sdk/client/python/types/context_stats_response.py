@@ -7,13 +7,13 @@ from ..core.pydantic_utilities import IS_PYDANTIC_V2, UniversalBaseModel
 
 
 class ContextStatsResponse(UniversalBaseModel):
-    total_tokens: int
-    system_tokens: int
-    history_tokens: int
-    retrieval_tokens: int
-    query_tokens: int
-    max_tokens: int
     compressed: bool
+    history_tokens: int
+    max_tokens: int
+    query_tokens: int
+    retrieval_tokens: int
+    system_tokens: int
+    total_tokens: int
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

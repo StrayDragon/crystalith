@@ -36,9 +36,9 @@ class ResearchClient:
         self,
         notebook_id: int,
         *,
-        offset: typing.Optional[int] = None,
-        limit: typing.Optional[int] = None,
         status: typing.Optional[ListResearchSessionsV1NotebooksNotebookIdResearchGetRequestStatus] = None,
+        limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[ResearchSessionListItem]:
         """
@@ -47,10 +47,6 @@ class ResearchClient:
         Parameters
         ----------
         notebook_id : int
-
-        offset : typing.Optional[int]
-
-        limit : typing.Optional[int]
 
         status : typing.Optional[ListResearchSessionsV1NotebooksNotebookIdResearchGetRequestStatus]
             枚举值:
@@ -61,6 +57,10 @@ class ResearchClient:
             * `waiting_user`: 等待用户确认
             * `completed`: 研究完成
             * `cancelled`: 已取消
+
+        limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -82,7 +82,7 @@ class ResearchClient:
         )
         """
         _response = self._raw_client.list_research_sessions(
-            notebook_id, offset=offset, limit=limit, status=status, request_options=request_options
+            notebook_id, status=status, limit=limit, offset=offset, request_options=request_options
         )
         return _response.data
 
@@ -246,6 +246,137 @@ class ResearchClient:
         )
         return _response.data
 
+    def cancel_research(
+        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> ResearchSessionResponse:
+        """
+        Cancel an ongoing research session.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        research_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        ResearchSessionResponse
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.research.cancel_research(
+            notebook_id=1,
+            research_id=1,
+        )
+        """
+        _response = self._raw_client.cancel_research(notebook_id, research_id, request_options=request_options)
+        return _response.data
+
+    def export_research(
+        self,
+        notebook_id: int,
+        research_id: int,
+        *,
+        export_type: typing.Optional[str] = OMIT,
+        include_report: typing.Optional[bool] = OMIT,
+        include_results: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> ExportResearchResponse:
+        """
+        Export research report to a source or note.
+
+        - export_type='source': Creates a new markdown source with the report
+        - export_type='note': Creates a new note (output) with the report
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        research_id : int
+
+        export_type : typing.Optional[str]
+            Export type: 'source' or 'note'
+
+        include_report : typing.Optional[bool]
+            Include final report
+
+        include_results : typing.Optional[bool]
+            Include aggregated results as links
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        ExportResearchResponse
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.research.export_research(
+            notebook_id=1,
+            research_id=1,
+        )
+        """
+        _response = self._raw_client.export_research(
+            notebook_id,
+            research_id,
+            export_type=export_type,
+            include_report=include_report,
+            include_results=include_results,
+            request_options=request_options,
+        )
+        return _response.data
+
+    def finish_research(
+        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> ResearchSessionResponse:
+        """
+        Finish research early and generate report.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        research_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        ResearchSessionResponse
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.research.finish_research(
+            notebook_id=1,
+            research_id=1,
+        )
+        """
+        _response = self._raw_client.finish_research(notebook_id, research_id, request_options=request_options)
+        return _response.data
+
     def modify_search_plan(
         self,
         notebook_id: int,
@@ -294,111 +425,6 @@ class ResearchClient:
         )
         return _response.data
 
-    def skip_iteration(
-        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> ResearchSessionResponse:
-        """
-        Skip the current iteration.
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        research_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        ResearchSessionResponse
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.research.skip_iteration(
-            notebook_id=1,
-            research_id=1,
-        )
-        """
-        _response = self._raw_client.skip_iteration(notebook_id, research_id, request_options=request_options)
-        return _response.data
-
-    def finish_research(
-        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> ResearchSessionResponse:
-        """
-        Finish research early and generate report.
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        research_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        ResearchSessionResponse
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.research.finish_research(
-            notebook_id=1,
-            research_id=1,
-        )
-        """
-        _response = self._raw_client.finish_research(notebook_id, research_id, request_options=request_options)
-        return _response.data
-
-    def cancel_research(
-        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> ResearchSessionResponse:
-        """
-        Cancel an ongoing research session.
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        research_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        ResearchSessionResponse
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.research.cancel_research(
-            notebook_id=1,
-            research_id=1,
-        )
-        """
-        _response = self._raw_client.cancel_research(notebook_id, research_id, request_options=request_options)
-        return _response.data
-
     def resume_research(
         self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
     ) -> ResearchSessionResponse:
@@ -432,6 +458,41 @@ class ResearchClient:
         )
         """
         _response = self._raw_client.resume_research(notebook_id, research_id, request_options=request_options)
+        return _response.data
+
+    def skip_iteration(
+        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> ResearchSessionResponse:
+        """
+        Skip the current iteration.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        research_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        ResearchSessionResponse
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.research.skip_iteration(
+            notebook_id=1,
+            research_id=1,
+        )
+        """
+        _response = self._raw_client.skip_iteration(notebook_id, research_id, request_options=request_options)
         return _response.data
 
     def start_research(
@@ -514,67 +575,6 @@ class ResearchClient:
         _response = self._raw_client.stream_research_progress(notebook_id, research_id, request_options=request_options)
         return _response.data
 
-    def export_research(
-        self,
-        notebook_id: int,
-        research_id: int,
-        *,
-        export_type: typing.Optional[str] = OMIT,
-        include_report: typing.Optional[bool] = OMIT,
-        include_results: typing.Optional[bool] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> ExportResearchResponse:
-        """
-        Export research report to a source or note.
-
-        - export_type='source': Creates a new markdown source with the report
-        - export_type='note': Creates a new note (output) with the report
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        research_id : int
-
-        export_type : typing.Optional[str]
-            Export type: 'source' or 'note'
-
-        include_report : typing.Optional[bool]
-            Include final report
-
-        include_results : typing.Optional[bool]
-            Include aggregated results as links
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        ExportResearchResponse
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.research.export_research(
-            notebook_id=1,
-            research_id=1,
-        )
-        """
-        _response = self._raw_client.export_research(
-            notebook_id,
-            research_id,
-            export_type=export_type,
-            include_report=include_report,
-            include_results=include_results,
-            request_options=request_options,
-        )
-        return _response.data
-
 
 class AsyncResearchClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
@@ -595,9 +595,9 @@ class AsyncResearchClient:
         self,
         notebook_id: int,
         *,
-        offset: typing.Optional[int] = None,
-        limit: typing.Optional[int] = None,
         status: typing.Optional[ListResearchSessionsV1NotebooksNotebookIdResearchGetRequestStatus] = None,
+        limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[ResearchSessionListItem]:
         """
@@ -606,10 +606,6 @@ class AsyncResearchClient:
         Parameters
         ----------
         notebook_id : int
-
-        offset : typing.Optional[int]
-
-        limit : typing.Optional[int]
 
         status : typing.Optional[ListResearchSessionsV1NotebooksNotebookIdResearchGetRequestStatus]
             枚举值:
@@ -620,6 +616,10 @@ class AsyncResearchClient:
             * `waiting_user`: 等待用户确认
             * `completed`: 研究完成
             * `cancelled`: 已取消
+
+        limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -649,7 +649,7 @@ class AsyncResearchClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.list_research_sessions(
-            notebook_id, offset=offset, limit=limit, status=status, request_options=request_options
+            notebook_id, status=status, limit=limit, offset=offset, request_options=request_options
         )
         return _response.data
 
@@ -849,6 +849,161 @@ class AsyncResearchClient:
         )
         return _response.data
 
+    async def cancel_research(
+        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> ResearchSessionResponse:
+        """
+        Cancel an ongoing research session.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        research_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        ResearchSessionResponse
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.research.cancel_research(
+                notebook_id=1,
+                research_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.cancel_research(notebook_id, research_id, request_options=request_options)
+        return _response.data
+
+    async def export_research(
+        self,
+        notebook_id: int,
+        research_id: int,
+        *,
+        export_type: typing.Optional[str] = OMIT,
+        include_report: typing.Optional[bool] = OMIT,
+        include_results: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> ExportResearchResponse:
+        """
+        Export research report to a source or note.
+
+        - export_type='source': Creates a new markdown source with the report
+        - export_type='note': Creates a new note (output) with the report
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        research_id : int
+
+        export_type : typing.Optional[str]
+            Export type: 'source' or 'note'
+
+        include_report : typing.Optional[bool]
+            Include final report
+
+        include_results : typing.Optional[bool]
+            Include aggregated results as links
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        ExportResearchResponse
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.research.export_research(
+                notebook_id=1,
+                research_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.export_research(
+            notebook_id,
+            research_id,
+            export_type=export_type,
+            include_report=include_report,
+            include_results=include_results,
+            request_options=request_options,
+        )
+        return _response.data
+
+    async def finish_research(
+        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> ResearchSessionResponse:
+        """
+        Finish research early and generate report.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        research_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        ResearchSessionResponse
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.research.finish_research(
+                notebook_id=1,
+                research_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.finish_research(notebook_id, research_id, request_options=request_options)
+        return _response.data
+
     async def modify_search_plan(
         self,
         notebook_id: int,
@@ -905,135 +1060,6 @@ class AsyncResearchClient:
         )
         return _response.data
 
-    async def skip_iteration(
-        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> ResearchSessionResponse:
-        """
-        Skip the current iteration.
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        research_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        ResearchSessionResponse
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.research.skip_iteration(
-                notebook_id=1,
-                research_id=1,
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.skip_iteration(notebook_id, research_id, request_options=request_options)
-        return _response.data
-
-    async def finish_research(
-        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> ResearchSessionResponse:
-        """
-        Finish research early and generate report.
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        research_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        ResearchSessionResponse
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.research.finish_research(
-                notebook_id=1,
-                research_id=1,
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.finish_research(notebook_id, research_id, request_options=request_options)
-        return _response.data
-
-    async def cancel_research(
-        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> ResearchSessionResponse:
-        """
-        Cancel an ongoing research session.
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        research_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        ResearchSessionResponse
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.research.cancel_research(
-                notebook_id=1,
-                research_id=1,
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.cancel_research(notebook_id, research_id, request_options=request_options)
-        return _response.data
-
     async def resume_research(
         self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
     ) -> ResearchSessionResponse:
@@ -1075,6 +1101,49 @@ class AsyncResearchClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.resume_research(notebook_id, research_id, request_options=request_options)
+        return _response.data
+
+    async def skip_iteration(
+        self, notebook_id: int, research_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> ResearchSessionResponse:
+        """
+        Skip the current iteration.
+
+        Parameters
+        ----------
+        notebook_id : int
+
+        research_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        ResearchSessionResponse
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.research.skip_iteration(
+                notebook_id=1,
+                research_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.skip_iteration(notebook_id, research_id, request_options=request_options)
         return _response.data
 
     async def start_research(
@@ -1172,74 +1241,5 @@ class AsyncResearchClient:
         """
         _response = await self._raw_client.stream_research_progress(
             notebook_id, research_id, request_options=request_options
-        )
-        return _response.data
-
-    async def export_research(
-        self,
-        notebook_id: int,
-        research_id: int,
-        *,
-        export_type: typing.Optional[str] = OMIT,
-        include_report: typing.Optional[bool] = OMIT,
-        include_results: typing.Optional[bool] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> ExportResearchResponse:
-        """
-        Export research report to a source or note.
-
-        - export_type='source': Creates a new markdown source with the report
-        - export_type='note': Creates a new note (output) with the report
-
-        Parameters
-        ----------
-        notebook_id : int
-
-        research_id : int
-
-        export_type : typing.Optional[str]
-            Export type: 'source' or 'note'
-
-        include_report : typing.Optional[bool]
-            Include final report
-
-        include_results : typing.Optional[bool]
-            Include aggregated results as links
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        ExportResearchResponse
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.research.export_research(
-                notebook_id=1,
-                research_id=1,
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.export_research(
-            notebook_id,
-            research_id,
-            export_type=export_type,
-            include_report=include_report,
-            include_results=include_results,
-            request_options=request_options,
         )
         return _response.data

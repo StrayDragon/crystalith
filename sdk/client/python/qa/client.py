@@ -31,10 +31,10 @@ class QaClient:
         notebook_id: int,
         *,
         question: str,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        top_k: typing.Optional[int] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> QaResponse:
         """
@@ -44,13 +44,13 @@ class QaClient:
 
         question : str
 
-        source_ids : typing.Optional[typing.Sequence[int]]
-
-        top_k : typing.Optional[int]
-
         min_score : typing.Optional[float]
 
         session_id : typing.Optional[int]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
+
+        top_k : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -75,10 +75,10 @@ class QaClient:
         _response = self._raw_client.ask_question(
             notebook_id,
             question=question,
-            source_ids=source_ids,
-            top_k=top_k,
             min_score=min_score,
             session_id=session_id,
+            source_ids=source_ids,
+            top_k=top_k,
             request_options=request_options,
         )
         return _response.data
@@ -88,10 +88,10 @@ class QaClient:
         notebook_id: int,
         *,
         question: str,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        top_k: typing.Optional[int] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.Any:
         """
@@ -108,13 +108,13 @@ class QaClient:
 
         question : str
 
-        source_ids : typing.Optional[typing.Sequence[int]]
-
-        top_k : typing.Optional[int]
-
         min_score : typing.Optional[float]
 
         session_id : typing.Optional[int]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
+
+        top_k : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -139,10 +139,10 @@ class QaClient:
         _response = self._raw_client.ask_question_stream(
             notebook_id,
             question=question,
-            source_ids=source_ids,
-            top_k=top_k,
             min_score=min_score,
             session_id=session_id,
+            source_ids=source_ids,
+            top_k=top_k,
             request_options=request_options,
         )
         return _response.data
@@ -168,10 +168,10 @@ class AsyncQaClient:
         notebook_id: int,
         *,
         question: str,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        top_k: typing.Optional[int] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> QaResponse:
         """
@@ -181,13 +181,13 @@ class AsyncQaClient:
 
         question : str
 
-        source_ids : typing.Optional[typing.Sequence[int]]
-
-        top_k : typing.Optional[int]
-
         min_score : typing.Optional[float]
 
         session_id : typing.Optional[int]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
+
+        top_k : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -220,10 +220,10 @@ class AsyncQaClient:
         _response = await self._raw_client.ask_question(
             notebook_id,
             question=question,
-            source_ids=source_ids,
-            top_k=top_k,
             min_score=min_score,
             session_id=session_id,
+            source_ids=source_ids,
+            top_k=top_k,
             request_options=request_options,
         )
         return _response.data
@@ -233,10 +233,10 @@ class AsyncQaClient:
         notebook_id: int,
         *,
         question: str,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        top_k: typing.Optional[int] = OMIT,
         min_score: typing.Optional[float] = OMIT,
         session_id: typing.Optional[int] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        top_k: typing.Optional[int] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.Any:
         """
@@ -253,13 +253,13 @@ class AsyncQaClient:
 
         question : str
 
-        source_ids : typing.Optional[typing.Sequence[int]]
-
-        top_k : typing.Optional[int]
-
         min_score : typing.Optional[float]
 
         session_id : typing.Optional[int]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
+
+        top_k : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -292,10 +292,10 @@ class AsyncQaClient:
         _response = await self._raw_client.ask_question_stream(
             notebook_id,
             question=question,
-            source_ids=source_ids,
-            top_k=top_k,
             min_score=min_score,
             session_id=session_id,
+            source_ids=source_ids,
+            top_k=top_k,
             request_options=request_options,
         )
         return _response.data

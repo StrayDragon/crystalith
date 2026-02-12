@@ -4,7 +4,7 @@ import typing
 
 OutputTypeInput = typing.Union[
     typing.Literal[
-        "FAQ", "GUIDE", "TIMELINE", "MINDMAP", "QUIZ", "BRIEFING", "SLIDES", "PARAGRAPH", "BULLETS", "STRUCTURED"
+        "BRIEFING", "BULLETS", "FAQ", "GUIDE", "MINDMAP", "PARAGRAPH", "QUIZ", "SLIDES", "STRUCTURED", "TIMELINE"
     ],
     typing.Any,
 ]

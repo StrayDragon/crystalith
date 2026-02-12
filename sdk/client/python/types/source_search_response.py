@@ -10,6 +10,12 @@ from .source_search_result import SourceSearchResult
 
 
 class SourceSearchResponse(UniversalBaseModel):
+    created_at: dt.datetime
+    engine: str
+    message: typing.Optional[str] = None
+    mode: str
+    query: str
+    results: typing.List[SourceSearchResult]
     status: SourceSearchResponseStatus = pydantic.Field()
     """
     枚举值:
@@ -17,13 +23,6 @@ class SourceSearchResponse(UniversalBaseModel):
     * `ok`: 搜索成功
     * `not_implemented`: 功能未实现
     """
-
-    query: str
-    engine: str
-    mode: str
-    results: typing.List[SourceSearchResult]
-    message: typing.Optional[str] = None
-    created_at: dt.datetime
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

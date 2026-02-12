@@ -12,10 +12,10 @@ from .context_stats_response import ContextStatsResponse
 class QaResponse(UniversalBaseModel):
     answer: str
     citations: typing.List[Citation]
-    evidence: bool
     confidence: float
-    created_at: dt.datetime
     context: ContextStatsResponse
+    created_at: dt.datetime
+    evidence: bool
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

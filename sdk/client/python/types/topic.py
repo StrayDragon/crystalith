@@ -7,10 +7,10 @@ from ..core.pydantic_utilities import IS_PYDANTIC_V2, UniversalBaseModel
 
 
 class Topic(UniversalBaseModel):
-    id: str
-    name: str
     chunk_ids: typing.List[int]
+    id: str
     keywords: typing.List[str]
+    name: str
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

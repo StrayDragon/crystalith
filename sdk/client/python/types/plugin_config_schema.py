@@ -4,14 +4,14 @@ import typing
 
 import pydantic
 from ..core.pydantic_utilities import IS_PYDANTIC_V2, UniversalBaseModel
-from .crystalith_shared_plugins_render_types_config_option import CrystalithSharedPluginsRenderTypesConfigOption
+from .config_option import ConfigOption
 
 
 class PluginConfigSchema(UniversalBaseModel):
-    quantity_options: typing.Optional[typing.List[CrystalithSharedPluginsRenderTypesConfigOption]] = None
-    difficulty_options: typing.Optional[typing.List[CrystalithSharedPluginsRenderTypesConfigOption]] = None
-    topic_placeholder: typing.Optional[str] = None
+    difficulty_options: typing.Optional[typing.List[ConfigOption]] = None
+    quantity_options: typing.Optional[typing.List[ConfigOption]] = None
     supports_topic: typing.Optional[bool] = None
+    topic_placeholder: typing.Optional[str] = None
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

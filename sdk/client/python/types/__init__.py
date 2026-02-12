@@ -15,7 +15,7 @@ if typing.TYPE_CHECKING:
     from .convert_session_to_source_response import ConvertSessionToSourceResponse
     from .convert_source_qa_to_source_response import ConvertSourceQaToSourceResponse
     from .convert_to_source_response import ConvertToSourceResponse
-    from .crystalith_shared_plugins_render_types_config_option import CrystalithSharedPluginsRenderTypesConfigOption
+    from .crystalith_features_workspace_api_config_option import CrystalithFeaturesWorkspaceApiConfigOption
     from .export_research_response import ExportResearchResponse
     from .extractor_info_response import ExtractorInfoResponse
     from .extractors_list_response import ExtractorsListResponse
@@ -112,7 +112,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ConvertSessionToSourceResponse": ".convert_session_to_source_response",
     "ConvertSourceQaToSourceResponse": ".convert_source_qa_to_source_response",
     "ConvertToSourceResponse": ".convert_to_source_response",
-    "CrystalithSharedPluginsRenderTypesConfigOption": ".crystalith_shared_plugins_render_types_config_option",
+    "CrystalithFeaturesWorkspaceApiConfigOption": ".crystalith_features_workspace_api_config_option",
     "ExportResearchResponse": ".export_research_response",
     "ExtractorInfoResponse": ".extractor_info_response",
     "ExtractorsListResponse": ".extractors_list_response",
@@ -233,7 +233,7 @@ __all__ = [
     "ConvertSessionToSourceResponse",
     "ConvertSourceQaToSourceResponse",
     "ConvertToSourceResponse",
-    "CrystalithSharedPluginsRenderTypesConfigOption",
+    "CrystalithFeaturesWorkspaceApiConfigOption",
     "ExportResearchResponse",
     "ExtractorInfoResponse",
     "ExtractorsListResponse",

@@ -24,6 +24,75 @@ class RawTemplatesClient:
     def __init__(self, *, client_wrapper: SyncClientWrapper):
         self._client_wrapper = client_wrapper
 
+    def save_notebook_as_template(
+        self,
+        notebook_id: int,
+        *,
+        name: str,
+        description: typing.Optional[str] = OMIT,
+        output_type: typing.Optional[TemplateFromNotebookCreateOutputType] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[TemplateRead]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        name : str
+
+        description : typing.Optional[str]
+
+        output_type : typing.Optional[TemplateFromNotebookCreateOutputType]
+            Preferred default output type for the template.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[TemplateRead]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/templates",
+            method="POST",
+            json={
+                "description": description,
+                "name": name,
+                "output_type": output_type,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    TemplateRead,
+                    parse_obj_as(
+                        type_=TemplateRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
     def list_templates(
         self, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[typing.List[TemplateRead]]:
@@ -61,17 +130,17 @@ class RawTemplatesClient:
     def create_template(
         self,
         *,
-        name: str,
         config_json: TemplateConfigInput,
+        name: str,
         description: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[TemplateRead]:
         """
         Parameters
         ----------
-        name : str
-
         config_json : TemplateConfigInput
+
+        name : str
 
         description : typing.Optional[str]
 
@@ -87,11 +156,11 @@ class RawTemplatesClient:
             "v1/templates",
             method="POST",
             json={
-                "name": name,
-                "description": description,
                 "config_json": convert_and_respect_annotation_metadata(
                     object_=config_json, annotation=TemplateConfigInput, direction="write"
                 ),
+                "description": description,
+                "name": name,
             },
             headers={
                 "content-type": "application/json",
@@ -215,9 +284,9 @@ class RawTemplatesClient:
         self,
         template_id: int,
         *,
-        name: typing.Optional[str] = OMIT,
-        description: typing.Optional[str] = OMIT,
         config_json: typing.Optional[TemplateConfigInput] = OMIT,
+        description: typing.Optional[str] = OMIT,
+        name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[TemplateRead]:
         """
@@ -225,11 +294,11 @@ class RawTemplatesClient:
         ----------
         template_id : int
 
-        name : typing.Optional[str]
+        config_json : typing.Optional[TemplateConfigInput]
 
         description : typing.Optional[str]
 
-        config_json : typing.Optional[TemplateConfigInput]
+        name : typing.Optional[str]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -243,80 +312,11 @@ class RawTemplatesClient:
             f"v1/templates/{jsonable_encoder(template_id)}",
             method="PATCH",
             json={
-                "name": name,
-                "description": description,
                 "config_json": convert_and_respect_annotation_metadata(
                     object_=config_json, annotation=typing.Optional[TemplateConfigInput], direction="write"
                 ),
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    TemplateRead,
-                    parse_obj_as(
-                        type_=TemplateRead,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return HttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    def save_notebook_as_template(
-        self,
-        notebook_id: int,
-        *,
-        name: str,
-        description: typing.Optional[str] = OMIT,
-        output_type: typing.Optional[TemplateFromNotebookCreateOutputType] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[TemplateRead]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        name : str
-
-        description : typing.Optional[str]
-
-        output_type : typing.Optional[TemplateFromNotebookCreateOutputType]
-            Preferred default output type for the template.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        HttpResponse[TemplateRead]
-            Successful Response
-        """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/templates",
-            method="POST",
-            json={
-                "name": name,
                 "description": description,
-                "output_type": output_type,
+                "name": name,
             },
             headers={
                 "content-type": "application/json",
@@ -355,6 +355,75 @@ class AsyncRawTemplatesClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
         self._client_wrapper = client_wrapper
 
+    async def save_notebook_as_template(
+        self,
+        notebook_id: int,
+        *,
+        name: str,
+        description: typing.Optional[str] = OMIT,
+        output_type: typing.Optional[TemplateFromNotebookCreateOutputType] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[TemplateRead]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        name : str
+
+        description : typing.Optional[str]
+
+        output_type : typing.Optional[TemplateFromNotebookCreateOutputType]
+            Preferred default output type for the template.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[TemplateRead]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/templates",
+            method="POST",
+            json={
+                "description": description,
+                "name": name,
+                "output_type": output_type,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    TemplateRead,
+                    parse_obj_as(
+                        type_=TemplateRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
     async def list_templates(
         self, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[typing.List[TemplateRead]]:
@@ -392,17 +461,17 @@ class AsyncRawTemplatesClient:
     async def create_template(
         self,
         *,
-        name: str,
         config_json: TemplateConfigInput,
+        name: str,
         description: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[TemplateRead]:
         """
         Parameters
         ----------
-        name : str
-
         config_json : TemplateConfigInput
+
+        name : str
 
         description : typing.Optional[str]
 
@@ -418,11 +487,11 @@ class AsyncRawTemplatesClient:
             "v1/templates",
             method="POST",
             json={
-                "name": name,
-                "description": description,
                 "config_json": convert_and_respect_annotation_metadata(
                     object_=config_json, annotation=TemplateConfigInput, direction="write"
                 ),
+                "description": description,
+                "name": name,
             },
             headers={
                 "content-type": "application/json",
@@ -546,9 +615,9 @@ class AsyncRawTemplatesClient:
         self,
         template_id: int,
         *,
-        name: typing.Optional[str] = OMIT,
-        description: typing.Optional[str] = OMIT,
         config_json: typing.Optional[TemplateConfigInput] = OMIT,
+        description: typing.Optional[str] = OMIT,
+        name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[TemplateRead]:
         """
@@ -556,11 +625,11 @@ class AsyncRawTemplatesClient:
         ----------
         template_id : int
 
-        name : typing.Optional[str]
+        config_json : typing.Optional[TemplateConfigInput]
 
         description : typing.Optional[str]
 
-        config_json : typing.Optional[TemplateConfigInput]
+        name : typing.Optional[str]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -574,80 +643,11 @@ class AsyncRawTemplatesClient:
             f"v1/templates/{jsonable_encoder(template_id)}",
             method="PATCH",
             json={
-                "name": name,
-                "description": description,
                 "config_json": convert_and_respect_annotation_metadata(
                     object_=config_json, annotation=typing.Optional[TemplateConfigInput], direction="write"
                 ),
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    TemplateRead,
-                    parse_obj_as(
-                        type_=TemplateRead,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return AsyncHttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    async def save_notebook_as_template(
-        self,
-        notebook_id: int,
-        *,
-        name: str,
-        description: typing.Optional[str] = OMIT,
-        output_type: typing.Optional[TemplateFromNotebookCreateOutputType] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[TemplateRead]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        name : str
-
-        description : typing.Optional[str]
-
-        output_type : typing.Optional[TemplateFromNotebookCreateOutputType]
-            Preferred default output type for the template.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        AsyncHttpResponse[TemplateRead]
-            Successful Response
-        """
-        _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/templates",
-            method="POST",
-            json={
-                "name": name,
                 "description": description,
-                "output_type": output_type,
+                "name": name,
             },
             headers={
                 "content-type": "application/json",

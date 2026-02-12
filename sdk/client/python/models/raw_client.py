@@ -23,8 +23,8 @@ class RawModelsClient:
     def list_models(
         self,
         *,
-        role: typing.Optional[ListModelsV1ModelsGetRequestRole] = None,
         capability: typing.Optional[str] = None,
+        role: typing.Optional[ListModelsV1ModelsGetRequestRole] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[ModelsListResponse]:
         """
@@ -34,9 +34,9 @@ class RawModelsClient:
 
         Parameters
         ----------
-        role : typing.Optional[ListModelsV1ModelsGetRequestRole]
-
         capability : typing.Optional[str]
+
+        role : typing.Optional[ListModelsV1ModelsGetRequestRole]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -50,8 +50,8 @@ class RawModelsClient:
             "v1/models",
             method="GET",
             params={
-                "role": role,
                 "capability": capability,
+                "role": role,
             },
             request_options=request_options,
         )
@@ -138,8 +138,8 @@ class AsyncRawModelsClient:
     async def list_models(
         self,
         *,
-        role: typing.Optional[ListModelsV1ModelsGetRequestRole] = None,
         capability: typing.Optional[str] = None,
+        role: typing.Optional[ListModelsV1ModelsGetRequestRole] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[ModelsListResponse]:
         """
@@ -149,9 +149,9 @@ class AsyncRawModelsClient:
 
         Parameters
         ----------
-        role : typing.Optional[ListModelsV1ModelsGetRequestRole]
-
         capability : typing.Optional[str]
+
+        role : typing.Optional[ListModelsV1ModelsGetRequestRole]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -165,8 +165,8 @@ class AsyncRawModelsClient:
             "v1/models",
             method="GET",
             params={
-                "role": role,
                 "capability": capability,
+                "role": role,
             },
             request_options=request_options,
         )

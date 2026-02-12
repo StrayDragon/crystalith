@@ -2,4 +2,4 @@
 
 import typing
 
-QaMessageRole = typing.Union[typing.Literal["user", "assistant"], typing.Any]
+QaMessageRole = typing.Union[typing.Literal["assistant", "user"], typing.Any]

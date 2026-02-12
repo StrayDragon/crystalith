@@ -3,5 +3,5 @@
 import typing
 
 WorkspaceToolTone = typing.Union[
-    typing.Literal["slate", "blue", "green", "rose", "amber", "teal", "indigo"], typing.Any
+    typing.Literal["amber", "blue", "green", "indigo", "rose", "slate", "teal"], typing.Any
 ]

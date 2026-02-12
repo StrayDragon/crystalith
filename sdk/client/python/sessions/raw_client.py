@@ -28,8 +28,8 @@ class RawSessionsClient:
         self,
         notebook_id: int,
         *,
-        offset: typing.Optional[int] = None,
         limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[typing.List[SessionRead]]:
         """
@@ -37,9 +37,9 @@ class RawSessionsClient:
         ----------
         notebook_id : int
 
-        offset : typing.Optional[int]
-
         limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -53,8 +53,8 @@ class RawSessionsClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/sessions",
             method="GET",
             params={
-                "offset": offset,
                 "limit": limit,
+                "offset": offset,
             },
             request_options=request_options,
         )
@@ -297,70 +297,6 @@ class RawSessionsClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    def convert_session_to_source(
-        self,
-        notebook_id: int,
-        session_id: int,
-        *,
-        message_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[ConvertSessionToSourceResponse]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        session_id : int
-
-        message_ids : typing.Optional[typing.Sequence[int]]
-            Specific message IDs to convert. If null, converts entire session.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        HttpResponse[ConvertSessionToSourceResponse]
-            Successful Response
-        """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sessions/{jsonable_encoder(session_id)}/convert-to-source",
-            method="POST",
-            json={
-                "message_ids": message_ids,
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    ConvertSessionToSourceResponse,
-                    parse_obj_as(
-                        type_=ConvertSessionToSourceResponse,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return HttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
     def convert_session_to_output(
         self,
         notebook_id: int,
@@ -441,6 +377,70 @@ class RawSessionsClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
+    def convert_session_to_source(
+        self,
+        notebook_id: int,
+        session_id: int,
+        *,
+        message_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[ConvertSessionToSourceResponse]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        session_id : int
+
+        message_ids : typing.Optional[typing.Sequence[int]]
+            Specific message IDs to convert. If null, converts entire session.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[ConvertSessionToSourceResponse]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sessions/{jsonable_encoder(session_id)}/convert-to-source",
+            method="POST",
+            json={
+                "message_ids": message_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    ConvertSessionToSourceResponse,
+                    parse_obj_as(
+                        type_=ConvertSessionToSourceResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
 
 class AsyncRawSessionsClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
@@ -450,8 +450,8 @@ class AsyncRawSessionsClient:
         self,
         notebook_id: int,
         *,
-        offset: typing.Optional[int] = None,
         limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[typing.List[SessionRead]]:
         """
@@ -459,9 +459,9 @@ class AsyncRawSessionsClient:
         ----------
         notebook_id : int
 
-        offset : typing.Optional[int]
-
         limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -475,8 +475,8 @@ class AsyncRawSessionsClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/sessions",
             method="GET",
             params={
-                "offset": offset,
                 "limit": limit,
+                "offset": offset,
             },
             request_options=request_options,
         )
@@ -719,70 +719,6 @@ class AsyncRawSessionsClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    async def convert_session_to_source(
-        self,
-        notebook_id: int,
-        session_id: int,
-        *,
-        message_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[ConvertSessionToSourceResponse]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        session_id : int
-
-        message_ids : typing.Optional[typing.Sequence[int]]
-            Specific message IDs to convert. If null, converts entire session.
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        AsyncHttpResponse[ConvertSessionToSourceResponse]
-            Successful Response
-        """
-        _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sessions/{jsonable_encoder(session_id)}/convert-to-source",
-            method="POST",
-            json={
-                "message_ids": message_ids,
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    ConvertSessionToSourceResponse,
-                    parse_obj_as(
-                        type_=ConvertSessionToSourceResponse,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return AsyncHttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
     async def convert_session_to_output(
         self,
         notebook_id: int,
@@ -843,6 +779,70 @@ class AsyncRawSessionsClient:
                     ConvertSessionToOutputResponse,
                     parse_obj_as(
                         type_=ConvertSessionToOutputResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def convert_session_to_source(
+        self,
+        notebook_id: int,
+        session_id: int,
+        *,
+        message_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[ConvertSessionToSourceResponse]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        session_id : int
+
+        message_ids : typing.Optional[typing.Sequence[int]]
+            Specific message IDs to convert. If null, converts entire session.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[ConvertSessionToSourceResponse]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/sessions/{jsonable_encoder(session_id)}/convert-to-source",
+            method="POST",
+            json={
+                "message_ids": message_ids,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    ConvertSessionToSourceResponse,
+                    parse_obj_as(
+                        type_=ConvertSessionToSourceResponse,  # type: ignore
                         object_=_response.json(),
                     ),
                 )

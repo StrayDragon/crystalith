@@ -28,6 +28,63 @@ class SlidesClient:
         """
         return self._raw_client
 
+    def create_draft(
+        self,
+        notebook_id: int,
+        *,
+        engine: typing.Optional[str] = OMIT,
+        generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
+        prompt: typing.Optional[str] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        title: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SlideDraftRead:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        engine : typing.Optional[str]
+            Rendering engine (default: slidev)
+
+        generation_config : typing.Optional[SlideGenerationConfig]
+
+        prompt : typing.Optional[str]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
+
+        title : typing.Optional[str]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SlideDraftRead
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.slides.create_draft(
+            notebook_id=1,
+        )
+        """
+        _response = self._raw_client.create_draft(
+            notebook_id,
+            engine=engine,
+            generation_config=generation_config,
+            prompt=prompt,
+            source_ids=source_ids,
+            title=title,
+            request_options=request_options,
+        )
+        return _response.data
+
     def get_latest_draft(
         self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
     ) -> SlideDraftRead:
@@ -56,63 +113,6 @@ class SlidesClient:
         )
         """
         _response = self._raw_client.get_latest_draft(notebook_id, request_options=request_options)
-        return _response.data
-
-    def create_draft(
-        self,
-        notebook_id: int,
-        *,
-        title: typing.Optional[str] = OMIT,
-        prompt: typing.Optional[str] = OMIT,
-        engine: typing.Optional[str] = OMIT,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> SlideDraftRead:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        title : typing.Optional[str]
-
-        prompt : typing.Optional[str]
-
-        engine : typing.Optional[str]
-            Rendering engine (default: slidev)
-
-        source_ids : typing.Optional[typing.Sequence[int]]
-
-        generation_config : typing.Optional[SlideGenerationConfig]
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SlideDraftRead
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.slides.create_draft(
-            notebook_id=1,
-        )
-        """
-        _response = self._raw_client.create_draft(
-            notebook_id,
-            title=title,
-            prompt=prompt,
-            engine=engine,
-            source_ids=source_ids,
-            generation_config=generation_config,
-            request_options=request_options,
-        )
         return _response.data
 
     def get_draft(
@@ -153,11 +153,11 @@ class SlidesClient:
         notebook_id: int,
         slide_id: int,
         *,
-        title: typing.Optional[str] = OMIT,
-        prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
+        prompt: typing.Optional[str] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        title: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SlideDraftRead:
         """
@@ -167,15 +167,15 @@ class SlidesClient:
 
         slide_id : int
 
-        title : typing.Optional[str]
+        engine : typing.Optional[str]
+
+        generation_config : typing.Optional[SlideGenerationConfig]
 
         prompt : typing.Optional[str]
 
-        engine : typing.Optional[str]
-
         source_ids : typing.Optional[typing.Sequence[int]]
 
-        generation_config : typing.Optional[SlideGenerationConfig]
+        title : typing.Optional[str]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -200,62 +200,12 @@ class SlidesClient:
         _response = self._raw_client.update_draft(
             notebook_id,
             slide_id,
-            title=title,
-            prompt=prompt,
             engine=engine,
-            source_ids=source_ids,
             generation_config=generation_config,
+            prompt=prompt,
+            source_ids=source_ids,
+            title=title,
             request_options=request_options,
-        )
-        return _response.data
-
-    def update_outline(
-        self,
-        notebook_id: int,
-        slide_id: int,
-        *,
-        outline: SlideOutline,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> SlideDraftRead:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        slide_id : int
-
-        outline : SlideOutline
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SlideDraftRead
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient, SlideOutline, SlideOutlineItem
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.slides.update_outline(
-            notebook_id=1,
-            slide_id=1,
-            outline=SlideOutline(
-                title="title",
-                slides=[
-                    SlideOutlineItem(
-                        title="title",
-                    )
-                ],
-            ),
-        )
-        """
-        _response = self._raw_client.update_outline(
-            notebook_id, slide_id, outline=outline, request_options=request_options
         )
         return _response.data
 
@@ -294,48 +244,6 @@ class SlidesClient:
         """
         _response = self._raw_client.update_markdown(
             notebook_id, slide_id, markdown=markdown, request_options=request_options
-        )
-        return _response.data
-
-    def generate_outline_stream(
-        self,
-        notebook_id: int,
-        slide_id: int,
-        *,
-        model_id: typing.Optional[str] = None,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> typing.Any:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        slide_id : int
-
-        model_id : typing.Optional[str]
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        typing.Any
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.slides.generate_outline_stream(
-            notebook_id=1,
-            slide_id=1,
-        )
-        """
-        _response = self._raw_client.generate_outline_stream(
-            notebook_id, slide_id, model_id=model_id, request_options=request_options
         )
         return _response.data
 
@@ -381,6 +289,98 @@ class SlidesClient:
         )
         return _response.data
 
+    def update_outline(
+        self,
+        notebook_id: int,
+        slide_id: int,
+        *,
+        outline: SlideOutline,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SlideDraftRead:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        slide_id : int
+
+        outline : SlideOutline
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SlideDraftRead
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient, SlideOutline, SlideOutlineItem
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.slides.update_outline(
+            notebook_id=1,
+            slide_id=1,
+            outline=SlideOutline(
+                slides=[
+                    SlideOutlineItem(
+                        title="title",
+                    )
+                ],
+                title="title",
+            ),
+        )
+        """
+        _response = self._raw_client.update_outline(
+            notebook_id, slide_id, outline=outline, request_options=request_options
+        )
+        return _response.data
+
+    def generate_outline_stream(
+        self,
+        notebook_id: int,
+        slide_id: int,
+        *,
+        model_id: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> typing.Any:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        slide_id : int
+
+        model_id : typing.Optional[str]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        typing.Any
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.slides.generate_outline_stream(
+            notebook_id=1,
+            slide_id=1,
+        )
+        """
+        _response = self._raw_client.generate_outline_stream(
+            notebook_id, slide_id, model_id=model_id, request_options=request_options
+        )
+        return _response.data
+
 
 class AsyncSlidesClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
@@ -396,6 +396,71 @@ class AsyncSlidesClient:
         AsyncRawSlidesClient
         """
         return self._raw_client
+
+    async def create_draft(
+        self,
+        notebook_id: int,
+        *,
+        engine: typing.Optional[str] = OMIT,
+        generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
+        prompt: typing.Optional[str] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        title: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SlideDraftRead:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        engine : typing.Optional[str]
+            Rendering engine (default: slidev)
+
+        generation_config : typing.Optional[SlideGenerationConfig]
+
+        prompt : typing.Optional[str]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
+
+        title : typing.Optional[str]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SlideDraftRead
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.slides.create_draft(
+                notebook_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.create_draft(
+            notebook_id,
+            engine=engine,
+            generation_config=generation_config,
+            prompt=prompt,
+            source_ids=source_ids,
+            title=title,
+            request_options=request_options,
+        )
+        return _response.data
 
     async def get_latest_draft(
         self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
@@ -433,71 +498,6 @@ class AsyncSlidesClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.get_latest_draft(notebook_id, request_options=request_options)
-        return _response.data
-
-    async def create_draft(
-        self,
-        notebook_id: int,
-        *,
-        title: typing.Optional[str] = OMIT,
-        prompt: typing.Optional[str] = OMIT,
-        engine: typing.Optional[str] = OMIT,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> SlideDraftRead:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        title : typing.Optional[str]
-
-        prompt : typing.Optional[str]
-
-        engine : typing.Optional[str]
-            Rendering engine (default: slidev)
-
-        source_ids : typing.Optional[typing.Sequence[int]]
-
-        generation_config : typing.Optional[SlideGenerationConfig]
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SlideDraftRead
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.slides.create_draft(
-                notebook_id=1,
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.create_draft(
-            notebook_id,
-            title=title,
-            prompt=prompt,
-            engine=engine,
-            source_ids=source_ids,
-            generation_config=generation_config,
-            request_options=request_options,
-        )
         return _response.data
 
     async def get_draft(
@@ -546,11 +546,11 @@ class AsyncSlidesClient:
         notebook_id: int,
         slide_id: int,
         *,
-        title: typing.Optional[str] = OMIT,
-        prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
+        prompt: typing.Optional[str] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        title: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> SlideDraftRead:
         """
@@ -560,15 +560,15 @@ class AsyncSlidesClient:
 
         slide_id : int
 
-        title : typing.Optional[str]
+        engine : typing.Optional[str]
+
+        generation_config : typing.Optional[SlideGenerationConfig]
 
         prompt : typing.Optional[str]
 
-        engine : typing.Optional[str]
-
         source_ids : typing.Optional[typing.Sequence[int]]
 
-        generation_config : typing.Optional[SlideGenerationConfig]
+        title : typing.Optional[str]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -601,70 +601,12 @@ class AsyncSlidesClient:
         _response = await self._raw_client.update_draft(
             notebook_id,
             slide_id,
-            title=title,
-            prompt=prompt,
             engine=engine,
-            source_ids=source_ids,
             generation_config=generation_config,
+            prompt=prompt,
+            source_ids=source_ids,
+            title=title,
             request_options=request_options,
-        )
-        return _response.data
-
-    async def update_outline(
-        self,
-        notebook_id: int,
-        slide_id: int,
-        *,
-        outline: SlideOutline,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> SlideDraftRead:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        slide_id : int
-
-        outline : SlideOutline
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SlideDraftRead
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient, SlideOutline, SlideOutlineItem
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.slides.update_outline(
-                notebook_id=1,
-                slide_id=1,
-                outline=SlideOutline(
-                    title="title",
-                    slides=[
-                        SlideOutlineItem(
-                            title="title",
-                        )
-                    ],
-                ),
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.update_outline(
-            notebook_id, slide_id, outline=outline, request_options=request_options
         )
         return _response.data
 
@@ -714,56 +656,6 @@ class AsyncSlidesClient:
         )
         return _response.data
 
-    async def generate_outline_stream(
-        self,
-        notebook_id: int,
-        slide_id: int,
-        *,
-        model_id: typing.Optional[str] = None,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> typing.Any:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        slide_id : int
-
-        model_id : typing.Optional[str]
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        typing.Any
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.slides.generate_outline_stream(
-                notebook_id=1,
-                slide_id=1,
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.generate_outline_stream(
-            notebook_id, slide_id, model_id=model_id, request_options=request_options
-        )
-        return _response.data
-
     async def generate_markdown_stream(
         self,
         notebook_id: int,
@@ -810,6 +702,114 @@ class AsyncSlidesClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.generate_markdown_stream(
+            notebook_id, slide_id, model_id=model_id, request_options=request_options
+        )
+        return _response.data
+
+    async def update_outline(
+        self,
+        notebook_id: int,
+        slide_id: int,
+        *,
+        outline: SlideOutline,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> SlideDraftRead:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        slide_id : int
+
+        outline : SlideOutline
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SlideDraftRead
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient, SlideOutline, SlideOutlineItem
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.slides.update_outline(
+                notebook_id=1,
+                slide_id=1,
+                outline=SlideOutline(
+                    slides=[
+                        SlideOutlineItem(
+                            title="title",
+                        )
+                    ],
+                    title="title",
+                ),
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.update_outline(
+            notebook_id, slide_id, outline=outline, request_options=request_options
+        )
+        return _response.data
+
+    async def generate_outline_stream(
+        self,
+        notebook_id: int,
+        slide_id: int,
+        *,
+        model_id: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> typing.Any:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        slide_id : int
+
+        model_id : typing.Optional[str]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        typing.Any
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.slides.generate_outline_stream(
+                notebook_id=1,
+                slide_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.generate_outline_stream(
             notebook_id, slide_id, model_id=model_id, request_options=request_options
         )
         return _response.data

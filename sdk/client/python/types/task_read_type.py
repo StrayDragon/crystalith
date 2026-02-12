@@ -2,4 +2,4 @@
 
 import typing
 
-TaskReadType = typing.Union[typing.Literal["refine", "document_parse"], typing.Any]
+TaskReadType = typing.Union[typing.Literal["document_parse", "refine"], typing.Any]

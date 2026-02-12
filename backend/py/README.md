@@ -46,7 +46,7 @@ CRYSTALITH_CONFIG_DIR=/app/config just db-init
 Optional flags:
 
 ```bash
-uv run scripts/db_init.py --config-path /app/config/app.yaml --schema-path /app/config/schema.json
+uv run scripts/db_init.py --config-path /app/config/app.yaml --schema-path /app/config/app.schema.json
 ```
 
 Create a new migration (autogenerate):

@@ -67,7 +67,7 @@ TBD - created by archiving change add-research-workspace. Update Purpose after a
 
 #### Scenario: 生成 Schema
 - **WHEN** 调用配置管理器的 Schema 生成接口
-- **THEN** 生成并保存 JSON Schema 文件（本地路径，例如 `config/schema.json`）
+- **THEN** 生成并保存 JSON Schema 文件（本地路径，例如 `config/app.schema.json`）
 
 ### Requirement: YAML 语言服务提示
 系统 SHALL 提供可直接用于 YAML 语言服务的 Schema 引用字符串。

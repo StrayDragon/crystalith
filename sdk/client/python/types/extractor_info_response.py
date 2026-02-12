@@ -11,14 +11,14 @@ class ExtractorInfoResponse(UniversalBaseModel):
     Information about an available extractor.
     """
 
-    type: str
-    enabled: bool
     available: bool
-    display_name: str
     description: str
+    display_name: str
+    enabled: bool
     priority: int
     requires_api_key: typing.Optional[bool] = None
     requires_service: typing.Optional[bool] = None
+    type: str
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

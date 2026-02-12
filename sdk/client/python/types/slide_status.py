@@ -2,4 +2,4 @@
 
 import typing
 
-SlideStatus = typing.Union[typing.Literal["idle", "running", "error"], typing.Any]
+SlideStatus = typing.Union[typing.Literal["error", "idle", "running"], typing.Any]

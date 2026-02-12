@@ -9,12 +9,12 @@ from .template_config_output import TemplateConfigOutput
 
 
 class TemplateRead(UniversalBaseModel):
-    id: int
-    name: str
-    description: typing.Optional[str] = None
     config_json: TemplateConfigOutput
-    is_builtin: bool
     created_at: dt.datetime
+    description: typing.Optional[str] = None
+    id: int
+    is_builtin: bool
+    name: str
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

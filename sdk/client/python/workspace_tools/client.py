@@ -25,30 +25,6 @@ class WorkspaceToolsClient:
         """
         return self._raw_client
 
-    def get_slides_config(self, *, request_options: typing.Optional[RequestOptions] = None) -> SlidesConfigResponse:
-        """
-        Parameters
-        ----------
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SlidesConfigResponse
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.workspace_tools.get_slides_config()
-        """
-        _response = self._raw_client.get_slides_config(request_options=request_options)
-        return _response.data
-
     def list_workspace_tools(
         self, *, request_options: typing.Optional[RequestOptions] = None
     ) -> WorkspaceToolsResponse:
@@ -73,6 +49,30 @@ class WorkspaceToolsClient:
         client.workspace_tools.list_workspace_tools()
         """
         _response = self._raw_client.list_workspace_tools(request_options=request_options)
+        return _response.data
+
+    def get_slides_config(self, *, request_options: typing.Optional[RequestOptions] = None) -> SlidesConfigResponse:
+        """
+        Parameters
+        ----------
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SlidesConfigResponse
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.workspace_tools.get_slides_config()
+        """
+        _response = self._raw_client.get_slides_config(request_options=request_options)
         return _response.data
 
     def get_tool_config(
@@ -123,40 +123,6 @@ class AsyncWorkspaceToolsClient:
         """
         return self._raw_client
 
-    async def get_slides_config(
-        self, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> SlidesConfigResponse:
-        """
-        Parameters
-        ----------
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        SlidesConfigResponse
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.workspace_tools.get_slides_config()
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.get_slides_config(request_options=request_options)
-        return _response.data
-
     async def list_workspace_tools(
         self, *, request_options: typing.Optional[RequestOptions] = None
     ) -> WorkspaceToolsResponse:
@@ -189,6 +155,40 @@ class AsyncWorkspaceToolsClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.list_workspace_tools(request_options=request_options)
+        return _response.data
+
+    async def get_slides_config(
+        self, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> SlidesConfigResponse:
+        """
+        Parameters
+        ----------
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        SlidesConfigResponse
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.workspace_tools.get_slides_config()
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.get_slides_config(request_options=request_options)
         return _response.data
 
     async def get_tool_config(

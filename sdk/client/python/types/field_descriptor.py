@@ -10,10 +10,10 @@ from .field_descriptor_type import FieldDescriptorType
 
 
 class FieldDescriptor(UniversalBaseModel):
-    key: str
-    type: FieldDescriptorType
-    label: typing.Optional[str] = None
     children: typing.Optional[typing.List["FieldDescriptor"]] = None
+    key: str
+    label: typing.Optional[str] = None
+    type: FieldDescriptorType
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

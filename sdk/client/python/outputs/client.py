@@ -30,86 +30,12 @@ class OutputsClient:
         """
         return self._raw_client
 
-    def create_output(
-        self,
-        notebook_id: int,
-        output_type: CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostRequestOutputType,
-        *,
-        prompt: typing.Optional[str] = OMIT,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        top_k: typing.Optional[int] = OMIT,
-        min_score: typing.Optional[float] = OMIT,
-        model_id: typing.Optional[str] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> OutputRead:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        output_type : CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostRequestOutputType
-            枚举值:
-
-            * `FAQ`: 问答清单
-            * `GUIDE`: 学习/行动指南
-            * `TIMELINE`: 关键事件序列
-            * `MINDMAP`: 主题层级结构
-            * `QUIZ`: 知识检验
-            * `BRIEFING`: 高层摘要
-            * `SLIDES`: 演示文稿
-            * `PARAGRAPH`: 段落摘要
-            * `BULLETS`: 要点列表
-            * `STRUCTURED`: 结构化摘要
-
-        prompt : typing.Optional[str]
-
-        source_ids : typing.Optional[typing.Sequence[int]]
-
-        top_k : typing.Optional[int]
-
-        min_score : typing.Optional[float]
-
-        model_id : typing.Optional[str]
-            Optional model ID to use for generation
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        OutputRead
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.outputs.create_output(
-            notebook_id=1,
-            output_type="FAQ",
-        )
-        """
-        _response = self._raw_client.create_output(
-            notebook_id,
-            output_type,
-            prompt=prompt,
-            source_ids=source_ids,
-            top_k=top_k,
-            min_score=min_score,
-            model_id=model_id,
-            request_options=request_options,
-        )
-        return _response.data
-
     def list_outputs(
         self,
         notebook_id: int,
         *,
-        offset: typing.Optional[int] = None,
         limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[OutputRead]:
         """
@@ -117,9 +43,9 @@ class OutputsClient:
         ----------
         notebook_id : int
 
-        offset : typing.Optional[int]
-
         limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -141,7 +67,7 @@ class OutputsClient:
         )
         """
         _response = self._raw_client.list_outputs(
-            notebook_id, offset=offset, limit=limit, request_options=request_options
+            notebook_id, limit=limit, offset=offset, request_options=request_options
         )
         return _response.data
 
@@ -247,32 +173,16 @@ class OutputsClient:
         _response = self._raw_client.convert_output_to_source(notebook_id, output_id, request_options=request_options)
         return _response.data
 
-
-class AsyncOutputsClient:
-    def __init__(self, *, client_wrapper: AsyncClientWrapper):
-        self._raw_client = AsyncRawOutputsClient(client_wrapper=client_wrapper)
-
-    @property
-    def with_raw_response(self) -> AsyncRawOutputsClient:
-        """
-        Retrieves a raw implementation of this client that returns raw responses.
-
-        Returns
-        -------
-        AsyncRawOutputsClient
-        """
-        return self._raw_client
-
-    async def create_output(
+    def create_output(
         self,
         notebook_id: int,
         output_type: CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostRequestOutputType,
         *,
+        min_score: typing.Optional[float] = OMIT,
+        model_id: typing.Optional[str] = OMIT,
         prompt: typing.Optional[str] = OMIT,
         source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         top_k: typing.Optional[int] = OMIT,
-        min_score: typing.Optional[float] = OMIT,
-        model_id: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> OutputRead:
         """
@@ -294,16 +204,16 @@ class AsyncOutputsClient:
             * `BULLETS`: 要点列表
             * `STRUCTURED`: 结构化摘要
 
+        min_score : typing.Optional[float]
+
+        model_id : typing.Optional[str]
+            Optional model ID to use for generation
+
         prompt : typing.Optional[str]
 
         source_ids : typing.Optional[typing.Sequence[int]]
 
         top_k : typing.Optional[int]
-
-        min_score : typing.Optional[float]
-
-        model_id : typing.Optional[str]
-            Optional model ID to use for generation
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -315,42 +225,50 @@ class AsyncOutputsClient:
 
         Examples
         --------
-        import asyncio
+        from crystalith import CrystalithClient
 
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
+        client = CrystalithClient(
             base_url="https://yourhost.com/path/to/api",
         )
-
-
-        async def main() -> None:
-            await client.outputs.create_output(
-                notebook_id=1,
-                output_type="FAQ",
-            )
-
-
-        asyncio.run(main())
+        client.outputs.create_output(
+            notebook_id=1,
+            output_type="BRIEFING",
+        )
         """
-        _response = await self._raw_client.create_output(
+        _response = self._raw_client.create_output(
             notebook_id,
             output_type,
+            min_score=min_score,
+            model_id=model_id,
             prompt=prompt,
             source_ids=source_ids,
             top_k=top_k,
-            min_score=min_score,
-            model_id=model_id,
             request_options=request_options,
         )
         return _response.data
+
+
+class AsyncOutputsClient:
+    def __init__(self, *, client_wrapper: AsyncClientWrapper):
+        self._raw_client = AsyncRawOutputsClient(client_wrapper=client_wrapper)
+
+    @property
+    def with_raw_response(self) -> AsyncRawOutputsClient:
+        """
+        Retrieves a raw implementation of this client that returns raw responses.
+
+        Returns
+        -------
+        AsyncRawOutputsClient
+        """
+        return self._raw_client
 
     async def list_outputs(
         self,
         notebook_id: int,
         *,
-        offset: typing.Optional[int] = None,
         limit: typing.Optional[int] = None,
+        offset: typing.Optional[int] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[OutputRead]:
         """
@@ -358,9 +276,9 @@ class AsyncOutputsClient:
         ----------
         notebook_id : int
 
-        offset : typing.Optional[int]
-
         limit : typing.Optional[int]
+
+        offset : typing.Optional[int]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -390,7 +308,7 @@ class AsyncOutputsClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.list_outputs(
-            notebook_id, offset=offset, limit=limit, request_options=request_options
+            notebook_id, limit=limit, offset=offset, request_options=request_options
         )
         return _response.data
 
@@ -519,5 +437,87 @@ class AsyncOutputsClient:
         """
         _response = await self._raw_client.convert_output_to_source(
             notebook_id, output_id, request_options=request_options
+        )
+        return _response.data
+
+    async def create_output(
+        self,
+        notebook_id: int,
+        output_type: CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostRequestOutputType,
+        *,
+        min_score: typing.Optional[float] = OMIT,
+        model_id: typing.Optional[str] = OMIT,
+        prompt: typing.Optional[str] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        top_k: typing.Optional[int] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> OutputRead:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        output_type : CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostRequestOutputType
+            枚举值:
+
+            * `FAQ`: 问答清单
+            * `GUIDE`: 学习/行动指南
+            * `TIMELINE`: 关键事件序列
+            * `MINDMAP`: 主题层级结构
+            * `QUIZ`: 知识检验
+            * `BRIEFING`: 高层摘要
+            * `SLIDES`: 演示文稿
+            * `PARAGRAPH`: 段落摘要
+            * `BULLETS`: 要点列表
+            * `STRUCTURED`: 结构化摘要
+
+        min_score : typing.Optional[float]
+
+        model_id : typing.Optional[str]
+            Optional model ID to use for generation
+
+        prompt : typing.Optional[str]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
+
+        top_k : typing.Optional[int]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        OutputRead
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.outputs.create_output(
+                notebook_id=1,
+                output_type="BRIEFING",
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.create_output(
+            notebook_id,
+            output_type,
+            min_score=min_score,
+            model_id=model_id,
+            prompt=prompt,
+            source_ids=source_ids,
+            top_k=top_k,
+            request_options=request_options,
         )
         return _response.data

@@ -23,34 +23,6 @@ class TasksClient:
         """
         return self._raw_client
 
-    def get_task(self, task_id: int, *, request_options: typing.Optional[RequestOptions] = None) -> TaskRead:
-        """
-        Parameters
-        ----------
-        task_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        TaskRead
-            Successful Response
-
-        Examples
-        --------
-        from crystalith import CrystalithClient
-
-        client = CrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-        client.tasks.get_task(
-            task_id=1,
-        )
-        """
-        _response = self._raw_client.get_task(task_id, request_options=request_options)
-        return _response.data
-
     def list_tasks(
         self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
     ) -> typing.List[TaskRead]:
@@ -79,6 +51,34 @@ class TasksClient:
         )
         """
         _response = self._raw_client.list_tasks(notebook_id, request_options=request_options)
+        return _response.data
+
+    def get_task(self, task_id: int, *, request_options: typing.Optional[RequestOptions] = None) -> TaskRead:
+        """
+        Parameters
+        ----------
+        task_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        TaskRead
+            Successful Response
+
+        Examples
+        --------
+        from crystalith import CrystalithClient
+
+        client = CrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+        client.tasks.get_task(
+            task_id=1,
+        )
+        """
+        _response = self._raw_client.get_task(task_id, request_options=request_options)
         return _response.data
 
     def cancel_task(self, task_id: int, *, request_options: typing.Optional[RequestOptions] = None) -> TaskRead:
@@ -125,42 +125,6 @@ class AsyncTasksClient:
         """
         return self._raw_client
 
-    async def get_task(self, task_id: int, *, request_options: typing.Optional[RequestOptions] = None) -> TaskRead:
-        """
-        Parameters
-        ----------
-        task_id : int
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        TaskRead
-            Successful Response
-
-        Examples
-        --------
-        import asyncio
-
-        from crystalith import AsyncCrystalithClient
-
-        client = AsyncCrystalithClient(
-            base_url="https://yourhost.com/path/to/api",
-        )
-
-
-        async def main() -> None:
-            await client.tasks.get_task(
-                task_id=1,
-            )
-
-
-        asyncio.run(main())
-        """
-        _response = await self._raw_client.get_task(task_id, request_options=request_options)
-        return _response.data
-
     async def list_tasks(
         self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
     ) -> typing.List[TaskRead]:
@@ -197,6 +161,42 @@ class AsyncTasksClient:
         asyncio.run(main())
         """
         _response = await self._raw_client.list_tasks(notebook_id, request_options=request_options)
+        return _response.data
+
+    async def get_task(self, task_id: int, *, request_options: typing.Optional[RequestOptions] = None) -> TaskRead:
+        """
+        Parameters
+        ----------
+        task_id : int
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        TaskRead
+            Successful Response
+
+        Examples
+        --------
+        import asyncio
+
+        from crystalith import AsyncCrystalithClient
+
+        client = AsyncCrystalithClient(
+            base_url="https://yourhost.com/path/to/api",
+        )
+
+
+        async def main() -> None:
+            await client.tasks.get_task(
+                task_id=1,
+            )
+
+
+        asyncio.run(main())
+        """
+        _response = await self._raw_client.get_task(task_id, request_options=request_options)
         return _response.data
 
     async def cancel_task(self, task_id: int, *, request_options: typing.Optional[RequestOptions] = None) -> TaskRead:

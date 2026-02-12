@@ -24,13 +24,32 @@ class RawSlidesClient:
     def __init__(self, *, client_wrapper: SyncClientWrapper):
         self._client_wrapper = client_wrapper
 
-    def get_latest_draft(
-        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    def create_draft(
+        self,
+        notebook_id: int,
+        *,
+        engine: typing.Optional[str] = OMIT,
+        generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
+        prompt: typing.Optional[str] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        title: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SlideDraftRead]:
         """
         Parameters
         ----------
         notebook_id : int
+
+        engine : typing.Optional[str]
+            Rendering engine (default: slidev)
+
+        generation_config : typing.Optional[SlideGenerationConfig]
+
+        prompt : typing.Optional[str]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
+
+        title : typing.Optional[str]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -41,9 +60,22 @@ class RawSlidesClient:
             Successful Response
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/latest",
-            method="GET",
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts",
+            method="POST",
+            json={
+                "engine": engine,
+                "generation_config": convert_and_respect_annotation_metadata(
+                    object_=generation_config, annotation=typing.Optional[SlideGenerationConfig], direction="write"
+                ),
+                "prompt": prompt,
+                "source_ids": source_ids,
+                "title": title,
+            },
+            headers={
+                "content-type": "application/json",
+            },
             request_options=request_options,
+            omit=OMIT,
         )
         try:
             if 200 <= _response.status_code < 300:
@@ -71,32 +103,13 @@ class RawSlidesClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    def create_draft(
-        self,
-        notebook_id: int,
-        *,
-        title: typing.Optional[str] = OMIT,
-        prompt: typing.Optional[str] = OMIT,
-        engine: typing.Optional[str] = OMIT,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
+    def get_latest_draft(
+        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[SlideDraftRead]:
         """
         Parameters
         ----------
         notebook_id : int
-
-        title : typing.Optional[str]
-
-        prompt : typing.Optional[str]
-
-        engine : typing.Optional[str]
-            Rendering engine (default: slidev)
-
-        source_ids : typing.Optional[typing.Sequence[int]]
-
-        generation_config : typing.Optional[SlideGenerationConfig]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -107,22 +120,9 @@ class RawSlidesClient:
             Successful Response
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts",
-            method="POST",
-            json={
-                "title": title,
-                "prompt": prompt,
-                "engine": engine,
-                "source_ids": source_ids,
-                "generation_config": convert_and_respect_annotation_metadata(
-                    object_=generation_config, annotation=typing.Optional[SlideGenerationConfig], direction="write"
-                ),
-            },
-            headers={
-                "content-type": "application/json",
-            },
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/latest",
+            method="GET",
             request_options=request_options,
-            omit=OMIT,
         )
         try:
             if 200 <= _response.status_code < 300:
@@ -204,11 +204,11 @@ class RawSlidesClient:
         notebook_id: int,
         slide_id: int,
         *,
-        title: typing.Optional[str] = OMIT,
-        prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
+        prompt: typing.Optional[str] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        title: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[SlideDraftRead]:
         """
@@ -218,15 +218,15 @@ class RawSlidesClient:
 
         slide_id : int
 
-        title : typing.Optional[str]
+        engine : typing.Optional[str]
+
+        generation_config : typing.Optional[SlideGenerationConfig]
 
         prompt : typing.Optional[str]
 
-        engine : typing.Optional[str]
-
         source_ids : typing.Optional[typing.Sequence[int]]
 
-        generation_config : typing.Optional[SlideGenerationConfig]
+        title : typing.Optional[str]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -240,78 +240,13 @@ class RawSlidesClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/{jsonable_encoder(slide_id)}",
             method="PATCH",
             json={
-                "title": title,
-                "prompt": prompt,
                 "engine": engine,
-                "source_ids": source_ids,
                 "generation_config": convert_and_respect_annotation_metadata(
                     object_=generation_config, annotation=typing.Optional[SlideGenerationConfig], direction="write"
                 ),
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    SlideDraftRead,
-                    parse_obj_as(
-                        type_=SlideDraftRead,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return HttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    def update_outline(
-        self,
-        notebook_id: int,
-        slide_id: int,
-        *,
-        outline: SlideOutline,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[SlideDraftRead]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        slide_id : int
-
-        outline : SlideOutline
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        HttpResponse[SlideDraftRead]
-            Successful Response
-        """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/{jsonable_encoder(slide_id)}/outline",
-            method="PUT",
-            json={
-                "outline": convert_and_respect_annotation_metadata(
-                    object_=outline, annotation=SlideOutline, direction="write"
-                ),
+                "prompt": prompt,
+                "source_ids": source_ids,
+                "title": title,
             },
             headers={
                 "content-type": "application/json",
@@ -370,6 +305,132 @@ class RawSlidesClient:
             method="PUT",
             json={
                 "markdown": markdown,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SlideDraftRead,
+                    parse_obj_as(
+                        type_=SlideDraftRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def generate_markdown_stream(
+        self,
+        notebook_id: int,
+        slide_id: int,
+        *,
+        model_id: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[typing.Any]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        slide_id : int
+
+        model_id : typing.Optional[str]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[typing.Any]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/{jsonable_encoder(slide_id)}/markdown/stream",
+            method="GET",
+            params={
+                "model_id": model_id,
+            },
+            request_options=request_options,
+        )
+        try:
+            if _response is None or not _response.text.strip():
+                return HttpResponse(response=_response, data=None)
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    typing.Any,
+                    parse_obj_as(
+                        type_=typing.Any,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    def update_outline(
+        self,
+        notebook_id: int,
+        slide_id: int,
+        *,
+        outline: SlideOutline,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SlideDraftRead]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        slide_id : int
+
+        outline : SlideOutline
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SlideDraftRead]
+            Successful Response
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/{jsonable_encoder(slide_id)}/outline",
+            method="PUT",
+            json={
+                "outline": convert_and_respect_annotation_metadata(
+                    object_=outline, annotation=SlideOutline, direction="write"
+                ),
             },
             headers={
                 "content-type": "application/json",
@@ -464,79 +525,37 @@ class RawSlidesClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    def generate_markdown_stream(
-        self,
-        notebook_id: int,
-        slide_id: int,
-        *,
-        model_id: typing.Optional[str] = None,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[typing.Any]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        slide_id : int
-
-        model_id : typing.Optional[str]
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        HttpResponse[typing.Any]
-            Successful Response
-        """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/{jsonable_encoder(slide_id)}/markdown/stream",
-            method="GET",
-            params={
-                "model_id": model_id,
-            },
-            request_options=request_options,
-        )
-        try:
-            if _response is None or not _response.text.strip():
-                return HttpResponse(response=_response, data=None)
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    typing.Any,
-                    parse_obj_as(
-                        type_=typing.Any,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return HttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
 
 class AsyncRawSlidesClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
         self._client_wrapper = client_wrapper
 
-    async def get_latest_draft(
-        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
+    async def create_draft(
+        self,
+        notebook_id: int,
+        *,
+        engine: typing.Optional[str] = OMIT,
+        generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
+        prompt: typing.Optional[str] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        title: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SlideDraftRead]:
         """
         Parameters
         ----------
         notebook_id : int
+
+        engine : typing.Optional[str]
+            Rendering engine (default: slidev)
+
+        generation_config : typing.Optional[SlideGenerationConfig]
+
+        prompt : typing.Optional[str]
+
+        source_ids : typing.Optional[typing.Sequence[int]]
+
+        title : typing.Optional[str]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -547,9 +566,22 @@ class AsyncRawSlidesClient:
             Successful Response
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/latest",
-            method="GET",
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts",
+            method="POST",
+            json={
+                "engine": engine,
+                "generation_config": convert_and_respect_annotation_metadata(
+                    object_=generation_config, annotation=typing.Optional[SlideGenerationConfig], direction="write"
+                ),
+                "prompt": prompt,
+                "source_ids": source_ids,
+                "title": title,
+            },
+            headers={
+                "content-type": "application/json",
+            },
             request_options=request_options,
+            omit=OMIT,
         )
         try:
             if 200 <= _response.status_code < 300:
@@ -577,32 +609,13 @@ class AsyncRawSlidesClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    async def create_draft(
-        self,
-        notebook_id: int,
-        *,
-        title: typing.Optional[str] = OMIT,
-        prompt: typing.Optional[str] = OMIT,
-        engine: typing.Optional[str] = OMIT,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
-        generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
-        request_options: typing.Optional[RequestOptions] = None,
+    async def get_latest_draft(
+        self, notebook_id: int, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[SlideDraftRead]:
         """
         Parameters
         ----------
         notebook_id : int
-
-        title : typing.Optional[str]
-
-        prompt : typing.Optional[str]
-
-        engine : typing.Optional[str]
-            Rendering engine (default: slidev)
-
-        source_ids : typing.Optional[typing.Sequence[int]]
-
-        generation_config : typing.Optional[SlideGenerationConfig]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -613,22 +626,9 @@ class AsyncRawSlidesClient:
             Successful Response
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts",
-            method="POST",
-            json={
-                "title": title,
-                "prompt": prompt,
-                "engine": engine,
-                "source_ids": source_ids,
-                "generation_config": convert_and_respect_annotation_metadata(
-                    object_=generation_config, annotation=typing.Optional[SlideGenerationConfig], direction="write"
-                ),
-            },
-            headers={
-                "content-type": "application/json",
-            },
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/latest",
+            method="GET",
             request_options=request_options,
-            omit=OMIT,
         )
         try:
             if 200 <= _response.status_code < 300:
@@ -710,11 +710,11 @@ class AsyncRawSlidesClient:
         notebook_id: int,
         slide_id: int,
         *,
-        title: typing.Optional[str] = OMIT,
-        prompt: typing.Optional[str] = OMIT,
         engine: typing.Optional[str] = OMIT,
-        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
         generation_config: typing.Optional[SlideGenerationConfig] = OMIT,
+        prompt: typing.Optional[str] = OMIT,
+        source_ids: typing.Optional[typing.Sequence[int]] = OMIT,
+        title: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[SlideDraftRead]:
         """
@@ -724,15 +724,15 @@ class AsyncRawSlidesClient:
 
         slide_id : int
 
-        title : typing.Optional[str]
+        engine : typing.Optional[str]
+
+        generation_config : typing.Optional[SlideGenerationConfig]
 
         prompt : typing.Optional[str]
 
-        engine : typing.Optional[str]
-
         source_ids : typing.Optional[typing.Sequence[int]]
 
-        generation_config : typing.Optional[SlideGenerationConfig]
+        title : typing.Optional[str]
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -746,78 +746,13 @@ class AsyncRawSlidesClient:
             f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/{jsonable_encoder(slide_id)}",
             method="PATCH",
             json={
-                "title": title,
-                "prompt": prompt,
                 "engine": engine,
-                "source_ids": source_ids,
                 "generation_config": convert_and_respect_annotation_metadata(
                     object_=generation_config, annotation=typing.Optional[SlideGenerationConfig], direction="write"
                 ),
-            },
-            headers={
-                "content-type": "application/json",
-            },
-            request_options=request_options,
-            omit=OMIT,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                _data = typing.cast(
-                    SlideDraftRead,
-                    parse_obj_as(
-                        type_=SlideDraftRead,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-                return AsyncHttpResponse(response=_response, data=_data)
-            if _response.status_code == 422:
-                raise UnprocessableEntityError(
-                    headers=dict(_response.headers),
-                    body=typing.cast(
-                        HttpValidationError,
-                        parse_obj_as(
-                            type_=HttpValidationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    ),
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
-        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
-
-    async def update_outline(
-        self,
-        notebook_id: int,
-        slide_id: int,
-        *,
-        outline: SlideOutline,
-        request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[SlideDraftRead]:
-        """
-        Parameters
-        ----------
-        notebook_id : int
-
-        slide_id : int
-
-        outline : SlideOutline
-
-        request_options : typing.Optional[RequestOptions]
-            Request-specific configuration.
-
-        Returns
-        -------
-        AsyncHttpResponse[SlideDraftRead]
-            Successful Response
-        """
-        _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/{jsonable_encoder(slide_id)}/outline",
-            method="PUT",
-            json={
-                "outline": convert_and_respect_annotation_metadata(
-                    object_=outline, annotation=SlideOutline, direction="write"
-                ),
+                "prompt": prompt,
+                "source_ids": source_ids,
+                "title": title,
             },
             headers={
                 "content-type": "application/json",
@@ -909,7 +844,7 @@ class AsyncRawSlidesClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    async def generate_outline_stream(
+    async def generate_markdown_stream(
         self,
         notebook_id: int,
         slide_id: int,
@@ -935,7 +870,7 @@ class AsyncRawSlidesClient:
             Successful Response
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/{jsonable_encoder(slide_id)}/outline/stream",
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/{jsonable_encoder(slide_id)}/markdown/stream",
             method="GET",
             params={
                 "model_id": model_id,
@@ -970,7 +905,72 @@ class AsyncRawSlidesClient:
             raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
         raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
 
-    async def generate_markdown_stream(
+    async def update_outline(
+        self,
+        notebook_id: int,
+        slide_id: int,
+        *,
+        outline: SlideOutline,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SlideDraftRead]:
+        """
+        Parameters
+        ----------
+        notebook_id : int
+
+        slide_id : int
+
+        outline : SlideOutline
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SlideDraftRead]
+            Successful Response
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/{jsonable_encoder(slide_id)}/outline",
+            method="PUT",
+            json={
+                "outline": convert_and_respect_annotation_metadata(
+                    object_=outline, annotation=SlideOutline, direction="write"
+                ),
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SlideDraftRead,
+                    parse_obj_as(
+                        type_=SlideDraftRead,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    headers=dict(_response.headers),
+                    body=typing.cast(
+                        HttpValidationError,
+                        parse_obj_as(
+                            type_=HttpValidationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    ),
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response.text)
+        raise ApiError(status_code=_response.status_code, headers=dict(_response.headers), body=_response_json)
+
+    async def generate_outline_stream(
         self,
         notebook_id: int,
         slide_id: int,
@@ -996,7 +996,7 @@ class AsyncRawSlidesClient:
             Successful Response
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/{jsonable_encoder(slide_id)}/markdown/stream",
+            f"v1/notebooks/{jsonable_encoder(notebook_id)}/slides/drafts/{jsonable_encoder(slide_id)}/outline/stream",
             method="GET",
             params={
                 "model_id": model_id,
