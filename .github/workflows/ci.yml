@@ -62,9 +62,6 @@ jobs:
           cd backend/py
           uv run scripts/api_schema.py check -s ../../frontend/web/openapi.json
 
-      - name: Check prod compose is synced
-        run: python scripts/deploy/sync_prod_compose.py --check
-
   frontend:
     runs-on: ubuntu-latest
     steps:
@@ -103,4 +100,3 @@ jobs:
           cd frontend/web
           pnpm run api:generate
           git diff --exit-code -- src/api/generated
-

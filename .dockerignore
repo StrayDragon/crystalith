@@ -3,20 +3,39 @@
 .env
 .env.*
 
+**/.DS_Store
+**/.idea
+**/.vscode
+
+# Python
 **/__pycache__
-**/*.pyc
+**/*.py[cod]
 **/.pytest_cache
 **/.mypy_cache
+**/.ruff_cache
+**/.venv
+**/.tox
+**/.nox
+**/*.egg-info
+**/.coverage
+**/.coverage.*
 
-backend/py/.venv
 backend/py/data
-backend/py/.coverage
+backend/py/.uv-cache
 
 config/secrets.yaml
 config/secrets.yml
 
-frontend/web/node_modules
-frontend/web/dist
+# Node / frontend build outputs
+**/node_modules
+**/.pnpm-store
+**/.turbo
+**/.next
+**/.vite
+**/dist
+**/build
+**/coverage
+
 frontend/web/playwright-report
 frontend/web/test-results
 
