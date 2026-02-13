@@ -13,7 +13,7 @@ const OFFSET = 8;
 interface ConfirmPopoverProps {
   message: string;
   onConfirm: () => void;
-  children: ReactElement;
+  children: ReactElement<any>;
   confirmText?: string;
   cancelText?: string;
   placement?: Placement;

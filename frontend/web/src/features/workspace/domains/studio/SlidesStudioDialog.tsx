@@ -152,7 +152,7 @@ interface SlidesStudioDialogProps {
   onOutputsUpdated: () => void;
   openMode?: 'config' | 'preview';
   draftId?: number | null;
-  queueStatus?: 'queued' | 'running' | 'error' | 'done' | null;
+  queueStatus?: 'queued' | 'running' | 'error' | 'done' | 'cancelled' | null;
   onQueueSlides?: (payload: {
     title: string;
     prompt: string;
@@ -474,7 +474,7 @@ export default function SlidesStudioDialog({
 
   useEffect(() => {
     if (!open || !isPreviewMode || !draft?.id) return;
-    if (queueStatus !== 'done') return;
+    if (queueStatus !== 'done' && queueStatus !== 'cancelled') return;
     void refreshDraft(draft.id);
   }, [draft?.id, isPreviewMode, open, queueStatus, refreshDraft]);
 
@@ -927,6 +927,7 @@ export default function SlidesStudioDialog({
             running: '生成中',
             error: '失败',
             done: '已完成',
+            cancelled: '已取消',
           }[queueStatus]
         : draft?.status === 'running'
           ? '生成中'

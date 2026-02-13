@@ -5,6 +5,7 @@ import ErrorBoundary from './ErrorBoundary';
 
 function CrashComponent() {
   throw new Error('boom');
+  return null;
 }
 
 beforeEach(() => {

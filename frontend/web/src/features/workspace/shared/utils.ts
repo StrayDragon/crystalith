@@ -357,7 +357,7 @@ export function normalizeCitation(row: ApiCitation): Citation {
 export function collectChunkIds(citations: Citation[]): number[] {
   return (citations ?? [])
     .map((citation) => citation.chunkId)
-    .filter((value): value is number => Number.isFinite(value) && value > 0);
+    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0);
 }
 
 export function collectOutputCitations(content: unknown): Citation[] {

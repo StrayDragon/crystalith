@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useMemo, type MouseEvent } from 'react';
+import { useEffect, useRef, useCallback, useMemo, type MouseEvent as ReactMouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { MyLocation as LocateIcon } from '@mui/icons-material';
 
@@ -93,7 +93,7 @@ export default function CitationPopover({
   useEffect(() => {
     if (!isOpen) return;
 
-    function handleClickOutside(event: MouseEvent) {
+    function handleClickOutside(event: globalThis.MouseEvent) {
       if (
         popoverRef.current &&
         !popoverRef.current.contains(event.target as Node)
@@ -143,7 +143,7 @@ export default function CitationPopover({
   );
 
   const handleLocateSource = useCallback(
-    (e: MouseEvent<HTMLButtonElement>, citation: Citation) => {
+    (e: ReactMouseEvent<HTMLButtonElement>, citation: Citation) => {
       e.stopPropagation();
       onLocateSource?.(citation);
       onClose();

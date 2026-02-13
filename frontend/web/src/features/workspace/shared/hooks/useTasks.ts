@@ -22,7 +22,7 @@ export function useTasks() {
     isLoading: false,
     error: '',
   });
-  const pollingRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const pollingRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -59,7 +59,7 @@ export function useTasks() {
   }, [isConnected, activeNotebookId]);
 
   const fetchTask = useCallback(
-    async (taskId: string) => {
+    async (taskId: number) => {
       if (!isConnected) return null;
       try {
         const task = await getTask({
@@ -67,7 +67,7 @@ export function useTasks() {
         });
         setTaskState((prev) => ({
           ...prev,
-          tasks: prev.tasks.map((t) => (t.id === taskId ? task : t)),
+          tasks: prev.tasks.map((t) => (t.id === task.id ? task : t)),
         }));
         return task;
       } catch (error) {
@@ -79,7 +79,7 @@ export function useTasks() {
 
   const pollTask = useCallback(
     (
-      taskId: string,
+      taskId: number,
       onComplete?: (task: TaskRead) => void,
       onError?: (error: string) => void,
       intervalMs = 2000,
@@ -111,6 +111,12 @@ export function useTasks() {
           return;
         }
 
+        if (task.status === 'cancelled') {
+          pollingRef.current.delete(taskId);
+          onError?.('任务已取消。');
+          return;
+        }
+
         if (attempts >= maxAttempts) {
           pollingRef.current.delete(taskId);
           onError?.('任务超时，请稍后重试。');
@@ -137,7 +143,7 @@ export function useTasks() {
     [fetchTask, isConnected],
   );
 
-  const stopPolling = useCallback((taskId: string) => {
+  const stopPolling = useCallback((taskId: number) => {
     const timer = pollingRef.current.get(taskId);
     if (timer) {
       clearTimeout(timer);

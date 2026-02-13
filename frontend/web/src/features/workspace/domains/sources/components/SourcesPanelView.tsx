@@ -969,27 +969,28 @@ function SourcesPanelView({
                   {sortOrder === val ? '✓ ' : '   '}{label}
                 </MenuItem>
               ))}
-              {sourceTags.length > 0 && (
-                <>
-                  <div className="my-1 border-t border-gray-100 dark:border-slate-700" />
-                  <div className="px-3 py-1 text-[9px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider">标签筛选</div>
-                  <MenuItem
-                    onClick={() => onTagFilterChange?.('')}
-                    className={`py-1.5 px-3 text-xs ${!tagFilter ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
-                  >
-                    {!tagFilter ? '✓ ' : '   '}全部
-                  </MenuItem>
-                  {sourceTags.map((tag) => (
+              {sourceTags.length > 0
+                ? [
+                    <div key="tag-filter-divider" className="my-1 border-t border-gray-100 dark:border-slate-700" />,
+                    <div key="tag-filter-title" className="px-3 py-1 text-[9px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider">标签筛选</div>,
                     <MenuItem
-                      key={tag.id}
-                      onClick={() => onTagFilterChange?.(tag.name)}
-                      className={`py-1.5 px-3 text-xs ${tagFilter === tag.name ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
+                      key="tag-filter-all"
+                      onClick={() => onTagFilterChange?.('')}
+                      className={`py-1.5 px-3 text-xs ${!tagFilter ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
                     >
-                      {tagFilter === tag.name ? '✓ ' : '   '}{tag.name}
-                    </MenuItem>
-                  ))}
-                </>
-              )}
+                      {!tagFilter ? '✓ ' : '   '}全部
+                    </MenuItem>,
+                    ...sourceTags.map((tag) => (
+                      <MenuItem
+                        key={tag.id}
+                        onClick={() => onTagFilterChange?.(tag.name)}
+                        className={`py-1.5 px-3 text-xs ${tagFilter === tag.name ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
+                      >
+                        {tagFilter === tag.name ? '✓ ' : '   '}{tag.name}
+                      </MenuItem>
+                    )),
+                  ]
+                : []}
             </MenuList>
           </Menu>
 
@@ -1037,45 +1038,46 @@ function SourcesPanelView({
                   </MenuItem>
                 )}
 
-                {(onAssignTagToSources || onRemoveTagFromSources) && (
-                  <>
-                    <div className="my-1 border-t border-gray-100 dark:border-slate-700" />
-                    <MenuItem
-                      onClick={handleBatchCreateAndAssignTag}
-                      disabled={!onCreateSourceTag || !onAssignTagToSources || tagMutationState === 'loading'}
-                      className="flex items-center gap-2 py-1.5 px-3 text-xs"
-                    >
-                      新建并分配标签
-                    </MenuItem>
-                    {sourceTags.map((tag) => (
+                {onAssignTagToSources || onRemoveTagFromSources
+                  ? [
+                      <div key="tag-actions-divider" className="my-1 border-t border-gray-100 dark:border-slate-700" />,
                       <MenuItem
-                        key={`assign-${tag.id}`}
-                        onClick={() => handleAssignExistingTag(tag.id)}
-                        disabled={!onAssignTagToSources || tagMutationState === 'loading'}
-                        className="py-1.5 px-3 text-xs"
+                        key="tag-actions-create"
+                        onClick={handleBatchCreateAndAssignTag}
+                        disabled={!onCreateSourceTag || !onAssignTagToSources || tagMutationState === 'loading'}
+                        className="flex items-center gap-2 py-1.5 px-3 text-xs"
                       >
-                        添加标签：{tag.name}
-                      </MenuItem>
-                    ))}
-                    {selectedTagNames.length > 0 && (
-                      <div className="my-1 border-t border-gray-100 dark:border-slate-700" />
-                    )}
-                    {selectedTagNames.map((tagName) => {
-                      const tag = sourceTags.find((item) => item.name === tagName);
-                      if (!tag) return null;
-                      return (
+                        新建并分配标签
+                      </MenuItem>,
+                      ...sourceTags.map((tag) => (
                         <MenuItem
-                          key={`remove-${tag.id}`}
-                          onClick={() => handleRemoveExistingTag(tag.id)}
-                          disabled={!onRemoveTagFromSources || tagMutationState === 'loading'}
-                          className="py-1.5 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                          key={`assign-${tag.id}`}
+                          onClick={() => handleAssignExistingTag(tag.id)}
+                          disabled={!onAssignTagToSources || tagMutationState === 'loading'}
+                          className="py-1.5 px-3 text-xs"
                         >
-                          移除标签：{tag.name}
+                          添加标签：{tag.name}
                         </MenuItem>
-                      );
-                    })}
-                  </>
-                )}
+                      )),
+                      ...(selectedTagNames.length > 0
+                        ? [<div key="tag-actions-divider-remove" className="my-1 border-t border-gray-100 dark:border-slate-700" />]
+                        : []),
+                      ...selectedTagNames.flatMap((tagName) => {
+                        const tag = sourceTags.find((item) => item.name === tagName);
+                        if (!tag) return [];
+                        return [
+                          <MenuItem
+                            key={`remove-${tag.id}`}
+                            onClick={() => handleRemoveExistingTag(tag.id)}
+                            disabled={!onRemoveTagFromSources || tagMutationState === 'loading'}
+                            className="py-1.5 px-3 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                          >
+                            移除标签：{tag.name}
+                          </MenuItem>,
+                        ];
+                      }),
+                    ]
+                  : []}
               </MenuList>
             </Menu>
           )}
