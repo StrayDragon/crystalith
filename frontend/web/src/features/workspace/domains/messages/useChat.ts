@@ -192,6 +192,8 @@ export function useChat({
             Accept: 'text/event-stream',
           },
           signal: abortController.signal,
+          // POST SSE should never retry — each retry re-sends the question
+          sseMaxRetryAttempts: 1,
           onSseEvent: (event) => {
             const { event: eventType, data } = event;
             if (eventType === 'chunk' && data && typeof data === 'object' && 'text' in data) {
@@ -229,6 +231,10 @@ export function useChat({
                 citationScope: scope,
               });
               s2.setCitations(normalizedCitations);
+              // Abort the SSE connection now that we have the complete response.
+              // This prevents the SSE client from misinterpreting the stream
+              // close as an error and retrying the request.
+              abortController.abort();
               return;
             }
             if (eventType === 'error') {

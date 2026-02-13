@@ -11,11 +11,15 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from crystalith.shared.config import ModelConfig, ModelRole, Settings
+from crystalith.shared.config import ModelConfig, ModelRole, Settings, auto_discover_ollama
 
 from crystalith.shared.deps import get_settings
 from crystalith.shared.deps import get_plugin_registry
 from crystalith.shared.plugins import PluginRegistry
+
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/v1/models", tags=["models"])
@@ -61,12 +65,23 @@ async def list_models(
     plugins: PluginRegistry = Depends(get_plugin_registry),
     role: Literal["chat", "embed", "edit", "autocomplete"] | None = None,
     capability: str | None = None,
+    refresh: bool = False,
 ) -> ModelsListResponse:
     """
     List all available AI models.
 
     Optionally filter by role (chat, embed, edit, autocomplete) or capability.
+    Set refresh=true to re-discover Ollama models.
     """
+    # Optionally refresh Ollama model discovery
+    if refresh:
+        try:
+            added = auto_discover_ollama(settings)
+            if added:
+                _logger.info("Refreshed: discovered %d new Ollama models", added)
+        except Exception:
+            _logger.debug("Ollama refresh failed", exc_info=True)
+
     models_settings = settings.models
     available = models_settings.available
 

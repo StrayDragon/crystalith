@@ -149,7 +149,7 @@ context_window:
 # ----------------------------------------------------------------------------
 search:
   searxng:
-    host: "http://localhost:8888"
+    host: "http://host.docker.internal:50201"
     timeout: 10
     max_results: 10
 

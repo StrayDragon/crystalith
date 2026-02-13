@@ -1,4 +1,7 @@
 services:
+  # ---------------------------------------------------------------------------
+  # Frontend (Nginx) — serves SPA + reverse-proxies API & Slidev
+  # ---------------------------------------------------------------------------
   web:
     build:
       context: ../..
@@ -11,6 +14,8 @@ services:
     container_name: crystalith-web
     ports:
       - "${CL_WEB_PORT:-8080}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       api:
         condition: service_healthy
@@ -23,6 +28,26 @@ services:
     networks:
       - frontend-net
 
+  # ---------------------------------------------------------------------------
+  # One-shot init: ensure shared data directory has correct permissions
+  # ---------------------------------------------------------------------------
+  data-init:
+    image: ${ALPINE_IMAGE:-alpine:3.21}
+    container_name: crystalith-data-init
+    volumes:
+      - ../../data:/data
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mkdir -p /data/output/preview
+        chmod -R a+rw /data
+        find /data -type d -exec chmod a+x {} \;
+        echo "[data-init] Permissions fixed."
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # Backend API (FastAPI)
+  # ---------------------------------------------------------------------------
   api:
     build:
       context: ../..
@@ -41,7 +66,7 @@ services:
       # Auto-run Alembic migrations on startup
       AUTO_DB_INIT: "1"
 
-      # Core env overrides (preferred in docker)
+      # Core env overrides — use Docker DNS names
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://crystalith:crystalith@postgres:5432/crystalith}
       CHROMA_HOST: chromadb
       CHROMA_PORT: "8000"
@@ -50,7 +75,7 @@ services:
       CACHE_PROVIDER: ${CACHE_PROVIDER:-memory}
       REDIS_URL: ${REDIS_URL:-}
 
-      # Optional AI provider overrides
+      # AI provider overrides
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
       OLLAMA_HOST: ${OLLAMA_HOST:-}
@@ -63,9 +88,11 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - api_data:/app/backend/py/data
+      - ../../data:/app/backend/py/data
       - ../../config:/app/config:ro
     depends_on:
+      data-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       chromadb:
@@ -80,6 +107,86 @@ services:
       - frontend-net
       - backend-net
 
+  # ---------------------------------------------------------------------------
+  # Slidev preview — renders generated slide markdown
+  # ---------------------------------------------------------------------------
+  slidev:
+    build:
+      context: ../..
+      dockerfile: dockers/slidev/Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:20-trixie-slim}
+        PNPM_VERSION: ${PNPM_VERSION:-10.29.2}
+        NPM_REGISTRY: ${NPM_REGISTRY:-}
+    container_name: crystalith-slidev
+    ports:
+      - "${CL_SLIDEV_PORT:-3030}:3030"
+    volumes:
+      # Share the same data directory so Slidev sees API-generated slides
+      - ../../data:/data
+    depends_on:
+      data-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1G
+    networks:
+      - frontend-net
+
+  # ---------------------------------------------------------------------------
+  # Host remap bridge (optional — enable with: docker compose --profile host-remap up)
+  #
+  # For services on a VPN, Tailscale, or other networks that Docker bridge
+  # networking cannot reach directly, this container listens on host ports
+  # and forwards traffic to the remote endpoints.
+  #
+  # Usage:
+  #   1. Set BRIDGE_FORWARDS in .env:
+  #      BRIDGE_FORWARDS=50201:gateway.lan:50201 50256:gateway.lan:50256
+  #   2. Start with the host-remap profile:
+  #      docker compose --profile host-remap --env-file .env -f deployments/prod/docker-compose.yml up -d
+  #
+  # Other containers reach forwarded ports via host.docker.internal:<port>.
+  # ---------------------------------------------------------------------------
+  host-remap:
+    build:
+      context: ../..
+      dockerfile: dockers/host-remap/Dockerfile
+      args:
+        ALPINE_IMAGE: ${ALPINE_IMAGE:-alpine:3.21}
+    container_name: crystalith-host-remap
+    profiles: ["host-remap"]
+    network_mode: host
+    environment:
+      BRIDGE_FORWARDS: "${BRIDGE_FORWARDS:-}"
+    command:
+      - |
+        if [ -z "$$BRIDGE_FORWARDS" ]; then
+          echo "[host-remap] No BRIDGE_FORWARDS configured — sleeping."
+          exec sleep infinity
+        fi
+        echo "[host-remap] Starting port forwards..."
+        for entry in $$BRIDGE_FORWARDS; do
+          lport=$$(echo "$$entry" | cut -d: -f1)
+          rhost=$$(echo "$$entry" | cut -d: -f2)
+          rport=$$(echo "$$entry" | cut -d: -f3)
+          echo "[host-remap]   0.0.0.0:$$lport -> $$rhost:$$rport"
+          socat TCP-LISTEN:$$lport,fork,reuseaddr TCP:$$rhost:$$rport &
+        done
+        wait
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.10"
+          memory: 32M
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL
+  # ---------------------------------------------------------------------------
   postgres:
     image: ${POSTGRES_IMAGE:-postgres:18.1-trixie}
     container_name: crystalith-postgres
@@ -103,6 +210,9 @@ services:
     networks:
       - backend-net
 
+  # ---------------------------------------------------------------------------
+  # ChromaDB
+  # ---------------------------------------------------------------------------
   chromadb:
     image: ${CHROMADB_IMAGE:-chromadb/chroma:0.5.15}
     container_name: crystalith-chromadb
@@ -122,6 +232,9 @@ services:
     networks:
       - backend-net
 
+  # ---------------------------------------------------------------------------
+  # Redis (optional, enable with: docker compose --profile redis up)
+  # ---------------------------------------------------------------------------
   redis:
     image: ${REDIS_IMAGE:-redis:7.4-alpine}
     container_name: crystalith-redis
@@ -142,6 +255,9 @@ services:
     networks:
       - backend-net
 
+  # ---------------------------------------------------------------------------
+  # Ollama (optional, enable with: docker compose --profile ollama up)
+  # ---------------------------------------------------------------------------
   ollama:
     image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
     container_name: crystalith-ollama
@@ -160,7 +276,6 @@ services:
 volumes:
   pgdata: {}
   chromadata: {}
-  api_data: {}
   redisdata: {}
   ollamadata: {}
 
