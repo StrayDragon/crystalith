@@ -1,4 +1,5 @@
 from .manager import ConfigManager
+from .ollama_discovery import auto_discover_ollama, discover_ollama_models
 from .models import (
     AppSettings,
     AISettings,
@@ -31,10 +32,12 @@ from .models import (
 __all__ = [
     "AppSettings",
     "AISettings",
+    "auto_discover_ollama",
     "ChatSettings",
     "CompletionOptions",
     "CacheSettings",
     "ConfigManager",
+    "discover_ollama_models",
     "ContextWindowSettings",
     "DatabaseSettings",
     "EmbeddingSettings",

@@ -11,6 +11,7 @@ from jsonschema import Draft7Validator, ValidationError as JsonSchemaValidationE
 from pydantic import ValidationError
 
 from .models import OllamaProviderSettings, OpenAIProviderSettings, Settings
+from .ollama_discovery import auto_discover_ollama
 
 logger = logging.getLogger(__name__)
 
@@ -164,7 +165,10 @@ class ConfigManager:
                 settings.cache.provider = normalized  # type: ignore[assignment]
         if redis_url:
             settings.cache.redis_url = redis_url
-            if settings.cache.provider != "redis":
+            # Only auto-promote to redis when no explicit CACHE_PROVIDER was set.
+            # If the user explicitly chose "memory", respect that choice even if
+            # REDIS_URL is pre-configured for later use.
+            if not cache_provider and settings.cache.provider != "redis":
                 settings.cache.provider = "redis"
 
         openai_api_key = _read_text_with_secrets("OPENAI_API_KEY")
@@ -203,16 +207,26 @@ class ConfigManager:
                 else:
                     model.provider_config = {"host": ollama_host}
 
+        available_ids = [m.id for m in settings.models.available]
+
         default_chat_model = _read_text("CRYSTALITH_DEFAULT_CHAT_MODEL", "DEFAULT_CHAT_MODEL")
         if default_chat_model:
             if settings.models.get_model(default_chat_model) is None:
-                raise ValueError(f"Invalid default chat model id: {default_chat_model}")
+                raise ValueError(
+                    f"Invalid default chat model id: {default_chat_model!r}. "
+                    f"Available model ids: {available_ids}. "
+                    f"Hint: use the model 'id' from config/app.yaml, not the raw provider model name."
+                )
             settings.models.defaults.chat = default_chat_model
 
         default_embedding_model = _read_text("CRYSTALITH_DEFAULT_EMBEDDING_MODEL", "DEFAULT_EMBEDDING_MODEL")
         if default_embedding_model:
             if settings.models.get_model(default_embedding_model) is None:
-                raise ValueError(f"Invalid default embedding model id: {default_embedding_model}")
+                raise ValueError(
+                    f"Invalid default embedding model id: {default_embedding_model!r}. "
+                    f"Available model ids: {available_ids}. "
+                    f"Hint: use the model 'id' from config/app.yaml, not the raw provider model name."
+                )
             settings.models.defaults.embedding = default_embedding_model
 
     def _validate_with_jsonschema(self, data: dict[str, Any]) -> list[str]:
@@ -300,6 +314,14 @@ class ConfigManager:
             # Load and validate settings with Pydantic
             settings = Settings.from_yaml(self.config_path, secrets=secrets)
             self._apply_env_overrides(settings, secrets)
+
+            # Auto-discover Ollama models (non-fatal)
+            try:
+                added = auto_discover_ollama(settings)
+                if added:
+                    logger.info("Auto-discovered %d Ollama models", added)
+            except Exception as exc:
+                logger.debug("Ollama auto-discovery skipped: %s", exc)
 
         except FileNotFoundError as exc:
             raise FileNotFoundError(f"Config file not found: {self.config_path}") from exc

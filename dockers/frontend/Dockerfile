@@ -21,6 +21,7 @@ RUN pnpm install --frozen-lockfile
 
 COPY frontend/web/ ./
 COPY frontend/packages/ ../packages/
+
 RUN pnpm run build
 
 FROM ${NGINX_IMAGE} AS runtime
