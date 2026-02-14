@@ -25,24 +25,24 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
  *
  * Optionally filter by role (chat, embed, edit, autocomplete) or capability.
  */
-export const listModelsV1ModelsGet = <ThrowOnError extends boolean = false>(options?: Options<ListModelsV1ModelsGetData, ThrowOnError>) => (options?.client ?? client).get<ListModelsV1ModelsGetResponses, ListModelsV1ModelsGetErrors, ThrowOnError>({ url: '/v1/models', ...options });
+export const listModelsV1ModelsGet = <ThrowOnError extends boolean = true>(options?: Options<ListModelsV1ModelsGetData, ThrowOnError>) => (options?.client ?? client).get<ListModelsV1ModelsGetResponses, ListModelsV1ModelsGetErrors, ThrowOnError, 'data'>({ url: '/v1/models', ...options });
 
 /**
  * Get Model
  *
  * Get a specific model by ID.
  */
-export const getModelV1ModelsModelIdGet = <ThrowOnError extends boolean = false>(options: Options<GetModelV1ModelsModelIdGetData, ThrowOnError>) => (options.client ?? client).get<GetModelV1ModelsModelIdGetResponses, GetModelV1ModelsModelIdGetErrors, ThrowOnError>({ url: '/v1/models/{model_id}', ...options });
+export const getModelV1ModelsModelIdGet = <ThrowOnError extends boolean = true>(options: Options<GetModelV1ModelsModelIdGetData, ThrowOnError>) => (options.client ?? client).get<GetModelV1ModelsModelIdGetResponses, GetModelV1ModelsModelIdGetErrors, ThrowOnError, 'data'>({ url: '/v1/models/{model_id}', ...options });
 
 /**
  * List Notebooks
  */
-export const listNotebooksV1NotebooksGet = <ThrowOnError extends boolean = false>(options?: Options<ListNotebooksV1NotebooksGetData, ThrowOnError>) => (options?.client ?? client).get<ListNotebooksV1NotebooksGetResponses, unknown, ThrowOnError>({ url: '/v1/notebooks', ...options });
+export const listNotebooksV1NotebooksGet = <ThrowOnError extends boolean = true>(options?: Options<ListNotebooksV1NotebooksGetData, ThrowOnError>) => (options?.client ?? client).get<ListNotebooksV1NotebooksGetResponses, unknown, ThrowOnError, 'data'>({ url: '/v1/notebooks', ...options });
 
 /**
  * Create Notebook
  */
-export const createNotebookV1NotebooksPost = <ThrowOnError extends boolean = false>(options: Options<CreateNotebookV1NotebooksPostData, ThrowOnError>) => (options.client ?? client).post<CreateNotebookV1NotebooksPostResponses, CreateNotebookV1NotebooksPostErrors, ThrowOnError>({
+export const createNotebookV1NotebooksPost = <ThrowOnError extends boolean = true>(options: Options<CreateNotebookV1NotebooksPostData, ThrowOnError>) => (options.client ?? client).post<CreateNotebookV1NotebooksPostResponses, CreateNotebookV1NotebooksPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks',
     ...options,
     headers: {
@@ -54,17 +54,17 @@ export const createNotebookV1NotebooksPost = <ThrowOnError extends boolean = fal
 /**
  * Delete Notebook
  */
-export const deleteNotebookV1NotebooksNotebookIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteNotebookV1NotebooksNotebookIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteNotebookV1NotebooksNotebookIdDeleteResponses, DeleteNotebookV1NotebooksNotebookIdDeleteErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}', ...options });
+export const deleteNotebookV1NotebooksNotebookIdDelete = <ThrowOnError extends boolean = true>(options: Options<DeleteNotebookV1NotebooksNotebookIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteNotebookV1NotebooksNotebookIdDeleteResponses, DeleteNotebookV1NotebooksNotebookIdDeleteErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}', ...options });
 
 /**
  * Get Notebook
  */
-export const getNotebookV1NotebooksNotebookIdGet = <ThrowOnError extends boolean = false>(options: Options<GetNotebookV1NotebooksNotebookIdGetData, ThrowOnError>) => (options.client ?? client).get<GetNotebookV1NotebooksNotebookIdGetResponses, GetNotebookV1NotebooksNotebookIdGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}', ...options });
+export const getNotebookV1NotebooksNotebookIdGet = <ThrowOnError extends boolean = true>(options: Options<GetNotebookV1NotebooksNotebookIdGetData, ThrowOnError>) => (options.client ?? client).get<GetNotebookV1NotebooksNotebookIdGetResponses, GetNotebookV1NotebooksNotebookIdGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}', ...options });
 
 /**
  * Update Notebook
  */
-export const updateNotebookV1NotebooksNotebookIdPatch = <ThrowOnError extends boolean = false>(options: Options<UpdateNotebookV1NotebooksNotebookIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateNotebookV1NotebooksNotebookIdPatchResponses, UpdateNotebookV1NotebooksNotebookIdPatchErrors, ThrowOnError>({
+export const updateNotebookV1NotebooksNotebookIdPatch = <ThrowOnError extends boolean = true>(options: Options<UpdateNotebookV1NotebooksNotebookIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateNotebookV1NotebooksNotebookIdPatchResponses, UpdateNotebookV1NotebooksNotebookIdPatchErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}',
     ...options,
     headers: {
@@ -76,36 +76,36 @@ export const updateNotebookV1NotebooksNotebookIdPatch = <ThrowOnError extends bo
 /**
  * Analyze Notebook
  */
-export const analyzeNotebookV1NotebooksNotebookIdAnalysisGet = <ThrowOnError extends boolean = false>(options: Options<AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetData, ThrowOnError>) => (options.client ?? client).get<AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetResponses, AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/analysis', ...options });
+export const analyzeNotebookV1NotebooksNotebookIdAnalysisGet = <ThrowOnError extends boolean = true>(options: Options<AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetData, ThrowOnError>) => (options.client ?? client).get<AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetResponses, AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/analysis', ...options });
 
 /**
  * List Outputs
  */
-export const listOutputsV1NotebooksNotebookIdOutputsGet = <ThrowOnError extends boolean = false>(options: Options<ListOutputsV1NotebooksNotebookIdOutputsGetData, ThrowOnError>) => (options.client ?? client).get<ListOutputsV1NotebooksNotebookIdOutputsGetResponses, ListOutputsV1NotebooksNotebookIdOutputsGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/outputs', ...options });
+export const listOutputsV1NotebooksNotebookIdOutputsGet = <ThrowOnError extends boolean = true>(options: Options<ListOutputsV1NotebooksNotebookIdOutputsGetData, ThrowOnError>) => (options.client ?? client).get<ListOutputsV1NotebooksNotebookIdOutputsGetResponses, ListOutputsV1NotebooksNotebookIdOutputsGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/outputs', ...options });
 
 /**
  * Delete Output
  *
  * Delete a specific output by ID.
  */
-export const deleteOutputV1NotebooksNotebookIdOutputsOutputIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteResponses, DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/outputs/{output_id}', ...options });
+export const deleteOutputV1NotebooksNotebookIdOutputsOutputIdDelete = <ThrowOnError extends boolean = true>(options: Options<DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteResponses, DeleteOutputV1NotebooksNotebookIdOutputsOutputIdDeleteErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/outputs/{output_id}', ...options });
 
 /**
  * Get Output
  */
-export const getOutputV1NotebooksNotebookIdOutputsOutputIdGet = <ThrowOnError extends boolean = false>(options: Options<GetOutputV1NotebooksNotebookIdOutputsOutputIdGetData, ThrowOnError>) => (options.client ?? client).get<GetOutputV1NotebooksNotebookIdOutputsOutputIdGetResponses, GetOutputV1NotebooksNotebookIdOutputsOutputIdGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/outputs/{output_id}', ...options });
+export const getOutputV1NotebooksNotebookIdOutputsOutputIdGet = <ThrowOnError extends boolean = true>(options: Options<GetOutputV1NotebooksNotebookIdOutputsOutputIdGetData, ThrowOnError>) => (options.client ?? client).get<GetOutputV1NotebooksNotebookIdOutputsOutputIdGetResponses, GetOutputV1NotebooksNotebookIdOutputsOutputIdGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/outputs/{output_id}', ...options });
 
 /**
  * Convert Output To Source
  *
  * Convert an output to a source document that can be used for RAG queries.
  */
-export const convertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePost = <ThrowOnError extends boolean = false>(options: Options<ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostData, ThrowOnError>) => (options.client ?? client).post<ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostResponses, ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/outputs/{output_id}/convert-to-source', ...options });
+export const convertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePost = <ThrowOnError extends boolean = true>(options: Options<ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostData, ThrowOnError>) => (options.client ?? client).post<ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostResponses, ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/outputs/{output_id}/convert-to-source', ...options });
 
 /**
  * Create Output
  */
-export const createOutputV1NotebooksNotebookIdOutputsOutputTypePost = <ThrowOnError extends boolean = false>(options: Options<CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostData, ThrowOnError>) => (options.client ?? client).post<CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostResponses, CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostErrors, ThrowOnError>({
+export const createOutputV1NotebooksNotebookIdOutputsOutputTypePost = <ThrowOnError extends boolean = true>(options: Options<CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostData, ThrowOnError>) => (options.client ?? client).post<CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostResponses, CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/outputs/{output_type}',
     ...options,
     headers: {
@@ -117,7 +117,7 @@ export const createOutputV1NotebooksNotebookIdOutputsOutputTypePost = <ThrowOnEr
 /**
  * Ask Question
  */
-export const askQuestionV1NotebooksNotebookIdQaPost = <ThrowOnError extends boolean = false>(options: Options<AskQuestionV1NotebooksNotebookIdQaPostData, ThrowOnError>) => (options.client ?? client).post<AskQuestionV1NotebooksNotebookIdQaPostResponses, AskQuestionV1NotebooksNotebookIdQaPostErrors, ThrowOnError>({
+export const askQuestionV1NotebooksNotebookIdQaPost = <ThrowOnError extends boolean = true>(options: Options<AskQuestionV1NotebooksNotebookIdQaPostData, ThrowOnError>) => (options.client ?? client).post<AskQuestionV1NotebooksNotebookIdQaPostResponses, AskQuestionV1NotebooksNotebookIdQaPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/qa',
     ...options,
     headers: {
@@ -136,7 +136,7 @@ export const askQuestionV1NotebooksNotebookIdQaPost = <ThrowOnError extends bool
  * - `done`: Completion `{"citations": [...], "evidence": bool, "confidence": float, ...}`
  * - `error`: Error `{"message": "..."}`
  */
-export const askQuestionStreamV1NotebooksNotebookIdQaStreamPost = <ThrowOnError extends boolean = false>(options: Options<AskQuestionStreamV1NotebooksNotebookIdQaStreamPostData, ThrowOnError>) => (options.client ?? client).post<AskQuestionStreamV1NotebooksNotebookIdQaStreamPostResponses, AskQuestionStreamV1NotebooksNotebookIdQaStreamPostErrors, ThrowOnError>({
+export const askQuestionStreamV1NotebooksNotebookIdQaStreamPost = <ThrowOnError extends boolean = true>(options: Options<AskQuestionStreamV1NotebooksNotebookIdQaStreamPostData, ThrowOnError>) => (options.client ?? client).post<AskQuestionStreamV1NotebooksNotebookIdQaStreamPostResponses, AskQuestionStreamV1NotebooksNotebookIdQaStreamPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/qa/stream',
     ...options,
     headers: {
@@ -148,7 +148,7 @@ export const askQuestionStreamV1NotebooksNotebookIdQaStreamPost = <ThrowOnError 
 /**
  * Refine
  */
-export const refineV1NotebooksNotebookIdRefinePost = <ThrowOnError extends boolean = false>(options: Options<RefineV1NotebooksNotebookIdRefinePostData, ThrowOnError>) => (options.client ?? client).post<RefineV1NotebooksNotebookIdRefinePostResponses, RefineV1NotebooksNotebookIdRefinePostErrors, ThrowOnError>({
+export const refineV1NotebooksNotebookIdRefinePost = <ThrowOnError extends boolean = true>(options: Options<RefineV1NotebooksNotebookIdRefinePostData, ThrowOnError>) => (options.client ?? client).post<RefineV1NotebooksNotebookIdRefinePostResponses, RefineV1NotebooksNotebookIdRefinePostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/refine',
     ...options,
     headers: {
@@ -160,7 +160,7 @@ export const refineV1NotebooksNotebookIdRefinePost = <ThrowOnError extends boole
 /**
  * Refine Batch
  */
-export const refineBatchV1NotebooksNotebookIdRefineBatchPost = <ThrowOnError extends boolean = false>(options: Options<RefineBatchV1NotebooksNotebookIdRefineBatchPostData, ThrowOnError>) => (options.client ?? client).post<RefineBatchV1NotebooksNotebookIdRefineBatchPostResponses, RefineBatchV1NotebooksNotebookIdRefineBatchPostErrors, ThrowOnError>({
+export const refineBatchV1NotebooksNotebookIdRefineBatchPost = <ThrowOnError extends boolean = true>(options: Options<RefineBatchV1NotebooksNotebookIdRefineBatchPostData, ThrowOnError>) => (options.client ?? client).post<RefineBatchV1NotebooksNotebookIdRefineBatchPostResponses, RefineBatchV1NotebooksNotebookIdRefineBatchPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/refine/batch',
     ...options,
     headers: {
@@ -174,14 +174,14 @@ export const refineBatchV1NotebooksNotebookIdRefineBatchPost = <ThrowOnError ext
  *
  * List research sessions for a notebook.
  */
-export const listResearchSessionsV1NotebooksNotebookIdResearchGet = <ThrowOnError extends boolean = false>(options: Options<ListResearchSessionsV1NotebooksNotebookIdResearchGetData, ThrowOnError>) => (options.client ?? client).get<ListResearchSessionsV1NotebooksNotebookIdResearchGetResponses, ListResearchSessionsV1NotebooksNotebookIdResearchGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research', ...options });
+export const listResearchSessionsV1NotebooksNotebookIdResearchGet = <ThrowOnError extends boolean = true>(options: Options<ListResearchSessionsV1NotebooksNotebookIdResearchGetData, ThrowOnError>) => (options.client ?? client).get<ListResearchSessionsV1NotebooksNotebookIdResearchGetResponses, ListResearchSessionsV1NotebooksNotebookIdResearchGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/research', ...options });
 
 /**
  * Create Research Session
  *
  * Create a new deep research session.
  */
-export const createResearchSessionV1NotebooksNotebookIdResearchPost = <ThrowOnError extends boolean = false>(options: Options<CreateResearchSessionV1NotebooksNotebookIdResearchPostData, ThrowOnError>) => (options.client ?? client).post<CreateResearchSessionV1NotebooksNotebookIdResearchPostResponses, CreateResearchSessionV1NotebooksNotebookIdResearchPostErrors, ThrowOnError>({
+export const createResearchSessionV1NotebooksNotebookIdResearchPost = <ThrowOnError extends boolean = true>(options: Options<CreateResearchSessionV1NotebooksNotebookIdResearchPostData, ThrowOnError>) => (options.client ?? client).post<CreateResearchSessionV1NotebooksNotebookIdResearchPostResponses, CreateResearchSessionV1NotebooksNotebookIdResearchPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/research',
     ...options,
     headers: {
@@ -195,21 +195,21 @@ export const createResearchSessionV1NotebooksNotebookIdResearchPost = <ThrowOnEr
  *
  * Delete or cancel a research session.
  */
-export const deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteResponses, DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}', ...options });
+export const deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete = <ThrowOnError extends boolean = true>(options: Options<DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteResponses, DeleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDeleteErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}', ...options });
 
 /**
  * Get Research Session
  *
  * Get details of a research session including all steps.
  */
-export const getResearchSessionV1NotebooksNotebookIdResearchResearchIdGet = <ThrowOnError extends boolean = false>(options: Options<GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetData, ThrowOnError>) => (options.client ?? client).get<GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetResponses, GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}', ...options });
+export const getResearchSessionV1NotebooksNotebookIdResearchResearchIdGet = <ThrowOnError extends boolean = true>(options: Options<GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetData, ThrowOnError>) => (options.client ?? client).get<GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetResponses, GetResearchSessionV1NotebooksNotebookIdResearchResearchIdGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}', ...options });
 
 /**
  * Approve Search Plan
  *
  * Approve the current search plan and continue research.
  */
-export const approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost = <ThrowOnError extends boolean = false>(options: Options<ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostData, ThrowOnError>) => (options.client ?? client).post<ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostResponses, ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostErrors, ThrowOnError>({
+export const approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost = <ThrowOnError extends boolean = true>(options: Options<ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostData, ThrowOnError>) => (options.client ?? client).post<ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostResponses, ApproveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/research/{research_id}/approve',
     ...options,
     headers: {
@@ -223,7 +223,7 @@ export const approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost
  *
  * Cancel an ongoing research session.
  */
-export const cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost = <ThrowOnError extends boolean = false>(options: Options<CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostData, ThrowOnError>) => (options.client ?? client).post<CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostResponses, CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/cancel', ...options });
+export const cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost = <ThrowOnError extends boolean = true>(options: Options<CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostData, ThrowOnError>) => (options.client ?? client).post<CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostResponses, CancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPostErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/cancel', ...options });
 
 /**
  * Export Research
@@ -233,7 +233,7 @@ export const cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost = <
  * - export_type='source': Creates a new markdown source with the report
  * - export_type='note': Creates a new note (output) with the report
  */
-export const exportResearchV1NotebooksNotebookIdResearchResearchIdExportPost = <ThrowOnError extends boolean = false>(options: Options<ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostData, ThrowOnError>) => (options.client ?? client).post<ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostResponses, ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostErrors, ThrowOnError>({
+export const exportResearchV1NotebooksNotebookIdResearchResearchIdExportPost = <ThrowOnError extends boolean = true>(options: Options<ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostData, ThrowOnError>) => (options.client ?? client).post<ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostResponses, ExportResearchV1NotebooksNotebookIdResearchResearchIdExportPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/research/{research_id}/export',
     ...options,
     headers: {
@@ -247,14 +247,14 @@ export const exportResearchV1NotebooksNotebookIdResearchResearchIdExportPost = <
  *
  * Finish research early and generate report.
  */
-export const finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost = <ThrowOnError extends boolean = false>(options: Options<FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostData, ThrowOnError>) => (options.client ?? client).post<FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostResponses, FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/finish', ...options });
+export const finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost = <ThrowOnError extends boolean = true>(options: Options<FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostData, ThrowOnError>) => (options.client ?? client).post<FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostResponses, FinishResearchV1NotebooksNotebookIdResearchResearchIdFinishPostErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/finish', ...options });
 
 /**
  * Modify Search Plan
  *
  * Modify the current search plan.
  */
-export const modifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPost = <ThrowOnError extends boolean = false>(options: Options<ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostData, ThrowOnError>) => (options.client ?? client).post<ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostResponses, ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostErrors, ThrowOnError>({
+export const modifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPost = <ThrowOnError extends boolean = true>(options: Options<ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostData, ThrowOnError>) => (options.client ?? client).post<ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostResponses, ModifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/research/{research_id}/modify',
     ...options,
     headers: {
@@ -268,21 +268,21 @@ export const modifySearchPlanV1NotebooksNotebookIdResearchResearchIdModifyPost =
  *
  * Resume a cancelled research session.
  */
-export const resumeResearchV1NotebooksNotebookIdResearchResearchIdResumePost = <ThrowOnError extends boolean = false>(options: Options<ResumeResearchV1NotebooksNotebookIdResearchResearchIdResumePostData, ThrowOnError>) => (options.client ?? client).post<ResumeResearchV1NotebooksNotebookIdResearchResearchIdResumePostResponses, ResumeResearchV1NotebooksNotebookIdResearchResearchIdResumePostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/resume', ...options });
+export const resumeResearchV1NotebooksNotebookIdResearchResearchIdResumePost = <ThrowOnError extends boolean = true>(options: Options<ResumeResearchV1NotebooksNotebookIdResearchResearchIdResumePostData, ThrowOnError>) => (options.client ?? client).post<ResumeResearchV1NotebooksNotebookIdResearchResearchIdResumePostResponses, ResumeResearchV1NotebooksNotebookIdResearchResearchIdResumePostErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/resume', ...options });
 
 /**
  * Skip Iteration
  *
  * Skip the current iteration.
  */
-export const skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost = <ThrowOnError extends boolean = false>(options: Options<SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostData, ThrowOnError>) => (options.client ?? client).post<SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostResponses, SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/skip', ...options });
+export const skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost = <ThrowOnError extends boolean = true>(options: Options<SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostData, ThrowOnError>) => (options.client ?? client).post<SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostResponses, SkipIterationV1NotebooksNotebookIdResearchResearchIdSkipPostErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/skip', ...options });
 
 /**
  * Start Research
  *
  * Start executing the research graph.
  */
-export const startResearchV1NotebooksNotebookIdResearchResearchIdStartPost = <ThrowOnError extends boolean = false>(options: Options<StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostData, ThrowOnError>) => (options.client ?? client).post<StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostResponses, StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/start', ...options });
+export const startResearchV1NotebooksNotebookIdResearchResearchIdStartPost = <ThrowOnError extends boolean = true>(options: Options<StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostData, ThrowOnError>) => (options.client ?? client).post<StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostResponses, StartResearchV1NotebooksNotebookIdResearchResearchIdStartPostErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/start', ...options });
 
 /**
  * Stream Research Progress
@@ -299,17 +299,17 @@ export const startResearchV1NotebooksNotebookIdResearchResearchIdStartPost = <Th
  * - `done`: Research complete `{"total_results": n}`
  * - `error`: Error `{"message": "..."}`
  */
-export const streamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGet = <ThrowOnError extends boolean = false>(options: Options<StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetData, ThrowOnError>) => (options.client ?? client).get<StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetResponses, StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/stream', ...options });
+export const streamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGet = <ThrowOnError extends boolean = true>(options: Options<StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetData, ThrowOnError>) => (options.client ?? client).get<StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetResponses, StreamResearchProgressV1NotebooksNotebookIdResearchResearchIdStreamGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/research/{research_id}/stream', ...options });
 
 /**
  * List Sessions
  */
-export const listSessionsV1NotebooksNotebookIdSessionsGet = <ThrowOnError extends boolean = false>(options: Options<ListSessionsV1NotebooksNotebookIdSessionsGetData, ThrowOnError>) => (options.client ?? client).get<ListSessionsV1NotebooksNotebookIdSessionsGetResponses, ListSessionsV1NotebooksNotebookIdSessionsGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sessions', ...options });
+export const listSessionsV1NotebooksNotebookIdSessionsGet = <ThrowOnError extends boolean = true>(options: Options<ListSessionsV1NotebooksNotebookIdSessionsGetData, ThrowOnError>) => (options.client ?? client).get<ListSessionsV1NotebooksNotebookIdSessionsGetResponses, ListSessionsV1NotebooksNotebookIdSessionsGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/sessions', ...options });
 
 /**
  * Create Session
  */
-export const createSessionV1NotebooksNotebookIdSessionsPost = <ThrowOnError extends boolean = false>(options: Options<CreateSessionV1NotebooksNotebookIdSessionsPostData, ThrowOnError>) => (options.client ?? client).post<CreateSessionV1NotebooksNotebookIdSessionsPostResponses, CreateSessionV1NotebooksNotebookIdSessionsPostErrors, ThrowOnError>({
+export const createSessionV1NotebooksNotebookIdSessionsPost = <ThrowOnError extends boolean = true>(options: Options<CreateSessionV1NotebooksNotebookIdSessionsPostData, ThrowOnError>) => (options.client ?? client).post<CreateSessionV1NotebooksNotebookIdSessionsPostResponses, CreateSessionV1NotebooksNotebookIdSessionsPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/sessions',
     ...options,
     headers: {
@@ -321,17 +321,17 @@ export const createSessionV1NotebooksNotebookIdSessionsPost = <ThrowOnError exte
 /**
  * Delete Session
  */
-export const deleteSessionV1NotebooksNotebookIdSessionsSessionIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteResponses, DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sessions/{session_id}', ...options });
+export const deleteSessionV1NotebooksNotebookIdSessionsSessionIdDelete = <ThrowOnError extends boolean = true>(options: Options<DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteResponses, DeleteSessionV1NotebooksNotebookIdSessionsSessionIdDeleteErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/sessions/{session_id}', ...options });
 
 /**
  * Get Session
  */
-export const getSessionV1NotebooksNotebookIdSessionsSessionIdGet = <ThrowOnError extends boolean = false>(options: Options<GetSessionV1NotebooksNotebookIdSessionsSessionIdGetData, ThrowOnError>) => (options.client ?? client).get<GetSessionV1NotebooksNotebookIdSessionsSessionIdGetResponses, GetSessionV1NotebooksNotebookIdSessionsSessionIdGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sessions/{session_id}', ...options });
+export const getSessionV1NotebooksNotebookIdSessionsSessionIdGet = <ThrowOnError extends boolean = true>(options: Options<GetSessionV1NotebooksNotebookIdSessionsSessionIdGetData, ThrowOnError>) => (options.client ?? client).get<GetSessionV1NotebooksNotebookIdSessionsSessionIdGetResponses, GetSessionV1NotebooksNotebookIdSessionsSessionIdGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/sessions/{session_id}', ...options });
 
 /**
  * Update Session
  */
-export const updateSessionV1NotebooksNotebookIdSessionsSessionIdPatch = <ThrowOnError extends boolean = false>(options: Options<UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponses, UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchErrors, ThrowOnError>({
+export const updateSessionV1NotebooksNotebookIdSessionsSessionIdPatch = <ThrowOnError extends boolean = true>(options: Options<UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchResponses, UpdateSessionV1NotebooksNotebookIdSessionsSessionIdPatchErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/sessions/{session_id}',
     ...options,
     headers: {
@@ -343,7 +343,7 @@ export const updateSessionV1NotebooksNotebookIdSessionsSessionIdPatch = <ThrowOn
 /**
  * Convert Session To Output
  */
-export const convertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPost = <ThrowOnError extends boolean = false>(options: Options<ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostData, ThrowOnError>) => (options.client ?? client).post<ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostResponses, ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostErrors, ThrowOnError>({
+export const convertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPost = <ThrowOnError extends boolean = true>(options: Options<ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostData, ThrowOnError>) => (options.client ?? client).post<ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostResponses, ConvertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/convert-to-output',
     ...options,
     headers: {
@@ -355,7 +355,7 @@ export const convertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvert
 /**
  * Convert Session To Source
  */
-export const convertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePost = <ThrowOnError extends boolean = false>(options: Options<ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostData, ThrowOnError>) => (options.client ?? client).post<ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostResponses, ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostErrors, ThrowOnError>({
+export const convertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePost = <ThrowOnError extends boolean = true>(options: Options<ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostData, ThrowOnError>) => (options.client ?? client).post<ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostResponses, ConvertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/convert-to-source',
     ...options,
     headers: {
@@ -367,12 +367,12 @@ export const convertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvert
 /**
  * List Messages
  */
-export const listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet = <ThrowOnError extends boolean = false>(options: Options<ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetData, ThrowOnError>) => (options.client ?? client).get<ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetResponses, ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/messages', ...options });
+export const listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet = <ThrowOnError extends boolean = true>(options: Options<ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetData, ThrowOnError>) => (options.client ?? client).get<ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetResponses, ListMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/messages', ...options });
 
 /**
  * Create Message
  */
-export const createMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPost = <ThrowOnError extends boolean = false>(options: Options<CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostData, ThrowOnError>) => (options.client ?? client).post<CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses, CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostErrors, ThrowOnError>({
+export const createMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPost = <ThrowOnError extends boolean = true>(options: Options<CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostData, ThrowOnError>) => (options.client ?? client).post<CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses, CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/messages',
     ...options,
     headers: {
@@ -384,7 +384,7 @@ export const createMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPost = <
 /**
  * Create Draft
  */
-export const createDraftV1NotebooksNotebookIdSlidesDraftsPost = <ThrowOnError extends boolean = false>(options: Options<CreateDraftV1NotebooksNotebookIdSlidesDraftsPostData, ThrowOnError>) => (options.client ?? client).post<CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponses, CreateDraftV1NotebooksNotebookIdSlidesDraftsPostErrors, ThrowOnError>({
+export const createDraftV1NotebooksNotebookIdSlidesDraftsPost = <ThrowOnError extends boolean = true>(options: Options<CreateDraftV1NotebooksNotebookIdSlidesDraftsPostData, ThrowOnError>) => (options.client ?? client).post<CreateDraftV1NotebooksNotebookIdSlidesDraftsPostResponses, CreateDraftV1NotebooksNotebookIdSlidesDraftsPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/slides/drafts',
     ...options,
     headers: {
@@ -396,17 +396,17 @@ export const createDraftV1NotebooksNotebookIdSlidesDraftsPost = <ThrowOnError ex
 /**
  * Get Latest Draft
  */
-export const getLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGet = <ThrowOnError extends boolean = false>(options: Options<GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetData, ThrowOnError>) => (options.client ?? client).get<GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponses, GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/slides/drafts/latest', ...options });
+export const getLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGet = <ThrowOnError extends boolean = true>(options: Options<GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetData, ThrowOnError>) => (options.client ?? client).get<GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetResponses, GetLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/slides/drafts/latest', ...options });
 
 /**
  * Get Draft
  */
-export const getDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGet = <ThrowOnError extends boolean = false>(options: Options<GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetData, ThrowOnError>) => (options.client ?? client).get<GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponses, GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}', ...options });
+export const getDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGet = <ThrowOnError extends boolean = true>(options: Options<GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetData, ThrowOnError>) => (options.client ?? client).get<GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetResponses, GetDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}', ...options });
 
 /**
  * Update Draft
  */
-export const updateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatch = <ThrowOnError extends boolean = false>(options: Options<UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponses, UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchErrors, ThrowOnError>({
+export const updateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatch = <ThrowOnError extends boolean = true>(options: Options<UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchResponses, UpdateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatchErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}',
     ...options,
     headers: {
@@ -418,7 +418,7 @@ export const updateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatch = <ThrowOn
 /**
  * Update Markdown
  */
-export const updateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPut = <ThrowOnError extends boolean = false>(options: Options<UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutData, ThrowOnError>) => (options.client ?? client).put<UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponses, UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutErrors, ThrowOnError>({
+export const updateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPut = <ThrowOnError extends boolean = true>(options: Options<UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutData, ThrowOnError>) => (options.client ?? client).put<UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutResponses, UpdateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPutErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/markdown',
     ...options,
     headers: {
@@ -430,12 +430,12 @@ export const updateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPut =
 /**
  * Generate Markdown Stream
  */
-export const generateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGet = <ThrowOnError extends boolean = false>(options: Options<GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetData, ThrowOnError>) => (options.client ?? client).get<GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetResponses, GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/markdown/stream', ...options });
+export const generateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGet = <ThrowOnError extends boolean = true>(options: Options<GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetData, ThrowOnError>) => (options.client ?? client).get<GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetResponses, GenerateMarkdownStreamV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownStreamGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/markdown/stream', ...options });
 
 /**
  * Update Outline
  */
-export const updateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePut = <ThrowOnError extends boolean = false>(options: Options<UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutData, ThrowOnError>) => (options.client ?? client).put<UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponses, UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutErrors, ThrowOnError>({
+export const updateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePut = <ThrowOnError extends boolean = true>(options: Options<UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutData, ThrowOnError>) => (options.client ?? client).put<UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutResponses, UpdateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePutErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/outline',
     ...options,
     headers: {
@@ -447,17 +447,17 @@ export const updateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePut = <
 /**
  * Generate Outline Stream
  */
-export const generateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGet = <ThrowOnError extends boolean = false>(options: Options<GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetData, ThrowOnError>) => (options.client ?? client).get<GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetResponses, GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/outline/stream', ...options });
+export const generateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGet = <ThrowOnError extends boolean = true>(options: Options<GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetData, ThrowOnError>) => (options.client ?? client).get<GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetResponses, GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutlineStreamGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/outline/stream', ...options });
 
 /**
  * List Sources
  */
-export const listSourcesV1NotebooksNotebookIdSourcesGet = <ThrowOnError extends boolean = false>(options: Options<ListSourcesV1NotebooksNotebookIdSourcesGetData, ThrowOnError>) => (options.client ?? client).get<ListSourcesV1NotebooksNotebookIdSourcesGetResponses, ListSourcesV1NotebooksNotebookIdSourcesGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sources', ...options });
+export const listSourcesV1NotebooksNotebookIdSourcesGet = <ThrowOnError extends boolean = true>(options: Options<ListSourcesV1NotebooksNotebookIdSourcesGetData, ThrowOnError>) => (options.client ?? client).get<ListSourcesV1NotebooksNotebookIdSourcesGetResponses, ListSourcesV1NotebooksNotebookIdSourcesGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/sources', ...options });
 
 /**
  * Upload Source
  */
-export const uploadSourceV1NotebooksNotebookIdSourcesPost = <ThrowOnError extends boolean = false>(options: Options<UploadSourceV1NotebooksNotebookIdSourcesPostData, ThrowOnError>) => (options.client ?? client).post<UploadSourceV1NotebooksNotebookIdSourcesPostResponses, UploadSourceV1NotebooksNotebookIdSourcesPostErrors, ThrowOnError>({
+export const uploadSourceV1NotebooksNotebookIdSourcesPost = <ThrowOnError extends boolean = true>(options: Options<UploadSourceV1NotebooksNotebookIdSourcesPostData, ThrowOnError>) => (options.client ?? client).post<UploadSourceV1NotebooksNotebookIdSourcesPostResponses, UploadSourceV1NotebooksNotebookIdSourcesPostErrors, ThrowOnError, 'data'>({
     ...formDataBodySerializer,
     url: '/v1/notebooks/{notebook_id}/sources',
     ...options,
@@ -470,7 +470,7 @@ export const uploadSourceV1NotebooksNotebookIdSourcesPost = <ThrowOnError extend
 /**
  * Batch Delete Sources
  */
-export const batchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDelete = <ThrowOnError extends boolean = false>(options: Options<BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteData, ThrowOnError>) => (options.client ?? client).delete<BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteResponses, BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteErrors, ThrowOnError>({
+export const batchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDelete = <ThrowOnError extends boolean = true>(options: Options<BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteData, ThrowOnError>) => (options.client ?? client).delete<BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteResponses, BatchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDeleteErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/sources/batch',
     ...options,
     headers: {
@@ -482,7 +482,7 @@ export const batchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDelete = <ThrowO
 /**
  * Batch Reembed Sources
  */
-export const batchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPost = <ThrowOnError extends boolean = false>(options: Options<BatchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPostData, ThrowOnError>) => (options.client ?? client).post<BatchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPostResponses, BatchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPostErrors, ThrowOnError>({
+export const batchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPost = <ThrowOnError extends boolean = true>(options: Options<BatchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPostData, ThrowOnError>) => (options.client ?? client).post<BatchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPostResponses, BatchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/sources/batch/re-embed',
     ...options,
     headers: {
@@ -505,7 +505,7 @@ export const batchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPost = <
  * The frontend can use this to show users which extraction methods are available
  * and let them choose a preferred method.
  */
-export const listExtractorsV1NotebooksNotebookIdSourcesExtractorsGet = <ThrowOnError extends boolean = false>(options: Options<ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetData, ThrowOnError>) => (options.client ?? client).get<ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses, ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sources/extractors', ...options });
+export const listExtractorsV1NotebooksNotebookIdSourcesExtractorsGet = <ThrowOnError extends boolean = true>(options: Options<ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetData, ThrowOnError>) => (options.client ?? client).get<ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses, ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/sources/extractors', ...options });
 
 /**
  * Create Source From Url
@@ -521,7 +521,7 @@ export const listExtractorsV1NotebooksNotebookIdSourcesExtractorsGet = <ThrowOnE
  * - `firecrawl`: External API using Firecrawl service
  * - `browserless`: Browser rendering using Browserless + Playwright
  */
-export const createSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPost = <ThrowOnError extends boolean = false>(options: Options<CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostData, ThrowOnError>) => (options.client ?? client).post<CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponses, CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostErrors, ThrowOnError>({
+export const createSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPost = <ThrowOnError extends boolean = true>(options: Options<CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostData, ThrowOnError>) => (options.client ?? client).post<CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostResponses, CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/sources/from-url',
     ...options,
     headers: {
@@ -533,7 +533,7 @@ export const createSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPost = <Throw
 /**
  * Search Sources
  */
-export const searchSourcesV1NotebooksNotebookIdSourcesSearchPost = <ThrowOnError extends boolean = false>(options: Options<SearchSourcesV1NotebooksNotebookIdSourcesSearchPostData, ThrowOnError>) => (options.client ?? client).post<SearchSourcesV1NotebooksNotebookIdSourcesSearchPostResponses, SearchSourcesV1NotebooksNotebookIdSourcesSearchPostErrors, ThrowOnError>({
+export const searchSourcesV1NotebooksNotebookIdSourcesSearchPost = <ThrowOnError extends boolean = true>(options: Options<SearchSourcesV1NotebooksNotebookIdSourcesSearchPostData, ThrowOnError>) => (options.client ?? client).post<SearchSourcesV1NotebooksNotebookIdSourcesSearchPostResponses, SearchSourcesV1NotebooksNotebookIdSourcesSearchPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/sources/search',
     ...options,
     headers: {
@@ -545,12 +545,12 @@ export const searchSourcesV1NotebooksNotebookIdSourcesSearchPost = <ThrowOnError
 /**
  * List Source Tags
  */
-export const listSourceTagsV1NotebooksNotebookIdSourcesTagsGet = <ThrowOnError extends boolean = false>(options: Options<ListSourceTagsV1NotebooksNotebookIdSourcesTagsGetData, ThrowOnError>) => (options.client ?? client).get<ListSourceTagsV1NotebooksNotebookIdSourcesTagsGetResponses, ListSourceTagsV1NotebooksNotebookIdSourcesTagsGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sources/tags', ...options });
+export const listSourceTagsV1NotebooksNotebookIdSourcesTagsGet = <ThrowOnError extends boolean = true>(options: Options<ListSourceTagsV1NotebooksNotebookIdSourcesTagsGetData, ThrowOnError>) => (options.client ?? client).get<ListSourceTagsV1NotebooksNotebookIdSourcesTagsGetResponses, ListSourceTagsV1NotebooksNotebookIdSourcesTagsGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/sources/tags', ...options });
 
 /**
  * Create Source Tag
  */
-export const createSourceTagV1NotebooksNotebookIdSourcesTagsPost = <ThrowOnError extends boolean = false>(options: Options<CreateSourceTagV1NotebooksNotebookIdSourcesTagsPostData, ThrowOnError>) => (options.client ?? client).post<CreateSourceTagV1NotebooksNotebookIdSourcesTagsPostResponses, CreateSourceTagV1NotebooksNotebookIdSourcesTagsPostErrors, ThrowOnError>({
+export const createSourceTagV1NotebooksNotebookIdSourcesTagsPost = <ThrowOnError extends boolean = true>(options: Options<CreateSourceTagV1NotebooksNotebookIdSourcesTagsPostData, ThrowOnError>) => (options.client ?? client).post<CreateSourceTagV1NotebooksNotebookIdSourcesTagsPostResponses, CreateSourceTagV1NotebooksNotebookIdSourcesTagsPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/sources/tags',
     ...options,
     headers: {
@@ -562,12 +562,12 @@ export const createSourceTagV1NotebooksNotebookIdSourcesTagsPost = <ThrowOnError
 /**
  * Delete Source Tag
  */
-export const deleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDeleteResponses, DeleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDeleteErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sources/tags/{tag_id}', ...options });
+export const deleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDelete = <ThrowOnError extends boolean = true>(options: Options<DeleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDeleteResponses, DeleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDeleteErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/sources/tags/{tag_id}', ...options });
 
 /**
  * Update Source Tag
  */
-export const updateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatch = <ThrowOnError extends boolean = false>(options: Options<UpdateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatchResponses, UpdateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatchErrors, ThrowOnError>({
+export const updateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatch = <ThrowOnError extends boolean = true>(options: Options<UpdateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatchResponses, UpdateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatchErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/sources/tags/{tag_id}',
     ...options,
     headers: {
@@ -579,7 +579,7 @@ export const updateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatch = <ThrowO
 /**
  * Remove Tag From Sources
  */
-export const removeTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDelete = <ThrowOnError extends boolean = false>(options: Options<RemoveTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDeleteData, ThrowOnError>) => (options.client ?? client).delete<RemoveTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDeleteResponses, RemoveTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDeleteErrors, ThrowOnError>({
+export const removeTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDelete = <ThrowOnError extends boolean = true>(options: Options<RemoveTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDeleteData, ThrowOnError>) => (options.client ?? client).delete<RemoveTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDeleteResponses, RemoveTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDeleteErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/sources/tags/{tag_id}/sources',
     ...options,
     headers: {
@@ -591,7 +591,7 @@ export const removeTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDel
 /**
  * Assign Tag To Sources
  */
-export const assignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPost = <ThrowOnError extends boolean = false>(options: Options<AssignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPostData, ThrowOnError>) => (options.client ?? client).post<AssignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPostResponses, AssignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPostErrors, ThrowOnError>({
+export const assignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPost = <ThrowOnError extends boolean = true>(options: Options<AssignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPostData, ThrowOnError>) => (options.client ?? client).post<AssignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPostResponses, AssignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/sources/tags/{tag_id}/sources',
     ...options,
     headers: {
@@ -603,7 +603,7 @@ export const assignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPost 
 /**
  * Delete Source
  */
-export const deleteSourceV1NotebooksNotebookIdSourcesSourceIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponses, DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sources/{source_id}', ...options });
+export const deleteSourceV1NotebooksNotebookIdSourcesSourceIdDelete = <ThrowOnError extends boolean = true>(options: Options<DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteResponses, DeleteSourceV1NotebooksNotebookIdSourcesSourceIdDeleteErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/sources/{source_id}', ...options });
 
 /**
  * List Source Chunks
@@ -619,14 +619,14 @@ export const deleteSourceV1NotebooksNotebookIdSourcesSourceIdDelete = <ThrowOnEr
  * - end_offset: 在原文中的结束位置
  * - metadata: 片段元数据（如页码等）
  */
-export const listSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGet = <ThrowOnError extends boolean = false>(options: Options<ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetData, ThrowOnError>) => (options.client ?? client).get<ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponses, ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sources/{source_id}/chunks', ...options });
+export const listSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGet = <ThrowOnError extends boolean = true>(options: Options<ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetData, ThrowOnError>) => (options.client ?? client).get<ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetResponses, ListSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/sources/{source_id}/chunks', ...options });
 
 /**
  * Source Qa
  *
  * Answer a question based on a specific source's content.
  */
-export const sourceQaV1NotebooksNotebookIdSourcesSourceIdQaPost = <ThrowOnError extends boolean = false>(options: Options<SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostData, ThrowOnError>) => (options.client ?? client).post<SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponses, SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostErrors, ThrowOnError>({
+export const sourceQaV1NotebooksNotebookIdSourcesSourceIdQaPost = <ThrowOnError extends boolean = true>(options: Options<SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostData, ThrowOnError>) => (options.client ?? client).post<SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostResponses, SourceQaV1NotebooksNotebookIdSourcesSourceIdQaPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/sources/{source_id}/qa',
     ...options,
     headers: {
@@ -640,7 +640,7 @@ export const sourceQaV1NotebooksNotebookIdSourcesSourceIdQaPost = <ThrowOnError 
  *
  * Convert source QA conversation to a new source document for RAG queries.
  */
-export const convertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePost = <ThrowOnError extends boolean = false>(options: Options<ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostData, ThrowOnError>) => (options.client ?? client).post<ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponses, ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostErrors, ThrowOnError>({
+export const convertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePost = <ThrowOnError extends boolean = true>(options: Options<ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostData, ThrowOnError>) => (options.client ?? client).post<ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostResponses, ConvertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/sources/{source_id}/qa/convert-to-source',
     ...options,
     headers: {
@@ -654,24 +654,24 @@ export const convertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConver
  *
  * Retry embedding for a failed source using existing chunks.
  */
-export const reembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPost = <ThrowOnError extends boolean = false>(options: Options<ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostData, ThrowOnError>) => (options.client ?? client).post<ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostResponses, ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sources/{source_id}/re-embed', ...options });
+export const reembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPost = <ThrowOnError extends boolean = true>(options: Options<ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostData, ThrowOnError>) => (options.client ?? client).post<ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostResponses, ReembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPostErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/sources/{source_id}/re-embed', ...options });
 
 /**
  * Get Source Summary
  *
  * Generate or retrieve summary for a specific source.
  */
-export const getSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGet = <ThrowOnError extends boolean = false>(options: Options<GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetData, ThrowOnError>) => (options.client ?? client).get<GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetResponses, GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/sources/{source_id}/summary', ...options });
+export const getSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGet = <ThrowOnError extends boolean = true>(options: Options<GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetData, ThrowOnError>) => (options.client ?? client).get<GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetResponses, GetSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/sources/{source_id}/summary', ...options });
 
 /**
  * List Tasks
  */
-export const listTasksV1NotebooksNotebookIdTasksGet = <ThrowOnError extends boolean = false>(options: Options<ListTasksV1NotebooksNotebookIdTasksGetData, ThrowOnError>) => (options.client ?? client).get<ListTasksV1NotebooksNotebookIdTasksGetResponses, ListTasksV1NotebooksNotebookIdTasksGetErrors, ThrowOnError>({ url: '/v1/notebooks/{notebook_id}/tasks', ...options });
+export const listTasksV1NotebooksNotebookIdTasksGet = <ThrowOnError extends boolean = true>(options: Options<ListTasksV1NotebooksNotebookIdTasksGetData, ThrowOnError>) => (options.client ?? client).get<ListTasksV1NotebooksNotebookIdTasksGetResponses, ListTasksV1NotebooksNotebookIdTasksGetErrors, ThrowOnError, 'data'>({ url: '/v1/notebooks/{notebook_id}/tasks', ...options });
 
 /**
  * Save Notebook As Template
  */
-export const saveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPost = <ThrowOnError extends boolean = false>(options: Options<SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostData, ThrowOnError>) => (options.client ?? client).post<SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostResponses, SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostErrors, ThrowOnError>({
+export const saveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPost = <ThrowOnError extends boolean = true>(options: Options<SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostData, ThrowOnError>) => (options.client ?? client).post<SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostResponses, SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostErrors, ThrowOnError, 'data'>({
     url: '/v1/notebooks/{notebook_id}/templates',
     ...options,
     headers: {
@@ -683,22 +683,22 @@ export const saveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPost = <ThrowOn
 /**
  * Get Task
  */
-export const getTaskV1TasksTaskIdGet = <ThrowOnError extends boolean = false>(options: Options<GetTaskV1TasksTaskIdGetData, ThrowOnError>) => (options.client ?? client).get<GetTaskV1TasksTaskIdGetResponses, GetTaskV1TasksTaskIdGetErrors, ThrowOnError>({ url: '/v1/tasks/{task_id}', ...options });
+export const getTaskV1TasksTaskIdGet = <ThrowOnError extends boolean = true>(options: Options<GetTaskV1TasksTaskIdGetData, ThrowOnError>) => (options.client ?? client).get<GetTaskV1TasksTaskIdGetResponses, GetTaskV1TasksTaskIdGetErrors, ThrowOnError, 'data'>({ url: '/v1/tasks/{task_id}', ...options });
 
 /**
  * Cancel Task
  */
-export const cancelTaskV1TasksTaskIdCancelPost = <ThrowOnError extends boolean = false>(options: Options<CancelTaskV1TasksTaskIdCancelPostData, ThrowOnError>) => (options.client ?? client).post<CancelTaskV1TasksTaskIdCancelPostResponses, CancelTaskV1TasksTaskIdCancelPostErrors, ThrowOnError>({ url: '/v1/tasks/{task_id}/cancel', ...options });
+export const cancelTaskV1TasksTaskIdCancelPost = <ThrowOnError extends boolean = true>(options: Options<CancelTaskV1TasksTaskIdCancelPostData, ThrowOnError>) => (options.client ?? client).post<CancelTaskV1TasksTaskIdCancelPostResponses, CancelTaskV1TasksTaskIdCancelPostErrors, ThrowOnError, 'data'>({ url: '/v1/tasks/{task_id}/cancel', ...options });
 
 /**
  * List Templates
  */
-export const listTemplatesV1TemplatesGet = <ThrowOnError extends boolean = false>(options?: Options<ListTemplatesV1TemplatesGetData, ThrowOnError>) => (options?.client ?? client).get<ListTemplatesV1TemplatesGetResponses, unknown, ThrowOnError>({ url: '/v1/templates', ...options });
+export const listTemplatesV1TemplatesGet = <ThrowOnError extends boolean = true>(options?: Options<ListTemplatesV1TemplatesGetData, ThrowOnError>) => (options?.client ?? client).get<ListTemplatesV1TemplatesGetResponses, unknown, ThrowOnError, 'data'>({ url: '/v1/templates', ...options });
 
 /**
  * Create Template
  */
-export const createTemplateV1TemplatesPost = <ThrowOnError extends boolean = false>(options: Options<CreateTemplateV1TemplatesPostData, ThrowOnError>) => (options.client ?? client).post<CreateTemplateV1TemplatesPostResponses, CreateTemplateV1TemplatesPostErrors, ThrowOnError>({
+export const createTemplateV1TemplatesPost = <ThrowOnError extends boolean = true>(options: Options<CreateTemplateV1TemplatesPostData, ThrowOnError>) => (options.client ?? client).post<CreateTemplateV1TemplatesPostResponses, CreateTemplateV1TemplatesPostErrors, ThrowOnError, 'data'>({
     url: '/v1/templates',
     ...options,
     headers: {
@@ -710,17 +710,17 @@ export const createTemplateV1TemplatesPost = <ThrowOnError extends boolean = fal
 /**
  * Delete Template
  */
-export const deleteTemplateV1TemplatesTemplateIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteTemplateV1TemplatesTemplateIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteTemplateV1TemplatesTemplateIdDeleteResponses, DeleteTemplateV1TemplatesTemplateIdDeleteErrors, ThrowOnError>({ url: '/v1/templates/{template_id}', ...options });
+export const deleteTemplateV1TemplatesTemplateIdDelete = <ThrowOnError extends boolean = true>(options: Options<DeleteTemplateV1TemplatesTemplateIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteTemplateV1TemplatesTemplateIdDeleteResponses, DeleteTemplateV1TemplatesTemplateIdDeleteErrors, ThrowOnError, 'data'>({ url: '/v1/templates/{template_id}', ...options });
 
 /**
  * Get Template
  */
-export const getTemplateV1TemplatesTemplateIdGet = <ThrowOnError extends boolean = false>(options: Options<GetTemplateV1TemplatesTemplateIdGetData, ThrowOnError>) => (options.client ?? client).get<GetTemplateV1TemplatesTemplateIdGetResponses, GetTemplateV1TemplatesTemplateIdGetErrors, ThrowOnError>({ url: '/v1/templates/{template_id}', ...options });
+export const getTemplateV1TemplatesTemplateIdGet = <ThrowOnError extends boolean = true>(options: Options<GetTemplateV1TemplatesTemplateIdGetData, ThrowOnError>) => (options.client ?? client).get<GetTemplateV1TemplatesTemplateIdGetResponses, GetTemplateV1TemplatesTemplateIdGetErrors, ThrowOnError, 'data'>({ url: '/v1/templates/{template_id}', ...options });
 
 /**
  * Update Template
  */
-export const updateTemplateV1TemplatesTemplateIdPatch = <ThrowOnError extends boolean = false>(options: Options<UpdateTemplateV1TemplatesTemplateIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateTemplateV1TemplatesTemplateIdPatchResponses, UpdateTemplateV1TemplatesTemplateIdPatchErrors, ThrowOnError>({
+export const updateTemplateV1TemplatesTemplateIdPatch = <ThrowOnError extends boolean = true>(options: Options<UpdateTemplateV1TemplatesTemplateIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateTemplateV1TemplatesTemplateIdPatchResponses, UpdateTemplateV1TemplatesTemplateIdPatchErrors, ThrowOnError, 'data'>({
     url: '/v1/templates/{template_id}',
     ...options,
     headers: {
@@ -732,16 +732,16 @@ export const updateTemplateV1TemplatesTemplateIdPatch = <ThrowOnError extends bo
 /**
  * List Workspace Tools
  */
-export const listWorkspaceToolsV1WorkspaceToolsGet = <ThrowOnError extends boolean = false>(options?: Options<ListWorkspaceToolsV1WorkspaceToolsGetData, ThrowOnError>) => (options?.client ?? client).get<ListWorkspaceToolsV1WorkspaceToolsGetResponses, unknown, ThrowOnError>({ url: '/v1/workspace/tools', ...options });
+export const listWorkspaceToolsV1WorkspaceToolsGet = <ThrowOnError extends boolean = true>(options?: Options<ListWorkspaceToolsV1WorkspaceToolsGetData, ThrowOnError>) => (options?.client ?? client).get<ListWorkspaceToolsV1WorkspaceToolsGetResponses, unknown, ThrowOnError, 'data'>({ url: '/v1/workspace/tools', ...options });
 
 /**
  * Get Slides Config
  */
-export const getSlidesConfigV1WorkspaceToolsSlidesConfigGet = <ThrowOnError extends boolean = false>(options?: Options<GetSlidesConfigV1WorkspaceToolsSlidesConfigGetData, ThrowOnError>) => (options?.client ?? client).get<GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses, unknown, ThrowOnError>({ url: '/v1/workspace/tools/slides/config', ...options });
+export const getSlidesConfigV1WorkspaceToolsSlidesConfigGet = <ThrowOnError extends boolean = true>(options?: Options<GetSlidesConfigV1WorkspaceToolsSlidesConfigGetData, ThrowOnError>) => (options?.client ?? client).get<GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses, unknown, ThrowOnError, 'data'>({ url: '/v1/workspace/tools/slides/config', ...options });
 
 /**
  * Get Tool Config
  *
  * Get configuration options for a specific tool.
  */
-export const getToolConfigV1WorkspaceToolsToolIdConfigGet = <ThrowOnError extends boolean = false>(options: Options<GetToolConfigV1WorkspaceToolsToolIdConfigGetData, ThrowOnError>) => (options.client ?? client).get<GetToolConfigV1WorkspaceToolsToolIdConfigGetResponses, GetToolConfigV1WorkspaceToolsToolIdConfigGetErrors, ThrowOnError>({ url: '/v1/workspace/tools/{tool_id}/config', ...options });
+export const getToolConfigV1WorkspaceToolsToolIdConfigGet = <ThrowOnError extends boolean = true>(options: Options<GetToolConfigV1WorkspaceToolsToolIdConfigGetData, ThrowOnError>) => (options.client ?? client).get<GetToolConfigV1WorkspaceToolsToolIdConfigGetResponses, GetToolConfigV1WorkspaceToolsToolIdConfigGetErrors, ThrowOnError, 'data'>({ url: '/v1/workspace/tools/{tool_id}/config', ...options });

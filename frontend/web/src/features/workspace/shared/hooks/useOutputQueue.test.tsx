@@ -62,6 +62,7 @@ beforeEach(() => {
     data: undefined,
     error: null,
     isLoading: false,
+    isValidating: false,
     mutate: vi.fn(),
   });
 
