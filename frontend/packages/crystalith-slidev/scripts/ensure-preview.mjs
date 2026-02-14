@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readlink, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -23,7 +23,43 @@ if (!fs.existsSync(previewPath)) {
 
 const sourceModules = path.join(packageRoot, 'node_modules');
 const targetModules = path.join(previewDir, 'node_modules');
-if (fs.existsSync(sourceModules) && !fs.existsSync(targetModules)) {
-  const linkType = process.platform === 'win32' ? 'junction' : 'dir';
-  await fs.promises.symlink(sourceModules, targetModules, linkType);
+
+function normalizePath(value) {
+  return path.resolve(String(value));
 }
+
+async function ensurePreviewNodeModulesSymlink() {
+  if (!fs.existsSync(sourceModules)) {
+    return;
+  }
+
+  const linkType = process.platform === 'win32' ? 'junction' : 'dir';
+
+  try {
+    const stats = await fs.promises.lstat(targetModules);
+
+    if (stats.isSymbolicLink()) {
+      const currentTarget = await readlink(targetModules);
+      const resolvedTarget = normalizePath(path.resolve(previewDir, currentTarget));
+      const resolvedSource = normalizePath(sourceModules);
+      if (resolvedTarget === resolvedSource) {
+        return;
+      }
+
+      await unlink(targetModules);
+      await fs.promises.symlink(sourceModules, targetModules, linkType);
+      return;
+    }
+
+    // If it's a real directory/file, don't clobber it.
+    return;
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+      await fs.promises.symlink(sourceModules, targetModules, linkType);
+      return;
+    }
+    throw error;
+  }
+}
+
+await ensurePreviewNodeModulesSymlink();
