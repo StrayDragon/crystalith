@@ -37,7 +37,7 @@ interface ChatPanelProps {
   onRetrySend?: () => void;
   isBlocked: boolean;
   isConnected: boolean;
-  inputRef: RefObject<HTMLTextAreaElement>;
+  inputRef: RefObject<HTMLTextAreaElement | null>;
   citations: Citation[];
   onCitationHover?: (chunkId: number | null, message: ChatMessage) => void;
   onCitationJump?: (citation: Citation, message: ChatMessage) => void;

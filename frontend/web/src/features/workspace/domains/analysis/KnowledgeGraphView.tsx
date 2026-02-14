@@ -101,7 +101,7 @@ interface KnowledgeGraphViewProps {
   isConnected: boolean;
 }
 
-interface KnowledgeNodeData {
+interface KnowledgeNodeData extends Record<string, unknown> {
   nodeType: KnowledgeNodeType;
   id: number;
   title: string;
@@ -128,7 +128,7 @@ function KnowledgeNode({ data }: NodeProps<Node<KnowledgeNodeData>>) {
 
   const baseColor = NODE_COLORS[nodeType];
   // For sources with topics, use topic color
-  const color = nodeType === 'source' && topicIndex !== null
+  const color = nodeType === 'source' && typeof topicIndex === 'number'
     ? TOPIC_COLORS[topicIndex % TOPIC_COLORS.length]
     : baseColor;
 

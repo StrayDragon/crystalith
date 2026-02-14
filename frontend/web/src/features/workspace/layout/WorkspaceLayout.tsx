@@ -906,14 +906,14 @@ export default function WorkspaceLayout() {
             }}
             isFullscreen={graphSourceDetailFullscreen}
             onToggleFullscreen={() => setGraphSourceDetailFullscreen((prev) => !prev)}
-            onSaveQAAsSource={sources.convertSourceQAToSource ? async (sourceTitle: string, messages) => {
+            onSaveQAAsSource={async (sourceTitle: string, messages) => {
               if (!graphSelectedSource) return;
               const qaMessages = messages.map((msg) => ({
                 role: msg.role,
                 content: msg.content,
               }));
               await sources.convertSourceQAToSource(graphSelectedSource.id, qaMessages);
-            } : undefined}
+            }}
           />
         </Suspense>
       )}
@@ -931,7 +931,7 @@ export default function WorkspaceLayout() {
             }}
             isFullscreen={citationSourceDetailFullscreen}
             onToggleFullscreen={() => setCitationSourceDetailFullscreen((prev) => !prev)}
-            onSaveQAAsSource={sources.convertSourceQAToSource ? handleCitationSaveQAAsSource : undefined}
+            onSaveQAAsSource={handleCitationSaveQAAsSource}
           />
         </Suspense>
       )}

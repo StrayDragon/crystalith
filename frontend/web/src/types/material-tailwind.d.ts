@@ -101,6 +101,13 @@ declare module '@material-tailwind/react' {
   }
   export const Card: React.FC<CardProps>;
 
+  export interface CardBodyProps extends Omit<ComponentProps<'div'>, 'ref'> {
+    children?: ReactNode;
+    className?: string;
+    [key: string]: unknown;
+  }
+  export const CardBody: React.FC<CardBodyProps>;
+
   // Chip
   export interface ChipProps {
     children?: ReactNode;
