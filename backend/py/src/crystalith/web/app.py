@@ -85,6 +85,13 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return value.strip().lower() not in {"0", "false", "no", "off"}
 
 
+def _env_bool_optional(name: str) -> bool | None:
+    value = os.getenv(name)
+    if value is None:
+        return None
+    return value.strip().lower() not in {"0", "false", "no", "off"}
+
+
 def create_app(
     settings: Settings | None = None,
     *,
@@ -133,7 +140,11 @@ def create_app(
             except Exception:  # noqa: BLE001
                 logger.exception("Failed to initialize built-in templates")
 
-        if _env_bool("AUTO_CLEANUP_FAILED_SOURCES", True):
+        cleanup_failed_sources = _env_bool_optional("AUTO_CLEANUP_FAILED_SOURCES")
+        if cleanup_failed_sources is None:
+            cleanup_failed_sources = app.state.settings.app.startup.cleanup_failed_sources
+
+        if cleanup_failed_sources:
             async with app.state.db.got_manual_session() as session:
                 failed_sources = await session.execute(
                     select(Source).where(Source.status == SourceStatus.FAILED)
@@ -184,13 +195,15 @@ def create_app(
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    cors = resolved.app.cors
+    if cors.allow_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=cors.allow_origins,
+            allow_credentials=cors.allow_credentials,
+            allow_methods=cors.allow_methods,
+            allow_headers=cors.allow_headers,
+        )
 
     @app.exception_handler(HTTPException)
     async def handle_http_exception(_: Request, exc: HTTPException) -> JSONResponse:

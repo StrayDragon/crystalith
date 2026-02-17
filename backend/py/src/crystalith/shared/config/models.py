@@ -334,6 +334,35 @@ class AppSettings(BaseModel):
     name: str = "Crystalith"
     openapi_path: str = "/v1/codev/openapi.json"
     openapi_ui_path: str = "/v1/codev/openapi-ui/scalar"
+    cors: "CorsSettings" = Field(default_factory=lambda: CorsSettings(), description="CORS settings")
+    startup: "StartupSettings" = Field(
+        default_factory=lambda: StartupSettings(),
+        description="Startup behaviors",
+    )
+
+
+class CorsSettings(BaseModel):
+    """CORS middleware settings for the API server."""
+
+    allow_origins: list[str] = Field(
+        default_factory=lambda: ["http://localhost:3000", "http://127.0.0.1:3000"],
+        description="Allowed origins (empty list disables CORS middleware).",
+    )
+    allow_credentials: bool = Field(True, description="Whether to allow cookies/credentials.")
+    allow_methods: list[str] = Field(default_factory=lambda: ["*"], description="Allowed methods.")
+    allow_headers: list[str] = Field(default_factory=lambda: ["*"], description="Allowed headers.")
+
+
+class StartupSettings(BaseModel):
+    """Startup behaviors."""
+
+    cleanup_failed_sources: bool = Field(
+        False,
+        description=(
+            "If true, delete sources with status='failed' on backend startup. "
+            "WARNING: this removes DB rows and may orphan related files/vectors."
+        ),
+    )
 
 
 class DatabaseSettings(BaseModel):

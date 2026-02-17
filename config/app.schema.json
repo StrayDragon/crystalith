@@ -40,6 +40,14 @@
           "default": "/v1/codev/openapi-ui/scalar",
           "title": "Openapi Ui Path",
           "type": "string"
+        },
+        "cors": {
+          "$ref": "#/$defs/CorsSettings",
+          "description": "CORS settings"
+        },
+        "startup": {
+          "$ref": "#/$defs/StartupSettings",
+          "description": "Startup behaviors"
         }
       },
       "title": "AppSettings",
@@ -288,6 +296,43 @@
         }
       },
       "title": "ContextWindowSettings",
+      "type": "object"
+    },
+    "CorsSettings": {
+      "description": "CORS middleware settings for the API server.",
+      "properties": {
+        "allow_origins": {
+          "description": "Allowed origins (empty list disables CORS middleware).",
+          "items": {
+            "type": "string"
+          },
+          "title": "Allow Origins",
+          "type": "array"
+        },
+        "allow_credentials": {
+          "default": true,
+          "description": "Whether to allow cookies/credentials.",
+          "title": "Allow Credentials",
+          "type": "boolean"
+        },
+        "allow_methods": {
+          "description": "Allowed methods.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Allow Methods",
+          "type": "array"
+        },
+        "allow_headers": {
+          "description": "Allowed headers.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Allow Headers",
+          "type": "array"
+        }
+      },
+      "title": "CorsSettings",
       "type": "object"
     },
     "DatabaseSettings": {
@@ -1001,6 +1046,19 @@
         }
       },
       "title": "SourceIngestionSettings",
+      "type": "object"
+    },
+    "StartupSettings": {
+      "description": "Startup behaviors.",
+      "properties": {
+        "cleanup_failed_sources": {
+          "default": false,
+          "description": "If true, delete sources with status='failed' on backend startup. WARNING: this removes DB rows and may orphan related files/vectors.",
+          "title": "Cleanup Failed Sources",
+          "type": "boolean"
+        }
+      },
+      "title": "StartupSettings",
       "type": "object"
     },
     "TrafilaturaSettings": {

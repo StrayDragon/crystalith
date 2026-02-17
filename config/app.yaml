@@ -16,6 +16,22 @@ version: "1.0.0"
 schema: v1
 
 # ----------------------------------------------------------------------------
+# App / web server
+# ----------------------------------------------------------------------------
+app:
+  cors:
+    # Allowed origins for browser clients (CORS).
+    # Keep this list tight in production.
+    allow_origins:
+      - "http://localhost:3000"
+      - "http://127.0.0.1:3000"
+
+  startup:
+    # If true, deletes sources with status=failed on backend startup.
+    # WARNING: This removes DB rows and may orphan related files/vectors.
+    cleanup_failed_sources: false
+
+# ----------------------------------------------------------------------------
 # Providers (use YAML anchors for reuse)
 # ----------------------------------------------------------------------------
 providers:
