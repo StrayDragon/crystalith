@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from crystalith.features.tasks.queue import TaskQueue
+from .queue import TaskQueue
 from crystalith.shared.db import Task
 from crystalith.shared.deps import get_db_session, get_task_queue
 from crystalith.shared.types import TaskStatus, TaskType
