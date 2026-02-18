@@ -14,6 +14,7 @@ import {
   type ResearchSessionListItem,
   type ResearchStatus,
 } from '../../../../api/generated';
+import { unwrapData } from '../../../../api/unwrap';
 
 // SSE Event types
 interface SSEStatusEvent {
@@ -131,12 +132,10 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     setIsLoading(true);
     setError('');
     try {
-      const response = await listResearchSessionsV1NotebooksNotebookIdResearchGet({
+      const response = await unwrapData(listResearchSessionsV1NotebooksNotebookIdResearchGet<true>({
         path: { notebook_id: notebookId },
-      });
-      if (Array.isArray(response)) {
-        setSessions(response);
-      }
+      }));
+      setSessions(response);
     } catch (err) {
       setError(err instanceof Error ? err.message : '获取研究列表失败');
     } finally {
@@ -150,14 +149,11 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setIsLoading(true);
       setError('');
       try {
-        const response = await getResearchSessionV1NotebooksNotebookIdResearchResearchIdGet({
+        const response = await unwrapData(getResearchSessionV1NotebooksNotebookIdResearchResearchIdGet<true>({
           path: { notebook_id: notebookId, research_id: researchId },
-        });
-        if (response) {
-          setActiveSession(response);
-          return response;
-        }
-        return null;
+        }));
+        setActiveSession(response);
+        return response;
       } catch (err) {
         setError(err instanceof Error ? err.message : '获取研究详情失败');
         return null;
@@ -174,29 +170,25 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setIsLoading(true);
       setError('');
       try {
-        const response = await createResearchSessionV1NotebooksNotebookIdResearchPost({
+        const data = await unwrapData(createResearchSessionV1NotebooksNotebookIdResearchPost<true>({
           path: { notebook_id: notebookId },
           body: { topic, max_iterations: maxIterations },
-        });
-        if (response) {
-          const data = response;
-          setSessions((prev) => [
-            {
-              id: data.id,
-              notebook_id: data.notebook_id,
-              topic: data.topic,
-              status: data.status,
-              current_iteration: data.current_iteration,
-              max_iterations: data.max_iterations,
-              created_at: data.created_at,
-              updated_at: data.created_at, // Use created_at as initial updated_at
-            },
-            ...prev,
-          ]);
-          setActiveSession(data);
-          return data;
-        }
-        return null;
+        }));
+        setSessions((prev) => [
+          {
+            id: data.id,
+            notebook_id: data.notebook_id,
+            topic: data.topic,
+            status: data.status,
+            current_iteration: data.current_iteration,
+            max_iterations: data.max_iterations,
+            created_at: data.created_at,
+            updated_at: data.created_at, // Use created_at as initial updated_at
+          },
+          ...prev,
+        ]);
+        setActiveSession(data);
+        return data;
       } catch (err) {
         setError(err instanceof Error ? err.message : '创建研究失败');
         return null;
@@ -213,7 +205,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setIsLoading(true);
       setError('');
       try {
-        await deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete({
+        await deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete<true>({
           path: { notebook_id: notebookId, research_id: researchId },
         });
         setSessions((prev) => prev.filter((s) => s.id !== researchId));
@@ -234,12 +226,10 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       if (!notebookId) return;
       setError('');
       try {
-        const response = await startResearchV1NotebooksNotebookIdResearchResearchIdStartPost({
+        const response = await unwrapData(startResearchV1NotebooksNotebookIdResearchResearchIdStartPost<true>({
           path: { notebook_id: notebookId, research_id: researchId },
-        });
-        if (response) {
-          setActiveSession(response);
-        }
+        }));
+        setActiveSession(response);
       } catch (err) {
         setError(err instanceof Error ? err.message : '启动研究失败');
       }
@@ -252,13 +242,11 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       if (!notebookId) return;
       setError('');
       try {
-        const response = await approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost({
+        const response = await unwrapData(approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost<true>({
           path: { notebook_id: notebookId, research_id: researchId },
           body: { feedback },
-        });
-        if (response) {
-          setActiveSession(response);
-        }
+        }));
+        setActiveSession(response);
       } catch (err) {
         setError(err instanceof Error ? err.message : '批准计划失败');
       }
@@ -271,12 +259,10 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       if (!notebookId) return;
       setError('');
       try {
-        const response = await skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost({
+        const response = await unwrapData(skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost<true>({
           path: { notebook_id: notebookId, research_id: researchId },
-        });
-        if (response) {
-          setActiveSession(response);
-        }
+        }));
+        setActiveSession(response);
       } catch (err) {
         setError(err instanceof Error ? err.message : '跳过迭代失败');
       }
@@ -289,12 +275,10 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       if (!notebookId) return;
       setError('');
       try {
-        const response = await finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost({
+        const response = await unwrapData(finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost<true>({
           path: { notebook_id: notebookId, research_id: researchId },
-        });
-        if (response) {
-          setActiveSession(response);
-        }
+        }));
+        setActiveSession(response);
       } catch (err) {
         setError(err instanceof Error ? err.message : '结束研究失败');
       }
@@ -308,26 +292,22 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       if (!notebookId) return;
       setError('');
       try {
-        const response = await cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost({
+        const response = await unwrapData(cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost<true>({
           path: { notebook_id: notebookId, research_id: researchId },
-        });
-        if (response) {
-          setActiveSession(response);
-          // Update sessions list
-          setSessions((prev) =>
-            prev.map((s) =>
-              s.id === researchId ? { ...s, status: response.status } : s
-            )
-          );
-          // Close SSE connection when cancelled
-          if (reconnectTimeoutRef.current) {
-            clearTimeout(reconnectTimeoutRef.current);
-            reconnectTimeoutRef.current = null;
-          }
-          if (eventSourceRef.current) {
-            eventSourceRef.current.close();
-            eventSourceRef.current = null;
-          }
+        }));
+        setActiveSession(response);
+        // Update sessions list
+        setSessions((prev) =>
+          prev.map((s) => (s.id === researchId ? { ...s, status: response.status } : s)),
+        );
+        // Close SSE connection when cancelled
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
+        }
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+          eventSourceRef.current = null;
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : '取消研究失败');
@@ -341,25 +321,22 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       if (!notebookId) return null;
       setError('');
       try {
-        const response = await resumeResearchV1NotebooksNotebookIdResearchResearchIdResumePost({
+        const response = await unwrapData(resumeResearchV1NotebooksNotebookIdResearchResearchIdResumePost<true>({
           path: { notebook_id: notebookId, research_id: researchId },
-        });
-        if (response) {
-          setActiveSession(response);
-          setSessions((prev) =>
-            prev.map((s) =>
-              s.id === researchId
-                ? {
-                    ...s,
-                    status: response.status,
-                    current_iteration: response.current_iteration,
-                  }
-                : s
-            )
-          );
-          return response;
-        }
-        return null;
+        }));
+        setActiveSession(response);
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === researchId
+              ? {
+                  ...s,
+                  status: response.status,
+                  current_iteration: response.current_iteration,
+                }
+              : s,
+          ),
+        );
+        return response;
       } catch (err) {
         setError(err instanceof Error ? err.message : '继续研究失败');
         return null;
@@ -543,7 +520,9 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       eventSource.onopen = () => {
         lastEventAtRef.current = Date.now();
         if (isReconnect) {
-          console.log('SSE reconnected successfully');
+          if (import.meta.env.DEV) {
+            console.log('SSE reconnected successfully');
+          }
           setSSEEvents((prev) => {
             const next = [
               ...prev,

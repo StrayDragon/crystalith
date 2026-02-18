@@ -20,6 +20,7 @@ import { useSources } from '../domains/sources/useSources';
 import type { ChatMessage, Citation, SourceItem } from '../shared/types';
 import { normalizeMessage } from '../shared/utils';
 import { listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet as listMessages } from '../../../api/generated';
+import { unwrapData } from '../../../api/unwrap';
 import { SkeletonCard } from '../shared/components/Skeleton';
 import { toast } from '../../../shared/toast';
 
@@ -502,17 +503,17 @@ export default function WorkspaceLayout() {
     setGraphSessionDetailFullscreen(false);
     setGraphSessionMessages([]);
 
-    if (notebooks.activeNotebookId) {
-      setGraphSessionMessagesLoading(true);
-      try {
-        const response = await listMessages({
-          path: { notebook_id: notebooks.activeNotebookId, session_id: session.id },
-        });
-        const normalizedMessages = response.map(normalizeMessage);
-        setGraphSessionMessages(normalizedMessages);
-      } catch {
-        setGraphSessionMessages([]);
-      } finally {
+	    if (notebooks.activeNotebookId) {
+	      setGraphSessionMessagesLoading(true);
+	      try {
+	        const response = await unwrapData(listMessages<true>({
+	          path: { notebook_id: notebooks.activeNotebookId, session_id: session.id },
+	        }));
+	        const normalizedMessages = response.map(normalizeMessage);
+	        setGraphSessionMessages(normalizedMessages);
+	      } catch {
+	        setGraphSessionMessages([]);
+	      } finally {
         setGraphSessionMessagesLoading(false);
       }
     }

@@ -7,7 +7,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { OutputTypeId } from '../../shared/types';
+import type { OutputTypeId } from '../../../shared/types';
 
 /**
  * Configuration option for an output plugin

@@ -90,6 +90,11 @@ jobs:
           cd frontend/web
           pnpm test
 
+      - name: Typecheck
+        run: |
+          cd frontend/web
+          pnpm run typecheck
+
       - name: Build
         run: |
           cd frontend/web

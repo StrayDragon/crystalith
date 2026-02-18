@@ -69,7 +69,7 @@ function parseRetryAfter(value: unknown): number | undefined {
 
 client.setConfig({
   baseUrl: '',
-  responseStyle: 'data',
+  responseStyle: 'fields',
   throwOnError: true,
 });
 

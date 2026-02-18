@@ -45,7 +45,7 @@ test('dialog supports retrying failed source import', async () => {
 });
 
 test('dialog shows progress text while batch adding sources', async () => {
-  let releaseFirst: (() => void) | null = null;
+  let releaseFirst: ((value?: void) => void) | undefined;
   const onAddSource = vi
     .fn()
     .mockImplementationOnce(

@@ -8,6 +8,7 @@ import {
   saveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPost as saveNotebookAsTemplate,
   updateTemplateV1TemplatesTemplateIdPatch as updateTemplate,
 } from '../../../../api/generated';
+import { unwrapData } from '../../../../api/unwrap';
 import type { OutputTypeId } from '../../shared/types';
 import { normalizeTemplate, type WorkspaceTemplate } from './types';
 
@@ -17,7 +18,7 @@ export function useTemplates() {
     error,
     isLoading,
     mutate,
-  } = useSWR('workspace/templates', listTemplates, {
+  } = useSWR('workspace/templates', () => unwrapData(listTemplates<true>()), {
     revalidateOnFocus: false,
   });
 
@@ -31,7 +32,7 @@ export function useTemplates() {
       outputType?: OutputTypeId | null;
       sourceTags?: string[];
     }) => {
-      const created = await createTemplate({
+      const created = await unwrapData(createTemplate<true>({
         body: {
           name: payload.name,
           description: payload.description ?? null,
@@ -41,7 +42,7 @@ export function useTemplates() {
             source_tags: payload.sourceTags ?? [],
           },
         },
-      });
+      }));
 
       await mutate(
         async (current) => (current ? [...current, created] : [created]),
@@ -54,10 +55,10 @@ export function useTemplates() {
 
   const updateTemplateDescription = useCallback(
     async (templateId: number, description: string) => {
-      const updated = await updateTemplate({
+      const updated = await unwrapData(updateTemplate<true>({
         path: { template_id: templateId },
         body: { description },
-      });
+      }));
       await mutate(
         async (current) =>
           current?.map((item) => (item.id === templateId ? updated : item)) ?? [updated],
@@ -70,7 +71,7 @@ export function useTemplates() {
 
   const removeTemplate = useCallback(
     async (templateId: number) => {
-      await deleteTemplate({ path: { template_id: templateId } });
+      await unwrapData(deleteTemplate<true>({ path: { template_id: templateId } }));
       await mutate(
         async (current) => current?.filter((item) => item.id !== templateId) ?? [],
         { revalidate: false },
@@ -86,14 +87,14 @@ export function useTemplates() {
       description?: string;
       outputType?: OutputTypeId | null;
     }) => {
-      const created = await saveNotebookAsTemplate({
+      const created = await unwrapData(saveNotebookAsTemplate<true>({
         path: { notebook_id: payload.notebookId },
         body: {
           name: payload.name,
           description: payload.description ?? null,
           output_type: payload.outputType ?? null,
         },
-      });
+      }));
       await mutate(
         async (current) => (current ? [...current, created] : [created]),
         { revalidate: false },

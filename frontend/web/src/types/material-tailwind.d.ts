@@ -351,6 +351,61 @@ declare module '@material-tailwind/react' {
   }
   export const Textarea: React.FC<TextareaProps>;
 
+  // Progress
+  export interface ProgressProps extends Omit<ComponentProps<'div'>, 'ref'> {
+    value?: number;
+    size?: 'sm' | 'md' | 'lg';
+    color?: string;
+    label?: ReactNode;
+    className?: string;
+    [key: string]: unknown;
+  }
+  export const Progress: React.FC<ProgressProps>;
+
+  // Tabs
+  export interface TabsProps extends Omit<ComponentProps<'div'>, 'ref'> {
+    value?: string | number;
+    orientation?: 'horizontal' | 'vertical';
+    className?: string;
+    children?: ReactNode;
+    [key: string]: unknown;
+  }
+  export const Tabs: React.FC<TabsProps>;
+
+  export interface TabsHeaderProps extends Omit<ComponentProps<'div'>, 'ref'> {
+    indicatorProps?: Record<string, unknown>;
+    className?: string;
+    children?: ReactNode;
+    [key: string]: unknown;
+  }
+  export const TabsHeader: React.FC<TabsHeaderProps>;
+
+  export interface TabsBodyProps extends Omit<ComponentProps<'div'>, 'ref'> {
+    animate?: Record<string, unknown>;
+    className?: string;
+    children?: ReactNode;
+    [key: string]: unknown;
+  }
+  export const TabsBody: React.FC<TabsBodyProps>;
+
+  export interface TabProps extends Omit<ComponentProps<'button'>, 'ref'> {
+    value: string | number;
+    className?: string;
+    activeClassName?: string;
+    disabled?: boolean;
+    children?: ReactNode;
+    [key: string]: unknown;
+  }
+  export const Tab: React.FC<TabProps>;
+
+  export interface TabPanelProps extends Omit<ComponentProps<'div'>, 'ref'> {
+    value: string | number;
+    className?: string;
+    children?: ReactNode;
+    [key: string]: unknown;
+  }
+  export const TabPanel: React.FC<TabPanelProps>;
+
   // ThemeProvider
   export interface ThemeProviderProps {
     children?: ReactNode;

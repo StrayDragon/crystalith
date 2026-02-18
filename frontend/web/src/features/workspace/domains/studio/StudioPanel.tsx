@@ -38,7 +38,7 @@ interface StudioPanelProps {
   onOpenSlides?: (options?: {
     mode: 'config' | 'preview';
     slideId?: number | null;
-    queueStatus?: 'queued' | 'running' | 'error' | 'done' | null;
+    queueStatus?: 'queued' | 'running' | 'error' | 'done' | 'cancelled' | null;
     queueJobId?: string | null;
   }) => void;
   onDeleteOutput: (outputId: number) => void;
@@ -64,7 +64,7 @@ interface ToolsPopoverProps {
   onOpenSlides?: (options?: {
     mode: 'config' | 'preview';
     slideId?: number | null;
-    queueStatus?: 'queued' | 'running' | 'error' | 'done' | null;
+    queueStatus?: 'queued' | 'running' | 'error' | 'done' | 'cancelled' | null;
     queueJobId?: string | null;
   }) => void;
   isConnected: boolean;

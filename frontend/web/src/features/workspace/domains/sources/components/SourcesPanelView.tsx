@@ -34,7 +34,6 @@ import type { VirtuosoHandle } from 'react-virtuoso';
 import type { AsyncStatus } from '../../../../../shared/types';
 import type {
   ExtractorInfoResponse as ExtractorInfo,
-  ExtractorType,
   QaMessage,
   SourceFromUrlMode,
   SourceTagRead,
@@ -61,6 +60,7 @@ import type { useResearch } from '../../research/useResearch';
 const SourceDetailDialog = lazy(() => import('../SourceDetailDialog'));
 const ResearchDetailPanel = lazy(() => import('../../research/ResearchDetailPanel'));
 
+type ExtractorType = ExtractorInfo['type'];
 
 const SUPPORTED_UPLOAD_EXTENSIONS = new Set(['txt', 'md', 'markdown']);
 
@@ -1120,7 +1120,9 @@ function SourcesPanelView({
                     : 'red';
               return (
                 <div
-                  ref={(node) => sourceRefs.current.set(source.id, node)}
+                  ref={(node) => {
+                    sourceRefs.current.set(source.id, node);
+                  }}
                   className={`group relative flex items-center rounded-xl border bg-white dark:bg-slate-900 shadow-sm transition-all hover:border-gray-300 hover:shadow mb-1.5 ux-slide-in ${
                     isHighlighted
                       ? 'border-blue-200 ring-2 ring-blue-300 bg-blue-50/70'

@@ -5,6 +5,7 @@ import {
   listTasksV1NotebooksNotebookIdTasksGet as listNotebookTasks,
   type TaskRead,
 } from '../../../../api/generated';
+import { unwrapData } from '../../../../api/unwrap';
 import { useWorkspaceStore } from '../state/workspaceStore';
 
 interface TaskState {
@@ -43,9 +44,9 @@ export function useTasks() {
     if (!activeNotebookId || !isConnected) return [];
     setTaskState((prev) => ({ ...prev, isLoading: true, error: '' }));
     try {
-      const tasks = await listNotebookTasks({
+      const tasks = await unwrapData(listNotebookTasks<true>({
         path: { notebook_id: activeNotebookId },
-      });
+      }));
       setTaskState({ tasks, isLoading: false, error: '' });
       return tasks;
     } catch (error) {
@@ -62,9 +63,9 @@ export function useTasks() {
     async (taskId: number) => {
       if (!isConnected) return null;
       try {
-        const task = await getTask({
+        const task = await unwrapData(getTask<true>({
           path: { task_id: taskId },
-        });
+        }));
         setTaskState((prev) => ({
           ...prev,
           tasks: prev.tasks.map((t) => (t.id === task.id ? task : t)),

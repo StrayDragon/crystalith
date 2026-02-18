@@ -6,11 +6,14 @@ import {
   convertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPost as convertSessionToOutput,
   convertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePost as convertSessionToSource,
   listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet as listMessages,
+  type Citation as ApiCitation,
   type OutputTypeInput,
 } from '../../../../api/generated';
+import { unwrapData } from '../../../../api/unwrap';
 import { client } from '../../../../api/generated/client.gen';
 import { toast } from '../../../../shared/toast';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
+import type { ChatMessage as WorkspaceChatMessage } from '../../shared/types';
 import {
   buildSourceScopeSnapshot,
   collectChunkIds,
@@ -61,12 +64,12 @@ export function useChat({
     activeNotebookId && activeSessionId && isConnected
       ? ['workspace/messages', activeNotebookId, activeSessionId]
       : null,
-    () => listMessages({
+    () => unwrapData(listMessages<true>({
       path: {
         notebook_id: activeNotebookId ?? 0,
         session_id: activeSessionId ?? 0,
       },
-    }),
+    })),
     { revalidateOnFocus: false },
   );
 
@@ -147,8 +150,8 @@ export function useChat({
 
     const selectedScope = buildSourceScopeSnapshot(selectedSourceTitles, 'selected');
 
-    const userMessage = { id: createId(), role: 'user', content: text };
-    const pendingMessages = [...s.messages, userMessage];
+    const userMessage: WorkspaceChatMessage = { id: createId(), role: 'user', content: text };
+    const pendingMessages: WorkspaceChatMessage[] = [...s.messages, userMessage];
     s.setMessages(pendingMessages);
     s.setDraft('');
 
@@ -170,7 +173,7 @@ export function useChat({
       setStreamingMessageId(assistantMessageId);
 
       // Add empty assistant message that will be filled by streaming
-      const assistantMessage = {
+      const assistantMessage: WorkspaceChatMessage = {
         id: assistantMessageId,
         role: 'assistant',
         content: '',
@@ -221,7 +224,7 @@ export function useChat({
                 streamingBufferRef.current = '';
                 store.getState().appendMessageContent(assistantMessageId, buffered);
               }
-              const doneData = data as { citations?: unknown[] };
+              const doneData = data as { citations?: ApiCitation[] };
               const normalizedCitations = doneData.citations?.map(normalizeCitation) ?? [];
               const scope = selectedScope;
               const s2 = store.getState();
@@ -315,17 +318,17 @@ export function useChat({
 
     // Non-streaming fallback
     try {
-      const qaResult = await askQuestion({
+      const qaResult = await unwrapData(askQuestion<true>({
         path: { notebook_id: s.activeNotebookId },
         body: {
           question: text,
           session_id: sessionId ?? undefined,
           source_ids: explicitSourceIds.length ? explicitSourceIds : undefined,
         },
-      });
+      }));
       const normalizedCitations = qaResult.citations?.map(normalizeCitation) ?? [];
       const scope = selectedScope;
-      const assistantMessage = {
+      const assistantMessage: WorkspaceChatMessage = {
         id: createId(),
         role: 'assistant',
         content: qaResult.answer,
@@ -368,7 +371,7 @@ export function useChat({
         }
       }
 
-      const assistantMessage = {
+      const assistantMessage: WorkspaceChatMessage = {
         id: createId(),
         role: 'assistant',
         content: errorMessage,
@@ -416,10 +419,10 @@ export function useChat({
     }
     setIsConverting(true);
     try {
-      const result = await convertSessionToSource({
+      const result = await unwrapData(convertSessionToSource<true>({
         path: { notebook_id: s.activeNotebookId, session_id: s.activeSessionId },
         body: { message_ids: null },
-      });
+      }));
       // Refresh sources list to show the new source
       if (refreshSources) {
         await refreshSources();
@@ -443,10 +446,10 @@ export function useChat({
       }
       setIsConverting(true);
       try {
-        const result = await convertSessionToOutput({
+        const result = await unwrapData(convertSessionToOutput<true>({
           path: { notebook_id: s.activeNotebookId, session_id: s.activeSessionId },
           body: { message_ids: null, output_type: outputType },
-        });
+        }));
         // Refresh outputs list to show the new output
         if (refreshOutputs) {
           await refreshOutputs();

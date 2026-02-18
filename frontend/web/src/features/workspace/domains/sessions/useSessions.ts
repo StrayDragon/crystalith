@@ -7,6 +7,7 @@ import {
   listSessionsV1NotebooksNotebookIdSessionsGet as listSessions,
   updateSessionV1NotebooksNotebookIdSessionsSessionIdPatch as updateSession,
 } from '../../../../api/generated';
+import { unwrapData } from '../../../../api/unwrap';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { ApiSession } from '../../shared/types';
 import { normalizeSession } from '../../shared/utils';
@@ -26,7 +27,7 @@ export function useSessions() {
     activeNotebookId && isConnected
       ? ['workspace/sessions', activeNotebookId]
       : null,
-    () => listSessions({ path: { notebook_id: activeNotebookId ?? 0 } }),
+    () => unwrapData(listSessions<true>({ path: { notebook_id: activeNotebookId ?? 0 } })),
     { revalidateOnFocus: false },
   );
 
@@ -80,15 +81,14 @@ export function useSessions() {
       }
       store.getState().setError('sessions', '');
       try {
-        const created = await createSession({
+        const created = await unwrapData(createSession<true>({
           path: { notebook_id: activeNotebookId },
           body: { title: title ?? null },
-        });
+        }));
         const normalized = normalizeSession(created);
         store.getState().setActiveSession(normalized.id);
         await mutate(
-          async (current: ApiSession[] | undefined) =>
-            current ? [created, ...current] : [created],
+          async (current) => (current ? [created, ...current] : [created]),
           { revalidate: false },
         );
         return normalized.id;
@@ -126,10 +126,10 @@ export function useSessions() {
       }
       store.getState().setError('sessions', '');
       try {
-        const updated = await updateSession({
+        const updated = await unwrapData(updateSession<true>({
           path: { notebook_id: activeNotebookId, session_id: sessionId },
           body: { title: title.trim() || undefined },
-        });
+        }));
         const normalized = normalizeSession(updated);
         store.getState().setSessions(
           store.getState().sessions.map((item) =>
@@ -137,7 +137,7 @@ export function useSessions() {
           ),
         );
         await mutate(
-          async (current: ApiSession[] | undefined) =>
+          async (current) =>
             current?.map((item) => (item.id === sessionId ? updated : item)) ?? [],
           { revalidate: false },
         );
@@ -159,9 +159,9 @@ export function useSessions() {
       }
       store.getState().setError('sessions', '');
       try {
-        await deleteSession({
+        await unwrapData(deleteSession<true>({
           path: { notebook_id: activeNotebookId, session_id: sessionId },
-        });
+        }));
         const s = store.getState();
         const remaining = s.sessions.filter((item) => item.id !== sessionId);
         s.setSessions(remaining);
@@ -169,8 +169,7 @@ export function useSessions() {
           s.setActiveSession(remaining[0]?.id ?? null);
         }
         await mutate(
-          async (current: ApiSession[] | undefined) =>
-            current?.filter((item) => item.id !== sessionId) ?? [],
+          async (current) => current?.filter((item) => item.id !== sessionId) ?? [],
           { revalidate: false },
         );
         return true;

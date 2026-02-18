@@ -1,4 +1,4 @@
-import type { SlideGenerationConfig } from '../shared/types';
+import type { SlideGenerationConfig } from '../../../shared/types';
 
 export function normalizeGenerationConfig(raw: any): SlideGenerationConfig | null {
   if (!raw || typeof raw !== 'object') return null;

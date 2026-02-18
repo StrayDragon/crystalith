@@ -72,7 +72,9 @@ beforeEach(() => {
     data: { tools: [] },
     error: null,
     isLoading: false,
-  });
+    isValidating: false,
+    mutate: vi.fn(),
+  } as any);
 });
 
 test('sets default refine prompt when empty', async () => {

@@ -26,6 +26,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "api:generate": "openapi-ts -i ./openapi.json -o ./src/api/generated -c @hey-api/client-fetch",
     "api:fetch": "cd ../../backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.json",
     "api:sync": "pnpm run api:fetch && pnpm run api:generate",

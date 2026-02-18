@@ -100,13 +100,15 @@ function useOutputQueueHarness({ isConnected }: { isConnected: boolean }) {
 
 test('enqueueOutputJob processes and updates outputs', async () => {
   vi.mocked(createOutput).mockResolvedValue({
-    id: 10,
-    type: 'FAQ',
-    prompt: 'hello',
-    chunk_ids: [1],
-    content: {},
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z',
+    data: {
+      id: 10,
+      type: 'FAQ',
+      prompt: 'hello',
+      chunk_ids: [1],
+      content: {},
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    },
   } as any);
 
   setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
@@ -142,7 +144,7 @@ test('enqueueOutputJob processes and updates outputs', async () => {
 });
 
 test('cancelOutputJob aborts running output job', async () => {
-  vi.mocked(createOutput).mockImplementation(({ signal }: any) =>
+  vi.mocked(createOutput).mockImplementation((({ signal }: any) =>
     new Promise((resolve, reject) => {
       signal.addEventListener('abort', () => {
         const error = new Error('aborted');
@@ -151,17 +153,18 @@ test('cancelOutputJob aborts running output job', async () => {
       });
       setTimeout(() => {
         resolve({
-          id: 11,
-          type: 'FAQ',
-          prompt: 'hello',
-          chunk_ids: [1],
-          content: {},
-          created_at: '2024-01-01T00:00:00Z',
-          updated_at: '2024-01-01T00:00:00Z',
+          data: {
+            id: 11,
+            type: 'FAQ',
+            prompt: 'hello',
+            chunk_ids: [1],
+            content: {},
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z',
+          },
         } as any);
       }, 200);
-    }),
-  );
+    })) as any);
 
   setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
   const { result } = renderHook(() =>

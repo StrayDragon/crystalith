@@ -29,16 +29,18 @@ function wrapSWR({ children }: { children: ReactNode }) {
 }
 
 test('lists templates and normalizes config fields', async () => {
-  vi.mocked(listTemplatesV1TemplatesGet).mockResolvedValue([
-    {
-      id: 1,
-      name: 'T1',
-      description: 'desc',
-      is_builtin: true,
-      created_at: '2026-01-01',
-      config_json: { session_titles: ['A'], output_type: 'FAQ', source_tags: ['x'] },
-    },
-  ] as any);
+  vi.mocked(listTemplatesV1TemplatesGet).mockResolvedValue({
+    data: [
+      {
+        id: 1,
+        name: 'T1',
+        description: 'desc',
+        is_builtin: true,
+        created_at: '2026-01-01',
+        config_json: { session_titles: ['A'], output_type: 'FAQ', source_tags: ['x'] },
+      },
+    ],
+  } as any);
 
   const { result } = renderHook(() => useTemplates(), { wrapper: wrapSWR });
 
@@ -53,14 +55,16 @@ test('lists templates and normalizes config fields', async () => {
 });
 
 test('saveCurrentNotebookAsTemplate appends new template', async () => {
-  vi.mocked(listTemplatesV1TemplatesGet).mockResolvedValue([] as any);
+  vi.mocked(listTemplatesV1TemplatesGet).mockResolvedValue({ data: [] } as any);
   vi.mocked(saveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPost).mockResolvedValue({
-    id: 2,
-    name: 'Saved',
-    description: null,
-    is_builtin: false,
-    created_at: '2026-01-02',
-    config_json: { session_titles: [], output_type: 'GUIDE', source_tags: [] },
+    data: {
+      id: 2,
+      name: 'Saved',
+      description: null,
+      is_builtin: false,
+      created_at: '2026-01-02',
+      config_json: { session_titles: [], output_type: 'GUIDE', source_tags: [] },
+    },
   } as any);
 
   const { result } = renderHook(() => useTemplates(), { wrapper: wrapSWR });
@@ -84,24 +88,28 @@ test('saveCurrentNotebookAsTemplate appends new template', async () => {
 });
 
 test('updateTemplateDescription patches and updates list', async () => {
-  vi.mocked(listTemplatesV1TemplatesGet).mockResolvedValue([
-    {
+  vi.mocked(listTemplatesV1TemplatesGet).mockResolvedValue({
+    data: [
+      {
+        id: 3,
+        name: 'Editable',
+        description: 'old',
+        is_builtin: false,
+        created_at: '2026-01-03',
+        config_json: { session_titles: [], output_type: null, source_tags: [] },
+      },
+    ],
+  } as any);
+
+  vi.mocked(updateTemplateV1TemplatesTemplateIdPatch).mockResolvedValue({
+    data: {
       id: 3,
       name: 'Editable',
-      description: 'old',
+      description: 'new',
       is_builtin: false,
       created_at: '2026-01-03',
       config_json: { session_titles: [], output_type: null, source_tags: [] },
     },
-  ] as any);
-
-  vi.mocked(updateTemplateV1TemplatesTemplateIdPatch).mockResolvedValue({
-    id: 3,
-    name: 'Editable',
-    description: 'new',
-    is_builtin: false,
-    created_at: '2026-01-03',
-    config_json: { session_titles: [], output_type: null, source_tags: [] },
   } as any);
 
   const { result } = renderHook(() => useTemplates(), { wrapper: wrapSWR });
@@ -120,18 +128,20 @@ test('updateTemplateDescription patches and updates list', async () => {
 });
 
 test('removeTemplate deletes and removes from list', async () => {
-  vi.mocked(listTemplatesV1TemplatesGet).mockResolvedValue([
-    {
-      id: 4,
-      name: 'ToDelete',
-      description: '',
-      is_builtin: false,
-      created_at: '2026-01-04',
-      config_json: { session_titles: [], output_type: null, source_tags: [] },
-    },
-  ] as any);
+  vi.mocked(listTemplatesV1TemplatesGet).mockResolvedValue({
+    data: [
+      {
+        id: 4,
+        name: 'ToDelete',
+        description: '',
+        is_builtin: false,
+        created_at: '2026-01-04',
+        config_json: { session_titles: [], output_type: null, source_tags: [] },
+      },
+    ],
+  } as any);
 
-  vi.mocked(deleteTemplateV1TemplatesTemplateIdDelete).mockResolvedValue({} as any);
+  vi.mocked(deleteTemplateV1TemplatesTemplateIdDelete).mockResolvedValue({ data: {} } as any);
 
   const { result } = renderHook(() => useTemplates(), { wrapper: wrapSWR });
 

@@ -2,7 +2,7 @@
  * ModelSelector - Component for selecting AI models for generation tasks
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactElement } from 'react';
 import {
   Select,
   Option,
@@ -17,6 +17,7 @@ import {
 } from '@mui/icons-material';
 
 import { listModelsV1ModelsGet as listModels, type ModelRead, type ModelsListResponse } from '../../../../api/generated';
+import { unwrapData } from '../../../../api/unwrap';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 
 export interface ModelSelectorProps {
@@ -60,9 +61,9 @@ export function ModelSelector({
       try {
         setLoading(true);
         setError(null);
-        const data = await listModels({
+        const data = await unwrapData(listModels<true>({
           query: capability ? { capability } : undefined,
-        });
+        }));
         if (!cancelled) {
           setModelsData(data);
           // Set default value if not already set
@@ -140,7 +141,7 @@ export function ModelSelector({
           // Custom render for selected value
           // element is the React Element of the selected Option
           if (!element) return null;
-          const modelId = element.props.value;
+          const modelId = (element as ReactElement<{ value?: string }>).props.value;
           const model = models.find((m) => m.id === modelId);
           if (!model) return element;
 

@@ -94,10 +94,12 @@ test('sendMessage returns error when no notebook is active', async () => {
 
 test('sendMessage non-streaming path stores assistant message and citations', async () => {
   vi.mocked(askQuestion).mockResolvedValue({
-    answer: 'Answer',
-    citations: [
-      { chunk_id: 5, chunk_index: 1, source_name: 'Doc', snippet: 'S' },
-    ],
+    data: {
+      answer: 'Answer',
+      citations: [
+        { chunk_id: 5, chunk_index: 1, source_name: 'Doc', snippet: 'S' },
+      ],
+    },
   } as any);
 
   const ensureSession = vi.fn().mockResolvedValue(123);
@@ -135,10 +137,12 @@ test('sendMessage non-streaming path stores assistant message and citations', as
 
 test('sendMessage passes selected source ids', async () => {
   vi.mocked(askQuestion).mockResolvedValue({
-    answer: 'Answer',
-    citations: [
-      { chunk_id: 5, chunk_index: 1, source_name: 'Doc', snippet: 'S' },
-    ],
+    data: {
+      answer: 'Answer',
+      citations: [
+        { chunk_id: 5, chunk_index: 1, source_name: 'Doc', snippet: 'S' },
+      ],
+    },
   } as any);
 
   const ensureSession = vi.fn().mockResolvedValue(456);
@@ -170,8 +174,10 @@ test('sendMessage passes selected source ids', async () => {
 
 test('sendMessage uses selected source ids when provided', async () => {
   vi.mocked(askQuestion).mockResolvedValue({
-    answer: 'Answer',
-    citations: [],
+    data: {
+      answer: 'Answer',
+      citations: [],
+    },
   } as any);
 
   const ensureSession = vi.fn().mockResolvedValue(789);
@@ -183,7 +189,16 @@ test('sendMessage uses selected source ids when provided', async () => {
     const s = useWorkspaceStore.getState();
     s.setConnectionState('live');
     s.setActiveNotebook(1);
-    s.setSources([{ id: 101, title: 'Doc', type: 'md', status: 'READY', statusTone: 'READY', chunks: 2 }]);
+    s.setSources([{
+      id: 101,
+      title: 'Doc',
+      type: 'md',
+      status: 'READY',
+      statusTone: 'READY',
+      chunks: 2,
+      tags: [],
+      createdAt: '2026-01-01T00:00:00Z',
+    }]);
     s.setSelectedSources({ 101: true });
     s.setDraft('Hello');
   });
