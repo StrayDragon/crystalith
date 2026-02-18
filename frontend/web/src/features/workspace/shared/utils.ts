@@ -91,7 +91,7 @@ export function buildSourceSummaryPrompt(title?: string | null): string {
   return `请总结《${safeTitle}》的核心观点`;
 }
 
-export function resolveTemplateLabel(prompt: string, templates: RefineTemplate[]): string {
+export function resolveTemplateLabel(prompt: string, templates: readonly RefineTemplate[]): string {
   const normalized = prompt.trim();
   const match = templates.find((item) => item.prompt.trim() === normalized);
   return match?.label ?? '自定义';

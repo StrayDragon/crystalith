@@ -41,6 +41,7 @@ import {
   listSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGet as listSourceChunks,
   type ChunkRead,
 } from '../../../../api/generated';
+import { unwrapData } from '../../../../api/unwrap';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { SourceItem } from '../../shared/types';
 import { toast } from '../../../../shared/toast';
@@ -189,7 +190,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     // Call real API
     setIsBriefLoading(true);
     setBriefError('');
-    getSourceSummary({ path: { notebook_id: notebookId, source_id: source.id } })
+    unwrapData(getSourceSummary<true>({ path: { notebook_id: notebookId, source_id: source.id } }))
       .then((response) => {
         const newBrief: SourceBrief = {
           summary: response.summary,
@@ -231,7 +232,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     // Call real API
     setIsChunksLoading(true);
     setChunksError('');
-    listSourceChunks({ path: { notebook_id: notebookId, source_id: source.id } })
+    unwrapData(listSourceChunks<true>({ path: { notebook_id: notebookId, source_id: source.id } }))
       .then((response) => {
         chunksCache.set(source.id, response);
         setChunks(response);
@@ -285,10 +286,10 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
 
     // Call real API
     try {
-      const response = await askSourceQuestion({
+      const response = await unwrapData(askSourceQuestion<true>({
         path: { notebook_id: notebookId, source_id: source.id },
         body: { question: userMessage.content },
-      });
+      }));
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
@@ -323,7 +324,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     }
 
     // Call real API
-    getSourceSummary({ path: { notebook_id: notebookId, source_id: source.id } })
+    unwrapData(getSourceSummary<true>({ path: { notebook_id: notebookId, source_id: source.id } }))
       .then((response) => {
         const newBrief: SourceBrief = {
           summary: response.summary,
@@ -485,9 +486,9 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
               <div className="flex items-center gap-1.5">
                 <DataObjectIcon style={{ fontSize: 14 }} />
                 <span>原始数据</span>
-                {source.chunkCount > 0 && (
+                {source.chunks > 0 && (
                   <span className="ml-1 px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded text-[10px] text-gray-500 dark:text-slate-400">
-                    {source.chunkCount}
+                    {source.chunks}
                   </span>
                 )}
               </div>
@@ -627,7 +628,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                           <div className="flex items-end ml-1">
                             <Menu
                               placement="bottom-start"
-                              open={exportMenuOpen && exportMenuOpen === message.id}
+                              open={exportMenuOpen === message.id}
                               handler={(open) => setExportMenuOpen(open ? message.id : null)}
                             >
                               <MenuHandler>

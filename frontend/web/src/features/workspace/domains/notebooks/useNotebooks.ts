@@ -7,6 +7,7 @@ import {
   listNotebooksV1NotebooksGet as listNotebooks,
   updateNotebookV1NotebooksNotebookIdPatch as updateNotebook,
 } from '../../../../api/generated';
+import { unwrapData } from '../../../../api/unwrap';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { StatusLabel } from '../../shared/types';
 import { normalizeNotebook } from '../../shared/utils';
@@ -32,7 +33,7 @@ export function useNotebooks() {
     error: notebookError,
     isLoading,
     mutate,
-  } = useSWR('workspace/notebooks', listNotebooks, {
+  } = useSWR('workspace/notebooks', () => unwrapData(listNotebooks<true>()), {
     revalidateOnFocus: false,
   });
 
@@ -80,9 +81,9 @@ export function useNotebooks() {
     const autoCreateNotebook = async () => {
       store.getState().setCreateState('loading');
       try {
-        const created = await createNotebook({
+        const created = await unwrapData(createNotebook<true>({
           body: { name: DEFAULT_NOTEBOOK_NAME },
-        });
+        }));
         const normalized = normalizeNotebook(created);
         store.getState().setActiveNotebook(normalized.id);
         await mutate(
@@ -122,9 +123,9 @@ export function useNotebooks() {
     s.setCreateState('loading');
     s.setError('create', '');
     try {
-      const created = await createNotebook({
+      const created = await unwrapData(createNotebook<true>({
         body: { name },
-      });
+      }));
       const normalized = normalizeNotebook(created);
       const s2 = store.getState();
       s2.setCreateName('');
@@ -151,9 +152,9 @@ export function useNotebooks() {
     s.setError('create', '');
 
     try {
-      const created = await createNotebook({
+      const created = await unwrapData(createNotebook<true>({
         body: { name: finalName },
-      });
+      }));
       const normalized = normalizeNotebook(created);
       const s2 = store.getState();
       s2.setActiveNotebook(normalized.id);
@@ -180,10 +181,10 @@ export function useNotebooks() {
       s.setError('create', '');
 
       try {
-        const created = await createNotebook({
+        const created = await unwrapData(createNotebook<true>({
           body: { name: finalName },
           query: { template_id: templateId },
-        });
+        }));
         const normalized = normalizeNotebook(created);
         const s2 = store.getState();
         s2.setActiveNotebook(normalized.id);
@@ -215,10 +216,10 @@ export function useNotebooks() {
       const trimmed = name.trim();
       if (!trimmed) return false;
       try {
-        const updated = await updateNotebook({
+        const updated = await unwrapData(updateNotebook<true>({
           path: { notebook_id: notebookId },
           body: { name: trimmed },
-        });
+        }));
         const normalized = normalizeNotebook(updated);
         await mutate(
           async (current) =>
@@ -243,9 +244,9 @@ export function useNotebooks() {
     async (notebookId: number) => {
       if (connectionState !== 'live') return false;
       try {
-        await deleteNotebook({
+        await unwrapData(deleteNotebook<true>({
           path: { notebook_id: notebookId },
-        });
+        }));
         await mutate(
           async (current) => current?.filter((item) => item.id !== notebookId) ?? [],
           { revalidate: false },

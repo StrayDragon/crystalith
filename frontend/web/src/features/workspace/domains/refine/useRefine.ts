@@ -4,12 +4,19 @@ import useSWR from 'swr';
 import {
   listWorkspaceToolsV1WorkspaceToolsGet as listWorkspaceTools,
   refineBatchV1NotebooksNotebookIdRefineBatchPost as refineBatch,
+  type FieldDescriptor as ApiFieldDescriptor,
+  type PluginConfigSchema as ApiPluginConfigSchema,
+  type RenderDescriptor as ApiRenderDescriptor,
+  type WorkspaceTool as ApiWorkspaceTool,
 } from '../../../../api/generated';
+import { unwrapData } from '../../../../api/unwrap';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type {
-  ApiWorkspaceTool,
+  FieldDescriptor,
   OutputItem,
   OutputTypeId,
+  PluginConfigSchema,
+  RefineOutput,
   RenderDescriptor,
   RefineJob,
   RefineMode,
@@ -26,6 +33,38 @@ import {
 import { REFINE_FORMATS, REFINE_TEMPLATES } from './data/refineTemplates';
 import { useOutputQueue } from '../../shared/hooks/useOutputQueue';
 
+function normalizeFieldDescriptor(field: ApiFieldDescriptor): FieldDescriptor {
+  return {
+    key: field.key,
+    type: field.type,
+    label: field.label ?? null,
+    children: (field.children ?? []).map(normalizeFieldDescriptor),
+  };
+}
+
+function normalizeRenderDescriptor(descriptor?: ApiRenderDescriptor | null): RenderDescriptor | null {
+  if (!descriptor) return null;
+  return {
+    layout: descriptor.layout,
+    item_schema: descriptor.item_schema
+      ? {
+          fields: (descriptor.item_schema.fields ?? []).map(normalizeFieldDescriptor),
+        }
+      : null,
+    options: descriptor.options ?? {},
+  };
+}
+
+function normalizeConfigSchema(schema?: ApiPluginConfigSchema | null): PluginConfigSchema | null {
+  if (!schema) return null;
+  return {
+    quantity_options: schema.quantity_options ?? [],
+    difficulty_options: schema.difficulty_options ?? [],
+    topic_placeholder: schema.topic_placeholder ?? '',
+    supports_topic: schema.supports_topic ?? false,
+  };
+}
+
 function normalizeTool(tool: ApiWorkspaceTool): WorkspaceTool {
   return {
     id: tool.id,
@@ -34,8 +73,8 @@ function normalizeTool(tool: ApiWorkspaceTool): WorkspaceTool {
     tone: tool.tone,
     outputType: tool.output_type,
     prompt: tool.prompt,
-    renderDescriptor: tool.render_descriptor ?? null,
-    configSchema: tool.config_schema ?? null,
+    renderDescriptor: normalizeRenderDescriptor(tool.render_descriptor),
+    configSchema: normalizeConfigSchema(tool.config_schema),
     badge: tool.badge ?? undefined,
     enabled: tool.enabled !== false,
   };
@@ -67,7 +106,7 @@ export function useRefine() {
 
   const { data: toolsData, error: toolsError, isLoading: toolsLoading } = useSWR(
     isConnected ? 'workspace/tools' : null,
-    () => listWorkspaceTools(),
+    () => unwrapData(listWorkspaceTools<true>()),
     { revalidateOnFocus: false },
   );
 
@@ -92,7 +131,14 @@ export function useRefine() {
 
   const outputTypeOptions = useMemo(() => {
     const seen = new Set<OutputTypeId>();
-    const options: { id: OutputTypeId; label: string; description: string; prompt: string }[] = [];
+    const options: {
+      id: OutputTypeId;
+      label: string;
+      description: string;
+      prompt: string;
+      badge?: string;
+      enabled?: boolean;
+    }[] = [];
     for (const tool of tools) {
       if (!tool.outputType || seen.has(tool.outputType)) continue;
       seen.add(tool.outputType);
@@ -101,6 +147,8 @@ export function useRefine() {
         label: tool.label,
         description: tool.description,
         prompt: tool.prompt,
+        badge: tool.badge,
+        enabled: tool.enabled,
       });
     }
     return options;
@@ -216,35 +264,28 @@ export function useRefine() {
   const processRefineJob = useCallback(
     async (jobId: string, prompt: string, sourceIds: number[], jobNotebookId: number | null) => {
       try {
-        let normalizedOutputs = {};
-        let response = null;
-        let resolvedCitations = null;
+        const normalizedOutputs: Partial<Record<RefineMode, RefineOutput>> = {};
+        let resolvedCitations = null as ReturnType<typeof normalizeCitation>[] | null;
         if (jobNotebookId && isConnected) {
-          response = await refineBatch({
+          const response = await unwrapData(refineBatch<true>({
             path: { notebook_id: jobNotebookId },
             body: {
               prompt,
-              formats: refineFormats,
+              formats: [...refineFormats],
               source_ids: sourceIds,
             },
-          });
-          resolvedCitations = response?.citations
-            ? response.citations.map(normalizeCitation)
-            : null;
-          normalizedOutputs = Object.entries(response.outputs ?? {}).reduce(
-            (acc, [format, output]) => {
-              if (!output) return acc;
-              const key = format as RefineMode;
-              acc[key] = {
-                paragraph: output.paragraph ?? '',
-                bullets: output.bullets ?? [],
-                structured: output.structured ?? null,
-                evidence: response?.evidence,
-              };
-              return acc;
-            },
-            {} as Record<RefineMode, any>,
-          );
+          }));
+          resolvedCitations = response.citations.map(normalizeCitation);
+          for (const [format, output] of Object.entries(response.outputs ?? {})) {
+            if (!output) continue;
+            const key = format as RefineMode;
+            normalizedOutputs[key] = {
+              paragraph: output.paragraph ?? '',
+              bullets: output.bullets ?? [],
+              structured: output.structured ?? null,
+              evidence: response.evidence,
+            };
+          }
         } else {
           throw new Error('backend unavailable');
         }
@@ -617,7 +658,7 @@ export function useRefine() {
         new Set(
           collectOutputCitations(output.content)
             .map((citation) => citation.sourceId)
-            .filter((value): value is number => Number.isFinite(value) && value > 0),
+            .filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0),
         ),
       );
       if (outputSourceIds.length === 0) {

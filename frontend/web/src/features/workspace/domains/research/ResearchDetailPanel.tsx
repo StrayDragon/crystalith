@@ -27,6 +27,7 @@ import {
   AutoAwesome as AutoAwesomeIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
   Download as DownloadIcon,
+  WarningAmber as WarningIcon,
 } from '@mui/icons-material';
 import type { ResearchSessionResponse, ResearchStepResponse } from '../../../../api/generated';
 import type { SSEEvent } from './useResearch';
@@ -314,7 +315,8 @@ function ResearchDetailPanel({
     // For completed sessions, always reconstruct from steps for full history
     // For active sessions, use SSE events for real-time updates
     const isCompletedSession = session.status === 'completed';
-    const hasSteps = session.steps && session.steps.length > 0;
+    const steps = session.steps ?? [];
+    const hasSteps = steps.length > 0;
 
     if (!isCompletedSession && sseEvents.length > 0) {
       // Real-time mode: use SSE events
@@ -349,8 +351,8 @@ function ResearchDetailPanel({
       });
 
       // Group steps by iteration
-      const stepsByIteration: Record<number, typeof session.steps> = {};
-      session.steps.forEach((step) => {
+      const stepsByIteration: Record<number, ResearchStepResponse[]> = {};
+      steps.forEach((step) => {
         if (!stepsByIteration[step.iteration]) {
           stepsByIteration[step.iteration] = [];
         }
@@ -517,8 +519,14 @@ function ResearchDetailPanel({
       );
     };
 
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      handle = window.requestIdleCallback(expand, { timeout: 200 });
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    const supportsIdleCallback = typeof idleWindow.requestIdleCallback === 'function';
+
+    if (supportsIdleCallback) {
+      handle = idleWindow.requestIdleCallback!(expand, { timeout: 200 });
     } else {
       handle = window.setTimeout(expand, 50);
     }
@@ -526,11 +534,11 @@ function ResearchDetailPanel({
     return () => {
       cancelled = true;
       if (handle !== null) {
-        if (typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
-          window.cancelIdleCallback(handle);
-        } else {
-          window.clearTimeout(handle);
+        if (supportsIdleCallback && typeof idleWindow.cancelIdleCallback === 'function') {
+          idleWindow.cancelIdleCallback(handle);
+          return;
         }
+        window.clearTimeout(handle);
       }
     };
   }, [
@@ -1344,11 +1352,12 @@ function ResultsDialogContent({
   setIsAddingSources,
 }: ResultsDialogContentProps) {
   const { style: modalStyle } = useLayer('modal');
+  const aggregatedResults = session.aggregated_results ?? [];
 
   const handleCopyLinks = () => {
-    const selectedUrls = Array.from(selectedResults).map(
-      (i) => session.aggregated_results![i].url
-    );
+    const selectedUrls = Array.from(selectedResults)
+      .map((i) => aggregatedResults[i]?.url)
+      .filter((url): url is string => typeof url === 'string' && url.length > 0);
     void copyToClipboard(selectedUrls.join('\n')).then((success) => {
       if (success) {
         toast.success(`已复制 ${selectedUrls.length} 个链接`);
@@ -1362,9 +1371,9 @@ function ResultsDialogContent({
     if (!onAddSourceFromUrl) return;
     setIsAddingSources(true);
     try {
-      const selectedUrls = Array.from(selectedResults).map(
-        (i) => session.aggregated_results![i].url
-      );
+      const selectedUrls = Array.from(selectedResults)
+        .map((i) => aggregatedResults[i]?.url)
+        .filter((url): url is string => typeof url === 'string' && url.length > 0);
       let successCount = 0;
       for (const url of selectedUrls) {
         try {
@@ -1401,21 +1410,21 @@ function ResultsDialogContent({
           <div>
             <h3 className="font-semibold text-gray-900">搜索结果</h3>
             <p className="text-sm text-gray-500 mt-0.5">
-              共 {session.aggregated_results!.length} 条结果，已选 {selectedResults.size} 条
+              共 {aggregatedResults.length} 条结果，已选 {selectedResults.size} 条
             </p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
-                if (selectedResults.size === session.aggregated_results!.length) {
+                if (selectedResults.size === aggregatedResults.length) {
                   setSelectedResults(new Set());
                 } else {
-                  setSelectedResults(new Set(session.aggregated_results!.map((_, i) => i)));
+                  setSelectedResults(new Set(aggregatedResults.map((_, i) => i)));
                 }
               }}
               className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1"
             >
-              {selectedResults.size === session.aggregated_results!.length ? '取消全选' : '全选'}
+              {selectedResults.size === aggregatedResults.length ? '取消全选' : '全选'}
             </button>
             <button
               onClick={onClose}
@@ -1428,7 +1437,13 @@ function ResultsDialogContent({
 
         {/* Results List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {session.aggregated_results!.map((result, index) => (
+          {aggregatedResults.map((result, index) => {
+            const url = typeof result.url === 'string' ? result.url : '';
+            const title = typeof result.title === 'string' ? result.title : null;
+            const snippet = typeof result.snippet === 'string' ? result.snippet : null;
+            const source = typeof result.source === 'string' ? result.source : null;
+            const iteration = typeof result.iteration === 'number' ? result.iteration : null;
+            return (
             <label
               key={index}
               className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -1455,26 +1470,27 @@ function ResultsDialogContent({
               />
               <div className="flex-1 min-w-0">
                 <a
-                  href={result.url}
+                  href={url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline line-clamp-1"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {result.title || '未知标题'}
+                  {title || '未知标题'}
                 </a>
                 <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
-                  {result.snippet || '无摘要'}
+                  {snippet || '无摘要'}
                 </p>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-gray-400">{result.source || 'web'}</span>
-                  {result.iteration && (
-                    <span className="text-xs text-gray-400">· 第 {result.iteration} 轮</span>
+                  <span className="text-xs text-gray-400">{source || 'web'}</span>
+                  {iteration != null && (
+                    <span className="text-xs text-gray-400">· 第 {iteration} 轮</span>
                   )}
                 </div>
               </div>
             </label>
-          ))}
+            );
+          })}
         </div>
 
         {/* Dialog Footer */}

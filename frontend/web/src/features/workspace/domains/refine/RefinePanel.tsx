@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type SVGProps } from 'react';
 
 import type {
   Citation,
@@ -28,7 +28,14 @@ interface RefinePanelProps {
   settings: RefineSettings;
   onToggleSetting: (key: keyof RefineSettings) => void;
   highlightedJobId: string | null;
-  outputTypeOptions: { id: OutputTypeId; label: string; description: string; prompt: string }[];
+  outputTypeOptions: {
+    id: OutputTypeId;
+    label: string;
+    description: string;
+    prompt: string;
+    badge?: string;
+    enabled?: boolean;
+  }[];
   outputType: OutputTypeId;
   outputs: OutputItem[];
   outputQueueJobs: { id: string; type: OutputTypeId; status: 'queued' | 'running' | 'done' | 'error' }[];
@@ -127,7 +134,7 @@ function RefineTemplateSection({
   );
 }
 
-const STUDIO_ICON_PROPS = {
+const STUDIO_ICON_PROPS: SVGProps<SVGSVGElement> = {
   viewBox: '0 0 24 24',
   fill: 'none',
   stroke: 'currentColor',
@@ -150,6 +157,9 @@ const STUDIO_TONE_MAP: Record<StudioIconId, StudioTone> = {
   QUIZ: 'blue',
   BRIEFING: 'slate',
   SLIDES: 'slate',
+  PARAGRAPH: 'slate',
+  BULLETS: 'slate',
+  STRUCTURED: 'slate',
   REFINE: 'slate',
 };
 
@@ -528,7 +538,7 @@ export default function RefinePanel({
     () =>
       recentTemplateIds
         .map((id) => templates.find((item) => item.id === id))
-        .filter((item): item is RefineTemplate => Boolean(item) && !favoriteSet.has(item.id)),
+        .filter((item): item is RefineTemplate => item != null && !favoriteSet.has(item.id)),
     [recentTemplateIds, templates, favoriteSet],
   );
   const favoriteTemplates = useMemo(
@@ -612,6 +622,8 @@ export default function RefinePanel({
         id: option.id,
         label: option.label,
         description: option.description,
+        badge: option.badge,
+        disabled: option.enabled === false,
         type: option.id,
       })),
     [outputTypeOptions],

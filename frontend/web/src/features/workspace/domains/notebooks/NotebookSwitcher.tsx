@@ -22,7 +22,7 @@ import {
   Settings as SettingsIcon,
 } from '@mui/icons-material';
 
-import type { AsyncStatus } from '../../../shared/types';
+import type { AsyncStatus } from '../../../../shared/types';
 import type { Notebook } from '../../shared/types';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../shared/layer';
@@ -40,7 +40,7 @@ interface NotebookSwitcherProps {
   isLoading: boolean;
   error: string;
   isConnected: boolean;
-  searchInputRef?: RefObject<HTMLInputElement>;
+  searchInputRef?: RefObject<HTMLInputElement | null>;
   createName: string;
   createState: AsyncStatus;
   createError: string;

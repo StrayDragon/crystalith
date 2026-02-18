@@ -4,7 +4,6 @@ import {
   Typography,
   IconButton,
   Checkbox,
-  Radio,
   Chip,
   Spinner,
 } from '@material-tailwind/react';
@@ -22,6 +21,7 @@ import {
   exportResearchV1NotebooksNotebookIdResearchResearchIdExportPost as exportResearch,
   type ResearchSessionResponse,
 } from '../../../../api/generated';
+import { unwrapData } from '../../../../api/unwrap';
 import { toast } from '../../../../shared/toast';
 import { useLayer } from '../../../../shared/layer';
 
@@ -69,14 +69,22 @@ function ResearchExportDialog({
 
     // Add references from aggregated results
     if (session.aggregated_results) {
-      session.aggregated_results.forEach((result, index) => {
+      session.aggregated_results.forEach((rawResult, index) => {
+        const result = rawResult as Record<string, unknown>;
+        const title = typeof result.title === 'string' && result.title.trim()
+          ? result.title
+          : `来源 ${index + 1}`;
+        const url = typeof result.url === 'string' ? result.url : undefined;
+        const snippetValue = typeof result.snippet === 'string' ? result.snippet : undefined;
+        const snippet = snippetValue ? snippetValue.slice(0, 100) : undefined;
+        const relevance = typeof result.relevance_score === 'number' ? result.relevance_score : undefined;
         items.push({
           id: `ref-${index}`,
           type: 'reference',
-          title: result.title || `来源 ${index + 1}`,
-          url: result.url,
-          snippet: result.snippet?.slice(0, 100),
-          relevance: result.relevance_score || 0.5,
+          title,
+          url,
+          snippet,
+          relevance: relevance ?? 0.5,
         });
       });
     }
@@ -131,16 +139,16 @@ function ResearchExportDialog({
       const selectedRefs = referenceItems
         .filter(item => selectedItems.has(item.id))
         .map(item => item.url)
-        .filter(Boolean);
+        .filter((url): url is string => typeof url === 'string' && url.length > 0);
 
-      const data = await exportResearch({
+      const data = await unwrapData(exportResearch<true>({
         path: { notebook_id: session.notebook_id, research_id: session.id },
         body: {
           export_type: exportTarget,
           include_report: includeReport,
           include_results: selectedRefs.length > 0,
         },
-      });
+      }));
 
       if (data?.success) {
         toast.success(data.message);
@@ -193,11 +201,12 @@ function ResearchExportDialog({
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <Radio
+                <input
+                  type="radio"
                   name="export-target"
                   checked={exportTarget === 'source'}
                   onChange={() => setExportTarget('source')}
-                  crossOrigin={undefined}
+                  className="h-4 w-4 text-blue-600"
                 />
                 <SourceIcon className={`w-5 h-5 ${exportTarget === 'source' ? 'text-blue-600' : 'text-gray-400'}`} />
                 <div>
@@ -212,11 +221,12 @@ function ResearchExportDialog({
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <Radio
+                <input
+                  type="radio"
                   name="export-target"
                   checked={exportTarget === 'note'}
                   onChange={() => setExportTarget('note')}
-                  crossOrigin={undefined}
+                  className="h-4 w-4 text-blue-600"
                 />
                 <NoteIcon className={`w-5 h-5 ${exportTarget === 'note' ? 'text-blue-600' : 'text-gray-400'}`} />
                 <div>

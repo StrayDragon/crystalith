@@ -8,6 +8,7 @@ import {
   getOutputV1NotebooksNotebookIdOutputsOutputIdGet as getOutput,
   listOutputsV1NotebooksNotebookIdOutputsGet as listOutputs,
 } from '../../../../api/generated';
+import { unwrapData } from '../../../../api/unwrap';
 import type { OutputItem, OutputTypeId, SlideGenerationConfig } from '../types';
 import { useWorkspaceStore } from '../state/workspaceStore';
 import { createId, formatTimestamp, normalizeOutput } from '../utils';
@@ -154,9 +155,9 @@ export function useOutputQueue({
       ? ['workspace/outputs', activeNotebookId]
       : null,
       () =>
-        listOutputs({
+        unwrapData(listOutputs<true>({
           path: { notebook_id: activeNotebookId ?? 0 },
-        }),
+        })),
       { revalidateOnFocus: false },
     );
 
@@ -283,10 +284,10 @@ export function useOutputQueue({
         source_ids: sourceIds.length ? sourceIds : undefined,
         generation_config: normalizeSlideGenerationConfig(generationConfig),
       };
-      const created = await createSlidesDraft({
+      const created = await unwrapData(createSlidesDraft<true>({
         path: { notebook_id: activeNotebookId },
         body: payload,
-      });
+      }));
       const draftId = created.id;
 
       onQueueTotal();
@@ -367,7 +368,7 @@ export function useOutputQueue({
             throw new Error('missing slide draft');
           }
         } else if (job.notebookId) {
-          const response = await createOutput({
+          const response = await unwrapData(createOutput<true>({
             path: { notebook_id: job.notebookId, output_type: job.type },
             body: {
               prompt: job.prompt || undefined,
@@ -375,7 +376,7 @@ export function useOutputQueue({
               model_id: job.modelId || undefined,
             },
             signal: abortController.signal,
-          });
+          }));
           if (isCancelled()) {
             const abortError = new Error('aborted');
             abortError.name = 'AbortError';
@@ -541,9 +542,9 @@ export function useOutputQueue({
       s.setOutputs(s.outputs.filter((item) => item.id !== outputId));
 
       try {
-        await deleteOutputApi({
+        await unwrapData(deleteOutputApi<true>({
           path: { notebook_id: s.activeNotebookId, output_id: outputId },
-        });
+        }));
       } catch (error) {
         console.error('Failed to delete output:', error);
         await mutateOutputs();
@@ -561,9 +562,9 @@ export function useOutputQueue({
       const s = store.getState();
       if (!s.activeNotebookId || !isConnected) return null;
       try {
-        const output = await getOutput({
+        const output = await unwrapData(getOutput<true>({
           path: { notebook_id: s.activeNotebookId, output_id: outputId },
-        });
+        }));
         const normalized = normalizeOutput(output);
         const s2 = store.getState();
         s2.setOutputs(

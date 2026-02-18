@@ -26,18 +26,20 @@ beforeEach(() => {
 });
 
 test('fetchSessions stores list data', async () => {
-  vi.mocked(listResearchSessionsV1NotebooksNotebookIdResearchGet).mockResolvedValue([
-    {
-      id: 1,
-      notebook_id: 1,
-      topic: 'Topic',
-      status: 'planning',
-      current_iteration: 0,
-      max_iterations: 3,
-      created_at: '2024-01-01',
-      updated_at: '2024-01-01',
-    },
-  ] as any);
+  vi.mocked(listResearchSessionsV1NotebooksNotebookIdResearchGet).mockResolvedValue({
+    data: [
+      {
+        id: 1,
+        notebook_id: 1,
+        topic: 'Topic',
+        status: 'planning',
+        current_iteration: 0,
+        max_iterations: 3,
+        created_at: '2024-01-01',
+        updated_at: '2024-01-01',
+      },
+    ],
+  } as any);
 
   const { result } = renderHook(() => useResearch(1));
 
@@ -53,14 +55,16 @@ test('fetchSessions stores list data', async () => {
 
 test('createSession updates sessions and activeSession', async () => {
   vi.mocked(createResearchSessionV1NotebooksNotebookIdResearchPost).mockResolvedValue({
-    id: 2,
-    notebook_id: 1,
-    topic: 'New Topic',
-    status: 'planning',
-    current_iteration: 0,
-    max_iterations: 4,
-    created_at: '2024-01-02',
-    updated_at: '2024-01-02',
+    data: {
+      id: 2,
+      notebook_id: 1,
+      topic: 'New Topic',
+      status: 'planning',
+      current_iteration: 0,
+      max_iterations: 4,
+      created_at: '2024-01-02',
+      updated_at: '2024-01-02',
+    },
   } as any);
 
   const { result } = renderHook(() => useResearch(1));
@@ -79,18 +83,20 @@ test('createSession updates sessions and activeSession', async () => {
 
 test('deleteSession removes session and clears active session', async () => {
   vi.mocked(createResearchSessionV1NotebooksNotebookIdResearchPost).mockResolvedValue({
-    id: 22,
-    notebook_id: 1,
-    topic: 'Topic',
-    status: 'planning',
-    current_iteration: 0,
-    max_iterations: 4,
-    created_at: '2024-01-01',
-    updated_at: '2024-01-01',
+    data: {
+      id: 22,
+      notebook_id: 1,
+      topic: 'Topic',
+      status: 'planning',
+      current_iteration: 0,
+      max_iterations: 4,
+      created_at: '2024-01-01',
+      updated_at: '2024-01-01',
+    },
   } as any);
 
   vi.mocked(deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete).mockResolvedValue(
-    {} as any,
+    { data: {} } as any,
   );
 
   const { result } = renderHook(() => useResearch(1));
