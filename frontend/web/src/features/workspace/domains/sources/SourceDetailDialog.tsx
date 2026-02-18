@@ -500,10 +500,19 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
             <TabPanel value="overview" className="p-0 h-full flex flex-col overflow-hidden">
               {/* Summary Section - Collapsible */}
               <div className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
-                <button
-                  type="button"
-                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-800/50 transition-colors"
-                  onClick={() => setSummaryCollapsed(!summaryCollapsed)}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={!summaryCollapsed}
+                  aria-controls="source-detail-auto-summary"
+                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-800/50 transition-colors cursor-pointer"
+                  onClick={() => setSummaryCollapsed((prev) => !prev)}
+                  onKeyDown={(e) => {
+                    if (e.currentTarget !== e.target) return;
+                    if (e.key !== 'Enter' && e.key !== ' ') return;
+                    e.preventDefault();
+                    setSummaryCollapsed((prev) => !prev);
+                  }}
                 >
                   <div className="flex items-center gap-2 text-blue-500">
                     <AutoAwesomeIcon style={{ fontSize: 16 }} />
@@ -537,10 +546,10 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                       <ExpandLessIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                     )}
                   </div>
-                </button>
+                </div>
 
                 {!summaryCollapsed && (
-                  <div className="px-4 pb-4">
+                  <div id="source-detail-auto-summary" className="px-4 pb-4">
                     {isBriefLoading ? (
                       <div className="space-y-2">
                         <div className="h-4 bg-gray-200 rounded w-full animate-pulse" />
