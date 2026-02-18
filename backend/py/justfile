@@ -7,11 +7,17 @@ dev:
 packages-test:
     #!/bin/bash
     for package in packages/*; do
-        uv run --project $package pytest $package/tests
+        uv run --project $package pytest --no-cov $package/tests
     done
 
 test: packages-test
     uv run pytest tests/ -v
+
+coverage: packages-test
+    uv run pytest tests/ -v -n 0 --cov=crystalith --cov-report=term --cov-fail-under=85
+
+coverage-html: packages-test
+    uv run pytest tests/ -v -n 0 --cov=crystalith --cov-report=html --cov-fail-under=85
 
 check-imports:
     rg --files -g '*.py' src/crystalith/features src/crystalith/shared | uv run python scripts/check_imports.py

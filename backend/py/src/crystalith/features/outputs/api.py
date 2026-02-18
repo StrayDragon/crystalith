@@ -225,9 +225,22 @@ def _extract_text_from_output(output: Output) -> str:
             parts.append(content["text"])
 
     elif output_type == OutputType.BULLETS:
-        if "bullets" in content and isinstance(content["bullets"], list):
+        # Support both the legacy {"bullets": [...]} format and the current
+        # BulletsOutput schema {"items": [{"text": ...}, ...]}.
+        if "items" in content and isinstance(content["items"], list):
+            for item in content["items"]:
+                if isinstance(item, str):
+                    text = item
+                elif isinstance(item, dict):
+                    text = str(item.get("text") or "")
+                else:
+                    text = ""
+                if text:
+                    parts.append(f"- {text}")
+        elif "bullets" in content and isinstance(content["bullets"], list):
             for bullet in content["bullets"]:
-                parts.append(f"- {bullet}")
+                if bullet:
+                    parts.append(f"- {bullet}")
 
     elif output_type == OutputType.FAQ:
         if "items" in content and isinstance(content["items"], list):
@@ -244,7 +257,7 @@ def _extract_text_from_output(output: Output) -> str:
         if "events" in content and isinstance(content["events"], list):
             for event in content["events"]:
                 date = event.get("date", "")
-                title = event.get("title", "")
+                title = event.get("event", event.get("title", ""))
                 desc = event.get("description", "")
                 parts.append(f"**{date}** - {title}")
                 if desc:
@@ -278,7 +291,32 @@ def _extract_text_from_output(output: Output) -> str:
             traverse_node(root)
 
     elif output_type == OutputType.GUIDE:
-        if "sections" in content and isinstance(content["sections"], list):
+        modules = content.get("modules")
+        if isinstance(modules, list):
+            for module in modules:
+                if not isinstance(module, dict):
+                    continue
+                title = module.get("title", "")
+                if title:
+                    parts.append(f"## {title}")
+                objective = module.get("objective")
+                if isinstance(objective, dict):
+                    objective_text = objective.get("text")
+                    if objective_text:
+                        parts.append(str(objective_text))
+                key_points = module.get("key_points")
+                if isinstance(key_points, list) and key_points:
+                    parts.append("")
+                    parts.append("### 要点")
+                    for point in key_points:
+                        if isinstance(point, dict):
+                            text = point.get("text") or ""
+                        else:
+                            text = str(point or "")
+                        if text:
+                            parts.append(f"- {text}")
+                parts.append("")
+        elif "sections" in content and isinstance(content["sections"], list):
             for section in content["sections"]:
                 title = section.get("title", "")
                 if title:
@@ -289,17 +327,36 @@ def _extract_text_from_output(output: Output) -> str:
                 parts.append("")
 
     elif output_type == OutputType.BRIEFING:
-        if "summary" in content:
-            parts.append("## 摘要")
-            parts.append(content["summary"])
-        if "key_points" in content and isinstance(content["key_points"], list):
-            parts.append("\n## 要点")
-            for point in content["key_points"]:
-                parts.append(f"- {point}")
-        if "recommendations" in content and isinstance(content["recommendations"], list):
-            parts.append("\n## 建议")
-            for rec in content["recommendations"]:
-                parts.append(f"- {rec}")
+        sections = content.get("sections")
+        if isinstance(sections, list):
+            for section in sections:
+                if not isinstance(section, dict):
+                    continue
+                heading = section.get("heading", "")
+                if heading:
+                    parts.append(f"## {heading}")
+                points = section.get("points")
+                if isinstance(points, list):
+                    for point in points:
+                        if isinstance(point, dict):
+                            text = point.get("text") or ""
+                        else:
+                            text = str(point or "")
+                        if text:
+                            parts.append(f"- {text}")
+                parts.append("")
+        else:
+            if "summary" in content:
+                parts.append("## 摘要")
+                parts.append(content["summary"])
+            if "key_points" in content and isinstance(content["key_points"], list):
+                parts.append("\n## 要点")
+                for point in content["key_points"]:
+                    parts.append(f"- {point}")
+            if "recommendations" in content and isinstance(content["recommendations"], list):
+                parts.append("\n## 建议")
+                for rec in content["recommendations"]:
+                    parts.append(f"- {rec}")
 
     elif output_type == OutputType.SLIDES:
         if "markdown" in content and isinstance(content["markdown"], str):
@@ -321,17 +378,34 @@ def _extract_text_from_output(output: Output) -> str:
                             parts.append(f"- {bullet}")
 
     elif output_type == OutputType.STRUCTURED:
-        # Generic structured content
-        if "sections" in content:
-            for section in content["sections"]:
+        bullets = content.get("bullets")
+        if isinstance(bullets, list):
+            for bullet in bullets:
+                if isinstance(bullet, dict):
+                    text = bullet.get("text") or ""
+                else:
+                    text = str(bullet or "")
+                if text:
+                    parts.append(f"- {text}")
+        terms = content.get("terms")
+        if isinstance(terms, list) and terms:
+            parts.append("")
+            parts.append("## 术语")
+            for term in terms:
+                if term:
+                    parts.append(f"- {term}")
+        sections = content.get("sections")
+        if not bullets and isinstance(sections, list):
+            for section in sections:
+                if not isinstance(section, dict):
+                    continue
                 title = section.get("title", "")
                 if title:
                     parts.append(f"## {title}")
                 body = section.get("content", "")
                 if body:
                     parts.append(body)
-        else:
-            # Fallback: serialize as readable text
+        if not parts:
             parts.append(json.dumps(content, ensure_ascii=False, indent=2))
 
     # Fallback if no parts extracted
