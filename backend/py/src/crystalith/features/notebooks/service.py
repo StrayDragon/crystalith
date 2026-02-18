@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from cl_logs.logging import get_logger
 
 from crystalith.shared.cache.interfaces import CacheProvider
-from crystalith.features.templates.schemas import TemplateConfig
+from ..templates.schemas import TemplateConfig
 from crystalith.shared.db import Notebook, Session, SourceTag, Template
 
 from . import repo
