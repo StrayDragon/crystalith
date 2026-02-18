@@ -30,8 +30,29 @@ class _StubRedis:
     async def get(self, key: str) -> str | None:
         return self.store.get(key)
 
+    async def mget(self, keys: list[str]) -> list[str | None]:
+        return [self.store.get(key) for key in keys]
+
     async def set(self, key: str, value: str, *, ex: int | None = None) -> None:  # noqa: ARG002
         self.store[key] = value
+
+    def pipeline(self, *, transaction: bool = False):  # noqa: ANN001, ARG002
+        stub = self
+
+        class _Pipe:
+            def __init__(self) -> None:
+                self._ops: list[tuple[str, str]] = []
+
+            def set(self, key: str, value: str, *, ex: int | None = None):  # noqa: ANN001, ARG002
+                self._ops.append((key, value))
+                return self
+
+            async def execute(self) -> list[bool]:
+                for key, value in self._ops:
+                    stub.store[key] = value
+                return [True for _ in self._ops]
+
+        return _Pipe()
 
     async def delete(self, *keys: str) -> None:
         for key in keys:
@@ -66,6 +87,9 @@ async def test_redis_cache_roundtrip_and_invalidate_pattern(monkeypatch) -> None
     await cache.set("a:1", {"v": 1}, ttl=0)
     await cache.set("a:2", {"v": 2})
     assert await cache.get("a:1") == {"v": 1}
+
+    await cache.set_many({"b:1": {"v": 10}, "b:2": {"v": 20}}, ttl=0)
+    assert await cache.get_many(["b:1", "missing", "b:2"]) == [{"v": 10}, None, {"v": 20}]
 
     deleted = await cache.invalidate_pattern("a:*")
     assert deleted == 2

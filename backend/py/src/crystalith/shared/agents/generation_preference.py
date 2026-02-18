@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from crystalith.shared.types import OutputType
+
 
 GenerationPreference = Literal["quality", "speed"]
 
@@ -25,3 +27,26 @@ def tuning_for_preference(preference: GenerationPreference | None) -> Generation
     if preference == "speed":
         return SPEED_TUNING
     return DEFAULT_TUNING
+
+
+def tuning_for_request(output_type: OutputType, preference: GenerationPreference | None) -> GenerationTuning:
+    base = tuning_for_preference(preference)
+    if preference is None:
+        return base
+
+    try:
+        is_tool = bool(getattr(output_type, "x_meta", None).is_tool)
+    except Exception:  # noqa: BLE001 - best-effort
+        is_tool = False
+
+    if not is_tool:
+        return base
+
+    if preference == "quality":
+        return GenerationTuning(
+            top_k=min(20, int(base.top_k) + 2),
+            min_score=max(0.0, float(base.min_score) - 0.05),
+            agent_retries=int(base.agent_retries),
+        )
+
+    return base

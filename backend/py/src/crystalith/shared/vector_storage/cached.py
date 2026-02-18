@@ -181,8 +181,11 @@ async def cached_vector_search_many(
     missing_vectors: list[Sequence[float]] = []
     missing_keys: list[str] = []
 
-    for idx, (key, query_vector) in enumerate(zip(keys, query_vectors)):
-        cached = await cache.get(key)
+    cached_values = await cache.get_many(keys)
+    if len(cached_values) != len(keys):  # pragma: no cover - defensive
+        cached_values = [await cache.get(key) for key in keys]
+
+    for idx, (key, query_vector, cached) in enumerate(zip(keys, query_vectors, cached_values)):
         if cached is not None:
             logger.info(
                 "cache_hit",
@@ -244,19 +247,19 @@ async def cached_vector_search_many(
                 for query_vector in missing_vectors
             ]
 
+        set_items: dict[str, list[dict[str, float | int]]] = {}
         for position, key, results in zip(missing_positions, missing_keys, miss_groups):
             groups[position] = results
-            await cache.set(
-                key,
-                [
-                    {
-                        "source_id": result.entry.source_id,
-                        "chunk_id": result.entry.chunk_id,
-                        "score": result.score,
-                    }
-                    for result in results
-                ],
-                ttl=VECTOR_SEARCH_CACHE_TTL_S,
-            )
+            set_items[key] = [
+                {
+                    "source_id": result.entry.source_id,
+                    "chunk_id": result.entry.chunk_id,
+                    "score": result.score,
+                }
+                for result in results
+            ]
+
+        if set_items:
+            await cache.set_many(set_items, ttl=VECTOR_SEARCH_CACHE_TTL_S)
 
     return [group or [] for group in groups]
