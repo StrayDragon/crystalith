@@ -12,6 +12,7 @@ from .cache import EmbeddingCache
 from .interfaces import ChatProvider, EmbeddingProvider
 from .ollama_provider import OllamaChatProvider, OllamaEmbeddingProvider
 from .openai_provider import OpenAIChatProvider, OpenAIEmbeddingProvider
+from .test_provider import TestChatProvider, TestEmbeddingProvider
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,6 +154,8 @@ def create_chat_provider_by_model_id(
                 timeout=_resolve_ai_timeout(settings),
                 max_retries=_resolve_ai_retries(settings),
             )
+        case "test":
+            return TestChatProvider(model=model_config.model)
         case provider:
             if plugins is None:
                 raise ValueError(f"Unsupported provider for model {model_id}: {provider}")
@@ -207,6 +210,8 @@ def create_embedding_provider_by_model_id(
                 max_retries=_resolve_ai_retries(settings),
                 cache=_EMBEDDING_CACHE,
             )
+        case "test":
+            return TestEmbeddingProvider(model=model_config.model)
         case provider:
             if plugins is None:
                 raise ValueError(f"Unsupported provider for model {model_id}: {provider}")

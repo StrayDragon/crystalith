@@ -71,6 +71,15 @@ def _sqlite_add_column_ddl(
     default_sql = _sqlite_default_sql(column, dialect)
     nullable = column.nullable
 
+    # SQLite does not allow non-constant defaults in `ALTER TABLE ... ADD COLUMN`
+    # (e.g. DEFAULT CURRENT_TIMESTAMP). When we detect such a default, prefer a
+    # nullable column without a default rather than failing schema ensure.
+    if default_sql is not None:
+        normalized_default = default_sql.strip().strip("()").upper()
+        if normalized_default in {"CURRENT_TIMESTAMP", "CURRENT_DATE", "CURRENT_TIME"}:
+            default_sql = None
+            nullable = True
+
     if not nullable and default_sql is None and table_has_rows:
         default_sql = _sqlite_fallback_default(column, dialect)
         if default_sql is None:

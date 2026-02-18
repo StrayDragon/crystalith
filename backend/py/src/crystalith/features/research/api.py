@@ -39,7 +39,7 @@ LOCK_TIMEOUT_SECONDS = 600
 
 def _lock_now() -> datetime.datetime:
     # Use naive UTC timestamps to match DB storage.
-    return datetime.datetime.utcnow()
+    return datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
 
 
 def _strip_tz(dt: datetime.datetime) -> datetime.datetime:
@@ -988,6 +988,10 @@ async def stream_research_progress(
             "iteration": research.current_iteration,
         })
 
+        # Release any read transaction started by initial loads so SQLite
+        # writers (background workers) can commit while we sleep/poll.
+        await session.rollback()
+
         # Poll for updates
         poll_interval = 1.0  # Balance responsiveness and DB load
         max_polls = 3600  # 1 hour max
@@ -1168,6 +1172,10 @@ async def stream_research_progress(
                     "iteration": current_iteration,
                     "message": "等待您确认搜索计划",
                 })
+
+            # End the read transaction for this poll so background writers can
+            # commit while we sleep.
+            await session.rollback()
 
     return StreamingResponse(
         generate_stream(),

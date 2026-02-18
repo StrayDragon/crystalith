@@ -9,46 +9,48 @@ from httpx import ASGITransport, AsyncClient
 
 from crystalith.shared.db import create_db_manager
 from crystalith.shared.db.migrations import upgrade_head
-from crystalith.shared.deps import get_ai_provider, get_chat_provider, get_embedding_provider
-from crystalith.shared.ai.interfaces import EmbeddingProvider
+from crystalith.shared.config import Settings
 from crystalith.shared.vector_storage import InMemoryVectorStore
 from crystalith.web.app import create_app
 
 
-class DummyEmbeddingProvider:
-    provider = "test"
-    model = "dummy"
-
-    async def embed(self, texts):
-        return [[1.0, 0.0, 0.0] for _ in texts]
-
-    async def embed_batch(self, texts, *, batch_size=100):
-        return await self.embed(texts)
-
-
-class DummyChatProvider:
-    provider = "test"
-    model = "dummy"
-
-    async def chat(self, messages):
-        return "Test answer"
-
-    async def chat_stream(self, messages):
-        yield "Test answer"
+@pytest.fixture
+def test_settings() -> Settings:
+    return Settings(
+        app={"cors": {"allow_origins": []}},
+        cache={"provider": "memory"},
+        vector_storage={"provider": "memory"},
+        models={
+            "defaults": {"chat": "test-chat", "embedding": "test-embed"},
+            "available": [
+                {
+                    "id": "test-chat",
+                    "provider": "test",
+                    "model": "test-chat",
+                    "display_name": "Test Chat",
+                    "roles": ["chat"],
+                },
+                {
+                    "id": "test-embed",
+                    "provider": "test",
+                    "model": "test-embed",
+                    "display_name": "Test Embed",
+                    "roles": ["embed"],
+                },
+            ],
+        },
+    )
 
 
 @pytest.fixture
-async def app():
+async def app(test_settings: Settings):
     tempdir = tempfile.TemporaryDirectory()
     db_path = Path(tempdir.name) / "test.db"
     db_url = f"sqlite+aiosqlite:///{db_path}"
     await asyncio.to_thread(upgrade_head, db_url)
     manager = create_db_manager(db_url)
     vector_store = InMemoryVectorStore()
-    app = create_app(db_manager=manager, vector_store=vector_store)
-    app.dependency_overrides[get_embedding_provider] = lambda: DummyEmbeddingProvider()  # type: ignore[assignment]
-    app.dependency_overrides[get_ai_provider] = lambda: DummyChatProvider()  # type: ignore[assignment]
-    app.dependency_overrides[get_chat_provider] = lambda: DummyChatProvider()  # type: ignore[assignment]
+    app = create_app(settings=test_settings, db_manager=manager, vector_store=vector_store)
     yield app
     await manager.close()
     tempdir.cleanup()

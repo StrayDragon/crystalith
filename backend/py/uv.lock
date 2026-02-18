@@ -954,6 +954,7 @@ dev = [
     { name = "jinja2sql" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
     { name = "pytest-xdist" },
 ]
 
@@ -1002,6 +1003,7 @@ dev = [
     { name = "jinja2sql", specifier = ">=0.3.4" },
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-asyncio", specifier = ">=1.1.0" },
+    { name = "pytest-cov", specifier = ">=5.0.0" },
     { name = "pytest-xdist", specifier = ">=3.5.0" },
 ]
 

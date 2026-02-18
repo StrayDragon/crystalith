@@ -1,0 +1,78 @@
+from __future__ import annotations
+
+import datetime
+import enum
+from fnmatch import fnmatch
+from typing import Any, AsyncIterator
+
+import pytest
+
+from crystalith.shared.cache.redis_cache import RedisCache, _json_default
+
+
+class _E(enum.Enum):
+    A = "a"
+
+
+def test_json_default_serializes_supported_types() -> None:
+    assert _json_default(datetime.datetime(2020, 1, 1)) == "2020-01-01T00:00:00"
+    assert _json_default(_E.A) == "a"
+    with pytest.raises(TypeError):
+        _json_default(object())
+
+
+class _StubRedis:
+    def __init__(self) -> None:
+        self.store: dict[str, str] = {}
+        self.closed = False
+        self.connection_pool = self
+
+    async def get(self, key: str) -> str | None:
+        return self.store.get(key)
+
+    async def set(self, key: str, value: str, *, ex: int | None = None) -> None:  # noqa: ARG002
+        self.store[key] = value
+
+    async def delete(self, *keys: str) -> None:
+        for key in keys:
+            self.store.pop(key, None)
+
+    async def scan_iter(self, *, match: str) -> AsyncIterator[str]:
+        for key in list(self.store.keys()):
+            if fnmatch(key, match):
+                yield key
+
+    async def close(self) -> None:
+        self.closed = True
+
+    async def disconnect(self) -> None:
+        self.closed = True
+
+
+@pytest.mark.asyncio
+async def test_redis_cache_roundtrip_and_invalidate_pattern(monkeypatch) -> None:
+    stub = _StubRedis()
+
+    class _RedisModule:
+        @staticmethod
+        def from_url(_url: str, *, decode_responses: bool):  # noqa: ANN001, ARG004
+            return stub
+
+    monkeypatch.setattr("crystalith.shared.cache.redis_cache.redis", _RedisModule)
+
+    cache = RedisCache(redis_url="redis://localhost:6379/0", ttl=1.0)
+    assert await cache.get("missing") is None
+
+    await cache.set("a:1", {"v": 1}, ttl=0)
+    await cache.set("a:2", {"v": 2})
+    assert await cache.get("a:1") == {"v": 1}
+
+    deleted = await cache.invalidate_pattern("a:*")
+    assert deleted == 2
+    assert await cache.get("a:1") is None
+
+    deleted2 = await cache.invalidate_pattern("a:*")
+    assert deleted2 == 0
+
+    await cache.close()
+    assert stub.closed is True
