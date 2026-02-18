@@ -113,6 +113,7 @@ Notes:
 ## Notes
 
 - `api` automatically runs Alembic migrations on startup (`AUTO_DB_INIT=1`).
+- Startup cleanup of `FAILED` sources is **disabled by default**. To opt in, set `app.startup.cleanup_failed_sources: true` in `config/app.yaml` (or set `AUTO_CLEANUP_FAILED_SOURCES=1`). This deletes DB rows and may orphan related files/vectors.
 - Data is persisted via Docker volumes (`pgdata`, `chromadata`, `api_data`).
 - Redis is optional; enable it with:
 
@@ -139,6 +140,8 @@ Copy `.env.example` to `.env` and edit as needed:
 - `APT_MIRROR` / `UV_INDEX_URL` / `NPM_REGISTRY`: Build-time mirrors (requires rebuild)
 
 The `api` service includes `extra_hosts: host.docker.internal:host-gateway` so containers can reach host services on Linux.
+
+If you deploy the UI and API on different origins, update `config/app.yaml` to allow your UI origin via `app.cors.allow_origins`.
 
 ### Using host Ollama (Linux)
 
