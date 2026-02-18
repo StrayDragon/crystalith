@@ -14,6 +14,7 @@ from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.generation_preference import GenerationPreference, tuning_for_preference
 from crystalith.shared.agents.models import build_chat_model, build_chat_model_from_model_id
 from crystalith.shared.observability import classify_error_kind
+from crystalith.shared.agents.output_postprocess import postprocess_output
 from crystalith.shared.agents.output_schemas import (
     BriefingOutput,
     BulletsOutput,
@@ -45,6 +46,8 @@ class OutputGraphState:
     trace_id: str | None = None
     request_id: str | None = None
     preference: GenerationPreference | None = None
+    effective_prompt: str = ""
+    plugin_schema_used: bool = False
     source_ids: list[int] | None = None
     top_k: int = 10
     min_score: float = 0.0
@@ -457,6 +460,7 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         if plugins is not None:
             plugin = plugins.output_types.get(state.output_type.value)
             if plugin is not None:
+                state.plugin_schema_used = True
                 schema = plugin.schema
                 if plugin.default_prompt:
                     default_prompt = plugin.default_prompt
@@ -489,6 +493,7 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         )
 
         effective_prompt = state.prompt.strip() or default_prompt
+        state.effective_prompt = effective_prompt
         user_prompt = _build_output_prompt(state.output_type, effective_prompt, state.context)
         generation_started = perf_counter()
         try:
@@ -526,6 +531,27 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
             )
             state.content = _fallback_output(state.output_type, effective_prompt)
 
+        return PostprocessOutput()
+
+
+@dataclass
+class PostprocessOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
+    """Apply deterministic postprocessing before mapping citations."""
+
+    async def run(
+        self, ctx: GraphRunContext[OutputGraphState, StudioDeps]
+    ) -> "MapCitations":
+        state = ctx.state
+
+        result = postprocess_output(
+            output_type=state.output_type,
+            content=state.content,
+            prompt_title=state.effective_prompt or state.prompt,
+            citations_count=len(state.citations),
+            preference=state.preference,
+            apply_structural=not state.plugin_schema_used,
+        )
+        state.content = result.content
         return MapCitations()
 
 
@@ -548,8 +574,7 @@ class MapCitations(BaseNode[OutputGraphState, StudioDeps, Output]):
 
         citation_map = {index: cit for index, cit in enumerate(state.citations, start=1)}
         fallback_citations = state.citations[:1]
-        normalized = _ensure_minimum_content(state.output_type, state.content, state.prompt)
-        state.content = _map_citations(normalized, citation_map, fallback_citations)
+        state.content = _map_citations(state.content, citation_map, fallback_citations)
         return PersistOutput()
 
 
@@ -596,7 +621,7 @@ class PersistOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
 # =============================================================================
 
 OUTPUT_GRAPH: Graph[OutputGraphState, StudioDeps, Output] = Graph(
-    nodes=[ResolveContext, GenerateOutput, MapCitations, PersistOutput]
+    nodes=[ResolveContext, GenerateOutput, PostprocessOutput, MapCitations, PersistOutput]
 )
 
 
