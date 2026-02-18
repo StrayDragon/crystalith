@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from openai import AsyncOpenAI
+from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.models.test import TestModel
 from pydantic_ai.providers.ollama import OllamaProvider
 from pydantic_ai.providers.openai import OpenAIProvider
 
@@ -41,7 +43,7 @@ def _validate_ollama_host(host: str, model_id: str) -> None:
         )
 
 
-def build_chat_model(settings: Settings) -> OpenAIChatModel:
+def build_chat_model(settings: Settings) -> Model:
     """Build the default chat model from settings.
 
     Uses models.defaults.chat to determine which model to use.
@@ -50,7 +52,7 @@ def build_chat_model(settings: Settings) -> OpenAIChatModel:
         settings: Application settings
 
     Returns:
-        Configured OpenAIChatModel instance
+        Configured chat model instance
 
     Raises:
         ModelConfigurationError: If no default chat model is configured
@@ -68,7 +70,7 @@ def build_chat_model(settings: Settings) -> OpenAIChatModel:
 def build_chat_model_from_model_id(
     settings: Settings,
     model_id: str,
-) -> OpenAIChatModel:
+) -> Model:
     """Build a chat model from a specific model ID.
 
     Looks up the model configuration from settings.models.available and
@@ -79,7 +81,7 @@ def build_chat_model_from_model_id(
         model_id: The model ID to use (must exist in settings.models.available)
 
     Returns:
-        Configured OpenAIChatModel instance
+        Configured chat model instance
 
     Raises:
         ModelConfigurationError: If the model is not found or doesn't support chat
@@ -104,10 +106,13 @@ def build_chat_model_from_model_id(
     return _build_chat_model_with_config(model_config)
 
 
-def _build_chat_model_with_config(model_config: ModelConfig) -> OpenAIChatModel:
+def _build_chat_model_with_config(model_config: ModelConfig) -> Model:
     """Build a chat model using model-specific configuration."""
     provider = model_config.provider
     model_name = model_config.model
+
+    if provider == "test":
+        return TestModel(seed=0, model_name=model_name)
 
     if provider == "openai":
         openai_settings = model_config.get_openai_config()

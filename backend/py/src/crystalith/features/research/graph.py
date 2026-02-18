@@ -368,6 +368,7 @@ class WaitForApproval(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]
                         modified_plan = latest_step.input_data.get("plan") if latest_step.input_data else None
                         if modified_plan:
                             state.search_plan = SearchPlan(
+                                iteration=state.current_iteration,
                                 queries=[
                                     SearchQuery(**q) for q in modified_plan.get("queries", [])
                                 ],
