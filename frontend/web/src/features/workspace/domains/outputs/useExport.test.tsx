@@ -8,7 +8,7 @@ import { useExport } from './useExport';
 
 const toastMock = vi.mocked(toast);
 
-const writeFileMock = vi.fn(async () => undefined);
+const writeFileMock = vi.fn(async (_options: { fileName: string }) => undefined);
 
 vi.mock('jspdf', () => ({
   jsPDF: class JsPdfMock {
@@ -130,6 +130,8 @@ test('exports pdf and pptx via special exporters', async () => {
   });
 
   expect(writeFileMock).toHaveBeenCalledTimes(1);
-  expect(writeFileMock.mock.calls[0][0].fileName).toMatch(/\.pptx$/i);
+  const options = writeFileMock.mock.calls[0]?.[0];
+  expect(options).toBeTruthy();
+  expect(options!.fileName).toMatch(/\.pptx$/i);
   clickSpy.mockRestore();
 });

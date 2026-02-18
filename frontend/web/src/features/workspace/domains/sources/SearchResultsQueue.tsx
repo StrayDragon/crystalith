@@ -17,8 +17,10 @@ import { Virtuoso } from 'react-virtuoso';
 
 import SearchResultCard, { type SearchResultItem } from './SearchResultCard';
 import type { SearchQueueItem } from './useSources';
-import type { ExtractorInfoResponse as ExtractorInfo, ExtractorType } from '../../../../api/generated';
+import type { ExtractorInfoResponse as ExtractorInfo } from '../../../../api/generated';
 import { LAYER_LEVELS } from '../../../../shared/layer';
+
+type ExtractorType = ExtractorInfo['type'];
 
 interface SearchResultsQueueProps {
   results: SearchResultItem[];
@@ -531,7 +533,7 @@ export default function SearchResultsQueue({
                     <Tooltip content="作为全文导入" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
                       <IconButton
                         size="sm"
-                        onClick={handleAddWithFetch}
+                        onClick={() => handleAddWithFetch()}
                         disabled={isAdding}
                         aria-label="作为全文导入"
                         className="w-6 h-6 min-w-[24px] bg-blue-600 text-white"

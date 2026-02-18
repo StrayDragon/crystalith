@@ -3942,7 +3942,7 @@
   "paths": {
     "/v1/models": {
       "get": {
-        "description": "List all available AI models.\n\nOptionally filter by role (chat, embed, edit, autocomplete) or capability.",
+        "description": "List all available AI models.\n\nOptionally filter by role (chat, embed, edit, autocomplete) or capability.\nSet refresh=true to re-discover Ollama models.",
         "operationId": "list_models_v1_models_get",
         "parameters": [
           {
@@ -3959,6 +3959,16 @@
                 }
               ],
               "title": "Capability"
+            }
+          },
+          {
+            "in": "query",
+            "name": "refresh",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Refresh",
+              "type": "boolean"
             }
           },
           {

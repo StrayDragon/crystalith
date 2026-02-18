@@ -2433,6 +2433,10 @@ export type ListModelsV1ModelsGetData = {
          */
         capability?: null | string;
         /**
+         * Refresh
+         */
+        refresh?: boolean;
+        /**
          * Role
          */
         role?: 'autocomplete' | 'chat' | 'edit' | 'embed' | null;

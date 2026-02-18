@@ -118,7 +118,9 @@ beforeEach(() => {
 
 test('handleSearch updates queue status and notice on success', async () => {
   vi.mocked(searchSources).mockResolvedValue({
-    results: [{ url: 'https://example.com', title: 'Example' }],
+    data: {
+      results: [{ url: 'https://example.com', title: 'Example' }],
+    },
   } as any);
 
   const { result } = renderHook(() => useSources());
@@ -155,8 +157,10 @@ test('handleSearch updates queue status and notice on success', async () => {
 
 test('removeSources calls batch delete endpoint and refreshes list', async () => {
   vi.mocked(batchDeleteSources).mockResolvedValue({
-    deleted_count: 2,
-    deleted_ids: [3, 4],
+    data: {
+      deleted_count: 2,
+      deleted_ids: [3, 4],
+    },
   } as any);
 
   const { result } = renderHook(() => useSources());
@@ -180,7 +184,7 @@ test('removeSources calls batch delete endpoint and refreshes list', async () =>
 });
 
 test('handleUpload supports multiple files and exposes queue', async () => {
-  vi.mocked(uploadSource).mockResolvedValue({ id: 1 } as any);
+  vi.mocked(uploadSource).mockResolvedValue({ data: { id: 1 } } as any);
 
   const { result } = renderHook(() => useSources());
 
@@ -212,10 +216,12 @@ test('handleUpload supports multiple files and exposes queue', async () => {
 
 test('batchReembedSources calls dedicated batch endpoint', async () => {
   vi.mocked(batchReembedSources).mockResolvedValue({
-    reembedded_count: 2,
-    failed_count: 0,
-    reembedded_ids: [5, 6],
-    failed_ids: [],
+    data: {
+      reembedded_count: 2,
+      failed_count: 0,
+      reembedded_ids: [5, 6],
+      failed_ids: [],
+    },
   } as any);
 
   const { result } = renderHook(() => useSources());
@@ -239,9 +245,11 @@ test('batchReembedSources calls dedicated batch endpoint', async () => {
 
 test('assignTagToSources sends selected source ids', async () => {
   vi.mocked(assignTagToSources).mockResolvedValue({
-    tag_id: 3,
-    source_ids: [1, 2],
-    count: 2,
+    data: {
+      tag_id: 3,
+      source_ids: [1, 2],
+      count: 2,
+    },
   } as any);
 
   const { result } = renderHook(() => useSources());

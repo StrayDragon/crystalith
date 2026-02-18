@@ -13,6 +13,7 @@ import {
 import { Close as CloseIcon, Edit as EditIcon } from '@mui/icons-material';
 
 import { getToolConfigV1WorkspaceToolsToolIdConfigGet as getToolConfig, type ToolConfigResponse } from '../../../../api/generated';
+import { unwrapData } from '../../../../api/unwrap';
 import { ModelSelector } from './ModelSelector';
 import type { OutputTypeId, WorkspaceTool } from '../../shared/types';
 import { getToolIcon, resolveTypeLabel, type StudioTone, TONE_COLORS } from './studioUtils';
@@ -25,7 +26,7 @@ interface StudioToolsGridProps {
   onOpenSlides?: (options?: {
     mode: 'config' | 'preview';
     slideId?: number | null;
-    queueStatus?: 'queued' | 'running' | 'error' | 'done' | null;
+    queueStatus?: 'queued' | 'running' | 'error' | 'done' | 'cancelled' | null;
     queueJobId?: string | null;
   }) => void;
   isConnected: boolean;
@@ -63,10 +64,12 @@ export default function StudioToolsGrid({
   useEffect(() => {
     if (!toolConfigOpen || !activeToolType || !isConnected) return;
 
+    let cancelled = false;
     const toolId = activeToolType.toLowerCase();
     setToolConfigLoading(true);
-    getToolConfig({ path: { tool_id: toolId } })
+    void unwrapData(getToolConfig<true>({ path: { tool_id: toolId } }))
       .then((config) => {
+        if (cancelled) return;
         setToolConfig(config);
         const defaultQuantity =
           config.quantity_options?.find((o) => o.is_default)?.id || 'standard';
@@ -76,11 +79,17 @@ export default function StudioToolsGrid({
         setConfigDifficulty(defaultDifficulty);
       })
       .catch(() => {
+        if (cancelled) return;
         setToolConfig(null);
       })
       .finally(() => {
+        if (cancelled) return;
         setToolConfigLoading(false);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [toolConfigOpen, activeToolType, isConnected]);
 
   const handleToolConfigOpen = useCallback(

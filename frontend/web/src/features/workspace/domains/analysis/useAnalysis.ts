@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { analyzeNotebookV1NotebooksNotebookIdAnalysisGet as analyzeNotebook, type AnalysisResult } from '../../../../api/generated';
+import { unwrapData } from '../../../../api/unwrap';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 
 interface AnalysisState {
@@ -43,9 +44,9 @@ export function useAnalysis() {
 
     setAnalysisState((prev) => ({ ...prev, isLoading: true, error: '' }));
     try {
-      const analysis = await analyzeNotebook({
+      const analysis = await unwrapData(analyzeNotebook<true>({
         path: { notebook_id: activeNotebookId },
-      });
+      }));
       setAnalysisState({ analysis, isLoading: false, error: '' });
       return analysis;
     } catch (error) {
