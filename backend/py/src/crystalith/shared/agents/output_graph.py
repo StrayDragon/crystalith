@@ -41,6 +41,8 @@ class OutputGraphState:
     notebook_id: int
     output_type: OutputType
     prompt: str
+    trace_id: str | None = None
+    request_id: str | None = None
     preference: GenerationPreference | None = None
     source_ids: list[int] | None = None
     top_k: int = 10
@@ -380,7 +382,10 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
 
         log.debug(
             "resolving context",
+            trace_id=state.trace_id,
+            request_id=state.request_id,
             notebook_id=state.notebook_id,
+            output_type=state.output_type.value,
             prompt_length=len(state.prompt),
             source_ids_count=len(state.source_ids or []),
             preference=state.preference,
@@ -402,6 +407,8 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
             state.resolved_chunk_ids = []
             log.info(
                 "context resolved (no embeddings)",
+                trace_id=state.trace_id,
+                request_id=state.request_id,
                 notebook_id=state.notebook_id,
                 output_type=state.output_type.value,
                 preference=state.preference,
@@ -485,6 +492,8 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
 
         log.info(
             "context resolved",
+            trace_id=state.trace_id,
+            request_id=state.request_id,
             notebook_id=state.notebook_id,
             output_type=state.output_type.value,
             preference=state.preference,
@@ -529,6 +538,8 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
 
         log.info(
             "generating output",
+            trace_id=state.trace_id,
+            request_id=state.request_id,
             output_type=state.output_type.value,
             prompt_length=len(state.prompt),
             context_length=len(state.context),
@@ -554,6 +565,8 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
             state.content = result.output.model_dump()
             log.info(
                 "output generation succeeded",
+                trace_id=state.trace_id,
+                request_id=state.request_id,
                 output_type=state.output_type.value,
                 content_keys=list(state.content.keys()) if isinstance(state.content, dict) else None,
                 model_id=state.model_id,
@@ -564,6 +577,8 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         except Exception as error:  # noqa: BLE001 - fallback for output generation
             log.warning(
                 "output generation failed, using fallback",
+                trace_id=state.trace_id,
+                request_id=state.request_id,
                 output_type=state.output_type.value,
                 error=type(error).__name__,
                 model_id=state.model_id,
@@ -587,6 +602,8 @@ class MapCitations(BaseNode[OutputGraphState, StudioDeps, Output]):
 
         log.debug(
             "mapping citations",
+            trace_id=state.trace_id,
+            request_id=state.request_id,
             output_type=state.output_type.value,
             citations_count=len(state.citations),
         )
@@ -623,6 +640,8 @@ class PersistOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         state.db_output = db_output
         log.info(
             "output persisted",
+            trace_id=state.trace_id,
+            request_id=state.request_id,
             output_id=db_output.id,
             notebook_id=state.notebook_id,
             output_type=state.output_type.value,
@@ -647,6 +666,8 @@ async def run_output_graph(
     prompt: str,
     deps: StudioDeps,
     *,
+    trace_id: str | None = None,
+    request_id: str | None = None,
     preference: GenerationPreference | None = None,
     source_ids: list[int] | None = None,
     top_k: int = 10,
@@ -667,6 +688,8 @@ async def run_output_graph(
         model_id: Optional model ID to use (overrides default from settings)
     """
     state = OutputGraphState(
+        trace_id=trace_id,
+        request_id=request_id,
         notebook_id=notebook_id,
         output_type=output_type,
         prompt=prompt,

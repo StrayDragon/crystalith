@@ -304,7 +304,7 @@ async def convert_source_qa_to_source(
             chunk_count=len(db_chunks),
         )
 
-        await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
+        await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
         return ConvertSourceQAToSourceResponse(
             source_id=source.id,
             filename=filename,

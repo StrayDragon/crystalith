@@ -296,6 +296,8 @@ async def _resolve_context(
     source_ids: list[int] | None,
     chunk_ids: list[int] | None = None,
     *,
+    trace_id: str | None = None,
+    request_id: str | None = None,
     top_k: int = DEFAULT_TOP_K,
     min_score: float = DEFAULT_MIN_SCORE,
 ) -> SlidesContext:
@@ -358,6 +360,8 @@ async def _resolve_context(
             context = format_context_from_chunk_ids(normalized_chunk_ids, chunk_map)
             log.info(
                 "slides context resolved (reused chunk_ids)",
+                trace_id=trace_id,
+                request_id=request_id,
                 notebook_id=notebook_id,
                 chunks=len(normalized_chunk_ids),
                 duration_ms=int((perf_counter() - started) * 1000),
@@ -372,6 +376,8 @@ async def _resolve_context(
     if not embeddings:
         log.info(
             "slides context resolved (no embeddings)",
+            trace_id=trace_id,
+            request_id=request_id,
             notebook_id=notebook_id,
             embed_ms=embed_ms,
             duration_ms=int((perf_counter() - started) * 1000),
@@ -402,6 +408,8 @@ async def _resolve_context(
     if not results:
         log.info(
             "slides context resolved (no results)",
+            trace_id=trace_id,
+            request_id=request_id,
             notebook_id=notebook_id,
             top_k=top_k,
             min_score=min_score,
@@ -441,6 +449,8 @@ async def _resolve_context(
 
     log.info(
         "slides context resolved",
+        trace_id=trace_id,
+        request_id=request_id,
         notebook_id=notebook_id,
         top_k=top_k,
         min_score=min_score,
@@ -466,6 +476,8 @@ async def generate_slides_outline(
     source_ids: list[int] | None,
     generation_config: SlideGenerationConfig | dict[str, object] | None = None,
     model_id: str | None = None,
+    trace_id: str | None = None,
+    request_id: str | None = None,
 ) -> tuple[SlideOutline, list[int]]:
     normalized_config = _normalize_generation_config(generation_config)
     preference = normalized_config.preference
@@ -483,6 +495,8 @@ async def generate_slides_outline(
         notebook_id,
         prompt,
         source_ids,
+        trace_id=trace_id,
+        request_id=request_id,
         top_k=top_k,
         min_score=min_score,
     )
@@ -508,6 +522,8 @@ async def generate_slides_outline(
         outline = result.output
         log.info(
             "slides outline generated",
+            trace_id=trace_id,
+            request_id=request_id,
             slides=len(outline.slides),
             notebook_id=notebook_id,
             preference=preference,
@@ -520,6 +536,8 @@ async def generate_slides_outline(
     except Exception as error:  # noqa: BLE001
         log.warning(
             "slides outline generation failed",
+            trace_id=trace_id,
+            request_id=request_id,
             error=type(error).__name__,
             notebook_id=notebook_id,
             preference=preference,
@@ -544,6 +562,8 @@ async def generate_slides_markdown(
     chunk_ids: list[int] | None = None,
     generation_config: SlideGenerationConfig | dict[str, object] | None = None,
     model_id: str | None = None,
+    trace_id: str | None = None,
+    request_id: str | None = None,
 ) -> tuple[str, list[int]]:
     normalized_config = _normalize_generation_config(generation_config)
     preference = normalized_config.preference
@@ -562,6 +582,8 @@ async def generate_slides_markdown(
         prompt,
         source_ids,
         chunk_ids,
+        trace_id=trace_id,
+        request_id=request_id,
         top_k=top_k,
         min_score=min_score,
     )
@@ -587,6 +609,8 @@ async def generate_slides_markdown(
         markdown = result.output.markdown
         log.info(
             "slides markdown generated",
+            trace_id=trace_id,
+            request_id=request_id,
             length=len(markdown),
             notebook_id=notebook_id,
             preference=preference,
@@ -599,6 +623,8 @@ async def generate_slides_markdown(
     except Exception as error:  # noqa: BLE001
         log.warning(
             "slides markdown generation failed",
+            trace_id=trace_id,
+            request_id=request_id,
             error=type(error).__name__,
             notebook_id=notebook_id,
             preference=preference,

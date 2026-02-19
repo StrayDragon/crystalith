@@ -15,7 +15,7 @@ from crystalith.shared.db import Chunk, Source, SourceTag, SourceTagMap
 from crystalith.shared.parsers import Parser, ParserFactory, TranscriptionProvider, UnsupportedDocumentError
 from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.types import SourceStatus
-from crystalith.shared.vector_storage import VectorStore
+from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
 
 from .api_schemas import SourceRead
 
@@ -34,9 +34,12 @@ def _sources_list_cache_key(
     return f"notebook:{notebook_id}:sources:list:{digest}"
 
 
-async def _invalidate_notebook_source_caches(cache: CacheProvider, *, notebook_id: int) -> None:
+async def _invalidate_notebook_source_caches(
+    cache: CacheProvider, *, notebook_id: int, vectors_changed: bool = False
+) -> None:
     await cache.invalidate_pattern(f"notebook:{notebook_id}:sources:*")
-    await cache.invalidate_pattern(f"notebook:{notebook_id}:vector_search:*")
+    if vectors_changed:
+        await bump_vector_epoch(cache=cache, notebook_id=notebook_id)
 
 
 def _resolve_parser(file: UploadFile, transcriber: TranscriptionProvider, plugins: PluginRegistry) -> Parser:

@@ -159,7 +159,7 @@ async def batch_reembed_sources(
             failed_ids.append(source_id)
 
     if reembedded_ids:
-        await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
+        await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
 
     return SourceBatchReembedResponse(
         reembedded_ids=reembedded_ids,
@@ -192,7 +192,7 @@ async def reembed_source(
         require_failed=True,
     )
     tags_by_source = await _load_tag_names_for_sources(session, source_ids=[source.id])
-    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
+    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
     return _source_to_read(source, chunk_count=chunk_count, tags=tags_by_source.get(source.id, []))
 
 
@@ -223,7 +223,7 @@ async def batch_delete_sources(
     for source_id in source_ids:
         await vector_store.remove_source(source_id)
 
-    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
+    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
     return SourceBatchDeleteResponse(deleted_ids=source_ids, deleted_count=len(source_ids))
 
 
@@ -259,7 +259,7 @@ async def delete_source(
     await session.delete(source)
     await session.commit()
     await vector_store.remove_source(source_id)
-    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
+    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
 
 
 @router.get("/{source_id}/chunks", response_model=list[ChunkRead])
