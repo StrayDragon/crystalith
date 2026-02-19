@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import os
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from time import perf_counter
 
@@ -15,7 +16,7 @@ from crystalith.shared.context import TokenCounter
 from crystalith.shared.db import Chunk, Source
 from crystalith.shared.types import OutputType, SourceStatus
 from crystalith.shared.utils import normalize_whitespace
-from crystalith.shared.vector_storage import VectorSearchResult, cached_vector_search
+from crystalith.shared.vector_storage import VectorSearchResult, cached_vector_search, cached_vector_search_many
 
 
 @dataclass(frozen=True, slots=True)
@@ -187,6 +188,53 @@ async def _vector_search(
         source_ids=source_ids,
     )
 
+
+async def _vector_search_many(
+    deps: StudioDeps,
+    *,
+    notebook_id: int,
+    query_vectors: Sequence[Sequence[float]],
+    trace_id: str | None,
+    request_id: str | None,
+    top_k: int,
+    min_score: float,
+    source_ids: list[int],
+) -> list[list[VectorSearchResult]]:
+    if deps.cache is not None:
+        return await cached_vector_search_many(
+            cache=deps.cache,
+            vector_store=deps.vector_store,
+            notebook_id=notebook_id,
+            query_vectors=query_vectors,
+            trace_id=trace_id,
+            request_id=request_id,
+            top_k=top_k,
+            min_score=min_score,
+            source_ids=source_ids,
+        )
+
+    search_many = getattr(deps.vector_store, "search_many", None)
+    if callable(search_many):
+        return await search_many(
+            notebook_id=notebook_id,
+            query_vectors=query_vectors,
+            top_k=top_k,
+            min_score=min_score,
+            source_ids=source_ids,
+        )
+
+    return await asyncio.gather(
+        *[
+            deps.vector_store.search(
+                notebook_id=notebook_id,
+                query_vector=query_vector,
+                top_k=top_k,
+                min_score=min_score,
+                source_ids=source_ids,
+            )
+            for query_vector in query_vectors
+        ]
+    )
 
 def _merge_search_results(
     result_groups: list[list[VectorSearchResult]],
@@ -483,21 +531,21 @@ async def retrieve_context(
         )
 
     search_started = perf_counter()
-    tasks = [
-        _vector_search(
+    query_vectors = [list(vector) for vector in embeddings if vector]
+    result_groups = (
+        await _vector_search_many(
             deps,
             notebook_id=notebook_id,
-            query_vector=list(vector),
+            query_vectors=query_vectors,
             trace_id=trace_id,
             request_id=request_id,
             top_k=top_k,
             min_score=min_score,
             source_ids=normalized_source_ids,
         )
-        for vector in embeddings
-        if vector
-    ]
-    result_groups = await asyncio.gather(*tasks) if tasks else []
+        if query_vectors
+        else []
+    )
     results = _merge_search_results(result_groups)
     search_ms = int((perf_counter() - search_started) * 1000)
     if timings_ms is not None:

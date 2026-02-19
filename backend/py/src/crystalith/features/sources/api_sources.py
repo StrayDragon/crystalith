@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.cache import CacheProvider
+from crystalith.shared.cache.epochs import get_sources_epoch
 from crystalith.shared.db import Chunk, Notebook, Source, SourceTag, SourceTagMap
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore
@@ -59,8 +60,10 @@ async def list_sources(
     if not normalized_tag:
         normalized_tag = None
 
+    epoch = await get_sources_epoch(cache=cache, notebook_id=notebook_id)
     cache_key = _sources_list_cache_key(
         notebook_id=notebook_id,
+        epoch=epoch,
         tag=normalized_tag,
         sort_by=sort_by,
         sort_order=sort_order,
@@ -284,7 +287,8 @@ async def list_source_chunks(
     if source is None or source.notebook_id != notebook_id:
         raise HTTPException(status_code=404, detail="Source not found")
 
-    cache_key = f"notebook:{notebook_id}:sources:{source_id}:chunks"
+    epoch = await get_sources_epoch(cache=cache, notebook_id=notebook_id)
+    cache_key = f"notebook:{notebook_id}:sources:v{int(epoch)}:{source_id}:chunks"
     cached = await cache.get(cache_key)
     if cached is not None:
         logger.info("cache_hit", key=cache_key)

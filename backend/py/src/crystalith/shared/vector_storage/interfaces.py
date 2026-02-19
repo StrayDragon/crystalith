@@ -39,6 +39,18 @@ class VectorStore(Protocol):
     ) -> list[VectorSearchResult]:
         ...
 
+    async def search_many(
+        self,
+        *,
+        notebook_id: int,
+        query_vectors: Sequence[Sequence[float]],
+        top_k: int = 5,
+        min_score: float = 0.2,
+        source_ids: Sequence[int] | None = None,
+        exclude_source_ids: Sequence[int] | None = None,
+    ) -> list[list[VectorSearchResult]]:
+        ...
+
     async def remove_source(self, source_id: int) -> None:
         ...
 

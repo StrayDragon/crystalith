@@ -154,6 +154,28 @@ class SQLiteVectorStore:
             exclude_source_id_set=exclude_source_id_set,
         )
 
+    async def search_many(
+        self,
+        *,
+        notebook_id: int,
+        query_vectors: Sequence[Sequence[float]],
+        top_k: int = 5,
+        min_score: float = 0.2,
+        source_ids: Sequence[int] | None = None,
+        exclude_source_ids: Sequence[int] | None = None,
+    ) -> list[list[VectorSearchResult]]:
+        return [
+            await self.search(
+                notebook_id=notebook_id,
+                query_vector=query_vector,
+                top_k=top_k,
+                min_score=min_score,
+                source_ids=source_ids,
+                exclude_source_ids=exclude_source_ids,
+            )
+            for query_vector in query_vectors
+        ]
+
     async def _brute_force_search(
         self,
         *,

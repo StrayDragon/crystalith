@@ -61,8 +61,14 @@ async def test_source_list_and_chunks_are_cached_and_invalidated(client, app) ->
         assert list_resp2.status_code == 200
         assert list_resp2.json() == list_resp1.json()
 
-        list_cache_sets = [k for k in cache.set_calls if k.startswith(f"notebook:{notebook_id}:sources:list:")]
+        list_cache_sets = [
+            k
+            for k in cache.set_calls
+            if k.startswith(f"notebook:{notebook_id}:sources:v") and ":list:" in k
+        ]
         assert len(list_cache_sets) == 1
+        list_cache_key = list_cache_sets[0]
+        epoch = int(list_cache_key.split(":sources:v", 1)[1].split(":", 1)[0])
 
         chunks_url = f"/v1/notebooks/{notebook_id}/sources/{source_id}/chunks"
         chunks_resp1 = await client.get(chunks_url)
@@ -71,18 +77,23 @@ async def test_source_list_and_chunks_are_cached_and_invalidated(client, app) ->
         assert chunks_resp2.status_code == 200
         assert chunks_resp2.json() == chunks_resp1.json()
 
-        chunks_cache_sets = [k for k in cache.set_calls if k == f"notebook:{notebook_id}:sources:{source_id}:chunks"]
+        expected_chunks_key = f"notebook:{notebook_id}:sources:v{epoch}:{source_id}:chunks"
+        chunks_cache_sets = [k for k in cache.set_calls if k == expected_chunks_key]
         assert len(chunks_cache_sets) == 1
 
         delete_resp = await client.delete(f"/v1/notebooks/{notebook_id}/sources/{source_id}")
         assert delete_resp.status_code == 204
-        assert f"notebook:{notebook_id}:sources:*" in cache.invalidate_calls
+        assert f"notebook:{notebook_id}:sources:*" not in cache.invalidate_calls
 
         list_resp3 = await client.get(list_url)
         assert list_resp3.status_code == 200
         assert list_resp3.json() == []
 
-        list_cache_sets = [k for k in cache.set_calls if k.startswith(f"notebook:{notebook_id}:sources:list:")]
+        list_cache_sets = [
+            k
+            for k in cache.set_calls
+            if k.startswith(f"notebook:{notebook_id}:sources:v") and ":list:" in k
+        ]
         assert len(list_cache_sets) == 2
     finally:
         app.dependency_overrides.pop(get_cache_provider, None)
