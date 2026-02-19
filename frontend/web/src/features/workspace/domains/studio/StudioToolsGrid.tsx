@@ -15,7 +15,9 @@ import { Close as CloseIcon, Edit as EditIcon } from '@mui/icons-material';
 import { getToolConfigV1WorkspaceToolsToolIdConfigGet as getToolConfig, type ToolConfigResponse } from '../../../../api/generated';
 import { unwrapData } from '../../../../api/unwrap';
 import { ModelSelector } from './ModelSelector';
-import type { OutputTypeId, WorkspaceTool } from '../../shared/types';
+import type { GenerationPreferenceSetting, OutputTypeId, WorkspaceTool } from '../../shared/types';
+import { useGenerationPreference } from '../../shared/hooks/useGenerationPreference';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { getToolIcon, resolveTypeLabel, type StudioTone, TONE_COLORS } from './studioUtils';
 
 interface StudioToolsGridProps {
@@ -44,6 +46,7 @@ export default function StudioToolsGrid({
   isFullscreen = false,
   hasSelectedSources,
 }: StudioToolsGridProps) {
+  const { preference, setPreference } = useGenerationPreference();
   const [toolConfigOpen, setToolConfigOpen] = useState(false);
   const [activeToolType, setActiveToolType] = useState<OutputTypeId | null>(null);
   const [configQuantity, setConfigQuantity] = useState<string>('standard');
@@ -118,11 +121,56 @@ export default function StudioToolsGrid({
   }, []);
 
   const handleGenerateWithConfig = useCallback(() => {
-    if (activeToolType) {
-      onGenerateOutput(activeToolType, configModelId);
+    if (!activeToolType) return;
+
+    const activeTool = tools.find((tool) => tool.outputType === activeToolType) ?? null;
+    const quantityLabel =
+      toolConfig?.quantity_options?.find((option) => option.id === configQuantity)?.label ??
+      configQuantity;
+    const difficultyLabel =
+      toolConfig?.difficulty_options?.find((option) => option.id === configDifficulty)?.label ??
+      configDifficulty;
+
+    const constraints: string[] = [];
+    if (configQuantity) {
+      constraints.push(`- 数量：${quantityLabel}`);
     }
+    if (toolConfig?.difficulty_options && configDifficulty) {
+      constraints.push(`- 难度：${difficultyLabel}`);
+    }
+    if (configTopic.trim()) {
+      constraints.push(`- 主题：${configTopic.trim()}`);
+    }
+
+    const promptParts: string[] = [];
+    if (activeTool?.prompt?.trim()) {
+      promptParts.push(activeTool.prompt.trim());
+    }
+    if (constraints.length > 0) {
+      promptParts.push(`约束：\n${constraints.join('\n')}`);
+    }
+
+    const configuredPrompt = promptParts.join('\n\n').trim();
+
+    const s = useWorkspaceStore.getState();
+    s.setOutputType(activeToolType);
+    if (configuredPrompt) {
+      s.setRefinePrompt(configuredPrompt);
+    }
+    onGenerateOutput(undefined, configModelId);
     handleToolConfigClose();
-  }, [activeToolType, configModelId, onGenerateOutput, handleToolConfigClose]);
+  }, [
+    activeToolType,
+    configDifficulty,
+    configModelId,
+    configQuantity,
+    configTopic,
+    handleToolConfigClose,
+    onGenerateOutput,
+    toolConfig?.difficulty_options,
+    toolConfig?.quantity_options,
+    tools,
+  ]);
 
   if (toolsLoading) {
     return (
@@ -333,6 +381,39 @@ export default function StudioToolsGrid({
                   />
                 </div>
               )}
+
+              <div>
+                <Typography variant="small" className="mb-2 font-medium text-gray-700">
+                  生成倾向
+                </Typography>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      { id: 'default', label: '默认' },
+                      { id: 'quality', label: '质量' },
+                      { id: 'speed', label: '速度' },
+                    ] as const satisfies ReadonlyArray<{
+                      id: GenerationPreferenceSetting;
+                      label: string;
+                    }>
+                  ).map((option) => (
+                    <Button
+                      key={option.id}
+                      variant={preference === option.id ? 'filled' : 'outlined'}
+                      size="sm"
+                      onClick={() => setPreference(option.id)}
+                      className={`rounded-full px-3 py-1.5 normal-case font-normal border-gray-200 ${
+                        preference === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
+                      }`}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+                <Typography variant="small" className="mt-2 text-xs text-gray-500">
+                  质量：更高召回/重试；速度：更低延迟。
+                </Typography>
+              </div>
 
               {isConnected && (
                 <div>

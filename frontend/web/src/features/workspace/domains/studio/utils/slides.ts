@@ -4,6 +4,7 @@ export function normalizeGenerationConfig(raw: any): SlideGenerationConfig | nul
   if (!raw || typeof raw !== 'object') return null;
   const config = raw as Record<string, any>;
   return {
+    preference: config.preference ?? null,
     quantity: config.quantity ?? null,
     audience: config.audience ?? null,
     structure: config.structure ?? null,

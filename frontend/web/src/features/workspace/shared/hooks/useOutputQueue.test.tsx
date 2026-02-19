@@ -6,6 +6,7 @@ import { renderHook } from '../../../../test-utils/renderHook';
 import { useWorkspaceStore } from '../state/workspaceStore';
 import { useOutputQueue } from './useOutputQueue';
 import { createOutputV1NotebooksNotebookIdOutputsOutputTypePost as createOutput } from '../../../../api/generated';
+import { GENERATION_PREFERENCE_STORAGE_KEY } from './useGenerationPreference';
 
 vi.mock('swr', () => ({
   default: vi.fn(),
@@ -27,6 +28,8 @@ const onQueueDone = vi.fn();
 const markJobCompleted = vi.fn();
 
 beforeEach(() => {
+  window.localStorage.removeItem(GENERATION_PREFERENCE_STORAGE_KEY);
+
   // Reset Zustand store
   useWorkspaceStore.setState({
     notebooks: [],
@@ -137,6 +140,48 @@ test('enqueueOutputJob processes and updates outputs', async () => {
     body: {
       prompt: 'hello',
       source_ids: [1],
+      model_id: undefined,
+    },
+    signal: expect.any(AbortSignal),
+  });
+});
+
+test('enqueueOutputJob propagates generation preference', async () => {
+  window.localStorage.setItem(GENERATION_PREFERENCE_STORAGE_KEY, 'speed');
+
+  vi.mocked(createOutput).mockResolvedValue({
+    data: {
+      id: 12,
+      type: 'FAQ',
+      prompt: 'hello',
+      chunk_ids: [1],
+      content: {},
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    },
+  } as any);
+
+  setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
+  const { result } = renderHook(() => useOutputQueueHarness({ isConnected: true }));
+
+  act(() => {
+    result.current.enqueueOutputJob({
+      type: 'FAQ',
+      prompt: 'hello',
+      sourceIds: [1],
+    });
+  });
+
+  await waitFor(() => {
+    expect(result.current.outputQueueJobs[0].status).toBe('done');
+  });
+
+  expect(createOutput).toHaveBeenCalledWith({
+    path: { notebook_id: 1, output_type: 'FAQ' },
+    body: {
+      prompt: 'hello',
+      source_ids: [1],
+      preference: 'speed',
       model_id: undefined,
     },
     signal: expect.any(AbortSignal),

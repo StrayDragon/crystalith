@@ -9,9 +9,10 @@ import {
   listOutputsV1NotebooksNotebookIdOutputsGet as listOutputs,
 } from '../../../../api/generated';
 import { unwrapData } from '../../../../api/unwrap';
-import type { OutputItem, OutputTypeId, SlideGenerationConfig } from '../types';
+import type { GenerationPreference, OutputItem, OutputTypeId, SlideGenerationConfig } from '../types';
 import { useWorkspaceStore } from '../state/workspaceStore';
 import { createId, formatTimestamp, normalizeOutput } from '../utils';
+import { readInitialGenerationPreferenceForApi } from './useGenerationPreference';
 
 type OutputQueueStatus = 'queued' | 'running' | 'done' | 'error' | 'cancelled';
 
@@ -25,6 +26,7 @@ export interface OutputQueueJob {
   createdAtLabel: string;
   notebookId: number | null;
   modelId?: string;
+  preference?: GenerationPreference;
   draftId?: number | null;
   title?: string;
   generationConfig?: SlideGenerationConfig | null;
@@ -41,7 +43,9 @@ interface UseOutputQueueOptions {
 
 function normalizeSlideGenerationConfig(config?: SlideGenerationConfig | null) {
   if (!config) return undefined;
+  const preference = config.preference ?? undefined;
   return {
+    ...(preference ? { preference } : {}),
     quantity: config.quantity ?? undefined,
     audience: config.audience ?? undefined,
     structure: config.structure ?? undefined,
@@ -229,6 +233,7 @@ export function useOutputQueue({
         onQueueReset();
       }
       onQueueTotal();
+      const preference = readInitialGenerationPreferenceForApi();
       const job: OutputQueueJob = {
         id: createId(),
         type,
@@ -239,6 +244,7 @@ export function useOutputQueue({
         createdAtLabel: formatTimestamp(createdAt),
         notebookId: activeNotebookId,
         modelId,
+        preference,
       };
       updateOutputQueueJobs((prev) => [job, ...prev]);
       return job;
@@ -368,11 +374,13 @@ export function useOutputQueue({
             throw new Error('missing slide draft');
           }
         } else if (job.notebookId) {
+          const preference = job.preference;
           const response = await unwrapData(createOutput<true>({
             path: { notebook_id: job.notebookId, output_type: job.type },
             body: {
               prompt: job.prompt || undefined,
               source_ids: job.sourceIds.length ? job.sourceIds : undefined,
+              ...(preference ? { preference } : {}),
               model_id: job.modelId || undefined,
             },
             signal: abortController.signal,
