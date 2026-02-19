@@ -501,7 +501,7 @@ async def retrieve_context(
 
     seed_text = seed.strip() or "Summarize the notebook sources."
     seeds = [seed_text]
-    if preference == "quality" and _env_bool(MULTI_QUERY_ENV, False):
+    if _env_bool(MULTI_QUERY_ENV, preference == "quality"):
         seeds = _build_query_seeds(seed_text, output_type)
 
     embed_started = perf_counter()
