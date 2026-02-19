@@ -328,6 +328,7 @@ async def _resolve_context(
         min_score=min_score,
         results=retrieved.stats.results,
         unique_sources=retrieved.stats.unique_sources,
+        query_count=retrieved.stats.query_count,
         truncated=retrieved.stats.truncated,
         embed_ms=retrieved.timings_ms.get("embed_ms"),
         search_ms=retrieved.timings_ms.get("search_ms"),

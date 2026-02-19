@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import os
 import re
 from dataclasses import dataclass
 from time import perf_counter
@@ -25,6 +27,7 @@ class RetrievalStats:
     budget_tokens: int | None
     used_tokens: int | None
     reused_chunk_ids: bool
+    query_count: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +44,8 @@ class RetrievedContext:
     chunks: list[RetrievedChunk]
     stats: RetrievalStats
     timings_ms: dict[str, int]
+
+MULTI_QUERY_ENV = "CRYSTALITH_RETRIEVAL_MULTI_QUERY"
 
 
 def _resolve_tokenizer_model_name(
@@ -118,6 +123,84 @@ def _dedup_text_key(text: str) -> str:
     cleaned = re.sub(r"[^\w\s]+", " ", cleaned)
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     return hashlib.sha256(cleaned.encode("utf-8")).hexdigest()
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _build_query_seeds(seed_text: str, output_type: OutputType) -> list[str]:
+    seeds: list[str] = [seed_text]
+
+    type_prompt = ""
+    try:
+        type_prompt = getattr(output_type, "x_meta", None).prompt or ""
+    except Exception:  # noqa: BLE001 - best-effort
+        type_prompt = ""
+
+    if type_prompt:
+        seeds.append(type_prompt.strip())
+    seeds.append(f"{seed_text}\n\nOutput type: {output_type.value}")
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for item in seeds:
+        cleaned = item.strip()
+        if not cleaned or cleaned in seen:
+            continue
+        deduped.append(cleaned)
+        seen.add(cleaned)
+    return deduped
+
+
+async def _vector_search(
+    deps: StudioDeps,
+    *,
+    notebook_id: int,
+    query_vector: list[float],
+    trace_id: str | None,
+    request_id: str | None,
+    top_k: int,
+    min_score: float,
+    source_ids: list[int],
+) -> list[VectorSearchResult]:
+    if deps.cache is not None:
+        return await cached_vector_search(
+            cache=deps.cache,
+            vector_store=deps.vector_store,
+            notebook_id=notebook_id,
+            query_vector=query_vector,
+            trace_id=trace_id,
+            request_id=request_id,
+            top_k=top_k,
+            min_score=min_score,
+            source_ids=source_ids,
+        )
+    return await deps.vector_store.search(
+        notebook_id=notebook_id,
+        query_vector=query_vector,
+        top_k=top_k,
+        min_score=min_score,
+        source_ids=source_ids,
+    )
+
+
+def _merge_search_results(
+    result_groups: list[list[VectorSearchResult]],
+) -> list[VectorSearchResult]:
+    merged: dict[int, VectorSearchResult] = {}
+    for group in result_groups:
+        for result in group:
+            chunk_id = int(result.entry.chunk_id)
+            existing = merged.get(chunk_id)
+            if existing is None or float(result.score) > float(existing.score):
+                merged[chunk_id] = result
+    output = list(merged.values())
+    output.sort(key=lambda item: float(item.score), reverse=True)
+    return output
 
 
 def _apply_dedup_and_diversity(
@@ -355,6 +438,7 @@ async def retrieve_context(
                 budget_tokens=budget_tokens,
                 used_tokens=used_tokens,
                 reused_chunk_ids=True,
+                query_count=0,
             )
             return RetrievedContext(
                 context_text=context_text,
@@ -368,8 +452,12 @@ async def retrieve_context(
             )
 
     seed_text = seed.strip() or "Summarize the notebook sources."
+    seeds = [seed_text]
+    if preference == "quality" and _env_bool(MULTI_QUERY_ENV, False):
+        seeds = _build_query_seeds(seed_text, output_type)
+
     embed_started = perf_counter()
-    embeddings = await deps.embedder.embed_batch([seed_text])
+    embeddings = await deps.embedder.embed_batch(seeds)
     embed_ms = int((perf_counter() - embed_started) * 1000)
     if timings_ms is not None:
         timings_ms["embed_ms"] = embed_ms
@@ -384,6 +472,7 @@ async def retrieve_context(
             budget_tokens=budget_tokens,
             used_tokens=0,
             reused_chunk_ids=False,
+            query_count=len(seeds),
         )
         return RetrievedContext(
             context_text="",
@@ -393,28 +482,23 @@ async def retrieve_context(
             timings_ms=timings,
         )
 
-    query_vector = embeddings[0]
     search_started = perf_counter()
-    if deps.cache is not None:
-        results = await cached_vector_search(
-            cache=deps.cache,
-            vector_store=deps.vector_store,
+    tasks = [
+        _vector_search(
+            deps,
             notebook_id=notebook_id,
-            query_vector=query_vector,
+            query_vector=list(vector),
             trace_id=trace_id,
             request_id=request_id,
             top_k=top_k,
             min_score=min_score,
             source_ids=normalized_source_ids,
         )
-    else:
-        results = await deps.vector_store.search(
-            notebook_id=notebook_id,
-            query_vector=query_vector,
-            top_k=top_k,
-            min_score=min_score,
-            source_ids=normalized_source_ids,
-        )
+        for vector in embeddings
+        if vector
+    ]
+    result_groups = await asyncio.gather(*tasks) if tasks else []
+    results = _merge_search_results(result_groups)
     search_ms = int((perf_counter() - search_started) * 1000)
     if timings_ms is not None:
         timings_ms["search_ms"] = search_ms
@@ -430,6 +514,7 @@ async def retrieve_context(
             budget_tokens=budget_tokens,
             used_tokens=0,
             reused_chunk_ids=False,
+            query_count=len(seeds),
         )
         return RetrievedContext(
             context_text="",
@@ -483,6 +568,7 @@ async def retrieve_context(
         budget_tokens=budget_tokens,
         used_tokens=used_tokens,
         reused_chunk_ids=False,
+        query_count=len(seeds),
     )
 
     return RetrievedContext(
