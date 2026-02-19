@@ -21,6 +21,11 @@ initializePlugins();
 export default function OutputContent({ output }: OutputContentProps) {
   const content = output.content ?? {};
   const isFallback = (content as any)._fallback === true;
+  const warnings = useMemo(() => {
+    const raw = (content as any)._warnings;
+    if (!Array.isArray(raw)) return [];
+    return raw.filter((item) => typeof item === 'string') as string[];
+  }, [content]);
   const typeId = output.type as OutputTypeId;
   const { isExporting, activeFormat, getSupportedFormats, exportOutput } = useExport();
   const renderDescriptor = useWorkspaceStore((s) => s.outputTypeRenderDescriptors[typeId] ?? null);
@@ -42,6 +47,21 @@ export default function OutputContent({ output }: OutputContentProps) {
 
   return (
     <div className="space-y-3">
+      {import.meta.env.DEV && warnings.length > 0 ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          <div className="font-semibold">Debug warnings</div>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {warnings.map((warning, index) => (
+              <span
+                key={`${warning}-${index}`}
+                className="rounded-full bg-amber-100 px-2 py-0.5 font-mono text-[11px] text-amber-900 dark:bg-amber-500/20 dark:text-amber-100"
+              >
+                {warning}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <div className="flex items-center justify-end gap-2">
         {isExporting && activeFormat ? (
           <span className="text-xs text-gray-500 dark:text-slate-300" aria-live="polite">
