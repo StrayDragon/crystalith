@@ -167,6 +167,9 @@ def ensure_minimum_content(
         return content
 
     if output_type == OutputType.PARAGRAPH:
+        text = content.get("text")
+        if not isinstance(text, str) or not text.strip():
+            return fallback_output(output_type, prompt_title)
         citations = content.get("citations")
         if not isinstance(citations, list) or not citations:
             content["citations"] = [1]
@@ -185,6 +188,115 @@ def ensure_minimum_content(
         return content
 
     return content
+
+
+def needs_repair(output_type: OutputType, content: Any) -> bool:
+    if not isinstance(content, dict):
+        return True
+    if content.get("_fallback") is True:
+        return False
+
+    def is_blank(value: Any) -> bool:
+        return not isinstance(value, str) or not value.strip()
+
+    if output_type == OutputType.FAQ:
+        items = content.get("items")
+        if not isinstance(items, list) or not items:
+            return True
+        for item in items:
+            if not isinstance(item, dict):
+                return True
+            if is_blank(item.get("question")) or is_blank(item.get("answer")):
+                return True
+        return False
+    if output_type == OutputType.GUIDE:
+        modules = content.get("modules")
+        if not isinstance(modules, list) or not modules:
+            return True
+        for module in modules:
+            if not isinstance(module, dict):
+                return True
+            if is_blank(module.get("title")):
+                return True
+            objective = module.get("objective")
+            if not isinstance(objective, dict) or is_blank(objective.get("text")):
+                return True
+            key_points = module.get("key_points")
+            if not isinstance(key_points, list) or not key_points:
+                return True
+            for item in key_points:
+                if not isinstance(item, dict) or is_blank(item.get("text")):
+                    return True
+        return False
+    if output_type == OutputType.TIMELINE:
+        events = content.get("events")
+        if not isinstance(events, list) or not events:
+            return True
+        for event in events:
+            if not isinstance(event, dict):
+                return True
+            if is_blank(event.get("event")) or is_blank(event.get("description")):
+                return True
+        return False
+    if output_type == OutputType.MINDMAP:
+        root = content.get("root")
+        if not isinstance(root, dict):
+            return True
+        if is_blank(root.get("label")):
+            return True
+        children = root.get("children")
+        if not isinstance(children, list) or not children:
+            return True
+        return False
+    if output_type == OutputType.QUIZ:
+        questions = content.get("questions")
+        if not isinstance(questions, list) or not questions:
+            return True
+        for question in questions:
+            if not isinstance(question, dict):
+                return True
+            if is_blank(question.get("question")) or is_blank(question.get("answer")):
+                return True
+        return False
+    if output_type == OutputType.BRIEFING:
+        sections = content.get("sections")
+        if not isinstance(sections, list) or not sections:
+            return True
+        for section in sections:
+            if not isinstance(section, dict):
+                return True
+            if is_blank(section.get("heading")):
+                return True
+            points = section.get("points")
+            if not isinstance(points, list) or not points:
+                return True
+            for point in points:
+                if not isinstance(point, dict) or is_blank(point.get("text")):
+                    return True
+        return False
+    if output_type == OutputType.PARAGRAPH:
+        text = content.get("text")
+        return is_blank(text)
+    if output_type == OutputType.BULLETS:
+        items = content.get("items")
+        if not isinstance(items, list) or not items:
+            return True
+        for item in items:
+            if not isinstance(item, dict) or is_blank(item.get("text")):
+                return True
+        return False
+    if output_type == OutputType.STRUCTURED:
+        bullets = content.get("bullets")
+        title = content.get("title")
+        if is_blank(title):
+            return True
+        if not isinstance(bullets, list) or not bullets:
+            return True
+        for bullet in bullets:
+            if not isinstance(bullet, dict) or is_blank(bullet.get("text")):
+                return True
+        return False
+    return False
 
 
 def _sanitize_citation_list(value: Any, *, max_index: int) -> tuple[list[int], bool]:

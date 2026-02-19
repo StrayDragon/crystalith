@@ -184,6 +184,7 @@ export default function SlidesStudioDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isQueueing, setIsQueueing] = useState(false);
   const [events, setEvents] = useState<{ type: string; message: string }[]>([]);
+  const [debugTimings, setDebugTimings] = useState<Record<string, number> | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [configPreference, setConfigPreference] = useState<GenerationPreferenceSetting>(() => globalPreference);
   const [configQuantity, setConfigQuantity] = useState('');
@@ -691,6 +692,7 @@ export default function SlidesStudioDialog({
       closeEventSource();
       setIsGenerating(true);
       setEvents([]);
+      setDebugTimings(null);
       setError('');
       const eventSource = new EventSource(url);
       eventSourceRef.current = eventSource;
@@ -733,7 +735,18 @@ export default function SlidesStudioDialog({
         void handleFinish(true);
       });
 
-      eventSource.addEventListener('done', async () => {
+      eventSource.addEventListener('done', async (event) => {
+        try {
+          const data = JSON.parse((event as MessageEvent).data || '{}');
+          if (data && typeof data === 'object' && data.timings_ms && typeof data.timings_ms === 'object') {
+            setDebugTimings(data.timings_ms);
+            if (import.meta.env.DEV) {
+              console.log('slides done timings_ms', data.timings_ms);
+            }
+          }
+        } catch {
+          // ignore parse errors
+        }
         await handleFinish();
       });
     },
@@ -1549,6 +1562,20 @@ export default function SlidesStudioDialog({
                       <span className="flex-1">{event.message}</span>
                     </div>
                   ))}
+                </div>
+              )}
+              {import.meta.env.DEV && debugTimings && !isConfigOnly && !isPreviewMode && (
+                <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-3 py-2 text-xs text-gray-700 dark:text-slate-200 space-y-2">
+                  <Typography variant="small" className="text-gray-500 dark:text-slate-400 text-xs">
+                    timings_ms
+                  </Typography>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(debugTimings)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([key, value]) => (
+                        <Chip key={key} value={`${key}: ${value}ms`} size="sm" variant="ghost" color="gray" />
+                      ))}
+                  </div>
                 </div>
               )}
               <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 flex-1 min-h-0 overflow-auto">
