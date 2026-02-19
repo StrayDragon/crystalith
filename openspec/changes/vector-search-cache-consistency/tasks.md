@@ -17,4 +17,5 @@
 ## 4. Verification
 
 - [x] 4.1 单测：epoch bump 后旧 key 不再命中；TTL 生效
-- [ ] 4.2 回归：Redis 场景下写路径不触发 SCAN 删除大量键（性能与稳定性对比）
+- [x] 4.2 回归：Redis 场景下写路径不触发 SCAN 删除大量键（性能与稳定性对比）
+  - 记录：Redis `MONITOR` 观察到写路径 `SCAN MATCH notebook:{id}:sources:*` + `GET/SET notebook:{id}:vector_epoch`；未出现 `SCAN ... vector_search:*`，vector_search key 以 `v{epoch}` 版本化并使用 `EX 300`。
