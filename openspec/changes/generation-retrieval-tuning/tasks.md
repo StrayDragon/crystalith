@@ -26,4 +26,5 @@
 ## 6. Verification
 
 - [x] 6.1 单测：budget 截断、去重、多样性裁剪、multi-query 合并策略
-- [ ] 6.2 回归：对比接入前后的 outputs/slides 生成稳定性与时延（结合 observability）
+- [x] 6.2 回归：对比接入前后的 outputs/slides 生成稳定性与时延（结合 observability）
+  - 记录：通过 `CRYSTALITH_OBSERVABILITY_SSE_TIMINGS=1` 验证 slides outline/markdown SSE timings；markdown 阶段可见 `reuse_ms` 且无 `embed_ms/search_ms`。
