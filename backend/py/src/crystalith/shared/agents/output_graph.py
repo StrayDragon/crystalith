@@ -13,6 +13,7 @@ from cl_logs.logging import get_logger
 from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.generation_preference import GenerationPreference, tuning_for_preference
 from crystalith.shared.agents.models import build_chat_model, build_chat_model_from_model_id
+from crystalith.shared.observability import classify_error_kind
 from crystalith.shared.agents.output_schemas import (
     BriefingOutput,
     BulletsOutput,
@@ -413,6 +414,7 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
                 output_type=state.output_type.value,
                 preference=state.preference,
                 embed_ms=embed_ms,
+                total_ms=int((perf_counter() - started) * 1000),
                 duration_ms=int((perf_counter() - started) * 1000),
             )
             return GenerateOutput()
@@ -425,6 +427,8 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
                 vector_store=deps.vector_store,
                 notebook_id=state.notebook_id,
                 query_vector=query_vector,
+                trace_id=state.trace_id,
+                request_id=state.request_id,
                 top_k=state.top_k,
                 min_score=state.min_score,
                 source_ids=normalized_source_ids,
@@ -444,6 +448,8 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
             state.resolved_chunk_ids = []
             log.info(
                 "context resolved (no results)",
+                trace_id=state.trace_id,
+                request_id=state.request_id,
                 notebook_id=state.notebook_id,
                 output_type=state.output_type.value,
                 preference=state.preference,
@@ -451,6 +457,7 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
                 min_score=state.min_score,
                 embed_ms=embed_ms,
                 search_ms=search_ms,
+                total_ms=int((perf_counter() - started) * 1000),
                 duration_ms=int((perf_counter() - started) * 1000),
             )
             return GenerateOutput()
@@ -504,6 +511,7 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
             search_ms=search_ms,
             db_ms=db_ms,
             format_ms=format_ms,
+            total_ms=int((perf_counter() - started) * 1000),
             duration_ms=int((perf_counter() - started) * 1000),
         )
         return GenerateOutput()
@@ -563,6 +571,7 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         try:
             result = await agent.run(user_prompt, deps=deps)
             state.content = result.output.model_dump()
+            generate_ms = int((perf_counter() - generation_started) * 1000)
             log.info(
                 "output generation succeeded",
                 trace_id=state.trace_id,
@@ -572,19 +581,25 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                 model_id=state.model_id,
                 preference=state.preference,
                 agent_retries=tuning.agent_retries,
-                duration_ms=int((perf_counter() - generation_started) * 1000),
+                fallback=False,
+                generate_ms=generate_ms,
+                duration_ms=generate_ms,
             )
         except Exception as error:  # noqa: BLE001 - fallback for output generation
+            generate_ms = int((perf_counter() - generation_started) * 1000)
             log.warning(
                 "output generation failed, using fallback",
                 trace_id=state.trace_id,
                 request_id=state.request_id,
                 output_type=state.output_type.value,
                 error=type(error).__name__,
+                error_kind=classify_error_kind(error),
                 model_id=state.model_id,
                 preference=state.preference,
                 agent_retries=tuning.agent_retries,
-                duration_ms=int((perf_counter() - generation_started) * 1000),
+                fallback=True,
+                generate_ms=generate_ms,
+                duration_ms=generate_ms,
             )
             state.content = _fallback_output(state.output_type, effective_prompt)
 
@@ -638,6 +653,7 @@ class PersistOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         await deps.session.refresh(db_output)
 
         state.db_output = db_output
+        persist_ms = int((perf_counter() - persist_started) * 1000)
         log.info(
             "output persisted",
             trace_id=state.trace_id,
@@ -646,7 +662,8 @@ class PersistOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
             notebook_id=state.notebook_id,
             output_type=state.output_type.value,
             preference=state.preference,
-            duration_ms=int((perf_counter() - persist_started) * 1000),
+            persist_ms=persist_ms,
+            duration_ms=persist_ms,
         )
         return End(db_output)
 

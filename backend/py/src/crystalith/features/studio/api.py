@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import datetime
 import json
-import uuid
+import os
 from collections.abc import AsyncGenerator
+from time import perf_counter
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -17,6 +18,7 @@ from cl_logs.logging import get_logger
 from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.models import ModelConfigurationError
 from crystalith.shared.cache import CacheProvider
+from crystalith.shared.observability import new_trace_id
 from crystalith.shared.deps import (
     get_cache_provider,
     get_db_session,
@@ -42,6 +44,14 @@ log = get_logger(__name__)
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/slides", tags=["slides"])
 
 SLIDE_RUNNING_STALE_AFTER = datetime.timedelta(minutes=10)
+SSE_TIMINGS_ENV = "CRYSTALITH_OBSERVABILITY_SSE_TIMINGS"
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() not in {"0", "false", "no", "off"}
 
 
 class SlideDraftCreate(BaseModel):
@@ -326,7 +336,7 @@ async def generate_outline_stream(
     model_id: str | None = None,
 ) -> StreamingResponse:
     slide = await _get_slide(session, notebook_id, slide_id)
-    trace_id = uuid.uuid4().hex
+    trace_id = new_trace_id()
     request_id = request.headers.get("x-request-id") or request.headers.get("x-correlation-id") or trace_id
     normalized_source_ids = _normalize_source_ids(slide.source_ids)
     if not normalized_source_ids:
@@ -343,6 +353,9 @@ async def generate_outline_stream(
         slide.status = SlideStatus.RUNNING
         slide.error_message = None
         await session.commit()
+
+        overall_started = perf_counter()
+        timings_ms: dict[str, int] = {}
 
         deps = StudioDeps(
             settings=settings,
@@ -366,16 +379,23 @@ async def generate_outline_stream(
                 model_id=model_id,
                 trace_id=trace_id,
                 request_id=request_id,
+                timings_ms=timings_ms,
             )
+            persist_started = perf_counter()
             slide.outline = outline.model_dump()
             slide.stage = SlideStage.OUTLINE
             slide.status = SlideStatus.IDLE
             slide.chunk_ids = resolved_chunk_ids
             await session.commit()
             await session.refresh(slide)
+            timings_ms["persist_ms"] = int((perf_counter() - persist_started) * 1000)
+            timings_ms["total_ms"] = int((perf_counter() - overall_started) * 1000)
 
             yield _sse_event("progress", {"trace_id": trace_id, "stage": "outline", "message": "大纲生成完成", "progress": 100})
-            yield _sse_event("done", {"trace_id": trace_id, "slide_id": slide.id})
+            done_payload = {"trace_id": trace_id, "slide_id": slide.id}
+            if _env_bool(SSE_TIMINGS_ENV, False):
+                done_payload["timings_ms"] = timings_ms
+            yield _sse_event("done", done_payload)
         except asyncio.CancelledError:
             if slide.status == SlideStatus.RUNNING:
                 slide.status = SlideStatus.IDLE
@@ -410,7 +430,7 @@ async def generate_markdown_stream(
     model_id: str | None = None,
 ) -> StreamingResponse:
     slide = await _get_slide(session, notebook_id, slide_id)
-    trace_id = uuid.uuid4().hex
+    trace_id = new_trace_id()
     request_id = request.headers.get("x-request-id") or request.headers.get("x-correlation-id") or trace_id
     normalized_source_ids = _normalize_source_ids(slide.source_ids)
     if not normalized_source_ids:
@@ -430,6 +450,9 @@ async def generate_markdown_stream(
         slide.status = SlideStatus.RUNNING
         slide.error_message = None
         await session.commit()
+
+        overall_started = perf_counter()
+        timings_ms: dict[str, int] = {}
 
         deps = StudioDeps(
             settings=settings,
@@ -457,7 +480,9 @@ async def generate_markdown_stream(
                 model_id=model_id,
                 trace_id=trace_id,
                 request_id=request_id,
+                timings_ms=timings_ms,
             )
+            persist_started = perf_counter()
             slide.markdown = markdown
             slide.stage = SlideStage.MARKDOWN
             slide.status = SlideStatus.IDLE
@@ -467,9 +492,14 @@ async def generate_markdown_stream(
             write_preview_markdown(slide.markdown or "")
             await _sync_output(session, slide)
             await session.refresh(slide)
+            timings_ms["persist_ms"] = int((perf_counter() - persist_started) * 1000)
+            timings_ms["total_ms"] = int((perf_counter() - overall_started) * 1000)
 
             yield _sse_event("progress", {"trace_id": trace_id, "stage": "markdown", "message": "Markdown 生成完成", "progress": 100})
-            yield _sse_event("done", {"trace_id": trace_id, "slide_id": slide.id})
+            done_payload = {"trace_id": trace_id, "slide_id": slide.id}
+            if _env_bool(SSE_TIMINGS_ENV, False):
+                done_payload["timings_ms"] = timings_ms
+            yield _sse_event("done", done_payload)
         except asyncio.CancelledError:
             if slide.status == SlideStatus.RUNNING:
                 slide.status = SlideStatus.IDLE
