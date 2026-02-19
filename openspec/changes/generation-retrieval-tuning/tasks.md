@@ -20,10 +20,10 @@
 
 ## 5. Optional: multi-query retrieval (quality)
 
-- [ ] 5.1 引入 multi-query 开关（feature flag / settings）
-- [ ] 5.2 实现质量优先下的多 seed 检索与合并（dedup + diversity 裁剪）
+- [x] 5.1 引入 multi-query 开关（feature flag / settings）
+- [x] 5.2 实现质量优先下的多 seed 检索与合并（dedup + diversity 裁剪）
 
 ## 6. Verification
 
-- [ ] 6.1 单测：budget 截断、去重、多样性裁剪、multi-query 合并策略
+- [x] 6.1 单测：budget 截断、去重、多样性裁剪、multi-query 合并策略
 - [ ] 6.2 回归：对比接入前后的 outputs/slides 生成稳定性与时延（结合 observability）
