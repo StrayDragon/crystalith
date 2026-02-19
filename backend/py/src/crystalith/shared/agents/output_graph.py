@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from time import perf_counter
 from typing import Any
 
 from pydantic_ai import Agent
@@ -10,6 +11,7 @@ from sqlalchemy import select
 from cl_logs.logging import get_logger
 
 from crystalith.shared.agents.deps import StudioDeps
+from crystalith.shared.agents.generation_preference import GenerationPreference, tuning_for_preference
 from crystalith.shared.agents.models import build_chat_model, build_chat_model_from_model_id
 from crystalith.shared.agents.output_schemas import (
     BriefingOutput,
@@ -23,10 +25,10 @@ from crystalith.shared.agents.output_schemas import (
     TimelineOutput,
 )
 from crystalith.shared.db import Chunk, Output, Source
-from crystalith.shared.types import OutputType
+from crystalith.shared.types import OutputType, SourceStatus
 from crystalith.shared.schemas.citations import Citation
 from crystalith.shared.utils import extract_page_number, extract_paragraph_index, format_context
-from crystalith.shared.vector_storage import VectorSearchResult
+from crystalith.shared.vector_storage import VectorSearchResult, cached_vector_search
 
 
 log = get_logger(__name__)
@@ -39,6 +41,7 @@ class OutputGraphState:
     notebook_id: int
     output_type: OutputType
     prompt: str
+    preference: GenerationPreference | None = None
     source_ids: list[int] | None = None
     top_k: int = 10
     min_score: float = 0.0
@@ -373,12 +376,14 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
     ) -> "GenerateOutput":
         state = ctx.state
         deps = ctx.deps
+        started = perf_counter()
 
         log.debug(
             "resolving context",
             notebook_id=state.notebook_id,
             prompt_length=len(state.prompt),
             source_ids_count=len(state.source_ids or []),
+            preference=state.preference,
         )
 
         normalized_source_ids = _normalize_source_ids(state.source_ids)
@@ -388,43 +393,110 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
         await _validate_source_ids(deps.session, state.notebook_id, normalized_source_ids)
 
         seed = state.prompt or "Summarize the notebook sources."
+        embed_started = perf_counter()
         embeddings = await deps.embedder.embed_batch([seed])
+        embed_ms = int((perf_counter() - embed_started) * 1000)
         if not embeddings:
             state.context = ""
             state.citations = []
             state.resolved_chunk_ids = []
+            log.info(
+                "context resolved (no embeddings)",
+                notebook_id=state.notebook_id,
+                output_type=state.output_type.value,
+                preference=state.preference,
+                embed_ms=embed_ms,
+                duration_ms=int((perf_counter() - started) * 1000),
+            )
             return GenerateOutput()
 
         query_vector = embeddings[0]
-        results = await deps.vector_store.search(
-            notebook_id=state.notebook_id,
-            query_vector=query_vector,
-            top_k=state.top_k,
-            min_score=state.min_score,
-            source_ids=normalized_source_ids,
-        )
+        search_started = perf_counter()
+        if deps.cache is not None:
+            results = await cached_vector_search(
+                cache=deps.cache,
+                vector_store=deps.vector_store,
+                notebook_id=state.notebook_id,
+                query_vector=query_vector,
+                top_k=state.top_k,
+                min_score=state.min_score,
+                source_ids=normalized_source_ids,
+            )
+        else:
+            results = await deps.vector_store.search(
+                notebook_id=state.notebook_id,
+                query_vector=query_vector,
+                top_k=state.top_k,
+                min_score=state.min_score,
+                source_ids=normalized_source_ids,
+            )
+        search_ms = int((perf_counter() - search_started) * 1000)
         if not results:
             state.context = ""
             state.citations = []
             state.resolved_chunk_ids = []
+            log.info(
+                "context resolved (no results)",
+                notebook_id=state.notebook_id,
+                output_type=state.output_type.value,
+                preference=state.preference,
+                top_k=state.top_k,
+                min_score=state.min_score,
+                embed_ms=embed_ms,
+                search_ms=search_ms,
+                duration_ms=int((perf_counter() - started) * 1000),
+            )
             return GenerateOutput()
 
         chunk_ids = [result.entry.chunk_id for result in results]
+        db_started = perf_counter()
         rows = await deps.session.execute(
             select(Chunk, Source)
             .join(Source, Source.id == Chunk.source_id)
             .where(Chunk.id.in_(chunk_ids))
         )
+        db_ms = int((perf_counter() - db_started) * 1000)
         chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
 
-        citations: list[Citation] = []
+        valid_results: list[VectorSearchResult] = []
         for result in results:
+            mapping = chunk_map.get(result.entry.chunk_id)
+            if mapping is None:
+                continue
+            chunk, source = mapping
+            if source.status != SourceStatus.READY:
+                continue
+            if chunk.source_id != source.id or result.entry.source_id != source.id:
+                continue
+            if not chunk.text.strip():
+                continue
+            valid_results.append(result)
+
+        citations: list[Citation] = []
+        for result in valid_results:
             chunk, source = chunk_map[result.entry.chunk_id]
             citations.append(_build_citation(chunk, source, result.score))
 
-        state.context = format_context(results, chunk_map)
+        format_started = perf_counter()
+        state.context = format_context(valid_results, chunk_map)
+        format_ms = int((perf_counter() - format_started) * 1000)
         state.citations = citations
-        state.resolved_chunk_ids = chunk_ids
+        state.resolved_chunk_ids = [result.entry.chunk_id for result in valid_results]
+
+        log.info(
+            "context resolved",
+            notebook_id=state.notebook_id,
+            output_type=state.output_type.value,
+            preference=state.preference,
+            top_k=state.top_k,
+            min_score=state.min_score,
+            results=len(valid_results),
+            embed_ms=embed_ms,
+            search_ms=search_ms,
+            db_ms=db_ms,
+            format_ms=format_ms,
+            duration_ms=int((perf_counter() - started) * 1000),
+        )
         return GenerateOutput()
 
 
@@ -462,18 +534,21 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
             context_length=len(state.context),
             has_context=bool(state.context.strip()),
             model_id=state.model_id,
+            preference=state.preference,
         )
 
+        tuning = tuning_for_preference(state.preference)
         agent = Agent(
             model,
             output_type=schema,
             deps_type=StudioDeps,
             system_prompt=SYSTEM_PROMPT,
-            retries=2,
+            retries=tuning.agent_retries,
         )
 
         effective_prompt = state.prompt.strip() or default_prompt
         user_prompt = _build_output_prompt(state.output_type, effective_prompt, state.context)
+        generation_started = perf_counter()
         try:
             result = await agent.run(user_prompt, deps=deps)
             state.content = result.output.model_dump()
@@ -482,6 +557,9 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                 output_type=state.output_type.value,
                 content_keys=list(state.content.keys()) if isinstance(state.content, dict) else None,
                 model_id=state.model_id,
+                preference=state.preference,
+                agent_retries=tuning.agent_retries,
+                duration_ms=int((perf_counter() - generation_started) * 1000),
             )
         except Exception as error:  # noqa: BLE001 - fallback for output generation
             log.warning(
@@ -489,6 +567,9 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                 output_type=state.output_type.value,
                 error=type(error).__name__,
                 model_id=state.model_id,
+                preference=state.preference,
+                agent_retries=tuning.agent_retries,
+                duration_ms=int((perf_counter() - generation_started) * 1000),
             )
             state.content = _fallback_output(state.output_type, effective_prompt)
 
@@ -527,6 +608,7 @@ class PersistOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         state = ctx.state
         deps = ctx.deps
 
+        persist_started = perf_counter()
         db_output = Output(
             notebook_id=state.notebook_id,
             type=state.output_type,
@@ -539,6 +621,14 @@ class PersistOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         await deps.session.refresh(db_output)
 
         state.db_output = db_output
+        log.info(
+            "output persisted",
+            output_id=db_output.id,
+            notebook_id=state.notebook_id,
+            output_type=state.output_type.value,
+            preference=state.preference,
+            duration_ms=int((perf_counter() - persist_started) * 1000),
+        )
         return End(db_output)
 
 
@@ -557,6 +647,7 @@ async def run_output_graph(
     prompt: str,
     deps: StudioDeps,
     *,
+    preference: GenerationPreference | None = None,
     source_ids: list[int] | None = None,
     top_k: int = 10,
     min_score: float = 0.0,
@@ -569,6 +660,7 @@ async def run_output_graph(
         output_type: Type of output to generate
         prompt: User prompt for generation
         deps: Studio dependencies
+        preference: Optional generation preference tuning (quality/speed)
         source_ids: Optional source IDs to constrain retrieval
         top_k: Number of chunks to retrieve from the selected sources
         min_score: Minimum similarity score for chunk retrieval
@@ -578,6 +670,7 @@ async def run_output_graph(
         notebook_id=notebook_id,
         output_type=output_type,
         prompt=prompt,
+        preference=preference,
         source_ids=source_ids,
         top_k=top_k,
         min_score=min_score,

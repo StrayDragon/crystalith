@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from time import perf_counter
+
 from pydantic_ai import Agent
 from sqlalchemy import select
 
 from cl_logs.logging import get_logger
 
 from crystalith.shared.agents.deps import StudioDeps
+from crystalith.shared.agents.generation_preference import tuning_for_preference
 from crystalith.shared.agents.models import build_chat_model, build_chat_model_from_model_id
 from crystalith.shared.db import Chunk, Source
+from crystalith.shared.types import SourceStatus
 from .schemas import SlideGenerationConfig, SlideMarkdown, SlideOutline, SlideOutlineItem
 from .config import (
     AUDIENCE_HINTS,
@@ -21,7 +25,8 @@ from .config import (
     THEME_PRESET_TEMPLATES,
     TONE_HINTS,
 )
-from crystalith.shared.utils import format_context
+from crystalith.shared.utils import format_context, format_context_from_chunk_ids
+from crystalith.shared.vector_storage import VectorSearchResult, cached_vector_search
 
 
 log = get_logger(__name__)
@@ -289,10 +294,12 @@ async def _resolve_context(
     notebook_id: int,
     prompt: str | None,
     source_ids: list[int] | None,
+    chunk_ids: list[int] | None = None,
     *,
     top_k: int = DEFAULT_TOP_K,
     min_score: float = DEFAULT_MIN_SCORE,
 ) -> SlidesContext:
+    started = perf_counter()
     normalized_source_ids = [int(v) for v in (source_ids or []) if int(v) > 0]
     if not normalized_source_ids:
         raise ValueError("source_ids must not be empty")
@@ -308,32 +315,145 @@ async def _resolve_context(
     if missing:
         raise ValueError("Unknown source_id in source_ids")
 
+    normalized_chunk_ids: list[int] = []
+    seen_chunk_ids: set[int] = set()
+    for raw in chunk_ids or []:
+        try:
+            chunk_id = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if chunk_id <= 0 or chunk_id in seen_chunk_ids:
+            continue
+        seen_chunk_ids.add(chunk_id)
+        normalized_chunk_ids.append(chunk_id)
+
+    if normalized_chunk_ids:
+        reuse_started = perf_counter()
+        rows = await deps.session.execute(
+            select(Chunk, Source)
+            .join(Source, Source.id == Chunk.source_id)
+            .where(
+                Chunk.id.in_(normalized_chunk_ids),
+                Source.notebook_id == notebook_id,
+                Source.id.in_(normalized_source_ids),
+            )
+        )
+        chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
+
+        is_valid = True
+        for chunk_id in normalized_chunk_ids:
+            mapping = chunk_map.get(chunk_id)
+            if mapping is None:
+                is_valid = False
+                break
+            chunk, source = mapping
+            if source.status != SourceStatus.READY:
+                is_valid = False
+                break
+            if not chunk.text.strip():
+                is_valid = False
+                break
+
+        if is_valid:
+            context = format_context_from_chunk_ids(normalized_chunk_ids, chunk_map)
+            log.info(
+                "slides context resolved (reused chunk_ids)",
+                notebook_id=notebook_id,
+                chunks=len(normalized_chunk_ids),
+                duration_ms=int((perf_counter() - started) * 1000),
+                reuse_ms=int((perf_counter() - reuse_started) * 1000),
+            )
+            return SlidesContext(context=context, resolved_chunk_ids=normalized_chunk_ids)
+
     seed = (prompt or "").strip() or "Summarize the notebook sources."
+    embed_started = perf_counter()
     embeddings = await deps.embedder.embed_batch([seed])
+    embed_ms = int((perf_counter() - embed_started) * 1000)
     if not embeddings:
+        log.info(
+            "slides context resolved (no embeddings)",
+            notebook_id=notebook_id,
+            embed_ms=embed_ms,
+            duration_ms=int((perf_counter() - started) * 1000),
+        )
         return SlidesContext(context="", resolved_chunk_ids=[])
 
     query_vector = embeddings[0]
-    results = await deps.vector_store.search(
-        notebook_id=notebook_id,
-        query_vector=query_vector,
-        top_k=top_k,
-        min_score=min_score,
-        source_ids=normalized_source_ids,
-    )
+    search_started = perf_counter()
+    if deps.cache is not None:
+        results = await cached_vector_search(
+            cache=deps.cache,
+            vector_store=deps.vector_store,
+            notebook_id=notebook_id,
+            query_vector=query_vector,
+            top_k=top_k,
+            min_score=min_score,
+            source_ids=normalized_source_ids,
+        )
+    else:
+        results = await deps.vector_store.search(
+            notebook_id=notebook_id,
+            query_vector=query_vector,
+            top_k=top_k,
+            min_score=min_score,
+            source_ids=normalized_source_ids,
+        )
+    search_ms = int((perf_counter() - search_started) * 1000)
     if not results:
+        log.info(
+            "slides context resolved (no results)",
+            notebook_id=notebook_id,
+            top_k=top_k,
+            min_score=min_score,
+            embed_ms=embed_ms,
+            search_ms=search_ms,
+            duration_ms=int((perf_counter() - started) * 1000),
+        )
         return SlidesContext(context="", resolved_chunk_ids=[])
 
     chunk_ids = [result.entry.chunk_id for result in results]
+    db_started = perf_counter()
     rows = await deps.session.execute(
         select(Chunk, Source)
         .join(Source, Source.id == Chunk.source_id)
         .where(Chunk.id.in_(chunk_ids))
     )
+    db_ms = int((perf_counter() - db_started) * 1000)
     chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
+
+    valid_results: list[VectorSearchResult] = []
+    for result in results:
+        mapping = chunk_map.get(result.entry.chunk_id)
+        if mapping is None:
+            continue
+        chunk, source = mapping
+        if source.status != SourceStatus.READY:
+            continue
+        if chunk.source_id != source.id or result.entry.source_id != source.id:
+            continue
+        if not chunk.text.strip():
+            continue
+        valid_results.append(result)
+
+    format_started = perf_counter()
+    context = format_context(valid_results, chunk_map)
+    format_ms = int((perf_counter() - format_started) * 1000)
+
+    log.info(
+        "slides context resolved",
+        notebook_id=notebook_id,
+        top_k=top_k,
+        min_score=min_score,
+        results=len(valid_results),
+        embed_ms=embed_ms,
+        search_ms=search_ms,
+        db_ms=db_ms,
+        format_ms=format_ms,
+        duration_ms=int((perf_counter() - started) * 1000),
+    )
     return SlidesContext(
-        context=format_context(results, chunk_map),
-        resolved_chunk_ids=chunk_ids,
+        context=context,
+        resolved_chunk_ids=[result.entry.chunk_id for result in valid_results],
     )
 
 
@@ -347,11 +467,24 @@ async def generate_slides_outline(
     generation_config: SlideGenerationConfig | dict[str, object] | None = None,
     model_id: str | None = None,
 ) -> tuple[SlideOutline, list[int]]:
+    normalized_config = _normalize_generation_config(generation_config)
+    preference = normalized_config.preference
+    top_k = DEFAULT_TOP_K
+    min_score = DEFAULT_MIN_SCORE
+    agent_retries = 2
+    if preference is not None:
+        tuning = tuning_for_preference(preference)
+        top_k = tuning.top_k
+        min_score = tuning.min_score
+        agent_retries = tuning.agent_retries
+
     context = await _resolve_context(
         deps,
         notebook_id,
         prompt,
         source_ids,
+        top_k=top_k,
+        min_score=min_score,
     )
 
     if model_id:
@@ -364,17 +497,37 @@ async def generate_slides_outline(
         output_type=SlideOutline,
         deps_type=StudioDeps,
         system_prompt=SLIDES_OUTLINE_SYSTEM,
-        retries=2,
+        retries=agent_retries,
     )
 
-    user_prompt = _build_outline_prompt(title, prompt, context.context, generation_config)
+    user_prompt = _build_outline_prompt(title, prompt, context.context, normalized_config)
 
+    generation_started = perf_counter()
     try:
         result = await agent.run(user_prompt, deps=deps)
         outline = result.output
-        log.info("slides outline generated", slides=len(outline.slides))
+        log.info(
+            "slides outline generated",
+            slides=len(outline.slides),
+            notebook_id=notebook_id,
+            preference=preference,
+            top_k=top_k,
+            min_score=min_score,
+            agent_retries=agent_retries,
+            context_length=len(context.context),
+            duration_ms=int((perf_counter() - generation_started) * 1000),
+        )
     except Exception as error:  # noqa: BLE001
-        log.warning("slides outline generation failed", error=type(error).__name__)
+        log.warning(
+            "slides outline generation failed",
+            error=type(error).__name__,
+            notebook_id=notebook_id,
+            preference=preference,
+            top_k=top_k,
+            min_score=min_score,
+            agent_retries=agent_retries,
+            duration_ms=int((perf_counter() - generation_started) * 1000),
+        )
         outline = _fallback_outline(title, prompt)
 
     return outline, context.resolved_chunk_ids
@@ -388,14 +541,29 @@ async def generate_slides_markdown(
     prompt: str | None,
     outline: SlideOutline,
     source_ids: list[int] | None,
+    chunk_ids: list[int] | None = None,
     generation_config: SlideGenerationConfig | dict[str, object] | None = None,
     model_id: str | None = None,
 ) -> tuple[str, list[int]]:
+    normalized_config = _normalize_generation_config(generation_config)
+    preference = normalized_config.preference
+    top_k = DEFAULT_TOP_K
+    min_score = DEFAULT_MIN_SCORE
+    agent_retries = 2
+    if preference is not None:
+        tuning = tuning_for_preference(preference)
+        top_k = tuning.top_k
+        min_score = tuning.min_score
+        agent_retries = tuning.agent_retries
+
     context = await _resolve_context(
         deps,
         notebook_id,
         prompt,
         source_ids,
+        chunk_ids,
+        top_k=top_k,
+        min_score=min_score,
     )
 
     if model_id:
@@ -408,21 +576,40 @@ async def generate_slides_markdown(
         output_type=SlideMarkdown,
         deps_type=StudioDeps,
         system_prompt=SLIDES_MARKDOWN_SYSTEM,
-        retries=2,
+        retries=agent_retries,
     )
 
-    user_prompt = _build_markdown_prompt(title, prompt, outline, context.context, generation_config)
+    user_prompt = _build_markdown_prompt(title, prompt, outline, context.context, normalized_config)
 
+    generation_started = perf_counter()
     try:
         result = await agent.run(user_prompt, deps=deps)
         markdown = result.output.markdown
-        log.info("slides markdown generated", length=len(markdown))
+        log.info(
+            "slides markdown generated",
+            length=len(markdown),
+            notebook_id=notebook_id,
+            preference=preference,
+            top_k=top_k,
+            min_score=min_score,
+            agent_retries=agent_retries,
+            context_length=len(context.context),
+            duration_ms=int((perf_counter() - generation_started) * 1000),
+        )
     except Exception as error:  # noqa: BLE001
-        log.warning("slides markdown generation failed", error=type(error).__name__)
+        log.warning(
+            "slides markdown generation failed",
+            error=type(error).__name__,
+            notebook_id=notebook_id,
+            preference=preference,
+            top_k=top_k,
+            min_score=min_score,
+            agent_retries=agent_retries,
+            duration_ms=int((perf_counter() - generation_started) * 1000),
+        )
         markdown = _outline_to_markdown(outline)
 
-    normalized = _normalize_generation_config(generation_config)
-    frontmatter_body = _build_frontmatter_body(title or outline.title, normalized)
+    frontmatter_body = _build_frontmatter_body(title or outline.title, normalized_config)
     markdown = _apply_frontmatter(markdown, frontmatter_body)
     return markdown, context.resolved_chunk_ids
 

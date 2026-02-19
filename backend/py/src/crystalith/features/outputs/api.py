@@ -5,7 +5,7 @@ import json
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,15 +13,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from cl_logs.logging import get_logger
 
 from crystalith.shared.agents.deps import StudioDeps
+from crystalith.shared.agents.generation_preference import GenerationPreference, tuning_for_preference
 from crystalith.shared.agents.models import ModelConfigurationError
 from crystalith.shared.agents.output_graph import run_output_graph
 from crystalith.shared.ai.interfaces import EmbeddingProvider
+from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import Settings
 from crystalith.shared.db import Chunk, Notebook, Output, Source
 from crystalith.shared.types import OutputType, SourceStatus
 from crystalith.shared.vector_storage import VectorStore
 
 from crystalith.shared.deps import (
+    get_cache_provider,
     get_db_session,
     get_embedding_provider,
     get_plugin_registry,
@@ -38,6 +41,10 @@ router = APIRouter(prefix="/v1/notebooks/{notebook_id}/outputs", tags=["outputs"
 
 
 class OutputGenerateRequest(BaseModel):
+    preference: GenerationPreference | None = Field(
+        None,
+        description="Generation preference: quality prioritizes accuracy, speed prioritizes latency.",
+    )
     prompt: str | None = None
     source_ids: list[int] | None = None
     top_k: int = Field(5, ge=1, le=20)
@@ -51,6 +58,19 @@ class OutputGenerateRequest(BaseModel):
             return None
         cleaned = " ".join(value.strip().split())
         return cleaned or None
+
+    @model_validator(mode="after")
+    def _apply_preference_defaults(self) -> "OutputGenerateRequest":
+        if self.preference is None:
+            return self
+
+        tuning = tuning_for_preference(self.preference)
+        fields_set = getattr(self, "model_fields_set", set())
+        if "top_k" not in fields_set:
+            self.top_k = tuning.top_k
+        if "min_score" not in fields_set:
+            self.min_score = tuning.min_score
+        return self
 
 
 class OutputRead(BaseModel):
@@ -73,6 +93,7 @@ async def create_output(
     payload: OutputGenerateRequest,
     session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_settings),
+    cache: CacheProvider = Depends(get_cache_provider),
     embedder=Depends(get_embedding_provider),
     vector_store=Depends(get_vector_store),
     plugins: PluginRegistry = Depends(get_plugin_registry),
@@ -88,6 +109,7 @@ async def create_output(
         session=session,
         vector_store=vector_store,
         embedder=embedder,
+        cache=cache,
         plugins=plugins,
     )
 
@@ -95,7 +117,10 @@ async def create_output(
         "creating output",
         notebook_id=notebook_id,
         output_type=output_type.value,
+        preference=payload.preference,
         prompt_length=len(payload.prompt) if payload.prompt else 0,
+        top_k=payload.top_k,
+        min_score=payload.min_score,
         model_id=payload.model_id,
     )
 
@@ -108,6 +133,7 @@ async def create_output(
             output_type=output_type,
             prompt=payload.prompt or "",
             deps=deps,
+            preference=payload.preference,
             source_ids=payload.source_ids,
             top_k=payload.top_k,
             min_score=payload.min_score,

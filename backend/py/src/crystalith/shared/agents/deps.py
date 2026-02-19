@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.interfaces import EmbeddingProvider
+from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import Settings
 from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.vector_storage import VectorStore
@@ -17,5 +18,6 @@ class StudioDeps:
     session: AsyncSession
     vector_store: VectorStore
     embedder: EmbeddingProvider
+    cache: CacheProvider | None = None
     model: Any | None = None
     plugins: PluginRegistry | None = None

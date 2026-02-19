@@ -157,17 +157,15 @@ class ChromaHttpVectorStore:
                 "query_embeddings": [query],
                 "n_results": int(top_k),
                 "where": where,
-                "include": ["embeddings", "metadatas", "distances"],
+                "include": ["metadatas", "distances"],
             },
         )
         response.raise_for_status()
         payload = response.json() if response.content else {}
 
-        embeddings = payload.get("embeddings") or []
         metadatas = payload.get("metadatas") or []
         distances = payload.get("distances") or []
 
-        query_embeddings = embeddings[0] if embeddings else []
         query_metadatas = metadatas[0] if metadatas else []
         query_distances = distances[0] if distances else []
 
@@ -175,7 +173,6 @@ class ChromaHttpVectorStore:
         for idx, metadata in enumerate(query_metadatas):
             if not isinstance(metadata, dict):
                 continue
-            vector = list(query_embeddings[idx]) if idx < len(query_embeddings) else []
             distance = query_distances[idx] if idx < len(query_distances) else None
             score = 0.0 if distance is None else 1.0 - float(distance)
             if score < min_score:
@@ -184,7 +181,7 @@ class ChromaHttpVectorStore:
                 notebook_id=int(metadata.get("notebook_id", notebook_id)),
                 source_id=int(metadata["source_id"]),
                 chunk_id=int(metadata["chunk_id"]),
-                vector=vector,
+                vector=[],
             )
             output.append(VectorSearchResult(entry=entry, score=score))
 

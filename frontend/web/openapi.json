@@ -943,6 +943,22 @@
             "description": "Optional model ID to use for generation",
             "title": "Model Id"
           },
+          "preference": {
+            "anyOf": [
+              {
+                "enum": [
+                  "quality",
+                  "speed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Generation preference: quality prioritizes accuracy, speed prioritizes latency.",
+            "title": "Preference"
+          },
           "prompt": {
             "anyOf": [
               {
@@ -2372,6 +2388,21 @@
               }
             ],
             "title": "Language"
+          },
+          "preference": {
+            "anyOf": [
+              {
+                "enum": [
+                  "quality",
+                  "speed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preference"
           },
           "quantity": {
             "anyOf": [

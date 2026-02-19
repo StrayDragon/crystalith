@@ -640,6 +640,12 @@ export type OutputGenerateRequest = {
      */
     model_id?: null | string;
     /**
+     * Preference
+     *
+     * Generation preference: quality prioritizes accuracy, speed prioritizes latency.
+     */
+    preference?: 'quality' | 'speed' | null;
+    /**
      * Prompt
      */
     prompt?: null | string;
@@ -1485,6 +1491,10 @@ export type SlideGenerationConfig = {
      */
     language?: null | string;
     /**
+     * Preference
+     */
+    preference?: 'quality' | 'speed' | null;
+    /**
      * Quantity
      */
     quantity?: null | string;
@@ -1500,7 +1510,7 @@ export type SlideGenerationConfig = {
      * Tone
      */
     tone?: null | string;
-    [key: string]: unknown | null | string | null | string | null | string | null | string | null | string | null | string | null | string | null | string | undefined;
+    [key: string]: unknown | null | string | null | string | null | string | null | string | 'quality' | 'speed' | null | null | string | null | string | null | string | null | string | undefined;
 };
 
 /**

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from crystalith.shared.agents.generation_preference import GenerationPreference
+
 
 class SlideOutlineItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -26,6 +28,7 @@ class SlideMarkdown(BaseModel):
 class SlideGenerationConfig(BaseModel):
     model_config = ConfigDict(extra="allow")
 
+    preference: GenerationPreference | None = None
     quantity: str | None = None
     audience: str | None = None
     structure: str | None = None
