@@ -433,6 +433,7 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
             unique_sources=retrieved.stats.unique_sources,
             avg_score=retrieved.stats.avg_score,
             truncated=retrieved.stats.truncated,
+            query_count=retrieved.stats.query_count,
             embed_ms=retrieved.timings_ms.get("embed_ms"),
             search_ms=retrieved.timings_ms.get("search_ms"),
             db_ms=retrieved.timings_ms.get("db_ms"),
