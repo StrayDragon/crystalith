@@ -15,7 +15,14 @@ from cl_logs.logging import get_logger
 
 from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.models import ModelConfigurationError
-from crystalith.shared.deps import get_db_session, get_embedding_provider, get_settings, get_vector_store
+from crystalith.shared.cache import CacheProvider
+from crystalith.shared.deps import (
+    get_cache_provider,
+    get_db_session,
+    get_embedding_provider,
+    get_settings,
+    get_vector_store,
+)
 from crystalith.shared.db import Notebook, Output, Source, StudioSlide
 from crystalith.shared.types import SlideStage, SlideStatus
 from crystalith.shared.types import OutputType
@@ -311,6 +318,7 @@ async def generate_outline_stream(
     slide_id: int,
     session: AsyncSession = Depends(get_db_session),
     settings=Depends(get_settings),
+    cache: CacheProvider = Depends(get_cache_provider),
     embedder=Depends(get_embedding_provider),
     vector_store=Depends(get_vector_store),
     model_id: str | None = None,
@@ -337,6 +345,7 @@ async def generate_outline_stream(
             session=session,
             vector_store=vector_store,
             embedder=embedder,
+            cache=cache,
         )
 
         yield _sse_event("progress", {"stage": "outline", "message": "开始生成大纲", "progress": 5})
@@ -388,6 +397,7 @@ async def generate_markdown_stream(
     slide_id: int,
     session: AsyncSession = Depends(get_db_session),
     settings=Depends(get_settings),
+    cache: CacheProvider = Depends(get_cache_provider),
     embedder=Depends(get_embedding_provider),
     vector_store=Depends(get_vector_store),
     model_id: str | None = None,
@@ -417,6 +427,7 @@ async def generate_markdown_stream(
             session=session,
             vector_store=vector_store,
             embedder=embedder,
+            cache=cache,
         )
 
         outline = SlideOutline.model_validate(slide.outline)
@@ -432,6 +443,7 @@ async def generate_markdown_stream(
                 prompt=slide.prompt,
                 outline=outline,
                 source_ids=normalized_source_ids,
+                chunk_ids=slide.chunk_ids,
                 generation_config=slide.generation_config,
                 model_id=model_id,
             )

@@ -113,29 +113,24 @@ class ChromaVectorStore:
             query_embeddings=[query],
             n_results=top_k,
             where=where,
-            include=["embeddings", "metadatas", "distances"],
+            include=["metadatas", "distances"],
         )
 
-        embeddings = results.get("embeddings")
         metadatas = results.get("metadatas")
         distances = results.get("distances")
-        if embeddings is None:
-            embeddings = []
         if metadatas is None:
             metadatas = []
         if distances is None:
             distances = []
 
-        if len(embeddings) == 0 or len(metadatas) == 0:
+        if len(metadatas) == 0:
             return []
 
-        query_embeddings = embeddings[0] if len(embeddings) > 0 else []
         query_metadatas = metadatas[0] if len(metadatas) > 0 else []
         query_distances = distances[0] if len(distances) > 0 else []
 
         output: list[VectorSearchResult] = []
         for idx, metadata in enumerate(query_metadatas):
-            vector = list(query_embeddings[idx]) if idx < len(query_embeddings) else []
             distance = query_distances[idx] if idx < len(query_distances) else None
             score = 0.0 if distance is None else 1.0 - float(distance)
             if score < min_score:
@@ -144,7 +139,7 @@ class ChromaVectorStore:
                 notebook_id=int(metadata["notebook_id"]),
                 source_id=int(metadata["source_id"]),
                 chunk_id=int(metadata["chunk_id"]),
-                vector=vector,
+                vector=[],
             )
             output.append(VectorSearchResult(entry=entry, score=score))
 
