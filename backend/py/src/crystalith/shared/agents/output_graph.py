@@ -13,7 +13,7 @@ from sqlalchemy import select
 from cl_logs.logging import get_logger
 
 from crystalith.shared.agents.deps import StudioDeps
-from crystalith.shared.agents.generation_preference import GenerationPreference, tuning_for_preference
+from crystalith.shared.agents.generation_preference import GenerationPreference, tuning_for_request
 from crystalith.shared.agents.models import build_chat_model, build_chat_model_from_model_id
 from crystalith.shared.observability import classify_error_kind
 from crystalith.shared.agents.output_postprocess import needs_repair, postprocess_output
@@ -524,7 +524,7 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
             preference=state.preference,
         )
 
-        tuning = tuning_for_preference(state.preference)
+        tuning = tuning_for_request(state.output_type, state.preference)
         agent = Agent(
             model,
             output_type=schema,
@@ -598,7 +598,7 @@ class PostprocessOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
             and needs_repair(state.output_type, content)
         ):
             repair_attempted = True
-            tuning = tuning_for_preference(state.preference)
+            tuning = tuning_for_request(state.output_type, state.preference)
             repair_retries = max(1, min(2, tuning.agent_retries))
 
             repair_prompt = _build_repair_prompt(

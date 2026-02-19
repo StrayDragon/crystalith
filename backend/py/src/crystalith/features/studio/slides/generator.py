@@ -9,7 +9,7 @@ from pydantic_ai import Agent
 from cl_logs.logging import get_logger
 
 from crystalith.shared.agents.deps import StudioDeps
-from crystalith.shared.agents.generation_preference import GenerationPreference, tuning_for_preference
+from crystalith.shared.agents.generation_preference import GenerationPreference, tuning_for_request
 from crystalith.shared.agents.models import build_chat_model, build_chat_model_from_model_id
 from crystalith.shared.observability import classify_error_kind
 from crystalith.shared.retrieval import retrieve_context
@@ -364,7 +364,7 @@ async def generate_slides_outline(
     min_score = DEFAULT_MIN_SCORE
     agent_retries = 2
     if preference is not None:
-        tuning = tuning_for_preference(preference)
+        tuning = tuning_for_request(OutputType.SLIDES, preference)
         top_k = tuning.top_k
         min_score = tuning.min_score
         agent_retries = tuning.agent_retries
@@ -465,7 +465,7 @@ async def generate_slides_markdown(
     min_score = DEFAULT_MIN_SCORE
     agent_retries = 2
     if preference is not None:
-        tuning = tuning_for_preference(preference)
+        tuning = tuning_for_request(OutputType.SLIDES, preference)
         top_k = tuning.top_k
         min_score = tuning.min_score
         agent_retries = tuning.agent_retries

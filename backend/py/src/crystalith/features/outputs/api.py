@@ -13,7 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from cl_logs.logging import get_logger
 
 from crystalith.shared.agents.deps import StudioDeps
-from crystalith.shared.agents.generation_preference import GenerationPreference, tuning_for_preference
+from crystalith.shared.agents.generation_preference import (
+    GenerationPreference,
+    tuning_for_preference,
+    tuning_for_request,
+)
 from crystalith.shared.agents.models import ModelConfigurationError
 from crystalith.shared.agents.output_graph import run_output_graph
 from crystalith.shared.ai.interfaces import EmbeddingProvider
@@ -113,6 +117,24 @@ async def create_output(
     request_id = request.headers.get("x-request-id") or request.headers.get("x-correlation-id") or trace_id
     started = perf_counter()
 
+    raw_payload: dict[str, Any] = {}
+    try:
+        raw_payload = await request.json()
+    except Exception:
+        raw_payload = {}
+
+    top_k_provided = isinstance(raw_payload, dict) and "top_k" in raw_payload
+    min_score_provided = isinstance(raw_payload, dict) and "min_score" in raw_payload
+
+    effective_top_k = payload.top_k
+    effective_min_score = payload.min_score
+    if payload.preference is not None:
+        tuning = tuning_for_request(output_type, payload.preference)
+        if not top_k_provided:
+            effective_top_k = tuning.top_k
+        if not min_score_provided:
+            effective_min_score = tuning.min_score
+
     deps = StudioDeps(
         settings=settings,
         session=session,
@@ -130,8 +152,8 @@ async def create_output(
         output_type=output_type.value,
         preference=payload.preference,
         prompt_length=len(payload.prompt) if payload.prompt else 0,
-        top_k=payload.top_k,
-        min_score=payload.min_score,
+        top_k=effective_top_k,
+        min_score=effective_min_score,
         model_id=payload.model_id,
     )
 
@@ -148,8 +170,8 @@ async def create_output(
             request_id=request_id,
             preference=payload.preference,
             source_ids=payload.source_ids,
-            top_k=payload.top_k,
-            min_score=payload.min_score,
+            top_k=effective_top_k,
+            min_score=effective_min_score,
             model_id=payload.model_id,
         )
     except ModelConfigurationError as exc:

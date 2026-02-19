@@ -4,6 +4,7 @@ import asyncio
 import fnmatch
 import time
 from collections import OrderedDict
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -33,6 +34,26 @@ class InMemoryCache:
             self._data.move_to_end(key)
             return entry.value
 
+    async def get_many(self, keys: Sequence[str]) -> list[Any | None]:
+        if not keys:
+            return []
+
+        now = time.monotonic()
+        output: list[Any | None] = []
+        async with self._lock:
+            for key in keys:
+                entry = self._data.get(key)
+                if entry is None:
+                    output.append(None)
+                    continue
+                if entry.expires_at is not None and entry.expires_at <= now:
+                    self._data.pop(key, None)
+                    output.append(None)
+                    continue
+                self._data.move_to_end(key)
+                output.append(entry.value)
+        return output
+
     async def set(self, key: str, value: Any, *, ttl: float | None = None) -> None:
         resolved_ttl = self._default_ttl if ttl is None else float(ttl)
         expires_at = None
@@ -41,6 +62,21 @@ class InMemoryCache:
         async with self._lock:
             self._data[key] = _Entry(value=value, expires_at=expires_at)
             self._data.move_to_end(key)
+            await self._evict_locked()
+
+    async def set_many(self, items: Mapping[str, Any], *, ttl: float | None = None) -> None:
+        if not items:
+            return None
+
+        resolved_ttl = self._default_ttl if ttl is None else float(ttl)
+        expires_at = None
+        if resolved_ttl > 0:
+            expires_at = time.monotonic() + resolved_ttl
+
+        async with self._lock:
+            for key, value in items.items():
+                self._data[str(key)] = _Entry(value=value, expires_at=expires_at)
+                self._data.move_to_end(str(key))
             await self._evict_locked()
 
     async def delete(self, key: str) -> None:
