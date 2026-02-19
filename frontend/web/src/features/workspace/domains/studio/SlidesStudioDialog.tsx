@@ -20,7 +20,7 @@ import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 
 import { ModelSelector } from './ModelSelector';
-import type { SlideDraft, SlideGenerationConfig, SlideOutline, SlideOutlineItem, SlideStage } from '../../shared/types';
+import type { GenerationPreferenceSetting, SlideDraft, SlideGenerationConfig, SlideOutline, SlideOutlineItem, SlideStage } from '../../shared/types';
 import {
   createDraftV1NotebooksNotebookIdSlidesDraftsPost as createSlidesDraft,
   getLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGet as getLatestSlidesDraft,
@@ -33,6 +33,7 @@ import {
 import { buildSlidevPreviewUrl } from '@crystalith-slidev';
 import { toast } from '../../../../shared/toast';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
+import { toApiGenerationPreference, useGenerationPreference } from '../../shared/hooks/useGenerationPreference';
 import { buildFrontmatterPreview, normalizeGenerationConfig } from './utils/slides';
 
 const STAGES: { id: SlideStage; label: string }[] = [
@@ -79,6 +80,7 @@ function normalizeSlidesConfig(raw: any): SlidesConfig | null {
   });
   return {
     defaults: {
+      preference: defaults.preference ?? null,
       quantity: defaults.quantity ?? null,
       audience: defaults.audience ?? null,
       structure: defaults.structure ?? null,
@@ -174,6 +176,7 @@ export default function SlidesStudioDialog({
   queueStatus = null,
   onQueueSlides,
 }: SlidesStudioDialogProps) {
+  const { preference: globalPreference, setPreference: setGlobalPreference } = useGenerationPreference();
   const [draft, setDraft] = useState<SlideDraft | null>(null);
   const [activeStage, setActiveStage] = useState<SlideStage>('input');
   const [loading, setLoading] = useState(false);
@@ -182,6 +185,7 @@ export default function SlidesStudioDialog({
   const [isQueueing, setIsQueueing] = useState(false);
   const [events, setEvents] = useState<{ type: string; message: string }[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [configPreference, setConfigPreference] = useState<GenerationPreferenceSetting>(() => globalPreference);
   const [configQuantity, setConfigQuantity] = useState('');
   const [configAudience, setConfigAudience] = useState('');
   const [configStructure, setConfigStructure] = useState('');
@@ -285,6 +289,7 @@ export default function SlidesStudioDialog({
     setActiveStage('input');
     setLoading(false);
     setIsGenerating(false);
+    setConfigPreference(globalPreference);
     setConfigQuantity(resolveOptionId(defaults?.quantity ?? null, quantityOptions));
     setConfigAudience(resolveOptionId(defaults?.audience ?? null, audienceOptions));
     setConfigStructure(resolveOptionId(defaults?.structure ?? null, structureOptions));
@@ -309,7 +314,7 @@ export default function SlidesStudioDialog({
     setShowMarkdownEditor(false);
     autoPreviewRef.current = null;
     setIsQueueing(false);
-  }, [configDefaults, slidesConfig]);
+  }, [configDefaults, globalPreference, slidesConfig]);
 
   const applyGenerationConfig = useCallback((config: SlideGenerationConfig | null | undefined) => {
     const defaults = configDefaults;
@@ -320,6 +325,11 @@ export default function SlidesStudioDialog({
     const languageOptions = slidesConfig?.languageOptions ?? [];
     const densityOptions = slidesConfig?.densityOptions ?? [];
     const themeOptions = slidesConfig?.themePresetOptions ?? [];
+    const preferenceValue =
+      config?.preference === 'quality' || config?.preference === 'speed'
+        ? config.preference
+        : globalPreference;
+    setConfigPreference(preferenceValue);
     setConfigQuantity(
       resolveOptionId(config?.quantity ?? defaults?.quantity ?? null, quantityOptions),
     );
@@ -340,7 +350,7 @@ export default function SlidesStudioDialog({
       resolveOptionId(config?.themePreset ?? defaults?.themePreset ?? null, themeOptions),
     );
     setConfigFrontmatter(config?.frontmatter ?? defaults?.frontmatter ?? '');
-  }, [configDefaults, slidesConfig]);
+  }, [configDefaults, globalPreference, slidesConfig]);
 
   const syncFromDraft = useCallback((nextDraft: SlideDraft | null) => {
     if (!nextDraft) {
@@ -485,7 +495,9 @@ export default function SlidesStudioDialog({
 
   const buildGenerationConfig = useCallback((): SlideGenerationConfig => {
     const frontmatter = configFrontmatter.trim();
+    const apiPreference = toApiGenerationPreference(configPreference);
     return {
+      preference: apiPreference,
       quantity: configQuantity,
       audience: configAudience,
       structure: configStructure,
@@ -500,6 +512,7 @@ export default function SlidesStudioDialog({
     configDensity,
     configFrontmatter,
     configLanguage,
+    configPreference,
     configQuantity,
     configStructure,
     configThemePreset,
@@ -508,7 +521,9 @@ export default function SlidesStudioDialog({
 
   const buildGenerationConfigPayload = useCallback(() => {
     const config = buildGenerationConfig();
+    const apiPreference = config.preference;
     return {
+      ...(apiPreference ? { preference: apiPreference } : {}),
       quantity: config.quantity,
       audience: config.audience,
       structure: config.structure,
@@ -1040,6 +1055,23 @@ export default function SlidesStudioDialog({
               </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-slate-300 font-medium">
+                生成倾向
+                <select
+                  className="rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-2 text-xs text-gray-700 dark:text-slate-200"
+                  value={configPreference}
+                  onChange={(event) => {
+                    const next = event.target.value as GenerationPreferenceSetting;
+                    setConfigPreference(next);
+                    setGlobalPreference(next);
+                  }}
+                  name="slidePreference"
+                >
+                  <option value="default">默认</option>
+                  <option value="quality">质量</option>
+                  <option value="speed">速度</option>
+                </select>
+              </label>
               <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-slate-300 font-medium">
                 幻灯片数量
                 <select
