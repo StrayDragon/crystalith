@@ -17,13 +17,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from cl_logs.logging import get_logger
 
 from crystalith.shared.ai.interfaces import EmbeddingProvider
+from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import Settings
 from crystalith.shared.db import Notebook, ResearchSession, ResearchStep
 from crystalith.shared.types import ResearchStatus, ResearchStepStatus, ResearchStepType
 from crystalith.shared.search import SearXNGSearcher
-from crystalith.shared.vector_storage import VectorStore
+from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
 
-from crystalith.shared.deps import get_db_session, get_embedding_provider, get_settings, get_vector_store
+from crystalith.shared.deps import (
+    get_cache_provider,
+    get_db_session,
+    get_embedding_provider,
+    get_settings,
+    get_vector_store,
+)
 
 
 log = get_logger(__name__)
@@ -1217,6 +1224,7 @@ async def export_research(
     payload: ExportResearchRequest,
     session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_settings),
+    cache: CacheProvider = Depends(get_cache_provider),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     vector_store: VectorStore = Depends(get_vector_store),
 ) -> ExportResearchResponse:
@@ -1324,6 +1332,9 @@ async def export_research(
 
             source.status = SourceStatus.READY
             await session.commit()
+
+            await cache.invalidate_pattern(f"notebook:{notebook_id}:sources:*")
+            await bump_vector_epoch(cache=cache, notebook_id=notebook_id)
 
             log.info(
                 "research exported to source",

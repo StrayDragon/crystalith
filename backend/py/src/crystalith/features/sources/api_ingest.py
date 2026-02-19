@@ -363,7 +363,7 @@ async def create_source_from_url(
             detail=f"Ingestion failed: {error_detail}",
         ) from exc
 
-    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
+    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
     return _source_to_read(source, chunk_count=len(chunk_models))
 
 
@@ -465,5 +465,5 @@ async def upload_source(
             detail=f"Ingestion failed: {error_detail}",
         ) from exc
 
-    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
+    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
     return _source_to_read(source, chunk_count=len(chunk_ids))
