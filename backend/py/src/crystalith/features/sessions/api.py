@@ -9,10 +9,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.interfaces import EmbeddingProvider
+from crystalith.shared.cache import CacheProvider
 from crystalith.shared.db import Chunk, Message, Output, Source
-from crystalith.shared.deps import get_db_session, get_embedding_provider, get_vector_store
+from crystalith.shared.deps import get_cache_provider, get_db_session, get_embedding_provider, get_vector_store
 from crystalith.shared.types import OutputType, SourceStatus
-from crystalith.shared.vector_storage import VectorStore
+from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
 
 from . import service
 from .schemas import SessionCreate, SessionRead, SessionUpdate
@@ -232,6 +233,7 @@ async def convert_session_to_source(
     session_id: int,
     payload: ConvertSessionToSourceRequest,
     session: AsyncSession = Depends(get_db_session),
+    cache: CacheProvider = Depends(get_cache_provider),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     vector_store: VectorStore = Depends(get_vector_store),
 ) -> ConvertSessionToSourceResponse:
@@ -325,6 +327,9 @@ async def convert_session_to_source(
             source_id=source.id,
             chunk_count=len(db_chunks),
         )
+
+        await cache.invalidate_pattern(f"notebook:{notebook_id}:sources:*")
+        await bump_vector_epoch(cache=cache, notebook_id=notebook_id)
 
         return ConvertSessionToSourceResponse(
             source_id=source.id,

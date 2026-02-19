@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import datetime
 import json
+import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 from sqlalchemy import select
@@ -21,7 +22,7 @@ from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import Settings
 from crystalith.shared.db import Chunk, Notebook, Output, Source
 from crystalith.shared.types import OutputType, SourceStatus
-from crystalith.shared.vector_storage import VectorStore
+from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
 
 from crystalith.shared.deps import (
     get_cache_provider,
@@ -91,6 +92,7 @@ async def create_output(
     notebook_id: int,
     output_type: OutputType,
     payload: OutputGenerateRequest,
+    request: Request,
     session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_settings),
     cache: CacheProvider = Depends(get_cache_provider),
@@ -104,6 +106,9 @@ async def create_output(
     if output_type == OutputType.SLIDES:
         raise HTTPException(status_code=400, detail="Use slides endpoints for SLIDES output")
 
+    trace_id = uuid.uuid4().hex
+    request_id = request.headers.get("x-request-id") or request.headers.get("x-correlation-id") or trace_id
+
     deps = StudioDeps(
         settings=settings,
         session=session,
@@ -115,6 +120,8 @@ async def create_output(
 
     log.info(
         "creating output",
+        trace_id=trace_id,
+        request_id=request_id,
         notebook_id=notebook_id,
         output_type=output_type.value,
         preference=payload.preference,
@@ -133,6 +140,8 @@ async def create_output(
             output_type=output_type,
             prompt=payload.prompt or "",
             deps=deps,
+            trace_id=trace_id,
+            request_id=request_id,
             preference=payload.preference,
             source_ids=payload.source_ids,
             top_k=payload.top_k,
@@ -140,7 +149,7 @@ async def create_output(
             model_id=payload.model_id,
         )
     except ModelConfigurationError as exc:
-        log.warning("model configuration error", error=str(exc))
+        log.warning("model configuration error", trace_id=trace_id, request_id=request_id, error=str(exc))
         raise HTTPException(
             status_code=503,
             detail=f"AI model configuration error: {exc}. Please check your config/app.yaml settings.",
@@ -150,6 +159,8 @@ async def create_output(
         error_msg = str(exc)
         log.warning(
             "model output validation failed",
+            trace_id=trace_id,
+            request_id=request_id,
             error=error_msg,
             output_type=output_type.value,
         )
@@ -160,16 +171,22 @@ async def create_output(
             detail = f"AI 模型响应异常：{error_msg[:100]}"
         raise HTTPException(status_code=422, detail=detail) from exc
     except ValueError as exc:
-        log.warning("invalid request", error=str(exc))
+        log.warning("invalid request", trace_id=trace_id, request_id=request_id, error=str(exc))
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        log.error("unexpected error during output generation", exc_info=exc)
+        log.error("unexpected error during output generation", trace_id=trace_id, request_id=request_id, exc_info=exc)
         raise HTTPException(
             status_code=500,
             detail="Failed to generate output. Please try again later.",
         ) from exc
 
-    log.info("output created", output_id=db_output.id, output_type=output_type.value)
+    log.info(
+        "output created",
+        trace_id=trace_id,
+        request_id=request_id,
+        output_id=db_output.id,
+        output_type=output_type.value,
+    )
     return OutputRead.model_validate(db_output)
 
 
@@ -496,6 +513,7 @@ async def convert_output_to_source(
     notebook_id: int,
     output_id: int,
     session: AsyncSession = Depends(get_db_session),
+    cache: CacheProvider = Depends(get_cache_provider),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     vector_store: VectorStore = Depends(get_vector_store),
 ) -> ConvertToSourceResponse:
@@ -591,6 +609,9 @@ async def convert_output_to_source(
             source_id=source.id,
             chunk_count=len(db_chunks),
         )
+
+        await cache.invalidate_pattern(f"notebook:{notebook_id}:sources:*")
+        await bump_vector_epoch(cache=cache, notebook_id=notebook_id)
 
         return ConvertToSourceResponse(
             source_id=source.id,

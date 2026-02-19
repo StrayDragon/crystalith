@@ -3,9 +3,10 @@ from __future__ import annotations
 import asyncio
 import datetime
 import json
+import uuid
 from collections.abc import AsyncGenerator
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
@@ -316,6 +317,7 @@ async def update_markdown(
 async def generate_outline_stream(
     notebook_id: int,
     slide_id: int,
+    request: Request,
     session: AsyncSession = Depends(get_db_session),
     settings=Depends(get_settings),
     cache: CacheProvider = Depends(get_cache_provider),
@@ -324,6 +326,8 @@ async def generate_outline_stream(
     model_id: str | None = None,
 ) -> StreamingResponse:
     slide = await _get_slide(session, notebook_id, slide_id)
+    trace_id = uuid.uuid4().hex
+    request_id = request.headers.get("x-request-id") or request.headers.get("x-correlation-id") or trace_id
     normalized_source_ids = _normalize_source_ids(slide.source_ids)
     if not normalized_source_ids:
         raise HTTPException(status_code=400, detail="source_ids must not be empty")
@@ -348,8 +352,8 @@ async def generate_outline_stream(
             cache=cache,
         )
 
-        yield _sse_event("progress", {"stage": "outline", "message": "开始生成大纲", "progress": 5})
-        yield _sse_event("toolcall", {"name": "slides_generate_outline"})
+        yield _sse_event("progress", {"trace_id": trace_id, "stage": "outline", "message": "开始生成大纲", "progress": 5})
+        yield _sse_event("toolcall", {"trace_id": trace_id, "name": "slides_generate_outline"})
 
         try:
             outline, resolved_chunk_ids = await generate_slides_outline(
@@ -360,6 +364,8 @@ async def generate_outline_stream(
                 source_ids=normalized_source_ids,
                 generation_config=slide.generation_config,
                 model_id=model_id,
+                trace_id=trace_id,
+                request_id=request_id,
             )
             slide.outline = outline.model_dump()
             slide.stage = SlideStage.OUTLINE
@@ -368,25 +374,25 @@ async def generate_outline_stream(
             await session.commit()
             await session.refresh(slide)
 
-            yield _sse_event("progress", {"stage": "outline", "message": "大纲生成完成", "progress": 100})
-            yield _sse_event("done", {"slide_id": slide.id})
+            yield _sse_event("progress", {"trace_id": trace_id, "stage": "outline", "message": "大纲生成完成", "progress": 100})
+            yield _sse_event("done", {"trace_id": trace_id, "slide_id": slide.id})
         except asyncio.CancelledError:
             if slide.status == SlideStatus.RUNNING:
                 slide.status = SlideStatus.IDLE
                 slide.error_message = "Generation cancelled."
                 await asyncio.shield(session.commit())
-            log.info("slide generation cancelled", slide_id=slide.id, stage="outline")
+            log.info("slide generation cancelled", trace_id=trace_id, request_id=request_id, slide_id=slide.id, stage="outline")
             raise
         except ModelConfigurationError as exc:
             slide.status = SlideStatus.ERROR
             slide.error_message = str(exc)[:500]
             await session.commit()
-            yield _sse_event("error", {"message": "AI 模型配置错误，请检查配置。"})
+            yield _sse_event("error", {"trace_id": trace_id, "message": "AI 模型配置错误，请检查配置。"})
         except Exception as exc:  # noqa: BLE001
             slide.status = SlideStatus.ERROR
             slide.error_message = str(exc)[:500]
             await session.commit()
-            yield _sse_event("error", {"message": "生成大纲失败，请稍后重试。"})
+            yield _sse_event("error", {"trace_id": trace_id, "message": "生成大纲失败，请稍后重试。"})
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
@@ -395,6 +401,7 @@ async def generate_outline_stream(
 async def generate_markdown_stream(
     notebook_id: int,
     slide_id: int,
+    request: Request,
     session: AsyncSession = Depends(get_db_session),
     settings=Depends(get_settings),
     cache: CacheProvider = Depends(get_cache_provider),
@@ -403,6 +410,8 @@ async def generate_markdown_stream(
     model_id: str | None = None,
 ) -> StreamingResponse:
     slide = await _get_slide(session, notebook_id, slide_id)
+    trace_id = uuid.uuid4().hex
+    request_id = request.headers.get("x-request-id") or request.headers.get("x-correlation-id") or trace_id
     normalized_source_ids = _normalize_source_ids(slide.source_ids)
     if not normalized_source_ids:
         raise HTTPException(status_code=400, detail="source_ids must not be empty")
@@ -432,8 +441,8 @@ async def generate_markdown_stream(
 
         outline = SlideOutline.model_validate(slide.outline)
 
-        yield _sse_event("progress", {"stage": "markdown", "message": "开始生成 Markdown", "progress": 10})
-        yield _sse_event("toolcall", {"name": "slides_generate_markdown"})
+        yield _sse_event("progress", {"trace_id": trace_id, "stage": "markdown", "message": "开始生成 Markdown", "progress": 10})
+        yield _sse_event("toolcall", {"trace_id": trace_id, "name": "slides_generate_markdown"})
 
         try:
             markdown, resolved_chunk_ids = await generate_slides_markdown(
@@ -446,6 +455,8 @@ async def generate_markdown_stream(
                 chunk_ids=slide.chunk_ids,
                 generation_config=slide.generation_config,
                 model_id=model_id,
+                trace_id=trace_id,
+                request_id=request_id,
             )
             slide.markdown = markdown
             slide.stage = SlideStage.MARKDOWN
@@ -457,24 +468,24 @@ async def generate_markdown_stream(
             await _sync_output(session, slide)
             await session.refresh(slide)
 
-            yield _sse_event("progress", {"stage": "markdown", "message": "Markdown 生成完成", "progress": 100})
-            yield _sse_event("done", {"slide_id": slide.id})
+            yield _sse_event("progress", {"trace_id": trace_id, "stage": "markdown", "message": "Markdown 生成完成", "progress": 100})
+            yield _sse_event("done", {"trace_id": trace_id, "slide_id": slide.id})
         except asyncio.CancelledError:
             if slide.status == SlideStatus.RUNNING:
                 slide.status = SlideStatus.IDLE
                 slide.error_message = "Generation cancelled."
                 await asyncio.shield(session.commit())
-            log.info("slide generation cancelled", slide_id=slide.id, stage="markdown")
+            log.info("slide generation cancelled", trace_id=trace_id, request_id=request_id, slide_id=slide.id, stage="markdown")
             raise
         except ModelConfigurationError as exc:
             slide.status = SlideStatus.ERROR
             slide.error_message = str(exc)[:500]
             await session.commit()
-            yield _sse_event("error", {"message": "AI 模型配置错误，请检查配置。"})
+            yield _sse_event("error", {"trace_id": trace_id, "message": "AI 模型配置错误，请检查配置。"})
         except Exception as exc:  # noqa: BLE001
             slide.status = SlideStatus.ERROR
             slide.error_message = str(exc)[:500]
             await session.commit()
-            yield _sse_event("error", {"message": "生成 Markdown 失败，请稍后重试。"})
+            yield _sse_event("error", {"trace_id": trace_id, "message": "生成 Markdown 失败，请稍后重试。"})
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
