@@ -2,6 +2,8 @@ export type PanelId = 'sources' | 'chat' | 'refine';
 export type ConnectionState = 'connecting' | 'error' | 'live';
 export type RefineMode = 'paragraph' | 'bullets' | 'structured';
 export type RefineStatus = 'queued' | 'running' | 'done' | 'error';
+export type GenerationPreference = 'quality' | 'speed';
+export type GenerationPreferenceSetting = GenerationPreference | 'default';
 export type OutputTypeId =
   | 'FAQ'
   | 'GUIDE'
@@ -132,6 +134,7 @@ export interface SlideOutline {
 }
 
 export interface SlideGenerationConfig {
+  preference?: GenerationPreference | null;
   quantity?: string | null;
   audience?: string | null;
   structure?: string | null;
