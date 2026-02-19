@@ -1,22 +1,22 @@
 ## 1. Shared retrieval module
 
-- [ ] 1.1 新建共享 retrieval 模块（输出：`resolved_chunk_ids`, `context_text`, `stats`）
-- [ ] 1.2 实现 token budget 截断（复用 `TokenCounter`/`ContextWindow` 的 retrieval 截断逻辑或提取 helper）
+- [x] 1.1 新建共享 retrieval 模块（输出：`resolved_chunk_ids`, `context_text`, `stats`）
+- [x] 1.2 实现 token budget 截断（复用 `TokenCounter`/`ContextWindow` 的 retrieval 截断逻辑或提取 helper）
 
 ## 2. Dedup & diversity
 
-- [ ] 2.1 实现 chunk 去重与近似重复折叠（确定性规则）
-- [ ] 2.2 实现按 source 的 chunk 数上限（可配置，默认值写入 settings 或常量）
+- [x] 2.1 实现 chunk 去重与近似重复折叠（确定性规则）
+- [x] 2.2 实现按 source 的 chunk 数上限（可配置，默认值写入 settings 或常量）
 
 ## 3. Integrate into outputs
 
-- [ ] 3.1 重构 OutputGraph ResolveContext 使用共享 retrieval 模块（替换现有分散逻辑）
-- [ ] 3.2 确保 citations 与 `resolved_chunk_ids` 行为与现有一致（回归验证）
+- [x] 3.1 重构 OutputGraph ResolveContext 使用共享 retrieval 模块（替换现有分散逻辑）
+- [x] 3.2 确保 citations 与 `resolved_chunk_ids` 行为与现有一致（回归验证）
 
 ## 4. Integrate into slides
 
-- [ ] 4.1 重构 slides context 构建使用共享 retrieval 模块（保留 chunk_ids 复用路径）
-- [ ] 4.2 确保 outline/markdown 两阶段 budget 与多样性一致生效
+- [x] 4.1 重构 slides context 构建使用共享 retrieval 模块（保留 chunk_ids 复用路径）
+- [x] 4.2 确保 outline/markdown 两阶段 budget 与多样性一致生效
 
 ## 5. Optional: multi-query retrieval (quality)
 
