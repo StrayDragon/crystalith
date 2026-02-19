@@ -5,16 +5,15 @@ from dataclasses import dataclass
 from time import perf_counter
 
 from pydantic_ai import Agent
-from sqlalchemy import select
 
 from cl_logs.logging import get_logger
 
 from crystalith.shared.agents.deps import StudioDeps
-from crystalith.shared.agents.generation_preference import tuning_for_preference
+from crystalith.shared.agents.generation_preference import GenerationPreference, tuning_for_preference
 from crystalith.shared.agents.models import build_chat_model, build_chat_model_from_model_id
-from crystalith.shared.db import Chunk, Source
 from crystalith.shared.observability import classify_error_kind
-from crystalith.shared.types import SourceStatus
+from crystalith.shared.retrieval import retrieve_context
+from crystalith.shared.types import OutputType
 from .schemas import SlideGenerationConfig, SlideMarkdown, SlideOutline, SlideOutlineItem
 from .config import (
     AUDIENCE_HINTS,
@@ -26,8 +25,6 @@ from .config import (
     THEME_PRESET_TEMPLATES,
     TONE_HINTS,
 )
-from crystalith.shared.utils import format_context, format_context_from_chunk_ids
-from crystalith.shared.vector_storage import VectorSearchResult, cached_vector_search
 
 
 log = get_logger(__name__)
@@ -293,6 +290,7 @@ def _build_markdown_prompt(
 async def _resolve_context(
     deps: StudioDeps,
     notebook_id: int,
+    preference: GenerationPreference | None,
     prompt: str | None,
     source_ids: list[int] | None,
     chunk_ids: list[int] | None = None,
@@ -302,195 +300,47 @@ async def _resolve_context(
     timings_ms: dict[str, int] | None = None,
     top_k: int = DEFAULT_TOP_K,
     min_score: float = DEFAULT_MIN_SCORE,
+    model_id: str | None = None,
 ) -> SlidesContext:
     started = perf_counter()
-    normalized_source_ids = [int(v) for v in (source_ids or []) if int(v) > 0]
-    if not normalized_source_ids:
-        raise ValueError("source_ids must not be empty")
-
-    rows = await deps.session.execute(
-        select(Source.id).where(
-            Source.notebook_id == notebook_id,
-            Source.id.in_(normalized_source_ids),
-        )
+    retrieved = await retrieve_context(
+        deps,
+        notebook_id=notebook_id,
+        seed=(prompt or "").strip(),
+        source_ids=source_ids,
+        chunk_ids=chunk_ids,
+        output_type=OutputType.SLIDES,
+        preference=preference,
+        model_id=model_id,
+        top_k=top_k,
+        min_score=min_score,
+        timings_ms=timings_ms,
+        trace_id=trace_id,
+        request_id=request_id,
     )
-    found = {row[0] for row in rows.all()}
-    missing = [source_id for source_id in normalized_source_ids if source_id not in found]
-    if missing:
-        raise ValueError("Unknown source_id in source_ids")
-
-    normalized_chunk_ids: list[int] = []
-    seen_chunk_ids: set[int] = set()
-    for raw in chunk_ids or []:
-        try:
-            chunk_id = int(raw)
-        except (TypeError, ValueError):
-            continue
-        if chunk_id <= 0 or chunk_id in seen_chunk_ids:
-            continue
-        seen_chunk_ids.add(chunk_id)
-        normalized_chunk_ids.append(chunk_id)
-
-    if normalized_chunk_ids:
-        reuse_started = perf_counter()
-        db_started = perf_counter()
-        rows = await deps.session.execute(
-            select(Chunk, Source)
-            .join(Source, Source.id == Chunk.source_id)
-            .where(
-                Chunk.id.in_(normalized_chunk_ids),
-                Source.notebook_id == notebook_id,
-                Source.id.in_(normalized_source_ids),
-            )
-        )
-        db_ms = int((perf_counter() - db_started) * 1000)
-        chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
-
-        is_valid = True
-        for chunk_id in normalized_chunk_ids:
-            mapping = chunk_map.get(chunk_id)
-            if mapping is None:
-                is_valid = False
-                break
-            chunk, source = mapping
-            if source.status != SourceStatus.READY:
-                is_valid = False
-                break
-            if not chunk.text.strip():
-                is_valid = False
-                break
-
-        if is_valid:
-            format_started = perf_counter()
-            context = format_context_from_chunk_ids(normalized_chunk_ids, chunk_map)
-            format_ms = int((perf_counter() - format_started) * 1000)
-            reuse_ms = int((perf_counter() - reuse_started) * 1000)
-            if timings_ms is not None:
-                timings_ms["db_ms"] = db_ms
-                timings_ms["format_ms"] = format_ms
-                timings_ms["reuse_ms"] = reuse_ms
-            log.info(
-                "slides context resolved (reused chunk_ids)",
-                trace_id=trace_id,
-                request_id=request_id,
-                notebook_id=notebook_id,
-                chunks=len(normalized_chunk_ids),
-                total_ms=int((perf_counter() - started) * 1000),
-                duration_ms=int((perf_counter() - started) * 1000),
-                reuse_ms=reuse_ms,
-                db_ms=db_ms,
-                format_ms=format_ms,
-            )
-            return SlidesContext(context=context, resolved_chunk_ids=normalized_chunk_ids)
-
-    seed = (prompt or "").strip() or "Summarize the notebook sources."
-    embed_started = perf_counter()
-    embeddings = await deps.embedder.embed_batch([seed])
-    embed_ms = int((perf_counter() - embed_started) * 1000)
-    if timings_ms is not None:
-        timings_ms["embed_ms"] = embed_ms
-    if not embeddings:
-        log.info(
-            "slides context resolved (no embeddings)",
-            trace_id=trace_id,
-            request_id=request_id,
-            notebook_id=notebook_id,
-            embed_ms=embed_ms,
-            total_ms=int((perf_counter() - started) * 1000),
-            duration_ms=int((perf_counter() - started) * 1000),
-        )
-        return SlidesContext(context="", resolved_chunk_ids=[])
-
-    query_vector = embeddings[0]
-    search_started = perf_counter()
-    if deps.cache is not None:
-        results = await cached_vector_search(
-            cache=deps.cache,
-            vector_store=deps.vector_store,
-            notebook_id=notebook_id,
-            query_vector=query_vector,
-            trace_id=trace_id,
-            request_id=request_id,
-            top_k=top_k,
-            min_score=min_score,
-            source_ids=normalized_source_ids,
-        )
-    else:
-        results = await deps.vector_store.search(
-            notebook_id=notebook_id,
-            query_vector=query_vector,
-            top_k=top_k,
-            min_score=min_score,
-            source_ids=normalized_source_ids,
-        )
-    search_ms = int((perf_counter() - search_started) * 1000)
-    if timings_ms is not None:
-        timings_ms["search_ms"] = search_ms
-    if not results:
-        log.info(
-            "slides context resolved (no results)",
-            trace_id=trace_id,
-            request_id=request_id,
-            notebook_id=notebook_id,
-            top_k=top_k,
-            min_score=min_score,
-            embed_ms=embed_ms,
-            search_ms=search_ms,
-            total_ms=int((perf_counter() - started) * 1000),
-            duration_ms=int((perf_counter() - started) * 1000),
-        )
-        return SlidesContext(context="", resolved_chunk_ids=[])
-
-    chunk_ids = [result.entry.chunk_id for result in results]
-    db_started = perf_counter()
-    rows = await deps.session.execute(
-        select(Chunk, Source)
-        .join(Source, Source.id == Chunk.source_id)
-        .where(Chunk.id.in_(chunk_ids))
-    )
-    db_ms = int((perf_counter() - db_started) * 1000)
-    if timings_ms is not None:
-        timings_ms["db_ms"] = db_ms
-    chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
-
-    valid_results: list[VectorSearchResult] = []
-    for result in results:
-        mapping = chunk_map.get(result.entry.chunk_id)
-        if mapping is None:
-            continue
-        chunk, source = mapping
-        if source.status != SourceStatus.READY:
-            continue
-        if chunk.source_id != source.id or result.entry.source_id != source.id:
-            continue
-        if not chunk.text.strip():
-            continue
-        valid_results.append(result)
-
-    format_started = perf_counter()
-    context = format_context(valid_results, chunk_map)
-    format_ms = int((perf_counter() - format_started) * 1000)
-    if timings_ms is not None:
-        timings_ms["format_ms"] = format_ms
 
     log.info(
-        "slides context resolved",
+        "slides context resolved (reused chunk_ids)" if retrieved.stats.reused_chunk_ids else "slides context resolved",
         trace_id=trace_id,
         request_id=request_id,
         notebook_id=notebook_id,
         top_k=top_k,
         min_score=min_score,
-        results=len(valid_results),
-        embed_ms=embed_ms,
-        search_ms=search_ms,
-        db_ms=db_ms,
-        format_ms=format_ms,
+        results=retrieved.stats.results,
+        unique_sources=retrieved.stats.unique_sources,
+        truncated=retrieved.stats.truncated,
+        embed_ms=retrieved.timings_ms.get("embed_ms"),
+        search_ms=retrieved.timings_ms.get("search_ms"),
+        db_ms=retrieved.timings_ms.get("db_ms"),
+        format_ms=retrieved.timings_ms.get("format_ms"),
+        reuse_ms=retrieved.timings_ms.get("reuse_ms"),
         total_ms=int((perf_counter() - started) * 1000),
         duration_ms=int((perf_counter() - started) * 1000),
     )
+
     return SlidesContext(
-        context=context,
-        resolved_chunk_ids=[result.entry.chunk_id for result in valid_results],
+        context=retrieved.context_text,
+        resolved_chunk_ids=retrieved.resolved_chunk_ids,
     )
 
 
@@ -521,6 +371,7 @@ async def generate_slides_outline(
     context = await _resolve_context(
         deps,
         notebook_id,
+        preference,
         prompt,
         source_ids,
         trace_id=trace_id,
@@ -528,6 +379,7 @@ async def generate_slides_outline(
         timings_ms=timings_ms,
         top_k=top_k,
         min_score=min_score,
+        model_id=model_id,
     )
 
     if model_id:
@@ -620,6 +472,7 @@ async def generate_slides_markdown(
     context = await _resolve_context(
         deps,
         notebook_id,
+        preference,
         prompt,
         source_ids,
         chunk_ids,
@@ -628,6 +481,7 @@ async def generate_slides_markdown(
         timings_ms=timings_ms,
         top_k=top_k,
         min_score=min_score,
+        model_id=model_id,
     )
 
     if model_id:
