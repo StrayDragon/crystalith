@@ -67,6 +67,25 @@ async def test_in_memory_cache_invalidate_pattern() -> None:
     assert await cache.get("notebook:2:sources:list:ccc") == 3
 
 
+@pytest.mark.asyncio
+async def test_in_memory_cache_get_many_roundtrip() -> None:
+    cache = InMemoryCache(ttl=60, max_size=10)
+    await cache.set("a", 1)
+    await cache.set("b", 2)
+
+    values = await cache.get_many(["a", "missing", "b"])
+    assert values == [1, None, 2]
+
+
+@pytest.mark.asyncio
+async def test_in_memory_cache_set_many_roundtrip() -> None:
+    cache = InMemoryCache(ttl=60, max_size=10)
+    await cache.set_many({"a": 1, "b": 2})
+
+    values = await cache.get_many(["a", "b", "missing"])
+    assert values == [1, 2, None]
+
+
 def test_cache_settings_validation_requires_redis_url() -> None:
     with pytest.raises(ValueError, match="redis_url"):
         Settings.model_validate({"cache": {"provider": "redis"}})
