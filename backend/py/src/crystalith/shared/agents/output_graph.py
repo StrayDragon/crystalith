@@ -26,10 +26,10 @@ from crystalith.shared.agents.output_schemas import (
     TimelineOutput,
 )
 from crystalith.shared.db import Chunk, Output, Source
-from crystalith.shared.types import OutputType, SourceStatus
+from crystalith.shared.types import OutputType
+from crystalith.shared.retrieval import retrieve_context
 from crystalith.shared.schemas.citations import Citation
-from crystalith.shared.utils import extract_page_number, extract_paragraph_index, format_context
-from crystalith.shared.vector_storage import VectorSearchResult, cached_vector_search
+from crystalith.shared.utils import extract_page_number, extract_paragraph_index
 
 
 log = get_logger(__name__)
@@ -396,107 +396,27 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
         if not normalized_source_ids:
             raise ValueError("source_ids must not be empty")
 
-        await _validate_source_ids(deps.session, state.notebook_id, normalized_source_ids)
-
-        seed = state.prompt or "Summarize the notebook sources."
-        embed_started = perf_counter()
-        embeddings = await deps.embedder.embed_batch([seed])
-        embed_ms = int((perf_counter() - embed_started) * 1000)
-        if not embeddings:
-            state.context = ""
-            state.citations = []
-            state.resolved_chunk_ids = []
-            log.info(
-                "context resolved (no embeddings)",
-                trace_id=state.trace_id,
-                request_id=state.request_id,
-                notebook_id=state.notebook_id,
-                output_type=state.output_type.value,
-                preference=state.preference,
-                embed_ms=embed_ms,
-                total_ms=int((perf_counter() - started) * 1000),
-                duration_ms=int((perf_counter() - started) * 1000),
-            )
-            return GenerateOutput()
-
-        query_vector = embeddings[0]
-        search_started = perf_counter()
-        if deps.cache is not None:
-            results = await cached_vector_search(
-                cache=deps.cache,
-                vector_store=deps.vector_store,
-                notebook_id=state.notebook_id,
-                query_vector=query_vector,
-                trace_id=state.trace_id,
-                request_id=state.request_id,
-                top_k=state.top_k,
-                min_score=state.min_score,
-                source_ids=normalized_source_ids,
-            )
-        else:
-            results = await deps.vector_store.search(
-                notebook_id=state.notebook_id,
-                query_vector=query_vector,
-                top_k=state.top_k,
-                min_score=state.min_score,
-                source_ids=normalized_source_ids,
-            )
-        search_ms = int((perf_counter() - search_started) * 1000)
-        if not results:
-            state.context = ""
-            state.citations = []
-            state.resolved_chunk_ids = []
-            log.info(
-                "context resolved (no results)",
-                trace_id=state.trace_id,
-                request_id=state.request_id,
-                notebook_id=state.notebook_id,
-                output_type=state.output_type.value,
-                preference=state.preference,
-                top_k=state.top_k,
-                min_score=state.min_score,
-                embed_ms=embed_ms,
-                search_ms=search_ms,
-                total_ms=int((perf_counter() - started) * 1000),
-                duration_ms=int((perf_counter() - started) * 1000),
-            )
-            return GenerateOutput()
-
-        chunk_ids = [result.entry.chunk_id for result in results]
-        db_started = perf_counter()
-        rows = await deps.session.execute(
-            select(Chunk, Source)
-            .join(Source, Source.id == Chunk.source_id)
-            .where(Chunk.id.in_(chunk_ids))
+        retrieved = await retrieve_context(
+            deps,
+            notebook_id=state.notebook_id,
+            seed=state.prompt or "Summarize the notebook sources.",
+            source_ids=normalized_source_ids,
+            output_type=state.output_type,
+            preference=state.preference,
+            model_id=state.model_id,
+            top_k=state.top_k,
+            min_score=state.min_score,
+            trace_id=state.trace_id,
+            request_id=state.request_id,
         )
-        db_ms = int((perf_counter() - db_started) * 1000)
-        chunk_map = {chunk.id: (chunk, source) for chunk, source in rows.all()}
 
-        valid_results: list[VectorSearchResult] = []
-        for result in results:
-            mapping = chunk_map.get(result.entry.chunk_id)
-            if mapping is None:
-                continue
-            chunk, source = mapping
-            if source.status != SourceStatus.READY:
-                continue
-            if chunk.source_id != source.id or result.entry.source_id != source.id:
-                continue
-            if not chunk.text.strip():
-                continue
-            valid_results.append(result)
+        state.context = retrieved.context_text
+        state.resolved_chunk_ids = retrieved.resolved_chunk_ids
+        state.citations = [
+            _build_citation(item.chunk, item.source, item.score) for item in retrieved.chunks
+        ]
 
-        citations: list[Citation] = []
-        for result in valid_results:
-            chunk, source = chunk_map[result.entry.chunk_id]
-            citations.append(_build_citation(chunk, source, result.score))
-
-        format_started = perf_counter()
-        state.context = format_context(valid_results, chunk_map)
-        format_ms = int((perf_counter() - format_started) * 1000)
-        state.citations = citations
-        state.resolved_chunk_ids = [result.entry.chunk_id for result in valid_results]
-
+        total_ms = int((perf_counter() - started) * 1000)
         log.info(
             "context resolved",
             trace_id=state.trace_id,
@@ -506,13 +426,16 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
             preference=state.preference,
             top_k=state.top_k,
             min_score=state.min_score,
-            results=len(valid_results),
-            embed_ms=embed_ms,
-            search_ms=search_ms,
-            db_ms=db_ms,
-            format_ms=format_ms,
-            total_ms=int((perf_counter() - started) * 1000),
-            duration_ms=int((perf_counter() - started) * 1000),
+            results=retrieved.stats.results,
+            unique_sources=retrieved.stats.unique_sources,
+            avg_score=retrieved.stats.avg_score,
+            truncated=retrieved.stats.truncated,
+            embed_ms=retrieved.timings_ms.get("embed_ms"),
+            search_ms=retrieved.timings_ms.get("search_ms"),
+            db_ms=retrieved.timings_ms.get("db_ms"),
+            format_ms=retrieved.timings_ms.get("format_ms"),
+            total_ms=total_ms,
+            duration_ms=total_ms,
         )
         return GenerateOutput()
 
