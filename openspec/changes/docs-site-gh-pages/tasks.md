@@ -23,8 +23,8 @@
 
 ## 4. 演示素材
 
-- [ ] 4.1 演示媒体优先入仓到 `docs/assets/`（建议 `demo.webm`，体积上限 10MB）；超出上限则改为 GitHub Release assets 外链（手工制作）
-- [ ] 4.2 录制并导出简约演示（Cursorful），并在站点首页或 Getting Started 嵌入入口（手工制作）
+- [x] 4.1 演示媒体优先入仓到 `docs/assets/`（建议 `demo.webm`，体积上限 10MB）；超出上限则改为 GitHub Release assets 外链（手工制作，PR #2）
+- [x] 4.2 录制并导出简约演示（Cursorful），并在站点首页或 Getting Started 嵌入入口（手工制作，PR #2）
 
 ## 5. 验证
 
