@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import datetime
 import json
-import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -21,6 +20,7 @@ from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import Settings
 from crystalith.shared.db import Chunk, Notebook, Output, Source
+from crystalith.shared.observability import new_trace_id
 from crystalith.shared.types import OutputType, SourceStatus
 from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
 
@@ -33,6 +33,8 @@ from crystalith.shared.deps import (
     get_vector_store,
 )
 from crystalith.shared.plugins import PluginRegistry
+
+from time import perf_counter
 
 
 log = get_logger(__name__)
@@ -106,8 +108,9 @@ async def create_output(
     if output_type == OutputType.SLIDES:
         raise HTTPException(status_code=400, detail="Use slides endpoints for SLIDES output")
 
-    trace_id = uuid.uuid4().hex
+    trace_id = new_trace_id()
     request_id = request.headers.get("x-request-id") or request.headers.get("x-correlation-id") or trace_id
+    started = perf_counter()
 
     deps = StudioDeps(
         settings=settings,
@@ -149,7 +152,13 @@ async def create_output(
             model_id=payload.model_id,
         )
     except ModelConfigurationError as exc:
-        log.warning("model configuration error", trace_id=trace_id, request_id=request_id, error=str(exc))
+        log.warning(
+            "model configuration error",
+            trace_id=trace_id,
+            request_id=request_id,
+            error_kind="model_error",
+            error=str(exc),
+        )
         raise HTTPException(
             status_code=503,
             detail=f"AI model configuration error: {exc}. Please check your config/app.yaml settings.",
@@ -161,6 +170,7 @@ async def create_output(
             "model output validation failed",
             trace_id=trace_id,
             request_id=request_id,
+            error_kind="validation_error",
             error=error_msg,
             output_type=output_type.value,
         )
@@ -171,10 +181,22 @@ async def create_output(
             detail = f"AI 模型响应异常：{error_msg[:100]}"
         raise HTTPException(status_code=422, detail=detail) from exc
     except ValueError as exc:
-        log.warning("invalid request", trace_id=trace_id, request_id=request_id, error=str(exc))
+        log.warning(
+            "invalid request",
+            trace_id=trace_id,
+            request_id=request_id,
+            error_kind="validation_error",
+            error=str(exc),
+        )
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        log.error("unexpected error during output generation", trace_id=trace_id, request_id=request_id, exc_info=exc)
+        log.error(
+            "unexpected error during output generation",
+            trace_id=trace_id,
+            request_id=request_id,
+            error_kind="unknown_error",
+            exc_info=exc,
+        )
         raise HTTPException(
             status_code=500,
             detail="Failed to generate output. Please try again later.",
@@ -186,6 +208,7 @@ async def create_output(
         request_id=request_id,
         output_id=db_output.id,
         output_type=output_type.value,
+        total_ms=int((perf_counter() - started) * 1000),
     )
     return OutputRead.model_validate(db_output)
 
