@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import json
 
 import pytest
 
@@ -78,6 +79,50 @@ async def test_slide_outline_and_markdown_streams_complete(client, app, db_sessi
     payload = draft2.json()
     assert payload["markdown"]
     assert payload["output_id"]
+
+
+@pytest.mark.asyncio
+async def test_slide_sse_done_includes_timings_when_enabled(client, app, db_session, monkeypatch) -> None:
+    monkeypatch.setenv("CRYSTALITH_OBSERVABILITY_SSE_TIMINGS", "1")
+
+    notebook_resp = await client.post("/v1/notebooks", json={"name": "Slides Timings"})
+    assert notebook_resp.status_code == 201
+    notebook_id = notebook_resp.json()["id"]
+
+    source = Source(notebook_id=notebook_id, filename="Doc.md", status=SourceStatus.READY)
+    db_session.add(source)
+    await db_session.flush()
+    chunk = Chunk(source_id=source.id, chunk_index=0, text="Hello slides.")
+    db_session.add(chunk)
+    await db_session.commit()
+
+    await app.state.vector_store.add(
+        notebook_id=notebook_id,
+        source_id=source.id,
+        chunk_ids=[chunk.id],
+        vectors=[[1.0, 0.0, 0.0]],
+    )
+
+    create_resp = await client.post(
+        f"/v1/notebooks/{notebook_id}/slides/drafts",
+        json={"title": "Deck", "prompt": "Summarize", "source_ids": [source.id]},
+    )
+    assert create_resp.status_code == 201
+    slide_id = create_resp.json()["id"]
+
+    async with client.stream(
+        "GET",
+        f"/v1/notebooks/{notebook_id}/slides/drafts/{slide_id}/outline/stream",
+    ) as response:
+        assert response.status_code == 200
+        lines = await _read_sse_until_event(response, want_event="done")
+        done_line = next((line for line in reversed(lines) if line.startswith("data:")), "")
+        payload = done_line.removeprefix("data:").strip()
+        data = {} if not payload else json.loads(payload)
+        assert "timings_ms" in data
+        assert isinstance(data["timings_ms"].get("total_ms"), int)
+        assert isinstance(data["timings_ms"].get("generate_ms"), int)
+        assert isinstance(data["timings_ms"].get("persist_ms"), int)
 
 
 @pytest.mark.asyncio

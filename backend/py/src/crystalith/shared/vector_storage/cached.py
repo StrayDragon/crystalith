@@ -71,6 +71,8 @@ async def cached_vector_search(
     vector_store: VectorStore,
     notebook_id: int,
     query_vector: Sequence[float],
+    trace_id: str | None = None,
+    request_id: str | None = None,
     top_k: int = 5,
     min_score: float = 0.2,
     source_ids: Sequence[int] | None = None,
@@ -89,7 +91,14 @@ async def cached_vector_search(
 
     cached = await cache.get(key)
     if cached is not None:
-        logger.info("cache_hit", key=key, notebook_id=notebook_id, epoch=epoch)
+        logger.info(
+            "cache_hit",
+            trace_id=trace_id,
+            request_id=request_id,
+            key=key,
+            notebook_id=notebook_id,
+            epoch=epoch,
+        )
         results: list[VectorSearchResult] = []
         for row in cached:
             results.append(
@@ -105,7 +114,14 @@ async def cached_vector_search(
             )
         return results
 
-    logger.info("cache_miss", key=key, notebook_id=notebook_id, epoch=epoch)
+    logger.info(
+        "cache_miss",
+        trace_id=trace_id,
+        request_id=request_id,
+        key=key,
+        notebook_id=notebook_id,
+        epoch=epoch,
+    )
     results = await vector_store.search(
         notebook_id=notebook_id,
         query_vector=query_vector,
