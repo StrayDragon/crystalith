@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
+from crystalith.shared.cache.epochs import bump_sources_epoch
 from crystalith.shared.db import Chunk, Source, SourceTag, SourceTagMap
 from crystalith.shared.parsers import Parser, ParserFactory, TranscriptionProvider, UnsupportedDocumentError
 from crystalith.shared.plugins import PluginRegistry
@@ -25,19 +26,20 @@ logger = get_logger(__name__)
 def _sources_list_cache_key(
     *,
     notebook_id: int,
+    epoch: int,
     tag: str | None,
     sort_by: str,
     sort_order: str,
 ) -> str:
     payload = {"tag": tag, "sort_by": sort_by, "sort_order": sort_order}
     digest = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:16]
-    return f"notebook:{notebook_id}:sources:list:{digest}"
+    return f"notebook:{notebook_id}:sources:v{int(epoch)}:list:{digest}"
 
 
 async def _invalidate_notebook_source_caches(
     cache: CacheProvider, *, notebook_id: int, vectors_changed: bool = False
 ) -> None:
-    await cache.invalidate_pattern(f"notebook:{notebook_id}:sources:*")
+    await bump_sources_epoch(cache=cache, notebook_id=notebook_id)
     if vectors_changed:
         await bump_vector_epoch(cache=cache, notebook_id=notebook_id)
 

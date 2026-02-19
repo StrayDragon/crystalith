@@ -18,6 +18,7 @@ from crystalith.shared.agents.models import ModelConfigurationError
 from crystalith.shared.agents.output_graph import run_output_graph
 from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
+from crystalith.shared.cache.epochs import bump_sources_epoch
 from crystalith.shared.config import Settings
 from crystalith.shared.db import Chunk, Notebook, Output, Source
 from crystalith.shared.observability import new_trace_id
@@ -633,7 +634,7 @@ async def convert_output_to_source(
             chunk_count=len(db_chunks),
         )
 
-        await cache.invalidate_pattern(f"notebook:{notebook_id}:sources:*")
+        await bump_sources_epoch(cache=cache, notebook_id=notebook_id)
         await bump_vector_epoch(cache=cache, notebook_id=notebook_id)
 
         return ConvertToSourceResponse(

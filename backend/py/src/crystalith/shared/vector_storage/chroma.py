@@ -146,6 +146,85 @@ class ChromaVectorStore:
         output.sort(key=lambda item: item.score, reverse=True)
         return output
 
+    async def search_many(
+        self,
+        *,
+        notebook_id: int,
+        query_vectors: Sequence[Sequence[float]],
+        top_k: int = 5,
+        min_score: float = 0.2,
+        source_ids: Sequence[int] | None = None,
+        exclude_source_ids: Sequence[int] | None = None,
+    ) -> list[list[VectorSearchResult]]:
+        if not query_vectors:
+            return []
+
+        dimension = self._load_dimension()
+        if dimension is None:
+            return [[] for _ in query_vectors]
+
+        valid_positions: list[int] = []
+        valid_queries: list[list[float]] = []
+        for index, query_vector in enumerate(query_vectors):
+            query = list(query_vector)
+            if not query:
+                continue
+            if len(query) != dimension:
+                continue
+            valid_positions.append(index)
+            valid_queries.append(query)
+
+        if not valid_queries:
+            return [[] for _ in query_vectors]
+
+        clauses: list[dict[str, Any]] = [{"notebook_id": notebook_id}]
+        if source_ids:
+            clauses.append({"source_id": {"$in": list(source_ids)}})
+        if exclude_source_ids:
+            clauses.append({"source_id": {"$nin": list(exclude_source_ids)}})
+
+        where: dict[str, Any]
+        if len(clauses) == 1:
+            where = clauses[0]
+        else:
+            where = {"$and": clauses}
+
+        results = self._collection.query(
+            query_embeddings=valid_queries,
+            n_results=top_k,
+            where=where,
+            include=["metadatas", "distances"],
+        )
+
+        metadatas = results.get("metadatas") or []
+        distances = results.get("distances") or []
+
+        output_groups: list[list[VectorSearchResult]] = [[] for _ in query_vectors]
+        for group_idx, position in enumerate(valid_positions):
+            query_metadatas = metadatas[group_idx] if group_idx < len(metadatas) else []
+            query_distances = distances[group_idx] if group_idx < len(distances) else []
+
+            group: list[VectorSearchResult] = []
+            for idx, metadata in enumerate(query_metadatas):
+                if not isinstance(metadata, dict):
+                    continue
+                distance = query_distances[idx] if idx < len(query_distances) else None
+                score = 0.0 if distance is None else 1.0 - float(distance)
+                if score < min_score:
+                    continue
+                entry = VectorEntry(
+                    notebook_id=int(metadata["notebook_id"]),
+                    source_id=int(metadata["source_id"]),
+                    chunk_id=int(metadata["chunk_id"]),
+                    vector=[],
+                )
+                group.append(VectorSearchResult(entry=entry, score=score))
+
+            group.sort(key=lambda item: item.score, reverse=True)
+            output_groups[position] = group
+
+        return output_groups
+
     async def remove_source(self, source_id: int) -> None:
         self._collection.delete(where={"source_id": source_id})
 

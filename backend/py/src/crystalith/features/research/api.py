@@ -18,6 +18,7 @@ from cl_logs.logging import get_logger
 
 from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
+from crystalith.shared.cache.epochs import bump_sources_epoch
 from crystalith.shared.config import Settings
 from crystalith.shared.db import Notebook, ResearchSession, ResearchStep
 from crystalith.shared.types import ResearchStatus, ResearchStepStatus, ResearchStepType
@@ -1333,7 +1334,7 @@ async def export_research(
             source.status = SourceStatus.READY
             await session.commit()
 
-            await cache.invalidate_pattern(f"notebook:{notebook_id}:sources:*")
+            await bump_sources_epoch(cache=cache, notebook_id=notebook_id)
             await bump_vector_epoch(cache=cache, notebook_id=notebook_id)
 
             log.info(
