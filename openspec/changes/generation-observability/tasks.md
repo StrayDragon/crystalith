@@ -12,7 +12,7 @@
 ## 3. Error classification
 
 - [x] 3.1 定义 `error_kind` 枚举/常量并在生成失败时统一填充
-- [ ] 3.2 将 provider/model 相关异常映射到稳定的 `error_kind`（避免日志字段过于离散）
+- [x] 3.2 将 provider/model 相关异常映射到稳定的 `error_kind`（避免日志字段过于离散）
 
 ## 4. Optional: slides SSE done timings
 

@@ -15,10 +15,10 @@
 
 ## 4. Optional: repair pass (quality)
 
-- [ ] 4.1 增加 repair 开关与触发条件（仅 quality，最多 1 次）
-- [ ] 4.2 实现 repair prompt 与修复执行（失败回退到确定性后处理/原 fallback）
+- [x] 4.1 增加 repair 开关与触发条件（仅 quality，最多 1 次）
+- [x] 4.2 实现 repair prompt 与修复执行（失败回退到确定性后处理/原 fallback）
 
 ## 5. Verification
 
 - [x] 5.1 为每个 output_type 增加后处理 golden cases（输入→输出可渲染且稳定）
-- [ ] 5.2 回归：前端插件渲染不再因空列表/缺字段而崩溃或降级为 raw JSON
+- [x] 5.2 回归：前端插件渲染不再因空列表/缺字段而崩溃或降级为 raw JSON

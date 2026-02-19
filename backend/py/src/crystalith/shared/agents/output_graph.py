@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 from dataclasses import dataclass, field
 from time import perf_counter
 from typing import Any
@@ -14,7 +16,7 @@ from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.generation_preference import GenerationPreference, tuning_for_preference
 from crystalith.shared.agents.models import build_chat_model, build_chat_model_from_model_id
 from crystalith.shared.observability import classify_error_kind
-from crystalith.shared.agents.output_postprocess import postprocess_output
+from crystalith.shared.agents.output_postprocess import needs_repair, postprocess_output
 from crystalith.shared.agents.output_schemas import (
     BriefingOutput,
     BulletsOutput,
@@ -34,6 +36,44 @@ from crystalith.shared.utils import extract_page_number, extract_paragraph_index
 
 
 log = get_logger(__name__)
+
+
+OUTPUT_REPAIR_ENV = "CRYSTALITH_OUTPUT_REPAIR"
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _strip_internal_keys(payload: Any) -> Any:
+    if not isinstance(payload, dict):
+        return payload
+    return {key: value for key, value in payload.items() if not str(key).startswith("_")}
+
+
+def _build_repair_prompt(
+    *,
+    output_type: OutputType,
+    prompt: str,
+    context: str,
+    draft: Any,
+    citations_count: int,
+) -> str:
+    serialized = json.dumps(_strip_internal_keys(draft), ensure_ascii=False, indent=2, default=str)
+    return (
+        "Repair the draft structured output so it is complete, non-empty, and useful.\n"
+        "Return JSON that matches the requested schema exactly.\n"
+        f"Allowed citation indices: 1..{citations_count} (integers only).\n\n"
+        f"Output type: {output_type.value}\n"
+        f"Prompt:\n{prompt}\n\n"
+        "Sources:\n"
+        f"{context}\n\n"
+        "Draft JSON:\n"
+        f"{serialized}"
+    )
 
 
 @dataclass
@@ -543,16 +583,96 @@ class PostprocessOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         self, ctx: GraphRunContext[OutputGraphState, StudioDeps]
     ) -> "MapCitations":
         state = ctx.state
+        deps = ctx.deps
+
+        content: Any = state.content
+        repair_attempted = False
+        repair_succeeded = False
+
+        if (
+            state.preference == "quality"
+            and _env_bool(OUTPUT_REPAIR_ENV, default=False)
+            and not state.plugin_schema_used
+            and bool(state.context.strip())
+            and len(state.citations) > 0
+            and needs_repair(state.output_type, content)
+        ):
+            repair_attempted = True
+            tuning = tuning_for_preference(state.preference)
+            repair_retries = max(1, min(2, tuning.agent_retries))
+
+            repair_prompt = _build_repair_prompt(
+                output_type=state.output_type,
+                prompt=state.effective_prompt or state.prompt,
+                context=state.context,
+                draft=content,
+                citations_count=len(state.citations),
+            )
+
+            repair_started = perf_counter()
+            try:
+                if state.model_id:
+                    model = build_chat_model_from_model_id(deps.settings, state.model_id)
+                else:
+                    model = deps.model or build_chat_model(deps.settings)
+
+                agent = Agent(
+                    model,
+                    output_type=OUTPUT_SCHEMAS[state.output_type],
+                    deps_type=StudioDeps,
+                    system_prompt=SYSTEM_PROMPT,
+                    retries=repair_retries,
+                )
+                result = await agent.run(repair_prompt, deps=deps)
+                content = result.output.model_dump()
+                repair_succeeded = True
+            except Exception as error:  # noqa: BLE001 - best-effort repair pass
+                repair_ms = int((perf_counter() - repair_started) * 1000)
+                log.warning(
+                    "output repair failed",
+                    trace_id=state.trace_id,
+                    request_id=state.request_id,
+                    output_type=state.output_type.value,
+                    preference=state.preference,
+                    model_id=state.model_id,
+                    agent_retries=repair_retries,
+                    error=type(error).__name__,
+                    error_kind=classify_error_kind(error),
+                    repair_ms=repair_ms,
+                    duration_ms=repair_ms,
+                )
+            else:
+                repair_ms = int((perf_counter() - repair_started) * 1000)
+                log.info(
+                    "output repair succeeded",
+                    trace_id=state.trace_id,
+                    request_id=state.request_id,
+                    output_type=state.output_type.value,
+                    preference=state.preference,
+                    model_id=state.model_id,
+                    agent_retries=repair_retries,
+                    repair_ms=repair_ms,
+                    duration_ms=repair_ms,
+                )
 
         result = postprocess_output(
             output_type=state.output_type,
-            content=state.content,
+            content=content,
             prompt_title=state.effective_prompt or state.prompt,
             citations_count=len(state.citations),
             preference=state.preference,
             apply_structural=not state.plugin_schema_used,
         )
-        state.content = result.content
+
+        processed = result.content
+        if repair_attempted:
+            warnings = processed.get("_warnings")
+            if not isinstance(warnings, list):
+                warnings = []
+            warnings.append("llm_repaired" if repair_succeeded else "llm_repair_failed")
+            processed["_warnings"] = list(dict.fromkeys(warnings))
+
+        state.content = processed
         return MapCitations()
 
 
