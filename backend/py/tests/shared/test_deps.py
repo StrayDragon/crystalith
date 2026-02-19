@@ -51,7 +51,9 @@ async def test_get_ai_provider_caches_instance(app, monkeypatch):  # noqa: ANN00
 
 @pytest.mark.asyncio
 async def test_get_embedding_provider_caches_instance(app, monkeypatch):  # noqa: ANN001
-    sentinel = object()
+    from crystalith.shared.ai.test_provider import TestEmbeddingProvider
+
+    sentinel = TestEmbeddingProvider("sentinel")
     calls = {"count": 0}
 
     def _factory(settings):  # noqa: ANN001
@@ -66,13 +68,54 @@ async def test_get_embedding_provider_caches_instance(app, monkeypatch):  # noqa
     first = get_embedding_provider(request)
     second = get_embedding_provider(request)
 
-    assert first is sentinel
-    assert second is sentinel
+    assert first is second
     assert calls["count"] == 1
-    assert app.state.embedding_provider is sentinel
+    assert first.provider == sentinel.provider
+    assert first.model == sentinel.model
+    assert app.state.embedding_provider is first
 
 
 @pytest.mark.asyncio
 async def test_get_vector_store_reads_app_state(app):  # noqa: ANN001
     request = _make_request(app)
     assert get_vector_store(request) is app.state.vector_store
+
+
+@pytest.mark.asyncio
+async def test_get_embedding_provider_wraps_cached_provider_when_redis(app, monkeypatch):  # noqa: ANN001
+    calls = {"count": 0}
+
+    class _CountingEmbedder:
+        provider = "test"
+
+        def __init__(self) -> None:
+            self.model = "counting"
+
+        async def embed(self, texts):  # noqa: ANN001
+            return await self.embed_batch(texts, batch_size=len(texts) or 1)
+
+        async def embed_batch(self, texts, *, batch_size: int = 100):  # noqa: ANN001
+            calls["count"] += 1
+            return [[1.0, 0.0, 0.0] for _ in texts]
+
+    def _factory(settings):  # noqa: ANN001
+        return _CountingEmbedder()
+
+    import crystalith.shared.deps as deps_module
+
+    monkeypatch.setattr(deps_module, "create_embedding_provider", _factory)
+    monkeypatch.setenv("CRYSTALITH_EMBEDDING_CACHE_ENABLED", "1")
+    monkeypatch.setenv("CRYSTALITH_EMBEDDING_CACHE_TTL_S", "not-a-number")
+    monkeypatch.setenv("CRYSTALITH_EMBEDDING_CACHE_MAX_TEXTS", "not-an-int")
+    monkeypatch.setenv("CRYSTALITH_EMBEDDING_CACHE_MAX_CHARS", "not-an-int")
+
+    # Exercise the "redis" branch without requiring Redis in tests.
+    app.state.settings.cache.provider = "redis"
+
+    request = _make_request(app)
+    provider = get_embedding_provider(request)
+    first = await provider.embed_batch(["hello"])
+    second = await provider.embed_batch(["hello"])
+
+    assert first == second
+    assert calls["count"] == 1

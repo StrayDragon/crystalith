@@ -38,6 +38,7 @@ def get_model_config_by_id(settings: Settings, model_id: str) -> ModelConfig | N
 
 
 def _create_openai_client(
+    settings: Settings,
     model_config: ModelConfig,
     *,
     reason: str,
@@ -65,6 +66,10 @@ def _create_openai_client(
         base_url=base_url,
         organization=organization,
         project=project,
+        timeout=_resolve_ai_timeout(settings),
+        # We run our own retry policy in providers.run_with_retry; disable SDK retries
+        # to avoid nested backoff and inflated tail latencies.
+        max_retries=0,
         webhook_secret="",
     )
 
@@ -143,7 +148,7 @@ def create_chat_provider_by_model_id(
         case "openai":
             return OpenAIChatProvider(
                 model=model_config.model,
-                client=_create_openai_client(model_config, reason=f"model:{model_id}"),
+                client=_create_openai_client(settings, model_config, reason=f"model:{model_id}"),
                 timeout=_resolve_ai_timeout(settings),
                 max_retries=_resolve_ai_retries(settings),
             )
@@ -191,7 +196,7 @@ def create_embedding_provider_by_model_id(
         case "openai":
             return OpenAIEmbeddingProvider(
                 model=model_config.model,
-                client=_create_openai_client(model_config, reason=f"embedding:{model_id}"),
+                client=_create_openai_client(settings, model_config, reason=f"embedding:{model_id}"),
                 timeout=_resolve_ai_timeout(settings),
                 max_retries=_resolve_ai_retries(settings),
                 cache=_EMBEDDING_CACHE,

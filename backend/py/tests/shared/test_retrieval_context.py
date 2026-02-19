@@ -230,3 +230,207 @@ async def test_retrieve_context_multi_query_quality_merges_results(db_session, t
 
     assert retrieved.stats.query_count >= 2
     assert len(retrieved.resolved_chunk_ids) == 2
+
+
+@pytest.mark.asyncio
+async def test_retrieve_context_multi_query_quality_defaults_on(db_session, test_settings) -> None:
+    notebook = Notebook(name="N5")
+    db_session.add(notebook)
+    await db_session.commit()
+    await db_session.refresh(notebook)
+
+    source = Source(notebook_id=notebook.id, filename="a.md", status=SourceStatus.READY)
+    db_session.add(source)
+    await db_session.flush()
+
+    chunk1 = Chunk(source_id=source.id, chunk_index=0, text="A0")
+    chunk2 = Chunk(source_id=source.id, chunk_index=1, text="B0")
+    db_session.add_all([chunk1, chunk2])
+    await db_session.commit()
+    await db_session.refresh(chunk1)
+    await db_session.refresh(chunk2)
+
+    vector_store = InMemoryVectorStore()
+    await vector_store.add(
+        notebook_id=notebook.id,
+        source_id=source.id,
+        chunk_ids=[chunk1.id, chunk2.id],
+        vectors=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+    )
+
+    deps = StudioDeps(
+        settings=test_settings,
+        session=db_session,
+        vector_store=vector_store,
+        embedder=_SeedAwareEmbedder("test-embed"),
+        cache=InMemoryCache(ttl=60),
+    )
+
+    retrieved = await retrieve_context(
+        deps,
+        notebook_id=notebook.id,
+        seed="seed",
+        source_ids=[source.id],
+        output_type=OutputType.PARAGRAPH,
+        preference="quality",
+        top_k=5,
+        min_score=0.0,
+        token_budget_tokens=10_000,
+    )
+
+    assert retrieved.stats.query_count >= 2
+    assert len(retrieved.resolved_chunk_ids) == 2
+
+
+@pytest.mark.asyncio
+async def test_retrieve_context_multi_query_speed_defaults_off(db_session, test_settings) -> None:
+    notebook = Notebook(name="N6")
+    db_session.add(notebook)
+    await db_session.commit()
+    await db_session.refresh(notebook)
+
+    source = Source(notebook_id=notebook.id, filename="a.md", status=SourceStatus.READY)
+    db_session.add(source)
+    await db_session.flush()
+
+    chunk1 = Chunk(source_id=source.id, chunk_index=0, text="A0")
+    chunk2 = Chunk(source_id=source.id, chunk_index=1, text="B0")
+    db_session.add_all([chunk1, chunk2])
+    await db_session.commit()
+    await db_session.refresh(chunk1)
+    await db_session.refresh(chunk2)
+
+    vector_store = InMemoryVectorStore()
+    await vector_store.add(
+        notebook_id=notebook.id,
+        source_id=source.id,
+        chunk_ids=[chunk1.id, chunk2.id],
+        vectors=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+    )
+
+    deps = StudioDeps(
+        settings=test_settings,
+        session=db_session,
+        vector_store=vector_store,
+        embedder=_SeedAwareEmbedder("test-embed"),
+        cache=InMemoryCache(ttl=60),
+    )
+
+    retrieved = await retrieve_context(
+        deps,
+        notebook_id=notebook.id,
+        seed="seed",
+        source_ids=[source.id],
+        output_type=OutputType.PARAGRAPH,
+        preference="speed",
+        top_k=5,
+        min_score=0.1,
+        token_budget_tokens=10_000,
+    )
+
+    assert retrieved.stats.query_count == 1
+    assert len(retrieved.resolved_chunk_ids) == 1
+
+
+@pytest.mark.asyncio
+async def test_retrieve_context_multi_query_speed_respects_env_flag(db_session, test_settings, monkeypatch) -> None:
+    monkeypatch.setenv("CRYSTALITH_RETRIEVAL_MULTI_QUERY", "1")
+
+    notebook = Notebook(name="N7")
+    db_session.add(notebook)
+    await db_session.commit()
+    await db_session.refresh(notebook)
+
+    source = Source(notebook_id=notebook.id, filename="a.md", status=SourceStatus.READY)
+    db_session.add(source)
+    await db_session.flush()
+
+    chunk1 = Chunk(source_id=source.id, chunk_index=0, text="A0")
+    chunk2 = Chunk(source_id=source.id, chunk_index=1, text="B0")
+    db_session.add_all([chunk1, chunk2])
+    await db_session.commit()
+    await db_session.refresh(chunk1)
+    await db_session.refresh(chunk2)
+
+    vector_store = InMemoryVectorStore()
+    await vector_store.add(
+        notebook_id=notebook.id,
+        source_id=source.id,
+        chunk_ids=[chunk1.id, chunk2.id],
+        vectors=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+    )
+
+    deps = StudioDeps(
+        settings=test_settings,
+        session=db_session,
+        vector_store=vector_store,
+        embedder=_SeedAwareEmbedder("test-embed"),
+        cache=InMemoryCache(ttl=60),
+    )
+
+    retrieved = await retrieve_context(
+        deps,
+        notebook_id=notebook.id,
+        seed="seed",
+        source_ids=[source.id],
+        output_type=OutputType.PARAGRAPH,
+        preference="speed",
+        top_k=5,
+        min_score=0.0,
+        token_budget_tokens=10_000,
+    )
+
+    assert retrieved.stats.query_count >= 2
+    assert len(retrieved.resolved_chunk_ids) == 2
+
+
+@pytest.mark.asyncio
+async def test_retrieve_context_multi_query_quality_can_be_disabled(db_session, test_settings, monkeypatch) -> None:
+    monkeypatch.setenv("CRYSTALITH_RETRIEVAL_MULTI_QUERY", "0")
+
+    notebook = Notebook(name="N8")
+    db_session.add(notebook)
+    await db_session.commit()
+    await db_session.refresh(notebook)
+
+    source = Source(notebook_id=notebook.id, filename="a.md", status=SourceStatus.READY)
+    db_session.add(source)
+    await db_session.flush()
+
+    chunk1 = Chunk(source_id=source.id, chunk_index=0, text="A0")
+    chunk2 = Chunk(source_id=source.id, chunk_index=1, text="B0")
+    db_session.add_all([chunk1, chunk2])
+    await db_session.commit()
+    await db_session.refresh(chunk1)
+    await db_session.refresh(chunk2)
+
+    vector_store = InMemoryVectorStore()
+    await vector_store.add(
+        notebook_id=notebook.id,
+        source_id=source.id,
+        chunk_ids=[chunk1.id, chunk2.id],
+        vectors=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+    )
+
+    deps = StudioDeps(
+        settings=test_settings,
+        session=db_session,
+        vector_store=vector_store,
+        embedder=_SeedAwareEmbedder("test-embed"),
+        cache=InMemoryCache(ttl=60),
+    )
+
+    retrieved = await retrieve_context(
+        deps,
+        notebook_id=notebook.id,
+        seed="seed",
+        source_ids=[source.id],
+        output_type=OutputType.PARAGRAPH,
+        preference="quality",
+        top_k=5,
+        min_score=0.1,
+        token_budget_tokens=10_000,
+    )
+
+    assert retrieved.stats.query_count == 1
+    assert len(retrieved.resolved_chunk_ids) == 1
