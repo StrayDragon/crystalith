@@ -39,3 +39,6 @@ vector-migrate:
 
 llm-eval:
     uv run python scripts/llm_eval.py
+
+embedding-cache-bench:
+    uv run python scripts/embedding_cache_bench.py

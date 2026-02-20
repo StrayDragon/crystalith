@@ -18,6 +18,27 @@ Crystalith runtime configuration lives in `config/app.yaml`.
 - `database.url`: SQLAlchemy URL (async)
 - `embedding.batch_size`: embedding batch size (perf tuning)
 
+## Redis embedding cache
+
+When `cache.provider=redis`, the backend can enable a cross-request embedding cache for small batches to reduce repeated
+embedding cost.
+
+Config:
+- `cache.provider: redis`
+- `cache.redis_url: redis://...`
+
+Env (defaults match `backend/py/src/crystalith/shared/deps.py`):
+- `CRYSTALITH_EMBEDDING_CACHE_ENABLED` (default: true)
+- `CRYSTALITH_EMBEDDING_CACHE_TTL_S` (default: 600)
+- `CRYSTALITH_EMBEDDING_CACHE_MAX_TEXTS` (default: 8)
+- `CRYSTALITH_EMBEDDING_CACHE_MAX_CHARS` (default: 2000)
+
+Benchmark (requires Redis + optional dependency `redis`):
+- `cd backend/py && just embedding-cache-bench`
+  - add `--reset-prefix` to clear the benchmark keyspace
+  - add `--scan-keys` to count keys for the benchmark prefix (can be slow on large DBs)
+  - add `--use-real-embedder --confirm-real-embedder` to use the configured embedding provider
+
 ## Speed / quality tuning
 
 Many generation endpoints accept `preference: "quality" | "speed"`.

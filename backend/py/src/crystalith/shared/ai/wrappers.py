@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass
 from collections.abc import Sequence
+from time import perf_counter
 from typing import Any
 
 from crystalith.shared.cache.interfaces import CacheProvider
@@ -22,6 +24,19 @@ def _coerce_vector(value: Any) -> list[float] | None:
             return None
         output.append(float(item))
     return output
+
+
+@dataclass(frozen=True, slots=True)
+class EmbeddingCacheBatchStats:
+    texts_count: int
+    unique_keys_count: int
+    hit_keys_count: int
+    miss_keys_count: int
+    hit_texts_count: int
+    miss_texts_count: int
+    cache_get_ms: int = 0
+    cache_set_ms: int = 0
+    skipped_reason: str | None = None
 
 
 class DefaultBatchEmbeddingProvider:
@@ -88,6 +103,7 @@ class CachedEmbeddingProvider:
 
         self.provider = inner.provider
         self.model = inner.model
+        self.last_stats: EmbeddingCacheBatchStats | None = None
 
     def _key(self, text: str) -> str:
         digest = _hash_text(text)
@@ -103,13 +119,40 @@ class CachedEmbeddingProvider:
         batch_size: int = 100,
     ) -> list[list[float]]:
         if not texts:
+            self.last_stats = EmbeddingCacheBatchStats(
+                texts_count=0,
+                unique_keys_count=0,
+                hit_keys_count=0,
+                miss_keys_count=0,
+                hit_texts_count=0,
+                miss_texts_count=0,
+                skipped_reason="empty",
+            )
             return []
         if batch_size <= 0:
             raise ValueError("batch_size must be greater than 0")
 
         if len(texts) > self._max_texts:
+            self.last_stats = EmbeddingCacheBatchStats(
+                texts_count=len(texts),
+                unique_keys_count=len(set(texts)),
+                hit_keys_count=0,
+                miss_keys_count=len(set(texts)),
+                hit_texts_count=0,
+                miss_texts_count=len(texts),
+                skipped_reason="batch_too_large",
+            )
             return await self._inner.embed_batch(texts, batch_size=batch_size)
         if any(len(text) > self._max_chars for text in texts):
+            self.last_stats = EmbeddingCacheBatchStats(
+                texts_count=len(texts),
+                unique_keys_count=len(set(texts)),
+                hit_keys_count=0,
+                miss_keys_count=len(set(texts)),
+                hit_texts_count=0,
+                miss_texts_count=len(texts),
+                skipped_reason="text_too_long",
+            )
             return await self._inner.embed_batch(texts, batch_size=batch_size)
 
         embeddings: list[list[float] | None] = [None] * len(texts)
@@ -122,18 +165,22 @@ class CachedEmbeddingProvider:
             texts_by_key.setdefault(key, text)
 
         keys = list(positions_by_key.keys())
+        cache_get_started = perf_counter()
         cached_values = await self._cache.get_many(keys)
         if len(cached_values) != len(keys):  # pragma: no cover - defensive
             cached_values = [await self._cache.get(key) for key in keys]
+        cache_get_ms = int((perf_counter() - cache_get_started) * 1000)
 
         missing_keys: list[str] = []
         missing_texts: list[str] = []
+        hit_keys: set[str] = set()
         for key, cached in zip(keys, cached_values):
             vector = _coerce_vector(cached)
             if vector is None:
                 missing_keys.append(key)
                 missing_texts.append(texts_by_key[key])
                 continue
+            hit_keys.add(key)
             for pos in positions_by_key.get(key, []):
                 embeddings[pos] = vector
 
@@ -152,7 +199,26 @@ class CachedEmbeddingProvider:
                 set_items[key] = coerced
 
             if set_items:
+                cache_set_started = perf_counter()
                 await self._cache.set_many(set_items, ttl=self._ttl_s)
+                cache_set_ms = int((perf_counter() - cache_set_started) * 1000)
+            else:
+                cache_set_ms = 0
+        else:
+            cache_set_ms = 0
+
+        hit_texts = sum(len(positions_by_key.get(key, [])) for key in hit_keys)
+        miss_texts = len(texts) - hit_texts
+        self.last_stats = EmbeddingCacheBatchStats(
+            texts_count=len(texts),
+            unique_keys_count=len(keys),
+            hit_keys_count=len(hit_keys),
+            miss_keys_count=len(missing_keys),
+            hit_texts_count=hit_texts,
+            miss_texts_count=miss_texts,
+            cache_get_ms=cache_get_ms,
+            cache_set_ms=cache_set_ms,
+        )
 
         output: list[list[float]] = []
         for vector in embeddings:

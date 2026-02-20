@@ -50,10 +50,16 @@ async def test_cached_embedding_provider_reuses_cached_vectors() -> None:
     vectors = await wrapped.embed_batch(["alpha", "beta", "alpha"], batch_size=5)
     assert len(vectors) == 3
     assert inner.calls == 1
+    assert wrapped.last_stats is not None
+    assert wrapped.last_stats.hit_keys_count == 0
+    assert wrapped.last_stats.miss_keys_count == 2
 
     vectors2 = await wrapped.embed_batch(["alpha", "beta", "alpha"], batch_size=5)
     assert vectors2 == vectors
     assert inner.calls == 1
+    assert wrapped.last_stats is not None
+    assert wrapped.last_stats.hit_keys_count == 2
+    assert wrapped.last_stats.miss_keys_count == 0
 
 
 @pytest.mark.asyncio
@@ -66,7 +72,11 @@ async def test_cached_embedding_provider_skips_large_batches() -> None:
     vectors = await wrapped.embed_batch(texts, batch_size=5)
     assert len(vectors) == len(texts)
     assert inner.calls == 1
+    assert wrapped.last_stats is not None
+    assert wrapped.last_stats.skipped_reason == "batch_too_large"
 
     vectors2 = await wrapped.embed_batch(texts, batch_size=5)
     assert vectors2 == vectors
     assert inner.calls == 2
+    assert wrapped.last_stats is not None
+    assert wrapped.last_stats.skipped_reason == "batch_too_large"
