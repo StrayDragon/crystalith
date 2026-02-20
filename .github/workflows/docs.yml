@@ -53,6 +53,9 @@ jobs:
           path: site
 
   deploy:
+    # GitHub Pages is not available for private repositories on all plans.
+    # Skip deploy (but still build) when the repo is private.
+    if: ${{ !github.event.repository.private }}
     needs: build
     runs-on: ubuntu-latest
     environment:
