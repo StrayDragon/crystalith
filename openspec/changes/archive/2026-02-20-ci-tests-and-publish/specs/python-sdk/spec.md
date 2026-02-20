@@ -11,4 +11,3 @@
 #### Scenario: SDK 最新允许发布
 - **WHEN** 发布 workflow 验证 SDK 无 diff
 - **THEN** workflow 继续构建并发布到 PyPI
-
