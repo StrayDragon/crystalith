@@ -55,11 +55,11 @@
 
 **Rationale:** 复用已有入口，避免在 CI 中实现新的“对比逻辑”；并把“生成产物必须提交”作为明确约束。
 
-### 4) Python SDK 发布前置校验：复用 SDK check 逻辑
+### 4) Python SDK freshness check：独立 check workflow（不含发布逻辑）
 
-**Decision:** 在 `release-python-sdk.yml` 中加入“SDK freshness check”（生成/校验无 diff）作为发布前置步骤；可复用 `check-python-sdk.yml` 的步骤或抽取为可复用的 composite action（后置优化）。
+**Decision:** 新增 `check-python-sdk.yml`，在 CI 中执行 `just api-check` + `just sdk-check`，以保证仓库内的 Python SDK 生成产物与当前 OpenAPI/后端版本保持一致；不在此变更中实现 PyPI 发布自动化。
 
-**Rationale:** 在不改变发布触发方式（仍为 workflow_dispatch）的前提下，防止发布过期 SDK。
+**Rationale:** freshness check 能显著降低“生成产物漂移”风险，且不引入发包所需的额外权限/机密配置与维护成本。
 
 ### 5) 质量门禁范围：先做最小闭环，不加 coverage/security/lint/type-check
 
@@ -87,13 +87,13 @@
 
 - [CI 时间过长影响迭代] → jobs 并行 + 缓存（uv cache、pnpm store cache）；并对 docs-only changes 使用 `paths-ignore` 降噪。
 - [生成代码非确定性导致“永远有 diff”] → 固定生成器版本（锁定依赖/全局工具版本），必要时在生成前清理输出目录并确保稳定排序。
-- [GitHub Pages/Release 等需要额外权限配置] → 在文档中明确需要的 permissions/environment（尤其是 PyPI OIDC 与 GitHub Environments）。
+- [GitHub Pages 等需要额外权限配置] → 在文档中明确需要的 permissions/environment。
 
 ## Migration Plan
 
 1. 新增主 CI workflow 并在 PR 上验证触发与通过/失败行为。
 2. 把 API consistency 与生成客户端 diff-check 接入主 CI。
-3. 更新 Python SDK release workflow：加入 freshness check；在失败时阻止 publish。
+3. 新增 Python SDK check workflow：加入 freshness check，确保生成产物与 schema 同步。
 4. 更新文档：说明 CI 约束（例如“修改后端 API 必须同步生成 openapi.json 与前端 client”）。
 
 ## Open Questions
