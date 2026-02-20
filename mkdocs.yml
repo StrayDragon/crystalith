@@ -1,0 +1,23 @@
+site_name: Crystalith
+repo_url: https://github.com/StrayDragon/crystalith
+repo_name: StrayDragon/crystalith
+
+theme:
+  name: material
+  logo: assets/logo.webp
+  features:
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Deployment: deployment.md
+  - Python SDK: sdk-python.md
+  - Plugins: plugins.md
+  - Configuration: configuration.md
+  - Contributing: contributing.md
