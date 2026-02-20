@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths-ignore:
       - "docs/**"
+      - "mkdocs.yml"
       - "openspec/**"
       - "**/*.md"
   pull_request:
     paths-ignore:
       - "docs/**"
+      - "mkdocs.yml"
       - "openspec/**"
       - "**/*.md"
   workflow_dispatch:
