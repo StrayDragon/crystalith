@@ -67,8 +67,20 @@ TBD - created by archiving change update-vector-storage. Update Purpose after ar
 - **AND** 不应仅由单一列表的最大 score 支配最终排序
 
 ### Requirement: Fusion Strategy is Testable
-系统 SHOULD 将 multi-query 融合策略实现为可单测的纯函数（或可注入策略），以便对排序行为做回归测试。
+系统 SHALL 将 multi-query 融合策略实现为可单测的纯函数（或可注入策略），以便对排序行为做回归测试。
 
 #### Scenario: 融合策略可回归
 - **WHEN** 使用固定输入结果列表运行融合函数
 - **THEN** 输出排序 MUST 稳定且可预测（与策略参数一致）
+
+### Requirement: Batch vector search
+系统 SHALL 支持批量向量检索接口（`search_many`），以一次调用处理多个 query 向量并返回分组结果，减少高延迟向量后端的调用开销。
+
+#### Scenario: 批量搜索返回分组结果
+- **WHEN** 调用 vector store 的 `search_many` 传入多个 `query_vectors`
+- **THEN** 返回值为与输入等长的结果列表（list[list[VectorSearchResult]]）
+- **AND** 每个位置的结果组仅对应同位置的 query 向量
+
+#### Scenario: 空 query 向量返回空组
+- **WHEN** `search_many` 的某个 query 向量为空或维度不匹配
+- **THEN** 返回结果中对应位置为一个空列表

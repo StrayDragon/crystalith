@@ -4,11 +4,16 @@
 TBD - created by archiving change add-caching-layer. Update Purpose after archive.
 ## Requirements
 ### Requirement: Cache Provider Interface
-系统 SHALL 提供统一的缓存抽象接口（CacheProvider），支持 get、set、delete 和基于模式的批量失效操作。系统 MUST 提供至少两种实现：InMemoryCache（默认）和 RedisCache（可选）。
+系统 SHALL 提供统一的缓存抽象接口（CacheProvider），支持 get、set、delete、基于模式的批量失效操作，并支持批量读写（get_many / set_many）。系统 MUST 提供至少两种实现：InMemoryCache（默认）和 RedisCache（可选）。
 
 #### Scenario: 内存缓存读写
 - **WHEN** 使用 InMemoryCache 写入一个键值对并立即读取
 - **THEN** 返回写入的值
+
+#### Scenario: 内存缓存批量读写
+- **WHEN** 使用 InMemoryCache 通过 set_many 写入多个键值对
+- **AND** 通过 get_many 批量读取这些键
+- **THEN** 返回与 keys 等长、按输入顺序对齐的值列表
 
 #### Scenario: 缓存 TTL 过期
 - **WHEN** 写入一个键值对并等待超过 TTL 时间后读取
@@ -45,14 +50,14 @@ TBD - created by archiving change add-caching-layer. Update Purpose after archiv
 - **AND** 日志 SHOULD 能区分“格式重试（schema）”与“网络重试（provider）”
 
 ### Requirement: Effective Settings Observability
-系统 SHOULD 在生成相关日志中记录 effective settings（timeout、max_retries、completion options），以便快速定位配置不生效或性能回归。
+系统 SHALL 在生成相关日志中记录 effective settings（timeout、max_retries、completion options），以便快速定位配置不生效或性能回归。
 
 #### Scenario: 输出 effective settings
 - **WHEN** 系统完成一次生成请求
 - **THEN** 日志 SHOULD 包含 timeout、max_retries、temperature/max_tokens 等关键字段（若适用）
 
 ### Requirement: Effective Tuning Observability
-系统 SHOULD 在生成相关日志中记录 effective tuning（至少包括 top_k/min_score/agent_retries 以及与 multi-query/budget 相关的关键字段），以支持数据驱动调参回归。
+系统 SHALL 在生成相关日志中记录 effective tuning（至少包括 top_k/min_score/agent_retries 以及与 multi-query/budget 相关的关键字段），以支持数据驱动调参回归。
 
 #### Scenario: 日志包含 effective tuning
 - **WHEN** 系统完成一次输出生成请求
@@ -67,7 +72,7 @@ TBD - created by archiving change add-caching-layer. Update Purpose after archiv
 - **THEN** 日志/指标 MUST 记录 query_count（实际 seeds 数）
 
 ### Requirement: Optional Retrieval Assembly Cache
-系统 MAY 提供短 TTL 的检索组装缓存（在安全边界内），用于降低重复检索/格式化的开销。
+系统 SHALL 可选地提供短 TTL 的检索组装缓存（在安全边界内），用于降低重复检索/格式化的开销。
 
 #### Scenario: 相同输入命中缓存
 - **GIVEN** 在短时间内重复以相同 notebook_id/source_ids/seeds 等参数请求检索
@@ -75,7 +80,7 @@ TBD - created by archiving change add-caching-layer. Update Purpose after archiv
 - **THEN** 系统 MAY 从缓存返回等价的检索结果并减少 DB/format 开销
 
 ### Requirement: Timings are Exportable for Evaluation
-系统 SHOULD 以稳定字段名提供分阶段 timings（embed/search/db/format/generate/total 等）与 query_count，供评测工具与性能回归使用。
+系统 SHALL 以稳定字段名提供分阶段 timings（embed/search/db/format/generate/total 等）与 query_count，供评测工具与性能回归使用。
 
 #### Scenario: 评测工具可读取 timings
 - **GIVEN** 一次生成请求的结果与日志/返回结构
@@ -95,7 +100,7 @@ TBD - created by archiving change add-caching-layer. Update Purpose after archiv
 - **THEN** 系统 SHOULD 记录等待耗时（用于性能分析）
 
 ### Requirement: Cancellation Avoids Wasteful Work
-系统 SHOULD 在请求取消时尽早停止后续阶段，减少无效计算与资源占用。
+系统 SHALL 在请求取消时尽早停止后续阶段，减少无效计算与资源占用。
 
 #### Scenario: 请求取消后停止生成
 - **WHEN** 客户端断开或请求被取消
@@ -111,3 +116,12 @@ TBD - created by archiving change add-caching-layer. Update Purpose after archiv
 #### Scenario: hit/miss 统计可获取
 - **WHEN** embedding 共享缓存被启用
 - **THEN** 系统 MUST 能提供每次 embed_batch 的 hit/miss 统计（或等价统计），便于压测采集
+
+### Requirement: Vector search caching avoids high-cost pattern invalidation
+系统 MUST 在 Redis 等外部缓存后端场景下避免高成本的 pattern invalidation（SCAN + DEL）作为主要失效方式；向量检索缓存 SHOULD 采用 epoch/version 化 key 的方式实现 O(1) 失效。
+
+#### Scenario: Redis 场景不依赖 SCAN 删除全部 vector_search keys
+- **WHEN** 系统使用 RedisCache 作为缓存后端
+- **AND** 发生向量集合变更（ingest/re-embed/delete）
+- **THEN** 系统通过 bump epoch 触发失效
+- **AND** 不需要扫描并删除 `notebook:{id}:vector_search:*` 的所有键

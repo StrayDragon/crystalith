@@ -146,3 +146,46 @@ TBD - created by archiving change add-studio-ppt. Update Purpose after archive.
 - **WHEN** 提供未知的主题预设 ID
 - **THEN** 系统回退到默认主题预设
 - **AND** 生成结果与默认预设一致
+
+### Requirement: SlideGenerationConfig supports preference
+系统 MUST 支持在 slides draft 的 `generation_config` 中保存 `preference`，并在读取 draft 时回填。
+
+#### Scenario: preference 持久化与回填
+- **WHEN** 客户端创建或更新 slides draft 时提交 `generation_config.preference`
+- **THEN** 后端保存该字段
+- **AND** 再次读取该 draft 时返回相同的 `generation_config.preference`
+
+### Requirement: Preference consistency across stages
+系统 MUST 在 outline 与 markdown 两个阶段使用相同的 `generation_config.preference`，并且 MUST 不在生成过程中隐式修改该值。
+
+#### Scenario: outline 与 markdown 一致
+- **WHEN** draft 已保存 `generation_config.preference`
+- **AND** 用户分别触发 outline 与 markdown 生成
+- **THEN** 两个阶段均使用该 preference
+
+### Requirement: Optional timings in slides SSE done event
+系统 MUST 支持在 debug 模式下为 slides SSE `done` 事件附带 `timings_ms` 字段，用于展示阶段耗时分解；默认 MUST 不输出该字段。
+
+#### Scenario: debug 开启时输出 timings_ms
+- **WHEN** debug timings 开关启用
+- **AND** 用户触发 slides outline 或 markdown 生成
+- **THEN** SSE `done` 事件 payload 包含 `timings_ms`
+
+#### Scenario: debug 关闭时不输出 timings_ms
+- **WHEN** debug timings 开关未启用
+- **AND** 用户触发 slides outline 或 markdown 生成
+- **THEN** SSE `done` 事件 payload 不包含 `timings_ms`
+
+### Requirement: Slides context uses shared retrieval strategy
+系统 MUST 在 slides outline/markdown 两阶段使用共享检索策略与 token budget 构建上下文。
+
+#### Scenario: slides 两阶段应用 budget
+- **WHEN** slides outline 或 markdown 构建 context
+- **THEN** 系统对 retrieval context 应用 token budget
+
+### Requirement: Slides retrieval enforces source diversity
+系统 MUST 在 slides 的 context 构建中限制单一来源占比，提升覆盖与稳定性。
+
+#### Scenario: 单源不会占满 context
+- **WHEN** 某一来源的 chunk 在检索排序中占据大多数
+- **THEN** slides context 中来自该 source 的 chunk 数受限于多样性规则

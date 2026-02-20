@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Batch vector search
-系统 SHOULD 支持批量向量检索接口（`search_many`），以一次调用处理多个 query 向量并返回分组结果，减少高延迟向量后端的调用开销。
+系统 SHALL 支持批量向量检索接口（`search_many`），以一次调用处理多个 query 向量并返回分组结果，减少高延迟向量后端的调用开销。
 
 #### Scenario: 批量搜索返回分组结果
 - **WHEN** 调用 vector store 的 `search_many` 传入多个 `query_vectors`

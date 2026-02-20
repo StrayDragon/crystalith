@@ -3,9 +3,7 @@
 ## Purpose
 
 定义 Crystalith 后端 Agent 工作流的架构和实现要求，包括使用 pydantic-graph 进行工作流编排、节点状态管理、LLM 集成和类型安全保证。
-
 ## Requirements
-
 ### Requirement: Pydantic Graph Based Workflow Orchestration
 系统 SHALL 使用 `pydantic-graph` 库进行所有 Agent 工作流编排。
 
@@ -279,3 +277,40 @@ These models MUST be importable by plugin packages without requiring the full co
 #### Scenario: CitedText 列表元素可为字符串
 - **WHEN** 模型输出将 `items`/`bullets` 等字段的元素以字符串形式返回
 - **THEN** 系统 MUST 将字符串视为 `text` 并补全缺失字段（例如 citations 默认空列表）
+
+### Requirement: OutputGraph supports generation preference
+系统 MUST 支持在 OutputGraph 执行时提供可选的 `preference`，并将其影响应用到 ResolveContext（检索参数）与 GenerateOutput（重试策略）。
+
+#### Scenario: preference 影响检索与重试
+- **WHEN** OutputGraph 以 `preference = speed` 运行
+- **THEN** ResolveContext 使用 speed 对应的检索调参（例如更小 top_k、更高 min_score）
+- **AND** GenerateOutput 使用 speed 对应的重试次数
+
+### Requirement: Explicit retrieval params override preference in OutputGraph
+系统 MUST 保证显式传入的 `top_k/min_score` 优先于 `preference` 的默认调参。
+
+#### Scenario: 显式参数优先生效
+- **WHEN** OutputGraph 以 `preference = quality` 运行
+- **AND** 同时显式传入 `top_k/min_score`
+- **THEN** ResolveContext 使用显式 `top_k/min_score`
+
+### Requirement: ResolveContext applies retrieval strategy and budget
+系统 MUST 在 OutputGraph 的 ResolveContext 阶段应用共享检索策略（去重/多样性）与 token budget，并产出可控的 retrieval context。
+
+#### Scenario: ResolveContext 预算截断
+- **WHEN** ResolveContext 构建的 retrieval context 超过预算
+- **THEN** 系统截断或压缩 retrieval context
+
+### Requirement: Preference influences retrieval strategy
+系统 MUST 允许 `preference` 影响检索策略（例如 top_k/min_score、预算大小、是否启用 multi-query）。
+
+#### Scenario: speed 使用更小预算
+- **WHEN** `preference = speed`
+- **THEN** 系统使用更小的 retrieval context budget（相对默认/quality）
+
+### Requirement: OutputGraph includes postprocessing step
+系统 MUST 在 OutputGraph 中包含一个 postprocessing 步骤（节点或等价逻辑），用于在 citations 映射与持久化前保证内容满足最低渲染契约。
+
+#### Scenario: Postprocessing 在持久化前执行
+- **WHEN** OutputGraph 准备持久化 output
+- **THEN** 系统已完成 postprocessing
