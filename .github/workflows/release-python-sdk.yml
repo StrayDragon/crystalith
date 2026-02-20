@@ -105,13 +105,13 @@ jobs:
           python -m build .tmp/pypi-python-sdk
 
       - name: Publish to PyPI (Trusted Publishing)
-        if: ${{ !inputs.dry_run && secrets.PYPI_API_TOKEN == '' }}
+        if: ${{ (inputs.dry_run == false || inputs.dry_run == 'false' || inputs.dry_run == '') && secrets.PYPI_API_TOKEN == '' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: .tmp/pypi-python-sdk/dist
 
       - name: Publish to PyPI (API token fallback)
-        if: ${{ !inputs.dry_run && secrets.PYPI_API_TOKEN != '' }}
+        if: ${{ (inputs.dry_run == false || inputs.dry_run == 'false' || inputs.dry_run == '') && secrets.PYPI_API_TOKEN != '' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
