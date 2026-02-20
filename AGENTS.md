@@ -13,12 +13,17 @@ Backend (from repo root):
 - `cd backend/py && just dev` runs the API server (uvicorn wrapper).
 - `cd backend/py && just test` runs pytest.
 - `cd backend/py && just db-init` creates local SQLite tables.
+- `cd backend/py && just config-schema` regenerates `config/app.schema.json`.
+- `cd backend/py && just packages-test` runs workspace package tests.
+- `cd backend/py && just llm-eval` runs the local eval harness.
+- `cd backend/py && just embedding-cache-bench` runs the Redis embedding cache benchmark.
 
 Frontend:
 - `cd frontend/web && pnpm install` installs JS deps.
 - `cd frontend/web && pnpm dev` starts the Vite dev server.
 - `cd frontend/web && pnpm test` runs Vitest.
 - `cd frontend/web && pnpm run build` creates a production build.
+- `cd frontend/web && pnpm typecheck` runs TypeScript typechecking.
 
 Tip: `just -l` lists available tasks in each directory.
 
@@ -27,7 +32,7 @@ Tip: `just -l` lists available tasks in each directory.
 - TypeScript/React: 2-space indentation; `PascalCase` components; hooks named `useX`.
 - CSS/Tailwind: keep global styles in `frontend/web/src/app/index.css`; feature styles live alongside components.
 - No repo-wide formatter is configured; match existing style and avoid unrelated reformatting.
-- If Backend API changed, must remember use pnpm run api:generate in frontend, and checked it
+- If backend OpenAPI changed, run `cd frontend/web && pnpm run api:sync` and verify.
 
 ## Testing Guidelines
 - Backend uses `pytest` + `pytest-asyncio`; tests live in `backend/py/tests/` and `backend/py/packages/*/tests/` with `test_*.py` names.

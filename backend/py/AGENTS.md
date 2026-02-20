@@ -12,6 +12,10 @@ Run from `backend/py`:
 - `just dev` starts the API server (uvicorn wrapper).
 - `just test` runs the pytest suite.
 - `just db-init` creates local SQLite tables for development.
+- `just config-schema` regenerates `config/app.schema.json`.
+- `just packages-test` runs workspace package tests.
+- `just llm-eval` runs the local eval harness.
+- `just embedding-cache-bench` runs the Redis embedding cache benchmark.
 - `just -l` lists available `just` tasks.
 
 ## Coding Style & Naming Conventions
@@ -19,7 +23,7 @@ Run from `backend/py`:
 - Use `snake_case` for functions/variables and `PascalCase` for classes.
 - Type hints are encouraged where they improve clarity.
 - No repo-wide formatter is enforced; match existing style and avoid large reformatting.
-- If Backend API changed, must remember use pnpm run api:generate in frontend, and checked it
+- If backend OpenAPI changed, run `cd frontend/web && pnpm run api:sync` and verify.
 
 ## Testing Guidelines
 - Frameworks: `pytest` + `pytest-asyncio`.

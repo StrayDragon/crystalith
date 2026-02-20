@@ -4,10 +4,11 @@ context: |
   Tech stack:
   - Backend: FastAPI (Python) in backend/py/src/crystalith; tests in backend/py/tests; workspace libs in backend/py/packages.
   - Frontend: Vite + React + TypeScript in frontend/web/src.
+  - Specs: canonical specs in openspec/specs; change workspaces in openspec/changes (archive in openspec/changes/archive).
 
   Commands (from repo root):
-  - Backend: cd backend/py && uv sync; just dev; just test; just db-init.
-  - Frontend: cd frontend/web && pnpm install; pnpm dev; pnpm test; pnpm run build.
+  - Backend: cd backend/py && uv sync; just dev; just test; just db-init; just config-schema; just packages-test; just llm-eval; just embedding-cache-bench.
+  - Frontend: cd frontend/web && pnpm install; pnpm dev; pnpm test; pnpm typecheck; pnpm run build; pnpm run api:sync.
 
   Conventions:
   - Python: 4-space indentation; prefer type hints; snake_case functions/vars; PascalCase classes.
@@ -23,7 +24,8 @@ context: |
   - Commit prefixes: feat:, fix:, refactor:, doc:, dev:, misc: (optional scope like feat(backend):).
 
   Notes:
-  - If backend API changes, run frontend `pnpm run api:generate` and verify.
+  - If backend OpenAPI changes, run frontend `pnpm run api:sync` and verify.
+  - See openspec/AGENTS.md for spec/change workflow conventions.
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
