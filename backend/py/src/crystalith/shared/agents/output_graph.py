@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from dataclasses import dataclass, field
@@ -14,7 +15,11 @@ from cl_logs.logging import get_logger
 
 from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.generation_preference import GenerationPreference, tuning_for_request
-from crystalith.shared.agents.models import build_chat_model, build_chat_model_from_model_id
+from crystalith.shared.agents.models import (
+    build_chat_model,
+    build_chat_model_from_model_id,
+    extract_effective_model_settings_for_log,
+)
 from crystalith.shared.observability import classify_error_kind
 from crystalith.shared.agents.output_postprocess import needs_repair, postprocess_output
 from crystalith.shared.agents.output_schemas import (
@@ -473,9 +478,22 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
             unique_sources=retrieved.stats.unique_sources,
             avg_score=retrieved.stats.avg_score,
             truncated=retrieved.stats.truncated,
+            max_chunks_per_source=retrieved.stats.max_chunks_per_source,
+            budget_tokens=retrieved.stats.budget_tokens,
+            used_tokens=retrieved.stats.used_tokens,
             query_count=retrieved.stats.query_count,
+            multi_query_enabled=retrieved.stats.multi_query_enabled,
+            seed_cap=retrieved.stats.seed_cap,
+            fusion_strategy=retrieved.stats.fusion_strategy,
+            cache_hit=retrieved.stats.cache_hit,
             embed_ms=retrieved.timings_ms.get("embed_ms"),
+            embed_wait_ms=retrieved.timings_ms.get("embed_wait_ms"),
+            embed_limit=retrieved.timings_ms.get("embed_limit"),
+            embed_hit=retrieved.timings_ms.get("embed_hit"),
             search_ms=retrieved.timings_ms.get("search_ms"),
+            search_wait_ms=retrieved.timings_ms.get("search_wait_ms"),
+            search_limit=retrieved.timings_ms.get("search_limit"),
+            search_hit=retrieved.timings_ms.get("search_hit"),
             db_ms=retrieved.timings_ms.get("db_ms"),
             format_ms=retrieved.timings_ms.get("format_ms"),
             total_ms=total_ms,
@@ -512,6 +530,7 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         else:
             model = deps.model or build_chat_model(deps.settings)
 
+        model_settings_log = extract_effective_model_settings_for_log(model)
         log.info(
             "generating output",
             trace_id=state.trace_id,
@@ -522,6 +541,7 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
             has_context=bool(state.context.strip()),
             model_id=state.model_id,
             preference=state.preference,
+            **model_settings_log,
         )
 
         tuning = tuning_for_request(state.output_type, state.preference)
@@ -537,8 +557,18 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         state.effective_prompt = effective_prompt
         user_prompt = _build_output_prompt(state.output_type, effective_prompt, state.context)
         generation_started = perf_counter()
+        limiters = getattr(deps, "limiters", None)
+        llm_limit = int(limiters.llm_generate.limit) if limiters is not None else 0
+        llm_wait_ms = 0
+        llm_hit = 0
         try:
-            result = await agent.run(user_prompt, deps=deps)
+            if limiters is None:
+                result = await agent.run(user_prompt, deps=deps)
+            else:
+                async with limiters.llm_generate.acquire() as lease:
+                    llm_wait_ms = int(lease.wait_ms)
+                    llm_hit = int(lease.hit)
+                    result = await agent.run(user_prompt, deps=deps)
             state.content = result.output.model_dump()
             generate_ms = int((perf_counter() - generation_started) * 1000)
             log.info(
@@ -551,9 +581,15 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                 preference=state.preference,
                 agent_retries=tuning.agent_retries,
                 fallback=False,
+                llm_limit=llm_limit,
+                llm_wait_ms=llm_wait_ms,
+                llm_hit=llm_hit,
                 generate_ms=generate_ms,
                 duration_ms=generate_ms,
+                **model_settings_log,
             )
+        except asyncio.CancelledError:
+            raise
         except Exception as error:  # noqa: BLE001 - fallback for output generation
             generate_ms = int((perf_counter() - generation_started) * 1000)
             log.warning(
@@ -567,8 +603,12 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                 preference=state.preference,
                 agent_retries=tuning.agent_retries,
                 fallback=True,
+                llm_limit=llm_limit,
+                llm_wait_ms=llm_wait_ms,
+                llm_hit=llm_hit,
                 generate_ms=generate_ms,
                 duration_ms=generate_ms,
+                **model_settings_log,
             )
             state.content = _fallback_output(state.output_type, effective_prompt)
 
@@ -610,12 +650,17 @@ class PostprocessOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
             )
 
             repair_started = perf_counter()
+            limiters = getattr(deps, "limiters", None)
+            llm_limit = int(limiters.llm_generate.limit) if limiters is not None else 0
+            llm_wait_ms = 0
+            llm_hit = 0
             try:
                 if state.model_id:
                     model = build_chat_model_from_model_id(deps.settings, state.model_id)
                 else:
                     model = deps.model or build_chat_model(deps.settings)
 
+                model_settings_log = extract_effective_model_settings_for_log(model)
                 agent = Agent(
                     model,
                     output_type=OUTPUT_SCHEMAS[state.output_type],
@@ -623,9 +668,17 @@ class PostprocessOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                     system_prompt=SYSTEM_PROMPT,
                     retries=repair_retries,
                 )
-                result = await agent.run(repair_prompt, deps=deps)
+                if limiters is None:
+                    result = await agent.run(repair_prompt, deps=deps)
+                else:
+                    async with limiters.llm_generate.acquire() as lease:
+                        llm_wait_ms = int(lease.wait_ms)
+                        llm_hit = int(lease.hit)
+                        result = await agent.run(repair_prompt, deps=deps)
                 content = result.output.model_dump()
                 repair_succeeded = True
+            except asyncio.CancelledError:
+                raise
             except Exception as error:  # noqa: BLE001 - best-effort repair pass
                 repair_ms = int((perf_counter() - repair_started) * 1000)
                 log.warning(
@@ -636,10 +689,14 @@ class PostprocessOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                     preference=state.preference,
                     model_id=state.model_id,
                     agent_retries=repair_retries,
+                    llm_limit=llm_limit,
+                    llm_wait_ms=llm_wait_ms,
+                    llm_hit=llm_hit,
                     error=type(error).__name__,
                     error_kind=classify_error_kind(error),
                     repair_ms=repair_ms,
                     duration_ms=repair_ms,
+                    **model_settings_log,
                 )
             else:
                 repair_ms = int((perf_counter() - repair_started) * 1000)
@@ -651,8 +708,12 @@ class PostprocessOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                     preference=state.preference,
                     model_id=state.model_id,
                     agent_retries=repair_retries,
+                    llm_limit=llm_limit,
+                    llm_wait_ms=llm_wait_ms,
+                    llm_hit=llm_hit,
                     repair_ms=repair_ms,
                     duration_ms=repair_ms,
+                    **model_settings_log,
                 )
 
         result = postprocess_output(

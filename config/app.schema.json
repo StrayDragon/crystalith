@@ -257,6 +257,34 @@
       "title": "CompletionOptions",
       "type": "object"
     },
+    "ConcurrencySettings": {
+      "description": "Stage-level concurrency guardrails for key I/O phases.",
+      "properties": {
+        "embedding": {
+          "default": 8,
+          "description": "Max concurrent embedding calls (0 disables limiter). Applies to retrieval/QA/refine embedding stages.",
+          "minimum": 0,
+          "title": "Embedding",
+          "type": "integer"
+        },
+        "vector_search": {
+          "default": 8,
+          "description": "Max concurrent vector search calls (0 disables limiter).",
+          "minimum": 0,
+          "title": "Vector Search",
+          "type": "integer"
+        },
+        "llm_generate": {
+          "default": 4,
+          "description": "Max concurrent LLM generation calls (0 disables limiter).",
+          "minimum": 0,
+          "title": "Llm Generate",
+          "type": "integer"
+        }
+      },
+      "title": "ConcurrencySettings",
+      "type": "object"
+    },
     "ContextWindowSettings": {
       "description": "Context window management settings.",
       "properties": {
@@ -1296,6 +1324,10 @@
     },
     "ai": {
       "$ref": "#/$defs/AISettings"
+    },
+    "concurrency": {
+      "$ref": "#/$defs/ConcurrencySettings",
+      "description": "Concurrency guardrails"
     },
     "chat": {
       "$ref": "#/$defs/ChatSettings"

@@ -5,7 +5,7 @@ from typing import Any, AsyncIterator, Literal, Sequence
 import ollama
 
 from .cache import EmbeddingCache
-from .retry import run_with_retry
+from .retry import default_retry_budget_s, run_with_retry
 from .types import ChatMessage
 
 
@@ -27,6 +27,7 @@ class OllamaEmbeddingProvider:
         self._client = client or ollama.AsyncClient(host=host)
         self._options = options
         self._timeout = timeout
+        self._total_timeout = default_retry_budget_s(timeout=timeout, max_retries=max_retries)
         self._max_retries = max_retries
         self._cache = cache
 
@@ -84,6 +85,7 @@ class OllamaEmbeddingProvider:
         response = await run_with_retry(
             _do_embed,
             timeout=self._timeout,
+            total_timeout=self._total_timeout,
             max_retries=self._max_retries,
         )
 
@@ -99,27 +101,35 @@ class OllamaChatProvider:
         *,
         client: Any | None = None,
         host: str | None = None,
+        options: dict[str, Any] | None = None,
         timeout: float | None = 60,
         max_retries: int = 3,
     ) -> None:
         self.model = model
         self._client = client or ollama.AsyncClient(host=host)
+        self._options = options
         self._timeout = timeout
+        self._total_timeout = default_retry_budget_s(timeout=timeout, max_retries=max_retries)
         self._max_retries = max_retries
 
     async def chat(self, messages: Sequence[ChatMessage]) -> str:
         if not messages:
             raise ValueError("messages must not be empty")
 
+        kwargs: dict[str, Any] = {
+            "model": self.model,
+            "messages": [{"role": m.role, "content": m.content} for m in messages],
+        }
+        if self._options is not None:
+            kwargs["options"] = self._options
+
         async def _do_chat() -> Any:
-            return await self._client.chat(
-                model=self.model,
-                messages=[{"role": m.role, "content": m.content} for m in messages],
-            )
+            return await self._client.chat(**kwargs)
 
         response = await run_with_retry(
             _do_chat,
             timeout=self._timeout,
+            total_timeout=self._total_timeout,
             max_retries=self._max_retries,
         )
 
@@ -131,16 +141,21 @@ class OllamaChatProvider:
         if not messages:
             raise ValueError("messages must not be empty")
 
+        kwargs: dict[str, Any] = {
+            "model": self.model,
+            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "stream": True,
+        }
+        if self._options is not None:
+            kwargs["options"] = self._options
+
         async def _do_chat_stream() -> Any:
-            return await self._client.chat(
-                model=self.model,
-                messages=[{"role": m.role, "content": m.content} for m in messages],
-                stream=True,
-            )
+            return await self._client.chat(**kwargs)
 
         response = await run_with_retry(
             _do_chat_stream,
             timeout=self._timeout,
+            total_timeout=self._total_timeout,
             max_retries=self._max_retries,
         )
         async for chunk in response:

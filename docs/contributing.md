@@ -33,6 +33,25 @@ cd backend/py && just test
 cd frontend/web && pnpm test
 ```
 
+## Config schema
+
+If you change config settings models, regenerate `config/app.schema.json`:
+
+```bash
+cd backend/py && just config-schema
+```
+
+## Eval / regression harness
+
+Generate an offline JSON + Markdown report (no network / real model calls by default):
+
+```bash
+cd backend/py && just llm-eval
+```
+
+To compare runs, keep the generated `backend/py/llm_eval_reports/llm_eval_report.json` as a baseline and diff it
+against a new run.
+
 ## OpenAPI / generated clients
 
 If you change backend APIs:
