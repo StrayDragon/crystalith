@@ -38,4 +38,3 @@
 #### Scenario: 生成客户端无 diff
 - **WHEN** CI 执行 `cd frontend/web && pnpm run api:generate`
 - **THEN** `frontend/web/src/api/generated` 不产生未提交 diff
-

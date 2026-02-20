@@ -52,4 +52,3 @@
 #### Scenario: 文档包含演示入口
 - **WHEN** 用户阅读文档首页或 Getting Started 页面
 - **THEN** 存在一个可播放或可点击的演示媒体入口
-
