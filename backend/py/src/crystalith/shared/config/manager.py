@@ -171,6 +171,18 @@ class ConfigManager:
             if not cache_provider and settings.cache.provider != "redis":
                 settings.cache.provider = "redis"
 
+        embedding_concurrency = _read_int("CRYSTALITH_CONCURRENCY__EMBEDDING")
+        if embedding_concurrency is not None and embedding_concurrency >= 0:
+            settings.concurrency.embedding = embedding_concurrency
+
+        vector_search_concurrency = _read_int("CRYSTALITH_CONCURRENCY__VECTOR_SEARCH")
+        if vector_search_concurrency is not None and vector_search_concurrency >= 0:
+            settings.concurrency.vector_search = vector_search_concurrency
+
+        llm_concurrency = _read_int("CRYSTALITH_CONCURRENCY__LLM_GENERATE")
+        if llm_concurrency is not None and llm_concurrency >= 0:
+            settings.concurrency.llm_generate = llm_concurrency
+
         openai_api_key = _read_text_with_secrets("OPENAI_API_KEY")
         openai_base_url = _read_text("OPENAI_BASE_URL")
         if openai_api_key or openai_base_url:
@@ -509,6 +521,10 @@ models:
       completion_options:
         temperature: 0.7
         max_tokens: 4096
+      request_options:
+        timeout: 30
+        headers:
+          X-Crystalith-Client: "crystalith"
 
     # Via proxy (e.g., OpenRouter)
     - id: "claude-3-sonnet"

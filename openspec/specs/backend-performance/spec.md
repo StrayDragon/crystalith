@@ -35,3 +35,68 @@ TBD - created by archiving change add-caching-layer. Update Purpose after archiv
 #### Scenario: 默认缓存配置
 - **WHEN** 配置文件中未指定 cache 段
 - **THEN** 系统使用 InMemoryCache 并采用默认 TTL 和大小限制
+
+### Requirement: Retry Boundary Clarity
+系统 MUST 明确重试边界，避免 SDK 与业务层重试叠加导致尾延迟膨胀。系统 SHOULD 将可重试错误（限流/超时/短暂网络失败）统一交由业务层策略处理。
+
+#### Scenario: 不出现嵌套 backoff
+- **WHEN** 系统遇到可重试的 provider 错误（例如 429/503/超时）
+- **THEN** 系统 MUST 不得同时触发 SDK 重试与业务层重试
+- **AND** 日志 SHOULD 能区分“格式重试（schema）”与“网络重试（provider）”
+
+### Requirement: Effective Settings Observability
+系统 SHOULD 在生成相关日志中记录 effective settings（timeout、max_retries、completion options），以便快速定位配置不生效或性能回归。
+
+#### Scenario: 输出 effective settings
+- **WHEN** 系统完成一次生成请求
+- **THEN** 日志 SHOULD 包含 timeout、max_retries、temperature/max_tokens 等关键字段（若适用）
+
+### Requirement: Effective Tuning Observability
+系统 SHOULD 在生成相关日志中记录 effective tuning（至少包括 top_k/min_score/agent_retries 以及与 multi-query/budget 相关的关键字段），以支持数据驱动调参回归。
+
+#### Scenario: 日志包含 effective tuning
+- **WHEN** 系统完成一次输出生成请求
+- **THEN** 日志 SHOULD 包含 effective `top_k`、`min_score`、`agent_retries`
+- **AND** SHOULD 包含 query_count 与关键阶段耗时（embed/search/generate 等）
+
+### Requirement: Multi-query Cost Controls
+系统 MUST 在 multi-query 场景下提供成本控制点（至少包括 seeds 上限与可观测的 query_count），并将其纳入默认 tuning。
+
+#### Scenario: 记录 query_count
+- **WHEN** 系统执行 multi-query 检索
+- **THEN** 日志/指标 MUST 记录 query_count（实际 seeds 数）
+
+### Requirement: Optional Retrieval Assembly Cache
+系统 MAY 提供短 TTL 的检索组装缓存（在安全边界内），用于降低重复检索/格式化的开销。
+
+#### Scenario: 相同输入命中缓存
+- **GIVEN** 在短时间内重复以相同 notebook_id/source_ids/seeds 等参数请求检索
+- **WHEN** 第二次请求发生
+- **THEN** 系统 MAY 从缓存返回等价的检索结果并减少 DB/format 开销
+
+### Requirement: Timings are Exportable for Evaluation
+系统 SHOULD 以稳定字段名提供分阶段 timings（embed/search/db/format/generate/total 等）与 query_count，供评测工具与性能回归使用。
+
+#### Scenario: 评测工具可读取 timings
+- **GIVEN** 一次生成请求的结果与日志/返回结构
+- **WHEN** 评测工具收集指标
+- **THEN** 工具 SHOULD 能读取 query_count 与关键阶段耗时字段并纳入报告
+
+### Requirement: Stage-level Concurrency Limits
+系统 MUST 为关键 I/O 阶段提供并发限制（至少包括 embedding、vector search、LLM generation），并允许通过配置调整上限。
+
+#### Scenario: embedding 并发受限
+- **GIVEN** 配置设置 embedding 并发上限为 N
+- **WHEN** 同时触发超过 N 个 embedding 请求
+- **THEN** 系统 MUST 限制并发执行数不超过 N（其余请求等待或排队）
+
+#### Scenario: limiter 等待可观测
+- **WHEN** 请求因 limiter 等待而延迟
+- **THEN** 系统 SHOULD 记录等待耗时（用于性能分析）
+
+### Requirement: Cancellation Avoids Wasteful Work
+系统 SHOULD 在请求取消时尽早停止后续阶段，减少无效计算与资源占用。
+
+#### Scenario: 请求取消后停止生成
+- **WHEN** 客户端断开或请求被取消
+- **THEN** 系统 SHOULD 尽早停止尚未开始的阶段

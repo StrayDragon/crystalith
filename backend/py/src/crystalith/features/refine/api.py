@@ -32,6 +32,7 @@ from crystalith.shared.deps import (
     get_db_session,
     get_embedding_provider,
     get_settings,
+    get_stage_limiters,
     get_task_queue,
     get_vector_store,
 )
@@ -237,6 +238,7 @@ async def refine_batch(
     chatter: ChatProvider = Depends(get_ai_provider),
     vector_store: VectorStore = Depends(get_vector_store),
     cache: CacheProvider = Depends(get_cache_provider),
+    limiters=Depends(get_stage_limiters),
     settings: Settings = Depends(get_settings),
 ) -> RefineBatchResponse:
     notebook = await session.get(Notebook, notebook_id)
@@ -255,22 +257,24 @@ async def refine_batch(
         context = ""
         evidence = False
     else:
-        embeddings = await embedder.embed_batch([payload.prompt])
+        async with limiters.embedding.acquire():
+            embeddings = await embedder.embed_batch([payload.prompt])
         if not embeddings:
             citations = []
             context = ""
             evidence = False
         else:
             query_vector = embeddings[0]
-            results = await cached_vector_search(
-                cache=cache,
-                vector_store=vector_store,
-                notebook_id=notebook_id,
-                query_vector=query_vector,
-                top_k=payload.top_k,
-                min_score=payload.min_score,
-                source_ids=source_ids,
-            )
+            async with limiters.vector_search.acquire():
+                results = await cached_vector_search(
+                    cache=cache,
+                    vector_store=vector_store,
+                    notebook_id=notebook_id,
+                    query_vector=query_vector,
+                    top_k=payload.top_k,
+                    min_score=payload.min_score,
+                    source_ids=source_ids,
+                )
             if not results:
                 citations = []
                 context = ""
@@ -308,7 +312,8 @@ async def refine_batch(
     async def _generate_output(format_name: str) -> tuple[str, RefineBatchOutput]:
         messages = _build_messages(format_name, payload.prompt, context)
         async with semaphore:
-            answer = await chatter.chat(messages)
+            async with limiters.llm_generate.acquire():
+                answer = await chatter.chat(messages)
         return format_name, _apply_format(format_name, answer, payload.prompt, citations)
 
     generated = await asyncio.gather(*[_generate_output(format_name) for format_name in formats])

@@ -132,6 +132,23 @@ embedding:
   batch_size: 32
 
 # ----------------------------------------------------------------------------
+# Concurrency guardrails (safe defaults)
+# ----------------------------------------------------------------------------
+# Applies to key I/O phases:
+# - embedding: retrieval/qa/refine embedding calls
+# - vector_search: vector DB search calls
+# - llm_generate: chat/completions (including streaming) calls
+#
+# Set to 0 to disable a limiter. Env overrides:
+# - CRYSTALITH_CONCURRENCY__EMBEDDING
+# - CRYSTALITH_CONCURRENCY__VECTOR_SEARCH
+# - CRYSTALITH_CONCURRENCY__LLM_GENERATE
+concurrency:
+  embedding: 8
+  vector_search: 8
+  llm_generate: 4
+
+# ----------------------------------------------------------------------------
 # Storage
 # ----------------------------------------------------------------------------
 vector_storage:

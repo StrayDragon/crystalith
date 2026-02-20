@@ -3,16 +3,27 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import ollama
-from openai import AsyncOpenAI
 
-from crystalith.shared.config import ModelConfig, OpenAIProviderSettings, OllamaProviderSettings, Settings
+from cl_logs.logging import get_logger
+
+from crystalith.shared.config import ModelConfig, RequestOptions, Settings
 from crystalith.shared.plugins import PluginRegistry
 
 from .cache import EmbeddingCache
+from .effective_settings import (
+    completion_options_to_ollama_options,
+    completion_options_to_openai_chat_kwargs,
+    resolve_completion_options,
+    resolve_request_options,
+)
 from .interfaces import ChatProvider, EmbeddingProvider
+from .openai_client_manager import get_openai_client_manager
 from .ollama_provider import OllamaChatProvider, OllamaEmbeddingProvider
 from .openai_provider import OpenAIChatProvider, OpenAIEmbeddingProvider
 from .test_provider import TestChatProvider, TestEmbeddingProvider
+
+
+log = get_logger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,9 +34,62 @@ class Providers:
 
 _EMBEDDING_CACHE = EmbeddingCache(maxsize=10_000)
 
+_WARNED_UNSUPPORTED_OPTIONS: set[tuple[str, str, tuple[str, ...]]] = set()
+_WARNED_IGNORED_REQUEST_OPTIONS: set[str] = set()
+_WARNED_PLUGIN_OPTIONS: set[str] = set()
 
-def _resolve_ai_timeout(settings: Settings) -> float:
-    return float(settings.ai.timeout)
+
+def _warn_unsupported_options_once(model_id: str, provider: str, unsupported: tuple[str, ...]) -> None:
+    if not unsupported:
+        return
+    key = (model_id, provider, unsupported)
+    if key in _WARNED_UNSUPPORTED_OPTIONS:
+        return
+    _WARNED_UNSUPPORTED_OPTIONS.add(key)
+    log.warning(
+        "unsupported completion_options ignored for provider",
+        model_id=model_id,
+        provider=provider,
+        unsupported_completion_options=list(unsupported),
+    )
+
+
+def _warn_ignored_request_options_once(model_id: str, provider: str, *, proxy: str | None, verify_ssl: bool, headers) -> None:
+    if proxy is None and verify_ssl is True and headers is None:
+        return
+    if model_id in _WARNED_IGNORED_REQUEST_OPTIONS:
+        return
+    _WARNED_IGNORED_REQUEST_OPTIONS.add(model_id)
+    log.warning(
+        "request_options ignored for provider",
+        model_id=model_id,
+        provider=provider,
+        proxy_configured=proxy is not None,
+        verify_ssl=verify_ssl,
+        header_keys=sorted(headers.keys()) if isinstance(headers, dict) else None,
+    )
+
+
+def _warn_plugin_options_once(model_id: str, provider: str, *, completion_options, request_options) -> None:
+    if completion_options is None and request_options is None:
+        return
+    key = f"{model_id}:{provider}"
+    if key in _WARNED_PLUGIN_OPTIONS:
+        return
+    _WARNED_PLUGIN_OPTIONS.add(key)
+
+    completion_fields = list(getattr(completion_options, "model_fields_set", set())) if completion_options else []
+    request_fields = list(getattr(request_options, "model_fields_set", set())) if request_options else []
+    if not completion_fields and not request_fields:
+        return
+
+    log.warning(
+        "plugin provider must apply completion_options/request_options",
+        model_id=model_id,
+        provider=provider,
+        completion_option_fields=sorted(str(f) for f in completion_fields) or None,
+        request_option_fields=sorted(str(f) for f in request_fields) or None,
+    )
 
 
 def _resolve_ai_retries(settings: Settings) -> int:
@@ -38,11 +102,11 @@ def get_model_config_by_id(settings: Settings, model_id: str) -> ModelConfig | N
 
 
 def _create_openai_client(
-    settings: Settings,
     model_config: ModelConfig,
     *,
     reason: str,
-) -> AsyncOpenAI:
+    request_options: RequestOptions,
+):
     """
     Create an OpenAI client from model configuration.
 
@@ -58,19 +122,18 @@ def _create_openai_client(
         )
 
     base_url = config.base_url or "https://api.openai.com/v1"
-    organization = config.organization or ""
-    project = config.project or ""
-
-    return AsyncOpenAI(
-        api_key=api_key,
+    return get_openai_client_manager().get(
+        api_key=api_key.strip(),
         base_url=base_url,
-        organization=organization,
-        project=project,
-        timeout=_resolve_ai_timeout(settings),
+        organization=config.organization,
+        project=config.project,
+        timeout=float(request_options.timeout),
+        proxy=request_options.proxy,
+        verify_ssl=request_options.verify_ssl,
+        headers=request_options.headers,
         # We run our own retry policy in providers.run_with_retry; disable SDK retries
         # to avoid nested backoff and inflated tail latencies.
         max_retries=0,
-        webhook_secret="",
     )
 
 
@@ -144,19 +207,39 @@ def create_chat_provider_by_model_id(
     if not model_config.has_role("chat"):
         raise ValueError(f"Model {model_id} does not support chat role")
 
+    request_options = resolve_request_options(settings, model_config)
+    completion_options = resolve_completion_options(model_config)
+
     match model_config.provider:
         case "openai":
+            completion_kwargs, unsupported = completion_options_to_openai_chat_kwargs(completion_options)
+            _warn_unsupported_options_once(model_id, "openai", unsupported)
             return OpenAIChatProvider(
                 model=model_config.model,
-                client=_create_openai_client(settings, model_config, reason=f"model:{model_id}"),
-                timeout=_resolve_ai_timeout(settings),
+                client=_create_openai_client(model_config, reason=f"model:{model_id}", request_options=request_options),
+                timeout=float(request_options.timeout),
                 max_retries=_resolve_ai_retries(settings),
+                completion_kwargs=completion_kwargs or None,
             )
         case "ollama":
+            _warn_ignored_request_options_once(
+                model_id,
+                "ollama",
+                proxy=request_options.proxy,
+                verify_ssl=request_options.verify_ssl,
+                headers=request_options.headers,
+            )
+            options: dict[str, object] = {}
+            if model_config.ollama_options:
+                options.update(model_config.ollama_options.to_options() or {})
+            ollama_options, unsupported = completion_options_to_ollama_options(completion_options)
+            _warn_unsupported_options_once(model_id, "ollama", unsupported)
+            options.update(ollama_options)
             return OllamaChatProvider(
                 model=model_config.model,
                 client=_create_ollama_client(model_config),
-                timeout=_resolve_ai_timeout(settings),
+                options=options or None,
+                timeout=float(request_options.timeout),
                 max_retries=_resolve_ai_retries(settings),
             )
         case "test":
@@ -169,6 +252,12 @@ def create_chat_provider_by_model_id(
             if plugin is None:
                 raise ValueError(f"Unsupported provider for model {model_id}: {provider}")
 
+            _warn_plugin_options_once(
+                model_id,
+                provider,
+                completion_options=model_config.completion_options,
+                request_options=model_config.request_options,
+            )
             return plugin.create_chat_provider(settings, model_config)
 
 
@@ -192,12 +281,14 @@ def create_embedding_provider_by_model_id(
     if not model_config.has_role("embed"):
         raise ValueError(f"Model {model_id} does not support embed role")
 
+    request_options = resolve_request_options(settings, model_config)
+
     match model_config.provider:
         case "openai":
             return OpenAIEmbeddingProvider(
                 model=model_config.model,
-                client=_create_openai_client(settings, model_config, reason=f"embedding:{model_id}"),
-                timeout=_resolve_ai_timeout(settings),
+                client=_create_openai_client(model_config, reason=f"embedding:{model_id}", request_options=request_options),
+                timeout=float(request_options.timeout),
                 max_retries=_resolve_ai_retries(settings),
                 cache=_EMBEDDING_CACHE,
             )
@@ -207,11 +298,18 @@ def create_embedding_provider_by_model_id(
             if model_config.ollama_options:
                 options = model_config.ollama_options.to_options()
 
+            _warn_ignored_request_options_once(
+                model_id,
+                "ollama",
+                proxy=request_options.proxy,
+                verify_ssl=request_options.verify_ssl,
+                headers=request_options.headers,
+            )
             return OllamaEmbeddingProvider(
                 model=model_config.model,
                 client=_create_ollama_client(model_config),
                 options=options,
-                timeout=_resolve_ai_timeout(settings),
+                timeout=float(request_options.timeout),
                 max_retries=_resolve_ai_retries(settings),
                 cache=_EMBEDDING_CACHE,
             )
@@ -225,4 +323,10 @@ def create_embedding_provider_by_model_id(
             if plugin is None:
                 raise ValueError(f"Unsupported provider for model {model_id}: {provider}")
 
+            _warn_plugin_options_once(
+                model_id,
+                provider,
+                completion_options=model_config.completion_options,
+                request_options=model_config.request_options,
+            )
             return plugin.create_embedding_provider(settings, model_config)

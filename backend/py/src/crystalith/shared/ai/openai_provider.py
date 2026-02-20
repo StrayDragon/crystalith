@@ -5,7 +5,7 @@ from typing import Any, AsyncIterator, Literal, Sequence
 from openai import AsyncOpenAI
 
 from .cache import EmbeddingCache
-from .retry import run_with_retry
+from .retry import default_retry_budget_s, run_with_retry
 from .types import ChatMessage
 
 
@@ -31,8 +31,14 @@ class OpenAIEmbeddingProvider:
             base_url=base_url,
             organization=organization,
             project=project,
+            timeout=timeout,
+            # We run our own retry policy in providers.run_with_retry; disable SDK retries
+            # to avoid nested backoff and inflated tail latencies.
+            max_retries=0,
+            webhook_secret="",
         )
         self._timeout = timeout
+        self._total_timeout = default_retry_budget_s(timeout=timeout, max_retries=max_retries)
         self._max_retries = max_retries
         self._cache = cache
 
@@ -89,6 +95,7 @@ class OpenAIEmbeddingProvider:
         response = await run_with_retry(
             _do_embed,
             timeout=self._timeout,
+            total_timeout=self._total_timeout,
             max_retries=self._max_retries,
         )
 
@@ -112,6 +119,7 @@ class OpenAIChatProvider:
         project: str | None = None,
         timeout: float | None = 60,
         max_retries: int = 3,
+        completion_kwargs: dict[str, Any] | None = None,
     ) -> None:
         self.model = model
         self._client = client or AsyncOpenAI(
@@ -119,9 +127,16 @@ class OpenAIChatProvider:
             base_url=base_url,
             organization=organization,
             project=project,
+            timeout=timeout,
+            # We run our own retry policy in providers.run_with_retry; disable SDK retries
+            # to avoid nested backoff and inflated tail latencies.
+            max_retries=0,
+            webhook_secret="",
         )
         self._timeout = timeout
+        self._total_timeout = default_retry_budget_s(timeout=timeout, max_retries=max_retries)
         self._max_retries = max_retries
+        self._completion_kwargs = dict(completion_kwargs) if completion_kwargs else {}
 
     async def chat(self, messages: Sequence[ChatMessage]) -> str:
         if not messages:
@@ -131,11 +146,13 @@ class OpenAIChatProvider:
             return await self._client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": m.role, "content": m.content} for m in messages],
+                **self._completion_kwargs,
             )
 
         response = await run_with_retry(
             _do_chat,
             timeout=self._timeout,
+            total_timeout=self._total_timeout,
             max_retries=self._max_retries,
         )
 
@@ -151,11 +168,13 @@ class OpenAIChatProvider:
                 model=self.model,
                 messages=[{"role": m.role, "content": m.content} for m in messages],
                 stream=True,
+                **self._completion_kwargs,
             )
 
         response = await run_with_retry(
             _create_stream,
             timeout=self._timeout,
+            total_timeout=self._total_timeout,
             max_retries=self._max_retries,
         )
         async for chunk in response:

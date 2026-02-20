@@ -13,6 +13,7 @@ from crystalith.shared.ai.factory import create_chat_provider, create_embedding_
 from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.shared.ai.wrappers import CachedEmbeddingProvider, DefaultBatchEmbeddingProvider
 from crystalith.shared.cache import CacheProvider, create_cache_provider
+from crystalith.shared.concurrency import StageLimiters
 from crystalith.shared.config import Settings
 from crystalith.shared.parsers import TranscriptionProvider, create_transcription_provider
 from crystalith.shared.plugins import PluginRegistry
@@ -127,6 +128,10 @@ def get_transcription_provider(settings: Settings = Depends(get_settings)) -> Tr
 
 def get_vector_store(request: Request) -> VectorStore:
     return request.app.state.vector_store
+
+
+def get_stage_limiters(request: Request) -> StageLimiters:
+    return request.app.state.limiters
 
 
 def get_task_queue(request: Request) -> "TaskQueue":

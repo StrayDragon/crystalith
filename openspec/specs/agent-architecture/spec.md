@@ -218,3 +218,49 @@ These models MUST be importable by plugin packages without requiring the full co
 - **WHEN** 安装依赖
 - **THEN** MUST 安装 `pydantic-graph` 包
 - **AND** SHALL NOT 安装 `langgraph` 及其子包（langgraph-checkpoint、langgraph-sdk、langgraph-prebuilt）
+
+### Requirement: OutputType-based Default Tuning
+系统 MUST 能基于 `OutputType + GenerationPreference` 选择默认 tuning，并在调用方未显式提供参数时应用到检索与生成阶段。
+
+#### Scenario: 显式参数优先
+- **GIVEN** 请求显式提供了 `top_k/min_score`
+- **WHEN** 系统生成某个 OutputType 的输出
+- **THEN** 系统 MUST 使用显式提供的 `top_k/min_score`
+- **AND** MUST NOT 被默认 tuning 覆盖
+
+#### Scenario: 未显式提供时应用默认 tuning
+- **GIVEN** 请求未显式提供 `top_k/min_score`
+- **WHEN** 系统生成某个 OutputType 的输出且 `preference=quality`
+- **THEN** 系统 MUST 使用该 OutputType 的 quality 默认 tuning
+
+### Requirement: Consistent Model Settings Application
+系统 MUST 在所有基于 `pydantic_ai.Agent` 的生成路径中一致应用来自配置的模型请求设置（completion options + request options），并在日志中记录 effective settings。
+
+#### Scenario: OutputGraph 应用 completion options
+- **GIVEN** 配置为默认 chat 模型设置了 `completion_options.temperature` 与 `completion_options.max_tokens`
+- **WHEN** 系统通过 OutputGraph 生成结构化输出
+- **THEN** LLM 请求 MUST 使用该 temperature/max_tokens 作为默认生成参数
+- **AND** 日志 MUST 记录本次生成的 effective completion options
+
+#### Scenario: OutputGraph 应用 request options
+- **GIVEN** 配置为默认 chat 模型设置了 `request_options.timeout` 与自定义 headers
+- **WHEN** 系统通过 OutputGraph 调用 LLM
+- **THEN** LLM 请求 MUST 使用该 timeout 与 headers
+
+### Requirement: No Nested Provider Retries
+系统 MUST 避免在 Agent 路径中出现“SDK 内置重试 + 业务层重试”的嵌套行为。系统 SHOULD 将网络/限流类错误的重试边界统一到业务层策略中。
+
+#### Scenario: 禁用 SDK 内置重试
+- **WHEN** 系统构建用于 Agent 的 OpenAI-compatible client
+- **THEN** SDK 的内置重试 MUST 被禁用（或设置为 0）
+
+### Requirement: Graph Nodes Respect Concurrency and Cancellation
+系统 MUST 确保 Agent/Graph 节点在执行 embedding/search/model 调用时遵循并发限制，并在请求取消时尽早退出。
+
+#### Scenario: OutputGraph 受 limiter 保护
+- **WHEN** OutputGraph 执行检索与生成阶段
+- **THEN** 每个阶段 MUST 在对应 limiter 下运行（或等价保护）
+
+#### Scenario: 取消时不继续后续节点
+- **WHEN** 在图执行过程中发生请求取消
+- **THEN** 图 SHOULD 不再继续执行后续昂贵节点（例如生成或持久化），或以明确的取消结果终止

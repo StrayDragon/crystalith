@@ -24,6 +24,7 @@ from crystalith.shared.deps import (
     get_db_session,
     get_embedding_provider,
     get_settings,
+    get_stage_limiters,
     get_vector_store,
 )
 from crystalith.shared.db import Notebook, Output, Source, StudioSlide
@@ -333,6 +334,7 @@ async def generate_outline_stream(
     cache: CacheProvider = Depends(get_cache_provider),
     embedder=Depends(get_embedding_provider),
     vector_store=Depends(get_vector_store),
+    limiters=Depends(get_stage_limiters),
     model_id: str | None = None,
 ) -> StreamingResponse:
     slide = await _get_slide(session, notebook_id, slide_id)
@@ -363,6 +365,7 @@ async def generate_outline_stream(
             vector_store=vector_store,
             embedder=embedder,
             cache=cache,
+            limiters=limiters,
         )
 
         yield _sse_event("progress", {"trace_id": trace_id, "stage": "outline", "message": "开始生成大纲", "progress": 5})
@@ -427,6 +430,7 @@ async def generate_markdown_stream(
     cache: CacheProvider = Depends(get_cache_provider),
     embedder=Depends(get_embedding_provider),
     vector_store=Depends(get_vector_store),
+    limiters=Depends(get_stage_limiters),
     model_id: str | None = None,
 ) -> StreamingResponse:
     slide = await _get_slide(session, notebook_id, slide_id)
@@ -460,6 +464,7 @@ async def generate_markdown_stream(
             vector_store=vector_store,
             embedder=embedder,
             cache=cache,
+            limiters=limiters,
         )
 
         outline = SlideOutline.model_validate(slide.outline)
