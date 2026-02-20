@@ -72,7 +72,7 @@ jobs:
             # is isolated from backend/py defaults.
             (
               cd "$package"
-              uv run --project . pytest -c pyproject.toml
+              uv run --project . pytest -c pyproject.toml -o asyncio_mode=auto
             )
           done
 
