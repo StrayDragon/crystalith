@@ -1,0 +1,9 @@
+[project]
+name = "crystalith-docs"
+version = "0.1.0"
+description = "Crystalith documentation site"
+requires-python = ">=3.12"
+dependencies = ["mkdocs-material>=9.5.0"]
+
+[tool.uv]
+package = false
