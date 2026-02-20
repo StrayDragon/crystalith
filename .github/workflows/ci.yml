@@ -68,7 +68,9 @@ jobs:
         run: |
           cd backend/py
           for package in packages/*; do
-            uv run --project "$package" pytest "$package/tests"
+            # Avoid inheriting backend/py pytest addopts (coverage fail-under) when running
+            # package-level tests. Each workspace package can provide its own config.
+            uv run --project "$package" pytest -c "$package/pyproject.toml" "$package/tests"
           done
 
       - name: Check OpenAPI schema is up to date
