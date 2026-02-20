@@ -29,6 +29,7 @@ from crystalith.shared.deps import (
     get_db_session,
     get_embedding_provider,
     get_settings,
+    get_stage_limiters,
     get_vector_store,
 )
 
@@ -143,6 +144,7 @@ async def ask_question(
     vector_store: VectorStore = Depends(get_vector_store),
     cache: CacheProvider = Depends(get_cache_provider),
     settings: Settings = Depends(get_settings),
+    limiters=Depends(get_stage_limiters),
 ) -> QAResponse:
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
@@ -224,11 +226,16 @@ async def ask_question(
     await _validate_source_ids(session, notebook_id, source_ids)
 
     if payload.session_id is None:
-        embeddings = await embedder.embed_batch([payload.question])
+        async with limiters.embedding.acquire():
+            embeddings = await embedder.embed_batch([payload.question])
         db_session = None
         history_messages = []
     else:
-        embedding_task = embedder.embed_batch([payload.question])
+        async def _embed_question() -> list[list[float]]:
+            async with limiters.embedding.acquire():
+                return await embedder.embed_batch([payload.question])
+
+        embedding_task = _embed_question()
         history_task = _load_history()
         embeddings, history_payload = await asyncio.gather(embedding_task, history_task)
         db_session, history_messages = history_payload
@@ -254,15 +261,16 @@ async def ask_question(
             context=ContextStatsResponse.model_validate(stats),
         )
     query_vector = embeddings[0]
-    results = await cached_vector_search(
-        cache=cache,
-        vector_store=vector_store,
-        notebook_id=notebook_id,
-        query_vector=query_vector,
-        top_k=payload.top_k,
-        min_score=payload.min_score,
-        source_ids=source_ids,
-    )
+    async with limiters.vector_search.acquire():
+        results = await cached_vector_search(
+            cache=cache,
+            vector_store=vector_store,
+            notebook_id=notebook_id,
+            query_vector=query_vector,
+            top_k=payload.top_k,
+            min_score=payload.min_score,
+            source_ids=source_ids,
+        )
 
     if not results:
         created_at = datetime.datetime.now(datetime.UTC)
@@ -389,7 +397,8 @@ async def ask_question(
         citation_ratio=citation_ratio,
     )
 
-    answer = await chatter.chat(messages)
+    async with limiters.llm_generate.acquire():
+        answer = await chatter.chat(messages)
     answer = _ensure_inline_citations(answer, citations)
     created_at = datetime.datetime.now(datetime.UTC)
     await _persist_session_messages(answer=answer, citations=citations, created_at=created_at)
@@ -459,6 +468,7 @@ async def ask_question_stream(
     vector_store: VectorStore = Depends(get_vector_store),
     cache: CacheProvider = Depends(get_cache_provider),
     settings: Settings = Depends(get_settings),
+    limiters=Depends(get_stage_limiters),
 ) -> StreamingResponse:
     """
     Stream QA response using Server-Sent Events.
@@ -563,13 +573,17 @@ async def ask_question_stream(
             if await request.is_disconnected():
                 return
             if payload.session_id is None:
-                embeddings = await embedder.embed_batch([payload.question])
+                async with limiters.embedding.acquire():
+                    embeddings = await embedder.embed_batch([payload.question])
             else:
-                embeddings, history_payload = await asyncio.gather(
-                    embedder.embed_batch([payload.question]),
-                    _load_history(),
-                )
+                async def _embed_question() -> list[list[float]]:
+                    async with limiters.embedding.acquire():
+                        return await embedder.embed_batch([payload.question])
+
+                embeddings, history_payload = await asyncio.gather(_embed_question(), _load_history())
                 db_session, history_messages = history_payload
+        except asyncio.CancelledError:
+            raise
         except Exception as embed_error:
             # Handle embedding service errors (e.g., Ollama 503)
             error_msg = f"Embedding 服务暂时不可用: {embed_error}"
@@ -605,15 +619,16 @@ async def ask_question_stream(
         query_vector = embeddings[0]
         if await request.is_disconnected():
             return
-        results = await cached_vector_search(
-            cache=cache,
-            vector_store=vector_store,
-            notebook_id=notebook_id,
-            query_vector=query_vector,
-            top_k=payload.top_k,
-            min_score=payload.min_score,
-            source_ids=source_ids,
-        )
+        async with limiters.vector_search.acquire():
+            results = await cached_vector_search(
+                cache=cache,
+                vector_store=vector_store,
+                notebook_id=notebook_id,
+                query_vector=query_vector,
+                top_k=payload.top_k,
+                min_score=payload.min_score,
+                source_ids=source_ids,
+            )
 
         if not results:
             created_at = datetime.datetime.now(datetime.UTC)
@@ -755,11 +770,14 @@ async def ask_question_stream(
         # Stream the answer
         answer_chunks: list[str] = []
         try:
-            async for chunk in chatter.chat_stream(messages):
-                if await request.is_disconnected():
-                    return
-                answer_chunks.append(chunk)
-                yield _sse_event("chunk", {"text": chunk})
+            async with limiters.llm_generate.acquire():
+                async for chunk in chatter.chat_stream(messages):
+                    if await request.is_disconnected():
+                        return
+                    answer_chunks.append(chunk)
+                    yield _sse_event("chunk", {"text": chunk})
+        except asyncio.CancelledError:
+            raise
         except Exception as e:  # noqa: BLE001
             yield _sse_event("error", {"message": str(e)})
             return

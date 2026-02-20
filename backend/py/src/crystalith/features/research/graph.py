@@ -11,7 +11,7 @@ from pydantic_graph import BaseNode, End, Graph, GraphRunContext
 
 from cl_logs.logging import get_logger
 
-from crystalith.shared.agents.models import build_chat_model
+from crystalith.shared.agents.models import build_chat_model, extract_effective_model_settings_for_log
 from crystalith.shared.db import ResearchSession, ResearchStep
 from crystalith.shared.types import ResearchStatus, ResearchStepStatus, ResearchStepType
 
@@ -166,6 +166,7 @@ class PlanSearches(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]):
         # Generate plan using AI
         try:
             model = build_chat_model(deps.settings)
+            model_settings_log = extract_effective_model_settings_for_log(model)
             agent = Agent(
                 model,
                 output_type=SearchPlanOutput,
@@ -196,6 +197,7 @@ class PlanSearches(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]):
                 "search plan generated",
                 session_id=state.session_id,
                 query_count=len(queries),
+                **model_settings_log,
             )
 
             # Emit thinking event with reasoning
@@ -637,8 +639,10 @@ class AnalyzeResults(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]])
         user_prompt = "\n".join(prompt_parts)
 
         # Analyze using AI
+        model_settings_log: dict[str, Any] = {}
         try:
             model = build_chat_model(deps.settings)
+            model_settings_log = extract_effective_model_settings_for_log(model)
             agent = Agent(
                 model,
                 output_type=AnalysisOutput,
@@ -674,6 +678,7 @@ class AnalyzeResults(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]])
             session_id=state.session_id,
             coverage=state.analysis.coverage,
             need_more=state.analysis.need_more_search,
+            **model_settings_log,
         )
 
         # Emit thinking event with summary
@@ -777,8 +782,10 @@ class GenerateReport(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]])
         user_prompt = "\n".join(prompt_parts)
 
         # Generate report using AI
+        model_settings_log: dict[str, Any] = {}
         try:
             model = build_chat_model(deps.settings)
+            model_settings_log = extract_effective_model_settings_for_log(model)
             agent = Agent(
                 model,
                 output_type=ReportOutput,
@@ -807,6 +814,7 @@ class GenerateReport(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]])
             "report generated",
             session_id=state.session_id,
             report_length=len(state.final_report),
+            **model_settings_log,
         )
 
         # Emit thinking event

@@ -52,6 +52,18 @@ jobs:
           cd backend/py
           uv run pytest tests/ -v
 
+      - name: Run offline LLM eval regression (non-blocking)
+        run: |
+          cd backend/py
+          uv run python scripts/llm_eval.py --output-dir llm_eval_reports
+
+      - name: Upload LLM eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-eval-report
+          path: backend/py/llm_eval_reports
+
       - name: Run workspace package tests
         run: |
           cd backend/py

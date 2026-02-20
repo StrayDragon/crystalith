@@ -430,6 +430,29 @@ class AISettings(BaseModel):
     max_retries: int = Field(3, ge=0, le=10, description="Maximum retries for retryable provider errors")
 
 
+class ConcurrencySettings(BaseModel):
+    """Stage-level concurrency guardrails for key I/O phases."""
+
+    embedding: int = Field(
+        8,
+        ge=0,
+        description=(
+            "Max concurrent embedding calls (0 disables limiter). "
+            "Applies to retrieval/QA/refine embedding stages."
+        ),
+    )
+    vector_search: int = Field(
+        8,
+        ge=0,
+        description="Max concurrent vector search calls (0 disables limiter).",
+    )
+    llm_generate: int = Field(
+        4,
+        ge=0,
+        description="Max concurrent LLM generation calls (0 disables limiter).",
+    )
+
+
 class ChatSettings(BaseModel):
     """
     Chat settings.
@@ -746,6 +769,7 @@ class Settings(BaseSettings):
     # === Feature Settings ===
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     ai: AISettings = Field(default_factory=AISettings)
+    concurrency: ConcurrencySettings = Field(default_factory=ConcurrencySettings, description="Concurrency guardrails")
     chat: ChatSettings = Field(default_factory=ChatSettings)
     refine: RefineSettings = Field(default_factory=RefineSettings)
     context_window: ContextWindowSettings = Field(default_factory=ContextWindowSettings)

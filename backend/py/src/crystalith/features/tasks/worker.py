@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.shared.ai.types import ChatMessage
+from crystalith.shared.concurrency import StageLimiters
 from crystalith.shared.config import RefineSettings, Settings
 from crystalith.shared.db import Chunk, Notebook, Source
 from crystalith.shared.utils import format_context, parse_bullets
@@ -118,9 +119,18 @@ async def execute_task(
     vector_store: VectorStore,
     embedder_factory: Callable[[Settings], EmbeddingProvider],
     chat_factory: Callable[[Settings], ChatProvider],
+    limiters: StageLimiters | None,
 ) -> dict[str, Any]:
     if task.type == TaskType.REFINE:
-        return await _execute_refine(task, session, settings, vector_store, embedder_factory, chat_factory)
+        return await _execute_refine(
+            task,
+            session,
+            settings,
+            vector_store,
+            embedder_factory,
+            chat_factory,
+            limiters=limiters,
+        )
     raise ValueError(f"Unsupported task type: {task.type}")
 
 
@@ -131,6 +141,8 @@ async def _execute_refine(
     vector_store: VectorStore,
     embedder_factory: Callable[[Settings], EmbeddingProvider],
     chat_factory: Callable[[Settings], ChatProvider],
+    *,
+    limiters: StageLimiters | None,
 ) -> dict[str, Any]:
     payload = task.payload
     prompt = str(payload.get("prompt", "")).strip()
@@ -158,20 +170,34 @@ async def _execute_refine(
         evidence = False
     else:
         embedder = embedder_factory(settings)
-        embeddings = await embedder.embed_batch([prompt])
+        if limiters is None:
+            embeddings = await embedder.embed_batch([prompt])
+        else:
+            async with limiters.embedding.acquire():
+                embeddings = await embedder.embed_batch([prompt])
         if not embeddings:
             citations = []
             context = ""
             evidence = False
         else:
             query_vector = embeddings[0]
-            results = await vector_store.search(
-                notebook_id=notebook_id,
-                query_vector=query_vector,
-                top_k=int(payload.get("top_k", 5)),
-                min_score=float(payload.get("min_score", 0.2)),
-                source_ids=source_ids,
-            )
+            if limiters is None:
+                results = await vector_store.search(
+                    notebook_id=notebook_id,
+                    query_vector=query_vector,
+                    top_k=int(payload.get("top_k", 5)),
+                    min_score=float(payload.get("min_score", 0.2)),
+                    source_ids=source_ids,
+                )
+            else:
+                async with limiters.vector_search.acquire():
+                    results = await vector_store.search(
+                        notebook_id=notebook_id,
+                        query_vector=query_vector,
+                        top_k=int(payload.get("top_k", 5)),
+                        min_score=float(payload.get("min_score", 0.2)),
+                        source_ids=source_ids,
+                    )
             if not results:
                 citations = []
                 context = ""
@@ -205,7 +231,11 @@ async def _execute_refine(
 
     chat_provider = chat_factory(settings)
     messages = _build_messages(format_name, prompt, context)
-    answer = await chat_provider.chat(messages)
+    if limiters is None:
+        answer = await chat_provider.chat(messages)
+    else:
+        async with limiters.llm_generate.acquire():
+            answer = await chat_provider.chat(messages)
     formatted = _apply_format(format_name, answer, prompt, citations)
     response = {
         "format": format_name,

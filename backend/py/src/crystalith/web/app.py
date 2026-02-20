@@ -17,7 +17,9 @@ from sqlalchemy import delete, select, text
 from cl_fastapix import FastAPIX
 from cl_sqlalchemyx.mgrs import AsyncDBManager
 
+from crystalith.shared.ai.openai_client_manager import get_openai_client_manager
 from crystalith.shared.cache import CacheProvider, create_cache_provider
+from crystalith.shared.concurrency import StageLimiters
 from crystalith.shared.config import ConfigManager, Settings
 from crystalith.shared.db import Source, create_db_manager
 from crystalith.shared.db.migrations import upgrade_head
@@ -104,12 +106,18 @@ def create_app(
     db = db_manager or create_db_manager(resolved.database.url)
     store = vector_store if vector_store is not None else create_vector_store(resolved)
     cache = cache_provider or create_cache_provider(resolved)
+    limiters = StageLimiters.from_limits(
+        embedding=resolved.concurrency.embedding,
+        vector_search=resolved.concurrency.vector_search,
+        llm_generate=resolved.concurrency.llm_generate,
+    )
     plugins = PluginRegistry()
     queue = task_queue or TaskQueue(
         db_manager=db,
         settings=resolved,
         vector_store=store,
         plugins=plugins,
+        limiters=limiters,
     )
 
     @asynccontextmanager
@@ -175,6 +183,10 @@ def create_app(
             stop_worker = getattr(app.state.task_queue, "stop_worker", None)
             if stop_worker is not None:
                 await stop_worker()
+            try:
+                await get_openai_client_manager().aclose()
+            except Exception:  # noqa: BLE001 - best-effort shutdown
+                logger.exception("Failed to close OpenAI clients")
 
     app = FastAPIX(
         title=resolved.app.name,
@@ -188,6 +200,7 @@ def create_app(
     app.state.db = db
     app.state.vector_store = store
     app.state.cache = cache
+    app.state.limiters = limiters
     app.state.task_queue = queue
     app.state.plugins = plugins
 

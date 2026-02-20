@@ -1,14 +1,22 @@
 from __future__ import annotations
 
-from openai import AsyncOpenAI
+from typing import Any
+
 from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.models.test import TestModel
+from pydantic_ai.profiles import ModelProfile
 from pydantic_ai.providers.ollama import OllamaProvider
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from cl_logs.logging import get_logger
 
+from crystalith.shared.ai.effective_settings import (
+    completion_options_to_pydantic_model_settings,
+    resolve_completion_options,
+    resolve_request_options,
+)
+from crystalith.shared.ai.openai_client_manager import get_openai_client_manager
 from crystalith.shared.config import ModelConfig, OpenAIProviderSettings, Settings
 
 
@@ -103,10 +111,27 @@ def build_chat_model_from_model_id(
         roles=model_config.roles,
     )
 
-    return _build_chat_model_with_config(model_config)
+    return _build_chat_model_with_config(settings, model_config)
 
 
-def _build_chat_model_with_config(model_config: ModelConfig) -> Model:
+_WARNED_UNSUPPORTED_COMPLETION_OPTIONS: set[tuple[str, tuple[str, ...]]] = set()
+
+
+def _warn_unsupported_completion_options_once(model_id: str, unsupported: tuple[str, ...]) -> None:
+    if not unsupported:
+        return
+    key = (model_id, unsupported)
+    if key in _WARNED_UNSUPPORTED_COMPLETION_OPTIONS:
+        return
+    _WARNED_UNSUPPORTED_COMPLETION_OPTIONS.add(key)
+    log.warning(
+        "unsupported completion_options ignored for provider",
+        model_id=model_id,
+        unsupported_completion_options=list(unsupported),
+    )
+
+
+def _build_chat_model_with_config(settings: Settings, model_config: ModelConfig) -> Model:
     """Build a chat model using model-specific configuration."""
     provider = model_config.provider
     model_name = model_config.model
@@ -114,27 +139,90 @@ def _build_chat_model_with_config(model_config: ModelConfig) -> Model:
     if provider == "test":
         return TestModel(seed=0, model_name=model_name)
 
+    completion_options = resolve_completion_options(model_config)
+    request_options = resolve_request_options(settings, model_config)
+    model_settings, unsupported = completion_options_to_pydantic_model_settings(
+        completion_options,
+        request_options=request_options,
+    )
+    _warn_unsupported_completion_options_once(model_config.id, unsupported)
+
     if provider == "openai":
         openai_settings = model_config.get_openai_config()
         _validate_openai_settings(openai_settings, model_config.id)
-        openai_client = AsyncOpenAI(
-            api_key=openai_settings.api_key,
-            base_url=openai_settings.base_url,
-            organization=openai_settings.organization or None,
-            project=openai_settings.project or None,
+        openai_client = get_openai_client_manager().get(
+            api_key=(openai_settings.api_key or "").strip(),
+            base_url=openai_settings.base_url or "https://api.openai.com/v1",
+            organization=openai_settings.organization,
+            project=openai_settings.project,
+            timeout=float(request_options.timeout),
+            proxy=request_options.proxy,
+            verify_ssl=request_options.verify_ssl,
+            headers=request_options.headers,
+            # Disable SDK retries; rely on business retry policy.
+            max_retries=0,
         )
         return OpenAIChatModel(
             model_name,
             provider=OpenAIProvider(openai_client=openai_client),
+            settings=model_settings,
         )
 
     if provider == "ollama":
         ollama_settings = model_config.get_ollama_config()
         _validate_ollama_host(ollama_settings.host, model_config.id)
         base_url = _normalize_ollama_base_url(ollama_settings.host)
+        openai_client = get_openai_client_manager().get(
+            api_key="api-key-not-set",
+            base_url=base_url,
+            organization=None,
+            project=None,
+            timeout=float(request_options.timeout),
+            proxy=request_options.proxy,
+            verify_ssl=request_options.verify_ssl,
+            headers=request_options.headers,
+            # Disable SDK retries; rely on business retry policy.
+            max_retries=0,
+        )
+        provider = OllamaProvider(openai_client=openai_client)
+        profile = provider.model_profile(model_name)
+        if not model_config.has_capability("tool_use"):
+            override = ModelProfile(supports_tools=False, default_structured_output_mode="prompted")
+            profile = profile.update(override) if profile is not None else override
         return OpenAIChatModel(
             model_name,
-            provider=OllamaProvider(base_url=base_url),
+            provider=provider,
+            profile=profile,
+            settings=model_settings,
         )
 
     raise ModelConfigurationError(f"Unsupported chat provider: {provider}")
+
+
+def extract_effective_model_settings_for_log(model: Any) -> dict[str, Any]:
+    settings: Any = getattr(model, "settings", None)
+    if not isinstance(settings, dict):
+        settings = {}
+
+    stop_sequences = settings.get("stop_sequences")
+    extra_headers = settings.get("extra_headers")
+    client = getattr(model, "client", None)
+
+    header_keys: list[str] | None = None
+    if isinstance(extra_headers, dict):
+        header_keys = sorted(str(k) for k in extra_headers.keys())
+
+    stop_count: int | None = None
+    if isinstance(stop_sequences, (list, tuple)):
+        stop_count = len(stop_sequences)
+
+    payload: dict[str, Any] = {
+        "model_timeout_s": settings.get("timeout"),
+        "model_temperature": settings.get("temperature"),
+        "model_max_tokens": settings.get("max_tokens"),
+        "model_top_p": settings.get("top_p"),
+        "model_stop_sequences_count": stop_count,
+        "model_header_keys": header_keys,
+        "sdk_max_retries": getattr(client, "max_retries", None) if client is not None else None,
+    }
+    return {k: v for k, v in payload.items() if v is not None}

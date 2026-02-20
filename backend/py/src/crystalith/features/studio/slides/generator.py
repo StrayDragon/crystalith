@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass
 from time import perf_counter
@@ -10,7 +11,11 @@ from cl_logs.logging import get_logger
 
 from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.generation_preference import GenerationPreference, tuning_for_request
-from crystalith.shared.agents.models import build_chat_model, build_chat_model_from_model_id
+from crystalith.shared.agents.models import (
+    build_chat_model,
+    build_chat_model_from_model_id,
+    extract_effective_model_settings_for_log,
+)
 from crystalith.shared.observability import classify_error_kind
 from crystalith.shared.retrieval import retrieve_context
 from crystalith.shared.types import OutputType
@@ -324,14 +329,28 @@ async def _resolve_context(
         trace_id=trace_id,
         request_id=request_id,
         notebook_id=notebook_id,
+        preference=preference,
         top_k=top_k,
         min_score=min_score,
         results=retrieved.stats.results,
         unique_sources=retrieved.stats.unique_sources,
         query_count=retrieved.stats.query_count,
         truncated=retrieved.stats.truncated,
+        max_chunks_per_source=retrieved.stats.max_chunks_per_source,
+        budget_tokens=retrieved.stats.budget_tokens,
+        used_tokens=retrieved.stats.used_tokens,
+        multi_query_enabled=retrieved.stats.multi_query_enabled,
+        seed_cap=retrieved.stats.seed_cap,
+        fusion_strategy=retrieved.stats.fusion_strategy,
+        cache_hit=retrieved.stats.cache_hit,
         embed_ms=retrieved.timings_ms.get("embed_ms"),
+        embed_wait_ms=retrieved.timings_ms.get("embed_wait_ms"),
+        embed_limit=retrieved.timings_ms.get("embed_limit"),
+        embed_hit=retrieved.timings_ms.get("embed_hit"),
         search_ms=retrieved.timings_ms.get("search_ms"),
+        search_wait_ms=retrieved.timings_ms.get("search_wait_ms"),
+        search_limit=retrieved.timings_ms.get("search_limit"),
+        search_hit=retrieved.timings_ms.get("search_hit"),
         db_ms=retrieved.timings_ms.get("db_ms"),
         format_ms=retrieved.timings_ms.get("format_ms"),
         reuse_ms=retrieved.timings_ms.get("reuse_ms"),
@@ -388,6 +407,7 @@ async def generate_slides_outline(
     else:
         model = deps.model or build_chat_model(deps.settings)
 
+    model_settings_log = extract_effective_model_settings_for_log(model)
     agent = Agent(
         model,
         output_type=SlideOutline,
@@ -399,12 +419,22 @@ async def generate_slides_outline(
     user_prompt = _build_outline_prompt(title, prompt, context.context, normalized_config)
 
     generation_started = perf_counter()
+    llm_limit = int(deps.limiters.llm_generate.limit) if deps.limiters is not None else 0
+    llm_wait_ms = 0
+    llm_hit = 0
     try:
-        result = await agent.run(user_prompt, deps=deps)
+        if deps.limiters is None:
+            result = await agent.run(user_prompt, deps=deps)
+        else:
+            async with deps.limiters.llm_generate.acquire() as lease:
+                llm_wait_ms = int(lease.wait_ms)
+                llm_hit = int(lease.hit)
+                result = await agent.run(user_prompt, deps=deps)
         outline = result.output
         generate_ms = int((perf_counter() - generation_started) * 1000)
         if timings_ms is not None:
             timings_ms["generate_ms"] = generate_ms
+            timings_ms["llm_wait_ms"] = llm_wait_ms
         log.info(
             "slides outline generated",
             trace_id=trace_id,
@@ -417,13 +447,20 @@ async def generate_slides_outline(
             agent_retries=agent_retries,
             context_length=len(context.context),
             fallback=False,
+            llm_limit=llm_limit,
+            llm_wait_ms=llm_wait_ms,
+            llm_hit=llm_hit,
             generate_ms=generate_ms,
             duration_ms=generate_ms,
+            **model_settings_log,
         )
+    except asyncio.CancelledError:
+        raise
     except Exception as error:  # noqa: BLE001
         generate_ms = int((perf_counter() - generation_started) * 1000)
         if timings_ms is not None:
             timings_ms["generate_ms"] = generate_ms
+            timings_ms["llm_wait_ms"] = llm_wait_ms
         log.warning(
             "slides outline generation failed",
             trace_id=trace_id,
@@ -436,8 +473,12 @@ async def generate_slides_outline(
             min_score=min_score,
             agent_retries=agent_retries,
             fallback=True,
+            llm_limit=llm_limit,
+            llm_wait_ms=llm_wait_ms,
+            llm_hit=llm_hit,
             generate_ms=generate_ms,
             duration_ms=generate_ms,
+            **model_settings_log,
         )
         outline = _fallback_outline(title, prompt)
 
@@ -490,6 +531,7 @@ async def generate_slides_markdown(
     else:
         model = deps.model or build_chat_model(deps.settings)
 
+    model_settings_log = extract_effective_model_settings_for_log(model)
     agent = Agent(
         model,
         output_type=SlideMarkdown,
@@ -501,12 +543,22 @@ async def generate_slides_markdown(
     user_prompt = _build_markdown_prompt(title, prompt, outline, context.context, normalized_config)
 
     generation_started = perf_counter()
+    llm_limit = int(deps.limiters.llm_generate.limit) if deps.limiters is not None else 0
+    llm_wait_ms = 0
+    llm_hit = 0
     try:
-        result = await agent.run(user_prompt, deps=deps)
+        if deps.limiters is None:
+            result = await agent.run(user_prompt, deps=deps)
+        else:
+            async with deps.limiters.llm_generate.acquire() as lease:
+                llm_wait_ms = int(lease.wait_ms)
+                llm_hit = int(lease.hit)
+                result = await agent.run(user_prompt, deps=deps)
         markdown = result.output.markdown
         generate_ms = int((perf_counter() - generation_started) * 1000)
         if timings_ms is not None:
             timings_ms["generate_ms"] = generate_ms
+            timings_ms["llm_wait_ms"] = llm_wait_ms
         log.info(
             "slides markdown generated",
             trace_id=trace_id,
@@ -519,13 +571,20 @@ async def generate_slides_markdown(
             agent_retries=agent_retries,
             context_length=len(context.context),
             fallback=False,
+            llm_limit=llm_limit,
+            llm_wait_ms=llm_wait_ms,
+            llm_hit=llm_hit,
             generate_ms=generate_ms,
             duration_ms=generate_ms,
+            **model_settings_log,
         )
+    except asyncio.CancelledError:
+        raise
     except Exception as error:  # noqa: BLE001
         generate_ms = int((perf_counter() - generation_started) * 1000)
         if timings_ms is not None:
             timings_ms["generate_ms"] = generate_ms
+            timings_ms["llm_wait_ms"] = llm_wait_ms
         log.warning(
             "slides markdown generation failed",
             trace_id=trace_id,
@@ -538,8 +597,12 @@ async def generate_slides_markdown(
             min_score=min_score,
             agent_retries=agent_retries,
             fallback=True,
+            llm_limit=llm_limit,
+            llm_wait_ms=llm_wait_ms,
+            llm_hit=llm_hit,
             generate_ms=generate_ms,
             duration_ms=generate_ms,
+            **model_settings_log,
         )
         markdown = _outline_to_markdown(outline)
 

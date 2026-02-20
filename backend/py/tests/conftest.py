@@ -10,6 +10,7 @@ from httpx import ASGITransport, AsyncClient
 from crystalith.shared.db import create_db_manager
 from crystalith.shared.db.migrations import upgrade_head
 from crystalith.shared.config import Settings
+from crystalith.shared.ai.openai_client_manager import get_openai_client_manager
 from crystalith.shared.vector_storage import InMemoryVectorStore
 from crystalith.web.app import create_app
 
@@ -67,3 +68,9 @@ async def client(app):
 async def db_session(app):
     async with app.state.db.got_manual_session() as session:
         yield session
+
+
+@pytest.fixture(scope="session", autouse=True)
+async def _close_openai_clients_after_tests():
+    yield
+    await get_openai_client_manager().aclose()

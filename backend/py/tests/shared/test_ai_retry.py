@@ -60,3 +60,21 @@ async def test_run_with_retry_respects_retry_after_header(monkeypatch) -> None:
     result = await run_with_retry(operation, timeout=None, max_retries=3)
     assert result == 1
     assert sleeps and sleeps[0] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_run_with_retry_respects_total_timeout_budget(monkeypatch) -> None:
+    sleeps: list[float] = []
+
+    async def fake_sleep(value: float) -> None:
+        sleeps.append(value)
+
+    monkeypatch.setattr(asyncio, "sleep", fake_sleep)
+
+    async def operation() -> int:
+        raise _Err("x", response=_Resp(429, headers={"Retry-After": "10"}))
+
+    with pytest.raises(asyncio.TimeoutError):
+        await run_with_retry(operation, timeout=None, total_timeout=0.01, max_retries=3)
+
+    assert sleeps == []

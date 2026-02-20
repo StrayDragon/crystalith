@@ -152,3 +152,73 @@ def test_ai_factory_rejects_unknown_provider_without_plugin_registry() -> None:
     )
     with pytest.raises(ValueError, match="Unsupported provider"):
         create_chat_provider_by_model_id(settings, "plugin-chat")
+
+
+def test_ai_factory_applies_request_options_timeout_per_model() -> None:
+    settings = Settings(
+        ai={"timeout": 60, "max_retries": 3},
+        models={
+            "available": [
+                {
+                    "id": "openai-chat",
+                    "provider": "openai",
+                    "model": "gpt-test",
+                    "display_name": "OpenAI Chat",
+                    "roles": ["chat"],
+                    "provider_config": {"api_key": "sk-test"},
+                    "request_options": {"timeout": 7},
+                },
+                {
+                    "id": "openai-embed",
+                    "provider": "openai",
+                    "model": "text-embedding-3",
+                    "display_name": "OpenAI Embed",
+                    "roles": ["embed"],
+                    "provider_config": {"api_key": "sk-test"},
+                    "request_options": {"timeout": 9},
+                },
+            ]
+        },
+    )
+
+    chat = create_chat_provider_by_model_id(settings, "openai-chat")
+    embed = create_embedding_provider_by_model_id(settings, "openai-embed")
+
+    assert isinstance(chat, OpenAIChatProvider)
+    assert isinstance(embed, OpenAIEmbeddingProvider)
+    assert chat._timeout == 7.0  # noqa: SLF001
+    assert embed._timeout == 9.0  # noqa: SLF001
+
+
+def test_ai_factory_applies_completion_options_to_openai_chat_provider() -> None:
+    settings = Settings(
+        ai={"timeout": 60, "max_retries": 3},
+        models={
+            "available": [
+                {
+                    "id": "openai-chat",
+                    "provider": "openai",
+                    "model": "gpt-test",
+                    "display_name": "OpenAI Chat",
+                    "roles": ["chat"],
+                    "provider_config": {"api_key": "sk-test"},
+                    "completion_options": {
+                        "temperature": 0.1,
+                        "max_tokens": 50,
+                        "top_p": 0.95,
+                        "stop": ["END"],
+                    },
+                }
+            ]
+        },
+    )
+
+    chat = create_chat_provider_by_model_id(settings, "openai-chat")
+    assert isinstance(chat, OpenAIChatProvider)
+    assert chat._completion_kwargs == {  # noqa: SLF001
+        "temperature": 0.1,
+        "max_completion_tokens": 50,
+        "top_p": 0.95,
+        "stop": ["END"],
+    }
+    assert getattr(chat._client, "max_retries", None) == 0  # noqa: SLF001

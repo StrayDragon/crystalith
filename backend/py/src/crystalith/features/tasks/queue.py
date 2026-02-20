@@ -13,6 +13,7 @@ from cl_sqlalchemyx.mgrs import AsyncDBManager
 
 from crystalith.shared.ai.factory import create_chat_provider, create_embedding_provider
 from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
+from crystalith.shared.concurrency import StageLimiters
 from crystalith.shared.config import Settings
 from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.vector_storage import VectorStore
@@ -22,7 +23,15 @@ from .types import TaskStatus, TaskType
 from .worker import execute_task
 
 TaskWorker = Callable[
-    [Task, AsyncSession, Settings, VectorStore, Callable[[Settings], EmbeddingProvider], Callable[[Settings], ChatProvider]],
+    [
+        Task,
+        AsyncSession,
+        Settings,
+        VectorStore,
+        Callable[[Settings], EmbeddingProvider],
+        Callable[[Settings], ChatProvider],
+        StageLimiters | None,
+    ],
     Awaitable[dict[str, Any]],
 ]
 
@@ -38,6 +47,7 @@ class TaskQueue:
         worker: TaskWorker | None = None,
         embedder_factory: Callable[[Settings], EmbeddingProvider] = create_embedding_provider,
         chat_factory: Callable[[Settings], ChatProvider] = create_chat_provider,
+        limiters: StageLimiters | None = None,
     ) -> None:
         self._db_manager = db_manager
         self._settings = settings
@@ -45,6 +55,7 @@ class TaskQueue:
         self._worker = worker or execute_task
         self._embedder_factory = self._wrap_factory(embedder_factory, plugins=plugins)
         self._chat_factory = self._wrap_factory(chat_factory, plugins=plugins)
+        self._limiters = limiters
         self._queue: asyncio.PriorityQueue[tuple[int, int, int]] = asyncio.PriorityQueue()
         self._counter = itertools.count()
         self._semaphore: asyncio.Semaphore | None = None
@@ -183,6 +194,7 @@ class TaskQueue:
                         self._vector_store,
                         self._embedder_factory,
                         self._chat_factory,
+                        self._limiters,
                     )
                     task.status = TaskStatus.COMPLETED
                     task.result = result

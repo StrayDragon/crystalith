@@ -5,6 +5,7 @@ import datetime as dt
 from collections.abc import Awaitable, Callable, Mapping
 from email.utils import parsedate_to_datetime
 from functools import wraps
+from time import perf_counter
 from typing import Any, ParamSpec, TypeVar
 
 from cl_logs.logging import get_logger
@@ -16,6 +17,25 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 _RETRYABLE_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
+
+
+def default_retry_budget_s(
+    *,
+    timeout: float | None,
+    max_retries: int,
+    initial_delay: float = 1.0,
+    max_delay: float = 10.0,
+    factor: float = 2.0,
+) -> float | None:
+    if timeout is None:
+        return None
+
+    retries = max(0, int(max_retries))
+    delay_budget = 0.0
+    for attempt in range(retries):
+        delay_budget += min(float(max_delay), float(initial_delay) * (float(factor) ** attempt))
+
+    return float(timeout) + delay_budget
 
 
 def _extract_status_code(error: Exception) -> int | None:
@@ -124,18 +144,32 @@ async def run_with_retry(
     *,
     timeout: float | None,
     max_retries: int,
+    total_timeout: float | None = None,
     initial_delay: float = 1.0,
     max_delay: float = 10.0,
     factor: float = 2.0,
     retry_if: Callable[[Exception], bool] | None = None,
 ) -> T:
     attempt = 0
+    started = perf_counter()
 
     while True:
+        remaining_budget = None
+        if total_timeout is not None:
+            remaining_budget = float(total_timeout) - (perf_counter() - started)
+            if remaining_budget <= 0:
+                raise asyncio.TimeoutError("retry budget exceeded")
+
         try:
             if timeout is None:
-                return await operation()
-            return await asyncio.wait_for(operation(), timeout=timeout)
+                if remaining_budget is None:
+                    return await operation()
+                return await asyncio.wait_for(operation(), timeout=max(0.0, remaining_budget))
+
+            attempt_timeout = float(timeout)
+            if remaining_budget is not None:
+                attempt_timeout = min(attempt_timeout, max(0.0, remaining_budget))
+            return await asyncio.wait_for(operation(), timeout=attempt_timeout)
         except Exception as error:  # noqa: BLE001 - preserve provider exceptions
             if isinstance(error, asyncio.CancelledError):
                 raise
@@ -149,6 +183,13 @@ async def run_with_retry(
                 delay = retry_after
             else:
                 delay = min(max_delay, initial_delay * (factor ** attempt))
+
+            if total_timeout is not None:
+                remaining_budget = float(total_timeout) - (perf_counter() - started)
+                if remaining_budget <= 0:
+                    raise asyncio.TimeoutError("retry budget exceeded") from error
+                if delay > remaining_budget:
+                    raise asyncio.TimeoutError("retry budget exceeded") from error
 
             attempt += 1
             log.warning(
@@ -164,6 +205,7 @@ async def run_with_retry(
 def with_retry(
     *,
     timeout: float | None = None,
+    total_timeout: float | None = None,
     max_retries: int = 3,
     initial_delay: float = 1.0,
     max_delay: float = 10.0,
@@ -176,6 +218,7 @@ def with_retry(
             return await run_with_retry(
                 lambda: operation(*args, **kwargs),
                 timeout=timeout,
+                total_timeout=total_timeout,
                 max_retries=max_retries,
                 initial_delay=initial_delay,
                 max_delay=max_delay,
