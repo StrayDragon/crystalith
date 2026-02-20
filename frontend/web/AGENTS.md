@@ -12,9 +12,11 @@ Frontend (from repo root):
 - `cd frontend/web && pnpm install` — install dependencies.
 - `pnpm dev` — start the Vite dev server.
 - `pnpm test` — run Vitest and React Testing Library.
+- `pnpm typecheck` — run TypeScript typechecking.
 - `pnpm run build` — create a production build.
 - `pnpm preview` — serve the production build locally.
   - Vite proxy uses `VITE_API_PROXY_TARGET` when set; defaults to `http://127.0.0.1:8032`.
+- `pnpm run api:sync` — fetch backend OpenAPI and regenerate `src/api/generated`.
 
 Backend (from repo root):
 - `cd backend/py && uv sync` — install Python deps.
@@ -28,7 +30,7 @@ Tip: `just -l` lists available tasks in each directory.
 - Python: 4-space indentation; `snake_case` for functions/vars, `PascalCase` classes.
 - CSS/Tailwind: global styles in `frontend/web/src/app/index.css`; feature styles live alongside components.
 - No repo-wide formatter is configured; match existing style and avoid unrelated reformatting.
-- If Backend API changed, must remember use pnpm run api:generate in frontend, and checked it
+- If backend OpenAPI changed, run `pnpm run api:sync` and verify.
 
 ## Layer System (z-index Management)
 The project uses a unified Layer system to manage z-index values. **Never use hardcoded z-index values** like `z-[99999]` or `z-50`.
