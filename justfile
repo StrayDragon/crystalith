@@ -40,7 +40,7 @@ sdk-gen-python VERSION='':
     if [[ ! -f "{{SCHEMA_PATH}}" ]]; then
       echo "OpenAPI schema not found at {{SCHEMA_PATH}}. Run: just api-export" >&2; exit 1
     fi
-    command -v fern >/dev/null 2>&1 || { echo "fern CLI not found. Install: pnpm install -g fern-api" >&2; exit 1; }
+    command -v fern >/dev/null 2>&1 || { echo "fern CLI not found. Install: npm install -g fern-api@3.73.1" >&2; exit 1; }
     (cd sdk/configs && fern generate --local --force --group python-sdk --version "$SDK_VERSION")
     if [[ ! -f "{{SDK_PATH}}/.fern/metadata.json" ]]; then
       echo "Fern metadata not found. Ensure generation succeeded." >&2; exit 1

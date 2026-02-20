@@ -26,6 +26,16 @@ models = client.models.list_models()
 
 - `frontend/web/openapi.json` must stay in sync with the backend schema (CI runs `uv run scripts/api_schema.py check`).
 - Generated API clients must be committed (CI runs `pnpm run api:generate` and checks for diff).
+- Python SDK publishing runs an SDK freshness check (generate + diff) before upload.
+
+## Publishing
+
+- GitHub Actions:
+  - `Check Python SDK`: runs `just api-check` + `just sdk-check`.
+  - `Release Python SDK`: requires `version` input (must match `backend/py/pyproject.toml`), runs freshness check, then publishes to PyPI (Trusted Publishing by default; `PYPI_API_TOKEN` fallback).
+- Fern:
+  - CI pins Fern CLI (`fern-api@3.73.1`).
+  - Generation may require `FERN_TOKEN` (local or CI secret).
 
 ## Local generation
 
