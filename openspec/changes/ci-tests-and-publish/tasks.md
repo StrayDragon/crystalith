@@ -8,12 +8,10 @@
 - [x] 1.6 生成客户端一致性：`cd frontend/web && pnpm run api:generate` 后用 `git diff` 校验无未提交变更
 - [x] 1.7 为 uv/pnpm 添加缓存（避免每次全量下载），并在失败时保留足够日志便于定位
 
-## 2. Python SDK 发布前置校验
+## 2. Python SDK freshness check（不含发布逻辑）
 
-- [x] 2.1 在 `.github/workflows/release-python-sdk.yml` 增加 SDK freshness check（生成/校验无 diff）
-- [x] 2.2 确保 freshness check 失败时阻止 publish（Trusted Publishing 与 token fallback 均不执行）
-- [x] 2.3 复用/对齐 `check-python-sdk.yml` 的步骤（必要时抽取为可复用脚本或 composite action）
-- [x] 2.4 固定 Fern CLI 版本：将 workflows 中的 `npm install -g fern-api` 替换为 `npm install -g fern-api@3.73.1`
+- [x] 2.1 新增 `.github/workflows/check-python-sdk.yml`：SDK freshness check（生成/校验无 diff）
+- [x] 2.2 固定 Fern CLI 版本：在 workflows 中使用 `npm install -g fern-api@3.73.1`
 
 ## 3. 文档与验证
 

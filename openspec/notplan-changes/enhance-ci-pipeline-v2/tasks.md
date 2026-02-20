@@ -71,7 +71,7 @@ flowchart TD
 
 ## Acceptance Criteria
 
-- [ ] **AC-1**: CI workflow 定义在 `.github/workflows/ci.yml`，与现有 `check-python-sdk.yml` 和 `release-python-sdk.yml` 不冲突
+- [ ] **AC-1**: CI workflow 定义在 `.github/workflows/ci.yml`，与现有 `check-python-sdk.yml` 不冲突
 - [ ] **AC-2**: 后端 job 使用 `uv` 安装依赖（与项目现有的 `uv sync` 一致）
 - [ ] **AC-3**: 前端 job 使用 `pnpm`（与项目现有配置一致）
 - [ ] **AC-4**: API 一致性 job 运行 `pnpm run api:generate` 后检查是否有 diff
