@@ -1,2 +1,0 @@
-SQLITEDB:
-  TEST_SQLITE_PATH: .tmp/cl_sqlalchemyx_test.db

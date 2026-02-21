@@ -30,8 +30,8 @@ pnpm dev
 - Backend tests: `cd backend/py && just test`
 - Frontend tests: `cd frontend/web && pnpm test`
 - If backend OpenAPI changes:
-  - Sync schema: `pnpm -C frontend/web run api:fetch`
-  - Regenerate client: `pnpm -C frontend/web run api:generate`
+  - Sync schema + regenerate client: `pnpm -C frontend/web run api:sync`
+  - Or from repo root: `just api-sync`
 
 ## Docker Compose (prod-like)
 

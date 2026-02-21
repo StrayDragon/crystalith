@@ -11,14 +11,13 @@
 """
 
 import asyncio
-import os
 from collections.abc import AsyncGenerator
 from pathlib import Path
+import tempfile
 from typing import Any, ClassVar
 
 import pytest
 import sqlalchemy as sa
-import yaml
 from cl_pydanticx import DataJson, json_to_bytes_serializer
 from cl_stdx.enumx import MetaInfoIntEnum, XMetaInfo
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer
@@ -203,63 +202,27 @@ class _TestCustomVersionDAL(AsyncBaseDAL[_TestTableWithCustomVersion, _TestCusto
 # ========== 测试夹具 ==========
 
 
-# ========== 测试专用数据库配置 ==========
-
-
-TEST_CONFIG_PATH = Path(__file__).with_name("test_config.yaml")
-
-
-def _load_sqlite_test_uri() -> tuple[str, Path]:
-    with TEST_CONFIG_PATH.open(encoding="utf-8") as f:
-        config: dict[str, Any] = yaml.safe_load(f)
-
-    sqlite_cfg: dict[str, Any] = config.get("SQLITEDB", {})
-    sqlite_rel_path = sqlite_cfg.get("TEST_SQLITE_PATH", ".tmp/cl_sqlalchemyx_test.db")
-    worker_id = os.getenv("PYTEST_XDIST_WORKER")
-    if worker_id:
-        rel_path = Path(sqlite_rel_path)
-        sqlite_rel_path = str(rel_path.with_name(f"{rel_path.stem}_{worker_id}{rel_path.suffix}"))
-
-    sqlite_path = (TEST_CONFIG_PATH.parent / sqlite_rel_path).resolve()
-    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
-
-    uri = f"sqlite+aiosqlite:///{sqlite_path}"
-    return uri, sqlite_path
-
-
-def _cleanup_sqlite_file(path: Path) -> None:
-    try:
-        path.unlink()
-    except FileNotFoundError:
-        pass
-    # NOTE: 不再尝试删除 .tmp 目录，因为在 xdist 并行测试下
-    # 其他 worker 可能仍在使用该目录，删除会导致竞态条件
-
-
 @pytest.fixture
 async def db_manager() -> AsyncGenerator[AsyncSQLiteManager, None]:
     """为 BaseDAL 测试创建数据库管理器"""
-    db_uri, sqlite_path = _load_sqlite_test_uri()
+    with tempfile.TemporaryDirectory(prefix="cl_sqlalchemyx_test_") as tmp_dir:
+        sqlite_path = Path(tmp_dir) / "cl_sqlalchemyx_test.db"
+        db_uri = f"sqlite+aiosqlite:///{sqlite_path}"
 
-    # 在连接前再次确保目录存在（防止并行 worker 间竞态条件）
-    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+        manager = AsyncSQLiteManager(
+            db_uri,
+            poolclass=NullPool,
+            connect_args={"check_same_thread": False},
+        )
 
-    manager = AsyncSQLiteManager(
-        db_uri,
-        poolclass=NullPool,
-        connect_args={"check_same_thread": False},
-    )
+        try:
+            # 确保测试需要的表结构已创建
+            async with manager.async_engine.begin() as conn:
+                await conn.run_sync(AsyncSqlATableBase.metadata.create_all, checkfirst=True)
 
-    try:
-        # 确保测试需要的表结构已创建
-        async with manager.async_engine.begin() as conn:
-            await conn.run_sync(AsyncSqlATableBase.metadata.create_all, checkfirst=True)
-
-        yield manager
-    finally:
-        # 测试结束后清理
-        await manager.close()
-        _cleanup_sqlite_file(sqlite_path)
+            yield manager
+        finally:
+            await manager.close()
 
 
 @pytest.fixture
