@@ -1,71 +1,53 @@
 # refine-output Specification
 
 ## Purpose
-TBD - created by archiving change add-research-workspace. Update Purpose after archive.
+
+定义“提炼（refine）”能力：在给定 prompt 与可选来源范围（`source_ids`）内生成提炼结果（`paragraph|bullets|structured|...`），并返回可追溯的 citations 与 evidence 标记。该能力为 Studio/工作区提供轻量的“快速总结/结构化”路径，不替代 outputs 生成流水线。
+
+## Related specs
+
+- `GLOSSARY.md`
+- `workspace-studio-ui/spec.md`
+- `workspace-api/spec.md`
+- `generation-preference/spec.md`
+- `background-task-queue/spec.md`
+
+## API
+
+- `POST /v1/notebooks/{notebook_id}/refine`：单格式提炼（通过 TaskQueue 执行并等待完成）
+- `POST /v1/notebooks/{notebook_id}/refine/batch`：批量提炼（一次返回多个 formats）
+
 ## Requirements
-### Requirement: 提炼输出
-系统 SHALL 提供“提炼”输出能力。
 
-#### Scenario: 生成提炼
-- **WHEN** 用户在提炼卡片点击生成
-- **THEN** 系统返回提炼内容并在右侧输出区展示
+### Requirement: Stable request fields
+请求体 MUST 支持字段（语义稳定）：
 
-### Requirement: 批量提炼输出
-系统 SHALL 支持在一次请求中生成多个提炼格式的输出。
+- `prompt: string`
+- `source_ids?: int[]`
+- `top_k: int`
+- `min_score: float`
+- 单格式：`format: string`
+- 批量：`formats?: string[]`（为空表示使用服务端默认 formats 列表）
 
-#### Scenario: 一次生成多格式
-- **WHEN** 客户端请求多个提炼格式
-- **THEN** 系统返回每个格式的提炼结果以便即时切换展示
+### Requirement: Stable response envelope
+响应 MUST 包含 `citations: Citation[]`, `evidence: bool`, `created_at`，并按 format 返回内容：
 
-### Requirement: 自定义提炼提示词
-系统 SHALL 允许用户自定义提炼提示词以控制输出关注点。
+- 单格式：`{ format, paragraph? | bullets? | structured? }`
+- 批量：`{ outputs: { [format]: { paragraph? | bullets? | structured? } } }`
 
-#### Scenario: 自定义提炼内容
-- **WHEN** 用户编辑提炼卡片中的提示词
-- **THEN** 系统使用该提示词生成提炼结果
+### Requirement: Formats have a minimal baseline and are configurable
+系统 MUST 至少支持 `paragraph`, `bullets`, `structured` 三种 format，并允许通过配置扩展 format 列表；未支持的 format MUST 返回 400（Unsupported refine format）。
 
-### Requirement: 提炼生成队列
-系统 SHALL 支持提炼生成任务队列。
+最小语义：
+- `paragraph`：连续段落文本
+- `bullets`：项目符号列表
+- `structured`：`{ title, bullets[], terms[] }`（并包含 citations）
 
-#### Scenario: 任务排队
-- **WHEN** 用户连续触发多次提炼
-- **THEN** 系统将请求加入队列并依序生成
+### Requirement: Retrieval scope is constrained by source_ids
+系统 MUST 支持通过 `source_ids` 显式限定提炼上下文范围，并仅从这些 sources 检索/构建 context；返回的 citations MUST 仅来自这些 sources。
 
-### Requirement: 提炼格式选项
-系统 SHALL 支持段落式、要点式、结构化三种提炼格式。
+当 `source_ids` 为空或未提供时，系统 MUST 不执行检索并以空上下文生成，且 citations 为空或 `evidence=false`。
 
-#### Scenario: 段落式提炼
-- **WHEN** 用户选择段落式格式
-- **THEN** 系统返回连续段落的提炼内容
-
-#### Scenario: 要点式提炼
-- **WHEN** 用户选择要点式格式
-- **THEN** 系统返回项目符号的提炼内容
-
-#### Scenario: 结构化提炼
-- **WHEN** 用户选择结构化格式
-- **THEN** 系统返回包含字段的提炼内容（标题/要点/关键术语/引用）
-
-### Requirement: 提炼格式可扩展
-系统 SHALL 允许通过配置扩展提炼格式列表。
-
-#### Scenario: 增加新的提炼格式
-- **WHEN** 配置中新增提炼格式定义
-- **THEN** UI 输出区出现新的提炼选项
-
-### Requirement: 选中来源限定输出范围
-系统 MUST 在生成提炼/Studio 输出时优先使用选中来源的 `source_ids` 作为上下文范围。
-
-#### Scenario: 有选中来源
-- **WHEN** 用户选中来源并触发输出生成
-- **THEN** 系统仅使用选中来源作为上下文
-- **AND** 输出记录（若创建）保存解析后的 chunk_ids
-
-#### Scenario: 未选中来源触发提炼
-- **WHEN** 用户未选中任何来源触发提炼
-- **THEN** 系统以空上下文生成输出且不执行自动检索
-- **AND** citations 为空或 evidence=false
-
-#### Scenario: 未选中来源触发 Studio 输出
-- **WHEN** 用户未选中任何来源触发 Studio 输出
-- **THEN** 系统返回 400 并拒绝生成
+### Requirement: Execution uses guardrails
+单格式提炼 MUST 通过后台任务队列执行（见 `background-task-queue/spec.md`），并遵循阶段级并发限制与取消语义。
+批量提炼 MAY 在单请求内执行，但 MUST 有并发上限以避免对 provider 造成突刺。

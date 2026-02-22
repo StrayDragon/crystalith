@@ -1,191 +1,38 @@
 # studio-slides Specification
 
 ## Purpose
-TBD - created by archiving change add-studio-ppt. Update Purpose after archive.
+
+作为 SLIDES（演示）输出在 Studio 中的“总览/导航”规范：定义以 slides draft 为核心的三阶段工作流（input → outline → markdown），并通过 SSE 提供可观察的生成进度；markdown 可被保存并用于 Slidev 预览与导出。
+
+本规范不重复 API 细节；draft/stream/preview 的稳定契约分别见下述聚焦 specs。
+
+## Related specs
+
+- `GLOSSARY.md`
+- `workspace-studio-ui/spec.md`（Studio 工具入口与 preference 传播）
+- `workspace-api/spec.md`（slides 端点入口与 tools config）
+- `generation-preference/spec.md`
+- `generation-retrieval/spec.md`
+- `studio-slides-drafts/spec.md`（draft 资源与 Output 同步）
+- `studio-slides-sse/spec.md`（SSE 事件与 busy/error/done 契约）
+- `studio-slides-preview/spec.md`（预览同步与共享预览文件）
+
 ## Requirements
-### Requirement: Studio 演示入口
 
-系统 **MUST** 在 Studio 工具网格中提供 `SLIDES` 类型的“演示”入口，并绑定当前 notebook 上下文。
+### Requirement: SLIDES tool entrypoint (Studio)
+系统 MUST 在 Studio 工具网格中提供 `SLIDES` 类型入口，并绑定当前 notebook 上下文。
 
-#### Scenario: 展示演示入口
-- **WHEN** 工作区加载 Studio 面板
-- **THEN** 工具网格中出现“演示”卡片
-- **AND** 该卡片的 `output_type` 为 `SLIDES`
+### Requirement: Draft-centric three-stage workflow
+系统 MUST 以 slides draft 驱动三阶段流程：
 
-#### Scenario: 进入演示流程
-- **WHEN** 用户点击“演示”工具
-- **THEN** 系统为当前 notebook 打开或创建演示草稿
-- **AND** 前端进入演示三阶段界面
+1. input：用户填写 title/prompt/config，并选择 sources
+2. outline：生成/编辑大纲并保存
+3. markdown：生成/编辑 Slidev Markdown 并保存
+用户关闭后再次打开 slides 时，系统 MUST 从后端加载 draft 并恢复到已保存阶段（见 `studio-slides-drafts/spec.md`）。
 
-### Requirement: 三阶段流程与状态持久化
+### Requirement: Generation streams are stage-specific
+系统 MUST 使用 SSE 端点分别生成 outline 与 markdown，并支持“串联生成”（先 outline 后 markdown）。
+用户选择“生成全部”时，客户端 MUST 依次调用 outline stream 与 markdown stream（见 `studio-slides-sse/spec.md`）。
 
-系统 **MUST** 以“输入 → 大纲 → Markdown”的三阶段流程生成演示，并由后端持久化各阶段状态与内容。
-
-#### Scenario: 选中来源的生成范围
-- **WHEN** 用户在工作区已选择来源并触发演示生成
-- **THEN** 后端仅使用选中来源作为生成上下文
-- **AND** 未选择来源时拒绝生成并返回 400
-
-#### Scenario: 状态恢复
-- **WHEN** 用户重新进入演示流程
-- **THEN** 系统加载已保存的大纲/Markdown
-- **AND** 不自动重新生成除非用户显式触发
-
-### Requirement: 生成进度与 SSE 事件流
-
-系统 **MUST** 通过 SSE 输出大纲与 Markdown 生成进度，并提供可识别的错误与忙碌状态。
-
-#### Scenario: 生成进度流
-- **WHEN** 用户触发大纲或 Markdown 生成
-- **THEN** SSE 持续推送 progress/toolcall/done 事件
-- **AND** 前端以进度状态展示生成过程
-
-#### Scenario: 忙碌与错误处理
-- **WHEN** 同一演示正在生成且用户再次触发
-- **THEN** SSE 返回 busy 事件并结束本次连接
-- **AND** 失败时返回 error 事件并附带错误信息
-
-### Requirement: 大纲与 Markdown 可编辑
-
-系统 **MUST** 支持用户编辑并保存演示大纲与 Markdown，后端持久化修改并用于后续生成与预览。
-
-#### Scenario: 保存大纲后生成 Markdown
-- **WHEN** 用户编辑并保存大纲
-- **THEN** 后端保存大纲内容
-- **AND** 后续 Markdown 生成基于该大纲执行
-
-#### Scenario: 保存 Markdown 后预览
-- **WHEN** 用户编辑并保存 Markdown
-- **THEN** 后端保存 Markdown 内容
-- **AND** 预览使用最新保存版本
-
-### Requirement: Slidev 预览能力
-
-系统 **MUST** 提供演示预览接口，启动或复用 Slidev CLI 预览进程并返回可访问的预览 URL。
-
-#### Scenario: 启动预览
-- **WHEN** 用户点击“预览”
-- **THEN** 后端启动或复用 Slidev 预览进程
-- **AND** 返回预览 URL 供前端打开
-
-#### Scenario: 预览不可用
-- **WHEN** Slidev CLI 不可用或启动失败
-- **THEN** 后端返回可识别错误
-- **AND** 前端提示用户处理依赖或重试
-
-### Requirement: 演示输出记录
-
-系统 **MUST** 在 Markdown 阶段完成后生成 `SLIDES` 类型输出记录，并在 Studio 历史列表中展示。
-
-#### Scenario: 输出记录创建
-- **WHEN** Markdown 生成完成
-- **THEN** 系统创建或更新 `SLIDES` 输出记录
-- **AND** 输出记录包含最新更新时间与关联草稿信息
-
-### Requirement: 演示一键生成入口
-
-系统 **MUST** 在 Studio 工具网格的“演示”卡片提供一键生成能力，自动创建/更新演示草稿并串联大纲与 Markdown 生成。
-
-#### Scenario: 一键生成演示
-
-- **WHEN** 用户点击“演示”卡片
-- **THEN** 系统为当前 notebook 创建或更新演示草稿并记录解析后的 source_ids
-- **AND** 未选择来源时阻止生成并提示需要选择来源
-- **AND** 自动依次触发大纲与 Markdown 生成的 SSE 流
-- **AND** 前端展示生成进度并在完成后进入 Markdown 阶段
-
-#### Scenario: 一键生成失败
-
-- **WHEN** 任一生成阶段返回 error
-- **THEN** 草稿状态标记为 error 并记录错误信息
-- **AND** 前端提供重试入口
-
-### Requirement: 演示生成参数
-
-系统 **MUST** 提供演示生成参数，并将其持久化至草稿以驱动 LLM 生成与 frontmatter 生成。
-
-#### Scenario: 设置参数并生成
-
-- **WHEN** 用户设置幻灯片数量、受众层级、结构模板、语气风格、语言、排版密度、主题预设与 frontmatter 参数
-- **THEN** 系统保存参数至演示草稿
-- **AND** 大纲与 Markdown 生成提示词包含所选参数约束
-- **AND** 生成的 Markdown 包含与参数一致的 frontmatter
-
-#### Scenario: 参数回填
-
-- **WHEN** 用户重新打开已有演示草稿
-- **THEN** 系统回填该草稿保存的参数
-- **AND** 未设置的参数使用默认值
-
-#### Scenario: 选择主题预设
-
-- **WHEN** 用户在演示配置中选择主题预设
-- **THEN** 系统应用与该预设对应的 frontmatter 模板
-- **AND** 用户仍可手动覆盖生成结果
-
-#### Scenario: 手动覆盖 frontmatter
-
-- **WHEN** 用户手动编辑 frontmatter 并保存 Markdown
-- **THEN** 系统保留用户覆盖内容
-- **AND** 后续预览使用手动覆盖版本
-
-### Requirement: 演示配置单一来源
-系统 **MUST** 提供由后端维护的演示生成配置集合（数量、受众、结构、语气、语言、密度、主题预设及默认值），并作为前端渲染与预览的唯一来源。
-
-#### Scenario: 获取演示配置
-- **WHEN** 前端进入演示配置界面
-- **THEN** 系统从后端配置接口 `/v1/workspace/tools/slides/config` 读取演示配置集合
-- **AND** 前端使用该集合渲染选项与默认值
-
-#### Scenario: 主题预设一致性
-- **WHEN** 用户选择主题预设且未提供 frontmatter 覆盖
-- **THEN** 前端预览生成的 frontmatter 字段集合与后端生成一致
-- **AND** 字段值与所选主题预设匹配
-
-#### Scenario: 主题预设回退
-- **WHEN** 提供未知的主题预设 ID
-- **THEN** 系统回退到默认主题预设
-- **AND** 生成结果与默认预设一致
-
-### Requirement: SlideGenerationConfig supports preference
-系统 MUST 支持在 slides draft 的 `generation_config` 中保存 `preference`，并在读取 draft 时回填。
-
-#### Scenario: preference 持久化与回填
-- **WHEN** 客户端创建或更新 slides draft 时提交 `generation_config.preference`
-- **THEN** 后端保存该字段
-- **AND** 再次读取该 draft 时返回相同的 `generation_config.preference`
-
-### Requirement: Preference consistency across stages
-系统 MUST 在 outline 与 markdown 两个阶段使用相同的 `generation_config.preference`，并且 MUST 不在生成过程中隐式修改该值。
-
-#### Scenario: outline 与 markdown 一致
-- **WHEN** draft 已保存 `generation_config.preference`
-- **AND** 用户分别触发 outline 与 markdown 生成
-- **THEN** 两个阶段均使用该 preference
-
-### Requirement: Optional timings in slides SSE done event
-系统 MUST 支持在 debug 模式下为 slides SSE `done` 事件附带 `timings_ms` 字段，用于展示阶段耗时分解；默认 MUST 不输出该字段。
-
-#### Scenario: debug 开启时输出 timings_ms
-- **WHEN** debug timings 开关启用
-- **AND** 用户触发 slides outline 或 markdown 生成
-- **THEN** SSE `done` 事件 payload 包含 `timings_ms`
-
-#### Scenario: debug 关闭时不输出 timings_ms
-- **WHEN** debug timings 开关未启用
-- **AND** 用户触发 slides outline 或 markdown 生成
-- **THEN** SSE `done` 事件 payload 不包含 `timings_ms`
-
-### Requirement: Slides context uses shared retrieval strategy
-系统 MUST 在 slides outline/markdown 两阶段使用共享检索策略与 token budget 构建上下文。
-
-#### Scenario: slides 两阶段应用 budget
-- **WHEN** slides outline 或 markdown 构建 context
-- **THEN** 系统对 retrieval context 应用 token budget
-
-### Requirement: Slides retrieval enforces source diversity
-系统 MUST 在 slides 的 context 构建中限制单一来源占比，提升覆盖与稳定性。
-
-#### Scenario: 单源不会占满 context
-- **WHEN** 某一来源的 chunk 在检索排序中占据大多数
-- **THEN** slides context 中来自该 source 的 chunk 数受限于多样性规则
+### Requirement: Preview uses latest saved markdown
+系统 MUST 支持 Slidev 预览，且预览使用“最新保存的 markdown”作为输入（见 `studio-slides-preview/spec.md`）。

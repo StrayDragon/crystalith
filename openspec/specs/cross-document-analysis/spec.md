@@ -1,54 +1,38 @@
 # cross-document-analysis Specification
 
 ## Purpose
-TBD - created by archiving change add-cross-document-analysis. Update Purpose after archive.
+
+定义 Notebook 内“跨来源/跨文档”的轻量分析能力：在已有 chunks/向量条目的基础上抽取来源间相似关系、主题聚类，并可选做少量矛盾检测。**本 spec 作为入口与边界说明**；具体契约拆分到聚焦 specs。
+
+## Related specs
+
+- `GLOSSARY.md`
+- `analysis-api/spec.md`（Notebook analysis API 契约）
+- `workspace-analysis-ui/spec.md`（Analysis 面板 + 知识图谱 UI）
+- `workspace-ui/spec.md`（入口/布局）
+- `vector-storage/spec.md`（向量条目与检索）
+- `generation-retrieval/spec.md`（召回策略；analysis 复用向量检索能力）
+- `citation-interaction/spec.md`（output/session → source 的引用关系）
+
+## Model（高层心智）
+
+- 基础数据：`Source → Chunk → VectorEntry`（见 `vector-storage/spec.md`）
+- AnalysisResult：`topics / relations / contradictions`（见 `analysis-api/spec.md`）
+- UI：Workspace 分析面板与知识图谱视图消费 AnalysisResult（见 `workspace-analysis-ui/spec.md`）
+
+## Non-goals
+
+- 不做跨 Notebook 的全局知识库（scope = 单 Notebook）
+- 不做强一致的事实校验/证明；矛盾检测仅为 UI 辅助信号（best-effort）
+- 不替代 `research-ui/spec.md` 的长链路研究工作流
+
 ## Requirements
-### Requirement: Source Correlation Detection
 
-系统必须（SHALL）使用向量存储的 top-k 搜索检测多个来源之间的关联关系，替代全对暴力比较。
+### Requirement: Analysis is read-only
+Analysis 过程 MUST 为只读：不创建/修改 sources、chunks 或 outputs；仅返回派生结果用于 UI 展示。
 
-#### Scenario: 检测来源关联
-- **WHEN** 笔记本包含 2 个以上来源
-- **AND** 用户触发分析
-- **THEN** 系统对每个条目执行 top-k 跨来源搜索检测语义关联
-- **AND** 显示关联强度评分
-- **AND** 列出共享的主要概念
+### Requirement: Chunk ids refer to backend chunk records
+AnalysisResult 中所有 `chunk_id(s)` MUST 指向后端 `chunks.id`（数据库主键），并可用于后续定位/引用（例如 citations / outputs 的 `chunk_ids`）。
 
-#### Scenario: 关联可视化
-- **WHEN** 关联分析完成
-- **THEN** 以网络图形式展示来源关系
-- **AND** 节点大小反映来源重要性
-- **AND** 边的粗细反映关联强度
-
-### Requirement: Topic Clustering
-
-系统必须（SHALL）对多来源内容进行主题聚类分析。
-
-#### Scenario: 自动主题聚类
-
-- **WHEN** 用户触发主题分析
-- **THEN** 系统将内容聚类为多个主题
-- **AND** 每个主题有自动生成的标签
-- **AND** 显示每个主题包含的来源
-
-#### Scenario: 主题分布可视化
-
-- **WHEN** 主题聚类完成
-- **THEN** 以饼图或柱状图展示主题分布
-- **AND** 点击主题可查看相关内容
-
-### Requirement: Contradiction Detection
-
-系统必须（SHALL）并行检测不同来源之间的潜在矛盾，使用并发控制限制 LLM 调用。
-
-#### Scenario: 检测语义矛盾
-- **WHEN** 多个来源包含相关但可能矛盾的信息
-- **THEN** 系统并行标记潜在矛盾点（并发限制为 5）
-- **AND** 显示矛盾的来源和具体内容
-- **AND** 提供 AI 生成的矛盾分析
-
-#### Scenario: 矛盾列表展示
-- **WHEN** 检测到矛盾点
-- **THEN** 以列表形式展示所有矛盾
-- **AND** 每条矛盾可展开查看详情
-- **AND** 支持用户标记为"已解决"
+### Requirement: UI is best-effort and bounded
+UI MUST 以“降低噪声/提升可读性”为目标消费 analysis 结果：对关系数、主题数、矛盾检测数等进行上限控制；避免在大 Notebook 下渲染不可用的超密集图。

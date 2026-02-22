@@ -1,49 +1,46 @@
 # generation-preference Specification
 
 ## Purpose
-TBD - created by archiving change generation-preference-ui. Update Purpose after archive.
+
+定义生成“偏好”（`preference`）的端到端语义：在质量与速度之间提供稳定的调参入口，并以**表驱动**的方式集中管理默认调参，避免散落的 heuristic。规范重点是**语义与优先级**（显式参数覆盖），具体默认值以实现中的 tuning table 为准。
+
+## Related specs
+
+- `GLOSSARY.md`
+- `output-graph/spec.md`
+- `generation-retrieval/spec.md`
+- `studio-slides/spec.md`
+- `workspace-api/spec.md`
+
 ## Requirements
+
 ### Requirement: Optional generation preference parameter
 系统 MUST 支持一个可选的生成倾向参数 `preference`，其值为 `quality` 或 `speed`，用于在“输出质量”与“生成速度”之间进行取舍。
 
-#### Scenario: 不提供 preference 仍可生成
-- **WHEN** 客户端请求生成但不提供 `preference`
-- **THEN** 系统仍正常生成（使用既有默认行为）
+`preference` 为空时系统 MUST 仍可生成（使用默认行为）；非 `quality|speed` 的值 MUST 返回 422（或等价的参数校验错误）。
 
-#### Scenario: 非法 preference 被拒绝
-- **WHEN** 客户端提供非 `quality|speed` 的 `preference`
-- **THEN** 系统返回 422（或等价的参数校验错误）
+### Requirement: Table-driven tuning model
+系统 MUST 使用一个集中式 tuning 表将 `(OutputType, preference)` 映射为一组默认调参（`GenerationTuning`），其字段至少包含：
 
-### Requirement: Preference tunes output generation defaults
-在 outputs 生成接口中，系统 MUST 在用户未显式提供检索参数时，根据 `preference` 应用默认调参（用于检索与重试）。
+- `top_k` / `min_score`（检索召回与阈值）
+- `agent_retries`（结构化生成重试次数）
+- `multi_query` / `multi_query_seed_cap`（multi-query 检索开关与种子上限）
+- `max_chunks_per_source`（来源多样性上限）
+- `token_budget_ratio`（context budget 占 context window 的比例）
+系统从 tuning 表返回 MUST 是完整 knob 集合（而非仅 top_k/min_score）。
 
-#### Scenario: quality 使用更高召回与更低阈值
-- **WHEN** 客户端在 outputs 生成请求中设置 `preference = quality`
-- **AND** 未显式设置 `top_k` 与 `min_score`
-- **THEN** 系统使用 `top_k = 8`
-- **AND** 系统使用 `min_score = 0.15`
-- **AND** 系统使用 `agent_retries = 3`
+### Requirement: Preference tunes outputs defaults (when not explicit)
+在 outputs 生成接口中，系统 MUST 在用户**未显式提供**检索参数时，根据 `preference` 应用默认调参（用于检索与重试）。
 
-#### Scenario: speed 使用更低召回与更高阈值
-- **WHEN** 客户端在 outputs 生成请求中设置 `preference = speed`
-- **AND** 未显式设置 `top_k` 与 `min_score`
-- **THEN** 系统使用 `top_k = 4`
-- **AND** 系统使用 `min_score = 0.25`
-- **AND** 系统使用 `agent_retries = 1`
+`quality` 的默认调参 SHOULD 比 `speed` 更“保守且更充分”（例如 `top_k` 与 `agent_retries` 不小于 speed）。
 
 ### Requirement: Explicit retrieval params override preference
 系统 MUST 允许用户显式指定 `top_k` 与 `min_score`，且显式值 MUST 优先于 `preference` 的默认调参。
 
-#### Scenario: 显式 top_k/min_score 不被 preference 覆盖
-- **WHEN** 客户端设置 `preference = quality`
-- **AND** 同时显式设置 `top_k = 6` 与 `min_score = 0.3`
-- **THEN** 系统使用 `top_k = 6`
-- **AND** 系统使用 `min_score = 0.3`
+### Requirement: Default tuning values are centralized
+系统 SHOULD 将默认值集中在 tuning 表中，并在 logs 中记录 effective tuning，以便回归调参。
 
-### Requirement: Preference tunes slides generation defaults
+实现 SHOULD 提供基础 tuning（default/quality/speed）与按 `OutputType` 的覆盖，并保持“可覆盖/可观测”特性；multi-query 可能被环境开关强制开启（即使 tuning 中为 false），但仍 MUST 遵循 `seed_cap` 等护栏（见 `generation-retrieval/spec.md`）。
+
+### Requirement: Preference is persisted in slides generation_config
 在 slides 生成中，系统 MUST 从 `SlideGenerationConfig.preference` 读取生成倾向，并用于 outline 与 markdown 两个阶段的检索与重试调参。
-
-#### Scenario: slides 两阶段使用同一 preference
-- **WHEN** slides draft 的 `generation_config.preference = speed`
-- **AND** 用户先触发 outline，再触发 markdown
-- **THEN** 两个阶段均以 `speed` 作为生成倾向
