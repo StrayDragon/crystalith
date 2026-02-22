@@ -2,32 +2,21 @@
 
 ## Purpose
 
-定义 Studio 模块内工具区的可收纳（折叠/展开）交互规范，使用户可以隐藏不常用的工具区以释放空间给输出和笔记列表。
+本能力点在早期用于描述“Studio 工具区折叠/展开”。当前实现已演进为 **Studio 生成工具 Popover**（从底部“生成”按钮打开），不再存在常驻可折叠的工具区。
+
+本规范保留为“当前实现的工具 Popover 行为约束”，以避免 UI 漂移；Studio 更完整的契约见 `workspace-studio-ui/spec.md`。
+
+## Related specs
+
+- `workspace-studio-ui/spec.md`
+- `workspace-ux-system/spec.md`（layer/z-index、modal/keyboard 等）
 
 ## Requirements
 
-### Requirement: Studio 工具区可收纳
-Studio 模块 MUST 支持工具区（ExtractTo）的折叠/展开切换。折叠时工具网格隐藏，空间释放给输出/笔记列表；展开时工具网格正常显示。
+### Requirement: Tools popover trigger and dismissal
+Studio MUST 提供“生成”入口用于打开工具选择 Popover；Popover MUST 支持显式关闭与点击外部关闭。
+用户点击 Studio 底部“生成”按钮时 MUST 打开工具选择 Popover（展示工具网格或 loading/error 状态）；Popover 打开后点击外部或点击关闭按钮 MUST 关闭。
 
-#### Scenario: 双击折叠工具区
-- **WHEN** 用户双击工具区标题栏
-- **THEN** 工具网格 MUST 以 200ms ease 动画隐藏
-- **AND** 输出/笔记列表 MUST 扩展占据释放的空间
-
-#### Scenario: 双击展开工具区
-- **WHEN** 用户双击已折叠的工具区标题栏
-- **THEN** 工具网格 MUST 以 200ms ease 动画重新显示
-- **AND** 输出/笔记列表 MUST 调整回共享空间
-
-#### Scenario: 单击不触发折叠
-- **WHEN** 用户单击工具区标题栏
-- **THEN** 系统 MUST NOT 触发折叠/展开操作
-
-#### Scenario: 折叠状态持久化
-- **WHEN** 用户折叠或展开工具区
-- **THEN** 系统 MUST 将当前折叠状态保存到 localStorage
-- **AND** 下次打开页面时 MUST 恢复上次的折叠状态
-
-#### Scenario: 折叠状态视觉提示
-- **WHEN** 工具区处于折叠状态
-- **THEN** MUST 有明显的视觉提示表明工具区已折叠且可双击展开
+### Requirement: Popover is rendered outside overflow containers
+工具 Popover SHOULD 使用 Portal 渲染到 `document.body`（或等效层），以避免被 widget/panel 的 overflow 裁切。
+Studio widget 位于可滚动/overflow hidden 容器内时，Popover SHOULD 仍完整可见且不被裁切。

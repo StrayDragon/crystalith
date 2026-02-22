@@ -1,7 +1,15 @@
 # llm-evaluation Specification
 
 ## Purpose
-TBD - created by archiving change llm-eval-regression-harness. Update Purpose after archive.
+
+定义本地与 CI 可重复运行的 LLM 评测/回归框架：以固定数据集执行生成并输出机器可读报告，覆盖结构正确性、引用合法性与性能指标，支持对不同版本/配置的回归比较。
+
+## Related specs
+
+- `GLOSSARY.md`
+- `generation-observability/spec.md`
+- `backend-performance/spec.md`
+- `ci-cd/spec.md`
 
 ## Requirements
 ### Requirement: Offline Evaluation Runner

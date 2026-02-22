@@ -1,42 +1,28 @@
 # studio-guide Specification
 
 ## Purpose
-TBD - created by archiving change enhance-studio-guide. Update Purpose after archive.
+
+定义 Studio 中 GUIDE 类型输出的学习路径展示：以模块卡片形式呈现，可勾选完成并显示整体进度，同时支持模块详情展开/折叠以平衡概览与细节。
+
+## Related specs
+
+- `GLOSSARY.md`
+- `workspace-studio-ui/spec.md`
+- `output-rendering/spec.md`
+- `output-graph/spec.md`
+
 ## Requirements
 ### Requirement: 可勾选学习路径
 
 系统 **MUST** 将指南呈现为可勾选的学习路径。
-
-#### Scenario: 显示模块
-
-- **WHEN** 用户打开指南
-- **THEN** 每个模块显示为可勾选的卡片
-- **AND** 卡片显示模块标题与目标摘要
-
-#### Scenario: 标记完成
-
-- **WHEN** 用户勾选模块完成
-- **THEN** 模块显示为已完成状态
+每个模块 MUST 显示为可勾选卡片（包含模块标题与目标摘要），勾选后 MUST 进入已完成状态。
 
 ### Requirement: 学习进度提示
 
 系统 **MUST** 显示指南的整体完成进度。
-
-#### Scenario: 进度统计
-
-- **WHEN** 用户勾选或取消模块
-- **THEN** 进度提示同步更新
+用户勾选/取消模块时，进度提示 MUST 同步更新。
 
 ### Requirement: 模块折叠
 
 系统 **MUST** 支持模块详情的展开与折叠。
-
-#### Scenario: 展开模块
-
-- **WHEN** 用户点击模块标题或展开按钮
-- **THEN** 显示该模块的要点列表
-
-#### Scenario: 折叠模块
-
-- **WHEN** 用户再次点击
-- **THEN** 模块详情折叠收起
+用户点击模块标题或展开按钮时 MUST 展开详情（要点列表），再次点击 MUST 折叠收起。

@@ -1,105 +1,51 @@
 # backend-module-structure Specification
 
 ## Purpose
-TBD - created by archiving change refactor-backend-feature-slices. Update Purpose after archive.
+
+定义 Crystalith 后端的模块组织与依赖边界：以 feature-sliced 方式在 `crystalith/features/*` 内聚 API/服务/仓储；在 `crystalith/web` 统一聚合路由；通过 FastAPI Depends 进行依赖注入；并约定跨层依赖方向与 API 模块的 import hygiene。
+
+本 spec 只覆盖“结构与边界”。错误 envelope、重试与性能护栏、插件系统等语义分别由对应 spec 负责，避免重复描述。
+
+## Related specs
+
+- `workspace-api/spec.md`（标准化错误响应 envelope）
+- `backend-performance/spec.md`（重试边界、缓存/并发护栏）
+- `plugin-system/spec.md`（插件发现与扩展点）
+- `config-management/spec.md`
+
 ## Requirements
 ### Requirement: Feature-Sliced Module Layout
 系统 MUST 采用按业务域划分的 feature-sliced 目录结构，将领域逻辑集中到 `crystalith/features/<feature>/`。
 
-#### Scenario: 新增领域功能
-- **WHEN** 新增一个有 HTTP 路由的领域功能
-- **THEN** 该功能的路由必须位于 `crystalith/features/<feature>/api.py`
-- **AND** 业务逻辑必须位于 `crystalith/features/<feature>/service.py` 或同层服务模块
-
-#### Scenario: 业务域归属明确
-- **WHEN** 模块提供以名词为中心的业务能力（如 sources、notebooks、outputs）
-- **THEN** 该模块必须归属到对应业务域的 `features/<feature>` 内
+最小约束：
+- 有 HTTP 路由的领域功能 MUST 以 `crystalith/features/<feature>/api.py` 作为对外入口（router 聚合点）
+- 业务逻辑 MUST 位于 `crystalith/features/<feature>/service.py` 或同层服务模块
+- 以名词为中心的业务能力（如 sources/notebooks/outputs）MUST 归属到对应 `features/<feature>` 内
 
 ### Requirement: Layered Dependency Direction
 系统 MUST 强制依赖方向为 `web -> features -> shared`，并禁止反向依赖。
 
-#### Scenario: Feature 依赖约束
-- **WHEN** 任何 `features/<feature>` 模块被导入
-- **THEN** 不允许在运行时导入 `crystalith/web` 或其他 `features/*` 模块
-
-#### Scenario: 共享层依赖约束
-- **WHEN** 任何 `shared/*` 模块被导入
-- **THEN** 不允许在运行时导入 `crystalith/web` 或 `features/*` 模块
-
-#### Scenario: 类型导入例外
-- **WHEN** 仅用于类型标注的导入置于 `typing.TYPE_CHECKING` 分支
-- **THEN** 该导入不视为违反层级依赖规则
+约束：
+- `features/*` MUST NOT 在运行时导入 `crystalith/web` 或其他 `features/*`
+- `shared/*` MUST NOT 在运行时导入 `crystalith/web` 或 `features/*`
+- 仅用于类型标注的导入 MAY 放入 `typing.TYPE_CHECKING` 分支作为例外
 
 ### Requirement: Shared Cross-Domain Types
 系统 MUST 将跨域共享类型与基础设施放置在 `crystalith/shared/`，避免与 feature 模块产生循环依赖。
 
-#### Scenario: 共享枚举被多处使用
-- **WHEN** 一个枚举或类型同时被数据库模型与多个 feature 使用
-- **THEN** 该类型必须位于 `crystalith/shared/` 并由各 feature 引用
-
 ### Requirement: Central Router Aggregation
 系统 MUST 在 `crystalith/web` 中集中注册所有 feature 路由，避免多处聚合导致隐式依赖链。
-
-#### Scenario: 应用启动时加载路由
-- **WHEN** FastAPI 应用初始化
-- **THEN** 所有 feature 路由都由 `crystalith/web` 的统一入口注册
-
-### Requirement: Retry Strategy for External Services
-系统 SHALL 对所有外部服务调用（AI provider、embedding provider、web extractor）提供统一的重试策略。重试 MUST 采用 exponential backoff，并支持配置最大重试次数和可重试异常类型。
-
-#### Scenario: AI Provider 暂时不可用
-- **WHEN** AI provider 返回 503 / 网络超时
-- **THEN** 系统自动重试（最多 3 次，间隔递增），全部失败后返回标准化错误响应
-
-#### Scenario: 速率限制重试
-- **WHEN** AI provider 返回 429 Rate Limit 并包含 retry-after header
-- **THEN** 系统按 retry-after 指定的时间等待后重试
-
-### Requirement: Standardized Error Response
-系统 SHALL 返回标准化的错误响应格式，包含 error_code、message、details 和可选的 retry_after 字段。
-
-#### Scenario: 标准化错误响应
-- **WHEN** API 请求触发错误
-- **THEN** 响应体包含 error_code（机器可读）、message（人类可读）和 details（调试信息）
 
 ### Requirement: Dependency Injection Convention
 后端 SHALL 使用 FastAPI 的 Depends 系统进行依赖注入。核心依赖（db session、AI provider、embedding provider、vector store）MUST 通过统一的 provider 函数注册和获取。Feature service MUST 不直接导入全局单例。
 
-#### Scenario: Service 获取依赖
-- **WHEN** feature API 端点处理请求
-- **THEN** 通过 Depends() 获取所需的 db session、AI provider 等，而非直接导入
-
-#### Scenario: 测试替换依赖
-- **WHEN** 编写 feature service 的单元测试
-- **THEN** 通过 app.dependency_overrides 替换为 mock 实现，无需 patch 模块导入
-
-#### Scenario: Provider 切换
-- **WHEN** 配置文件中将 AI provider 从 OpenAI 切换为 Ollama
-- **THEN** 依赖注入系统自动提供对应的 provider 实例，无需修改 feature 代码
-
-### Requirement: Plugin Registry
-系统 SHALL 提供 PluginRegistry 组件，负责插件的发现、注册和生命周期管理。PluginRegistry MUST 在应用启动时扫描已安装的 entry_points 并加载符合接口规范的插件。
-
-#### Scenario: 启动时加载插件
-- **WHEN** 应用启动且已安装符合规范的插件包
-- **THEN** PluginRegistry 发现并注册该插件，日志记录加载详情
-
-#### Scenario: 接口不兼容的插件
-- **WHEN** 已安装的插件不符合当前版本的接口规范
-- **THEN** PluginRegistry 记录警告日志并跳过该插件，不影响系统启动
+测试与部署路径：
+- 测试时 SHOULD 通过 `app.dependency_overrides` 替换依赖实现（避免 patch 模块导入）
+- provider 切换（如 OpenAI→Ollama）SHOULD 仅通过配置驱动，feature 代码不应修改
 
 ### Requirement: Feature API decomposition via sub-routers
 系统 SHALL 允许在不改变 `crystalith/features/<feature>/api.py` 作为对外入口的前提下，将该 feature 的端点按职责拆分到同目录下的子模块（例如 `api_tags.py`、`api_ingest.py`），并由 `api.py` 统一聚合导出单一 router。
-
-#### Scenario: 拆分端点但保持入口稳定
-- **WHEN** 某个 feature 的 API 端点按职责拆分到多个 `api_*.py` 子模块
-- **THEN** `crystalith/web` 只需要继续导入 `crystalith/features/<feature>/api.py`
-- **AND** 该 feature 的路由仍以同一个 router 前缀对外提供服务
+`crystalith/web` MUST 只依赖 `crystalith/features/<feature>/api.py` 作为入口导入点，避免导入多个子模块导致依赖链扩散。
 
 ### Requirement: Import hygiene for API modules
 系统 MUST 保持 API 模块的 import 结构清晰：所有 import 语句 MUST 位于模块顶部，并且在任何运行时语句（如 logger 初始化、常量计算、router 声明）之前执行，避免产生隐式的加载顺序问题。
-
-#### Scenario: API 模块加载顺序可预测
-- **WHEN** Python 导入 `crystalith/features/<feature>/api.py`
-- **THEN** 模块首先完成所有 import
-- **AND** 之后才执行 logger/router 等运行时初始化代码

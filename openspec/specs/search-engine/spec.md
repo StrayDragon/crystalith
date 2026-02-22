@@ -1,56 +1,34 @@
 # search-engine Specification
 
 ## Purpose
-TBD - created by archiving change add-search-engine. Update Purpose after archive.
+
+定义外部搜索引擎集成能力：通过 SearXNG 执行真实 Web 搜索并返回标准化结果结构，附带可选的摘要 message，错误时快速显式失败，避免静默降级为“空结果”。
+
+## Related specs
+
+- `GLOSSARY.md`
+- `config-management/spec.md`
+- `source-ingestion-url/spec.md`
+- `workspace-api/spec.md`
+- `research-ui/spec.md`
+
 ## Requirements
 ### Requirement: Search Engine Integration
 
-系统 **MUST** 提供与外部搜索引擎集成的能力，支持 Web、Scholar、Docs 三种搜索模式，返回真实搜索结果。
+系统 MUST 提供与外部搜索引擎集成的能力，通过 SearXNG 返回真实搜索结果。当前仅支持 Web 模式（Scholar/Docs 暂未实现；前端仅展示 Web）。
 
-#### Scenario: Web 模式返回真实搜索结果
-
-- **WHEN** 用户调用搜索 API 并指定 mode=web
-- **THEN** 系统调用配置的搜索引擎（如 SearXNG）获取结果
-- **AND** 返回包含 title、url、snippet 字段的搜索结果列表
-
-#### Scenario: 搜索失败时快速报错
-
-- **WHEN** 搜索引擎 API 调用失败（网络错误、超时等）
-- **THEN** 系统抛出 RuntimeError 而非静默返回空列表
-- **AND** 前端显示错误提示信息
-
-#### Scenario: 搜索结果缓存
-
-- **WHEN** 用户执行相同的搜索查询（query + category）
-- **AND** 缓存未过期
-- **THEN** 系统从缓存返回结果
-- **AND** 不调用外部 API
+最小行为：
+- Web 模式下调用配置的 SearXNG 获取结果，并返回包含 `title/url/snippet` 的结果列表
+- 客户端提交未识别的 mode 时 MUST 回退为 Web 以保持兼容
+- 搜索引擎调用失败（网络/超时等）时 MUST 快速报错（不得静默返回空列表），前端据此显示错误提示
 
 ### Requirement: Search Provider Abstraction
 
-系统 **MUST** 提供搜索提供者抽象层，支持多种搜索引擎后端的灵活切换。
+系统 MUST 将搜索调用封装在 provider/service 层（当前实现为 SearXNG），以便在不改变调用方的前提下替换/扩展搜索后端。
 
-#### Scenario: 配置搜索提供者
-
-- **WHEN** 管理员在配置文件中指定 SearXNG 实例地址
-- **THEN** 系统使用该实例执行搜索
-- **AND** 支持配置超时时间和缓存 TTL
-
-#### Scenario: 搜索类别映射
-
-- **WHEN** 用户请求 Scholar 模式搜索
-- **THEN** 系统将请求映射到 SearXNG 的 science 类别
-- **AND** 返回学术相关的搜索结果
+配置中 SHOULD 支持设置 SearXNG 实例地址、超时时间与最大返回条数。
 
 ### Requirement: 搜索结果摘要消息
 系统 **MUST** 在搜索响应中返回由摘要生成流程产生的 message，用于描述搜索结果与下一步建议。
 
-#### Scenario: 返回摘要消息
-- **WHEN** 搜索摘要生成成功
-- **THEN** 搜索响应的 message 字段包含摘要与下一步提示
-- **AND** message 不使用占位或 TODO 文本
-
-#### Scenario: 摘要生成失败
-- **WHEN** 搜索摘要生成失败或不可用
-- **THEN** 搜索响应的 message 字段为空字符串
-- **AND** 仍返回真实的搜索结果列表
+摘要生成成功时 message MUST 非占位文本；摘要生成失败或不可用时 message MUST 为空字符串，且仍 MUST 返回真实的搜索结果列表。

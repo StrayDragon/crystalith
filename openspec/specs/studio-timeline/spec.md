@@ -1,28 +1,23 @@
 # studio-timeline Specification
 
 ## Purpose
-TBD - created by archiving change enhance-studio-timeline. Update Purpose after archive.
+
+定义 Studio 中 TIMELINE 类型输出的可视化呈现：按时间顺序展示事件条目，并支持事件详情的展开/收起以兼顾扫描与深入阅读。
+
+## Related specs
+
+- `GLOSSARY.md`
+- `workspace-studio-ui/spec.md`
+- `output-rendering/spec.md`
+- `output-graph/spec.md`
+
 ## Requirements
 ### Requirement: 可视化时间轴
 
 系统 **MUST** 以时间轴形式展示事件顺序。
-
-#### Scenario: 渲染时间轴
-
-- **WHEN** 用户打开时间轴输出
-- **THEN** 事件按时间顺序显示在纵向时间轴上
-- **AND** 每个事件显示日期与标题
+事件 MUST 按时间顺序显示在纵向时间轴上，且每个事件显示日期与标题。
 
 ### Requirement: 事件详情展开
 
 系统 **MUST** 支持展开/收起事件详情。
-
-#### Scenario: 展开描述
-
-- **WHEN** 用户点击事件条目
-- **THEN** 展开显示事件描述
-
-#### Scenario: 收起描述
-
-- **WHEN** 用户再次点击该事件
-- **THEN** 事件描述收起
+用户点击事件条目时 MUST 展开描述，再次点击 MUST 收起描述。
