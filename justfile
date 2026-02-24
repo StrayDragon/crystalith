@@ -73,7 +73,7 @@ check:
     git diff --exit-code -- frontend/web/src/api/generated
 
 # Run all tests
-test: test-backend test-frontend
+test: check test-backend test-frontend
 
 # Run backend tests only
 test-backend:

@@ -10,7 +10,7 @@ packages-test:
         uv run --project $package pytest --no-cov $package/tests
     done
 
-test: packages-test
+test: packages-test check
     uv run pytest tests/ -v
 
 check:
@@ -35,7 +35,7 @@ config-schema-check:
     #!/usr/bin/env bash
     set -euo pipefail
     just config-schema
-    if ! git diff --exit-code -- ../../config/app.schema.json; then
+    if ! git diff --ignore-space-at-eol --exit-code -- ../../config/app.schema.json; then
         echo "config/app.schema.json is out of date. Run: cd backend/py && just config-schema" >&2
         exit 1
     fi
