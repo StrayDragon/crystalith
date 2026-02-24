@@ -7,24 +7,23 @@ import SourcesPanelView, { type SourcesPanelProps } from './components/SourcesPa
 export default function SourcesPanel(props: SourcesPanelProps) {
   const { notebookId } = props;
   const research = useResearch(notebookId);
+  const { fetchSessions, subscribeToSSE, unsubscribeFromSSE, activeSession } = research;
 
   useEffect(() => {
     if (notebookId) {
-      research.fetchSessions();
+      fetchSessions();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notebookId]);
+  }, [notebookId, fetchSessions]);
 
   useEffect(() => {
-    const session = research.activeSession;
+    const session = activeSession;
     if (!session) return;
     if (['planning', 'searching', 'analyzing', 'waiting_user'].includes(session.status)) {
-      research.subscribeToSSE(session.id);
-      return () => research.unsubscribeFromSSE();
+      subscribeToSSE(session.id);
+      return () => unsubscribeFromSSE();
     }
-    research.unsubscribeFromSSE();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [research.activeSession?.id, research.activeSession?.status]);
+    unsubscribeFromSSE();
+  }, [activeSession?.id, activeSession?.status, subscribeToSSE, unsubscribeFromSSE]);
 
   return <SourcesPanelView {...props} research={research} />;
 }

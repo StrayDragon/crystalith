@@ -21,6 +21,9 @@
 ### Requirement: SSE 连接生命周期
 系统 MUST 仅在研究会话处于活动状态时维持 SSE 连接（planning/searching/analyzing/waiting_user），并在 completed/cancelled 后释放连接并停止重连。
 
+### Requirement: SSE 重连 gating 使用最新会话状态
+系统 MUST 以“最新的研究会话状态”为准决定是否继续重连（本地最新 state 或服务端真值），不得因为 stale closure/过期状态而在 completed/cancelled 后继续重连。
+
 ### Requirement: SSE 连接状态提示
 系统 MUST 在 SSE 连接中断、重连、与放弃重连时提供可见提示：
 

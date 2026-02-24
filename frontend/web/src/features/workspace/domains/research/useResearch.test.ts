@@ -112,3 +112,84 @@ test('deleteSession removes session and clears active session', async () => {
   expect(result.current.sessions).toHaveLength(0);
   expect(result.current.activeSession).toBeNull();
 });
+
+test('SSE reconnect does not use stale session state after completion', async () => {
+  vi.useFakeTimers();
+
+  class MockEventSource {
+    static instances: MockEventSource[] = [];
+    onerror: (() => void) | null = null;
+    onopen: (() => void) | null = null;
+    closed = false;
+    url: string;
+
+    constructor(url: string) {
+      this.url = url;
+      MockEventSource.instances.push(this);
+    }
+
+    addEventListener(_type: string, _listener: any) {
+      return;
+    }
+
+    close() {
+      this.closed = true;
+    }
+
+    triggerError() {
+      this.onerror?.();
+    }
+  }
+
+  vi.stubGlobal('EventSource', MockEventSource as any);
+
+  const baseSession = {
+    id: 1,
+    notebook_id: 1,
+    topic: 'Topic',
+    status: 'planning',
+    current_iteration: 0,
+    max_iterations: 3,
+    created_at: '2024-01-01',
+    updated_at: '2024-01-01',
+  };
+
+  try {
+    vi.mocked(listResearchSessionsV1NotebooksNotebookIdResearchGet).mockResolvedValueOnce({
+      data: [baseSession],
+    } as any);
+
+    const { result } = renderHook(() => useResearch(1));
+
+    await act(async () => {
+      await result.current.fetchSessions();
+    });
+
+    act(() => {
+      result.current.subscribeToSSE(1);
+    });
+
+    expect(MockEventSource.instances).toHaveLength(1);
+
+    vi.mocked(listResearchSessionsV1NotebooksNotebookIdResearchGet).mockResolvedValueOnce({
+      data: [{ ...baseSession, status: 'completed' }],
+    } as any);
+
+    await act(async () => {
+      await result.current.fetchSessions();
+    });
+
+    expect(result.current.sessions[0].status).toBe('completed');
+
+    act(() => {
+      MockEventSource.instances[0].triggerError();
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(MockEventSource.instances).toHaveLength(1);
+  } finally {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  }
+});
