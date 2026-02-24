@@ -5,8 +5,10 @@ import {
   formatRelativeTime,
   normalizeCitation,
   normalizeMessage,
+  normalizeOutput,
   normalizeSource,
 } from './utils';
+import { decodeOutputItem, isFallbackOutputPayload } from './outputPayload';
 
 beforeEach(() => {
   vi.useRealTimers();
@@ -84,4 +86,39 @@ test('normalizeSource resolves type and status labels', () => {
   expect(source.type).toBe('Markdown');
   expect(source.status).toBe('已索引');
   expect(source.statusTone).toBe('READY');
+});
+
+test('normalizeOutput keeps typed payload when shape matches', () => {
+  const output = normalizeOutput({
+    id: 8,
+    notebook_id: 1,
+    type: 'FAQ',
+    prompt: 'faq',
+    chunk_ids: [1],
+    content: { items: [{ question: 'Q1', answer: 'A1' }] },
+    created_at: '2026-01-01T10:00:00Z',
+    updated_at: '2026-01-01T10:00:00Z',
+  });
+
+  const decoded = decodeOutputItem(output);
+  expect(decoded?.type).toBe('FAQ');
+  if (decoded?.type !== 'FAQ') {
+    throw new Error('Expected FAQ output');
+  }
+  expect(decoded.content.items[0]?.answer).toBe('A1');
+});
+
+test('normalizeOutput falls back for invalid payload shape', () => {
+  const output = normalizeOutput({
+    id: 9,
+    notebook_id: 1,
+    type: 'GUIDE',
+    prompt: 'guide',
+    chunk_ids: [1],
+    content: { not_modules: true },
+    created_at: '2026-01-01T10:00:00Z',
+    updated_at: '2026-01-01T10:00:00Z',
+  });
+
+  expect(isFallbackOutputPayload(output.content)).toBe(true);
 });
