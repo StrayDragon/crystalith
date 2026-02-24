@@ -272,6 +272,55 @@ async def test_qa_similarity_below_threshold_returns_no_evidence(client, db_sess
 
 
 @pytest.mark.asyncio
+async def test_qa_stream_done_metadata_matches_non_stream(client, db_session, app) -> None:
+    create_resp = await client.post("/v1/notebooks", json={"name": "QA Stream Metadata"})
+    assert create_resp.status_code == 201
+    notebook_id = create_resp.json()["id"]
+
+    source = Source(
+        notebook_id=notebook_id,
+        filename="Doc-Stream.md",
+        status=SourceStatus.READY,
+    )
+    db_session.add(source)
+    await db_session.flush()
+    chunk = Chunk(source_id=source.id, chunk_index=0, text="Stream QA chunk")
+    db_session.add(chunk)
+    await db_session.commit()
+
+    await app.state.vector_store.add(
+        notebook_id=notebook_id,
+        source_id=source.id,
+        chunk_ids=[chunk.id],
+        vectors=[[1.0, 0.0, 0.0]],
+    )
+
+    payload = {"question": "测试 stream metadata", "source_ids": [source.id]}
+
+    base_resp = await client.post(
+        f"/v1/notebooks/{notebook_id}/qa",
+        json=payload,
+    )
+    assert base_resp.status_code == 200
+    base_body = base_resp.json()
+
+    async with client.stream(
+        "POST",
+        f"/v1/notebooks/{notebook_id}/qa/stream",
+        json=payload,
+    ) as response:
+        assert response.status_code == 200
+        events = await _read_sse_events_until(response, stop_event="done")
+
+    done_payload = next(data for event, data in events if event == "done")
+
+    assert done_payload["evidence"] == base_body["evidence"]
+    assert done_payload["citations"] == base_body["citations"]
+    assert done_payload["confidence"] == pytest.approx(base_body["confidence"])
+    assert done_payload["context"] == base_body["context"]
+
+
+@pytest.mark.asyncio
 async def test_qa_stream_success_persists_messages(client, db_session, app) -> None:
     notebook_resp = await client.post("/v1/notebooks", json={"name": "QA Stream Success"})
     assert notebook_resp.status_code == 201
