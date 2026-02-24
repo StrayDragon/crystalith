@@ -1,4 +1,4 @@
-default:
+_default:
     @just -l
 
 SDK_PATH := "sdk/client/python"
