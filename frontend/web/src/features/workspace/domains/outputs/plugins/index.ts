@@ -7,7 +7,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { OutputTypeId } from '../../../shared/types';
+import type { OutputPayload, OutputTypeId } from '../../../shared/types';
 
 /**
  * Configuration option for an output plugin
@@ -28,10 +28,7 @@ export interface PluginConfigSchema {
   supportsTopic?: boolean;
 }
 
-/**
- * Output content structure (generic)
- */
-export type OutputContent = Record<string, unknown>;
+export type OutputContent = OutputPayload;
 
 /**
  * Output Plugin interface

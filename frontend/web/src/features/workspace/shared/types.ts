@@ -15,6 +15,93 @@ export type OutputTypeId =
   | 'PARAGRAPH'
   | 'BULLETS'
   | 'STRUCTURED';
+
+export interface OutputContentBase {
+  title?: string | null;
+  _fallback?: boolean;
+  _warnings?: string[];
+}
+
+export interface FAQOutputContent extends OutputContentBase {
+  items: Array<{ question?: string | null; answer?: string | null }>;
+}
+
+export interface GuideOutputContent extends OutputContentBase {
+  modules: Array<{
+    title?: string | null;
+    objective?: { text?: string | null } | null;
+    key_points?: Array<{ text?: string | null }> | null;
+  }>;
+}
+
+export interface TimelineOutputContent extends OutputContentBase {
+  events: Array<{ date?: string | null; event?: string | null; description?: string | null }>;
+}
+
+export interface MindmapOutputNode {
+  label?: string | null;
+  children?: MindmapOutputNode[] | null;
+}
+
+export interface MindmapOutputContent extends OutputContentBase {
+  root: MindmapOutputNode;
+}
+
+export interface QuizOutputContent extends OutputContentBase {
+  questions: Array<{
+    question?: string | null;
+    options?: string[] | null;
+    answer?: string | string[] | null;
+    explanation?: string | null;
+  }>;
+}
+
+export interface BriefingOutputContent extends OutputContentBase {
+  sections: Array<{
+    heading?: string | null;
+    points?: Array<{ text?: string | null }> | null;
+  }>;
+}
+
+export interface SlidesOutputContent extends OutputContentBase {
+  slide_id?: number | null;
+  engine?: string | null;
+  outline?: {
+    title?: string | null;
+    slides?: Array<{ title?: string | null; bullets?: string[] | null }> | null;
+  } | null;
+  markdown?: string | null;
+}
+
+export interface ParagraphOutputContent extends OutputContentBase {
+  text: string;
+}
+
+export interface BulletsOutputContent extends OutputContentBase {
+  items: Array<string | { text?: string | null }>;
+}
+
+export interface StructuredOutputContent extends OutputContentBase {
+  bullets?: Array<string | { text?: string | null }> | null;
+  terms?: string[] | null;
+}
+
+export type OutputContentByType = {
+  FAQ: FAQOutputContent;
+  GUIDE: GuideOutputContent;
+  TIMELINE: TimelineOutputContent;
+  MINDMAP: MindmapOutputContent;
+  QUIZ: QuizOutputContent;
+  BRIEFING: BriefingOutputContent;
+  SLIDES: SlidesOutputContent;
+  PARAGRAPH: ParagraphOutputContent;
+  BULLETS: BulletsOutputContent;
+  STRUCTURED: StructuredOutputContent;
+};
+
+export type KnownOutputPayload = OutputContentByType[OutputTypeId];
+export type UnknownOutputPayload = OutputContentBase & Record<string, unknown>;
+export type OutputPayload = KnownOutputPayload | UnknownOutputPayload;
 export type SlideStage = 'input' | 'outline' | 'markdown';
 export type SlideStatus = 'idle' | 'running' | 'error';
 export type SourceSearchStatus = 'ok' | 'not_implemented';
@@ -218,12 +305,19 @@ export interface OutputItem {
   type: OutputTypeId;
   prompt: string;
   chunkIds: number[];
-  content: Record<string, unknown>;
+  content: OutputPayload;
   createdAt: string;
   updatedAt: string;
   createdAtRaw?: string;
   updatedAtRaw?: string;
 }
+
+export type TypedOutputItem = {
+  [K in OutputTypeId]: Omit<OutputItem, 'type' | 'content'> & {
+    type: K;
+    content: OutputContentByType[K];
+  };
+}[OutputTypeId];
 
 export interface StatusLabel {
   text: string;

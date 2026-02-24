@@ -11,6 +11,7 @@ import {
 import { MoreVert as MoreVertIcon, Delete as DeleteIcon, FormatQuote as QuoteIcon } from '@mui/icons-material';
 
 import type { Citation, OutputItem } from '../../shared/types';
+import { getOutputTitle } from '../../shared/outputPayload';
 import { collectOutputCitations, formatRelativeTime } from '../../shared/utils';
 import CitationPopover from '../../shared/components/citations/CitationPopover';
 import OutputContent from './OutputContent';
@@ -31,15 +32,6 @@ interface StudioOutputViewerProps {
   onLocateSource?: (citation: Citation) => void;
   /** 是否提升 z-index（用于从其他 modal 如知识图谱中打开时） */
   elevated?: boolean;
-}
-
-function resolveOutputTitle(output: OutputItem): string {
-  const content = output.content ?? {};
-  const contentTitle = typeof (content as any).title === 'string' ? (content as any).title.trim() : '';
-  if (contentTitle) return contentTitle;
-  const promptTitle = output.prompt?.trim();
-  if (promptTitle) return promptTitle;
-  return `${output.type} 输出`;
 }
 
 function resolveOutputMeta(output: OutputItem): string {
@@ -118,7 +110,7 @@ export default function StudioOutputViewer({
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 sm:px-6 dark:border-slate-700">
           <div className="flex flex-col min-w-0">
             <Typography variant="h6" className="text-lg font-semibold text-gray-900 truncate dark:text-slate-100">
-              {selectedOutput ? resolveOutputTitle(selectedOutput) : '暂无输出'}
+              {selectedOutput ? getOutputTitle(selectedOutput) : '暂无输出'}
             </Typography>
             <Typography variant="small" className="text-gray-600 font-medium dark:text-slate-300">
               {selectedOutput ? resolveOutputMeta(selectedOutput) : '请先生成输出内容'}
@@ -189,7 +181,7 @@ export default function StudioOutputViewer({
                           variant="small"
                           className={`truncate text-sm ${isActive ? 'font-semibold text-gray-900 dark:text-slate-100' : 'font-medium text-gray-800 dark:text-slate-300'}`}
                         >
-                          {resolveOutputTitle(output)}
+                          {getOutputTitle(output)}
                         </Typography>
                         <Typography variant="small" className="text-[10px] text-gray-500 font-medium mt-0.5 truncate dark:text-slate-400">
                           {resolveOutputMeta(output)}
@@ -215,7 +207,7 @@ export default function StudioOutputViewer({
                             </MenuHandler>
                             <MenuList className="p-1 min-w-[120px] dark:bg-slate-900 dark:border-slate-700">
                               <ConfirmPopover
-                                message={`确定要删除「${resolveOutputTitle(output)}」吗？此操作不可撤销。`}
+                                message={`确定要删除「${getOutputTitle(output)}」吗？此操作不可撤销。`}
                                 onConfirm={() => handleDelete(output.id)}
                                 placement="left"
                               >

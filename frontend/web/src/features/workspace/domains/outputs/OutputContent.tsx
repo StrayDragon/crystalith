@@ -3,6 +3,7 @@ import { Menu, MenuHandler, MenuList, MenuItem, Spinner } from '@material-tailwi
 import { Download as DownloadIcon } from '@mui/icons-material';
 
 import type { OutputItem, OutputTypeId } from '../../shared/types';
+import { getOutputPayloadWarnings, isFallbackOutputPayload } from '../../shared/outputPayload';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { pluginRegistry } from './plugins';
@@ -20,12 +21,8 @@ initializePlugins();
 
 export default function OutputContent({ output }: OutputContentProps) {
   const content = output.content ?? {};
-  const isFallback = (content as any)._fallback === true;
-  const warnings = useMemo(() => {
-    const raw = (content as any)._warnings;
-    if (!Array.isArray(raw)) return [];
-    return raw.filter((item) => typeof item === 'string') as string[];
-  }, [content]);
+  const isFallback = isFallbackOutputPayload(content);
+  const warnings = useMemo(() => getOutputPayloadWarnings(content), [content]);
   const typeId = output.type as OutputTypeId;
   const { isExporting, activeFormat, getSupportedFormats, exportOutput } = useExport();
   const renderDescriptor = useWorkspaceStore((s) => s.outputTypeRenderDescriptors[typeId] ?? null);
@@ -34,8 +31,9 @@ export default function OutputContent({ output }: OutputContentProps) {
 
   // Get the plugin for this output type
   const plugin = useMemo(() => pluginRegistry.get(typeId), [typeId]);
+  const pluginCanRender = plugin ? plugin.validateContent(content) : false;
 
-  const body = plugin ? (
+  const body = plugin && pluginCanRender ? (
     plugin.render(content, isFallback)
   ) : renderDescriptor ? (
     <GenericOutputRenderer content={content} renderDescriptor={renderDescriptor} />

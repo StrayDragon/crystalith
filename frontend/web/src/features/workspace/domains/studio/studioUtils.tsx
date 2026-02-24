@@ -10,6 +10,7 @@ import {
 } from '@mui/icons-material';
 
 import type { OutputItem, OutputTypeId } from '../../shared/types';
+import { getOutputTitle } from '../../shared/outputPayload';
 import { formatRelativeTime } from '../../shared/utils';
 
 export type StudioTone = 'slate' | 'blue' | 'green' | 'rose' | 'amber' | 'teal' | 'indigo';
@@ -38,12 +39,7 @@ export const TONE_COLORS: Record<StudioTone, { bg: string; border: string; text:
 };
 
 export function resolveOutputTitle(output: OutputItem): string {
-  const content = output.content ?? {};
-  const contentTitle = typeof (content as any).title === 'string' ? (content as any).title.trim() : '';
-  if (contentTitle) return contentTitle;
-  const promptTitle = output.prompt?.trim();
-  if (promptTitle) return promptTitle;
-  return `${output.type} 输出`;
+  return getOutputTitle(output);
 }
 
 export function resolveNoteMeta(output: OutputItem): string {
