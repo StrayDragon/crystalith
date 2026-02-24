@@ -5,7 +5,11 @@ Notebook-centric AI workspace with RAG over your sources.
 ## Docs
 
 - GitHub Pages: https://straydragon.github.io/crystalith/
-- Local markdown: `docs/`
+- Source: `docs/`
+- Local preview:
+  - `uv sync --project docs`
+  - `just docs-serve`
+  - `just docs-build`
 
 ## Quick start (local dev)
 

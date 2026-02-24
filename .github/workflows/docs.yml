@@ -44,8 +44,8 @@ jobs:
       - name: Sync docs dependencies
         run: uv sync --project docs --frozen
 
-      - name: Build docs (strict)
-        run: uv run --project docs mkdocs build --strict
+      - name: Build docs
+        run: uv run --project docs zensical build --clean -f mkdocs.yml
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

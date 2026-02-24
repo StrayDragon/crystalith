@@ -2,9 +2,11 @@ site_name: Crystalith
 repo_url: https://github.com/StrayDragon/crystalith
 repo_name: StrayDragon/crystalith
 
+docs_dir: docs/content
+
 theme:
-  name: material
-  logo: assets/logo.webp
+  variant: modern
+  logo: static/logo.webp
   features:
     - navigation.sections
     - navigation.expand

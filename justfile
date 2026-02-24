@@ -74,6 +74,30 @@ test-frontend:
     cd frontend/web && pnpm test
 
 # --------------------------------------------------------------------------
+# Docs
+# --------------------------------------------------------------------------
+
+# Serve docs site (Zensical)
+docs-serve *ARGS='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    EXTRA_ARGS=({{ARGS}})
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
+      EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
+    fi
+    uv run --project docs zensical serve -f mkdocs.yml "${EXTRA_ARGS[@]}"
+
+# Build docs site (Zensical)
+docs-build *ARGS='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    EXTRA_ARGS=({{ARGS}})
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
+      EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
+    fi
+    uv run --project docs zensical build -f mkdocs.yml "${EXTRA_ARGS[@]}"
+
+# --------------------------------------------------------------------------
 # Docker Deployment
 #
 # Default PROFILES can be overridden:
