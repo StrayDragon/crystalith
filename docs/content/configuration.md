@@ -39,6 +39,22 @@ Benchmark (requires Redis + optional dependency `redis`):
   - add `--scan-keys` to count keys for the benchmark prefix (can be slow on large DBs)
   - add `--use-real-embedder --confirm-real-embedder` to use the configured embedding provider
 
+## URL fetch SSRF protections
+
+`POST /v1/notebooks/{notebook_id}/sources/from-url` supports `mode: fetch`, which makes server-side HTTP requests.
+
+By default, Crystalith blocks high-risk targets (localhost / private networks / cloud metadata IPs) to mitigate SSRF.
+
+Config (in `config/app.yaml`):
+- `source_ingestion.url_fetch.security.allowlist_hosts`: exact hostnames to permit
+- `source_ingestion.url_fetch.security.allowlist_domains`: domain suffixes to permit (matches `example.com` and `*.example.com`)
+- `source_ingestion.url_fetch.security.allowlist_cidrs`: CIDR ranges to permit (use sparingly)
+- `source_ingestion.url_fetch.security.allowlist_only`: if true, block everything not allowlisted
+- `source_ingestion.url_fetch.security.max_redirects`: redirect hop limit (each hop is revalidated)
+
+Security note: allowlisting internal ranges can re-enable SSRF impact (internal port access, metadata access, etc). Prefer
+allowlisting the smallest set of specific hosts/domains.
+
 ## Speed / quality tuning
 
 Many generation endpoints accept `preference: "quality" | "speed"`.

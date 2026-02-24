@@ -28,6 +28,7 @@ from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore
 from crystalith.shared.parsers import TranscriptionProvider
+from crystalith.shared.net import UrlSafetyError, validate_url_for_fetch
 
 from .api_common import (
     _build_source_metadata,
@@ -77,7 +78,10 @@ async def list_extractors(
     from crystalith.shared.extraction import ExtractorFactory
 
     web_extraction_settings = settings.source_ingestion.web_extraction
-    factory = ExtractorFactory(web_extraction_settings)
+    factory = ExtractorFactory(
+        web_extraction_settings,
+        url_fetch_security=settings.source_ingestion.url_fetch.security,
+    )
 
     extractor_infos = factory.get_available_extractors()
 
@@ -203,9 +207,18 @@ async def create_source_from_url(
         from crystalith.shared.utils.chunker import chunk_text
 
         web_extraction_settings = settings.source_ingestion.web_extraction
+        url_fetch_security = settings.source_ingestion.url_fetch.security
 
         # Create extractor factory
-        factory = ExtractorFactory(web_extraction_settings)
+        factory = ExtractorFactory(
+            web_extraction_settings,
+            url_fetch_security=url_fetch_security,
+        )
+
+        try:
+            await validate_url_for_fetch(url, policy=url_fetch_security)
+        except UrlSafetyError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         # Determine preferred extractor
         preferred_extractor: ExtractorType | None = None
@@ -345,6 +358,9 @@ async def create_source_from_url(
             chunk_ids=chunk_ids,
             vectors=embeddings,
         )
+    except HTTPException:
+        await session.rollback()
+        raise
     except Exception as exc:
         await session.rollback()
         source.status = SourceStatus.FAILED
@@ -386,6 +402,10 @@ async def upload_source(
     filename = file.filename or "upload.txt"
     mime_type = file.content_type
 
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="empty document")
+
     source = Source(
         notebook_id=notebook_id,
         filename=filename,
@@ -398,13 +418,14 @@ async def upload_source(
     await session.refresh(source)
 
     try:
-        raw = await file.read()
         parse_started = perf_counter()
         loop = asyncio.get_running_loop()
         chunks = await loop.run_in_executor(None, parser.parse, raw)
         parse_time_ms = int((perf_counter() - parse_started) * 1000)
         if not chunks:
-            raise ValueError("empty document")
+            await session.delete(source)
+            await session.commit()
+            raise HTTPException(status_code=400, detail="empty document")
 
         page_count = getattr(parser, "page_count", None)
         if page_count is None:
@@ -447,6 +468,9 @@ async def upload_source(
             chunk_ids=chunk_ids,
             vectors=embeddings,
         )
+    except HTTPException:
+        await session.rollback()
+        raise
     except Exception as exc:
         await session.rollback()
         source.status = SourceStatus.FAILED

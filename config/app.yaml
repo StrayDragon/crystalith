@@ -208,6 +208,14 @@ source_ingestion:
     timeout: 30
     retry_count: 2
     retry_delay: 1.0
+    security:
+      # SSRF protections for "source from URL" fetch mode.
+      # Safe by default: blocks localhost/private networks/metadata IPs unless explicitly allowlisted.
+      allowlist_hosts: []
+      allowlist_domains: []
+      allowlist_cidrs: []
+      allowlist_only: false
+      max_redirects: 5
 
   web_extraction:
     fallback_order:

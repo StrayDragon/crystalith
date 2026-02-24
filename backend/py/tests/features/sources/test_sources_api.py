@@ -86,6 +86,61 @@ def _serve_html(html: str) -> str:
         thread.join(timeout=5)
         server.server_close()
 
+
+@contextlib.contextmanager
+def _serve_redirect(location: str) -> tuple[str, dict[str, int]]:
+    hits: dict[str, int] = {"count": 0}
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, format: str, *args) -> None:  # noqa: A003 - base signature
+            return
+
+        def do_GET(self) -> None:  # noqa: N802 - http.server naming
+            hits["count"] += 1
+            self.send_response(302)
+            self.send_header("Location", location)
+            self.end_headers()
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        host, port = server.server_address
+        yield f"http://{host}:{port}/", hits
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()
+
+
+@contextlib.contextmanager
+def _serve_html_counting(html: str) -> tuple[str, dict[str, int]]:
+    body = html.encode("utf-8")
+    hits: dict[str, int] = {"count": 0}
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, format: str, *args) -> None:  # noqa: A003 - base signature
+            return
+
+        def do_GET(self) -> None:  # noqa: N802 - http.server naming
+            hits["count"] += 1
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        host, port = server.server_address
+        yield f"http://{host}:{port}/", hits
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()
+
 @pytest.mark.asyncio
 async def test_sources_crud(client):
     notebook_resp = await client.post("/v1/notebooks", json={"name": "Notebook"})
@@ -120,6 +175,67 @@ async def test_sources_crud(client):
     after_resp = await client.get(f"/v1/notebooks/{notebook_id}/sources")
     assert after_resp.status_code == 200
     assert after_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_source_from_url_fetch_blocks_private_url_without_network_request(client):
+    notebook_resp = await client.post("/v1/notebooks", json={"name": "From URL SSRF Block"})
+    assert notebook_resp.status_code == 201
+    notebook_id = notebook_resp.json()["id"]
+
+    with _serve_html_counting("<html><body>hello</body></html>") as (url, hits):
+        resp = await client.post(
+            f"/v1/notebooks/{notebook_id}/sources/from-url",
+            json={"url": url, "mode": "fetch"},
+        )
+        assert resp.status_code == 400
+        assert hits["count"] == 0
+
+    list_resp = await client.get(f"/v1/notebooks/{notebook_id}/sources")
+    assert list_resp.status_code == 200
+    assert list_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_source_from_url_fetch_blocks_redirect_to_metadata(client, app):
+    notebook_resp = await client.post("/v1/notebooks", json={"name": "From URL Redirect SSRF"})
+    assert notebook_resp.status_code == 201
+    notebook_id = notebook_resp.json()["id"]
+
+    # Allowlist initial local server so we can exercise redirect validation.
+    app.state.settings.source_ingestion.url_fetch.security.allowlist_hosts = ["127.0.0.1"]
+
+    with _serve_redirect("http://169.254.169.254/") as (url, hits):
+        resp = await client.post(
+            f"/v1/notebooks/{notebook_id}/sources/from-url",
+            json={"url": url, "mode": "fetch"},
+        )
+        assert resp.status_code == 400
+        assert hits["count"] == 1
+
+    list_resp = await client.get(f"/v1/notebooks/{notebook_id}/sources")
+    assert list_resp.status_code == 200
+    assert list_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_source_from_url_fetch_allows_allowlisted_host(client, app):
+    notebook_resp = await client.post("/v1/notebooks", json={"name": "From URL Allowlist"})
+    assert notebook_resp.status_code == 201
+    notebook_id = notebook_resp.json()["id"]
+
+    app.state.settings.source_ingestion.url_fetch.security.allowlist_hosts = ["127.0.0.1"]
+
+    with _serve_html("<html><head><title>T</title></head><body>Hello</body></html>") as url:
+        resp = await client.post(
+            f"/v1/notebooks/{notebook_id}/sources/from-url",
+            json={"url": url, "mode": "fetch"},
+        )
+        assert resp.status_code == 201
+
+    list_resp = await client.get(f"/v1/notebooks/{notebook_id}/sources")
+    assert list_resp.status_code == 200
+    assert len(list_resp.json()) == 1
 
 
 @pytest.mark.asyncio
@@ -164,6 +280,59 @@ async def test_upload_source_parse_runs_in_executor_without_blocking_requests(cl
     # need to ensure the "quick" request completes meaningfully earlier than
     # the slow parse upload task.
     assert (total_elapsed - quick_elapsed) > 0.03
+
+
+@pytest.mark.asyncio
+async def test_upload_empty_file_returns_400_and_does_not_create_source(client):
+    notebook_resp = await client.post("/v1/notebooks", json={"name": "Empty Upload"})
+    assert notebook_resp.status_code == 201
+    notebook_id = notebook_resp.json()["id"]
+
+    resp = await client.post(
+        f"/v1/notebooks/{notebook_id}/sources",
+        files={"file": ("empty.txt", b"", "text/plain")},
+    )
+    assert resp.status_code == 400
+
+    list_resp = await client.get(f"/v1/notebooks/{notebook_id}/sources")
+    assert list_resp.status_code == 200
+    assert list_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_upload_no_chunks_returns_400_and_does_not_create_source(client, monkeypatch):
+    notebook_resp = await client.post("/v1/notebooks", json={"name": "No Chunks"})
+    assert notebook_resp.status_code == 201
+    notebook_id = notebook_resp.json()["id"]
+
+    class _EmptyParser:
+        parser_type = "text"
+        page_count = None
+
+        def parse(self, _content: bytes):
+            return []
+
+    def _from_file(
+        cls,  # noqa: ANN001
+        *,
+        filename: str | None,
+        mime_type: str | None,
+        transcriber=None,  # noqa: ANN001
+        media_fetcher=None,  # noqa: ANN001
+    ):
+        return _EmptyParser()
+
+    monkeypatch.setattr(ParserFactory, "from_file", classmethod(_from_file))
+
+    resp = await client.post(
+        f"/v1/notebooks/{notebook_id}/sources",
+        files={"file": ("empty-doc.txt", b"not empty", "text/plain")},
+    )
+    assert resp.status_code == 400
+
+    list_resp = await client.get(f"/v1/notebooks/{notebook_id}/sources")
+    assert list_resp.status_code == 200
+    assert list_resp.json() == []
 
 
 @pytest.mark.asyncio
@@ -421,6 +590,8 @@ async def test_create_source_from_url_fetch_mode_uses_trafilatura_without_extern
     notebook_resp = await client.post("/v1/notebooks", json={"name": "URL Fetch Notebook"})
     assert notebook_resp.status_code == 201
     notebook_id = notebook_resp.json()["id"]
+
+    app.state.settings.source_ingestion.url_fetch.security.allowlist_hosts = ["127.0.0.1"]
 
     html = (
         "<html><head><title>Example</title></head>"

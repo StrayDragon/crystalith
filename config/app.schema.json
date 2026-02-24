@@ -1146,6 +1146,51 @@
       "title": "TrafilaturaSettings",
       "type": "object"
     },
+    "UrlFetchSecuritySettings": {
+      "description": "URL fetch SSRF 安全策略配置。",
+      "properties": {
+        "allowlist_hosts": {
+          "description": "显式允许的 host（精确匹配）。可用于受控环境下放行内部站点。",
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowlist Hosts",
+          "type": "array"
+        },
+        "allowlist_domains": {
+          "description": "显式允许的域名后缀（example.com 将匹配 example.com 和 *.example.com）。",
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowlist Domains",
+          "type": "array"
+        },
+        "allowlist_cidrs": {
+          "description": "显式允许的 CIDR 网段（例如 10.0.0.0/8）。",
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowlist Cidrs",
+          "type": "array"
+        },
+        "allowlist_only": {
+          "default": false,
+          "description": "仅允许 allowlist 命中的 URL（默认 false：允许公网，但拒绝 localhost/私网/元数据等高风险目标）。",
+          "title": "Allowlist Only",
+          "type": "boolean"
+        },
+        "max_redirects": {
+          "default": 5,
+          "description": "URL fetch 最大重定向跳数（逐跳重验 SSRF 安全策略）。",
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Max Redirects",
+          "type": "integer"
+        }
+      },
+      "title": "UrlFetchSecuritySettings",
+      "type": "object"
+    },
     "UrlFetchSettings": {
       "description": "URL 内容获取配置。",
       "properties": {
@@ -1176,6 +1221,10 @@
           "minimum": 0.0,
           "title": "Retry Delay",
           "type": "number"
+        },
+        "security": {
+          "$ref": "#/$defs/UrlFetchSecuritySettings",
+          "description": "URL fetch SSRF 安全策略（默认拒绝 localhost/私网/元数据等高风险目标）。"
         }
       },
       "title": "UrlFetchSettings",
