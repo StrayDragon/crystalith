@@ -1,44 +1,31 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import ChatPanel from '../domains/messages/ChatPanel';
-import SessionDetailDialog from '../domains/sessions/SessionDetailDialog';
 import SessionSwitcher from '../domains/sessions/SessionSwitcher';
 import type { ChatMessage as SourceDialogMessage } from '../domains/sources/SourceDetailDialog';
 import SourcesPanel from '../domains/sources/SourcesPanel';
 import StudioPanel from '../domains/studio/StudioPanel';
-import WorkspaceHeader from './WorkspaceHeader';
-import ShortcutHelpPanel from './ShortcutHelpPanel';
-import { useWorkspaceStore } from '../shared/state/workspaceStore';
-import { useKeyboardShortcuts, type KeyboardShortcutBinding } from '../shared/hooks/useKeyboardShortcuts';
-import { WORKSPACE_SHORTCUTS } from '../shared/shortcuts';
 import { useAnalysis } from '../domains/analysis/useAnalysis';
 import { useChat } from '../domains/messages/useChat';
 import { useNotebooks } from '../domains/notebooks/useNotebooks';
 import { useRefine } from '../domains/refine/useRefine';
 import { useSessions } from '../domains/sessions/useSessions';
 import { useSources } from '../domains/sources/useSources';
-import type { ChatMessage, Citation, SourceItem } from '../shared/types';
+import { useKeyboardShortcuts, type KeyboardShortcutBinding } from '../shared/hooks/useKeyboardShortcuts';
 import { getSlideIdFromOutput } from '../shared/outputPayload';
-import { normalizeMessage } from '../shared/utils';
-import { listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet as listMessages } from '../../../api/generated';
-import { unwrapData } from '../../../api/unwrap';
-import { SkeletonCard } from '../shared/components/Skeleton';
+import { useWorkspaceStore } from '../shared/state/workspaceStore';
+import type { ChatMessage, Citation, SourceItem } from '../shared/types';
 import { toast } from '../../../shared/toast';
-
+import { useWorkspaceOverlays } from './hooks';
+import WorkspaceHeader from './WorkspaceHeader';
 import {
   ModularCanvas,
-  type ModularCanvasHandle,
-  CommandPalette,
   type CommandItem,
-  WidgetCatalog,
-  WIDGET_REGISTRY,
   DEFAULT_LAYOUT,
+  type ModularCanvasHandle,
+  WIDGET_REGISTRY,
 } from './modular-canvas';
-
-const StudioOutputViewer = lazy(() => import('../domains/outputs/StudioOutputViewer'));
-const KnowledgeGraphView = lazy(() => import('../domains/analysis/KnowledgeGraphView'));
-const SlidesStudioDialog = lazy(() => import('../domains/studio/SlidesStudioDialog'));
-const SourceDetailDialog = lazy(() => import('../domains/sources/SourceDetailDialog'));
+import { WorkspaceOverlays } from './overlays';
 
 export default function WorkspaceLayout() {
   const selectedSourceIds_raw = useWorkspaceStore((s) => s.selectedSourceIds);
@@ -47,48 +34,12 @@ export default function WorkspaceLayout() {
   const errMessages = useWorkspaceStore((s) => s.errors.messages);
   const store = useWorkspaceStore;
 
-  // ─── Modular Canvas state ───
   const canvasRef = useRef<ModularCanvasHandle>(null);
-  const [locked, setLocked] = useState(true); // default locked
-  const [showCmdPalette, setShowCmdPalette] = useState(false);
-  const [showCatalog, setShowCatalog] = useState(false);
+  const [locked, setLocked] = useState(true);
   const [activeWidgetIds, setActiveWidgetIds] = useState<string[]>([]);
-
-  // ─── Viewer / dialog state ───
-  const [isViewerOpen, setIsViewerOpen] = useState(false);
-  const [isViewerFullscreen, setIsViewerFullscreen] = useState(false);
-  const [viewerOutputId, setViewerOutputId] = useState<number | null>(null);
-  const [isViewerElevated, setIsViewerElevated] = useState(false);
-  const [isSessionSwitcherOpen, setIsSessionSwitcherOpen] = useState(false);
-  const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const sessionSearchRef = useRef<HTMLInputElement | null>(null);
 
-  const [isGraphViewOpen, setIsGraphViewOpen] = useState(false);
-
-  // Source detail dialog state for graph view
-  const [graphSourceDetailOpen, setGraphSourceDetailOpen] = useState(false);
-  const [graphSelectedSource, setGraphSelectedSource] = useState<SourceItem | null>(null);
-  const [graphSourceDetailFullscreen, setGraphSourceDetailFullscreen] = useState(false);
-
-  // Source detail dialog state for citation popovers
-  const [citationSourceDetailOpen, setCitationSourceDetailOpen] = useState(false);
-  const [citationSelectedSource, setCitationSelectedSource] = useState<SourceItem | null>(null);
-  const [citationSourceDetailFullscreen, setCitationSourceDetailFullscreen] = useState(false);
-  const [jumpToSource, setJumpToSource] = useState<{ id: number; token: number } | null>(null);
-
-  // Session detail dialog state for graph view
-  const [graphSessionDetailOpen, setGraphSessionDetailOpen] = useState(false);
-  const [graphSelectedSession, setGraphSelectedSession] = useState<{ id: number; title: string; createdAt: string; updatedAt: string } | null>(null);
-  const [graphSessionDetailFullscreen, setGraphSessionDetailFullscreen] = useState(false);
-  const [graphSessionMessages, setGraphSessionMessages] = useState<ChatMessage[]>([]);
-  const [graphSessionMessagesLoading, setGraphSessionMessagesLoading] = useState(false);
-  const [isSlidesDialogOpen, setIsSlidesDialogOpen] = useState(false);
-  const [slidesOpenMode, setSlidesOpenMode] = useState<'config' | 'preview'>('config');
-  const [slidesDraftId, setSlidesDraftId] = useState<number | null>(null);
-  const [slidesQueueJobId, setSlidesQueueJobId] = useState<string | null>(null);
-
-  // ─── Domain hooks ───
   const notebooks = useNotebooks();
   const sessions = useSessions();
   const sources = useSources();
@@ -100,13 +51,7 @@ export default function WorkspaceLayout() {
     refreshSources: sources.retrySources,
     refreshOutputs: refine.retryOutputs,
   });
-  const slidesQueueStatus = useMemo(() => {
-    if (!slidesQueueJobId) return null;
-    const job = refine.outputQueueJobs.find((item) => item.id === slidesQueueJobId);
-    return job?.status ?? null;
-  }, [refine.outputQueueJobs, slidesQueueJobId]);
 
-  // ─── Derived state ───
   const selectedSourceIds = useMemo(
     () =>
       Object.entries(selectedSourceIds_raw)
@@ -157,6 +102,33 @@ export default function WorkspaceLayout() {
     [chunkToSourceId, sourceById, sources.sources],
   );
 
+  const resolveSlideDraftId = useCallback(
+    (outputId: number) => {
+      const output = refine.outputs.find((item) => item.id === outputId);
+      if (!output) return null;
+      return getSlideIdFromOutput(output);
+    },
+    [refine.outputs],
+  );
+
+  const fetchAnalysisIfNeeded = useCallback(() => {
+    if (!analysis.analysis && !analysis.isLoading) {
+      void analysis.fetchAnalysis();
+    }
+  }, [analysis.analysis, analysis.isLoading, analysis.fetchAnalysis]);
+
+  const overlays = useWorkspaceOverlays({
+    activeNotebookId,
+    resolveSlideDraftId,
+    fetchAnalysisIfNeeded,
+  });
+
+  const slidesQueueStatus = useMemo(() => {
+    if (!overlays.slidesQueueJobId) return null;
+    const job = refine.outputQueueJobs.find((item) => item.id === overlays.slidesQueueJobId);
+    return job?.status ?? null;
+  }, [overlays.slidesQueueJobId, refine.outputQueueJobs]);
+
   const handleSelectedSourceIdsChange = useCallback(
     (selected: Record<number, boolean>) => {
       store.getState().setSelectedSources(selected);
@@ -169,7 +141,6 @@ export default function WorkspaceLayout() {
     [selectedSourceIds_raw],
   );
 
-  // ─── Handlers ───
   const handleChatCitationHover = useCallback(
     (chunkId: number | null) => {
       if (chunkId == null) {
@@ -188,11 +159,9 @@ export default function WorkspaceLayout() {
         toast.error('未找到对应来源，请先同步来源列表。');
         return;
       }
-      setCitationSelectedSource(source);
-      setCitationSourceDetailOpen(true);
-      setCitationSourceDetailFullscreen(false);
+      overlays.openCitationSourceDetail(source);
     },
-    [resolveCitationSource],
+    [overlays, resolveCitationSource],
   );
 
   const handleLocateCitationSource = useCallback(
@@ -202,24 +171,33 @@ export default function WorkspaceLayout() {
         toast.error('未找到对应来源，请先同步来源列表。');
         return;
       }
-      setJumpToSource((prev) => ({
-        id: source.id,
-        token: (prev?.token ?? 0) + 1,
-      }));
+      overlays.locateCitationSource(source.id);
     },
-    [resolveCitationSource],
+    [overlays, resolveCitationSource],
   );
 
   const handleCitationSaveQAAsSource = useCallback(
     async (_sourceTitle: string, messages: SourceDialogMessage[]) => {
-      if (!citationSelectedSource || !sources.convertSourceQAToSource) return;
+      if (!overlays.citationSelectedSource || !sources.convertSourceQAToSource) return;
       const qaMessages = messages.map((msg) => ({
         role: msg.role,
         content: msg.content,
       }));
-      await sources.convertSourceQAToSource(citationSelectedSource.id, qaMessages);
+      await sources.convertSourceQAToSource(overlays.citationSelectedSource.id, qaMessages);
     },
-    [citationSelectedSource, sources.convertSourceQAToSource],
+    [overlays.citationSelectedSource, sources.convertSourceQAToSource],
+  );
+
+  const handleSaveGraphSourceQAAsSource = useCallback(
+    async (_sourceTitle: string, messages: SourceDialogMessage[]) => {
+      if (!overlays.graphSelectedSource || !sources.convertSourceQAToSource) return;
+      const qaMessages = messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+      await sources.convertSourceQAToSource(overlays.graphSelectedSource.id, qaMessages);
+    },
+    [overlays.graphSelectedSource, sources.convertSourceQAToSource],
   );
 
   const handleChatCitationJump = useCallback(
@@ -248,297 +226,128 @@ export default function WorkspaceLayout() {
     [handleOpenCitationSourceDetail, sources],
   );
 
-  const openSlidesDialog = useCallback(
-    (mode: 'config' | 'preview', slideId?: number | null, queueJobId?: string | null) => {
-      setSlidesOpenMode(mode);
-      setSlidesDraftId(slideId ?? null);
-      setSlidesQueueJobId(queueJobId ?? null);
-      setIsSlidesDialogOpen(true);
-      setIsViewerOpen(false);
-      setViewerOutputId(null);
-      setIsViewerFullscreen(false);
-      setIsViewerElevated(false);
+  const focusPanel = useCallback(
+    (panel: 'sources' | 'chat' | 'studio') => {
+      const nextActivePanel = panel === 'studio' ? 'refine' : panel;
+      store.getState().setActivePanel(nextActivePanel);
     },
-    [],
+    [store],
   );
-
-  const resolveSlideDraftId = useCallback(
-    (outputId: number) => {
-      const output = refine.outputs.find((item) => item.id === outputId);
-      if (!output) return null;
-      return getSlideIdFromOutput(output);
-    },
-    [refine.outputs],
-  );
-
-  const handleOpenOutputViewer = useCallback((outputId: number, elevated = false) => {
-    const slideId = resolveSlideDraftId(outputId);
-    if (slideId) {
-      openSlidesDialog('preview', slideId);
-      return;
-    }
-    setViewerOutputId(outputId);
-    setIsViewerOpen(true);
-    setIsViewerFullscreen(false);
-    setIsViewerElevated(elevated);
-  }, [openSlidesDialog, resolveSlideDraftId]);
-
-  const handleOpenOutputViewerFullscreen = useCallback((outputId: number) => {
-    const slideId = resolveSlideDraftId(outputId);
-    if (slideId) {
-      openSlidesDialog('preview', slideId);
-      return;
-    }
-    setViewerOutputId(outputId);
-    setIsViewerOpen(true);
-    setIsViewerFullscreen(true);
-    setIsViewerElevated(false);
-  }, [openSlidesDialog, resolveSlideDraftId]);
-
-  const handleCloseOutputViewer = useCallback(() => {
-    setIsViewerOpen(false);
-    setIsViewerFullscreen(false);
-  }, []);
-
-  const handleToggleOutputViewer = useCallback(() => {
-    setIsViewerFullscreen((prev) => !prev);
-  }, []);
-
-  const handleSelectOutput = useCallback((outputId: number) => {
-    const slideId = resolveSlideDraftId(outputId);
-    if (slideId) {
-      openSlidesDialog('preview', slideId);
-      return;
-    }
-    setViewerOutputId(outputId);
-  }, [openSlidesDialog, resolveSlideDraftId]);
-
-  const focusPanel = useCallback((panel: 'sources' | 'chat' | 'studio') => {
-    const nextActivePanel = panel === 'studio' ? 'refine' : panel;
-    store.getState().setActivePanel(nextActivePanel);
-  }, [store]);
 
   const openSessionSearch = useCallback(() => {
-    setIsSessionSwitcherOpen(true);
+    overlays.openSessionSwitcher();
     window.requestAnimationFrame(() => {
       sessionSearchRef.current?.focus();
       sessionSearchRef.current?.select();
     });
-  }, []);
+  }, [overlays]);
 
   const createNotebookByShortcut = useCallback(() => {
     void notebooks.createNotebookQuick('未命名笔记本');
   }, [notebooks]);
 
-  // ─── Lock toggle ───
   const toggleLock = useCallback(() => {
     setLocked((prev) => !prev);
   }, []);
 
-  // ─── Close overlays ───
-  const closeActiveOverlay = useCallback(() => {
-    if (showCmdPalette) {
-      setShowCmdPalette(false);
-      return true;
-    }
-
-    if (showCatalog) {
-      setShowCatalog(false);
-      return true;
-    }
-
-    if (isShortcutHelpOpen) {
-      setIsShortcutHelpOpen(false);
-      return true;
-    }
-
-    if (graphSessionDetailOpen) {
-      setGraphSessionDetailOpen(false);
-      setGraphSessionDetailFullscreen(false);
-      setGraphSessionMessages([]);
-      return true;
-    }
-
-    if (citationSourceDetailOpen) {
-      setCitationSourceDetailOpen(false);
-      setCitationSelectedSource(null);
-      setCitationSourceDetailFullscreen(false);
-      return true;
-    }
-
-    if (graphSourceDetailOpen) {
-      setGraphSourceDetailOpen(false);
-      setGraphSourceDetailFullscreen(false);
-      return true;
-    }
-
-    if (isSlidesDialogOpen) {
-      setIsSlidesDialogOpen(false);
-      setSlidesOpenMode('config');
-      setSlidesDraftId(null);
-      setSlidesQueueJobId(null);
-      return true;
-    }
-
-    if (isViewerOpen) {
-      handleCloseOutputViewer();
-      return true;
-    }
-
-    if (isGraphViewOpen) {
-      setIsGraphViewOpen(false);
-      return true;
-    }
-
-    if (isSessionSwitcherOpen) {
-      setIsSessionSwitcherOpen(false);
-      return true;
-    }
-
-    return false;
-  }, [
-    showCmdPalette,
-    showCatalog,
-    citationSourceDetailOpen,
-    graphSessionDetailOpen,
-    graphSourceDetailOpen,
-    isGraphViewOpen,
-    isSessionSwitcherOpen,
-    isShortcutHelpOpen,
-    isSlidesDialogOpen,
-    isViewerOpen,
-    handleCloseOutputViewer,
-  ]);
-
-  // ─── Keyboard shortcuts ───
-  const shortcutBindings = useMemo<KeyboardShortcutBinding[]>(() => [
-    {
-      id: 'open-command-palette',
-      combo: 'Ctrl+K',
-      handler: () => {
-        setShowCmdPalette((v) => !v);
+  const shortcutBindings = useMemo<KeyboardShortcutBinding[]>(
+    () => [
+      {
+        id: 'open-command-palette',
+        combo: 'Ctrl+K',
+        handler: () => {
+          overlays.toggleCommandPalette();
+        },
       },
-    },
-    {
-      id: 'create-notebook',
-      combo: 'Ctrl+N',
-      handler: () => {
-        createNotebookByShortcut();
+      {
+        id: 'create-notebook',
+        combo: 'Ctrl+N',
+        handler: () => {
+          createNotebookByShortcut();
+        },
       },
-    },
-    {
-      id: 'focus-sources',
-      combo: 'Ctrl+1',
-      handler: () => {
-        focusPanel('sources');
+      {
+        id: 'focus-sources',
+        combo: 'Ctrl+1',
+        handler: () => {
+          focusPanel('sources');
+        },
       },
-    },
-    {
-      id: 'focus-chat',
-      combo: 'Ctrl+2',
-      handler: () => {
-        focusPanel('chat');
+      {
+        id: 'focus-chat',
+        combo: 'Ctrl+2',
+        handler: () => {
+          focusPanel('chat');
+        },
       },
-    },
-    {
-      id: 'focus-studio',
-      combo: 'Ctrl+3',
-      handler: () => {
-        focusPanel('studio');
+      {
+        id: 'focus-studio',
+        combo: 'Ctrl+3',
+        handler: () => {
+          focusPanel('studio');
+        },
       },
-    },
-    {
-      id: 'send-message',
-      combo: 'Ctrl+Enter',
-      allowInInput: true,
-      handler: () => {
-        if (!notebooks.activeNotebookId || chat.isSending) return;
-        void chat.sendMessage();
+      {
+        id: 'send-message',
+        combo: 'Ctrl+Enter',
+        allowInInput: true,
+        handler: () => {
+          if (!notebooks.activeNotebookId || chat.isSending) return;
+          void chat.sendMessage();
+        },
       },
-    },
-    {
-      id: 'close-overlay',
-      combo: 'Escape',
-      allowInInput: true,
-      preventDefault: false,
-      handler: (event) => {
-        if (closeActiveOverlay()) {
-          event.preventDefault();
-        }
+      {
+        id: 'close-overlay',
+        combo: 'Escape',
+        allowInInput: true,
+        preventDefault: false,
+        handler: (event) => {
+          if (overlays.closeActiveOverlay()) {
+            event.preventDefault();
+          }
+        },
       },
-    },
-    {
-      id: 'open-shortcut-help',
-      combo: 'Ctrl+?',
-      handler: () => {
-        setIsShortcutHelpOpen(true);
+      {
+        id: 'open-shortcut-help',
+        combo: 'Ctrl+?',
+        handler: () => {
+          overlays.openShortcutHelp();
+        },
       },
-    },
-  ], [
-    chat.isSending,
-    chat.sendMessage,
-    closeActiveOverlay,
-    createNotebookByShortcut,
-    focusPanel,
-    notebooks.activeNotebookId,
-  ]);
+    ],
+    [
+      chat.isSending,
+      chat.sendMessage,
+      createNotebookByShortcut,
+      focusPanel,
+      notebooks.activeNotebookId,
+      overlays,
+    ],
+  );
 
   useKeyboardShortcuts(shortcutBindings);
 
-  // ─── Graph view handlers ───
-  const handleGraphSourceClick = useCallback((source: SourceItem) => {
-    setGraphSelectedSource(source);
-    setGraphSourceDetailOpen(true);
-    setGraphSourceDetailFullscreen(false);
-  }, []);
-
-  const handleGraphSessionClick = useCallback(async (session: { id: number; title?: string; createdAt?: string; updatedAt?: string }) => {
-    setGraphSelectedSession({
-      id: session.id,
-      title: session.title || `对话 ${session.id}`,
-      createdAt: session.createdAt || '',
-      updatedAt: session.updatedAt || '',
-    });
-    setGraphSessionDetailOpen(true);
-    setGraphSessionDetailFullscreen(false);
-    setGraphSessionMessages([]);
-
-	    if (notebooks.activeNotebookId) {
-	      setGraphSessionMessagesLoading(true);
-	      try {
-	        const response = await unwrapData(listMessages<true>({
-	          path: { notebook_id: notebooks.activeNotebookId, session_id: session.id },
-	        }));
-	        const normalizedMessages = response.map(normalizeMessage);
-	        setGraphSessionMessages(normalizedMessages);
-	      } catch {
-	        setGraphSessionMessages([]);
-	      } finally {
-        setGraphSessionMessagesLoading(false);
-      }
-    }
-  }, [notebooks.activeNotebookId]);
-
   useEffect(() => {
-    if (!isViewerOpen) return;
+    if (!overlays.isViewerOpen) return;
     if (refine.outputs.length === 0) {
-      setIsViewerOpen(false);
-      setViewerOutputId(null);
+      overlays.closeOutputViewer();
+      overlays.setViewerOutputId(null);
       return;
     }
-    if (viewerOutputId && refine.outputs.some((item) => item.id === viewerOutputId)) {
+    if (
+      overlays.viewerOutputId &&
+      refine.outputs.some((item) => item.id === overlays.viewerOutputId)
+    ) {
       return;
     }
-    setViewerOutputId(refine.outputs[0].id);
-  }, [isViewerOpen, refine.outputs, viewerOutputId]);
+    overlays.setViewerOutputId(refine.outputs[0].id);
+  }, [overlays, refine.outputs]);
 
   const isConnected = notebooks.isConnected;
 
-  // ─── Command palette items ───
   const cmdPaletteCommands = useMemo<CommandItem[]>(() => {
     const cmds: CommandItem[] = [];
 
-    // Add/remove module commands
     Object.entries(WIDGET_REGISTRY).forEach(([id, meta]) => {
       const isActive = activeWidgetIds.includes(id);
       if (!isActive) {
@@ -558,7 +367,6 @@ export default function WorkspaceLayout() {
       }
     });
 
-    // Lock/unlock
     cmds.push({
       id: 'toggle-lock',
       label: locked ? '解锁布局（进入编辑模式）' : '锁定布局',
@@ -566,7 +374,6 @@ export default function WorkspaceLayout() {
       action: toggleLock,
     });
 
-    // Session search
     cmds.push({
       id: 'session-search',
       label: '切换会话',
@@ -574,67 +381,49 @@ export default function WorkspaceLayout() {
       action: openSessionSearch,
     });
 
-    // Knowledge graph
     cmds.push({
       id: 'open-graph',
       label: '打开知识图谱',
       icon: '🕸',
-      action: () => {
-        setIsGraphViewOpen(true);
-        if (!analysis.analysis && !analysis.isLoading) {
-          analysis.fetchAnalysis();
-        }
-      },
+      action: overlays.openGraphView,
     });
 
-    // Shortcut help
     cmds.push({
       id: 'shortcut-help',
       label: '快捷键帮助',
       icon: '⌨️',
-      action: () => setIsShortcutHelpOpen(true),
+      action: overlays.openShortcutHelp,
     });
 
     return cmds;
-  }, [activeWidgetIds, locked, toggleLock, openSessionSearch, analysis]);
+  }, [activeWidgetIds, locked, openSessionSearch, overlays, toggleLock]);
 
-  // ─── Widget header extras (e.g., SessionSwitcher in chat widget header) ───
-  const widgetHeaderExtras = useMemo(() => ({
-    chat: (
-      <SessionSwitcher
-        sessions={sessions.sessions}
-        activeSessionId={sessions.activeSessionId}
-        isOpen={isSessionSwitcherOpen}
-        isLoading={sessions.isLoading}
-        error={sessions.error}
-        isConnected={sessions.isConnected}
-        searchInputRef={sessionSearchRef}
-        onToggle={() => setIsSessionSwitcherOpen((prev) => !prev)}
-        onClose={() => setIsSessionSwitcherOpen(false)}
-        onSelect={sessions.setActiveSessionId}
-        onCreate={async () => {
-          await sessions.createSession();
-        }}
-        onUpdate={sessions.updateSession}
-        onDelete={sessions.deleteSession}
-        onRetry={sessions.retrySessions}
-      />
-    ),
-  }), [
-    sessions.sessions,
-    sessions.activeSessionId,
-    isSessionSwitcherOpen,
-    sessions.isLoading,
-    sessions.error,
-    sessions.isConnected,
-    sessions.setActiveSessionId,
-    sessions.createSession,
-    sessions.updateSession,
-    sessions.deleteSession,
-    sessions.retrySessions,
-  ]);
+  const widgetHeaderExtras = useMemo(
+    () => ({
+      chat: (
+        <SessionSwitcher
+          sessions={sessions.sessions}
+          activeSessionId={sessions.activeSessionId}
+          isOpen={overlays.isSessionSwitcherOpen}
+          isLoading={sessions.isLoading}
+          error={sessions.error}
+          isConnected={sessions.isConnected}
+          searchInputRef={sessionSearchRef}
+          onToggle={overlays.toggleSessionSwitcher}
+          onClose={overlays.closeSessionSwitcher}
+          onSelect={sessions.setActiveSessionId}
+          onCreate={async () => {
+            await sessions.createSession();
+          }}
+          onUpdate={sessions.updateSession}
+          onDelete={sessions.deleteSession}
+          onRetry={sessions.retrySessions}
+        />
+      ),
+    }),
+    [overlays, sessions],
+  );
 
-  // ─── Render widget content by id ───
   const renderWidget = useCallback(
     (widgetId: string) => {
       switch (widgetId) {
@@ -642,7 +431,7 @@ export default function WorkspaceLayout() {
           return (
             <SourcesPanel
               sources={sources.sources}
-              jumpToSource={jumpToSource}
+              jumpToSource={overlays.jumpToSource}
               onUpload={sources.handleUpload}
               uploadState={sources.uploadState}
               uploadError={sources.uploadError}
@@ -732,11 +521,15 @@ export default function WorkspaceLayout() {
               onGenerateOutput={refine.onGenerateOutput}
               onOpenSlides={(options) => {
                 const mode = options?.mode ?? 'config';
-                openSlidesDialog(mode, options?.slideId ?? null, options?.queueJobId ?? null);
+                overlays.openSlidesDialog(
+                  mode,
+                  options?.slideId ?? null,
+                  options?.queueJobId ?? null,
+                );
               }}
               onDeleteOutput={refine.onDeleteOutput}
-              onSelectOutput={handleOpenOutputViewer}
-              onSelectOutputFullscreen={handleOpenOutputViewerFullscreen}
+              onSelectOutput={overlays.openOutputViewer}
+              onSelectOutputFullscreen={overlays.openOutputViewerFullscreen}
               onSaveNote={refine.saveContentAsNote}
               onConvertToSource={sources.convertOutputToSource}
               onJumpToCitation={handleOutputCitationJump}
@@ -755,20 +548,25 @@ export default function WorkspaceLayout() {
       }
     },
     [
-      // sources
-      sources, jumpToSource, activeNotebookId, handleSelectedSourceIdsChange,
-      // chat
-      chat, isConnected, errMessages, notebooks.activeNotebookId,
-      handleChatCitationHover, handleChatCitationJump, handleLocateCitationSource,
-      // studio
-      refine, openSlidesDialog, handleOpenOutputViewer, handleOpenOutputViewerFullscreen,
-      handleOutputCitationJump, hasSelectedSources,
+      activeNotebookId,
+      chat,
+      errMessages,
+      handleChatCitationHover,
+      handleChatCitationJump,
+      handleLocateCitationSource,
+      handleOutputCitationJump,
+      handleSelectedSourceIdsChange,
+      hasSelectedSources,
+      isConnected,
+      notebooks.activeNotebookId,
+      overlays,
+      refine,
+      sources,
     ],
   );
 
   return (
     <div className="flex flex-col h-screen bg-gray-50/50 dark:bg-slate-950 overflow-hidden text-gray-900 dark:text-gray-100">
-      {/* ── Header (fixed top bar – outside GridStack) ── */}
       <div className="flex-shrink-0 relative z-10 px-4 pt-1">
         <WorkspaceHeader
           notebooks={notebooks.notebooks}
@@ -785,20 +583,14 @@ export default function WorkspaceLayout() {
           onUpdateNotebook={notebooks.updateNotebook}
           onDeleteNotebook={notebooks.deleteNotebook}
           onSelectNotebook={notebooks.setActiveNotebookId}
-          onOpenKnowledgeGraph={() => {
-            setIsGraphViewOpen(true);
-            if (!analysis.analysis && !analysis.isLoading) {
-              analysis.fetchAnalysis();
-            }
-          }}
+          onOpenKnowledgeGraph={overlays.openGraphView}
           locked={locked}
           onToggleLock={toggleLock}
-          onOpenCatalog={() => setShowCatalog((v) => !v)}
-          onOpenCommandPalette={() => { setShowCmdPalette(true); }}
+          onOpenCatalog={overlays.toggleCatalog}
+          onOpenCommandPalette={overlays.openCommandPalette}
         />
       </div>
 
-      {/* ── Modular Canvas (GridStack layout) ── */}
       <ModularCanvas
         ref={canvasRef}
         defaultLayout={DEFAULT_LAYOUT}
@@ -809,147 +601,72 @@ export default function WorkspaceLayout() {
         onWidgetIdsChange={setActiveWidgetIds}
       />
 
-      {/* ── Command Palette ── */}
-      <CommandPalette
-        open={showCmdPalette}
-        onClose={() => setShowCmdPalette(false)}
-        commands={cmdPaletteCommands}
-      />
-
-      {/* ── Widget Catalog ── */}
-      <WidgetCatalog
-        open={showCatalog}
-        onClose={() => setShowCatalog(false)}
-        widgetMeta={WIDGET_REGISTRY}
+      <WorkspaceOverlays
+        commandPaletteOpen={overlays.showCommandPalette}
+        onCloseCommandPalette={overlays.closeCommandPalette}
+        commandPaletteCommands={cmdPaletteCommands}
+        catalogOpen={overlays.showCatalog}
+        onCloseCatalog={overlays.closeCatalog}
         activeWidgetIds={activeWidgetIds}
         onAddWidget={(id) => canvasRef.current?.addWidget(id)}
-      />
-
-      {/* ── Shortcut Help ── */}
-      <ShortcutHelpPanel
-        open={isShortcutHelpOpen}
-        shortcuts={WORKSPACE_SHORTCUTS}
-        onClose={() => setIsShortcutHelpOpen(false)}
-      />
-
-      {/* ── Output Viewer ── */}
-      <Suspense fallback={<div className="fixed bottom-4 right-4 w-72"><SkeletonCard lines={3} /></div>}>
-        <StudioOutputViewer
-          outputs={refine.outputs}
-          selectedOutputId={viewerOutputId}
-          isOpen={isViewerOpen}
-          isFullscreen={isViewerFullscreen}
-          onClose={handleCloseOutputViewer}
-          onToggleFullscreen={handleToggleOutputViewer}
-          onSelectOutput={handleSelectOutput}
-          onDeleteOutput={refine.onDeleteOutput}
-          onJumpToCitation={handleOutputCitationJump}
-          onCitationHover={handleChatCitationHover}
-          onLocateSource={handleLocateCitationSource}
-          elevated={isViewerElevated}
-        />
-      </Suspense>
-
-      {/* ── Slides Dialog ── */}
-      {isSlidesDialogOpen && (
-        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[420px]"><SkeletonCard lines={6} /></div></div>}>
-          <SlidesStudioDialog
-            open={isSlidesDialogOpen}
-            onClose={() => {
-              setIsSlidesDialogOpen(false);
-              setSlidesOpenMode('config');
-              setSlidesDraftId(null);
-              setSlidesQueueJobId(null);
-            }}
-            notebookId={activeNotebookId}
-            selectedSourceIds={selectedSourceIds}
-            isConnected={isConnected}
-            onOutputsUpdated={refine.retryOutputs}
-            openMode={slidesOpenMode}
-            draftId={slidesDraftId}
-            queueStatus={slidesQueueStatus}
-            onQueueSlides={refine.onQueueSlides}
-          />
-        </Suspense>
-      )}
-
-      {/* ── Knowledge Graph View ── */}
-      {isGraphViewOpen && (
-        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[520px]"><SkeletonCard lines={6} /></div></div>}>
-          <KnowledgeGraphView
-            sources={sources.sources}
-            outputs={refine.outputs}
-            sessions={sessions.sessions}
-            messages={chat.messages}
-            analysis={analysis.analysis}
-            isLoading={analysis.isLoading}
-            error={analysis.error}
-            activeSessionId={activeSessionId}
-            onClose={() => setIsGraphViewOpen(false)}
-            onRefresh={analysis.fetchAnalysis}
-            onSourceClick={handleGraphSourceClick}
-            onOutputClick={(output) => handleOpenOutputViewer(output.id, true)}
-            onSessionClick={handleGraphSessionClick}
-            isConnected={analysis.isConnected}
-          />
-        </Suspense>
-      )}
-
-      {/* ── Source Detail Dialog for Graph View ── */}
-      {graphSourceDetailOpen && (
-        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[520px]"><SkeletonCard lines={5} /></div></div>}>
-          <SourceDetailDialog
-            open={graphSourceDetailOpen}
-            source={graphSelectedSource}
-            onClose={() => {
-              setGraphSourceDetailOpen(false);
-              setGraphSourceDetailFullscreen(false);
-            }}
-            isFullscreen={graphSourceDetailFullscreen}
-            onToggleFullscreen={() => setGraphSourceDetailFullscreen((prev) => !prev)}
-            onSaveQAAsSource={async (sourceTitle: string, messages) => {
-              if (!graphSelectedSource) return;
-              const qaMessages = messages.map((msg) => ({
-                role: msg.role,
-                content: msg.content,
-              }));
-              await sources.convertSourceQAToSource(graphSelectedSource.id, qaMessages);
-            }}
-          />
-        </Suspense>
-      )}
-
-      {/* ── Source Detail Dialog for Citation Popovers ── */}
-      {citationSourceDetailOpen && (
-        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[520px]"><SkeletonCard lines={5} /></div></div>}>
-          <SourceDetailDialog
-            open={citationSourceDetailOpen}
-            source={citationSelectedSource}
-            onClose={() => {
-              setCitationSourceDetailOpen(false);
-              setCitationSelectedSource(null);
-              setCitationSourceDetailFullscreen(false);
-            }}
-            isFullscreen={citationSourceDetailFullscreen}
-            onToggleFullscreen={() => setCitationSourceDetailFullscreen((prev) => !prev)}
-            onSaveQAAsSource={handleCitationSaveQAAsSource}
-          />
-        </Suspense>
-      )}
-
-      {/* ── Session Detail Dialog for Graph View ── */}
-      <SessionDetailDialog
-        open={graphSessionDetailOpen}
-        session={graphSelectedSession}
-        messages={graphSessionMessages}
-        onClose={() => {
-          setGraphSessionDetailOpen(false);
-          setGraphSessionDetailFullscreen(false);
-          setGraphSessionMessages([]);
-        }}
-        isFullscreen={graphSessionDetailFullscreen}
-        onToggleFullscreen={() => setGraphSessionDetailFullscreen((prev) => !prev)}
-        isLoading={graphSessionMessagesLoading}
+        shortcutHelpOpen={overlays.isShortcutHelpOpen}
+        onCloseShortcutHelp={overlays.closeShortcutHelp}
+        outputs={refine.outputs}
+        viewerOutputId={overlays.viewerOutputId}
+        viewerOpen={overlays.isViewerOpen}
+        viewerFullscreen={overlays.isViewerFullscreen}
+        viewerElevated={overlays.isViewerElevated}
+        onCloseViewer={overlays.closeOutputViewer}
+        onToggleViewerFullscreen={overlays.toggleOutputViewer}
+        onSelectViewerOutput={overlays.selectOutput}
+        onDeleteOutput={refine.onDeleteOutput}
+        onOutputCitationJump={handleOutputCitationJump}
+        onCitationHover={handleChatCitationHover}
+        onLocateCitationSource={handleLocateCitationSource}
+        slidesDialogOpen={overlays.isSlidesDialogOpen}
+        onCloseSlidesDialog={overlays.closeSlidesDialog}
+        notebookId={activeNotebookId}
+        selectedSourceIds={selectedSourceIds}
+        isConnected={isConnected}
+        onOutputsUpdated={refine.retryOutputs}
+        slidesOpenMode={overlays.slidesOpenMode}
+        slidesDraftId={overlays.slidesDraftId}
+        slidesQueueStatus={slidesQueueStatus}
+        onQueueSlides={refine.onQueueSlides}
+        graphViewOpen={overlays.isGraphViewOpen}
+        onCloseGraphView={overlays.closeGraphView}
+        onRefreshGraph={analysis.fetchAnalysis}
+        onGraphSourceClick={overlays.openGraphSourceDetail}
+        onGraphOutputClick={(output) => overlays.openOutputViewer(output.id, true)}
+        onGraphSessionClick={overlays.handleGraphSessionClick}
+        graphSources={sources.sources}
+        graphOutputs={refine.outputs}
+        graphSessions={sessions.sessions}
+        graphMessages={chat.messages}
+        graphAnalysis={analysis.analysis}
+        graphAnalysisLoading={analysis.isLoading}
+        graphAnalysisError={analysis.error}
+        activeSessionId={activeSessionId}
+        graphConnected={analysis.isConnected}
+        graphSourceDetailOpen={overlays.graphSourceDetailOpen}
+        graphSelectedSource={overlays.graphSelectedSource}
+        onCloseGraphSourceDetail={overlays.closeGraphSourceDetail}
+        graphSourceDetailFullscreen={overlays.graphSourceDetailFullscreen}
+        onToggleGraphSourceDetailFullscreen={overlays.toggleGraphSourceDetailFullscreen}
+        onSaveGraphSourceQAAsSource={handleSaveGraphSourceQAAsSource}
+        citationSourceDetailOpen={overlays.citationSourceDetailOpen}
+        citationSelectedSource={overlays.citationSelectedSource}
+        onCloseCitationSourceDetail={overlays.closeCitationSourceDetail}
+        citationSourceDetailFullscreen={overlays.citationSourceDetailFullscreen}
+        onToggleCitationSourceDetailFullscreen={overlays.toggleCitationSourceDetailFullscreen}
+        onSaveCitationSourceQAAsSource={handleCitationSaveQAAsSource}
+        graphSessionDetailOpen={overlays.graphSessionDetailOpen}
+        graphSelectedSession={overlays.graphSelectedSession}
+        graphSessionMessages={overlays.graphSessionMessages}
+        onCloseGraphSessionDetail={overlays.closeGraphSessionDetail}
+        graphSessionDetailFullscreen={overlays.graphSessionDetailFullscreen}
+        onToggleGraphSessionDetailFullscreen={overlays.toggleGraphSessionDetailFullscreen}
+        graphSessionMessagesLoading={overlays.graphSessionMessagesLoading}
       />
     </div>
   );

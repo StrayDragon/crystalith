@@ -47,8 +47,14 @@ export default function CommandPalette({ open, onClose, commands }: CommandPalet
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Escape') onClose();
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }
             if (e.key === 'Enter' && filtered.length > 0) {
+              e.preventDefault();
+              e.stopPropagation();
               filtered[0].action();
               onClose();
             }
