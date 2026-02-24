@@ -14,6 +14,9 @@ class CacheProvider(Protocol):
     async def set(self, key: str, value: Any, *, ttl: float | None = None) -> None:
         ...
 
+    async def incr(self, key: str, amount: int = 1, *, ttl: float | None = None) -> int:
+        ...
+
     async def set_many(self, items: Mapping[str, Any], *, ttl: float | None = None) -> None:
         ...
 

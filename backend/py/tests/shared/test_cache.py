@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import time
 
 import pytest
 
-from crystalith.shared.cache import InMemoryCache
+from crystalith.shared.cache import InMemoryCache, bump_sources_epoch, get_sources_epoch
 from crystalith.shared.config import Settings
+from crystalith.shared.vector_storage import bump_vector_epoch, get_vector_epoch
 
 
 @pytest.mark.asyncio
@@ -84,6 +86,27 @@ async def test_in_memory_cache_set_many_roundtrip() -> None:
 
     values = await cache.get_many(["a", "b", "missing"])
     assert values == [1, 2, None]
+
+
+@pytest.mark.asyncio
+async def test_in_memory_cache_incr_is_atomic_under_concurrency() -> None:
+    cache = InMemoryCache(ttl=60, max_size=10)
+    tasks = [cache.incr("k") for _ in range(50)]
+    results = await asyncio.gather(*tasks)
+    assert len(set(results)) == len(tasks)
+    assert await cache.get("k") == 50
+
+
+@pytest.mark.asyncio
+async def test_epoch_bumps_do_not_lose_increments_under_concurrency() -> None:
+    cache = InMemoryCache(ttl=60, max_size=10)
+
+    sources_tasks = [bump_sources_epoch(cache=cache, notebook_id=1) for _ in range(25)]
+    vector_tasks = [bump_vector_epoch(cache=cache, notebook_id=1) for _ in range(25)]
+    await asyncio.gather(*sources_tasks, *vector_tasks)
+
+    assert await get_sources_epoch(cache=cache, notebook_id=1) == 25
+    assert await get_vector_epoch(cache=cache, notebook_id=1) == 25
 
 
 def test_cache_settings_validation_requires_redis_url() -> None:

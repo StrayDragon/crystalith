@@ -21,6 +21,9 @@
 系统 MUST 在任何改变 notebook 向量集合的写操作后 bump 对应 notebook 的 `vector_epoch`。
 例如：re-embed、删除 source（或 notebook）等操作 MUST bump `vector_epoch`。
 
+### Requirement: vector_epoch bump MUST be atomic
+系统 MUST 以原子方式 bump `vector_epoch`，保证并发写入下 epoch 变化可靠，从而确保旧 epoch 下的检索缓存不会被误命中。
+
 ### Requirement: Epoch change invalidates prior cached searches
 系统 MUST 保证 epoch 变化后，之前 epoch 下写入的检索缓存不再被命中。
 

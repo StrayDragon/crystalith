@@ -64,6 +64,40 @@ class InMemoryCache:
             self._data.move_to_end(key)
             await self._evict_locked()
 
+    async def incr(self, key: str, amount: int = 1, *, ttl: float | None = None) -> int:
+        resolved_amount = int(amount)
+        now = time.monotonic()
+        async with self._lock:
+            entry = self._data.get(key)
+            if entry is not None and entry.expires_at is not None and entry.expires_at <= now:
+                self._data.pop(key, None)
+                entry = None
+
+            current = 0
+            if entry is not None:
+                try:
+                    current = int(entry.value)
+                except (TypeError, ValueError):
+                    current = 0
+
+            next_value = current + resolved_amount
+
+            expires_at = None
+            if ttl is None:
+                if entry is not None:
+                    expires_at = entry.expires_at
+                elif self._default_ttl > 0:
+                    expires_at = now + self._default_ttl
+            else:
+                resolved_ttl = float(ttl)
+                if resolved_ttl > 0:
+                    expires_at = now + resolved_ttl
+
+            self._data[key] = _Entry(value=next_value, expires_at=expires_at)
+            self._data.move_to_end(key)
+            await self._evict_locked()
+            return next_value
+
     async def set_many(self, items: Mapping[str, Any], *, ttl: float | None = None) -> None:
         if not items:
             return None
