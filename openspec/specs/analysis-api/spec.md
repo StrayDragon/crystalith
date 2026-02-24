@@ -32,6 +32,10 @@
 - **WHEN** notebook 尚无可用向量条目（未索引或为空）
 - **THEN** 返回 `topics=[]`, `relations=[]`, `contradictions=[]`
 
+### Requirement: Analysis MUST not load vector entries from other notebooks
+系统 MUST 在分析单个 notebook 时仅加载该 notebook 的向量条目，且 MUST NOT 为了过滤而先加载其他 notebook 的 entries。
+实现 SHOULD 使用 `entries(notebook_id=...)` 或等价的后端过滤能力。
+
 ### Requirement: Similarity relations are chunk-level and cross-source
 系统 MUST 基于向量存储的 top-k 搜索抽取 chunk 级相似关系：
 

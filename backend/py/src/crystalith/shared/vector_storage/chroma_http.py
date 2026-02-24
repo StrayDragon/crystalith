@@ -295,17 +295,36 @@ class ChromaHttpVectorStore:
         )
         response.raise_for_status()
 
-    async def entries(self) -> Iterable[VectorEntry]:
+    async def entries(
+        self,
+        *,
+        notebook_id: int | None = None,
+        source_ids: Sequence[int] | None = None,
+    ) -> Iterable[VectorEntry]:
         collection_id = await self._ensure_collection()
         limit = 1000
         offset = 0
+
+        clauses: list[dict[str, Any]] = []
+        if notebook_id is not None:
+            clauses.append({"notebook_id": int(notebook_id)})
+        if source_ids:
+            clauses.append({"source_id": {"$in": list(sorted(set(int(value) for value in source_ids)))}})
+
+        where: dict[str, Any]
+        if not clauses:
+            where = {}
+        elif len(clauses) == 1:
+            where = clauses[0]
+        else:
+            where = {"$and": clauses}
 
         entries: list[VectorEntry] = []
         while True:
             response = await self._client.post(
                 f"/api/v1/collections/{collection_id}/get",
                 json={
-                    "where": {},
+                    "where": where,
                     "limit": limit,
                     "offset": offset,
                     "include": ["embeddings", "metadatas"],

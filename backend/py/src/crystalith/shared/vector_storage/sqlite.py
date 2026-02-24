@@ -189,7 +189,7 @@ class SQLiteVectorStore:
         """Perform brute-force vector search using cosine similarity."""
         entries = await self.entries(
             notebook_id=notebook_id,
-            source_id_set=source_id_set,
+            source_ids=sorted(source_id_set) if source_id_set else None,
         )
         results_heap: list[tuple[float, VectorEntry]] = []
         query_norm = _norm(query)
@@ -230,7 +230,7 @@ class SQLiteVectorStore:
         self,
         *,
         notebook_id: int | None = None,
-        source_id_set: set[int] | None = None,
+        source_ids: Sequence[int] | None = None,
     ) -> Iterable[VectorEntry]:
         await self._ensure_schema()
         params: dict[str, int] = {}
@@ -238,9 +238,9 @@ class SQLiteVectorStore:
         if notebook_id is not None:
             where_clauses.append("notebook_id = :notebook_id")
             params["notebook_id"] = notebook_id
-        if source_id_set:
+        if source_ids:
             placeholders = []
-            for idx, source_id in enumerate(sorted(source_id_set)):
+            for idx, source_id in enumerate(sorted(set(int(value) for value in source_ids))):
                 key = f"source_id_{idx}"
                 placeholders.append(f":{key}")
                 params[key] = source_id

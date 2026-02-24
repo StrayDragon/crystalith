@@ -19,6 +19,12 @@ async def test_chroma_vector_store_add_search_entries_and_removals(tmp_path) -> 
     entries = list(await store.entries())
     assert {entry.chunk_id for entry in entries} == {100, 101}
 
+    scoped = list(await store.entries(notebook_id=1))
+    assert {entry.chunk_id for entry in scoped} == {100, 101}
+    assert list(await store.entries(notebook_id=2)) == []
+    assert list(await store.entries(source_ids=[10])) == scoped
+    assert list(await store.entries(notebook_id=1, source_ids=[10])) == scoped
+
     results = await store.search(
         notebook_id=1,
         query_vector=[1.0, 0.0],
