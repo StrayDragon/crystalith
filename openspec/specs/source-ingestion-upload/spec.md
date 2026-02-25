@@ -29,6 +29,12 @@
 
 上传的文件类型无法匹配任何 parser 时 MUST 返回 415（Unsupported file type），且 MUST NOT 创建 Source 记录。
 
+### Requirement: Empty uploads return 400 and do not create sources
+对确定性用户输入错误（例如空文件或解析后无有效内容），系统 MUST 返回 400，且 MUST NOT 创建 Source 记录：
+
+- 空文件（0 bytes）上传 MUST 返回 400
+- parser 解析成功但产出 chunks 为空（无可索引内容）时 MUST 返回 400
+
 ### Requirement: Parsing runs in executor
 系统 MUST 将同步解析操作放入线程池/执行器中运行，避免阻塞异步事件循环。
 
@@ -45,4 +51,5 @@
 
 - ingest 成功：`processing -> ready`（解析 + 嵌入 + 向量写入）
 - ingest 失败：`processing -> failed`（写入 `error_message`）
-解析/嵌入发生异常时 Source 记录 MUST 保留且 `status = failed`，客户端收到 500（Ingestion failed）。
+对运行时异常（解析/嵌入/向量写入发生异常）Source 记录 MUST 保留且 `status = failed`，客户端收到 500（Ingestion failed）。
+对确定性用户输入错误（空文件/空内容）系统 MUST 返回 400，且 MUST NOT 创建 Source 记录。

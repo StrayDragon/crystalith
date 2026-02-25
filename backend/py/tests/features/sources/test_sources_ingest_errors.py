@@ -8,7 +8,6 @@ import pytest
 from sqlalchemy import select
 
 from crystalith.shared.db import Source
-from crystalith.shared.types import SourceStatus
 
 
 @contextlib.contextmanager
@@ -39,7 +38,7 @@ def _serve_html(html: str) -> str:
 
 
 @pytest.mark.asyncio
-async def test_sources_ingest_errors_and_validation(client, db_session) -> None:
+async def test_sources_ingest_errors_and_validation(client, db_session, app) -> None:
     notebook_resp = await client.post("/v1/notebooks", json={"name": "Ingest Errors"})
     assert notebook_resp.status_code == 201
     notebook_id = notebook_resp.json()["id"]
@@ -63,17 +62,16 @@ async def test_sources_ingest_errors_and_validation(client, db_session) -> None:
         f"/v1/notebooks/{notebook_id}/sources",
         files={"file": ("empty.txt", b"", "text/plain")},
     )
-    assert empty.status_code == 500
+    assert empty.status_code == 400
 
     rows = await db_session.execute(
         select(Source).where(Source.notebook_id == notebook_id, Source.filename == "empty.txt")
     )
     created = rows.scalar_one_or_none()
-    assert created is not None
-    assert created.status == SourceStatus.FAILED
-    assert created.error_message
+    assert created is None
 
     html = "<html><head><title>Empty</title></head><body></body></html>"
+    app.state.settings.source_ingestion.url_fetch.security.allowlist_hosts = ["127.0.0.1"]
     with _serve_html(html) as base_url:
         fetch = await client.post(
             f"/v1/notebooks/{notebook_id}/sources/from-url",

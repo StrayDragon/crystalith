@@ -8,9 +8,12 @@ from typing import Any
 import httpx
 import trafilatura
 from trafilatura.settings import use_config
+from urllib.parse import urljoin
 
 from .interfaces import BaseExtractor, ExtractionError, NetworkError, ParseError
 from .types import ExtractedContent, ExtractorType
+
+from crystalith.shared.config.models import UrlFetchSecuritySettings
 
 
 class TrafilaturaExtractor(BaseExtractor):
@@ -32,6 +35,7 @@ class TrafilaturaExtractor(BaseExtractor):
         timeout: int = 30,
         user_agent: str | None = None,
         proxy_url: str | None = None,
+        url_fetch_security: UrlFetchSecuritySettings | None = None,
     ):
         """
         Initialize the Trafilatura extractor.
@@ -53,6 +57,7 @@ class TrafilaturaExtractor(BaseExtractor):
         self.output_format = output_format
         self.timeout = timeout
         self.proxy_url = proxy_url
+        self.url_fetch_security = url_fetch_security
 
         # Default browser-like User-Agent
         self.user_agent = user_agent or (
@@ -145,15 +150,62 @@ class TrafilaturaExtractor(BaseExtractor):
             "Cache-Control": "no-cache",
         }
 
+        max_redirects = getattr(self.url_fetch_security, "max_redirects", 5)
         try:
             async with httpx.AsyncClient(
                 timeout=float(self.timeout),
-                follow_redirects=True,
+                follow_redirects=False,
                 proxy=self.proxy_url,
             ) as client:
-                response = await client.get(url, headers=headers)
-                response.raise_for_status()
-                return response.text
+                current_url = url
+                if self.url_fetch_security is not None:
+                    from crystalith.shared.net import UrlSafetyError, validate_url_for_fetch
+
+                    try:
+                        await validate_url_for_fetch(current_url, policy=self.url_fetch_security)
+                    except UrlSafetyError as exc:
+                        raise self._create_error(
+                            f"Blocked URL by SSRF policy: {exc}",
+                            url=current_url,
+                            error_class=ExtractionError,
+                        ) from exc
+
+                for hop in range(max_redirects + 1):
+                    response = await client.get(current_url, headers=headers)
+
+                    if response.status_code in {301, 302, 303, 307, 308}:
+                        location = response.headers.get("Location")
+                        if not location:
+                            raise self._create_error(
+                                "Redirect response missing Location header",
+                                url=current_url,
+                                error_class=NetworkError,
+                            )
+                        next_url = urljoin(current_url, location)
+
+                        if self.url_fetch_security is not None:
+                            from crystalith.shared.net import UrlSafetyError, validate_url_for_fetch
+
+                            try:
+                                await validate_url_for_fetch(next_url, policy=self.url_fetch_security)
+                            except UrlSafetyError as exc:
+                                raise self._create_error(
+                                    f"Blocked redirect target by SSRF policy: {exc}",
+                                    url=next_url,
+                                    error_class=ExtractionError,
+                                ) from exc
+
+                        current_url = next_url
+                        continue
+
+                    response.raise_for_status()
+                    return response.text
+
+                raise self._create_error(
+                    f"Too many redirects (>{max_redirects})",
+                    url=url,
+                    error_class=NetworkError,
+                )
         except httpx.HTTPStatusError as exc:
             raise self._create_error(
                 f"HTTP {exc.response.status_code}: Failed to fetch URL",

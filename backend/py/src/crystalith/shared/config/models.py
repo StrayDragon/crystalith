@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import ipaddress
 from pathlib import Path
 from typing import Any, Literal
 
@@ -589,12 +590,83 @@ class HttpProxySettings(BaseModel):
         return True
 
 
+class UrlFetchSecuritySettings(BaseModel):
+    """URL fetch SSRF 安全策略配置。"""
+
+    allowlist_hosts: list[str] = Field(
+        default_factory=list,
+        description="显式允许的 host（精确匹配）。可用于受控环境下放行内部站点。",
+    )
+    allowlist_domains: list[str] = Field(
+        default_factory=list,
+        description="显式允许的域名后缀（example.com 将匹配 example.com 和 *.example.com）。",
+    )
+    allowlist_cidrs: list[str] = Field(
+        default_factory=list,
+        description="显式允许的 CIDR 网段（例如 10.0.0.0/8）。",
+    )
+    allowlist_only: bool = Field(
+        False,
+        description="仅允许 allowlist 命中的 URL（默认 false：允许公网，但拒绝 localhost/私网/元数据等高风险目标）。",
+    )
+    max_redirects: int = Field(
+        5,
+        ge=0,
+        le=10,
+        description="URL fetch 最大重定向跳数（逐跳重验 SSRF 安全策略）。",
+    )
+
+    @field_validator("allowlist_hosts", "allowlist_domains", mode="before")
+    @classmethod
+    def _normalize_allowlist_hosts_domains(cls, v: Any) -> list[str]:
+        if v is None or v == "":
+            return []
+        if not isinstance(v, list):
+            raise TypeError("allowlist must be a list of strings")
+        normalized: list[str] = []
+        for raw in v:
+            if raw is None:
+                continue
+            item = str(raw).strip().lower()
+            if not item:
+                continue
+            if item.startswith("."):
+                item = item[1:]
+            normalized.append(item)
+        return normalized
+
+    @field_validator("allowlist_cidrs", mode="before")
+    @classmethod
+    def _normalize_allowlist_cidrs(cls, v: Any) -> list[str]:
+        if v is None or v == "":
+            return []
+        if not isinstance(v, list):
+            raise TypeError("allowlist_cidrs must be a list of CIDR strings")
+        normalized: list[str] = []
+        for raw in v:
+            if raw is None:
+                continue
+            item = str(raw).strip()
+            if not item:
+                continue
+            try:
+                ipaddress.ip_network(item, strict=False)
+            except ValueError as exc:
+                raise ValueError(f"invalid CIDR: {item}") from exc
+            normalized.append(item)
+        return normalized
+
+
 class UrlFetchSettings(BaseModel):
     """URL 内容获取配置。"""
     proxy: HttpProxySettings = Field(default_factory=HttpProxySettings, description="代理配置")
     timeout: int = Field(30, ge=5, le=120, description="请求超时时间（秒）")
     retry_count: int = Field(2, ge=0, le=5, description="重试次数")
     retry_delay: float = Field(1.0, ge=0.0, le=10.0, description="重试间隔（秒）")
+    security: UrlFetchSecuritySettings = Field(
+        default_factory=UrlFetchSecuritySettings,
+        description="URL fetch SSRF 安全策略（默认拒绝 localhost/私网/元数据等高风险目标）。",
+    )
 
 
 # =============================================================================

@@ -11,6 +11,7 @@ from .types import ExtractedContent, ExtractorInfo, ExtractorType
 
 if TYPE_CHECKING:
     from crystalith.shared.config.models import WebExtractionSettings
+    from crystalith.shared.config.models import UrlFetchSecuritySettings
 
 logger = get_logger(__name__)
 
@@ -26,14 +27,21 @@ class ExtractorFactory:
     - browserless: Browser rendering (requires service)
     """
 
-    def __init__(self, settings: "WebExtractionSettings"):
+    def __init__(
+        self,
+        settings: "WebExtractionSettings",
+        *,
+        url_fetch_security: "UrlFetchSecuritySettings | None" = None,
+    ):
         """
         Initialize the factory with configuration.
 
         Args:
             settings: Web extraction configuration.
+            url_fetch_security: URL fetch SSRF 安全策略（用于本地抓取器逐跳重定向重验）。
         """
         self.settings = settings
+        self.url_fetch_security = url_fetch_security
         self._extractors: dict[ExtractorType, Extractor] = {}
         self._initialized = False
 
@@ -57,6 +65,7 @@ class ExtractorFactory:
                 output_format=traf_settings.output_format,
                 timeout=traf_settings.timeout,
                 proxy_url=proxy_url,
+                url_fetch_security=self.url_fetch_security,
             )
 
         # Initialize Jina Reader (if enabled)
