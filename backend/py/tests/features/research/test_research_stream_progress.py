@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import datetime
 import json
 
 import pytest
 
+from crystalith.features.research import api as research_api
 from crystalith.shared.db import ResearchSession, ResearchStep
 from crystalith.shared.types import ResearchStatus, ResearchStepStatus, ResearchStepType
 
 
 @pytest.mark.asyncio
-async def test_research_stream_emits_plan_search_analysis_report_waiting_and_done(client, app) -> None:
+async def test_research_stream_emits_plan_search_analysis_report_waiting_and_done(client, app, monkeypatch) -> None:
     notebook_resp = await client.post("/v1/notebooks", json={"name": "Research Stream Progress"})
     assert notebook_resp.status_code == 201
     notebook_id = notebook_resp.json()["id"]
@@ -31,6 +33,16 @@ async def test_research_stream_emits_plan_search_analysis_report_waiting_and_don
         research.locked_at = now
         research.lock_expires_at = now + datetime.timedelta(minutes=20)
         await session.commit()
+
+    waiting_emitted = asyncio.Event()
+    original_sse_event = research_api._sse_event
+
+    def _tracked_sse_event(event: str, data: dict) -> str:
+        if event == "waiting":
+            waiting_emitted.set()
+        return original_sse_event(event, data)
+
+    monkeypatch.setattr(research_api, "_sse_event", _tracked_sse_event)
 
     async def _updater() -> None:
         async with app.state.db.got_manual_session() as session:
@@ -56,10 +68,9 @@ async def test_research_stream_emits_plan_search_analysis_report_waiting_and_don
             )
             await session.commit()
 
-            # Give the stream time to observe WAITING_USER and emit events on
-            # the first poll (poll_interval=1s).
-            await asyncio.sleep(1.5)
+        await asyncio.wait_for(waiting_emitted.wait(), timeout=10)
 
+        async with app.state.db.got_manual_session() as session:
             research = await session.get(ResearchSession, research_id)
             assert research is not None
             research.status = ResearchStatus.COMPLETED
@@ -98,30 +109,40 @@ async def test_research_stream_emits_plan_search_analysis_report_waiting_and_don
 
     update_task = asyncio.create_task(_updater())
 
-    events: list[str] = []
-    async with client.stream(
-        "GET",
-        f"/v1/notebooks/{notebook_id}/research/{research_id}/stream",
-    ) as response:
-        assert response.status_code == 200
+    async def _collect_events() -> list[str]:
+        events: list[str] = []
+        async with client.stream(
+            "GET",
+            f"/v1/notebooks/{notebook_id}/research/{research_id}/stream",
+        ) as response:
+            assert response.status_code == 200
 
-        current_event: str | None = None
-        started = asyncio.get_running_loop().time()
-        async for line in response.aiter_lines():
-            if (asyncio.get_running_loop().time() - started) > 15:
-                break
-            if not line:
-                continue
-            if line.startswith("event: "):
-                current_event = line.removeprefix("event: ").strip()
-                continue
-            if current_event and line.startswith("data: "):
-                _ = json.loads(line.removeprefix("data: ").strip() or "{}")
-                events.append(current_event)
-                if current_event == "done":
-                    break
-                current_event = None
+            current_event: str | None = None
+            async for line in response.aiter_lines():
+                if not line:
+                    continue
+                if line.startswith("event: "):
+                    current_event = line.removeprefix("event: ").strip()
+                    continue
+                if current_event and line.startswith("data: "):
+                    _ = json.loads(line.removeprefix("data: ").strip() or "{}")
+                    events.append(current_event)
+                    if current_event == "done":
+                        break
+                    current_event = None
+        return events
 
-    await update_task
+    try:
+        events = await asyncio.wait_for(_collect_events(), timeout=20)
+    finally:
+        if not update_task.done():
+            update_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await update_task
+
+    if update_task.done():
+        update_task_exc = update_task.exception()
+        if update_task_exc is not None:
+            raise update_task_exc
 
     assert {"status", "thinking", "plan_ready", "search_progress", "analysis", "report", "waiting", "done"} <= set(events)

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
 from crystalith.shared.agents.deps import StudioDeps
@@ -84,6 +82,13 @@ async def test_retrieve_context_assembly_cache_ttl_expires(db_session, test_sett
     monkeypatch.setenv("CRYSTALITH_RETRIEVAL_ASSEMBLY_CACHE", "1")
     monkeypatch.setenv("CRYSTALITH_RETRIEVAL_ASSEMBLY_CACHE_TTL_S", "0.01")
 
+    now = 0.0
+
+    def _monotonic() -> float:
+        return now
+
+    monkeypatch.setattr("crystalith.shared.cache.in_memory.time.monotonic", _monotonic)
+
     notebook = Notebook(name="cache-ttl")
     db_session.add(notebook)
     await db_session.commit()
@@ -126,7 +131,7 @@ async def test_retrieve_context_assembly_cache_ttl_expires(db_session, test_sett
         token_budget_tokens=10_000,
     )
 
-    await asyncio.sleep(0.02)
+    now = 0.02
 
     retrieved = await retrieve_context(
         deps,

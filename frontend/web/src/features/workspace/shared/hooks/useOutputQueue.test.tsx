@@ -189,52 +189,67 @@ test('enqueueOutputJob propagates generation preference', async () => {
 });
 
 test('cancelOutputJob aborts running output job', async () => {
-  vi.mocked(createOutput).mockImplementation((({ signal }: any) =>
-    new Promise((resolve, reject) => {
-      signal.addEventListener('abort', () => {
-        const error = new Error('aborted');
-        error.name = 'AbortError';
-        reject(error);
+  vi.useFakeTimers();
+  try {
+    vi.mocked(createOutput).mockImplementation((({ signal }: any) =>
+      new Promise((resolve, reject) => {
+        signal.addEventListener('abort', () => {
+          const error = new Error('aborted');
+          error.name = 'AbortError';
+          reject(error);
+        });
+        setTimeout(() => {
+          resolve({
+            data: {
+              id: 11,
+              type: 'FAQ',
+              prompt: 'hello',
+              chunk_ids: [1],
+              content: {},
+              created_at: '2024-01-01T00:00:00Z',
+              updated_at: '2024-01-01T00:00:00Z',
+            },
+          } as any);
+        }, 200);
+      })) as any);
+
+    setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
+    const { result } = renderHook(() =>
+      useOutputQueueHarness({ isConnected: true }),
+    );
+
+    const flushUntil = async (predicate: () => boolean) => {
+      for (let i = 0; i < 10; i += 1) {
+        if (predicate()) return;
+        await act(async () => {});
+      }
+      throw new Error('condition not met');
+    };
+
+    act(() => {
+      result.current.enqueueOutputJob({
+        type: 'FAQ',
+        prompt: 'hello',
+        sourceIds: [1],
       });
-      setTimeout(() => {
-        resolve({
-          data: {
-            id: 11,
-            type: 'FAQ',
-            prompt: 'hello',
-            chunk_ids: [1],
-            content: {},
-            created_at: '2024-01-01T00:00:00Z',
-            updated_at: '2024-01-01T00:00:00Z',
-          },
-        } as any);
-      }, 200);
-    })) as any);
-
-  setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
-  const { result } = renderHook(() =>
-    useOutputQueueHarness({ isConnected: true }),
-  );
-
-  act(() => {
-    result.current.enqueueOutputJob({
-      type: 'FAQ',
-      prompt: 'hello',
-      sourceIds: [1],
     });
-  });
 
-  await waitFor(() => {
-    expect(result.current.outputQueueJobs[0]?.status).toBe('running');
-  });
+    await flushUntil(() => result.current.outputQueueJobs[0]?.status === 'running');
 
-  act(() => {
-    result.current.cancelOutputJob(result.current.outputQueueJobs[0].id);
-  });
+    await act(async () => {
+      result.current.cancelOutputJob(result.current.outputQueueJobs[0].id);
+      await Promise.resolve();
+    });
 
-  await waitFor(() => {
-    expect(result.current.outputQueueJobs[0]?.status).toBe('cancelled');
-  });
+    await flushUntil(() => result.current.outputQueueJobs[0]?.status === 'cancelled');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(200);
+    });
+  } finally {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  }
 });
 
 test('enqueueOutputJob returns null when no sources selected', async () => {
