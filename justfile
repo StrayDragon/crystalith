@@ -62,6 +62,16 @@ sdk-check: api-export (sdk-gen-python)
 # Testing
 # --------------------------------------------------------------------------
 
+# Run fast repository guardrails (no full test suite)
+check:
+    @echo "==> Backend guardrails"
+    cd backend/py && just check
+    @echo "==> OpenAPI schema consistency"
+    just api-check
+    @echo "==> Frontend generated API client consistency"
+    cd frontend/web && pnpm run api:generate
+    git diff --exit-code -- frontend/web/src/api/generated
+
 # Run all tests
 test: test-backend test-frontend
 
