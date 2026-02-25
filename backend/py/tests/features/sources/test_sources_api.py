@@ -6,7 +6,6 @@ import json
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from time import perf_counter
 from types import SimpleNamespace
 
 import pytest
@@ -244,6 +243,26 @@ async def test_upload_source_parse_runs_in_executor_without_blocking_requests(cl
     assert notebook_resp.status_code == 201
     notebook_id = notebook_resp.json()["id"]
 
+    parse_started = threading.Event()
+    allow_parse = threading.Event()
+
+    class _GatedSlowParser:
+        parser_type = "text"
+        page_count = None
+
+        def parse(self, content: bytes):
+            parse_started.set()
+            allow_parse.wait(timeout=5)
+            text = content.decode("utf-8", errors="ignore") or "slow"
+            return [
+                SimpleNamespace(
+                    text=text,
+                    start_offset=0,
+                    end_offset=len(text),
+                    metadata={},
+                )
+            ]
+
     def _from_file(
         cls,  # noqa: ANN001
         *,
@@ -252,11 +271,10 @@ async def test_upload_source_parse_runs_in_executor_without_blocking_requests(cl
         transcriber=None,  # noqa: ANN001
         media_fetcher=None,  # noqa: ANN001
     ):
-        return _SlowParser()
+        return _GatedSlowParser()
 
     monkeypatch.setattr(ParserFactory, "from_file", classmethod(_from_file))
 
-    started = perf_counter()
     upload_task = asyncio.create_task(
         client.post(
             f"/v1/notebooks/{notebook_id}/sources",
@@ -264,22 +282,18 @@ async def test_upload_source_parse_runs_in_executor_without_blocking_requests(cl
         )
     )
 
-    await asyncio.sleep(0.02)
+    try:
+        assert await asyncio.to_thread(parse_started.wait, 5)
 
-    quick_started = perf_counter()
-    quick_resp = await client.post("/v1/notebooks", json={"name": "Quick Notebook"})
-    quick_elapsed = perf_counter() - quick_started
+        quick_resp = await client.post("/v1/notebooks", json={"name": "Quick Notebook"})
+        assert quick_resp.status_code == 201
+        assert not upload_task.done()
 
-    upload_resp = await upload_task
-    total_elapsed = perf_counter() - started
-
-    assert upload_resp.status_code == 201
-    assert quick_resp.status_code == 201
-    assert total_elapsed >= 0.3
-    # Avoid overly strict absolute thresholds under parallel test load. We only
-    # need to ensure the "quick" request completes meaningfully earlier than
-    # the slow parse upload task.
-    assert (total_elapsed - quick_elapsed) > 0.03
+        allow_parse.set()
+        upload_resp = await asyncio.wait_for(upload_task, timeout=5)
+        assert upload_resp.status_code == 201
+    finally:
+        allow_parse.set()
 
 
 @pytest.mark.asyncio
@@ -341,6 +355,31 @@ async def test_upload_three_sources_concurrently_keeps_response_times_stable(cli
     assert notebook_resp.status_code == 201
     notebook_id = notebook_resp.json()["id"]
 
+    started_events = [threading.Event() for _ in range(3)]
+    release_events = [threading.Event() for _ in range(3)]
+    parser_idx = 0
+    parser_lock = threading.Lock()
+
+    class _GatedSlowParser:
+        parser_type = "text"
+        page_count = None
+
+        def __init__(self, idx: int) -> None:
+            self._idx = idx
+
+        def parse(self, content: bytes):
+            started_events[self._idx].set()
+            release_events[self._idx].wait(timeout=5)
+            text = content.decode("utf-8", errors="ignore") or f"slow-{self._idx}"
+            return [
+                SimpleNamespace(
+                    text=text,
+                    start_offset=0,
+                    end_offset=len(text),
+                    metadata={},
+                )
+            ]
+
     def _from_file(
         cls,  # noqa: ANN001
         *,
@@ -349,35 +388,41 @@ async def test_upload_three_sources_concurrently_keeps_response_times_stable(cli
         transcriber=None,  # noqa: ANN001
         media_fetcher=None,  # noqa: ANN001
     ):
-        return _SlowParser()
+        nonlocal parser_idx
+        with parser_lock:
+            idx = parser_idx
+            parser_idx += 1
+        if idx >= len(started_events):  # pragma: no cover - defensive
+            return _SlowParser()
+        return _GatedSlowParser(idx)
 
     monkeypatch.setattr(ParserFactory, "from_file", classmethod(_from_file))
 
-    async def _upload(index: int) -> tuple[float, int]:
-        started = perf_counter()
+    async def _upload(index: int) -> int:
         response = await client.post(
             f"/v1/notebooks/{notebook_id}/sources",
             files={"file": (f"slow-{index}.txt", b"B" * 2048, "text/plain")},
         )
-        elapsed = perf_counter() - started
-        return elapsed, response.status_code
+        return response.status_code
 
     tasks = [asyncio.create_task(_upload(index)) for index in range(3)]
 
-    await asyncio.sleep(0.02)
-    quick_started = perf_counter()
-    quick_resp = await client.post("/v1/notebooks", json={"name": "Quick Notebook 2"})
-    quick_elapsed = perf_counter() - quick_started
+    try:
+        waits = [asyncio.to_thread(event.wait, 5) for event in started_events]
+        assert all(await asyncio.gather(*waits))
 
-    upload_results = await asyncio.gather(*tasks)
-    upload_durations = [duration for duration, _ in upload_results]
-    upload_statuses = [status for _, status in upload_results]
+        quick_resp = await client.post("/v1/notebooks", json={"name": "Quick Notebook 2"})
+        assert quick_resp.status_code == 201
+        assert all(not task.done() for task in tasks)
 
-    assert all(status_code == 201 for status_code in upload_statuses)
-    assert quick_resp.status_code == 201
-    assert quick_elapsed < 0.5
-    assert max(upload_durations) < 1.5
-    assert max(upload_durations) - min(upload_durations) < 0.8
+        for event in release_events:
+            event.set()
+
+        upload_statuses = await asyncio.gather(*tasks)
+        assert all(status_code == 201 for status_code in upload_statuses)
+    finally:
+        for event in release_events:
+            event.set()
 
 
 @pytest.mark.asyncio

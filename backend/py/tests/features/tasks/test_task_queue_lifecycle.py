@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import time
 from typing import Any
 
 import pytest
@@ -32,10 +31,11 @@ async def test_task_queue_does_not_create_waiters_until_waited(app):
 @pytest.mark.asyncio
 async def test_stop_worker_cancels_in_flight_tasks(app):
     started = asyncio.Event()
+    worker_block = asyncio.Event()
 
     async def _slow_worker(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
         started.set()
-        await asyncio.sleep(60)
+        await worker_block.wait()
         return {"ok": True}
 
     queue = TaskQueue(
@@ -51,13 +51,14 @@ async def test_stop_worker_cancels_in_flight_tasks(app):
 
     await asyncio.wait_for(started.wait(), timeout=2.0)
 
-    deadline = time.monotonic() + 2.0
-    status = await queue.get_status(task_id)
-    while status.status != TaskStatus.RUNNING and time.monotonic() < deadline:
-        await asyncio.sleep(0.01)
-        status = await queue.get_status(task_id)
+    async def _wait_until_running() -> None:
+        while True:
+            status = await queue.get_status(task_id)
+            if status.status == TaskStatus.RUNNING:
+                return
+            await asyncio.sleep(0.02)
 
-    assert status.status == TaskStatus.RUNNING
+    await asyncio.wait_for(_wait_until_running(), timeout=2.0)
 
     await queue.stop_worker()
 
