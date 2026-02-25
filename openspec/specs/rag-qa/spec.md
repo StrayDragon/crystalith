@@ -11,7 +11,6 @@
 - `source-ingestion/spec.md`
 - `workspace-api/spec.md`
 - `citation-interaction/spec.md`
-
 ## Requirements
 ### Requirement: 基于检索的回答
 系统 SHALL 仅基于当前 Notebook 内已索引的来源回答问题，并将回答范围约束在检索到的上下文内。
@@ -51,3 +50,14 @@
 系统 SHOULD 基于 `OutputType` 为 multi-query 生成额外的 query seeds/hints，以提高检索覆盖稳定性。
 
 当 `output_type=TIMELINE` 且启用 multi-query 时，seeds SHOULD 更关注日期/事件抽取提示（不泄露实现细节）。multi-query 启用时系统 MUST 将 seeds 数量限制在可配置上限内。
+
+### Requirement: QA completion logic MUST be shared across stream and non-stream paths
+系统 MUST 在流式与非流式 QA 路径中复用同一套完成阶段逻辑（消息持久化、context 统计映射、完成元信息构造），避免重复实现导致行为漂移。
+
+#### Scenario: No-evidence completion remains consistent
+- **WHEN** 同一输入在 stream/non-stream 路径均命中“无证据”分支
+- **THEN** 两条路径都会使用共享完成逻辑持久化消息，并返回一致的 `evidence=false` 与空 citations 元信息
+
+#### Scenario: Evidence completion remains consistent
+- **WHEN** 同一输入在 stream/non-stream 路径命中“有证据”分支
+- **THEN** 两条路径都会使用共享完成逻辑持久化消息，并返回一致的 citations/confidence/context 元信息

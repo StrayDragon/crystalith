@@ -29,6 +29,7 @@ from crystalith.shared.deps import (
 
 from .service import (
     NO_EVIDENCE_ANSWER,
+    QAPipelineResult,
     normalize_source_ids,
     persist_qa_messages,
     run_qa_pipeline,
@@ -76,6 +77,75 @@ def _ensure_inline_citations(answer: str, citations: list[Citation]) -> str:
     return f"{answer} [1]"
 
 
+def _context_stats_from_result(result: QAPipelineResult) -> ContextStatsResponse:
+    return ContextStatsResponse.model_validate(result.context_stats)
+
+
+async def _persist_qa_completion(
+    *,
+    session: AsyncSession,
+    result: QAPipelineResult,
+    question: str,
+    answer: str,
+    citations: list[Citation],
+) -> datetime.datetime:
+    created_at = datetime.datetime.now(datetime.UTC)
+    await persist_qa_messages(
+        session,
+        db_session=result.db_session,
+        history_messages=result.history_messages,
+        question=question,
+        answer=answer,
+        citations=citations,
+        created_at=created_at,
+    )
+    return created_at
+
+
+async def _build_qa_response(
+    *,
+    session: AsyncSession,
+    result: QAPipelineResult,
+    question: str,
+    answer: str,
+    citations: list[Citation],
+    evidence: bool,
+    confidence: float,
+) -> QAResponse:
+    created_at = await _persist_qa_completion(
+        session=session,
+        result=result,
+        question=question,
+        answer=answer,
+        citations=citations,
+    )
+    return QAResponse(
+        answer=answer,
+        citations=citations,
+        evidence=evidence,
+        confidence=confidence,
+        created_at=created_at,
+        context=_context_stats_from_result(result),
+    )
+
+
+def _build_qa_stream_done_data(
+    *,
+    result: QAPipelineResult,
+    citations: list[Citation],
+    evidence: bool,
+    confidence: float,
+    created_at: datetime.datetime,
+) -> QAStreamDoneData:
+    return QAStreamDoneData(
+        citations=citations,
+        evidence=evidence,
+        confidence=confidence,
+        created_at=created_at,
+        context=_context_stats_from_result(result),
+    )
+
+
 @router.post("", response_model=QAResponse)
 async def ask_question(
     notebook_id: int,
@@ -108,45 +178,27 @@ async def ask_question(
     )
 
     if not result.evidence:
-        created_at = datetime.datetime.now(datetime.UTC)
-        await persist_qa_messages(
-            session,
-            db_session=result.db_session,
-            history_messages=result.history_messages,
+        return await _build_qa_response(
+            session=session,
+            result=result,
             question=payload.question,
-            answer=NO_EVIDENCE_ANSWER,
-            citations=[],
-            created_at=created_at,
-        )
-        return QAResponse(
             answer=NO_EVIDENCE_ANSWER,
             citations=[],
             evidence=False,
             confidence=0.0,
-            created_at=created_at,
-            context=ContextStatsResponse.model_validate(result.context_stats),
         )
 
     async with limiters.llm_generate.acquire():
         answer = await chatter.chat(result.messages)
     answer = _ensure_inline_citations(answer, result.citations)
-    created_at = datetime.datetime.now(datetime.UTC)
-    await persist_qa_messages(
-        session,
-        db_session=result.db_session,
-        history_messages=result.history_messages,
+    return await _build_qa_response(
+        session=session,
+        result=result,
         question=payload.question,
-        answer=answer,
-        citations=result.citations,
-        created_at=created_at,
-    )
-    return QAResponse(
         answer=answer,
         citations=result.citations,
         evidence=True,
         confidence=result.confidence,
-        created_at=created_at,
-        context=ContextStatsResponse.model_validate(result.context_stats),
     )
 
 
@@ -239,25 +291,22 @@ async def ask_question_stream(
         if not result.evidence:
             if await request.is_disconnected():
                 return
-            created_at = datetime.datetime.now(datetime.UTC)
-            await persist_qa_messages(
-                session,
-                db_session=result.db_session,
-                history_messages=result.history_messages,
+            created_at = await _persist_qa_completion(
+                session=session,
+                result=result,
                 question=payload.question,
                 answer=NO_EVIDENCE_ANSWER,
                 citations=[],
-                created_at=created_at,
             )
             yield _sse_event("chunk", {"text": NO_EVIDENCE_ANSWER})
             yield _sse_event(
                 "done",
-                QAStreamDoneData(
+                _build_qa_stream_done_data(
+                    result=result,
                     citations=[],
                     evidence=False,
                     confidence=0.0,
                     created_at=created_at,
-                    context=ContextStatsResponse.model_validate(result.context_stats),
                 ).model_dump(mode="json"),
             )
             return
@@ -281,24 +330,21 @@ async def ask_question_stream(
 
         answer = "".join(answer_chunks)
         answer = _ensure_inline_citations(answer, result.citations)
-        created_at = datetime.datetime.now(datetime.UTC)
-        await persist_qa_messages(
-            session,
-            db_session=result.db_session,
-            history_messages=result.history_messages,
+        created_at = await _persist_qa_completion(
+            session=session,
+            result=result,
             question=payload.question,
             answer=answer,
             citations=result.citations,
-            created_at=created_at,
         )
         yield _sse_event(
             "done",
-            QAStreamDoneData(
+            _build_qa_stream_done_data(
+                result=result,
                 citations=result.citations,
                 evidence=True,
                 confidence=result.confidence,
                 created_at=created_at,
-                context=ContextStatsResponse.model_validate(result.context_stats),
             ).model_dump(mode="json"),
         )
 
