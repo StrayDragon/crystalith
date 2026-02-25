@@ -1,0 +1,161 @@
+from __future__ import annotations
+
+import pytest
+
+from crystalith.shared.db import Chunk, Source
+from crystalith.shared.types import SourceStatus
+
+
+def _assert_error_envelope(response, expected_error_code: str) -> dict:
+    payload = response.json()
+    assert payload["error_code"] == expected_error_code
+    assert isinstance(payload.get("message"), str)
+    assert payload["message"]
+    return payload
+
+
+@pytest.mark.asyncio
+async def test_api_smoke_health_notebook_and_analysis_404(client) -> None:
+    health = await client.get("/health")
+    assert health.status_code == 200
+    assert health.json() == {"status": "ok"}
+
+    create_resp = await client.post("/v1/notebooks", json={"name": "Smoke Notebook"})
+    assert create_resp.status_code == 201
+    notebook_id = create_resp.json()["id"]
+    assert isinstance(notebook_id, int)
+
+    list_resp = await client.get("/v1/notebooks")
+    assert list_resp.status_code == 200
+    notebooks = list_resp.json()
+    assert any(item["id"] == notebook_id for item in notebooks)
+
+    empty_analysis = await client.get(f"/v1/notebooks/{notebook_id}/analysis")
+    assert empty_analysis.status_code == 200
+    assert empty_analysis.json() == {
+        "topics": [],
+        "relations": [],
+        "contradictions": [],
+    }
+
+    missing_analysis = await client.get("/v1/notebooks/999999/analysis")
+    assert missing_analysis.status_code == 404
+    _assert_error_envelope(missing_analysis, "NOT_FOUND")
+
+
+@pytest.mark.asyncio
+async def test_api_smoke_sources_upload_chunks_and_delete(client) -> None:
+    create_notebook = await client.post("/v1/notebooks", json={"name": "Sources Smoke"})
+    assert create_notebook.status_code == 201
+    notebook_id = create_notebook.json()["id"]
+
+    upload = await client.post(
+        f"/v1/notebooks/{notebook_id}/sources",
+        files={"file": ("smoke.txt", b"alpha\nbeta\ngamma", "text/plain")},
+    )
+    assert upload.status_code == 201
+    source_id = upload.json()["id"]
+
+    list_sources = await client.get(f"/v1/notebooks/{notebook_id}/sources")
+    assert list_sources.status_code == 200
+    sources = list_sources.json()
+    assert any(item["id"] == source_id for item in sources)
+
+    chunks_resp = await client.get(f"/v1/notebooks/{notebook_id}/sources/{source_id}/chunks")
+    assert chunks_resp.status_code == 200
+    chunks = chunks_resp.json()
+    assert chunks
+    chunk_indexes = [item["chunk_index"] for item in chunks]
+    assert chunk_indexes == sorted(chunk_indexes)
+
+    delete_resp = await client.delete(f"/v1/notebooks/{notebook_id}/sources/{source_id}")
+    assert delete_resp.status_code == 204
+
+    list_after_delete = await client.get(f"/v1/notebooks/{notebook_id}/sources")
+    assert list_after_delete.status_code == 200
+    assert all(item["id"] != source_id for item in list_after_delete.json())
+
+
+@pytest.mark.asyncio
+async def test_api_smoke_error_envelope_contracts(client) -> None:
+    validation_error = await client.post("/v1/notebooks", json={})
+    assert validation_error.status_code == 422
+    validation_payload = _assert_error_envelope(validation_error, "VALIDATION_ERROR")
+    assert isinstance(validation_payload.get("details"), list)
+    assert validation_payload["details"]
+
+    create_notebook = await client.post("/v1/notebooks", json={"name": "Errors Smoke"})
+    assert create_notebook.status_code == 201
+    notebook_id = create_notebook.json()["id"]
+
+    empty_upload = await client.post(
+        f"/v1/notebooks/{notebook_id}/sources",
+        files={"file": ("empty.txt", b"", "text/plain")},
+    )
+    assert empty_upload.status_code == 400
+    _assert_error_envelope(empty_upload, "BAD_REQUEST")
+
+    missing_notebook_sources = await client.get("/v1/notebooks/999999/sources")
+    assert missing_notebook_sources.status_code == 404
+    _assert_error_envelope(missing_notebook_sources, "NOT_FOUND")
+
+
+@pytest.mark.asyncio
+async def test_api_smoke_qa_and_outputs_contract(client, db_session, app) -> None:
+    create_notebook = await client.post("/v1/notebooks", json={"name": "Outputs QA Smoke"})
+    assert create_notebook.status_code == 201
+    notebook_id = create_notebook.json()["id"]
+
+    source = Source(
+        notebook_id=notebook_id,
+        filename="smoke.md",
+        status=SourceStatus.READY,
+    )
+    db_session.add(source)
+    await db_session.flush()
+
+    chunk = Chunk(
+        source_id=source.id,
+        chunk_index=0,
+        text="Smoke chunk for QA and outputs.",
+    )
+    db_session.add(chunk)
+    await db_session.commit()
+
+    await app.state.vector_store.add(
+        notebook_id=notebook_id,
+        source_id=source.id,
+        chunk_ids=[chunk.id],
+        vectors=[[1.0, 0.0, 0.0]],
+    )
+
+    qa_resp = await client.post(
+        f"/v1/notebooks/{notebook_id}/qa",
+        json={"question": "smoke question", "source_ids": [source.id]},
+    )
+    assert qa_resp.status_code == 200
+    qa_payload = qa_resp.json()
+    assert isinstance(qa_payload.get("answer"), str)
+    assert isinstance(qa_payload.get("evidence"), bool)
+    assert isinstance(qa_payload.get("citations"), list)
+
+    create_output = await client.post(
+        f"/v1/notebooks/{notebook_id}/outputs/BULLETS",
+        json={"prompt": "summarize", "source_ids": [source.id]},
+    )
+    assert create_output.status_code == 201
+    output_payload = create_output.json()
+    assert isinstance(output_payload.get("id"), int)
+    assert output_payload["type"] == "BULLETS"
+    assert isinstance(output_payload.get("content"), dict)
+
+    bad_output = await client.post(
+        f"/v1/notebooks/{notebook_id}/outputs/BULLETS",
+        json={"prompt": "x", "source_ids": []},
+    )
+    assert bad_output.status_code == 400
+    _assert_error_envelope(bad_output, "BAD_REQUEST")
+
+    missing_output = await client.get("/v1/notebooks/999999/outputs")
+    assert missing_output.status_code == 404
+    _assert_error_envelope(missing_output, "NOT_FOUND")
