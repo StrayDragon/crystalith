@@ -48,5 +48,8 @@
 - 删除 source（单个或批量）后 MUST bump `sources_epoch` 与 `vector_epoch`
 - 仅变更 tag（创建/重命名/绑定/解绑）时 MUST bump `sources_epoch` 且 MUST NOT bump `vector_epoch`
 
+### Requirement: Epoch bumps are atomic and monotonic under concurrency
+系统 MUST 保证 `sources_epoch` 与 `vector_epoch` 的 bump 在并发下为原子操作，并保持单调递增（不丢失递增）。
+
 ### Requirement: Deletion removes vectors
 系统 MUST 在删除 source 后移除其在向量存储中的数据，避免“幽灵 chunks”被检索命中。

@@ -54,6 +54,18 @@ class RedisCache:
         else:
             await self._client.set(key, raw)
 
+    async def incr(self, key: str, amount: int = 1, *, ttl: float | None = None) -> int:
+        value = await self._client.incrby(key, int(amount))
+        if ttl is None:
+            return int(value)
+
+        resolved_ttl = float(ttl)
+        if resolved_ttl > 0:
+            await self._client.expire(key, int(resolved_ttl))
+        else:
+            await self._client.persist(key)
+        return int(value)
+
     async def set_many(self, items: Mapping[str, Any], *, ttl: float | None = None) -> None:
         if not items:
             return None

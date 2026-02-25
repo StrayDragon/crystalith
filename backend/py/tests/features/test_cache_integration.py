@@ -11,6 +11,7 @@ class _SpyCache:
     def __init__(self) -> None:
         self.data: dict[str, object] = {}
         self.get_calls: list[str] = []
+        self.incr_calls: list[str] = []
         self.set_calls: list[str] = []
         self.delete_calls: list[str] = []
         self.invalidate_calls: list[str] = []
@@ -22,6 +23,16 @@ class _SpyCache:
     async def set(self, key: str, value, *, ttl=None):  # noqa: ANN001
         self.set_calls.append(key)
         self.data[key] = value
+
+    async def incr(self, key: str, amount: int = 1, *, ttl=None) -> int:  # noqa: ANN001
+        self.incr_calls.append(key)
+        try:
+            current = int(self.data.get(key, 0))
+        except (TypeError, ValueError):
+            current = 0
+        next_value = current + int(amount)
+        self.data[key] = next_value
+        return next_value
 
     async def delete(self, key: str) -> None:
         self.delete_calls.append(key)

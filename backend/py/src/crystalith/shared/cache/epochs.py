@@ -18,8 +18,5 @@ async def get_sources_epoch(*, cache: CacheProvider, notebook_id: int) -> int:
 
 
 async def bump_sources_epoch(*, cache: CacheProvider, notebook_id: int) -> int:
-    current = await get_sources_epoch(cache=cache, notebook_id=notebook_id)
-    next_epoch = current + 1
     # Epoch should not expire; old cache keys are evicted via TTL.
-    await cache.set(make_sources_epoch_key(notebook_id=notebook_id), next_epoch, ttl=0)
-    return next_epoch
+    return await cache.incr(make_sources_epoch_key(notebook_id=notebook_id), ttl=0)

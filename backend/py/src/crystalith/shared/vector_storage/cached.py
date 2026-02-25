@@ -30,11 +30,8 @@ async def get_vector_epoch(*, cache: CacheProvider, notebook_id: int) -> int:
 
 
 async def bump_vector_epoch(*, cache: CacheProvider, notebook_id: int) -> int:
-    current = await get_vector_epoch(cache=cache, notebook_id=notebook_id)
-    next_epoch = current + 1
     # Ensure epoch outlives vector_search cache TTL (default 60s).
-    await cache.set(make_vector_epoch_key(notebook_id=notebook_id), next_epoch, ttl=0)
-    return next_epoch
+    return await cache.incr(make_vector_epoch_key(notebook_id=notebook_id), ttl=0)
 
 
 def _hash_vector(vector: Sequence[float]) -> str:
