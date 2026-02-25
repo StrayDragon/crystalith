@@ -16,9 +16,10 @@ import {
 } from '@mui/icons-material';
 
 import type { OutputPlugin, OutputContent } from './index';
+import { decodeOutputContent, isOutputContentForType } from '../../../shared/outputPayload';
 import FlashcardViewer from '../FlashcardViewer';
 import GuideChecklist from '../GuideChecklist';
-import MindmapViewer from '../MindmapViewer';
+import MindmapViewer, { type MindmapNode } from '../MindmapViewer';
 import QuizRunner from '../QuizRunner';
 import ReportViewer from '../ReportViewer';
 import TimelineViewer from '../TimelineViewer';
@@ -51,6 +52,18 @@ function OutputError({ message }: { message: string }) {
   );
 }
 
+function normalizeMindmapNode(node: unknown): MindmapNode {
+  const record = node && typeof node === 'object' ? (node as Record<string, unknown>) : {};
+  const label = typeof record.label === 'string' ? record.label : '未命名节点';
+  const children = Array.isArray(record.children)
+    ? record.children.map((child) => normalizeMindmapNode(child))
+    : [];
+  return {
+    label,
+    ...(children.length > 0 ? { children } : {}),
+  };
+}
+
 // --- FAQ Plugin ---
 
 export const faqPlugin: OutputPlugin = {
@@ -71,16 +84,16 @@ export const faqPlugin: OutputPlugin = {
   },
   enabled: true,
   render: (content, isFallback) => {
-    const items = (content as any).items;
-    if (!Array.isArray(items)) return <OutputError message="无效的闪卡数据" />;
+    const faq = decodeOutputContent('FAQ', content);
+    if (!faq) return <OutputError message="无效的闪卡数据" />;
     return (
       <div className="StructuredOutputFaq">
         {isFallback && <FallbackWarning />}
-        <FlashcardViewer items={items} />
+        <FlashcardViewer items={faq.items} />
       </div>
     );
   },
-  validateContent: (content) => Array.isArray((content as any).items),
+  validateContent: (content) => isOutputContentForType('FAQ', content),
 };
 
 // --- Guide Plugin ---
@@ -108,16 +121,16 @@ export const guidePlugin: OutputPlugin = {
   },
   enabled: true,
   render: (content, isFallback) => {
-    const modules = (content as any).modules;
-    if (!Array.isArray(modules)) return <OutputError message="无效的指南数据" />;
+    const guide = decodeOutputContent('GUIDE', content);
+    if (!guide) return <OutputError message="无效的指南数据" />;
     return (
       <div className="StructuredOutputGuide">
         {isFallback && <FallbackWarning />}
-        <GuideChecklist modules={modules} />
+        <GuideChecklist modules={guide.modules} />
       </div>
     );
   },
-  validateContent: (content) => Array.isArray((content as any).modules),
+  validateContent: (content) => isOutputContentForType('GUIDE', content),
 };
 
 // --- Timeline Plugin ---
@@ -140,16 +153,16 @@ export const timelinePlugin: OutputPlugin = {
   },
   enabled: true,
   render: (content, isFallback) => {
-    const events = (content as any).events;
-    if (!Array.isArray(events)) return <OutputError message="无效的时间轴数据" />;
+    const timeline = decodeOutputContent('TIMELINE', content);
+    if (!timeline) return <OutputError message="无效的时间轴数据" />;
     return (
       <div className="StructuredOutputTimeline">
         {isFallback && <FallbackWarning />}
-        <TimelineViewer events={events} />
+        <TimelineViewer events={timeline.events} />
       </div>
     );
   },
-  validateContent: (content) => Array.isArray((content as any).events),
+  validateContent: (content) => isOutputContentForType('TIMELINE', content),
 };
 
 // --- Mindmap Plugin ---
@@ -172,8 +185,9 @@ export const mindmapPlugin: OutputPlugin = {
   },
   enabled: true,
   render: (content, isFallback) => {
-    const root = (content as any).root;
-    if (!root) return <OutputError message="无效的思维导图数据" />;
+    const mindmap = decodeOutputContent('MINDMAP', content);
+    if (!mindmap) return <OutputError message="无效的思维导图数据" />;
+    const root = normalizeMindmapNode(mindmap.root);
     return (
       <>
         {isFallback && <FallbackWarning />}
@@ -181,7 +195,7 @@ export const mindmapPlugin: OutputPlugin = {
       </>
     );
   },
-  validateContent: (content) => !!(content as any).root,
+  validateContent: (content) => isOutputContentForType('MINDMAP', content),
 };
 
 // --- Quiz Plugin ---
@@ -209,16 +223,16 @@ export const quizPlugin: OutputPlugin = {
   },
   enabled: true,
   render: (content, isFallback) => {
-    const questions = (content as any).questions;
-    if (!Array.isArray(questions)) return <OutputError message="无效的测验数据" />;
+    const quiz = decodeOutputContent('QUIZ', content);
+    if (!quiz) return <OutputError message="无效的测验数据" />;
     return (
       <div className="StructuredOutputQuiz">
         {isFallback && <FallbackWarning />}
-        <QuizRunner questions={questions} />
+        <QuizRunner questions={quiz.questions} />
       </div>
     );
   },
-  validateContent: (content) => Array.isArray((content as any).questions),
+  validateContent: (content) => isOutputContentForType('QUIZ', content),
 };
 
 // --- Briefing Plugin ---
@@ -241,16 +255,16 @@ export const briefingPlugin: OutputPlugin = {
   },
   enabled: true,
   render: (content, isFallback) => {
-    const sections = (content as any).sections;
-    if (!Array.isArray(sections)) return <OutputError message="无效的报告数据" />;
+    const briefing = decodeOutputContent('BRIEFING', content);
+    if (!briefing) return <OutputError message="无效的报告数据" />;
     return (
       <div className="StructuredOutputBriefing">
         {isFallback && <FallbackWarning />}
-        <ReportViewer sections={sections} />
+        <ReportViewer sections={briefing.sections} />
       </div>
     );
   },
-  validateContent: (content) => Array.isArray((content as any).sections),
+  validateContent: (content) => isOutputContentForType('BRIEFING', content),
 };
 
 // --- Slides Plugin ---
@@ -273,28 +287,30 @@ export const slidesPlugin: OutputPlugin = {
   },
   enabled: true,
   render: (content, isFallback) => {
-    const title = (content as any).title || '演示';
-    const outline = (content as any).outline;
-    const markdown = (content as any).markdown;
+    const slides = decodeOutputContent('SLIDES', content);
+    if (!slides) return <OutputError message="无效的演示数据" />;
+    const title = slides.title || '演示';
+    const outline = slides.outline;
+    const markdown = slides.markdown;
     return (
       <div className="space-y-4">
         {isFallback && <FallbackWarning />}
         <div>
           <div className="text-lg font-semibold text-gray-900 dark:text-slate-100">{title}</div>
           <div className="text-xs text-gray-500 dark:text-slate-400">
-            引擎：{(content as any).engine || 'slidev'}
+            引擎：{slides.engine || 'slidev'}
           </div>
         </div>
-        {outline?.slides ? (
+        {Array.isArray(outline?.slides) ? (
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-slate-700 dark:bg-slate-900">
             <div className="text-xs font-semibold text-gray-600 mb-2 dark:text-slate-300">大纲</div>
             <div className="space-y-2 text-sm text-gray-800 dark:text-slate-200">
-              {outline.slides.map((slide: any, index: number) => (
+              {outline.slides.map((slide, index) => (
                 <div key={`${slide.title}-${index}`}>
                   <div className="font-semibold">{slide.title || `幻灯片 ${index + 1}`}</div>
                   {Array.isArray(slide.bullets) && slide.bullets.length > 0 && (
                     <ul className="list-disc pl-5 text-xs text-gray-600 dark:text-slate-400">
-                      {slide.bullets.map((bullet: string, idx: number) => (
+                      {slide.bullets.map((bullet, idx) => (
                         <li key={`${bullet}-${idx}`}>{bullet}</li>
                       ))}
                     </ul>
@@ -314,10 +330,7 @@ export const slidesPlugin: OutputPlugin = {
       </div>
     );
   },
-  validateContent: (content) =>
-    typeof (content as any).title === 'string' ||
-    typeof (content as any).markdown === 'string' ||
-    Boolean((content as any).outline),
+  validateContent: (content) => isOutputContentForType('SLIDES', content),
 };
 
 // --- Export all plugins ---

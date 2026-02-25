@@ -21,6 +21,7 @@ import {
 import { Virtuoso } from 'react-virtuoso';
 
 import type { Citation, OutputItem, OutputTypeId } from '../../shared/types';
+import { getSlideIdFromOutput } from '../../shared/outputPayload';
 import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../shared/layer';
@@ -141,7 +142,7 @@ export default function StudioOutputsList({
       outputs.map((output) => ({
         id: `${output.id}`,
         outputId: output.id,
-        slideId: output.type === 'SLIDES' ? (output.content as any)?.slide_id ?? null : null,
+        slideId: getSlideIdFromOutput(output),
         title: resolveOutputTitle(output),
         meta: resolveNoteMeta(output),
         type: output.type,

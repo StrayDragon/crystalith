@@ -17,6 +17,7 @@ import type {
   SessionSummary,
   SourceItem,
 } from './types';
+import { decodeOutputItem, normalizeOutputPayload, pickTextValue } from './outputPayload';
 
 export function createId(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -130,120 +131,126 @@ function formatOutputLine(text: string, depth = 0) {
   return `${indent}${text}`;
 }
 
+type MindmapNodeLike = {
+  label?: string | null;
+  children?: MindmapNodeLike[] | null;
+};
+
 function formatMindmapLines(
-  node: { label?: string; children?: any[] } | null | undefined,
+  node: MindmapNodeLike | null | undefined,
   depth = 0,
   lines: string[] = [],
 ) {
   if (!node) return lines;
   lines.push(formatOutputLine(`- ${node.label || '未命名节点'}`, depth));
   if (Array.isArray(node.children)) {
-    node.children.forEach((child) => formatMindmapLines(child, depth + 1, lines));
+    node.children.forEach((child) => {
+      formatMindmapLines(child, depth + 1, lines);
+    });
   }
   return lines;
 }
 
 export function formatStructuredOutputForCopy(output: OutputItem): string {
-  const content = output.content ?? {};
-  if (output.type === 'FAQ' && Array.isArray((content as any).items)) {
-    return (content as any).items
-      .map((item: any) => `Q: ${item.question || '问题'}\nA: ${item.answer || '暂无回答'}`)
-      .join('\n\n');
-  }
-  if (output.type === 'GUIDE' && Array.isArray((content as any).modules)) {
-    return (content as any).modules
-      .map((module: any) => {
-        const lines: string[] = [];
-        lines.push(module.title || '模块');
-        lines.push(`目标：${module.objective?.text || '暂无目标'}`);
-        if (Array.isArray(module.key_points)) {
-          lines.push(
-            ...module.key_points.map((item: any) => formatOutputLine(`- ${item.text || '要点'}`, 0)),
-          );
+  const typed = decodeOutputItem(output);
+  if (!typed) return JSON.stringify(output.content ?? {}, null, 2);
+
+  switch (typed.type) {
+    case 'FAQ':
+      return typed.content.items
+        .map((item) => `Q: ${item.question || '问题'}\nA: ${item.answer || '暂无回答'}`)
+        .join('\n\n');
+    case 'GUIDE':
+      return typed.content.modules
+        .map((module) => {
+          const lines: string[] = [];
+          lines.push(module.title || '模块');
+          lines.push(`目标：${module.objective?.text || '暂无目标'}`);
+          if (Array.isArray(module.key_points)) {
+            lines.push(
+              ...module.key_points.map((item) => formatOutputLine(`- ${item.text || '要点'}`, 0)),
+            );
+          }
+          return lines.join('\n');
+        })
+        .join('\n\n');
+    case 'TIMELINE':
+      return typed.content.events
+        .map((event) =>
+          [event.date || '时间', event.event || '事件', event.description || '暂无描述'].join(' · '),
+        )
+        .join('\n');
+    case 'MINDMAP':
+      return formatMindmapLines(typed.content.root).join('\n');
+    case 'QUIZ':
+      return typed.content.questions
+        .map((question) => {
+          const lines: string[] = [];
+          lines.push(question.question || '问题');
+          if (Array.isArray(question.options)) {
+            lines.push(
+              ...question.options.map((option) => formatOutputLine(`- ${option}`, 0)),
+            );
+          }
+          const answers = Array.isArray(question.answer) ? question.answer.join(' / ') : question.answer;
+          lines.push(`答案：${answers || '暂无答案'}`);
+          return lines.join('\n');
+        })
+        .join('\n\n');
+    case 'BRIEFING':
+      return typed.content.sections
+        .map((section) => {
+          const lines: string[] = [];
+          lines.push(section.heading || '要点');
+          if (Array.isArray(section.points)) {
+            lines.push(
+              ...section.points.map((point) => formatOutputLine(`- ${point.text || '内容'}`, 0)),
+            );
+          }
+          return lines.join('\n');
+        })
+        .join('\n\n');
+    case 'SLIDES': {
+      if (typeof typed.content.markdown === 'string') {
+        return typed.content.markdown;
+      }
+      const slides = typed.content.outline?.slides;
+      if (Array.isArray(slides)) {
+        const lines: string[] = [typed.content.outline?.title || '演示'];
+        for (const slide of slides) {
+          lines.push(slide.title || '幻灯片');
+          if (Array.isArray(slide.bullets)) {
+            lines.push(...slide.bullets.map((item) => formatOutputLine(`- ${item}`, 1)));
+          }
         }
         return lines.join('\n');
-      })
-      .join('\n\n');
-  }
-  if (output.type === 'TIMELINE' && Array.isArray((content as any).events)) {
-    return (content as any).events
-      .map((event: any) =>
-        [event.date || '时间', event.event || '事件', event.description || '暂无描述'].join(' · '),
-      )
-      .join('\n');
-  }
-  if (output.type === 'MINDMAP' && (content as any).root) {
-    return formatMindmapLines((content as any).root).join('\n');
-  }
-  if (output.type === 'QUIZ' && Array.isArray((content as any).questions)) {
-    return (content as any).questions
-      .map((question: any) => {
-        const lines: string[] = [];
-        lines.push(question.question || '问题');
-        if (Array.isArray(question.options)) {
-          lines.push(
-            ...question.options.map((option: string) => formatOutputLine(`- ${option}`, 0)),
-          );
-        }
-        lines.push(`答案：${question.answer || '暂无答案'}`);
-        return lines.join('\n');
-      })
-      .join('\n\n');
-  }
-  if (output.type === 'BRIEFING' && Array.isArray((content as any).sections)) {
-    return (content as any).sections
-      .map((section: any) => {
-        const lines: string[] = [];
-        lines.push(section.heading || '要点');
-        if (Array.isArray(section.points)) {
-          lines.push(
-            ...section.points.map((point: any) => formatOutputLine(`- ${point.text || '内容'}`, 0)),
-          );
-        }
-        return lines.join('\n');
-      })
-      .join('\n\n');
-  }
-  if (output.type === 'SLIDES') {
-    if (typeof (content as any).markdown === 'string') {
-      return (content as any).markdown;
+      }
+      return JSON.stringify(output.content ?? {}, null, 2);
     }
-    if ((content as any).outline && Array.isArray((content as any).outline.slides)) {
-      const outline = (content as any).outline;
-      const lines: string[] = [outline.title || '演示'];
-      for (const slide of outline.slides) {
-        lines.push(slide.title || '幻灯片');
-        if (Array.isArray(slide.bullets)) {
-          lines.push(...slide.bullets.map((item: string) => formatOutputLine(`- ${item}`, 1)));
-        }
+    case 'PARAGRAPH':
+      return typed.content.text;
+    case 'BULLETS':
+      return typed.content.items
+        .map((item) => `- ${pickTextValue(item) || '要点'}`)
+        .join('\n');
+    case 'STRUCTURED': {
+      const lines: string[] = [];
+      lines.push(typed.content.title || '未命名结构化输出');
+      if (Array.isArray(typed.content.bullets)) {
+        lines.push(
+          ...typed.content.bullets.map((item) =>
+            formatOutputLine(`- ${pickTextValue(item) || '要点'}`, 0),
+          ),
+        );
+      }
+      if (Array.isArray(typed.content.terms) && typed.content.terms.length > 0) {
+        lines.push(`关键术语：${typed.content.terms.join('、')}`);
       }
       return lines.join('\n');
     }
+    default:
+      return JSON.stringify(output.content ?? {}, null, 2);
   }
-  if (output.type === 'PARAGRAPH' && typeof (content as any).text === 'string') {
-    return (content as any).text;
-  }
-  if (output.type === 'BULLETS' && Array.isArray((content as any).items)) {
-    return (content as any).items
-      .map((item: any) => `- ${item.text || '要点'}`)
-      .join('\n');
-  }
-  if (output.type === 'STRUCTURED') {
-    const lines: string[] = [];
-    lines.push((content as any).title || '未命名结构化输出');
-    if (Array.isArray((content as any).bullets)) {
-      lines.push(
-        ...((content as any).bullets as any[]).map((item: any) =>
-          formatOutputLine(`- ${item.text || '要点'}`, 0),
-        ),
-      );
-    }
-    if (Array.isArray((content as any).terms) && (content as any).terms.length > 0) {
-      lines.push(`关键术语：${(content as any).terms.join('、')}`);
-    }
-    return lines.join('\n');
-  }
-  return JSON.stringify(output.content ?? {}, null, 2);
 }
 
 export function normalizeNotebook(row: ApiNotebook): Notebook {
@@ -285,7 +292,7 @@ export function normalizeOutput(row: ApiOutput): OutputItem {
     type: row.type,
     prompt: row.prompt ?? '',
     chunkIds: row.chunk_ids ?? [],
-    content: row.content ?? {},
+    content: normalizeOutputPayload(row.type, row.content),
     createdAt: formatTimestamp(row.created_at ?? undefined),
     updatedAt: formatTimestamp(row.updated_at ?? undefined),
     createdAtRaw: row.created_at ?? undefined,
@@ -331,8 +338,8 @@ export function normalizeSource(row: ApiSource): SourceItem {
     statusTone: statusKey,
     indexProgress,
     chunks: row.chunk_count ?? 0,
-    tags: Array.isArray((row as any).tags)
-      ? (row as any).tags.filter((tag: unknown): tag is string => typeof tag === 'string' && tag.length > 0)
+    tags: Array.isArray(row.tags)
+      ? row.tags.filter((tag): tag is string => typeof tag === 'string' && tag.length > 0)
       : [],
     createdAt: formatTimestamp(row.created_at ?? undefined),
     createdAtRaw: row.created_at ?? undefined,

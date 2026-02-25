@@ -71,3 +71,13 @@ test('only shows markdown for timeline export', async () => {
   expect(await screen.findByRole('menuitem', { name: '导出为 Markdown' })).toBeInTheDocument();
   expect(screen.queryByRole('menuitem', { name: '导出为 JSON' })).not.toBeInTheDocument();
 });
+
+test('falls back to raw JSON renderer when payload shape is invalid', () => {
+  const output = createOutput('QUIZ', {
+    wrong: true,
+  });
+
+  render(<OutputContent output={output} />);
+
+  expect(screen.getByText(/"wrong": true/)).toBeInTheDocument();
+});

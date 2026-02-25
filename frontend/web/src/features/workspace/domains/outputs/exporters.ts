@@ -1,4 +1,5 @@
 import type { OutputItem, OutputTypeId } from '../../shared/types';
+import { decodeOutputContent, decodeOutputItem, getOutputTitle } from '../../shared/outputPayload';
 import { formatStructuredOutputForCopy } from '../../shared/utils';
 
 export type ExportFormat = 'markdown' | 'json' | 'pdf' | 'pptx';
@@ -32,12 +33,7 @@ export const OUTPUT_EXPORT_FORMATS: Record<OutputTypeId, ExportFormat[]> = {
 };
 
 function resolveOutputTitle(output: OutputItem): string {
-  const content = output.content ?? {};
-  const contentTitle = typeof (content as any).title === 'string' ? (content as any).title.trim() : '';
-  if (contentTitle) return contentTitle;
-  const promptTitle = output.prompt?.trim();
-  if (promptTitle) return promptTitle;
-  return `${output.type} 输出`;
+  return getOutputTitle(output);
 }
 
 function sanitizeFileName(value: string): string {
@@ -70,14 +66,14 @@ export function buildMarkdownExport(output: OutputItem): string {
 }
 
 export function buildJsonExport(output: OutputItem): Record<string, unknown> {
-  const content = output.content ?? {};
+  const typed = decodeOutputItem(output);
 
-  if (output.type === 'FAQ' && Array.isArray((content as any).items)) {
+  if (typed?.type === 'FAQ') {
     return {
       schema: 'crystalith.flashcards.v1',
       type: 'flashcard',
       title: resolveOutputTitle(output),
-      items: (content as any).items.map((item: any, index: number) => ({
+      items: typed.content.items.map((item, index) => ({
         id: index + 1,
         front: item.question ?? '',
         back: item.answer ?? '',
@@ -85,12 +81,12 @@ export function buildJsonExport(output: OutputItem): Record<string, unknown> {
     };
   }
 
-  if (output.type === 'QUIZ' && Array.isArray((content as any).questions)) {
+  if (typed?.type === 'QUIZ') {
     return {
       schema: 'crystalith.quiz.v1',
       type: 'quiz',
       title: resolveOutputTitle(output),
-      questions: (content as any).questions.map((question: any, index: number) => ({
+      questions: typed.content.questions.map((question, index) => ({
         id: index + 1,
         question: question.question ?? '',
         options: Array.isArray(question.options) ? question.options : [],
@@ -104,7 +100,7 @@ export function buildJsonExport(output: OutputItem): Record<string, unknown> {
     schema: 'crystalith.output.v1',
     type: output.type,
     title: resolveOutputTitle(output),
-    content,
+    content: output.content ?? {},
   };
 }
 
@@ -164,18 +160,18 @@ function parseSlidesFromMarkdown(markdown: string): SlideExportItem[] {
 }
 
 export function buildSlidesExportItems(output: OutputItem): SlideExportItem[] {
-  const content = output.content ?? {};
-  const outlineSlides = (content as any).outline?.slides;
+  const slidesContent = decodeOutputContent('SLIDES', output.content);
+  const outlineSlides = slidesContent?.outline?.slides;
 
   if (Array.isArray(outlineSlides) && outlineSlides.length > 0) {
-    return outlineSlides.map((slide: any) => ({
-      title: slide?.title || '未命名幻灯片',
-      bullets: Array.isArray(slide?.bullets) ? slide.bullets.map((item: any) => String(item)) : [],
+    return outlineSlides.map((slide) => ({
+      title: slide.title || '未命名幻灯片',
+      bullets: Array.isArray(slide.bullets) ? slide.bullets.map((item) => String(item)) : [],
       paragraphs: [],
     }));
   }
 
-  const markdown = typeof (content as any).markdown === 'string' ? (content as any).markdown : '';
+  const markdown = typeof slidesContent?.markdown === 'string' ? slidesContent.markdown : '';
   const parsed = markdown ? parseSlidesFromMarkdown(markdown) : [];
   if (parsed.length > 0) return parsed;
 

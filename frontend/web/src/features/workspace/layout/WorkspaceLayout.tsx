@@ -18,6 +18,7 @@ import { useRefine } from '../domains/refine/useRefine';
 import { useSessions } from '../domains/sessions/useSessions';
 import { useSources } from '../domains/sources/useSources';
 import type { ChatMessage, Citation, SourceItem } from '../shared/types';
+import { getSlideIdFromOutput } from '../shared/outputPayload';
 import { normalizeMessage } from '../shared/utils';
 import { listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet as listMessages } from '../../../api/generated';
 import { unwrapData } from '../../../api/unwrap';
@@ -264,9 +265,8 @@ export default function WorkspaceLayout() {
   const resolveSlideDraftId = useCallback(
     (outputId: number) => {
       const output = refine.outputs.find((item) => item.id === outputId);
-      if (!output || output.type !== 'SLIDES') return null;
-      const slideId = (output.content as any)?.slide_id;
-      return typeof slideId === 'number' ? slideId : null;
+      if (!output) return null;
+      return getSlideIdFromOutput(output);
     },
     [refine.outputs],
   );

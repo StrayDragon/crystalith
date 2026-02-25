@@ -303,9 +303,12 @@ function collectOutputSourceNames(value: unknown, names: Set<string>) {
   }
 }
 
-function extractOutputSourceNames(content: Record<string, unknown>) {
+function extractOutputSourceNames(content: unknown) {
+  if (!content || typeof content !== 'object' || Array.isArray(content)) {
+    return [] as string[];
+  }
   const names = new Set<string>();
-  collectOutputSourceNames(content, names);
+  collectOutputSourceNames(content as Record<string, unknown>, names);
   return Array.from(names);
 }
 
