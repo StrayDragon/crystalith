@@ -57,5 +57,10 @@ class VectorStore(Protocol):
     async def remove_notebook(self, notebook_id: int) -> None:
         ...
 
-    async def entries(self) -> Iterable[VectorEntry]:
+    async def entries(
+        self,
+        *,
+        notebook_id: int | None = None,
+        source_ids: Sequence[int] | None = None,
+    ) -> Iterable[VectorEntry]:
         ...

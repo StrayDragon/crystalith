@@ -24,6 +24,14 @@
 - `vector_storage.chroma.telemetry` 未设置或为 false 时，Chroma 遥测 MUST 保持关闭
 - `search` MUST 使用 Chroma 原生 `collection.query()` 执行 ANN 搜索（不加载全量条目到内存），并通过 where 子句支持 `source_ids` / `exclude_source_ids` 过滤
 
+### Requirement: Vector store MUST support notebook-scoped entry enumeration
+系统 SHALL 在向量存储抽象层提供按 notebook 枚举向量条目的能力，以支持 analysis 等需要全量条目的场景，同时避免跨 notebook 的全量扫描。
+
+最小行为：
+- VectorStore `entries` MUST 支持 `notebook_id` 过滤参数
+- 当提供 `notebook_id` 时，返回结果 MUST 仅包含该 notebook 的条目
+- 当向量后端支持服务端过滤时（例如 Chroma where），实现 MUST 优先使用后端过滤而非应用层过滤
+
 ### Requirement: Vector Storage Provider Configuration
 系统 MUST 支持通过 `vector_storage.provider` 选择向量后端，并支持 `memory`、`sqlite` 与 `chroma`。
 `memory` 模式重启后数据会丢失；`sqlite` 模式使用 `vector_storage.sqlite.path` 持久化（搜索语义正确但性能特性与 Chroma 不同，部分实现 MAY 为应用层 brute-force）。

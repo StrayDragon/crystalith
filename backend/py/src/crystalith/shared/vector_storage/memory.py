@@ -140,5 +140,19 @@ class InMemoryVectorStore:
             for query_vector in query_vectors
         ]
 
-    async def entries(self) -> Iterable[VectorEntry]:
-        return tuple(entry.entry for entry in self._entries)
+    async def entries(
+        self,
+        *,
+        notebook_id: int | None = None,
+        source_ids: Sequence[int] | None = None,
+    ) -> Iterable[VectorEntry]:
+        source_id_set = set(source_ids) if source_ids else None
+        filtered: list[VectorEntry] = []
+        for stored in self._entries:
+            entry = stored.entry
+            if notebook_id is not None and entry.notebook_id != notebook_id:
+                continue
+            if source_id_set is not None and entry.source_id not in source_id_set:
+                continue
+            filtered.append(entry)
+        return tuple(filtered)

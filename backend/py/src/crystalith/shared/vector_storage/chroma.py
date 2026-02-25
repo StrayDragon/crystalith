@@ -231,8 +231,30 @@ class ChromaVectorStore:
     async def remove_notebook(self, notebook_id: int) -> None:
         self._collection.delete(where={"notebook_id": notebook_id})
 
-    async def entries(self) -> Iterable[VectorEntry]:
-        items = self._collection.get(include=["embeddings", "metadatas"])
+    async def entries(
+        self,
+        *,
+        notebook_id: int | None = None,
+        source_ids: Sequence[int] | None = None,
+    ) -> Iterable[VectorEntry]:
+        clauses: list[dict[str, Any]] = []
+        if notebook_id is not None:
+            clauses.append({"notebook_id": int(notebook_id)})
+        if source_ids:
+            clauses.append({"source_id": {"$in": list(sorted(set(int(value) for value in source_ids)))}})
+
+        where: dict[str, Any] | None
+        if not clauses:
+            where = None
+        elif len(clauses) == 1:
+            where = clauses[0]
+        else:
+            where = {"$and": clauses}
+
+        if where is None:
+            items = self._collection.get(include=["embeddings", "metadatas"])
+        else:
+            items = self._collection.get(where=where, include=["embeddings", "metadatas"])
         embeddings = items.get("embeddings")
         metadatas = items.get("metadatas")
         if embeddings is None:

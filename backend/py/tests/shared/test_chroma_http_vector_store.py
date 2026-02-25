@@ -99,10 +99,34 @@ def _make_stub_chroma_app(*, include_collection_id: bool = True) -> FastAPI:
     async def get(collection_id: str, request: Request):  # noqa: ANN001
         assert collection_id == app.state.collection_id
         body = await request.json()
+        where = body.get("where") or {}
         limit = int(body.get("limit") or 1000)
         offset = int(body.get("offset") or 0)
 
-        items = sorted(app.state.entries.items(), key=lambda item: item[0])
+        def matches(entry: _Stored) -> bool:
+            if not where:
+                return True
+            if "$and" in where:
+                clauses = where["$and"]
+            else:
+                clauses = [where]
+            for clause in clauses:
+                if "notebook_id" in clause and entry.metadata.get("notebook_id") != clause["notebook_id"]:
+                    return False
+                source_filter = clause.get("source_id")
+                if isinstance(source_filter, dict):
+                    if "$in" in source_filter and entry.metadata.get("source_id") not in set(source_filter["$in"]):
+                        return False
+                    if "$nin" in source_filter and entry.metadata.get("source_id") in set(source_filter["$nin"]):
+                        return False
+                elif source_filter is not None and entry.metadata.get("source_id") != source_filter:
+                    return False
+            return True
+
+        items = sorted(
+            [(entry_id, stored) for entry_id, stored in app.state.entries.items() if matches(stored)],
+            key=lambda item: item[0],
+        )
         page = items[offset : offset + limit]
 
         ids = [entry_id for entry_id, _ in page]
@@ -133,6 +157,12 @@ async def test_chroma_http_vector_store_happy_path_without_network() -> None:
         chunk_ids=[100, 101],
         vectors=[[1.0, 0.0], [0.0, 1.0]],
     )
+
+    entries = list(await store.entries(notebook_id=1))
+    assert {entry.chunk_id for entry in entries} == {100, 101}
+    assert list(await store.entries(notebook_id=2)) == []
+    assert list(await store.entries(source_ids=[10])) == entries
+    assert list(await store.entries(notebook_id=1, source_ids=[10])) == entries
 
     results = await store.search(
         notebook_id=1,

@@ -17,11 +17,6 @@ from crystalith.shared.deps import get_ai_provider, get_db_session, get_vector_s
 
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/analysis", tags=["analysis"])
 
-
-def _filter_entries(entries: list[VectorEntry], notebook_id: int) -> list[VectorEntry]:
-    return [entry for entry in entries if entry.notebook_id == notebook_id]
-
-
 @router.get("", response_model=AnalysisResult)
 async def analyze_notebook(
     notebook_id: int,
@@ -33,7 +28,7 @@ async def analyze_notebook(
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
 
-    entries = _filter_entries(list(await vector_store.entries()), notebook_id)
+    entries = list(await vector_store.entries(notebook_id=notebook_id))
     if not entries:
         return AnalysisResult(topics=[], relations=[], contradictions=[])
 
