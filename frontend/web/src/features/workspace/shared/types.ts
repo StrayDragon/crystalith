@@ -385,16 +385,21 @@ export interface ApiWorkspaceToolsResponse {
   tools: ApiWorkspaceTool[];
 }
 
-export interface ApiOutput {
+interface ApiOutputBase {
   id: number;
   notebook_id: number;
-  type: OutputTypeId;
   prompt?: string | null;
   chunk_ids?: number[] | null;
-  content: Record<string, unknown>;
   created_at?: string | null;
   updated_at?: string | null;
 }
+
+export type ApiOutput = {
+  [K in OutputTypeId]: ApiOutputBase & {
+    type: K;
+    content: OutputContentByType[K] | Record<string, unknown>;
+  };
+}[OutputTypeId];
 
 export interface ApiSource {
   id: number;

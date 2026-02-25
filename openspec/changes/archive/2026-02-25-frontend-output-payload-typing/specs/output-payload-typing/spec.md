@@ -1,8 +1,7 @@
 # output-payload-typing Specification
 
-## Purpose
-TBD - created by archiving change typed-output-payloads. Update Purpose after archive.
-## Requirements
+## MODIFIED Requirements
+
 ### Requirement: Output payloads MUST be modeled as a discriminated union
 前端 MUST 将 output payload 建模为以 `OutputTypeId` 为判别字段的 discriminated union，使消费方可在 `switch(type)` 下获得类型 narrowing。
 前端 API 映射层（如 `ApiOutput`）也 MUST 保持相同判别语义，避免在进入业务组件前退化为无关联的宽泛对象。
