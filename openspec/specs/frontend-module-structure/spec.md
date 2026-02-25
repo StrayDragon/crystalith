@@ -13,7 +13,6 @@
 - `workspace-ux-system/spec.md`
 - `frontend-api-client/spec.md`
 - `ci-cd/spec.md`
-
 ## Requirements
 ### Requirement: Workspace domain slicing
 系统 MUST 在 `frontend/web/src/features/workspace/domains/<domain>/` 内组织 workspace 子域代码，并将该子域相关的组件、hooks、api、types 聚合在同一域内（避免散落在 `features/workspace` 顶层）。
@@ -37,3 +36,10 @@
 
 ### Requirement: Container/presentation split is enforced for complex panels
 复杂 domain panel 的副作用（请求/轮询/取消/重试）MUST 收敛在 domain hooks（如 `useSources`、`useResearch`）中；展示组件尽量保持“给定 props 即纯渲染”，并可渐进拆分为 `components/` 下的可复用片段而不改变对外入口接口。
+
+### Requirement: WorkspaceLayout MUST delegate overlays and side-effects to focused modules
+Workspace 顶层布局组件（例如 `WorkspaceLayout`）MUST 将 overlays/dialogs 的状态与副作用收敛到聚焦的 hooks/模块中，并将 overlays 的展示部分拆分为纯渲染组件，避免单文件聚合跨域 state 与副作用。
+
+#### Scenario: Overlay close policy is centralized
+- **WHEN** 用户触发关闭 overlay（例如 Escape）
+- **THEN** 系统通过单一的 `closeActiveOverlay` 策略决定关闭顺序，并确保相关资源被清理（timeouts/EventSource/临时 state）
