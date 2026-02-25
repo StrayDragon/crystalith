@@ -116,6 +116,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
   const [error, setError] = useState('');
   const [sseEvents, setSSEEvents] = useState<SSEEvent[]>([]);
 
+  const sessionsRef = useRef<ResearchSessionListItem[]>([]);
+  const activeSessionRef = useRef<ResearchSessionResponse | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const staleCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -126,6 +128,14 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
   const maxSseEvents = 500;
   const staleConnectionMs = 45000;
   const staleCheckIntervalMs = 5000;
+
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
+  useEffect(() => {
+    activeSessionRef.current = activeSession;
+  }, [activeSession]);
 
   const fetchSessions = useCallback(async () => {
     if (!notebookId) return;
@@ -345,6 +355,37 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     [notebookId]
   );
 
+  const unsubscribeFromSSE = useCallback(() => {
+    // Clear any pending reconnect timeout
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    if (staleCheckIntervalRef.current) {
+      clearInterval(staleCheckIntervalRef.current);
+      staleCheckIntervalRef.current = null;
+    }
+    // Reset reconnect attempts
+    reconnectAttemptRef.current = 0;
+    // Close connection
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+  }, []);
+
+  const isResearchSessionActive = useCallback((researchId: number) => {
+    const session = sessionsRef.current.find((s) => s.id === researchId);
+    if (session) {
+      return ['planning', 'searching', 'analyzing', 'waiting_user'].includes(session.status);
+    }
+    const active = activeSessionRef.current;
+    if (active?.id === researchId) {
+      return ['planning', 'searching', 'analyzing', 'waiting_user'].includes(active.status);
+    }
+    return false;
+  }, []);
+
   const subscribeToSSE = useCallback(
     (researchId: number, isReconnect = false) => {
       if (!notebookId) return;
@@ -378,6 +419,9 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       const currentResearchId = researchId;
 
       const scheduleReconnect = (message: string) => {
+        if (!isResearchSessionActive(currentResearchId)) {
+          return;
+        }
         // Check if we should attempt reconnection
         if (reconnectAttemptRef.current < maxReconnectAttempts) {
           reconnectAttemptRef.current += 1;
@@ -398,8 +442,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           });
 
           reconnectTimeoutRef.current = setTimeout(() => {
-            const session = sessions.find(s => s.id === currentResearchId);
-            if (session && ['planning', 'searching', 'analyzing', 'waiting_user'].includes(session.status)) {
+            if (isResearchSessionActive(currentResearchId)) {
               subscribeToSSE(currentResearchId, true);
             }
           }, delay);
@@ -449,6 +492,10 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
                   : s
               )
             );
+
+            if (!['planning', 'searching', 'analyzing', 'waiting_user'].includes(data.status)) {
+              unsubscribeFromSSE();
+            }
           }
 
           // Update iteration from thinking events that include new_iteration type
@@ -492,6 +539,9 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
             fetchSession(researchId);
             // Also refresh sessions list
             fetchSessions();
+            if (eventType === 'done') {
+              unsubscribeFromSSE();
+            }
           }
         } catch {
           console.error('Failed to parse SSE event:', event.data);
@@ -545,27 +595,8 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
         }
       }, staleCheckIntervalMs);
     },
-    [notebookId, fetchSession, fetchSessions, sessions]
+    [notebookId, fetchSession, fetchSessions, isResearchSessionActive, unsubscribeFromSSE]
   );
-
-  const unsubscribeFromSSE = useCallback(() => {
-    // Clear any pending reconnect timeout
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-    if (staleCheckIntervalRef.current) {
-      clearInterval(staleCheckIntervalRef.current);
-      staleCheckIntervalRef.current = null;
-    }
-    // Reset reconnect attempts
-    reconnectAttemptRef.current = 0;
-    // Close connection
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
-  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
