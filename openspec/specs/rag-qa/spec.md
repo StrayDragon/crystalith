@@ -30,6 +30,14 @@
 - 未提供 `source_ids` 或 `source_ids` 为空时系统 MUST 不执行检索并返回无证据提示（citations 为空或 `evidence=false`）
 - `source_ids` 包含不属于当前 notebook 的来源时系统 MUST 返回 400 并说明无效来源范围
 
+### Requirement: 流式与非流式 QA 的检索元信息一致
+系统 MUST 保证同一输入在非流式 QA 与流式 QA（以 `done` 事件为准）返回一致的检索与引用元信息：
+
+- `citations` 数组（内容与顺序）
+- `evidence` 布尔值
+- `confidence` 数值
+- `context` 统计字段（若存在）
+
 ### Requirement: RAG 管道并行化
 系统 MUST 在 RAG Q&A 流程中将无依赖的操作并行执行，减少端到端延迟。
 
