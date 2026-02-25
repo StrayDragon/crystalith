@@ -13,6 +13,12 @@ packages-test:
 test: packages-test
     uv run pytest tests/ -v
 
+check:
+    @echo "==> Checking backend import layering"
+    just check-imports
+    @echo "==> Checking config schema consistency"
+    just config-schema-check
+
 coverage: packages-test
     uv run pytest tests/ -v -n 0 --cov=crystalith --cov-report=term --cov-fail-under=85
 
@@ -24,6 +30,15 @@ check-imports:
 
 config-schema:
     uv run python -c "from pathlib import Path; from crystalith.shared.config import ConfigManager; ConfigManager(Path('../../config/app.yaml'), schema_path=Path('../../config/app.schema.json')).write_schema()"
+
+config-schema-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just config-schema
+    if ! git diff --exit-code -- ../../config/app.schema.json; then
+        echo "config/app.schema.json is out of date. Run: cd backend/py && just config-schema" >&2
+        exit 1
+    fi
 
 db-init:
     uv run scripts/db_init.py

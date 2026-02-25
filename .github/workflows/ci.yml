@@ -47,6 +47,18 @@ jobs:
           cd backend/py
           uv sync --frozen
 
+      - name: Check backend import layering
+        run: |
+          cd backend/py
+          just check-imports
+
+      - name: Check config schema consistency
+        run: |
+          cd backend/py
+          just config-schema
+          cd ../..
+          git diff --exit-code -- config/app.schema.json
+
       - name: Run backend tests
         run: |
           cd backend/py
