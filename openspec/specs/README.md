@@ -1,82 +1,69 @@
-# OpenSpec Canonical Specs
+# OpenSpec Canonical Specs (Consolidated)
 
-本目录为 Crystalith 的**主规范**（canonical specs）。每个能力点对应一个目录：`openspec/specs/<capability>/spec.md`。
+本目录已按“最新主干 + 去重合并”完成收敛。当前 canonical 规范为统一命名的 24 个 spec；旧路径 deprecated 薄壳已在 batch-2 中移除。
 
-## 建议阅读顺序（快速建立全局心智）
+## Canonical Reading Order
 
-1. **后端工作流/插件与生成链路**
-   - `agent-architecture/spec.md`
-   - `plugin-system/spec.md`
-   - `output-graph/spec.md`
-   - `generation-preference/spec.md`
-   - `generation-retrieval/spec.md`
-   - `generation-observability/spec.md`
-   - `output-postprocessing/spec.md`
-   - `refine-output/spec.md`
-2. **后端工程结构与基础设施**
-   - `backend-module-structure/spec.md`
-   - `config-management/spec.md`
-   - `ai-provider-config/spec.md`
-   - `data-access/spec.md`
-   - `notebook-management/spec.md`
-   - `background-task-queue/spec.md`
-   - `backend-performance/spec.md`
-3. **前端工作区与交互（NotebookLM-style）**
-   - `workspace-ui/spec.md`
-   - `workspace-ux-system/spec.md`
-   - `frontend-module-structure/spec.md`
-   - `modular-canvas-layout/spec.md`
-   - `workspace-sources-ui/spec.md`
-   - `workspace-chat-ui/spec.md`
-   - `workspace-studio-ui/spec.md`
-   - `studio-collapsible-tools/spec.md`
-   - `output-rendering/spec.md`
-   - `citation-interaction/spec.md`
-   - `workspace-analysis-ui/spec.md`
-   - `research-ui/spec.md`
-4. **来源、检索与搜索**
-   - `source-ingestion/spec.md`
-   - `source-ingestion-upload/spec.md`
-   - `source-ingestion-url/spec.md`
-   - `source-ingestion-management/spec.md`
-   - `source-ingestion-tags/spec.md`
-   - `source-ingestion-summary-qa/spec.md`
-   - `content-conversion/spec.md`
-   - `search-engine/spec.md`
-   - `vector-storage/spec.md`
-   - `vector-search-cache/spec.md`
-   - `rag-qa/spec.md`
-   - `analysis-api/spec.md`
-   - `cross-document-analysis/spec.md`
-5. **Studio 输出类型（按需查阅）**
-   - `studio-slides/spec.md`
-   - `studio-slides-drafts/spec.md`
-   - `studio-slides-sse/spec.md`
-   - `studio-slides-preview/spec.md`
-   - `studio-briefing/spec.md`
-   - `studio-guide/spec.md`
-   - `studio-flashcard/spec.md`
-   - `studio-mindmap/spec.md`
-   - `studio-quiz/spec.md`
-   - `studio-timeline/spec.md`
-6. **SDK / API / 部署与工程化**
-   - `workspace-api/spec.md`
-   - `openapi-docs/spec.md`
-   - `frontend-api-client/spec.md`
-   - `python-sdk/spec.md`
-   - `deployment/spec.md`
-   - `deployments-layout/spec.md`
-   - `ci-cd/spec.md`
-   - `docs-site/spec.md`
-   - `llm-evaluation/spec.md`
+1. 架构与基础
+   - `architecture-core/spec.md`
+   - `architecture-plugin-and-agent/spec.md`
+   - `config-and-models/spec.md`
+   - `data-and-storage/spec.md`
+   - `retrieval-and-cache/spec.md`
+2. API 与客户端
+   - `workspace-api-contract/spec.md`
+   - `openapi-and-client-generation/spec.md`
+3. Workspace UI
+   - `workspace-ui-core/spec.md`
+   - `workspace-ui-sources/spec.md`
+   - `workspace-ui-chat/spec.md`
+   - `workspace-ui-studio/spec.md`
+   - `workspace-ui-analysis/spec.md`
+   - `workspace-ui-research-and-citation/spec.md`
+4. Source 与生成
+   - `source-ingestion-core/spec.md`
+   - `source-ingestion-upload-and-url/spec.md`
+   - `source-ingestion-management-and-tags/spec.md`
+   - `source-ingestion-summary-and-conversion/spec.md`
+   - `generation-core/spec.md`
+   - `generation-observability-and-guardrails/spec.md`
+   - `output-rendering-and-typing/spec.md`
+5. Studio 输出
+   - `studio-slides-workflow/spec.md`
+   - `studio-output-types/spec.md`
+6. 交付与质量
+   - `delivery-and-deployment/spec.md`
+   - `quality-and-regression/spec.md`
 
-## 规范写作约定（简版）
+## Consolidation Map (Old -> New)
 
-- **Purpose**：用 2-5 句说明该 spec 的“覆盖范围/边界/不解决什么问题”。
-- **Requirements**：按 `### Requirement: ...` 组织；每条需求尽量只约束一个概念。
-- **Cross-links**：避免重复描述。能被其它 spec 复用的“公共契约”，放在更基础的 spec 中，并在此引用。
-- **Umbrella + focused**：当某个 spec 变长时，优先拆分为“总览 spec（入口/导航/不变量）+ 聚焦 specs（具体契约）”以提高可读性。
+- `backend-module-structure`, `frontend-module-structure` -> `architecture-core`
+- `agent-architecture`, `plugin-system` -> `architecture-plugin-and-agent`
+- `config-management`, `ai-provider-config` -> `config-and-models`
+- `data-access`, `vector-storage` -> `data-and-storage`
+- `generation-retrieval`, `vector-search-cache`, `search-engine` -> `retrieval-and-cache`
+- `workspace-api`, `notebook-management`, `analysis-api` -> `workspace-api-contract`
+- `openapi-docs`, `frontend-api-client`, `python-sdk` -> `openapi-and-client-generation`
+- `workspace-ui`, `workspace-ux-system`, `modular-canvas-layout` -> `workspace-ui-core`
+- `workspace-sources-ui` -> `workspace-ui-sources`
+- `workspace-chat-ui` -> `workspace-ui-chat`
+- `workspace-studio-ui`, `studio-collapsible-tools` -> `workspace-ui-studio`
+- `workspace-analysis-ui`, `cross-document-analysis` -> `workspace-ui-analysis`
+- `research-ui`, `citation-interaction` -> `workspace-ui-research-and-citation`
+- `source-ingestion` -> `source-ingestion-core`
+- `source-ingestion-upload`, `source-ingestion-url` -> `source-ingestion-upload-and-url`
+- `source-ingestion-management`, `source-ingestion-tags` -> `source-ingestion-management-and-tags`
+- `source-ingestion-summary-qa`, `content-conversion` -> `source-ingestion-summary-and-conversion`
+- `output-graph`, `generation-preference`, `rag-qa`, `refine-output`, `output-postprocessing` -> `generation-core`
+- `generation-observability`, `backend-performance`, `background-task-queue` -> `generation-observability-and-guardrails`
+- `output-rendering`, `output-payload-typing` -> `output-rendering-and-typing`
+- `studio-slides`, `studio-slides-drafts`, `studio-slides-sse`, `studio-slides-preview` -> `studio-slides-workflow`
+- `studio-briefing`, `studio-guide`, `studio-flashcard`, `studio-mindmap`, `studio-quiz`, `studio-timeline` -> `studio-output-types`
+- `deployment`, `deployments-layout`, `docs-site` -> `delivery-and-deployment`
+- `ci-cd`, `api-regression-suite`, `llm-evaluation`, `test-stability` -> `quality-and-regression`
 
-## 术语表
+## Deprecation Policy
 
-- `GLOSSARY.md`
+- 迁移日期：`2026-02-25`
+- batch-2 执行日期：`2026-02-25`
+- 旧路径目录已删除，仅保留本 README 的 Old -> New 映射用于检索历史名称
