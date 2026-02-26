@@ -132,6 +132,28 @@ class ConfigManager:
                 logger.warning("Invalid int for %s: %s", names[0], value)
                 return None
 
+        def _read_float(*names: str) -> float | None:
+            value = _read_text(*names)
+            if value is None:
+                return None
+            try:
+                return float(value)
+            except ValueError:
+                logger.warning("Invalid float for %s: %s", names[0], value)
+                return None
+
+        def _read_bool(*names: str) -> bool | None:
+            value = _read_text(*names)
+            if value is None:
+                return None
+            lowered = value.strip().lower()
+            if lowered in {"1", "true", "yes", "on"}:
+                return True
+            if lowered in {"0", "false", "no", "off"}:
+                return False
+            logger.warning("Invalid bool for %s: %s", names[0], value)
+            return None
+
         database_url = _read_text("DATABASE_URL", "CRYSTALITH_DATABASE__URL")
         if database_url:
             settings.database.url = database_url
@@ -218,6 +240,72 @@ class ConfigManager:
                     model.provider_config["host"] = ollama_host
                 else:
                     model.provider_config = {"host": ollama_host}
+
+        def _apply_optional_service_env(service_name: str) -> None:
+            upper = service_name.upper()
+            service = getattr(settings.optional_services, service_name)
+
+            enabled = _read_bool(
+                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__ENABLED",
+                f"CRYSTALITH_OPTIONAL_{upper}_ENABLED",
+            )
+            if enabled is not None:
+                service.enabled = enabled
+
+            endpoint = _read_text(
+                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__ENDPOINT",
+                f"CRYSTALITH_OPTIONAL_{upper}_ENDPOINT",
+            )
+            if endpoint:
+                service.endpoint = endpoint
+
+            timeout_s = _read_float(
+                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__TIMEOUT_S",
+                f"CRYSTALITH_OPTIONAL_{upper}_TIMEOUT_S",
+            )
+            if timeout_s is not None and timeout_s > 0:
+                service.timeout_s = timeout_s
+
+            probe_enabled = _read_bool(
+                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__PROBE__ENABLED",
+                f"CRYSTALITH_OPTIONAL_{upper}_PROBE_ENABLED",
+            )
+            if probe_enabled is not None:
+                service.probe.enabled = probe_enabled
+
+            probe_timeout_s = _read_float(
+                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__PROBE__TIMEOUT_S",
+                f"CRYSTALITH_OPTIONAL_{upper}_PROBE_TIMEOUT_S",
+            )
+            if probe_timeout_s is not None and probe_timeout_s > 0:
+                service.probe.timeout_s = probe_timeout_s
+
+            probe_interval_s = _read_float(
+                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__PROBE__INTERVAL_S",
+                f"CRYSTALITH_OPTIONAL_{upper}_PROBE_INTERVAL_S",
+            )
+            if probe_interval_s is not None and probe_interval_s > 0:
+                service.probe.interval_s = probe_interval_s
+
+            probe_path = _read_text(
+                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__PROBE__PATH",
+                f"CRYSTALITH_OPTIONAL_{upper}_PROBE_PATH",
+            )
+            if probe_path:
+                service.probe.path = probe_path
+
+            degrade_policy = _read_text(
+                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__DEGRADE_POLICY",
+                f"CRYSTALITH_OPTIONAL_{upper}_DEGRADE_POLICY",
+            )
+            if degrade_policy in {"core_available", "fail_closed"}:
+                service.degrade_policy = degrade_policy
+
+        for optional_service in ("ollama", "chroma", "redis", "searxng"):
+            _apply_optional_service_env(optional_service)
+
+        if ollama_host and not settings.optional_services.ollama.endpoint:
+            settings.optional_services.ollama.endpoint = ollama_host
 
         available_ids = [m.id for m in settings.models.available]
 
@@ -394,7 +482,7 @@ class ConfigManager:
 
         self.schema_path.parent.mkdir(parents=True, exist_ok=True)
         self.schema_path.write_text(
-            json.dumps(schema, ensure_ascii=False, indent=2),
+            json.dumps(schema, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
 

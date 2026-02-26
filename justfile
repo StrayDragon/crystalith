@@ -108,44 +108,84 @@ docs-build *ARGS='':
     uv run --project docs zensical build -f mkdocs.yml "${EXTRA_ARGS[@]}"
 
 # --------------------------------------------------------------------------
-# Docker Deployment
+# Dev Compose (developer defaults)
 #
-# Default PROFILES can be overridden:
-#   just docker-compose-up                       # uses default profiles
-#   just PROFILES="" docker-compose-up            # no optional profiles
-#   just PROFILES="host-remap ollama" docker-compose-up  # custom profiles
+# Default overlays: storage + redis.
+# Available overlays: storage redis ollama slidev host-remap
+# Example:
+#   just DEV_OPTIONALS="storage redis ollama" dev-docker-up
 # --------------------------------------------------------------------------
 
-COMPOSE_FILE := "deployments/prod/docker-compose.yml"
-# Default profiles to enable (space-separated). Override with: just PROFILES="..." <cmd>
-PROFILES := "host-remap"
+COMPOSE_CORE_FILE := "deployments/prod/docker-compose.yml"
+DEV_OPTIONALS := "storage redis"
+CHINA_APT_MIRROR := "https://mirrors.tuna.tsinghua.edu.cn/debian"
+CHINA_UV_INDEX_URL := "https://mirrors.aliyun.com/pypi/simple/"
+CHINA_NPM_REGISTRY := "https://registry.npmmirror.com"
 
-_compose_profiles := if PROFILES == "" { "" } else { replace(trim(PROFILES), " ", " --profile ") }
-_compose_profile_flags := if _compose_profiles == "" { "" } else { "--profile " + _compose_profiles }
-COMPOSE_BASE := "docker compose --env-file .env -f " + COMPOSE_FILE + " " + _compose_profile_flags
+dev-docker-up *ARGS='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    FILES=(-f {{COMPOSE_CORE_FILE}})
+    for optional in {{DEV_OPTIONALS}}; do
+      FILES+=(-f "deployments/prod/docker-compose.${optional}.yml")
+    done
+    EXTRA_ARGS=({{ARGS}})
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
+      EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
+    fi
+    APT_MIRROR="${APT_MIRROR:-{{CHINA_APT_MIRROR}}}" \
+    UV_INDEX_URL="${UV_INDEX_URL:-{{CHINA_UV_INDEX_URL}}}" \
+    NPM_REGISTRY="${NPM_REGISTRY:-{{CHINA_NPM_REGISTRY}}}" \
+    docker compose --env-file .env "${FILES[@]}" up -d --build "${EXTRA_ARGS[@]}"
 
-# Start all services (build if needed)
-docker-compose-up *ARGS='':
-    {{COMPOSE_BASE}} up -d --build {{ARGS}}
+dev-docker-down *ARGS='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    FILES=(-f {{COMPOSE_CORE_FILE}})
+    for optional in {{DEV_OPTIONALS}}; do
+      FILES+=(-f "deployments/prod/docker-compose.${optional}.yml")
+    done
+    EXTRA_ARGS=({{ARGS}})
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
+      EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
+    fi
+    docker compose --env-file .env "${FILES[@]}" down "${EXTRA_ARGS[@]}"
 
-# Stop all services
-docker-compose-down *ARGS='':
-    {{COMPOSE_BASE}} down {{ARGS}}
+dev-docker-ps:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    FILES=(-f {{COMPOSE_CORE_FILE}})
+    for optional in {{DEV_OPTIONALS}}; do
+      FILES+=(-f "deployments/prod/docker-compose.${optional}.yml")
+    done
+    docker compose --env-file .env "${FILES[@]}" ps
 
-# Show running container status
-docker-compose-ps:
-    {{COMPOSE_BASE}} ps
+dev-docker-logs *ARGS='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    FILES=(-f {{COMPOSE_CORE_FILE}})
+    for optional in {{DEV_OPTIONALS}}; do
+      FILES+=(-f "deployments/prod/docker-compose.${optional}.yml")
+    done
+    EXTRA_ARGS=({{ARGS}})
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
+      EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
+    fi
+    docker compose --env-file .env "${FILES[@]}" logs -f "${EXTRA_ARGS[@]}"
 
-# Follow logs (all services or specific: just docker-compose-logs api)
-docker-compose-logs *ARGS='':
-    {{COMPOSE_BASE}} logs -f {{ARGS}}
+dev-docker-rebuild SERVICE:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    FILES=(-f {{COMPOSE_CORE_FILE}})
+    for optional in {{DEV_OPTIONALS}}; do
+      FILES+=(-f "deployments/prod/docker-compose.${optional}.yml")
+    done
+    APT_MIRROR="${APT_MIRROR:-{{CHINA_APT_MIRROR}}}" \
+    UV_INDEX_URL="${UV_INDEX_URL:-{{CHINA_UV_INDEX_URL}}}" \
+    NPM_REGISTRY="${NPM_REGISTRY:-{{CHINA_NPM_REGISTRY}}}" \
+    docker compose --env-file .env "${FILES[@]}" up -d --build --no-deps {{SERVICE}}
 
-# Rebuild and restart a specific service (e.g., just docker-compose-rebuild api)
-docker-compose-rebuild SERVICE:
-    {{COMPOSE_BASE}} up -d --build --no-deps {{SERVICE}}
-
-# Smoke test: verify all endpoints
-docker-compose-smoke-test:
+dev-docker-smoke:
     #!/usr/bin/env bash
     set -euo pipefail
     PORT="${CL_WEB_PORT:-8080}"
@@ -155,9 +195,8 @@ docker-compose-smoke-test:
     echo "=== Models ==="
     curl -fsS "http://localhost:$PORT/v1/models" | python3 -m json.tool | head -10
     echo "..."
-    echo "=== Slidev ==="
-    STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:3030/")
-    echo "Slidev: HTTP $STATUS"
+    echo "=== Dependencies ==="
+    curl -fsS "http://localhost:$PORT/health/dependencies" | python3 -m json.tool | head -20
     echo
     echo "All checks passed."
 

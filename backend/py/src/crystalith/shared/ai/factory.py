@@ -7,6 +7,7 @@ import ollama
 from cl_logs.logging import get_logger
 
 from crystalith.shared.config import ModelConfig, RequestOptions, Settings
+from crystalith.shared.config.ollama_discovery import resolve_reachable_ollama_host
 from crystalith.shared.plugins import PluginRegistry
 
 from .cache import EmbeddingCache
@@ -144,7 +145,16 @@ def _create_ollama_client(model_config: ModelConfig) -> ollama.AsyncClient:
     Uses the model's provider_config for host settings.
     """
     ollama_settings = model_config.get_ollama_config()
-    return ollama.AsyncClient(host=ollama_settings.host)
+    resolved_host = resolve_reachable_ollama_host(preferred_host=ollama_settings.host)
+    if resolved_host != ollama_settings.host:
+        log.info(
+            "resolved ollama host fallback for model",
+            model_id=model_config.id,
+            model=model_config.model,
+            configured_host=ollama_settings.host,
+            resolved_host=resolved_host,
+        )
+    return ollama.AsyncClient(host=resolved_host)
 
 
 def create_embedding_provider(settings: Settings, *, plugins: PluginRegistry | None = None) -> EmbeddingProvider:

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import datetime as dt
 import logging
 import os
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,11 @@ from crystalith.shared.ai.openai_client_manager import get_openai_client_manager
 from crystalith.shared.cache import CacheProvider, create_cache_provider
 from crystalith.shared.concurrency import StageLimiters
 from crystalith.shared.config import ConfigManager, Settings
+from crystalith.shared.config.ollama_discovery import (
+    auto_discover_ollama,
+    collect_ollama_hosts,
+    probe_ollama_host,
+)
 from crystalith.shared.db import Source, create_db_manager
 from crystalith.shared.db.migrations import upgrade_head
 from crystalith.shared.schemas.errors import (
@@ -94,6 +100,67 @@ def _env_bool_optional(name: str) -> bool | None:
     return value.strip().lower() not in {"0", "false", "no", "off"}
 
 
+def _env_float(name: str, default: float) -> float:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    try:
+        return float(value.strip())
+    except ValueError:
+        return default
+
+
+def _iso_now() -> str:
+    return dt.datetime.now(dt.timezone.utc).isoformat()
+
+
+async def _run_ollama_monitor(
+    app: FastAPIX,
+    stop_event: asyncio.Event,
+    *,
+    interval_s: float,
+    timeout_s: float,
+    include_env_host: bool,
+) -> None:
+    while not stop_event.is_set():
+        try:
+            hosts = collect_ollama_hosts(
+                app.state.settings,
+                include_env=include_env_host,
+                include_fallback=True,
+            )
+            host_status: dict[str, dict[str, Any]] = {}
+            has_healthy_host = False
+
+            for host in sorted(hosts):
+                healthy, error_message, model_count = await asyncio.to_thread(
+                    probe_ollama_host,
+                    host,
+                    timeout=timeout_s,
+                )
+                host_status[host] = {
+                    "healthy": healthy,
+                    "error": error_message,
+                    "model_count": model_count,
+                }
+                has_healthy_host = has_healthy_host or healthy
+
+            app.state.ollama_hosts_status = host_status
+            app.state.ollama_monitor_last_probe = _iso_now()
+
+            if has_healthy_host:
+                added = await asyncio.to_thread(auto_discover_ollama, app.state.settings)
+                if added:
+                    logger.info("Ollama monitor discovered %d new models", added)
+        except Exception:  # noqa: BLE001 - best-effort background probe
+            logger.exception("Ollama monitor probe failed")
+
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=interval_s)
+        except asyncio.TimeoutError:
+            continue
+
+
 def create_app(
     settings: Settings | None = None,
     *,
@@ -122,6 +189,9 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPIX):
+        ollama_monitor_stop: asyncio.Event | None = None
+        ollama_monitor_task: asyncio.Task[None] | None = None
+
         if _env_bool("AUTO_DB_INIT", False):
             await asyncio.to_thread(upgrade_head, app.state.settings.database.url)
 
@@ -168,10 +238,36 @@ def create_app(
                         source_ids,
                     )
 
+        app.state.ollama_hosts_status = {}
+        app.state.ollama_monitor_last_probe = None
+        if _env_bool("CRYSTALITH_OLLAMA_MONITOR_ENABLED", True):
+            interval_s = max(0.1, _env_float("CRYSTALITH_OLLAMA_MONITOR_INTERVAL_S", 15.0))
+            timeout_s = max(0.1, _env_float("CRYSTALITH_OLLAMA_MONITOR_TIMEOUT_S", 3.0))
+            include_env_host = _env_bool("CRYSTALITH_OLLAMA_MONITOR_INCLUDE_ENV_HOST", False)
+            ollama_monitor_stop = asyncio.Event()
+            ollama_monitor_task = asyncio.create_task(
+                _run_ollama_monitor(
+                    app,
+                    ollama_monitor_stop,
+                    interval_s=interval_s,
+                    timeout_s=timeout_s,
+                    include_env_host=include_env_host,
+                )
+            )
+
         await app.state.task_queue.start_worker()
         try:
             yield
         finally:
+            if ollama_monitor_stop is not None:
+                ollama_monitor_stop.set()
+            if ollama_monitor_task is not None:
+                try:
+                    await asyncio.wait_for(ollama_monitor_task, timeout=2.0)
+                except asyncio.TimeoutError:
+                    ollama_monitor_task.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await ollama_monitor_task
             await app.state.db.close()
             close_vector_store = getattr(app.state.vector_store, "close", None)
             if close_vector_store is not None:
@@ -207,6 +303,58 @@ def create_app(
     @app.get("/health", include_in_schema=False)
     async def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/health/dependencies", include_in_schema=False)
+    async def dependency_health() -> dict[str, Any]:
+        settings: Settings = app.state.settings
+        ollama_hosts_status = dict(getattr(app.state, "ollama_hosts_status", {}) or {})
+        ollama_any_healthy = any(bool(item.get("healthy")) for item in ollama_hosts_status.values())
+        ollama_enabled = any(model.provider == "ollama" for model in settings.models.available) or bool(
+            os.getenv("OLLAMA_HOST")
+        )
+
+        vector_provider = settings.vector_storage.provider
+        cache_provider = settings.cache.provider
+
+        return {
+            "status": "ok",
+            "generated_at": _iso_now(),
+            "core": {
+                "frontend": {
+                    "service": "web",
+                    "healthy": None,
+                    "note": "frontend health is validated through reverse-proxy route /health",
+                },
+                "backend": {"service": "api", "healthy": True},
+            },
+            "optional": {
+                "storage_chroma": {
+                    "enabled": vector_provider == "chroma",
+                    "provider": vector_provider,
+                    "endpoint": f"http://{settings.vector_storage.chroma.host}:{settings.vector_storage.chroma.port}",
+                    "degrade_policy": "core_available",
+                },
+                "cache_redis": {
+                    "enabled": cache_provider == "redis",
+                    "provider": cache_provider,
+                    "endpoint": settings.cache.redis_url,
+                    "degrade_policy": "core_available",
+                },
+                "ollama": {
+                    "enabled": ollama_enabled,
+                    "healthy": ollama_any_healthy if ollama_hosts_status else None,
+                    "hosts": ollama_hosts_status,
+                    "last_probe": getattr(app.state, "ollama_monitor_last_probe", None),
+                    "degrade_policy": "core_available",
+                },
+                "search_searxng": {
+                    "enabled": bool(settings.search.searxng.host),
+                    "endpoint": settings.search.searxng.host,
+                    "timeout_s": settings.search.searxng.timeout,
+                    "degrade_policy": "core_available",
+                },
+            },
+        }
 
     cors = resolved.app.cors
     if cors.allow_origins:

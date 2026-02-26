@@ -210,3 +210,31 @@ def test_build_chat_model_rejects_unsupported_provider() -> None:
 
     with pytest.raises(ModelConfigurationError, match="Unsupported chat provider"):
         build_chat_model_from_model_id(settings, "bad")
+
+
+def test_build_chat_model_resolves_fallback_host_for_ollama(monkeypatch) -> None:
+    settings = Settings(
+        models={
+            "defaults": {"chat": "ollama-chat"},
+            "available": [
+                {
+                    "id": "ollama-chat",
+                    "provider": "ollama",
+                    "model": "qwen:latest",
+                    "display_name": "Ollama",
+                    "roles": ["chat"],
+                    "provider_config": {"host": "http://host.docker.internal:11434"},
+                }
+            ],
+        }
+    )
+
+    # Mock reason: enforce deterministic fallback selection without network dependency.
+    monkeypatch.setattr(
+        "crystalith.shared.agents.models.resolve_reachable_ollama_host",
+        lambda **_: "http://localhost:11434",
+    )
+
+    model = build_chat_model(settings)
+    assert isinstance(model, OpenAIChatModel)
+    assert str(model.client.base_url).rstrip("/") == "http://localhost:11434/v1"

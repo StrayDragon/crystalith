@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-import os
-
-import pytest
-
 from crystalith.shared.config import ModelConfig, Settings
 from crystalith.shared.config.ollama_discovery import (
     _is_embedding_model,
     _model_display_name,
     auto_discover_ollama,
     build_model_configs_from_ollama,
+    collect_ollama_hosts,
     merge_discovered_models,
+    probe_ollama_host,
+    resolve_reachable_ollama_host,
 )
 
 
@@ -88,3 +87,89 @@ def test_auto_discover_ollama_uses_env_host(monkeypatch) -> None:
     added = auto_discover_ollama(settings)
     assert added == 1
     assert any(isinstance(m, ModelConfig) and m.model == "bge-m3:latest" for m in settings.models.available)
+
+
+def test_collect_ollama_hosts_without_fallback_and_without_env(monkeypatch) -> None:
+    settings = Settings(
+        models={
+            "available": [
+                {
+                    "id": "local-chat",
+                    "provider": "ollama",
+                    "model": "qwen2.5:7b",
+                    "display_name": "Local chat",
+                    "roles": ["chat"],
+                    "provider_config": {"host": "http://localhost:11434"},
+                }
+            ]
+        }
+    )
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
+    hosts = collect_ollama_hosts(settings, include_env=False, include_fallback=False)
+    assert hosts == {"http://localhost:11434"}
+
+
+def test_collect_ollama_hosts_adds_local_fallback_for_docker_internal(monkeypatch) -> None:
+    settings = Settings(
+        models={
+            "available": [
+                {
+                    "id": "local-chat",
+                    "provider": "ollama",
+                    "model": "qwen2.5:7b",
+                    "display_name": "Local chat",
+                    "roles": ["chat"],
+                    "provider_config": {"host": "http://host.docker.internal:11434"},
+                }
+            ]
+        }
+    )
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
+    hosts = collect_ollama_hosts(settings, include_env=False, include_fallback=True)
+    assert "http://host.docker.internal:11434" in hosts
+    assert "http://127.0.0.1:11434" in hosts
+
+
+def test_probe_ollama_host_success(monkeypatch) -> None:
+    class _Response:
+        def raise_for_status(self) -> None:
+            return
+
+        def json(self) -> dict[str, object]:
+            return {"models": [{"name": "a"}, {"name": "b"}]}
+
+    class _Client:
+        def __init__(self, timeout: float) -> None:  # noqa: ARG002
+            pass
+
+        def __enter__(self) -> "_Client":
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> bool:  # noqa: ANN001, ARG002
+            return False
+
+        def get(self, url: str) -> _Response:  # noqa: ARG002
+            return _Response()
+
+    # Mock reason: avoid network dependency while validating host probe behavior.
+    monkeypatch.setattr("crystalith.shared.config.ollama_discovery.httpx.Client", _Client)
+    healthy, error, model_count = probe_ollama_host("http://localhost:11434", timeout=0.1)
+    assert healthy is True
+    assert error is None
+    assert model_count == 2
+
+
+def test_resolve_reachable_ollama_host_falls_back_to_localhost(monkeypatch) -> None:
+    def stub_probe(host: str, *, timeout: float = 3.0):  # noqa: ANN001, ARG001
+        if host == "http://localhost:11434":
+            return True, None, 2
+        return False, "unreachable", None
+
+    # Mock reason: deterministic host health matrix without requiring a live Ollama daemon.
+    monkeypatch.setattr("crystalith.shared.config.ollama_discovery.probe_ollama_host", stub_probe)
+
+    host = resolve_reachable_ollama_host(
+        preferred_host="http://host.docker.internal:11434",
+        include_env=False,
+    )
+    assert host == "http://localhost:11434"

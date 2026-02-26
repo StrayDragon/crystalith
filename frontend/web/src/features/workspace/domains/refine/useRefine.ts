@@ -331,8 +331,8 @@ export function useRefine() {
           const statusError = error as Error & { status?: number };
 
           if (statusError.status === 503) {
-            errorMessage = 'AI 服务暂时不可用，请检查模型配置。';
-            userFacingError = 'AI 服务配置错误，请联系管理员。';
+            errorMessage = '可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置。';
+            userFacingError = '可选 AI 服务暂时不可用，请稍后重试或切换模型。';
           } else if (statusError.status === 404) {
             errorMessage = '笔记本不存在或已被删除。';
             userFacingError = '笔记本已失效，请刷新页面。';

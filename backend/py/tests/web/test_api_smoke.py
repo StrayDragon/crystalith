@@ -20,6 +20,14 @@ async def test_api_smoke_health_notebook_and_analysis_404(client) -> None:
     assert health.status_code == 200
     assert health.json() == {"status": "ok"}
 
+    dependency_health = await client.get("/health/dependencies")
+    assert dependency_health.status_code == 200
+    payload = dependency_health.json()
+    assert payload["status"] == "ok"
+    assert payload["core"]["frontend"]["service"] == "web"
+    assert payload["core"]["backend"]["service"] == "api"
+    assert "optional" in payload
+
     create_resp = await client.post("/v1/notebooks", json={"name": "Smoke Notebook"})
     assert create_resp.status_code == 201
     notebook_id = create_resp.json()["id"]
@@ -98,6 +106,23 @@ async def test_api_smoke_error_envelope_contracts(client) -> None:
     missing_notebook_sources = await client.get("/v1/notebooks/999999/sources")
     assert missing_notebook_sources.status_code == 404
     _assert_error_envelope(missing_notebook_sources, "NOT_FOUND")
+
+
+@pytest.mark.asyncio
+async def test_api_smoke_dependency_health_reports_ollama_runtime(client, app, monkeypatch) -> None:
+    monkeypatch.setenv("OLLAMA_HOST", "http://localhost:11434")
+    app.state.ollama_hosts_status = {
+        "http://localhost:11434": {"healthy": True, "error": None, "model_count": 2}
+    }
+    app.state.ollama_monitor_last_probe = "2026-02-26T00:00:00+00:00"
+
+    response = await client.get("/health/dependencies")
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["optional"]["ollama"]["enabled"] is True
+    assert payload["optional"]["ollama"]["healthy"] is True
+    assert payload["optional"]["ollama"]["hosts"]["http://localhost:11434"]["model_count"] == 2
 
 
 @pytest.mark.asyncio
