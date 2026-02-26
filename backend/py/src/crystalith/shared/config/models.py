@@ -830,12 +830,23 @@ class WebExtractionSettings(BaseModel):
     )
 
 
+class SourceDedupSettings(BaseModel):
+    """来源去重配置（可选）。"""
+
+    enabled: bool = Field(False, description="是否启用来源去重（默认关闭）")
+
+
 class SourceIngestionSettings(BaseModel):
     """来源导入配置。"""
+
     url_fetch: UrlFetchSettings = Field(default_factory=_default_factory(UrlFetchSettings), description="URL 获取配置")
     web_extraction: WebExtractionSettings = Field(
         default_factory=_default_factory(WebExtractionSettings),
         description="网页内容提取配置",
+    )
+    dedup: SourceDedupSettings = Field(
+        default_factory=_default_factory(SourceDedupSettings),
+        description="来源去重配置（upload/url），默认关闭。",
     )
 
 

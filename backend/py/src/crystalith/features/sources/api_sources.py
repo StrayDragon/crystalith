@@ -21,7 +21,6 @@ from crystalith.shared.deps import (
 )
 
 from .api_common import (
-    _fetch_sources_or_404,
     _invalidate_notebook_source_caches,
     _load_tag_names_for_sources,
     _reembed_existing_source,
@@ -30,6 +29,7 @@ from .api_common import (
 )
 from .api_schemas import (
     ChunkRead,
+    SourceBatchItemResult,
     SourceBatchDeleteRequest,
     SourceBatchDeleteResponse,
     SourceBatchReembedRequest,
@@ -139,18 +139,30 @@ async def batch_reembed_sources(
         raise HTTPException(status_code=404, detail="Notebook not found")
 
     source_ids = list(dict.fromkeys(payload.source_ids))
-    sources = await _fetch_sources_or_404(
-        session,
-        notebook_id=notebook_id,
-        source_ids=source_ids,
+    result = await session.execute(
+        select(Source).where(Source.notebook_id == notebook_id, Source.id.in_(source_ids))
     )
+    sources = list(result.scalars().all())
     source_map = {source.id: source for source in sources}
 
     reembedded_ids: list[int] = []
     failed_ids: list[int] = []
+    results: list[SourceBatchItemResult] = []
 
     for source_id in source_ids:
-        source = source_map[source_id]
+        source = source_map.get(source_id)
+        if source is None:
+            failed_ids.append(source_id)
+            results.append(
+                SourceBatchItemResult(
+                    source_id=source_id,
+                    ok=False,
+                    error_code="SOURCE_NOT_FOUND",
+                    message="Source not found",
+                )
+            )
+            continue
+
         try:
             await _reembed_existing_source(
                 notebook_id=notebook_id,
@@ -161,15 +173,43 @@ async def batch_reembed_sources(
                 require_failed=False,
             )
             reembedded_ids.append(source_id)
-        except HTTPException:
+            results.append(SourceBatchItemResult(source_id=source_id, ok=True))
+        except HTTPException as exc:
             failed_ids.append(source_id)
+            detail = exc.detail
+            error_code: str | None = None
+            message: str | None = None
+            if isinstance(detail, dict):
+                code = detail.get("error_code")
+                msg = detail.get("message")
+                if isinstance(code, str):
+                    error_code = code
+                if isinstance(msg, str):
+                    message = msg
+            results.append(
+                SourceBatchItemResult(
+                    source_id=source_id,
+                    ok=False,
+                    error_code=error_code or "SOURCE_REEMBED_FAILED",
+                    message=message or "Re-embed failed",
+                )
+            )
         except Exception:
             failed_ids.append(source_id)
+            results.append(
+                SourceBatchItemResult(
+                    source_id=source_id,
+                    ok=False,
+                    error_code="SOURCE_REEMBED_FAILED",
+                    message="Re-embed failed",
+                )
+            )
 
     if reembedded_ids:
         await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
 
     return SourceBatchReembedResponse(
+        results=results,
         reembedded_ids=reembedded_ids,
         failed_ids=failed_ids,
         reembedded_count=len(reembedded_ids),
@@ -217,22 +257,46 @@ async def batch_delete_sources(
         raise HTTPException(status_code=404, detail="Notebook not found")
 
     source_ids = list(dict.fromkeys(payload.source_ids))
-    sources = await _fetch_sources_or_404(
-        session,
-        notebook_id=notebook_id,
-        source_ids=source_ids,
+    result = await session.execute(
+        select(Source).where(Source.notebook_id == notebook_id, Source.id.in_(source_ids))
     )
+    sources = list(result.scalars().all())
     source_map = {source.id: source for source in sources}
 
-    for source_id in source_ids:
-        await session.delete(source_map[source_id])
-    await session.commit()
+    results: list[SourceBatchItemResult] = []
+    deleted_ids: list[int] = []
 
     for source_id in source_ids:
-        await vector_store.remove_source(source_id)
+        source = source_map.get(source_id)
+        if source is None:
+            results.append(
+                SourceBatchItemResult(
+                    source_id=source_id,
+                    ok=False,
+                    error_code="SOURCE_NOT_FOUND",
+                    message="Source not found",
+                )
+            )
+            continue
+        await session.delete(source)
+        deleted_ids.append(source_id)
+        results.append(SourceBatchItemResult(source_id=source_id, ok=True))
 
-    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
-    return SourceBatchDeleteResponse(deleted_ids=source_ids, deleted_count=len(source_ids))
+    if deleted_ids:
+        await session.commit()
+        for source_id in deleted_ids:
+            try:
+                await vector_store.remove_source(source_id)
+            except Exception:  # noqa: BLE001 - best-effort vector purge
+                logger.exception("failed to purge source vectors after deletion", source_id=source_id)
+
+        await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
+
+    return SourceBatchDeleteResponse(
+        results=results,
+        deleted_ids=deleted_ids,
+        deleted_count=len(deleted_ids),
+    )
 
 
 @router.delete("", response_model=SourceBatchDeleteResponse, include_in_schema=False)

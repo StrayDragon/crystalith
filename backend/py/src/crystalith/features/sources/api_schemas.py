@@ -24,7 +24,10 @@ class SourceRead(BaseModel):
         serialization_alias="metadata",
     )
     status: SourceStatus
+    error_code: str | None = None
     error_message: str | None
+    recovery_hint: str | None = None
+    last_error_at: datetime.datetime | None = None
     chunk_count: int = 0
     tags: list[str] = Field(default_factory=list)
     created_at: datetime.datetime
@@ -98,7 +101,15 @@ class SourceBatchDeleteRequest(BaseModel):
     source_ids: list[int] = Field(..., min_length=1)
 
 
+class SourceBatchItemResult(BaseModel):
+    source_id: int
+    ok: bool
+    error_code: str | None = None
+    message: str | None = None
+
+
 class SourceBatchDeleteResponse(BaseModel):
+    results: list[SourceBatchItemResult] = Field(default_factory=list)
     deleted_ids: list[int]
     deleted_count: int
 
@@ -108,6 +119,7 @@ class SourceBatchReembedRequest(BaseModel):
 
 
 class SourceBatchReembedResponse(BaseModel):
+    results: list[SourceBatchItemResult] = Field(default_factory=list)
     reembedded_ids: list[int]
     failed_ids: list[int]
     reembedded_count: int
@@ -148,6 +160,7 @@ class SourceTagSourceBindingResponse(BaseModel):
     tag_id: int
     source_ids: list[int]
     count: int
+    results: list[SourceBatchItemResult] = Field(default_factory=list)
 
 
 class SourceFromUrlMode(MetaInfoStrEnum):

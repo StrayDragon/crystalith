@@ -16,6 +16,15 @@ from crystalith.shared.deps import get_cache_provider, get_db_session, get_embed
 from crystalith.shared.types import OutputType, SourceStatus
 from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
 
+from crystalith.shared.source_diagnostics import (
+    SOURCE_ERROR_EMBEDDING_FAILED,
+    SOURCE_ERROR_INGESTION_FAILED,
+    SOURCE_ERROR_VECTOR_STORE_FAILED,
+    SourceFailure,
+    apply_source_failure,
+    raise_source_failure,
+)
+
 from . import service
 from .schemas import SessionCreate, SessionRead, SessionUpdate
 
@@ -292,12 +301,15 @@ async def convert_session_to_source(
     await session.refresh(source)
 
     try:
+        stage = "chunks"
         chunk_texts = _split_text_to_chunks(text_content)
         if not chunk_texts:
             chunk_texts = [text_content]
 
+        stage = "embed"
         embeddings = await embedder.embed_batch(chunk_texts)
 
+        stage = "chunks"
         db_chunks: list[Chunk] = []
         for idx, chunk_text in enumerate(chunk_texts):
             chunk = Chunk(
@@ -313,8 +325,13 @@ async def convert_session_to_source(
         chunk_ids = [chunk.id for chunk in db_chunks]
 
         source.status = SourceStatus.READY
+        source.error_code = None
+        source.error_message = None
+        source.recovery_hint = None
+        source.last_error_at = None
         await session.commit()
 
+        stage = "vector_store"
         await vector_store.add(
             notebook_id=notebook_id,
             source_id=source.id,
@@ -340,13 +357,35 @@ async def convert_session_to_source(
 
     except Exception as exc:
         log.error("failed to convert session to source", exc_info=exc)
-        source.status = SourceStatus.FAILED
-        source.error_message = str(exc)[:500]
+        await session.rollback()
+        if stage == "embed":
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_EMBEDDING_FAILED,
+                message="转换会话失败：向量嵌入失败",
+                recovery_hint="检查 embedding 模型/服务是否可用，或稍后重试。",
+                status_code=503,
+                details=str(exc)[:512],
+            )
+        elif stage == "vector_store":
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_VECTOR_STORE_FAILED,
+                message="转换会话失败：写入向量库失败",
+                recovery_hint="检查向量库服务配置与连通性，或稍后重试。",
+                status_code=503,
+                details=str(exc)[:512],
+            )
+        else:
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_INGESTION_FAILED,
+                message="转换会话失败",
+                recovery_hint="可稍后重试；若持续失败，检查日志或依赖服务状态。",
+                status_code=500,
+                details=str(exc)[:512],
+            )
+        apply_source_failure(source, failure)
+        session.add(source)
         await session.commit()
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to convert session to source. Please try again.",
-        ) from exc
+        raise_source_failure(failure)
 
 
 @router.post(

@@ -275,6 +275,48 @@ export function useSources() {
               ),
             );
           } catch (error) {
+            const err = error as {
+              errorCode?: string;
+              details?: unknown;
+              message?: string;
+            };
+            if (err?.errorCode === 'SOURCE_DEDUP_HIT') {
+              const details = err.details as { existing_filename?: unknown } | null;
+              const existingFilename =
+                details && typeof details.existing_filename === 'string' && details.existing_filename
+                  ? details.existing_filename
+                  : file.name;
+              const reuse = window.confirm(
+                `检测到重复来源：${existingFilename}\n\n点击“确定”复用已有来源；点击“取消”仍创建新来源。`,
+              );
+              const dedup_action = reuse ? 'reuse' : 'create_new';
+              try {
+                await unwrapData(uploadSource<true>({
+                  path: { notebook_id: activeNotebookId },
+                  query: { dedup_action },
+                  body: { file },
+                }));
+                successCount += 1;
+                setUploadQueue((prev) =>
+                  prev.map((item) =>
+                    item.id === queueId
+                      ? { ...item, status: 'success', message: reuse ? '已复用已有来源' : undefined }
+                      : item,
+                  ),
+                );
+                continue;
+              } catch (retryError) {
+                failedFiles.push(file);
+                setUploadQueue((prev) =>
+                  prev.map((item) =>
+                    item.id === queueId
+                      ? { ...item, status: 'error', message: '上传失败' }
+                      : item,
+                  ),
+                );
+                continue;
+              }
+            }
             failedFiles.push(file);
             setUploadQueue((prev) =>
               prev.map((item) =>
@@ -672,8 +714,9 @@ export function useSources() {
       if (!activeNotebookId) {
         throw new Error('请先创建笔记本');
       }
-      const result = await unwrapData(addSourceFromUrl<true>({
+      const call = async (dedup_action?: 'reuse' | 'create_new') => unwrapData(addSourceFromUrl<true>({
         path: { notebook_id: activeNotebookId },
+        query: dedup_action ? { dedup_action } : undefined,
         body: {
           url,
           mode,
@@ -682,8 +725,33 @@ export function useSources() {
           extractor: options?.extractor,
         },
       }));
-      await mutate();
-      return result;
+
+      try {
+        const result = await call();
+        await mutate();
+        return result;
+      } catch (error) {
+        const err = error as {
+          errorCode?: string;
+          details?: unknown;
+          message?: string;
+        };
+        if (err?.errorCode !== 'SOURCE_DEDUP_HIT') {
+          throw error;
+        }
+        const details = err.details as { existing_filename?: unknown } | null;
+        const existingFilename =
+          details && typeof details.existing_filename === 'string' && details.existing_filename
+            ? details.existing_filename
+            : url;
+        const reuse = window.confirm(
+          `检测到重复来源：${existingFilename}\n\n点击“确定”复用已有来源；点击“取消”仍创建新来源。`,
+        );
+        const result = await call(reuse ? 'reuse' : 'create_new');
+        await mutate();
+        if (reuse) toast.info('已复用已有来源');
+        return result;
+      }
     },
     [isConnected, activeNotebookId, mutate],
   );

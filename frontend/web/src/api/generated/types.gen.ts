@@ -64,12 +64,7 @@ export type ChunkRead = {
      * Id
      */
     id: number;
-    /**
-     * Metadata
-     */
-    metadata?: {
-        [key: string]: unknown;
-    } | null;
+    metadata?: JsonDict | null;
     /**
      * Start Offset
      */
@@ -453,6 +448,16 @@ export type ItemSchema = {
     fields?: Array<FieldDescriptor>;
 };
 
+export type JsonDict = {
+    [key: string]: JsonValue;
+};
+
+export type JsonPrimitive = boolean | number | null | number | string;
+
+export type JsonValue = JsonPrimitive | {
+    [key: string]: JsonValue;
+} | Array<JsonValue>;
+
 /**
  * MessageCreate
  */
@@ -667,12 +672,7 @@ export type OutputRead = {
      * Chunk Ids
      */
     chunk_ids: Array<number> | null;
-    /**
-     * Content
-     */
-    content: {
-        [key: string]: unknown;
-    };
+    content: JsonDict;
     /**
      * Created At
      */
@@ -1084,9 +1084,7 @@ export type ResearchSessionResponse = {
     /**
      * Aggregated Results
      */
-    aggregated_results: Array<{
-        [key: string]: unknown;
-    }> | null;
+    aggregated_results: Array<JsonDict> | null;
     /**
      * Created At
      */
@@ -1166,22 +1164,12 @@ export type ResearchStepResponse = {
      * Id
      */
     id: number;
-    /**
-     * Input Data
-     */
-    input_data: {
-        [key: string]: unknown;
-    } | null;
+    input_data: JsonDict | null;
     /**
      * Iteration
      */
     iteration: number;
-    /**
-     * Output Data
-     */
-    output_data: {
-        [key: string]: unknown;
-    } | null;
+    output_data: JsonDict | null;
     /**
      * Session Id
      */
@@ -1645,12 +1633,7 @@ export type SlidesThemePreset = {
      * Label
      */
     label: string;
-    /**
-     * Template
-     */
-    template: {
-        [key: string]: unknown;
-    };
+    template: JsonDict;
 };
 
 /**
@@ -1675,6 +1658,32 @@ export type SourceBatchDeleteResponse = {
      * Deleted Ids
      */
     deleted_ids: Array<number>;
+    /**
+     * Results
+     */
+    results?: Array<SourceBatchItemResult>;
+};
+
+/**
+ * SourceBatchItemResult
+ */
+export type SourceBatchItemResult = {
+    /**
+     * Error Code
+     */
+    error_code?: null | string;
+    /**
+     * Message
+     */
+    message?: null | string;
+    /**
+     * Ok
+     */
+    ok: boolean;
+    /**
+     * Source Id
+     */
+    source_id: number;
 };
 
 /**
@@ -1707,6 +1716,10 @@ export type SourceBatchReembedResponse = {
      * Reembedded Ids
      */
     reembedded_ids: Array<number>;
+    /**
+     * Results
+     */
+    results?: Array<SourceBatchItemResult>;
 };
 
 /**
@@ -1797,6 +1810,10 @@ export type SourceRead = {
      */
     created_at: string;
     /**
+     * Error Code
+     */
+    error_code?: null | string;
+    /**
      * Error Message
      */
     error_message: null | string;
@@ -1809,11 +1826,10 @@ export type SourceRead = {
      */
     id: number;
     /**
-     * Metadata
+     * Last Error At
      */
-    metadata?: {
-        [key: string]: unknown;
-    } | null;
+    last_error_at?: string | null;
+    metadata?: JsonDict | null;
     /**
      * Mime Type
      */
@@ -1826,6 +1842,10 @@ export type SourceRead = {
      * Parser Type
      */
     parser_type: string;
+    /**
+     * Recovery Hint
+     */
+    recovery_hint?: null | string;
     /**
      * SourceStatus
      *
@@ -2032,6 +2052,10 @@ export type SourceTagSourceBindingResponse = {
      * Count
      */
     count: number;
+    /**
+     * Results
+     */
+    results?: Array<SourceBatchItemResult>;
     /**
      * Source Ids
      */
@@ -4077,7 +4101,12 @@ export type UploadSourceV1NotebooksNotebookIdSourcesPostData = {
          */
         notebook_id: number;
     };
-    query?: never;
+    query?: {
+        /**
+         * Dedup Action
+         */
+        dedup_action?: 'create_new' | 'prompt' | 'reuse';
+    };
     url: '/v1/notebooks/{notebook_id}/sources';
 };
 
@@ -4197,7 +4226,12 @@ export type CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostData = {
          */
         notebook_id: number;
     };
-    query?: never;
+    query?: {
+        /**
+         * Dedup Action
+         */
+        dedup_action?: 'create_new' | 'prompt' | 'reuse';
+    };
     url: '/v1/notebooks/{notebook_id}/sources/from-url';
 };
 

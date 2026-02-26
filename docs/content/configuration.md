@@ -55,6 +55,45 @@ Config (in `config/app.yaml`):
 Security note: allowlisting internal ranges can re-enable SSRF impact (internal port access, metadata access, etc). Prefer
 allowlisting the smallest set of specific hosts/domains.
 
+## Source dedup (optional)
+
+Crystalith can optionally detect duplicate sources for:
+- file uploads: `POST /v1/notebooks/{notebook_id}/sources`
+- URL imports: `POST /v1/notebooks/{notebook_id}/sources/from-url`
+
+Config (in `config/app.yaml`):
+- `source_ingestion.dedup.enabled` (default: false)
+
+Dedup keys (implementation):
+- uploads: `sha256(file_bytes)`
+- urls: canonicalized URL (strip tracking params like `utm_*`, normalize scheme/host/path, sort query) then hashed
+
+When enabled, a dedup hit does **not** silently drop your request:
+- The API may return `409` with `error_code=SOURCE_DEDUP_HIT`, and the UI will prompt:
+  - reuse the existing source, or
+  - create a new source anyway.
+- You can also drive this explicitly via `dedup_action` query param:
+  - `dedup_action=reuse`
+  - `dedup_action=create_new`
+
+## Source ingestion troubleshooting
+
+When a Source enters `FAILED`, the sources list/get APIs may include diagnostic fields:
+- `error_code`
+- `error_message`
+- `recovery_hint`
+- `last_error_at`
+
+Common `error_code` values and fixes:
+- `PARSER_FAILED`: the parser crashed. Try converting to plain text/Markdown and re-upload.
+- `URL_FETCH_BLOCKED`: SSRF protections blocked the URL. Use a public URL or adjust the allowlist settings above.
+- `EXTRACTOR_TIMEOUT`: web extraction timed out. Retry or switch to another extractor.
+- `EXTRACTOR_FAILED`: web extraction failed. Retry, switch extractors, or check if the site requires login / blocks crawlers.
+- `OPTIONAL_SERVICE_UNAVAILABLE`: an optional dependency is down/misconfigured. Check service connectivity/config.
+- `EMBEDDING_FAILED`: embedding provider failed. Check model/provider config and availability.
+- `VECTOR_STORE_FAILED`: vector storage failed. Check vector store config/service status.
+- `SOURCE_INGESTION_FAILED`: generic fallback when a specific cause isn't available. Check logs and optional service health.
+
 ## Speed / quality tuning
 
 Many generation endpoints accept `preference: "quality" | "speed"`.

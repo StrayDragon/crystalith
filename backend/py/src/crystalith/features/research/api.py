@@ -1255,6 +1255,14 @@ async def export_research(
     from crystalith.shared.db import Chunk, Output, Source
     from crystalith.shared.types import SourceStatus
     from crystalith.shared.types import OutputType
+    from crystalith.shared.source_diagnostics import (
+        SOURCE_ERROR_EMBEDDING_FAILED,
+        SOURCE_ERROR_INGESTION_FAILED,
+        SOURCE_ERROR_VECTOR_STORE_FAILED,
+        SourceFailure,
+        apply_source_failure,
+        raise_source_failure,
+    )
 
     research = await _get_research_session(session, notebook_id, research_id)
 
@@ -1311,6 +1319,7 @@ async def export_research(
         await session.refresh(source)
 
         try:
+            stage = "chunks"
             # Create embeddings and chunks
             log.info("starting export to source", research_id=research.id, source_id=source.id)
 
@@ -1332,9 +1341,11 @@ async def export_research(
                 chunk_texts = [text_content]
 
             log.info("creating embeddings", chunk_count=len(chunk_texts))
+            stage = "embed"
             embeddings = await embedder.embed_batch(chunk_texts)
             log.info("embeddings created", embedding_count=len(embeddings))
 
+            stage = "chunks"
             db_chunks: list[Chunk] = []
             for idx, (chunk_text, embedding) in enumerate(zip(chunk_texts, embeddings)):
                 chunk = Chunk(
@@ -1347,6 +1358,7 @@ async def export_research(
                 await session.flush()
                 db_chunks.append(chunk)
 
+            stage = "vector_store"
             await vector_store.add(
                 notebook_id=notebook_id,
                 source_id=source.id,
@@ -1354,7 +1366,12 @@ async def export_research(
                 vectors=embeddings,
             )
 
+            stage = "commit_ready"
             source.status = SourceStatus.READY
+            source.error_code = None
+            source.error_message = None
+            source.recovery_hint = None
+            source.last_error_at = None
             await session.commit()
 
             await bump_sources_epoch(cache=cache, notebook_id=notebook_id)
@@ -1373,10 +1390,37 @@ async def export_research(
             )
 
         except Exception as e:
-            source.status = SourceStatus.FAILED
-            await session.commit()
+            if stage != "vector_store":
+                await session.rollback()
             log.error("failed to export research to source", error=str(e))
-            raise HTTPException(status_code=500, detail=f"导出失败：{e!s}")
+            if stage == "embed":
+                failure = SourceFailure(
+                    error_code=SOURCE_ERROR_EMBEDDING_FAILED,
+                    message="导出研究报告失败：向量嵌入失败",
+                    recovery_hint="检查 embedding 模型/服务是否可用，或稍后重试。",
+                    status_code=503,
+                    details=str(e)[:512],
+                )
+            elif stage == "vector_store":
+                failure = SourceFailure(
+                    error_code=SOURCE_ERROR_VECTOR_STORE_FAILED,
+                    message="导出研究报告失败：写入向量库失败",
+                    recovery_hint="检查向量库服务配置与连通性，或稍后重试。",
+                    status_code=503,
+                    details=str(e)[:512],
+                )
+            else:
+                failure = SourceFailure(
+                    error_code=SOURCE_ERROR_INGESTION_FAILED,
+                    message="导出研究报告失败",
+                    recovery_hint="可稍后重试；若持续失败，检查日志或依赖服务状态。",
+                    status_code=500,
+                    details=str(e)[:512],
+                )
+            apply_source_failure(source, failure)
+            session.add(source)
+            await session.commit()
+            raise_source_failure(failure)
 
     elif payload.export_type == "note":
         # Create as output/note

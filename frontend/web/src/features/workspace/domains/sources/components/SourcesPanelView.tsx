@@ -27,6 +27,7 @@ import {
   History as HistoryIcon,
   Close as CloseIcon,
   Replay as ReplayIcon,
+  ContentCopy as ContentCopyIcon,
 } from '@mui/icons-material';
 import { Virtuoso } from 'react-virtuoso';
 import type { VirtuosoHandle } from 'react-virtuoso';
@@ -46,6 +47,7 @@ import type {
   SourceUploadItem,
 } from '../useSources';
 import { toast } from '../../../../../shared/toast';
+import { copyToClipboard } from '../../../../../shared/clipboard';
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
 import ConfirmPopover from '../../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../../shared/layer';
@@ -1172,6 +1174,20 @@ function SourcesPanelView({
                           </span>
                         ) : null}
                       </div>
+                      {source.statusTone === 'FAILED' && (source.errorMessage || source.recoveryHint || source.errorCode) ? (
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[10px] text-red-600 dark:text-red-400 truncate">
+                            {source.errorMessage || source.errorCode || '导入失败'}
+                          </span>
+                          {source.recoveryHint ? (
+                            <Tooltip content={source.recoveryHint}>
+                              <span className="text-[10px] text-red-500 underline decoration-dotted cursor-help">
+                                修复建议
+                              </span>
+                            </Tooltip>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                   </button>
 
@@ -1201,6 +1217,23 @@ function SourcesPanelView({
                           <OpenInFullIcon style={{ fontSize: 16 }} />
                           <span>放大查看</span>
                         </MenuItem>
+                        {source.statusTone === 'FAILED' && (source.recoveryHint || source.errorMessage || source.errorCode) ? (
+                          <MenuItem
+                            onClick={async () => {
+                              const text = source.recoveryHint || source.errorMessage || source.errorCode || '';
+                              const ok = await copyToClipboard(text);
+                              if (ok) {
+                                toast.success('已复制修复建议');
+                              } else {
+                                toast.error('复制失败');
+                              }
+                            }}
+                            className="flex items-center gap-2 py-2 px-3 text-xs"
+                          >
+                            <ContentCopyIcon style={{ fontSize: 16 }} />
+                            <span>复制修复建议</span>
+                          </MenuItem>
+                        ) : null}
                         <ConfirmPopover
                           message={`确定要删除「${source.title}」吗？此操作不可撤销。`}
                           onConfirm={async () => {

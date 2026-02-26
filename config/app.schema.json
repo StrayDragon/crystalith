@@ -1210,6 +1210,19 @@
       "title": "SearchSettings",
       "type": "object"
     },
+    "SourceDedupSettings": {
+      "description": "来源去重配置（可选）。",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "是否启用来源去重（默认关闭）",
+          "title": "Enabled",
+          "type": "boolean"
+        }
+      },
+      "title": "SourceDedupSettings",
+      "type": "object"
+    },
     "SourceIngestionSettings": {
       "description": "来源导入配置。",
       "properties": {
@@ -1220,6 +1233,10 @@
         "web_extraction": {
           "$ref": "#/$defs/WebExtractionSettings",
           "description": "网页内容提取配置"
+        },
+        "dedup": {
+          "$ref": "#/$defs/SourceDedupSettings",
+          "description": "来源去重配置（upload/url），默认关闭。"
         }
       },
       "title": "SourceIngestionSettings",

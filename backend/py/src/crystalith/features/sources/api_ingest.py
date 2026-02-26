@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import hashlib
 from time import perf_counter
-from typing import cast
+from typing import Literal, cast
 
 from cl_logs import get_logger
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.agents.deps import StudioDeps
@@ -29,11 +31,12 @@ from crystalith.shared.json_types import JsonDict
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore
 from crystalith.shared.parsers import TranscriptionProvider
-from crystalith.shared.net import UrlSafetyError, validate_url_for_fetch
+from crystalith.shared.net import UrlSafetyError, canonicalize_url_for_dedup, validate_url_for_fetch
 
 from .api_common import (
     _build_source_metadata,
     _invalidate_notebook_source_caches,
+    _load_tag_names_for_sources,
     _page_count_from_chunks,
     _resolve_parser,
     _source_to_read,
@@ -48,6 +51,19 @@ from .api_schemas import (
     SourceSearchResponse,
     SourceSearchResult,
     SourceSearchStatus,
+)
+from crystalith.shared.source_diagnostics import (
+    SOURCE_ERROR_EMBEDDING_FAILED,
+    SOURCE_ERROR_EXTRACTOR_FAILED,
+    SOURCE_ERROR_EXTRACTOR_TIMEOUT,
+    SOURCE_ERROR_INGESTION_FAILED,
+    SOURCE_ERROR_OPTIONAL_SERVICE_UNAVAILABLE,
+    SOURCE_ERROR_PARSER_FAILED,
+    SOURCE_ERROR_URL_FETCH_BLOCKED,
+    SOURCE_ERROR_VECTOR_STORE_FAILED,
+    SourceFailure,
+    apply_source_failure,
+    raise_source_failure,
 )
 
 logger = get_logger(__name__)
@@ -156,6 +172,8 @@ async def search_sources(
 async def create_source_from_url(
     notebook_id: int,
     payload: SourceFromUrlRequest,
+    response: Response,
+    dedup_action: Literal["prompt", "reuse", "create_new"] = "prompt",
     session: AsyncSession = Depends(get_db_session),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     vector_store: VectorStore = Depends(get_vector_store),
@@ -177,7 +195,43 @@ async def create_source_from_url(
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
 
-    url = payload.url
+    url = payload.url.strip()
+    canonical_url = canonicalize_url_for_dedup(url)
+    url_digest = hashlib.sha256(canonical_url.encode("utf-8")).hexdigest()
+    dedup_key = f"url:sha256:{url_digest}"
+
+    if settings.source_ingestion.dedup.enabled:
+        existing_source = await session.scalar(
+            select(Source)
+            .where(Source.notebook_id == notebook_id, Source.dedup_key == dedup_key)
+            .order_by(Source.created_at.desc())
+        )
+        if existing_source is not None and dedup_action != "create_new":
+            if dedup_action == "reuse":
+                response.status_code = status.HTTP_200_OK
+                chunk_count = await session.scalar(
+                    select(func.count(ChunkModel.id)).where(ChunkModel.source_id == existing_source.id)
+                )
+                tags_by_source = await _load_tag_names_for_sources(session, source_ids=[existing_source.id])
+                return _source_to_read(
+                    existing_source,
+                    chunk_count=int(chunk_count or 0),
+                    tags=tags_by_source.get(existing_source.id, []),
+                )
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error_code": "SOURCE_DEDUP_HIT",
+                    "message": "检测到重复来源",
+                    "details": {
+                        "existing_source_id": existing_source.id,
+                        "existing_filename": existing_source.filename,
+                        "existing_status": existing_source.status.value,
+                        "recovery_hint": "你可以复用已有来源，或选择仍创建新来源。",
+                    },
+                },
+            )
+
     title = payload.title or url
     snippet = payload.snippet or ""
     extraction_metadata: JsonDict = {}
@@ -192,7 +246,7 @@ async def create_source_from_url(
                 text=content_text,
                 start_offset=0,
                 end_offset=len(content_text),
-                metadata={"url": url, "title": title},
+                metadata={"url": url, "canonical_url": canonical_url, "title": title},
             )
         ]
         parser_type = "link"
@@ -201,6 +255,7 @@ async def create_source_from_url(
         # Fetch mode: use the extraction system
         from crystalith.shared.ai.retry import run_with_retry
         from crystalith.shared.extraction import (
+            ConfigurationError,
             ExtractionError,
             ExtractorFactory,
             NetworkError,
@@ -220,7 +275,14 @@ async def create_source_from_url(
         try:
             await validate_url_for_fetch(url, policy=url_fetch_security)
         except UrlSafetyError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            raise_source_failure(
+                SourceFailure(
+                    error_code=SOURCE_ERROR_URL_FETCH_BLOCKED,
+                    message=str(exc),
+                    recovery_hint="该 URL 被 SSRF 安全策略阻止。请使用公开的 http(s) URL，或在配置中加入 allowlist。",
+                    status_code=400,
+                )
+            )
 
         # Determine preferred extractor
         preferred_extractor: ExtractorType | None = None
@@ -266,19 +328,40 @@ async def create_source_from_url(
                 url=url,
                 error=str(exc),
             )
-            raise HTTPException(
-                status_code=400,
-                detail=f"无法提取网页内容: {exc.message}",
-            ) from exc
+            error_code = SOURCE_ERROR_EXTRACTOR_FAILED
+            status_code = 400
+            hint = "尝试切换提取器，或检查 URL 是否需要登录/反爬限制。"
+            if isinstance(exc, (NetworkError, ServiceUnavailableError, ConfigurationError)):
+                error_code = SOURCE_ERROR_OPTIONAL_SERVICE_UNAVAILABLE
+                status_code = 503
+                hint = "检查网络连通性与提取器配置（API key / 服务地址），或稍后重试。"
+            if "timeout" in exc.message.lower():
+                error_code = SOURCE_ERROR_EXTRACTOR_TIMEOUT
+                status_code = 503
+                hint = "网页提取超时。可稍后重试或切换提取器。"
+            raise_source_failure(
+                SourceFailure(
+                    error_code=error_code,
+                    message=f"无法提取网页内容: {exc.message}",
+                    recovery_hint=hint,
+                    status_code=status_code,
+                    details={"extractor": exc.extractor, "url": exc.url},
+                )
+            )
         except Exception as exc:
             logger.exception(
                 "Unexpected extraction error",
                 url=url,
             )
-            raise HTTPException(
-                status_code=500,
-                detail=f"提取过程发生错误: {exc!s}",
-            ) from exc
+            raise_source_failure(
+                SourceFailure(
+                    error_code=SOURCE_ERROR_EXTRACTOR_FAILED,
+                    message="提取过程发生错误",
+                    recovery_hint="可稍后重试，或尝试切换提取器。",
+                    status_code=500,
+                    details=str(exc)[:512],
+                )
+            )
 
         # Update title from extraction if available
         if extracted.title and not payload.title:
@@ -303,14 +386,17 @@ async def create_source_from_url(
         filename=title[:255],  # Truncate if too long
         mime_type="text/html",
         parser_type=parser_type,
+        dedup_key=dedup_key,
         status=SourceStatus.PROCESSING,
     )
     session.add(source)
     await session.commit()
     await session.refresh(source)
 
+    stage: str = "metadata"
     try:
         # Build metadata
+        stage = "metadata"
         page_count = None
         metadata = _build_source_metadata(
             chunks,
@@ -319,6 +405,7 @@ async def create_source_from_url(
             page_count=page_count,
         )
         metadata["url"] = url
+        metadata["canonical_url"] = canonical_url
         if payload.title:
             metadata["original_title"] = payload.title
 
@@ -328,11 +415,13 @@ async def create_source_from_url(
         source.metadata_ = metadata
 
         # Embed chunks
+        stage = "embed"
         embeddings = await embedder.embed_batch([chunk.text for chunk in chunks])
         if len(embeddings) != len(chunks):
             raise ValueError("embedding count mismatch")
 
         # Create chunk records
+        stage = "chunks"
         chunk_models: list[ChunkModel] = []
         for index, chunk in enumerate(chunks):
             chunk_model = ChunkModel(
@@ -349,12 +438,17 @@ async def create_source_from_url(
         await session.flush()
         chunk_ids = [chunk.id for chunk in chunk_models]
 
+        stage = "commit_ready"
         source.status = SourceStatus.READY
+        source.error_code = None
         source.error_message = None
+        source.recovery_hint = None
+        source.last_error_at = None
         await session.commit()
         await session.refresh(source)
 
         # Add to vector store
+        stage = "vector_store"
         await vector_store.add(
             notebook_id=notebook_id,
             source_id=source.id,
@@ -366,21 +460,41 @@ async def create_source_from_url(
         raise
     except Exception as exc:
         await session.rollback()
-        source.status = SourceStatus.FAILED
-        error_detail = str(exc)[:512]
-        source.error_message = error_detail
+        if stage == "embed":
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_EMBEDDING_FAILED,
+                message="向量嵌入失败",
+                recovery_hint="检查 embedding 模型/服务是否可用，或稍后重试。",
+                status_code=503,
+                details=str(exc)[:512],
+            )
+        elif stage == "vector_store":
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_VECTOR_STORE_FAILED,
+                message="写入向量库失败",
+                recovery_hint="检查向量库服务配置与连通性，或稍后重试。",
+                status_code=503,
+                details=str(exc)[:512],
+            )
+        else:
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_INGESTION_FAILED,
+                message="导入失败",
+                recovery_hint="可稍后重试；若持续失败，检查日志或依赖服务状态。",
+                status_code=500,
+                details=str(exc)[:512],
+            )
+        apply_source_failure(source, failure)
         session.add(source)
         await session.commit()
+        await session.refresh(source)
         # Log with Rich exception traceback
         logger.exception(
             "Source ingestion failed for URL",
             url=url,
-            error=error_detail,
+            error=str(exc)[:512],
         )
-        raise HTTPException(
-            status_code=500,
-            detail=f"Ingestion failed: {error_detail}",
-        ) from exc
+        raise_source_failure(failure)
 
     await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
     return _source_to_read(source, chunk_count=len(chunk_models))
@@ -389,8 +503,11 @@ async def create_source_from_url(
 @router.post("", response_model=SourceRead, status_code=status.HTTP_201_CREATED)
 async def upload_source(
     notebook_id: int,
+    response: Response,
     file: UploadFile = File(...),
+    dedup_action: Literal["prompt", "reuse", "create_new"] = "prompt",
     session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     transcriber: TranscriptionProvider = Depends(get_transcription_provider),
     vector_store: VectorStore = Depends(get_vector_store),
@@ -409,20 +526,58 @@ async def upload_source(
     if not raw:
         raise HTTPException(status_code=400, detail="empty document")
 
+    dedup_digest = hashlib.sha256(raw).hexdigest()
+    dedup_key = f"upload:sha256:{dedup_digest}"
+
+    if settings.source_ingestion.dedup.enabled:
+        existing_source = await session.scalar(
+            select(Source)
+            .where(Source.notebook_id == notebook_id, Source.dedup_key == dedup_key)
+            .order_by(Source.created_at.desc())
+        )
+        if existing_source is not None and dedup_action != "create_new":
+            if dedup_action == "reuse":
+                response.status_code = status.HTTP_200_OK
+                chunk_count = await session.scalar(
+                    select(func.count(ChunkModel.id)).where(ChunkModel.source_id == existing_source.id)
+                )
+                tags_by_source = await _load_tag_names_for_sources(session, source_ids=[existing_source.id])
+                return _source_to_read(
+                    existing_source,
+                    chunk_count=int(chunk_count or 0),
+                    tags=tags_by_source.get(existing_source.id, []),
+                )
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error_code": "SOURCE_DEDUP_HIT",
+                    "message": "检测到重复来源",
+                    "details": {
+                        "existing_source_id": existing_source.id,
+                        "existing_filename": existing_source.filename,
+                        "existing_status": existing_source.status.value,
+                        "recovery_hint": "你可以复用已有来源，或选择仍创建新来源。",
+                    },
+                },
+            )
+
     source = Source(
         notebook_id=notebook_id,
         filename=filename,
         mime_type=mime_type,
         parser_type=parser.parser_type,
+        dedup_key=dedup_key,
         status=SourceStatus.PROCESSING,
     )
     session.add(source)
     await session.commit()
     await session.refresh(source)
 
+    stage = "parse"
     try:
         parse_started = perf_counter()
         loop = asyncio.get_running_loop()
+        stage = "parse"
         chunks = await loop.run_in_executor(None, parser.parse, raw)
         parse_time_ms = int((perf_counter() - parse_started) * 1000)
         if not chunks:
@@ -440,10 +595,12 @@ async def upload_source(
             page_count=page_count,
         )
 
+        stage = "embed"
         embeddings = await embedder.embed_batch([chunk.text for chunk in chunks])
         if len(embeddings) != len(chunks):
             raise ValueError("embedding count mismatch")
 
+        stage = "chunks"
         chunk_models: list[ChunkModel] = []
         for index, chunk in enumerate(chunks):
             chunk_model = ChunkModel(
@@ -460,11 +617,16 @@ async def upload_source(
         await session.flush()
         chunk_ids = [chunk.id for chunk in chunk_models]
 
+        stage = "commit_ready"
         source.status = SourceStatus.READY
+        source.error_code = None
         source.error_message = None
+        source.recovery_hint = None
+        source.last_error_at = None
         await session.commit()
         await session.refresh(source)
 
+        stage = "vector_store"
         await vector_store.add(
             notebook_id=notebook_id,
             source_id=source.id,
@@ -476,21 +638,49 @@ async def upload_source(
         raise
     except Exception as exc:
         await session.rollback()
-        source.status = SourceStatus.FAILED
-        error_detail = str(exc)[:512]
-        source.error_message = error_detail
+        if stage == "parse":
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_PARSER_FAILED,
+                message="解析失败",
+                recovery_hint="请检查文件格式与内容，或尝试转换为 TXT/Markdown 后重新上传。",
+                status_code=500,
+                details=str(exc)[:512],
+            )
+        elif stage == "embed":
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_EMBEDDING_FAILED,
+                message="向量嵌入失败",
+                recovery_hint="检查 embedding 模型/服务是否可用，或稍后重试。",
+                status_code=503,
+                details=str(exc)[:512],
+            )
+        elif stage == "vector_store":
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_VECTOR_STORE_FAILED,
+                message="写入向量库失败",
+                recovery_hint="检查向量库服务配置与连通性，或稍后重试。",
+                status_code=503,
+                details=str(exc)[:512],
+            )
+        else:
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_INGESTION_FAILED,
+                message="导入失败",
+                recovery_hint="可稍后重试；若持续失败，检查日志或依赖服务状态。",
+                status_code=500,
+                details=str(exc)[:512],
+            )
+        apply_source_failure(source, failure)
         session.add(source)
         await session.commit()
+        await session.refresh(source)
         # Log with Rich exception traceback
         logger.exception(
             "Source upload ingestion failed",
             filename=file.filename,
-            error=error_detail,
+            error=str(exc)[:512],
         )
-        raise HTTPException(
-            status_code=500,
-            detail=f"Ingestion failed: {error_detail}",
-        ) from exc
+        raise_source_failure(failure)
 
     await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
     return _source_to_read(source, chunk_count=len(chunk_ids))

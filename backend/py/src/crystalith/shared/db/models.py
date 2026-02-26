@@ -193,13 +193,17 @@ class Source(AsyncSqlATableBase):
         sa.JSON,
         nullable=True,
     )
+    dedup_key: Mapped[str | None] = mapped_column(sa.String(128), nullable=True)
 
     status: Mapped[SourceStatus] = mapped_column(
         sa.Enum(SourceStatus, name="source_status", values_callable=_enum_values),
         nullable=False,
         server_default=sa.text(f"'{SourceStatus.PROCESSING.value}'"),
     )
+    error_code: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
     error_message: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    recovery_hint: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    last_error_at: Mapped[datetime.datetime | None] = mapped_column(sa.DateTime, nullable=True)
 
     created_at: Mapped[datetime.datetime] = mapped_column(
         sa.DateTime,
@@ -237,7 +241,10 @@ class Source(AsyncSqlATableBase):
         viewonly=True,
     )
 
-    __table_args__ = (sa.Index("ix_sources_notebook_id_status", "notebook_id", "status"),)
+    __table_args__ = (
+        sa.Index("ix_sources_notebook_id_status", "notebook_id", "status"),
+        sa.Index("ix_sources_notebook_id_dedup_key", "notebook_id", "dedup_key"),
+    )
 
 
 class Chunk(AsyncSqlATableBase):

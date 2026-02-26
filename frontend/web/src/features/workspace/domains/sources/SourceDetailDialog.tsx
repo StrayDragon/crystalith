@@ -498,6 +498,55 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
           <TabsBody className="flex-1 min-h-0 overflow-hidden">
             {/* Overview Tab - Summary + QA combined */}
             <TabPanel value="overview" className="p-0 h-full flex flex-col overflow-hidden">
+              {source.statusTone === 'FAILED' && (source.errorMessage || source.recoveryHint || source.errorCode) ? (
+                <div className="mx-4 mt-4 mb-2 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-3 py-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <Typography variant="small" className="text-xs font-semibold text-red-700 dark:text-red-300">
+                        来源处理失败
+                      </Typography>
+                      {source.errorCode ? (
+                        <Typography variant="small" className="mt-1 text-[11px] text-red-700 dark:text-red-300">
+                          错误码：<span className="font-mono">{source.errorCode}</span>
+                        </Typography>
+                      ) : null}
+                      {source.errorMessage ? (
+                        <Typography variant="small" className="mt-1 text-[11px] text-red-700 dark:text-red-300">
+                          原因：{source.errorMessage}
+                        </Typography>
+                      ) : null}
+                      {source.recoveryHint ? (
+                        <Typography variant="small" className="mt-1 text-[11px] text-red-700 dark:text-red-300">
+                          修复建议：{source.recoveryHint}
+                        </Typography>
+                      ) : null}
+                      {source.lastErrorAt ? (
+                        <Typography variant="small" className="mt-1 text-[11px] text-red-600/80 dark:text-red-300/80">
+                          发生时间：{new Date(source.lastErrorAt).toLocaleString('zh-CN')}
+                        </Typography>
+                      ) : null}
+                    </div>
+                    <IconButton
+                      variant="text"
+                      size="sm"
+                      onClick={async () => {
+                        const text = [
+                          source.errorCode ? `错误码: ${source.errorCode}` : null,
+                          source.errorMessage ? `原因: ${source.errorMessage}` : null,
+                          source.recoveryHint ? `修复建议: ${source.recoveryHint}` : null,
+                        ].filter(Boolean).join('\n');
+                        const ok = await copyToClipboard(text);
+                        if (ok) toast.success('已复制失败信息');
+                        else toast.error('复制失败');
+                      }}
+                      className="rounded-full text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50"
+                      aria-label="复制失败信息"
+                    >
+                      <ContentCopyIcon className="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                </div>
+              ) : null}
               {/* Summary Section - Collapsible */}
               <div className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
                 <div
