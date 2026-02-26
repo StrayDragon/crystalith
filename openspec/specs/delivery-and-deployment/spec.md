@@ -14,6 +14,10 @@
 ### Requirement: Deployments directory is canonical
 仓库 MUST 以 `deployments/` 作为部署清单根目录，并包含 `deployments/prod/`。
 
+#### Scenario: Locate production manifests
+- **WHEN** 新操作者在仓库中寻找生产部署入口
+- **THEN** 系统 SHALL 在 `deployments/` 下提供清晰的清单与 `deployments/prod/` 目录
+
 ### Requirement: Production stack is runnable from layered prod manifests
 `deployments/prod` MUST 提供可一键启动的生产栈配置，且该配置 MUST 将 `frontend` 与 `backend` 定义为核心必选服务；任何附加服务 MUST 通过 profile 或等价组合开关显式启用。
 规范术语与 Compose 服务名映射 MUST 固定为：`frontend -> web`，`backend -> api`。
@@ -25,8 +29,16 @@
 ### Requirement: Stateful services persist data
 有状态服务 MUST 使用 volume 持久化，容器重建后数据不丢失。
 
+#### Scenario: Recreate containers without data loss
+- **WHEN** 有状态服务容器被重建或升级
+- **THEN** 系统 SHALL 通过 volume 保持数据不丢失
+
 ### Requirement: Runtime images are optimized and non-root
 生产镜像 MUST 使用多阶段构建且以非 root 用户运行。
+
+#### Scenario: Runtime container does not run as root
+- **WHEN** 运维检查生产容器运行用户
+- **THEN** 生产镜像 SHALL 以非 root 用户运行并保持最小运行时体积
 
 ### Requirement: Optional offline Ollama composition is supported
 生产 compose MUST 支持可选本地 Ollama 组合（overlay 或 `ollama` profile），且在未启用该可选组合时 MUST 允许使用外部 Ollama 或其他 embedding/chat 提供方，不得强制绑定本地 Ollama 容器。
