@@ -61,6 +61,8 @@ Full composition smoke:
 just composition-smoke
 # or:
 SMOKE_SCENARIOS="core-only single-optional" ./scripts/composition_smoke.sh
+# optional: clean compose volumes during reset
+SMOKE_PRUNE_VOLUMES=1 ./scripts/composition_smoke.sh
 ```
 
 Manual checks:

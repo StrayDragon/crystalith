@@ -136,7 +136,7 @@ def _probe_http_endpoint(
     try:
         with httpx.Client(timeout=max(0.1, timeout_s), follow_redirects=True) as client:
             response = client.get(target)
-        if response.status_code < 500:
+        if 200 <= response.status_code < 300:
             return True, None
         return False, f"HTTP {response.status_code}"
     except Exception as exc:  # noqa: BLE001 - endpoint-specific failures are expected
@@ -598,7 +598,12 @@ def create_app(
     @app.get("/health/dependencies", include_in_schema=False)
     async def dependency_health() -> dict[str, Any]:
         has_legacy_ollama_state = bool(getattr(app.state, "ollama_hosts_status", {}) or {})
-        if getattr(app.state, "optional_services_last_probe", None) is None and not has_legacy_ollama_state:
+        monitor_enabled = _env_bool("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED", True)
+        needs_refresh = (
+            not monitor_enabled
+            or (getattr(app.state, "optional_services_last_probe", None) is None and not has_legacy_ollama_state)
+        )
+        if needs_refresh:
             try:
                 await _refresh_optional_services_status(
                     app,

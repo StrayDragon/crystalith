@@ -8,6 +8,7 @@ ENV_FILE="${ENV_FILE:-.env}"
 WEB_PORT="${CL_WEB_PORT:-8080}"
 BASE_URL="http://localhost:${WEB_PORT}"
 SKIP_BUILD="${SKIP_BUILD:-0}"
+SMOKE_PRUNE_VOLUMES="${SMOKE_PRUNE_VOLUMES:-0}"
 EXTERNAL_OLLAMA_HOST="${EXTERNAL_OLLAMA_HOST:-http://host.docker.internal:11434}"
 
 CORE_FILE="deployments/prod/docker-compose.yml"
@@ -37,6 +38,11 @@ compose_core_redis() {
 }
 
 compose_reset() {
+  local down_args=(down --remove-orphans)
+  if [[ "$SMOKE_PRUNE_VOLUMES" == "1" ]]; then
+    down_args+=(-v)
+  fi
+
   compose \
     -f "$CORE_FILE" \
     -f "$STORAGE_FILE" \
@@ -44,7 +50,7 @@ compose_reset() {
     -f "$OLLAMA_FILE" \
     -f "$SLIDEV_FILE" \
     -f "$HOST_REMAP_FILE" \
-    down --remove-orphans -v >/dev/null 2>&1 || true
+    "${down_args[@]}" >/dev/null 2>&1 || true
 }
 
 up_flags=(-d)
