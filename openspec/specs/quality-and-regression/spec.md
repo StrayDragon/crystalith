@@ -8,9 +8,7 @@
 
 - 不定义具体业务功能
 - 不定义部署拓扑
-
 ## Requirements
-
 ### Requirement: CI runs on push and pull_request
 CI MUST 在 push/PR 触发并提供可见状态检查。
 
