@@ -6,10 +6,13 @@ import { renderHook } from '../../../../test-utils/renderHook';
 import { toast } from '../../../../shared/toast';
 import { useExport } from './useExport';
 
-const toastMock = vi.mocked(toast);
-
 const writeFileMock = vi.fn(async (_options: { fileName: string }) => undefined);
+let toastSuccessSpy: ReturnType<typeof vi.spyOn>;
+let toastErrorSpy: ReturnType<typeof vi.spyOn>;
+let toastInfoSpy: ReturnType<typeof vi.spyOn>;
+let toastWarningSpy: ReturnType<typeof vi.spyOn>;
 
+// Mock reason: export libs rely on browser/document internals not available in jsdom.
 vi.mock('jspdf', () => ({
   jsPDF: class JsPdfMock {
     internal = { pageSize: { height: 800 } };
@@ -28,6 +31,7 @@ vi.mock('jspdf', () => ({
   },
 }));
 
+// Mock reason: export libs rely on browser/document internals not available in jsdom.
 vi.mock('pptxgenjs', () => ({
   default: class PptxGenMock {
     layout?: string;
@@ -47,15 +51,6 @@ vi.mock('pptxgenjs', () => ({
   },
 }));
 
-vi.mock('../../../../shared/toast', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-    warning: vi.fn(),
-  },
-}));
-
 function createOutput(type: OutputItem['type'], content: Record<string, unknown>): OutputItem {
   return {
     id: 1,
@@ -69,10 +64,16 @@ function createOutput(type: OutputItem['type'], content: Record<string, unknown>
 }
 
 beforeEach(() => {
-  toastMock.success.mockClear();
-  toastMock.error.mockClear();
-  toastMock.info.mockClear();
-  toastMock.warning.mockClear();
+  // Mock reason: suppress visual toast side effects while asserting notification calls.
+  toastSuccessSpy = vi.spyOn(toast, 'success').mockImplementation(() => {});
+  toastErrorSpy = vi.spyOn(toast, 'error').mockImplementation(() => {});
+  toastInfoSpy = vi.spyOn(toast, 'info').mockImplementation(() => {});
+  toastWarningSpy = vi.spyOn(toast, 'warning').mockImplementation(() => {});
+
+  toastSuccessSpy.mockClear();
+  toastErrorSpy.mockClear();
+  toastInfoSpy.mockClear();
+  toastWarningSpy.mockClear();
   writeFileMock.mockClear();
 
   Object.defineProperty(URL, 'createObjectURL', {
@@ -86,6 +87,7 @@ beforeEach(() => {
 });
 
 test('exports markdown via download and resets state', async () => {
+  // Mock reason: jsdom has no real browser navigation/download pipeline; assert anchor click contract only.
   const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
   const { result } = renderHook(() => useExport());
 
@@ -101,12 +103,13 @@ test('exports markdown via download and resets state', async () => {
     expect(result.current.activeFormat).toBe(null);
   });
 
-  expect(toastMock.success).toHaveBeenCalled();
+  expect(toastSuccessSpy).toHaveBeenCalled();
   expect(clickSpy).toHaveBeenCalled();
   clickSpy.mockRestore();
 });
 
 test('exports pdf and pptx via special exporters', async () => {
+  // Mock reason: jsdom has no real browser navigation/download pipeline; assert anchor click contract only.
   const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
   const { result } = renderHook(() => useExport());
 
@@ -117,7 +120,7 @@ test('exports pdf and pptx via special exporters', async () => {
     );
   });
 
-  expect(toastMock.success).toHaveBeenCalled();
+  expect(toastSuccessSpy).toHaveBeenCalled();
   expect(clickSpy).toHaveBeenCalled();
 
   await act(async () => {

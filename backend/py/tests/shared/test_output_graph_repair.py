@@ -20,6 +20,7 @@ async def test_postprocess_output_runs_repair_when_enabled_and_quality(
 ) -> None:
     import crystalith.shared.agents.output_graph as output_graph_mod
 
+    # Mock reason: env flag is the supported switch for enabling repair flow.
     monkeypatch.setenv(output_graph_mod.OUTPUT_REPAIR_ENV, "1")
     called: dict[str, Any] = {"runs": 0}
 
@@ -37,6 +38,7 @@ async def test_postprocess_output_runs_repair_when_enabled_and_quality(
 
             return type("Result", (), {"output": _Out()})()
 
+    # Mock reason: isolate repair decision logic without invoking real LLM calls.
     monkeypatch.setattr(output_graph_mod, "Agent", _StubAgent)
 
     state = OutputGraphState(
@@ -65,6 +67,7 @@ async def test_postprocess_output_skips_repair_when_speed_preference(
 ) -> None:
     import crystalith.shared.agents.output_graph as output_graph_mod
 
+    # Mock reason: env flag is the supported switch for enabling repair flow.
     monkeypatch.setenv(output_graph_mod.OUTPUT_REPAIR_ENV, "1")
     called: dict[str, Any] = {"runs": 0}
 
@@ -76,6 +79,7 @@ async def test_postprocess_output_skips_repair_when_speed_preference(
             called["runs"] += 1
             raise AssertionError("repair should not run for speed preference")
 
+    # Mock reason: isolate repair gating logic without invoking real LLM calls.
     monkeypatch.setattr(output_graph_mod, "Agent", _StubAgent)
 
     state = OutputGraphState(
@@ -102,12 +106,14 @@ async def test_postprocess_output_skips_repair_for_plugin_schema(
 ) -> None:
     import crystalith.shared.agents.output_graph as output_graph_mod
 
+    # Mock reason: env flag is the supported switch for enabling repair flow.
     monkeypatch.setenv(output_graph_mod.OUTPUT_REPAIR_ENV, "1")
 
     class _StubAgent:
         def __init__(self, model, *, output_type, deps_type, system_prompt, retries):  # noqa: ANN001
             raise AssertionError("repair should not run when plugin schema is used")
 
+    # Mock reason: assert plugin-schema bypass path without invoking real LLM calls.
     monkeypatch.setattr(output_graph_mod, "Agent", _StubAgent)
 
     state = OutputGraphState(
@@ -133,6 +139,7 @@ async def test_postprocess_output_repair_failure_falls_back_to_deterministic(
 ) -> None:
     import crystalith.shared.agents.output_graph as output_graph_mod
 
+    # Mock reason: env flag is the supported switch for enabling repair flow.
     monkeypatch.setenv(output_graph_mod.OUTPUT_REPAIR_ENV, "1")
 
     class _StubAgent:
@@ -142,6 +149,7 @@ async def test_postprocess_output_repair_failure_falls_back_to_deterministic(
         async def run(self, user_prompt: str, deps: Any):  # noqa: ANN001
             raise RuntimeError("boom")
 
+    # Mock reason: force repair failure branch without invoking real LLM calls.
     monkeypatch.setattr(output_graph_mod, "Agent", _StubAgent)
 
     state = OutputGraphState(

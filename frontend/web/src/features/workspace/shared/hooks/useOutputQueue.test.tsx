@@ -1,26 +1,22 @@
 import { act, waitFor } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
-import useSWR from 'swr';
+import { SWRConfig } from 'swr';
+import type { ReactNode } from 'react';
+import { delay, http, HttpResponse } from 'msw';
 
 import { renderHook } from '../../../../test-utils/renderHook';
+import { server } from '../../../../test-utils/msw/server';
 import { useWorkspaceStore } from '../state/workspaceStore';
 import { useOutputQueue } from './useOutputQueue';
-import { createOutputV1NotebooksNotebookIdOutputsOutputTypePost as createOutput } from '../../../../api/generated';
 import { GENERATION_PREFERENCE_STORAGE_KEY } from './useGenerationPreference';
 
-vi.mock('swr', () => ({
-  default: vi.fn(),
-}));
-
-vi.mock('../../../../api/generated', () => ({
-  createOutputV1NotebooksNotebookIdOutputsOutputTypePost: vi.fn(),
-  createDraftV1NotebooksNotebookIdSlidesDraftsPost: vi.fn(),
-  deleteOutputV1NotebooksNotebookIdOutputsOutputIdDelete: vi.fn(),
-  getOutputV1NotebooksNotebookIdOutputsOutputIdGet: vi.fn(),
-  listOutputsV1NotebooksNotebookIdOutputsGet: vi.fn(),
-}));
-
-const swrMock = vi.mocked(useSWR);
+function wrapSWR({ children }: { children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, revalidateOnFocus: false }}>
+      {children}
+    </SWRConfig>
+  );
+}
 
 const onQueueReset = vi.fn();
 const onQueueTotal = vi.fn();
@@ -30,7 +26,6 @@ const markJobCompleted = vi.fn();
 beforeEach(() => {
   window.localStorage.removeItem(GENERATION_PREFERENCE_STORAGE_KEY);
 
-  // Reset Zustand store
   useWorkspaceStore.setState({
     notebooks: [],
     activeNotebookId: null,
@@ -61,13 +56,9 @@ beforeEach(() => {
     errors: { notebooks: '', sources: '', sessions: '', messages: '', outputs: '', send: '', create: '' },
   });
 
-  swrMock.mockReturnValue({
-    data: undefined,
-    error: null,
-    isLoading: false,
-    isValidating: false,
-    mutate: vi.fn(),
-  });
+  server.use(
+    http.get('*/v1/notebooks/:notebook_id/outputs', () => HttpResponse.json([])),
+  );
 
   onQueueReset.mockClear();
   onQueueTotal.mockClear();
@@ -102,21 +93,25 @@ function useOutputQueueHarness({ isConnected }: { isConnected: boolean }) {
 }
 
 test('enqueueOutputJob processes and updates outputs', async () => {
-  vi.mocked(createOutput).mockResolvedValue({
-    data: {
-      id: 10,
-      type: 'FAQ',
-      prompt: 'hello',
-      chunk_ids: [1],
-      content: {},
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
-    },
-  } as any);
+  let capturedBody: Record<string, unknown> | null = null;
+  server.use(
+    http.post('*/v1/notebooks/:notebook_id/outputs/:output_type', async ({ request }) => {
+      capturedBody = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({
+        id: 10,
+        type: 'FAQ',
+        prompt: 'hello',
+        chunk_ids: [1],
+        content: {},
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      });
+    }),
+  );
 
   setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
   const { result } = renderHook(() =>
-    useOutputQueueHarness({ isConnected: true }),
+    useOutputQueueHarness({ isConnected: true }), { wrapper: wrapSWR },
   );
 
   act(() => {
@@ -135,34 +130,33 @@ test('enqueueOutputJob processes and updates outputs', async () => {
     expect(useWorkspaceStore.getState().outputs).toHaveLength(1);
   });
 
-  expect(createOutput).toHaveBeenCalledWith({
-    path: { notebook_id: 1, output_type: 'FAQ' },
-    body: {
-      prompt: 'hello',
-      source_ids: [1],
-      model_id: undefined,
-    },
-    signal: expect.any(AbortSignal),
+  expect(capturedBody).toEqual({
+    prompt: 'hello',
+    source_ids: [1],
   });
 });
 
 test('enqueueOutputJob propagates generation preference', async () => {
   window.localStorage.setItem(GENERATION_PREFERENCE_STORAGE_KEY, 'speed');
 
-  vi.mocked(createOutput).mockResolvedValue({
-    data: {
-      id: 12,
-      type: 'FAQ',
-      prompt: 'hello',
-      chunk_ids: [1],
-      content: {},
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
-    },
-  } as any);
+  let capturedBody: Record<string, unknown> | null = null;
+  server.use(
+    http.post('*/v1/notebooks/:notebook_id/outputs/:output_type', async ({ request }) => {
+      capturedBody = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({
+        id: 12,
+        type: 'FAQ',
+        prompt: 'hello',
+        chunk_ids: [1],
+        content: {},
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      });
+    }),
+  );
 
   setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
-  const { result } = renderHook(() => useOutputQueueHarness({ isConnected: true }));
+  const { result } = renderHook(() => useOutputQueueHarness({ isConnected: true }), { wrapper: wrapSWR });
 
   act(() => {
     result.current.enqueueOutputJob({
@@ -176,46 +170,34 @@ test('enqueueOutputJob propagates generation preference', async () => {
     expect(result.current.outputQueueJobs[0].status).toBe('done');
   });
 
-  expect(createOutput).toHaveBeenCalledWith({
-    path: { notebook_id: 1, output_type: 'FAQ' },
-    body: {
-      prompt: 'hello',
-      source_ids: [1],
-      preference: 'speed',
-      model_id: undefined,
-    },
-    signal: expect.any(AbortSignal),
+  expect(capturedBody).toEqual({
+    prompt: 'hello',
+    source_ids: [1],
+    preference: 'speed',
   });
 });
 
 test('cancelOutputJob aborts running output job', async () => {
   vi.useFakeTimers();
   try {
-    vi.mocked(createOutput).mockImplementation((({ signal }: any) =>
-      new Promise((resolve, reject) => {
-        signal.addEventListener('abort', () => {
-          const error = new Error('aborted');
-          error.name = 'AbortError';
-          reject(error);
+    server.use(
+      http.post('*/v1/notebooks/:notebook_id/outputs/:output_type', async () => {
+        await delay(200);
+        return HttpResponse.json({
+          id: 11,
+          type: 'FAQ',
+          prompt: 'hello',
+          chunk_ids: [1],
+          content: {},
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
         });
-        setTimeout(() => {
-          resolve({
-            data: {
-              id: 11,
-              type: 'FAQ',
-              prompt: 'hello',
-              chunk_ids: [1],
-              content: {},
-              created_at: '2024-01-01T00:00:00Z',
-              updated_at: '2024-01-01T00:00:00Z',
-            },
-          } as any);
-        }, 200);
-      })) as any);
+      }),
+    );
 
     setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
     const { result } = renderHook(() =>
-      useOutputQueueHarness({ isConnected: true }),
+      useOutputQueueHarness({ isConnected: true }), { wrapper: wrapSWR },
     );
 
     const flushUntil = async (predicate: () => boolean) => {
@@ -255,7 +237,7 @@ test('cancelOutputJob aborts running output job', async () => {
 test('enqueueOutputJob returns null when no sources selected', async () => {
   setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
   const { result } = renderHook(() =>
-    useOutputQueueHarness({ isConnected: true }),
+    useOutputQueueHarness({ isConnected: true }), { wrapper: wrapSWR },
   );
 
   let created: any = null;
@@ -274,7 +256,7 @@ test('enqueueOutputJob returns null when no sources selected', async () => {
 test('enqueueSlidesJob returns null when disconnected', async () => {
   setWorkspaceStateForOutputQueue({ isConnected: false, activeNotebookId: 1 });
   const { result } = renderHook(() =>
-    useOutputQueueHarness({ isConnected: false }),
+    useOutputQueueHarness({ isConnected: false }), { wrapper: wrapSWR },
   );
 
   let created: any = null;

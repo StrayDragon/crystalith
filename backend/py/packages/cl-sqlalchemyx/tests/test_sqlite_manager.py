@@ -104,6 +104,7 @@ async def test_health_check_false(monkeypatch: pytest.MonkeyPatch, db_manager: A
     def bad_session(_self: Any) -> BadCtx:  # type: ignore[no-redef]
         return BadCtx()
 
+    # Mock reason: force session acquisition failure to validate health-check fallback behavior.
     monkeypatch.setattr(db_manager, "got_manual_session", bad_session, raising=False)
     assert await db_manager.health_check() is False
 
@@ -173,6 +174,7 @@ async def test_configured_session_autocommit_true_commits(monkeypatch: pytest.Mo
         async def fake_commit() -> None:  # type: ignore[unused-argument]
             called["commit"] += 1
 
+        # Mock reason: capture commit side effect count without real DB side effects.
         monkeypatch.setattr(session, "commit", fake_commit, raising=False)
 
         async with async_configured_session_temporarily(session, autocommit=True):
@@ -192,6 +194,7 @@ async def test_configured_session_exception_triggers_rollback_and_restore(
         async def fake_rollback() -> None:  # type: ignore[unused-argument]
             called["rollback"] += 1
 
+        # Mock reason: capture rollback side effect count without real DB side effects.
         monkeypatch.setattr(session, "rollback", fake_rollback, raising=False)
 
         with pytest.raises(RuntimeError):

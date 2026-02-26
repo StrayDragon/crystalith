@@ -5,6 +5,7 @@ import type { OutputItem } from '../../shared/types';
 import OutputContent from './OutputContent';
 import { useExport } from './useExport';
 
+// Mock reason: isolate OutputContent menu/dispatch behavior from export implementation side effects.
 vi.mock('./useExport', () => ({
   useExport: vi.fn(),
 }));

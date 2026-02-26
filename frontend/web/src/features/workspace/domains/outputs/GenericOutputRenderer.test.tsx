@@ -148,6 +148,7 @@ test('falls back to JSON when render_descriptor is missing', () => {
 });
 
 test('falls back to JSON for unsupported layout and logs warning', () => {
+  // Mock reason: silence expected warning output while asserting unsupported layout fallback.
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   render(
     <GenericOutputRenderer

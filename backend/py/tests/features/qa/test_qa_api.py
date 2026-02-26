@@ -415,6 +415,7 @@ async def test_qa_stream_disconnect_skips_persistence(client, db_session, app, m
     async def always_disconnected(_self: Request) -> bool:
         return True
 
+    # Mock reason: deterministically force disconnect state to validate stream interruption handling.
     monkeypatch.setattr(Request, "is_disconnected", always_disconnected)
 
     async with client.stream(

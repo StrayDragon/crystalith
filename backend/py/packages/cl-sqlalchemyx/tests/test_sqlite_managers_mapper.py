@@ -78,6 +78,7 @@ async def test_managers_mapper_health_check_failure(monkeypatch: pytest.MonkeyPa
     async def bad_health_check() -> bool:
         raise RuntimeError("health check failed")
 
+    # Mock reason: force manager failure path to validate aggregate health-check handling.
     monkeypatch.setattr(manager, "health_check", bad_health_check, raising=False)
     try:
         results = await mapper.health_check()

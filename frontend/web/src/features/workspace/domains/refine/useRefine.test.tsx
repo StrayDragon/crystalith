@@ -1,17 +1,16 @@
 import { act, waitFor } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
-import useSWR from 'swr';
+import { SWRConfig } from 'swr';
+import type { ReactNode } from 'react';
+import { http, HttpResponse } from 'msw';
 
 import { renderHook } from '../../../../test-utils/renderHook';
+import { server } from '../../../../test-utils/msw/server';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { REFINE_TEMPLATES } from './data/refineTemplates';
 import { useRefine } from './useRefine';
-import { refineBatchV1NotebooksNotebookIdRefineBatchPost as refineBatch } from '../../../../api/generated';
 
-vi.mock('swr', () => ({
-  default: vi.fn(),
-}));
-
+// Mock reason: isolate refine job behavior from independent output queue scheduler lifecycle.
 vi.mock('../../shared/hooks/useOutputQueue', () => ({
   useOutputQueue: () => ({
     outputQueueJobs: [],
@@ -29,15 +28,15 @@ vi.mock('../../shared/hooks/useOutputQueue', () => ({
   }),
 }));
 
-vi.mock('../../../../api/generated', () => ({
-  listWorkspaceToolsV1WorkspaceToolsGet: vi.fn(),
-  refineBatchV1NotebooksNotebookIdRefineBatchPost: vi.fn(),
-}));
-
-const swrMock = vi.mocked(useSWR);
+function wrapSWR({ children }: { children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, revalidateOnFocus: false }}>
+      {children}
+    </SWRConfig>
+  );
+}
 
 beforeEach(() => {
-  // Reset Zustand store
   useWorkspaceStore.setState({
     notebooks: [],
     activeNotebookId: null,
@@ -68,17 +67,13 @@ beforeEach(() => {
     errors: { notebooks: '', sources: '', sessions: '', messages: '', outputs: '', send: '', create: '' },
   });
 
-  swrMock.mockReturnValue({
-    data: { tools: [] },
-    error: null,
-    isLoading: false,
-    isValidating: false,
-    mutate: vi.fn(),
-  } as any);
+  server.use(
+    http.get('*/v1/workspace/tools', () => HttpResponse.json({ tools: [] })),
+  );
 });
 
 test('sets default refine prompt when empty', async () => {
-  const { result } = renderHook(() => useRefine());
+  const { result } = renderHook(() => useRefine(), { wrapper: wrapSWR });
 
   await waitFor(() => {
     expect(result.current.refinePrompt).toBe(REFINE_TEMPLATES[0].prompt);
@@ -86,12 +81,18 @@ test('sets default refine prompt when empty', async () => {
 });
 
 test('onGenerateRefine enqueues job with selected source ids', async () => {
-  vi.mocked(refineBatch).mockResolvedValue({
-    outputs: { paragraph: { paragraph: 'Answer', bullets: [], structured: null } },
-    citations: [{ chunk_id: 9, chunk_index: 1, source_name: 'Doc', snippet: 'S' }],
-  } as any);
+  let capturedBody: Record<string, unknown> | null = null;
+  server.use(
+    http.post('*/v1/notebooks/:notebook_id/refine/batch', async ({ request }) => {
+      capturedBody = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({
+        outputs: { paragraph: { paragraph: 'Answer', bullets: [], structured: null } },
+        citations: [{ chunk_id: 9, chunk_index: 1, source_name: 'Doc', snippet: 'S' }],
+      });
+    }),
+  );
 
-  const { result } = renderHook(() => useRefine());
+  const { result } = renderHook(() => useRefine(), { wrapper: wrapSWR });
 
   act(() => {
     const s = useWorkspaceStore.getState();
@@ -111,14 +112,9 @@ test('onGenerateRefine enqueues job with selected source ids', async () => {
 
   expect(result.current.refineJobs[0].sourceIds).toEqual([101, 102]);
   expect(useWorkspaceStore.getState().activePanel).toBe('refine');
-  await waitFor(() => {
-    expect(refineBatch).toHaveBeenCalledWith({
-      path: { notebook_id: 1 },
-      body: {
-        prompt: '提炼核心结论',
-        formats: expect.any(Array),
-        source_ids: [101, 102],
-      },
-    });
+  expect(capturedBody).toEqual({
+    prompt: '提炼核心结论',
+    formats: expect.any(Array),
+    source_ids: [101, 102],
   });
 });

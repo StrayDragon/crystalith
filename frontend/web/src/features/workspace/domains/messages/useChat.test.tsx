@@ -1,37 +1,24 @@
 import { act, waitFor } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
-import useSWR from 'swr';
+import { SWRConfig } from 'swr';
+import type { ReactNode } from 'react';
+import { http, HttpResponse } from 'msw';
 
 import { renderHook } from '../../../../test-utils/renderHook';
+import { server } from '../../../../test-utils/msw/server';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { useChat } from './useChat';
-import { askQuestionV1NotebooksNotebookIdQaPost as askQuestion } from '../../../../api/generated';
 import { client } from '../../../../api/generated/client.gen';
 
-vi.mock('swr', () => ({
-  default: vi.fn(),
-}));
-
-vi.mock('../../../../api/generated', () => ({
-  askQuestionV1NotebooksNotebookIdQaPost: vi.fn(),
-  convertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPost: vi.fn(),
-  convertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePost: vi.fn(),
-  listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet: vi.fn(),
-}));
-
-vi.mock('../../../../api/generated/client.gen', () => ({
-  client: {
-    sse: {
-      post: vi.fn(),
-    },
-  },
-}));
-
-const swrMock = vi.mocked(useSWR);
-const ssePostMock = vi.mocked(client.sse.post);
+function wrapSWR({ children }: { children: ReactNode }) {
+  return (
+    <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, revalidateOnFocus: false }}>
+      {children}
+    </SWRConfig>
+  );
+}
 
 beforeEach(() => {
-  // Reset Zustand store
   useWorkspaceStore.setState({
     notebooks: [],
     activeNotebookId: null,
@@ -62,21 +49,15 @@ beforeEach(() => {
     errors: { notebooks: '', sources: '', sessions: '', messages: '', outputs: '', send: '', create: '' },
   });
 
-  swrMock.mockReturnValue({
-    data: undefined,
-    error: null,
-    isLoading: false,
-    isValidating: false,
-    mutate: vi.fn(),
-  });
-
-  ssePostMock.mockReset();
+  server.use(
+    http.get('*/v1/notebooks/:notebook_id/sessions/:session_id/messages', () => HttpResponse.json([])),
+  );
 });
 
 test('sendMessage returns error when no notebook is active', async () => {
   const ensureSession = vi.fn().mockResolvedValue(1);
   const { result } = renderHook(() =>
-    useChat({ ensureSession, enableStreaming: false }),
+    useChat({ ensureSession, enableStreaming: false }), { wrapper: wrapSWR },
   );
 
   act(() => {
@@ -89,22 +70,26 @@ test('sendMessage returns error when no notebook is active', async () => {
   });
 
   expect(result.current.sendError).toBe('请先创建笔记本。');
-  expect(askQuestion).not.toHaveBeenCalled();
+  expect(result.current.messages).toHaveLength(0);
 });
 
 test('sendMessage non-streaming path stores assistant message and citations', async () => {
-  vi.mocked(askQuestion).mockResolvedValue({
-    data: {
-      answer: 'Answer',
-      citations: [
-        { chunk_id: 5, chunk_index: 1, source_name: 'Doc', snippet: 'S' },
-      ],
-    },
-  } as any);
+  let capturedBody: Record<string, unknown> | null = null;
+  server.use(
+    http.post('*/v1/notebooks/:notebook_id/qa', async ({ request }) => {
+      capturedBody = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({
+        answer: 'Answer',
+        citations: [
+          { chunk_id: 5, chunk_index: 1, source_name: 'Doc', snippet: 'S' },
+        ],
+      });
+    }),
+  );
 
   const ensureSession = vi.fn().mockResolvedValue(123);
   const { result } = renderHook(() =>
-    useChat({ ensureSession, enableStreaming: false }),
+    useChat({ ensureSession, enableStreaming: false }), { wrapper: wrapSWR },
   );
 
   act(() => {
@@ -125,29 +110,29 @@ test('sendMessage non-streaming path stores assistant message and citations', as
   const assistant = result.current.messages[1];
   expect(assistant.content).toBe('Answer');
   expect(result.current.citations).toHaveLength(1);
-  expect(askQuestion).toHaveBeenCalledWith({
-    path: { notebook_id: 1 },
-    body: {
-      question: 'Hello',
-      session_id: 123,
-      source_ids: undefined,
-    },
+  expect(capturedBody).toEqual({
+    question: 'Hello',
+    session_id: 123,
   });
 });
 
 test('sendMessage passes selected source ids', async () => {
-  vi.mocked(askQuestion).mockResolvedValue({
-    data: {
-      answer: 'Answer',
-      citations: [
-        { chunk_id: 5, chunk_index: 1, source_name: 'Doc', snippet: 'S' },
-      ],
-    },
-  } as any);
+  let capturedBody: Record<string, unknown> | null = null;
+  server.use(
+    http.post('*/v1/notebooks/:notebook_id/qa', async ({ request }) => {
+      capturedBody = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({
+        answer: 'Answer',
+        citations: [
+          { chunk_id: 5, chunk_index: 1, source_name: 'Doc', snippet: 'S' },
+        ],
+      });
+    }),
+  );
 
   const ensureSession = vi.fn().mockResolvedValue(456);
   const { result } = renderHook(() =>
-    useChat({ ensureSession, enableStreaming: false }),
+    useChat({ ensureSession, enableStreaming: false }), { wrapper: wrapSWR },
   );
 
   act(() => {
@@ -162,27 +147,28 @@ test('sendMessage passes selected source ids', async () => {
     await result.current.sendMessage();
   });
 
-  expect(askQuestion).toHaveBeenCalledWith({
-    path: { notebook_id: 1 },
-    body: {
-      question: 'Hello',
-      session_id: 456,
-      source_ids: [101, 102],
-    },
+  expect(capturedBody).toEqual({
+    question: 'Hello',
+    session_id: 456,
+    source_ids: [101, 102],
   });
 });
 
 test('sendMessage uses selected source ids when provided', async () => {
-  vi.mocked(askQuestion).mockResolvedValue({
-    data: {
-      answer: 'Answer',
-      citations: [],
-    },
-  } as any);
+  let capturedBody: Record<string, unknown> | null = null;
+  server.use(
+    http.post('*/v1/notebooks/:notebook_id/qa', async ({ request }) => {
+      capturedBody = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({
+        answer: 'Answer',
+        citations: [],
+      });
+    }),
+  );
 
   const ensureSession = vi.fn().mockResolvedValue(789);
   const { result } = renderHook(() =>
-    useChat({ ensureSession, enableStreaming: false }),
+    useChat({ ensureSession, enableStreaming: false }), { wrapper: wrapSWR },
   );
 
   act(() => {
@@ -207,17 +193,16 @@ test('sendMessage uses selected source ids when provided', async () => {
     await result.current.sendMessage();
   });
 
-  expect(askQuestion).toHaveBeenCalledWith({
-    path: { notebook_id: 1 },
-    body: {
-      question: 'Hello',
-      session_id: 789,
-      source_ids: [101],
-    },
+  expect(capturedBody).toEqual({
+    question: 'Hello',
+    session_id: 789,
+    source_ids: [101],
   });
 });
 
 test('stopStreaming aborts active stream generation', async () => {
+  // Mock reason: streaming abort/flush lifecycle is hard to deterministically emulate with fetch SSE in jsdom.
+  const ssePostMock = vi.spyOn(client.sse, 'post');
   let capturedSignal: AbortSignal | undefined;
 
   ssePostMock.mockImplementation(async ({ signal }: any) => {
@@ -233,7 +218,7 @@ test('stopStreaming aborts active stream generation', async () => {
 
   const ensureSession = vi.fn().mockResolvedValue(1001);
   const { result } = renderHook(() =>
-    useChat({ ensureSession, enableStreaming: true }),
+    useChat({ ensureSession, enableStreaming: true }), { wrapper: wrapSWR },
   );
 
   act(() => {
@@ -262,4 +247,6 @@ test('stopStreaming aborts active stream generation', async () => {
   await waitFor(() => {
     expect(result.current.isStreaming).toBe(false);
   });
+
+  ssePostMock.mockRestore();
 });

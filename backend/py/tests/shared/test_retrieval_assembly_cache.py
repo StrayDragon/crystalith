@@ -13,6 +13,7 @@ from crystalith.shared.vector_storage import InMemoryVectorStore
 
 @pytest.mark.asyncio
 async def test_retrieve_context_assembly_cache_hits(db_session, test_settings, monkeypatch) -> None:
+    # Mock reason: env flags are the public switch for assembly cache behavior in retrieval.
     monkeypatch.setenv("CRYSTALITH_RETRIEVAL_ASSEMBLY_CACHE", "1")
     monkeypatch.setenv("CRYSTALITH_RETRIEVAL_ASSEMBLY_CACHE_TTL_S", "1")
 
@@ -79,6 +80,7 @@ async def test_retrieve_context_assembly_cache_hits(db_session, test_settings, m
 
 @pytest.mark.asyncio
 async def test_retrieve_context_assembly_cache_ttl_expires(db_session, test_settings, monkeypatch) -> None:
+    # Mock reason: env flags are the public switch for assembly cache behavior in retrieval.
     monkeypatch.setenv("CRYSTALITH_RETRIEVAL_ASSEMBLY_CACHE", "1")
     monkeypatch.setenv("CRYSTALITH_RETRIEVAL_ASSEMBLY_CACHE_TTL_S", "0.01")
 
@@ -87,6 +89,7 @@ async def test_retrieve_context_assembly_cache_ttl_expires(db_session, test_sett
     def _monotonic() -> float:
         return now
 
+    # Mock reason: deterministic monotonic clock control for TTL expiry assertions.
     monkeypatch.setattr("crystalith.shared.cache.in_memory.time.monotonic", _monotonic)
 
     notebook = Notebook(name="cache-ttl")

@@ -58,6 +58,7 @@ let mediaController = createMatchMediaController(false);
 
 beforeEach(() => {
   mediaController = createMatchMediaController(false);
+  // Mock reason: control system theme change events deterministically in jsdom.
   vi.spyOn(window, 'matchMedia').mockImplementation(() => mediaController.mediaQueryList);
   window.localStorage.clear();
   document.documentElement.className = 'h-full';

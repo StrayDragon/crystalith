@@ -114,6 +114,7 @@ async def test_extractor_factory_falls_back_to_jina_when_trafilatura_fails(monke
     markdown = "# Title\n\nFallback content."
 
     with _serve_http(markdown) as (base_url, capture):
+        # Mock reason: redirect extractor network target to local stub server for deterministic behavior.
         monkeypatch.setattr(JinaReaderExtractor, "BASE_URL", base_url)
         settings = WebExtractionSettings(
             trafilatura={"enabled": True},
@@ -137,6 +138,7 @@ async def test_extractor_factory_respects_preferred_extractor(monkeypatch: pytes
     markdown = "# Preferred\n\nJina wins."
 
     with _serve_http(markdown) as (base_url, _capture):
+        # Mock reason: redirect extractor network target to local stub server for deterministic behavior.
         monkeypatch.setattr(JinaReaderExtractor, "BASE_URL", base_url)
         settings = WebExtractionSettings(
             trafilatura={"enabled": True},

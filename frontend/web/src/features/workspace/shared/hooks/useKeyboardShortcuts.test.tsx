@@ -129,6 +129,7 @@ test('supports allowInInput shortcuts like Ctrl+Enter', () => {
 });
 
 test('detects duplicate shortcut conflicts', () => {
+  // Mock reason: silence expected warning output while asserting duplicate detection behavior.
   const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
   renderHook(() =>

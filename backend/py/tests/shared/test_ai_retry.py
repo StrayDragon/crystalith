@@ -46,6 +46,7 @@ async def test_run_with_retry_respects_retry_after_header(monkeypatch) -> None:
     async def fake_sleep(value: float) -> None:
         sleeps.append(value)
 
+    # Mock reason: avoid real delay while asserting backoff timing behavior.
     monkeypatch.setattr(asyncio, "sleep", fake_sleep)
 
     attempts = 0
@@ -69,6 +70,7 @@ async def test_run_with_retry_respects_total_timeout_budget(monkeypatch) -> None
     async def fake_sleep(value: float) -> None:
         sleeps.append(value)
 
+    # Mock reason: avoid real delay while asserting timeout budget behavior.
     monkeypatch.setattr(asyncio, "sleep", fake_sleep)
 
     async def operation() -> int:

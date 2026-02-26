@@ -24,6 +24,7 @@ async def test_in_memory_cache_ttl_expiry(monkeypatch: pytest.MonkeyPatch) -> No
     def _monotonic() -> float:
         return now
 
+    # Mock reason: control monotonic clock progression deterministically for TTL assertions.
     monkeypatch.setattr(time, "monotonic", _monotonic)
 
     cache = InMemoryCache(ttl=1, max_size=10)
@@ -41,6 +42,7 @@ async def test_in_memory_cache_lru_eviction(monkeypatch: pytest.MonkeyPatch) -> 
     def _monotonic() -> float:
         return now
 
+    # Mock reason: control monotonic clock progression deterministically for eviction assertions.
     monkeypatch.setattr(time, "monotonic", _monotonic)
 
     cache = InMemoryCache(ttl=60, max_size=2)

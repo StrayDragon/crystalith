@@ -21,12 +21,14 @@ def _reset_logging_state() -> Iterator[None]:
 
 
 def test_detect_json_output_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Mock reason: environment toggles are the contract under test for output format selection.
     monkeypatch.setenv("LOGX_FORMAT", "json")
     assert detect_json_output(False) is True
 
     monkeypatch.setenv("LOGX_FORMAT", "console")
     assert detect_json_output(True) is False
 
+    # Mock reason: docker env fallback behavior is part of the same env-driven decision contract.
     monkeypatch.delenv("LOGX_FORMAT")
     monkeypatch.setenv("RUNNING_IN_DOCKER", "true")
     assert detect_json_output() is True

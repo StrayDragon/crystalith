@@ -1,45 +1,32 @@
 import { act, waitFor } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
+import { http, HttpResponse } from 'msw';
 
 import { renderHook } from '../../../../test-utils/renderHook';
+import { server } from '../../../../test-utils/msw/server';
 import { useResearch } from './useResearch';
-import {
-  createResearchSessionV1NotebooksNotebookIdResearchPost,
-  deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete,
-  listResearchSessionsV1NotebooksNotebookIdResearchGet,
-} from '../../../../api/generated';
-
-vi.mock('../../../../api/generated', () => ({
-  createResearchSessionV1NotebooksNotebookIdResearchPost: vi.fn(),
-  deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete: vi.fn(),
-  listResearchSessionsV1NotebooksNotebookIdResearchGet: vi.fn(),
-  getResearchSessionV1NotebooksNotebookIdResearchResearchIdGet: vi.fn(),
-  startResearchV1NotebooksNotebookIdResearchResearchIdStartPost: vi.fn(),
-  approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost: vi.fn(),
-  finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost: vi.fn(),
-  skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost: vi.fn(),
-  cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost: vi.fn(),
-}));
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 test('fetchSessions stores list data', async () => {
-  vi.mocked(listResearchSessionsV1NotebooksNotebookIdResearchGet).mockResolvedValue({
-    data: [
-      {
-        id: 1,
-        notebook_id: 1,
-        topic: 'Topic',
-        status: 'planning',
-        current_iteration: 0,
-        max_iterations: 3,
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01',
-      },
-    ],
-  } as any);
+  server.use(
+    http.get('*/v1/notebooks/:notebook_id/research', () =>
+      HttpResponse.json([
+        {
+          id: 1,
+          notebook_id: 1,
+          topic: 'Topic',
+          status: 'planning',
+          current_iteration: 0,
+          max_iterations: 3,
+          created_at: '2024-01-01',
+          updated_at: '2024-01-01',
+        },
+      ]),
+    ),
+  );
 
   const { result } = renderHook(() => useResearch(1));
 
@@ -54,18 +41,21 @@ test('fetchSessions stores list data', async () => {
 });
 
 test('createSession updates sessions and activeSession', async () => {
-  vi.mocked(createResearchSessionV1NotebooksNotebookIdResearchPost).mockResolvedValue({
-    data: {
-      id: 2,
-      notebook_id: 1,
-      topic: 'New Topic',
-      status: 'planning',
-      current_iteration: 0,
-      max_iterations: 4,
-      created_at: '2024-01-02',
-      updated_at: '2024-01-02',
-    },
-  } as any);
+  server.use(
+    http.post('*/v1/notebooks/:notebook_id/research', async ({ request, params }) => {
+      const body = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({
+        id: 2,
+        notebook_id: Number(params.notebook_id),
+        topic: String(body.topic ?? 'New Topic'),
+        status: 'planning',
+        current_iteration: 0,
+        max_iterations: Number(body.max_iterations ?? 4),
+        created_at: '2024-01-02',
+        updated_at: '2024-01-02',
+      });
+    }),
+  );
 
   const { result } = renderHook(() => useResearch(1));
 
@@ -82,21 +72,21 @@ test('createSession updates sessions and activeSession', async () => {
 });
 
 test('deleteSession removes session and clears active session', async () => {
-  vi.mocked(createResearchSessionV1NotebooksNotebookIdResearchPost).mockResolvedValue({
-    data: {
-      id: 22,
-      notebook_id: 1,
-      topic: 'Topic',
-      status: 'planning',
-      current_iteration: 0,
-      max_iterations: 4,
-      created_at: '2024-01-01',
-      updated_at: '2024-01-01',
-    },
-  } as any);
-
-  vi.mocked(deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete).mockResolvedValue(
-    { data: {} } as any,
+  server.use(
+    http.post('*/v1/notebooks/:notebook_id/research', async ({ request, params }) => {
+      const body = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({
+        id: 22,
+        notebook_id: Number(params.notebook_id),
+        topic: String(body.topic ?? 'Topic'),
+        status: 'planning',
+        current_iteration: 0,
+        max_iterations: Number(body.max_iterations ?? 4),
+        created_at: '2024-01-01',
+        updated_at: '2024-01-01',
+      });
+    }),
+    http.delete('*/v1/notebooks/:notebook_id/research/:research_id', () => HttpResponse.json({})),
   );
 
   const { result } = renderHook(() => useResearch(1));
@@ -141,6 +131,7 @@ test('SSE reconnect does not use stale session state after completion', async ()
     }
   }
 
+  // Mock reason: deterministic control of reconnect/error lifecycle is not reliable with real EventSource in jsdom.
   vi.stubGlobal('EventSource', MockEventSource as any);
 
   const baseSession = {
@@ -154,11 +145,18 @@ test('SSE reconnect does not use stale session state after completion', async ()
     updated_at: '2024-01-01',
   };
 
-  try {
-    vi.mocked(listResearchSessionsV1NotebooksNotebookIdResearchGet).mockResolvedValueOnce({
-      data: [baseSession],
-    } as any);
+  let listCount = 0;
+  server.use(
+    http.get('*/v1/notebooks/:notebook_id/research', () => {
+      listCount += 1;
+      if (listCount === 1) {
+        return HttpResponse.json([baseSession]);
+      }
+      return HttpResponse.json([{ ...baseSession, status: 'completed' }]);
+    }),
+  );
 
+  try {
     const { result } = renderHook(() => useResearch(1));
 
     await act(async () => {
@@ -170,10 +168,6 @@ test('SSE reconnect does not use stale session state after completion', async ()
     });
 
     expect(MockEventSource.instances).toHaveLength(1);
-
-    vi.mocked(listResearchSessionsV1NotebooksNotebookIdResearchGet).mockResolvedValueOnce({
-      data: [{ ...baseSession, status: 'completed' }],
-    } as any);
 
     await act(async () => {
       await result.current.fetchSessions();

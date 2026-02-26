@@ -131,12 +131,14 @@ def test_config_manager_apply_env_overrides_updates_models_and_defaults(monkeypa
     )
     manager = ConfigManager(config_path=Path("config/app.yaml"))
 
+    # Mock reason: env overrides are the public contract this method applies onto loaded config.
     monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./override.db")
     monkeypatch.setenv("CACHE_PROVIDER", "redis")
     monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-new")
     monkeypatch.setenv("OPENAI_BASE_URL", "http://new")
     monkeypatch.setenv("OLLAMA_HOST", "http://ollama")
+    # Mock reason: default model selection is configured via env in production deployments.
     monkeypatch.setenv("CRYSTALITH_DEFAULT_CHAT_MODEL", "test-chat")
 
     manager._apply_env_overrides(settings, secrets={})
@@ -158,6 +160,7 @@ def test_config_manager_apply_env_overrides_updates_models_and_defaults(monkeypa
 def test_config_manager_apply_env_overrides_rejects_unknown_default_model(monkeypatch) -> None:
     settings = Settings(models={"available": []})
     manager = ConfigManager(config_path=Path("config/app.yaml"))
+    # Mock reason: invalid default model id is injected through env variables in production.
     monkeypatch.setenv("CRYSTALITH_DEFAULT_CHAT_MODEL", "missing")
     with pytest.raises(ValueError, match="Invalid default chat model id"):
         manager._apply_env_overrides(settings, secrets={})
@@ -201,6 +204,7 @@ def test_config_manager_load_roundtrip_with_schema(tmp_path, monkeypatch) -> Non
     manager = ConfigManager(config_path=config_path, schema_path=schema_path)
     manager.write_schema()
 
+    # Mock reason: keep config load test deterministic and independent of local Ollama availability.
     monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
 
     settings = manager.load(validate_schema=True)

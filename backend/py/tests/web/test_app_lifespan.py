@@ -40,6 +40,7 @@ async def test_startup_cleanup_failed_sources_respects_env_override(
     settings_value: bool,
     should_delete_failed: bool,
 ) -> None:
+    # Mock reason: override process env to verify startup cleanup precedence (env > config).
     if env_value is None:
         monkeypatch.delenv("AUTO_CLEANUP_FAILED_SOURCES", raising=False)
     else:
