@@ -89,6 +89,11 @@ These Pydantic models live in:
 
 - `backend/py/src/crystalith/shared/plugins/render_types.py`
 
+Notes:
+- The Studio tool configuration dialog renders from `GET /v1/workspace/tools` only (using `config_schema`).
+- `GET /v1/workspace/tools/{tool_id}/config` is kept for backwards compatibility and derived from the same schema.
+- Default option selection uses `is_default=true` when present; otherwise the UI falls back to stable defaults.
+
 If an extension attribute is present but has the wrong type, the registry logs a warning and ignores it.
 
 If multiple plugins register the same `output_type`, the last one wins and the registry logs a warning.

@@ -223,6 +223,7 @@ def test_workspace_tools_endpoint_includes_render_descriptor_when_plugin_availab
         app = create_app(settings=settings, db_manager=manager, vector_store=vector_store)
         with TestClient(app) as client:
             payload = client.get("/v1/workspace/tools").json()
+            config_payload = client.get("/v1/workspace/tools/quiz/config").json()
 
     tools = payload["tools"]
     quiz_tool = next(tool for tool in tools if tool["output_type"] == "QUIZ")
@@ -230,6 +231,9 @@ def test_workspace_tools_endpoint_includes_render_descriptor_when_plugin_availab
 
     assert quiz_tool["render_descriptor"]["layout"] == "cards"
     assert quiz_tool["config_schema"]["topic_placeholder"] == "Topic"
+    assert config_payload["tool_id"] == "quiz"
+    assert config_payload["topic_placeholder"] == "Topic"
+    assert config_payload["quantity_options"] == quiz_tool["config_schema"]["quantity_options"]
     assert faq_tool["render_descriptor"] is None
 
 

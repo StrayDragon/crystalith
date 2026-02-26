@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Button,
   Dialog,
@@ -12,13 +12,17 @@ import {
 } from '@material-tailwind/react';
 import { Close as CloseIcon, Edit as EditIcon } from '@mui/icons-material';
 
-import { getToolConfigV1WorkspaceToolsToolIdConfigGet as getToolConfig, type ToolConfigResponse } from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
 import { ModelSelector } from './ModelSelector';
-import type { GenerationPreferenceSetting, OutputTypeId, WorkspaceTool } from '../../shared/types';
+import type { ConfigOption, GenerationPreferenceSetting, OutputTypeId, WorkspaceTool } from '../../shared/types';
 import { useGenerationPreference } from '../../shared/hooks/useGenerationPreference';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { getToolIcon, resolveTypeLabel, type StudioTone, TONE_COLORS } from './studioUtils';
+
+const FALLBACK_QUANTITY_OPTIONS: ConfigOption[] = [
+  { id: 'less', label: '更少', is_default: false },
+  { id: 'standard', label: '标准（默认）', is_default: true },
+  { id: 'more', label: '更多', is_default: false },
+];
 
 interface StudioToolsGridProps {
   tools: WorkspaceTool[];
@@ -53,8 +57,20 @@ export default function StudioToolsGrid({
   const [configDifficulty, setConfigDifficulty] = useState<string>('medium');
   const [configTopic, setConfigTopic] = useState('');
   const [configModelId, setConfigModelId] = useState<string | null>(null);
-  const [toolConfig, setToolConfig] = useState<ToolConfigResponse | null>(null);
-  const [toolConfigLoading, setToolConfigLoading] = useState(false);
+  const activeTool = useMemo(
+    () => tools.find((tool) => tool.outputType === activeToolType) ?? null,
+    [activeToolType, tools],
+  );
+  const activeToolSchema = activeTool?.configSchema ?? null;
+  const quantityOptions = useMemo(() => {
+    const options = activeToolSchema?.quantity_options ?? [];
+    return options.length > 0 ? options : FALLBACK_QUANTITY_OPTIONS;
+  }, [activeToolSchema]);
+  const difficultyOptions = useMemo(() => activeToolSchema?.difficulty_options ?? [], [activeToolSchema]);
+  const supportsTopic = activeToolSchema?.supports_topic !== false;
+  const topicPlaceholder =
+    activeToolSchema?.topic_placeholder ||
+    "示例提示\n• 限定特定来源或主题\n• 说明重点关注的方向\n• 提供具体的约束条件";
 
   const typeLabelMap = useMemo(() => {
     const map = new Map<OutputTypeId, string>();
@@ -63,37 +79,6 @@ export default function StudioToolsGrid({
     });
     return map;
   }, [tools]);
-
-  useEffect(() => {
-    if (!toolConfigOpen || !activeToolType || !isConnected) return;
-
-    let cancelled = false;
-    const toolId = activeToolType.toLowerCase();
-    setToolConfigLoading(true);
-    void unwrapData(getToolConfig<true>({ path: { tool_id: toolId } }))
-      .then((config) => {
-        if (cancelled) return;
-        setToolConfig(config);
-        const defaultQuantity =
-          config.quantity_options?.find((o) => o.is_default)?.id || 'standard';
-        const defaultDifficulty =
-          config.difficulty_options?.find((o) => o.is_default)?.id || 'medium';
-        setConfigQuantity(defaultQuantity);
-        setConfigDifficulty(defaultDifficulty);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setToolConfig(null);
-      })
-      .finally(() => {
-        if (cancelled) return;
-        setToolConfigLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [toolConfigOpen, activeToolType, isConnected]);
 
   const handleToolConfigOpen = useCallback(
     (event: React.MouseEvent<HTMLElement>, toolType: OutputTypeId) => {
@@ -104,38 +89,42 @@ export default function StudioToolsGrid({
       }
       setActiveToolType(toolType);
       setToolConfigOpen(true);
-      setConfigQuantity('standard');
-      setConfigDifficulty('medium');
+      const tool = tools.find((item) => item.outputType === toolType) ?? null;
+      const schema = tool?.configSchema ?? null;
+      const localQuantityOptions =
+        schema?.quantity_options && schema.quantity_options.length > 0
+          ? schema.quantity_options
+          : FALLBACK_QUANTITY_OPTIONS;
+      const localDifficultyOptions = schema?.difficulty_options ?? [];
+      setConfigQuantity(localQuantityOptions.find((o) => o.is_default)?.id || 'standard');
+      setConfigDifficulty(localDifficultyOptions.find((o) => o.is_default)?.id || 'medium');
       setConfigTopic('');
       setConfigModelId(null);
-      setToolConfig(null);
     },
-    [onOpenSlides],
+    [onOpenSlides, tools],
   );
 
   const handleToolConfigClose = useCallback(() => {
     setToolConfigOpen(false);
     setActiveToolType(null);
-    setToolConfig(null);
     setConfigModelId(null);
   }, []);
 
   const handleGenerateWithConfig = useCallback(() => {
     if (!activeToolType) return;
 
-    const activeTool = tools.find((tool) => tool.outputType === activeToolType) ?? null;
     const quantityLabel =
-      toolConfig?.quantity_options?.find((option) => option.id === configQuantity)?.label ??
+      quantityOptions.find((option) => option.id === configQuantity)?.label ??
       configQuantity;
     const difficultyLabel =
-      toolConfig?.difficulty_options?.find((option) => option.id === configDifficulty)?.label ??
+      difficultyOptions.find((option) => option.id === configDifficulty)?.label ??
       configDifficulty;
 
     const constraints: string[] = [];
     if (configQuantity) {
       constraints.push(`- 数量：${quantityLabel}`);
     }
-    if (toolConfig?.difficulty_options && configDifficulty) {
+    if (difficultyOptions.length > 0 && configDifficulty) {
       constraints.push(`- 难度：${difficultyLabel}`);
     }
     if (configTopic.trim()) {
@@ -161,14 +150,15 @@ export default function StudioToolsGrid({
     handleToolConfigClose();
   }, [
     activeToolType,
+    activeTool,
     configDifficulty,
     configModelId,
     configQuantity,
     configTopic,
+    difficultyOptions,
     handleToolConfigClose,
     onGenerateOutput,
-    toolConfig?.difficulty_options,
-    toolConfig?.quantity_options,
+    quantityOptions,
     tools,
   ]);
 
@@ -299,137 +289,118 @@ export default function StudioToolsGrid({
             <CloseIcon className="h-4 w-4" />
           </IconButton>
         </DialogHeader>
-
         <DialogBody className="p-4 flex flex-col gap-4 overflow-y-auto max-h-[60vh]">
-          {toolConfigLoading ? (
-            <div className="flex flex-col gap-3">
-              <div className="h-12 bg-gray-100 rounded-lg animate-pulse" />
-              <div className="h-12 bg-gray-100 rounded-lg animate-pulse" />
-              <div className="h-20 bg-gray-100 rounded-lg animate-pulse" />
-            </div>
-          ) : (
-            <>
-              {(toolConfig?.quantity_options || !toolConfig) && (
-                <div>
-                  <Typography variant="small" className="mb-2 font-medium text-gray-700">
-                    数量
-                  </Typography>
-                  <div className="flex flex-wrap gap-2">
-                    {(toolConfig?.quantity_options || [
-                      { id: 'less', label: '更少', is_default: false },
-                      { id: 'standard', label: '标准（默认）', is_default: true },
-                      { id: 'more', label: '更多', is_default: false },
-                    ]).map((option) => (
-                      <Button
-                        key={option.id}
-                        variant={configQuantity === option.id ? 'filled' : 'outlined'}
-                        size="sm"
-                        onClick={() => setConfigQuantity(option.id)}
-                        className={`rounded-full px-3 py-1.5 normal-case font-normal border-gray-200 ${
-                          configQuantity === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
-                        }`}
-                      >
-                        {configQuantity === option.id && option.is_default && <span className="mr-1">✓</span>}
-                        {option.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {(toolConfig?.difficulty_options || (!toolConfig && activeToolType !== 'FAQ' && activeToolType !== 'TIMELINE' && activeToolType !== 'MINDMAP' && activeToolType !== 'BRIEFING')) && (
-                <div>
-                  <Typography variant="small" className="mb-2 font-medium text-gray-700">
-                    难度等级
-                  </Typography>
-                  <div className="flex flex-wrap gap-2">
-                    {(toolConfig?.difficulty_options || [
-                      { id: 'easy', label: '简单', is_default: false },
-                      { id: 'medium', label: '中等（默认）', is_default: true },
-                      { id: 'hard', label: '困难', is_default: false },
-                    ]).map((option) => (
-                      <Button
-                        key={option.id}
-                        variant={configDifficulty === option.id ? 'filled' : 'outlined'}
-                        size="sm"
-                        onClick={() => setConfigDifficulty(option.id)}
-                        className={`rounded-full px-3 py-1.5 normal-case font-normal border-gray-200 ${
-                          configDifficulty === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
-                        }`}
-                      >
-                        {configDifficulty === option.id && option.is_default && <span className="mr-1">✓</span>}
-                        {option.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {(toolConfig?.supports_topic !== false) && (
-                <div>
-                  <Typography variant="small" className="mb-2 font-medium text-gray-700">
-                    主题应该是什么？
-                  </Typography>
-                  <Textarea
-                    placeholder={toolConfig?.topic_placeholder || "示例提示\n• 限定特定来源或主题\n• 说明重点关注的方向\n• 提供具体的约束条件"}
-                    value={configTopic}
-                    onChange={(e) => setConfigTopic(e.target.value)}
-                    className="!border-t-blue-gray-200 focus:!border-t-gray-900 min-h-[100px]"
-                    labelProps={{
-                      className: "before:content-none after:content-none",
-                    }}
-                  />
-                </div>
-              )}
-
-              <div>
-                <Typography variant="small" className="mb-2 font-medium text-gray-700">
-                  生成倾向
-                </Typography>
-                <div className="flex flex-wrap gap-2">
-                  {(
-                    [
-                      { id: 'default', label: '默认' },
-                      { id: 'quality', label: '质量' },
-                      { id: 'speed', label: '速度' },
-                    ] as const satisfies ReadonlyArray<{
-                      id: GenerationPreferenceSetting;
-                      label: string;
-                    }>
-                  ).map((option) => (
-                    <Button
-                      key={option.id}
-                      variant={preference === option.id ? 'filled' : 'outlined'}
-                      size="sm"
-                      onClick={() => setPreference(option.id)}
-                      className={`rounded-full px-3 py-1.5 normal-case font-normal border-gray-200 ${
-                        preference === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
-                      }`}
-                    >
-                      {option.label}
-                    </Button>
-                  ))}
-                </div>
-                <Typography variant="small" className="mt-2 text-xs text-gray-500">
-                  质量：更高召回/重试；速度：更低延迟。
-                </Typography>
+          {quantityOptions.length > 0 && (
+            <div>
+              <Typography variant="small" className="mb-2 font-medium text-gray-700">
+                数量
+              </Typography>
+              <div className="flex flex-wrap gap-2">
+                {quantityOptions.map((option) => (
+                  <Button
+                    key={option.id}
+                    variant={configQuantity === option.id ? 'filled' : 'outlined'}
+                    size="sm"
+                    onClick={() => setConfigQuantity(option.id)}
+                    className={`rounded-full px-3 py-1.5 normal-case font-normal border-gray-200 ${
+                      configQuantity === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
+                    }`}
+                  >
+                    {configQuantity === option.id && option.is_default && <span className="mr-1">✓</span>}
+                    {option.label}
+                  </Button>
+                ))}
               </div>
+            </div>
+          )}
 
-              {isConnected && (
-                <div>
-                  <Typography variant="small" className="mb-2 font-medium text-gray-700">
-                    AI 模型
-                  </Typography>
-                  <ModelSelector
-                    value={configModelId}
-                    onChange={setConfigModelId}
-                    capability="chat"
-                    label="选择生成模型"
-                    size="md"
-                  />
-                </div>
-              )}
-            </>
+          {difficultyOptions.length > 0 && (
+            <div>
+              <Typography variant="small" className="mb-2 font-medium text-gray-700">
+                难度等级
+              </Typography>
+              <div className="flex flex-wrap gap-2">
+                {difficultyOptions.map((option) => (
+                  <Button
+                    key={option.id}
+                    variant={configDifficulty === option.id ? 'filled' : 'outlined'}
+                    size="sm"
+                    onClick={() => setConfigDifficulty(option.id)}
+                    className={`rounded-full px-3 py-1.5 normal-case font-normal border-gray-200 ${
+                      configDifficulty === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
+                    }`}
+                  >
+                    {configDifficulty === option.id && option.is_default && <span className="mr-1">✓</span>}
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {supportsTopic && (
+            <div>
+              <Typography variant="small" className="mb-2 font-medium text-gray-700">
+                主题应该是什么？
+              </Typography>
+              <Textarea
+                placeholder={topicPlaceholder}
+                value={configTopic}
+                onChange={(e) => setConfigTopic(e.target.value)}
+                className="!border-t-blue-gray-200 focus:!border-t-gray-900 min-h-[100px]"
+                labelProps={{
+                  className: 'before:content-none after:content-none',
+                }}
+              />
+            </div>
+          )}
+
+          <div>
+            <Typography variant="small" className="mb-2 font-medium text-gray-700">
+              生成倾向
+            </Typography>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { id: 'default', label: '默认' },
+                  { id: 'quality', label: '质量' },
+                  { id: 'speed', label: '速度' },
+                ] as const satisfies ReadonlyArray<{
+                  id: GenerationPreferenceSetting;
+                  label: string;
+                }>
+              ).map((option) => (
+                <Button
+                  key={option.id}
+                  variant={preference === option.id ? 'filled' : 'outlined'}
+                  size="sm"
+                  onClick={() => setPreference(option.id)}
+                  className={`rounded-full px-3 py-1.5 normal-case font-normal border-gray-200 ${
+                    preference === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
+                  }`}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+            <Typography variant="small" className="mt-2 text-xs text-gray-500">
+              质量：更高召回/重试；速度：更低延迟。
+            </Typography>
+          </div>
+
+          {isConnected && (
+            <div>
+              <Typography variant="small" className="mb-2 font-medium text-gray-700">
+                AI 模型
+              </Typography>
+              <ModelSelector
+                value={configModelId}
+                onChange={setConfigModelId}
+                capability="chat"
+                label="选择生成模型"
+                size="md"
+              />
+            </div>
           )}
         </DialogBody>
 
