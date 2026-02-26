@@ -42,6 +42,7 @@ async def test_research_stream_emits_plan_search_analysis_report_waiting_and_don
             waiting_emitted.set()
         return original_sse_event(event, data)
 
+    # Mock reason: instrument emitted SSE events for ordering assertions without altering production code paths.
     monkeypatch.setattr(research_api, "_sse_event", _tracked_sse_event)
 
     async def _updater() -> None:

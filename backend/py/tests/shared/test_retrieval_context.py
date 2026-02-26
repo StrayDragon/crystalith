@@ -187,6 +187,7 @@ async def test_retrieve_context_truncates_to_budget(db_session, test_settings) -
 
 @pytest.mark.asyncio
 async def test_retrieve_context_multi_query_quality_merges_results(db_session, test_settings, monkeypatch) -> None:
+    # Mock reason: explicit env control is required to exercise the multi-query quality branch.
     monkeypatch.setenv("CRYSTALITH_RETRIEVAL_MULTI_QUERY", "1")
 
     notebook = Notebook(name="N4")
@@ -345,6 +346,7 @@ async def test_retrieve_context_multi_query_speed_defaults_off(db_session, test_
 
 @pytest.mark.asyncio
 async def test_retrieve_context_multi_query_speed_respects_env_flag(db_session, test_settings, monkeypatch) -> None:
+    # Mock reason: explicit env control is required to exercise the multi-query speed override branch.
     monkeypatch.setenv("CRYSTALITH_RETRIEVAL_MULTI_QUERY", "1")
 
     notebook = Notebook(name="N7")
@@ -399,6 +401,7 @@ async def test_retrieve_context_multi_query_speed_respects_env_flag(db_session, 
 
 @pytest.mark.asyncio
 async def test_retrieve_context_multi_query_quality_can_be_disabled(db_session, test_settings, monkeypatch) -> None:
+    # Mock reason: explicit env control is required to verify the quality-path disable flag.
     monkeypatch.setenv("CRYSTALITH_RETRIEVAL_MULTI_QUERY", "0")
 
     notebook = Notebook(name="N8")

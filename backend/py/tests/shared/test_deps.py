@@ -37,6 +37,7 @@ async def test_get_ai_provider_caches_instance(app, monkeypatch):  # noqa: ANN00
 
     import crystalith.shared.deps as deps_module
 
+    # Mock reason: assert provider memoization semantics without constructing real provider implementations.
     monkeypatch.setattr(deps_module, "create_chat_provider", _factory)
 
     request = _make_request(app)
@@ -62,6 +63,7 @@ async def test_get_embedding_provider_caches_instance(app, monkeypatch):  # noqa
 
     import crystalith.shared.deps as deps_module
 
+    # Mock reason: assert provider memoization semantics without constructing real provider implementations.
     monkeypatch.setattr(deps_module, "create_embedding_provider", _factory)
 
     request = _make_request(app)
@@ -103,7 +105,9 @@ async def test_get_embedding_provider_wraps_cached_provider_when_redis(app, monk
 
     import crystalith.shared.deps as deps_module
 
+    # Mock reason: force deterministic embedder for cache wrapper behavior checks.
     monkeypatch.setattr(deps_module, "create_embedding_provider", _factory)
+    # Mock reason: cache wrapper config is driven by env overrides in runtime.
     monkeypatch.setenv("CRYSTALITH_EMBEDDING_CACHE_ENABLED", "1")
     monkeypatch.setenv("CRYSTALITH_EMBEDDING_CACHE_TTL_S", "not-a-number")
     monkeypatch.setenv("CRYSTALITH_EMBEDDING_CACHE_MAX_TEXTS", "not-an-int")

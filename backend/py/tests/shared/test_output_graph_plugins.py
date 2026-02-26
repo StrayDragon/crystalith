@@ -51,6 +51,7 @@ async def test_generate_output_prefers_plugin_schema_and_prompt(monkeypatch: pyt
 
             return type("Result", (), {"output": _Out()})()
 
+    # Mock reason: validate schema/prompt selection without external model execution.
     monkeypatch.setattr(output_graph_mod, "Agent", _StubAgent)
 
     state = OutputGraphState(
@@ -94,6 +95,7 @@ async def test_generate_output_falls_back_to_core_schema_and_prompt(monkeypatch:
 
             return type("Result", (), {"output": _Out()})()
 
+    # Mock reason: validate fallback schema/prompt selection without external model execution.
     monkeypatch.setattr(output_graph_mod, "Agent", _StubAgent)
 
     state = OutputGraphState(

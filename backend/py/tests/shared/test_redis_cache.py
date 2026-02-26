@@ -97,6 +97,7 @@ async def test_redis_cache_roundtrip_and_invalidate_pattern(monkeypatch) -> None
         def from_url(_url: str, *, decode_responses: bool):  # noqa: ANN001, ARG004
             return stub
 
+    # Mock reason: avoid external Redis dependency while verifying cache contract behavior.
     monkeypatch.setattr("crystalith.shared.cache.redis_cache.redis", _RedisModule)
 
     cache = RedisCache(redis_url="redis://localhost:6379/0", ttl=1.0)
@@ -129,6 +130,7 @@ async def test_redis_cache_incr_roundtrip(monkeypatch) -> None:
         def from_url(_url: str, *, decode_responses: bool):  # noqa: ANN001, ARG004
             return stub
 
+    # Mock reason: avoid external Redis dependency while verifying increment semantics.
     monkeypatch.setattr("crystalith.shared.cache.redis_cache.redis", _RedisModule)
 
     cache = RedisCache(redis_url="redis://localhost:6379/0", ttl=1.0)

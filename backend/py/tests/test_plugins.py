@@ -85,6 +85,7 @@ def test_plugin_registry_loads_ai_provider_plugin(monkeypatch: pytest.MonkeyPatc
     from crystalith.shared.plugins import registry as registry_mod
 
     plugin = MockProviderPlugin()
+    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
     monkeypatch.setattr(
         registry_mod,
         "_iter_entry_points",
@@ -105,6 +106,7 @@ def test_plugin_registry_loads_output_type_plugin_and_extension_attributes(
     from crystalith.shared.plugins import registry as registry_mod
 
     plugin = MockOutputTypePlugin()
+    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
     monkeypatch.setattr(
         registry_mod,
         "_iter_entry_points",
@@ -134,6 +136,7 @@ def test_plugin_registry_output_type_conflict_overwrites_and_logs_warning(
     def _warning(message: str, **kwargs: Any) -> None:
         warnings.append((message, kwargs))
 
+    # Mock reason: capture warning side effects without relying on global logging sinks.
     monkeypatch.setattr(registry_mod.log, "warning", _warning)
 
     plugin_a = MockOutputTypePlugin()
@@ -144,6 +147,7 @@ def test_plugin_registry_output_type_conflict_overwrites_and_logs_warning(
     plugin_b = MockOutputTypePlugin()
     plugin_b.schema = _SchemaB
 
+    # Mock reason: entry point ordering drives conflict behavior and must be deterministic in tests.
     monkeypatch.setattr(
         registry_mod,
         "_iter_entry_points",
@@ -174,6 +178,7 @@ def test_plugin_registry_output_type_plugin_without_extensions_is_ok(
         default_prompt = None
 
     plugin = MinimalOutputTypePlugin()
+    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
     monkeypatch.setattr(
         registry_mod,
         "_iter_entry_points",
@@ -197,6 +202,7 @@ def test_workspace_tools_endpoint_includes_render_descriptor_when_plugin_availab
     from crystalith.web.app import create_app
 
     plugin = MockOutputTypePlugin()
+    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
     monkeypatch.setattr(
         registry_mod,
         "_iter_entry_points",
@@ -228,6 +234,7 @@ def test_plugin_registry_respects_disabled_list(monkeypatch: pytest.MonkeyPatch)
     from crystalith.shared.plugins import registry as registry_mod
 
     plugin = MockProviderPlugin()
+    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
     monkeypatch.setattr(
         registry_mod,
         "_iter_entry_points",
@@ -248,6 +255,7 @@ def test_models_endpoint_includes_plugin_provider(monkeypatch: pytest.MonkeyPatc
     from crystalith.web.app import create_app
 
     plugin = MockProviderPlugin()
+    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
     monkeypatch.setattr(
         registry_mod,
         "_iter_entry_points",
@@ -288,6 +296,7 @@ def test_models_endpoint_hides_disabled_plugin_provider(monkeypatch: pytest.Monk
     from crystalith.web.app import create_app
 
     plugin = MockProviderPlugin()
+    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
     monkeypatch.setattr(
         registry_mod,
         "_iter_entry_points",

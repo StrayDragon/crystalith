@@ -3899,6 +3899,7 @@ class TestIterRecordsEdgeCases:
         # 模拟调用 _iter_records 时的检查
         # 检查逻辑: if not hasattr(table_class, "id") or not isinstance(...)
         with pytest.raises(ValueError, match="必须有 id 字段"):
+            # Mock reason: iterate DAL record path without constructing a real async DB session.
             # 使用 mock 测试检查逻辑
             import asyncio
             from unittest.mock import AsyncMock

@@ -6,6 +6,7 @@ import { LayerProvider } from '../../../../shared/layer';
 import SourcesPanel from './SourcesPanel';
 import { toast } from '../../../../shared/toast';
 
+// Mock reason: react-virtuoso depends on layout/observer behaviors that are unstable in jsdom.
 vi.mock('react-virtuoso', () => ({
   Virtuoso: ({ data, itemContent }: any) => (
     <div>
@@ -16,6 +17,7 @@ vi.mock('react-virtuoso', () => ({
   ),
 }));
 
+// Mock reason: keep this test focused on SourcesPanel interaction wiring, not research hook internals.
 vi.mock('../research/useResearch', () => ({
   useResearch: () => ({
     sessions: [],
@@ -38,28 +40,33 @@ vi.mock('../research/useResearch', () => ({
   }),
 }));
 
+// Mock reason: isolate panel interaction tests from child component rendering details.
 vi.mock('./SearchResultsQueue', () => ({
   default: () => null,
 }));
 
+// Mock reason: isolate panel interaction tests from child component rendering details.
 vi.mock('./AddSearchResultDialog', () => ({
   default: () => null,
 }));
 
+// Mock reason: isolate panel interaction tests from child component rendering details.
 vi.mock('../research/ResearchCapsule', () => ({
   default: () => null,
 }));
 
-vi.mock('../../../../shared/toast', () => ({
-  toast: {
-    warning: vi.fn(),
-    error: vi.fn(),
-    success: vi.fn(),
-    info: vi.fn(),
-  },
-}));
+let toastWarningSpy: ReturnType<typeof vi.spyOn>;
+let toastErrorSpy: ReturnType<typeof vi.spyOn>;
+let toastSuccessSpy: ReturnType<typeof vi.spyOn>;
+let toastInfoSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
+  // Mock reason: suppress visual toast side effects while asserting notification calls.
+  toastWarningSpy = vi.spyOn(toast, 'warning').mockImplementation(() => {});
+  toastErrorSpy = vi.spyOn(toast, 'error').mockImplementation(() => {});
+  toastSuccessSpy = vi.spyOn(toast, 'success').mockImplementation(() => {});
+  toastInfoSpy = vi.spyOn(toast, 'info').mockImplementation(() => {});
+
   vi.clearAllMocks();
 });
 
@@ -232,5 +239,5 @@ test('filters unsupported upload files and shows warning', () => {
 
   expect(uploadSpy).toHaveBeenCalledTimes(1);
   expect(uploadSpy).toHaveBeenCalledWith([supported]);
-  expect(toast.warning).toHaveBeenCalledTimes(1);
+  expect(toastWarningSpy).toHaveBeenCalledTimes(1);
 });

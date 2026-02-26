@@ -72,12 +72,14 @@ def test_auto_discover_ollama_uses_env_host(monkeypatch) -> None:
         }
     )
 
+    # Mock reason: env host override is part of runtime resolution path under test.
     monkeypatch.setenv("OLLAMA_HOST", "http://example.invalid")
 
     def stub_discover(host: str, *, timeout: float = 5.0):  # noqa: ANN001
         assert host in {"http://localhost:11434", "http://example.invalid"}
         return [{"name": "bge-m3:latest", "details": {"family": "bge"}}]
 
+    # Mock reason: avoid external Ollama dependency while validating host resolution/merge behavior.
     monkeypatch.setattr(
         "crystalith.shared.config.ollama_discovery.discover_ollama_models",
         stub_discover,

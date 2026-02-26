@@ -273,6 +273,7 @@ async def test_upload_source_parse_runs_in_executor_without_blocking_requests(cl
     ):
         return _GatedSlowParser()
 
+    # Mock reason: inject deterministic parser latency/content to validate concurrency behavior.
     monkeypatch.setattr(ParserFactory, "from_file", classmethod(_from_file))
 
     upload_task = asyncio.create_task(
@@ -336,6 +337,7 @@ async def test_upload_no_chunks_returns_400_and_does_not_create_source(client, m
     ):
         return _EmptyParser()
 
+    # Mock reason: inject empty parser output to verify no-chunk error handling path.
     monkeypatch.setattr(ParserFactory, "from_file", classmethod(_from_file))
 
     resp = await client.post(
@@ -396,6 +398,7 @@ async def test_upload_three_sources_concurrently_keeps_response_times_stable(cli
             return _SlowParser()
         return _GatedSlowParser(idx)
 
+    # Mock reason: inject deterministic parser latency/content to validate concurrent upload stability.
     monkeypatch.setattr(ParserFactory, "from_file", classmethod(_from_file))
 
     async def _upload(index: int) -> int:

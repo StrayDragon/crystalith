@@ -93,6 +93,7 @@ async def test_run_with_retry_honors_retry_after_header(monkeypatch: pytest.Monk
     async def _fake_sleep(delay: float) -> None:
         delays.append(delay)
 
+    # Mock reason: avoid real delay while asserting retry-after handling.
     monkeypatch.setattr(asyncio, "sleep", _fake_sleep)
 
     async def _op() -> str:

@@ -83,6 +83,7 @@ async def test_slide_outline_and_markdown_streams_complete(client, app, db_sessi
 
 @pytest.mark.asyncio
 async def test_slide_sse_done_includes_timings_when_enabled(client, app, db_session, monkeypatch) -> None:
+    # Mock reason: this env flag is the supported switch for enabling SSE timing payloads.
     monkeypatch.setenv("CRYSTALITH_OBSERVABILITY_SSE_TIMINGS", "1")
 
     notebook_resp = await client.post("/v1/notebooks", json={"name": "Slides Timings"})

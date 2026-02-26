@@ -54,11 +54,13 @@ async def test_output_graph_cancellation_does_not_persist(app, db_session, monke
 
     import crystalith.shared.agents.output_graph as output_graph_module
 
+    # Mock reason: force retrieval path to stay in-memory for deterministic cancellation behavior.
     monkeypatch.setattr(output_graph_module, "retrieve_context", _fake_retrieve_context, raising=True)
 
     async def _cancelled_run(self, *_args, **_kwargs):  # noqa: ANN001
         raise asyncio.CancelledError()
 
+    # Mock reason: directly inject CancelledError from model execution path.
     monkeypatch.setattr(output_graph_module.Agent, "run", _cancelled_run, raising=True)
 
     deps = StudioDeps(
@@ -111,11 +113,13 @@ async def test_slides_generator_cancellation_does_not_fallback(app, db_session, 
             timings_ms={},
         )
 
+    # Mock reason: force retrieval path to stay in-memory for deterministic cancellation behavior.
     monkeypatch.setattr(slides_generator_module, "retrieve_context", _fake_retrieve_context, raising=True)
 
     async def _cancelled_run(self, *_args, **_kwargs):  # noqa: ANN001
         raise asyncio.CancelledError()
 
+    # Mock reason: directly inject CancelledError from model execution path.
     monkeypatch.setattr(slides_generator_module.Agent, "run", _cancelled_run, raising=True)
 
     deps = StudioDeps(

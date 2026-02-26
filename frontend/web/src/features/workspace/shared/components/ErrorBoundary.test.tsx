@@ -9,6 +9,7 @@ function CrashComponent() {
 }
 
 beforeEach(() => {
+  // Mock reason: suppress React error boundary logging noise for intentional crash test.
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 

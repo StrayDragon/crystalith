@@ -99,11 +99,13 @@ async def test_migrate_cli_run_errors_when_sqlite_missing(tmp_path) -> None:
 
 
 def test_vector_store_cli_parse_args_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Mock reason: emulate CLI invocation safely without mutating real process argv.
     monkeypatch.setattr(sys, "argv", ["prog"])
     migrate_args = migrate_parse_args()
     assert migrate_args.sqlite_path == "./data/vectors.db"
     assert migrate_args.chroma_path == "./data/chroma"
 
+    # Mock reason: emulate CLI invocation safely without mutating real process argv.
     monkeypatch.setattr(sys, "argv", ["prog"])
     verify_args = verify_parse_args()
     assert verify_args.sqlite_path == "./data/vectors.db"
@@ -127,6 +129,7 @@ def test_vector_store_cli_main_roundtrip(tmp_path, monkeypatch: pytest.MonkeyPat
 
     asyncio.run(_seed())
 
+    # Mock reason: emulate CLI invocation safely without mutating real process argv.
     monkeypatch.setattr(
         sys,
         "argv",
@@ -140,6 +143,7 @@ def test_vector_store_cli_main_roundtrip(tmp_path, monkeypatch: pytest.MonkeyPat
     )
     assert migrate_main() == 0
 
+    # Mock reason: emulate CLI invocation safely without mutating real process argv.
     monkeypatch.setattr(
         sys,
         "argv",

@@ -145,6 +145,7 @@ async def test_jina_reader_extract_success_and_headers(monkeypatch: pytest.Monke
         return 200, "# Title\n\nFirst paragraph.\n\nMore."
 
     with _serve_http(handler) as (base_url, _):
+        # Mock reason: redirect extractor network target to local stub server for deterministic behavior.
         monkeypatch.setattr(JinaReaderExtractor, "BASE_URL", base_url)
         extractor = JinaReaderExtractor(api_key="sk-test", return_format="text")
         result = await extractor.extract("https://example.com")
@@ -175,6 +176,7 @@ async def test_jina_reader_extract_maps_http_statuses(
         return status, "error"
 
     with _serve_http(handler) as (base_url, _):
+        # Mock reason: redirect extractor network target to local stub server for deterministic behavior.
         monkeypatch.setattr(JinaReaderExtractor, "BASE_URL", base_url)
         extractor = JinaReaderExtractor()
         with pytest.raises(error_type):
@@ -188,6 +190,7 @@ async def test_jina_reader_is_available_true_when_reachable(monkeypatch: pytest.
         return 200, ""
 
     with _serve_http(handler) as (base_url, _):
+        # Mock reason: redirect extractor network target to local stub server for deterministic behavior.
         monkeypatch.setattr(JinaReaderExtractor, "BASE_URL", base_url)
         extractor = JinaReaderExtractor()
         assert await extractor.is_available() is True
@@ -195,6 +198,7 @@ async def test_jina_reader_is_available_true_when_reachable(monkeypatch: pytest.
 
 @pytest.mark.asyncio
 async def test_jina_reader_is_available_false_when_unreachable(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Mock reason: force unreachable endpoint to assert fallback behavior without real network dependency.
     monkeypatch.setattr(JinaReaderExtractor, "BASE_URL", "http://127.0.0.1:1/")
     extractor = JinaReaderExtractor()
     assert await extractor.is_available() is False

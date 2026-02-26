@@ -3,6 +3,25 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom/vitest';
+import { afterAll, afterEach, beforeAll } from 'vitest';
+
+import { client } from './api/generated/client.gen';
+import { server } from './test-utils/msw/server';
+
+beforeAll(() => {
+  client.setConfig({
+    baseUrl: 'http://localhost',
+  });
+  server.listen({ onUnhandledRequest: 'bypass' });
+});
+
+afterEach(() => {
+  server.resetHandlers();
+});
+
+afterAll(() => {
+  server.close();
+});
 
 if (!Element.prototype.animate) {
   Element.prototype.animate = () =>
