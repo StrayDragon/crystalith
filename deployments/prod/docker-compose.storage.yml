@@ -1,0 +1,57 @@
+services:
+  api:
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://crystalith:crystalith@postgres:5432/crystalith}
+      CHROMA_HOST: ${CHROMA_HOST:-chromadb}
+      CHROMA_PORT: ${CHROMA_PORT:-8000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:18.1-trixie}
+    container_name: crystalith-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-crystalith}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crystalith}
+      POSTGRES_DB: ${POSTGRES_DB:-crystalith}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1536M
+    networks:
+      - backend-net
+
+  chromadb:
+    image: ${CHROMADB_IMAGE:-chromadb/chroma:0.5.15}
+    container_name: crystalith-chromadb
+    volumes:
+      - chromadata:/chroma/chroma
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/api/v1/heartbeat')"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1G
+    networks:
+      - backend-net
+
+volumes:
+  pgdata: {}
+  chromadata: {}

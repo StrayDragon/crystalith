@@ -1,0 +1,30 @@
+services:
+  api:
+    environment:
+      CACHE_PROVIDER: ${CACHE_PROVIDER:-redis}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7.4-alpine}
+    container_name: crystalith-redis
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+    networks:
+      - backend-net
+
+volumes:
+  redisdata: {}

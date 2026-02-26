@@ -1,0 +1,32 @@
+services:
+  host-remap:
+    build:
+      context: ../..
+      dockerfile: dockers/host-remap/Dockerfile
+      args:
+        ALPINE_IMAGE: ${ALPINE_IMAGE:-alpine:3.21}
+    container_name: crystalith-host-remap
+    network_mode: host
+    environment:
+      BRIDGE_FORWARDS: "${BRIDGE_FORWARDS:-}"
+    command:
+      - |
+        if [ -z "$$BRIDGE_FORWARDS" ]; then
+          echo "[host-remap] No BRIDGE_FORWARDS configured - sleeping."
+          exec sleep infinity
+        fi
+        echo "[host-remap] Starting port forwards..."
+        for entry in $$BRIDGE_FORWARDS; do
+          lport=$$(echo "$$entry" | cut -d: -f1)
+          rhost=$$(echo "$$entry" | cut -d: -f2)
+          rport=$$(echo "$$entry" | cut -d: -f3)
+          echo "[host-remap]   0.0.0.0:$$lport -> $$rhost:$$rport"
+          socat TCP-LISTEN:$$lport,fork,reuseaddr TCP:$$rhost:$$rport &
+        done
+        wait
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.10"
+          memory: 32M

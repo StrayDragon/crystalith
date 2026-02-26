@@ -138,6 +138,10 @@ def test_config_manager_apply_env_overrides_updates_models_and_defaults(monkeypa
     monkeypatch.setenv("OPENAI_API_KEY", "sk-new")
     monkeypatch.setenv("OPENAI_BASE_URL", "http://new")
     monkeypatch.setenv("OLLAMA_HOST", "http://ollama")
+    monkeypatch.setenv("CRYSTALITH_OPTIONAL_OLLAMA_ENABLED", "1")
+    monkeypatch.setenv("CRYSTALITH_OPTIONAL_OLLAMA_ENDPOINT", "http://ollama:11434")
+    monkeypatch.setenv("CRYSTALITH_OPTIONAL_OLLAMA_PROBE_INTERVAL_S", "30")
+    monkeypatch.setenv("CRYSTALITH_OPTIONAL_OLLAMA_DEGRADE_POLICY", "core_available")
     # Mock reason: default model selection is configured via env in production deployments.
     monkeypatch.setenv("CRYSTALITH_DEFAULT_CHAT_MODEL", "test-chat")
 
@@ -155,6 +159,10 @@ def test_config_manager_apply_env_overrides_updates_models_and_defaults(monkeypa
     ollama_model = settings.models.get_model("test-embed")
     assert ollama_model is not None
     assert ollama_model.get_ollama_config().host == "http://ollama"
+    assert settings.optional_services.ollama.enabled is True
+    assert settings.optional_services.ollama.endpoint == "http://ollama:11434"
+    assert settings.optional_services.ollama.probe.interval_s == 30
+    assert settings.optional_services.ollama.degrade_policy == "core_available"
 
 
 def test_config_manager_apply_env_overrides_rejects_unknown_default_model(monkeypatch) -> None:

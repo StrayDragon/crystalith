@@ -222,3 +222,38 @@ def test_ai_factory_applies_completion_options_to_openai_chat_provider() -> None
         "stop": ["END"],
     }
     assert getattr(chat._client, "max_retries", None) == 0  # noqa: SLF001
+
+
+def test_ai_factory_resolves_fallback_host_for_ollama_client(monkeypatch) -> None:
+    observed_hosts: list[str] = []
+
+    class _StubAsyncClient:
+        def __init__(self, *, host: str | None = None) -> None:
+            observed_hosts.append(host or "")
+
+    settings = Settings(
+        models={
+            "available": [
+                {
+                    "id": "ollama-embed",
+                    "provider": "ollama",
+                    "model": "bge-m3:latest",
+                    "display_name": "Ollama Embed",
+                    "roles": ["embed"],
+                    "provider_config": {"host": "http://host.docker.internal:11434"},
+                },
+            ]
+        }
+    )
+
+    # Mock reason: validate fallback host selection without network dependency.
+    monkeypatch.setattr(
+        "crystalith.shared.ai.factory.resolve_reachable_ollama_host",
+        lambda **_: "http://localhost:11434",
+    )
+    # Mock reason: verify the resolved host passed to client constructor.
+    monkeypatch.setattr("crystalith.shared.ai.factory.ollama.AsyncClient", _StubAsyncClient)
+
+    provider = create_embedding_provider_by_model_id(settings, "ollama-embed")
+    assert isinstance(provider, OllamaEmbeddingProvider)
+    assert observed_hosts == ["http://localhost:11434"]

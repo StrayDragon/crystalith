@@ -910,6 +910,115 @@
       "title": "OpenAIProviderSettings",
       "type": "object"
     },
+    "OptionalServiceProbeSettings": {
+      "description": "Probe settings for an optional dependency service.",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "Whether periodic probing is enabled",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "timeout_s": {
+          "default": 3.0,
+          "description": "Probe timeout in seconds",
+          "maximum": 120,
+          "minimum": 0.1,
+          "title": "Timeout S",
+          "type": "number"
+        },
+        "interval_s": {
+          "default": 15.0,
+          "description": "Probe interval in seconds",
+          "maximum": 3600,
+          "minimum": 0.1,
+          "title": "Interval S",
+          "type": "number"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional HTTP probe path",
+          "title": "Path"
+        }
+      },
+      "title": "OptionalServiceProbeSettings",
+      "type": "object"
+    },
+    "OptionalServiceSettings": {
+      "description": "Runtime contract for one optional dependency service.",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "Whether this optional service is enabled",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "endpoint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Service endpoint/base URL",
+          "title": "Endpoint"
+        },
+        "timeout_s": {
+          "default": 3.0,
+          "description": "Connection timeout in seconds",
+          "maximum": 120,
+          "minimum": 0.1,
+          "title": "Timeout S",
+          "type": "number"
+        },
+        "probe": {
+          "$ref": "#/$defs/OptionalServiceProbeSettings",
+          "description": "Probe policy for this service"
+        },
+        "degrade_policy": {
+          "default": "core_available",
+          "description": "Degrade policy when dependency is unavailable",
+          "enum": [
+            "core_available",
+            "fail_closed"
+          ],
+          "title": "Degrade Policy",
+          "type": "string"
+        }
+      },
+      "title": "OptionalServiceSettings",
+      "type": "object"
+    },
+    "OptionalServicesSettings": {
+      "description": "Optional dependency service contracts.",
+      "properties": {
+        "ollama": {
+          "$ref": "#/$defs/OptionalServiceSettings"
+        },
+        "chroma": {
+          "$ref": "#/$defs/OptionalServiceSettings"
+        },
+        "redis": {
+          "$ref": "#/$defs/OptionalServiceSettings"
+        },
+        "searxng": {
+          "$ref": "#/$defs/OptionalServiceSettings"
+        }
+      },
+      "title": "OptionalServicesSettings",
+      "type": "object"
+    },
     "PluginsSettings": {
       "description": "Plugin loading configuration.\n\nPlugins are discovered via Python entry points (group: `crystalith.plugins`).\nThis section controls which discovered plugins are enabled.",
       "properties": {
@@ -1390,6 +1499,10 @@
     "search": {
       "$ref": "#/$defs/SearchSettings",
       "description": "Web search settings"
+    },
+    "optional_services": {
+      "$ref": "#/$defs/OptionalServicesSettings",
+      "description": "Optional dependency service contracts and probe policies"
     },
     "plugins": {
       "$ref": "#/$defs/PluginsSettings",

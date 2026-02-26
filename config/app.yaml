@@ -187,6 +187,55 @@ search:
     max_results: 10
 
 # ----------------------------------------------------------------------------
+# Optional service contracts (core remains available when these are unavailable)
+# ----------------------------------------------------------------------------
+optional_services:
+  # frontend/backend core naming maps to compose services web/api.
+  ollama:
+    enabled: false
+    endpoint: "http://localhost:11434"
+    timeout_s: 3
+    probe:
+      enabled: true
+      timeout_s: 3
+      interval_s: 15
+      path: "/api/tags"
+    degrade_policy: "core_available"
+
+  chroma:
+    enabled: false
+    endpoint: "http://localhost:8000"
+    timeout_s: 3
+    probe:
+      enabled: true
+      timeout_s: 3
+      interval_s: 15
+      path: "/api/v1/heartbeat"
+    degrade_policy: "core_available"
+
+  redis:
+    enabled: false
+    endpoint: "redis://localhost:6379/0"
+    timeout_s: 3
+    probe:
+      enabled: true
+      timeout_s: 3
+      interval_s: 15
+      path: null
+    degrade_policy: "core_available"
+
+  searxng:
+    enabled: false
+    endpoint: "http://host.docker.internal:50201"
+    timeout_s: 10
+    probe:
+      enabled: true
+      timeout_s: 3
+      interval_s: 30
+      path: "/search?q=ping&format=json"
+    degrade_policy: "core_available"
+
+# ----------------------------------------------------------------------------
 # Proxy settings (YAML anchor for optional reuse)
 # ----------------------------------------------------------------------------
 proxy_settings: &default_proxy

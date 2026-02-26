@@ -1,0 +1,25 @@
+services:
+  slidev:
+    build:
+      context: ../..
+      dockerfile: dockers/slidev/Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:20-trixie-slim}
+        PNPM_VERSION: ${PNPM_VERSION:-10.29.2}
+        NPM_REGISTRY: ${NPM_REGISTRY:-}
+    container_name: crystalith-slidev
+    ports:
+      - "${CL_SLIDEV_PORT:-3030}:3030"
+    volumes:
+      - ../../data:/data
+    depends_on:
+      data-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1G
+    networks:
+      - frontend-net

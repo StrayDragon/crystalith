@@ -19,6 +19,11 @@ from .models import ModelConfig, OllamaProviderSettings, Settings
 
 logger = logging.getLogger(__name__)
 
+_FALLBACK_OLLAMA_HOSTS: tuple[str, ...] = (
+    "http://127.0.0.1:11434",
+    "http://localhost:11434",
+)
+
 # Embedding model families (models in these families get the "embed" role)
 _EMBEDDING_FAMILIES = frozenset({
     "bert", "nomic-bert", "nomic-embed", "bge", "e5", "gte",
@@ -100,6 +105,127 @@ def discover_ollama_models(
         return []
 
 
+def collect_ollama_hosts(
+    settings: Settings,
+    *,
+    include_env: bool = True,
+    include_fallback: bool = True,
+) -> set[str]:
+    """Collect unique Ollama hosts from settings and optional environment."""
+    hosts: set[str] = set()
+
+    for model in settings.models.available:
+        if model.provider != "ollama":
+            continue
+        ollama_config = model.get_ollama_config()
+        if ollama_config.host:
+            hosts.add(ollama_config.host)
+
+    if include_env:
+        env_host = os.environ.get("OLLAMA_HOST")
+        if env_host:
+            hosts.add(env_host)
+
+    if include_fallback:
+        should_add_fallback = not hosts or any("host.docker.internal" in host for host in hosts)
+        if should_add_fallback:
+            hosts.update(_FALLBACK_OLLAMA_HOSTS)
+
+    return hosts
+
+
+def _collect_ollama_hosts_in_order(
+    settings: Settings | None,
+    *,
+    preferred_host: str | None = None,
+    include_env: bool,
+    include_fallback: bool,
+) -> list[str]:
+    ordered_hosts: list[str] = []
+    seen_hosts: set[str] = set()
+
+    def _append(host: str | None) -> None:
+        if not host:
+            return
+        normalized = host.strip()
+        if not normalized or normalized in seen_hosts:
+            return
+        seen_hosts.add(normalized)
+        ordered_hosts.append(normalized)
+
+    _append(preferred_host)
+
+    if settings is not None:
+        for model in settings.models.available:
+            if model.provider != "ollama":
+                continue
+            _append(model.get_ollama_config().host)
+
+    if include_env:
+        _append(os.environ.get("OLLAMA_HOST"))
+
+    if include_fallback:
+        for host in _FALLBACK_OLLAMA_HOSTS:
+            _append(host)
+
+    return ordered_hosts
+
+
+def probe_ollama_host(
+    host: str,
+    *,
+    timeout: float = 3.0,
+) -> tuple[bool, str | None, int | None]:
+    """Probe Ollama host health via /api/tags.
+
+    Returns (healthy, error_message, model_count).
+    """
+    try:
+        with httpx.Client(timeout=timeout) as client:
+            resp = client.get(f"{host}/api/tags")
+            resp.raise_for_status()
+            data = resp.json()
+        models = data.get("models", [])
+        model_count = len(models) if isinstance(models, list) else None
+        return True, None, model_count
+    except Exception as exc:
+        return False, str(exc), None
+
+
+def resolve_reachable_ollama_host(
+    *,
+    preferred_host: str | None = None,
+    settings: Settings | None = None,
+    timeout: float = 0.8,
+    include_env: bool = True,
+    include_fallback: bool = True,
+) -> str:
+    """Return the first healthy Ollama host from ordered candidates.
+
+    If none are healthy, falls back to the preferred host, then localhost.
+    """
+    hosts = _collect_ollama_hosts_in_order(
+        settings,
+        preferred_host=preferred_host,
+        include_env=include_env,
+        include_fallback=include_fallback,
+    )
+
+    if not hosts:
+        return _FALLBACK_OLLAMA_HOSTS[0]
+
+    probe_timeout = max(0.1, timeout)
+    for host in hosts:
+        healthy, _, _ = probe_ollama_host(host, timeout=probe_timeout)
+        if healthy:
+            return host
+
+    preferred = (preferred_host or "").strip()
+    if preferred:
+        return preferred
+    return hosts[0]
+
+
 def build_model_configs_from_ollama(
     ollama_models: list[dict[str, Any]],
     host: str = "http://localhost:11434",
@@ -178,23 +304,7 @@ def auto_discover_ollama(settings: Settings) -> int:
 
     Returns the total number of newly added models.
     """
-    # Collect unique Ollama hosts from existing model configs
-    hosts: set[str] = set()
-
-    for model in settings.models.available:
-        if model.provider == "ollama":
-            ollama_config = model.get_ollama_config()
-            if ollama_config.host:
-                hosts.add(ollama_config.host)
-
-    # Also check OLLAMA_HOST env var
-    env_host = os.environ.get("OLLAMA_HOST")
-    if env_host:
-        hosts.add(env_host)
-
-    # Default fallback
-    if not hosts:
-        hosts.add("http://localhost:11434")
+    hosts = collect_ollama_hosts(settings, include_env=True, include_fallback=True)
 
     total_added = 0
     for host in hosts:

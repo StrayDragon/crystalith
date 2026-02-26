@@ -34,5 +34,5 @@ pnpm dev
 
 ```bash
 cp .env.example .env
-just docker-compose-up
+just dev-docker-up
 ```

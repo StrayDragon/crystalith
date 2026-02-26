@@ -291,7 +291,7 @@ export function useChat({
           if (error instanceof Error) {
             const statusError = error as Error & { status?: number };
             if (statusError.status === 503) {
-              errorMessage = 'AI 服务暂时不可用，请检查模型配置或稍后重试。';
+              errorMessage = '可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置或稍后重试。';
             } else if (statusError.status === 404) {
               errorMessage = '会话或笔记本不存在。';
             } else if (statusError.status === 500) {
@@ -353,8 +353,8 @@ export function useChat({
         const statusError = error as Error & { status?: number };
 
         if (statusError.status === 503) {
-          errorMessage = 'AI 服务暂时不可用，请检查模型配置或稍后重试。';
-          userFacingError = 'AI 服务配置错误，请联系管理员。';
+          errorMessage = '可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置或稍后重试。';
+          userFacingError = '可选 AI 服务暂时不可用，请稍后重试或切换模型。';
         } else if (statusError.status === 404) {
           errorMessage = '会话或笔记本不存在。';
           userFacingError = '会话已失效，请刷新页面。';

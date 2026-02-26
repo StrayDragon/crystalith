@@ -18,6 +18,7 @@ from crystalith.shared.ai.effective_settings import (
 )
 from crystalith.shared.ai.openai_client_manager import get_openai_client_manager
 from crystalith.shared.config import ModelConfig, OpenAIProviderSettings, Settings
+from crystalith.shared.config.ollama_discovery import resolve_reachable_ollama_host
 
 
 log = get_logger(__name__)
@@ -171,7 +172,16 @@ def _build_chat_model_with_config(settings: Settings, model_config: ModelConfig)
     if provider == "ollama":
         ollama_settings = model_config.get_ollama_config()
         _validate_ollama_host(ollama_settings.host, model_config.id)
-        base_url = _normalize_ollama_base_url(ollama_settings.host)
+        resolved_host = resolve_reachable_ollama_host(preferred_host=ollama_settings.host)
+        if resolved_host != ollama_settings.host:
+            log.info(
+                "resolved ollama host fallback for agent model",
+                model_id=model_config.id,
+                model=model_name,
+                configured_host=ollama_settings.host,
+                resolved_host=resolved_host,
+            )
+        base_url = _normalize_ollama_base_url(resolved_host)
         openai_client = get_openai_client_manager().get(
             api_key="api-key-not-set",
             base_url=base_url,

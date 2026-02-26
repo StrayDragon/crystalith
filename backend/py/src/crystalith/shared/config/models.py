@@ -493,6 +493,60 @@ class SearchSettings(BaseModel):
     searxng: SearXNGSettings = Field(default_factory=lambda: SearXNGSettings())
 
 
+class OptionalServiceProbeSettings(BaseModel):
+    """Probe settings for an optional dependency service."""
+
+    enabled: bool = Field(True, description="Whether periodic probing is enabled")
+    timeout_s: float = Field(3.0, ge=0.1, le=120, description="Probe timeout in seconds")
+    interval_s: float = Field(15.0, ge=0.1, le=3600, description="Probe interval in seconds")
+    path: str | None = Field(None, description="Optional HTTP probe path")
+
+
+class OptionalServiceSettings(BaseModel):
+    """Runtime contract for one optional dependency service."""
+
+    enabled: bool = Field(False, description="Whether this optional service is enabled")
+    endpoint: str | None = Field(None, description="Service endpoint/base URL")
+    timeout_s: float = Field(3.0, ge=0.1, le=120, description="Connection timeout in seconds")
+    probe: OptionalServiceProbeSettings = Field(
+        default_factory=OptionalServiceProbeSettings,
+        description="Probe policy for this service",
+    )
+    degrade_policy: Literal["core_available", "fail_closed"] = Field(
+        "core_available",
+        description="Degrade policy when dependency is unavailable",
+    )
+
+
+class OptionalServicesSettings(BaseModel):
+    """Optional dependency service contracts."""
+
+    ollama: OptionalServiceSettings = Field(
+        default_factory=lambda: OptionalServiceSettings(
+            endpoint="http://localhost:11434",
+            enabled=False,
+        )
+    )
+    chroma: OptionalServiceSettings = Field(
+        default_factory=lambda: OptionalServiceSettings(
+            endpoint="http://localhost:8000",
+            enabled=False,
+        )
+    )
+    redis: OptionalServiceSettings = Field(
+        default_factory=lambda: OptionalServiceSettings(
+            endpoint="redis://localhost:6379/0",
+            enabled=False,
+        )
+    )
+    searxng: OptionalServiceSettings = Field(
+        default_factory=lambda: OptionalServiceSettings(
+            endpoint="http://localhost:8888",
+            enabled=False,
+        )
+    )
+
+
 class PluginsSettings(BaseModel):
     """
     Plugin loading configuration.
@@ -846,6 +900,10 @@ class Settings(BaseSettings):
     refine: RefineSettings = Field(default_factory=RefineSettings)
     context_window: ContextWindowSettings = Field(default_factory=ContextWindowSettings)
     search: SearchSettings = Field(default_factory=lambda: SearchSettings(), description="Web search settings")
+    optional_services: OptionalServicesSettings = Field(
+        default_factory=OptionalServicesSettings,
+        description="Optional dependency service contracts and probe policies",
+    )
     plugins: PluginsSettings = Field(default_factory=PluginsSettings, description="插件加载配置")
     source_ingestion: SourceIngestionSettings = Field(
         default_factory=SourceIngestionSettings,
