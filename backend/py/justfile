@@ -10,17 +10,27 @@ packages-test:
         uv run --project $package pytest --no-cov $package/tests
     done
 
-test: packages-test check
+test: packages-test lint check-imports config-schema-check
     uv run pytest tests/ -v
 
 typecheck:
     uv run basedpyright
+
+lint:
+    uv run ruff check src tests
+
+contract:
+    uv run pytest tests/contract -v --no-cov
 
 check:
     @echo "==> Checking backend import layering"
     just check-imports
     @echo "==> Checking config schema consistency"
     just config-schema-check
+    @echo "==> Running Python lint"
+    just lint
+    @echo "==> Running API contract tests"
+    just contract
 
 coverage: packages-test
     uv run pytest tests/ -v -n 0 --cov=crystalith --cov-report=term --cov-fail-under=85

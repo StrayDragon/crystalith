@@ -33,6 +33,18 @@ cd backend/py && just test
 cd frontend/web && pnpm test
 ```
 
+## Lint / contract checks
+
+```bash
+cd backend/py && just lint
+cd backend/py && just contract
+cd frontend/web && pnpm run lint
+```
+
+Notes:
+- `pnpm -C frontend/web run lint` runs an incremental check (changed files vs `origin/main`).
+- Use `pnpm -C frontend/web run lint:all` to lint the whole frontend (may be stricter than the current baseline).
+
 ## Config schema
 
 If you change config settings models, regenerate `config/app.schema.json`:

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Literal, cast
 
 import yaml
-from jsonschema import Draft7Validator, ValidationError as JsonSchemaValidationError
+from jsonschema import Draft7Validator
 from pydantic import ValidationError
 
 from crystalith.shared.json_types import JsonValue

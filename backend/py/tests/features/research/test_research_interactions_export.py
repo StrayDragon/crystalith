@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import asyncio
 import datetime
 
 import pytest
 import sqlalchemy as sa
 
 from crystalith.shared.db import ResearchSession, ResearchStep
-from crystalith.shared.types import ResearchStatus, ResearchStepStatus, ResearchStepType
+from crystalith.shared.types import ResearchStatus
 
 
 @pytest.mark.asyncio

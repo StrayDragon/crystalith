@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from cl_logs import get_logger
 
-from .interfaces import BaseExtractor, ExtractionError, Extractor
+from .interfaces import ExtractionError, Extractor
 from .types import ExtractedContent, ExtractorInfo, ExtractorType
 
 if TYPE_CHECKING:

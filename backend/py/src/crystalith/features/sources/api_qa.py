@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-from typing import Literal
 
 from cl_logs import get_logger
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -190,7 +189,7 @@ def _format_qa_messages_as_markdown(
 ) -> str:
     """Format QA messages as markdown content."""
     timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M:%S")
-    content = f"# 来源问答记录\n\n"
+    content = "# 来源问答记录\n\n"
     content += f"**原始来源**: {source_title}\n"
     content += f"**生成时间**: {timestamp} UTC\n\n"
     content += "---\n\n"

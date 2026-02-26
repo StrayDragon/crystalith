@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import enum
 from fnmatch import fnmatch
-from typing import Any, AsyncIterator
+from typing import AsyncIterator
 
 import pytest
 

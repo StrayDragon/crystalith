@@ -75,6 +75,7 @@ dev = [
     "pytest-asyncio>=1.1.0",
     "pytest-cov>=5.0.0",
     "pytest-xdist>=3.5.0",
+    "ruff>=0.13.1",
     "crystalith-output-quiz",
     "crystalith-output-timeline",
     "crystalith-output-mindmap",
@@ -112,3 +113,14 @@ reportUnknownArgumentType = "none"
 reportUnknownMemberType = "none"
 reportUnknownParameterType = "none"
 reportUnknownVariableType = "none"
+
+[tool.ruff]
+line-length = 140
+indent-width = 4
+target-version = "py312"
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+# Start small and keep it actionable. We'll expand the ruleset once the baseline
+# is clean and the team is ready to tighten the gate.
+select = ["F"]

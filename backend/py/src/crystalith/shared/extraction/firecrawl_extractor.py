@@ -229,9 +229,6 @@ class FirecrawlExtractor(BaseExtractor):
         if not self.api_key:
             return False
 
-        try:
-            # Just check if we can import and create client
-            from firecrawl import Firecrawl
-            return True
-        except ImportError:
-            return False
+        import importlib.util
+
+        return importlib.util.find_spec("firecrawl") is not None

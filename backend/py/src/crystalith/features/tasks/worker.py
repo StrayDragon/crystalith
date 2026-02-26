@@ -15,7 +15,7 @@ from crystalith.shared.concurrency import StageLimiters
 from crystalith.shared.config import RefineSettings, Settings
 from crystalith.shared.db import Chunk, Notebook, Source
 from crystalith.shared.utils import format_context, parse_bullets
-from crystalith.shared.vector_storage import VectorSearchResult, VectorStore
+from crystalith.shared.vector_storage import VectorStore
 
 from .models import Task
 from .types import TaskType

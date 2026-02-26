@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TypedDict
 
-import sqlalchemy as sa
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
