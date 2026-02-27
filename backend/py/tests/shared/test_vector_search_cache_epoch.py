@@ -8,6 +8,17 @@ from crystalith.shared.cache import InMemoryCache
 from crystalith.shared.vector_storage import VectorEntry, VectorSearchResult, bump_vector_epoch, cached_vector_search
 
 
+class _FailingCache(InMemoryCache):
+    async def get(self, key: str):  # noqa: ANN001
+        raise RuntimeError(f"cache get unavailable: {key}")
+
+    async def set(self, key: str, value, *, ttl: float | None = None):  # noqa: ANN001
+        raise RuntimeError(f"cache set unavailable: {key}")
+
+    async def incr(self, key: str, *, ttl: float | None = None):  # noqa: ANN001
+        raise RuntimeError(f"cache incr unavailable: {key}")
+
+
 class _StubVectorStore:
     def __init__(self) -> None:
         self.search_calls = 0
@@ -92,4 +103,27 @@ async def test_cached_vector_search_epoch_invalidation() -> None:
 
     third = await cached_vector_search(**params)
     assert third
+    assert vector_store.search_calls == 2
+
+
+@pytest.mark.asyncio
+async def test_cached_vector_search_falls_back_when_cache_unavailable() -> None:
+    cache = _FailingCache(ttl=60)
+    vector_store = _StubVectorStore()
+
+    params = {
+        "cache": cache,
+        "vector_store": vector_store,
+        "notebook_id": 1,
+        "query_vector": [0.1, 0.2, 0.3],
+        "top_k": 5,
+        "min_score": 0.2,
+        "source_ids": [1],
+    }
+
+    first = await cached_vector_search(**params)
+    second = await cached_vector_search(**params)
+
+    assert first
+    assert second
     assert vector_store.search_calls == 2

@@ -1,5 +1,22 @@
+x-logging-default: &logging-default
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  logging: *logging-default
+
+x-deploy-medium: &deploy-medium
+  resources:
+    limits:
+      cpus: "1.00"
+      memory: 1G
+
 services:
   slidev:
+    <<: *service-defaults
     build:
       context: ../..
       dockerfile: dockers/slidev/Dockerfile
@@ -15,11 +32,6 @@ services:
     depends_on:
       data-init:
         condition: service_completed_successfully
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "1.00"
-          memory: 1G
+    deploy: *deploy-medium
     networks:
       - frontend-net

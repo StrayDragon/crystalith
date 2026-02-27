@@ -1,3 +1,24 @@
+x-healthcheck-default: &healthcheck-default
+  interval: 10s
+  timeout: 5s
+  retries: 20
+
+x-logging-default: &logging-default
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  logging: *logging-default
+
+x-deploy-small: &deploy-small
+  resources:
+    limits:
+      cpus: "0.50"
+      memory: 256M
+
 services:
   api:
     environment:
@@ -8,21 +29,15 @@ services:
         condition: service_healthy
 
   redis:
+    <<: *service-defaults
     image: ${REDIS_IMAGE:-redis:7.4-alpine}
     container_name: crystalith-redis
     volumes:
       - redisdata:/data
     healthcheck:
+      <<: *healthcheck-default
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "0.50"
-          memory: 256M
+    deploy: *deploy-small
     networks:
       - backend-net
 

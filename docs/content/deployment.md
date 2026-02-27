@@ -55,6 +55,14 @@ just DEV_OPTIONALS="storage redis" dev-docker-down
 just dev-docker-smoke
 ```
 
+Full composition smoke:
+
+```bash
+just composition-smoke
+# or:
+SMOKE_SCENARIOS="core-only single-optional" ./scripts/composition_smoke.sh
+```
+
 Manual checks:
 
 ```bash
@@ -77,3 +85,28 @@ curl -fsS -X POST "http://localhost:${CL_WEB_PORT:-8080}/v1/notebooks" \
 
 - Main path is merge (`-f`) composition.
 - `include` is intentionally not used in default deployment path.
+
+## Behavior Changes
+
+- Default startup is core-only (`web` + `api`) and no longer auto-enables optional dependencies.
+- Optional dependency health is standardized in `/health/dependencies` with:
+  `status`, `healthy`, `last_probe`, `error_code`, `recovery_hint`.
+- Optional service failures degrade optional capabilities instead of taking down core health routes.
+- Runtime monitor env names are now `CRYSTALITH_OPTIONAL_SERVICES_MONITOR_*`.
+
+## Migration
+
+Old local-entry commands are removed; switch to:
+
+- `just dev-up` -> `just dev-docker-up`
+- `just dev-down` -> `just dev-docker-down`
+- `just dev-ps` -> `just dev-docker-ps`
+- `just dev-logs` -> `just dev-docker-logs`
+- `just dev-rebuild <service>` -> `just dev-docker-rebuild <service>`
+- `just dev-smoke` -> `just dev-docker-smoke`
+- `CRYSTALITH_OLLAMA_MONITOR_*` -> `CRYSTALITH_OPTIONAL_SERVICES_MONITOR_*`
+
+Rollback path:
+
+- Explicitly turn on all overlays to approximate previous full stack behavior:
+  `just DEV_OPTIONALS="storage redis ollama slidev" dev-docker-up`

@@ -35,4 +35,5 @@ pnpm dev
 ```bash
 cp .env.example .env
 just dev-docker-up
+just composition-smoke
 ```

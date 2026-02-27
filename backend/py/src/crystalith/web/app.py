@@ -4,10 +4,13 @@ import asyncio
 import datetime as dt
 import logging
 import os
+import socket
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
+import httpx
 from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -114,7 +117,311 @@ def _iso_now() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat()
 
 
-async def _run_ollama_monitor(
+def _probe_http_endpoint(
+    endpoint: str | None,
+    *,
+    timeout_s: float,
+    path: str | None = None,
+) -> tuple[bool, str | None]:
+    if not endpoint:
+        return False, "endpoint is empty"
+
+    target = endpoint.rstrip("/")
+    probe_path = (path or "").strip()
+    if probe_path:
+        if not probe_path.startswith("/"):
+            probe_path = f"/{probe_path}"
+        target = f"{target}{probe_path}"
+
+    try:
+        with httpx.Client(timeout=max(0.1, timeout_s), follow_redirects=True) as client:
+            response = client.get(target)
+        if response.status_code < 500:
+            return True, None
+        return False, f"HTTP {response.status_code}"
+    except Exception as exc:  # noqa: BLE001 - endpoint-specific failures are expected
+        return False, str(exc)
+
+
+def _probe_redis_endpoint(
+    endpoint: str | None,
+    *,
+    timeout_s: float,
+) -> tuple[bool, str | None]:
+    if not endpoint:
+        return False, "endpoint is empty"
+
+    parsed = urlparse(endpoint)
+    host = parsed.hostname
+    port = parsed.port or 6379
+    if not host:
+        return False, f"invalid endpoint: {endpoint}"
+
+    try:
+        with socket.create_connection((host, port), timeout=max(0.1, timeout_s)):
+            return True, None
+    except OSError as exc:
+        return False, str(exc)
+
+
+def _optional_recovery_hint(service_key: str) -> str:
+    if service_key == "storage_chroma":
+        return "启动 storage overlay，或设置 CHROMA_HOST/CHROMA_PORT 指向可用 Chroma 服务。"
+    if service_key == "cache_redis":
+        return "启动 redis overlay，或设置 REDIS_URL 指向可用 Redis。"
+    if service_key == "ollama":
+        return "启动 ollama overlay，或设置 OLLAMA_HOST 指向可用 Ollama。"
+    return "检查服务地址与网络连通性，或禁用该可选服务。"
+
+
+def _optional_error_code(service_key: str) -> str:
+    if service_key == "storage_chroma":
+        return "CHROMA_UNAVAILABLE"
+    if service_key == "cache_redis":
+        return "REDIS_UNAVAILABLE"
+    if service_key == "ollama":
+        return "OLLAMA_UNAVAILABLE"
+    return "OPTIONAL_SERVICE_UNAVAILABLE"
+
+
+def _model_provider(model: Any) -> str | None:
+    if isinstance(model, dict):
+        provider = model.get("provider")
+        return str(provider) if provider is not None else None
+    provider = getattr(model, "provider", None)
+    return str(provider) if provider is not None else None
+
+
+def _is_ollama_enabled(settings: Settings) -> bool:
+    return (
+        settings.optional_services.ollama.enabled
+        or any(_model_provider(model) == "ollama" for model in settings.models.available)
+        or bool(os.getenv("OLLAMA_HOST"))
+    )
+
+
+def _build_optional_status_template(settings: Settings) -> dict[str, dict[str, Any]]:
+    vector_provider = settings.vector_storage.provider
+    cache_provider = settings.cache.provider
+    chroma_endpoint = settings.optional_services.chroma.endpoint or (
+        f"http://{settings.vector_storage.chroma.host}:{settings.vector_storage.chroma.port}"
+    )
+    redis_endpoint = settings.optional_services.redis.endpoint or settings.cache.redis_url
+    ollama_endpoint = os.getenv("OLLAMA_HOST") or settings.optional_services.ollama.endpoint
+    searxng_endpoint = settings.optional_services.searxng.endpoint or settings.search.searxng.host
+
+    return {
+        "storage_chroma": {
+            "service": "chroma",
+            "enabled": settings.optional_services.chroma.enabled or vector_provider == "chroma",
+            "provider": vector_provider,
+            "endpoint": chroma_endpoint,
+            "status": "unknown",
+            "healthy": None,
+            "error": None,
+            "error_code": None,
+            "recovery_hint": None,
+            "last_probe": None,
+            "probe": settings.optional_services.chroma.probe.model_dump(),
+            "degrade_policy": settings.optional_services.chroma.degrade_policy,
+        },
+        "cache_redis": {
+            "service": "redis",
+            "enabled": settings.optional_services.redis.enabled or cache_provider == "redis",
+            "provider": cache_provider,
+            "endpoint": redis_endpoint,
+            "status": "unknown",
+            "healthy": None,
+            "error": None,
+            "error_code": None,
+            "recovery_hint": None,
+            "last_probe": None,
+            "probe": settings.optional_services.redis.probe.model_dump(),
+            "degrade_policy": settings.optional_services.redis.degrade_policy,
+        },
+        "ollama": {
+            "service": "ollama",
+            "enabled": _is_ollama_enabled(settings),
+            "endpoint": ollama_endpoint,
+            "status": "unknown",
+            "healthy": None,
+            "hosts": {},
+            "error": None,
+            "error_code": None,
+            "recovery_hint": None,
+            "last_probe": None,
+            "probe": settings.optional_services.ollama.probe.model_dump(),
+            "degrade_policy": settings.optional_services.ollama.degrade_policy,
+        },
+        "search_searxng": {
+            "service": "searxng",
+            "enabled": settings.optional_services.searxng.enabled or bool(searxng_endpoint),
+            "endpoint": searxng_endpoint,
+            "timeout_s": settings.search.searxng.timeout,
+            "status": "unknown",
+            "healthy": None,
+            "error": None,
+            "error_code": None,
+            "recovery_hint": None,
+            "last_probe": None,
+            "probe": settings.optional_services.searxng.probe.model_dump(),
+            "degrade_policy": settings.optional_services.searxng.degrade_policy,
+        },
+    }
+
+
+def _finalize_optional_status(service_key: str, status: dict[str, Any]) -> None:
+    if not status.get("enabled"):
+        status["status"] = "disabled"
+        status["healthy"] = None
+        status["error"] = None
+        status["error_code"] = None
+        status["recovery_hint"] = None
+        return
+
+    healthy = status.get("healthy")
+    if healthy is True:
+        status["status"] = "healthy"
+        status["error"] = None
+        status["error_code"] = None
+        status["recovery_hint"] = None
+        return
+
+    if healthy is False:
+        status["status"] = "degraded"
+        status["error_code"] = status.get("error_code") or _optional_error_code(service_key)
+        status["recovery_hint"] = status.get("recovery_hint") or _optional_recovery_hint(service_key)
+        return
+
+    status["status"] = "unknown"
+    status["error_code"] = None
+    status["recovery_hint"] = None
+
+
+async def _refresh_optional_services_status(
+    app: FastAPIX,
+    *,
+    timeout_s: float,
+    include_env_host: bool,
+) -> None:
+    settings: Settings = app.state.settings
+    statuses = _build_optional_status_template(settings)
+    probe_time = _iso_now()
+
+    for service_key, status in statuses.items():
+        probe_cfg = status.get("probe", {})
+        probe_enabled = bool(probe_cfg.get("enabled", True))
+        if not status.get("enabled") or not probe_enabled:
+            _finalize_optional_status(service_key, status)
+            continue
+
+        service_timeout = max(0.1, float(probe_cfg.get("timeout_s", timeout_s)))
+        service_path = probe_cfg.get("path")
+        status["last_probe"] = probe_time
+
+        if service_key == "storage_chroma":
+            healthy, error = await asyncio.to_thread(
+                _probe_http_endpoint,
+                status.get("endpoint"),
+                timeout_s=service_timeout,
+                path=service_path or "/api/v1/heartbeat",
+            )
+            status["healthy"] = healthy
+            status["error"] = error
+
+        elif service_key == "cache_redis":
+            healthy, error = await asyncio.to_thread(
+                _probe_redis_endpoint,
+                status.get("endpoint"),
+                timeout_s=service_timeout,
+            )
+            status["healthy"] = healthy
+            status["error"] = error
+
+        elif service_key == "ollama":
+            hosts = collect_ollama_hosts(
+                settings,
+                include_env=include_env_host,
+                include_fallback=True,
+            )
+            endpoint = status.get("endpoint")
+            if isinstance(endpoint, str) and endpoint.strip():
+                hosts.add(endpoint.strip())
+
+            host_status: dict[str, dict[str, Any]] = {}
+            has_healthy_host = False
+            for host in sorted(hosts):
+                healthy, error_message, model_count = await asyncio.to_thread(
+                    probe_ollama_host,
+                    host,
+                    timeout=service_timeout,
+                )
+                host_status[host] = {
+                    "healthy": healthy,
+                    "error": error_message,
+                    "model_count": model_count,
+                }
+                has_healthy_host = has_healthy_host or healthy
+
+            status["hosts"] = host_status
+            status["healthy"] = has_healthy_host if host_status else None
+            if not has_healthy_host and host_status:
+                first_error = next((item.get("error") for item in host_status.values() if item.get("error")), None)
+                status["error"] = first_error or "all ollama probes failed"
+
+            app.state.ollama_hosts_status = host_status
+            app.state.ollama_monitor_last_probe = probe_time
+
+            if has_healthy_host:
+                added = await asyncio.to_thread(auto_discover_ollama, settings)
+                if added:
+                    logger.info("Ollama monitor discovered %d new models", added)
+
+        elif service_key == "search_searxng":
+            healthy, error = await asyncio.to_thread(
+                _probe_http_endpoint,
+                status.get("endpoint"),
+                timeout_s=service_timeout,
+                path=service_path,
+            )
+            status["healthy"] = healthy
+            status["error"] = error
+
+        _finalize_optional_status(service_key, status)
+
+    app.state.optional_services_status = statuses
+    app.state.optional_services_last_probe = probe_time
+
+
+def _optional_services_snapshot(app: FastAPIX) -> dict[str, dict[str, Any]]:
+    settings: Settings = app.state.settings
+    snapshot = _build_optional_status_template(settings)
+    current = dict(getattr(app.state, "optional_services_status", {}) or {})
+    static_fields = {"enabled", "endpoint", "provider", "probe", "degrade_policy", "timeout_s"}
+    for service_key, service_status in current.items():
+        if service_key in snapshot and isinstance(service_status, dict):
+            for field, value in service_status.items():
+                if field in static_fields:
+                    continue
+                snapshot[service_key][field] = value
+
+    legacy_ollama_hosts = dict(getattr(app.state, "ollama_hosts_status", {}) or {})
+    if legacy_ollama_hosts:
+        ollama = snapshot["ollama"]
+        if not ollama.get("hosts"):
+            ollama["hosts"] = legacy_ollama_hosts
+        if ollama.get("healthy") is None:
+            ollama["healthy"] = any(bool(item.get("healthy")) for item in legacy_ollama_hosts.values())
+        if ollama.get("last_probe") is None:
+            ollama["last_probe"] = getattr(app.state, "ollama_monitor_last_probe", None)
+
+    for service_key, status in snapshot.items():
+        _finalize_optional_status(service_key, status)
+
+    return snapshot
+
+
+async def _run_optional_services_monitor(
     app: FastAPIX,
     stop_event: asyncio.Event,
     *,
@@ -124,36 +431,13 @@ async def _run_ollama_monitor(
 ) -> None:
     while not stop_event.is_set():
         try:
-            hosts = collect_ollama_hosts(
-                app.state.settings,
-                include_env=include_env_host,
-                include_fallback=True,
+            await _refresh_optional_services_status(
+                app,
+                timeout_s=timeout_s,
+                include_env_host=include_env_host,
             )
-            host_status: dict[str, dict[str, Any]] = {}
-            has_healthy_host = False
-
-            for host in sorted(hosts):
-                healthy, error_message, model_count = await asyncio.to_thread(
-                    probe_ollama_host,
-                    host,
-                    timeout=timeout_s,
-                )
-                host_status[host] = {
-                    "healthy": healthy,
-                    "error": error_message,
-                    "model_count": model_count,
-                }
-                has_healthy_host = has_healthy_host or healthy
-
-            app.state.ollama_hosts_status = host_status
-            app.state.ollama_monitor_last_probe = _iso_now()
-
-            if has_healthy_host:
-                added = await asyncio.to_thread(auto_discover_ollama, app.state.settings)
-                if added:
-                    logger.info("Ollama monitor discovered %d new models", added)
         except Exception:  # noqa: BLE001 - best-effort background probe
-            logger.exception("Ollama monitor probe failed")
+            logger.exception("Optional services monitor probe failed")
 
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=interval_s)
@@ -189,8 +473,8 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPIX):
-        ollama_monitor_stop: asyncio.Event | None = None
-        ollama_monitor_task: asyncio.Task[None] | None = None
+        optional_monitor_stop: asyncio.Event | None = None
+        optional_monitor_task: asyncio.Task[None] | None = None
 
         if _env_bool("AUTO_DB_INIT", False):
             await asyncio.to_thread(upgrade_head, app.state.settings.database.url)
@@ -240,15 +524,18 @@ def create_app(
 
         app.state.ollama_hosts_status = {}
         app.state.ollama_monitor_last_probe = None
-        if _env_bool("CRYSTALITH_OLLAMA_MONITOR_ENABLED", True):
-            interval_s = max(0.1, _env_float("CRYSTALITH_OLLAMA_MONITOR_INTERVAL_S", 15.0))
-            timeout_s = max(0.1, _env_float("CRYSTALITH_OLLAMA_MONITOR_TIMEOUT_S", 3.0))
-            include_env_host = _env_bool("CRYSTALITH_OLLAMA_MONITOR_INCLUDE_ENV_HOST", False)
-            ollama_monitor_stop = asyncio.Event()
-            ollama_monitor_task = asyncio.create_task(
-                _run_ollama_monitor(
+        app.state.optional_services_status = _build_optional_status_template(app.state.settings)
+        app.state.optional_services_last_probe = None
+
+        if _env_bool("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED", True):
+            interval_s = max(0.1, _env_float("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_INTERVAL_S", 15.0))
+            timeout_s = max(0.1, _env_float("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_TIMEOUT_S", 3.0))
+            include_env_host = _env_bool("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_INCLUDE_ENV_HOST", True)
+            optional_monitor_stop = asyncio.Event()
+            optional_monitor_task = asyncio.create_task(
+                _run_optional_services_monitor(
                     app,
-                    ollama_monitor_stop,
+                    optional_monitor_stop,
                     interval_s=interval_s,
                     timeout_s=timeout_s,
                     include_env_host=include_env_host,
@@ -259,15 +546,15 @@ def create_app(
         try:
             yield
         finally:
-            if ollama_monitor_stop is not None:
-                ollama_monitor_stop.set()
-            if ollama_monitor_task is not None:
+            if optional_monitor_stop is not None:
+                optional_monitor_stop.set()
+            if optional_monitor_task is not None:
                 try:
-                    await asyncio.wait_for(ollama_monitor_task, timeout=2.0)
+                    await asyncio.wait_for(optional_monitor_task, timeout=2.0)
                 except asyncio.TimeoutError:
-                    ollama_monitor_task.cancel()
+                    optional_monitor_task.cancel()
                     with suppress(asyncio.CancelledError):
-                        await ollama_monitor_task
+                        await optional_monitor_task
             await app.state.db.close()
             close_vector_store = getattr(app.state.vector_store, "close", None)
             if close_vector_store is not None:
@@ -299,6 +586,10 @@ def create_app(
     app.state.limiters = limiters
     app.state.task_queue = queue
     app.state.plugins = plugins
+    app.state.optional_services_status = _build_optional_status_template(resolved)
+    app.state.optional_services_last_probe = None
+    app.state.ollama_hosts_status = {}
+    app.state.ollama_monitor_last_probe = None
 
     @app.get("/health", include_in_schema=False)
     async def health() -> dict[str, str]:
@@ -306,19 +597,23 @@ def create_app(
 
     @app.get("/health/dependencies", include_in_schema=False)
     async def dependency_health() -> dict[str, Any]:
-        settings: Settings = app.state.settings
-        ollama_hosts_status = dict(getattr(app.state, "ollama_hosts_status", {}) or {})
-        ollama_any_healthy = any(bool(item.get("healthy")) for item in ollama_hosts_status.values())
-        ollama_enabled = any(model.provider == "ollama" for model in settings.models.available) or bool(
-            os.getenv("OLLAMA_HOST")
-        )
+        has_legacy_ollama_state = bool(getattr(app.state, "ollama_hosts_status", {}) or {})
+        if getattr(app.state, "optional_services_last_probe", None) is None and not has_legacy_ollama_state:
+            try:
+                await _refresh_optional_services_status(
+                    app,
+                    timeout_s=1.0,
+                    include_env_host=True,
+                )
+            except Exception:  # noqa: BLE001 - keep dependency health non-blocking
+                logger.exception("Dependency health probe refresh failed")
 
-        vector_provider = settings.vector_storage.provider
-        cache_provider = settings.cache.provider
+        optional_status = _optional_services_snapshot(app)
 
         return {
             "status": "ok",
             "generated_at": _iso_now(),
+            "last_probe": getattr(app.state, "optional_services_last_probe", None),
             "core": {
                 "frontend": {
                     "service": "web",
@@ -327,33 +622,7 @@ def create_app(
                 },
                 "backend": {"service": "api", "healthy": True},
             },
-            "optional": {
-                "storage_chroma": {
-                    "enabled": vector_provider == "chroma",
-                    "provider": vector_provider,
-                    "endpoint": f"http://{settings.vector_storage.chroma.host}:{settings.vector_storage.chroma.port}",
-                    "degrade_policy": "core_available",
-                },
-                "cache_redis": {
-                    "enabled": cache_provider == "redis",
-                    "provider": cache_provider,
-                    "endpoint": settings.cache.redis_url,
-                    "degrade_policy": "core_available",
-                },
-                "ollama": {
-                    "enabled": ollama_enabled,
-                    "healthy": ollama_any_healthy if ollama_hosts_status else None,
-                    "hosts": ollama_hosts_status,
-                    "last_probe": getattr(app.state, "ollama_monitor_last_probe", None),
-                    "degrade_policy": "core_available",
-                },
-                "search_searxng": {
-                    "enabled": bool(settings.search.searxng.host),
-                    "endpoint": settings.search.searxng.host,
-                    "timeout_s": settings.search.searxng.timeout,
-                    "degrade_policy": "core_available",
-                },
-            },
+            "optional": optional_status,
         }
 
     cors = resolved.app.cors

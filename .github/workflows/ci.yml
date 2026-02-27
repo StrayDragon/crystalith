@@ -136,3 +136,21 @@ jobs:
           cd frontend/web
           pnpm run api:generate
           git diff --exit-code -- src/api/generated
+
+  composition-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [core-only, single-optional]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare env
+        run: cp .env.example .env
+
+      - name: Run composition smoke
+        run: |
+          SMOKE_SCENARIOS="${{ matrix.scenario }}" ./scripts/composition_smoke.sh
