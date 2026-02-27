@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from crystalith.shared.agents.generation_preference import GenerationPreference
 from crystalith.shared.types import OutputType
@@ -9,11 +8,11 @@ from crystalith.shared.types import OutputType
 
 @dataclass(frozen=True, slots=True)
 class PostprocessResult:
-    content: dict[str, Any]
+    content: dict[str, object]
     warnings: list[str]
 
 
-def fallback_output(output_type: OutputType, prompt_title: str) -> dict[str, Any]:
+def fallback_output(output_type: OutputType, prompt_title: str) -> dict[str, object]:
     title = prompt_title or ""
     error_note = "⚠️ AI 模型生成失败，请稍后重试或使用更强大的模型。"
 
@@ -102,9 +101,9 @@ def fallback_output(output_type: OutputType, prompt_title: str) -> dict[str, Any
 
 def ensure_minimum_content(
     output_type: OutputType,
-    content: Any,
+    content: object,
     prompt_title: str,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     if not isinstance(content, dict):
         return fallback_output(output_type, prompt_title)
 
@@ -190,13 +189,13 @@ def ensure_minimum_content(
     return content
 
 
-def needs_repair(output_type: OutputType, content: Any) -> bool:
+def needs_repair(output_type: OutputType, content: object) -> bool:
     if not isinstance(content, dict):
         return True
     if content.get("_fallback") is True:
         return False
 
-    def is_blank(value: Any) -> bool:
+    def is_blank(value: object) -> bool:
         return not isinstance(value, str) or not value.strip()
 
     if output_type == OutputType.FAQ:
@@ -299,7 +298,7 @@ def needs_repair(output_type: OutputType, content: Any) -> bool:
     return False
 
 
-def _sanitize_citation_list(value: Any, *, max_index: int) -> tuple[list[int], bool]:
+def _sanitize_citation_list(value: object, *, max_index: int) -> tuple[list[int], bool]:
     if not isinstance(value, list):
         return [], value is not None
     if max_index <= 0:
@@ -328,11 +327,11 @@ def _sanitize_citation_list(value: Any, *, max_index: int) -> tuple[list[int], b
     return output, changed
 
 
-def sanitize_citations_indices(payload: Any, *, citations_count: int) -> tuple[Any, bool]:
+def sanitize_citations_indices(payload: object, *, citations_count: int) -> tuple[object, bool]:
     changed = False
 
     if isinstance(payload, dict):
-        mapped: dict[str, Any] = {}
+        mapped: dict[str, object] = {}
         for key, value in payload.items():
             if key == "citations":
                 sanitized, list_changed = _sanitize_citation_list(value, max_index=citations_count)
@@ -345,7 +344,7 @@ def sanitize_citations_indices(payload: Any, *, citations_count: int) -> tuple[A
         return mapped, changed
 
     if isinstance(payload, list):
-        items: list[Any] = []
+        items: list[object] = []
         for item in payload:
             nested, nested_changed = sanitize_citations_indices(item, citations_count=citations_count)
             items.append(nested)
@@ -358,7 +357,7 @@ def sanitize_citations_indices(payload: Any, *, citations_count: int) -> tuple[A
 def postprocess_output(
     *,
     output_type: OutputType,
-    content: Any,
+    content: object,
     prompt_title: str,
     citations_count: int,
     preference: GenerationPreference | None = None,
@@ -366,7 +365,7 @@ def postprocess_output(
 ) -> PostprocessResult:
     warnings: list[str] = []
 
-    normalized: Any = content
+    normalized: object = content
     if apply_structural:
         normalized = ensure_minimum_content(output_type, normalized, prompt_title)
         if normalized is not content:

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TypedDict
 
 import sqlalchemy as sa
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.db import Notebook, Session, SourceTag, Template
@@ -13,7 +14,13 @@ from . import repo
 from .schemas import TemplateConfig
 
 
-BUILTIN_TEMPLATES: list[dict[str, Any]] = [
+class _BuiltinTemplate(TypedDict):
+    name: str
+    description: str
+    config: TemplateConfig
+
+
+BUILTIN_TEMPLATES: list[_BuiltinTemplate] = [
     {
         "name": "论文研究",
         "description": "预配置研究会话与结构化输出偏好。",
@@ -49,7 +56,7 @@ async def ensure_builtin_templates(session: AsyncSession) -> None:
         existing = (
             await session.execute(select(Template.id).limit(1))
         ).scalar_one_or_none()
-    except sa.exc.SQLAlchemyError:
+    except SQLAlchemyError:
         # Database/table not ready yet.
         return
 

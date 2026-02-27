@@ -6,7 +6,7 @@ import asyncio
 import datetime
 import json
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import cast
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cl_logs.logging import get_logger
 
+from crystalith.shared.json_types import JsonDict
 from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.cache.epochs import bump_sources_epoch
@@ -78,13 +79,14 @@ async def acquire_lock(
 
     # Acquire lock
     research.locked_at = now
-    research.lock_expires_at = now + datetime.timedelta(seconds=timeout_seconds)
+    expires_at = now + datetime.timedelta(seconds=timeout_seconds)
+    research.lock_expires_at = expires_at
     await session.commit()
 
     log.info(
         "lock acquired",
         session_id=research.id,
-        expires_at=research.lock_expires_at.isoformat(),
+        expires_at=expires_at.isoformat(),
     )
     return True
 
@@ -270,8 +272,8 @@ class ResearchStepResponse(BaseModel):
     session_id: int
     iteration: int
     type: ResearchStepType
-    input_data: dict[str, Any] | None
-    output_data: dict[str, Any] | None
+    input_data: JsonDict | None
+    output_data: JsonDict | None
     status: ResearchStepStatus
     created_at: datetime.datetime
 
@@ -294,7 +296,7 @@ class ResearchSessionResponse(BaseModel):
     status: ResearchStatus
     current_iteration: int
     max_iterations: int
-    aggregated_results: list[dict[str, Any]] | None
+    aggregated_results: list[JsonDict] | None
     final_report: str | None
     created_at: datetime.datetime
     updated_at: datetime.datetime
@@ -1077,8 +1079,21 @@ async def stream_research_progress(
                 new_steps = step_result.scalars().all()
                 for step in new_steps:
                     if step.type == ResearchStepType.PLAN and step.output_data:
-                        queries = step.output_data.get("queries", [])
-                        reasoning = step.output_data.get("reasoning", "")
+                        output_data = step.output_data
+                        queries_value = output_data.get("queries")
+                        reasoning_value = output_data.get("reasoning")
+
+                        reasoning = reasoning_value if isinstance(reasoning_value, str) else ""
+                        queries: list[JsonDict] = []
+                        if isinstance(queries_value, list):
+                            for item in queries_value:
+                                if isinstance(item, dict):
+                                    queries.append(cast(JsonDict, item))
+                        query_strings: list[str] = []
+                        for item in queries:
+                            query_value = item.get("query")
+                            if isinstance(query_value, str) and query_value:
+                                query_strings.append(query_value)
 
                         # Emit reasoning as thinking
                         if reasoning:
@@ -1092,11 +1107,11 @@ async def stream_research_progress(
                             "type": "plan_generated",
                             "message": f"📋 已生成 {len(queries)} 个搜索查询",
                             "iteration": step.iteration,
-                            "queries": [q.get("query", "") for q in queries],
+                            "queries": query_strings,
                         })
 
                         yield _sse_event("plan_ready", {
-                            "plan": step.output_data,
+                            "plan": output_data,
                             "iteration": step.iteration,
                         })
 
@@ -1117,9 +1132,14 @@ async def stream_research_progress(
                         })
 
                     elif step.type == ResearchStepType.ANALYZE and step.output_data:
-                        summary = step.output_data.get("summary", "")
-                        coverage = step.output_data.get("coverage", 0)
-                        need_more = step.output_data.get("need_more_search", False)
+                        output_data = step.output_data
+                        summary_value = output_data.get("summary")
+                        coverage_value = output_data.get("coverage")
+                        need_more_value = output_data.get("need_more_search")
+
+                        summary = summary_value if isinstance(summary_value, str) else ""
+                        coverage = float(coverage_value) if isinstance(coverage_value, (int, float)) else 0.0
+                        need_more = bool(need_more_value) if isinstance(need_more_value, bool) else False
 
                         yield _sse_event("thinking", {
                             "type": "analysis_complete",
@@ -1260,9 +1280,14 @@ async def export_research(
         if payload.include_results and research.aggregated_results:
             content_parts.append("\n\n---\n\n## 参考来源\n\n")
             for i, result in enumerate(research.aggregated_results[:20], 1):
-                title = result.get("title", "未知标题")
-                url = result.get("url", "")
-                snippet = result.get("snippet", "")[:100]
+                title_value = result.get("title")
+                url_value = result.get("url")
+                snippet_value = result.get("snippet")
+
+                title = title_value if isinstance(title_value, str) and title_value else "未知标题"
+                url = url_value if isinstance(url_value, str) else ""
+                snippet = snippet_value if isinstance(snippet_value, str) else ""
+                snippet = snippet[:100]
                 content_parts.append(f"{i}. [{title}]({url})\n")
                 if snippet:
                     content_parts.append(f"   > {snippet}...\n\n")

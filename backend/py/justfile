@@ -13,6 +13,9 @@ packages-test:
 test: packages-test check
     uv run pytest tests/ -v
 
+typecheck:
+    uv run basedpyright
+
 check:
     @echo "==> Checking backend import layering"
     just check-imports

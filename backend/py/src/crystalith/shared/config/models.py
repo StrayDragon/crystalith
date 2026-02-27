@@ -4,11 +4,14 @@ import os
 import re
 import ipaddress
 from pathlib import Path
-from typing import Any, Literal
+from collections.abc import Callable
+from typing import Literal, TypeVar, cast
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import YamlConfigSettingsSource
+
+from crystalith.shared.json_types import JsonValue
 
 
 # =============================================================================
@@ -17,8 +20,14 @@ from pydantic_settings.sources import YamlConfigSettingsSource
 
 _VAR_PATTERN = re.compile(r"\$\{\{\s*(env|secrets)\.(\w+)\s*\}\}")
 
+_T = TypeVar("_T")
 
-def resolve_variables(value: Any, secrets: dict[str, str] | None = None) -> Any:
+
+def _default_factory(factory: type[_T]) -> Callable[[], _T]:
+    return cast(Callable[[], _T], factory)
+
+
+def resolve_variables(value: JsonValue, secrets: dict[str, str] | None = None) -> JsonValue:
     """
     Resolve ${{ env.VAR }} and ${{ secrets.VAR }} in string values.
 
@@ -37,9 +46,9 @@ def resolve_variables(value: Any, secrets: dict[str, str] | None = None) -> Any:
                 return secrets.get(var_name, "")
             return ""
         return _VAR_PATTERN.sub(replacer, value)
-    elif isinstance(value, dict):
+    if isinstance(value, dict):
         return {k: resolve_variables(v, secrets) for k, v in value.items()}
-    elif isinstance(value, list):
+    if isinstance(value, list):
         return [resolve_variables(item, secrets) for item in value]
     return value
 
@@ -100,8 +109,8 @@ class OllamaRuntimeOptions(BaseModel):
     numa: bool | None = None
     low_vram: bool | None = None
 
-    def to_options(self) -> dict[str, Any] | None:
-        data = self.model_dump(exclude_none=True)
+    def to_options(self) -> dict[str, JsonValue] | None:
+        data = cast(dict[str, JsonValue], self.model_dump(exclude_none=True))
         if data.get("num_thread") == "auto":
             data.pop("num_thread", None)
         return data or None
@@ -184,26 +193,26 @@ class ModelConfig(BaseModel):
     )
 
     # Provider-specific config (can use YAML anchors)
-    provider_config: OpenAIProviderSettings | OllamaProviderSettings | dict[str, Any] | None = Field(
-        None,
+    provider_config: OpenAIProviderSettings | OllamaProviderSettings | dict[str, JsonValue] | None = Field(
+        default=None,
         description="Provider-specific configuration (can reference providers via anchors)",
     )
 
     # Completion options
     completion_options: CompletionOptions | None = Field(
-        None,
+        default=None,
         description="Default completion options for this model",
     )
 
     # Ollama-specific options
     ollama_options: OllamaRuntimeOptions | None = Field(
-        None,
+        default=None,
         description="Ollama-specific runtime options",
     )
 
     # Request options
     request_options: RequestOptions | None = Field(
-        None,
+        default=None,
         description="HTTP request options",
     )
 
@@ -233,7 +242,7 @@ class ModelConfig(BaseModel):
         if isinstance(self.provider_config, OpenAIProviderSettings):
             return self.provider_config
         elif isinstance(self.provider_config, dict):
-            return OpenAIProviderSettings(**self.provider_config)
+            return OpenAIProviderSettings.model_validate(self.provider_config)
         return OpenAIProviderSettings()
 
     def get_ollama_config(self) -> OllamaProviderSettings:
@@ -241,7 +250,7 @@ class ModelConfig(BaseModel):
         if isinstance(self.provider_config, OllamaProviderSettings):
             return self.provider_config
         elif isinstance(self.provider_config, dict):
-            return OllamaProviderSettings(**self.provider_config)
+            return OllamaProviderSettings.model_validate(self.provider_config)
         return OllamaProviderSettings()
 
 
@@ -271,7 +280,7 @@ class ModelsSettings(BaseModel):
               model: "gpt-5.2"
               roles: [chat, edit]
     """
-    defaults: ModelDefaults = Field(default_factory=ModelDefaults)
+    defaults: ModelDefaults = Field(default_factory=_default_factory(ModelDefaults))
     available: list[ModelConfig] = Field(default_factory=list)
 
     @model_validator(mode="after")
@@ -314,11 +323,17 @@ class ModelsSettings(BaseModel):
 
     def get_default_for_role(self, role: ModelRole) -> ModelConfig | None:
         """Get the default model for a role."""
-        # Map role names to ModelDefaults field names
-        # (ModelRole uses "embed" but ModelDefaults field is "embedding")
-        _role_to_field = {"embed": "embedding"}
-        field_name = _role_to_field.get(role, role)
-        default_id = getattr(self.defaults, field_name, None)
+        match role:
+            case "chat":
+                default_id = self.defaults.chat
+            case "embed":
+                default_id = self.defaults.embedding
+            case "edit":
+                default_id = self.defaults.edit
+            case "autocomplete":
+                default_id = self.defaults.autocomplete
+            case _:
+                default_id = None
         if default_id:
             return self.get_model(default_id)
         # Fallback to first model with this role
@@ -335,9 +350,12 @@ class AppSettings(BaseModel):
     name: str = "Crystalith"
     openapi_path: str = "/v1/codev/openapi.json"
     openapi_ui_path: str = "/v1/codev/openapi-ui/scalar"
-    cors: "CorsSettings" = Field(default_factory=lambda: CorsSettings(), description="CORS settings")
+    cors: "CorsSettings" = Field(
+        default_factory=lambda: CorsSettings.model_validate({}),
+        description="CORS settings",
+    )
     startup: "StartupSettings" = Field(
-        default_factory=lambda: StartupSettings(),
+        default_factory=lambda: StartupSettings.model_validate({}),
         description="Startup behaviors",
     )
 
@@ -387,8 +405,8 @@ class VectorStorageChromaSettings(BaseModel):
 class VectorStorageSettings(BaseModel):
     """Vector storage settings."""
     provider: Literal["memory", "sqlite", "chroma"] = "chroma"
-    sqlite: VectorStorageSQLiteSettings = Field(default_factory=VectorStorageSQLiteSettings)
-    chroma: VectorStorageChromaSettings = Field(default_factory=VectorStorageChromaSettings)
+    sqlite: VectorStorageSQLiteSettings = Field(default_factory=_default_factory(VectorStorageSQLiteSettings))
+    chroma: VectorStorageChromaSettings = Field(default_factory=_default_factory(VectorStorageChromaSettings))
 
 
 class CacheSettings(BaseModel):
@@ -490,7 +508,7 @@ class SearXNGSettings(BaseModel):
 
 class SearchSettings(BaseModel):
     """Web search settings."""
-    searxng: SearXNGSettings = Field(default_factory=lambda: SearXNGSettings())
+    searxng: SearXNGSettings = Field(default_factory=_default_factory(SearXNGSettings))
 
 
 class OptionalServiceProbeSettings(BaseModel):
@@ -509,7 +527,7 @@ class OptionalServiceSettings(BaseModel):
     endpoint: str | None = Field(None, description="Service endpoint/base URL")
     timeout_s: float = Field(3.0, ge=0.1, le=120, description="Connection timeout in seconds")
     probe: OptionalServiceProbeSettings = Field(
-        default_factory=OptionalServiceProbeSettings,
+        default_factory=_default_factory(OptionalServiceProbeSettings),
         description="Probe policy for this service",
     )
     degrade_policy: Literal["core_available", "fail_closed"] = Field(
@@ -522,27 +540,23 @@ class OptionalServicesSettings(BaseModel):
     """Optional dependency service contracts."""
 
     ollama: OptionalServiceSettings = Field(
-        default_factory=lambda: OptionalServiceSettings(
-            endpoint="http://localhost:11434",
-            enabled=False,
+        default_factory=lambda: OptionalServiceSettings.model_validate(
+            {"endpoint": "http://localhost:11434", "enabled": False}
         )
     )
     chroma: OptionalServiceSettings = Field(
-        default_factory=lambda: OptionalServiceSettings(
-            endpoint="http://localhost:8000",
-            enabled=False,
+        default_factory=lambda: OptionalServiceSettings.model_validate(
+            {"endpoint": "http://localhost:8000", "enabled": False}
         )
     )
     redis: OptionalServiceSettings = Field(
-        default_factory=lambda: OptionalServiceSettings(
-            endpoint="redis://localhost:6379/0",
-            enabled=False,
+        default_factory=lambda: OptionalServiceSettings.model_validate(
+            {"endpoint": "redis://localhost:6379/0", "enabled": False}
         )
     )
     searxng: OptionalServiceSettings = Field(
-        default_factory=lambda: OptionalServiceSettings(
-            endpoint="http://localhost:8888",
-            enabled=False,
+        default_factory=lambda: OptionalServiceSettings.model_validate(
+            {"endpoint": "http://localhost:8888", "enabled": False}
         )
     )
 
@@ -672,7 +686,7 @@ class UrlFetchSecuritySettings(BaseModel):
 
     @field_validator("allowlist_hosts", "allowlist_domains", mode="before")
     @classmethod
-    def _normalize_allowlist_hosts_domains(cls, v: Any) -> list[str]:
+    def _normalize_allowlist_hosts_domains(cls, v: object) -> list[str]:
         if v is None or v == "":
             return []
         if not isinstance(v, list):
@@ -691,7 +705,7 @@ class UrlFetchSecuritySettings(BaseModel):
 
     @field_validator("allowlist_cidrs", mode="before")
     @classmethod
-    def _normalize_allowlist_cidrs(cls, v: Any) -> list[str]:
+    def _normalize_allowlist_cidrs(cls, v: object) -> list[str]:
         if v is None or v == "":
             return []
         if not isinstance(v, list):
@@ -713,12 +727,12 @@ class UrlFetchSecuritySettings(BaseModel):
 
 class UrlFetchSettings(BaseModel):
     """URL 内容获取配置。"""
-    proxy: HttpProxySettings = Field(default_factory=HttpProxySettings, description="代理配置")
+    proxy: HttpProxySettings = Field(default_factory=_default_factory(HttpProxySettings), description="代理配置")
     timeout: int = Field(30, ge=5, le=120, description="请求超时时间（秒）")
     retry_count: int = Field(2, ge=0, le=5, description="重试次数")
     retry_delay: float = Field(1.0, ge=0.0, le=10.0, description="重试间隔（秒）")
     security: UrlFetchSecuritySettings = Field(
-        default_factory=UrlFetchSecuritySettings,
+        default_factory=_default_factory(UrlFetchSecuritySettings),
         description="URL fetch SSRF 安全策略（默认拒绝 localhost/私网/元数据等高风险目标）。",
     )
 
@@ -799,28 +813,28 @@ class WebExtractionSettings(BaseModel):
 
     # 各提取器配置
     trafilatura: TrafilaturaSettings = Field(
-        default_factory=TrafilaturaSettings,
+        default_factory=_default_factory(TrafilaturaSettings),
         description="Trafilatura 本地提取器配置",
     )
     jina: JinaSettings = Field(
-        default_factory=JinaSettings,
+        default_factory=_default_factory(JinaSettings),
         description="Jina Reader API 提取器配置",
     )
     firecrawl: FirecrawlSettings = Field(
-        default_factory=FirecrawlSettings,
+        default_factory=_default_factory(FirecrawlSettings),
         description="Firecrawl API 提取器配置",
     )
     browserless: BrowserlessSettings = Field(
-        default_factory=BrowserlessSettings,
+        default_factory=_default_factory(BrowserlessSettings),
         description="Browserless 浏览器渲染提取器配置",
     )
 
 
 class SourceIngestionSettings(BaseModel):
     """来源导入配置。"""
-    url_fetch: UrlFetchSettings = Field(default_factory=UrlFetchSettings, description="URL 获取配置")
+    url_fetch: UrlFetchSettings = Field(default_factory=_default_factory(UrlFetchSettings), description="URL 获取配置")
     web_extraction: WebExtractionSettings = Field(
-        default_factory=WebExtractionSettings,
+        default_factory=_default_factory(WebExtractionSettings),
         description="网页内容提取配置",
     )
 
@@ -876,42 +890,45 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="ignore", env_prefix="CRYSTALITH_")
 
     # === Metadata (Continue-style) ===
-    name: str = Field("Crystalith", description="Configuration name")
-    version: str = Field("1.0.0", description="Configuration version")
-    schema_version: str = Field("v1", alias="schema", description="Schema version")
+    name: str = Field(default="Crystalith", description="Configuration name")
+    version: str = Field(default="1.0.0", description="Configuration version")
+    schema_version: str = Field(default="v1", alias="schema", description="Schema version")
 
     # === Providers (for YAML anchor references) ===
-    providers: dict[str, Any] = Field(
+    providers: dict[str, JsonValue] = Field(
         default_factory=dict,
         description="Reusable provider configurations (use YAML anchors)",
     )
 
     # === Core Settings ===
-    app: AppSettings = Field(default_factory=AppSettings)
-    database: DatabaseSettings = Field(default_factory=DatabaseSettings)
-    vector_storage: VectorStorageSettings = Field(default_factory=VectorStorageSettings)
-    cache: CacheSettings = Field(default_factory=CacheSettings)
+    app: AppSettings = Field(default_factory=_default_factory(AppSettings))
+    database: DatabaseSettings = Field(default_factory=_default_factory(DatabaseSettings))
+    vector_storage: VectorStorageSettings = Field(default_factory=_default_factory(VectorStorageSettings))
+    cache: CacheSettings = Field(default_factory=_default_factory(CacheSettings))
 
     # === Feature Settings ===
-    embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
-    ai: AISettings = Field(default_factory=AISettings)
-    concurrency: ConcurrencySettings = Field(default_factory=ConcurrencySettings, description="Concurrency guardrails")
-    chat: ChatSettings = Field(default_factory=ChatSettings)
-    refine: RefineSettings = Field(default_factory=RefineSettings)
-    context_window: ContextWindowSettings = Field(default_factory=ContextWindowSettings)
-    search: SearchSettings = Field(default_factory=lambda: SearchSettings(), description="Web search settings")
+    embedding: EmbeddingSettings = Field(default_factory=_default_factory(EmbeddingSettings))
+    ai: AISettings = Field(default_factory=_default_factory(AISettings))
+    concurrency: ConcurrencySettings = Field(
+        default_factory=_default_factory(ConcurrencySettings),
+        description="Concurrency guardrails",
+    )
+    chat: ChatSettings = Field(default_factory=_default_factory(ChatSettings))
+    refine: RefineSettings = Field(default_factory=_default_factory(RefineSettings))
+    context_window: ContextWindowSettings = Field(default_factory=_default_factory(ContextWindowSettings))
+    search: SearchSettings = Field(default_factory=_default_factory(SearchSettings), description="Web search settings")
     optional_services: OptionalServicesSettings = Field(
-        default_factory=OptionalServicesSettings,
+        default_factory=_default_factory(OptionalServicesSettings),
         description="Optional dependency service contracts and probe policies",
     )
-    plugins: PluginsSettings = Field(default_factory=PluginsSettings, description="插件加载配置")
+    plugins: PluginsSettings = Field(default_factory=_default_factory(PluginsSettings), description="插件加载配置")
     source_ingestion: SourceIngestionSettings = Field(
-        default_factory=SourceIngestionSettings,
+        default_factory=_default_factory(SourceIngestionSettings),
         description="来源导入配置（包含 URL 获取和代理设置）",
     )
 
     # === Models ===
-    models: ModelsSettings = Field(default_factory=ModelsSettings, description="Model configurations")
+    models: ModelsSettings = Field(default_factory=_default_factory(ModelsSettings), description="Model configurations")
 
     @classmethod
     def settings_customise_sources(

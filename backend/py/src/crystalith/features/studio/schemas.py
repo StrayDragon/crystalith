@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import datetime
-from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from crystalith.shared.json_types import JsonDict
 from crystalith.shared.types import SlideStage, SlideStatus
 
 
@@ -13,7 +13,7 @@ class SlideDraftCreate(BaseModel):
     prompt: str | None = None
     engine: str = Field("slidev", description="Rendering engine (default: slidev)")
     source_ids: list[int] | None = None
-    generation_config: dict[str, Any] | None = None
+    generation_config: JsonDict | None = None
 
 
 class SlideDraftUpdate(BaseModel):
@@ -21,7 +21,7 @@ class SlideDraftUpdate(BaseModel):
     prompt: str | None = None
     engine: str | None = None
     source_ids: list[int] | None = None
-    generation_config: dict[str, Any] | None = None
+    generation_config: JsonDict | None = None
 
 
 class SlideDraftRead(BaseModel):
@@ -34,9 +34,9 @@ class SlideDraftRead(BaseModel):
     prompt: str | None
     engine: str
     chunk_ids: list[int] | None
-    outline: dict[str, Any] | None
+    outline: JsonDict | None
     markdown: str | None
-    generation_config: dict[str, Any] | None
+    generation_config: JsonDict | None
     stage: SlideStage
     status: SlideStatus
     error_message: str | None

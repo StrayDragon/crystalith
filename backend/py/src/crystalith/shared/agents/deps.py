@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
+from pydantic_ai.models import Model
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.interfaces import EmbeddingProvider
@@ -20,6 +20,6 @@ class StudioDeps:
     vector_store: VectorStore
     embedder: EmbeddingProvider
     cache: CacheProvider | None = None
-    model: Any | None = None
+    model: Model | None = None
     limiters: StageLimiters | None = None
     plugins: PluginRegistry | None = None

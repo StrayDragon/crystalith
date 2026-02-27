@@ -12,7 +12,7 @@ from cl_sqlalchemyx.mgrs import AsyncDBManager
 from crystalith.shared.ai.factory import create_chat_provider, create_embedding_provider
 from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.shared.ai.wrappers import CachedEmbeddingProvider, DefaultBatchEmbeddingProvider
-from crystalith.shared.cache import CacheProvider, create_cache_provider
+from crystalith.shared.cache import CacheProvider
 from crystalith.shared.concurrency import StageLimiters
 from crystalith.shared.config import Settings
 from crystalith.shared.parsers import TranscriptionProvider, create_transcription_provider
@@ -32,11 +32,7 @@ def get_plugin_registry(request: Request) -> PluginRegistry:
 
 
 def get_cache_provider(request: Request) -> CacheProvider:
-    provider = getattr(request.app.state, "cache", None)
-    if provider is None:
-        provider = create_cache_provider(request.app.state.settings)
-        request.app.state.cache = provider
-    return provider
+    return request.app.state.cache
 
 
 async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
@@ -73,7 +69,7 @@ def _env_float(name: str, default: float) -> float:
 
 
 def get_embedding_provider(request: Request) -> EmbeddingProvider:
-    provider = getattr(request.app.state, "embedding_provider", None)
+    provider = request.app.state.embedding_provider
     if provider is None:
         settings: Settings = request.app.state.settings
         try:
@@ -105,7 +101,7 @@ def get_embedding_provider(request: Request) -> EmbeddingProvider:
 
 
 def get_ai_provider(request: Request) -> ChatProvider:
-    provider = getattr(request.app.state, "ai_provider", None)
+    provider = request.app.state.ai_provider
     if provider is None:
         try:
             provider = create_chat_provider(

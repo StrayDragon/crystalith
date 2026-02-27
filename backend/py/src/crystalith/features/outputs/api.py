@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import json
-from typing import Any
+from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -39,6 +39,7 @@ from crystalith.shared.deps import (
     get_vector_store,
 )
 from crystalith.shared.plugins import PluginRegistry
+from crystalith.shared.json_types import JsonDict, JsonValue
 
 from time import perf_counter
 
@@ -74,7 +75,7 @@ class OutputGenerateRequest(BaseModel):
             return self
 
         tuning = tuning_for_preference(self.preference)
-        fields_set = getattr(self, "model_fields_set", set())
+        fields_set = self.model_fields_set
         if "top_k" not in fields_set:
             self.top_k = tuning.top_k
         if "min_score" not in fields_set:
@@ -90,7 +91,7 @@ class OutputRead(BaseModel):
     type: OutputType
     prompt: str | None
     chunk_ids: list[int] | None
-    content: dict[str, Any]
+    content: JsonDict
     created_at: datetime.datetime
     updated_at: datetime.datetime
 
@@ -119,11 +120,11 @@ async def create_output(
     request_id = request.headers.get("x-request-id") or request.headers.get("x-correlation-id") or trace_id
     started = perf_counter()
 
-    raw_payload: dict[str, Any] = {}
+    raw_payload: object = None
     try:
         raw_payload = await request.json()
     except Exception:
-        raw_payload = {}
+        raw_payload = None
 
     top_k_provided = isinstance(raw_payload, dict) and "top_k" in raw_payload
     min_score_provided = isinstance(raw_payload, dict) and "min_score" in raw_payload
@@ -301,6 +302,19 @@ class ConvertToSourceResponse(BaseModel):
     chunk_count: int
 
 
+def _json_to_text(value: JsonValue | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (int, float, bool)):
+        return str(value)
+    try:
+        return json.dumps(value, ensure_ascii=False)
+    except TypeError:
+        return str(value)
+
+
 def _extract_text_from_output(output: Output) -> str:
     """Extract text content from output for source creation."""
     content = output.content
@@ -311,16 +325,20 @@ def _extract_text_from_output(output: Output) -> str:
 
     # Add title if present
     if "title" in content:
-        parts.append(f"# {content['title']}")
+        parts.append(f"# {_json_to_text(content['title'])}")
 
     # Handle different output types
     output_type = output.type
 
     if output_type == OutputType.PARAGRAPH:
         if "content" in content:
-            parts.append(content["content"])
+            paragraph = _json_to_text(content["content"])
+            if paragraph:
+                parts.append(paragraph)
         elif "text" in content:
-            parts.append(content["text"])
+            paragraph = _json_to_text(content["text"])
+            if paragraph:
+                parts.append(paragraph)
 
     elif output_type == OutputType.BULLETS:
         # Support both the legacy {"bullets": [...]} format and the current
@@ -330,9 +348,10 @@ def _extract_text_from_output(output: Output) -> str:
                 if isinstance(item, str):
                     text = item
                 elif isinstance(item, dict):
-                    text = str(item.get("text") or "")
+                    item_dict = cast(JsonDict, item)
+                    text = _json_to_text(item_dict.get("text"))
                 else:
-                    text = ""
+                    text = _json_to_text(item)
                 if text:
                     parts.append(f"- {text}")
         elif "bullets" in content and isinstance(content["bullets"], list):
@@ -343,8 +362,11 @@ def _extract_text_from_output(output: Output) -> str:
     elif output_type == OutputType.FAQ:
         if "items" in content and isinstance(content["items"], list):
             for item in content["items"]:
-                q = item.get("question", item.get("q", ""))
-                a = item.get("answer", item.get("a", ""))
+                if not isinstance(item, dict):
+                    continue
+                item_dict = cast(JsonDict, item)
+                q = _json_to_text(item_dict.get("question") or item_dict.get("q"))
+                a = _json_to_text(item_dict.get("answer") or item_dict.get("a"))
                 if q:
                     parts.append(f"**Q: {q}**")
                 if a:
@@ -354,9 +376,12 @@ def _extract_text_from_output(output: Output) -> str:
     elif output_type == OutputType.TIMELINE:
         if "events" in content and isinstance(content["events"], list):
             for event in content["events"]:
-                date = event.get("date", "")
-                title = event.get("event", event.get("title", ""))
-                desc = event.get("description", "")
+                if not isinstance(event, dict):
+                    continue
+                event_dict = cast(JsonDict, event)
+                date = _json_to_text(event_dict.get("date"))
+                title = _json_to_text(event_dict.get("event") or event_dict.get("title"))
+                desc = _json_to_text(event_dict.get("description"))
                 parts.append(f"**{date}** - {title}")
                 if desc:
                     parts.append(f"  {desc}")
@@ -364,29 +389,35 @@ def _extract_text_from_output(output: Output) -> str:
     elif output_type == OutputType.QUIZ:
         if "questions" in content and isinstance(content["questions"], list):
             for i, q in enumerate(content["questions"], 1):
-                question = q.get("question", "")
+                if not isinstance(q, dict):
+                    continue
+                q_dict = cast(JsonDict, q)
+                question = _json_to_text(q_dict.get("question"))
                 parts.append(f"{i}. {question}")
-                options = q.get("options", [])
-                for opt in options:
-                    parts.append(f"   - {opt}")
-                answer = q.get("answer", "")
+                options = q_dict.get("options")
+                if isinstance(options, list):
+                    for opt in options:
+                        parts.append(f"   - {_json_to_text(opt)}")
+                answer = _json_to_text(q_dict.get("answer"))
                 if answer:
                     parts.append(f"   答案: {answer}")
                 parts.append("")
 
     elif output_type == OutputType.MINDMAP:
         # Convert mindmap to text outline
-        def traverse_node(node: dict, indent: int = 0) -> None:
-            label = node.get("label", node.get("name", ""))
+        def traverse_node(node: JsonDict, indent: int = 0) -> None:
+            label = _json_to_text(node.get("label") or node.get("name"))
             prefix = "  " * indent + ("- " if indent > 0 else "# ")
             parts.append(f"{prefix}{label}")
             children = node.get("children", [])
-            for child in children:
-                traverse_node(child, indent + 1)
+            if isinstance(children, list):
+                for child in children:
+                    if isinstance(child, dict):
+                        traverse_node(cast(JsonDict, child), indent + 1)
 
         root = content.get("root") or content
         if isinstance(root, dict):
-            traverse_node(root)
+            traverse_node(cast(JsonDict, root))
 
     elif output_type == OutputType.GUIDE:
         modules = content.get("modules")
@@ -394,34 +425,38 @@ def _extract_text_from_output(output: Output) -> str:
             for module in modules:
                 if not isinstance(module, dict):
                     continue
-                title = module.get("title", "")
+                module_dict = cast(JsonDict, module)
+                title = _json_to_text(module_dict.get("title"))
                 if title:
                     parts.append(f"## {title}")
-                objective = module.get("objective")
+                objective = module_dict.get("objective")
                 if isinstance(objective, dict):
-                    objective_text = objective.get("text")
+                    objective_text = cast(JsonDict, objective).get("text")
                     if objective_text:
-                        parts.append(str(objective_text))
-                key_points = module.get("key_points")
+                        parts.append(_json_to_text(objective_text))
+                key_points = module_dict.get("key_points")
                 if isinstance(key_points, list) and key_points:
                     parts.append("")
                     parts.append("### 要点")
                     for point in key_points:
                         if isinstance(point, dict):
-                            text = point.get("text") or ""
+                            text = _json_to_text(cast(JsonDict, point).get("text"))
                         else:
-                            text = str(point or "")
+                            text = _json_to_text(point)
                         if text:
                             parts.append(f"- {text}")
                 parts.append("")
         elif "sections" in content and isinstance(content["sections"], list):
             for section in content["sections"]:
-                title = section.get("title", "")
+                if not isinstance(section, dict):
+                    continue
+                section_dict = cast(JsonDict, section)
+                title = _json_to_text(section_dict.get("title"))
                 if title:
                     parts.append(f"## {title}")
-                body = section.get("content", section.get("body", ""))
+                body = section_dict.get("content") or section_dict.get("body")
                 if body:
-                    parts.append(body)
+                    parts.append(_json_to_text(body))
                 parts.append("")
 
     elif output_type == OutputType.BRIEFING:
@@ -430,59 +465,61 @@ def _extract_text_from_output(output: Output) -> str:
             for section in sections:
                 if not isinstance(section, dict):
                     continue
-                heading = section.get("heading", "")
+                section_dict = cast(JsonDict, section)
+                heading = _json_to_text(section_dict.get("heading"))
                 if heading:
                     parts.append(f"## {heading}")
-                points = section.get("points")
+                points = section_dict.get("points")
                 if isinstance(points, list):
                     for point in points:
                         if isinstance(point, dict):
-                            text = point.get("text") or ""
+                            text = _json_to_text(cast(JsonDict, point).get("text"))
                         else:
-                            text = str(point or "")
+                            text = _json_to_text(point)
                         if text:
                             parts.append(f"- {text}")
                 parts.append("")
         else:
             if "summary" in content:
                 parts.append("## 摘要")
-                parts.append(content["summary"])
+                parts.append(_json_to_text(content["summary"]))
             if "key_points" in content and isinstance(content["key_points"], list):
                 parts.append("\n## 要点")
                 for point in content["key_points"]:
-                    parts.append(f"- {point}")
+                    parts.append(f"- {_json_to_text(point)}")
             if "recommendations" in content and isinstance(content["recommendations"], list):
                 parts.append("\n## 建议")
                 for rec in content["recommendations"]:
-                    parts.append(f"- {rec}")
+                    parts.append(f"- {_json_to_text(rec)}")
 
     elif output_type == OutputType.SLIDES:
         if "markdown" in content and isinstance(content["markdown"], str):
             parts.append(content["markdown"])
         elif "outline" in content and isinstance(content["outline"], dict):
-            outline = content["outline"]
-            title = outline.get("title") or "演示"
+            outline = cast(JsonDict, content["outline"])
+            title = _json_to_text(outline.get("title")) or "演示"
             parts.append(f"# {title}")
             slides = outline.get("slides", [])
             if isinstance(slides, list):
                 for slide in slides:
                     if not isinstance(slide, dict):
                         continue
-                    slide_title = slide.get("title") or "幻灯片"
+                    slide_dict = cast(JsonDict, slide)
+                    slide_title = _json_to_text(slide_dict.get("title")) or "幻灯片"
                     parts.append(f"## {slide_title}")
-                    bullets = slide.get("bullets", [])
+                    bullets = slide_dict.get("bullets")
                     if isinstance(bullets, list):
                         for bullet in bullets:
-                            parts.append(f"- {bullet}")
+                            parts.append(f"- {_json_to_text(bullet)}")
 
     elif output_type == OutputType.STRUCTURED:
         bullets = content.get("bullets")
         if isinstance(bullets, list):
             for bullet in bullets:
                 if isinstance(bullet, dict):
-                    text = bullet.get("text") or ""
+                    text = _json_to_text(cast(JsonDict, bullet).get("text"))
                 else:
-                    text = str(bullet or "")
+                    text = _json_to_text(bullet)
                 if text:
                     parts.append(f"- {text}")
         terms = content.get("terms")
@@ -491,18 +528,19 @@ def _extract_text_from_output(output: Output) -> str:
             parts.append("## 术语")
             for term in terms:
                 if term:
-                    parts.append(f"- {term}")
+                    parts.append(f"- {_json_to_text(term)}")
         sections = content.get("sections")
         if not bullets and isinstance(sections, list):
             for section in sections:
                 if not isinstance(section, dict):
                     continue
-                title = section.get("title", "")
+                section_dict = cast(JsonDict, section)
+                title = _json_to_text(section_dict.get("title"))
                 if title:
                     parts.append(f"## {title}")
-                body = section.get("content", "")
+                body = section_dict.get("content")
                 if body:
-                    parts.append(body)
+                    parts.append(_json_to_text(body))
         if not parts:
             parts.append(json.dumps(content, ensure_ascii=False, indent=2))
 
@@ -510,8 +548,9 @@ def _extract_text_from_output(output: Output) -> str:
     if not parts and content:
         # Try common fields
         for key in ["content", "text", "body", "summary"]:
-            if key in content and isinstance(content[key], str):
-                parts.append(content[key])
+            value = content.get(key)
+            if isinstance(value, str):
+                parts.append(value)
                 break
 
     # Add prompt as context if present

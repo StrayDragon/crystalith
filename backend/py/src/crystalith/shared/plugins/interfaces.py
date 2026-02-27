@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 from pydantic import BaseModel
 
 from crystalith.shared.config import ModelConfig, Settings
+from .render_types import OutputTypePluginMeta, PluginConfigSchema, RenderDescriptor
 if TYPE_CHECKING:
     from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
     from crystalith.shared.parsers.interfaces import Parser
@@ -36,6 +37,8 @@ class AIProviderPlugin(Protocol):
     `models.available[].provider` in config.
     """
 
+    api_version: str
+
     def create_chat_provider(self, settings: Settings, model_config: ModelConfig) -> "ChatProvider": ...
 
     def create_embedding_provider(self, settings: Settings, model_config: ModelConfig) -> "EmbeddingProvider": ...
@@ -49,6 +52,8 @@ class ParserPlugin(Protocol):
     `parser_type` will be written to Source.parser_type for observability.
     """
 
+    api_version: str
+
     parser_type: str
     supported_mime_types: set[str]
     supported_extensions: set[str]
@@ -58,8 +63,8 @@ class ParserPlugin(Protocol):
         *,
         filename: str | None,
         mime_type: str | None,
-        transcriber: "TranscriptionProvider" | None = None,
-        media_fetcher: "MediaFetcher" | None = None,
+        transcriber: "TranscriptionProvider | None" = None,
+        media_fetcher: "MediaFetcher | None" = None,
     ) -> "Parser": ...
 
 
@@ -73,6 +78,12 @@ class OutputTypePlugin(Protocol):
     introduce brand new output types without a core migration.
     """
 
+    api_version: str
+
     output_type: str
     schema: type[BaseModel]
     default_prompt: str | None
+
+    metadata: OutputTypePluginMeta | None
+    render_descriptor: RenderDescriptor | None
+    config_schema: PluginConfigSchema | None

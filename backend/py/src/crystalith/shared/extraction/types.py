@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
 
 
 class ExtractorType(str, Enum):
@@ -75,7 +74,7 @@ class ExtractedContent:
     raw_html: str | None = None
     """Raw HTML content (optional, for debugging)."""
 
-    extra: dict[str, Any] = field(default_factory=dict)
+    extra: dict[str, object] = field(default_factory=dict)
     """Additional metadata from the extractor."""
 
     @property
@@ -88,7 +87,7 @@ class ExtractedContent:
         """Check if the extraction result is empty."""
         return not self.text or len(self.text.strip()) == 0
 
-    def to_metadata(self) -> dict[str, Any]:
+    def to_metadata(self) -> dict[str, object]:
         """Convert to metadata dict for storage."""
         return {
             "extractor": self.extractor,
@@ -131,7 +130,7 @@ class ExtractorInfo:
     requires_service: bool = False
     """Whether this extractor requires an external service."""
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, object]:
         """Convert to dict for API response."""
         return {
             "type": self.type.value,

@@ -4,7 +4,8 @@ import datetime
 import enum
 import json
 from collections.abc import Mapping, Sequence
-from typing import Any
+
+from crystalith.shared.json_types import JsonValue
 
 try:
     import redis.asyncio as redis
@@ -12,7 +13,7 @@ except ModuleNotFoundError:  # pragma: no cover
     redis = None  # type: ignore[assignment]
 
 
-def _json_default(value: Any) -> Any:
+def _json_default(value: object) -> object:
     if isinstance(value, datetime.datetime):
         return value.isoformat()
     if isinstance(value, enum.Enum):
@@ -27,18 +28,18 @@ class RedisCache:
         self._client = redis.from_url(redis_url, decode_responses=True)
         self._default_ttl = float(ttl)
 
-    async def get(self, key: str) -> Any | None:
+    async def get(self, key: str) -> JsonValue | None:
         raw = await self._client.get(key)
         if raw is None:
             return None
         return json.loads(raw)
 
-    async def get_many(self, keys: Sequence[str]) -> list[Any | None]:
+    async def get_many(self, keys: Sequence[str]) -> list[JsonValue | None]:
         if not keys:
             return []
 
         raws = await self._client.mget(list(keys))
-        output: list[Any | None] = []
+        output: list[JsonValue | None] = []
         for raw in raws:
             if raw is None:
                 output.append(None)
@@ -46,7 +47,7 @@ class RedisCache:
             output.append(json.loads(raw))
         return output
 
-    async def set(self, key: str, value: Any, *, ttl: float | None = None) -> None:
+    async def set(self, key: str, value: JsonValue, *, ttl: float | None = None) -> None:
         resolved_ttl = self._default_ttl if ttl is None else float(ttl)
         raw = json.dumps(value, ensure_ascii=False, default=_json_default)
         if resolved_ttl > 0:
@@ -66,7 +67,7 @@ class RedisCache:
             await self._client.persist(key)
         return int(value)
 
-    async def set_many(self, items: Mapping[str, Any], *, ttl: float | None = None) -> None:
+    async def set_many(self, items: Mapping[str, JsonValue], *, ttl: float | None = None) -> None:
         if not items:
             return None
 
@@ -93,10 +94,5 @@ class RedisCache:
         return len(keys)
 
     async def close(self) -> None:
-        close = getattr(self._client, "close", None)
-        if close is not None:
-            await close()
-        pool = getattr(self._client, "connection_pool", None)
-        disconnect = getattr(pool, "disconnect", None) if pool is not None else None
-        if disconnect is not None:
-            await disconnect()
+        await self._client.close()
+        await self._client.connection_pool.disconnect()

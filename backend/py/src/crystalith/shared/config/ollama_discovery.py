@@ -11,11 +11,11 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
+from typing import TypedDict, cast
 
 import httpx
 
-from .models import ModelConfig, OllamaProviderSettings, Settings
+from .models import ModelConfig, ModelRole, OllamaProviderSettings, Settings
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +36,16 @@ _EMBEDDING_NAME_PREFIXES = (
     "all-minilm", "e5-", "gte-", "jina-embeddings",
     "text-embedding",
 )
+
+
+class _OllamaModelDetails(TypedDict, total=False):
+    family: str
+    parameter_size: str
+
+
+class OllamaModelDict(TypedDict, total=False):
+    name: str
+    details: _OllamaModelDetails
 
 
 def _is_embedding_model(name: str, family: str | None = None) -> bool:
@@ -88,7 +98,7 @@ def discover_ollama_models(
     host: str = "http://localhost:11434",
     *,
     timeout: float = 5.0,
-) -> list[dict[str, Any]]:
+) -> list[OllamaModelDict]:
     """Query Ollama server for available models.
 
     Returns raw model data from the Ollama API.
@@ -99,7 +109,16 @@ def discover_ollama_models(
             resp = client.get(f"{host}/api/tags")
             resp.raise_for_status()
             data = resp.json()
-            return data.get("models", [])
+            if not isinstance(data, dict):
+                return []
+            models = data.get("models")
+            if not isinstance(models, list):
+                return []
+            output: list[OllamaModelDict] = []
+            for model in models:
+                if isinstance(model, dict):
+                    output.append(cast(OllamaModelDict, model))
+            return output
     except Exception as exc:
         logger.debug("Ollama discovery failed for %s: %s", host, exc)
         return []
@@ -227,23 +246,30 @@ def resolve_reachable_ollama_host(
 
 
 def build_model_configs_from_ollama(
-    ollama_models: list[dict[str, Any]],
+    ollama_models: list[OllamaModelDict],
     host: str = "http://localhost:11434",
 ) -> list[ModelConfig]:
     """Convert raw Ollama model data to ModelConfig instances."""
     configs: list[ModelConfig] = []
 
     for model_data in ollama_models:
-        name: str = model_data.get("name", "")
-        if not name:
+        name_raw = model_data.get("name")
+        if not isinstance(name_raw, str) or not name_raw:
             continue
+        name = name_raw
 
-        details = model_data.get("details", {})
-        family = details.get("family", "")
-        param_size = details.get("parameter_size", "")
+        details = model_data.get("details")
+        if not isinstance(details, dict):
+            details = {}
+
+        family_raw = details.get("family")
+        family = family_raw if isinstance(family_raw, str) else ""
+
+        param_size_raw = details.get("parameter_size")
+        param_size = param_size_raw if isinstance(param_size_raw, str) else ""
 
         is_embed = _is_embedding_model(name, family)
-        roles: list[str] = ["embed"] if is_embed else ["chat"]
+        roles: list[ModelRole] = ["embed"] if is_embed else ["chat"]
 
         display_name = _model_display_name(name)
         description = f"Ollama · {family}" if family else "Ollama model"
@@ -256,7 +282,7 @@ def build_model_configs_from_ollama(
             model=name,
             display_name=display_name,
             description=description,
-            roles=roles,  # type: ignore[arg-type]
+            roles=roles,
             capabilities=[],
             provider_config=OllamaProviderSettings(host=host),
         )

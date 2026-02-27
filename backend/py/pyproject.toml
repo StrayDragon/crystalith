@@ -68,6 +68,7 @@ crystalith-output-mindmap = { workspace = true }
 
 [dependency-groups]
 dev = [
+    "basedpyright>=1.31.0",
     "freezegun>=1.5.1",
     "jinja2sql>=0.3.4",
     "pytest>=8.4.1",
@@ -90,3 +91,24 @@ fail_under = 85
 
 [tool.coverage.run]
 concurrency = ["greenlet"]
+
+[tool.basedpyright]
+pythonVersion = "3.12"
+include = ["src", "tests"]
+
+# Keep the baseline actionable: forbid explicit Any in app code, but avoid
+# turning every third-party stub gap into a hard failure.
+typeCheckingMode = "standard"
+reportMissingTypeStubs = "none"
+
+reportExplicitAny = "error"
+reportAny = "warning"
+
+[[tool.basedpyright.executionEnvironments]]
+root = "tests"
+reportExplicitAny = "none"
+reportAny = "none"
+reportUnknownArgumentType = "none"
+reportUnknownMemberType = "none"
+reportUnknownParameterType = "none"
+reportUnknownVariableType = "none"

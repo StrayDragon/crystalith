@@ -51,7 +51,7 @@ async def test_postprocess_output_runs_repair_when_enabled_and_quality(
         effective_prompt="P",
         content={"text": " ", "citations": [1]},
     )
-    deps = type("Deps", (), {"model": object()})()
+    deps = type("Deps", (), {"model": object(), "limiters": None})()
 
     await PostprocessOutput().run(_DummyCtx(state, deps))
 
@@ -92,7 +92,7 @@ async def test_postprocess_output_skips_repair_when_speed_preference(
         effective_prompt="P",
         content={"text": "", "citations": [1]},
     )
-    deps = type("Deps", (), {"model": object()})()
+    deps = type("Deps", (), {"model": object(), "limiters": None})()
 
     await PostprocessOutput().run(_DummyCtx(state, deps))
 
@@ -127,7 +127,7 @@ async def test_postprocess_output_skips_repair_for_plugin_schema(
         plugin_schema_used=True,
         content={"text": "", "citations": [1]},
     )
-    deps = type("Deps", (), {"model": object()})()
+    deps = type("Deps", (), {"model": object(), "limiters": None})()
 
     await PostprocessOutput().run(_DummyCtx(state, deps))
     assert state.content["_postprocessed"] is True
@@ -162,7 +162,7 @@ async def test_postprocess_output_repair_failure_falls_back_to_deterministic(
         effective_prompt="P",
         content={"text": "", "citations": [1]},
     )
-    deps = type("Deps", (), {"model": object()})()
+    deps = type("Deps", (), {"model": object(), "limiters": None})()
 
     await PostprocessOutput().run(_DummyCtx(state, deps))
 

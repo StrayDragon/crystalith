@@ -5,7 +5,7 @@ import json
 import os
 from dataclasses import dataclass, field
 from time import perf_counter
-from typing import Any
+from typing import cast
 
 from pydantic_ai import Agent
 from pydantic_graph import BaseNode, End, Graph, GraphRunContext
@@ -53,7 +53,7 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return value.strip().lower() not in {"0", "false", "no", "off"}
 
 
-def _strip_internal_keys(payload: Any) -> Any:
+def _strip_internal_keys(payload: object) -> object:
     if not isinstance(payload, dict):
         return payload
     return {key: value for key, value in payload.items() if not str(key).startswith("_")}
@@ -64,7 +64,7 @@ def _build_repair_prompt(
     output_type: OutputType,
     prompt: str,
     context: str,
-    draft: Any,
+    draft: object,
     citations_count: int,
 ) -> str:
     serialized = json.dumps(_strip_internal_keys(draft), ensure_ascii=False, indent=2, default=str)
@@ -99,7 +99,7 @@ class OutputGraphState:
     context: str = ""
     citations: list[Citation] = field(default_factory=list)
     resolved_chunk_ids: list[int] = field(default_factory=list)
-    content: dict[str, Any] = field(default_factory=dict)
+    content: dict[str, object] = field(default_factory=dict)
     db_output: Output | None = None
     model_id: str | None = None  # Optional model ID for dynamic model selection
 
@@ -149,7 +149,7 @@ def _build_citation(chunk: Chunk, source: Source, score: float) -> Citation:
     )
 
 
-def _resolve_citation_indices(value: Any) -> list[int]:
+def _resolve_citation_indices(value: object) -> list[int]:
     if not isinstance(value, list):
         return []
     indices: list[int] = []
@@ -167,7 +167,7 @@ def _resolve_citations(
     indices: list[int],
     citation_map: dict[int, Citation],
     fallback: list[Citation],
-) -> list[dict[str, Any]]:
+) -> list[dict[str, object]]:
     resolved: list[Citation] = []
     for index in indices:
         citation = citation_map.get(index)
@@ -175,7 +175,7 @@ def _resolve_citations(
             resolved.append(citation)
     if not resolved and fallback:
         resolved = fallback[:1]
-    return [item.model_dump() for item in resolved]
+    return [cast(dict[str, object], item.model_dump()) for item in resolved]
 
 
 def _normalize_source_ids(source_ids: list[int] | None) -> list[int]:
@@ -207,12 +207,12 @@ async def _validate_source_ids(
 
 
 def _map_citations(
-    payload: Any,
+    payload: object,
     citation_map: dict[int, Citation],
     fallback: list[Citation],
-) -> Any:
+) -> object:
     if isinstance(payload, dict):
-        mapped: dict[str, Any] = {}
+        mapped: dict[str, object] = {}
         for key, value in payload.items():
             if key == "citations":
                 indices = _resolve_citation_indices(value)
@@ -225,7 +225,7 @@ def _map_citations(
     return payload
 
 
-def _fallback_output(output_type: OutputType, prompt: str) -> dict[str, Any]:
+def _fallback_output(output_type: OutputType, prompt: str) -> dict[str, object]:
     """Generate fallback content when AI model fails to produce valid output.
 
     This provides a meaningful placeholder that indicates the generation failed,
@@ -319,11 +319,12 @@ def _fallback_output(output_type: OutputType, prompt: str) -> dict[str, Any]:
 
 def _ensure_minimum_content(
     output_type: OutputType,
-    content: Any,
+    content: object,
     prompt: str,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     if not isinstance(content, dict):
         return _fallback_output(output_type, prompt)
+    content = cast(dict[str, object], content)
 
     if output_type == OutputType.FAQ:
         items = content.get("items")
@@ -508,14 +509,14 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
 
     async def run(
         self, ctx: GraphRunContext[OutputGraphState, StudioDeps]
-    ) -> "MapCitations":
+    ) -> "PostprocessOutput":
         state = ctx.state
         deps = ctx.deps
 
         schema = OUTPUT_SCHEMAS[state.output_type]
         default_prompt = DEFAULT_PROMPTS.get(state.output_type, "")
 
-        plugins = getattr(deps, "plugins", None)
+        plugins = deps.plugins
         if plugins is not None:
             plugin = plugins.output_types.get(state.output_type.value)
             if plugin is not None:
@@ -557,7 +558,7 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         state.effective_prompt = effective_prompt
         user_prompt = _build_output_prompt(state.output_type, effective_prompt, state.context)
         generation_started = perf_counter()
-        limiters = getattr(deps, "limiters", None)
+        limiters = deps.limiters
         llm_limit = int(limiters.llm_generate.limit) if limiters is not None else 0
         llm_wait_ms = 0
         llm_hit = 0
@@ -569,14 +570,14 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                     llm_wait_ms = int(lease.wait_ms)
                     llm_hit = int(lease.hit)
                     result = await agent.run(user_prompt, deps=deps)
-            state.content = result.output.model_dump()
+            state.content = cast(dict[str, object], result.output.model_dump())
             generate_ms = int((perf_counter() - generation_started) * 1000)
             log.info(
                 "output generation succeeded",
                 trace_id=state.trace_id,
                 request_id=state.request_id,
                 output_type=state.output_type.value,
-                content_keys=list(state.content.keys()) if isinstance(state.content, dict) else None,
+                content_keys=list(state.content.keys()),
                 model_id=state.model_id,
                 preference=state.preference,
                 agent_retries=tuning.agent_retries,
@@ -625,7 +626,7 @@ class PostprocessOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         state = ctx.state
         deps = ctx.deps
 
-        content: Any = state.content
+        content: object = state.content
         repair_attempted = False
         repair_succeeded = False
 
@@ -650,10 +651,11 @@ class PostprocessOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
             )
 
             repair_started = perf_counter()
-            limiters = getattr(deps, "limiters", None)
+            limiters = deps.limiters
             llm_limit = int(limiters.llm_generate.limit) if limiters is not None else 0
             llm_wait_ms = 0
             llm_hit = 0
+            model_settings_log: dict[str, object] = {}
             try:
                 if state.model_id:
                     model = build_chat_model_from_model_id(deps.settings, state.model_id)
@@ -675,7 +677,7 @@ class PostprocessOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                         llm_wait_ms = int(lease.wait_ms)
                         llm_hit = int(lease.hit)
                         result = await agent.run(repair_prompt, deps=deps)
-                content = result.output.model_dump()
+                content = cast(dict[str, object], result.output.model_dump())
                 repair_succeeded = True
             except asyncio.CancelledError:
                 raise
@@ -756,7 +758,7 @@ class MapCitations(BaseNode[OutputGraphState, StudioDeps, Output]):
 
         citation_map = {index: cit for index, cit in enumerate(state.citations, start=1)}
         fallback_citations = state.citations[:1]
-        state.content = _map_citations(state.content, citation_map, fallback_citations)
+        state.content = cast(dict[str, object], _map_citations(state.content, citation_map, fallback_citations))
         return PersistOutput()
 
 

@@ -9,6 +9,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from crystalith.shared.config import Settings
+from crystalith.shared.config.models import ModelConfig
 from crystalith.shared.db import Notebook, Source, create_db_manager
 from crystalith.shared.db.migrations import upgrade_head
 from crystalith.shared.types import SourceStatus
@@ -142,14 +143,16 @@ async def test_lifespan_starts_ollama_monitor_when_enabled(
 ) -> None:
     settings = test_settings.model_copy(deep=True)
     settings.models.available.append(
-        {
-            "id": "local-embed",
-            "provider": "ollama",
-            "model": "bge-m3:567m",
-            "display_name": "Local Embed",
-            "roles": ["embed"],
-            "provider_config": {"host": "http://localhost:11434"},
-        }
+        ModelConfig.model_validate(
+            {
+                "id": "local-embed",
+                "provider": "ollama",
+                "model": "bge-m3:567m",
+                "display_name": "Local Embed",
+                "roles": ["embed"],
+                "provider_config": {"host": "http://localhost:11434"},
+            }
+        )
     )
 
     calls = {"probe": 0, "discover": 0}

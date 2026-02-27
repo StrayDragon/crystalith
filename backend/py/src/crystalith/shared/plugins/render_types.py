@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -47,7 +47,7 @@ class RenderDescriptor(BaseModel):
 
     layout: RenderLayout
     item_schema: ItemSchema | None = None
-    options: dict[str, Any] = Field(default_factory=dict)
+    options: dict[str, object] = Field(default_factory=dict)
 
 
 class ConfigOption(BaseModel):

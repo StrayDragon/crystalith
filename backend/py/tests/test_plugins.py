@@ -176,6 +176,9 @@ def test_plugin_registry_output_type_plugin_without_extensions_is_ok(
         output_type = "QUIZ"
         schema = _MockOutputSchema
         default_prompt = None
+        metadata = None
+        render_descriptor = None
+        config_schema = None
 
     plugin = MinimalOutputTypePlugin()
     # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.

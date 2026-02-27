@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from typing import Mapping
 
@@ -13,9 +14,16 @@ def _freeze_headers(headers: Mapping[str, str] | None) -> tuple[tuple[str, str],
     return tuple(sorted((str(k), str(v)) for k, v in headers.items()))
 
 
+def _api_key_fingerprint(api_key: str) -> str:
+    trimmed = api_key.strip()
+    if not trimmed:
+        return ""
+    return hashlib.sha256(trimmed.encode("utf-8")).hexdigest()
+
+
 @dataclass(frozen=True, slots=True)
 class OpenAIClientKey:
-    api_key: str
+    api_key_fingerprint: str
     base_url: str
     organization: str | None
     project: str | None
@@ -52,8 +60,9 @@ class OpenAIClientManager:
         headers: Mapping[str, str] | None,
         max_retries: int = 0,
     ) -> AsyncOpenAI:
+        normalized_api_key = api_key.strip()
         key = OpenAIClientKey(
-            api_key=api_key,
+            api_key_fingerprint=_api_key_fingerprint(normalized_api_key),
             base_url=base_url,
             organization=organization or None,
             project=project or None,
@@ -79,7 +88,7 @@ class OpenAIClientManager:
         default_headers = dict(key.headers) if key.headers else None
 
         client = AsyncOpenAI(
-            api_key=key.api_key,
+            api_key=normalized_api_key,
             base_url=key.base_url,
             organization=key.organization,
             project=key.project,

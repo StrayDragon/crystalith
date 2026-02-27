@@ -16,6 +16,7 @@ from crystalith.shared.agents.generation_preference import GenerationPreference,
 from crystalith.shared.cache.epochs import get_sources_epoch
 from crystalith.shared.context import TokenCounter
 from crystalith.shared.db import Chunk, Source
+from crystalith.shared.json_types import JsonValue
 from crystalith.shared.types import OutputType, SourceStatus
 from crystalith.shared.utils import normalize_whitespace
 from crystalith.shared.vector_storage import (
@@ -104,7 +105,7 @@ def _default_budget_tokens(
     output_type: OutputType,
     preference: GenerationPreference | None,
 ) -> int:
-    max_tokens = int(getattr(deps.settings.context_window, "max_tokens", 8000) or 8000)
+    max_tokens = int(deps.settings.context_window.max_tokens)
     ratio = _default_budget_ratio(output_type=output_type, preference=preference)
     return max(256, int(max_tokens * ratio))
 
@@ -118,15 +119,19 @@ def _default_max_chunks_per_source(
     return max(1, int(tuning.max_chunks_per_source))
 
 
-def _normalize_chunk_ids(chunk_ids: list[int] | None) -> list[int]:
+def _normalize_chunk_ids(chunk_ids: Sequence[JsonValue] | None) -> list[int]:
     if not chunk_ids:
         return []
     normalized: list[int] = []
     seen: set[int] = set()
     for raw in chunk_ids:
+        if raw is None or isinstance(raw, (dict, list)) or isinstance(raw, bool):
+            continue
+        if not isinstance(raw, (int, float, str)):
+            continue
         try:
             chunk_id = int(raw)
-        except (TypeError, ValueError):
+        except ValueError:
             continue
         if chunk_id <= 0 or chunk_id in seen:
             continue
@@ -184,7 +189,7 @@ def _build_query_seeds(seed_text: str, output_type: OutputType) -> list[str]:
 
     type_prompt = ""
     try:
-        type_prompt = getattr(output_type, "x_meta", None).prompt or ""
+        type_prompt = output_type.meta.prompt
     except Exception:  # noqa: BLE001 - best-effort
         type_prompt = ""
 
@@ -302,27 +307,12 @@ async def _vector_search_many(
             source_ids=source_ids,
         )
 
-    search_many = getattr(deps.vector_store, "search_many", None)
-    if callable(search_many):
-        return await search_many(
-            notebook_id=notebook_id,
-            query_vectors=query_vectors,
-            top_k=top_k,
-            min_score=min_score,
-            source_ids=source_ids,
-        )
-
-    return await asyncio.gather(
-        *[
-            deps.vector_store.search(
-                notebook_id=notebook_id,
-                query_vector=query_vector,
-                top_k=top_k,
-                min_score=min_score,
-                source_ids=source_ids,
-            )
-            for query_vector in query_vectors
-        ]
+    return await deps.vector_store.search_many(
+        notebook_id=notebook_id,
+        query_vectors=query_vectors,
+        top_k=top_k,
+        min_score=min_score,
+        source_ids=source_ids,
     )
 
 def _merge_search_results_max_score(

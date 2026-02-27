@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.models.test import TestModel
@@ -10,6 +8,7 @@ from pydantic_ai.providers.ollama import OllamaProvider
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from cl_logs.logging import get_logger
+from pydantic import BaseModel
 
 from crystalith.shared.ai.effective_settings import (
     completion_options_to_pydantic_model_settings,
@@ -142,6 +141,11 @@ def _build_chat_model_with_config(settings: Settings, model_config: ModelConfig)
 
     completion_options = resolve_completion_options(model_config)
     request_options = resolve_request_options(settings, model_config)
+    timeout_s = (
+        float(request_options.timeout)
+        if request_options.timeout is not None
+        else float(settings.ai.timeout)
+    )
     model_settings, unsupported = completion_options_to_pydantic_model_settings(
         completion_options,
         request_options=request_options,
@@ -156,7 +160,7 @@ def _build_chat_model_with_config(settings: Settings, model_config: ModelConfig)
             base_url=openai_settings.base_url or "https://api.openai.com/v1",
             organization=openai_settings.organization,
             project=openai_settings.project,
-            timeout=float(request_options.timeout),
+            timeout=timeout_s,
             proxy=request_options.proxy,
             verify_ssl=request_options.verify_ssl,
             headers=request_options.headers,
@@ -187,7 +191,7 @@ def _build_chat_model_with_config(settings: Settings, model_config: ModelConfig)
             base_url=base_url,
             organization=None,
             project=None,
-            timeout=float(request_options.timeout),
+            timeout=timeout_s,
             proxy=request_options.proxy,
             verify_ssl=request_options.verify_ssl,
             headers=request_options.headers,
@@ -209,14 +213,20 @@ def _build_chat_model_with_config(settings: Settings, model_config: ModelConfig)
     raise ModelConfigurationError(f"Unsupported chat provider: {provider}")
 
 
-def extract_effective_model_settings_for_log(model: Any) -> dict[str, Any]:
-    settings: Any = getattr(model, "settings", None)
-    if not isinstance(settings, dict):
+def extract_effective_model_settings_for_log(model: Model) -> dict[str, object]:
+    settings_obj: object = {}
+    if isinstance(model, OpenAIChatModel):
+        settings_obj = model.settings or {}
+
+    if isinstance(settings_obj, dict):
+        settings: dict[str, object] = {str(k): v for k, v in settings_obj.items()}
+    elif isinstance(settings_obj, BaseModel):
+        settings = settings_obj.model_dump()
+    else:
         settings = {}
 
     stop_sequences = settings.get("stop_sequences")
     extra_headers = settings.get("extra_headers")
-    client = getattr(model, "client", None)
 
     header_keys: list[str] | None = None
     if isinstance(extra_headers, dict):
@@ -226,13 +236,12 @@ def extract_effective_model_settings_for_log(model: Any) -> dict[str, Any]:
     if isinstance(stop_sequences, (list, tuple)):
         stop_count = len(stop_sequences)
 
-    payload: dict[str, Any] = {
+    payload: dict[str, object] = {
         "model_timeout_s": settings.get("timeout"),
         "model_temperature": settings.get("temperature"),
         "model_max_tokens": settings.get("max_tokens"),
         "model_top_p": settings.get("top_p"),
         "model_stop_sequences_count": stop_count,
         "model_header_keys": header_keys,
-        "sdk_max_retries": getattr(client, "max_retries", None) if client is not None else None,
     }
     return {k: v for k, v in payload.items() if v is not None}

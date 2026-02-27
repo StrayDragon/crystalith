@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Iterable, Sequence
-from typing import Any
 
 import httpx
 
@@ -138,13 +137,13 @@ class ChromaHttpVectorStore:
         if self._dimension is not None and len(query) != self._dimension:
             return []
 
-        clauses: list[dict[str, Any]] = [{"notebook_id": notebook_id}]
+        clauses: list[dict[str, object]] = [{"notebook_id": notebook_id}]
         if source_ids:
             clauses.append({"source_id": {"$in": list(source_ids)}})
         if exclude_source_ids:
             clauses.append({"source_id": {"$nin": list(exclude_source_ids)}})
 
-        where: dict[str, Any]
+        where: dict[str, object]
         if len(clauses) == 1:
             where = clauses[0]
         else:
@@ -226,13 +225,13 @@ class ChromaHttpVectorStore:
         if not queries:
             return output_groups
 
-        clauses: list[dict[str, Any]] = [{"notebook_id": notebook_id}]
+        clauses: list[dict[str, object]] = [{"notebook_id": notebook_id}]
         if source_ids:
             clauses.append({"source_id": {"$in": list(source_ids)}})
         if exclude_source_ids:
             clauses.append({"source_id": {"$nin": list(exclude_source_ids)}})
 
-        where: dict[str, Any]
+        where: dict[str, object]
         if len(clauses) == 1:
             where = clauses[0]
         else:
@@ -305,13 +304,13 @@ class ChromaHttpVectorStore:
         limit = 1000
         offset = 0
 
-        clauses: list[dict[str, Any]] = []
+        clauses: list[dict[str, object]] = []
         if notebook_id is not None:
             clauses.append({"notebook_id": int(notebook_id)})
         if source_ids:
             clauses.append({"source_id": {"$in": list(sorted(set(int(value) for value in source_ids)))}})
 
-        where: dict[str, Any]
+        where: dict[str, object]
         if not clauses:
             where = {}
         elif len(clauses) == 1:

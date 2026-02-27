@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import datetime
-from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from crystalith.shared.json_types import JsonDict
 from crystalith.shared.types import ResearchStatus
 
 
@@ -21,7 +21,7 @@ class ResearchSessionRead(BaseModel):
     status: ResearchStatus
     current_iteration: int
     max_iterations: int
-    aggregated_results: list[dict[str, Any]] | None
+    aggregated_results: list[JsonDict] | None
     final_report: str | None
     created_at: datetime.datetime
     updated_at: datetime.datetime

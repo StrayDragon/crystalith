@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+from typing import cast
 
 from cl_stdx.enumx import MetaInfoStrEnum, XMetaInfo
 
@@ -78,9 +79,14 @@ class OutputType(MetaInfoStrEnum):
         prompt="Create a structured summary from the sources.",
     )
 
+    @property
+    def meta(self) -> OutputTypeMeta:
+        # `cl_stdx.enumx` attaches `x_meta` dynamically on enum members.
+        return cast(OutputTypeMeta, self.x_meta)  # pyright: ignore[reportAttributeAccessIssue]
+
     @classmethod
     def get_tool_types(cls) -> list["OutputType"]:
-        return [t for t in cls if t.x_meta.is_tool]  # pyright: ignore[reportAttributeAccessIssue]
+        return [t for t in cls if t.meta.is_tool]
 
 
 class SourceStatus(MetaInfoStrEnum):

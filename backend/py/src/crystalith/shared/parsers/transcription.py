@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from openai import OpenAI
 
@@ -21,6 +21,11 @@ class TranscriptionProvider(Protocol):
         filename: str | None = None,
         mime_type: str | None = None,
     ) -> str: ...
+
+
+@runtime_checkable
+class _HasText(Protocol):
+    text: str
 
 
 class OpenAITranscriber:
@@ -68,10 +73,9 @@ class OpenAITranscriber:
         if isinstance(response, str):
             return response
 
-        text = getattr(response, "text", None)
-        if text is None:
+        if not isinstance(response, _HasText):
             raise ParserError("Transcription response missing text")
-        return text
+        return response.text
 
 
 class DisabledTranscriber:

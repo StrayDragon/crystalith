@@ -26,6 +26,7 @@ class VideoParser:
         self._mime_type = mime_type
         self._source_url = source_url
         self._media_fetcher = media_fetcher or DisabledMediaFetcher()
+        self.page_count: int | None = None
 
     def parse(self, content: bytes) -> list[Chunk]:
         filename = self._filename

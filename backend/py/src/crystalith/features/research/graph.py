@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import cast
 
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent
@@ -11,6 +11,7 @@ from pydantic_graph import BaseNode, End, Graph, GraphRunContext
 
 from cl_logs.logging import get_logger
 
+from crystalith.shared.json_types import JsonDict
 from crystalith.shared.agents.models import build_chat_model, extract_effective_model_settings_for_log
 from crystalith.shared.db import ResearchSession, ResearchStep
 from crystalith.shared.types import ResearchStatus, ResearchStepStatus, ResearchStepType
@@ -32,13 +33,23 @@ log = get_logger(__name__)
 # Pydantic Models for AI Output
 # =============================================================================
 
+class SearchPlanQueryOutput(BaseModel):
+    """AI output item for a single search query."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    query: str
+    engine: str = "Web"
+    priority: int = 1
+    reason: str = ""
+
 
 class SearchPlanOutput(BaseModel):
     """AI output for search plan generation."""
 
     model_config = ConfigDict(extra="forbid")
 
-    queries: list[dict[str, Any]]
+    queries: list[SearchPlanQueryOutput]
     reasoning: str
 
 
@@ -125,7 +136,7 @@ Your report should be well-structured, insightful, and actionable. Follow this t
 
 
 @dataclass
-class PlanSearches(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]):
+class PlanSearches(BaseNode[ResearchGraphState, ResearchDeps, JsonDict]):
     """Generate a search plan for the current iteration."""
 
     async def run(
@@ -175,14 +186,14 @@ class PlanSearches(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]):
             )
             result = await agent.run(user_prompt)
 
-            queries = []
+            queries: list[SearchQuery] = []
             for q in result.output.queries[:5]:  # Max 5 queries
                 queries.append(
                     SearchQuery(
-                        query=q.get("query", ""),
-                        engine=q.get("engine", "Web"),
-                        priority=q.get("priority", 1),
-                        reason=q.get("reason", ""),
+                        query=q.query,
+                        engine=q.engine,
+                        priority=int(q.priority),
+                        reason=q.reason,
                     )
                 )
 
@@ -258,7 +269,7 @@ class PlanSearches(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]):
 
 
 @dataclass
-class WaitForApproval(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]):
+class WaitForApproval(BaseNode[ResearchGraphState, ResearchDeps, JsonDict]):
     """Wait for user to approve/modify the search plan.
 
     This node implements Human-in-the-loop by polling the database for user actions.
@@ -368,14 +379,11 @@ class WaitForApproval(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]
                     if action == "modify":
                         # Get modified plan from step data
                         modified_plan = latest_step.input_data.get("plan") if latest_step.input_data else None
-                        if modified_plan:
-                            state.search_plan = SearchPlan(
-                                iteration=state.current_iteration,
-                                queries=[
-                                    SearchQuery(**q) for q in modified_plan.get("queries", [])
-                                ],
-                                reasoning=modified_plan.get("reasoning", "用户修改的计划"),
-                            )
+                        plan = _parse_search_plan(modified_plan, state.current_iteration)
+                        if plan is not None:
+                            if not plan.reasoning:
+                                plan.reasoning = "用户修改的计划"
+                            state.search_plan = plan
                             if deps.on_thinking:
                                 await deps.on_thinking({
                                     "type": "user_action",
@@ -413,7 +421,7 @@ class WaitForApproval(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]
 
 
 @dataclass
-class ExecuteSearches(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]):
+class ExecuteSearches(BaseNode[ResearchGraphState, ResearchDeps, JsonDict]):
     """Execute the search plan."""
 
     async def run(
@@ -462,7 +470,7 @@ class ExecuteSearches(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]
                     sr = SearchResult(
                         title=r.title,
                         url=r.url,
-                        snippet=r.snippet,
+                        snippet=r.snippet or "",
                         source=r.engine or sq.engine,
                         iteration=state.current_iteration,
                     )
@@ -594,7 +602,7 @@ class ExecuteSearches(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]
 
 
 @dataclass
-class AnalyzeResults(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]):
+class AnalyzeResults(BaseNode[ResearchGraphState, ResearchDeps, JsonDict]):
     """Analyze search results and decide whether to continue."""
 
     async def run(
@@ -639,7 +647,7 @@ class AnalyzeResults(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]])
         user_prompt = "\n".join(prompt_parts)
 
         # Analyze using AI
-        model_settings_log: dict[str, Any] = {}
+        model_settings_log: dict[str, object] = {}
         try:
             model = build_chat_model(deps.settings)
             model_settings_log = extract_effective_model_settings_for_log(model)
@@ -731,12 +739,12 @@ class AnalyzeResults(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]])
 
 
 @dataclass
-class GenerateReport(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]]):
+class GenerateReport(BaseNode[ResearchGraphState, ResearchDeps, JsonDict]):
     """Generate the final research report."""
 
     async def run(
         self, ctx: GraphRunContext[ResearchGraphState, ResearchDeps]
-    ) -> End[dict[str, Any]]:
+    ) -> End[JsonDict]:
         state = ctx.state
         deps = ctx.deps
 
@@ -782,7 +790,7 @@ class GenerateReport(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]])
         user_prompt = "\n".join(prompt_parts)
 
         # Generate report using AI
-        model_settings_log: dict[str, Any] = {}
+        model_settings_log: dict[str, object] = {}
         try:
             model = build_chat_model(deps.settings)
             model_settings_log = extract_effective_model_settings_for_log(model)
@@ -862,13 +870,16 @@ class GenerateReport(BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]])
 # =============================================================================
 
 
-RESEARCH_GRAPH: Graph[ResearchGraphState, ResearchDeps, dict[str, Any]] = Graph(
+RESEARCH_GRAPH: Graph[ResearchGraphState, ResearchDeps, JsonDict] = Graph(
     nodes=[PlanSearches, WaitForApproval, ExecuteSearches, AnalyzeResults, GenerateReport]
 )
 
 
-def _parse_search_plan(plan_data: dict[str, Any], fallback_iteration: int) -> SearchPlan | None:
-    queries_raw = plan_data.get("queries") if isinstance(plan_data, dict) else None
+def _parse_search_plan(plan_data: object, fallback_iteration: int) -> SearchPlan | None:
+    if not isinstance(plan_data, dict):
+        return None
+    normalized = cast(dict[str, object], plan_data)
+    queries_raw = normalized.get("queries")
     if not isinstance(queries_raw, list):
         return None
 
@@ -895,20 +906,34 @@ def _parse_search_plan(plan_data: dict[str, Any], fallback_iteration: int) -> Se
     if not queries:
         return None
 
-    try:
-        iteration = int(plan_data.get("iteration") or fallback_iteration)
-    except (TypeError, ValueError):
-        iteration = fallback_iteration
+    iteration_value = normalized.get("iteration")
+    iteration = fallback_iteration
+    if isinstance(iteration_value, int) and not isinstance(iteration_value, bool):
+        iteration = iteration_value
+    elif isinstance(iteration_value, float):
+        iteration = int(iteration_value)
+    elif isinstance(iteration_value, str):
+        try:
+            iteration = int(iteration_value)
+        except ValueError:
+            iteration = fallback_iteration
 
-    try:
-        estimated_results = int(plan_data.get("estimated_results", 10))
-    except (TypeError, ValueError):
-        estimated_results = 10
+    estimated_value = normalized.get("estimated_results")
+    estimated_results = 10
+    if isinstance(estimated_value, int) and not isinstance(estimated_value, bool):
+        estimated_results = estimated_value
+    elif isinstance(estimated_value, float):
+        estimated_results = int(estimated_value)
+    elif isinstance(estimated_value, str):
+        try:
+            estimated_results = int(estimated_value)
+        except ValueError:
+            estimated_results = 10
 
     return SearchPlan(
         iteration=iteration,
         queries=queries,
-        reasoning=str(plan_data.get("reasoning") or ""),
+        reasoning=str(normalized.get("reasoning") or ""),
         estimated_results=estimated_results,
     )
 
@@ -956,13 +981,24 @@ def _build_state_from_session(research: ResearchSession) -> ResearchGraphState:
         for raw in research.aggregated_results:
             if not isinstance(raw, dict):
                 continue
+            iteration_value = raw.get("iteration")
+            iteration = research.current_iteration
+            if isinstance(iteration_value, int) and not isinstance(iteration_value, bool):
+                iteration = iteration_value
+            elif isinstance(iteration_value, float):
+                iteration = int(iteration_value)
+            elif isinstance(iteration_value, str):
+                try:
+                    iteration = int(iteration_value)
+                except ValueError:
+                    iteration = research.current_iteration
             state.all_results.append(
                 SearchResult(
                     title=str(raw.get("title") or ""),
                     url=str(raw.get("url") or ""),
                     snippet=str(raw.get("snippet") or ""),
                     source=str(raw.get("source") or ""),
-                    iteration=int(raw.get("iteration") or research.current_iteration),
+                    iteration=iteration,
                 )
             )
 
@@ -974,7 +1010,7 @@ def _start_node_for_status(
     status: ResearchStatus,
     *,
     has_plan: bool,
-) -> BaseNode[ResearchGraphState, ResearchDeps, dict[str, Any]] | None:
+) -> BaseNode[ResearchGraphState, ResearchDeps, JsonDict] | None:
     if status == ResearchStatus.PLANNING:
         return PlanSearches()
     if status == ResearchStatus.WAITING_USER:
@@ -991,7 +1027,7 @@ def _start_node_for_status(
 async def run_research_graph_from_session(
     research: ResearchSession,
     deps: ResearchDeps,
-) -> dict[str, Any]:
+) -> JsonDict:
     """Resume research graph based on existing session state."""
     start_node = _start_node_for_status(
         research.status,
@@ -1007,7 +1043,7 @@ async def run_research_graph_from_session(
 
     state = _build_state_from_session(research)
     result = await RESEARCH_GRAPH.run(start_node, state=state, deps=deps)
-    return result.output
+    return cast(JsonDict, result.output)
 
 
 async def run_research_graph(
@@ -1017,7 +1053,7 @@ async def run_research_graph(
     deps: ResearchDeps,
     *,
     max_iterations: int = 4,
-) -> dict[str, Any]:
+) -> JsonDict:
     """Run the research graph and return results.
 
     Args:
@@ -1038,4 +1074,4 @@ async def run_research_graph(
     )
 
     result = await RESEARCH_GRAPH.run(PlanSearches(), state=state, deps=deps)
-    return result.output
+    return cast(JsonDict, result.output)

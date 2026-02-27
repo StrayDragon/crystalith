@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Protocol
 
 from fastapi import APIRouter
 from pydantic import BaseModel
+
+from crystalith.shared.json_types import JsonDict
 
 from .slides.config import (
     AUDIENCE_OPTIONS,
@@ -30,7 +32,7 @@ class SlidesConfigOption(BaseModel):
 class SlidesThemePreset(BaseModel):
     id: str
     label: str
-    template: dict[str, Any]
+    template: JsonDict
 
 
 class SlidesConfigResponse(BaseModel):
@@ -44,11 +46,39 @@ class SlidesConfigResponse(BaseModel):
     theme_preset_options: list[SlidesThemePreset]
 
 
-def _option_to_response(option) -> SlidesConfigOption:
+class _OptionLike(Protocol):
+    @property
+    def id(self) -> str:
+        ...
+
+    @property
+    def label(self) -> str:
+        ...
+
+    @property
+    def is_default(self) -> bool:
+        ...
+
+
+class _ThemeLike(Protocol):
+    @property
+    def id(self) -> str:
+        ...
+
+    @property
+    def label(self) -> str:
+        ...
+
+    @property
+    def template(self) -> JsonDict:
+        ...
+
+
+def _option_to_response(option: _OptionLike) -> SlidesConfigOption:
     return SlidesConfigOption(id=option.id, label=option.label, is_default=option.is_default)
 
 
-def _theme_to_response(option) -> SlidesThemePreset:
+def _theme_to_response(option: _ThemeLike) -> SlidesThemePreset:
     return SlidesThemePreset(id=option.id, label=option.label, template=option.template)
 
 

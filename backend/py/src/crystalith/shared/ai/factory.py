@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
 import ollama
 
 from cl_logs.logging import get_logger
 
-from crystalith.shared.config import ModelConfig, RequestOptions, Settings
+from crystalith.shared.config import CompletionOptions, ModelConfig, RequestOptions, Settings
 from crystalith.shared.config.ollama_discovery import resolve_reachable_ollama_host
+from crystalith.shared.json_types import JsonValue
 from crystalith.shared.plugins import PluginRegistry
 
 from .cache import EmbeddingCache
@@ -55,7 +57,14 @@ def _warn_unsupported_options_once(model_id: str, provider: str, unsupported: tu
     )
 
 
-def _warn_ignored_request_options_once(model_id: str, provider: str, *, proxy: str | None, verify_ssl: bool, headers) -> None:
+def _warn_ignored_request_options_once(
+    model_id: str,
+    provider: str,
+    *,
+    proxy: str | None,
+    verify_ssl: bool,
+    headers: dict[str, str] | None,
+) -> None:
     if proxy is None and verify_ssl is True and headers is None:
         return
     if model_id in _WARNED_IGNORED_REQUEST_OPTIONS:
@@ -71,7 +80,13 @@ def _warn_ignored_request_options_once(model_id: str, provider: str, *, proxy: s
     )
 
 
-def _warn_plugin_options_once(model_id: str, provider: str, *, completion_options, request_options) -> None:
+def _warn_plugin_options_once(
+    model_id: str,
+    provider: str,
+    *,
+    completion_options: CompletionOptions | None,
+    request_options: RequestOptions | None,
+) -> None:
     if completion_options is None and request_options is None:
         return
     key = f"{model_id}:{provider}"
@@ -79,8 +94,8 @@ def _warn_plugin_options_once(model_id: str, provider: str, *, completion_option
         return
     _WARNED_PLUGIN_OPTIONS.add(key)
 
-    completion_fields = list(getattr(completion_options, "model_fields_set", set())) if completion_options else []
-    request_fields = list(getattr(request_options, "model_fields_set", set())) if request_options else []
+    completion_fields = list(completion_options.model_fields_set) if completion_options is not None else []
+    request_fields = list(request_options.model_fields_set) if request_options is not None else []
     if not completion_fields and not request_fields:
         return
 
@@ -106,6 +121,7 @@ def _create_openai_client(
     model_config: ModelConfig,
     *,
     reason: str,
+    timeout_s: float,
     request_options: RequestOptions,
 ):
     """
@@ -128,7 +144,7 @@ def _create_openai_client(
         base_url=base_url,
         organization=config.organization,
         project=config.project,
-        timeout=float(request_options.timeout),
+        timeout=timeout_s,
         proxy=request_options.proxy,
         verify_ssl=request_options.verify_ssl,
         headers=request_options.headers,
@@ -218,6 +234,11 @@ def create_chat_provider_by_model_id(
         raise ValueError(f"Model {model_id} does not support chat role")
 
     request_options = resolve_request_options(settings, model_config)
+    timeout_s = (
+        float(request_options.timeout)
+        if request_options.timeout is not None
+        else float(settings.ai.timeout)
+    )
     completion_options = resolve_completion_options(model_config)
 
     match model_config.provider:
@@ -226,8 +247,13 @@ def create_chat_provider_by_model_id(
             _warn_unsupported_options_once(model_id, "openai", unsupported)
             return OpenAIChatProvider(
                 model=model_config.model,
-                client=_create_openai_client(model_config, reason=f"model:{model_id}", request_options=request_options),
-                timeout=float(request_options.timeout),
+                client=_create_openai_client(
+                    model_config,
+                    reason=f"model:{model_id}",
+                    timeout_s=timeout_s,
+                    request_options=request_options,
+                ),
+                timeout=timeout_s,
                 max_retries=_resolve_ai_retries(settings),
                 completion_kwargs=completion_kwargs or None,
             )
@@ -239,17 +265,17 @@ def create_chat_provider_by_model_id(
                 verify_ssl=request_options.verify_ssl,
                 headers=request_options.headers,
             )
-            options: dict[str, object] = {}
+            options: dict[str, JsonValue] = {}
             if model_config.ollama_options:
                 options.update(model_config.ollama_options.to_options() or {})
             ollama_options, unsupported = completion_options_to_ollama_options(completion_options)
             _warn_unsupported_options_once(model_id, "ollama", unsupported)
-            options.update(ollama_options)
+            options.update(cast(dict[str, JsonValue], ollama_options))
             return OllamaChatProvider(
                 model=model_config.model,
                 client=_create_ollama_client(model_config),
                 options=options or None,
-                timeout=float(request_options.timeout),
+                timeout=timeout_s,
                 max_retries=_resolve_ai_retries(settings),
             )
         case "test":
@@ -292,13 +318,23 @@ def create_embedding_provider_by_model_id(
         raise ValueError(f"Model {model_id} does not support embed role")
 
     request_options = resolve_request_options(settings, model_config)
+    timeout_s = (
+        float(request_options.timeout)
+        if request_options.timeout is not None
+        else float(settings.ai.timeout)
+    )
 
     match model_config.provider:
         case "openai":
             return OpenAIEmbeddingProvider(
                 model=model_config.model,
-                client=_create_openai_client(model_config, reason=f"embedding:{model_id}", request_options=request_options),
-                timeout=float(request_options.timeout),
+                client=_create_openai_client(
+                    model_config,
+                    reason=f"embedding:{model_id}",
+                    timeout_s=timeout_s,
+                    request_options=request_options,
+                ),
+                timeout=timeout_s,
                 max_retries=_resolve_ai_retries(settings),
                 cache=_EMBEDDING_CACHE,
             )
@@ -319,7 +355,7 @@ def create_embedding_provider_by_model_id(
                 model=model_config.model,
                 client=_create_ollama_client(model_config),
                 options=options,
-                timeout=float(request_options.timeout),
+                timeout=timeout_s,
                 max_retries=_resolve_ai_retries(settings),
                 cache=_EMBEDDING_CACHE,
             )

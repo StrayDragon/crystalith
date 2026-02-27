@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True, slots=True)
@@ -8,6 +8,7 @@ class ChunkPayload:
     text: str
     start_offset: int
     end_offset: int
+    metadata: dict[str, object] = field(default_factory=dict)
 
 
 def chunk_text(text: str, *, chunk_size: int = 800, overlap: int = 100) -> list[ChunkPayload]:

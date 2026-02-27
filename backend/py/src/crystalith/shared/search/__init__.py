@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from crystalith.shared.config import Settings
+    from langchain_community.utilities import SearxSearchWrapper
 
 __all__ = ["SearchResult", "SearXNGSearcher"]
 
@@ -144,23 +145,7 @@ class SearXNGSearcher:
         Returns:
             Configured SearXNGSearcher instance
         """
-        search_config = getattr(settings, "search", None)
-        if search_config is None:
-            # Default configuration
-            return cls(
-                host="http://localhost:8888",
-                timeout=10,
-                max_results=10,
-            )
-
-        searxng_config = getattr(search_config, "searxng", None)
-        if searxng_config is None:
-            return cls(
-                host="http://localhost:8888",
-                timeout=10,
-                max_results=10,
-            )
-
+        searxng_config = settings.search.searxng
         return cls(
             host=searxng_config.host,
             api_key=searxng_config.api_key,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from cl_logs import get_logger
 
@@ -303,11 +303,10 @@ class ExtractorFactory:
     async def close(self) -> None:
         """Close all extractors and cleanup resources."""
         for extractor in self._extractors.values():
-            if hasattr(extractor, "close"):
-                try:
-                    await extractor.close()
-                except Exception:
-                    pass
+            try:
+                await extractor.close()
+            except Exception:
+                pass
 
         self._extractors.clear()
         self._initialized = False

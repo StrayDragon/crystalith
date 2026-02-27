@@ -34,9 +34,15 @@ def _sqlite_default_sql(column: sa.Column, dialect: sa.engine.Dialect) -> str | 
     if isinstance(info_default, str) and info_default:
         return info_default
     if column.server_default is not None:
-        return _compile_sql(column.server_default.arg, dialect)
+        arg = getattr(column.server_default, "arg", None)
+        if isinstance(arg, sa.ClauseElement):
+            return _compile_sql(arg, dialect)
+        if arg is not None:
+            return _compile_sql(sa.literal(arg), dialect)
     if column.default is not None and column.default.is_scalar:
-        return _compile_sql(sa.literal(column.default.arg), dialect)
+        arg = getattr(column.default, "arg", None)
+        if arg is not None:
+            return _compile_sql(sa.literal(arg), dialect)
     return None
 
 

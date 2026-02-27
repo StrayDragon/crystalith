@@ -4,9 +4,10 @@ import hashlib
 from dataclasses import dataclass
 from collections.abc import Sequence
 from time import perf_counter
-from typing import Any
+from typing import cast
 
 from crystalith.shared.cache.interfaces import CacheProvider
+from crystalith.shared.json_types import JsonValue
 
 from .interfaces import EmbeddingProvider
 
@@ -15,7 +16,7 @@ def _hash_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _coerce_vector(value: Any) -> list[float] | None:
+def _coerce_vector(value: object) -> list[float] | None:
     if not isinstance(value, list) or not value:
         return None
     output: list[float] = []
@@ -189,14 +190,14 @@ class CachedEmbeddingProvider:
             if len(miss_vectors) != len(missing_texts):
                 return []
 
-            set_items: dict[str, list[float]] = {}
+            set_items: dict[str, JsonValue] = {}
             for key, vector in zip(missing_keys, miss_vectors):
                 coerced = _coerce_vector(vector)
                 if coerced is None:
                     return []
                 for pos in positions_by_key.get(key, []):
                     embeddings[pos] = coerced
-                set_items[key] = coerced
+                set_items[key] = cast(JsonValue, coerced)
 
             if set_items:
                 cache_set_started = perf_counter()

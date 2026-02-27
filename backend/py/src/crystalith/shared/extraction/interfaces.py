@@ -81,6 +81,10 @@ class Extractor(Protocol):
         """
         ...
 
+    async def close(self) -> None:
+        """Release any resources held by the extractor (best-effort)."""
+        ...
+
 
 class BaseExtractor(ABC):
     """Base class for extractors with common functionality."""
@@ -99,6 +103,10 @@ class BaseExtractor(ABC):
     async def is_available(self) -> bool:
         """Check if this extractor is available. Override in subclasses."""
         return True
+
+    async def close(self) -> None:
+        """Release any resources held by the extractor. Override in subclasses."""
+        return None
 
     def _create_error(
         self,

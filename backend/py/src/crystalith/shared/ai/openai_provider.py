@@ -1,12 +1,78 @@
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Literal, Sequence
+from typing import AsyncIterator, Literal, Protocol, Sequence, cast
 
 from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionMessageParam
 
 from .cache import EmbeddingCache
+from .effective_settings import OpenAIChatCompletionKwargs
 from .retry import default_retry_budget_s, run_with_retry
 from .types import ChatMessage
+
+
+class _OpenAIEmbeddingItem(Protocol):
+    @property
+    def index(self) -> int:
+        ...
+
+    @property
+    def embedding(self) -> Sequence[float]:
+        ...
+
+
+class _OpenAIEmbeddingResponse(Protocol):
+    @property
+    def data(self) -> Sequence[_OpenAIEmbeddingItem]:
+        ...
+
+
+class _OpenAIChatCompletionMessage(Protocol):
+    @property
+    def content(self) -> str | None:
+        ...
+
+
+class _OpenAIChatCompletionChoice(Protocol):
+    @property
+    def message(self) -> _OpenAIChatCompletionMessage:
+        ...
+
+
+class _OpenAIChatCompletionResponse(Protocol):
+    @property
+    def choices(self) -> Sequence[_OpenAIChatCompletionChoice]:
+        ...
+
+
+class _OpenAIChatDelta(Protocol):
+    @property
+    def content(self) -> str | None:
+        ...
+
+
+class _OpenAIChatStreamChoice(Protocol):
+    @property
+    def delta(self) -> _OpenAIChatDelta:
+        ...
+
+
+class _OpenAIChatStreamChunk(Protocol):
+    @property
+    def choices(self) -> Sequence[_OpenAIChatStreamChoice]:
+        ...
+
+
+def _to_openai_messages(messages: Sequence[ChatMessage]) -> list[ChatCompletionMessageParam]:
+    payload: list[ChatCompletionMessageParam] = []
+    for message in messages:
+        payload.append(
+            cast(
+                ChatCompletionMessageParam,
+                {"role": message.role, "content": message.content},
+            )
+        )
+    return payload
 
 
 class OpenAIEmbeddingProvider:
@@ -16,7 +82,7 @@ class OpenAIEmbeddingProvider:
         self,
         model: str,
         *,
-        client: Any | None = None,
+        client: AsyncOpenAI | None = None,
         api_key: str | None = None,
         base_url: str | None = None,
         organization: str | None = None,
@@ -86,7 +152,7 @@ class OpenAIEmbeddingProvider:
         return [list(vector) for vector in embeddings if vector is not None]
 
     async def _embed_chunk(self, texts: Sequence[str]) -> list[list[float]]:
-        async def _do_embed() -> Any:
+        async def _do_embed() -> _OpenAIEmbeddingResponse:
             return await self._client.embeddings.create(
                 model=self.model,
                 input=list(texts),
@@ -100,8 +166,10 @@ class OpenAIEmbeddingProvider:
         )
 
         data = list(response.data)
-        if data and hasattr(data[0], "index"):
+        try:
             data.sort(key=lambda item: item.index)
+        except Exception:  # noqa: BLE001 - tolerate unexpected SDK object shapes
+            pass
         return [list(item.embedding) for item in data]
 
 
@@ -112,14 +180,14 @@ class OpenAIChatProvider:
         self,
         model: str,
         *,
-        client: Any | None = None,
+        client: AsyncOpenAI | None = None,
         api_key: str | None = None,
         base_url: str | None = None,
         organization: str | None = None,
         project: str | None = None,
         timeout: float | None = 60,
         max_retries: int = 3,
-        completion_kwargs: dict[str, Any] | None = None,
+        completion_kwargs: OpenAIChatCompletionKwargs | None = None,
     ) -> None:
         self.model = model
         self._client = client or AsyncOpenAI(
@@ -136,16 +204,18 @@ class OpenAIChatProvider:
         self._timeout = timeout
         self._total_timeout = default_retry_budget_s(timeout=timeout, max_retries=max_retries)
         self._max_retries = max_retries
-        self._completion_kwargs = dict(completion_kwargs) if completion_kwargs else {}
+        self._completion_kwargs: OpenAIChatCompletionKwargs = (
+            cast(OpenAIChatCompletionKwargs, dict(completion_kwargs)) if completion_kwargs else {}
+        )
 
     async def chat(self, messages: Sequence[ChatMessage]) -> str:
         if not messages:
             raise ValueError("messages must not be empty")
 
-        async def _do_chat() -> Any:
+        async def _do_chat() -> _OpenAIChatCompletionResponse:
             return await self._client.chat.completions.create(
                 model=self.model,
-                messages=[{"role": m.role, "content": m.content} for m in messages],
+                messages=_to_openai_messages(messages),
                 **self._completion_kwargs,
             )
 
@@ -163,10 +233,10 @@ class OpenAIChatProvider:
         if not messages:
             raise ValueError("messages must not be empty")
 
-        async def _create_stream() -> Any:
+        async def _create_stream() -> AsyncIterator[_OpenAIChatStreamChunk]:
             return await self._client.chat.completions.create(
                 model=self.model,
-                messages=[{"role": m.role, "content": m.content} for m in messages],
+                messages=_to_openai_messages(messages),
                 stream=True,
                 **self._completion_kwargs,
             )

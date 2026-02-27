@@ -21,6 +21,7 @@ class AudioParser:
         self._transcriber = transcriber
         self._filename = filename
         self._mime_type = mime_type
+        self.page_count: int | None = None
 
     def parse(self, content: bytes) -> list[Chunk]:
         if not content:

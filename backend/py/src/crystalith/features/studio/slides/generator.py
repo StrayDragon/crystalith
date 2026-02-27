@@ -16,6 +16,7 @@ from crystalith.shared.agents.models import (
     build_chat_model_from_model_id,
     extract_effective_model_settings_for_log,
 )
+from crystalith.shared.json_types import JsonDict
 from crystalith.shared.observability import classify_error_kind
 from crystalith.shared.retrieval import retrieve_context
 from crystalith.shared.types import OutputType
@@ -55,7 +56,7 @@ class SlidesContext:
 
 
 def _normalize_generation_config(
-    config: SlideGenerationConfig | dict[str, object] | None,
+    config: SlideGenerationConfig | JsonDict | None,
 ) -> SlideGenerationConfig:
     if isinstance(config, SlideGenerationConfig):
         return config
@@ -371,7 +372,7 @@ async def generate_slides_outline(
     title: str | None,
     prompt: str | None,
     source_ids: list[int] | None,
-    generation_config: SlideGenerationConfig | dict[str, object] | None = None,
+    generation_config: SlideGenerationConfig | JsonDict | None = None,
     model_id: str | None = None,
     trace_id: str | None = None,
     request_id: str | None = None,
@@ -494,7 +495,7 @@ async def generate_slides_markdown(
     outline: SlideOutline,
     source_ids: list[int] | None,
     chunk_ids: list[int] | None = None,
-    generation_config: SlideGenerationConfig | dict[str, object] | None = None,
+    generation_config: SlideGenerationConfig | JsonDict | None = None,
     model_id: str | None = None,
     trace_id: str | None = None,
     request_id: str | None = None,
@@ -613,7 +614,7 @@ async def generate_slides_markdown(
 
 def build_markdown_from_outline(
     outline: SlideOutline,
-    generation_config: SlideGenerationConfig | dict[str, object] | None = None,
+    generation_config: SlideGenerationConfig | JsonDict | None = None,
 ) -> str:
     markdown = _outline_to_markdown(outline)
     normalized = _normalize_generation_config(generation_config)

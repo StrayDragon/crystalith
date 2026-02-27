@@ -58,9 +58,18 @@ async def list_notebooks(
 ) -> list[NotebookRead]:
     if cache is not None:
         cached = await cache.get(_NOTEBOOKS_LIST_CACHE_KEY)
-        if cached is not None:
-            logger.info("cache_hit", key=_NOTEBOOKS_LIST_CACHE_KEY)
-            return [NotebookRead.model_validate(item) for item in cached]
+        if isinstance(cached, list):
+            try:
+                payload = [NotebookRead.model_validate(item) for item in cached]
+            except Exception:  # noqa: BLE001 - tolerate corrupted/legacy cache shapes
+                payload = None
+            if payload is not None:
+                logger.info("cache_hit", key=_NOTEBOOKS_LIST_CACHE_KEY)
+                return payload
+            try:
+                await cache.delete(_NOTEBOOKS_LIST_CACHE_KEY)
+            except Exception:  # noqa: BLE001 - best-effort cache cleanup
+                pass
         logger.info("cache_miss", key=_NOTEBOOKS_LIST_CACHE_KEY)
 
     notebooks = await repo.list_notebooks(session)

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import importlib
 import time
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable
+from typing import Protocol, TypeAlias, cast
 
 import trafilatura
 
@@ -17,8 +19,53 @@ from .interfaces import (
 )
 from .types import ExtractedContent, ExtractorType
 
-if TYPE_CHECKING:
-    from playwright.async_api import Browser, Page
+class _Chromium(Protocol):
+    async def connect_over_cdp(self, connection_url: str, *, timeout: int) -> "_Browser": ...
+
+
+class _Playwright(Protocol):
+    chromium: _Chromium
+
+    async def stop(self) -> None: ...
+
+
+class _PlaywrightManager(Protocol):
+    async def start(self) -> _Playwright: ...
+
+
+AsyncPlaywrightFactory: TypeAlias = Callable[[], _PlaywrightManager]
+
+
+def _load_async_playwright() -> AsyncPlaywrightFactory:
+    module = importlib.import_module("playwright.async_api")
+    factory = getattr(module, "async_playwright", None)
+    if not callable(factory):
+        raise RuntimeError("playwright.async_api.async_playwright is missing")
+    return cast(AsyncPlaywrightFactory, factory)
+
+
+class _Page(Protocol):
+    async def goto(self, url: str, *, wait_until: str, timeout: int) -> object: ...
+
+    async def content(self) -> str: ...
+
+    async def title(self) -> str: ...
+
+    async def close(self) -> None: ...
+
+
+class _BrowserContext(Protocol):
+    async def new_page(self) -> _Page: ...
+
+    async def close(self) -> None: ...
+
+
+class _Browser(Protocol):
+    def is_connected(self) -> bool: ...
+
+    async def new_context(self, *, user_agent: str) -> _BrowserContext: ...
+
+    async def close(self) -> None: ...
 
 
 class BrowserlessExtractor(BaseExtractor):
@@ -62,8 +109,8 @@ class BrowserlessExtractor(BaseExtractor):
         self.include_tables = include_tables
         self.include_links = include_links
 
-        self._playwright: Any = None
-        self._browser: Browser | None = None
+        self._playwright: _Playwright | None = None
+        self._browser: _Browser | None = None
 
     @property
     def extractor_type(self) -> ExtractorType:
@@ -77,13 +124,13 @@ class BrowserlessExtractor(BaseExtractor):
             url = f"{url}{separator}token={self.token}"
         return url
 
-    async def _ensure_browser(self) -> "Browser":
+    async def _ensure_browser(self) -> _Browser:
         """Ensure browser connection is established."""
         if self._browser is not None and self._browser.is_connected():
             return self._browser
 
         try:
-            from playwright.async_api import async_playwright
+            async_playwright = _load_async_playwright()
         except ImportError as exc:
             raise self._create_error(
                 "playwright package is not installed. "
@@ -94,9 +141,12 @@ class BrowserlessExtractor(BaseExtractor):
         try:
             if self._playwright is None:
                 self._playwright = await async_playwright().start()
+            playwright = self._playwright
+            if playwright is None:  # pragma: no cover - defensive
+                raise RuntimeError("Playwright failed to start")
 
             connection_url = self._get_connection_url()
-            self._browser = await self._playwright.chromium.connect_over_cdp(
+            self._browser = await playwright.chromium.connect_over_cdp(
                 connection_url,
                 timeout=self.timeout * 1000,  # Convert to ms
             )
@@ -132,49 +182,48 @@ class BrowserlessExtractor(BaseExtractor):
         start_time = time.perf_counter()
 
         browser = await self._ensure_browser()
-        page: Page | None = None
 
+        # Create new context and page
+        context = await browser.new_context(
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+        )
         try:
-            # Create new context and page
-            context = await browser.new_context(
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/120.0.0.0 Safari/537.36"
-                ),
-            )
             page = await context.new_page()
-
-            # Navigate to URL
             try:
-                await page.goto(
-                    url,
-                    wait_until=self.wait_until,
-                    timeout=self.timeout * 1000,
-                )
-            except Exception as exc:
-                error_msg = str(exc).lower()
-                if "timeout" in error_msg:
+                # Navigate to URL
+                try:
+                    await page.goto(
+                        url,
+                        wait_until=self.wait_until,
+                        timeout=self.timeout * 1000,
+                    )
+                except Exception as exc:
+                    error_msg = str(exc).lower()
+                    if "timeout" in error_msg:
+                        raise self._create_error(
+                            f"Page load timed out after {self.timeout}s",
+                            url=url,
+                            error_class=NetworkError,
+                        ) from exc
                     raise self._create_error(
-                        f"Page load timed out after {self.timeout}s",
+                        f"Failed to load page: {exc}",
                         url=url,
                         error_class=NetworkError,
                     ) from exc
-                raise self._create_error(
-                    f"Failed to load page: {exc}",
-                    url=url,
-                    error_class=NetworkError,
-                ) from exc
 
-            # Get rendered HTML
-            rendered_html = await page.content()
+                # Get rendered HTML
+                rendered_html = await page.content()
 
-            # Get page title from browser
-            page_title = await page.title()
-
-        finally:
-            if page:
+                # Get page title from browser
+                page_title = await page.title()
+            finally:
                 await page.close()
+        finally:
+            await context.close()
 
         # Extract content using trafilatura
         try:
@@ -224,7 +273,7 @@ class BrowserlessExtractor(BaseExtractor):
             },
         )
 
-    def _extract_metadata(self, html: str, url: str) -> dict[str, Any]:
+    def _extract_metadata(self, html: str, url: str) -> dict[str, str | None]:
         """Extract metadata from rendered HTML."""
         try:
             metadata = trafilatura.extract_metadata(html, default_url=url)
@@ -246,8 +295,10 @@ class BrowserlessExtractor(BaseExtractor):
         """Check if Browserless service is available."""
         # Check if playwright is installed
         try:
-            from playwright.async_api import async_playwright
-        except ImportError:
+            _ = _load_async_playwright()
+        except ImportError:  # pragma: no cover - depends on optional dependency
+            return False
+        except Exception:  # pragma: no cover - defensive
             return False
 
         # Check if endpoint is configured

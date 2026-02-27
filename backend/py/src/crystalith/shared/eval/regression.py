@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import cast
 
 from crystalith.shared.agents.generation_preference import GenerationPreference
 from crystalith.shared.types import OutputType
@@ -15,7 +15,7 @@ class EvalSample:
     prompt: str
     output_type: OutputType
     preference: GenerationPreference | None = None
-    constraints: dict[str, Any] = field(default_factory=dict)
+    constraints: dict[str, object] = field(default_factory=dict)
 
 
 def load_dataset(path: Path) -> list[EvalSample]:
@@ -50,7 +50,7 @@ def load_dataset(path: Path) -> list[EvalSample]:
             normalized = str(preference_value).strip().lower()
             if normalized not in {"quality", "speed"}:
                 raise ValueError(f"Sample {sample_id} has invalid preference: {preference_value!r}")
-            preference = normalized  # type: ignore[assignment]
+            preference = cast(GenerationPreference, normalized)
 
         constraints = item.get("constraints")
         if constraints is None:
@@ -90,7 +90,7 @@ def percentile(values: list[float], pct: float) -> float:
     return float(samples[lower] + (samples[upper] - samples[lower]) * weight)
 
 
-def _collect_citation_indices(payload: Any) -> list[int]:
+def _collect_citation_indices(payload: object) -> list[int]:
     indices: list[int] = []
 
     if isinstance(payload, dict):
@@ -114,7 +114,7 @@ def _collect_citation_indices(payload: Any) -> list[int]:
     return indices
 
 
-def validate_citations(payload: Any, *, citations_count: int) -> tuple[bool, bool]:
+def validate_citations(payload: object, *, citations_count: int) -> tuple[bool, bool]:
     indices = _collect_citation_indices(payload)
     if not indices:
         return False, False
@@ -123,8 +123,8 @@ def validate_citations(payload: Any, *, citations_count: int) -> tuple[bool, boo
     return all(1 <= index <= citations_count for index in indices), True
 
 
-def _collect_citation_objects(payload: Any) -> list[dict[str, Any]]:
-    citations: list[dict[str, Any]] = []
+def _collect_citation_objects(payload: object) -> list[dict[str, object]]:
+    citations: list[dict[str, object]] = []
 
     if isinstance(payload, dict):
         for key, value in payload.items():
@@ -146,7 +146,7 @@ def _collect_citation_objects(payload: Any) -> list[dict[str, Any]]:
 
 
 def validate_mapped_citations(
-    payload: Any,
+    payload: object,
     *,
     allowed_chunk_ids: set[int] | None = None,
     allowed_source_ids: set[int] | None = None,
@@ -170,7 +170,7 @@ def validate_mapped_citations(
 
 def check_constraints(
     *,
-    constraints: dict[str, Any],
+    constraints: dict[str, object],
     fallback: bool,
     citations_valid: bool,
     has_citations: bool,
@@ -188,10 +188,14 @@ def check_constraints(
 
     min_query_count = constraints.get("min_query_count")
     if min_query_count is not None:
-        try:
-            minimum = int(min_query_count)
-        except (TypeError, ValueError):
+        minimum = 0
+        if isinstance(min_query_count, bool):
             minimum = 0
+        elif isinstance(min_query_count, (int, float, str)):
+            try:
+                minimum = int(min_query_count)
+            except ValueError:
+                minimum = 0
         if query_count < minimum:
             failures.append("query_count")
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 from dataclasses import dataclass
+from typing import cast
 
 import sqlalchemy as sa
 from fastapi import HTTPException
@@ -10,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.interfaces import EmbeddingProvider
-from crystalith.shared.ai.types import ChatMessage
+from crystalith.shared.ai.types import ChatMessage, ChatRole
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import Settings
 from crystalith.shared.concurrency import StageLimiters
@@ -110,10 +111,12 @@ async def load_session_history(
         .where(Message.session_id == session_id)
         .order_by(Message.created_at.asc())
     )
-    history_messages = [
-        ChatMessage(role=message.role, content=message.content)
-        for message in history_rows.scalars().all()
-    ]
+    history_messages: list[ChatMessage] = []
+    for message in history_rows.scalars().all():
+        role = message.role
+        if role not in {"system", "user", "assistant"}:
+            role = "user"
+        history_messages.append(ChatMessage(role=cast(ChatRole, role), content=message.content))
     return db_session, history_messages
 
 

@@ -4,16 +4,20 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Literal, cast
 
 import yaml
 from jsonschema import Draft7Validator, ValidationError as JsonSchemaValidationError
 from pydantic import ValidationError
 
+from crystalith.shared.json_types import JsonValue
+
 from .models import OllamaProviderSettings, OpenAIProviderSettings, Settings
 from .ollama_discovery import auto_discover_ollama
 
 logger = logging.getLogger(__name__)
+
+OptionalServiceDegradePolicy = Literal["core_available", "fail_closed"]
 
 
 class ConfigManager:
@@ -222,7 +226,7 @@ class ConfigManager:
                     if openai_base_url:
                         model.provider_config["base_url"] = openai_base_url
                 else:
-                    config: dict[str, Any] = {}
+                    config: dict[str, JsonValue] = {}
                     if openai_api_key:
                         config["api_key"] = openai_api_key
                     if openai_base_url:
@@ -241,9 +245,16 @@ class ConfigManager:
                 else:
                     model.provider_config = {"host": ollama_host}
 
+        services = {
+            "ollama": settings.optional_services.ollama,
+            "chroma": settings.optional_services.chroma,
+            "redis": settings.optional_services.redis,
+            "searxng": settings.optional_services.searxng,
+        }
+
         def _apply_optional_service_env(service_name: str) -> None:
             upper = service_name.upper()
-            service = getattr(settings.optional_services, service_name)
+            service = services[service_name]
 
             enabled = _read_bool(
                 f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__ENABLED",
@@ -299,7 +310,7 @@ class ConfigManager:
                 f"CRYSTALITH_OPTIONAL_{upper}_DEGRADE_POLICY",
             )
             if degrade_policy in {"core_available", "fail_closed"}:
-                service.degrade_policy = degrade_policy
+                service.degrade_policy = cast(OptionalServiceDegradePolicy, degrade_policy)
 
         for optional_service in ("ollama", "chroma", "redis", "searxng"):
             _apply_optional_service_env(optional_service)
@@ -329,7 +340,7 @@ class ConfigManager:
                 )
             settings.models.defaults.embedding = default_embedding_model
 
-    def _validate_with_jsonschema(self, data: dict[str, Any]) -> list[str]:
+    def _validate_with_jsonschema(self, data: dict[str, JsonValue]) -> list[str]:
         """
         Validate configuration data against JSON Schema.
 

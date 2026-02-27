@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
-
 from pydantic import BaseModel, Field
+
+from crystalith.shared.json_types import JsonDict
 
 from .api_schemas import SourceRead
 
@@ -12,7 +12,7 @@ class SourceCreate(BaseModel):
     content: str | None = None
     mime_type: str | None = None
     parser_type: str = Field("text", min_length=1, max_length=64)
-    metadata: dict[str, Any] | None = None
+    metadata: JsonDict | None = None
 
 
 __all__ = [

@@ -1,27 +1,33 @@
 from __future__ import annotations
 
-from typing import Any, TypeVar
+from typing import TypedDict
 
 from pydantic import BaseModel
 from pydantic_ai.settings import ModelSettings
 
 from crystalith.shared.config import CompletionOptions, ModelConfig, RequestOptions, Settings
 
-TModel = TypeVar("TModel", bound=BaseModel)
+class OpenAIChatCompletionKwargs(TypedDict, total=False):
+    temperature: float
+    max_completion_tokens: int
+    top_p: float
+    stop: list[str]
 
 
-def _explicit_fields(model: TModel | None) -> dict[str, Any]:
+class OllamaCompletionOptions(TypedDict, total=False):
+    temperature: float
+    num_predict: int
+    top_p: float
+    top_k: int
+    stop: list[str]
+
+
+def _explicit_fields(model: BaseModel | None) -> dict[str, object]:
     if model is None:
         return {}
 
-    fields_set = getattr(model, "model_fields_set", set())
-    data: dict[str, Any] = {}
-    for field in fields_set:
-        value = getattr(model, field, None)
-        if value is None:
-            continue
-        data[str(field)] = value
-    return data
+    dumped = model.model_dump(exclude_none=True, exclude_unset=True)
+    return {str(key): value for key, value in dumped.items()}
 
 
 def resolve_completion_options(
@@ -29,12 +35,12 @@ def resolve_completion_options(
     *,
     overrides: CompletionOptions | None = None,
 ) -> CompletionOptions | None:
-    merged: dict[str, Any] = {}
+    merged: dict[str, object] = {}
     merged.update(_explicit_fields(model_config.completion_options))
     merged.update(_explicit_fields(overrides))
     if not merged:
         return None
-    return CompletionOptions(**merged)
+    return CompletionOptions.model_validate(merged)
 
 
 def resolve_request_options(
@@ -43,10 +49,10 @@ def resolve_request_options(
     *,
     overrides: RequestOptions | None = None,
 ) -> RequestOptions:
-    merged: dict[str, Any] = {"timeout": int(settings.ai.timeout)}
+    merged: dict[str, object] = {"timeout": int(settings.ai.timeout)}
     merged.update(_explicit_fields(model_config.request_options))
     merged.update(_explicit_fields(overrides))
-    return RequestOptions(**merged)
+    return RequestOptions.model_validate(merged)
 
 
 def completion_options_to_pydantic_model_settings(
@@ -90,11 +96,11 @@ def completion_options_to_pydantic_model_settings(
 
 def completion_options_to_openai_chat_kwargs(
     completion_options: CompletionOptions | None,
-) -> tuple[dict[str, Any], tuple[str, ...]]:
+) -> tuple[OpenAIChatCompletionKwargs, tuple[str, ...]]:
     if completion_options is None:
         return {}, ()
 
-    kwargs: dict[str, Any] = {}
+    kwargs: OpenAIChatCompletionKwargs = {}
     unsupported: list[str] = []
 
     if completion_options.temperature is not None:
@@ -119,11 +125,11 @@ def completion_options_to_openai_chat_kwargs(
 
 def completion_options_to_ollama_options(
     completion_options: CompletionOptions | None,
-) -> tuple[dict[str, Any], tuple[str, ...]]:
+) -> tuple[OllamaCompletionOptions, tuple[str, ...]]:
     if completion_options is None:
         return {}, ()
 
-    options: dict[str, Any] = {}
+    options: OllamaCompletionOptions = {}
     unsupported: list[str] = []
 
     if completion_options.temperature is not None:
