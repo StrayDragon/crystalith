@@ -59,6 +59,11 @@ jobs:
           cd ../..
           git diff --exit-code -- config/app.schema.json
 
+      - name: Lint (incremental baseline)
+        run: |
+          cd backend/py
+          just lint
+
       - name: Run backend tests
         run: |
           cd backend/py
@@ -98,6 +103,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch default branch (for incremental lint)
+        run: git fetch origin main --depth=1
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -120,6 +130,11 @@ jobs:
         run: |
           cd frontend/web
           pnpm test
+
+      - name: Lint (incremental baseline)
+        run: |
+          cd frontend/web
+          pnpm run lint
 
       - name: Typecheck
         run: |

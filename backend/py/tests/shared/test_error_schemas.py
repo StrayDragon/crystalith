@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import asyncio
 
-import pytest
-
 from crystalith.shared.schemas.errors import (
     build_error_response,
     build_error_response_from_exception,

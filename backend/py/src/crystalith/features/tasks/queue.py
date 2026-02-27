@@ -5,7 +5,6 @@ import itertools
 from collections.abc import Awaitable, Callable
 from typing import TypeVar, cast
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cl_logs.logging import get_logger

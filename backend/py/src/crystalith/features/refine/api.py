@@ -24,7 +24,7 @@ from crystalith.shared.utils import (
     format_context,
     parse_bullets,
 )
-from crystalith.shared.vector_storage import VectorSearchResult, VectorStore, cached_vector_search
+from crystalith.shared.vector_storage import VectorStore, cached_vector_search
 
 from crystalith.shared.deps import (
     get_ai_provider,

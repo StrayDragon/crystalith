@@ -8,7 +8,6 @@ import httpx
 
 from .interfaces import (
     BaseExtractor,
-    ExtractionError,
     NetworkError,
     ParseError,
     ServiceUnavailableError,
@@ -206,7 +205,7 @@ class JinaReaderExtractor(BaseExtractor):
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 # Use a simple test URL
-                response = await client.head(
+                await client.head(
                     f"{self.BASE_URL}https://example.com",
                     follow_redirects=True,
                 )

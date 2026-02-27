@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.cache.epochs import get_sources_epoch
 from crystalith.shared.db import Chunk, Notebook, Source, SourceTag, SourceTagMap
-from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore
 
 from crystalith.shared.ai.interfaces import EmbeddingProvider

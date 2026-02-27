@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 
 from crystalith.shared.vector_storage import VectorEntry, VectorStore
 

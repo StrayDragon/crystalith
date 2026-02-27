@@ -11,7 +11,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from crystalith.shared.config import ModelConfig, ModelRole, Settings, auto_discover_ollama
+from crystalith.shared.config import ModelConfig, Settings, auto_discover_ollama
 
 from crystalith.shared.deps import get_settings
 from crystalith.shared.deps import get_plugin_registry

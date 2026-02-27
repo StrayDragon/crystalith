@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.interfaces import ChatProvider
 from crystalith.shared.db import Chunk, Notebook, Source
-from crystalith.shared.vector_storage import VectorEntry, VectorStore
+from crystalith.shared.vector_storage import VectorStore
 
 from .clustering import cluster_topics
 from .contradiction import detect_contradictions

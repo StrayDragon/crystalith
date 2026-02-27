@@ -510,7 +510,6 @@ class ExecuteSearches(BaseNode[ResearchGraphState, ResearchDeps, JsonDict]):
             })
 
         # Deduplicate by URL and similar titles
-        seen_urls: set[str] = {r.url for r in state.all_results}
         seen_titles: set[str] = {r.title.lower().strip() for r in state.all_results}
 
         def normalize_url(url: str) -> str:
@@ -809,7 +808,7 @@ class GenerateReport(BaseNode[ResearchGraphState, ResearchDeps, JsonDict]):
             lines = [
                 f"# 研究报告：{state.topic}",
                 "",
-                f"## 概述",
+                "## 概述",
                 f"完成 {state.current_iteration} 轮搜索，共收集 {len(state.all_results)} 条结果。",
                 "",
                 "## 主要来源",

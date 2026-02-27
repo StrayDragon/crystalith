@@ -879,8 +879,6 @@ async def _run_research_background(
 
 async def _extend_lock_periodically(db_manager, session_id: int) -> None:
     """Periodically extend the lock to prevent timeout during long operations."""
-    from crystalith.shared.db import create_db_manager
-
     # Extend lock every 5 minutes (half of the 10-minute timeout)
     extension_interval = 300
 
@@ -1410,7 +1408,7 @@ async def export_research(
 
         return ExportResearchResponse(
             success=True,
-            message=f"报告已导出为笔记",
+            message="报告已导出为笔记",
             note_id=output.id,
         )
 
