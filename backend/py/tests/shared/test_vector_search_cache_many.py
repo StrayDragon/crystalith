@@ -38,6 +38,20 @@ class _CountingCache(InMemoryCache):
         return await super().set_many(items, ttl=ttl)
 
 
+class _FailingBulkCache(InMemoryCache):
+    async def get_many(self, keys: Sequence[str]):  # noqa: ANN001
+        raise RuntimeError("cache get_many unavailable")
+
+    async def set_many(self, items: Mapping[str, object], *, ttl: float | None = None):  # noqa: ANN001
+        raise RuntimeError("cache set_many unavailable")
+
+    async def get(self, key: str):  # noqa: ANN001
+        raise RuntimeError("cache get unavailable")
+
+    async def incr(self, key: str, *, ttl: float | None = None):  # noqa: ANN001
+        raise RuntimeError("cache incr unavailable")
+
+
 class _StubVectorStore:
     def __init__(self) -> None:
         self.search_many_calls = 0
@@ -143,4 +157,27 @@ async def test_cached_vector_search_many_uses_bulk_cache_and_reuses_results() ->
 
     third = await cached_vector_search_many(**params)
     assert len(third) == 3
+    assert vector_store.search_many_calls == 2
+
+
+@pytest.mark.asyncio
+async def test_cached_vector_search_many_falls_back_when_cache_unavailable() -> None:
+    cache = _FailingBulkCache(ttl=60)
+    vector_store = _StubVectorStore()
+
+    params = {
+        "cache": cache,
+        "vector_store": vector_store,
+        "notebook_id": 1,
+        "query_vectors": [[0.1, 0.2], [0.2, 0.3]],
+        "top_k": 5,
+        "min_score": 0.0,
+        "source_ids": [1],
+    }
+
+    first = await cached_vector_search_many(**params)
+    second = await cached_vector_search_many(**params)
+
+    assert len(first) == 2
+    assert len(second) == 2
     assert vector_store.search_many_calls == 2

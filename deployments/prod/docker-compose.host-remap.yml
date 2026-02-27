@@ -1,5 +1,22 @@
+x-logging-default: &logging-default
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  logging: *logging-default
+
+x-deploy-tiny: &deploy-tiny
+  resources:
+    limits:
+      cpus: "0.10"
+      memory: 32M
+
 services:
   host-remap:
+    <<: *service-defaults
     build:
       context: ../..
       dockerfile: dockers/host-remap/Dockerfile
@@ -24,9 +41,4 @@ services:
           socat TCP-LISTEN:$$lport,fork,reuseaddr TCP:$$rhost:$$rport &
         done
         wait
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "0.10"
-          memory: 32M
+    deploy: *deploy-tiny

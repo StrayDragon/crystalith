@@ -24,8 +24,10 @@ async def test_api_smoke_health_notebook_and_analysis_404(client) -> None:
     assert dependency_health.status_code == 200
     payload = dependency_health.json()
     assert payload["status"] == "ok"
+    assert payload["last_probe"] is not None
     assert payload["core"]["frontend"]["service"] == "web"
     assert payload["core"]["backend"]["service"] == "api"
+    assert payload["optional"]["storage_chroma"]["status"] in {"disabled", "unknown", "healthy", "degraded"}
     assert "optional" in payload
 
     create_resp = await client.post("/v1/notebooks", json={"name": "Smoke Notebook"})
@@ -123,6 +125,30 @@ async def test_api_smoke_dependency_health_reports_ollama_runtime(client, app, m
     assert payload["optional"]["ollama"]["enabled"] is True
     assert payload["optional"]["ollama"]["healthy"] is True
     assert payload["optional"]["ollama"]["hosts"]["http://localhost:11434"]["model_count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_api_smoke_dependency_health_optional_failure_is_recoverable(client, app) -> None:
+    app.state.settings.optional_services.redis.enabled = True
+    app.state.settings.optional_services.redis.endpoint = "redis://127.0.0.1:1/0"
+    app.state.settings.optional_services.redis.probe.enabled = True
+    app.state.optional_services_last_probe = None
+
+    dependency_health = await client.get("/health/dependencies")
+    assert dependency_health.status_code == 200
+    payload = dependency_health.json()
+
+    redis_status = payload["optional"]["cache_redis"]
+    assert redis_status["enabled"] is True
+    assert redis_status["status"] == "degraded"
+    assert redis_status["healthy"] is False
+    assert redis_status["error_code"] == "REDIS_UNAVAILABLE"
+    assert isinstance(redis_status["recovery_hint"], str)
+    assert redis_status["recovery_hint"]
+
+    health = await client.get("/health")
+    assert health.status_code == 200
+    assert health.json() == {"status": "ok"}
 
 
 @pytest.mark.asyncio

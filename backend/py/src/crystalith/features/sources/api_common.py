@@ -39,9 +39,23 @@ def _sources_list_cache_key(
 async def _invalidate_notebook_source_caches(
     cache: CacheProvider, *, notebook_id: int, vectors_changed: bool = False
 ) -> None:
-    await bump_sources_epoch(cache=cache, notebook_id=notebook_id)
+    try:
+        await bump_sources_epoch(cache=cache, notebook_id=notebook_id)
+    except Exception as exc:  # noqa: BLE001 - optional cache invalidation should not block writes
+        logger.warning(
+            "sources_cache_epoch_bump_failed",
+            notebook_id=notebook_id,
+            error=str(exc),
+        )
     if vectors_changed:
-        await bump_vector_epoch(cache=cache, notebook_id=notebook_id)
+        try:
+            await bump_vector_epoch(cache=cache, notebook_id=notebook_id)
+        except Exception as exc:  # noqa: BLE001 - optional cache invalidation should not block writes
+            logger.warning(
+                "vector_cache_epoch_bump_failed",
+                notebook_id=notebook_id,
+                error=str(exc),
+            )
 
 
 def _resolve_parser(file: UploadFile, transcriber: TranscriptionProvider, plugins: PluginRegistry) -> Parser:

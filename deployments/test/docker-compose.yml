@@ -1,3 +1,8 @@
+x-healthcheck-default: &healthcheck-default
+  interval: 5s
+  timeout: 5s
+  retries: 20
+
 services:
   postgres_test:
     image: ${CL_POSTGRES_TEST_IMAGE:-postgres:18.1-trixie}
@@ -11,10 +16,8 @@ services:
     volumes:
       - postgres_test_data_18:/var/lib/postgresql
     healthcheck:
+      <<: *healthcheck-default
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
 
 volumes:
   postgres_test_data_18: {}

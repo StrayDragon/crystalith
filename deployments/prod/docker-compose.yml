@@ -1,8 +1,53 @@
+x-healthcheck-default: &healthcheck-default
+  interval: 10s
+  timeout: 5s
+  retries: 20
+
+x-logging-default: &logging-default
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  logging: *logging-default
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+
+x-deploy-small: &deploy-small
+  resources:
+    limits:
+      cpus: "0.50"
+      memory: 256M
+
+x-deploy-medium: &deploy-medium
+  resources:
+    limits:
+      cpus: "1.00"
+      memory: 1G
+
+x-api-env: &api-env
+  HOST: 0.0.0.0
+  PORT: 8032
+  RELOAD: "0"
+  AUTO_DB_INIT: "1"
+  CACHE_PROVIDER: ${CACHE_PROVIDER:-memory}
+  REDIS_URL: ${REDIS_URL:-}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+  OLLAMA_HOST: ${OLLAMA_HOST:-}
+  CRYSTALITH_DEFAULT_CHAT_MODEL: ${CRYSTALITH_DEFAULT_CHAT_MODEL:-}
+  CRYSTALITH_DEFAULT_EMBEDDING_MODEL: ${CRYSTALITH_DEFAULT_EMBEDDING_MODEL:-}
+  CRYSTALITH_CONFIG_PATH: /app/config/app.yaml
+  CRYSTALITH_SECRETS_PATH: ${CRYSTALITH_SECRETS_PATH:-}
+
 services:
   # ---------------------------------------------------------------------------
   # Frontend (Nginx) — serves SPA + reverse-proxies API/optional Slidev
   # ---------------------------------------------------------------------------
   web:
+    <<: *service-defaults
     build:
       context: ../..
       dockerfile: dockers/frontend/Dockerfile
@@ -14,17 +59,10 @@ services:
     container_name: crystalith-web
     ports:
       - "${CL_WEB_PORT:-8080}:8080"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       api:
         condition: service_healthy
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "0.50"
-          memory: 256M
+    deploy: *deploy-small
     networks:
       - frontend-net
 
@@ -34,6 +72,7 @@ services:
   data-init:
     image: ${ALPINE_IMAGE:-alpine:3.21}
     container_name: crystalith-data-init
+    logging: *logging-default
     volumes:
       - ../../data:/data
     entrypoint: ["/bin/sh", "-c"]
@@ -49,6 +88,7 @@ services:
   # Backend API (FastAPI) - core mode defaults to local sqlite/memory storage
   # ---------------------------------------------------------------------------
   api:
+    <<: *service-defaults
     build:
       context: ../..
       dockerfile: dockers/backend/Dockerfile
@@ -58,26 +98,7 @@ services:
         APT_MIRROR: ${APT_MIRROR:-}
         UV_INDEX_URL: ${UV_INDEX_URL:-}
     container_name: crystalith-api
-    environment:
-      HOST: 0.0.0.0
-      PORT: 8032
-      RELOAD: "0"
-      AUTO_DB_INIT: "1"
-
-      # Optional cache/provider/model overrides
-      CACHE_PROVIDER: ${CACHE_PROVIDER:-memory}
-      REDIS_URL: ${REDIS_URL:-}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
-      OLLAMA_HOST: ${OLLAMA_HOST:-}
-      CRYSTALITH_DEFAULT_CHAT_MODEL: ${CRYSTALITH_DEFAULT_CHAT_MODEL:-}
-      CRYSTALITH_DEFAULT_EMBEDDING_MODEL: ${CRYSTALITH_DEFAULT_EMBEDDING_MODEL:-}
-
-      # Config discovery in container
-      CRYSTALITH_CONFIG_PATH: /app/config/app.yaml
-      CRYSTALITH_SECRETS_PATH: ${CRYSTALITH_SECRETS_PATH:-}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    environment: *api-env
     volumes:
       - ../../data:/app/backend/py/data
       - ../../config:/app/config:ro
@@ -85,16 +106,9 @@ services:
       data-init:
         condition: service_completed_successfully
     healthcheck:
+      <<: *healthcheck-default
       test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8032/health')"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "1.00"
-          memory: 1G
+    deploy: *deploy-medium
     networks:
       - frontend-net
       - backend-net

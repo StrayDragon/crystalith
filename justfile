@@ -200,6 +200,9 @@ dev-docker-smoke:
     echo
     echo "All checks passed."
 
+composition-smoke:
+    ./scripts/composition_smoke.sh
+
 # --------------------------------------------------------------------------
 # Misc
 # --------------------------------------------------------------------------

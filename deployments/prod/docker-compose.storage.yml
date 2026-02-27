@@ -1,3 +1,30 @@
+x-healthcheck-default: &healthcheck-default
+  interval: 10s
+  timeout: 5s
+  retries: 20
+
+x-logging-default: &logging-default
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  logging: *logging-default
+
+x-deploy-medium: &deploy-medium
+  resources:
+    limits:
+      cpus: "1.00"
+      memory: 1G
+
+x-deploy-postgres: &deploy-postgres
+  resources:
+    limits:
+      cpus: "1.00"
+      memory: 1536M
+
 services:
   api:
     environment:
@@ -11,6 +38,7 @@ services:
         condition: service_healthy
 
   postgres:
+    <<: *service-defaults
     image: ${POSTGRES_IMAGE:-postgres:18.1-trixie}
     container_name: crystalith-postgres
     environment:
@@ -20,35 +48,23 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:
+      <<: *healthcheck-default
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
-      timeout: 5s
-      retries: 20
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "1.00"
-          memory: 1536M
+    deploy: *deploy-postgres
     networks:
       - backend-net
 
   chromadb:
+    <<: *service-defaults
     image: ${CHROMADB_IMAGE:-chromadb/chroma:0.5.15}
     container_name: crystalith-chromadb
     volumes:
       - chromadata:/chroma/chroma
     healthcheck:
+      <<: *healthcheck-default
       test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/api/v1/heartbeat')"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "1.00"
-          memory: 1G
+    deploy: *deploy-medium
     networks:
       - backend-net
 

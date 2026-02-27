@@ -149,10 +149,10 @@ async def test_lifespan_starts_ollama_monitor_when_enabled(
     monkeypatch.setattr(app_module, "collect_ollama_hosts", _collect_hosts)
     monkeypatch.setattr(app_module, "probe_ollama_host", _probe_host)
     monkeypatch.setattr(app_module, "auto_discover_ollama", _auto_discover)
-    monkeypatch.setenv("CRYSTALITH_OLLAMA_MONITOR_ENABLED", "1")
-    monkeypatch.setenv("CRYSTALITH_OLLAMA_MONITOR_INTERVAL_S", "0.02")
-    monkeypatch.setenv("CRYSTALITH_OLLAMA_MONITOR_TIMEOUT_S", "0.02")
-    monkeypatch.setenv("CRYSTALITH_OLLAMA_MONITOR_INCLUDE_ENV_HOST", "0")
+    monkeypatch.setenv("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED", "1")
+    monkeypatch.setenv("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_INTERVAL_S", "0.02")
+    monkeypatch.setenv("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_TIMEOUT_S", "0.02")
+    monkeypatch.setenv("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_INCLUDE_ENV_HOST", "0")
 
     tempdir, db_url = await _create_test_db()
     manager = create_db_manager(db_url)
@@ -165,6 +165,7 @@ async def test_lifespan_starts_ollama_monitor_when_enabled(
             assert calls["discover"] >= 1
             assert app.state.ollama_hosts_status["http://localhost:11434"]["healthy"] is True
             assert app.state.ollama_monitor_last_probe is not None
+            assert app.state.optional_services_status["ollama"]["status"] == "healthy"
     finally:
         await manager.close()
         tempdir.cleanup()

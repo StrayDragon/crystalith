@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from email.utils import parsedate_to_datetime
 from typing import Any
 
+import httpx
 from pydantic import BaseModel, Field
 
 
@@ -142,7 +143,16 @@ def status_code_from_exception(error: Exception) -> int | None:
         if isinstance(response_status, int):
             return response_status
 
-    if isinstance(error, TimeoutError | asyncio.TimeoutError):
+    if isinstance(error, TimeoutError | asyncio.TimeoutError | httpx.TimeoutException):
+        return 503
+
+    if isinstance(error, httpx.HTTPStatusError):
+        status_code = error.response.status_code
+        if status_code >= 500:
+            return 503
+        return status_code
+
+    if isinstance(error, httpx.TransportError):
         return 503
 
     return None

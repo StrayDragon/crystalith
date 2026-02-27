@@ -75,7 +75,16 @@ async def cached_vector_search(
     source_ids: Sequence[int] | None = None,
     exclude_source_ids: Sequence[int] | None = None,
 ) -> list[VectorSearchResult]:
-    epoch = await get_vector_epoch(cache=cache, notebook_id=notebook_id)
+    try:
+        epoch = await get_vector_epoch(cache=cache, notebook_id=notebook_id)
+    except Exception as exc:  # noqa: BLE001 - cache failures should not block retrieval
+        logger.warning(
+            "vector_search_cache_epoch_failed",
+            error=str(exc),
+            notebook_id=notebook_id,
+        )
+        epoch = 0
+
     key = make_vector_search_cache_key(
         notebook_id=notebook_id,
         epoch=epoch,
@@ -86,7 +95,17 @@ async def cached_vector_search(
         exclude_source_ids=exclude_source_ids,
     )
 
-    cached = await cache.get(key)
+    try:
+        cached = await cache.get(key)
+    except Exception as exc:  # noqa: BLE001 - fail-open cache
+        logger.warning(
+            "vector_search_cache_get_failed",
+            error=str(exc),
+            notebook_id=notebook_id,
+            key=key,
+        )
+        cached = None
+
     if cached is not None:
         logger.info(
             "cache_hit",
@@ -128,18 +147,26 @@ async def cached_vector_search(
         exclude_source_ids=exclude_source_ids,
     )
 
-    await cache.set(
-        key,
-        [
-            {
-                "source_id": result.entry.source_id,
-                "chunk_id": result.entry.chunk_id,
-                "score": result.score,
-            }
-            for result in results
-        ],
-        ttl=VECTOR_SEARCH_CACHE_TTL_S,
-    )
+    try:
+        await cache.set(
+            key,
+            [
+                {
+                    "source_id": result.entry.source_id,
+                    "chunk_id": result.entry.chunk_id,
+                    "score": result.score,
+                }
+                for result in results
+            ],
+            ttl=VECTOR_SEARCH_CACHE_TTL_S,
+        )
+    except Exception as exc:  # noqa: BLE001 - fail-open cache
+        logger.warning(
+            "vector_search_cache_set_failed",
+            error=str(exc),
+            notebook_id=notebook_id,
+            key=key,
+        )
     return results
 
 
@@ -159,7 +186,16 @@ async def cached_vector_search_many(
     if not query_vectors:
         return []
 
-    epoch = await get_vector_epoch(cache=cache, notebook_id=notebook_id)
+    try:
+        epoch = await get_vector_epoch(cache=cache, notebook_id=notebook_id)
+    except Exception as exc:  # noqa: BLE001 - cache failures should not block retrieval
+        logger.warning(
+            "vector_search_cache_epoch_failed",
+            error=str(exc),
+            notebook_id=notebook_id,
+        )
+        epoch = 0
+
     keys = [
         make_vector_search_cache_key(
             notebook_id=notebook_id,
@@ -178,9 +214,30 @@ async def cached_vector_search_many(
     missing_vectors: list[Sequence[float]] = []
     missing_keys: list[str] = []
 
-    cached_values = await cache.get_many(keys)
+    try:
+        cached_values = await cache.get_many(keys)
+    except Exception as exc:  # noqa: BLE001 - fail-open cache
+        logger.warning(
+            "vector_search_cache_get_many_failed",
+            error=str(exc),
+            notebook_id=notebook_id,
+        )
+        cached_values = [None for _ in keys]
+
     if len(cached_values) != len(keys):  # pragma: no cover - defensive
-        cached_values = [await cache.get(key) for key in keys]
+        fallback_values: list[object | None] = []
+        for key in keys:
+            try:
+                fallback_values.append(await cache.get(key))
+            except Exception as exc:  # noqa: BLE001 - fail-open cache
+                logger.warning(
+                    "vector_search_cache_get_failed",
+                    error=str(exc),
+                    notebook_id=notebook_id,
+                    key=key,
+                )
+                fallback_values.append(None)
+        cached_values = fallback_values
 
     for idx, (key, query_vector, cached) in enumerate(zip(keys, query_vectors, cached_values)):
         if cached is not None:
@@ -257,6 +314,13 @@ async def cached_vector_search_many(
             ]
 
         if set_items:
-            await cache.set_many(set_items, ttl=VECTOR_SEARCH_CACHE_TTL_S)
+            try:
+                await cache.set_many(set_items, ttl=VECTOR_SEARCH_CACHE_TTL_S)
+            except Exception as exc:  # noqa: BLE001 - fail-open cache
+                logger.warning(
+                    "vector_search_cache_set_many_failed",
+                    error=str(exc),
+                    notebook_id=notebook_id,
+                )
 
     return [group or [] for group in groups]

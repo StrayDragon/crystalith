@@ -1,3 +1,18 @@
+x-healthcheck-default: &healthcheck-default
+  interval: 10s
+  timeout: 5s
+  retries: 20
+
+x-logging-default: &logging-default
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  logging: *logging-default
+
 services:
   api:
     environment:
@@ -9,16 +24,14 @@ services:
         condition: service_healthy
 
   ollama:
+    <<: *service-defaults
     image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
     container_name: crystalith-ollama
     volumes:
       - ollamadata:/root/.ollama
     healthcheck:
+      <<: *healthcheck-default
       test: ["CMD", "ollama", "list"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-    restart: unless-stopped
     networks:
       - frontend-net
 
