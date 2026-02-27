@@ -8,9 +8,7 @@
 
 - 不重复 Sources/Chat/Studio/Analysis 子域细节
 - 不定义后端算法
-
 ## Requirements
-
 ### Requirement: Workspace uses modular canvas layout
 工作区 MUST 基于模块化画布布局，默认包含 Sources/Chat/Studio 核心模块。
 
