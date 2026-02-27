@@ -156,7 +156,8 @@ vector_storage:
   chroma:
     path: "./data/chroma"
     telemetry: false
-    host: "localhost"
+    # Empty host => embedded Chroma (no separate Chroma server required).
+    host: ""
     port: 8000
   sqlite:
     path: "./data/vectors.db"

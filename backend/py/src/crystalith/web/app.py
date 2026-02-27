@@ -204,9 +204,16 @@ def _is_ollama_enabled(settings: Settings) -> bool:
 def _build_optional_status_template(settings: Settings) -> OptionalServicesStatus:
     vector_provider = settings.vector_storage.provider
     cache_provider = settings.cache.provider
-    chroma_endpoint = settings.optional_services.chroma.endpoint or (
-        f"http://{settings.vector_storage.chroma.host}:{settings.vector_storage.chroma.port}"
-    )
+    chroma_host = settings.vector_storage.chroma.host
+    chroma_host_set = bool(chroma_host and chroma_host.strip())
+    chroma_enabled = settings.optional_services.chroma.enabled or (vector_provider == "chroma" and chroma_host_set)
+    chroma_endpoint = None
+    if chroma_enabled:
+        chroma_endpoint = (
+            f"http://{chroma_host}:{settings.vector_storage.chroma.port}"
+            if chroma_host_set
+            else settings.optional_services.chroma.endpoint
+        )
     redis_endpoint = settings.optional_services.redis.endpoint or settings.cache.redis_url
     ollama_endpoint = os.getenv("OLLAMA_HOST") or settings.optional_services.ollama.endpoint
     searxng_endpoint = settings.optional_services.searxng.endpoint or settings.search.searxng.host
@@ -219,7 +226,7 @@ def _build_optional_status_template(settings: Settings) -> OptionalServicesStatu
     return {
         "storage_chroma": {
             "service": "chroma",
-            "enabled": settings.optional_services.chroma.enabled or vector_provider == "chroma",
+            "enabled": chroma_enabled,
             "provider": vector_provider,
             "endpoint": chroma_endpoint,
             "status": "unknown",
