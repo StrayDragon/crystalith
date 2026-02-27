@@ -19,6 +19,12 @@ schema: v1
 # App / web server
 # ----------------------------------------------------------------------------
 app:
+  auth:
+    # Optional API key auth for self-host deployments.
+    # When enabled, all /v1/** endpoints require `Authorization: Bearer <token>`.
+    enabled: false
+    # api_key: "${{ env.CRYSTALITH_API_KEY }}"
+
   cors:
     # Allowed origins for browser clients (CORS).
     # Keep this list tight in production.

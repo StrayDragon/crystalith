@@ -29,6 +29,7 @@ Base URL (no `/v1`):
 - Docker Compose (same entrypoint as Web UI): `http://localhost:${CL_WEB_PORT:-8080}`
 
 Note: Port `8000` is typically an optional dependency (e.g. Chroma), not the Crystalith API.
+Auth (optional): if `app.auth.enabled=true`, send `Authorization: Bearer <token>` (or `X-API-Key: <token>`).
 
 ```ts
 import { client } from '../api/generated/client.gen';
@@ -43,8 +44,11 @@ import {
   listOutputsV1NotebooksNotebookIdOutputsGet as listOutputs,
 } from '../api/generated';
 
+const apiKey = '<token>'; // or from env/secrets
+
 client.setConfig({
   baseUrl: 'http://127.0.0.1:8032',
+  headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : undefined,
   responseStyle: 'fields',
   throwOnError: true,
 });

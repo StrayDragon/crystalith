@@ -2,6 +2,11 @@
 
 This page focuses on day‑2 operability for self‑hosted Crystalith: diagnostics, backup/restore, and a quick runbook.
 
+## Security
+
+- By default, the API is **unauthenticated**. Enable `app.auth` (or add a reverse-proxy auth layer) before exposing your stack to the public internet.
+- When `app.auth.enabled=true`, all `/v1/**` endpoints require an API key (Bearer token). `/health` and `/health/dependencies` remain anonymous for probes.
+
 ## Diagnostics
 
 - UI: use the Workspace **Health / Diagnostics** dialog (header button).

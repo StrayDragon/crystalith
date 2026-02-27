@@ -20,11 +20,17 @@ Base URL (no `/v1`):
 - Docker Compose (same entrypoint as Web UI): `http://localhost:${CL_WEB_PORT:-8080}`
 
 Note: Port `8000` is typically an optional dependency (e.g. Chroma), not the Crystalith API.
+Auth (optional): if `app.auth.enabled=true`, send `Authorization: Bearer <token>` (or `X-API-Key: <token>`).
 
 ```python
+import os
+
 from crystalith import CrystalithClient
 
-client = CrystalithClient(base_url="http://127.0.0.1:8032")
+api_key = os.environ.get("CRYSTALITH_API_KEY")
+headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+
+client = CrystalithClient(base_url="http://127.0.0.1:8032", headers=headers)
 
 notebooks = client.notebooks.list_notebooks()
 notebook = client.notebooks.create_notebook(name="Demo")
