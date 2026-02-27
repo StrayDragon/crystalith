@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import json
 from collections.abc import Callable
-from typing import Any
+from typing import TypedDict, cast
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -21,7 +21,24 @@ from .models import Task
 from .types import TaskType
 
 
-def _fallback_structured(prompt: str, citations: list[dict[str, Any]]) -> dict[str, Any]:
+class RefineTaskPayload(TypedDict, total=False):
+    prompt: str
+    format: str
+    source_ids: list[int]
+    top_k: int
+    min_score: float
+
+
+class RefineCitation(TypedDict):
+    source_id: int
+    source_name: str
+    chunk_id: int
+    chunk_index: int
+    snippet: str
+    score: float
+
+
+def _fallback_structured(prompt: str, citations: list[RefineCitation]) -> dict[str, object]:
     title = prompt.strip()[:48] or "Refine"
     bullets = [citation["snippet"] for citation in citations[:5]]
     return {"title": title, "bullets": bullets, "terms": [], "citations": citations}
@@ -53,8 +70,8 @@ def _apply_format(
     format_name: str,
     answer: str,
     prompt: str,
-    citations: list[dict[str, Any]],
-) -> dict[str, Any]:
+    citations: list[RefineCitation],
+) -> dict[str, object]:
     if format_name == "paragraph":
         return {"paragraph": answer.strip()}
     if format_name == "bullets":
@@ -62,7 +79,7 @@ def _apply_format(
 
     try:
         parsed = json.loads(answer)
-        structured = {
+        structured: dict[str, object] = {
             "title": str(parsed.get("title", "")),
             "bullets": [str(item) for item in parsed.get("bullets", [])],
             "terms": [str(item) for item in parsed.get("terms", [])],
@@ -120,7 +137,7 @@ async def execute_task(
     embedder_factory: Callable[[Settings], EmbeddingProvider],
     chat_factory: Callable[[Settings], ChatProvider],
     limiters: StageLimiters | None,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     if task.type == TaskType.REFINE:
         return await _execute_refine(
             task,
@@ -143,8 +160,8 @@ async def _execute_refine(
     chat_factory: Callable[[Settings], ChatProvider],
     *,
     limiters: StageLimiters | None,
-) -> dict[str, Any]:
-    payload = task.payload
+) -> dict[str, object]:
+    payload = cast(RefineTaskPayload, task.payload)
     prompt = str(payload.get("prompt", "")).strip()
     if not prompt:
         raise ValueError("Refine task requires a prompt")
@@ -163,7 +180,7 @@ async def _execute_refine(
     if source_ids:
         await _validate_source_ids(session, notebook_id, source_ids)
 
-    citations: list[dict[str, Any]]
+    citations: list[RefineCitation]
     if not source_ids:
         citations = []
         context = ""

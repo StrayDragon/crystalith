@@ -67,6 +67,7 @@ async def test_generate_output_prefers_plugin_schema_and_prompt(monkeypatch: pyt
             "plugins": _DummyPlugins(_Plugin()),
             "settings": object(),
             "model": object(),
+            "limiters": None,
         },
     )()
 
@@ -111,6 +112,7 @@ async def test_generate_output_falls_back_to_core_schema_and_prompt(monkeypatch:
             "plugins": _DummyPlugins(None),
             "settings": object(),
             "model": object(),
+            "limiters": None,
         },
     )()
 

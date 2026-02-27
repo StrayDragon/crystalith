@@ -4,7 +4,7 @@ import asyncio
 import datetime as dt
 from collections.abc import Mapping
 from email.utils import parsedate_to_datetime
-from typing import Any
+from typing import Protocol, runtime_checkable
 
 import httpx
 from pydantic import BaseModel, Field
@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 class ErrorResponse(BaseModel):
     error_code: str
     message: str
-    details: Any | None = None
+    details: object | None = None
     retry_after: int | None = Field(default=None, ge=0)
 
 
@@ -54,7 +54,12 @@ def default_message_for_status(status_code: int) -> str:
     return _STATUS_DEFAULT_MESSAGES.get(status_code, "请求处理失败")
 
 
-def _read_header(headers: Mapping[str, Any] | Any, name: str) -> str | None:
+@runtime_checkable
+class _HasGet(Protocol):
+    def get(self, key: str) -> object | None: ...
+
+
+def _read_header(headers: object | None, name: str) -> str | None:
     if headers is None:
         return None
 
@@ -62,21 +67,18 @@ def _read_header(headers: Mapping[str, Any] | Any, name: str) -> str | None:
         for key, value in headers.items():
             if str(key).lower() == name.lower():
                 return str(value)
+        return None
 
-    getter = getattr(headers, "get", None)
-    if callable(getter):
-        value = getter(name)
+    if isinstance(headers, _HasGet):
+        value = headers.get(name)
         if value is None:
-            value = getter(name.lower())
-        if value is None:
-            value = getter(name.title())
-        if value is not None:
-            return str(value)
+            return None
+        return str(value)
 
     return None
 
 
-def parse_retry_after(value: Any) -> int | None:
+def parse_retry_after(value: object) -> int | None:
     if value is None:
         return None
 
@@ -110,39 +112,50 @@ def parse_retry_after(value: Any) -> int | None:
     return max(0, seconds)
 
 
-def retry_after_from_headers(headers: Mapping[str, Any] | Any | None) -> int | None:
-    if headers is None:
-        return None
+def retry_after_from_headers(headers: object | None) -> int | None:
     return parse_retry_after(_read_header(headers, "retry-after"))
 
 
+@runtime_checkable
+class _HasHeaders(Protocol):
+    headers: Mapping[str, object]
+
+
+@runtime_checkable
+class _HasResponse(Protocol):
+    response: _HasHeaders | None
+
+
+@runtime_checkable
+class _HasStatusCode(Protocol):
+    status_code: object
+
+
+@runtime_checkable
+class _HasResponseWithStatusCode(Protocol):
+    response: _HasStatusCode | None
+
+
 def retry_after_from_exception(error: Exception) -> int | None:
-    response = getattr(error, "response", None)
-    if response is not None:
-        headers = getattr(response, "headers", None)
-        parsed = retry_after_from_headers(headers)
+    if isinstance(error, httpx.HTTPStatusError):
+        return retry_after_from_headers(error.response.headers)
+
+    if isinstance(error, _HasResponse):
+        response = error.response
+        if response is not None:
+            parsed = retry_after_from_headers(response.headers)
+            if parsed is not None:
+                return parsed
+
+    if isinstance(error, _HasHeaders):
+        parsed = retry_after_from_headers(error.headers)
         if parsed is not None:
             return parsed
-
-    headers = getattr(error, "headers", None)
-    parsed = retry_after_from_headers(headers)
-    if parsed is not None:
-        return parsed
 
     return None
 
 
 def status_code_from_exception(error: Exception) -> int | None:
-    status_code = getattr(error, "status_code", None)
-    if isinstance(status_code, int):
-        return status_code
-
-    response = getattr(error, "response", None)
-    if response is not None:
-        response_status = getattr(response, "status_code", None)
-        if isinstance(response_status, int):
-            return response_status
-
     if isinstance(error, TimeoutError | asyncio.TimeoutError | httpx.TimeoutException):
         return 503
 
@@ -155,14 +168,26 @@ def status_code_from_exception(error: Exception) -> int | None:
     if isinstance(error, httpx.TransportError):
         return 503
 
+    if isinstance(error, _HasStatusCode):
+        status_code = error.status_code
+        if isinstance(status_code, int):
+            return status_code
+
+    if isinstance(error, _HasResponseWithStatusCode):
+        response = error.response
+        if response is not None:
+            status_code = response.status_code
+            if isinstance(status_code, int):
+                return status_code
+
     return None
 
 
 def build_error_response(
     *,
     status_code: int,
-    detail: Any,
-    headers: Mapping[str, Any] | Any | None = None,
+    detail: object,
+    headers: Mapping[str, object] | None = None,
 ) -> ErrorResponse:
     retry_after = retry_after_from_headers(headers)
 

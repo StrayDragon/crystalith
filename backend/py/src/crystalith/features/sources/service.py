@@ -38,7 +38,7 @@ async def create_source(
     chunk_count = 0
     if content:
         chunks = chunk_text(content)
-        payloads = [
+        payloads: list[tuple[int, str, int | None, int | None, dict | None]] = [
             (index, payload.text, payload.start_offset, payload.end_offset, None)
             for index, payload in enumerate(chunks)
         ]

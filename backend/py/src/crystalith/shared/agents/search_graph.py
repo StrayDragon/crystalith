@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TypedDict, cast
 
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent
@@ -17,6 +17,18 @@ from crystalith.shared.search import SearXNGSearcher
 log = get_logger(__name__)
 
 
+class SearchResultDict(TypedDict):
+    title: str
+    url: str
+    snippet: str
+    source: str
+
+
+class SearchGraphOutput(TypedDict):
+    message: str
+    results: list[SearchResultDict]
+
+
 @dataclass
 class SearchGraphState:
     """State object passed through the search graph."""
@@ -25,7 +37,7 @@ class SearchGraphState:
     engine: str
     mode: str
     message: str = ""
-    results: list[dict[str, Any]] = field(default_factory=list)
+    results: list[SearchResultDict] = field(default_factory=list)
 
 
 class SearchSummary(BaseModel):
@@ -47,7 +59,7 @@ SYSTEM_PROMPT = (
 
 
 @dataclass
-class GenerateSummary(BaseNode[SearchGraphState, StudioDeps, dict[str, Any]]):
+class GenerateSummary(BaseNode[SearchGraphState, StudioDeps, SearchGraphOutput]):
     """Generate a summary for the search query using LLM."""
 
     async def run(
@@ -78,12 +90,12 @@ class GenerateSummary(BaseNode[SearchGraphState, StudioDeps, dict[str, Any]]):
 
 
 @dataclass
-class BuildResults(BaseNode[SearchGraphState, StudioDeps, dict[str, Any]]):
+class BuildResults(BaseNode[SearchGraphState, StudioDeps, SearchGraphOutput]):
     """Build search results using real search engine."""
 
     async def run(
         self, ctx: GraphRunContext[SearchGraphState, StudioDeps]
-    ) -> End[dict[str, Any]]:
+    ) -> End[SearchGraphOutput]:
         state = ctx.state
         deps = ctx.deps
 
@@ -93,12 +105,15 @@ class BuildResults(BaseNode[SearchGraphState, StudioDeps, dict[str, Any]]):
 
         # Convert SearchResult objects to dicts for API response
         state.results = [
-            {
-                "title": r.title,
-                "url": r.url,
-                "snippet": r.snippet,
-                "source": r.engine or state.engine,
-            }
+            cast(
+                SearchResultDict,
+                {
+                    "title": r.title,
+                    "url": r.url,
+                    "snippet": r.snippet,
+                    "source": r.engine or state.engine,
+                },
+            )
             for r in search_results
         ]
 
@@ -108,14 +123,14 @@ class BuildResults(BaseNode[SearchGraphState, StudioDeps, dict[str, Any]]):
             result_count=len(state.results),
         )
 
-        return End({"message": state.message, "results": state.results})
+        return End(cast(SearchGraphOutput, {"message": state.message, "results": state.results}))
 
 
 # =============================================================================
 # Graph Definition
 # =============================================================================
 
-SEARCH_GRAPH: Graph[SearchGraphState, StudioDeps, dict[str, Any]] = Graph(
+SEARCH_GRAPH: Graph[SearchGraphState, StudioDeps, SearchGraphOutput] = Graph(
     nodes=[GenerateSummary, BuildResults]
 )
 
@@ -125,7 +140,7 @@ async def run_search_graph(
     engine: str,
     mode: str,
     deps: StudioDeps,
-) -> dict[str, Any]:
+) -> SearchGraphOutput:
     """Run the search graph and return the results."""
     state = SearchGraphState(
         query=query,
@@ -133,4 +148,4 @@ async def run_search_graph(
         mode=mode,
     )
     result = await SEARCH_GRAPH.run(GenerateSummary(), state=state, deps=deps)
-    return result.output
+    return cast(SearchGraphOutput, result.output)

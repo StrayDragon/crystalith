@@ -64,3 +64,6 @@ class VectorStore(Protocol):
         source_ids: Sequence[int] | None = None,
     ) -> Iterable[VectorEntry]:
         ...
+
+    async def close(self) -> None:
+        ...

@@ -536,6 +536,44 @@
       "title": "JinaSettings",
       "type": "object"
     },
+    "JsonPrimitive": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JsonPrimitive"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        }
+      ]
+    },
     "ModelConfig": {
       "description": "Configuration for a single AI model.\n\nInspired by Continue's model configuration with enhancements for Crystalith.\n\nExample:\n    - id: \"gpt-5.2\"\n      provider: \"openai\"\n      model: \"gpt-5.2\"\n      display_name: \"GPT-5.2\"\n      description: \"Latest OpenAI model\"\n      roles: [chat, edit]\n      capabilities: [tool_use, image_input]\n      provider_config:\n        <<: *openai_main\n      completion_options:\n        temperature: 0.7\n        max_tokens: 4096",
       "properties": {
@@ -615,7 +653,9 @@
               "$ref": "#/$defs/OllamaProviderSettings"
             },
             {
-              "additionalProperties": true,
+              "additionalProperties": {
+                "$ref": "#/$defs/JsonValue"
+              },
               "type": "object"
             },
             {
@@ -1460,7 +1500,9 @@
       "type": "string"
     },
     "providers": {
-      "additionalProperties": true,
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
       "description": "Reusable provider configurations (use YAML anchors)",
       "title": "Providers",
       "type": "object"

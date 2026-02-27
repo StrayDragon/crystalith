@@ -11,9 +11,13 @@ def make_sources_epoch_key(*, notebook_id: int) -> str:
 
 async def get_sources_epoch(*, cache: CacheProvider, notebook_id: int) -> int:
     raw = await cache.get(make_sources_epoch_key(notebook_id=notebook_id))
+    if raw is None or isinstance(raw, (dict, list)) or isinstance(raw, bool):
+        return 0
+    if not isinstance(raw, (int, float, str)):
+        return 0
     try:
         return int(raw)
-    except (TypeError, ValueError):
+    except ValueError:
         return 0
 
 

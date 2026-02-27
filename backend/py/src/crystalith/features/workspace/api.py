@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, cast
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.plugins.render_types import PluginConfigSchema, RenderDescriptor
 from crystalith.shared.types import OutputType, OutputTypeMeta
 
@@ -126,13 +127,13 @@ def _build_tools() -> list[WorkspaceTool]:
     """Build workspace tools from OutputType metadata."""
     tools: list[WorkspaceTool] = []
     for output_type in OutputType.get_tool_types():
-        meta: OutputTypeMeta = output_type.x_meta  # pyright: ignore[reportAttributeAccessIssue]
+        meta: OutputTypeMeta = output_type.meta
         tools.append(
             WorkspaceTool(
                 id=output_type.value.lower(),
                 label=meta.display_text,
                 description=meta.description,
-                tone=meta.tone,  # pyright: ignore[reportArgumentType]
+                tone=cast(ToolTone, meta.tone),
                 output_type=output_type,
                 prompt=meta.prompt,
             )
@@ -150,8 +151,9 @@ def _get_tool_by_id(tool_id: str) -> WorkspaceTool | None:
 
 @router.get("/tools", response_model=WorkspaceToolsResponse)
 async def list_workspace_tools(request: Request) -> WorkspaceToolsResponse:
-    plugins = getattr(request.app.state, "plugins", None)
-    if plugins is None:
+    try:
+        plugins = cast(PluginRegistry, request.app.state.plugins)
+    except AttributeError:
         return WorkspaceToolsResponse(tools=_build_tools())
 
     tools: list[WorkspaceTool] = []

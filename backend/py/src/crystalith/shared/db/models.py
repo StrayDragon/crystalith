@@ -3,13 +3,13 @@ from __future__ import annotations
 import datetime
 
 import enum
-from typing import Any
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from cl_sqlalchemyx.base.dal import AsyncSqlATableBase
 
+from crystalith.shared.json_types import JsonDict
 from crystalith.shared.types import (
     TaskStatus,
     TaskType,
@@ -24,7 +24,7 @@ from crystalith.shared.types import (
 
 
 def _enum_values(enum_cls: type[enum.Enum]) -> list[str]:
-    return [member.value for member in enum_cls]  # type: ignore[return-value]
+    return [str(member.value) for member in enum_cls]
 
 
 class Notebook(AsyncSqlATableBase):
@@ -81,7 +81,7 @@ class Template(AsyncSqlATableBase):
     id: Mapped[int] = mapped_column(sa.Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(sa.String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
-    config_json: Mapped[dict[str, Any]] = mapped_column(sa.JSON, nullable=False)
+    config_json: Mapped[JsonDict] = mapped_column(sa.JSON, nullable=False)
     is_builtin: Mapped[bool] = mapped_column(
         sa.Boolean,
         nullable=False,
@@ -188,7 +188,7 @@ class Source(AsyncSqlATableBase):
         nullable=False,
         server_default=sa.text("'text'"),
     )
-    metadata_: Mapped[dict[str, Any] | None] = mapped_column(
+    metadata_: Mapped[JsonDict | None] = mapped_column(
         "metadata",
         sa.JSON,
         nullable=True,
@@ -255,7 +255,7 @@ class Chunk(AsyncSqlATableBase):
     text: Mapped[str] = mapped_column(sa.Text, nullable=False)
     start_offset: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     end_offset: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
-    metadata_: Mapped[dict[str, Any] | None] = mapped_column(
+    metadata_: Mapped[JsonDict | None] = mapped_column(
         "metadata",
         sa.JSON,
         nullable=True,
@@ -379,7 +379,7 @@ class Output(AsyncSqlATableBase):
     )
     prompt: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     chunk_ids: Mapped[list[int] | None] = mapped_column(sa.JSON, nullable=True)
-    content: Mapped[dict[str, Any]] = mapped_column(sa.JSON, nullable=False)
+    content: Mapped[JsonDict] = mapped_column(sa.JSON, nullable=False)
 
     created_at: Mapped[datetime.datetime] = mapped_column(
         sa.DateTime,
@@ -425,9 +425,9 @@ class StudioSlide(AsyncSqlATableBase):
     )
     chunk_ids: Mapped[list[int] | None] = mapped_column(sa.JSON, nullable=True)
     source_ids: Mapped[list[int] | None] = mapped_column(sa.JSON, nullable=True)
-    outline: Mapped[dict[str, Any] | None] = mapped_column(sa.JSON, nullable=True)
+    outline: Mapped[JsonDict | None] = mapped_column(sa.JSON, nullable=True)
     markdown: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
-    generation_config: Mapped[dict[str, Any] | None] = mapped_column(sa.JSON, nullable=True)
+    generation_config: Mapped[JsonDict | None] = mapped_column(sa.JSON, nullable=True)
     stage: Mapped[SlideStage] = mapped_column(
         sa.Enum(SlideStage, name="slide_stage", values_callable=_enum_values),
         nullable=False,
@@ -489,7 +489,7 @@ class ResearchSession(AsyncSqlATableBase):
         nullable=False,
         server_default=sa.text("4"),
     )
-    aggregated_results: Mapped[list[dict[str, Any]] | None] = mapped_column(
+    aggregated_results: Mapped[list[JsonDict] | None] = mapped_column(
         sa.JSON,
         nullable=True,
     )
@@ -550,8 +550,8 @@ class ResearchStep(AsyncSqlATableBase):
         sa.Enum(ResearchStepType, name="research_step_type", values_callable=_enum_values),
         nullable=False,
     )
-    input_data: Mapped[dict[str, Any] | None] = mapped_column(sa.JSON, nullable=True)
-    output_data: Mapped[dict[str, Any] | None] = mapped_column(sa.JSON, nullable=True)
+    input_data: Mapped[JsonDict | None] = mapped_column(sa.JSON, nullable=True)
+    output_data: Mapped[JsonDict | None] = mapped_column(sa.JSON, nullable=True)
     status: Mapped[ResearchStepStatus] = mapped_column(
         sa.Enum(ResearchStepStatus, name="research_step_status", values_callable=_enum_values),
         nullable=False,
@@ -593,8 +593,8 @@ class Task(AsyncSqlATableBase):
         nullable=False,
         server_default=sa.text(f"'{TaskStatus.PENDING.value}'"),
     )
-    payload: Mapped[dict] = mapped_column(sa.JSON, nullable=False)
-    result: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
+    payload: Mapped[JsonDict] = mapped_column(sa.JSON, nullable=False)
+    result: Mapped[JsonDict | None] = mapped_column(sa.JSON, nullable=True)
     error: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     progress: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default="0")
 

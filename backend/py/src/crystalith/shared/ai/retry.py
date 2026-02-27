@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Callable, Mapping
 from email.utils import parsedate_to_datetime
 from functools import wraps
 from time import perf_counter
-from typing import Any, ParamSpec, TypeVar
+from typing import ParamSpec, Protocol, TypeVar, runtime_checkable
 
 from cl_logs.logging import get_logger
 
@@ -17,6 +17,26 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 _RETRYABLE_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
+
+
+@runtime_checkable
+class _HasHeaders(Protocol):
+    headers: Mapping[str, object]
+
+
+@runtime_checkable
+class _HasResponseWithHeaders(Protocol):
+    response: _HasHeaders | None
+
+
+@runtime_checkable
+class _HasStatusCode(Protocol):
+    status_code: object
+
+
+@runtime_checkable
+class _HasResponseWithStatusCode(Protocol):
+    response: _HasStatusCode | None
 
 
 def default_retry_budget_s(
@@ -39,35 +59,27 @@ def default_retry_budget_s(
 
 
 def _extract_status_code(error: Exception) -> int | None:
-    status_code = getattr(error, "status_code", None)
-    if isinstance(status_code, int):
-        return status_code
-    response = getattr(error, "response", None)
-    if response is None:
-        return None
-    response_status = getattr(response, "status_code", None)
-    if isinstance(response_status, int):
-        return response_status
+    if isinstance(error, _HasStatusCode):
+        status_code = error.status_code
+        if isinstance(status_code, int):
+            return status_code
+
+    if isinstance(error, _HasResponseWithStatusCode):
+        response = error.response
+        if response is not None:
+            status_code = response.status_code
+            if isinstance(status_code, int):
+                return status_code
+
     return None
 
 
-def _read_header(headers: Mapping[str, Any] | Any, name: str) -> str | None:
+def _read_header(headers: Mapping[str, object] | None, name: str) -> str | None:
     if headers is None:
         return None
 
-    if isinstance(headers, Mapping):
-        for key, value in headers.items():
-            if str(key).lower() == name.lower():
-                return str(value)
-
-    getter = getattr(headers, "get", None)
-    if callable(getter):
-        value = getter(name)
-        if value is None:
-            value = getter(name.lower())
-        if value is None:
-            value = getter(name.title())
-        if value is not None:
+    for key, value in headers.items():
+        if str(key).lower() == name.lower():
             return str(value)
 
     return None
@@ -105,17 +117,17 @@ def _parse_retry_after(value: str | int | float | None) -> float | None:
 
 
 def extract_retry_after(error: Exception) -> float | None:
-    response = getattr(error, "response", None)
-    if response is not None:
-        headers = getattr(response, "headers", None)
-        parsed = _parse_retry_after(_read_header(headers, "retry-after"))
+    if isinstance(error, _HasResponseWithHeaders):
+        response = error.response
+        if response is not None:
+            parsed = _parse_retry_after(_read_header(response.headers, "retry-after"))
+            if parsed is not None:
+                return parsed
+
+    if isinstance(error, _HasHeaders):
+        parsed = _parse_retry_after(_read_header(error.headers, "retry-after"))
         if parsed is not None:
             return parsed
-
-    headers = getattr(error, "headers", None)
-    parsed = _parse_retry_after(_read_header(headers, "retry-after"))
-    if parsed is not None:
-        return parsed
 
     return None
 

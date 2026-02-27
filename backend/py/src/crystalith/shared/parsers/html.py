@@ -11,6 +11,7 @@ class HTMLParser:
     parser_type = "html"
     supported_mime_types = {"text/html"}
     supported_extensions = {".html", ".htm"}
+    page_count: int | None = None
 
     def parse(self, content: bytes) -> list[Chunk]:
         try:

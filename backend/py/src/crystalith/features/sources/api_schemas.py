@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import datetime
-from typing import Any, Literal
+from typing import Literal
 
 from cl_stdx.enumx import MetaInfoStrEnum, XMetaInfo
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from crystalith.shared.json_types import JsonDict
 from crystalith.shared.types import SourceStatus
 
 
@@ -17,7 +18,7 @@ class SourceRead(BaseModel):
     filename: str
     mime_type: str | None
     parser_type: str
-    metadata: dict[str, Any] | None = Field(
+    metadata: JsonDict | None = Field(
         default=None,
         validation_alias="metadata_",
         serialization_alias="metadata",
@@ -40,7 +41,7 @@ class ChunkRead(BaseModel):
     text: str
     start_offset: int | None
     end_offset: int | None
-    metadata: dict[str, Any] | None = Field(
+    metadata: JsonDict | None = Field(
         default=None,
         validation_alias="metadata_",
         serialization_alias="metadata",

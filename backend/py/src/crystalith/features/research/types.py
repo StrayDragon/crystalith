@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING
+
+from crystalith.shared.json_types import JsonDict
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,6 +57,13 @@ class IterationAnalysis:
     summary: str
     need_more_search: bool
     suggested_queries: list[str] = field(default_factory=list)
+
+
+ProgressCallback = Callable[[JsonDict], Awaitable[None]]
+PlanReadyCallback = Callable[[SearchPlan | None], Awaitable[None]]
+SearchResultCallback = Callable[[SearchResult], Awaitable[None]]
+AnalysisCallback = Callable[[IterationAnalysis | None], Awaitable[None]]
+ThinkingCallback = Callable[[JsonDict], Awaitable[None]]
 
 
 from enum import Enum
@@ -136,8 +146,8 @@ class ResearchDeps:
     searcher: "SearXNGSearcher"
 
     # Optional callbacks for progress updates
-    on_progress: Any | None = None
-    on_plan_ready: Any | None = None
-    on_search_result: Any | None = None
-    on_analysis: Any | None = None
-    on_thinking: Any | None = None  # Callback for streaming thinking content
+    on_progress: ProgressCallback | None = None
+    on_plan_ready: PlanReadyCallback | None = None
+    on_search_result: SearchResultCallback | None = None
+    on_analysis: AnalysisCallback | None = None
+    on_thinking: ThinkingCallback | None = None  # Callback for streaming thinking content

@@ -1,15 +1,19 @@
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 
-def _normalize_citations(value: Any) -> list[int]:
+def _normalize_citations(value: object) -> list[int]:
     if value is None:
         return []
 
-    def _push_int(items: list[int], item: Any) -> None:
+    def _push_int(items: list[int], item: object) -> None:
+        if item is None or isinstance(item, (dict, list)) or isinstance(item, bool):
+            return
+        if not isinstance(item, (int, float, str)):
+            return
         try:
             parsed = int(item)
         except (TypeError, ValueError):
@@ -57,7 +61,7 @@ class CitedText(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _coerce_from_str(cls, value: Any) -> Any:
+    def _coerce_from_str(cls, value: object) -> object:
         if isinstance(value, str):
             return {"text": value, "citations": []}
         return value

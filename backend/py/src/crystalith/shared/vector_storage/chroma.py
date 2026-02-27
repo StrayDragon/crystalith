@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any
+from typing import cast
 
 import chromadb
+from chromadb.api.types import Metadatas, PyEmbeddings, Where
 from chromadb.config import Settings as ChromaSettings
 
 from .types import VectorEntry, VectorSearchResult
@@ -50,17 +51,17 @@ class ChromaVectorStore:
         self._ensure_dimension(expected_dim)
 
         ids = [self._build_id(notebook_id, source_id, chunk_id) for chunk_id in chunk_ids]
-        metadatas = [
+        metadatas = cast(Metadatas, [
             {
                 "notebook_id": notebook_id,
                 "source_id": source_id,
                 "chunk_id": chunk_id,
             }
             for chunk_id in chunk_ids
-        ]
+        ])
         self._collection.upsert(
             ids=ids,
-            embeddings=vectors_list,
+            embeddings=cast(PyEmbeddings, vectors_list),
             metadatas=metadatas,
         )
 
@@ -97,22 +98,22 @@ class ChromaVectorStore:
         if dimension is None or len(query) != dimension:
             return []
 
-        clauses: list[dict[str, Any]] = [{"notebook_id": notebook_id}]
+        clauses: list[dict[str, object]] = [{"notebook_id": notebook_id}]
         if source_ids:
             clauses.append({"source_id": {"$in": list(source_ids)}})
         if exclude_source_ids:
             clauses.append({"source_id": {"$nin": list(exclude_source_ids)}})
 
-        where: dict[str, Any]
+        where_obj: dict[str, object]
         if len(clauses) == 1:
-            where = clauses[0]
+            where_obj = clauses[0]
         else:
-            where = {"$and": clauses}
+            where_obj = {"$and": clauses}
 
         results = self._collection.query(
-            query_embeddings=[query],
+            query_embeddings=cast(PyEmbeddings, [query]),
             n_results=top_k,
-            where=where,
+            where=cast(Where, where_obj),
             include=["metadatas", "distances"],
         )
 
@@ -131,14 +132,17 @@ class ChromaVectorStore:
 
         output: list[VectorSearchResult] = []
         for idx, metadata in enumerate(query_metadatas):
+            if not isinstance(metadata, dict):
+                continue
             distance = query_distances[idx] if idx < len(query_distances) else None
             score = 0.0 if distance is None else 1.0 - float(distance)
             if score < min_score:
                 continue
+            metadata_obj = cast(dict[str, object], metadata)
             entry = VectorEntry(
-                notebook_id=int(metadata["notebook_id"]),
-                source_id=int(metadata["source_id"]),
-                chunk_id=int(metadata["chunk_id"]),
+                notebook_id=int(cast(int, metadata_obj.get("notebook_id"))),
+                source_id=int(cast(int, metadata_obj.get("source_id"))),
+                chunk_id=int(cast(int, metadata_obj.get("chunk_id"))),
                 vector=[],
             )
             output.append(VectorSearchResult(entry=entry, score=score))
@@ -177,22 +181,22 @@ class ChromaVectorStore:
         if not valid_queries:
             return [[] for _ in query_vectors]
 
-        clauses: list[dict[str, Any]] = [{"notebook_id": notebook_id}]
+        clauses: list[dict[str, object]] = [{"notebook_id": notebook_id}]
         if source_ids:
             clauses.append({"source_id": {"$in": list(source_ids)}})
         if exclude_source_ids:
             clauses.append({"source_id": {"$nin": list(exclude_source_ids)}})
 
-        where: dict[str, Any]
+        where_obj: dict[str, object]
         if len(clauses) == 1:
-            where = clauses[0]
+            where_obj = clauses[0]
         else:
-            where = {"$and": clauses}
+            where_obj = {"$and": clauses}
 
         results = self._collection.query(
-            query_embeddings=valid_queries,
+            query_embeddings=cast(PyEmbeddings, valid_queries),
             n_results=top_k,
-            where=where,
+            where=cast(Where, where_obj),
             include=["metadatas", "distances"],
         )
 
@@ -212,10 +216,11 @@ class ChromaVectorStore:
                 score = 0.0 if distance is None else 1.0 - float(distance)
                 if score < min_score:
                     continue
+                metadata_obj = cast(dict[str, object], metadata)
                 entry = VectorEntry(
-                    notebook_id=int(metadata["notebook_id"]),
-                    source_id=int(metadata["source_id"]),
-                    chunk_id=int(metadata["chunk_id"]),
+                    notebook_id=int(cast(int, metadata_obj.get("notebook_id"))),
+                    source_id=int(cast(int, metadata_obj.get("source_id"))),
+                    chunk_id=int(cast(int, metadata_obj.get("chunk_id"))),
                     vector=[],
                 )
                 group.append(VectorSearchResult(entry=entry, score=score))
@@ -237,24 +242,24 @@ class ChromaVectorStore:
         notebook_id: int | None = None,
         source_ids: Sequence[int] | None = None,
     ) -> Iterable[VectorEntry]:
-        clauses: list[dict[str, Any]] = []
+        clauses: list[dict[str, object]] = []
         if notebook_id is not None:
             clauses.append({"notebook_id": int(notebook_id)})
         if source_ids:
             clauses.append({"source_id": {"$in": list(sorted(set(int(value) for value in source_ids)))}})
 
-        where: dict[str, Any] | None
+        where_obj: dict[str, object] | None
         if not clauses:
-            where = None
+            where_obj = None
         elif len(clauses) == 1:
-            where = clauses[0]
+            where_obj = clauses[0]
         else:
-            where = {"$and": clauses}
+            where_obj = {"$and": clauses}
 
-        if where is None:
+        if where_obj is None:
             items = self._collection.get(include=["embeddings", "metadatas"])
         else:
-            items = self._collection.get(where=where, include=["embeddings", "metadatas"])
+            items = self._collection.get(where=cast(Where, where_obj), include=["embeddings", "metadatas"])
         embeddings = items.get("embeddings")
         metadatas = items.get("metadatas")
         if embeddings is None:
@@ -264,11 +269,13 @@ class ChromaVectorStore:
 
         entries: list[VectorEntry] = []
         for metadata, vector in zip(metadatas, embeddings):
+            if not isinstance(metadata, dict):
+                continue
             entries.append(
                 VectorEntry(
-                    notebook_id=int(metadata["notebook_id"]),
-                    source_id=int(metadata["source_id"]),
-                    chunk_id=int(metadata["chunk_id"]),
+                    notebook_id=int(cast(int, metadata.get("notebook_id"))),
+                    source_id=int(cast(int, metadata.get("source_id"))),
+                    chunk_id=int(cast(int, metadata.get("chunk_id"))),
                     vector=list(vector),
                 )
             )
@@ -294,8 +301,13 @@ class ChromaVectorStore:
     def _load_dimension(self) -> int | None:
         if self._dimension is not None:
             return self._dimension
-        metadata = getattr(self._collection, "metadata", None) or {}
-        stored = metadata.get("dimension") if isinstance(metadata, dict) else None
+        metadata_obj: object | None
+        try:
+            metadata_obj = self._collection.metadata
+        except Exception:
+            metadata_obj = None
+        metadata: dict[str, object] = metadata_obj if isinstance(metadata_obj, dict) else {}
+        stored = metadata.get("dimension")
         if isinstance(stored, int):
             self._dimension = stored
             return stored

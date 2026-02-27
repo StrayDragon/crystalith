@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 from time import perf_counter
-from typing import Any
+from typing import cast
 
 from cl_logs import get_logger
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -14,7 +14,7 @@ from crystalith.shared.agents.search_graph import run_search_graph
 from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import Settings
-from crystalith.shared.db import Chunk, Notebook, Source
+from crystalith.shared.db import Chunk as ChunkModel, Notebook, Source
 from crystalith.shared.deps import (
     get_cache_provider,
     get_db_session,
@@ -25,6 +25,7 @@ from crystalith.shared.deps import (
     get_vector_store,
 )
 from crystalith.shared.plugins import PluginRegistry
+from crystalith.shared.json_types import JsonDict
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore
 from crystalith.shared.parsers import TranscriptionProvider
@@ -179,18 +180,20 @@ async def create_source_from_url(
     url = payload.url
     title = payload.title or url
     snippet = payload.snippet or ""
-    extraction_metadata: dict[str, Any] = {}
+    extraction_metadata: JsonDict = {}
+
+    from crystalith.shared.utils.chunker import ChunkPayload, chunk_text
 
     if payload.mode == SourceFromUrlMode.LINK:
         # Link mode: create a simple source with URL metadata
         content_text = f"# {title}\n\n{snippet}\n\n来源: {url}"
-        chunks = [
-            type("Chunk", (), {
-                "text": content_text,
-                "start_offset": 0,
-                "end_offset": len(content_text),
-                "metadata": {"url": url, "title": title},
-            })()
+        chunks: list[ChunkPayload] = [
+            ChunkPayload(
+                text=content_text,
+                start_offset=0,
+                end_offset=len(content_text),
+                metadata={"url": url, "title": title},
+            )
         ]
         parser_type = "link"
         parse_time_ms = 0
@@ -204,7 +207,6 @@ async def create_source_from_url(
             ServiceUnavailableError,
         )
         from crystalith.shared.extraction.types import ExtractorType
-        from crystalith.shared.utils.chunker import chunk_text
 
         web_extraction_settings = settings.source_ingestion.web_extraction
         url_fetch_security = settings.source_ingestion.url_fetch.security
@@ -293,7 +295,7 @@ async def create_source_from_url(
         parser_type = f"web:{extracted.extractor}"
 
         # Store extraction metadata
-        extraction_metadata = extracted.to_metadata()
+        extraction_metadata = cast(JsonDict, extracted.to_metadata())
 
     # Create the source record
     source = Source(
@@ -310,19 +312,20 @@ async def create_source_from_url(
     try:
         # Build metadata
         page_count = None
-        source.metadata_ = _build_source_metadata(
+        metadata = _build_source_metadata(
             chunks,
             parser_type=parser_type,
             parse_time_ms=parse_time_ms,
             page_count=page_count,
         )
-        source.metadata_["url"] = url
+        metadata["url"] = url
         if payload.title:
-            source.metadata_["original_title"] = payload.title
+            metadata["original_title"] = payload.title
 
         # Add extraction metadata
         if extraction_metadata:
-            source.metadata_.update(extraction_metadata)
+            metadata.update(extraction_metadata)
+        source.metadata_ = metadata
 
         # Embed chunks
         embeddings = await embedder.embed_batch([chunk.text for chunk in chunks])
@@ -330,15 +333,15 @@ async def create_source_from_url(
             raise ValueError("embedding count mismatch")
 
         # Create chunk records
-        chunk_models: list[Chunk] = []
+        chunk_models: list[ChunkModel] = []
         for index, chunk in enumerate(chunks):
-            chunk_model = Chunk(
+            chunk_model = ChunkModel(
                 source_id=source.id,
                 chunk_index=index,
                 text=chunk.text,
                 start_offset=chunk.start_offset,
                 end_offset=chunk.end_offset,
-                metadata_=chunk.metadata if hasattr(chunk, "metadata") else None,
+                metadata_=cast(JsonDict, chunk.metadata) or None,
             )
             session.add(chunk_model)
             chunk_models.append(chunk_model)
@@ -427,7 +430,7 @@ async def upload_source(
             await session.commit()
             raise HTTPException(status_code=400, detail="empty document")
 
-        page_count = getattr(parser, "page_count", None)
+        page_count = parser.page_count
         if page_count is None:
             page_count = _page_count_from_chunks(chunks)
         source.metadata_ = _build_source_metadata(
@@ -441,15 +444,15 @@ async def upload_source(
         if len(embeddings) != len(chunks):
             raise ValueError("embedding count mismatch")
 
-        chunk_models: list[Chunk] = []
+        chunk_models: list[ChunkModel] = []
         for index, chunk in enumerate(chunks):
-            chunk_model = Chunk(
+            chunk_model = ChunkModel(
                 source_id=source.id,
                 chunk_index=index,
                 text=chunk.text,
                 start_offset=chunk.start_offset,
                 end_offset=chunk.end_offset,
-                metadata_=chunk.metadata or None,
+                metadata_=cast(JsonDict, chunk.metadata) or None,
             )
             session.add(chunk_model)
             chunk_models.append(chunk_model)

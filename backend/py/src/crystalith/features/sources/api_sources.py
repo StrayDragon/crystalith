@@ -69,9 +69,15 @@ async def list_sources(
         sort_order=sort_order,
     )
     cached = await cache.get(cache_key)
-    if cached is not None:
+    if isinstance(cached, list):
         logger.info("cache_hit", key=cache_key)
-        return [SourceRead.model_validate(item) for item in cached]
+        try:
+            return [SourceRead.model_validate(item) for item in cached]
+        except Exception:  # noqa: BLE001 - fail-open cache
+            try:
+                await cache.delete(cache_key)
+            except Exception:  # noqa: BLE001 - best-effort
+                pass
     logger.info("cache_miss", key=cache_key)
 
     chunk_count = func.count(Chunk.id)
@@ -290,9 +296,15 @@ async def list_source_chunks(
     epoch = await get_sources_epoch(cache=cache, notebook_id=notebook_id)
     cache_key = f"notebook:{notebook_id}:sources:v{int(epoch)}:{source_id}:chunks"
     cached = await cache.get(cache_key)
-    if cached is not None:
+    if isinstance(cached, list):
         logger.info("cache_hit", key=cache_key)
-        return [ChunkRead.model_validate(item) for item in cached]
+        try:
+            return [ChunkRead.model_validate(item) for item in cached]
+        except Exception:  # noqa: BLE001 - fail-open cache
+            try:
+                await cache.delete(cache_key)
+            except Exception:  # noqa: BLE001 - best-effort
+                pass
     logger.info("cache_miss", key=cache_key)
 
     result = await session.execute(

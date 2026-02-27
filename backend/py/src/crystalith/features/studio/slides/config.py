@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from .schemas import SlideGenerationConfig
+from crystalith.shared.json_types import JsonDict
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,7 +17,7 @@ class SlidesOption:
 class SlidesThemePreset:
     id: str
     label: str
-    template: dict[str, Any]
+    template: JsonDict
 
 
 DEFAULT_CONFIG = SlideGenerationConfig(
@@ -70,7 +70,7 @@ LANGUAGE_HINTS: dict[str, str] = {
     "en": "英文",
 }
 
-THEME_PRESET_TEMPLATES: dict[str, dict[str, Any]] = {
+THEME_PRESET_TEMPLATES: dict[str, JsonDict] = {
     "minimal-clean": {
         "theme": "default",
         "colorSchema": "light",

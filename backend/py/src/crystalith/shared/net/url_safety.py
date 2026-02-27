@@ -4,7 +4,7 @@ import asyncio
 import ipaddress
 import socket
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Protocol, Sequence
+from typing import Awaitable, Callable, Protocol, Sequence, TypeAlias
 from urllib.parse import SplitResult, urlsplit
 
 
@@ -13,13 +13,25 @@ class UrlSafetyError(ValueError):
 
 
 class UrlFetchSecurityPolicy(Protocol):
-    allowlist_hosts: Sequence[str]
-    allowlist_domains: Sequence[str]
-    allowlist_cidrs: Sequence[str]
-    allowlist_only: bool
+    @property
+    def allowlist_hosts(self) -> Sequence[str]:
+        ...
+
+    @property
+    def allowlist_domains(self) -> Sequence[str]:
+        ...
+
+    @property
+    def allowlist_cidrs(self) -> Sequence[str]:
+        ...
+
+    @property
+    def allowlist_only(self) -> bool:
+        ...
 
 
-UrlFetchHostResolver = Callable[[str, int], Awaitable[Sequence[ipaddress._BaseAddress]]]
+IPAddress: TypeAlias = ipaddress.IPv4Address | ipaddress.IPv6Address
+UrlFetchHostResolver = Callable[[str, int], Awaitable[Sequence[IPAddress]]]
 
 
 @dataclass(frozen=True)
@@ -76,7 +88,7 @@ def _ip_matches_allowlist(ip: ipaddress._BaseAddress, allowlist: _Allowlist) -> 
     return False
 
 
-def _is_blocked_ip(ip: ipaddress._BaseAddress) -> bool:
+def _is_blocked_ip(ip: IPAddress) -> bool:
     if ip == _METADATA_IPV4:
         return True
     # Safe-by-default SSRF denylist.
@@ -105,10 +117,10 @@ def _parse_url(url: str) -> SplitResult:
     return parsed
 
 
-async def _default_resolve(hostname: str, port: int) -> Sequence[ipaddress._BaseAddress]:
+async def _default_resolve(hostname: str, port: int) -> Sequence[IPAddress]:
     loop = asyncio.get_running_loop()
     infos = await loop.getaddrinfo(hostname, port, type=socket.SOCK_STREAM)
-    resolved: set[ipaddress._BaseAddress] = set()
+    resolved: set[IPAddress] = set()
     for _family, _socktype, _proto, _canonname, sockaddr in infos:
         ip_str = sockaddr[0]
         try:

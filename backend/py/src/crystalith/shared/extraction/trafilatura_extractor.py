@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import time
-from typing import Any
 
 import httpx
 import trafilatura
@@ -123,13 +122,19 @@ class TrafilaturaExtractor(BaseExtractor):
 
         extraction_time_ms = int((time.perf_counter() - start_time) * 1000)
 
+        title = metadata.get("title")
+        author = metadata.get("author")
+        date = metadata.get("date")
+        description = metadata.get("description")
+        language = metadata.get("language")
+
         return ExtractedContent(
             text=result if isinstance(result, str) else str(result),
-            title=metadata.get("title"),
-            author=metadata.get("author"),
-            date=metadata.get("date"),
-            description=metadata.get("description"),
-            language=metadata.get("language"),
+            title=title if isinstance(title, str) else None,
+            author=author if isinstance(author, str) else None,
+            date=date if isinstance(date, str) else None,
+            description=description if isinstance(description, str) else None,
+            language=language if isinstance(language, str) else None,
             url=url,
             extractor=self.extractor_type.value,
             extraction_time_ms=extraction_time_ms,
@@ -150,7 +155,7 @@ class TrafilaturaExtractor(BaseExtractor):
             "Cache-Control": "no-cache",
         }
 
-        max_redirects = getattr(self.url_fetch_security, "max_redirects", 5)
+        max_redirects = self.url_fetch_security.max_redirects if self.url_fetch_security is not None else 5
         try:
             async with httpx.AsyncClient(
                 timeout=float(self.timeout),
@@ -219,7 +224,7 @@ class TrafilaturaExtractor(BaseExtractor):
                 error_class=NetworkError,
             ) from exc
 
-    def _extract_metadata(self, html: str, url: str) -> dict[str, Any]:
+    def _extract_metadata(self, html: str, url: str) -> dict[str, object]:
         """Extract metadata from HTML using trafilatura."""
         try:
             metadata = trafilatura.extract_metadata(html, default_url=url)

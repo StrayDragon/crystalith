@@ -156,3 +156,6 @@ class InMemoryVectorStore:
                 continue
             filtered.append(entry)
         return tuple(filtered)
+
+    async def close(self) -> None:
+        return None

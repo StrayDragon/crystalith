@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from importlib import metadata
-from typing import Any
+from typing import cast
 
 from cl_logs.logging import get_logger
 
@@ -18,6 +18,8 @@ from .render_types import OutputTypePluginMeta, PluginConfigSchema, RenderDescri
 
 
 log = get_logger(__name__)
+
+SupportedPlugin = AIProviderPlugin | ParserPlugin | OutputTypePlugin
 
 
 def _iter_entry_points(group: str) -> list[metadata.EntryPoint]:
@@ -47,7 +49,7 @@ class PluginRegistry:
     entrypoint_group = "crystalith.plugins"
 
     def __init__(self) -> None:
-        self.plugins: dict[str, Any] = {}
+        self.plugins: dict[str, SupportedPlugin] = {}
         self.ai_providers: dict[str, AIProviderPlugin] = {}
         self.parsers: dict[str, ParserPlugin] = {}
         self.output_types: dict[str, OutputTypePlugin] = {}
@@ -101,25 +103,11 @@ class PluginRegistry:
                 report.skipped[plugin_id] = "init_error"
                 continue
 
-            if not self._is_api_compatible(plugin_id, plugin):
-                report.skipped[plugin_id] = "incompatible_api"
-                continue
+            has_ai_provider = isinstance(plugin, AIProviderPlugin)
+            has_parser = isinstance(plugin, ParserPlugin)
+            has_output_type = isinstance(plugin, OutputTypePlugin)
 
-            registered_any = False
-
-            if isinstance(plugin, AIProviderPlugin):
-                self.ai_providers[plugin_id] = plugin
-                registered_any = True
-
-            if isinstance(plugin, ParserPlugin):
-                self.parsers[plugin.parser_type] = plugin
-                registered_any = True
-
-            if isinstance(plugin, OutputTypePlugin):
-                self._register_output_type_plugin(plugin_id, plugin)
-                registered_any = True
-
-            if not registered_any:
+            if not (has_ai_provider or has_parser or has_output_type):
                 log.warning(
                     "plugin skipped (no compatible interfaces)",
                     plugin_id=plugin_id,
@@ -128,16 +116,31 @@ class PluginRegistry:
                 report.skipped[plugin_id] = "no_compatible_interfaces"
                 continue
 
+            supported = cast(SupportedPlugin, plugin)
+            if not self._is_api_compatible(plugin_id, supported):
+                report.skipped[plugin_id] = "incompatible_api"
+                continue
+
+            if has_ai_provider:
+                self.ai_providers[plugin_id] = cast(AIProviderPlugin, supported)
+
+            if has_parser:
+                parser = cast(ParserPlugin, supported)
+                self.parsers[parser.parser_type] = parser
+
+            if has_output_type:
+                self._register_output_type_plugin(plugin_id, cast(OutputTypePlugin, supported))
+
             self._loaded_entrypoints[plugin_id] = str(entry_point.value)
-            self.plugins[plugin_id] = plugin
+            self.plugins[plugin_id] = supported
             report.loaded.append(plugin_id)
             log.info(
                 "plugin loaded",
                 plugin_id=plugin_id,
                 entry_point=str(entry_point.value),
-                has_ai_provider=plugin_id in self.ai_providers,
-                has_parser=isinstance(plugin, ParserPlugin),
-                has_output_type=isinstance(plugin, OutputTypePlugin),
+                has_ai_provider=has_ai_provider,
+                has_parser=has_parser,
+                has_output_type=has_output_type,
             )
 
         return report
@@ -161,7 +164,7 @@ class PluginRegistry:
         self.render_descriptors.pop(output_type, None)
         self.config_schemas.pop(output_type, None)
 
-        metadata = getattr(plugin, "metadata", None)
+        metadata = plugin.metadata
         if metadata is not None:
             if isinstance(metadata, OutputTypePluginMeta):
                 self.output_type_metadata[output_type] = metadata
@@ -173,7 +176,7 @@ class PluginRegistry:
                     metadata_type=type(metadata).__name__,
                 )
 
-        render_descriptor = getattr(plugin, "render_descriptor", None)
+        render_descriptor = plugin.render_descriptor
         if render_descriptor is not None:
             if isinstance(render_descriptor, RenderDescriptor):
                 self.render_descriptors[output_type] = render_descriptor
@@ -185,7 +188,7 @@ class PluginRegistry:
                     render_descriptor_type=type(render_descriptor).__name__,
                 )
 
-        config_schema = getattr(plugin, "config_schema", None)
+        config_schema = plugin.config_schema
         if config_schema is not None:
             if isinstance(config_schema, PluginConfigSchema):
                 self.config_schemas[output_type] = config_schema
@@ -197,7 +200,7 @@ class PluginRegistry:
                     config_schema_type=type(config_schema).__name__,
                 )
 
-    def _normalize_loaded_plugin(self, plugin_id: str, loaded: Any) -> Any | None:
+    def _normalize_loaded_plugin(self, plugin_id: str, loaded: object) -> object | None:
         if isinstance(loaded, type):
             try:
                 return loaded()
@@ -210,12 +213,8 @@ class PluginRegistry:
                 return None
         return loaded
 
-    def _is_api_compatible(self, plugin_id: str, plugin: Any) -> bool:
-        api_version = getattr(plugin, "api_version", None)
-        if api_version is None:
-            return True
-
-        # If the plugin exposes api_version, validate it.
+    def _is_api_compatible(self, plugin_id: str, plugin: SupportedPlugin) -> bool:
+        api_version = plugin.api_version
         if not isinstance(api_version, str):
             log.warning(
                 "plugin api_version must be a string; skipping",

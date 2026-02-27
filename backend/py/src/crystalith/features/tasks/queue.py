@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import itertools
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TypeVar, cast
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,12 +15,15 @@ from crystalith.shared.ai.factory import create_chat_provider, create_embedding_
 from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.shared.concurrency import StageLimiters
 from crystalith.shared.config import Settings
+from crystalith.shared.json_types import JsonDict
 from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.vector_storage import VectorStore
 
 from .models import Task
 from .types import TaskStatus, TaskType
 from .worker import execute_task
+
+TProvider = TypeVar("TProvider")
 
 TaskWorker = Callable[
     [
@@ -32,7 +35,7 @@ TaskWorker = Callable[
         Callable[[Settings], ChatProvider],
         StageLimiters | None,
     ],
-    Awaitable[dict[str, Any]],
+    Awaitable[dict[str, object]],
 ]
 
 
@@ -65,11 +68,15 @@ class TaskQueue:
         self._log = get_logger(__name__)
 
     @staticmethod
-    def _wrap_factory(factory: Callable[[Settings], Any], *, plugins: PluginRegistry | None) -> Callable[[Settings], Any]:
+    def _wrap_factory(
+        factory: Callable[..., TProvider],
+        *,
+        plugins: PluginRegistry | None,
+    ) -> Callable[[Settings], TProvider]:
         if plugins is None:
-            return factory
+            return factory  # type: ignore[return-value]
 
-        def wrapped(settings: Settings) -> Any:
+        def wrapped(settings: Settings) -> TProvider:
             try:
                 return factory(settings, plugins=plugins)
             except TypeError:
@@ -80,7 +87,7 @@ class TaskQueue:
     async def enqueue(
         self,
         task_type: TaskType,
-        payload: dict[str, Any],
+        payload: dict[str, object],
         notebook_id: int | None = None,
     ) -> int:
         async with self._db_manager.got_manual_session() as session:
@@ -96,10 +103,14 @@ class TaskQueue:
             await session.refresh(task)
 
         raw_priority = payload.get("priority", 0)
-        try:
-            priority = int(raw_priority)
-        except (TypeError, ValueError):
+        priority = 0
+        if isinstance(raw_priority, bool):
             priority = 0
+        elif isinstance(raw_priority, (int, float, str)):
+            try:
+                priority = int(raw_priority)
+            except ValueError:
+                priority = 0
         await self._queue.put((priority, next(self._counter), task.id))
         return task.id
 
@@ -197,7 +208,7 @@ class TaskQueue:
                         self._limiters,
                     )
                     task.status = TaskStatus.COMPLETED
-                    task.result = result
+                    task.result = cast(JsonDict, result)
                     task.error = None
                     task.progress = 100
                 except asyncio.CancelledError:

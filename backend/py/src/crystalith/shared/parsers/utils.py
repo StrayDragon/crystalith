@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
-
 from .types import Chunk
 
 
-def chunk_paragraphs(text: str, *, metadata: dict[str, Any] | None = None) -> list[Chunk]:
+def chunk_paragraphs(text: str, *, metadata: dict[str, object] | None = None) -> list[Chunk]:
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     if not normalized.strip():
         return []

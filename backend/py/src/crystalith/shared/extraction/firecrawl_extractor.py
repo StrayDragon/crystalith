@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+from collections.abc import Mapping
+from typing import Protocol, TypedDict, cast, runtime_checkable
 
 from .interfaces import (
     BaseExtractor,
@@ -14,6 +15,30 @@ from .interfaces import (
     ServiceUnavailableError,
 )
 from .types import ExtractedContent, ExtractorType
+
+
+class _FirecrawlResultDict(TypedDict, total=False):
+    markdown: str
+    html: str
+    metadata: dict[str, object]
+
+
+@runtime_checkable
+class _FirecrawlResultObject(Protocol):
+    markdown: str
+    html: str | None
+    metadata: dict[str, object] | None
+
+
+class _FirecrawlClient(Protocol):
+    def scrape(
+        self,
+        url: str,
+        *,
+        formats: list[str],
+        only_main_content: bool,
+        timeout: int,
+    ) -> object: ...
 
 
 class FirecrawlExtractor(BaseExtractor):
@@ -47,13 +72,13 @@ class FirecrawlExtractor(BaseExtractor):
         self.timeout = timeout
         self.formats = formats or ["markdown"]
         self.only_main_content = only_main_content
-        self._client: Any = None
+        self._client: object | None = None
 
     @property
     def extractor_type(self) -> ExtractorType:
         return ExtractorType.FIRECRAWL
 
-    def _get_client(self) -> Any:
+    def _get_client(self) -> _FirecrawlClient:
         """Get or create the Firecrawl client."""
         if self._client is None:
             if not self.api_key:
@@ -72,7 +97,7 @@ class FirecrawlExtractor(BaseExtractor):
                     error_class=ConfigurationError,
                 ) from exc
 
-        return self._client
+        return cast(_FirecrawlClient, self._client)
 
     async def extract(self, url: str, html: str | None = None) -> ExtractedContent:
         """
@@ -135,7 +160,7 @@ class FirecrawlExtractor(BaseExtractor):
 
         return content
 
-    def _parse_result(self, result: Any, url: str) -> ExtractedContent:
+    def _parse_result(self, result: object, url: str) -> ExtractedContent:
         """Parse Firecrawl API result into ExtractedContent."""
         if result is None:
             raise self._create_error(
@@ -144,22 +169,31 @@ class FirecrawlExtractor(BaseExtractor):
                 error_class=ParseError,
             )
 
-        # Handle different result formats
-        if isinstance(result, dict):
-            # New API format
-            markdown = result.get("markdown", "")
-            html_content = result.get("html", "")
-            metadata = result.get("metadata", {})
-        elif hasattr(result, "markdown"):
-            # Object format
-            markdown = getattr(result, "markdown", "") or ""
-            html_content = getattr(result, "html", "") or ""
-            metadata = getattr(result, "metadata", {}) or {}
+        markdown = ""
+        html_content = ""
+        metadata: dict[str, object] = {}
+
+        # Handle different result formats.
+        if isinstance(result, Mapping):
+            parsed = cast(Mapping[str, object], result)
+            markdown_value = parsed.get("markdown")
+            if isinstance(markdown_value, str):
+                markdown = markdown_value
+
+            html_value = parsed.get("html")
+            if isinstance(html_value, str):
+                html_content = html_value
+
+            metadata_value = parsed.get("metadata")
+            if isinstance(metadata_value, Mapping):
+                metadata = dict(cast(Mapping[str, object], metadata_value))
+        elif isinstance(result, _FirecrawlResultObject):
+            markdown = result.markdown or ""
+            html_content = result.html or ""
+            metadata = result.metadata or {}
         else:
-            # Fallback: treat as string
+            # Fallback: treat as string.
             markdown = str(result)
-            html_content = ""
-            metadata = {}
 
         if not markdown or not markdown.strip():
             raise self._create_error(
@@ -169,9 +203,13 @@ class FirecrawlExtractor(BaseExtractor):
             )
 
         # Extract metadata fields
-        title = metadata.get("title") or metadata.get("ogTitle")
-        description = metadata.get("description") or metadata.get("ogDescription")
-        language = metadata.get("language")
+        title_raw = metadata.get("title") or metadata.get("ogTitle")
+        description_raw = metadata.get("description") or metadata.get("ogDescription")
+        language_raw = metadata.get("language")
+
+        title = title_raw if isinstance(title_raw, str) else None
+        description = description_raw if isinstance(description_raw, str) else None
+        language = language_raw if isinstance(language_raw, str) else None
 
         return ExtractedContent(
             text=markdown,

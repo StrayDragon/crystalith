@@ -3,10 +3,12 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Sequence
+from typing import cast
 
 from cl_logs.logging import get_logger
 
 from crystalith.shared.cache.interfaces import CacheProvider
+from crystalith.shared.json_types import JsonDict, JsonValue
 
 from .interfaces import VectorStore
 from .types import VectorEntry, VectorSearchResult
@@ -21,12 +23,40 @@ def make_vector_epoch_key(*, notebook_id: int) -> str:
     return VECTOR_EPOCH_KEY.format(notebook_id=int(notebook_id))
 
 
+def _json_int(value: JsonValue) -> int | None:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _json_float(value: JsonValue) -> float | None:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return None
+    return None
+
+
 async def get_vector_epoch(*, cache: CacheProvider, notebook_id: int) -> int:
     raw = await cache.get(make_vector_epoch_key(notebook_id=notebook_id))
-    try:
-        return int(raw)
-    except (TypeError, ValueError):
+    if raw is None:
         return 0
+    value = _json_int(raw)
+    return value if value is not None else 0
 
 
 async def bump_vector_epoch(*, cache: CacheProvider, notebook_id: int) -> int:
@@ -106,7 +136,7 @@ async def cached_vector_search(
         )
         cached = None
 
-    if cached is not None:
+    if isinstance(cached, list):
         logger.info(
             "cache_hit",
             trace_id=trace_id,
@@ -116,16 +146,24 @@ async def cached_vector_search(
             epoch=epoch,
         )
         results: list[VectorSearchResult] = []
-        for row in cached:
+        for row_value in cached:
+            if not isinstance(row_value, dict):
+                continue
+            row = cast(JsonDict, row_value)
+            source_id = _json_int(row.get("source_id"))
+            chunk_id = _json_int(row.get("chunk_id"))
+            score = _json_float(row.get("score"))
+            if source_id is None or chunk_id is None or score is None:
+                continue
             results.append(
                 VectorSearchResult(
                     entry=VectorEntry(
                         notebook_id=notebook_id,
-                        source_id=int(row["source_id"]),
-                        chunk_id=int(row["chunk_id"]),
+                        source_id=source_id,
+                        chunk_id=chunk_id,
                         vector=[],
                     ),
-                    score=float(row["score"]),
+                    score=score,
                 )
             )
         return results
@@ -225,7 +263,7 @@ async def cached_vector_search_many(
         cached_values = [None for _ in keys]
 
     if len(cached_values) != len(keys):  # pragma: no cover - defensive
-        fallback_values: list[object | None] = []
+        fallback_values: list[JsonValue | None] = []
         for key in keys:
             try:
                 fallback_values.append(await cache.get(key))
@@ -240,7 +278,7 @@ async def cached_vector_search_many(
         cached_values = fallback_values
 
     for idx, (key, query_vector, cached) in enumerate(zip(keys, query_vectors, cached_values)):
-        if cached is not None:
+        if isinstance(cached, list):
             logger.info(
                 "cache_hit",
                 trace_id=trace_id,
@@ -250,16 +288,24 @@ async def cached_vector_search_many(
                 epoch=epoch,
             )
             results: list[VectorSearchResult] = []
-            for row in cached:
+            for row_value in cached:
+                if not isinstance(row_value, dict):
+                    continue
+                row = cast(JsonDict, row_value)
+                source_id = _json_int(row.get("source_id"))
+                chunk_id = _json_int(row.get("chunk_id"))
+                score = _json_float(row.get("score"))
+                if source_id is None or chunk_id is None or score is None:
+                    continue
                 results.append(
                     VectorSearchResult(
                         entry=VectorEntry(
                             notebook_id=notebook_id,
-                            source_id=int(row["source_id"]),
-                            chunk_id=int(row["chunk_id"]),
+                            source_id=source_id,
+                            chunk_id=chunk_id,
                             vector=[],
                         ),
-                        score=float(row["score"]),
+                        score=score,
                     )
                 )
             groups[idx] = results
@@ -278,40 +324,29 @@ async def cached_vector_search_many(
         missing_keys.append(key)
 
     if missing_vectors:
-        search_many = getattr(vector_store, "search_many", None)
-        if callable(search_many):
-            miss_groups = await search_many(
-                notebook_id=notebook_id,
-                query_vectors=missing_vectors,
-                top_k=top_k,
-                min_score=min_score,
-                source_ids=source_ids,
-                exclude_source_ids=exclude_source_ids,
-            )
-        else:
-            miss_groups = [
-                await vector_store.search(
-                    notebook_id=notebook_id,
-                    query_vector=query_vector,
-                    top_k=top_k,
-                    min_score=min_score,
-                    source_ids=source_ids,
-                    exclude_source_ids=exclude_source_ids,
-                )
-                for query_vector in missing_vectors
-            ]
+        miss_groups = await vector_store.search_many(
+            notebook_id=notebook_id,
+            query_vectors=missing_vectors,
+            top_k=top_k,
+            min_score=min_score,
+            source_ids=source_ids,
+            exclude_source_ids=exclude_source_ids,
+        )
 
-        set_items: dict[str, list[dict[str, float | int]]] = {}
+        set_items: dict[str, JsonValue] = {}
         for position, key, results in zip(missing_positions, missing_keys, miss_groups):
             groups[position] = results
-            set_items[key] = [
-                {
-                    "source_id": result.entry.source_id,
-                    "chunk_id": result.entry.chunk_id,
-                    "score": result.score,
-                }
-                for result in results
-            ]
+            set_items[key] = cast(
+                JsonValue,
+                [
+                    {
+                        "source_id": result.entry.source_id,
+                        "chunk_id": result.entry.chunk_id,
+                        "score": result.score,
+                    }
+                    for result in results
+                ],
+            )
 
         if set_items:
             try:

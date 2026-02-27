@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Protocol
 
 from cl_logs import get_logger
 from fastapi import HTTPException, UploadFile
@@ -15,12 +16,23 @@ from crystalith.shared.cache.epochs import bump_sources_epoch
 from crystalith.shared.db import Chunk, Source, SourceTag, SourceTagMap
 from crystalith.shared.parsers import Parser, ParserFactory, TranscriptionProvider, UnsupportedDocumentError
 from crystalith.shared.plugins import PluginRegistry
+from crystalith.shared.json_types import JsonDict
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
 
 from .api_schemas import SourceRead
 
 logger = get_logger(__name__)
+
+
+class _ChunkLike(Protocol):
+    @property
+    def text(self) -> str:
+        ...
+
+    @property
+    def metadata(self) -> dict[str, object]:
+        ...
 
 
 def _sources_list_cache_key(
@@ -79,28 +91,25 @@ def _resolve_parser(file: UploadFile, transcriber: TranscriptionProvider, plugin
         raise HTTPException(status_code=415, detail="Unsupported file type") from exc
 
 
-def _page_count_from_chunks(chunks: Iterable[Any]) -> int | None:
+def _page_count_from_chunks(chunks: Iterable[_ChunkLike]) -> int | None:
     pages: list[int] = []
     for chunk in chunks:
-        if not hasattr(chunk, "metadata"):
-            continue
-        page = chunk.metadata.get("page") if isinstance(chunk.metadata, dict) else None
+        page = chunk.metadata.get("page")
         if isinstance(page, int):
             pages.append(page)
     return max(pages) if pages else None
 
 
 def _build_source_metadata(
-    chunks: Iterable[Any],
+    chunks: Iterable[_ChunkLike],
     *,
     parser_type: str,
     parse_time_ms: int,
     page_count: int | None,
-) -> dict[str, Any]:
+) -> JsonDict:
     word_count = 0
     for chunk in chunks:
-        text = getattr(chunk, "text", "")
-        word_count += len(text.split())
+        word_count += len(chunk.text.split())
     return {
         "parser_type": parser_type,
         "word_count": word_count,
@@ -119,8 +128,8 @@ def _source_to_read(
         tags = sorted(
             {
                 tag.name
-                for tag in getattr(source, "tags", [])
-                if isinstance(getattr(tag, "name", None), str) and tag.name
+                for tag in source.tags
+                if tag.name
             }
         )
 
@@ -175,7 +184,7 @@ async def _fetch_sources_or_404(
     result = await session.execute(
         select(Source).where(Source.notebook_id == notebook_id, Source.id.in_(unique_ids))
     )
-    sources = result.scalars().all()
+    sources = list(result.scalars().all())
     found_ids = {source.id for source in sources}
     missing_ids = [source_id for source_id in unique_ids if source_id not in found_ids]
     if missing_ids:
