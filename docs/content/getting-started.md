@@ -29,6 +29,7 @@ pnpm dev
 
 - Command palette: `Ctrl+K`
 - Shortcut help: `Ctrl+?`
+- Sources: upload `.txt`, `.md`, `.markdown`, or `.pdf` files in the Sources panel.
 - Health / diagnostics: use the header button to inspect `/health/dependencies`
 
 ## Dev workflow tips

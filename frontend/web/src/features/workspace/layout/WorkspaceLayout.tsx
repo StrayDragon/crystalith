@@ -15,6 +15,7 @@ import { useKeyboardShortcuts, type KeyboardShortcutBinding } from '../shared/ho
 import { getSlideIdFromOutput } from '../shared/outputPayload';
 import { useWorkspaceStore } from '../shared/state/workspaceStore';
 import type { ChatMessage, Citation, SourceItem } from '../shared/types';
+import { SOURCE_UPLOAD_ACCEPT } from '../shared/uploadTypes';
 import { exportOutputJsonDownload, exportOutputMarkdownDownload, exportQaJsonDownload, exportQaMarkdownDownload } from '../shared/evidenceExport';
 import { toast } from '../../../shared/toast';
 import { computeWorkspaceReadiness, useDependencyHealth, useWorkspaceOverlays } from './hooks';
@@ -797,7 +798,7 @@ export default function WorkspaceLayout() {
         type="file"
         hidden
         multiple
-        accept=".txt,.md,.markdown,text/plain,text/markdown"
+        accept={SOURCE_UPLOAD_ACCEPT}
         onChange={(event) => {
           sources.handleUpload(event.target.files);
           if (event.target) {
