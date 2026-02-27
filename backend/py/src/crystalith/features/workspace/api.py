@@ -7,7 +7,11 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from crystalith.shared.plugins import PluginRegistry
-from crystalith.shared.plugins.render_types import PluginConfigSchema, RenderDescriptor
+from crystalith.shared.plugins.render_types import (
+    ConfigOption as PluginConfigOption,
+    PluginConfigSchema,
+    RenderDescriptor,
+)
 from crystalith.shared.types import OutputType, OutputTypeMeta
 
 
@@ -122,6 +126,40 @@ TOOL_CONFIGS: dict[str, dict] = {
 }
 
 
+def _build_base_config_schema(tool_id: str) -> PluginConfigSchema:
+    config = TOOL_CONFIGS.get(tool_id, {})
+    quantity_options = config.get("quantity_options", DEFAULT_QUANTITY_OPTIONS)
+    difficulty_options = config.get("difficulty_options", DEFAULT_DIFFICULTY_OPTIONS)
+
+    def _to_plugin_options(options: list[ConfigOption] | None) -> list[PluginConfigOption]:
+        if not options:
+            return []
+        return [
+            PluginConfigOption(id=option.id, label=option.label, is_default=option.is_default)
+            for option in options
+        ]
+
+    return PluginConfigSchema(
+        quantity_options=_to_plugin_options(quantity_options),
+        difficulty_options=_to_plugin_options(difficulty_options),
+        topic_placeholder=config.get("topic_placeholder", "主题应该是什么？"),
+        supports_topic=bool(config.get("supports_topic", True)),
+    )
+
+
+def _merge_config_schema(
+    *,
+    base: PluginConfigSchema,
+    override: PluginConfigSchema,
+) -> PluginConfigSchema:
+    return PluginConfigSchema(
+        quantity_options=override.quantity_options or base.quantity_options,
+        difficulty_options=override.difficulty_options or base.difficulty_options,
+        topic_placeholder=(override.topic_placeholder or "").strip() or base.topic_placeholder,
+        supports_topic=override.supports_topic,
+    )
+
+
 @lru_cache(maxsize=1)
 def _build_tools() -> list[WorkspaceTool]:
     """Build workspace tools from OutputType metadata."""
@@ -154,15 +192,27 @@ async def list_workspace_tools(request: Request) -> WorkspaceToolsResponse:
     try:
         plugins = cast(PluginRegistry, request.app.state.plugins)
     except AttributeError:
-        return WorkspaceToolsResponse(tools=_build_tools())
+        return WorkspaceToolsResponse(
+            tools=[
+                tool.model_copy(update={"config_schema": _build_base_config_schema(tool.id)})
+                for tool in _build_tools()
+            ]
+        )
 
     tools: list[WorkspaceTool] = []
     for tool in _build_tools():
+        base_schema = _build_base_config_schema(tool.id)
+        plugin_schema = plugins.get_config_schema(tool.output_type.value)
+        resolved_schema = (
+            _merge_config_schema(base=base_schema, override=plugin_schema)
+            if plugin_schema is not None
+            else base_schema
+        )
         tools.append(
             tool.model_copy(
                 update={
                     "render_descriptor": plugins.get_render_descriptor(tool.output_type.value),
-                    "config_schema": plugins.get_config_schema(tool.output_type.value),
+                    "config_schema": resolved_schema,
                 }
             )
         )
@@ -171,22 +221,39 @@ async def list_workspace_tools(request: Request) -> WorkspaceToolsResponse:
 
 
 @router.get("/tools/{tool_id}/config", response_model=ToolConfigResponse)
-async def get_tool_config(tool_id: str) -> ToolConfigResponse:
+async def get_tool_config(tool_id: str, request: Request) -> ToolConfigResponse:
     """Get configuration options for a specific tool."""
     tool = _get_tool_by_id(tool_id)
     if tool is None:
         raise HTTPException(status_code=404, detail="Tool not found")
 
-    config = TOOL_CONFIGS.get(tool_id, {})
+    base_schema = _build_base_config_schema(tool_id)
+
+    try:
+        plugins = cast(PluginRegistry, request.app.state.plugins)
+    except AttributeError:
+        plugins = None
+
+    plugin_schema = plugins.get_config_schema(tool.output_type.value) if plugins is not None else None
+    resolved_schema = (
+        _merge_config_schema(base=base_schema, override=plugin_schema)
+        if plugin_schema is not None
+        else base_schema
+    )
+
+    def _to_response_options(options: list[PluginConfigOption]) -> list[ConfigOption] | None:
+        if not options:
+            return None
+        return [
+            ConfigOption(id=option.id, label=option.label, is_default=option.is_default)
+            for option in options
+        ]
 
     return ToolConfigResponse(
         tool_id=tool_id,
         tool_label=tool.label,
-        quantity_options=config.get("quantity_options", DEFAULT_QUANTITY_OPTIONS),
-        difficulty_options=config.get("difficulty_options", DEFAULT_DIFFICULTY_OPTIONS),
-        topic_placeholder=config.get(
-            "topic_placeholder",
-            "主题应该是什么？",
-        ),
-        supports_topic=True,
+        quantity_options=_to_response_options(resolved_schema.quantity_options),
+        difficulty_options=_to_response_options(resolved_schema.difficulty_options),
+        topic_placeholder=resolved_schema.topic_placeholder,
+        supports_topic=resolved_schema.supports_topic,
     )
