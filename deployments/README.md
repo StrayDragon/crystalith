@@ -81,6 +81,8 @@ Full composition smoke (core-only + optional late start + external service wirin
 just composition-smoke
 # or:
 SMOKE_SCENARIOS="core-only single-optional" ./scripts/composition_smoke.sh
+# optional: clean compose volumes during reset
+SMOKE_PRUNE_VOLUMES=1 ./scripts/composition_smoke.sh
 ```
 
 Manual:

@@ -4,6 +4,7 @@ import pytest
 
 from crystalith.shared.db import Chunk, Source
 from crystalith.shared.types import SourceStatus
+import crystalith.web.app as app_module
 
 
 def _assert_error_envelope(response, expected_error_code: str) -> dict:
@@ -149,6 +150,27 @@ async def test_api_smoke_dependency_health_optional_failure_is_recoverable(clien
     health = await client.get("/health")
     assert health.status_code == 200
     assert health.json() == {"status": "ok"}
+
+
+@pytest.mark.asyncio
+async def test_api_smoke_dependency_health_refreshes_when_monitor_disabled(client, app, monkeypatch) -> None:
+    calls = {"refresh": 0}
+
+    async def _refresh(_app, *, timeout_s: float, include_env_host: bool) -> None:  # noqa: ARG001
+        calls["refresh"] += 1
+        _app.state.optional_services_last_probe = f"probe-{calls['refresh']}"
+
+    monkeypatch.setenv("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED", "0")
+    monkeypatch.setattr(app_module, "_refresh_optional_services_status", _refresh)
+
+    app.state.optional_services_last_probe = "stale"
+
+    first = await client.get("/health/dependencies")
+    second = await client.get("/health/dependencies")
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert calls["refresh"] == 2
 
 
 @pytest.mark.asyncio

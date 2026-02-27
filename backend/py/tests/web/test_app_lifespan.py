@@ -17,6 +17,26 @@ import crystalith.web.app as app_module
 from crystalith.web.app import create_app
 
 
+def test_probe_http_endpoint_treats_4xx_as_unhealthy(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _DummyResponse:
+        status_code = 404
+
+    class _DummyClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):  # noqa: ANN001
+            return False
+
+        def get(self, url: str):  # noqa: ARG002
+            return _DummyResponse()
+
+    monkeypatch.setattr(app_module.httpx, "Client", lambda **kwargs: _DummyClient())
+    healthy, error = app_module._probe_http_endpoint("http://service.test", timeout_s=1.0)
+    assert healthy is False
+    assert error == "HTTP 404"
+
+
 async def _create_test_db() -> tuple[tempfile.TemporaryDirectory[str], str]:
     tempdir = tempfile.TemporaryDirectory()
     db_path = Path(tempdir.name) / "test.db"
