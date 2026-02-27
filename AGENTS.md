@@ -28,7 +28,7 @@ Frontend:
 Tip: `just -l` lists available tasks in each directory.
 
 ## Coding Style & Naming Conventions
-- Python: 4-space indentation; prefer type hints; `snake_case` for functions/vars, `PascalCase` for classes.
+- Python: 4-space indentation; prefer high-coverage type hints; minimize `Any`; avoid dynamic attribute access (`getattr`, `hasattr`, `__getattr__`); `snake_case` for functions/vars, `PascalCase` for classes.
 - TypeScript/React: 2-space indentation; `PascalCase` components; hooks named `useX`.
 - CSS/Tailwind: keep global styles in `frontend/web/src/app/index.css`; feature styles live alongside components.
 - No repo-wide formatter is configured; match existing style and avoid unrelated reformatting.

@@ -27,7 +27,7 @@ Tip: `just -l` lists available tasks in each directory.
 
 ## Coding Style & Naming Conventions
 - TypeScript/React: 2-space indentation; components use `PascalCase`; hooks are `useX`; tests named `*.test.tsx`.
-- Python: 4-space indentation; `snake_case` for functions/vars, `PascalCase` classes.
+- Python (backend): 4-space indentation; prefer high-coverage type hints; minimize `Any`; avoid dynamic attribute access (`getattr`, `hasattr`, `__getattr__`); `snake_case` for functions/vars, `PascalCase` classes.
 - CSS/Tailwind: global styles in `frontend/web/src/app/index.css`; feature styles live alongside components.
 - No repo-wide formatter is configured; match existing style and avoid unrelated reformatting.
 - If backend OpenAPI changed, run `pnpm run api:sync` and verify.

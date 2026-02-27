@@ -21,7 +21,9 @@ Run from `backend/py`:
 ## Coding Style & Naming Conventions
 - Python uses 4-space indentation; keep imports tidy and readable.
 - Use `snake_case` for functions/variables and `PascalCase` for classes.
-- Type hints are encouraged where they improve clarity.
+- Prefer high-coverage type hints (especially at module boundaries).
+- Minimize `Any`; prefer `Protocol`/`TypedDict`/`Literal` and JSON-safe value types (`JsonValue`/`JsonDict`) for payloads.
+- Avoid dynamic attribute access (`getattr`, `hasattr`, `__getattr__`); make interfaces explicit instead.
 - No repo-wide formatter is enforced; match existing style and avoid large reformatting.
 - If backend OpenAPI changed, run `cd frontend/web && pnpm run api:sync` and verify.
 
