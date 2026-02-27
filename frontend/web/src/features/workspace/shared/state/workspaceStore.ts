@@ -26,6 +26,7 @@ export interface WorkspaceStoreState {
   // --- Notebooks ---
   notebooks: Notebook[];
   activeNotebookId: number | null;
+  autoCreatedNotebookId: number | null;
 
   // --- Sessions ---
   sessions: SessionSummary[];
@@ -73,6 +74,7 @@ export interface WorkspaceStoreActions {
   // --- Notebooks ---
   setNotebooks: (notebooks: Notebook[]) => void;
   setActiveNotebook: (id: number | null) => void;
+  setAutoCreatedNotebookId: (id: number | null) => void;
 
   // --- Sessions ---
   setSessions: (sessions: SessionSummary[]) => void;
@@ -126,6 +128,7 @@ export type WorkspaceStore = WorkspaceStoreState & WorkspaceStoreActions;
 const initialState: WorkspaceStoreState = {
   notebooks: [],
   activeNotebookId: null,
+  autoCreatedNotebookId: null,
   sessions: [],
   activeSessionId: null,
   sources: [],
@@ -206,6 +209,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
         send: '',
       },
     })),
+  setAutoCreatedNotebookId: (autoCreatedNotebookId) => set({ autoCreatedNotebookId }),
 
   // --- Sessions ---
   setSessions: (sessions) => set({ sessions }),

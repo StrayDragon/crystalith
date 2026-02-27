@@ -1,0 +1,281 @@
+import type { MouseEvent as ReactMouseEvent } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  Close as CloseIcon,
+  ContentCopy as ContentCopyIcon,
+  Refresh as RefreshIcon,
+} from '@mui/icons-material';
+
+import { copyToClipboard } from '../../../../shared/clipboard';
+import { useLayer } from '../../../../shared/layer';
+import { toast } from '../../../../shared/toast';
+import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
+import {
+  toOptionalServiceDiagnostics,
+  type DependencyHealthResponse,
+} from '../hooks/useDependencyHealth';
+
+interface DiagnosticsDialogProps {
+  open: boolean;
+  onClose: () => void;
+  isLoading: boolean;
+  error: string;
+  data: DependencyHealthResponse | null;
+  onRefresh: () => void;
+}
+
+function toneForStatus(status: string): { bg: string; text: string } {
+  switch (status) {
+    case 'healthy':
+      return { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-800 dark:text-emerald-200' };
+    case 'degraded':
+      return { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-800 dark:text-amber-200' };
+    case 'disabled':
+      return { bg: 'bg-gray-100 dark:bg-slate-800', text: 'text-gray-700 dark:text-slate-200' };
+    case 'unknown':
+    default:
+      return { bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-700 dark:text-slate-200' };
+  }
+}
+
+export default function DiagnosticsDialog({
+  open,
+  onClose,
+  isLoading,
+  error,
+  data,
+  onRefresh,
+}: DiagnosticsDialogProps) {
+  const { style: modalStyle } = useLayer('modal');
+  const modalRef = useRef<HTMLDivElement | null>(null);
+
+  useFocusTrap({
+    active: open,
+    containerRef: modalRef,
+    onEscape: onClose,
+  });
+
+  const optionalItems = useMemo(() => toOptionalServiceDiagnostics(data?.optional), [data?.optional]);
+
+  const handleCopy = useCallback(async (value: string) => {
+    await copyToClipboard(value);
+    toast.success('已复制到剪贴板');
+  }, []);
+
+  const handleBackdropClick = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      if (event.target !== event.currentTarget) return;
+      onClose();
+    },
+    [onClose],
+  );
+
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={modalStyle}
+      role="dialog"
+      aria-modal="true"
+      aria-label="健康与诊断"
+      onClick={handleBackdropClick}
+    >
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+
+      <div
+        ref={modalRef}
+        tabIndex={-1}
+        className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-3xl mx-4 ux-modal-in overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-slate-700">
+          <div className="min-w-0">
+            <div className="text-base font-semibold text-gray-900 dark:text-slate-100">
+              健康 / 诊断
+            </div>
+            <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400">
+              {data?.generated_at ? `生成时间：${data.generated_at}` : '用于排查依赖服务状态与修复建议'}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="w-9 h-9 rounded-xl border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center justify-center text-gray-700 dark:text-slate-200"
+              aria-label="刷新诊断"
+            >
+              <RefreshIcon sx={{ fontSize: 18 }} />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-9 h-9 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 flex items-center justify-center text-gray-700 dark:text-slate-200"
+              aria-label="关闭"
+            >
+              <CloseIcon sx={{ fontSize: 18 }} />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 max-h-[70vh] overflow-y-auto">
+          {error ? (
+            <div className="mb-4 rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50/60 dark:bg-red-950/20 px-4 py-3">
+              <div className="text-sm font-semibold text-red-800 dark:text-red-200">诊断失败</div>
+              <div className="mt-1 text-xs text-red-700 dark:text-red-300">{error}</div>
+            </div>
+          ) : null}
+
+          {isLoading && !data ? (
+            <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-gray-700 dark:text-slate-200">
+              加载中…
+            </div>
+          ) : null}
+
+          {data?.core ? (
+            <div className="mb-4">
+              <div className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-2">
+                Core
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {Object.entries(data.core).map(([key, service]) => (
+                  <div
+                    key={key}
+                    className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                        {service.service}
+                      </div>
+                      <div
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          service.healthy ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {service.healthy === true ? 'healthy' : service.healthy === false ? 'unhealthy' : 'n/a'}
+                      </div>
+                    </div>
+                    {service.note ? (
+                      <div className="mt-1 text-[11px] text-gray-600 dark:text-slate-400">
+                        {service.note}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div>
+            <div className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-2">
+              Optional Services
+            </div>
+
+            <div className="space-y-2">
+              {optionalItems.map((item) => {
+                const tone = toneForStatus(item.status);
+                return (
+                  <div
+                    key={item.key}
+                    className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                            {item.label}
+                          </div>
+                          <div className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${tone.bg} ${tone.text}`}>
+                            {item.status}
+                          </div>
+                          {!item.enabled ? (
+                            <div className="text-[10px] text-gray-500 dark:text-slate-400">
+                              disabled
+                            </div>
+                          ) : null}
+                        </div>
+
+                        {item.endpoint ? (
+                          <div className="mt-1 text-[11px] text-gray-600 dark:text-slate-400">
+                            endpoint: <span className="font-mono">{item.endpoint}</span>
+                          </div>
+                        ) : null}
+
+                        {item.errorCode ? (
+                          <div className="mt-1 text-[11px] text-gray-600 dark:text-slate-400">
+                            error_code: <span className="font-mono">{item.errorCode}</span>
+                          </div>
+                        ) : null}
+
+                        {item.error ? (
+                          <div className="mt-1 text-[11px] text-red-700 dark:text-red-300">
+                            {item.error}
+                          </div>
+                        ) : null}
+
+                        {item.recoveryHint ? (
+                          <div className="mt-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 px-3 py-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="text-[11px] font-semibold text-gray-800 dark:text-slate-200">
+                                recovery_hint
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => void handleCopy(item.recoveryHint ?? '')}
+                                className="px-2 py-1 rounded-md text-[11px] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1"
+                              >
+                                <ContentCopyIcon sx={{ fontSize: 14 }} />
+                                复制
+                              </button>
+                            </div>
+                            <pre className="mt-1 whitespace-pre-wrap text-[11px] text-gray-700 dark:text-slate-300">
+                              {item.recoveryHint}
+                            </pre>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="flex-shrink-0 text-[10px] text-gray-500 dark:text-slate-400">
+                        {item.lastProbe ? `last_probe: ${item.lastProbe}` : null}
+                      </div>
+                    </div>
+
+                    {item.key === 'ollama' && data?.optional?.ollama?.hosts ? (
+                      <div className="mt-3">
+                        <div className="text-[11px] font-semibold text-gray-700 dark:text-slate-200 mb-1">
+                          hosts
+                        </div>
+                        <div className="space-y-1">
+                          {Object.entries(data.optional.ollama.hosts).map(([host, hostStatus]) => (
+                            <div
+                              key={host}
+                              className="flex items-center justify-between gap-2 text-[11px] text-gray-700 dark:text-slate-300"
+                            >
+                              <span className="font-mono truncate">{host}</span>
+                              <span className="text-gray-500 dark:text-slate-400">
+                                {hostStatus.healthy ? 'healthy' : 'degraded'}
+                                {hostStatus.model_count != null ? ` · models=${hostStatus.model_count}` : ''}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+
+              {optionalItems.length === 0 && !isLoading ? (
+                <div className="text-sm text-gray-600 dark:text-slate-300">
+                  未找到可选服务状态。
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}

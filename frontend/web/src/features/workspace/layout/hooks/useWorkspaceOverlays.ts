@@ -22,6 +22,7 @@ export function useWorkspaceOverlays({
   const [showCatalog, setShowCatalog] = useState(false);
   const [isSessionSwitcherOpen, setIsSessionSwitcherOpen] = useState(false);
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [isViewerFullscreen, setIsViewerFullscreen] = useState(false);
   const [viewerOutputId, setViewerOutputId] = useState<number | null>(null);
@@ -45,6 +46,14 @@ export function useWorkspaceOverlays({
 
   const closeCatalog = useCallback(() => {
     setShowCatalog(false);
+  }, []);
+
+  const openDiagnostics = useCallback(() => {
+    setIsDiagnosticsOpen(true);
+  }, []);
+
+  const closeDiagnostics = useCallback(() => {
+    setIsDiagnosticsOpen(false);
   }, []);
 
   const openShortcutHelp = useCallback(() => {
@@ -206,6 +215,10 @@ export function useWorkspaceOverlays({
       closeShortcutHelp();
       return true;
     }
+    if (isDiagnosticsOpen) {
+      closeDiagnostics();
+      return true;
+    }
     if (graphSessionDetail.isOpen) {
       graphSessionDetail.closeSessionDetail();
       return true;
@@ -242,6 +255,8 @@ export function useWorkspaceOverlays({
     closeCatalog,
     isShortcutHelpOpen,
     closeShortcutHelp,
+    isDiagnosticsOpen,
+    closeDiagnostics,
     graphSessionDetail,
     citationSourceDetailOpen,
     closeCitationSourceDetail,
@@ -281,6 +296,7 @@ export function useWorkspaceOverlays({
     showCatalog,
     isSessionSwitcherOpen,
     isShortcutHelpOpen,
+    isDiagnosticsOpen,
     isViewerOpen,
     isViewerFullscreen,
     viewerOutputId,
@@ -307,6 +323,8 @@ export function useWorkspaceOverlays({
     closeCommandPalette,
     toggleCatalog,
     closeCatalog,
+    openDiagnostics,
+    closeDiagnostics,
     openShortcutHelp,
     closeShortcutHelp,
     openSessionSwitcher,
