@@ -1,9 +1,9 @@
 ## 1. Python SDK：可发布包形态
 
-- [ ] 1.1 明确 PyPI 分发名与 Python 导入名策略（避免与后端 `crystalith` 包混淆/冲突）。
-- [ ] 1.2 为 `sdk/client/python` 补齐 Python packaging 元数据（`pyproject.toml`、README、license/include 配置）并声明运行时依赖（如 `httpx`、`pydantic` 等）。
-- [ ] 1.3 调整 Fern 生成配置（如需）以匹配新的包名/导入名，并确保生成仍可重复（生成后无 diff）。
-- [ ] 1.4 增加本地构建命令（wheel/sdist）并在 CI 发布路径中执行构建校验。
+- [x] 1.1 明确 PyPI 分发名与 Python 导入名策略（避免与后端 `crystalith` 包混淆/冲突）。
+- [x] 1.2 为 `sdk/client/python` 补齐 Python packaging 元数据（`pyproject.toml`、README、license/include 配置）并声明运行时依赖（如 `httpx`、`pydantic` 等）。
+- [x] 1.3 调整 Fern 生成配置（如需）以匹配新的包名/导入名，并确保生成仍可重复（生成后无 diff）。
+- [x] 1.4 增加本地构建命令（wheel/sdist）并在 CI 发布路径中执行构建校验。
 
 ## 2. TypeScript SDK：独立 npm 包
 

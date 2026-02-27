@@ -1,7 +1,8 @@
 _default:
     @just -l
 
-SDK_PATH := "sdk/client/python"
+SDK_ROOT := "sdk/client/python"
+SDK_PACKAGE_PATH := "sdk/client/python/src/crystalith_sdk"
 SCHEMA_PATH := "frontend/web/openapi.json"
 
 # --------------------------------------------------------------------------
@@ -42,21 +43,39 @@ sdk-gen-python VERSION='':
     fi
     command -v fern >/dev/null 2>&1 || { echo "fern CLI not found. Install: npm install -g fern-api@3.73.1" >&2; exit 1; }
     (cd sdk/configs && fern generate --local --force --group python-sdk --version "$SDK_VERSION")
-    if [[ ! -f "{{SDK_PATH}}/.fern/metadata.json" ]]; then
+    if [[ ! -f "{{SDK_PACKAGE_PATH}}/.fern/metadata.json" ]]; then
       echo "Fern metadata not found. Ensure generation succeeded." >&2; exit 1
     fi
-    echo "$SDK_VERSION" > "{{SDK_PATH}}/.sdk-version"
-    cp LICENSE "{{SDK_PATH}}/LICENSE"
-    printf '# This directory is generated via Fern (just sdk-gen-python).\n# Do not edit manually.\n' > "{{SDK_PATH}}/.generated"
-    echo "Python SDK v${SDK_VERSION} generated at {{SDK_PATH}}"
+    echo "$SDK_VERSION" > "{{SDK_ROOT}}/.sdk-version"
+    cp LICENSE "{{SDK_ROOT}}/LICENSE"
+    printf '# The Python package under src/crystalith_sdk is generated via Fern (just sdk-gen-python).\n# Do not edit generated files manually.\n' > "{{SDK_ROOT}}/.generated"
+    touch "{{SDK_PACKAGE_PATH}}/py.typed"
+    SDK_VERSION="$SDK_VERSION" python - <<'PY'
+    import os
+    import re
+    from pathlib import Path
+
+    sdk_version = os.environ["SDK_VERSION"]
+    pyproject = Path("sdk/client/python/pyproject.toml")
+    text = pyproject.read_text(encoding="utf-8")
+    updated, count = re.subn(r'(?m)^version\\s*=\\s*\"[^\"]+\"\\s*$', f'version = \"{sdk_version}\"', text, count=1)
+    if count != 1:
+        raise SystemExit("Expected exactly one [project].version entry in sdk/client/python/pyproject.toml")
+    pyproject.write_text(updated, encoding="utf-8")
+    PY
+    echo "Python SDK v${SDK_VERSION} generated at {{SDK_PACKAGE_PATH}}"
 
 # Generate all SDKs: export schema → frontend SDK → Python SDK
 sdk-gen VERSION='': api-export sdk-gen-web (sdk-gen-python VERSION)
 
 # Check Python SDK is up to date (for pre-commit)
 sdk-check: api-export (sdk-gen-python)
-    git add {{SDK_PATH}}
+    git add {{SDK_ROOT}}
     git diff --staged --exit-code
+
+# Build Python SDK (wheel/sdist)
+sdk-build-python:
+    cd {{SDK_ROOT}} && uv build --no-sources --clear
 
 # --------------------------------------------------------------------------
 # Testing

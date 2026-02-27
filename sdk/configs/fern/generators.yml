@@ -11,7 +11,7 @@ groups:
         version: 4.53.1
         output:
           location: local-file-system
-          path: ../../client/python
+          path: ../../client/python/src/crystalith_sdk
         config:
-          package_name: crystalith
+          package_name: crystalith_sdk
           client_class_name: CrystalithClient
