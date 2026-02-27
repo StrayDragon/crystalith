@@ -22,6 +22,14 @@ from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore, cached_vector_search
 
 from .api_common import _invalidate_notebook_source_caches
+from crystalith.shared.source_diagnostics import (
+    SOURCE_ERROR_EMBEDDING_FAILED,
+    SOURCE_ERROR_INGESTION_FAILED,
+    SOURCE_ERROR_VECTOR_STORE_FAILED,
+    SourceFailure,
+    apply_source_failure,
+    raise_source_failure,
+)
 from .api_schemas import (
     ConvertSourceQAToSourceRequest,
     ConvertSourceQAToSourceResponse,
@@ -264,15 +272,18 @@ async def convert_source_qa_to_source(
     await session.refresh(source)
 
     try:
+        stage = "chunks"
         # Split into chunks
         chunk_texts = _split_text_to_chunks(text_content)
         if not chunk_texts:
             chunk_texts = [text_content]
 
         # Create embeddings
+        stage = "embed"
         embeddings = await embedder.embed_batch(chunk_texts)
 
         # Create chunks and store in vector store
+        stage = "chunks"
         db_chunks: list[Chunk] = []
         for idx, (chunk_text, embedding) in enumerate(zip(chunk_texts, embeddings)):
             chunk = Chunk(
@@ -286,6 +297,7 @@ async def convert_source_qa_to_source(
             db_chunks.append(chunk)
 
         # Add to vector store
+        stage = "vector_store"
         await vector_store.add(
             notebook_id=notebook_id,
             source_id=source.id,
@@ -294,7 +306,12 @@ async def convert_source_qa_to_source(
         )
 
         # Mark source as ready
+        stage = "commit_ready"
         source.status = SourceStatus.READY
+        source.error_code = None
+        source.error_message = None
+        source.recovery_hint = None
+        source.last_error_at = None
         await session.commit()
 
         logger.info(
@@ -315,10 +332,32 @@ async def convert_source_qa_to_source(
             source_id=source.id,
             error=str(exc),
         )
-        source.status = SourceStatus.FAILED
-        source.error_message = str(exc)
+        if stage != "vector_store":
+            await session.rollback()
+        if stage == "embed":
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_EMBEDDING_FAILED,
+                message="来源问答转换失败：向量嵌入失败",
+                recovery_hint="检查 embedding 模型/服务是否可用，或稍后重试。",
+                status_code=503,
+                details=str(exc)[:512],
+            )
+        elif stage == "vector_store":
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_VECTOR_STORE_FAILED,
+                message="来源问答转换失败：写入向量库失败",
+                recovery_hint="检查向量库服务配置与连通性，或稍后重试。",
+                status_code=503,
+                details=str(exc)[:512],
+            )
+        else:
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_INGESTION_FAILED,
+                message="来源问答转换失败",
+                recovery_hint="可稍后重试；若持续失败，检查日志或依赖服务状态。",
+                status_code=500,
+                details=str(exc)[:512],
+            )
+        apply_source_failure(source, failure)
         await session.commit()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to process source QA: {exc}",
-        ) from exc
+        raise_source_failure(failure)

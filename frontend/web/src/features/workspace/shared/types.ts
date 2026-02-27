@@ -160,6 +160,10 @@ export interface SourceItem {
   type: string;
   status: string;
   statusTone: string;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  recoveryHint?: string | null;
+  lastErrorAt?: string | null;
   indexProgress?: number | null;
   chunks: number;
   tags: string[];
@@ -407,6 +411,10 @@ export interface ApiSource {
   filename?: string | null;
   mime_type?: string | null;
   status?: string | null;
+  error_code?: string | null;
+  error_message?: string | null;
+  recovery_hint?: string | null;
+  last_error_at?: string | null;
   chunk_count?: number | null;
   metadata?: Record<string, unknown> | null;
   tags?: string[] | null;

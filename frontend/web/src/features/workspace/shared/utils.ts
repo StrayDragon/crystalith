@@ -336,6 +336,10 @@ export function normalizeSource(row: ApiSource): SourceItem {
     type: formatSourceType(row),
     status: statusLabel,
     statusTone: statusKey,
+    errorCode: typeof row.error_code === 'string' && row.error_code ? row.error_code : null,
+    errorMessage: typeof row.error_message === 'string' && row.error_message ? row.error_message : null,
+    recoveryHint: typeof row.recovery_hint === 'string' && row.recovery_hint ? row.recovery_hint : null,
+    lastErrorAt: typeof row.last_error_at === 'string' && row.last_error_at ? row.last_error_at : null,
     indexProgress,
     chunks: row.chunk_count ?? 0,
     tags: Array.isArray(row.tags)

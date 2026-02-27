@@ -42,6 +42,14 @@ from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.json_types import JsonDict, JsonValue
 
 from time import perf_counter
+from crystalith.shared.source_diagnostics import (
+    SOURCE_ERROR_EMBEDDING_FAILED,
+    SOURCE_ERROR_INGESTION_FAILED,
+    SOURCE_ERROR_VECTOR_STORE_FAILED,
+    SourceFailure,
+    apply_source_failure,
+    raise_source_failure,
+)
 
 
 log = get_logger(__name__)
@@ -663,15 +671,18 @@ async def convert_output_to_source(
     await session.refresh(source)
 
     try:
+        stage = "chunks"
         # Split into chunks
         chunk_texts = _split_text_to_chunks(text_content)
         if not chunk_texts:
             chunk_texts = [text_content]
 
         # Create embeddings
+        stage = "embed"
         embeddings = await embedder.embed_batch(chunk_texts)
 
         # Create chunks
+        stage = "chunks"
         db_chunks: list[Chunk] = []
         for idx, chunk_text in enumerate(chunk_texts):
             chunk = Chunk(
@@ -686,6 +697,7 @@ async def convert_output_to_source(
         await session.flush()
 
         # Add to vector store
+        stage = "vector_store"
         await vector_store.add(
             notebook_id=notebook_id,
             source_id=source.id,
@@ -694,7 +706,12 @@ async def convert_output_to_source(
         )
 
         # Update source status
+        stage = "commit_ready"
         source.status = SourceStatus.READY
+        source.error_code = None
+        source.error_message = None
+        source.recovery_hint = None
+        source.last_error_at = None
         await session.commit()
 
         log.info(
@@ -715,10 +732,33 @@ async def convert_output_to_source(
 
     except Exception as exc:
         log.error("failed to convert output to source", exc_info=exc)
-        source.status = SourceStatus.FAILED
-        source.error_message = str(exc)[:500]
+        if stage != "vector_store":
+            await session.rollback()
+        if stage == "embed":
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_EMBEDDING_FAILED,
+                message="转换输出失败：向量嵌入失败",
+                recovery_hint="检查 embedding 模型/服务是否可用，或稍后重试。",
+                status_code=503,
+                details=str(exc)[:512],
+            )
+        elif stage == "vector_store":
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_VECTOR_STORE_FAILED,
+                message="转换输出失败：写入向量库失败",
+                recovery_hint="检查向量库服务配置与连通性，或稍后重试。",
+                status_code=503,
+                details=str(exc)[:512],
+            )
+        else:
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_INGESTION_FAILED,
+                message="转换输出失败",
+                recovery_hint="可稍后重试；若持续失败，检查日志或依赖服务状态。",
+                status_code=500,
+                details=str(exc)[:512],
+            )
+        apply_source_failure(source, failure)
+        session.add(source)
         await session.commit()
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to convert output to source. Please try again.",
-        ) from exc
+        raise_source_failure(failure)

@@ -21,6 +21,14 @@ from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
 
 from .api_schemas import SourceRead
+from crystalith.shared.source_diagnostics import (
+    SOURCE_ERROR_EMBEDDING_FAILED,
+    SOURCE_ERROR_INGESTION_FAILED,
+    SOURCE_ERROR_VECTOR_STORE_FAILED,
+    SourceFailure,
+    apply_source_failure,
+    raise_source_failure,
+)
 
 logger = get_logger(__name__)
 
@@ -141,7 +149,10 @@ def _source_to_read(
         parser_type=source.parser_type,
         metadata=source.metadata_,
         status=source.status,
+        error_code=source.error_code,
         error_message=source.error_message,
+        recovery_hint=source.recovery_hint,
+        last_error_at=source.last_error_at,
         chunk_count=chunk_count,
         tags=tags,
         created_at=source.created_at,
@@ -216,17 +227,21 @@ async def _reembed_existing_source(
         raise HTTPException(status_code=400, detail="Source has no chunks to re-embed")
 
     source.status = SourceStatus.PROCESSING
+    source.error_code = None
     source.error_message = None
+    source.recovery_hint = None
     session.add(source)
     await session.commit()
     await session.refresh(source)
 
     try:
+        stage = "embed"
         embeddings = await embedder.embed_batch([chunk.text for chunk in chunks])
         if len(embeddings) != len(chunks):
             raise ValueError("embedding count mismatch")
 
         chunk_ids = [chunk.id for chunk in chunks]
+        stage = "vector_store"
         await vector_store.remove_source(source.id)
         await vector_store.add(
             notebook_id=notebook_id,
@@ -236,21 +251,46 @@ async def _reembed_existing_source(
         )
     except Exception as exc:
         await session.rollback()
-        source.status = SourceStatus.FAILED
-        error_detail = str(exc)[:512]
-        source.error_message = error_detail
+        if stage == "embed":
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_EMBEDDING_FAILED,
+                message="重新嵌入失败：向量嵌入失败",
+                recovery_hint="检查 embedding 模型/服务是否可用，或稍后重试。",
+                status_code=503,
+                details=str(exc)[:512],
+            )
+        elif stage == "vector_store":
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_VECTOR_STORE_FAILED,
+                message="重新嵌入失败：写入向量库失败",
+                recovery_hint="检查向量库服务配置与连通性，或稍后重试。",
+                status_code=503,
+                details=str(exc)[:512],
+            )
+        else:
+            failure = SourceFailure(
+                error_code=SOURCE_ERROR_INGESTION_FAILED,
+                message="重新嵌入失败",
+                recovery_hint="可稍后重试；若持续失败，检查日志或依赖服务状态。",
+                status_code=500,
+                details=str(exc)[:512],
+            )
+        apply_source_failure(source, failure)
         session.add(source)
         await session.commit()
         await session.refresh(source)
         logger.exception(
             "Source re-embed failed",
             source_id=source.id,
-            error=error_detail,
+            error=str(exc)[:512],
         )
-        raise HTTPException(status_code=500, detail=f"Re-embed failed: {error_detail}") from exc
+        raise_source_failure(failure)
 
     source.status = SourceStatus.READY
+    source.error_code = None
     source.error_message = None
+    source.recovery_hint = None
+    source.last_error_at = None
     session.add(source)
     await session.commit()
     await session.refresh(source)

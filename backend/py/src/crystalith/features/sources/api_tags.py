@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.cache import CacheProvider
-from crystalith.shared.db import Notebook, SourceTag, SourceTagMap
+from crystalith.shared.db import Notebook, Source, SourceTag, SourceTagMap
 
 from crystalith.shared.deps import (
     get_cache_provider,
@@ -13,10 +13,10 @@ from crystalith.shared.deps import (
 )
 
 from .api_common import (
-    _fetch_sources_or_404,
     _invalidate_notebook_source_caches,
 )
 from .api_schemas import (
+    SourceBatchItemResult,
     SourceTagCreateRequest,
     SourceTagRead,
     SourceTagSourceBindingRequest,
@@ -129,26 +129,60 @@ async def assign_tag_to_sources(
         raise HTTPException(status_code=404, detail="Tag not found")
 
     source_ids = list(dict.fromkeys(payload.source_ids))
-    await _fetch_sources_or_404(session, notebook_id=notebook_id, source_ids=source_ids)
+    result = await session.execute(
+        select(Source.id).where(Source.notebook_id == notebook_id, Source.id.in_(source_ids))
+    )
+    existing_sources = {row[0] for row in result.all()}
 
     existing_result = await session.execute(
         select(SourceTagMap.source_id)
-        .where(SourceTagMap.tag_id == tag_id, SourceTagMap.source_id.in_(source_ids))
+        .where(SourceTagMap.tag_id == tag_id, SourceTagMap.source_id.in_(list(existing_sources)))
     )
     existing_ids = {source_id for source_id, in existing_result.all()}
 
+    results: list[SourceBatchItemResult] = []
+    changed = 0
     for source_id in source_ids:
-        if source_id in existing_ids:
+        if source_id not in existing_sources:
+            results.append(
+                SourceBatchItemResult(
+                    source_id=source_id,
+                    ok=False,
+                    error_code="SOURCE_NOT_FOUND",
+                    message="Source not found",
+                )
+            )
             continue
-        session.add(SourceTagMap(source_id=source_id, tag_id=tag_id))
 
-    await session.commit()
-    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
+        if source_id in existing_ids:
+            results.append(
+                SourceBatchItemResult(
+                    source_id=source_id,
+                    ok=True,
+                    message="Already assigned",
+                )
+            )
+            continue
+
+        session.add(SourceTagMap(source_id=source_id, tag_id=tag_id))
+        changed += 1
+        results.append(
+            SourceBatchItemResult(
+                source_id=source_id,
+                ok=True,
+                message="Assigned",
+            )
+        )
+
+    if changed:
+        await session.commit()
+        await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
 
     return SourceTagSourceBindingResponse(
         tag_id=tag_id,
         source_ids=source_ids,
-        count=len(source_ids),
+        count=sum(1 for item in results if item.ok),
+        results=results,
     )
 
 
@@ -165,20 +199,60 @@ async def remove_tag_from_sources(
         raise HTTPException(status_code=404, detail="Tag not found")
 
     source_ids = list(dict.fromkeys(payload.source_ids))
-    await _fetch_sources_or_404(session, notebook_id=notebook_id, source_ids=source_ids)
+    result = await session.execute(
+        select(Source.id).where(Source.notebook_id == notebook_id, Source.id.in_(source_ids))
+    )
+    existing_sources = {row[0] for row in result.all()}
 
     mappings_result = await session.execute(
         select(SourceTagMap)
-        .where(SourceTagMap.tag_id == tag_id, SourceTagMap.source_id.in_(source_ids))
+        .where(SourceTagMap.tag_id == tag_id, SourceTagMap.source_id.in_(list(existing_sources)))
     )
-    mappings = mappings_result.scalars().all()
-    for mapping in mappings:
+    mappings = list(mappings_result.scalars().all())
+    mapping_by_source: dict[int, SourceTagMap] = {mapping.source_id: mapping for mapping in mappings}
+
+    results: list[SourceBatchItemResult] = []
+    changed = 0
+    for source_id in source_ids:
+        if source_id not in existing_sources:
+            results.append(
+                SourceBatchItemResult(
+                    source_id=source_id,
+                    ok=False,
+                    error_code="SOURCE_NOT_FOUND",
+                    message="Source not found",
+                )
+            )
+            continue
+
+        mapping = mapping_by_source.get(source_id)
+        if mapping is None:
+            results.append(
+                SourceBatchItemResult(
+                    source_id=source_id,
+                    ok=True,
+                    message="Not assigned",
+                )
+            )
+            continue
+
         await session.delete(mapping)
-    await session.commit()
-    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
+        changed += 1
+        results.append(
+            SourceBatchItemResult(
+                source_id=source_id,
+                ok=True,
+                message="Removed",
+            )
+        )
+
+    if changed:
+        await session.commit()
+        await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id)
 
     return SourceTagSourceBindingResponse(
         tag_id=tag_id,
         source_ids=source_ids,
-        count=len(mappings),
+        count=sum(1 for item in results if item.ok),
+        results=results,
     )

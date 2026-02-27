@@ -91,14 +91,12 @@
           "metadata": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/JsonDict"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Metadata"
+            ]
           },
           "start_offset": {
             "anyOf": [
@@ -653,6 +651,50 @@
         "title": "ItemSchema",
         "type": "object"
       },
+      "JsonDict": {
+        "additionalProperties": {
+          "$ref": "#/components/schemas/JsonValue"
+        },
+        "type": "object"
+      },
+      "JsonPrimitive": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "string"
+          }
+        ]
+      },
+      "JsonValue": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/JsonPrimitive"
+          },
+          {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object"
+          },
+          {
+            "items": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "array"
+          }
+        ]
+      },
       "MessageCreate": {
         "properties": {
           "citations": {
@@ -1012,9 +1054,7 @@
             "title": "Chunk Ids"
           },
           "content": {
-            "additionalProperties": true,
-            "title": "Content",
-            "type": "object"
+            "$ref": "#/components/schemas/JsonDict"
           },
           "created_at": {
             "format": "date-time",
@@ -1681,8 +1721,7 @@
             "anyOf": [
               {
                 "items": {
-                  "additionalProperties": true,
-                  "type": "object"
+                  "$ref": "#/components/schemas/JsonDict"
                 },
                 "type": "array"
               },
@@ -1801,14 +1840,12 @@
           "input_data": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/JsonDict"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Input Data"
+            ]
           },
           "iteration": {
             "title": "Iteration",
@@ -1817,14 +1854,12 @@
           "output_data": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/JsonDict"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Output Data"
+            ]
           },
           "session_id": {
             "title": "Session Id",
@@ -2646,9 +2681,7 @@
             "type": "string"
           },
           "template": {
-            "additionalProperties": true,
-            "title": "Template",
-            "type": "object"
+            "$ref": "#/components/schemas/JsonDict"
           }
         },
         "required": [
@@ -2688,6 +2721,13 @@
             },
             "title": "Deleted Ids",
             "type": "array"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SourceBatchItemResult"
+            },
+            "title": "Results",
+            "type": "array"
           }
         },
         "required": [
@@ -2695,6 +2735,46 @@
           "deleted_ids"
         ],
         "title": "SourceBatchDeleteResponse",
+        "type": "object"
+      },
+      "SourceBatchItemResult": {
+        "properties": {
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Message"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ok",
+          "source_id"
+        ],
+        "title": "SourceBatchItemResult",
         "type": "object"
       },
       "SourceBatchReembedRequest": {
@@ -2736,6 +2816,13 @@
               "type": "integer"
             },
             "title": "Reembedded Ids",
+            "type": "array"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SourceBatchItemResult"
+            },
+            "title": "Results",
             "type": "array"
           }
         },
@@ -2872,6 +2959,17 @@
             "title": "Created At",
             "type": "string"
           },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Error Code"
+          },
           "error_message": {
             "anyOf": [
               {
@@ -2891,17 +2989,27 @@
             "title": "Id",
             "type": "integer"
           },
-          "metadata": {
+          "last_error_at": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "format": "date-time",
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Metadata"
+            "title": "Last Error At"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JsonDict"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "mime_type": {
             "anyOf": [
@@ -2921,6 +3029,17 @@
           "parser_type": {
             "title": "Parser Type",
             "type": "string"
+          },
+          "recovery_hint": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Recovery Hint"
           },
           "status": {
             "description": "枚举值:\n\n* `processing`: 正在处理\n* `ready`: 处理完成\n* `failed`: 处理失败",
@@ -3226,6 +3345,13 @@
           "count": {
             "title": "Count",
             "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SourceBatchItemResult"
+            },
+            "title": "Results",
+            "type": "array"
           },
           "source_ids": {
             "items": {
@@ -6677,6 +6803,21 @@
               "title": "Notebook Id",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "dedup_action",
+            "required": false,
+            "schema": {
+              "default": "prompt",
+              "enum": [
+                "create_new",
+                "prompt",
+                "reuse"
+              ],
+              "title": "Dedup Action",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -6876,6 +7017,21 @@
             "schema": {
               "title": "Notebook Id",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dedup_action",
+            "required": false,
+            "schema": {
+              "default": "prompt",
+              "enum": [
+                "create_new",
+                "prompt",
+                "reuse"
+              ],
+              "title": "Dedup Action",
+              "type": "string"
             }
           }
         ],
