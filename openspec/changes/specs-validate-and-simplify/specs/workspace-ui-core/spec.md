@@ -1,15 +1,4 @@
-# workspace-ui-core Specification
-
-## Purpose
-
-定义 Workspace 顶层体验的不变量：模块化布局、头部入口、响应式策略、全局 UX 基线。该规范只覆盖“顶层框架与跨面板约束”，避免与各业务面板的交互细节耦合。
-
-## Non-goals
-
-- 不重复 Sources/Chat/Studio/Analysis 子域细节
-- 不定义后端算法
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Workspace uses modular canvas layout
 工作区 MUST 基于模块化画布布局，默认包含 Sources/Chat/Studio 核心模块。

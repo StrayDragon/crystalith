@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定义输出在前端的类型建模与渲染契约：typed payload 判别联合、运行时 guard、通用渲染器与回退路径。
+定义输出在前端的类型建模与渲染契约：typed payload 判别联合、运行时 guard、通用渲染器与回退路径。该规范确保新输出类型不会破坏渲染链路，并为未知输出提供安全降级。
 
 ## Non-goals
 
@@ -14,14 +14,34 @@
 ### Requirement: Output payload is modeled as discriminated union
 前端 MUST 以 `output.type` 作为判别字段建模 payload，保证类型 narrowing 可用。
 
+#### Scenario: Type narrowing by output.type
+- **WHEN** 前端收到一个带有 `output.type` 的输出 payload
+- **THEN** 系统 SHALL 能基于该字段进行判别联合的类型 narrowing
+
 ### Requirement: Runtime decode provides safe fallback
 运行时 decoder/guard MUST 在 shape 不匹配时回退到 raw/unknown 渲染，不得崩溃。
+
+#### Scenario: Unknown output shape does not crash UI
+- **WHEN** 输出 payload 的 shape 与预期类型不匹配
+- **THEN** 系统 SHALL 回退到 raw/unknown 渲染并保持 UI 不崩溃
 
 ### Requirement: GenericOutputRenderer supports canonical layouts
 通用渲染器 MUST 支持规范布局类型与字段描述符递归渲染。
 
+#### Scenario: Render canonical layout
+- **WHEN** 输出使用规范布局与字段描述符
+- **THEN** GenericOutputRenderer SHALL 能递归渲染该布局
+
 ### Requirement: RenderDescriptor contract is stable
 workspace tools 返回的 `render_descriptor`/`config_schema` 字段语义 MUST 稳定。
 
+#### Scenario: Tool schemas remain compatible
+- **WHEN** 前端基于 `render_descriptor`/`config_schema` 渲染工具输出
+- **THEN** 字段语义 SHALL 保持稳定以避免客户端漂移
+
 ### Requirement: Rendering priority is deterministic
 渲染优先级 MUST 为 专用插件 > GenericOutputRenderer > Raw JSON。
+
+#### Scenario: Renderer selection follows priority
+- **WHEN** 某输出类型存在专用插件且通用渲染器也可用
+- **THEN** 系统 SHALL 按优先级选择专用插件渲染，否则回退到通用渲染或 Raw JSON

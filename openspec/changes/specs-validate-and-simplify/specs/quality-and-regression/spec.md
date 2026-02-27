@@ -1,15 +1,4 @@
-# quality-and-regression Specification
-
-## Purpose
-
-定义工程质量门槛：CI 流水线、回归冒烟、评测基线与测试稳定性约束。该规范旨在让关键回归尽早暴露并可在本地与 CI 中一致复现。
-
-## Non-goals
-
-- 不定义具体业务功能
-- 不定义部署拓扑
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: CI runs on push and pull_request
 CI MUST 在 push/PR 触发并提供可见状态检查。

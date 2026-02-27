@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定义来源管理与标签体系：列表、排序、过滤、chunks、删除、re-embed、tag CRUD 与绑定关系。
+定义来源管理与标签体系：列表、排序、过滤、chunks、删除、re-embed、tag CRUD 与绑定关系。该规范强调查询语义与失效规则可预测，避免因缓存或排序漂移导致 UI/服务不一致。
 
 ## Non-goals
 
@@ -14,17 +14,41 @@
 ### Requirement: Source list query semantics are stable
 来源列表 MUST 支持 tag 精确过滤与稳定排序（date/name/size/type + asc/desc）。
 
+#### Scenario: List sources with filters and sort
+- **WHEN** 用户按 tag 过滤并指定排序参数查询来源列表
+- **THEN** 系统 SHALL 返回稳定排序结果并按 tag 精确过滤
+
 ### Requirement: Source list can be epoch-cached
-列表结果 SHOULD 基于 `sources_epoch` 缓存并在来源变更后 O(1) 失效。
+列表结果 MUST 基于 `sources_epoch` 缓存并在来源变更后 O(1) 失效。
+
+#### Scenario: Source list cache invalidates on epoch bump
+- **WHEN** 来源集合发生变更并 bump `sources_epoch`
+- **THEN** 系统 SHALL 使来源列表缓存 O(1) 失效并在下次查询重建
 
 ### Requirement: Chunks endpoint returns deterministic order
 来源 chunks 接口 MUST 按 `chunk_index` 升序返回。
 
+#### Scenario: Chunks are ordered by chunk_index
+- **WHEN** 客户端请求某来源的 chunks
+- **THEN** 系统 SHALL 按 `chunk_index` 升序返回结果
+
 ### Requirement: Delete and re-embed keep storage and epochs consistent
 删除 MUST 同时删 DB 与向量；re-embed MUST 使用既有 chunks 重算向量并维护 epoch。
+
+#### Scenario: Re-embed recomputes vectors without changing chunks
+- **WHEN** 用户对一个来源执行 re-embed
+- **THEN** 系统 SHALL 使用既有 chunks 重算向量并维护 epoch 一致性
 
 ### Requirement: Tag uniqueness is notebook-scoped and case-insensitive
 同一 notebook 下 tag 名称 MUST 大小写不敏感唯一。
 
+#### Scenario: Tags are unique case-insensitively
+- **WHEN** 用户在同一 notebook 创建 tag `AI` 与 `ai`
+- **THEN** 系统 SHALL 将其视为冲突并保持大小写不敏感唯一性
+
 ### Requirement: Tag mutations invalidate source list caches
 tag 创建/更新/删除/绑定/解绑成功后 MUST bump `sources_epoch`。
+
+#### Scenario: Tag changes invalidate list cache
+- **WHEN** 用户成功创建/更新/删除/绑定/解绑某个 tag
+- **THEN** 系统 SHALL bump `sources_epoch` 以使来源列表缓存失效

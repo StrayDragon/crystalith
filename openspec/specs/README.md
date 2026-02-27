@@ -1,6 +1,6 @@
 # OpenSpec Canonical Specs (Consolidated)
 
-本目录已按“最新主干 + 去重合并”完成收敛。当前 canonical 规范为统一命名的 24 个 spec；旧路径 deprecated 薄壳已在 batch-2 中移除。
+本目录已按“最新主干 + 去重合并”完成收敛。当前 canonical 规范为统一命名的 21 个 spec；旧路径 deprecated 薄壳已在 batch-2 中移除。
 
 ## Canonical Reading Order
 
@@ -15,11 +15,7 @@
    - `openapi-and-client-generation/spec.md`
 3. Workspace UI
    - `workspace-ui-core/spec.md`
-   - `workspace-ui-sources/spec.md`
-   - `workspace-ui-chat/spec.md`
-   - `workspace-ui-studio/spec.md`
-   - `workspace-ui-analysis/spec.md`
-   - `workspace-ui-research-and-citation/spec.md`
+   - `workspace-ui-panels/spec.md`
 4. Source 与生成
    - `source-ingestion-core/spec.md`
    - `source-ingestion-upload-and-url/spec.md`
@@ -45,11 +41,11 @@
 - `workspace-api`, `notebook-management`, `analysis-api` -> `workspace-api-contract`
 - `openapi-docs`, `frontend-api-client`, `python-sdk` -> `openapi-and-client-generation`
 - `workspace-ui`, `workspace-ux-system`, `modular-canvas-layout` -> `workspace-ui-core`
-- `workspace-sources-ui` -> `workspace-ui-sources`
-- `workspace-chat-ui` -> `workspace-ui-chat`
-- `workspace-studio-ui`, `studio-collapsible-tools` -> `workspace-ui-studio`
-- `workspace-analysis-ui`, `cross-document-analysis` -> `workspace-ui-analysis`
-- `research-ui`, `citation-interaction` -> `workspace-ui-research-and-citation`
+- `workspace-sources-ui` -> `workspace-ui-panels`
+- `workspace-chat-ui` -> `workspace-ui-panels`
+- `workspace-studio-ui`, `studio-collapsible-tools` -> `workspace-ui-panels`
+- `workspace-analysis-ui`, `cross-document-analysis` -> `workspace-ui-panels`
+- `research-ui`, `citation-interaction` -> `workspace-ui-panels`
 - `source-ingestion` -> `source-ingestion-core`
 - `source-ingestion-upload`, `source-ingestion-url` -> `source-ingestion-upload-and-url`
 - `source-ingestion-management`, `source-ingestion-tags` -> `source-ingestion-management-and-tags`

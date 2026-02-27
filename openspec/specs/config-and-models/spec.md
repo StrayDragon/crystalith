@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定义配置加载、Schema 校验、模型与 provider 选择的统一规则，确保本地一键启动与生产可控覆盖并存。
+定义配置加载、Schema 校验、模型与 provider 选择的统一规则，确保本地一键启动与生产可控覆盖并存。该规范强调安全默认值与可预期覆盖优先级，避免“能跑但不可控”的配置漂移。
 
 ## Non-goals
 
@@ -14,6 +14,10 @@
 ### Requirement: YAML config is validated by schema
 系统 MUST 从 YAML 加载配置并以 `config/app.schema.json` 校验结构。
 
+#### Scenario: Invalid YAML config is rejected
+- **WHEN** 用户提供的 YAML 配置不满足 `config/app.schema.json`
+- **THEN** 系统 SHALL 以明确错误拒绝启动或拒绝加载该配置
+
 ### Requirement: Environment overrides are supported
 环境变量 MUST 可覆盖配置字段且优先级高于 YAML 默认值；对于可选子服务，系统 MUST 支持独立的启用开关、连接地址与探活参数覆盖，不得要求用户修改核心配置结构才能接入外部服务。
 
@@ -23,6 +27,10 @@
 
 ### Requirement: Secrets are not committed in plaintext
 示例配置 MUST 不包含明文密钥；密钥应由环境变量或安全注入提供。
+
+#### Scenario: Sample config contains no plaintext secrets
+- **WHEN** 用户参考仓库内示例配置进行部署
+- **THEN** 示例配置 SHALL 不包含明文密钥，并引导用户使用环境变量或安全注入提供密钥
 
 ### Requirement: Model selection is centralized
 模型列表与默认选择 MUST 通过集中配置管理，并 MUST 支持“核心可运行默认模型”与“可选增强模型”并存；当可选模型依赖不可达时，系统 MUST 返回可恢复错误或回退策略，不得导致整体配置加载失败。
@@ -34,9 +42,16 @@
 ### Requirement: Providers include built-ins and plugins
 provider 体系 MUST 同时支持内置 provider 与插件扩展 provider。
 
+#### Scenario: Select a plugin provider
+- **WHEN** 用户配置选择一个插件形式的 provider
+- **THEN** 系统 SHALL 能加载并使用该 provider，且与内置 provider 使用同一选择接口
+
 ### Requirement: URL fetch security config is safe by default
 URL 抓取安全配置 MUST 默认拒绝高风险目标（localhost/私网/元数据地址等）。
 
+#### Scenario: Block high-risk URL targets
+- **WHEN** 抓取目标指向 localhost/私网/云元数据地址等高风险目标
+- **THEN** 系统 SHALL 默认拒绝该请求并返回可理解的错误
 ### Requirement: Optional service config schema is explicit
 配置 Schema MUST 显式声明可选子服务块（启用标记、endpoint、timeout、probe policy、degrade policy），并给出默认值与示例，避免隐式约定。
 
