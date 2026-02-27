@@ -16,7 +16,8 @@ import { getSlideIdFromOutput } from '../shared/outputPayload';
 import { useWorkspaceStore } from '../shared/state/workspaceStore';
 import type { ChatMessage, Citation, SourceItem } from '../shared/types';
 import { toast } from '../../../shared/toast';
-import { useWorkspaceOverlays } from './hooks';
+import { computeWorkspaceReadiness, useDependencyHealth, useWorkspaceOverlays } from './hooks';
+import WorkspaceOnboardingBanner from './components/WorkspaceOnboardingBanner';
 import WorkspaceHeader from './WorkspaceHeader';
 import {
   ModularCanvas,
@@ -26,11 +27,14 @@ import {
   WIDGET_REGISTRY,
 } from './modular-canvas';
 import { WorkspaceOverlays } from './overlays';
+import AddSourceFromUrlDialog from './overlays/AddSourceFromUrlDialog';
+import DiagnosticsDialog from './overlays/DiagnosticsDialog';
 
 export default function WorkspaceLayout() {
   const selectedSourceIds_raw = useWorkspaceStore((s) => s.selectedSourceIds);
   const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
   const activeSessionId = useWorkspaceStore((s) => s.activeSessionId);
+  const autoCreatedNotebookId = useWorkspaceStore((s) => s.autoCreatedNotebookId);
   const errMessages = useWorkspaceStore((s) => s.errors.messages);
   const store = useWorkspaceStore;
 
@@ -39,6 +43,8 @@ export default function WorkspaceLayout() {
   const [activeWidgetIds, setActiveWidgetIds] = useState<string[]>([]);
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const sessionSearchRef = useRef<HTMLInputElement | null>(null);
+  const uploadFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [addSourceFromUrlOpen, setAddSourceFromUrlOpen] = useState(false);
 
   const notebooks = useNotebooks();
   const sessions = useSessions();
@@ -122,6 +128,8 @@ export default function WorkspaceLayout() {
     resolveSlideDraftId,
     fetchAnalysisIfNeeded,
   });
+
+  const dependencyHealth = useDependencyHealth({ enabled: overlays.isDiagnosticsOpen });
 
   const slidesQueueStatus = useMemo(() => {
     if (!overlays.slidesQueueJobId) return null;
@@ -345,8 +353,170 @@ export default function WorkspaceLayout() {
 
   const isConnected = notebooks.isConnected;
 
+  const readiness = useMemo(
+    () =>
+      computeWorkspaceReadiness({
+        connectionState: notebooks.connectionState,
+        connectionError: notebooks.notebooksError,
+        notebookId: notebooks.activeNotebookId,
+        sourcesLoading: sources.isLoading,
+        sourcesCount: sources.sources.length,
+        sessionsLoading: sessions.isLoading,
+        sessionId: sessions.activeSessionId,
+      }),
+    [
+      notebooks.activeNotebookId,
+      notebooks.connectionState,
+      notebooks.notebooksError,
+      sessions.activeSessionId,
+      sessions.isLoading,
+      sources.isLoading,
+      sources.sources.length,
+    ],
+  );
+
+  const showReadyGuide = useMemo(() => {
+    return readiness.kind === 'ready' && chat.messages.length === 0 && refine.outputs.length === 0;
+  }, [chat.messages.length, readiness.kind, refine.outputs.length]);
+
+  const handleOpenDeploymentDocs = useCallback(() => {
+    window.open(
+      'https://github.com/StrayDragon/crystalith/blob/main/deployments/README.md',
+      '_blank',
+      'noopener,noreferrer',
+    );
+  }, []);
+
+  const handleOpenDiagnostics = useCallback(() => {
+    overlays.openDiagnostics();
+  }, [overlays.openDiagnostics]);
+
+  const handleOpenUpload = useCallback(() => {
+    uploadFileInputRef.current?.click();
+  }, []);
+
+  const handleFocusSourceSearch = useCallback(() => {
+    const el = document.getElementById('source-search-input') as HTMLInputElement | null;
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.focus();
+    el.select();
+  }, []);
+
+  const handleFocusChat = useCallback(() => {
+    const el = chatInputRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.focus();
+  }, []);
+
+  const handleStartSession = useCallback(async () => {
+    await sessions.ensureSession();
+    window.requestAnimationFrame(() => {
+      handleFocusChat();
+    });
+  }, [handleFocusChat, sessions.ensureSession]);
+
+  const handleCreateNotebookFromOnboarding = useCallback(async () => {
+    const ok = await notebooks.createNotebookQuick('未命名笔记本');
+    if (ok) {
+      toast.success('已创建笔记本');
+    }
+  }, [notebooks.createNotebookQuick]);
+
+  const handleOpenAddSourceFromUrl = useCallback(() => {
+    setAddSourceFromUrlOpen(true);
+  }, []);
+
+  const handleCloseAddSourceFromUrl = useCallback(() => {
+    setAddSourceFromUrlOpen(false);
+  }, []);
+
+  const handleAddSourceFromUrl = useCallback(
+    async (url: string, mode: Parameters<typeof sources.addSourceFromUrl>[1]) => {
+      await sources.addSourceFromUrl(url, mode);
+      toast.success('已添加来源');
+    },
+    [sources.addSourceFromUrl],
+  );
+
   const cmdPaletteCommands = useMemo<CommandItem[]>(() => {
     const cmds: CommandItem[] = [];
+
+    // Core onboarding actions
+    cmds.push({
+      id: 'create-notebook',
+      label: '新建笔记本',
+      icon: '📓',
+      action: () => {
+        void handleCreateNotebookFromOnboarding();
+      },
+    });
+
+    notebooks.notebooks.slice(0, 12).forEach((notebook) => {
+      cmds.push({
+        id: `switch-notebook-${notebook.id}`,
+        label:
+          notebook.id === notebooks.activeNotebookId
+            ? `切换笔记本: ${notebook.title}（当前）`
+            : `切换笔记本: ${notebook.title}`,
+        icon: notebook.id === notebooks.activeNotebookId ? '✅' : '📓',
+        action: () => {
+          notebooks.setActiveNotebookId(notebook.id);
+        },
+      });
+    });
+
+    cmds.push({
+      id: 'import-sources-upload',
+      label: '导入来源: 上传文件',
+      icon: '⬆️',
+      action: handleOpenUpload,
+    });
+
+    cmds.push({
+      id: 'import-sources-url',
+      label: '导入来源: 从 URL',
+      icon: '🔗',
+      action: handleOpenAddSourceFromUrl,
+    });
+
+    cmds.push({
+      id: 'import-sources-search',
+      label: '导入来源: 搜索',
+      icon: '🔍',
+      action: handleFocusSourceSearch,
+    });
+
+    cmds.push({
+      id: 'start-session',
+      label: '开始会话',
+      icon: '💬',
+      action: () => {
+        void handleStartSession();
+      },
+    });
+
+    cmds.push({
+      id: 'open-slides-studio',
+      label: '打开 Slides Studio',
+      icon: '🖼️',
+      action: () => overlays.openSlidesDialog('config'),
+    });
+
+    cmds.push({
+      id: 'open-diagnostics',
+      label: '健康 / 诊断',
+      icon: '🩺',
+      action: overlays.openDiagnostics,
+    });
+
+    cmds.push({
+      id: 'shortcut-help',
+      label: '快捷键帮助',
+      icon: '⌨️',
+      action: overlays.openShortcutHelp,
+    });
 
     Object.entries(WIDGET_REGISTRY).forEach(([id, meta]) => {
       const isActive = activeWidgetIds.includes(id);
@@ -388,15 +558,22 @@ export default function WorkspaceLayout() {
       action: overlays.openGraphView,
     });
 
-    cmds.push({
-      id: 'shortcut-help',
-      label: '快捷键帮助',
-      icon: '⌨️',
-      action: overlays.openShortcutHelp,
-    });
-
     return cmds;
-  }, [activeWidgetIds, locked, openSessionSearch, overlays, toggleLock]);
+  }, [
+    activeWidgetIds,
+    handleCreateNotebookFromOnboarding,
+    handleFocusSourceSearch,
+    handleOpenAddSourceFromUrl,
+    handleOpenUpload,
+    handleStartSession,
+    locked,
+    notebooks.activeNotebookId,
+    notebooks.notebooks,
+    notebooks.setActiveNotebookId,
+    openSessionSearch,
+    overlays,
+    toggleLock,
+  ]);
 
   const widgetHeaderExtras = useMemo(
     () => ({
@@ -567,10 +744,40 @@ export default function WorkspaceLayout() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50/50 dark:bg-slate-950 overflow-hidden text-gray-900 dark:text-gray-100">
+      <input
+        ref={uploadFileInputRef}
+        type="file"
+        hidden
+        multiple
+        accept=".txt,.md,.markdown,text/plain,text/markdown"
+        onChange={(event) => {
+          sources.handleUpload(event.target.files);
+          if (event.target) {
+            event.target.value = '';
+          }
+        }}
+      />
+
+      <AddSourceFromUrlDialog
+        open={addSourceFromUrlOpen}
+        onClose={handleCloseAddSourceFromUrl}
+        onAdd={handleAddSourceFromUrl}
+      />
+
+      <DiagnosticsDialog
+        open={overlays.isDiagnosticsOpen}
+        onClose={overlays.closeDiagnostics}
+        isLoading={dependencyHealth.isLoading}
+        error={dependencyHealth.error}
+        data={dependencyHealth.data}
+        onRefresh={dependencyHealth.refresh}
+      />
+
       <div className="flex-shrink-0 relative z-10 px-4 pt-1">
         <WorkspaceHeader
           notebooks={notebooks.notebooks}
           activeNotebookId={notebooks.activeNotebookId}
+          autoCreatedNotebookId={autoCreatedNotebookId}
           isNotebooksLoading={notebooks.isLoading}
           notebooksError={notebooks.notebooksError}
           createName={notebooks.createName}
@@ -584,10 +791,29 @@ export default function WorkspaceLayout() {
           onDeleteNotebook={notebooks.deleteNotebook}
           onSelectNotebook={notebooks.setActiveNotebookId}
           onOpenKnowledgeGraph={overlays.openGraphView}
+          onOpenDiagnostics={overlays.openDiagnostics}
+          onOpenShortcutHelp={overlays.openShortcutHelp}
           locked={locked}
           onToggleLock={toggleLock}
           onOpenCatalog={overlays.toggleCatalog}
           onOpenCommandPalette={overlays.openCommandPalette}
+        />
+
+        <WorkspaceOnboardingBanner
+          readiness={readiness}
+          showReadyGuide={showReadyGuide}
+          onRetryConnection={notebooks.retryNotebooks}
+          onOpenDiagnostics={handleOpenDiagnostics}
+          onOpenDeploymentDocs={handleOpenDeploymentDocs}
+          onCreateNotebook={handleCreateNotebookFromOnboarding}
+          onUploadSources={handleOpenUpload}
+          onAddSourceFromUrl={handleOpenAddSourceFromUrl}
+          onFocusSourceSearch={handleFocusSourceSearch}
+          onStartSession={handleStartSession}
+          onFocusChat={handleFocusChat}
+          onOpenSlidesStudio={() => overlays.openSlidesDialog('config')}
+          onOpenCommandPalette={overlays.openCommandPalette}
+          onOpenShortcutHelp={overlays.openShortcutHelp}
         />
       </div>
 

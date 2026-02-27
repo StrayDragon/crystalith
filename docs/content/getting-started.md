@@ -25,6 +25,12 @@ pnpm install
 pnpm dev
 ```
 
+## Workspace tips
+
+- Command palette: `Ctrl+K`
+- Shortcut help: `Ctrl+?`
+- Health / diagnostics: use the header button to inspect `/health/dependencies`
+
 ## Dev workflow tips
 
 - Backend tests: `cd backend/py && just test`

@@ -1,7 +1,7 @@
 export type ShortcutCategory = '导航' | '操作' | '编辑';
 
 export type WorkspaceShortcutId =
-  | 'open-search'
+  | 'open-command-palette'
   | 'create-notebook'
   | 'focus-sources'
   | 'focus-chat'
@@ -20,9 +20,9 @@ export interface WorkspaceShortcutDefinition {
 
 export const WORKSPACE_SHORTCUTS: WorkspaceShortcutDefinition[] = [
   {
-    id: 'open-search',
+    id: 'open-command-palette',
     combo: 'Ctrl+K',
-    description: '打开会话搜索面板',
+    description: '打开命令面板',
     category: '导航',
   },
   {

@@ -128,6 +128,10 @@ export default defineConfig({
         target: apiProxyTarget,
         changeOrigin: true,
       },
+      '/health': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
     },
   },
   test: {

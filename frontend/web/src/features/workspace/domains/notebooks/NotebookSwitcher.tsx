@@ -33,6 +33,10 @@ import SaveTemplateDialog from '../templates/SaveTemplateDialog';
 import { useTemplates } from '../templates/useTemplates';
 import type { WorkspaceTemplate } from '../templates/types';
 
+export type NotebookSwitcherRequest =
+  | { type: 'edit'; notebookId: number; token: number }
+  | { type: 'create'; token: number };
+
 interface NotebookSwitcherProps {
   notebooks: Notebook[];
   activeNotebookId: number | null;
@@ -44,6 +48,7 @@ interface NotebookSwitcherProps {
   createName: string;
   createState: AsyncStatus;
   createError: string;
+  request?: NotebookSwitcherRequest | null;
   onToggle: () => void;
   onClose: () => void;
   onSelect: (notebookId: number | null) => void;
@@ -65,6 +70,7 @@ export default function NotebookSwitcher({
   createName,
   createState,
   createError,
+  request = null,
   onToggle,
   onClose,
   onSelect,
@@ -86,6 +92,7 @@ export default function NotebookSwitcher({
   const [saveTemplateNotebookId, setSaveTemplateNotebookId] = useState<number | null>(null);
   const [saveTemplateDefaultName, setSaveTemplateDefaultName] = useState('');
   const editInputRef = useRef<HTMLInputElement | null>(null);
+  const lastRequestTokenRef = useRef<number | null>(null);
 
   const createLoading = createState === 'loading';
   const createDisabled = !isConnected || createLoading || createName.trim().length === 0;
@@ -140,6 +147,25 @@ export default function NotebookSwitcher({
     setEditingNotebookId(notebook.id);
     setEditingTitle(notebook.title);
   }
+
+  useEffect(() => {
+    if (!request) return;
+    if (lastRequestTokenRef.current === request.token) return;
+
+    if (request.type === 'create') {
+      lastRequestTokenRef.current = request.token;
+      setCreateOpen(true);
+      return;
+    }
+
+    if (request.type === 'edit') {
+      if (!isOpen) return;
+      const notebook = notebooks.find((item) => item.id === request.notebookId);
+      if (!notebook) return;
+      startEditing(notebook);
+      lastRequestTokenRef.current = request.token;
+    }
+  }, [isOpen, notebooks, request]);
 
   async function handleSaveEdit() {
     if (!editingNotebookId || !onUpdate || isUpdating) return;

@@ -85,6 +85,7 @@ export function useNotebooks() {
           body: { name: DEFAULT_NOTEBOOK_NAME },
         }));
         const normalized = normalizeNotebook(created);
+        store.getState().setAutoCreatedNotebookId(normalized.id);
         store.getState().setActiveNotebook(normalized.id);
         await mutate(
           async (current) => (current ? [...current, created] : [created]),
@@ -252,6 +253,9 @@ export function useNotebooks() {
           { revalidate: false },
         );
         const s = store.getState();
+        if (s.autoCreatedNotebookId === notebookId) {
+          s.setAutoCreatedNotebookId(null);
+        }
         const remaining = s.notebooks.filter((item) => item.id !== notebookId);
         s.setNotebooks(remaining);
         if (s.activeNotebookId === notebookId) {
