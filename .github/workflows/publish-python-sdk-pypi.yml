@@ -42,21 +42,22 @@ jobs:
           cd backend/py
           uv sync --frozen
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install Fern CLI
-        run: npm install -g fern-api@3.73.1
-
       - name: Check OpenAPI schema is up to date
         run: just api-check
 
-      - name: Check Python SDK is up to date
-        env:
-          FERN_TOKEN: ${{ secrets.FERN_TOKEN }}
-        run: just sdk-check
+      - name: Check Python SDK version matches backend
+        run: just sdk-version-check
+
+      - name: Check tag matches version
+        run: |
+          set -euo pipefail
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          BACKEND_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("backend/py/pyproject.toml").read_text())["project"]["version"])')"
+          if [[ "$TAG_VERSION" != "$BACKEND_VERSION" ]]; then
+            echo "Tag/version mismatch: tag=$TAG_VERSION backend/py=$BACKEND_VERSION" >&2
+            exit 1
+          fi
+          echo "Tag/version OK: $TAG_VERSION"
 
       - name: Build Python SDK (wheel/sdist)
         run: just sdk-build-python

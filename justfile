@@ -53,6 +53,23 @@ sdk-gen-python VERSION='':
     (cd "{{SDK_ROOT}}" && uv version "$SDK_VERSION" --frozen)
     echo "Python SDK v${SDK_VERSION} generated at {{SDK_PACKAGE_PATH}}"
 
+# Check backend/SDK versions are consistent (no generation).
+sdk-version-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    BACKEND_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("backend/py/pyproject.toml").read_text())["project"]["version"])')"
+    SDK_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("sdk/client/python/pyproject.toml").read_text())["project"]["version"])')"
+    SDK_FILE_VERSION="$(tr -d '\r\n' < "sdk/client/python/.sdk-version")"
+    if [[ "$BACKEND_VERSION" != "$SDK_VERSION" ]]; then
+      echo "SDK version mismatch: backend/py=$BACKEND_VERSION sdk/client/python/pyproject.toml=$SDK_VERSION" >&2
+      exit 1
+    fi
+    if [[ "$BACKEND_VERSION" != "$SDK_FILE_VERSION" ]]; then
+      echo "SDK version mismatch: backend/py=$BACKEND_VERSION sdk/client/python/.sdk-version=$SDK_FILE_VERSION" >&2
+      exit 1
+    fi
+    echo "SDK version OK: $BACKEND_VERSION"
+
 # Generate all SDKs: export schema → frontend SDK → Python SDK
 sdk-gen VERSION='': api-export sdk-gen-web (sdk-gen-python VERSION)
 

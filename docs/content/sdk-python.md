@@ -52,14 +52,15 @@ print(output.id, output.type)
 
 - `frontend/web/openapi.json` must stay in sync with the backend schema (CI runs `uv run scripts/api_schema.py check`).
 - Generated API clients must be committed (CI runs `pnpm run api:generate` and checks for diff).
+- The Python SDK must build and its version must match the backend (CI runs `just sdk-version-check` + `just sdk-build-python`).
 
 ## Automation
 
 - GitHub Actions:
-  - `Check Python SDK`: runs `just api-check` + `just sdk-check`.
+  - `Check Python SDK`: runs `just api-check` + `just sdk-version-check` + `just sdk-build-python`.
 - Fern:
-  - CI pins Fern CLI (`fern-api@3.73.1`).
-  - Generation may require `FERN_TOKEN` (local or CI secret).
+  - Local generation uses Fern CLI (`npm install -g fern-api@3.73.1`) and Docker (`fern generate --local`).
+  - `FERN_TOKEN` / `fern login` is only required for remote generation.
 
 ## Local generation
 
