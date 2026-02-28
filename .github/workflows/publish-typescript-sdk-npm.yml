@@ -1,0 +1,62 @@
+name: Publish TypeScript SDK to npm
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup just
+        uses: extractions/setup-just@v2
+
+      - name: Setup Python (for version checks)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.29.2"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+          cache: "pnpm"
+          cache-dependency-path: sdk/client/typescript/pnpm-lock.yaml
+
+      - name: Check SDK versions match backend
+        run: just sdk-version-check
+
+      - name: Check tag matches version
+        run: |
+          set -euo pipefail
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          BACKEND_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("backend/py/pyproject.toml").read_text())["project"]["version"])')"
+          if [[ "$TAG_VERSION" != "$BACKEND_VERSION" ]]; then
+            echo "Tag/version mismatch: tag=$TAG_VERSION backend/py=$BACKEND_VERSION" >&2
+            exit 1
+          fi
+          echo "Tag/version OK: $TAG_VERSION"
+
+      - name: Build TypeScript SDK (dist + types)
+        run: just sdk-build-typescript
+
+      - name: Publish TypeScript SDK to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd sdk/client/typescript
+          npm publish

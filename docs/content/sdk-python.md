@@ -16,6 +16,12 @@ Fern configuration lives in:
 - SDK version is sourced from `backend/py/pyproject.toml` and written to `sdk/client/python/.sdk-version` during generation.
 - You can override with `just sdk-gen-python VERSION=X.Y.Z`, but it must match the backend version.
 
+## Install
+
+```bash
+pip install crystalith-sdk
+```
+
 ## Minimal example
 
 Base URL (no `/v1`):
@@ -76,6 +82,9 @@ just sdk-check
 
 # Build Python SDK (wheel/sdist)
 just sdk-build-python
+
+# Check versions match backend (Python + TypeScript)
+just sdk-version-check
 ```
 
 ## Notes
