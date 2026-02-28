@@ -21,6 +21,8 @@ Then open:
 
 Note: The API is served through the `web` (Nginx) front door. Requests to `/v1/*` are reverse-proxied to the internal `api:8032` service.
 
+Security note: by default the API is **unauthenticated**. Do not expose `CL_WEB_PORT` to the public internet without adding protection (see `app.auth` in `Configuration`).
+
 ## Optional Overlays
 
 - `deployments/prod/docker-compose.storage.yml`: postgres + chromadb
@@ -74,10 +76,14 @@ Manual checks:
 curl -fsS "http://localhost:${CL_WEB_PORT:-8080}/health"
 curl -fsS "http://localhost:${CL_WEB_PORT:-8080}/health/dependencies"
 curl -fsS "http://localhost:${CL_WEB_PORT:-8080}/v1/models"
+# If API auth is enabled (app.auth.enabled=true):
+# curl -fsS -H "Authorization: Bearer $CRYSTALITH_API_KEY" "http://localhost:${CL_WEB_PORT:-8080}/v1/models"
 
 curl -fsS -X POST "http://localhost:${CL_WEB_PORT:-8080}/v1/notebooks" \
   -H 'Content-Type: application/json' \
   -d '{"name":"smoke"}'
+# If API auth is enabled (app.auth.enabled=true), add:
+#   -H "Authorization: Bearer $CRYSTALITH_API_KEY"
 ```
 
 ## External Service Replacement

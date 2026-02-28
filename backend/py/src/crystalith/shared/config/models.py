@@ -345,11 +345,37 @@ class ModelsSettings(BaseModel):
 # Feature Settings
 # =============================================================================
 
+class AppAuthSettings(BaseModel):
+    """Optional API authentication settings for self-host deployments."""
+
+    enabled: bool = Field(
+        False,
+        description="If true, require API key authentication for /v1 endpoints.",
+    )
+    api_key: str | None = Field(
+        None,
+        description=(
+            "Shared API key used for 'Authorization: Bearer <token>'. "
+            "Prefer injecting via ${{ env.* }} / ${{ secrets.* }}."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def validate_api_key_required_when_enabled(self) -> "AppAuthSettings":
+        if self.enabled and not (self.api_key and self.api_key.strip()):
+            raise ValueError("app.auth.enabled=true requires app.auth.api_key to be set")
+        return self
+
+
 class AppSettings(BaseModel):
     """Application settings."""
     name: str = "Crystalith"
     openapi_path: str = "/v1/codev/openapi.json"
     openapi_ui_path: str = "/v1/codev/openapi-ui/scalar"
+    auth: AppAuthSettings = Field(
+        default_factory=lambda: AppAuthSettings.model_validate({}),
+        description="Optional API authentication settings.",
+    )
     cors: "CorsSettings" = Field(
         default_factory=lambda: CorsSettings.model_validate({}),
         description="CORS settings",

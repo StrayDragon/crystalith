@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from fastapi import Depends
 from cl_fastapix import FastAPIX
 
 from crystalith.features.analysis.api import router as analysis_router
@@ -19,21 +20,25 @@ from crystalith.features.templates.api import router as templates_router
 from crystalith.features.workspace.api import router as workspace_router
 from crystalith.features.studio.api import router as slides_router
 
+from crystalith.web.auth import require_api_key
+
 
 def register_routers(app: FastAPIX) -> None:
-    app.include_router(notebooks_router)
-    app.include_router(sessions_router)
-    app.include_router(messages_router)
-    app.include_router(analysis_router)
-    app.include_router(models_router)
-    app.include_router(qa_router)
-    app.include_router(sources_router)
-    app.include_router(citations_router)
-    app.include_router(outputs_router)
-    app.include_router(refine_router)
-    app.include_router(slides_router)
-    app.include_router(research_router)
-    app.include_router(tasks_router)
-    app.include_router(templates_router)
-    app.include_router(workspace_slides_router)
-    app.include_router(workspace_router)
+    auth_dependencies = [Depends(require_api_key)]
+
+    app.include_router(notebooks_router, dependencies=auth_dependencies)
+    app.include_router(sessions_router, dependencies=auth_dependencies)
+    app.include_router(messages_router, dependencies=auth_dependencies)
+    app.include_router(analysis_router, dependencies=auth_dependencies)
+    app.include_router(models_router, dependencies=auth_dependencies)
+    app.include_router(qa_router, dependencies=auth_dependencies)
+    app.include_router(sources_router, dependencies=auth_dependencies)
+    app.include_router(citations_router, dependencies=auth_dependencies)
+    app.include_router(outputs_router, dependencies=auth_dependencies)
+    app.include_router(refine_router, dependencies=auth_dependencies)
+    app.include_router(slides_router, dependencies=auth_dependencies)
+    app.include_router(research_router, dependencies=auth_dependencies)
+    app.include_router(tasks_router, dependencies=auth_dependencies)
+    app.include_router(templates_router, dependencies=auth_dependencies)
+    app.include_router(workspace_slides_router, dependencies=auth_dependencies)
+    app.include_router(workspace_router, dependencies=auth_dependencies)

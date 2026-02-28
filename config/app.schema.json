@@ -23,6 +23,32 @@
       "title": "AISettings",
       "type": "object"
     },
+    "AppAuthSettings": {
+      "description": "Optional API authentication settings for self-host deployments.",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "If true, require API key authentication for /v1 endpoints.",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "api_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Shared API key used for 'Authorization: Bearer <token>'. Prefer injecting via ${{ env.* }} / ${{ secrets.* }}.",
+          "title": "Api Key"
+        }
+      },
+      "title": "AppAuthSettings",
+      "type": "object"
+    },
     "AppSettings": {
       "description": "Application settings.",
       "properties": {
@@ -40,6 +66,10 @@
           "default": "/v1/codev/openapi-ui/scalar",
           "title": "Openapi Ui Path",
           "type": "string"
+        },
+        "auth": {
+          "$ref": "#/$defs/AppAuthSettings",
+          "description": "Optional API authentication settings."
         },
         "cors": {
           "$ref": "#/$defs/CorsSettings",

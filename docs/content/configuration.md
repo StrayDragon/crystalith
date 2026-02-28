@@ -13,10 +13,30 @@ Crystalith runtime configuration lives in `config/app.yaml`.
 ## Common settings
 
 - `app.cors.allow_origins`: browser client origins (CORS)
+- `app.auth.enabled`: require API key auth for `/v1/**` (self-host)
+- `app.auth.api_key`: shared API key (prefer env/secrets injection)
 - `models.defaults.chat` / `models.defaults.embedding`: default model ids
 - `vector_storage.provider`: `chroma` or `sqlite`
 - `database.url`: SQLAlchemy URL (async)
 - `embedding.batch_size`: embedding batch size (perf tuning)
+
+## API authentication (self-host)
+
+Crystalith can optionally require an API key for all `/v1/**` endpoints.
+
+Config:
+
+```yaml
+app:
+  auth:
+    enabled: true
+    api_key: "${{ env.CRYSTALITH_API_KEY }}"
+```
+
+Notes:
+- Prefer `${{ env.* }}` / `${{ secrets.* }}` to avoid committing secrets.
+- Clients should send `Authorization: Bearer <token>` (or `X-API-Key: <token>`).
+- `/health` and `/health/dependencies` stay anonymous for probes.
 
 ## Redis embedding cache
 
