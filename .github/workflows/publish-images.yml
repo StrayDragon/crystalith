@@ -1,0 +1,239 @@
+name: Publish Images (GHCR)
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE: ghcr.io/${{ github.repository_owner }}/crystalith-api
+  WEB_IMAGE: ghcr.io/${{ github.repository_owner }}/crystalith-web
+  PLATFORMS: linux/amd64,linux/arm64
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release tag + image metadata
+        id: vars
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ref_name="${GITHUB_REF_NAME}"
+          if [[ "${ref_name}" != v* ]]; then
+            echo "Expected a tag like vX.Y.Z, got: ${ref_name}" >&2
+            exit 1
+          fi
+
+          version="${ref_name#v}"
+          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+].*)?$ ]]; then
+            echo "Tag must look like vX.Y.Z (optionally with pre-release/build), got: ${ref_name}" >&2
+            exit 1
+          fi
+
+          shortsha="$(echo "${GITHUB_SHA}" | cut -c1-7)"
+          major="${version%%.*}"
+          rest="${version#*.}"
+          minor="${rest%%.*}"
+
+          is_prerelease=0
+          if [[ "${version}" == *-* ]]; then
+            is_prerelease=1
+          fi
+
+          api_tags=()
+          api_tags+=("${API_IMAGE}:${version}")
+          api_tags+=("${API_IMAGE}:sha-${shortsha}")
+          web_tags=()
+          web_tags+=("${WEB_IMAGE}:${version}")
+          web_tags+=("${WEB_IMAGE}:sha-${shortsha}")
+
+          if [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            api_tags+=("${API_IMAGE}:${major}.${minor}")
+            api_tags+=("${API_IMAGE}:${major}")
+            api_tags+=("${API_IMAGE}:latest")
+            web_tags+=("${WEB_IMAGE}:${major}.${minor}")
+            web_tags+=("${WEB_IMAGE}:${major}")
+            web_tags+=("${WEB_IMAGE}:latest")
+          fi
+
+          created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          oci_labels=()
+          oci_labels+=("org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}")
+          oci_labels+=("org.opencontainers.image.revision=${GITHUB_SHA}")
+          oci_labels+=("org.opencontainers.image.version=${version}")
+          oci_labels+=("org.opencontainers.image.created=${created}")
+
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "shortsha=${shortsha}" >> "${GITHUB_OUTPUT}"
+          echo "is_prerelease=${is_prerelease}" >> "${GITHUB_OUTPUT}"
+
+          {
+            echo "api_tags<<EOF"
+            printf '%s\n' "${api_tags[@]}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+          {
+            echo "web_tags<<EOF"
+            printf '%s\n' "${web_tags[@]}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+          {
+            echo "oci_labels<<EOF"
+            printf '%s\n' "${oci_labels[@]}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+          echo "Resolved version=${version} shortsha=${shortsha} prerelease=${is_prerelease}"
+
+      - name: Verify repository versions match tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${{ steps.vars.outputs.version }}"
+          python - <<PY
+          import json
+          import pathlib
+          import tomllib
+
+          expected = "${{ steps.vars.outputs.version }}"
+
+          pyproject = tomllib.loads(pathlib.Path("backend/py/pyproject.toml").read_text(encoding="utf-8"))
+          backend = pyproject["project"]["version"]
+
+          package = json.loads(pathlib.Path("frontend/web/package.json").read_text(encoding="utf-8"))
+          frontend = package["version"]
+
+          errors: list[str] = []
+          if backend != expected:
+              errors.append(f"backend/py/pyproject.toml version={backend} != tag={expected}")
+          if frontend != expected:
+              errors.append(f"frontend/web/package.json version={frontend} != tag={expected}")
+          if backend != frontend:
+              errors.append(f"backend version={backend} != frontend version={frontend}")
+          if errors:
+              raise SystemExit("Version mismatch:\\n- " + "\\n- ".join(errors))
+          print(f"OK: backend={backend} frontend={frontend} tag={expected}")
+          PY
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build + push api image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: dockers/backend/Dockerfile
+          platforms: ${{ env.PLATFORMS }}
+          push: true
+          tags: ${{ steps.vars.outputs.api_tags }}
+          labels: ${{ steps.vars.outputs.oci_labels }}
+          build-args: |
+            CI=true
+            USE_CN_MIRROR=0
+          cache-from: type=gha,scope=crystalith-api
+          cache-to: type=gha,mode=max,scope=crystalith-api
+
+      - name: Build + push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: dockers/frontend/Dockerfile
+          platforms: ${{ env.PLATFORMS }}
+          push: true
+          tags: ${{ steps.vars.outputs.web_tags }}
+          labels: ${{ steps.vars.outputs.oci_labels }}
+          build-args: |
+            CI=true
+            USE_CN_MIRROR=0
+          cache-from: type=gha,scope=crystalith-web
+          cache-to: type=gha,mode=max,scope=crystalith-web
+
+      - name: Post-push smoke (pull + /health)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="${{ steps.vars.outputs.version }}"
+          api_image="${API_IMAGE}:${version}"
+          web_image="${WEB_IMAGE}:${version}"
+
+          echo "Pulling ${api_image}"
+          docker pull "${api_image}"
+          echo "Pulling ${web_image}"
+          docker pull "${web_image}"
+
+          docker network create crystalith-smoke >/dev/null 2>&1 || true
+
+          cleanup() {
+            docker rm -f crystalith-api crystalith-web >/dev/null 2>&1 || true
+            docker network rm crystalith-smoke >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker run -d --name crystalith-api --network crystalith-smoke --network-alias api \
+            -e AUTO_DB_INIT=1 \
+            -e CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED=0 \
+            -p 8032:8032 \
+            "${api_image}"
+
+          echo "Waiting for api /health..."
+          for i in $(seq 1 60); do
+            if curl -fsS "http://127.0.0.1:8032/health" >/dev/null; then
+              echo "api healthy"
+              break
+            fi
+            sleep 1
+            if [[ "${i}" -eq 60 ]]; then
+              echo "api did not become healthy in time" >&2
+              docker logs crystalith-api || true
+              exit 1
+            fi
+          done
+
+          docker run -d --name crystalith-web --network crystalith-smoke \
+            -p 8080:8080 \
+            "${web_image}"
+
+          echo "Waiting for web -> api /health..."
+          for i in $(seq 1 60); do
+            if curl -fsS "http://127.0.0.1:8080/health" >/dev/null; then
+              echo "web healthy (reverse proxy ok)"
+              break
+            fi
+            sleep 1
+            if [[ "${i}" -eq 60 ]]; then
+              echo "web did not become healthy in time" >&2
+              docker logs crystalith-web || true
+              exit 1
+            fi
+          done
+
+          curl -fsS "http://127.0.0.1:8032/health" >/dev/null
+          curl -fsS "http://127.0.0.1:8080/health" >/dev/null
+          echo "Smoke checks passed."

@@ -13,6 +13,58 @@ cp .env.example .env
 docker compose --env-file .env -f deployments/prod/docker-compose.yml up -d --build
 ```
 
+Build note (China mirrors):
+- By default, the Dockerfiles may use China mirrors to speed up builds.
+- In CI, mirrors are disabled automatically.
+- To disable locally: `USE_CN_MIRROR=0 docker compose ... --build`
+
+## Using GHCR prebuilt images (no local build)
+
+If you prefer not to build from source, you can pull the versioned runtime images from GHCR.
+
+Network note (proxy):
+- If you have trouble pulling images from GHCR, configure Docker to use a proxy.
+- Example one-off environment (adjust for your setup): `HTTPS_PROXY=http://127.0.0.1:20171`
+
+Recommended tag selection:
+- Prefer an exact version tag: `X.Y.Z`
+- Use `sha-<shortsha>` only for debugging/repro
+- Avoid `latest` for production pinning
+
+Minimal example (core-only):
+
+```bash
+export OWNER="<github-org-or-user>"
+export VERSION="X.Y.Z"
+
+docker pull "ghcr.io/${OWNER}/crystalith-api:${VERSION}"
+docker pull "ghcr.io/${OWNER}/crystalith-web:${VERSION}"
+
+docker network create crystalith-smoke >/dev/null 2>&1 || true
+
+docker run -d --name crystalith-api --network crystalith-smoke --network-alias api \
+  -e AUTO_DB_INIT=1 \
+  -e CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED=0 \
+  -v "$PWD/data:/app/backend/py/data" \
+  -v "$PWD/config:/app/config:ro" \
+  -e CRYSTALITH_CONFIG_PATH=/app/config/app.yaml \
+  -p 8032:8032 \
+  "ghcr.io/${OWNER}/crystalith-api:${VERSION}"
+
+docker run -d --name crystalith-web --network crystalith-smoke \
+  -p 8080:8080 \
+  "ghcr.io/${OWNER}/crystalith-web:${VERSION}"
+
+curl -fsS "http://localhost:8080/health"
+```
+
+Cleanup:
+
+```bash
+docker rm -f crystalith-web crystalith-api
+docker network rm crystalith-smoke
+```
+
 Then open:
 - Web UI: `http://localhost:${CL_WEB_PORT:-8080}`
 - Health: `http://localhost:${CL_WEB_PORT:-8080}/health`

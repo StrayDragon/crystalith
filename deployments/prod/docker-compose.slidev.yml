@@ -21,6 +21,8 @@ services:
       context: ../..
       dockerfile: dockers/slidev/Dockerfile
       args:
+        CI: ${CI:-}
+        USE_CN_MIRROR: ${USE_CN_MIRROR:-1}
         NODE_IMAGE: ${NODE_IMAGE:-node:20-trixie-slim}
         PNPM_VERSION: ${PNPM_VERSION:-10.29.2}
         NPM_REGISTRY: ${NPM_REGISTRY:-}

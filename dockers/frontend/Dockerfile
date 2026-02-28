@@ -3,15 +3,24 @@ ARG NGINX_IMAGE=nginx:1.29.5-trixie
 
 FROM ${NODE_IMAGE} AS build
 
+ARG USE_CN_MIRROR=1
+ARG CI=""
 ARG NPM_REGISTRY=""
 ARG PNPM_VERSION=10.29.2
 
 WORKDIR /app/frontend/web
 
 RUN set -eux; \
-  if [ -n "$NPM_REGISTRY" ]; then \
-    npm config set registry "$NPM_REGISTRY"; \
-    export COREPACK_NPM_REGISTRY="$NPM_REGISTRY"; \
+  use_cn_mirror="1"; \
+  case "${USE_CN_MIRROR:-1}" in 0|false|no|off) use_cn_mirror="0" ;; esac; \
+  case "${CI:-}" in ""|0|false|no|off) ;; *) use_cn_mirror="0" ;; esac; \
+  npm_registry="${NPM_REGISTRY:-}"; \
+  if [ -z "$npm_registry" ] && [ "$use_cn_mirror" = "1" ]; then \
+    npm_registry="https://registry.npmmirror.com"; \
+  fi; \
+  if [ -n "$npm_registry" ]; then \
+    npm config set registry "$npm_registry"; \
+    export COREPACK_NPM_REGISTRY="$npm_registry"; \
   fi; \
   corepack enable; \
   corepack prepare "pnpm@${PNPM_VERSION}" --activate
