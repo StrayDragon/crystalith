@@ -15,10 +15,16 @@ Fern configuration lives in:
 
 ## Minimal example
 
+Base URL (no `/v1`):
+- Local dev (`cd backend/py && just dev`): `http://127.0.0.1:8032`
+- Docker Compose (same entrypoint as Web UI): `http://localhost:${CL_WEB_PORT:-8080}`
+
+Note: Port `8000` is typically an optional dependency (e.g. Chroma), not the Crystalith API.
+
 ```python
 from crystalith import CrystalithClient
 
-client = CrystalithClient(base_url="http://localhost:8000")
+client = CrystalithClient(base_url="http://127.0.0.1:8032")
 
 notebooks = client.notebooks.list_notebooks()
 notebook = client.notebooks.create_notebook(name="Demo")

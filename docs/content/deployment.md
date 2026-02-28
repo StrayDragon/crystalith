@@ -17,6 +17,9 @@ Then open:
 - Web UI: `http://localhost:${CL_WEB_PORT:-8080}`
 - Health: `http://localhost:${CL_WEB_PORT:-8080}/health`
 - Dependency health: `http://localhost:${CL_WEB_PORT:-8080}/health/dependencies`
+- API (via Nginx front door): `http://localhost:${CL_WEB_PORT:-8080}/v1/`
+
+Note: The API is served through the `web` (Nginx) front door. Requests to `/v1/*` are reverse-proxied to the internal `api:8032` service.
 
 ## Optional Overlays
 
