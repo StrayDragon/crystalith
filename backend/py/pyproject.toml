@@ -1,7 +1,7 @@
 [project]
 name = "crystalith"
 version = "0.1.0"
-description = "Add your description here"
+description = "Notebook-centric AI workspace with RAG over your sources."
 readme = "README.md"
 authors = [
     { name = "straydragon", email = "straydragonl@foxmail.com" }

@@ -11,6 +11,13 @@ Notebook-centric AI workspace with RAG over your sources.
   - `just docs-serve`
   - `just docs-build`
 
+## Community
+
+- Contributing: `CONTRIBUTING.md`
+- Security: `SECURITY.md`
+- Changelog: `CHANGELOG.md`
+- License: `LICENSE` (Apache-2.0)
+
 ## Quick start (local dev)
 
 Backend:
