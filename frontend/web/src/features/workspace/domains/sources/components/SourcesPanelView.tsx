@@ -48,6 +48,7 @@ import type {
 } from '../useSources';
 import { toast } from '../../../../../shared/toast';
 import { copyToClipboard } from '../../../../../shared/clipboard';
+import { t } from '../../../../../shared/i18n';
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
 import ConfirmPopover from '../../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../../shared/layer';
@@ -68,6 +69,21 @@ const SourceDetailDialog = lazy(() => import('../SourceDetailDialog'));
 const ResearchDetailPanel = lazy(() => import('../../research/ResearchDetailPanel'));
 
 type ExtractorType = ExtractorInfo['type'];
+
+const SEARCH_ENGINE_WEB = 'Web' as const;
+type SearchEngine = typeof SEARCH_ENGINE_WEB;
+
+const SEARCH_MODES = ['Fast Research', 'Deep Research'] as const;
+type SearchMode = (typeof SEARCH_MODES)[number];
+
+function normalizeSearchMode(value: string | null): SearchMode {
+  if (!value) return 'Fast Research';
+  return SEARCH_MODES.includes(value as SearchMode) ? (value as SearchMode) : 'Fast Research';
+}
+
+function labelForSearchMode(mode: SearchMode): string {
+  return mode === 'Deep Research' ? t('sources.search.mode.deep') : t('sources.search.mode.fast');
+}
 
 function splitUploadFiles(files: File[]) {
   const supported: File[] = [];
@@ -199,11 +215,11 @@ function SourcesPanelView({
   const uploadDisabled = !isConnected || uploadState === 'loading';
   const isSearching = searchState === 'loading';
   const [searchQuery, setSearchQuery] = useState('');
-  const [engine, setEngine] = useState('Web');
+  const [engine, setEngine] = useState<SearchEngine>(SEARCH_ENGINE_WEB);
   // Load search mode preference from localStorage
-  const [mode, setMode] = useState(() => {
+  const [mode, setMode] = useState<SearchMode>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('crystalith_search_mode') || 'Fast Research';
+      return normalizeSearchMode(localStorage.getItem('crystalith_search_mode'));
     }
     return 'Fast Research';
   });
@@ -223,7 +239,7 @@ function SourcesPanelView({
   const [highlightedSourceId, setHighlightedSourceId] = useState<number | null>(null);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   const [uploadDragActive, setUploadDragActive] = useState(false);
-  const [uploadHint, setUploadHint] = useState('支持拖拽多个文件到上传按钮区域');
+  const [uploadHint, setUploadHint] = useState(t('sources.upload.hint.default'));
 
   // Add search results dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -491,21 +507,21 @@ function SourcesPanelView({
     // Deep Research mode
     if (mode === 'Deep Research') {
       if (!isConnected) {
-        toast.error('未连接到后端服务，暂不支持深度研究');
+        toast.error(t('sources.research.backend_disconnected'));
         return;
       }
       if (!notebookId) {
-        toast.error('请先创建笔记本');
+        toast.error(t('sources.research.require_notebook'));
         return;
       }
       if (!searchQuery.trim()) {
-        toast.error('请输入研究主题');
+        toast.error(t('sources.research.require_topic'));
         return;
       }
 
       // 检查是否正在加载
       if (research.isLoading) {
-        toast.error('请稍候，操作正在进行中');
+        toast.error(t('sources.research.busy'));
         return;
       }
 
@@ -514,7 +530,7 @@ function SourcesPanelView({
         (s) => ['planning', 'searching', 'analyzing', 'waiting_user'].includes(s.status)
       );
       if (hasActiveResearch) {
-        toast.error('已有研究任务正在进行中，请等待完成或取消后再创建新研究');
+        toast.error(t('sources.research.active_exists'));
         return;
       }
 
@@ -525,10 +541,10 @@ function SourcesPanelView({
           // SSE subscription is handled by useEffect when activeSession changes
           await research.startResearch(session.id);
           setSearchQuery('');
-          toast.success('深度研究已启动');
+          toast.success(t('sources.research.started'));
         }
       } catch (error) {
-        toast.error('创建研究失败');
+        toast.error(t('sources.research.create_failed'));
       }
       return;
     }
@@ -549,7 +565,7 @@ function SourcesPanelView({
     research.clearEvents();
     const session = await research.fetchSession(sessionId);
     if (!session) {
-      toast.error('获取研究详情失败');
+      toast.error(t('sources.research.detail_fetch_failed'));
       return;
     }
     setResearchDetailOpen(true);
@@ -597,7 +613,7 @@ function SourcesPanelView({
     research.clearEvents();
     const resumed = await research.resumeResearch(research.activeSession.id);
     if (!resumed) {
-      toast.error('继续研究失败');
+      toast.error(t('sources.research.resume_failed'));
     }
   }, [research]);
 
@@ -641,7 +657,7 @@ function SourcesPanelView({
       {/* Fixed Header: Upload & Search - Always visible */}
       <div className="flex-shrink-0 px-3 sm:px-4 pt-3 sm:pt-4 pb-2 flex flex-col gap-3 border-b border-gray-100 dark:border-slate-700">
         {/* Upload Button */}
-        <Tooltip content="支持 .txt / .md / .markdown / .pdf 文件，可多选与拖拽">
+        <Tooltip content={t('sources.upload.tooltip')}>
           <div
             className={`rounded-full ${uploadDragActive ? 'ring-2 ring-blue-200' : ''}`}
             onDragOver={(event) => {
@@ -661,16 +677,19 @@ function SourcesPanelView({
               if (!droppedFiles.length) return;
               const { supported, unsupported } = splitUploadFiles(droppedFiles);
               if (unsupported.length > 0) {
-                toast.warning(`已忽略 ${unsupported.length} 个不支持的文件，仅支持 .txt/.md/.markdown/.pdf`);
+                toast.warning(t('sources.upload.toast.unsupported', { count: unsupported.length }));
               }
               if (supported.length === 0) {
-                setUploadHint('仅支持 .txt / .md / .markdown / .pdf 文件');
+                setUploadHint(t('sources.upload.hint.only_supported'));
                 return;
               }
               setUploadHint(
                 unsupported.length > 0
-                  ? `已过滤 ${unsupported.length} 个文件，准备上传 ${supported.length} 个文件`
-                  : '支持拖拽多个文件到上传按钮区域',
+                  ? t('sources.upload.hint.filtered_ready', {
+                      unsupported: unsupported.length,
+                      supported: supported.length,
+                    })
+                  : t('sources.upload.hint.default'),
               );
               onUpload(supported);
             }}
@@ -689,10 +708,10 @@ function SourcesPanelView({
                 <CloudUploadIcon style={{ fontSize: 18 }} />
               )}
               {uploadDragActive
-                ? '拖放文件到此处'
+                ? t('sources.upload.drag_drop')
                 : uploadState === 'loading'
-                  ? '上传中…'
-                  : '添加来源'}
+                  ? t('sources.upload.uploading')
+                  : t('sources.upload.add_sources')}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -703,7 +722,7 @@ function SourcesPanelView({
                   const selectedFiles = Array.from(event.target.files ?? []);
                   const { supported, unsupported } = splitUploadFiles(selectedFiles);
                   if (unsupported.length > 0) {
-                    toast.warning(`已忽略 ${unsupported.length} 个不支持的文件，仅支持 .txt/.md/.markdown/.pdf`);
+                    toast.warning(t('sources.upload.toast.unsupported', { count: unsupported.length }));
                   }
                   if (supported.length > 0) {
                     onUpload(supported);
@@ -715,7 +734,7 @@ function SourcesPanelView({
                 disabled={uploadDisabled}
                 id="source-upload-input"
                 name="sourceUpload"
-                aria-label="上传来源文件"
+                aria-label={t('sources.upload.aria_label')}
               />
             </Button>
           </div>
@@ -792,7 +811,7 @@ function SourcesPanelView({
               </div>
               <input
                 className="w-full h-9 pl-10 pr-10 rounded-lg bg-transparent border-none outline-none text-sm text-gray-800 placeholder-gray-500 focus:ring-0"
-                placeholder="在网络中搜索新来源"
+                placeholder={t('sources.search.placeholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
@@ -803,7 +822,7 @@ function SourcesPanelView({
                 }}
                 id="source-search-input"
                 name="sourceSearch"
-                aria-label="在网络中搜索新来源"
+                aria-label={t('sources.search.aria_label')}
               />
               <div className="absolute top-2/4 right-1 -translate-y-2/4">
                  <IconButton
@@ -822,7 +841,7 @@ function SourcesPanelView({
             {/* Engine indicator (Web only, Scholar/Docs removed for now) */}
             <div className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border border-gray-300 bg-white text-gray-800 text-[11px]">
               {getEngineIcon()}
-              <span>Web</span>
+              <span>{t('sources.search.engine.web')}</span>
             </div>
 
             {/* Mode Select */}
@@ -834,12 +853,12 @@ function SourcesPanelView({
                   className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border-gray-300 bg-white dark:bg-slate-900 text-gray-800 normal-case font-normal text-[11px] hover:bg-gray-100 dark:hover:bg-slate-700"
                 >
                   {getModeIcon()}
-                  {mode}
+                  {labelForSearchMode(mode)}
                   <ExpandMoreIcon style={{ fontSize: 12 }} />
                 </Button>
               </MenuHandler>
               <MenuList className="min-w-[120px] p-1">
-                {['Fast Research', 'Deep Research'].map((opt) => {
+                {SEARCH_MODES.map((opt) => {
                   const modeTestId = opt === 'Deep Research'
                     ? 'mode-deep-research'
                     : 'mode-fast-research';
@@ -850,7 +869,7 @@ function SourcesPanelView({
                     className={`py-1.5 px-3 text-xs ${mode === opt ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
                     onClick={() => setMode(opt)}
                   >
-                    {opt}
+                    {labelForSearchMode(opt)}
                   </MenuItem>
                 );
                 })}
@@ -866,7 +885,7 @@ function SourcesPanelView({
           {/* Search Status - only show loading state */}
           {isSearching && (
             <Typography variant="small" className="text-[11px] text-gray-600 font-medium px-1">
-              搜索中…
+              {t('sources.search.searching')}
             </Typography>
           )}
 

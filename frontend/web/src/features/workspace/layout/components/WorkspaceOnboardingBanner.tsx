@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Close as CloseIcon } from '@mui/icons-material';
 
 import type { WorkspaceReadiness } from '../hooks/useWorkspaceReadiness';
+import { t } from '../../../../shared/i18n';
 
 const ONBOARDING_DISMISSED_KEY = 'crystalith_workspace_onboarding_dismissed_v1';
 
@@ -100,11 +101,13 @@ export default function WorkspaceOnboardingBanner({
     switch (readiness.kind) {
       case 'not_connected': {
         const title =
-          readiness.connectionState === 'connecting' ? '正在连接后端…' : '后端连接失败';
+          readiness.connectionState === 'connecting'
+            ? t('workspace.onboarding.connecting_title')
+            : t('workspace.onboarding.connection_failed_title');
         const description =
           readiness.connectionState === 'connecting'
-            ? '首次加载可能需要几秒；若长时间无响应，请确认后端服务已启动。'
-            : readiness.error || '未连接到后端服务，请检查后重试。';
+            ? t('workspace.onboarding.connecting_description')
+            : readiness.error || t('workspace.onboarding.connection_failed_description');
         return {
           title,
           description,
@@ -112,13 +115,13 @@ export default function WorkspaceOnboardingBanner({
           actions: (
             <>
               <ActionButton variant="primary" onClick={onRetryConnection}>
-                重试连接
+                {t('workspace.onboarding.retry_connection')}
               </ActionButton>
               <ActionButton variant="secondary" onClick={onOpenDiagnostics}>
-                查看诊断
+                {t('workspace.onboarding.open_diagnostics')}
               </ActionButton>
               <ActionButton variant="ghost" onClick={onOpenDeploymentDocs}>
-                打开部署文档
+                {t('workspace.onboarding.open_deployment_docs')}
               </ActionButton>
             </>
           ),
@@ -127,19 +130,19 @@ export default function WorkspaceOnboardingBanner({
 
       case 'no_notebook':
         return {
-          title: '先创建一个笔记本',
-          description: '笔记本用于隔离不同项目的来源、对话与输出。',
+          title: t('workspace.onboarding.no_notebook_title'),
+          description: t('workspace.onboarding.no_notebook_description'),
           tone: 'info',
           actions: (
             <>
               <ActionButton variant="primary" onClick={onCreateNotebook}>
-                创建笔记本
+                {t('workspace.onboarding.create_notebook')}
               </ActionButton>
               <ActionButton variant="secondary" onClick={onOpenCommandPalette}>
-                命令面板（Ctrl+K）
+                {t('workspace.onboarding.command_palette')}
               </ActionButton>
               <ActionButton variant="ghost" onClick={onOpenShortcutHelp}>
-                快捷键帮助
+                {t('workspace.onboarding.shortcut_help')}
               </ActionButton>
             </>
           ),
@@ -147,19 +150,19 @@ export default function WorkspaceOnboardingBanner({
 
       case 'no_sources':
         return {
-          title: '导入一些来源',
-          description: '上传文件、从 URL 导入，或先做一次搜索，把内容放进当前笔记本。',
+          title: t('workspace.onboarding.no_sources_title'),
+          description: t('workspace.onboarding.no_sources_description'),
           tone: 'info',
           actions: (
             <>
               <ActionButton variant="primary" onClick={onUploadSources}>
-                上传文件
+                {t('workspace.onboarding.upload_sources')}
               </ActionButton>
               <ActionButton variant="secondary" onClick={onAddSourceFromUrl}>
-                从 URL 导入
+                {t('workspace.onboarding.add_source_from_url')}
               </ActionButton>
               <ActionButton variant="secondary" onClick={onFocusSourceSearch}>
-                搜索导入
+                {t('workspace.onboarding.focus_source_search')}
               </ActionButton>
             </>
           ),
@@ -167,19 +170,19 @@ export default function WorkspaceOnboardingBanner({
 
       case 'no_session':
         return {
-          title: '开始一个会话',
-          description: '有了来源后，创建会话开始提问；也可以直接打开 Studio 生成输出。',
+          title: t('workspace.onboarding.no_session_title'),
+          description: t('workspace.onboarding.no_session_description'),
           tone: 'info',
           actions: (
             <>
               <ActionButton variant="primary" onClick={onStartSession}>
-                一键开始会话
+                {t('workspace.onboarding.start_session')}
               </ActionButton>
               <ActionButton variant="secondary" onClick={onFocusChat}>
-                去提问
+                {t('workspace.onboarding.focus_chat')}
               </ActionButton>
               <ActionButton variant="secondary" onClick={onOpenSlidesStudio}>
-                打开 Slides Studio
+                {t('workspace.onboarding.open_slides_studio')}
               </ActionButton>
             </>
           ),
@@ -187,19 +190,19 @@ export default function WorkspaceOnboardingBanner({
 
       case 'ready':
         return {
-          title: '准备就绪',
-          description: '试试提问（对话面板），或直接生成一个输出（例如 Slides）。',
+          title: t('workspace.onboarding.ready_title'),
+          description: t('workspace.onboarding.ready_description'),
           tone: 'success',
           actions: (
             <>
               <ActionButton variant="primary" onClick={onFocusChat}>
-                开始提问
+                {t('workspace.onboarding.ask_question')}
               </ActionButton>
               <ActionButton variant="secondary" onClick={onOpenSlidesStudio}>
-                生成 Slides
+                {t('workspace.onboarding.generate_slides')}
               </ActionButton>
               <ActionButton variant="ghost" onClick={onOpenCommandPalette}>
-                命令面板（Ctrl+K）
+                {t('workspace.onboarding.command_palette')}
               </ActionButton>
             </>
           ),
@@ -235,7 +238,7 @@ export default function WorkspaceOnboardingBanner({
 
   return (
     <section
-      aria-label="Workspace 引导提示"
+      aria-label={t('workspace.onboarding.banner_aria')}
       className={`mt-2 rounded-xl border ${borderTone} px-3 py-2 shadow-sm`}
     >
       <div className="flex items-start gap-3">
@@ -253,7 +256,7 @@ export default function WorkspaceOnboardingBanner({
           <button
             type="button"
             onClick={handleDismiss}
-            aria-label="关闭引导提示"
+            aria-label={t('workspace.onboarding.dismiss_banner_aria')}
             className="flex-shrink-0 w-7 h-7 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors flex items-center justify-center"
           >
             <CloseIcon sx={{ fontSize: 16 }} />

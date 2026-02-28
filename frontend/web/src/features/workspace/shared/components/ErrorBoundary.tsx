@@ -1,5 +1,7 @@
 import { Component, Fragment, type ErrorInfo, type ReactNode } from 'react';
 
+import { t } from '../../../../shared/i18n';
+
 type ErrorBoundaryProps = {
   children: ReactNode;
   title?: string;
@@ -36,9 +38,9 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
 
   render() {
     if (this.state.hasError) {
-      const title = this.props.title ?? '组件加载失败';
+      const title = this.props.title ?? t('workspace.error_boundary.title');
       const description =
-        this.props.description ?? '请稍后重试，若问题持续请刷新页面。';
+        this.props.description ?? t('workspace.error_boundary.description');
 
       return (
         <div className="m-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -49,7 +51,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
             className="mt-3 inline-flex items-center rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
             onClick={this.handleRetry}
           >
-            重试
+            {t('common.retry')}
           </button>
         </div>
       );

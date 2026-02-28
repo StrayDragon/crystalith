@@ -32,6 +32,7 @@ import {
 } from '../../../../api/generated';
 import { buildSlidevPreviewUrl } from '@crystalith-slidev';
 import { toast } from '../../../../shared/toast';
+import { t } from '../../../../shared/i18n';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { toApiGenerationPreference, useGenerationPreference } from '../../shared/hooks/useGenerationPreference';
 import { buildFrontmatterPreview, normalizeGenerationConfig } from './utils/slides';
@@ -224,7 +225,7 @@ export default function SlidesStudioDialog({
   });
   const slidesConfig = useMemo(() => normalizeSlidesConfig(slidesConfigData), [slidesConfigData]);
   const slidesConfigErrorMessage = !isConnected
-    ? '未连接到后端服务。'
+    ? t('studio.slides.connection_required')
     : slidesConfigError
       ? '演示配置加载失败。'
       : '';
@@ -539,13 +540,13 @@ export default function SlidesStudioDialog({
   const saveInputStage = useCallback(async () => {
     if (!notebookId) return null;
     if (!isConnected) {
-      setError('未连接到后端服务。');
+      setError(t('studio.slides.connection_required'));
       return null;
     }
     setError('');
     const resolvedSourceIds = await resolveSourceIds();
     if (resolvedSourceIds.length === 0) {
-      setError('请先选择来源。');
+      setError(t('studio.slides.require_sources'));
       return null;
     }
     const payload = {
@@ -585,11 +586,11 @@ export default function SlidesStudioDialog({
     if (!onQueueSlides) return;
     if (isQueueing) return;
     if (!isConnected) {
-      toast.error('未连接到后端服务。');
+      toast.error(t('studio.slides.connection_required'));
       return;
     }
     if (!notebookId) {
-      toast.error('请先创建笔记本。');
+      toast.error(t('studio.slides.require_notebook'));
       return;
     }
     setError('');
@@ -597,8 +598,8 @@ export default function SlidesStudioDialog({
     try {
       const resolvedSourceIds = await resolveSourceIds();
       if (resolvedSourceIds.length === 0) {
-        setError('请先选择来源。');
-        toast.error('请先选择来源。');
+        setError(t('studio.slides.require_sources'));
+        toast.error(t('studio.slides.require_sources'));
         return;
       }
       const job = await onQueueSlides({
@@ -609,11 +610,11 @@ export default function SlidesStudioDialog({
         modelId: configModelId ?? undefined,
       });
       if (job) {
-        toast.success('已加入队列');
+        toast.success(t('studio.slides.queue.added'));
         onClose();
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : '加入队列失败，请稍后重试。';
+      const message = err instanceof Error ? err.message : t('studio.slides.queue.failed_default');
       setError(message);
       toast.error(message);
     } finally {
@@ -635,7 +636,7 @@ export default function SlidesStudioDialog({
   const handleSaveOutline = useCallback(async () => {
     if (!notebookId || !draft) return;
     if (!isConnected) {
-      setError('未连接到后端服务。');
+      setError(t('studio.slides.connection_required'));
       return;
     }
     const outline: SlideOutline = {
@@ -655,7 +656,7 @@ export default function SlidesStudioDialog({
   const handleSaveMarkdown = useCallback(async () => {
     if (!notebookId || !draft) return;
     if (!isConnected) {
-      setError('未连接到后端服务。');
+      setError(t('studio.slides.connection_required'));
       return;
     }
     const updated = await updateSlidesMarkdown({
@@ -756,7 +757,7 @@ export default function SlidesStudioDialog({
   const handleGenerateOutline = useCallback(async () => {
     if (!notebookId) return;
     if (!isConnected) {
-      setError('未连接到后端服务。');
+      setError(t('studio.slides.connection_required'));
       return;
     }
     const saved = await saveInputStage();
@@ -774,11 +775,11 @@ export default function SlidesStudioDialog({
   const handleGenerateMarkdown = useCallback(async () => {
     if (!notebookId || !draft) return;
     if (!isConnected) {
-      setError('未连接到后端服务。');
+      setError(t('studio.slides.connection_required'));
       return;
     }
     if (!draft.sourceIds || draft.sourceIds.length === 0) {
-      setError('请先选择来源。');
+      setError(t('studio.slides.require_sources'));
       return;
     }
     await handleSaveOutline();
@@ -805,7 +806,7 @@ export default function SlidesStudioDialog({
   const handleGenerateAll = useCallback(async () => {
     if (!notebookId) return;
     if (!isConnected) {
-      setError('未连接到后端服务。');
+      setError(t('studio.slides.connection_required'));
       return;
     }
     const saved = await saveInputStage();
@@ -839,7 +840,7 @@ export default function SlidesStudioDialog({
 
   const buildPreview = useCallback(async (force = false) => {
     if (!isConnected) {
-      setPreviewError('未连接到后端服务。');
+      setPreviewError(t('studio.slides.connection_required'));
       return;
     }
     if (!markdown.trim()) {
@@ -1422,7 +1423,7 @@ export default function SlidesStudioDialog({
       return { tone: 'blue', message: '正在生成中，请稍候...' };
     }
     if (queueStatus === 'queued') {
-      return { tone: 'gray', message: '已加入队列，等待生成...' };
+      return { tone: 'gray', message: t('studio.slides.queue.pending') };
     }
     if (queueStatus === 'running') {
       return { tone: 'blue', message: '正在生成中，请稍候...' };

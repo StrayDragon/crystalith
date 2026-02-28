@@ -10,6 +10,7 @@ import {
 import { copyToClipboard } from '../../../../shared/clipboard';
 import { useLayer } from '../../../../shared/layer';
 import { toast } from '../../../../shared/toast';
+import { t } from '../../../../shared/i18n';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import {
   toOptionalServiceDiagnostics,
@@ -39,6 +40,31 @@ function toneForStatus(status: string): { bg: string; text: string } {
   }
 }
 
+function labelForOptionalStatus(status: string): string {
+  switch (status) {
+    case 'healthy':
+      return t('workspace.diagnostics.status.healthy');
+    case 'degraded':
+      return t('workspace.diagnostics.status.degraded');
+    case 'disabled':
+      return t('workspace.diagnostics.status.disabled');
+    case 'unknown':
+      return t('workspace.diagnostics.status.unknown');
+    default:
+      return status;
+  }
+}
+
+function labelForCoreHealth(healthy: boolean | null | undefined): string {
+  if (healthy === true) {
+    return t('workspace.diagnostics.status.healthy');
+  }
+  if (healthy === false) {
+    return t('workspace.diagnostics.status.unhealthy');
+  }
+  return t('workspace.diagnostics.status.na');
+}
+
 export default function DiagnosticsDialog({
   open,
   onClose,
@@ -60,7 +86,7 @@ export default function DiagnosticsDialog({
 
   const handleCopy = useCallback(async (value: string) => {
     await copyToClipboard(value);
-    toast.success('已复制到剪贴板');
+    toast.success(t('common.copied_to_clipboard'));
   }, []);
 
   const handleBackdropClick = useCallback(
@@ -79,7 +105,7 @@ export default function DiagnosticsDialog({
       style={modalStyle}
       role="dialog"
       aria-modal="true"
-      aria-label="健康与诊断"
+      aria-label={t('workspace.diagnostics.title')}
       onClick={handleBackdropClick}
     >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
@@ -92,10 +118,12 @@ export default function DiagnosticsDialog({
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-slate-700">
           <div className="min-w-0">
             <div className="text-base font-semibold text-gray-900 dark:text-slate-100">
-              健康 / 诊断
+              {t('workspace.diagnostics.title')}
             </div>
             <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400">
-              {data?.generated_at ? `生成时间：${data.generated_at}` : '用于排查依赖服务状态与修复建议'}
+              {data?.generated_at
+                ? t('workspace.diagnostics.generated_at', { timestamp: data.generated_at })
+                : t('workspace.diagnostics.description')}
             </div>
           </div>
 
@@ -104,7 +132,7 @@ export default function DiagnosticsDialog({
               type="button"
               onClick={onRefresh}
               className="w-9 h-9 rounded-xl border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center justify-center text-gray-700 dark:text-slate-200"
-              aria-label="刷新诊断"
+              aria-label={t('workspace.diagnostics.refresh_aria')}
             >
               <RefreshIcon sx={{ fontSize: 18 }} />
             </button>
@@ -112,7 +140,7 @@ export default function DiagnosticsDialog({
               type="button"
               onClick={onClose}
               className="w-9 h-9 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 flex items-center justify-center text-gray-700 dark:text-slate-200"
-              aria-label="关闭"
+              aria-label={t('common.close')}
             >
               <CloseIcon sx={{ fontSize: 18 }} />
             </button>
@@ -122,21 +150,21 @@ export default function DiagnosticsDialog({
         <div className="p-5 max-h-[70vh] overflow-y-auto">
           {error ? (
             <div className="mb-4 rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50/60 dark:bg-red-950/20 px-4 py-3">
-              <div className="text-sm font-semibold text-red-800 dark:text-red-200">诊断失败</div>
+              <div className="text-sm font-semibold text-red-800 dark:text-red-200">{t('workspace.diagnostics.failure_title')}</div>
               <div className="mt-1 text-xs text-red-700 dark:text-red-300">{error}</div>
             </div>
           ) : null}
 
           {isLoading && !data ? (
             <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-gray-700 dark:text-slate-200">
-              加载中…
+              {t('common.loading')}
             </div>
           ) : null}
 
           {data?.core ? (
             <div className="mb-4">
               <div className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-2">
-                Core
+                {t('workspace.diagnostics.section.core')}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {Object.entries(data.core).map(([key, service]) => (
@@ -153,7 +181,7 @@ export default function DiagnosticsDialog({
                           service.healthy ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
                         }`}
                       >
-                        {service.healthy === true ? 'healthy' : service.healthy === false ? 'unhealthy' : 'n/a'}
+                        {labelForCoreHealth(service.healthy)}
                       </div>
                     </div>
                     {service.note ? (
@@ -169,12 +197,13 @@ export default function DiagnosticsDialog({
 
           <div>
             <div className="text-xs font-semibold text-gray-700 dark:text-slate-200 mb-2">
-              Optional Services
+              {t('workspace.diagnostics.section.optional')}
             </div>
 
             <div className="space-y-2">
               {optionalItems.map((item) => {
                 const tone = toneForStatus(item.status);
+                const statusLabel = labelForOptionalStatus(item.status);
                 return (
                   <div
                     key={item.key}
@@ -187,24 +216,24 @@ export default function DiagnosticsDialog({
                             {item.label}
                           </div>
                           <div className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${tone.bg} ${tone.text}`}>
-                            {item.status}
+                            {statusLabel}
                           </div>
                           {!item.enabled ? (
                             <div className="text-[10px] text-gray-500 dark:text-slate-400">
-                              disabled
+                              {t('workspace.diagnostics.disabled_badge')}
                             </div>
                           ) : null}
                         </div>
 
                         {item.endpoint ? (
                           <div className="mt-1 text-[11px] text-gray-600 dark:text-slate-400">
-                            endpoint: <span className="font-mono">{item.endpoint}</span>
+                            {t('workspace.diagnostics.label.endpoint')} <span className="font-mono">{item.endpoint}</span>
                           </div>
                         ) : null}
 
                         {item.errorCode ? (
                           <div className="mt-1 text-[11px] text-gray-600 dark:text-slate-400">
-                            error_code: <span className="font-mono">{item.errorCode}</span>
+                            {t('workspace.diagnostics.label.error_code')} <span className="font-mono">{item.errorCode}</span>
                           </div>
                         ) : null}
 
@@ -218,7 +247,7 @@ export default function DiagnosticsDialog({
                           <div className="mt-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 px-3 py-2">
                             <div className="flex items-center justify-between gap-2">
                               <div className="text-[11px] font-semibold text-gray-800 dark:text-slate-200">
-                                recovery_hint
+                                {t('workspace.diagnostics.label.recovery_hint')}
                               </div>
                               <button
                                 type="button"
@@ -226,7 +255,7 @@ export default function DiagnosticsDialog({
                                 className="px-2 py-1 rounded-md text-[11px] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1"
                               >
                                 <ContentCopyIcon sx={{ fontSize: 14 }} />
-                                复制
+                                {t('common.copy')}
                               </button>
                             </div>
                             <pre className="mt-1 whitespace-pre-wrap text-[11px] text-gray-700 dark:text-slate-300">
@@ -237,14 +266,14 @@ export default function DiagnosticsDialog({
                       </div>
 
                       <div className="flex-shrink-0 text-[10px] text-gray-500 dark:text-slate-400">
-                        {item.lastProbe ? `last_probe: ${item.lastProbe}` : null}
+                        {item.lastProbe ? t('workspace.diagnostics.label.last_probe', { timestamp: item.lastProbe }) : null}
                       </div>
                     </div>
 
                     {item.key === 'ollama' && data?.optional?.ollama?.hosts ? (
                       <div className="mt-3">
                         <div className="text-[11px] font-semibold text-gray-700 dark:text-slate-200 mb-1">
-                          hosts
+                          {t('workspace.diagnostics.section.hosts')}
                         </div>
                         <div className="space-y-1">
                           {Object.entries(data.optional.ollama.hosts).map(([host, hostStatus]) => (
@@ -254,8 +283,10 @@ export default function DiagnosticsDialog({
                             >
                               <span className="font-mono truncate">{host}</span>
                               <span className="text-gray-500 dark:text-slate-400">
-                                {hostStatus.healthy ? 'healthy' : 'degraded'}
-                                {hostStatus.model_count != null ? ` · models=${hostStatus.model_count}` : ''}
+                                {labelForOptionalStatus(hostStatus.healthy ? 'healthy' : 'degraded')}
+                                {hostStatus.model_count != null
+                                  ? ` · ${t('workspace.diagnostics.label.models', { count: hostStatus.model_count })}`
+                                  : ''}
                               </span>
                             </div>
                           ))}
@@ -268,7 +299,7 @@ export default function DiagnosticsDialog({
 
               {optionalItems.length === 0 && !isLoading ? (
                 <div className="text-sm text-gray-600 dark:text-slate-300">
-                  未找到可选服务状态。
+                  {t('workspace.diagnostics.empty_optional')}
                 </div>
               ) : null}
             </div>
