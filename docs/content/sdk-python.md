@@ -5,6 +5,9 @@ The Python SDK is generated from the backend OpenAPI schema via Fern and stored 
 
 - `sdk/client/python`
 
+The import package lives under:
+- `sdk/client/python/src/crystalith_sdk`
+
 Fern configuration lives in:
 - `sdk/configs/fern/fern.config.json`
 - `sdk/configs/fern/generators.yml`
@@ -25,7 +28,7 @@ Auth (optional): if `app.auth.enabled=true`, send `Authorization: Bearer <token>
 ```python
 import os
 
-from crystalith import CrystalithClient
+from crystalith_sdk import CrystalithClient
 
 api_key = os.environ.get("CRYSTALITH_API_KEY")
 headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
@@ -69,6 +72,9 @@ just sdk-gen-python
 
 # Check if Python SDK is up to date (for pre-commit)
 just sdk-check
+
+# Build Python SDK (wheel/sdist)
+just sdk-build-python
 ```
 
 ## Notes
