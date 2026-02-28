@@ -5,6 +5,7 @@ import { Download as DownloadIcon } from '@mui/icons-material';
 import type { OutputItem, OutputTypeId } from '../../shared/types';
 import { getOutputPayloadWarnings, isFallbackOutputPayload } from '../../shared/outputPayload';
 import { LAYER_LEVELS } from '../../../../shared/layer';
+import { t } from '../../../../shared/i18n';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { pluginRegistry } from './plugins';
 import { initializePlugins } from './plugins/registerPlugins';
@@ -47,7 +48,7 @@ export default function OutputContent({ output }: OutputContentProps) {
     <div className="space-y-3">
       {import.meta.env.DEV && warnings.length > 0 ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-          <div className="font-semibold">Debug warnings</div>
+          <div className="font-semibold">{t('common.debug_warnings')}</div>
           <div className="mt-1 flex flex-wrap gap-2">
             {warnings.map((warning, index) => (
               <span

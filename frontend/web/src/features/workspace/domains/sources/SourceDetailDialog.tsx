@@ -48,6 +48,7 @@ import { toast } from '../../../../shared/toast';
 import { useLayer } from '../../../../shared/layer';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { copyToClipboard } from '../../../../shared/clipboard';
+import { t } from '../../../../shared/i18n';
 
 interface SourceDetailDialogProps {
   open: boolean;
@@ -433,7 +434,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
               {source.title}
             </Typography>
             <Typography variant="small" className="text-gray-500 dark:text-slate-400 text-xs font-medium">
-              来源详情 · 支持 RAG 问答
+              {t('sources.detail.subtitle')}
             </Typography>
           </div>
         </div>
@@ -452,7 +453,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
             size="sm"
             onClick={onClose}
             className="rounded-full"
-            aria-label="关闭来源详情"
+            aria-label={t('sources.detail.close_aria')}
           >
             <CloseIcon className="h-4 w-4" />
           </IconButton>
@@ -714,7 +715,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                                   }}
                                 >
                                   <ContentCopyIcon style={{ fontSize: 14 }} />
-                                  复制到剪贴板
+                                  {t('common.copy_to_clipboard')}
                                 </MenuItem>
                                 <MenuItem
                                   className="flex items-center gap-2 text-xs"
@@ -724,7 +725,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
                                   }}
                                 >
                                   <FileDownloadIcon style={{ fontSize: 14 }} />
-                                  下载为 Markdown
+                                  {t('sources.detail.qa_export.download_markdown')}
                                 </MenuItem>
                                 {onSaveQAAsSource && (
                                   <MenuItem

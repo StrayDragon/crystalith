@@ -12,6 +12,7 @@ import {
 import { unwrapData } from '../../../../api/unwrap';
 import { client } from '../../../../api/generated/client.gen';
 import { toast } from '../../../../shared/toast';
+import { t } from '../../../../shared/i18n';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { ChatMessage as WorkspaceChatMessage } from '../../shared/types';
 import {
@@ -414,7 +415,7 @@ export function useChat({
     const s = store.getState();
     if (!s.activeNotebookId || !s.activeSessionId) return;
     if (s.connectionState !== 'live') {
-      toast.warning('未连接到后端服务，暂不支持转换。');
+      toast.warning(t('messages.convert.connection_required'));
       return;
     }
     setIsConverting(true);
@@ -427,10 +428,15 @@ export function useChat({
       if (refreshSources) {
         await refreshSources();
       }
-      toast.success(`已转换为来源：${result.filename}（${result.chunk_count} 个分块）`);
+      toast.success(
+        t('messages.convert.to_source.success', {
+          filename: result.filename,
+          chunkCount: result.chunk_count,
+        }),
+      );
     } catch (error) {
-      const message = error instanceof Error ? error.message : '转换失败';
-      toast.error(`转换失败：${message}`);
+      const message = error instanceof Error ? error.message : t('messages.convert.failure_default');
+      toast.error(t('messages.convert.failure', { message }));
     } finally {
       setIsConverting(false);
     }
@@ -441,7 +447,7 @@ export function useChat({
       const s = store.getState();
       if (!s.activeNotebookId || !s.activeSessionId) return;
       if (s.connectionState !== 'live') {
-        toast.warning('未连接到后端服务，暂不支持转换。');
+        toast.warning(t('messages.convert.connection_required'));
         return;
       }
       setIsConverting(true);
@@ -454,10 +460,10 @@ export function useChat({
         if (refreshOutputs) {
           await refreshOutputs();
         }
-        toast.success(`已转换为笔记：${result.title}`);
+        toast.success(t('messages.convert.to_output.success', { title: result.title }));
       } catch (error) {
-        const message = error instanceof Error ? error.message : '转换失败';
-        toast.error(`转换失败：${message}`);
+        const message = error instanceof Error ? error.message : t('messages.convert.failure_default');
+        toast.error(t('messages.convert.failure', { message }));
       } finally {
         setIsConverting(false);
       }

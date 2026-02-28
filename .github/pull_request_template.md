@@ -27,3 +27,4 @@ Results:
 - [ ] No secrets or tokens committed
 - [ ] Docs updated (if needed)
 - [ ] OpenAPI client regenerated if API changed (`pnpm -C frontend/web run api:sync`)
+- [ ] Critical-path UI copy is centralized via `t()` (avoid new hardcoded strings) / 关键路径文案集中管理（避免新增硬编码）
