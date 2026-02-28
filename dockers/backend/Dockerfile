@@ -4,6 +4,8 @@ ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.10.2
 FROM ${UV_IMAGE} AS uv
 FROM ${PYTHON_IMAGE} AS builder
 
+ARG USE_CN_MIRROR=1
+ARG CI=""
 ARG APT_MIRROR=""
 ARG UV_INDEX_URL=""
 
@@ -15,8 +17,15 @@ WORKDIR /app/backend/py
 COPY --from=uv /uv /uvx /bin/
 
 RUN set -eux; \
-  if [ -n "$APT_MIRROR" ]; then \
-    apt_mirror="${APT_MIRROR%/}"; \
+  use_cn_mirror="1"; \
+  case "${USE_CN_MIRROR:-1}" in 0|false|no|off) use_cn_mirror="0" ;; esac; \
+  case "${CI:-}" in ""|0|false|no|off) ;; *) use_cn_mirror="0" ;; esac; \
+  apt_mirror="${APT_MIRROR:-}"; \
+  if [ -z "$apt_mirror" ] && [ "$use_cn_mirror" = "1" ]; then \
+    apt_mirror="https://mirrors.tuna.tsinghua.edu.cn/debian"; \
+  fi; \
+  if [ -n "$apt_mirror" ]; then \
+    apt_mirror="${apt_mirror%/}"; \
     if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
       sed -i -E "s#https?://deb.debian.org/debian(/?)([[:space:]]|$)#${apt_mirror}\\1\\2#g" /etc/apt/sources.list.d/debian.sources; \
     elif [ -f /etc/apt/sources.list ]; then \
@@ -37,8 +46,15 @@ COPY backend/py/alembic ./alembic
 COPY backend/py/scripts ./scripts
 
 RUN set -eux; \
-  if [ -n "$UV_INDEX_URL" ]; then \
-    UV_INDEX_URL="$UV_INDEX_URL" UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable; \
+  use_cn_mirror="1"; \
+  case "${USE_CN_MIRROR:-1}" in 0|false|no|off) use_cn_mirror="0" ;; esac; \
+  case "${CI:-}" in ""|0|false|no|off) ;; *) use_cn_mirror="0" ;; esac; \
+  uv_index_url="${UV_INDEX_URL:-}"; \
+  if [ -z "$uv_index_url" ] && [ "$use_cn_mirror" = "1" ]; then \
+    uv_index_url="https://mirrors.aliyun.com/pypi/simple/"; \
+  fi; \
+  if [ -n "$uv_index_url" ]; then \
+    UV_INDEX_URL="$uv_index_url" UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable; \
   else \
     UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable; \
   fi
