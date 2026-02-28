@@ -50,19 +50,7 @@ sdk-gen-python VERSION='':
     cp LICENSE "{{SDK_ROOT}}/LICENSE"
     printf '# The Python package under src/crystalith_sdk is generated via Fern (just sdk-gen-python).\n# Do not edit generated files manually.\n' > "{{SDK_ROOT}}/.generated"
     touch "{{SDK_PACKAGE_PATH}}/py.typed"
-    SDK_VERSION="$SDK_VERSION" python - <<'PY'
-    import os
-    import re
-    from pathlib import Path
-
-    sdk_version = os.environ["SDK_VERSION"]
-    pyproject = Path("sdk/client/python/pyproject.toml")
-    text = pyproject.read_text(encoding="utf-8")
-    updated, count = re.subn(r'(?m)^version\\s*=\\s*\"[^\"]+\"\\s*$', f'version = \"{sdk_version}\"', text, count=1)
-    if count != 1:
-        raise SystemExit("Expected exactly one [project].version entry in sdk/client/python/pyproject.toml")
-    pyproject.write_text(updated, encoding="utf-8")
-    PY
+    (cd "{{SDK_ROOT}}" && uv version "$SDK_VERSION" --frozen)
     echo "Python SDK v${SDK_VERSION} generated at {{SDK_PACKAGE_PATH}}"
 
 # Generate all SDKs: export schema → frontend SDK → Python SDK
