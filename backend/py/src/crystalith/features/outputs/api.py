@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import json
-from typing import cast
+from typing import Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -26,6 +26,7 @@ from crystalith.shared.cache.epochs import bump_sources_epoch
 from crystalith.shared.config import Settings
 from crystalith.shared.db import Chunk, Notebook, Output, Source
 from crystalith.shared.observability import new_trace_id
+from crystalith.shared.schemas.citations import Citation
 from crystalith.shared.types import OutputType, SourceStatus
 from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
 
@@ -102,6 +103,87 @@ class OutputRead(BaseModel):
     content: JsonDict
     created_at: datetime.datetime
     updated_at: datetime.datetime
+
+
+class OutputExportSource(BaseModel):
+    source_id: int
+    source_name: str
+    mime_type: str | None = None
+    parser_type: str | None = None
+
+
+class OutputExportJson(BaseModel):
+    notebook_id: int
+    output_id: int
+    output_type: OutputType
+    prompt: str | None
+    content: JsonDict
+    citations: list[Citation]
+    sources: list[OutputExportSource]
+    exported_at: datetime.datetime
+
+
+def _collect_output_citations(value: object) -> list[Citation]:
+    citations: list[Citation] = []
+    seen_chunk_ids: set[int] = set()
+
+    def _push(item: object) -> None:
+        if not isinstance(item, dict):
+            return
+        try:
+            citation = Citation.model_validate(item)
+        except Exception:
+            return
+        if citation.chunk_id in seen_chunk_ids:
+            return
+        seen_chunk_ids.add(citation.chunk_id)
+        citations.append(citation)
+
+    def _walk(node: object) -> None:
+        if node is None:
+            return
+        if isinstance(node, list):
+            for child in node:
+                _walk(child)
+            return
+        if not isinstance(node, dict):
+            return
+        if isinstance(node.get("citations"), list):
+            for item in node["citations"]:
+                _push(item)
+        for child in node.values():
+            _walk(child)
+
+    _walk(value)
+    return citations
+
+
+def _build_output_sources_meta(
+    *,
+    sources: list[Source],
+    fallback_names: dict[int, str],
+) -> list[OutputExportSource]:
+    items: list[OutputExportSource] = []
+    for source in sources:
+        items.append(
+            OutputExportSource(
+                source_id=source.id,
+                source_name=source.filename or fallback_names.get(source.id) or "未知来源",
+                mime_type=source.mime_type,
+                parser_type=source.parser_type,
+            )
+        )
+    missing_ids = [source_id for source_id in fallback_names.keys() if source_id not in {s.id for s in sources}]
+    for source_id in sorted(missing_ids):
+        items.append(
+            OutputExportSource(
+                source_id=source_id,
+                source_name=fallback_names.get(source_id) or "未知来源",
+                mime_type=None,
+                parser_type=None,
+            )
+        )
+    return items
 
 
 @router.post("/{output_type}", response_model=OutputRead, status_code=status.HTTP_201_CREATED)
@@ -285,6 +367,78 @@ async def get_output(
     if output is None or output.notebook_id != notebook_id:
         raise HTTPException(status_code=404, detail="Output not found")
     return OutputRead.model_validate(output)
+
+
+@router.get("/{output_id}/export", response_model=OutputExportJson)
+async def export_output(
+    notebook_id: int,
+    output_id: int,
+    format: Literal["markdown", "json"] = Query("markdown"),
+    session: AsyncSession = Depends(get_db_session),
+) -> object:
+    """Export an output with citations as Markdown or JSON."""
+    output = await session.get(Output, output_id)
+    if output is None or output.notebook_id != notebook_id:
+        raise HTTPException(status_code=404, detail="Output not found")
+
+    citations = _collect_output_citations(output.content)
+    fallback_names = {citation.source_id: citation.source_name for citation in citations}
+    source_ids = list(dict.fromkeys([citation.source_id for citation in citations if citation.source_id]))
+    source_rows = await session.execute(
+        select(Source).where(Source.notebook_id == notebook_id, Source.id.in_(source_ids))
+    )
+    sources = list(source_rows.scalars().all())
+    sources_meta = _build_output_sources_meta(sources=sources, fallback_names=fallback_names)
+
+    exported_at = datetime.datetime.now(datetime.UTC)
+    if format == "json":
+        return OutputExportJson(
+            notebook_id=notebook_id,
+            output_id=output.id,
+            output_type=output.type,
+            prompt=output.prompt,
+            content=output.content,
+            citations=citations,
+            sources=sources_meta,
+            exported_at=exported_at,
+        )
+
+    body = _extract_text_from_output(output).strip() or (output.prompt or "")
+    lines: list[str] = []
+    lines.append(f"# Output Export ({output.type.value})")
+    lines.append("")
+    if body:
+        lines.append(body)
+        lines.append("")
+
+    if citations:
+        lines.append("## Citations")
+        lines.append("")
+        for index, citation in enumerate(citations, start=1):
+            parts = [f"[{index}] {citation.source_name}", f"chunk {citation.chunk_index}"]
+            if citation.page_number is not None:
+                parts.append(f"page {citation.page_number}")
+            if citation.paragraph_index is not None:
+                parts.append(f"para {citation.paragraph_index}")
+            lines.append(" · ".join(parts))
+            snippet = citation.snippet.strip()
+            if snippet:
+                lines.append(f"> {snippet}")
+            lines.append("")
+
+    if sources_meta:
+        lines.append("## Sources")
+        lines.append("")
+        for item in sources_meta:
+            mime = f" ({item.mime_type})" if item.mime_type else ""
+            lines.append(f"- {item.source_name}{mime} (id: {item.source_id})")
+
+    filename = f"output-{output.id}-{output.type.value}.md"
+    return Response(
+        "\n".join(lines).rstrip() + "\n",
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename=\"{filename}\"'},
+    )
 
 
 @router.delete("/{output_id}", status_code=status.HTTP_204_NO_CONTENT)

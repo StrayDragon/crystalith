@@ -14,15 +14,17 @@ import {
   Notes as NotesIcon,
   Source as SourceIcon,
   ExpandMore as ExpandMoreIcon,
-  FormatQuote as QuoteIcon,
+  FileDownload as DownloadIcon,
 } from '@mui/icons-material';
 
 import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
-import CitationPopover from '../../shared/components/citations/CitationPopover';
+import CitationsControl from '../../shared/components/citations/CitationsControl';
 import { IconCopy, IconSave, IconSend } from '../../shared/components/Icons';
 import { SkeletonList } from '../../shared/components/Skeleton';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { copyToClipboard } from '../../../../shared/clipboard';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
+import { exportQaJsonDownload, exportQaMarkdownDownload } from '../../shared/evidenceExport';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -80,6 +82,9 @@ function ChatPanel({
   onConvertToOutput,
   isConverting = false,
 }: ChatPanelProps) {
+  const notebookId = useWorkspaceStore((s) => s.activeNotebookId);
+  const sessionId = useWorkspaceStore((s) => s.activeSessionId);
+
   const citationIndexMap = useMemo(() => {
     const map = new Map<number, { citation: Citation; index: number }>();
     citations.forEach((citation, index) => {
@@ -90,8 +95,6 @@ function ChatPanel({
   }, [citations]);
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [popoverMessageId, setPopoverMessageId] = useState<string | null>(null);
-  const [popoverAnchorRect, setPopoverAnchorRect] = useState<DOMRect | null>(null);
 
   const shouldRenderMessageList =
     isConnected &&
@@ -109,6 +112,15 @@ function ChatPanel({
   }, []);
 
   const renderMessage = (message: ChatMessage) => {
+    const numericMessageId = Number(message.id);
+    const canExportMessage =
+      message.role === 'assistant' &&
+      isConnected &&
+      notebookId != null &&
+      sessionId != null &&
+      Number.isFinite(numericMessageId) &&
+      numericMessageId > 0;
+
     const messageCitationEntries =
       message.citations && message.citations.length > 0
         ? message.citations.map((citation, index) => {
@@ -149,32 +161,12 @@ function ChatPanel({
           <div className="flex items-center gap-1 mt-1 flex-wrap">
             {messageCitationEntries.length > 0 && (
               <>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
-                  onClick={(e) => {
-                    setPopoverAnchorRect(e.currentTarget.getBoundingClientRect());
-                    setPopoverMessageId(message.id);
-                  }}
-                  aria-label={`查看全部 ${messageCitationEntries.length} 条引用`}
-                >
-                  <QuoteIcon style={{ fontSize: 14 }} />
-                  查看引用 ({messageCitationEntries.length})
-                </button>
-                {popoverMessageId === message.id && (
-                  <CitationPopover
-                    citations={messageCitationEntries.map((entry) => entry.citation)}
-                    isOpen={true}
-                    onClose={() => {
-                      setPopoverMessageId(null);
-                      setPopoverAnchorRect(null);
-                    }}
-                    anchorRect={popoverAnchorRect}
-                    onJumpToCitation={(citation) => onCitationJump?.(citation, message)}
-                    onCitationHover={(chunkId) => onCitationHover?.(chunkId, message)}
-                    onLocateSource={(citation) => onCitationLocate?.(citation, message)}
-                  />
-                )}
+                <CitationsControl
+                  citations={messageCitationEntries.map((entry) => entry.citation)}
+                  onCitationHover={(chunkId) => onCitationHover?.(chunkId, message)}
+                  onLocateSource={(citation) => onCitationLocate?.(citation, message)}
+                  onOpenSource={(citation) => onCitationJump?.(citation, message)}
+                />
               </>
             )}
             <button
@@ -193,6 +185,47 @@ function ChatPanel({
               <IconCopy className="w-3.5 h-3.5" />
               {copiedId === message.id ? '已复制' : '复制'}
             </button>
+
+            {canExportMessage && (
+              <Menu placement="bottom-start">
+                <MenuHandler>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
+                  >
+                    <DownloadIcon style={{ fontSize: 14 }} />
+                    导出
+                    <ExpandMoreIcon style={{ fontSize: 12 }} />
+                  </button>
+                </MenuHandler>
+                <MenuList className="p-1 min-w-[160px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
+                  <MenuItem
+                    onClick={() =>
+                      exportQaMarkdownDownload({
+                        notebookId: notebookId ?? 0,
+                        sessionId: sessionId ?? 0,
+                        messageId: numericMessageId,
+                      })
+                    }
+                    className="flex items-center gap-2 py-2 px-3 text-xs"
+                  >
+                    <span>导出 Markdown</span>
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() =>
+                      void exportQaJsonDownload({
+                        notebookId: notebookId ?? 0,
+                        sessionId: sessionId ?? 0,
+                        messageId: numericMessageId,
+                      })
+                    }
+                    className="flex items-center gap-2 py-2 px-3 text-xs"
+                  >
+                    <span>导出 JSON</span>
+                  </MenuItem>
+                </MenuList>
+              </Menu>
+            )}
 
             {isConnected && (onConvertToSource || onConvertToOutput) && (
               <Menu placement="bottom-start">

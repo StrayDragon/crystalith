@@ -12,6 +12,12 @@ dependencies = [
 {% endif %}
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4.1",
+  "crystalith",
+]
+
 [project.entry-points."crystalith.plugins"]
 {{ plugin_id }} = "{{ module_name }}.plugin:plugin"
 

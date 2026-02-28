@@ -19,7 +19,10 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Deployment: deployment.md
+  - Operations: operations.md
   - Python SDK: sdk-python.md
+  - TypeScript SDK: sdk-typescript.md
   - Plugins: plugins.md
+  - Evidence Chain: evidence-chain.md
   - Configuration: configuration.md
   - Contributing: contributing.md

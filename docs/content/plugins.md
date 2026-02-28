@@ -43,6 +43,9 @@ If `plugins.enabled` is set, only those ids are loaded.
 
 All plugin interfaces live in `backend/py/src/crystalith/shared/plugins/interfaces.py`.
 
+Plugins MUST declare `api_version` and it MUST be one of `SUPPORTED_PLUGIN_API_VERSIONS`
+(currently `v1`). Incompatible plugins are skipped at startup with a structured reason.
+
 ## 3.1) Compliance checker
 
 There is a lightweight compliance checker script:
@@ -51,6 +54,12 @@ There is a lightweight compliance checker script:
 cd backend/py
 uv run python scripts/check_plugins.py --json
 ```
+
+The JSON report includes:
+- `host.plugin_api_version` + `host.supported_api_versions`
+- `loaded`: loaded plugin ids
+- `skipped`: plugin id → `{ error_code, message, hint?, details? }`
+- `issues`: compliance issues for loaded plugins (human-readable strings)
 
 ### AIProviderPlugin
 
@@ -78,8 +87,7 @@ Output plugins currently **override existing** output types (by `OutputType.valu
 
 #### Optional extension attributes
 
-The `OutputTypePlugin` Protocol intentionally remains minimal for backward compatibility.
-At registration time, Crystalith uses `getattr()` to detect optional extension attributes:
+Output type plugins can optionally provide additional UI metadata:
 
 - `metadata: OutputTypePluginMeta | None` — UI metadata (description, display_text, tone)
 - `render_descriptor: RenderDescriptor | None` — declarative frontend layout descriptor

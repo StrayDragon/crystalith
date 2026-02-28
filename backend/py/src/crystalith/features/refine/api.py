@@ -297,7 +297,7 @@ async def refine_batch(
                             source_id=source.id,
                             source_name=source.filename,
                             chunk_id=chunk.id,
-                            chunk_index=chunk.chunk_index,
+                            chunk_index=chunk.chunk_index + 1,
                             page_number=extract_page_number(chunk),
                             paragraph_index=extract_paragraph_index(chunk),
                             snippet=snippet,

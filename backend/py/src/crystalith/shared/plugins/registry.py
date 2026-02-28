@@ -7,12 +7,14 @@ from typing import cast
 from cl_logs.logging import get_logger
 
 from crystalith.shared.config import Settings
+from crystalith.shared.json_types import JsonValue
 
 from .interfaces import (
     AIProviderPlugin,
     OutputTypePlugin,
     ParserPlugin,
     PLUGIN_API_VERSION,
+    SUPPORTED_PLUGIN_API_VERSIONS,
 )
 from .render_types import OutputTypePluginMeta, PluginConfigSchema, RenderDescriptor
 
@@ -31,9 +33,28 @@ def _iter_entry_points(group: str) -> list[metadata.EntryPoint]:
 
 
 @dataclass(slots=True)
+class PluginSkipDetail:
+    error_code: str
+    message: str
+    hint: str | None = None
+    details: dict[str, JsonValue] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, JsonValue]:
+        payload: dict[str, JsonValue] = {
+            "error_code": self.error_code,
+            "message": self.message,
+        }
+        if self.hint is not None:
+            payload["hint"] = self.hint
+        if self.details:
+            payload["details"] = self.details
+        return payload
+
+
+@dataclass(slots=True)
 class PluginLoadReport:
     loaded: list[str] = field(default_factory=list)
-    skipped: dict[str, str] = field(default_factory=dict)
+    skipped: dict[str, PluginSkipDetail] = field(default_factory=dict)
 
 
 class PluginRegistry:
@@ -81,9 +102,22 @@ class PluginRegistry:
         report = PluginLoadReport()
         for entry_point in _iter_entry_points(self.entrypoint_group):
             plugin_id = entry_point.name
+            entry_point_value = str(entry_point.value)
 
             if not settings.plugins.is_enabled(plugin_id):
-                report.skipped[plugin_id] = "disabled"
+                if settings.plugins.enabled:
+                    hint = f"Add {plugin_id!r} to plugins.enabled in config/app.yaml to load this plugin."
+                    details: dict[str, JsonValue] = {"policy": "allowlist"}
+                else:
+                    hint = f"Remove {plugin_id!r} from plugins.disabled in config/app.yaml to load this plugin."
+                    details = {"policy": "denylist"}
+                details["entry_point"] = entry_point_value
+                report.skipped[plugin_id] = PluginSkipDetail(
+                    error_code="disabled",
+                    message="Plugin disabled by configuration",
+                    hint=hint,
+                    details=details,
+                )
                 continue
 
             try:
@@ -92,15 +126,43 @@ class PluginRegistry:
                 log.warning(
                     "plugin load failed",
                     plugin_id=plugin_id,
-                    entry_point=str(entry_point.value),
+                    entry_point=entry_point_value,
                     error=type(exc).__name__,
                 )
-                report.skipped[plugin_id] = f"load_error:{type(exc).__name__}"
+                error_code = "missing_dependency" if isinstance(exc, ModuleNotFoundError) else "load_error"
+                hint = (
+                    "Install the missing dependency and ensure the plugin package is installed."
+                    if error_code == "missing_dependency"
+                    else "Verify the entry point is importable and the plugin dependencies are installed."
+                )
+                details: dict[str, JsonValue] = {
+                    "entry_point": entry_point_value,
+                    "error": type(exc).__name__,
+                }
+                if isinstance(exc, ModuleNotFoundError) and exc.name:
+                    details["missing_module"] = exc.name
+                report.skipped[plugin_id] = PluginSkipDetail(
+                    error_code=error_code,
+                    message="Plugin failed to load",
+                    hint=hint,
+                    details=details,
+                )
                 continue
 
             plugin = self._normalize_loaded_plugin(plugin_id, loaded)
             if plugin is None:
-                report.skipped[plugin_id] = "init_error"
+                plugin_class = (
+                    f"{loaded.__module__}.{loaded.__name__}" if isinstance(loaded, type) else type(loaded).__name__
+                )
+                report.skipped[plugin_id] = PluginSkipDetail(
+                    error_code="init_error",
+                    message="Plugin initialization failed",
+                    hint="Expose a module-level `plugin` instance or make the entry-point object no-arg constructible.",
+                    details={
+                        "entry_point": entry_point_value,
+                        "plugin_class": plugin_class,
+                    },
+                )
                 continue
 
             has_ai_provider = isinstance(plugin, AIProviderPlugin)
@@ -111,14 +173,21 @@ class PluginRegistry:
                 log.warning(
                     "plugin skipped (no compatible interfaces)",
                     plugin_id=plugin_id,
-                    entry_point=str(entry_point.value),
+                    entry_point=entry_point_value,
                 )
-                report.skipped[plugin_id] = "no_compatible_interfaces"
+                report.skipped[plugin_id] = PluginSkipDetail(
+                    error_code="no_compatible_interfaces",
+                    message="Plugin does not implement any supported plugin interfaces",
+                    hint="Implement AIProviderPlugin, ParserPlugin, or OutputTypePlugin from crystalith.shared.plugins.interfaces.",
+                    details={"entry_point": entry_point_value},
+                )
                 continue
 
             supported = cast(SupportedPlugin, plugin)
-            if not self._is_api_compatible(plugin_id, supported):
-                report.skipped[plugin_id] = "incompatible_api"
+            api_issue = self._api_compatibility_issue(plugin_id, supported)
+            if api_issue is not None:
+                api_issue.details.setdefault("entry_point", entry_point_value)
+                report.skipped[plugin_id] = api_issue
                 continue
 
             if has_ai_provider:
@@ -131,13 +200,13 @@ class PluginRegistry:
             if has_output_type:
                 self._register_output_type_plugin(plugin_id, cast(OutputTypePlugin, supported))
 
-            self._loaded_entrypoints[plugin_id] = str(entry_point.value)
+            self._loaded_entrypoints[plugin_id] = entry_point_value
             self.plugins[plugin_id] = supported
             report.loaded.append(plugin_id)
             log.info(
                 "plugin loaded",
                 plugin_id=plugin_id,
-                entry_point=str(entry_point.value),
+                entry_point=entry_point_value,
                 has_ai_provider=has_ai_provider,
                 has_parser=has_parser,
                 has_output_type=has_output_type,
@@ -213,7 +282,7 @@ class PluginRegistry:
                 return None
         return loaded
 
-    def _is_api_compatible(self, plugin_id: str, plugin: SupportedPlugin) -> bool:
+    def _api_compatibility_issue(self, plugin_id: str, plugin: SupportedPlugin) -> PluginSkipDetail | None:
         api_version = plugin.api_version
         if not isinstance(api_version, str):
             log.warning(
@@ -221,18 +290,33 @@ class PluginRegistry:
                 plugin_id=plugin_id,
                 api_version_type=type(api_version).__name__,
             )
-            return False
+            supported = sorted(SUPPORTED_PLUGIN_API_VERSIONS)
+            return PluginSkipDetail(
+                error_code="invalid_api_version",
+                message="Plugin api_version must be a string",
+                hint=f"Set api_version to one of: {supported!r}",
+                details={"api_version_type": type(api_version).__name__},
+            )
 
-        if api_version != PLUGIN_API_VERSION:
+        if api_version not in SUPPORTED_PLUGIN_API_VERSIONS:
+            supported = sorted(SUPPORTED_PLUGIN_API_VERSIONS)
             log.warning(
-                "plugin api_version mismatch; skipping",
+                "plugin api_version unsupported; skipping",
                 plugin_id=plugin_id,
                 api_version=api_version,
-                expected=PLUGIN_API_VERSION,
+                supported=supported,
             )
-            return False
+            return PluginSkipDetail(
+                error_code="incompatible_version",
+                message="Plugin api_version is not supported by this host",
+                hint=f"Update the plugin to api_version {PLUGIN_API_VERSION!r} (supported: {supported!r}).",
+                details={
+                    "api_version": api_version,
+                    "supported": supported,
+                },
+            )
 
-        return True
+        return None
 
     # =============================================================================
     # Query helpers

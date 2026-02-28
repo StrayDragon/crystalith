@@ -4,22 +4,36 @@ import argparse
 import json
 from pathlib import Path
 
+from cl_logs import LogConfig, temporary_logging_config
+
 from crystalith.shared.config import ConfigManager
-from crystalith.shared.plugins import PluginRegistry
+from crystalith.shared.plugins import PLUGIN_API_VERSION, SUPPORTED_PLUGIN_API_VERSIONS, PluginRegistry
 from crystalith.shared.plugins.compliance import check_plugin
+
+
+def _resolve_default_path(value: str | None, *, relative: str) -> Path:
+    if value:
+        return Path(value)
+
+    cwd_candidate = Path(relative)
+    if cwd_candidate.is_file():
+        return cwd_candidate
+
+    repo_root = Path(__file__).resolve().parents[3]
+    return repo_root / relative
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Crystalith plugin compliance checker")
     parser.add_argument(
         "--config-path",
-        default="config/app.yaml",
-        help="Path to config/app.yaml (default: config/app.yaml)",
+        default=None,
+        help="Path to config/app.yaml (default: auto-detect)",
     )
     parser.add_argument(
         "--schema-path",
-        default="config/app.schema.json",
-        help="Path to config/app.schema.json (default: config/app.schema.json)",
+        default=None,
+        help="Path to config/app.schema.json (default: auto-detect)",
     )
     parser.add_argument(
         "--json",
@@ -28,8 +42,15 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    manager = ConfigManager(Path(args.config_path), Path(args.schema_path))
-    settings = manager.load()
+    config_path = _resolve_default_path(args.config_path, relative="config/app.yaml")
+    schema_path = _resolve_default_path(args.schema_path, relative="config/app.schema.json")
+
+    manager = ConfigManager(config_path, schema_path)
+    if args.json:
+        with temporary_logging_config(LogConfig(level="CRITICAL", min_json_level="CRITICAL")):
+            settings = manager.load()
+    else:
+        settings = manager.load()
 
     registry = PluginRegistry()
     report = registry.load_from_entry_points(settings)
@@ -41,8 +62,12 @@ def main() -> int:
             issues[plugin_id] = found
 
     payload = {
+        "host": {
+            "plugin_api_version": PLUGIN_API_VERSION,
+            "supported_api_versions": sorted(SUPPORTED_PLUGIN_API_VERSIONS),
+        },
         "loaded": report.loaded,
-        "skipped": report.skipped,
+        "skipped": {plugin_id: detail.to_dict() for plugin_id, detail in report.skipped.items()},
         "issues": issues,
     }
 

@@ -30,6 +30,18 @@ def test_check_plugin_validates_ai_provider_callables() -> None:
     assert "AIProviderPlugin missing callable: create_chat_provider" in issues
 
 
+def test_check_plugin_validates_ai_provider_embedding_callable() -> None:
+    class Plugin:
+        api_version = PLUGIN_API_VERSION
+        create_embedding_provider = 123
+
+        def create_chat_provider(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+            raise AssertionError("should not be called")
+
+    issues = check_plugin("ai", Plugin())
+    assert "AIProviderPlugin missing callable: create_embedding_provider" in issues
+
+
 def test_check_plugin_validates_parser_plugin_fields() -> None:
     class Plugin:
         api_version = PLUGIN_API_VERSION

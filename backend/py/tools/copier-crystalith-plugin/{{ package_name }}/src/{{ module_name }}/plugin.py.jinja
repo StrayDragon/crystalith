@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-{% if plugin_kind == "OutputType" %}
-
+{% if plugin_kind == "OutputType" -%}
 from pydantic import BaseModel, Field
 
 from crystalith.shared.plugins.render_types import (
@@ -14,22 +13,23 @@ from crystalith.shared.plugins.render_types import (
 )
 
 
-class MyItem(BaseModel):
+class Item(BaseModel):
     text: str
     citations: list[int] = Field(default_factory=list)
 
 
-class MyOutput(BaseModel):
-    items: list[MyItem] = Field(default_factory=list)
+class Output(BaseModel):
+    items: list[Item] = Field(default_factory=list)
 
 
-class MyPlugin:
+class Plugin:
     api_version = "v1"
 
     output_type = "{{ output_type }}"
-    schema = MyOutput
-    default_prompt = "Generate structured output from the sources."
+    schema = Output
+    default_prompt = "Describe what you want to generate."
 
+    # ── Common extension points ──────────────────────────────────────────
     metadata = OutputTypePluginMeta(
         description="{{ description }}",
         display_text="{{ display_text }}",
@@ -48,46 +48,42 @@ class MyPlugin:
     )
 
     config_schema = PluginConfigSchema(
-        quantity_options=[ConfigOption(id="standard", label="Standard", is_default=True)],
+        quantity_options=[
+            ConfigOption(id="standard", label="Standard", is_default=True),
+        ],
         difficulty_options=[],
         topic_placeholder="Topic (optional)",
         supports_topic=True,
     )
 
 
-plugin = MyPlugin()
-
-{% else %}
-
+plugin = Plugin()
+{%- else -%}
 from collections.abc import AsyncIterator, Sequence
 from typing import Any
 
 
-class MyChatProvider:
+class ChatProvider:
     provider = "{{ plugin_id }}"
 
     def __init__(self, model: str) -> None:
         self.model = model
 
     async def chat(self, messages: Sequence[Any]) -> str:
-        last = messages[-1] if messages else {}
-        content = getattr(last, "content", None)
-        if content is None and isinstance(last, dict):
-            content = last.get("content")
-        return f"{{ plugin_id }}:{% raw %}{content or ''}{% endraw %}"
+        raise NotImplementedError
 
     async def chat_stream(self, messages: Sequence[Any]) -> AsyncIterator[str]:
         yield await self.chat(messages)
 
 
-class MyEmbeddingProvider:
+class EmbeddingProvider:
     provider = "{{ plugin_id }}"
 
     def __init__(self, model: str) -> None:
         self.model = model
 
     async def embed(self, texts: Sequence[str]) -> list[list[float]]:
-        return await self.embed_batch(texts, batch_size=len(texts) or 1)
+        raise NotImplementedError
 
     async def embed_batch(
         self,
@@ -95,21 +91,18 @@ class MyEmbeddingProvider:
         *,
         batch_size: int = 100,
     ) -> list[list[float]]:
-        if not texts:
-            return []
-        return [[float(len(text))] for text in texts]
+        raise NotImplementedError
 
 
-class MyPlugin:
+class Plugin:
     api_version = "v1"
 
-    def create_chat_provider(self, settings: Any, model_config: Any) -> MyChatProvider:
-        return MyChatProvider(model=str(getattr(model_config, "model", "")))
+    def create_chat_provider(self, settings: Any, model_config: Any) -> ChatProvider:
+        return ChatProvider(model=str(getattr(model_config, "model", "")))
 
-    def create_embedding_provider(self, settings: Any, model_config: Any) -> MyEmbeddingProvider:
-        return MyEmbeddingProvider(model=str(getattr(model_config, "model", "")))
+    def create_embedding_provider(self, settings: Any, model_config: Any) -> EmbeddingProvider:
+        return EmbeddingProvider(model=str(getattr(model_config, "model", "")))
 
 
-plugin = MyPlugin()
-
-{% endif %}
+plugin = Plugin()
+{%- endif %}

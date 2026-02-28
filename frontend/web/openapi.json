@@ -190,6 +190,83 @@
         "title": "Citation",
         "type": "object"
       },
+      "CitationContextChunk": {
+        "properties": {
+          "chunk_id": {
+            "title": "Chunk Id",
+            "type": "integer"
+          },
+          "chunk_index": {
+            "title": "Chunk Index",
+            "type": "integer"
+          },
+          "page_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Number"
+          },
+          "paragraph_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paragraph Index"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "chunk_id",
+          "chunk_index",
+          "text"
+        ],
+        "title": "CitationContextChunk",
+        "type": "object"
+      },
+      "CitationContextResponse": {
+        "properties": {
+          "after": {
+            "items": {
+              "$ref": "#/components/schemas/CitationContextChunk"
+            },
+            "title": "After",
+            "type": "array"
+          },
+          "before": {
+            "items": {
+              "$ref": "#/components/schemas/CitationContextChunk"
+            },
+            "title": "Before",
+            "type": "array"
+          },
+          "chunk": {
+            "$ref": "#/components/schemas/CitationContextChunk"
+          },
+          "citation": {
+            "$ref": "#/components/schemas/Citation"
+          }
+        },
+        "required": [
+          "after",
+          "before",
+          "chunk",
+          "citation"
+        ],
+        "title": "CitationContextResponse",
+        "type": "object"
+      },
       "ConfigOption": {
         "additionalProperties": false,
         "properties": {
@@ -964,6 +1041,122 @@
         "title": "NotebookUpdate",
         "type": "object"
       },
+      "OutputExportJson": {
+        "properties": {
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "content": {
+            "$ref": "#/components/schemas/JsonDict"
+          },
+          "exported_at": {
+            "format": "date-time",
+            "title": "Exported At",
+            "type": "string"
+          },
+          "notebook_id": {
+            "title": "Notebook Id",
+            "type": "integer"
+          },
+          "output_id": {
+            "title": "Output Id",
+            "type": "integer"
+          },
+          "output_type": {
+            "description": "枚举值:\n\n* `FAQ`: 问答清单\n* `GUIDE`: 学习/行动指南\n* `TIMELINE`: 关键事件序列\n* `MINDMAP`: 主题层级结构\n* `QUIZ`: 知识检验\n* `BRIEFING`: 高层摘要\n* `SLIDES`: 演示文稿\n* `PARAGRAPH`: 段落摘要\n* `BULLETS`: 要点列表\n* `STRUCTURED`: 结构化摘要",
+            "enum": [
+              "BRIEFING",
+              "BULLETS",
+              "FAQ",
+              "GUIDE",
+              "MINDMAP",
+              "PARAGRAPH",
+              "QUIZ",
+              "SLIDES",
+              "STRUCTURED",
+              "TIMELINE"
+            ],
+            "title": "OutputType",
+            "type": "string",
+            "x-enum-class": "OutputType",
+            "x-enum-module": "crystalith.shared.types"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Prompt"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/OutputExportSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "citations",
+          "content",
+          "exported_at",
+          "notebook_id",
+          "output_id",
+          "output_type",
+          "prompt",
+          "sources"
+        ],
+        "title": "OutputExportJson",
+        "type": "object"
+      },
+      "OutputExportSource": {
+        "properties": {
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Mime Type"
+          },
+          "parser_type": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Parser Type"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "integer"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "source_name"
+        ],
+        "title": "OutputExportSource",
+        "type": "object"
+      },
       "OutputGenerateRequest": {
         "properties": {
           "min_score": {
@@ -1186,6 +1379,108 @@
           }
         },
         "title": "PluginConfigSchema",
+        "type": "object"
+      },
+      "QAExportJson": {
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "exported_at": {
+            "format": "date-time",
+            "title": "Exported At",
+            "type": "string"
+          },
+          "message_id": {
+            "title": "Message Id",
+            "type": "integer"
+          },
+          "notebook_id": {
+            "title": "Notebook Id",
+            "type": "integer"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Question"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/QAExportSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "answer",
+          "citations",
+          "exported_at",
+          "message_id",
+          "notebook_id",
+          "question",
+          "session_id",
+          "sources"
+        ],
+        "title": "QAExportJson",
+        "type": "object"
+      },
+      "QAExportSource": {
+        "properties": {
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Mime Type"
+          },
+          "parser_type": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Parser Type"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "integer"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "source_name"
+        ],
+        "title": "QAExportSource",
         "type": "object"
       },
       "QAMessage": {
@@ -4472,6 +4767,130 @@
         ]
       }
     },
+    "/v1/notebooks/{notebook_id}/citations/context": {
+      "get": {
+        "description": "Fetch citation context for evidence review.\n\nProvide either `chunk_id` OR (`source_id` + `chunk_index`).\nReturned `chunk_index` values are 1-based.",
+        "operationId": "get_citation_context_v1_notebooks__notebook_id__citations_context_get",
+        "parameters": [
+          {
+            "description": "1-based chunk index within the source",
+            "in": "query",
+            "name": "chunk_index",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "1-based chunk index within the source",
+              "title": "Chunk Index"
+            }
+          },
+          {
+            "description": "How many chunks to include after the cited chunk",
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "How many chunks to include after the cited chunk",
+              "maximum": 5,
+              "minimum": 0,
+              "title": "After",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "How many chunks to include before the cited chunk",
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "How many chunks to include before the cited chunk",
+              "maximum": 5,
+              "minimum": 0,
+              "title": "Before",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "notebook_id",
+            "required": true,
+            "schema": {
+              "title": "Notebook Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "chunk_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Chunk Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CitationContextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Citation Context",
+        "tags": [
+          "citations"
+        ]
+      }
+    },
     "/v1/notebooks/{notebook_id}/outputs": {
       "get": {
         "operationId": "list_outputs_v1_notebooks__notebook_id__outputs_get",
@@ -4687,6 +5106,72 @@
         ]
       }
     },
+    "/v1/notebooks/{notebook_id}/outputs/{output_id}/export": {
+      "get": {
+        "description": "Export an output with citations as Markdown or JSON.",
+        "operationId": "export_output_v1_notebooks__notebook_id__outputs__output_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notebook_id",
+            "required": true,
+            "schema": {
+              "title": "Notebook Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "output_id",
+            "required": true,
+            "schema": {
+              "title": "Output Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "markdown",
+              "enum": [
+                "json",
+                "markdown"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutputExportJson"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Output",
+        "tags": [
+          "outputs"
+        ]
+      }
+    },
     "/v1/notebooks/{notebook_id}/outputs/{output_type}": {
       "post": {
         "operationId": "create_output_v1_notebooks__notebook_id__outputs__output_type__post",
@@ -4812,6 +5297,92 @@
           }
         },
         "summary": "Ask Question",
+        "tags": [
+          "qa"
+        ]
+      }
+    },
+    "/v1/notebooks/{notebook_id}/qa/export": {
+      "get": {
+        "description": "Export a QA answer with citations as Markdown or JSON.",
+        "operationId": "export_qa_v1_notebooks__notebook_id__qa_export_get",
+        "parameters": [
+          {
+            "description": "Assistant message ID to export; defaults to latest",
+            "in": "query",
+            "name": "message_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Assistant message ID to export; defaults to latest",
+              "title": "Message Id"
+            }
+          },
+          {
+            "in": "path",
+            "name": "notebook_id",
+            "required": true,
+            "schema": {
+              "title": "Notebook Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "markdown",
+              "enum": [
+                "json",
+                "markdown"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Session Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QAExportJson"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Qa",
         "tags": [
           "qa"
         ]
