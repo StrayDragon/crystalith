@@ -24,6 +24,12 @@ just sdk-gen-web
 
 ## Minimal example (repo code)
 
+Base URL (no `/v1`):
+- Local dev (`cd backend/py && just dev`): `http://127.0.0.1:8032`
+- Docker Compose (same entrypoint as Web UI): `http://localhost:${CL_WEB_PORT:-8080}`
+
+Note: Port `8000` is typically an optional dependency (e.g. Chroma), not the Crystalith API.
+
 ```ts
 import { client } from '../api/generated/client.gen';
 import { unwrapData } from '../api/unwrap';
@@ -38,7 +44,7 @@ import {
 } from '../api/generated';
 
 client.setConfig({
-  baseUrl: 'http://localhost:8000',
+  baseUrl: 'http://127.0.0.1:8032',
   responseStyle: 'fields',
   throwOnError: true,
 });
