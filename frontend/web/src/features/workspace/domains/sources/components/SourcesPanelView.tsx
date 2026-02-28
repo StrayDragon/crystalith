@@ -52,6 +52,11 @@ import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
 import ConfirmPopover from '../../../../../shared/ConfirmPopover';
 import { LAYER_LEVELS } from '../../../../../shared/layer';
 import { SkeletonCard, SkeletonList } from '../../../shared/components/Skeleton';
+import {
+  SOURCE_UPLOAD_ACCEPT,
+  SOURCE_UPLOAD_SUPPORTED_EXTENSIONS,
+  SOURCE_UPLOAD_SUPPORTED_MIME_TYPES,
+} from '../../../shared/uploadTypes';
 import type { ChatMessage } from '../SourceDetailDialog';
 import SearchResultsQueue from '../SearchResultsQueue';
 import AddSearchResultDialog from '../AddSearchResultDialog';
@@ -64,8 +69,6 @@ const ResearchDetailPanel = lazy(() => import('../../research/ResearchDetailPane
 
 type ExtractorType = ExtractorInfo['type'];
 
-const SUPPORTED_UPLOAD_EXTENSIONS = new Set(['txt', 'md', 'markdown']);
-
 function splitUploadFiles(files: File[]) {
   const supported: File[] = [];
   const unsupported: File[] = [];
@@ -74,9 +77,7 @@ function splitUploadFiles(files: File[]) {
     const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
     const type = (file.type || '').toLowerCase();
     const isSupported =
-      SUPPORTED_UPLOAD_EXTENSIONS.has(extension) ||
-      type === 'text/plain' ||
-      type === 'text/markdown';
+      SOURCE_UPLOAD_SUPPORTED_EXTENSIONS.has(extension) || SOURCE_UPLOAD_SUPPORTED_MIME_TYPES.has(type);
 
     if (isSupported) {
       supported.push(file);
@@ -640,7 +641,7 @@ function SourcesPanelView({
       {/* Fixed Header: Upload & Search - Always visible */}
       <div className="flex-shrink-0 px-3 sm:px-4 pt-3 sm:pt-4 pb-2 flex flex-col gap-3 border-b border-gray-100 dark:border-slate-700">
         {/* Upload Button */}
-        <Tooltip content="支持文本(.txt)和Markdown(.md)文件，可多选与拖拽">
+        <Tooltip content="支持 .txt / .md / .markdown / .pdf 文件，可多选与拖拽">
           <div
             className={`rounded-full ${uploadDragActive ? 'ring-2 ring-blue-200' : ''}`}
             onDragOver={(event) => {
@@ -660,10 +661,10 @@ function SourcesPanelView({
               if (!droppedFiles.length) return;
               const { supported, unsupported } = splitUploadFiles(droppedFiles);
               if (unsupported.length > 0) {
-                toast.warning(`已忽略 ${unsupported.length} 个不支持的文件，仅支持 .txt/.md/.markdown`);
+                toast.warning(`已忽略 ${unsupported.length} 个不支持的文件，仅支持 .txt/.md/.markdown/.pdf`);
               }
               if (supported.length === 0) {
-                setUploadHint('仅支持 .txt / .md / .markdown 文件');
+                setUploadHint('仅支持 .txt / .md / .markdown / .pdf 文件');
                 return;
               }
               setUploadHint(
@@ -697,12 +698,12 @@ function SourcesPanelView({
                 type="file"
                 hidden
                 multiple
-                accept=".txt,.md,.markdown,text/plain,text/markdown"
+                accept={SOURCE_UPLOAD_ACCEPT}
                 onChange={(event) => {
                   const selectedFiles = Array.from(event.target.files ?? []);
                   const { supported, unsupported } = splitUploadFiles(selectedFiles);
                   if (unsupported.length > 0) {
-                    toast.warning(`已忽略 ${unsupported.length} 个不支持的文件，仅支持 .txt/.md/.markdown`);
+                    toast.warning(`已忽略 ${unsupported.length} 个不支持的文件，仅支持 .txt/.md/.markdown/.pdf`);
                   }
                   if (supported.length > 0) {
                     onUpload(supported);

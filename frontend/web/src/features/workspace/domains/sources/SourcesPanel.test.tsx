@@ -231,7 +231,9 @@ test('filters unsupported upload files and shows warning', () => {
   );
 
   const supported = new File(['ok'], 'doc.md', { type: 'text/markdown' });
-  const unsupported = new File(['bin'], 'archive.pdf', { type: 'application/pdf' });
+  const unsupported = new File(['bin'], 'archive.docx', {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  });
 
   fireEvent.change(screen.getByLabelText('上传来源文件'), {
     target: { files: [supported, unsupported] },
@@ -240,4 +242,24 @@ test('filters unsupported upload files and shows warning', () => {
   expect(uploadSpy).toHaveBeenCalledTimes(1);
   expect(uploadSpy).toHaveBeenCalledWith([supported]);
   expect(toastWarningSpy).toHaveBeenCalledTimes(1);
+});
+
+test('accepts PDF upload via drag-and-drop', () => {
+  const uploadSpy = vi.fn();
+  const props = createProps({ onUpload: uploadSpy });
+
+  render(
+    <LayerProvider>
+      <SourcesPanel {...props} />
+    </LayerProvider>,
+  );
+
+  const pdf = new File(['pdf'], 'paper.pdf', { type: 'application/pdf' });
+
+  fireEvent.drop(screen.getByRole('button', { name: '添加来源' }), {
+    dataTransfer: { files: [pdf] },
+  });
+
+  expect(toastWarningSpy).not.toHaveBeenCalled();
+  expect(uploadSpy).toHaveBeenCalledWith([pdf]);
 });

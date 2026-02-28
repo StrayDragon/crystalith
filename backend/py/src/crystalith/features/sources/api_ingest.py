@@ -642,7 +642,7 @@ async def upload_source(
             failure = SourceFailure(
                 error_code=SOURCE_ERROR_PARSER_FAILED,
                 message="解析失败",
-                recovery_hint="请检查文件格式与内容，或尝试转换为 TXT/Markdown 后重新上传。",
+                recovery_hint="请检查文件格式与内容（支持 .txt/.md/.markdown/.pdf），或尝试将文件转换为可解析的文本后重新上传。",
                 status_code=500,
                 details=str(exc)[:512],
             )
