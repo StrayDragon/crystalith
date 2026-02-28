@@ -214,7 +214,7 @@ def _build_optional_status_template(settings: Settings) -> OptionalServicesStatu
             if chroma_host_set
             else settings.optional_services.chroma.endpoint
         )
-    redis_endpoint = settings.optional_services.redis.endpoint or settings.cache.redis_url
+    redis_endpoint = settings.cache.redis_url or settings.optional_services.redis.endpoint
     ollama_endpoint = os.getenv("OLLAMA_HOST") or settings.optional_services.ollama.endpoint
     searxng_endpoint = settings.optional_services.searxng.endpoint or settings.search.searxng.host
 

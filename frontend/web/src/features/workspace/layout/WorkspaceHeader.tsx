@@ -3,6 +3,7 @@ import { Menu, MenuHandler, MenuItem, MenuList, Tooltip } from '@material-tailwi
 import {
   DarkMode as DarkModeIcon,
   Close as CloseIcon,
+  FileDownload as DownloadIcon,
   Hub as HubIcon,
   LightMode as LightModeIcon,
   Lock as LockIcon,
@@ -14,6 +15,8 @@ import {
 import type { AsyncStatus } from '../../../shared/types';
 import ConfirmPopover from '../../../shared/ConfirmPopover';
 import type { Notebook } from '../shared/types';
+import { useWorkspaceStore } from '../shared/state/workspaceStore';
+import { exportOutputJsonDownload, exportOutputMarkdownDownload, exportQaJsonDownload, exportQaMarkdownDownload } from '../shared/evidenceExport';
 import { useTheme, type ThemeMode } from '../shared/hooks/useTheme';
 import NotebookSwitcher, { type NotebookSwitcherRequest } from '../domains/notebooks/NotebookSwitcher';
 
@@ -106,6 +109,8 @@ export default function WorkspaceHeader({
   );
   const notebookSearchRef = useRef<HTMLInputElement | null>(null);
   const { theme, setTheme } = useTheme();
+  const activeSessionId = useWorkspaceStore((s) => s.activeSessionId);
+  const outputs = useWorkspaceStore((s) => s.outputs);
 
   const autoNotebookTitle = useMemo(() => {
     if (!autoCreatedNotebookId) return null;
@@ -222,6 +227,75 @@ export default function WorkspaceHeader({
               <MonitorHeartIcon sx={{ fontSize: 16 }} />
             </button>
           </Tooltip>
+        ) : null}
+
+        {activeNotebookId && isConnected ? (
+          <Menu placement="bottom-end">
+            <MenuHandler>
+              <Tooltip content="导出">
+                <button
+                  type="button"
+                  aria-label="导出"
+                  className="flex items-center justify-center w-7 h-7 rounded-md transition-all text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+                >
+                  <DownloadIcon sx={{ fontSize: 16 }} />
+                </button>
+              </Tooltip>
+            </MenuHandler>
+            <MenuList className="p-1.5 min-w-[220px] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 rounded-xl shadow-lg">
+              <div className="px-2 pt-1 pb-1.5">
+                <span className="text-[10px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider">导出</span>
+              </div>
+
+              {activeSessionId ? (
+                <>
+                  <MenuItem
+                    onClick={() => exportQaMarkdownDownload({ notebookId: activeNotebookId, sessionId: activeSessionId })}
+                    className="flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
+                  >
+                    <span className="text-sm w-5 text-center">📝</span>
+                    <span>导出当前会话（Markdown）</span>
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => void exportQaJsonDownload({ notebookId: activeNotebookId, sessionId: activeSessionId })}
+                    className="flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
+                  >
+                    <span className="text-sm w-5 text-center">🧾</span>
+                    <span>导出当前会话（JSON）</span>
+                  </MenuItem>
+                </>
+              ) : (
+                <div className="px-3 py-2 text-[11px] text-gray-400 dark:text-slate-500">
+                  暂无会话可导出
+                </div>
+              )}
+
+              <hr className="my-1.5 border-gray-100 dark:border-slate-700" />
+
+              {outputs.length > 0 ? (
+                <>
+                  <MenuItem
+                    onClick={() => exportOutputMarkdownDownload({ notebookId: activeNotebookId, outputId: outputs[0].id })}
+                    className="flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
+                  >
+                    <span className="text-sm w-5 text-center">📝</span>
+                    <span>导出最新 Output（Markdown）</span>
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => void exportOutputJsonDownload({ notebookId: activeNotebookId, outputId: outputs[0].id })}
+                    className="flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
+                  >
+                    <span className="text-sm w-5 text-center">🧾</span>
+                    <span>导出最新 Output（JSON）</span>
+                  </MenuItem>
+                </>
+              ) : (
+                <div className="px-3 py-2 text-[11px] text-gray-400 dark:text-slate-500">
+                  暂无 Output 可导出
+                </div>
+              )}
+            </MenuList>
+          </Menu>
         ) : null}
 
         {/* Avatar dropdown — consolidates all controls */}

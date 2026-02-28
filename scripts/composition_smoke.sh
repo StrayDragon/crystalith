@@ -19,10 +19,30 @@ SLIDEV_FILE="deployments/prod/docker-compose.slidev.yml"
 HOST_REMAP_FILE="deployments/prod/docker-compose.host-remap.yml"
 
 if [[ -f "$ENV_FILE" ]]; then
-  # shellcheck disable=SC1090
-  source "$ENV_FILE"
-  WEB_PORT="${CL_WEB_PORT:-$WEB_PORT}"
-  BASE_URL="http://localhost:${WEB_PORT}"
+  # Do NOT `source` compose env files: they are not guaranteed to be valid shell.
+  # Parse only the keys we need.
+  ENV_WEB_PORT="$(python3 - "$ENV_FILE" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+value = None
+for raw in path.read_text().splitlines():
+    line = raw.strip()
+    if not line or line.startswith("#") or "=" not in line:
+        continue
+    key, val = line.split("=", 1)
+    if key.strip() != "CL_WEB_PORT":
+        continue
+    value = val.strip().strip('"').strip("'")
+    break
+print(value or "")
+PY
+  )"
+  if [[ -n "$ENV_WEB_PORT" ]]; then
+    WEB_PORT="$ENV_WEB_PORT"
+    BASE_URL="http://localhost:${WEB_PORT}"
+  fi
 fi
 
 compose() {
@@ -35,6 +55,14 @@ compose_core() {
 
 compose_core_redis() {
   compose -f "$CORE_FILE" -f "$REDIS_FILE" "$@"
+}
+
+compose_core_key_optionals() {
+  compose -f "$CORE_FILE" -f "$STORAGE_FILE" -f "$REDIS_FILE" -f "$OLLAMA_FILE" "$@"
+}
+
+compose_core_all_optionals() {
+  compose -f "$CORE_FILE" -f "$STORAGE_FILE" -f "$REDIS_FILE" -f "$OLLAMA_FILE" -f "$SLIDEV_FILE" "$@"
 }
 
 compose_reset() {
@@ -77,7 +105,7 @@ wait_http() {
 
 assert_dependency_expr() {
   local expr="$1"
-  curl -fsS "${BASE_URL}/health/dependencies" | python3 - "$expr" <<'PY'
+  curl -fsS "${BASE_URL}/health/dependencies" | python3 -c '
 import json
 import sys
 
@@ -86,7 +114,25 @@ data = json.load(sys.stdin)
 ok = eval(expr, {"__builtins__": {}}, {"data": data})
 if not ok:
     raise SystemExit(f"assertion failed: {expr}")
-PY
+' "$expr"
+}
+
+wait_dependency_expr() {
+  local expr="$1"
+  local timeout_s="${2:-120}"
+  local start
+  start="$(date +%s)"
+  while true; do
+    if assert_dependency_expr "$expr" >/dev/null 2>&1; then
+      return 0
+    fi
+    if (( "$(date +%s)" - start >= timeout_s )); then
+      echo "timeout waiting for dependency assertion: ${expr}" >&2
+      curl -fsS "${BASE_URL}/health/dependencies" | python3 -m json.tool | head -120 >&2 || true
+      return 1
+    fi
+    sleep 2
+  done
 }
 
 run_core_only() {
@@ -102,7 +148,7 @@ run_core_only() {
 run_single_optional() {
   echo "==> Scenario: single-optional(redis)"
   compose_reset
-  compose_core_redis up "${up_flags[@]}"
+  CACHE_PROVIDER=redis REDIS_URL="redis://redis:6379/0" compose_core_redis up "${up_flags[@]}"
   wait_http "${BASE_URL}/health"
   assert_dependency_expr "data['optional']['cache_redis']['enabled'] is True"
 }
@@ -110,22 +156,22 @@ run_single_optional() {
 run_late_optional() {
   echo "==> Scenario: optional-late-start(redis)"
   compose_reset
-  compose_core up "${up_flags[@]}"
+  CACHE_PROVIDER=redis REDIS_URL="redis://redis:6379/0" compose_core up "${up_flags[@]}"
   wait_http "${BASE_URL}/health"
 
-  compose_core_redis up -d redis
+  CACHE_PROVIDER=redis REDIS_URL="redis://redis:6379/0" compose_core_redis up -d redis
 
   local start
   start="$(date +%s)"
   while true; do
-    if curl -fsS "${BASE_URL}/health/dependencies" | python3 - <<'PY'
+    if curl -fsS "${BASE_URL}/health/dependencies" | python3 -c '
 import json
 import sys
 
 data = json.load(sys.stdin)
 status = data["optional"]["cache_redis"]["status"]
 raise SystemExit(0 if status == "healthy" else 1)
-PY
+'
     then
       break
     fi
@@ -146,6 +192,29 @@ run_external_service() {
   OLLAMA_HOST="$EXTERNAL_OLLAMA_HOST" assert_dependency_expr "data['optional']['ollama']['endpoint'] == '$EXTERNAL_OLLAMA_HOST'"
 }
 
+run_key_optionals() {
+  echo "==> Scenario: key-optionals(storage+redis+ollama)"
+  compose_reset
+  CACHE_PROVIDER=redis REDIS_URL="redis://redis:6379/0" compose_core_key_optionals up "${up_flags[@]}"
+  wait_http "${BASE_URL}/health"
+  wait_dependency_expr "data['optional']['storage_chroma']['enabled'] is True"
+  wait_dependency_expr "data['optional']['cache_redis']['enabled'] is True"
+  wait_dependency_expr "data['optional']['ollama']['enabled'] is True"
+  wait_dependency_expr "data['optional']['storage_chroma']['status'] != 'unknown'"
+  wait_dependency_expr "data['optional']['cache_redis']['status'] != 'unknown'"
+  wait_dependency_expr "data['optional']['ollama']['status'] != 'unknown'"
+}
+
+run_all_optionals() {
+  echo "==> Scenario: all-optionals(storage+redis+ollama+slidev)"
+  compose_reset
+  CACHE_PROVIDER=redis REDIS_URL="redis://redis:6379/0" compose_core_all_optionals up "${up_flags[@]}"
+  wait_http "${BASE_URL}/health"
+  wait_dependency_expr "data['optional']['storage_chroma']['enabled'] is True"
+  wait_dependency_expr "data['optional']['cache_redis']['enabled'] is True"
+  wait_dependency_expr "data['optional']['ollama']['enabled'] is True"
+}
+
 SCENARIOS="${SMOKE_SCENARIOS:-core-only late-optional external-service}"
 for scenario in $SCENARIOS; do
   case "$scenario" in
@@ -160,6 +229,12 @@ for scenario in $SCENARIOS; do
       ;;
     external-service)
       run_external_service
+      ;;
+    key-optionals)
+      run_key_optionals
+      ;;
+    all-optionals)
+      run_all_optionals
       ;;
     *)
       echo "unknown scenario: $scenario" >&2

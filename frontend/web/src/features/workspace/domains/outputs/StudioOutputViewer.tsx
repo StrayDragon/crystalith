@@ -8,15 +8,17 @@ import {
   Typography,
   Tooltip,
 } from '@material-tailwind/react';
-import { MoreVert as MoreVertIcon, Delete as DeleteIcon, FormatQuote as QuoteIcon } from '@mui/icons-material';
+import { MoreVert as MoreVertIcon, Delete as DeleteIcon, FileDownload as DownloadIcon } from '@mui/icons-material';
 
 import type { Citation, OutputItem } from '../../shared/types';
 import { getOutputTitle } from '../../shared/outputPayload';
 import { collectOutputCitations, formatRelativeTime } from '../../shared/utils';
-import CitationPopover from '../../shared/components/citations/CitationPopover';
+import CitationsControl from '../../shared/components/citations/CitationsControl';
 import OutputContent from './OutputContent';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 import { useLayer } from '../../../../shared/layer';
+import { useWorkspaceStore } from '../../shared/state/workspaceStore';
+import { exportOutputJsonDownload, exportOutputMarkdownDownload } from '../../shared/evidenceExport';
 
 interface StudioOutputViewerProps {
   outputs: OutputItem[];
@@ -61,9 +63,9 @@ export default function StudioOutputViewer({
   onLocateSource,
   elevated = false,
 }: StudioOutputViewerProps) {
+  const notebookId = useWorkspaceStore((s) => s.activeNotebookId);
+
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
-  const [citationPopoverOpen, setCitationPopoverOpen] = useState(false);
-  const [citationAnchorRect, setCitationAnchorRect] = useState<DOMRect | null>(null);
 
   const selectedOutput = useMemo(() => {
     if (!selectedOutputId) return outputs[0] ?? null;
@@ -117,6 +119,35 @@ export default function StudioOutputViewer({
             </Typography>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            {selectedOutput && notebookId ? (
+              <Menu placement="bottom-end">
+                <MenuHandler>
+                  <Tooltip content="导出">
+                    <IconButton
+                      variant="text"
+                      className="rounded-full text-gray-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                      aria-label="导出"
+                    >
+                      <DownloadIcon style={{ fontSize: 18 }} />
+                    </IconButton>
+                  </Tooltip>
+                </MenuHandler>
+                <MenuList className="p-1 min-w-[160px] dark:bg-slate-900 dark:border-slate-700">
+                  <MenuItem
+                    onClick={() => exportOutputMarkdownDownload({ notebookId, outputId: selectedOutput.id })}
+                    className="flex items-center gap-2 py-2 px-3 text-xs"
+                  >
+                    <span>导出 Markdown</span>
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => void exportOutputJsonDownload({ notebookId, outputId: selectedOutput.id })}
+                    className="flex items-center gap-2 py-2 px-3 text-xs"
+                  >
+                    <span>导出 JSON</span>
+                  </MenuItem>
+                </MenuList>
+              </Menu>
+            ) : null}
             <Tooltip content={isFullscreen ? '退出全屏' : '进入全屏'}>
               <IconButton
                 variant="text"
@@ -234,34 +265,15 @@ export default function StudioOutputViewer({
                   <Typography variant="small" className="text-xs font-semibold text-gray-600 dark:text-slate-300">
                     引用
                   </Typography>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 rounded-full border border-gray-200 bg-white hover:bg-gray-50 hover:text-gray-700 transition-colors cursor-pointer dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-slate-100"
-                    onClick={(e) => {
-                      setCitationAnchorRect(e.currentTarget.getBoundingClientRect());
-                      setCitationPopoverOpen(true);
-                    }}
-                    aria-label={`查看全部 ${outputCitations.length} 条引用`}
-                  >
-                    <QuoteIcon style={{ fontSize: 14 }} />
-                    查看全部 ({outputCitations.length})
-                  </button>
-                </div>
-                {citationPopoverOpen && (
-                  <CitationPopover
+                  <CitationsControl
                     citations={outputCitations}
-                    isOpen={true}
-                    onClose={() => {
-                      setCitationPopoverOpen(false);
-                      setCitationAnchorRect(null);
-                    }}
-                    anchorRect={citationAnchorRect}
-                    onJumpToCitation={(citation) => onJumpToCitation?.(citation, outputCitations)}
                     onCitationHover={onCitationHover}
                     onLocateSource={onLocateSource}
+                    onOpenSource={(citation) => onJumpToCitation?.(citation, outputCitations)}
                     elevated
+                    triggerClassName="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 rounded-full border border-gray-200 bg-white hover:bg-gray-50 hover:text-gray-700 transition-colors cursor-pointer dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-slate-100"
                   />
-                )}
+                </div>
               </div>
             ) : null}
           </section>

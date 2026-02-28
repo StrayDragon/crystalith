@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from .interfaces import AIProviderPlugin, BasePlugin, OutputTypePlugin, ParserPlugin, PLUGIN_API_VERSION
+from .interfaces import (
+    AIProviderPlugin,
+    BasePlugin,
+    OutputTypePlugin,
+    ParserPlugin,
+    SUPPORTED_PLUGIN_API_VERSIONS,
+)
 from .render_types import OutputTypePluginMeta, PluginConfigSchema, RenderDescriptor
 
 
@@ -17,8 +23,9 @@ def check_plugin(plugin_id: str, plugin: object) -> list[str]:
 
     has_interface = False
 
-    if isinstance(plugin, BasePlugin) and plugin.api_version != PLUGIN_API_VERSION:
-        issues.append(f"api_version mismatch: got {plugin.api_version!r}, expected {PLUGIN_API_VERSION!r}")
+    if isinstance(plugin, BasePlugin) and plugin.api_version not in SUPPORTED_PLUGIN_API_VERSIONS:
+        supported = sorted(SUPPORTED_PLUGIN_API_VERSIONS)
+        issues.append(f"api_version mismatch: got {plugin.api_version!r}, supported {supported!r}")
 
     if isinstance(plugin, AIProviderPlugin):
         has_interface = True

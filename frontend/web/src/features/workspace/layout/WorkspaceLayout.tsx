@@ -15,6 +15,7 @@ import { useKeyboardShortcuts, type KeyboardShortcutBinding } from '../shared/ho
 import { getSlideIdFromOutput } from '../shared/outputPayload';
 import { useWorkspaceStore } from '../shared/state/workspaceStore';
 import type { ChatMessage, Citation, SourceItem } from '../shared/types';
+import { exportOutputJsonDownload, exportOutputMarkdownDownload, exportQaJsonDownload, exportQaMarkdownDownload } from '../shared/evidenceExport';
 import { toast } from '../../../shared/toast';
 import { computeWorkspaceReadiness, useDependencyHealth, useWorkspaceOverlays } from './hooks';
 import WorkspaceOnboardingBanner from './components/WorkspaceOnboardingBanner';
@@ -497,6 +498,49 @@ export default function WorkspaceLayout() {
       },
     });
 
+    if (activeNotebookId && activeSessionId && isConnected) {
+      cmds.push({
+        id: 'export-qa-markdown',
+        label: '导出当前会话（Markdown，含引用）',
+        icon: '⬇️',
+        action: () => {
+          exportQaMarkdownDownload({ notebookId: activeNotebookId, sessionId: activeSessionId });
+        },
+      });
+
+      cmds.push({
+        id: 'export-qa-json',
+        label: '导出当前会话（JSON，含引用）',
+        icon: '⬇️',
+        action: () => {
+          void exportQaJsonDownload({ notebookId: activeNotebookId, sessionId: activeSessionId });
+        },
+      });
+    }
+
+    if (activeNotebookId && isConnected) {
+      const outputId = overlays.viewerOutputId ?? refine.outputs[0]?.id ?? null;
+      if (outputId) {
+        cmds.push({
+          id: 'export-output-markdown',
+          label: '导出当前 Output（Markdown，含引用）',
+          icon: '📝',
+          action: () => {
+            exportOutputMarkdownDownload({ notebookId: activeNotebookId, outputId });
+          },
+        });
+
+        cmds.push({
+          id: 'export-output-json',
+          label: '导出当前 Output（JSON，含引用）',
+          icon: '🧾',
+          action: () => {
+            void exportOutputJsonDownload({ notebookId: activeNotebookId, outputId });
+          },
+        });
+      }
+    }
+
     cmds.push({
       id: 'open-slides-studio',
       label: '打开 Slides Studio',
@@ -561,17 +605,21 @@ export default function WorkspaceLayout() {
     return cmds;
   }, [
     activeWidgetIds,
+    activeNotebookId,
+    activeSessionId,
     handleCreateNotebookFromOnboarding,
     handleFocusSourceSearch,
     handleOpenAddSourceFromUrl,
     handleOpenUpload,
     handleStartSession,
+    isConnected,
     locked,
     notebooks.activeNotebookId,
     notebooks.notebooks,
     notebooks.setActiveNotebookId,
     openSessionSearch,
     overlays,
+    refine.outputs,
     toggleLock,
   ]);
 

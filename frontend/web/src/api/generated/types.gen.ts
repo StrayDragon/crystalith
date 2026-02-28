@@ -114,6 +114,48 @@ export type Citation = {
 };
 
 /**
+ * CitationContextChunk
+ */
+export type CitationContextChunk = {
+    /**
+     * Chunk Id
+     */
+    chunk_id: number;
+    /**
+     * Chunk Index
+     */
+    chunk_index: number;
+    /**
+     * Page Number
+     */
+    page_number?: number | null;
+    /**
+     * Paragraph Index
+     */
+    paragraph_index?: number | null;
+    /**
+     * Text
+     */
+    text: string;
+};
+
+/**
+ * CitationContextResponse
+ */
+export type CitationContextResponse = {
+    /**
+     * After
+     */
+    after: Array<CitationContextChunk>;
+    /**
+     * Before
+     */
+    before: Array<CitationContextChunk>;
+    chunk: CitationContextChunk;
+    citation: Citation;
+};
+
+/**
  * ConfigOption
  */
 export type ConfigOption = {
@@ -631,6 +673,76 @@ export type NotebookUpdate = {
 };
 
 /**
+ * OutputExportJson
+ */
+export type OutputExportJson = {
+    /**
+     * Citations
+     */
+    citations: Array<Citation>;
+    content: JsonDict;
+    /**
+     * Exported At
+     */
+    exported_at: string;
+    /**
+     * Notebook Id
+     */
+    notebook_id: number;
+    /**
+     * Output Id
+     */
+    output_id: number;
+    /**
+     * OutputType
+     *
+     * 枚举值:
+     *
+     * * `FAQ`: 问答清单
+     * * `GUIDE`: 学习/行动指南
+     * * `TIMELINE`: 关键事件序列
+     * * `MINDMAP`: 主题层级结构
+     * * `QUIZ`: 知识检验
+     * * `BRIEFING`: 高层摘要
+     * * `SLIDES`: 演示文稿
+     * * `PARAGRAPH`: 段落摘要
+     * * `BULLETS`: 要点列表
+     * * `STRUCTURED`: 结构化摘要
+     */
+    output_type: 'BRIEFING' | 'BULLETS' | 'FAQ' | 'GUIDE' | 'MINDMAP' | 'PARAGRAPH' | 'QUIZ' | 'SLIDES' | 'STRUCTURED' | 'TIMELINE';
+    /**
+     * Prompt
+     */
+    prompt: null | string;
+    /**
+     * Sources
+     */
+    sources: Array<OutputExportSource>;
+};
+
+/**
+ * OutputExportSource
+ */
+export type OutputExportSource = {
+    /**
+     * Mime Type
+     */
+    mime_type?: null | string;
+    /**
+     * Parser Type
+     */
+    parser_type?: null | string;
+    /**
+     * Source Id
+     */
+    source_id: number;
+    /**
+     * Source Name
+     */
+    source_name: string;
+};
+
+/**
  * OutputGenerateRequest
  */
 export type OutputGenerateRequest = {
@@ -768,6 +880,66 @@ export type PluginConfigSchema = {
      * Topic Placeholder
      */
     topic_placeholder?: string;
+};
+
+/**
+ * QAExportJson
+ */
+export type QaExportJson = {
+    /**
+     * Answer
+     */
+    answer: string;
+    /**
+     * Citations
+     */
+    citations: Array<Citation>;
+    /**
+     * Exported At
+     */
+    exported_at: string;
+    /**
+     * Message Id
+     */
+    message_id: number;
+    /**
+     * Notebook Id
+     */
+    notebook_id: number;
+    /**
+     * Question
+     */
+    question: null | string;
+    /**
+     * Session Id
+     */
+    session_id: number;
+    /**
+     * Sources
+     */
+    sources: Array<QaExportSource>;
+};
+
+/**
+ * QAExportSource
+ */
+export type QaExportSource = {
+    /**
+     * Mime Type
+     */
+    mime_type?: null | string;
+    /**
+     * Parser Type
+     */
+    parser_type?: null | string;
+    /**
+     * Source Id
+     */
+    source_id: number;
+    /**
+     * Source Name
+     */
+    source_name: string;
 };
 
 /**
@@ -2694,6 +2866,63 @@ export type AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetResponses = {
 
 export type AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetResponse = AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetResponses[keyof AnalyzeNotebookV1NotebooksNotebookIdAnalysisGetResponses];
 
+export type GetCitationContextV1NotebooksNotebookIdCitationsContextGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: {
+        /**
+         * Chunk Index
+         *
+         * 1-based chunk index within the source
+         */
+        chunk_index?: number | null;
+        /**
+         * After
+         *
+         * How many chunks to include after the cited chunk
+         */
+        after?: number;
+        /**
+         * Before
+         *
+         * How many chunks to include before the cited chunk
+         */
+        before?: number;
+        /**
+         * Chunk Id
+         */
+        chunk_id?: number | null;
+        /**
+         * Source Id
+         */
+        source_id?: number | null;
+    };
+    url: '/v1/notebooks/{notebook_id}/citations/context';
+};
+
+export type GetCitationContextV1NotebooksNotebookIdCitationsContextGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetCitationContextV1NotebooksNotebookIdCitationsContextGetError = GetCitationContextV1NotebooksNotebookIdCitationsContextGetErrors[keyof GetCitationContextV1NotebooksNotebookIdCitationsContextGetErrors];
+
+export type GetCitationContextV1NotebooksNotebookIdCitationsContextGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: CitationContextResponse;
+};
+
+export type GetCitationContextV1NotebooksNotebookIdCitationsContextGetResponse = GetCitationContextV1NotebooksNotebookIdCitationsContextGetResponses[keyof GetCitationContextV1NotebooksNotebookIdCitationsContextGetResponses];
+
 export type ListOutputsV1NotebooksNotebookIdOutputsGetData = {
     body?: never;
     path: {
@@ -2837,6 +3066,45 @@ export type ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSo
 
 export type ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostResponse = ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostResponses[keyof ConvertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePostResponses];
 
+export type ExportOutputV1NotebooksNotebookIdOutputsOutputIdExportGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Output Id
+         */
+        output_id: number;
+    };
+    query?: {
+        /**
+         * Format
+         */
+        format?: 'json' | 'markdown';
+    };
+    url: '/v1/notebooks/{notebook_id}/outputs/{output_id}/export';
+};
+
+export type ExportOutputV1NotebooksNotebookIdOutputsOutputIdExportGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ExportOutputV1NotebooksNotebookIdOutputsOutputIdExportGetError = ExportOutputV1NotebooksNotebookIdOutputsOutputIdExportGetErrors[keyof ExportOutputV1NotebooksNotebookIdOutputsOutputIdExportGetErrors];
+
+export type ExportOutputV1NotebooksNotebookIdOutputsOutputIdExportGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: OutputExportJson;
+};
+
+export type ExportOutputV1NotebooksNotebookIdOutputsOutputIdExportGetResponse = ExportOutputV1NotebooksNotebookIdOutputsOutputIdExportGetResponses[keyof ExportOutputV1NotebooksNotebookIdOutputsOutputIdExportGetResponses];
+
 export type CreateOutputV1NotebooksNotebookIdOutputsOutputTypePostData = {
     body: OutputGenerateRequest;
     path: {
@@ -2913,6 +3181,51 @@ export type AskQuestionV1NotebooksNotebookIdQaPostResponses = {
 };
 
 export type AskQuestionV1NotebooksNotebookIdQaPostResponse = AskQuestionV1NotebooksNotebookIdQaPostResponses[keyof AskQuestionV1NotebooksNotebookIdQaPostResponses];
+
+export type ExportQaV1NotebooksNotebookIdQaExportGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query: {
+        /**
+         * Message Id
+         *
+         * Assistant message ID to export; defaults to latest
+         */
+        message_id?: number | null;
+        /**
+         * Format
+         */
+        format?: 'json' | 'markdown';
+        /**
+         * Session Id
+         */
+        session_id: number;
+    };
+    url: '/v1/notebooks/{notebook_id}/qa/export';
+};
+
+export type ExportQaV1NotebooksNotebookIdQaExportGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ExportQaV1NotebooksNotebookIdQaExportGetError = ExportQaV1NotebooksNotebookIdQaExportGetErrors[keyof ExportQaV1NotebooksNotebookIdQaExportGetErrors];
+
+export type ExportQaV1NotebooksNotebookIdQaExportGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: QaExportJson;
+};
+
+export type ExportQaV1NotebooksNotebookIdQaExportGetResponse = ExportQaV1NotebooksNotebookIdQaExportGetResponses[keyof ExportQaV1NotebooksNotebookIdQaExportGetResponses];
 
 export type AskQuestionStreamV1NotebooksNotebookIdQaStreamPostData = {
     body: QaRequest;

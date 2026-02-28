@@ -32,12 +32,20 @@ Agent 运行依赖 MUST 通过显式依赖声明/注入传入，不得隐式读�
 - **WHEN** 系统启动并加载可用插件
 - **THEN** 插件 SHALL 通过 `entry_points` 被发现，且冲突时按 last-wins 规则确定生效项
 
-### Requirement: Plugin compatibility can be gated
-系统 MUST 支持 `api_version` 或等价兼容性门禁，以避免不兼容插件静默生效。
+### Requirement: Compatibility policy is explicit and stable
+宿主 MUST 明确声明支持的 `api_version` 集合，并对不兼容插件实施门禁，避免静默生效或静默失效。
 
-#### Scenario: Block incompatible plugin
-- **WHEN** 插件声明的兼容版本不满足当前运行时
-- **THEN** 系统 SHALL 阻止该插件生效并给出明确原因
+#### Scenario: Block incompatible api_version
+- **WHEN** 插件声明的 `api_version` 不在宿主支持集合内
+- **THEN** 系统 SHALL 阻止插件生效并输出明确原因
+
+### Requirement: Plugin compatibility failures are diagnosable
+当插件因版本不兼容或合规问题被跳过时，系统 MUST 提供结构化、可机器读取的诊断信息。
+
+#### Scenario: Compliance checker reports skipped plugin reason
+- **WHEN** 插件被判定为不兼容或不合规而无法加载
+- **THEN** 系统 SHALL 在日志或合规报告中给出稳定 `error_code` 与人类可读 `message`
+- **AND** SHALL 提供可执行的修复建议（hint）
 
 ### Requirement: Plugin schema/render models are importable
 插件扩展所需的 schema/render 类型 MUST 可被外部插件稳定导入。

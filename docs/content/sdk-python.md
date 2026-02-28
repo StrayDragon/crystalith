@@ -13,13 +13,24 @@ Fern configuration lives in:
 - SDK version is sourced from `backend/py/pyproject.toml` and written to `sdk/client/python/.sdk-version` during generation.
 - You can override with `just sdk-gen-python VERSION=X.Y.Z`, but it must match the backend version.
 
-## Usage (after `pip install crystalith`)
+## Minimal example
 
 ```python
 from crystalith import CrystalithClient
 
-client = CrystalithClient(base_url="https://your-host")
-models = client.models.list_models()
+client = CrystalithClient(base_url="http://localhost:8000")
+
+notebooks = client.notebooks.list_notebooks()
+notebook = client.notebooks.create_notebook(name="Demo")
+
+with open("example.pdf", "rb") as f:
+    client.sources.upload_source(notebook.id, file=("example.pdf", f))
+
+qa = client.qa.ask_question(notebook.id, question="Summarize the uploaded source.")
+print(qa.answer)
+
+output = client.outputs.create_output(notebook.id, "BRIEFING")
+print(output.id, output.type)
 ```
 
 ## CI constraints

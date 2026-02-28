@@ -2,21 +2,11 @@
 
 {{ description }}
 
-{% if plugin_kind == "OutputType" %}
-This is an example **OutputTypePlugin** that overrides an existing `OutputType` value
-in Crystalith (e.g. `FAQ`, `QUIZ`, `TIMELINE`).
-
-It can optionally provide:
-- `metadata` (`OutputTypePluginMeta`)
-- `render_descriptor` (`RenderDescriptor`)
-- `config_schema` (`PluginConfigSchema`)
-{% else %}
 ## Install (editable)
 
 ```bash
 pip install -e .
 ```
-{% endif %}
 
 ## Register
 
@@ -26,3 +16,34 @@ This project registers a plugin via:
 [project.entry-points."crystalith.plugins"]
 {{ plugin_id }} = "{{ module_name }}.plugin:plugin"
 ```
+
+## Tests
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
+
+## Development tips
+
+- Set `api_version = "v1"` to match the host's supported plugin API version.
+- To see why a plugin was loaded or skipped, run Crystalith's compliance checker:
+
+```bash
+cd path/to/crystalith/backend/py
+uv run python scripts/check_plugins.py --json
+```
+
+{% if plugin_kind == "OutputType" %}
+## OutputType extension points
+
+This is an example **OutputTypePlugin** that overrides an existing `OutputType` value
+in Crystalith (e.g. `FAQ`, `QUIZ`, `TIMELINE`).
+
+Optional extension attributes:
+- `metadata` (`OutputTypePluginMeta`) — UI label + tone
+- `render_descriptor` (`RenderDescriptor`) — declarative frontend layout descriptor
+- `config_schema` (`PluginConfigSchema`) — generation dialog configuration
+
+See `src/{{ module_name }}/plugin.py` for a minimal example.
+{% endif %}

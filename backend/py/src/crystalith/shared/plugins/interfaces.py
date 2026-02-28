@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 
 PLUGIN_API_VERSION = "v1"
+SUPPORTED_PLUGIN_API_VERSIONS: frozenset[str] = frozenset({PLUGIN_API_VERSION})
 
 
 @runtime_checkable

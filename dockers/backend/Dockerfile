@@ -36,13 +36,11 @@ COPY backend/py/alembic.ini ./
 COPY backend/py/alembic ./alembic
 COPY backend/py/scripts ./scripts
 
-# Production docker-compose uses external ChromaDB service (HTTP); keep the API
-# image smaller by skipping embedded-Chroma Python dependencies at install time.
 RUN set -eux; \
   if [ -n "$UV_INDEX_URL" ]; then \
-    UV_INDEX_URL="$UV_INDEX_URL" UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable --no-install-package chromadb; \
+    UV_INDEX_URL="$UV_INDEX_URL" UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable; \
   else \
-    UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable --no-install-package chromadb; \
+    UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable; \
   fi
 
 FROM ${PYTHON_IMAGE} AS runtime

@@ -40,11 +40,27 @@ notebook、session、message 的范围归属与 404/400 语义 MUST 稳定。
 - **THEN** stream SHALL 至少包含 `chunk|done|error` 事件并保持字段语义稳定
 
 ### Requirement: Citation model is unified across APIs
-citation 对象结构 MUST 在 QA/messages/outputs 中保持一致且索引映射为 1-based。
+citation 对象 MUST 在 QA/messages/outputs 等对外 API 中保持字段语义一致，并包含最小可定位字段集。
 
 #### Scenario: Citations are consistent across endpoints
 - **WHEN** QA/messages/outputs 返回 citation 对象
-- **THEN** citation 结构 SHALL 保持一致且索引映射为 1-based
+- **THEN** citation 结构 SHALL 保持一致
+- **AND** citation SHALL 至少包含 `source_id`, `source_name`, `chunk_id`, `chunk_index`, `snippet`
+- **AND** `chunk_index` SHALL 表示在该 source 内的稳定顺序（1-based）
+
+### Requirement: Citation context lookup is supported
+系统 MUST 提供可按 citation 定位并获取上下文的稳定端点，以支持用户复查证据链。
+
+#### Scenario: Fetch citation context
+- **WHEN** 客户端请求某 citation 的上下文
+- **THEN** 系统 SHALL 返回片段前后文（或等价上下文）与页码/段落等元信息（如可用）
+
+### Requirement: Exports can include citations
+系统 MUST 支持将 QA/Outputs 导出为包含 citations 的格式（Markdown/JSON 或等价），以便分享与复盘。
+
+#### Scenario: Export includes citation list
+- **WHEN** 用户导出 QA 或某个 Output
+- **THEN** 导出结果 SHALL 包含引用清单与可定位信息（source_id 或可解析来源标识）
 
 ### Requirement: Workspace tools and outputs endpoints are stable
 `/v1/workspace/tools` 与 outputs/slides 相关端点 MUST 保持可用与向后兼容。

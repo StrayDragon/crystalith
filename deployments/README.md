@@ -69,6 +69,55 @@ just DEV_OPTIONALS="storage redis" dev-docker-down
 - `slidev`: local slide preview service.
 - `host-remap`: host-network socat bridge for VPN/Tailscale scenarios.
 
+## Overlay Enablement & Acceptance
+
+Use `/health/dependencies` (or the Workspace Diagnostics panel) as the single source of truth for optional service status.
+
+### storage (postgres + chromadb)
+
+Enable when you need durable DB + vector storage outside the API container (recommended for long‑running self-host setups).
+
+- Enable: add `-f deployments/prod/docker-compose.storage.yml` (or `just DEV_OPTIONALS="storage ..."`).
+- External replacement: set `DATABASE_URL`, `CHROMA_HOST`, `CHROMA_PORT` and omit the overlay services.
+- Acceptance:
+  - `curl -fsS "http://localhost:${CL_WEB_PORT:-8080}/health/dependencies" | python3 -m json.tool | head -80`
+  - Verify `optional.storage_chroma.enabled == true` and status is not `unknown`.
+
+### redis
+
+Enable when you want caching for embeddings/vector search and lower latency.
+
+- Enable: add `-f deployments/prod/docker-compose.redis.yml`.
+- External replacement: set `CACHE_PROVIDER=redis`, `REDIS_URL=...` and omit the overlay service.
+- Acceptance:
+  - Verify `optional.cache_redis.enabled == true` and status is not `unknown`.
+
+### ollama
+
+Enable when you want fully local models (no external LLM provider).
+
+- Enable: add `-f deployments/prod/docker-compose.ollama.yml`.
+- External replacement: set `OLLAMA_HOST=...` and omit the overlay service.
+- Acceptance:
+  - Verify `optional.ollama.enabled == true` and endpoint matches `OLLAMA_HOST`.
+
+### slidev
+
+Enable when you want slide preview service in the same compose project.
+
+- Enable: add `-f deployments/prod/docker-compose.slidev.yml`.
+- Acceptance:
+  - Verify the Slidev container is running: `docker compose ps slidev`
+  - (Optional) check `http://localhost:${CL_SLIDEV_PORT:-3030}`.
+
+### host-remap
+
+Enable only for special networking setups (VPN/Tailscale, host-network forwarding).
+
+- Enable: add `-f deployments/prod/docker-compose.host-remap.yml`.
+- Acceptance:
+  - Configure `BRIDGE_FORWARDS` and verify the forwarded ports are reachable from within containers.
+
 ## Acceptance (core)
 
 ```bash

@@ -4,16 +4,19 @@ import asyncio
 import datetime
 import json
 from collections.abc import AsyncGenerator
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import Query, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import Settings
-from crystalith.shared.db import Notebook, Session
+from crystalith.shared.db import Message, Notebook, Session, Source
 from crystalith.shared.schemas.citations import Citation
 from crystalith.shared.vector_storage import VectorStore
 
@@ -356,4 +359,174 @@ async def ask_question_stream(
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
+    )
+
+
+class QAExportSource(BaseModel):
+    source_id: int
+    source_name: str
+    mime_type: str | None = None
+    parser_type: str | None = None
+
+
+class QAExportJson(BaseModel):
+    notebook_id: int
+    session_id: int
+    message_id: int
+    question: str | None
+    answer: str
+    citations: list[Citation]
+    sources: list[QAExportSource]
+    exported_at: datetime.datetime
+
+
+def _build_sources_meta(
+    *,
+    sources: list[Source],
+    fallback_names: dict[int, str],
+) -> list[QAExportSource]:
+    items: list[QAExportSource] = []
+    for source in sources:
+        items.append(
+            QAExportSource(
+                source_id=source.id,
+                source_name=source.filename or fallback_names.get(source.id) or "未知来源",
+                mime_type=source.mime_type,
+                parser_type=source.parser_type,
+            )
+        )
+    missing = [source_id for source_id in fallback_names.keys() if source_id not in {s.id for s in sources}]
+    for source_id in sorted(missing):
+        items.append(
+            QAExportSource(
+                source_id=source_id,
+                source_name=fallback_names.get(source_id) or "未知来源",
+                mime_type=None,
+                parser_type=None,
+            )
+        )
+    return items
+
+
+def _format_citation_line(index: int, citation: Citation) -> str:
+    parts = [f"[{index}] {citation.source_name}"]
+    parts.append(f"chunk {citation.chunk_index}")
+    if citation.page_number is not None:
+        parts.append(f"page {citation.page_number}")
+    if citation.paragraph_index is not None:
+        parts.append(f"para {citation.paragraph_index}")
+    prefix = " · ".join(parts)
+    snippet = citation.snippet.strip()
+    if snippet:
+        return f"{prefix}\n> {snippet}"
+    return prefix
+
+
+@router.get("/export", response_model=QAExportJson)
+async def export_qa(
+    notebook_id: int,
+    session_id: int = Query(..., ge=1),
+    message_id: int | None = Query(None, ge=1, description="Assistant message ID to export; defaults to latest"),
+    format: Literal["markdown", "json"] = Query("markdown"),
+    session: AsyncSession = Depends(get_db_session),
+) -> object:
+    """Export a QA answer with citations as Markdown or JSON."""
+    notebook = await session.get(Notebook, notebook_id)
+    if notebook is None:
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
+    db_session = await session.get(Session, session_id)
+    if db_session is None or db_session.notebook_id != notebook_id:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    assistant_message: Message | None
+    if message_id is not None:
+        message = await session.get(Message, message_id)
+        if message is None or message.session_id != session_id:
+            raise HTTPException(status_code=404, detail="Message not found")
+        if message.role != "assistant":
+            raise HTTPException(status_code=400, detail="message_id must refer to an assistant message")
+        assistant_message = message
+    else:
+        result = await session.execute(
+            select(Message)
+            .where(Message.session_id == session_id, Message.role == "assistant")
+            .order_by(Message.created_at.desc())
+            .limit(1)
+        )
+        assistant_message = result.scalars().first()
+
+    if assistant_message is None:
+        raise HTTPException(status_code=404, detail="No assistant message found to export")
+
+    question_result = await session.execute(
+        select(Message)
+        .where(
+            Message.session_id == session_id,
+            Message.role == "user",
+            Message.created_at <= assistant_message.created_at,
+        )
+        .order_by(Message.created_at.desc())
+        .limit(1)
+    )
+    question_message = question_result.scalars().first()
+    question = question_message.content if question_message is not None else None
+
+    raw_citations = assistant_message.citations or []
+    citations = [Citation.model_validate(item) for item in raw_citations]
+
+    source_ids = list(dict.fromkeys([citation.source_id for citation in citations if citation.source_id]))
+    source_rows = await session.execute(
+        select(Source).where(Source.notebook_id == notebook_id, Source.id.in_(source_ids))
+    )
+    sources = list(source_rows.scalars().all())
+
+    fallback_names = {citation.source_id: citation.source_name for citation in citations}
+    sources_meta = _build_sources_meta(sources=sources, fallback_names=fallback_names)
+
+    exported_at = datetime.datetime.now(datetime.UTC)
+    if format == "json":
+        return QAExportJson(
+            notebook_id=notebook_id,
+            session_id=session_id,
+            message_id=assistant_message.id,
+            question=question,
+            answer=assistant_message.content,
+            citations=citations,
+            sources=sources_meta,
+            exported_at=exported_at,
+        )
+
+    lines: list[str] = []
+    lines.append("# QA Export")
+    lines.append("")
+    if question:
+        lines.append("## Question")
+        lines.append("")
+        lines.append(question)
+        lines.append("")
+    lines.append("## Answer")
+    lines.append("")
+    lines.append(assistant_message.content)
+    lines.append("")
+
+    if citations:
+        lines.append("## Citations")
+        lines.append("")
+        for index, citation in enumerate(citations, start=1):
+            lines.append(_format_citation_line(index, citation))
+            lines.append("")
+
+    if sources_meta:
+        lines.append("## Sources")
+        lines.append("")
+        for item in sources_meta:
+            mime = f" ({item.mime_type})" if item.mime_type else ""
+            lines.append(f"- {item.source_name}{mime} (id: {item.source_id})")
+
+    filename = f"qa-session-{session_id}-message-{assistant_message.id}.md"
+    return Response(
+        "\n".join(lines).rstrip() + "\n",
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
