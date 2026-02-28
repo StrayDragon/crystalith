@@ -46,21 +46,11 @@ jobs:
           cd backend/py
           uv sync --frozen
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install Fern CLI
-        run: npm install -g fern-api@3.73.1
-
       - name: Check OpenAPI schema is up to date
         run: just api-check
 
-      - name: Check Python SDK is up to date
-        env:
-          FERN_TOKEN: ${{ secrets.FERN_TOKEN }}
-        run: just sdk-check
+      - name: Check Python SDK version matches backend
+        run: just sdk-version-check
 
       - name: Build Python SDK package (wheel/sdist)
         run: just sdk-build-python
