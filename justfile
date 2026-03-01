@@ -3,6 +3,7 @@ _default:
 
 SDK_ROOT := "sdk/client/python"
 SDK_PACKAGE_PATH := "sdk/client/python/src/crystalith_sdk"
+SDK_TS_ROOT := "sdk/client/typescript"
 SCHEMA_PATH := "frontend/web/openapi.json"
 
 # --------------------------------------------------------------------------
@@ -53,6 +54,34 @@ sdk-gen-python VERSION='':
     (cd "{{SDK_ROOT}}" && uv version "$SDK_VERSION" --frozen)
     echo "Python SDK v${SDK_VERSION} generated at {{SDK_PACKAGE_PATH}}"
 
+# Generate TypeScript SDK via openapi-ts (version from backend/py/pyproject.toml)
+sdk-gen-typescript VERSION='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    BACKEND_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("backend/py/pyproject.toml").read_text())["project"]["version"])')"
+    SDK_VERSION="${VERSION:-$BACKEND_VERSION}"
+    if [[ -n "{{VERSION}}" && "{{VERSION}}" != "$BACKEND_VERSION" ]]; then
+      echo "SDK_VERSION ({{VERSION}}) must match backend version ($BACKEND_VERSION)" >&2; exit 1
+    fi
+    if [[ ! -f "{{SCHEMA_PATH}}" ]]; then
+      echo "OpenAPI schema not found at {{SCHEMA_PATH}}. Run: just api-export" >&2; exit 1
+    fi
+    command -v pnpm >/dev/null 2>&1 || { echo "pnpm not found. Install: https://pnpm.io/installation" >&2; exit 1; }
+    python - <<PY
+    import json
+    import pathlib
+
+    path = pathlib.Path("{{SDK_TS_ROOT}}/package.json")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["version"] = "${SDK_VERSION}"
+    path.write_text(json.dumps(data, indent=2) + "\\n", encoding="utf-8")
+    PY
+    cp LICENSE "{{SDK_TS_ROOT}}/LICENSE"
+    printf '# The TypeScript package under sdk/client/typescript is generated via openapi-ts (just sdk-gen-typescript).\\n# Do not edit generated files manually.\\n' > "{{SDK_TS_ROOT}}/.generated"
+    pnpm -C "{{SDK_TS_ROOT}}" install --frozen-lockfile
+    pnpm -C "{{SDK_TS_ROOT}}" run generate
+    echo "TypeScript SDK v${SDK_VERSION} generated at {{SDK_TS_ROOT}}"
+
 # Check backend/SDK versions are consistent (no generation).
 sdk-version-check:
     #!/usr/bin/env bash
@@ -60,6 +89,7 @@ sdk-version-check:
     BACKEND_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("backend/py/pyproject.toml").read_text())["project"]["version"])')"
     SDK_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("sdk/client/python/pyproject.toml").read_text())["project"]["version"])')"
     SDK_FILE_VERSION="$(tr -d '\r\n' < "sdk/client/python/.sdk-version")"
+    TS_SDK_VERSION="$(python -c 'import json, pathlib; print(json.loads(pathlib.Path("sdk/client/typescript/package.json").read_text())["version"])')"
     if [[ "$BACKEND_VERSION" != "$SDK_VERSION" ]]; then
       echo "SDK version mismatch: backend/py=$BACKEND_VERSION sdk/client/python/pyproject.toml=$SDK_VERSION" >&2
       exit 1
@@ -68,10 +98,24 @@ sdk-version-check:
       echo "SDK version mismatch: backend/py=$BACKEND_VERSION sdk/client/python/.sdk-version=$SDK_FILE_VERSION" >&2
       exit 1
     fi
+    if [[ "$BACKEND_VERSION" != "$TS_SDK_VERSION" ]]; then
+      echo "SDK version mismatch: backend/py=$BACKEND_VERSION sdk/client/typescript/package.json=$TS_SDK_VERSION" >&2
+      exit 1
+    fi
     echo "SDK version OK: $BACKEND_VERSION"
 
 # Generate all SDKs: export schema → frontend SDK → Python SDK
 sdk-gen VERSION='': api-export sdk-gen-web (sdk-gen-python VERSION)
+
+# Build TypeScript SDK (dist + types)
+sdk-build-typescript:
+    pnpm -C {{SDK_TS_ROOT}} install --frozen-lockfile
+    pnpm -C {{SDK_TS_ROOT}} run build
+
+# Check TypeScript SDK is up to date (for pre-commit)
+sdk-check-typescript: (sdk-gen-typescript)
+    git add {{SDK_TS_ROOT}}
+    git diff --staged --exit-code
 
 # Check Python SDK is up to date (for pre-commit)
 sdk-check: api-export (sdk-gen-python)

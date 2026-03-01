@@ -1,0 +1,32 @@
+{
+  "name": "crystalith-sdk",
+  "version": "0.1.0",
+  "description": "Crystalith API TypeScript SDK (generated from OpenAPI).",
+  "license": "Apache-2.0",
+  "author": "straydragon <straydragonl@foxmail.com>",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist src/generated",
+    "generate": "openapi-ts -i ../../../frontend/web/openapi.json -o ./src/generated -c @hey-api/client-fetch",
+    "build": "tsup",
+    "pack": "pnpm run build && npm pack"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.90.8",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2"
+  },
+  "packageManager": "pnpm@10.29.2"
+}
