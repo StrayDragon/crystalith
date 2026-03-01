@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import {
@@ -25,6 +25,10 @@ import { LAYER_LEVELS } from '../../../../shared/layer';
 import { copyToClipboard } from '../../../../shared/clipboard';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { exportQaJsonDownload, exportQaMarkdownDownload } from '../../shared/evidenceExport';
+import { parseChatUiEnvelope } from './chatUiEnvelope';
+import { chatUiComponentRegistry } from './chatUiRegistry';
+import JsonFallbackCard from './components/JsonFallbackCard';
+import ToolActionCard from './components/ToolActionCard';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -84,6 +88,13 @@ function ChatPanel({
 }: ChatPanelProps) {
   const notebookId = useWorkspaceStore((s) => s.activeNotebookId);
   const sessionId = useWorkspaceStore((s) => s.activeSessionId);
+  const latestAssistantMessageId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const msg = messages[i];
+      if (msg?.role === 'assistant') return msg.id;
+    }
+    return null;
+  }, [messages]);
 
   const citationIndexMap = useMemo(() => {
     const map = new Map<number, { citation: Citation; index: number }>();
@@ -95,6 +106,9 @@ function ChatPanel({
   }, [citations]);
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [toolRuns, setToolRuns] = useState<Record<string, { status: 'pending' | 'running' | 'success' | 'error'; outputText?: string | null; errorMessage?: string | null }>>({});
+  const autoExecSeenRef = useRef(new Set<string>());
+  const toolInFlightRef = useRef(new Set<string>());
 
   const shouldRenderMessageList =
     isConnected &&
@@ -111,6 +125,31 @@ function ChatPanel({
     }
   }, []);
 
+  const runQaExportPreview = useCallback(
+    async (params: { format: 'markdown' | 'json'; messageId: number }) => {
+      if (notebookId == null || sessionId == null) {
+        throw new Error('未选择会话，无法导出预览。');
+      }
+      const query = new URLSearchParams();
+      query.set('session_id', String(sessionId));
+      query.set('message_id', String(params.messageId));
+      query.set('format', params.format);
+      const url = `/v1/notebooks/${notebookId}/qa/export?${query.toString()}`;
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        throw new Error(`请求失败: HTTP ${resp.status}`);
+      }
+      if (params.format === 'json') {
+        const data = (await resp.json()) as unknown;
+        const text = JSON.stringify(data, null, 2);
+        return text.length > 4000 ? text.slice(0, 4000) + '\n…' : text;
+      }
+      const text = await resp.text();
+      return text.length > 4000 ? text.slice(0, 4000) + '\n…' : text;
+    },
+    [notebookId, sessionId],
+  );
+
   const renderMessage = (message: ChatMessage) => {
     const numericMessageId = Number(message.id);
     const canExportMessage =
@@ -120,6 +159,24 @@ function ChatPanel({
       sessionId != null &&
       Number.isFinite(numericMessageId) &&
       numericMessageId > 0;
+
+    const parsedAssistantContent =
+      message.role === 'assistant' ? parseChatUiEnvelope(message.content) : null;
+    const assistantFallbackText = parsedAssistantContent?.fallbackText ?? message.content;
+    const assistantEnvelope = parsedAssistantContent?.envelope ?? null;
+
+    const toolResultByUseId = new Map<string, { status: 'success' | 'error'; outputText?: string | null; errorMessage?: string | null }>();
+    if (assistantEnvelope) {
+      for (const part of assistantEnvelope.parts) {
+        if (part.type !== 'tool_result') continue;
+        const outputText = part.output ? JSON.stringify(part.output, null, 2) : null;
+        toolResultByUseId.set(part.tool_use_id, {
+          status: part.status,
+          outputText: outputText && outputText.length > 4000 ? outputText.slice(0, 4000) + '\n…' : outputText,
+          errorMessage: part.error_message ?? null,
+        });
+      }
+    }
 
     const messageCitationEntries =
       message.citations && message.citations.length > 0
@@ -138,24 +195,144 @@ function ChatPanel({
                 Boolean(entry),
             );
 
+    const typingCursor =
+      message.role === 'assistant' && isStreaming && streamingMessageId === message.id ? (
+        <span className="TypingCursor" aria-hidden="true" />
+      ) : null;
+
     return (
       <div
         className={`flex flex-col gap-2 pb-4 ${message.role === 'user' ? 'items-end' : 'items-start'}`}
         data-testid="chat-message-item"
       >
         <div
-          className={`text-sm leading-relaxed whitespace-pre-wrap ${
+          className={`text-sm leading-relaxed ${
             message.role === 'user'
               ? 'rounded-2xl bg-gray-100 dark:bg-slate-800 px-4 py-2 text-gray-700 dark:text-slate-100'
               : 'text-gray-800 dark:text-slate-100'
           }`}
         >
-          {message.content}
-          {message.role === 'assistant' &&
-          isStreaming &&
-          streamingMessageId === message.id ? (
-            <span className="TypingCursor" aria-hidden="true" />
-          ) : null}
+          {message.role === 'assistant' && assistantEnvelope ? (
+            <div className="flex flex-col gap-2">
+              {assistantEnvelope.parts.map((part, index) => {
+                if (part.type === 'text') {
+                  return (
+                    <div
+                      key={`text:${index}`}
+                      className="whitespace-pre-wrap"
+                    >
+                      {part.text}
+                    </div>
+                  );
+                }
+                if (part.type === 'component') {
+                  const registration = chatUiComponentRegistry[part.name] ?? null;
+                  if (!registration) {
+                    return (
+                      <JsonFallbackCard
+                        key={`component:${part.id}`}
+                        title={`Unknown component: ${part.name}`}
+                        json={part}
+                      />
+                    );
+                  }
+                  const validated = registration.validateProps(part.props);
+                  if (!validated.ok) {
+                    return (
+                      <JsonFallbackCard
+                        key={`component:${part.id}`}
+                        title={`Invalid props: ${part.name}`}
+                        json={{ part, issues: validated.issues }}
+                      />
+                    );
+                  }
+                  const Component = registration.Component;
+                  return (
+                    <Component
+                      key={`component:${part.id}`}
+                      {...validated.data}
+                    />
+                  );
+                }
+                if (part.type === 'tool_result') {
+                  // Rendered alongside its corresponding tool_use when possible.
+                  return null;
+                }
+                if (part.type === 'tool_use') {
+                  const runKey = `${message.id}:${part.id}`;
+                  const runState = toolRuns[runKey] ?? { status: 'pending' as const };
+                  const persisted = toolResultByUseId.get(part.id) ?? null;
+                  const status = persisted ? (persisted.status === 'success' ? 'success' : 'error') : runState.status;
+                  const outputText = persisted?.outputText ?? runState.outputText ?? null;
+                  const errorMessage = persisted?.errorMessage ?? runState.errorMessage ?? null;
+
+                  const autoExecWhitelist = new Set(['qa_export_markdown_preview']);
+                  const isWhitelisted = autoExecWhitelist.has(part.name);
+                  const requiresConfirm = Boolean(part.requires_confirm) || !isWhitelisted;
+                  const autoExecute =
+                    Boolean(part.auto_execute) &&
+                    isWhitelisted &&
+                    latestAssistantMessageId === message.id;
+
+                  const canExecute = canExportMessage && (part.name === 'qa_export_markdown_preview' || part.name === 'qa_export_json_preview');
+
+                  const onExecute = async () => {
+                    if (!canExecute) return;
+                    if (toolInFlightRef.current.has(runKey)) return;
+                    if (autoExecute) {
+                      if (autoExecSeenRef.current.has(runKey)) return;
+                      autoExecSeenRef.current.add(runKey);
+                    }
+                    toolInFlightRef.current.add(runKey);
+                    setToolRuns((prev) => ({
+                      ...prev,
+                      [runKey]: { status: 'running', outputText: null, errorMessage: null },
+                    }));
+                    try {
+                      const preview = await runQaExportPreview({
+                        format: part.name === 'qa_export_json_preview' ? 'json' : 'markdown',
+                        messageId: numericMessageId,
+                      });
+                      setToolRuns((prev) => ({
+                        ...prev,
+                        [runKey]: { status: 'success', outputText: preview, errorMessage: null },
+                      }));
+                    } catch (error) {
+                      const message = error instanceof Error ? error.message : '请求失败';
+                      setToolRuns((prev) => ({
+                        ...prev,
+                        [runKey]: { status: 'error', outputText: null, errorMessage: message },
+                      }));
+                    } finally {
+                      toolInFlightRef.current.delete(runKey);
+                    }
+                  };
+
+                  return (
+                    <ToolActionCard
+                      key={`tool:${part.id}`}
+                      title={part.name}
+                      description={requiresConfirm ? '需要确认后执行' : '可自动执行'}
+                      status={status}
+                      outputText={outputText}
+                      errorMessage={errorMessage}
+                      canExecute={canExecute}
+                      requiresConfirm={requiresConfirm}
+                      autoExecute={autoExecute}
+                      onExecute={onExecute}
+                    />
+                  );
+                }
+                return null;
+              })}
+              {typingCursor}
+            </div>
+          ) : (
+            <div className="whitespace-pre-wrap">
+              {message.role === 'assistant' ? assistantFallbackText : message.content}
+              {typingCursor}
+            </div>
+          )}
         </div>
         {message.role === 'assistant' && message.content ? (
           <div className="flex items-center gap-1 mt-1 flex-wrap">
@@ -172,7 +349,7 @@ function ChatPanel({
             <button
               type="button"
               className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
-              onClick={() => onSaveToNote?.(message.content)}
+              onClick={() => onSaveToNote?.(assistantFallbackText)}
             >
               <IconSave className="w-3.5 h-3.5" />
               保存到笔记
@@ -180,7 +357,7 @@ function ChatPanel({
             <button
               type="button"
               className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
-              onClick={() => handleCopy(message.id, message.content)}
+              onClick={() => handleCopy(message.id, assistantFallbackText)}
             >
               <IconCopy className="w-3.5 h-3.5" />
               {copiedId === message.id ? '已复制' : '复制'}

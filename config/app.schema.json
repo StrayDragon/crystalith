@@ -49,6 +49,25 @@
       "title": "AppAuthSettings",
       "type": "object"
     },
+    "AppFeaturesSettings": {
+      "description": "Application feature flags.",
+      "properties": {
+        "chat_prompt_presets_enabled": {
+          "default": false,
+          "description": "Enable /prompt:* directives in QA.",
+          "title": "Chat Prompt Presets Enabled",
+          "type": "boolean"
+        },
+        "chat_ui_envelope_enabled": {
+          "default": false,
+          "description": "Embed UI envelopes into assistant message content.",
+          "title": "Chat Ui Envelope Enabled",
+          "type": "boolean"
+        }
+      },
+      "title": "AppFeaturesSettings",
+      "type": "object"
+    },
     "AppSettings": {
       "description": "Application settings.",
       "properties": {
@@ -66,6 +85,10 @@
           "default": "/v1/codev/openapi-ui/scalar",
           "title": "Openapi Ui Path",
           "type": "string"
+        },
+        "features": {
+          "$ref": "#/$defs/AppFeaturesSettings",
+          "description": "Feature flags."
         },
         "auth": {
           "$ref": "#/$defs/AppAuthSettings",

@@ -15,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
+from crystalith.shared.chat_ui_envelope import strip_ui_envelope
+from crystalith.shared.chat_ui_envelope import embed_ui_envelope
 from crystalith.shared.config import Settings
 from crystalith.shared.db import Message, Notebook, Session, Source
 from crystalith.shared.schemas.citations import Citation
@@ -78,6 +80,41 @@ def _ensure_inline_citations(answer: str, citations: list[Citation]) -> str:
     if "[" in answer and "]" in answer:
         return answer
     return f"{answer} [1]"
+
+
+def _build_answer_envelope(*, answer: str) -> dict[str, object]:
+    return {
+        "schema": "crystalith.ui.message.v1",
+        "parts": [
+            {
+                "type": "component",
+                "name": "AnswerCard",
+                "id": "answer",
+                "props": {"markdown": answer},
+            },
+            {
+                "type": "tool_use",
+                "id": "qa_export_markdown_preview",
+                "name": "qa_export_markdown_preview",
+                "input": {},
+                "auto_execute": True,
+            },
+            {
+                "type": "tool_use",
+                "id": "qa_export_json_preview",
+                "name": "qa_export_json_preview",
+                "input": {},
+                "requires_confirm": True,
+            },
+        ],
+    }
+
+
+def _maybe_embed_answer(*, answer: str, settings: Settings, envelope: dict[str, object] | None = None) -> str:
+    if not settings.app.features.chat_ui_envelope_enabled:
+        return answer
+    resolved_envelope = envelope or _build_answer_envelope(answer=answer)
+    return embed_ui_envelope(answer, resolved_envelope)
 
 
 def _context_stats_from_result(result: QAPipelineResult) -> ContextStatsResponse:
@@ -185,7 +222,7 @@ async def ask_question(
             session=session,
             result=result,
             question=payload.question,
-            answer=NO_EVIDENCE_ANSWER,
+            answer=_maybe_embed_answer(answer=NO_EVIDENCE_ANSWER, settings=settings),
             citations=[],
             evidence=False,
             confidence=0.0,
@@ -198,7 +235,7 @@ async def ask_question(
         session=session,
         result=result,
         question=payload.question,
-        answer=answer,
+        answer=_maybe_embed_answer(answer=answer, settings=settings),
         citations=result.citations,
         evidence=True,
         confidence=result.confidence,
@@ -294,11 +331,12 @@ async def ask_question_stream(
         if not result.evidence:
             if await request.is_disconnected():
                 return
+            persisted_answer = _maybe_embed_answer(answer=NO_EVIDENCE_ANSWER, settings=settings)
             created_at = await _persist_qa_completion(
                 session=session,
                 result=result,
                 question=payload.question,
-                answer=NO_EVIDENCE_ANSWER,
+                answer=persisted_answer,
                 citations=[],
             )
             yield _sse_event("chunk", {"text": NO_EVIDENCE_ANSWER})
@@ -333,11 +371,12 @@ async def ask_question_stream(
 
         answer = "".join(answer_chunks)
         answer = _ensure_inline_citations(answer, result.citations)
+        persisted_answer = _maybe_embed_answer(answer=answer, settings=settings)
         created_at = await _persist_qa_completion(
             session=session,
             result=result,
             question=payload.question,
-            answer=answer,
+            answer=persisted_answer,
             citations=result.citations,
         )
         yield _sse_event(
@@ -459,6 +498,8 @@ async def export_qa(
     if assistant_message is None:
         raise HTTPException(status_code=404, detail="No assistant message found to export")
 
+    answer_text = strip_ui_envelope(assistant_message.content)
+
     question_result = await session.execute(
         select(Message)
         .where(
@@ -491,7 +532,7 @@ async def export_qa(
             session_id=session_id,
             message_id=assistant_message.id,
             question=question,
-            answer=assistant_message.content,
+            answer=answer_text,
             citations=citations,
             sources=sources_meta,
             exported_at=exported_at,
@@ -507,7 +548,7 @@ async def export_qa(
         lines.append("")
     lines.append("## Answer")
     lines.append("")
-    lines.append(assistant_message.content)
+    lines.append(answer_text)
     lines.append("")
 
     if citations:
