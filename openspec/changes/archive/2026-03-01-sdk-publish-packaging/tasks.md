@@ -13,8 +13,8 @@
 
 ## 3. Release：tag 驱动发布与产物归档
 
-- [ ] 3.1 新增 tag 发布工作流（`vX.Y.Z`）：校验版本一致性 → 生成 SDK → 构建产物 → 发布到 PyPI/npm → 上传 artifacts 到 GitHub Release。
-- [ ] 3.2 梳理并最小化所需 secrets/permissions（PyPI token、npm token、`packages: write`/`id-token` 等），并提供 dry-run/TestPyPI 预演路径（可选）。
+- [x] 3.1 新增 tag 发布工作流（`vX.Y.Z`）：校验版本一致性 → 生成 SDK → 构建产物 → 发布到 PyPI/npm → 上传 artifacts 到 GitHub Release。
+- [x] 3.2 梳理并最小化所需 secrets/permissions（PyPI token、npm token、`packages: write`/`id-token` 等），并提供 dry-run/TestPyPI 预演路径（可选）。
 
 ## 4. Docs：对外可用的安装与使用入口
 
@@ -22,6 +22,6 @@
 
 ## 5. Verification
 
-- [ ] 5.1 Python：生成 + 构建通过（wheel/sdist），并可在干净环境中安装后完成最小请求（如 list notebooks）。
+- [x] 5.1 Python：生成 + 构建通过（wheel/sdist），并可在干净环境中安装后完成最小请求（如 list notebooks）。
 - [x] 5.2 TypeScript：`npm pack` 产物可安装并能在 TS 项目中编译通过（类型声明可用）。
-- [ ] 5.3 CI：PR 上漂移检查可稳定复现；tag 发布工作流可在 dry-run 环境验证通过。
+- [x] 5.3 CI：PR 上漂移检查可稳定复现；tag 发布工作流可在 dry-run 环境验证通过。

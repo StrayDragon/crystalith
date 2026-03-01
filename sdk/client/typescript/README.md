@@ -1,5 +1,8 @@
 # @crystalith/sdk
 
+[![npm](https://img.shields.io/npm/v/%40crystalith%2Fsdk?label=npm)](https://www.npmjs.com/package/@crystalith/sdk)
+[![PyPI](https://img.shields.io/pypi/v/crystalith-sdk?label=PyPI)](https://pypi.org/project/crystalith-sdk/)
+
 TypeScript SDK for the Crystalith API, generated from the repo OpenAPI schema.
 
 ## Install

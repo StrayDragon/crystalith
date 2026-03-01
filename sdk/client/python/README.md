@@ -1,5 +1,8 @@
 # Crystalith Python SDK
 
+[![PyPI](https://img.shields.io/pypi/v/crystalith-sdk?label=PyPI)](https://pypi.org/project/crystalith-sdk/)
+[![npm](https://img.shields.io/npm/v/%40crystalith%2Fsdk?label=npm)](https://www.npmjs.com/package/@crystalith/sdk)
+
 This package is the official Python client SDK for the Crystalith API. It is generated from the
 repository OpenAPI schema using Fern.
 
