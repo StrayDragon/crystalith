@@ -4,6 +4,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from .audio import AudioParser
+from .csv import CSVParser
 from .html import HTMLParser
 from .interfaces import Parser, UnsupportedDocumentError
 from .media import DisabledMediaFetcher, MediaFetcher
@@ -64,6 +65,8 @@ class ParserFactory:
                     mime_type=normalized_mime,
                     media_fetcher=resolved_fetcher,
                 )
+            if normalized_mime in CSVParser.supported_mime_types:
+                return CSVParser()
             if normalized_mime in TextParser.supported_mime_types:
                 return TextParser()
             if normalized_mime in PDFParser.supported_mime_types:
@@ -85,6 +88,8 @@ class ParserFactory:
                     mime_type=normalized_mime or None,
                     media_fetcher=resolved_fetcher,
                 )
+            if extension in CSVParser.supported_extensions:
+                return CSVParser()
             if extension in TextParser.supported_extensions:
                 return TextParser()
             if extension in PDFParser.supported_extensions:

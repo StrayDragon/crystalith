@@ -60,3 +60,29 @@ if (typeof window !== 'undefined' && !window.IntersectionObserver) {
     unobserve() {}
   } as typeof IntersectionObserver;
 }
+
+if (typeof URL !== 'undefined' && !('createObjectURL' in URL)) {
+  // Some optional dependencies (e.g. media encoder helpers) expect these to exist.
+  // jsdom does not implement them by default.
+  (URL as unknown as { createObjectURL: (blob: Blob) => string }).createObjectURL = () =>
+    'blob:vitest-mock';
+  (URL as unknown as { revokeObjectURL: (url: string) => void }).revokeObjectURL = () => {};
+}
+
+if (typeof window !== 'undefined' && !window.Worker) {
+  window.Worker = class Worker {
+    constructor() {}
+
+    postMessage() {}
+
+    terminate() {}
+
+    addEventListener() {}
+
+    removeEventListener() {}
+
+    dispatchEvent() {
+      return false;
+    }
+  } as unknown as typeof Worker;
+}

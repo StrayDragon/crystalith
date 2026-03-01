@@ -1,4 +1,5 @@
 from .audio import AudioParser
+from .csv import CSVParser
 from .factory import ParserFactory
 from .html import HTMLParser
 from .interfaces import Parser, ParserError, UnsupportedDocumentError
@@ -16,6 +17,7 @@ from .video import VideoParser
 
 __all__ = [
     "AudioParser",
+    "CSVParser",
     "Chunk",
     "ChunkInfo",
     "DisabledMediaFetcher",

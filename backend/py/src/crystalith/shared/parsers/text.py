@@ -7,8 +7,8 @@ from .utils import chunk_paragraphs
 
 class TextParser:
     parser_type = "text"
-    supported_mime_types = {"text/plain", "text/markdown"}
-    supported_extensions = {".txt", ".md", ".markdown"}
+    supported_mime_types = {"text/plain", "text/markdown", "text/csv"}
+    supported_extensions = {".txt", ".md", ".markdown", ".csv"}
     page_count: int | None = None
 
     def parse(self, content: bytes) -> list[Chunk]:
