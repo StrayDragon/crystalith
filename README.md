@@ -1,5 +1,8 @@
 # Crystalith
 
+[![PyPI](https://img.shields.io/pypi/v/crystalith-sdk?label=PyPI)](https://pypi.org/project/crystalith-sdk/)
+[![npm](https://img.shields.io/npm/v/%40crystalith%2Fsdk?label=npm)](https://www.npmjs.com/package/@crystalith/sdk)
+
 Notebook-centric AI workspace with RAG over your sources.
 
 ## Docs
