@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.cache.epochs import bump_sources_epoch
+from crystalith.shared.chat_ui_envelope import strip_ui_envelope
 from crystalith.shared.db import Chunk, Message, Output, Source
 from crystalith.shared.deps import get_cache_provider, get_db_session, get_embedding_provider, get_vector_store
 from crystalith.shared.types import OutputType, SourceStatus
@@ -115,11 +116,12 @@ def _extract_messages_text(messages: list[Message], format: str = "markdown") ->
 
     parts: list[str] = []
     for msg in messages:
+        content = strip_ui_envelope(msg.content) if msg.role == "assistant" else msg.content
         if format == "raw":
-            parts.append(msg.content)
+            parts.append(content)
         else:
             role_label = "用户" if msg.role == "user" else "助手"
-            parts.append(f"**{role_label}**:\n{msg.content}")
+            parts.append(f"**{role_label}**:\n{content}")
 
     return "\n\n".join(parts)
 

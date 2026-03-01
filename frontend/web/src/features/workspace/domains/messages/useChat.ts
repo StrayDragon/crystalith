@@ -15,6 +15,7 @@ import { toast } from '../../../../shared/toast';
 import { t } from '../../../../shared/i18n';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { ChatMessage as WorkspaceChatMessage } from '../../shared/types';
+import { CHAT_UI_ENVELOPE_DELIMITER } from './chatUiEnvelope';
 import {
   buildSourceScopeSnapshot,
   collectChunkIds,
@@ -22,6 +23,25 @@ import {
   normalizeCitation,
   normalizeMessage,
 } from '../../shared/utils';
+
+function buildStreamingAnswerContent(markdown: string) {
+  return (
+    markdown +
+    CHAT_UI_ENVELOPE_DELIMITER +
+    JSON.stringify({
+      schema: 'crystalith.ui.message.v1',
+      parts: [
+        {
+          type: 'component',
+          name: 'AnswerCard',
+          id: 'answer',
+          props: { markdown },
+          streaming: true,
+        },
+      ],
+    })
+  );
+}
 
 interface UseChatOptions {
   ensureSession: (title?: string | null) => Promise<number | null>;
@@ -58,6 +78,7 @@ export function useChat({
   const [lastFailedDraft, setLastFailedDraft] = useState('');
   const messagesRef = useRef(messages);
   const streamingBufferRef = useRef('');
+  const streamingMarkdownRef = useRef('');
   const streamingFlushTimerRef = useRef<NodeJS.Timeout | null>(null);
   const streamingAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -177,10 +198,11 @@ export function useChat({
       const assistantMessage: WorkspaceChatMessage = {
         id: assistantMessageId,
         role: 'assistant',
-        content: '',
+        content: buildStreamingAnswerContent(''),
         citationScope: selectedScope ?? undefined,
       };
       store.getState().addStreamingMessage(assistantMessage);
+      streamingMarkdownRef.current = '';
 
       let hadSseError = false;
       try {
@@ -210,7 +232,10 @@ export function useChat({
                   if (!streamingBufferRef.current) return;
                   const buffered = streamingBufferRef.current;
                   streamingBufferRef.current = '';
-                  store.getState().appendMessageContent(assistantMessageId, buffered);
+                  streamingMarkdownRef.current += buffered;
+                  store.getState().updateMessage(assistantMessageId, {
+                    content: buildStreamingAnswerContent(streamingMarkdownRef.current),
+                  });
                 }, 50);
               }
               return;
@@ -223,7 +248,10 @@ export function useChat({
               if (streamingBufferRef.current) {
                 const buffered = streamingBufferRef.current;
                 streamingBufferRef.current = '';
-                store.getState().appendMessageContent(assistantMessageId, buffered);
+                streamingMarkdownRef.current += buffered;
+                store.getState().updateMessage(assistantMessageId, {
+                  content: buildStreamingAnswerContent(streamingMarkdownRef.current),
+                });
               }
               const doneData = data as { citations?: ApiCitation[] };
               const normalizedCitations = doneData.citations?.map(normalizeCitation) ?? [];
@@ -250,7 +278,7 @@ export function useChat({
               if (streamingBufferRef.current) {
                 const buffered = streamingBufferRef.current;
                 streamingBufferRef.current = '';
-                store.getState().appendMessageContent(assistantMessageId, buffered);
+                streamingMarkdownRef.current += buffered;
               }
               const errorMessage =
                 data && typeof data === 'object' && 'message' in data

@@ -367,11 +367,28 @@ class AppAuthSettings(BaseModel):
         return self
 
 
+class AppFeaturesSettings(BaseModel):
+    """Application feature flags."""
+
+    chat_prompt_presets_enabled: bool = Field(
+        False,
+        description="Enable /prompt:* directives in QA.",
+    )
+    chat_ui_envelope_enabled: bool = Field(
+        False,
+        description="Embed UI envelopes into assistant message content.",
+    )
+
+
 class AppSettings(BaseModel):
     """Application settings."""
     name: str = "Crystalith"
     openapi_path: str = "/v1/codev/openapi.json"
     openapi_ui_path: str = "/v1/codev/openapi-ui/scalar"
+    features: AppFeaturesSettings = Field(
+        default_factory=lambda: AppFeaturesSettings.model_validate({}),
+        description="Feature flags.",
+    )
     auth: AppAuthSettings = Field(
         default_factory=lambda: AppAuthSettings.model_validate({}),
         description="Optional API authentication settings.",

@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.ai.types import ChatMessage, ChatRole
 from crystalith.shared.cache import CacheProvider
+from crystalith.shared.chat_ui_envelope import strip_ui_envelope
 from crystalith.shared.config import Settings
 from crystalith.shared.concurrency import StageLimiters
 from crystalith.shared.context import ContextStats, ContextWindow, TokenCounter
@@ -116,7 +117,8 @@ async def load_session_history(
         role = message.role
         if role not in {"system", "user", "assistant"}:
             role = "user"
-        history_messages.append(ChatMessage(role=cast(ChatRole, role), content=message.content))
+        content = strip_ui_envelope(message.content) if role == "assistant" else message.content
+        history_messages.append(ChatMessage(role=cast(ChatRole, role), content=content))
     return db_session, history_messages
 
 

@@ -5,14 +5,15 @@ import { expect, test, vi } from 'vitest';
 
 import ChatPanel from './ChatPanel';
 import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
+import { CHAT_UI_ENVELOPE_DELIMITER } from './chatUiEnvelope';
 
 type ChatPanelOverrides = Partial<ComponentProps<typeof ChatPanel>>;
 
-function renderChatPanel(overrides?: ChatPanelOverrides) {
+function buildChatPanelElement(overrides?: ChatPanelOverrides) {
   const defaultMessages: ChatMessage[] = [];
   const defaultCitations: Citation[] = [];
 
-  return render(
+  return (
     <div style={{ height: 640, width: 720 }}>
       <ChatPanel
         messages={defaultMessages}
@@ -34,8 +35,12 @@ function renderChatPanel(overrides?: ChatPanelOverrides) {
         isConverting={false}
         {...overrides}
       />
-    </div>,
+    </div>
   );
+}
+
+function renderChatPanel(overrides?: ChatPanelOverrides) {
+  return render(buildChatPanelElement(overrides));
 }
 
 test('chat messages render assistant content', async () => {
@@ -110,4 +115,84 @@ test('chat panel shows stop streaming button', () => {
 
   fireEvent.click(stopButton);
   expect(onStopStreaming).toHaveBeenCalledTimes(1);
+});
+
+test('assistant message renders unknown component as JSON fallback', async () => {
+  const content =
+    'fallback' +
+    CHAT_UI_ENVELOPE_DELIMITER +
+    JSON.stringify({
+      schema: 'crystalith.ui.message.v1',
+      parts: [
+        {
+          type: 'component',
+          name: 'UnknownCard',
+          id: 'c1',
+          props: { a: 1 },
+        },
+      ],
+    });
+
+  const messages: ChatMessage[] = [
+    {
+      id: 'assistant-1',
+      role: 'assistant',
+      content,
+      citationScope: {
+        mode: 'selected',
+        kind: 'citations',
+        count: 0,
+        sources: [],
+      },
+    },
+  ];
+
+  renderChatPanel({ messages });
+
+  expect(await screen.findByText('Unknown component: UnknownCard')).toBeInTheDocument();
+});
+
+test('assistant message renders AnswerCard from envelope and updates content', async () => {
+  const buildEnvelopeContent = (markdown: string) =>
+    markdown +
+    CHAT_UI_ENVELOPE_DELIMITER +
+    JSON.stringify({
+      schema: 'crystalith.ui.message.v1',
+      parts: [
+        {
+          type: 'component',
+          name: 'AnswerCard',
+          id: 'answer',
+          props: { markdown },
+          streaming: true,
+        },
+      ],
+    });
+
+  const messages: ChatMessage[] = [
+    {
+      id: 'assistant-1',
+      role: 'assistant',
+      content: buildEnvelopeContent('Hello'),
+      citationScope: {
+        mode: 'selected',
+        kind: 'citations',
+        count: 0,
+        sources: [],
+      },
+    },
+  ];
+
+  const result = renderChatPanel({ messages });
+  expect(await screen.findByText('Hello')).toBeInTheDocument();
+
+  const updatedMessages: ChatMessage[] = [
+    {
+      ...messages[0],
+      content: buildEnvelopeContent('Hello world'),
+    },
+  ];
+
+  result.rerender(buildChatPanelElement({ messages: updatedMessages }));
+  expect(await screen.findByText('Hello world')).toBeInTheDocument();
 });
