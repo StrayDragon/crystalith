@@ -1,11 +1,14 @@
 {
-  "name": "crystalith-sdk",
+  "name": "@crystalith/sdk",
   "version": "0.1.0",
   "description": "Crystalith API TypeScript SDK (generated from OpenAPI).",
   "license": "Apache-2.0",
   "author": "straydragon <straydragonl@foxmail.com>",
   "type": "module",
   "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
