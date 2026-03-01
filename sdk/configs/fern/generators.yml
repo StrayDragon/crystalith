@@ -1,9 +1,7 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/fern-api/fern/refs/heads/main/generators-yml.schema.json
-
+# yaml-language-server: $schema=https://schema.buildwithfern.dev/generators-yml.json
 api:
   specs:
     - openapi: ../../../frontend/web/openapi.json
-
 groups:
   python-sdk:
     generators:
@@ -15,3 +13,30 @@ groups:
         config:
           package_name: crystalith_sdk
           client_class_name: CrystalithClient
+  go-sdk:
+    generators:
+      # NOTE: Some networks can't reach proxy.golang.org. Fern local generation
+      # doesn't forward GOPROXY/GOSUMDB into the generator container, so we
+      # patch the Docker image locally (see: `just sdk-gen-go`).
+      - name: fernapi/fern-go-sdk
+        version: 1.26.0
+        output:
+          location: local-file-system
+          path: ../../../vendor/crystalith-sdks/go
+        config:
+          packageName: crystalith
+          module:
+            path: github.com/StrayDragon/crystalith-sdks/go
+  rust-sdk:
+    generators:
+      - name: fernapi/fern-rust-sdk
+        version: 0.17.3
+        output:
+          location: local-file-system
+          path: ../../../vendor/crystalith-sdks/rust
+        config:
+          clientClassName: CrystalithClient
+          crateName: crystalith-sdk
+          packageDescription: "Crystalith API Rust SDK (generated from OpenAPI)."
+          packageLicense: "Apache-2.0"
+          packageRepository: "https://github.com/StrayDragon/crystalith-sdks"

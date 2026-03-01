@@ -4,6 +4,8 @@ _default:
 SDK_ROOT := "sdk/client/python"
 SDK_PACKAGE_PATH := "sdk/client/python/src/crystalith_sdk"
 SDK_TS_ROOT := "sdk/client/typescript"
+SDK_GO_ROOT := "vendor/crystalith-sdks/go"
+SDK_RUST_ROOT := "vendor/crystalith-sdks/rust"
 SCHEMA_PATH := "frontend/web/openapi.json"
 
 # --------------------------------------------------------------------------
@@ -53,6 +55,52 @@ sdk-gen-python VERSION='':
     touch "{{SDK_PACKAGE_PATH}}/py.typed"
     (cd "{{SDK_ROOT}}" && uv version "$SDK_VERSION" --frozen)
     echo "Python SDK v${SDK_VERSION} generated at {{SDK_PACKAGE_PATH}}"
+
+# Generate Go SDK via Fern (version from backend/py/pyproject.toml)
+sdk-gen-go VERSION='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    git submodule update --init --recursive vendor/crystalith-sdks
+    BACKEND_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("backend/py/pyproject.toml").read_text())["project"]["version"])')"
+    SDK_VERSION="${VERSION:-$BACKEND_VERSION}"
+    if [[ -n "{{VERSION}}" && "{{VERSION}}" != "$BACKEND_VERSION" ]]; then
+      echo "SDK_VERSION ({{VERSION}}) must match backend version ($BACKEND_VERSION)" >&2; exit 1
+    fi
+    if [[ ! -f "{{SCHEMA_PATH}}" ]]; then
+      echo "OpenAPI schema not found at {{SCHEMA_PATH}}. Run: just api-export" >&2; exit 1
+    fi
+    command -v fern >/dev/null 2>&1 || { echo "fern CLI not found. Install: npm install -g fern-api@3.73.1" >&2; exit 1; }
+    # Fern local generation does not forward GOPROXY/GOSUMDB into the generator container.
+    # If proxy.golang.org is unreachable, patch the Docker image locally to use Go module mirrors.
+    if [[ "${FERN_GO_SDK_PATCH_IMAGE:-auto}" != "0" ]]; then
+      if [[ "${FERN_GO_SDK_PATCH_IMAGE:-auto}" == "1" ]] || ! curl -fsSL --max-time 3 https://proxy.golang.org >/dev/null 2>&1; then
+        command -v docker >/dev/null 2>&1 || { echo "docker not found (needed for --local generation). Install Docker or use --runner podman and adjust the patch step." >&2; exit 1; }
+        docker build -t fernapi/fern-go-sdk:1.26.0 -f sdk/generators/fern-go-sdk/Dockerfile sdk/generators/fern-go-sdk
+      fi
+    fi
+    (cd sdk/configs && fern generate --local --force --group go-sdk --version "$SDK_VERSION")
+    cp LICENSE "{{SDK_GO_ROOT}}/LICENSE"
+    printf '# The Go module under vendor/crystalith-sdks/go is generated via Fern (just sdk-gen-go).\n# Do not edit generated files manually.\n' > "{{SDK_GO_ROOT}}/.generated"
+    echo "Go SDK v${SDK_VERSION} generated at {{SDK_GO_ROOT}}"
+
+# Generate Rust SDK via Fern (version from backend/py/pyproject.toml)
+sdk-gen-rust VERSION='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    git submodule update --init --recursive vendor/crystalith-sdks
+    BACKEND_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("backend/py/pyproject.toml").read_text())["project"]["version"])')"
+    SDK_VERSION="${VERSION:-$BACKEND_VERSION}"
+    if [[ -n "{{VERSION}}" && "{{VERSION}}" != "$BACKEND_VERSION" ]]; then
+      echo "SDK_VERSION ({{VERSION}}) must match backend version ($BACKEND_VERSION)" >&2; exit 1
+    fi
+    if [[ ! -f "{{SCHEMA_PATH}}" ]]; then
+      echo "OpenAPI schema not found at {{SCHEMA_PATH}}. Run: just api-export" >&2; exit 1
+    fi
+    command -v fern >/dev/null 2>&1 || { echo "fern CLI not found. Install: npm install -g fern-api@3.73.1" >&2; exit 1; }
+    (cd sdk/configs && fern generate --local --force --group rust-sdk --version "$SDK_VERSION")
+    cp LICENSE "{{SDK_RUST_ROOT}}/LICENSE"
+    printf '# The Rust crate under vendor/crystalith-sdks/rust is generated via Fern (just sdk-gen-rust).\n# Do not edit generated files manually.\n' > "{{SDK_RUST_ROOT}}/.generated"
+    echo "Rust SDK v${SDK_VERSION} generated at {{SDK_RUST_ROOT}}"
 
 # Generate TypeScript SDK via openapi-ts (version from backend/py/pyproject.toml)
 sdk-gen-typescript VERSION='':

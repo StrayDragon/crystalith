@@ -22,6 +22,8 @@ nav:
   - Operations: operations.md
   - Python SDK: sdk-python.md
   - TypeScript SDK: sdk-typescript.md
+  - Go SDK: sdk-go.md
+  - Rust SDK: sdk-rust.md
   - Plugins: plugins.md
   - Evidence Chain: evidence-chain.md
   - Configuration: configuration.md
