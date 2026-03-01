@@ -7,6 +7,7 @@ from pypdf import PdfWriter
 
 from crystalith.shared.config import Settings
 from crystalith.shared.parsers.audio import AudioParser
+from crystalith.shared.parsers.csv import CSVParser
 from crystalith.shared.parsers.factory import ParserFactory, _is_youtube_url
 from crystalith.shared.parsers.html import HTMLParser
 from crystalith.shared.parsers.interfaces import ParserError, UnsupportedDocumentError
@@ -269,6 +270,8 @@ def test_parser_factory_selects_parsers_by_mime_and_extension() -> None:
     assert isinstance(ParserFactory.from_file(filename="a.txt", mime_type="text/plain"), TextParser)
     assert isinstance(ParserFactory.from_file(filename="a.html", mime_type="text/html"), HTMLParser)
     assert isinstance(ParserFactory.from_file(filename="a.pdf", mime_type="application/pdf"), PDFParser)
+    assert isinstance(ParserFactory.from_file(filename="a.csv", mime_type="text/csv"), CSVParser)
+    assert isinstance(ParserFactory.from_file(filename="a.csv", mime_type=None), CSVParser)
 
     class _Transcriber:
         provider = "test"
@@ -281,6 +284,25 @@ def test_parser_factory_selects_parsers_by_mime_and_extension() -> None:
         ParserFactory.from_file(filename="a.mp3", mime_type=None, transcriber=_Transcriber()),
         AudioParser,
     )
+
+
+def test_csv_parser_chunks_by_rows_and_sets_metadata() -> None:
+    parser = CSVParser()
+    content = b"a,b\n1,2\n3,4\n"
+    chunks = parser.parse(content)
+    assert len(chunks) == 1
+    assert chunks[0].metadata["csv_row_start"] == 1
+    assert chunks[0].metadata["csv_row_end"] == 2
+    assert "| a | b |" in chunks[0].text
+    assert "| 1 | 2 |" in chunks[0].text
+
+    rows = ["c1,c2"] + [f"{i},{i + 1}" for i in range(55)]
+    chunks2 = parser.parse(("\n".join(rows) + "\n").encode("utf-8"))
+    assert len(chunks2) == 2
+    assert chunks2[0].metadata["csv_row_start"] == 1
+    assert chunks2[0].metadata["csv_row_end"] == 50
+    assert chunks2[1].metadata["csv_row_start"] == 51
+    assert chunks2[1].metadata["csv_row_end"] == 55
 
 
 def test_pdf_parser_handles_blank_and_encrypted_pdfs() -> None:

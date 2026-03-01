@@ -40,6 +40,14 @@ from .service import (
     run_qa_pipeline,
     validate_source_ids,
 )
+from .presets import (
+    get_preset,
+    list_preset_ids,
+    parse_prompt_directive,
+    parse_stats_preset_output,
+    stats_output_to_ui_envelope,
+)
+from crystalith.shared.ai.types import ChatMessage
 
 
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/qa", tags=["qa"])
@@ -80,6 +88,19 @@ def _ensure_inline_citations(answer: str, citations: list[Citation]) -> str:
     if "[" in answer and "]" in answer:
         return answer
     return f"{answer} [1]"
+
+
+def _override_system_prompt(messages: list[ChatMessage], system_prompt: str) -> list[ChatMessage]:
+    if not messages:
+        return []
+    updated = list(messages)
+    updated[0] = ChatMessage(role="system", content=system_prompt)
+    return updated
+
+
+def _format_prompt_usage() -> str:
+    presets = ", ".join(list_preset_ids())
+    return f"Usage: /prompt:<preset> <query>. Available presets: {presets}"
 
 
 def _build_answer_envelope(*, answer: str) -> dict[str, object]:
@@ -202,11 +223,30 @@ async def ask_question(
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
 
+    preset = None
+    pipeline_question = payload.question
+    try:
+        directive = parse_prompt_directive(payload.question)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=_format_prompt_usage())
+    if directive is not None:
+        if not settings.app.features.chat_prompt_presets_enabled:
+            raise HTTPException(status_code=400, detail="Prompt presets are disabled")
+        if not directive.query:
+            raise HTTPException(status_code=400, detail=_format_prompt_usage())
+        preset = get_preset(directive.preset)
+        if preset is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown preset: {directive.preset}. {_format_prompt_usage()}",
+            )
+        pipeline_question = directive.query
+
     result = await run_qa_pipeline(
         session=session,
         settings=settings,
         notebook_id=notebook_id,
-        question=payload.question,
+        question=pipeline_question,
         source_ids=payload.source_ids,
         top_k=payload.top_k,
         min_score=payload.min_score,
@@ -226,6 +266,39 @@ async def ask_question(
             citations=[],
             evidence=False,
             confidence=0.0,
+        )
+
+    if preset is not None and preset.id == "stats":
+        async with limiters.llm_generate.acquire():
+            raw = await chatter.chat(_override_system_prompt(result.messages, preset.system_prompt))
+        parsed = parse_stats_preset_output(raw)
+        if parsed is None:
+            async with limiters.llm_generate.acquire():
+                answer = await chatter.chat(result.messages)
+            answer = _ensure_inline_citations(answer, result.citations)
+            return await _build_qa_response(
+                session=session,
+                result=result,
+                question=payload.question,
+                answer=_maybe_embed_answer(answer=answer, settings=settings),
+                citations=result.citations,
+                evidence=True,
+                confidence=result.confidence,
+            )
+        fallback = _ensure_inline_citations(parsed.fallback_markdown, result.citations)
+        content = _maybe_embed_answer(
+            answer=fallback,
+            settings=settings,
+            envelope=stats_output_to_ui_envelope(parsed),
+        )
+        return await _build_qa_response(
+            session=session,
+            result=result,
+            question=payload.question,
+            answer=content,
+            citations=result.citations,
+            evidence=True,
+            confidence=result.confidence,
         )
 
     async with limiters.llm_generate.acquire():
@@ -291,6 +364,75 @@ async def ask_question_stream(
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
 
+    preset = None
+    pipeline_question = payload.question
+    try:
+        directive = parse_prompt_directive(payload.question)
+    except ValueError:
+        directive = None
+
+        async def generate_stream_invalid_directive() -> AsyncGenerator[str, None]:
+            yield _sse_event("error", {"message": _format_prompt_usage()})
+
+        return StreamingResponse(
+            generate_stream_invalid_directive(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    if directive is not None:
+        if not settings.app.features.chat_prompt_presets_enabled:
+
+            async def generate_stream_presets_disabled() -> AsyncGenerator[str, None]:
+                yield _sse_event("error", {"message": "Prompt presets are disabled"})
+
+            return StreamingResponse(
+                generate_stream_presets_disabled(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                },
+            )
+        if not directive.query:
+
+            async def generate_stream_empty_query() -> AsyncGenerator[str, None]:
+                yield _sse_event("error", {"message": _format_prompt_usage()})
+
+            return StreamingResponse(
+                generate_stream_empty_query(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                },
+            )
+        preset = get_preset(directive.preset)
+        if preset is None:
+
+            async def generate_stream_unknown_preset() -> AsyncGenerator[str, None]:
+                yield _sse_event(
+                    "error",
+                    {"message": f"Unknown preset: {directive.preset}. {_format_prompt_usage()}"},
+                )
+
+            return StreamingResponse(
+                generate_stream_unknown_preset(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                },
+            )
+        pipeline_question = directive.query
+
     normalized_source_ids = normalize_source_ids(payload.source_ids)
     if normalized_source_ids:
         await validate_source_ids(session, notebook_id=notebook_id, source_ids=normalized_source_ids)
@@ -309,7 +451,7 @@ async def ask_question_stream(
                 session=session,
                 settings=settings,
                 notebook_id=notebook_id,
-                question=payload.question,
+                question=pipeline_question,
                 source_ids=normalized_source_ids,
                 top_k=payload.top_k,
                 min_score=payload.min_score,
@@ -351,6 +493,55 @@ async def ask_question_stream(
                 ).model_dump(mode="json"),
             )
             return
+
+        if preset is not None and preset.id == "stats":
+            try:
+                async with limiters.llm_generate.acquire():
+                    raw = await chatter.chat(_override_system_prompt(result.messages, preset.system_prompt))
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                yield _sse_event("error", {"message": str(exc)})
+                return
+
+            parsed = parse_stats_preset_output(raw)
+            if parsed is None:
+                # Fallback to default streaming QA.
+                pass
+            else:
+                if await request.is_disconnected():
+                    return
+
+                fallback = _ensure_inline_citations(parsed.fallback_markdown, result.citations)
+                chunk_size = 240
+                for idx in range(0, len(fallback), chunk_size):
+                    if await request.is_disconnected():
+                        return
+                    yield _sse_event("chunk", {"text": fallback[idx : idx + chunk_size]})
+
+                persisted_answer = _maybe_embed_answer(
+                    answer=fallback,
+                    settings=settings,
+                    envelope=stats_output_to_ui_envelope(parsed),
+                )
+                created_at = await _persist_qa_completion(
+                    session=session,
+                    result=result,
+                    question=payload.question,
+                    answer=persisted_answer,
+                    citations=result.citations,
+                )
+                yield _sse_event(
+                    "done",
+                    _build_qa_stream_done_data(
+                        result=result,
+                        citations=result.citations,
+                        evidence=True,
+                        confidence=result.confidence,
+                        created_at=created_at,
+                    ).model_dump(mode="json"),
+                )
+                return
 
         answer_chunks: list[str] = []
         try:

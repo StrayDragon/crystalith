@@ -62,6 +62,8 @@ class TestChatProvider:
 
         system = next((message.content for message in messages if message.role == "system"), "")
         normalized = system.lower()
+        last_user = next((message.content for message in reversed(messages) if message.role == "user"), "")
+        last_user_normalized = last_user.lower()
 
         if "return json with keys" in normalized:
             return json.dumps(
@@ -69,6 +71,27 @@ class TestChatProvider:
                     "title": "Test title",
                     "bullets": ["Test bullet 1", "Test bullet 2"],
                     "terms": ["Test term"],
+                },
+                ensure_ascii=False,
+            )
+
+        if "fallback_markdown" in normalized and "chart" in normalized and "table" in normalized:
+            if "invalid_json" in last_user_normalized:
+                return "not-json"
+            if "invalid_stats" in last_user_normalized:
+                return json.dumps({"fallback_markdown": "Bad stats"}, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "fallback_markdown": "Test stats answer [1]",
+                    "chart": {
+                        "title": "Test chart",
+                        "unit": "items",
+                        "items": [{"label": "A", "value": 1}, {"label": "B", "value": 2}],
+                    },
+                    "table": {
+                        "columns": ["Name", "Count"],
+                        "rows": [["A", 1], ["B", 2]],
+                    },
                 },
                 ensure_ascii=False,
             )

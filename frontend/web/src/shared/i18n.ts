@@ -71,15 +71,15 @@ const ZH_CN_MESSAGES = {
   'workspace.diagnostics.label.models': '模型数={count}',
   'workspace.diagnostics.empty_optional': '未找到可选服务状态。',
 
-  'sources.upload.tooltip': '支持 .txt / .md / .markdown / .pdf 文件，可多选与拖拽',
+  'sources.upload.tooltip': '支持 .txt / .md / .markdown / .pdf / .csv 文件，可多选与拖拽',
   'sources.upload.drag_drop': '拖放文件到此处',
   'sources.upload.uploading': '上传中…',
   'sources.upload.add_sources': '添加来源',
   'sources.upload.aria_label': '上传来源文件',
   'sources.upload.hint.default': '支持拖拽多个文件到上传按钮区域',
-  'sources.upload.hint.only_supported': '仅支持 .txt / .md / .markdown / .pdf 文件',
+  'sources.upload.hint.only_supported': '仅支持 .txt / .md / .markdown / .pdf / .csv 文件',
   'sources.upload.hint.filtered_ready': '已过滤 {unsupported} 个文件，准备上传 {supported} 个文件',
-  'sources.upload.toast.unsupported': '已忽略 {count} 个不支持的文件，仅支持 .txt/.md/.markdown/.pdf',
+  'sources.upload.toast.unsupported': '已忽略 {count} 个不支持的文件，仅支持 .txt/.md/.markdown/.pdf/.csv',
 
   'sources.search.placeholder': '在网络中搜索新来源',
   'sources.search.aria_label': '在网络中搜索新来源',
