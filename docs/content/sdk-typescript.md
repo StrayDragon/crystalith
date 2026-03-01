@@ -3,7 +3,7 @@
 ## Overview
 The TypeScript SDK is generated from the backend OpenAPI schema and packaged for npm.
 
-- npm package: `crystalith-sdk`
+- npm package: `@crystalith/sdk`
 - Repo package root: `sdk/client/typescript`
 - Generated client source: `sdk/client/typescript/src/generated`
 
@@ -16,7 +16,7 @@ The Web UI still uses a generated client under `frontend/web/src/api/generated`.
 ## Install
 
 ```bash
-npm install crystalith-sdk
+npm install @crystalith/sdk
 ```
 
 ## Local generation (repo)
@@ -43,7 +43,7 @@ Auth (optional): if `app.auth.enabled=true`, send `Authorization: Bearer <token>
 import {
   listNotebooksV1NotebooksGet as listNotebooks,
   client,
-} from 'crystalith-sdk';
+} from '@crystalith/sdk';
 
 const apiKey = '<token>'; // optional
 

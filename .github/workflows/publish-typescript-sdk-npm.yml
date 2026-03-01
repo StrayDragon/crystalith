@@ -59,4 +59,4 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd sdk/client/typescript
-          npm publish
+          npm publish --access public
