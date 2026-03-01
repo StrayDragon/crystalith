@@ -90,6 +90,15 @@ just sdk-build-python
 just sdk-version-check
 ```
 
+## Release workflow (PyPI)
+
+Because the Python package lives inside the `crystalith-sdks` git submodule, the release flow is:
+
+1. Generate + commit + push SDK changes in `crystalith-sdks`
+2. Update the submodule pointer in `crystalith` (commit + push)
+3. Run `just sdk-release-check`
+4. Tag `vX.Y.Z` in `crystalith` and push the tag (triggers publish)
+
 ## Notes
 - The generated README.md is owned by the Fern generator.
 - Do not manually edit generated files; changes should be made in backend APIs.
