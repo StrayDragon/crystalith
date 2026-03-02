@@ -42,4 +42,5 @@ rerun `just sdk-gen-go`.
 
 ## Versioning / publishing notes
 - Go module versions come from git tags (not a `go.mod` version field).
+- In `crystalith-sdks`, tags use the Go subdir prefix: `go/vX.Y.Z`.
 - The module path is configured as `github.com/StrayDragon/crystalith-sdks/go`. If you publish the Go SDK from a different repo/path, update `module.path` in `sdk/configs/fern/generators.yml`.

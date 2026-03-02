@@ -18,5 +18,5 @@ just sdk-gen-rust
 ```
 
 ## Versioning / publishing notes
-- Crate name is configured as `crystalith-sdk`.
+- Crate name is `crystalith_sdk`.
 - Version is aligned with `backend/py/pyproject.toml` (the `just sdk-gen-rust` recipe enforces this).

@@ -1,9 +1,6 @@
-name: Publish TypeScript SDK to npm
+name: Publish TypeScript SDK to npm (deprecated)
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -13,6 +10,11 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
+      - name: Notice
+        run: |
+          echo "This workflow is deprecated."
+          echo "Preferred: tag typescript/vX.Y.Z in crystalith-sdks to publish from the monorepo."
+
       - name: Checkout
         uses: actions/checkout@v4
 
