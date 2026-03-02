@@ -5,9 +5,9 @@
   - [x] 准备logo : ./docs/content/static/logo.webp
   - [x] 发布一个操作指南的部署 github page 的文档 可能要独立仓库? 或者用一些文档生成器
 
-- [ ] 需要提前注册并占位当前可能的pypi, npm 包等等 避免重名
-  - [ ] pypi: python client sdk
-  - [ ] npm: ts client sdk (需要调用fern生成)
+- 需要提前注册并占位当前可能的pypi, npm 包等等 避免重名
+  - [x] pypi: python client sdk
+  - [x] npm: ts client sdk (需要调用fern生成)
   - [ ] crates: client sdk (需要调用生成)
   - [ ] go: client sdk
-  - [ ] docker images ghcr 分发
+  - [x] docker images ghcr 分发
