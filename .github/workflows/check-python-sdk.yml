@@ -22,11 +22,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Setup just
         uses: extractions/setup-just@v2
+
+      - name: Checkout SDK monorepo submodule
+        run: just sdk-submodule-update
 
       - name: Setup Python
         uses: actions/setup-python@v5

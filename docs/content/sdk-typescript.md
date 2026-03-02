@@ -31,6 +31,15 @@ just sdk-build-typescript
 just sdk-check-typescript
 ```
 
+## Release workflow (npm)
+
+Because the npm package lives inside the `crystalith-sdks` git submodule, the release flow is:
+
+1. Generate + commit + push SDK changes in `crystalith-sdks`
+2. Update the submodule pointer in `crystalith` (commit + push)
+3. Run `just sdk-release-check`
+4. Tag `vX.Y.Z` in `crystalith` and push the tag (triggers publish)
+
 ## Minimal example
 
 Base URL (no `/v1`):

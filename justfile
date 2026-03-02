@@ -31,11 +31,24 @@ sdk-gen-web:
 # Sync frontend: export schema + regenerate frontend SDK
 api-sync: api-export sdk-gen-web
 
-# Generate Python SDK via Fern (version from backend/py/pyproject.toml)
-sdk-gen-python VERSION='':
+# Ensure the SDK monorepo submodule is checked out (with a clearer error message than raw git output).
+sdk-submodule-update:
     #!/usr/bin/env bash
     set -euo pipefail
-    git submodule update --init --recursive vendor/crystalith-sdks
+    git submodule sync --recursive
+    if ! git submodule update --init --recursive vendor/crystalith-sdks; then
+      echo "Failed to checkout SDK monorepo submodule: vendor/crystalith-sdks" >&2
+      echo "Expected release flow:" >&2
+      echo "  1) Generate SDKs and commit+push crystalith-sdks" >&2
+      echo "  2) Update crystalith submodule pointer (vendor/crystalith-sdks) and push" >&2
+      echo "  3) Tag vX.Y.Z and push the tag to trigger publishing" >&2
+      exit 1
+    fi
+
+# Generate Python SDK via Fern (version from backend/py/pyproject.toml)
+sdk-gen-python VERSION='': sdk-submodule-update
+    #!/usr/bin/env bash
+    set -euo pipefail
     BACKEND_VERSION=$(cd backend/py && python -c \
       'import re, pathlib; m = re.search(r"^version\s*=\s*\"([^\"]+)\"", pathlib.Path("pyproject.toml").read_text(), re.M); print(m.group(1)) if m else exit("version not found in backend/py/pyproject.toml")')
     SDK_VERSION="${VERSION:-$BACKEND_VERSION}"
@@ -58,10 +71,9 @@ sdk-gen-python VERSION='':
     echo "Python SDK v${SDK_VERSION} generated at {{SDK_PACKAGE_PATH}}"
 
 # Generate Go SDK via Fern (version from backend/py/pyproject.toml)
-sdk-gen-go VERSION='':
+sdk-gen-go VERSION='': sdk-submodule-update
     #!/usr/bin/env bash
     set -euo pipefail
-    git submodule update --init --recursive vendor/crystalith-sdks
     BACKEND_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("backend/py/pyproject.toml").read_text())["project"]["version"])')"
     SDK_VERSION="${VERSION:-$BACKEND_VERSION}"
     if [[ -n "{{VERSION}}" && "{{VERSION}}" != "$BACKEND_VERSION" ]]; then
@@ -85,10 +97,9 @@ sdk-gen-go VERSION='':
     echo "Go SDK v${SDK_VERSION} generated at {{SDK_GO_ROOT}}"
 
 # Generate Rust SDK via Fern (version from backend/py/pyproject.toml)
-sdk-gen-rust VERSION='':
+sdk-gen-rust VERSION='': sdk-submodule-update
     #!/usr/bin/env bash
     set -euo pipefail
-    git submodule update --init --recursive vendor/crystalith-sdks
     BACKEND_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("backend/py/pyproject.toml").read_text())["project"]["version"])')"
     SDK_VERSION="${VERSION:-$BACKEND_VERSION}"
     if [[ -n "{{VERSION}}" && "{{VERSION}}" != "$BACKEND_VERSION" ]]; then
@@ -104,10 +115,9 @@ sdk-gen-rust VERSION='':
     echo "Rust SDK v${SDK_VERSION} generated at {{SDK_RUST_ROOT}}"
 
 # Generate TypeScript SDK via openapi-ts (version from backend/py/pyproject.toml)
-sdk-gen-typescript VERSION='':
+sdk-gen-typescript VERSION='': sdk-submodule-update
     #!/usr/bin/env bash
     set -euo pipefail
-    git submodule update --init --recursive vendor/crystalith-sdks
     BACKEND_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("backend/py/pyproject.toml").read_text())["project"]["version"])')"
     SDK_VERSION="${VERSION:-$BACKEND_VERSION}"
     if [[ -n "{{VERSION}}" && "{{VERSION}}" != "$BACKEND_VERSION" ]]; then
@@ -133,10 +143,9 @@ sdk-gen-typescript VERSION='':
     echo "TypeScript SDK v${SDK_VERSION} generated at {{SDK_TS_ROOT}}"
 
 # Check backend/SDK versions are consistent (no generation).
-sdk-version-check:
+sdk-version-check: sdk-submodule-update
     #!/usr/bin/env bash
     set -euo pipefail
-    git submodule update --init --recursive vendor/crystalith-sdks
     BACKEND_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("backend/py/pyproject.toml").read_text())["project"]["version"])')"
     SDK_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("vendor/crystalith-sdks/python/pyproject.toml").read_text())["project"]["version"])')"
     SDK_FILE_VERSION="$(tr -d '\r\n' < "vendor/crystalith-sdks/python/.sdk-version")"
@@ -159,8 +168,7 @@ sdk-version-check:
 sdk-gen VERSION='': api-export sdk-gen-web (sdk-gen-python VERSION)
 
 # Build TypeScript SDK (dist + types)
-sdk-build-typescript:
-    git submodule update --init --recursive vendor/crystalith-sdks
+sdk-build-typescript: sdk-submodule-update
     pnpm -C {{SDK_TS_ROOT}} install --frozen-lockfile
     pnpm -C {{SDK_TS_ROOT}} run build
 
@@ -183,9 +191,38 @@ sdk-check: api-export (sdk-gen-python)
     fi
 
 # Build Python SDK (wheel/sdist)
-sdk-build-python:
-    git submodule update --init --recursive vendor/crystalith-sdks
+sdk-build-python: sdk-submodule-update
     cd {{SDK_ROOT}} && uv build --no-sources --clear
+
+# Preflight check before tagging a release (ensures submodule is committed and pushed).
+sdk-release-check: sdk-submodule-update sdk-version-check api-check
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ -n "$(git status --porcelain)" ]]; then
+      echo "Working tree is dirty. Commit changes before tagging a release." >&2
+      git status --porcelain >&2
+      exit 1
+    fi
+    if [[ -n "$(git -C vendor/crystalith-sdks status --porcelain)" ]]; then
+      echo "SDK monorepo has uncommitted changes. Commit+push crystalith-sdks first." >&2
+      git -C vendor/crystalith-sdks status --porcelain >&2
+      exit 1
+    fi
+    RECORDED_SHA="$(git ls-files --stage vendor/crystalith-sdks | awk '{print $2}')"
+    CURRENT_SHA="$(git -C vendor/crystalith-sdks rev-parse HEAD)"
+    if [[ "$RECORDED_SHA" != "$CURRENT_SHA" ]]; then
+      echo "Submodule pointer is not committed in crystalith." >&2
+      echo "Recorded: $RECORDED_SHA" >&2
+      echo "Checked out: $CURRENT_SHA" >&2
+      echo "Fix: commit and push the updated submodule pointer, then tag vX.Y.Z." >&2
+      exit 1
+    fi
+    git -C vendor/crystalith-sdks fetch origin main
+    if ! git -C vendor/crystalith-sdks merge-base --is-ancestor "$CURRENT_SHA" origin/main; then
+      echo "crystalith-sdks commit $CURRENT_SHA is not on origin/main. Push/merge it before tagging." >&2
+      exit 1
+    fi
+    echo "SDK release preflight OK."
 
 # --------------------------------------------------------------------------
 # Testing
