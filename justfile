@@ -41,8 +41,14 @@ sdk-submodule-update:
       echo "Expected release flow:" >&2
       echo "  1) Generate SDKs and commit+push crystalith-sdks" >&2
       echo "  2) Update crystalith submodule pointer (vendor/crystalith-sdks) and push" >&2
-      echo "  3) Tag vX.Y.Z and push the tag to trigger publishing" >&2
+      echo "  3) Tag crystalith-sdks (python/vX.Y.Z, typescript/vX.Y.Z, go/vX.Y.Z, rust/vX.Y.Z) and push tags" >&2
+      echo "     (or: run just sdk-release X.Y.Z from crystalith)" >&2
       exit 1
+    fi
+    # Keep fetch URL as-is (often https), but make pushes use SSH for convenience.
+    SUBMODULE_URL="$(git -C vendor/crystalith-sdks remote get-url origin || true)"
+    if [[ "$SUBMODULE_URL" == https://github.com/* ]]; then
+      git -C vendor/crystalith-sdks remote set-url --push origin "git@github.com:${SUBMODULE_URL#https://github.com/}"
     fi
 
 # Generate Python SDK via Fern (version from backend/py/pyproject.toml)
@@ -86,7 +92,20 @@ sdk-gen-go VERSION='': sdk-submodule-update
     # Fern local generation does not forward GOPROXY/GOSUMDB into the generator container.
     # If proxy.golang.org is unreachable, patch the Docker image locally to use Go module mirrors.
     if [[ "${FERN_GO_SDK_PATCH_IMAGE:-auto}" != "0" ]]; then
-      if [[ "${FERN_GO_SDK_PATCH_IMAGE:-auto}" == "1" ]] || ! curl -fsSL --max-time 3 https://proxy.golang.org >/dev/null 2>&1; then
+      SHOULD_PATCH="0"
+      if [[ "${FERN_GO_SDK_PATCH_IMAGE:-auto}" == "1" ]]; then
+        SHOULD_PATCH="1"
+      elif [[ "${FERN_GO_SDK_PATCH_IMAGE:-auto}" == "auto" ]]; then
+        if ! command -v curl >/dev/null 2>&1; then
+          SHOULD_PATCH="1"
+        elif ! curl -fsSL --max-time 3 "https://proxy.golang.org/github.com/google/uuid/@v/v1.6.0.mod" >/dev/null 2>&1; then
+          SHOULD_PATCH="1"
+        fi
+      else
+        echo "Invalid FERN_GO_SDK_PATCH_IMAGE=${FERN_GO_SDK_PATCH_IMAGE} (expected: auto|0|1)" >&2
+        exit 1
+      fi
+      if [[ "$SHOULD_PATCH" == "1" ]]; then
         command -v docker >/dev/null 2>&1 || { echo "docker not found (needed for --local generation). Install Docker or use --runner podman and adjust the patch step." >&2; exit 1; }
         docker build -t fernapi/fern-go-sdk:1.26.0 -f sdk/generators/fern-go-sdk/Dockerfile sdk/generators/fern-go-sdk
       fi
@@ -150,6 +169,7 @@ sdk-version-check: sdk-submodule-update
     SDK_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("vendor/crystalith-sdks/python/pyproject.toml").read_text())["project"]["version"])')"
     SDK_FILE_VERSION="$(tr -d '\r\n' < "vendor/crystalith-sdks/python/.sdk-version")"
     TS_SDK_VERSION="$(python -c 'import json, pathlib; print(json.loads(pathlib.Path("vendor/crystalith-sdks/typescript/package.json").read_text())["version"])')"
+    RUST_SDK_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("vendor/crystalith-sdks/rust/Cargo.toml").read_text())["package"]["version"])')"
     if [[ "$BACKEND_VERSION" != "$SDK_VERSION" ]]; then
       echo "SDK version mismatch: backend/py=$BACKEND_VERSION vendor/crystalith-sdks/python/pyproject.toml=$SDK_VERSION" >&2
       exit 1
@@ -160,6 +180,10 @@ sdk-version-check: sdk-submodule-update
     fi
     if [[ "$BACKEND_VERSION" != "$TS_SDK_VERSION" ]]; then
       echo "SDK version mismatch: backend/py=$BACKEND_VERSION vendor/crystalith-sdks/typescript/package.json=$TS_SDK_VERSION" >&2
+      exit 1
+    fi
+    if [[ "$BACKEND_VERSION" != "$RUST_SDK_VERSION" ]]; then
+      echo "SDK version mismatch: backend/py=$BACKEND_VERSION vendor/crystalith-sdks/rust/Cargo.toml=$RUST_SDK_VERSION" >&2
       exit 1
     fi
     echo "SDK version OK: $BACKEND_VERSION"
@@ -195,7 +219,7 @@ sdk-build-python: sdk-submodule-update
     cd {{SDK_ROOT}} && uv build --no-sources --clear
 
 # Preflight check before tagging a release (ensures submodule is committed and pushed).
-sdk-release-check: sdk-submodule-update
+sdk-release-preflight: sdk-submodule-update
     #!/usr/bin/env bash
     set -euo pipefail
     if [[ -n "$(git status --porcelain)" ]]; then
@@ -222,9 +246,111 @@ sdk-release-check: sdk-submodule-update
       echo "crystalith-sdks commit $CURRENT_SHA is not on origin/main. Push/merge it before tagging." >&2
       exit 1
     fi
+    echo "SDK release preflight OK."
+
+sdk-release-check: sdk-release-preflight
     just sdk-version-check
     just api-check
-    echo "SDK release preflight OK."
+    echo "SDK release checks OK."
+
+# Release all client SDKs with a single version:
+# 1) sync OpenAPI + frontend client
+# 2) generate python/typescript/go/rust SDKs
+# 3) commit+push crystalith-sdks
+# 4) tag crystalith-sdks (go/python/typescript/rust)
+# 5) commit+push crystalith (submodule pointer + schema/client)
+# 6) tag crystalith (vX.Y.Z) for overall release
+sdk-release VERSION:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    VERSION="{{VERSION}}"
+    TAG="v${VERSION}"
+
+    if [[ -z "$VERSION" ]]; then
+      echo "Usage: just sdk-release X.Y.Z" >&2
+      exit 1
+    fi
+
+    if [[ -n "$(git status --porcelain)" ]]; then
+      echo "Working tree is dirty. Commit/stash changes before running sdk-release." >&2
+      git status --porcelain >&2
+      exit 1
+    fi
+
+    BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+    if [[ "$BRANCH" != "main" ]]; then
+      echo "sdk-release must be run on branch 'main' (current: $BRANCH)" >&2
+      exit 1
+    fi
+
+    git fetch origin main --tags
+    if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+      echo "Tag already exists on origin: ${TAG}" >&2
+      exit 1
+    fi
+
+    BACKEND_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("backend/py/pyproject.toml").read_text())["project"]["version"])')"
+    if [[ "$BACKEND_VERSION" != "$VERSION" ]]; then
+      echo "Version mismatch: requested=$VERSION backend/py=$BACKEND_VERSION" >&2
+      echo "Update backend/py/pyproject.toml first, then rerun: just sdk-release $BACKEND_VERSION" >&2
+      exit 1
+    fi
+
+    just sdk-submodule-update
+    if [[ -n "$(git -C vendor/crystalith-sdks status --porcelain)" ]]; then
+      echo "SDK monorepo submodule has uncommitted changes. Commit/stash them first." >&2
+      git -C vendor/crystalith-sdks status --porcelain >&2
+      exit 1
+    fi
+    git -C vendor/crystalith-sdks fetch origin main
+    git -C vendor/crystalith-sdks pull --rebase origin main
+
+    # Keep OpenAPI + frontend generated client in sync (CI requires this).
+    just api-sync
+
+    # Generate SDKs into crystalith-sdks.
+    just sdk-gen-python VERSION="$VERSION"
+    just sdk-gen-typescript VERSION="$VERSION"
+    just sdk-gen-go VERSION="$VERSION"
+    just sdk-gen-rust VERSION="$VERSION"
+
+    # Commit + push crystalith-sdks (if changed).
+    if [[ -n "$(git -C vendor/crystalith-sdks status --porcelain)" ]]; then
+      git -C vendor/crystalith-sdks add -A
+      git -C vendor/crystalith-sdks commit -m "chore: release sdks ${TAG}"
+      git -C vendor/crystalith-sdks push origin main
+    else
+      echo "No changes detected in crystalith-sdks; skipping commit."
+    fi
+
+    # Tag the monorepo (use per-language tags; Go requires the subdir prefix).
+    for prefix in go python typescript rust; do
+      T="${prefix}/${TAG}"
+      if git -C vendor/crystalith-sdks ls-remote --exit-code --tags origin "refs/tags/${T}" >/dev/null 2>&1; then
+        echo "Tag already exists on crystalith-sdks origin: ${T}" >&2
+        exit 1
+      fi
+      git -C vendor/crystalith-sdks tag "${T}"
+    done
+    git -C vendor/crystalith-sdks push origin "go/${TAG}" "python/${TAG}" "typescript/${TAG}" "rust/${TAG}"
+
+    # Commit + push crystalith (schema/client + submodule pointer).
+    git add frontend/web/openapi.json frontend/web/src/api/generated vendor/crystalith-sdks
+    if [[ -n "$(git diff --cached --name-only)" ]]; then
+      git commit -m "chore(release): ${TAG}"
+      git push origin main
+    else
+      echo "No changes to commit in crystalith; skipping commit."
+    fi
+
+    # Final preflight: ensure submodule pointer is committed and monorepo commit is pushed.
+    just sdk-release-preflight
+
+    # Tag + push tag for crystalith release.
+    git tag "${TAG}"
+    git push origin "${TAG}"
+    echo "Release tag pushed: ${TAG}"
 
 # --------------------------------------------------------------------------
 # Testing

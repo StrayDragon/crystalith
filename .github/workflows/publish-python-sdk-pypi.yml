@@ -1,9 +1,6 @@
-name: Publish Python SDK to PyPI
+name: Publish Python SDK to PyPI (deprecated)
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -15,6 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: pypi
     steps:
+      - name: Notice
+        run: |
+          echo "This workflow is deprecated."
+          echo "Preferred: tag python/vX.Y.Z in crystalith-sdks to publish from the monorepo."
+
       - name: Checkout
         uses: actions/checkout@v4
 
