@@ -4,10 +4,12 @@ from fastapi import Depends
 from cl_fastapix import FastAPIX
 
 from crystalith.features.analysis.api import router as analysis_router
+from crystalith.features.commands.api import router as commands_router
 from crystalith.features.messages.api import router as messages_router
 from crystalith.features.models.api import router as models_router
 from crystalith.features.notebooks.api import router as notebooks_router
 from crystalith.features.outputs.api import router as outputs_router
+from crystalith.features.prompt_presets.api import router as prompt_presets_router
 from crystalith.features.qa.api import router as qa_router
 from crystalith.features.refine.api import router as refine_router
 from crystalith.features.research.api import router as research_router
@@ -34,6 +36,8 @@ def register_routers(app: FastAPIX) -> None:
     app.include_router(qa_router, dependencies=auth_dependencies)
     app.include_router(sources_router, dependencies=auth_dependencies)
     app.include_router(citations_router, dependencies=auth_dependencies)
+    app.include_router(commands_router, dependencies=auth_dependencies)
+    app.include_router(prompt_presets_router, dependencies=auth_dependencies)
     app.include_router(outputs_router, dependencies=auth_dependencies)
     app.include_router(refine_router, dependencies=auth_dependencies)
     app.include_router(slides_router, dependencies=auth_dependencies)

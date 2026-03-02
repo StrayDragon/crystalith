@@ -1,11 +1,21 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createRef } from 'react';
 import type { ComponentProps } from 'react';
-import { expect, test, vi } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
+import { SWRConfig } from 'swr';
+import { http, HttpResponse } from 'msw';
 
 import ChatPanel from './ChatPanel';
 import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
 import { CHAT_UI_ENVELOPE_DELIMITER } from './chatUiEnvelope';
+import { LayerProvider } from '../../../../shared/layer';
+import { server } from '../../../../test-utils/msw/server';
+
+beforeEach(() => {
+  server.use(
+    http.get('*/v1/commands', () => HttpResponse.json([])),
+  );
+});
 
 type ChatPanelOverrides = Partial<ComponentProps<typeof ChatPanel>>;
 
@@ -15,26 +25,30 @@ function buildChatPanelElement(overrides?: ChatPanelOverrides) {
 
   return (
     <div style={{ height: 640, width: 720 }}>
-      <ChatPanel
-        messages={defaultMessages}
-        draft=""
-        onDraftChange={vi.fn()}
-        onSend={vi.fn()}
-        isSending={false}
-        notice=""
-        isBlocked={false}
-        isConnected={true}
-        inputRef={createRef<HTMLTextAreaElement>()}
-        citations={defaultCitations}
-        isLoadingMessages={false}
-        messagesError=""
-        onRetryMessages={vi.fn()}
-        onSaveToNote={vi.fn()}
-        onConvertToSource={vi.fn()}
-        onConvertToOutput={vi.fn((_outputType: OutputTypeId) => Promise.resolve())}
-        isConverting={false}
-        {...overrides}
-      />
+      <LayerProvider>
+        <SWRConfig value={{ provider: () => new Map() }}>
+          <ChatPanel
+            messages={defaultMessages}
+            draft=""
+            onDraftChange={vi.fn()}
+            onSend={vi.fn()}
+            isSending={false}
+            notice=""
+            isBlocked={false}
+            isConnected={true}
+            inputRef={createRef<HTMLTextAreaElement>()}
+            citations={defaultCitations}
+            isLoadingMessages={false}
+            messagesError=""
+            onRetryMessages={vi.fn()}
+            onSaveToNote={vi.fn()}
+            onConvertToSource={vi.fn()}
+            onConvertToOutput={vi.fn((_outputType: OutputTypeId) => Promise.resolve())}
+            isConverting={false}
+            {...overrides}
+          />
+        </SWRConfig>
+      </LayerProvider>
     </div>
   );
 }
@@ -195,4 +209,99 @@ test('assistant message renders AnswerCard from envelope and updates content', a
 
   result.rerender(buildChatPanelElement({ messages: updatedMessages }));
   expect(await screen.findByText('Hello world')).toBeInTheDocument();
+});
+
+test('tab completes a command suggestion', async () => {
+  server.use(
+    http.get('*/v1/commands', () =>
+      HttpResponse.json([
+        {
+          id: 'stats',
+          kind: 'prompt_preset',
+          trigger: '/prompt:stats',
+          description: 'Stats',
+          enabled: true,
+          source: 'builtin',
+          meta: null,
+        },
+      ]),
+    ),
+  );
+
+  const onDraftChange = vi.fn();
+  renderChatPanel({ draft: '/p', onDraftChange });
+
+  const textarea = screen.getByRole('textbox', { name: '对话输入' }) as HTMLTextAreaElement;
+  textarea.setSelectionRange(2, 2);
+  fireEvent.focus(textarea);
+
+  expect(await screen.findByText('/prompt:stats')).toBeInTheDocument();
+
+  fireEvent.keyDown(textarea, { key: 'Tab' });
+
+  expect(onDraftChange).toHaveBeenCalledWith('/prompt:stats ');
+});
+
+test('enter accepts command suggestion and does not send message', async () => {
+  server.use(
+    http.get('*/v1/commands', () =>
+      HttpResponse.json([
+        {
+          id: 'stats',
+          kind: 'prompt_preset',
+          trigger: '/prompt:stats',
+          description: 'Stats',
+          enabled: true,
+          source: 'builtin',
+          meta: null,
+        },
+      ]),
+    ),
+  );
+
+  const onDraftChange = vi.fn();
+  const onSend = vi.fn();
+  renderChatPanel({ draft: '/p', onDraftChange, onSend });
+
+  const textarea = screen.getByRole('textbox', { name: '对话输入' }) as HTMLTextAreaElement;
+  textarea.setSelectionRange(2, 2);
+  fireEvent.focus(textarea);
+
+  expect(await screen.findByText('/prompt:stats')).toBeInTheDocument();
+
+  fireEvent.keyDown(textarea, { key: 'Enter' });
+
+  expect(onSend).not.toHaveBeenCalled();
+  expect(onDraftChange).toHaveBeenCalledWith('/prompt:stats ');
+});
+
+test('disabled commands are not accepted by tab completion', async () => {
+  server.use(
+    http.get('*/v1/commands', () =>
+      HttpResponse.json([
+        {
+          id: 'demo',
+          kind: 'prompt_preset',
+          trigger: '/prompt:demo',
+          description: 'Demo',
+          enabled: false,
+          source: 'custom',
+          meta: null,
+        },
+      ]),
+    ),
+  );
+
+  const onDraftChange = vi.fn();
+  renderChatPanel({ draft: '/prompt:d', onDraftChange });
+
+  const textarea = screen.getByRole('textbox', { name: '对话输入' }) as HTMLTextAreaElement;
+  textarea.setSelectionRange(8, 8);
+  fireEvent.focus(textarea);
+
+  expect(await screen.findByText('/prompt:demo')).toBeInTheDocument();
+
+  fireEvent.keyDown(textarea, { key: 'Tab' });
+
+  expect(onDraftChange).not.toHaveBeenCalled();
 });

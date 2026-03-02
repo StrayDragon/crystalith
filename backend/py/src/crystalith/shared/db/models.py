@@ -97,6 +97,37 @@ class Template(AsyncSqlATableBase):
     __table_args__ = (sa.Index("ix_templates_is_builtin", "is_builtin"),)
 
 
+class PromptPreset(AsyncSqlATableBase):
+    __tablename__ = "prompt_presets"
+
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True, autoincrement=True)
+    trigger: Mapped[str] = mapped_column(sa.String(64), nullable=False, unique=True)
+    description: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    system_prompt: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    enabled: Mapped[bool] = mapped_column(
+        sa.Boolean,
+        nullable=False,
+        server_default=sa.true(),
+    )
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+        onupdate=sa.sql.func.now(),
+    )
+
+    __table_args__ = (
+        sa.Index("ix_prompt_presets_enabled", "enabled"),
+        sa.Index("ix_prompt_presets_trigger", "trigger"),
+    )
+
+
 class Session(AsyncSqlATableBase):
     __tablename__ = "sessions"
 

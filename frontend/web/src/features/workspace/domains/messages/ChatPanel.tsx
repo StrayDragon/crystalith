@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import {
@@ -21,9 +21,11 @@ import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
 import CitationsControl from '../../shared/components/citations/CitationsControl';
 import { IconCopy, IconSave, IconSend } from '../../shared/components/Icons';
 import { SkeletonList } from '../../shared/components/Skeleton';
-import { LAYER_LEVELS } from '../../../../shared/layer';
+import { LAYER_LEVELS, useLayer } from '../../../../shared/layer';
 import { copyToClipboard } from '../../../../shared/clipboard';
+import { toast } from '../../../../shared/toast';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
+import { useCommands } from '../../shared/hooks/useCommands';
 import { exportQaJsonDownload, exportQaMarkdownDownload } from '../../shared/evidenceExport';
 import { parseChatUiEnvelope } from './chatUiEnvelope';
 import { chatUiComponentRegistry } from './chatUiRegistry';
@@ -109,6 +111,119 @@ function ChatPanel({
   const [toolRuns, setToolRuns] = useState<Record<string, { status: 'pending' | 'running' | 'success' | 'error'; outputText?: string | null; errorMessage?: string | null }>>({});
   const autoExecSeenRef = useRef(new Set<string>());
   const toolInFlightRef = useRef(new Set<string>());
+
+  const { style: dropdownStyle } = useLayer('dropdown');
+  const {
+    commands,
+    isLoading: isCommandsLoading,
+    error: commandsError,
+    refresh: refreshCommands,
+  } = useCommands({ enabled: isConnected && !isBlocked });
+  const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
+  const [commandSelectedIndex, setCommandSelectedIndex] = useState(0);
+  const [commandContext, setCommandContext] = useState<{
+    token: string;
+    start: number;
+    end: number;
+  } | null>(null);
+
+  const commandSuggestions = useMemo(() => {
+    if (!commandContext || !commandContext.token.startsWith('/')) return [];
+    const token = commandContext.token.toLowerCase();
+    return commands.filter((item) => item.trigger.toLowerCase().startsWith(token));
+  }, [commands, commandContext]);
+
+  const selectedCommandSuggestion = useMemo(
+    () => commandSuggestions[commandSelectedIndex] ?? null,
+    [commandSuggestions, commandSelectedIndex],
+  );
+
+  useEffect(() => {
+    if (!isCommandMenuOpen) return;
+    if (!commandSuggestions.length) {
+      setCommandSelectedIndex(0);
+      return;
+    }
+    if (commandSuggestions[commandSelectedIndex]?.enabled) return;
+    const firstEnabled = commandSuggestions.findIndex((item) => item.enabled);
+    setCommandSelectedIndex(firstEnabled >= 0 ? firstEnabled : 0);
+  }, [commandSelectedIndex, commandSuggestions, isCommandMenuOpen]);
+
+  const closeCommandMenu = useCallback(() => {
+    setIsCommandMenuOpen(false);
+    setCommandContext(null);
+  }, []);
+
+  const updateCommandMenu = useCallback(
+    (value: string, cursorIndex: number) => {
+      const cursor = Math.max(0, Math.min(cursorIndex, value.length));
+      const before = value.slice(0, cursor);
+      const tokenStart =
+        Math.max(before.lastIndexOf(' '), before.lastIndexOf('\n'), before.lastIndexOf('\t')) + 1;
+      const after = value.slice(cursor);
+      const endOffset = after.search(/\s/);
+      const tokenEnd = endOffset === -1 ? value.length : cursor + endOffset;
+      const token = value.slice(tokenStart, tokenEnd);
+
+      if (!token.startsWith('/')) {
+        closeCommandMenu();
+        return;
+      }
+
+      setCommandContext({ token, start: tokenStart, end: tokenEnd });
+      setIsCommandMenuOpen(true);
+    },
+    [closeCommandMenu],
+  );
+
+  const acceptCommandSuggestion = useCallback(
+    (suggestion: (typeof commandSuggestions)[number]) => {
+      if (!commandContext) return;
+      if (!suggestion.enabled) {
+        toast.info('该指令已禁用');
+        return;
+      }
+      const afterChar = draft[commandContext.end] ?? '';
+      const needsSpace = afterChar === '' || !/\s/.test(afterChar);
+      const replacement = suggestion.trigger + (needsSpace ? ' ' : '');
+      const nextDraft =
+        draft.slice(0, commandContext.start) +
+        replacement +
+        draft.slice(commandContext.end);
+      onDraftChange(nextDraft);
+      closeCommandMenu();
+
+      requestAnimationFrame(() => {
+        const el = inputRef.current;
+        if (!el) return;
+        const pos = commandContext.start + replacement.length;
+        el.focus();
+        try {
+          el.setSelectionRange(pos, pos);
+        } catch {
+          // ignore
+        }
+      });
+    },
+    [closeCommandMenu, commandContext, draft, inputRef, onDraftChange],
+  );
+
+  const moveCommandSelection = useCallback(
+    (delta: number) => {
+      if (!commandSuggestions.length) return;
+      const len = commandSuggestions.length;
+      let nextIndex = commandSelectedIndex;
+      for (let i = 0; i < len; i += 1) {
+        nextIndex = (nextIndex + delta + len) % len;
+        if (commandSuggestions[nextIndex]?.enabled) {
+          setCommandSelectedIndex(nextIndex);
+          return;
+        }
+      }
+      setCommandSelectedIndex((prev) => (prev + delta + len) % len);
+    },
+    [commandSelectedIndex, commandSuggestions],
+  );
 
   const shouldRenderMessageList =
     isConnected &&
@@ -547,20 +662,156 @@ function ChatPanel({
           onSend();
         }}
       >
-        <div className="flex items-center gap-2 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 sm:px-4 py-2 shadow-sm transition-all duration-200 focus-within:border-gray-400 dark:focus-within:border-slate-500 focus-within:ring-2 focus-within:ring-gray-100 dark:focus-within:ring-slate-700">
+        <div className="relative flex items-center gap-2 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 sm:px-4 py-2 shadow-sm transition-all duration-200 focus-within:border-gray-400 dark:focus-within:border-slate-500 focus-within:ring-2 focus-within:ring-gray-100 dark:focus-within:ring-slate-700">
+          {isCommandMenuOpen && commandContext?.token.startsWith('/') ? (
+            <div
+              className="absolute bottom-full left-0 right-0 mb-2"
+              style={dropdownStyle}
+              role="presentation"
+            >
+              <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl overflow-hidden">
+                <div className="px-3 py-2 flex items-center justify-between gap-2 border-b border-gray-100 dark:border-slate-800">
+                  <div className="text-[11px] font-semibold text-gray-700 dark:text-slate-200">
+                    指令补全
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {commandsError ? (
+                      <div className="text-[10px] text-red-600 dark:text-red-300">
+                        加载失败
+                      </div>
+                    ) : null}
+                    {isCommandsLoading ? (
+                      <Spinner className="h-3 w-3" color="blue" />
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="max-h-56 overflow-y-auto">
+                  {isCommandsLoading ? (
+                    <div className="px-3 py-3 text-xs text-gray-500 dark:text-slate-400">
+                      正在加载指令…
+                    </div>
+                  ) : commandSuggestions.length === 0 ? (
+                    <div className="px-3 py-3 text-xs text-gray-500 dark:text-slate-400">
+                      无匹配指令
+                    </div>
+                  ) : (
+                    <div role="listbox" aria-label="指令补全">
+                      {commandSuggestions.map((item, index) => {
+                        const isSelected = index === commandSelectedIndex;
+                        const disabled = !item.enabled;
+                        return (
+                          <button
+                            key={`${item.kind}:${item.trigger}:${item.source}`}
+                            type="button"
+                            className={`w-full text-left px-3 py-2 flex items-start gap-3 ${
+                              disabled
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'hover:bg-gray-50 dark:hover:bg-slate-800/70'
+                            } ${isSelected ? 'bg-gray-100 dark:bg-slate-800/70' : ''}`}
+                            onMouseDown={(event) => {
+                              event.preventDefault();
+                              acceptCommandSuggestion(item);
+                            }}
+                            role="option"
+                            aria-selected={isSelected}
+                            disabled={disabled}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="font-mono text-xs text-gray-900 dark:text-slate-100 truncate">
+                                  {item.trigger}
+                                </span>
+                                <span
+                                  className={`text-[10px] px-1.5 py-0.5 rounded-full border ${
+                                    item.source === 'builtin'
+                                      ? 'border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300'
+                                      : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-200'
+                                  }`}
+                                >
+                                  {item.source === 'builtin' ? '内置' : '自定义'}
+                                </span>
+                                {!item.enabled ? (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-300">
+                                    已禁用
+                                  </span>
+                                ) : null}
+                              </div>
+                              {item.description ? (
+                                <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400 truncate">
+                                  {item.description}
+                                </div>
+                              ) : null}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="px-3 py-2 border-t border-gray-100 dark:border-slate-800 text-[10px] text-gray-500 dark:text-slate-400 flex items-center justify-between">
+                  <span>Tab / Enter 补全</span>
+                  <span>↑↓ 选择 · Esc 关闭</span>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <textarea
             className="flex-1 bg-transparent text-sm text-gray-700 dark:text-slate-100 outline-none resize-none border-none focus:ring-0 min-h-[32px] sm:min-h-[44px]"
             name="chatPrompt"
             ref={inputRef}
             value={draft}
-            onChange={(event) => onDraftChange(event.target.value)}
+            onChange={(event) => {
+              const value = event.target.value;
+              onDraftChange(value);
+              updateCommandMenu(value, event.target.selectionStart ?? value.length);
+            }}
+            onFocus={(event) => {
+              void refreshCommands();
+              updateCommandMenu(event.currentTarget.value, event.currentTarget.selectionStart ?? event.currentTarget.value.length);
+            }}
+            onBlur={() => closeCommandMenu()}
+            onClick={(event) => updateCommandMenu(event.currentTarget.value, event.currentTarget.selectionStart ?? event.currentTarget.value.length)}
+            onKeyUp={(event) => updateCommandMenu(event.currentTarget.value, event.currentTarget.selectionStart ?? event.currentTarget.value.length)}
             disabled={isSending || isBlocked}
             aria-label="对话输入"
             placeholder={isBlocked ? '请先创建笔记本' : '开始输入...'}
             onKeyDown={(event) => {
+              if (event.nativeEvent.isComposing) return;
+
+              if (isCommandMenuOpen && commandContext?.token.startsWith('/')) {
+                if (event.key === 'ArrowDown') {
+                  event.preventDefault();
+                  moveCommandSelection(1);
+                  return;
+                }
+                if (event.key === 'ArrowUp') {
+                  event.preventDefault();
+                  moveCommandSelection(-1);
+                  return;
+                }
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  closeCommandMenu();
+                  return;
+                }
+                if (event.key === 'Tab' || event.key === 'Enter') {
+                  const candidate =
+                    (selectedCommandSuggestion?.enabled ? selectedCommandSuggestion : null) ??
+                    commandSuggestions.find((item) => item.enabled) ??
+                    null;
+                  if (candidate) {
+                    event.preventDefault();
+                    acceptCommandSuggestion(candidate);
+                    return;
+                  }
+                }
+              }
+
               if (event.key !== 'Enter') return;
               if (event.shiftKey) return;
-              if (event.nativeEvent.isComposing) return;
               event.preventDefault();
               onSend();
             }}
