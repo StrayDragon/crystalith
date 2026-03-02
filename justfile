@@ -195,7 +195,7 @@ sdk-build-python: sdk-submodule-update
     cd {{SDK_ROOT}} && uv build --no-sources --clear
 
 # Preflight check before tagging a release (ensures submodule is committed and pushed).
-sdk-release-check: sdk-submodule-update sdk-version-check api-check
+sdk-release-check: sdk-submodule-update
     #!/usr/bin/env bash
     set -euo pipefail
     if [[ -n "$(git status --porcelain)" ]]; then
@@ -222,6 +222,8 @@ sdk-release-check: sdk-submodule-update sdk-version-check api-check
       echo "crystalith-sdks commit $CURRENT_SHA is not on origin/main. Push/merge it before tagging." >&2
       exit 1
     fi
+    just sdk-version-check
+    just api-check
     echo "SDK release preflight OK."
 
 # --------------------------------------------------------------------------
