@@ -197,3 +197,105 @@ async def test_stats_preset_stream_persists_envelope_and_emits_chunk_and_done(db
     assistant = next((msg for msg in reversed(messages) if msg.get("role") == "assistant"), None)
     assert assistant is not None
     assert "[[crystalith-ui:v1]]" in (assistant.get("content") or "")
+
+
+@pytest.mark.asyncio
+async def test_custom_prompt_preset_overrides_system_prompt(db_session, client, app):
+    app.state.settings.app.features.chat_prompt_presets_enabled = True
+
+    preset_resp = await client.post(
+        "/v1/prompt-presets",
+        json={
+            "trigger": "demo",
+            "description": "Demo preset",
+            "system_prompt": "Answer using bullet points.",
+            "enabled": True,
+        },
+    )
+    assert preset_resp.status_code == 201
+
+    create_resp = await client.post("/v1/notebooks", json={"name": "Custom Preset QA"})
+    assert create_resp.status_code == 201
+    notebook_id = create_resp.json()["id"]
+
+    source = Source(
+        notebook_id=notebook_id,
+        filename="Doc.md",
+        status=SourceStatus.READY,
+    )
+    db_session.add(source)
+    await db_session.flush()
+
+    chunk = Chunk(source_id=source.id, chunk_index=0, text="Test chunk for custom preset.")
+    db_session.add(chunk)
+    await db_session.commit()
+
+    await app.state.vector_store.add(
+        notebook_id=notebook_id,
+        source_id=source.id,
+        chunk_ids=[chunk.id],
+        vectors=[[1.0, 0.0, 0.0]],
+    )
+
+    qa_resp = await client.post(
+        f"/v1/notebooks/{notebook_id}/qa",
+        json={"question": "/prompt:demo hello", "source_ids": [source.id]},
+    )
+    assert qa_resp.status_code == 200
+    payload = qa_resp.json()
+    assert payload["answer"].startswith("- Test bullet 1")
+
+
+@pytest.mark.asyncio
+async def test_custom_prompt_preset_disabled_returns_400(client, app):
+    app.state.settings.app.features.chat_prompt_presets_enabled = True
+
+    preset_resp = await client.post(
+        "/v1/prompt-presets",
+        json={
+            "trigger": "demo",
+            "description": "Disabled demo",
+            "system_prompt": "Answer using bullet points.",
+            "enabled": False,
+        },
+    )
+    assert preset_resp.status_code == 201
+
+    create_resp = await client.post("/v1/notebooks", json={"name": "Custom Preset Disabled"})
+    assert create_resp.status_code == 201
+    notebook_id = create_resp.json()["id"]
+
+    qa_resp = await client.post(
+        f"/v1/notebooks/{notebook_id}/qa",
+        json={"question": "/prompt:demo hello"},
+    )
+    assert qa_resp.status_code == 400
+    assert qa_resp.json()["message"] == "Prompt preset is disabled"
+
+
+@pytest.mark.asyncio
+async def test_prompt_usage_includes_custom_presets(client, app):
+    app.state.settings.app.features.chat_prompt_presets_enabled = True
+
+    preset_resp = await client.post(
+        "/v1/prompt-presets",
+        json={
+            "trigger": "demo",
+            "description": "Demo preset",
+            "system_prompt": "Answer using bullet points.",
+            "enabled": True,
+        },
+    )
+    assert preset_resp.status_code == 201
+
+    create_resp = await client.post("/v1/notebooks", json={"name": "Custom Preset Usage"})
+    assert create_resp.status_code == 201
+    notebook_id = create_resp.json()["id"]
+
+    qa_resp = await client.post(
+        f"/v1/notebooks/{notebook_id}/qa",
+        json={"question": "/prompt:unknown hello"},
+    )
+    assert qa_resp.status_code == 400
+    assert "Available presets:" in qa_resp.json()["message"]
+    assert "demo" in qa_resp.json()["message"]

@@ -156,6 +156,41 @@ export type CitationContextResponse = {
 };
 
 /**
+ * CommandRead
+ */
+export type CommandRead = {
+    /**
+     * Description
+     */
+    description?: string;
+    /**
+     * Enabled
+     */
+    enabled?: boolean;
+    /**
+     * Id
+     *
+     * Stable command id (e.g. preset trigger).
+     */
+    id: string;
+    /**
+     * Kind
+     */
+    kind: 'prompt_preset';
+    meta?: JsonDict | null;
+    /**
+     * Source
+     */
+    source: 'builtin' | 'custom';
+    /**
+     * Trigger
+     *
+     * Trigger string that can be typed (e.g. /prompt:stats).
+     */
+    trigger: string;
+};
+
+/**
  * ConfigOption
  */
 export type ConfigOption = {
@@ -880,6 +915,88 @@ export type PluginConfigSchema = {
      * Topic Placeholder
      */
     topic_placeholder?: string;
+};
+
+/**
+ * PromptPresetCreate
+ */
+export type PromptPresetCreate = {
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Enabled
+     */
+    enabled?: boolean;
+    /**
+     * System Prompt
+     */
+    system_prompt: string;
+    /**
+     * Trigger
+     */
+    trigger: string;
+};
+
+/**
+ * PromptPresetRead
+ */
+export type PromptPresetRead = {
+    /**
+     * Created At
+     */
+    created_at?: string | null;
+    /**
+     * Description
+     */
+    description?: null | string;
+    /**
+     * Enabled
+     */
+    enabled: boolean;
+    /**
+     * Preset Id
+     */
+    preset_id?: number | null;
+    /**
+     * Source
+     */
+    source: 'builtin' | 'custom';
+    /**
+     * System Prompt
+     */
+    system_prompt: string;
+    /**
+     * Trigger
+     */
+    trigger: string;
+    /**
+     * Updated At
+     */
+    updated_at?: string | null;
+};
+
+/**
+ * PromptPresetUpdate
+ */
+export type PromptPresetUpdate = {
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Enabled
+     */
+    enabled?: boolean | null;
+    /**
+     * System Prompt
+     */
+    system_prompt?: string | null;
+    /**
+     * Trigger
+     */
+    trigger?: string | null;
 };
 
 /**
@@ -2629,6 +2746,24 @@ export type CrystalithFeaturesWorkspaceApiConfigOption = {
      */
     label: string;
 };
+
+export type ListCommandsV1CommandsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/commands';
+};
+
+export type ListCommandsV1CommandsGetResponses = {
+    /**
+     * Response List Commands V1 Commands Get
+     *
+     * Successful Response
+     */
+    200: Array<CommandRead>;
+};
+
+export type ListCommandsV1CommandsGetResponse = ListCommandsV1CommandsGetResponses[keyof ListCommandsV1CommandsGetResponses];
 
 export type ListModelsV1ModelsGetData = {
     body?: never;
@@ -5061,6 +5196,109 @@ export type SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostResponses = 
 };
 
 export type SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostResponse = SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostResponses[keyof SaveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPostResponses];
+
+export type ListPromptPresetsV1PromptPresetsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/prompt-presets';
+};
+
+export type ListPromptPresetsV1PromptPresetsGetResponses = {
+    /**
+     * Response List Prompt Presets V1 Prompt Presets Get
+     *
+     * Successful Response
+     */
+    200: Array<PromptPresetRead>;
+};
+
+export type ListPromptPresetsV1PromptPresetsGetResponse = ListPromptPresetsV1PromptPresetsGetResponses[keyof ListPromptPresetsV1PromptPresetsGetResponses];
+
+export type CreatePromptPresetV1PromptPresetsPostData = {
+    body: PromptPresetCreate;
+    path?: never;
+    query?: never;
+    url: '/v1/prompt-presets';
+};
+
+export type CreatePromptPresetV1PromptPresetsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreatePromptPresetV1PromptPresetsPostError = CreatePromptPresetV1PromptPresetsPostErrors[keyof CreatePromptPresetV1PromptPresetsPostErrors];
+
+export type CreatePromptPresetV1PromptPresetsPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: PromptPresetRead;
+};
+
+export type CreatePromptPresetV1PromptPresetsPostResponse = CreatePromptPresetV1PromptPresetsPostResponses[keyof CreatePromptPresetV1PromptPresetsPostResponses];
+
+export type DeletePromptPresetV1PromptPresetsPresetIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Preset Id
+         */
+        preset_id: number;
+    };
+    query?: never;
+    url: '/v1/prompt-presets/{preset_id}';
+};
+
+export type DeletePromptPresetV1PromptPresetsPresetIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeletePromptPresetV1PromptPresetsPresetIdDeleteError = DeletePromptPresetV1PromptPresetsPresetIdDeleteErrors[keyof DeletePromptPresetV1PromptPresetsPresetIdDeleteErrors];
+
+export type DeletePromptPresetV1PromptPresetsPresetIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeletePromptPresetV1PromptPresetsPresetIdDeleteResponse = DeletePromptPresetV1PromptPresetsPresetIdDeleteResponses[keyof DeletePromptPresetV1PromptPresetsPresetIdDeleteResponses];
+
+export type UpdatePromptPresetV1PromptPresetsPresetIdPatchData = {
+    body: PromptPresetUpdate;
+    path: {
+        /**
+         * Preset Id
+         */
+        preset_id: number;
+    };
+    query?: never;
+    url: '/v1/prompt-presets/{preset_id}';
+};
+
+export type UpdatePromptPresetV1PromptPresetsPresetIdPatchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdatePromptPresetV1PromptPresetsPresetIdPatchError = UpdatePromptPresetV1PromptPresetsPresetIdPatchErrors[keyof UpdatePromptPresetV1PromptPresetsPresetIdPatchErrors];
+
+export type UpdatePromptPresetV1PromptPresetsPresetIdPatchResponses = {
+    /**
+     * Successful Response
+     */
+    200: PromptPresetRead;
+};
+
+export type UpdatePromptPresetV1PromptPresetsPresetIdPatchResponse = UpdatePromptPresetV1PromptPresetsPresetIdPatchResponses[keyof UpdatePromptPresetV1PromptPresetsPresetIdPatchResponses];
 
 export type GetTaskV1TasksTaskIdGetData = {
     body?: never;

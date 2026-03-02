@@ -31,6 +31,7 @@ import {
 import { WorkspaceOverlays } from './overlays';
 import AddSourceFromUrlDialog from './overlays/AddSourceFromUrlDialog';
 import DiagnosticsDialog from './overlays/DiagnosticsDialog';
+import SystemConfigDialog from './overlays/SystemConfigDialog';
 
 export default function WorkspaceLayout() {
   const selectedSourceIds_raw = useWorkspaceStore((s) => s.selectedSourceIds);
@@ -822,6 +823,11 @@ export default function WorkspaceLayout() {
         onRefresh={dependencyHealth.refresh}
       />
 
+      <SystemConfigDialog
+        open={overlays.isSystemConfigOpen}
+        onClose={overlays.closeSystemConfig}
+      />
+
       <div className="flex-shrink-0 relative z-10 px-4 pt-1">
         <WorkspaceHeader
           notebooks={notebooks.notebooks}
@@ -841,6 +847,7 @@ export default function WorkspaceLayout() {
           onSelectNotebook={notebooks.setActiveNotebookId}
           onOpenKnowledgeGraph={overlays.openGraphView}
           onOpenDiagnostics={overlays.openDiagnostics}
+          onOpenSystemConfig={overlays.openSystemConfig}
           onOpenShortcutHelp={overlays.openShortcutHelp}
           locked={locked}
           onToggleLock={toggleLock}

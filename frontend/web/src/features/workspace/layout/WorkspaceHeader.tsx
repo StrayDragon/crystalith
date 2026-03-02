@@ -9,6 +9,7 @@ import {
   Lock as LockIcon,
   LockOpen as LockOpenIcon,
   MonitorHeart as MonitorHeartIcon,
+  Settings as SettingsIcon,
   SettingsBrightness as SystemThemeIcon,
 } from '@mui/icons-material';
 
@@ -38,6 +39,7 @@ interface WorkspaceHeaderProps {
   onSelectNotebook: (notebookId: number | null) => void;
   onOpenKnowledgeGraph?: () => void;
   onOpenDiagnostics?: () => void;
+  onOpenSystemConfig?: () => void;
   onOpenShortcutHelp?: () => void;
   // Modular Canvas controls
   locked?: boolean;
@@ -95,6 +97,7 @@ export default function WorkspaceHeader({
   onSelectNotebook,
   onOpenKnowledgeGraph,
   onOpenDiagnostics,
+  onOpenSystemConfig,
   onOpenShortcutHelp,
   locked,
   onToggleLock,
@@ -336,6 +339,15 @@ export default function WorkspaceHeader({
                 <span className="text-sm w-5 text-center">⌨️</span>
                 <span className="flex-1">命令面板</span>
                 <kbd className="ml-auto text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded text-gray-400 dark:text-slate-500 font-mono">⌘K</kbd>
+              </MenuItem>
+            )}
+            {onOpenSystemConfig && (
+              <MenuItem
+                onClick={onOpenSystemConfig}
+                className="flex items-center gap-2.5 py-2 px-3 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
+              >
+                <SettingsIcon style={{ fontSize: 16, marginLeft: 2 }} className="text-gray-500 dark:text-slate-400" />
+                <span>系统配置</span>
               </MenuItem>
             )}
             {onOpenShortcutHelp && (
