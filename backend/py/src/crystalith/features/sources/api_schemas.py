@@ -11,7 +11,7 @@ from crystalith.shared.types import SourceStatus
 
 
 class SourceRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int
     notebook_id: int
@@ -37,7 +37,7 @@ class SourceRead(BaseModel):
 class ChunkRead(BaseModel):
     """Response model for a text chunk."""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int
     chunk_index: int

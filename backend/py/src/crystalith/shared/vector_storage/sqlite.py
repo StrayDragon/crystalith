@@ -191,7 +191,9 @@ class SQLiteVectorStore:
             notebook_id=notebook_id,
             source_ids=sorted(source_id_set) if source_id_set else None,
         )
-        results_heap: list[tuple[float, VectorEntry]] = []
+        # NOTE: heapq compares tuple elements in order. If scores tie, we must
+        # include a deterministic tiebreaker so VectorEntry isn't compared.
+        results_heap: list[tuple[float, int, VectorEntry]] = []
         query_norm = _norm(query)
         for entry in entries:
             if exclude_source_id_set is not None and entry.source_id in exclude_source_id_set:
@@ -200,13 +202,13 @@ class SQLiteVectorStore:
             if score < min_score:
                 continue
             if len(results_heap) < top_k:
-                heapq.heappush(results_heap, (score, entry))
+                heapq.heappush(results_heap, (score, int(entry.chunk_id), entry))
                 continue
             if results_heap[0][0] < score:
-                heapq.heapreplace(results_heap, (score, entry))
+                heapq.heapreplace(results_heap, (score, int(entry.chunk_id), entry))
         results = [
             VectorSearchResult(entry=entry, score=score)
-            for score, entry in sorted(results_heap, key=lambda item: item[0], reverse=True)
+            for score, _chunk_id, entry in sorted(results_heap, key=lambda item: item[0], reverse=True)
         ]
         return results
 
