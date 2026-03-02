@@ -4,8 +4,8 @@
 The TypeScript SDK is generated from the backend OpenAPI schema and packaged for npm.
 
 - npm package: `@crystalith/sdk`
-- Repo package root: `sdk/client/typescript`
-- Generated client source: `sdk/client/typescript/src/generated`
+- Repo package root: `vendor/crystalith-sdks/typescript` (git submodule)
+- Generated client source: `vendor/crystalith-sdks/typescript/src/generated`
 
 The Web UI still uses a generated client under `frontend/web/src/api/generated`.
 
@@ -22,6 +22,7 @@ npm install @crystalith/sdk
 ## Local generation (repo)
 
 ```bash
+git submodule update --init --recursive vendor/crystalith-sdks
 just api-export
 just sdk-gen-typescript
 just sdk-build-typescript

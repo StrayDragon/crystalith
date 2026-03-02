@@ -5,11 +5,12 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/check-python-sdk.yml"
+      - ".gitmodules"
       - "backend/py/**"
       - "frontend/web/openapi.json"
       - "justfile"
-      - "sdk/client/python/**"
       - "sdk/configs/**"
+      - "vendor/crystalith-sdks"
   workflow_dispatch:
 
 permissions:
@@ -21,6 +22,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup just
         uses: extractions/setup-just@v2
