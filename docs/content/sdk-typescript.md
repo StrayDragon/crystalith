@@ -27,7 +27,7 @@ just api-export
 just sdk-gen-typescript
 just sdk-build-typescript
 
-# Drift check (regenerate + git diff)
+# Drift check (regenerate + git status)
 just sdk-check-typescript
 ```
 
