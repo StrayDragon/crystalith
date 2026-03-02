@@ -160,6 +160,7 @@ sdk-gen VERSION='': api-export sdk-gen-web (sdk-gen-python VERSION)
 
 # Build TypeScript SDK (dist + types)
 sdk-build-typescript:
+    git submodule update --init --recursive vendor/crystalith-sdks
     pnpm -C {{SDK_TS_ROOT}} install --frozen-lockfile
     pnpm -C {{SDK_TS_ROOT}} run build
 
@@ -183,6 +184,7 @@ sdk-check: api-export (sdk-gen-python)
 
 # Build Python SDK (wheel/sdist)
 sdk-build-python:
+    git submodule update --init --recursive vendor/crystalith-sdks
     cd {{SDK_ROOT}} && uv build --no-sources --clear
 
 # --------------------------------------------------------------------------
