@@ -109,3 +109,28 @@ async def test_sqlite_vector_store_enforces_vector_dimension(tmp_path) -> None:
         assert wrong_dim_search == []
     finally:
         await store.close()
+
+
+@pytest.mark.asyncio
+async def test_sqlite_vector_store_search_handles_tied_scores(tmp_path) -> None:
+    store = SQLiteVectorStore(path=tmp_path / "vectors.db")
+    try:
+        await store.add(
+            notebook_id=1,
+            source_id=1,
+            chunk_ids=[1, 2],
+            vectors=[
+                [1.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+            ],
+        )
+
+        results = await store.search(
+            notebook_id=1,
+            query_vector=[1.0, 0.0, 0.0],
+            top_k=10,
+            min_score=0.0,
+        )
+        assert sorted(item.entry.chunk_id for item in results) == [1, 2]
+    finally:
+        await store.close()
