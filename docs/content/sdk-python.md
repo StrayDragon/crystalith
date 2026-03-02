@@ -3,17 +3,17 @@
 ## Overview
 The Python SDK is generated from the backend OpenAPI schema via Fern and stored in:
 
-- `sdk/client/python`
+- `vendor/crystalith-sdks/python` (git submodule)
 
 The import package lives under:
-- `sdk/client/python/src/crystalith_sdk`
+- `vendor/crystalith-sdks/python/src/crystalith_sdk`
 
 Fern configuration lives in:
 - `sdk/configs/fern/fern.config.json`
 - `sdk/configs/fern/generators.yml`
 
 ## Versioning
-- SDK version is sourced from `backend/py/pyproject.toml` and written to `sdk/client/python/.sdk-version` during generation.
+- SDK version is sourced from `backend/py/pyproject.toml` and written to `vendor/crystalith-sdks/python/.sdk-version` during generation.
 - You can override with `just sdk-gen-python VERSION=X.Y.Z`, but it must match the backend version.
 
 ## Install
@@ -71,6 +71,9 @@ print(output.id, output.type)
 ## Local generation
 
 ```bash
+# Ensure the SDK monorepo submodule is present
+git submodule update --init --recursive vendor/crystalith-sdks
+
 # Generate all SDKs (export schema + frontend + Python)
 just sdk-gen
 

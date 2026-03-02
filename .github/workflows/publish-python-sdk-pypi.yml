@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup just
         uses: extractions/setup-just@v2
@@ -64,5 +66,5 @@ jobs:
 
       - name: Publish Python SDK to PyPI (Trusted Publisher)
         run: |
-          cd sdk/client/python
+          cd vendor/crystalith-sdks/python
           uv publish --trusted-publishing always

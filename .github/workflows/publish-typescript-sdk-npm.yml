@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup just
         uses: extractions/setup-just@v2
@@ -35,7 +37,7 @@ jobs:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
           cache: "pnpm"
-          cache-dependency-path: sdk/client/typescript/pnpm-lock.yaml
+          cache-dependency-path: vendor/crystalith-sdks/typescript/pnpm-lock.yaml
 
       - name: Check SDK versions match backend
         run: just sdk-version-check
@@ -58,5 +60,5 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          cd sdk/client/typescript
+          cd vendor/crystalith-sdks/typescript
           npm publish --access public

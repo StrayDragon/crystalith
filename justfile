@@ -1,9 +1,9 @@
 _default:
     @just -l
 
-SDK_ROOT := "sdk/client/python"
-SDK_PACKAGE_PATH := "sdk/client/python/src/crystalith_sdk"
-SDK_TS_ROOT := "sdk/client/typescript"
+SDK_ROOT := "vendor/crystalith-sdks/python"
+SDK_PACKAGE_PATH := "vendor/crystalith-sdks/python/src/crystalith_sdk"
+SDK_TS_ROOT := "vendor/crystalith-sdks/typescript"
 SDK_GO_ROOT := "vendor/crystalith-sdks/go"
 SDK_RUST_ROOT := "vendor/crystalith-sdks/rust"
 SCHEMA_PATH := "frontend/web/openapi.json"
@@ -35,6 +35,7 @@ api-sync: api-export sdk-gen-web
 sdk-gen-python VERSION='':
     #!/usr/bin/env bash
     set -euo pipefail
+    git submodule update --init --recursive vendor/crystalith-sdks
     BACKEND_VERSION=$(cd backend/py && python -c \
       'import re, pathlib; m = re.search(r"^version\s*=\s*\"([^\"]+)\"", pathlib.Path("pyproject.toml").read_text(), re.M); print(m.group(1)) if m else exit("version not found in backend/py/pyproject.toml")')
     SDK_VERSION="${VERSION:-$BACKEND_VERSION}"
@@ -106,6 +107,7 @@ sdk-gen-rust VERSION='':
 sdk-gen-typescript VERSION='':
     #!/usr/bin/env bash
     set -euo pipefail
+    git submodule update --init --recursive vendor/crystalith-sdks
     BACKEND_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("backend/py/pyproject.toml").read_text())["project"]["version"])')"
     SDK_VERSION="${VERSION:-$BACKEND_VERSION}"
     if [[ -n "{{VERSION}}" && "{{VERSION}}" != "$BACKEND_VERSION" ]]; then
@@ -125,7 +127,7 @@ sdk-gen-typescript VERSION='':
     path.write_text(json.dumps(data, indent=2) + "\\n", encoding="utf-8")
     PY
     cp LICENSE "{{SDK_TS_ROOT}}/LICENSE"
-    printf '# The TypeScript package under sdk/client/typescript is generated via openapi-ts (just sdk-gen-typescript).\\n# Do not edit generated files manually.\\n' > "{{SDK_TS_ROOT}}/.generated"
+    printf '# The TypeScript package under vendor/crystalith-sdks/typescript is generated via openapi-ts (just sdk-gen-typescript).\\n# Do not edit generated files manually.\\n' > "{{SDK_TS_ROOT}}/.generated"
     pnpm -C "{{SDK_TS_ROOT}}" install --frozen-lockfile
     pnpm -C "{{SDK_TS_ROOT}}" run generate
     echo "TypeScript SDK v${SDK_VERSION} generated at {{SDK_TS_ROOT}}"
@@ -134,20 +136,21 @@ sdk-gen-typescript VERSION='':
 sdk-version-check:
     #!/usr/bin/env bash
     set -euo pipefail
+    git submodule update --init --recursive vendor/crystalith-sdks
     BACKEND_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("backend/py/pyproject.toml").read_text())["project"]["version"])')"
-    SDK_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("sdk/client/python/pyproject.toml").read_text())["project"]["version"])')"
-    SDK_FILE_VERSION="$(tr -d '\r\n' < "sdk/client/python/.sdk-version")"
-    TS_SDK_VERSION="$(python -c 'import json, pathlib; print(json.loads(pathlib.Path("sdk/client/typescript/package.json").read_text())["version"])')"
+    SDK_VERSION="$(python -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("vendor/crystalith-sdks/python/pyproject.toml").read_text())["project"]["version"])')"
+    SDK_FILE_VERSION="$(tr -d '\r\n' < "vendor/crystalith-sdks/python/.sdk-version")"
+    TS_SDK_VERSION="$(python -c 'import json, pathlib; print(json.loads(pathlib.Path("vendor/crystalith-sdks/typescript/package.json").read_text())["version"])')"
     if [[ "$BACKEND_VERSION" != "$SDK_VERSION" ]]; then
-      echo "SDK version mismatch: backend/py=$BACKEND_VERSION sdk/client/python/pyproject.toml=$SDK_VERSION" >&2
+      echo "SDK version mismatch: backend/py=$BACKEND_VERSION vendor/crystalith-sdks/python/pyproject.toml=$SDK_VERSION" >&2
       exit 1
     fi
     if [[ "$BACKEND_VERSION" != "$SDK_FILE_VERSION" ]]; then
-      echo "SDK version mismatch: backend/py=$BACKEND_VERSION sdk/client/python/.sdk-version=$SDK_FILE_VERSION" >&2
+      echo "SDK version mismatch: backend/py=$BACKEND_VERSION vendor/crystalith-sdks/python/.sdk-version=$SDK_FILE_VERSION" >&2
       exit 1
     fi
     if [[ "$BACKEND_VERSION" != "$TS_SDK_VERSION" ]]; then
-      echo "SDK version mismatch: backend/py=$BACKEND_VERSION sdk/client/typescript/package.json=$TS_SDK_VERSION" >&2
+      echo "SDK version mismatch: backend/py=$BACKEND_VERSION vendor/crystalith-sdks/typescript/package.json=$TS_SDK_VERSION" >&2
       exit 1
     fi
     echo "SDK version OK: $BACKEND_VERSION"
@@ -162,13 +165,21 @@ sdk-build-typescript:
 
 # Check TypeScript SDK is up to date (for pre-commit)
 sdk-check-typescript: (sdk-gen-typescript)
-    git add {{SDK_TS_ROOT}}
-    git diff --staged --exit-code
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ -n "$(git -C vendor/crystalith-sdks status --porcelain -- typescript)" ]]; then
+      echo "TypeScript SDK is out of date. Run: just sdk-gen-typescript" >&2
+      exit 1
+    fi
 
 # Check Python SDK is up to date (for pre-commit)
 sdk-check: api-export (sdk-gen-python)
-    git add {{SDK_ROOT}}
-    git diff --staged --exit-code
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ -n "$(git -C vendor/crystalith-sdks status --porcelain -- python)" ]]; then
+      echo "Python SDK is out of date. Run: just sdk-gen-python" >&2
+      exit 1
+    fi
 
 # Build Python SDK (wheel/sdist)
 sdk-build-python:

@@ -5,17 +5,19 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/check-typescript-sdk.yml"
+      - ".gitmodules"
       - "backend/py/**"
       - "frontend/web/openapi.json"
       - "justfile"
-      - "sdk/client/typescript/**"
+      - "vendor/crystalith-sdks"
   pull_request:
     paths:
       - ".github/workflows/check-typescript-sdk.yml"
+      - ".gitmodules"
       - "backend/py/**"
       - "frontend/web/openapi.json"
       - "justfile"
-      - "sdk/client/typescript/**"
+      - "vendor/crystalith-sdks"
   workflow_dispatch:
 
 permissions:
@@ -27,6 +29,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup just
         uses: extractions/setup-just@v2
@@ -46,7 +50,7 @@ jobs:
         with:
           node-version: "20"
           cache: "pnpm"
-          cache-dependency-path: sdk/client/typescript/pnpm-lock.yaml
+          cache-dependency-path: vendor/crystalith-sdks/typescript/pnpm-lock.yaml
 
       - name: Check SDK versions match backend
         run: just sdk-version-check
