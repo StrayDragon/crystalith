@@ -1,6 +1,6 @@
 # OpenSpec Canonical Specs (Consolidated)
 
-本目录已按“最新主干 + 去重合并”完成收敛。当前 canonical 规范为统一命名的 21 个 spec；旧路径 deprecated 薄壳已在 batch-2 中移除。
+本目录已按“最新主干 + 去重合并”完成收敛。当前 canonical 规范为统一命名的 22 个 spec；旧路径 deprecated 薄壳已在 batch-2 中移除。
 
 ## Canonical Reading Order
 
@@ -12,6 +12,7 @@
    - `retrieval-and-cache/spec.md`
 2. API 与客户端
    - `workspace-api-contract/spec.md`
+   - `workspace-command-registry/spec.md`
    - `openapi-and-client-generation/spec.md`
 3. Workspace UI
    - `workspace-ui-core/spec.md`

@@ -29,8 +29,28 @@ Workspace MUST 以稳定的面板集合装配 Sources/Chat/Studio/Analysis/Resea
 Workspace 的 Chat 面板 MUST 允许用户在输入框中使用 `/prompt:<preset> <query>` 指令来请求受控的预设生成模式。
 
 #### Scenario: User can send a /prompt message
-- **WHEN** 用户在 Chat 输入框中输入以 `/prompt:` 开头的内容并发送
+- **WHEN** 用户在 Chat 输入框中输入以 `/prompt:` 开头的内容并发送（无论是否打开自动补全）
 - **THEN** UI SHALL 将该文本作为一次消息发送（不应在前端预过滤为“非法输入”）
+
+### Requirement: Chat input provides command autocomplete for /prompt presets
+Workspace 的 Chat 输入框 MUST 使用 `GET /v1/commands` 获取命令列表，并在用户输入 `/` 或 `/prompt:` 前缀时提供自动补全 UI。
+
+#### Scenario: Tab accepts the selected suggestion
+- **WHEN** 用户打开补全菜单并选中某项命令
+- **AND** 用户按下 `Tab`
+- **THEN** UI SHALL 将该命令的 `trigger` 插入到输入框中（替换当前 token）
+
+#### Scenario: Disabled commands are not selectable
+- **WHEN** 补全列表中某条命令 `enabled=false`
+- **THEN** UI SHALL 将其展示为 disabled
+- **AND** SHALL 阻止用户通过键盘/鼠标选择并插入该命令
+
+### Requirement: System config UI allows users to manage prompt presets
+Workspace UI MUST 提供“系统配置”入口，并允许用户对 custom `/prompt:*` presets 执行 CRUD（触发词、描述、system prompt、启用状态）。
+
+#### Scenario: Preset CRUD updates autocomplete
+- **WHEN** 用户在“系统配置”中创建/更新/删除 custom preset
+- **THEN** UI SHALL 刷新 `GET /v1/commands` 的缓存并更新补全列表
 
 ### Requirement: Chat panel renders UI envelopes embedded in assistant messages
 Chat 面板 MUST 能识别 assistant `content` 中的 delimiter `[[crystalith-ui:v1]]` 并解析其 JSON envelope；解析成功后 MUST 按 `parts[]` 渲染结构化 UI（text/component/tool_use/tool_result）。
