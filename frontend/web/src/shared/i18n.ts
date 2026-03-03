@@ -82,7 +82,14 @@ const ZH_CN_MESSAGES = {
   'sources.upload.toast.unsupported': '已忽略 {count} 个不支持的文件，仅支持 .txt/.md/.markdown/.pdf/.csv',
 
   'sources.search.placeholder': '在网络中搜索新来源',
+  'sources.search.placeholder.deep': '描述你的研究需求（目标、范围、输出形式…）',
   'sources.search.aria_label': '在网络中搜索新来源',
+  'sources.search.aria_label.deep': '输入研究需求',
+  'sources.search.toggle.to_deep': '切换到深度研究',
+  'sources.search.toggle.to_fast': '切换到快速研究',
+  'sources.search.action.fast': '开始搜索',
+  'sources.search.action.deep': '开始深度研究',
+  'sources.search.hint.deep': '深度研究会创建研究会话并生成报告；写清楚目标、范围和期望输出会更准确。',
   'sources.search.searching': '搜索中…',
   'sources.search.engine.web': '网页',
   'sources.search.mode.fast': '快速研究',
@@ -90,7 +97,7 @@ const ZH_CN_MESSAGES = {
 
   'sources.research.backend_disconnected': '未连接到后端服务，暂不支持深度研究',
   'sources.research.require_notebook': '请先创建笔记本',
-  'sources.research.require_topic': '请输入研究主题',
+  'sources.research.require_topic': '请输入研究需求',
   'sources.research.busy': '请稍候，操作正在进行中',
   'sources.research.active_exists': '已有研究任务正在进行中，请等待完成或取消后再创建新研究',
   'sources.research.started': '深度研究已启动',
