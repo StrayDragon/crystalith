@@ -18,8 +18,6 @@ import {
   Delete as DeleteIcon,
   Description as DescriptionIcon,
   CloudUpload as CloudUploadIcon,
-  Language as LanguageIcon,
-  Speed as SpeedIcon,
   Psychology as PsychologyIcon,
   ExpandMore as ExpandMoreIcon,
   ArrowForward as ArrowForwardIcon,
@@ -79,10 +77,6 @@ type SearchMode = (typeof SEARCH_MODES)[number];
 function normalizeSearchMode(value: string | null): SearchMode {
   if (!value) return 'Fast Research';
   return SEARCH_MODES.includes(value as SearchMode) ? (value as SearchMode) : 'Fast Research';
-}
-
-function labelForSearchMode(mode: SearchMode): string {
-  return mode === 'Deep Research' ? t('sources.search.mode.deep') : t('sources.search.mode.fast');
 }
 
 function splitUploadFiles(files: File[]) {
@@ -215,7 +209,7 @@ function SourcesPanelView({
   const uploadDisabled = !isConnected || uploadState === 'loading';
   const isSearching = searchState === 'loading';
   const [searchQuery, setSearchQuery] = useState('');
-  const [engine, setEngine] = useState<SearchEngine>(SEARCH_ENGINE_WEB);
+  const engine: SearchEngine = SEARCH_ENGINE_WEB;
   // Load search mode preference from localStorage
   const [mode, setMode] = useState<SearchMode>(() => {
     if (typeof window !== 'undefined') {
@@ -235,11 +229,19 @@ function SourcesPanelView({
   const sourceListRef = useRef<VirtuosoHandle | null>(null);
   const sourceRefs = useRef(new Map<number, HTMLDivElement | null>());
   const researchModalRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const fastSearchDebounceTimerRef = useRef<number | null>(null);
   const [highlightedSourceId, setHighlightedSourceId] = useState<number | null>(null);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   const [uploadDragActive, setUploadDragActive] = useState(false);
   const [uploadHint, setUploadHint] = useState(t('sources.upload.hint.default'));
+  const isDeepResearchMode = mode === 'Deep Research';
+  const searchPlaceholder = isDeepResearchMode
+    ? t('sources.search.placeholder.deep')
+    : t('sources.search.placeholder');
+  const searchModeToggleLabel = isDeepResearchMode
+    ? t('sources.search.toggle.to_fast')
+    : t('sources.search.toggle.to_deep');
 
   // Add search results dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -558,6 +560,13 @@ function SourcesPanelView({
     }, 300);
   };
 
+  const handleToggleSearchMode = useCallback(() => {
+    setMode((prev) => (prev === 'Deep Research' ? 'Fast Research' : 'Deep Research'));
+    window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+  }, []);
+
   // Handle research session click
   const handleResearchClick = useCallback(async (sessionId: number) => {
     // Unsubscribe from any existing SSE connection and clear events
@@ -638,19 +647,6 @@ function SourcesPanelView({
       research.fetchSession(research.activeSession.id);
     }
   }, [research]);
-
-  // Engine is now fixed to 'Web' only (Scholar/Docs removed for now)
-  const getEngineIcon = () => {
-    return <LanguageIcon style={{ fontSize: 16 }} />;
-  };
-
-  const getModeIcon = () => {
-    return mode === 'Deep Research' ? (
-      <PsychologyIcon style={{ fontSize: 16 }} />
-    ) : (
-      <SpeedIcon style={{ fontSize: 16 }} />
-    );
-  };
 
   return (
     <div className={`flex flex-1 flex-col min-h-0 ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''}`}>
@@ -803,78 +799,72 @@ function SourcesPanelView({
         ) : null}
 
         {/* Search Section */}
-        <div className="border border-gray-300 rounded-lg bg-white dark:bg-slate-900 overflow-hidden">
-          <div className="p-2">
-            <div className="relative flex w-full">
-              <div className="absolute top-2/4 left-3 -translate-y-2/4 text-gray-500 dark:text-slate-400">
-                 <SearchIcon style={{ fontSize: 20 }} />
-              </div>
-              <input
-                className="w-full h-9 pl-10 pr-10 rounded-lg bg-transparent border-none outline-none text-sm text-gray-800 placeholder-gray-500 focus:ring-0"
-                placeholder={t('sources.search.placeholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSearch();
-                  }
-                }}
-                id="source-search-input"
-                name="sourceSearch"
-                aria-label={t('sources.search.aria_label')}
-              />
-              <div className="absolute top-2/4 right-1 -translate-y-2/4">
-                 <IconButton
-                   size="sm"
-                   className="rounded-full w-7 h-7 bg-blue-500 hover:bg-blue-600"
-                   onClick={handleSearch}
-                 >
-                   <ArrowForwardIcon style={{ fontSize: 16 }} />
-                 </IconButton>
-              </div>
-            </div>
-          </div>
-
-          {/* Search Options */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 border-t border-gray-200">
-            {/* Engine indicator (Web only, Scholar/Docs removed for now) */}
-            <div className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border border-gray-300 bg-white text-gray-800 text-[11px]">
-              {getEngineIcon()}
-              <span>{t('sources.search.engine.web')}</span>
-            </div>
-
-            {/* Mode Select */}
-            <Menu placement="bottom-start">
-              <MenuHandler>
-                <Button
-                  variant="outlined"
-                  size="sm"
-                  className="flex items-center gap-1.5 px-2 py-1 h-6 rounded border-gray-300 bg-white dark:bg-slate-900 text-gray-800 normal-case font-normal text-[11px] hover:bg-gray-100 dark:hover:bg-slate-700"
-                >
-                  {getModeIcon()}
-                  {labelForSearchMode(mode)}
-                  <ExpandMoreIcon style={{ fontSize: 12 }} />
-                </Button>
-              </MenuHandler>
-              <MenuList className="min-w-[120px] p-1">
-                {SEARCH_MODES.map((opt) => {
-                  const modeTestId = opt === 'Deep Research'
-                    ? 'mode-deep-research'
-                    : 'mode-fast-research';
-                  return (
-                  <MenuItem
-                    key={opt}
-                    data-testid={modeTestId}
-                    className={`py-1.5 px-3 text-xs ${mode === opt ? 'bg-gray-100 dark:bg-slate-800 font-medium' : ''}`}
-                    onClick={() => setMode(opt)}
+        <div
+          className={
+            isDeepResearchMode
+              ? 'rounded-lg p-[1px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 shadow-sm ux-animated-gradient focus-within:ring-2 focus-within:ring-indigo-500/25'
+              : 'rounded-lg border border-gray-300 bg-white dark:bg-slate-900 transition-colors duration-200 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-300'
+          }
+        >
+          <div className="rounded-[7px] bg-white dark:bg-slate-900 overflow-hidden">
+            <div className="p-2">
+              <div className="flex w-full items-center gap-2">
+                <Tooltip content={searchModeToggleLabel}>
+                  <button
+                    type="button"
+                    onClick={handleToggleSearchMode}
+                    aria-label={searchModeToggleLabel}
+                    className="flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 hover:shadow-sm active:scale-[0.98] bg-gray-50 text-gray-600 dark:bg-slate-800 dark:text-slate-300"
                   >
-                    {labelForSearchMode(opt)}
-                  </MenuItem>
-                );
-                })}
-              </MenuList>
-            </Menu>
+                    <span key={isDeepResearchMode ? 'deep' : 'fast'} className="ux-fade-in">
+                      {isDeepResearchMode ? (
+                        <PsychologyIcon style={{ fontSize: 20 }} />
+                      ) : (
+                        <SearchIcon style={{ fontSize: 20 }} />
+                      )}
+                    </span>
+                  </button>
+                </Tooltip>
+
+                <input
+                  ref={searchInputRef}
+                  className="min-w-0 flex-1 h-9 px-3 rounded-lg bg-transparent border border-transparent outline-none text-sm text-gray-800 placeholder-gray-500 focus:ring-0 transition-colors duration-200"
+                  placeholder={searchPlaceholder}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSearch();
+                    }
+                  }}
+                  id="source-search-input"
+                  name="sourceSearch"
+                  aria-label={
+                    isDeepResearchMode ? t('sources.search.aria_label.deep') : t('sources.search.aria_label')
+                  }
+                />
+
+                <IconButton
+                  size="sm"
+                  aria-label={
+                    isDeepResearchMode ? t('sources.search.action.deep') : t('sources.search.action.fast')
+                  }
+                  className="rounded-full w-9 h-9 transition-all duration-200 active:scale-[0.98] bg-blue-500 hover:bg-blue-600"
+                  onClick={handleSearch}
+                >
+                  <ArrowForwardIcon style={{ fontSize: 16 }} />
+                </IconButton>
+              </div>
+            </div>
+
+            {isDeepResearchMode ? (
+              <div className="px-3 pb-2 -mt-1">
+                <Typography variant="small" className="text-[11px] text-gray-600 dark:text-slate-400 ux-slide-in">
+                  {t('sources.search.hint.deep')}
+                </Typography>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

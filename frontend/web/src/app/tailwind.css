@@ -114,6 +114,11 @@
   .ux-modal-in {
     animation: ux-modal-in 180ms cubic-bezier(0.2, 0, 0, 1);
   }
+
+  .ux-animated-gradient {
+    background-size: 200% 200%;
+    animation: ux-gradient-shift 4.5s ease infinite;
+  }
 }
 
 @keyframes typing-cursor-blink {
@@ -158,6 +163,18 @@
   }
 }
 
+@keyframes ux-gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -173,7 +190,8 @@
   .TypingCursor,
   .ux-fade-in,
   .ux-slide-in,
-  .ux-modal-in {
+  .ux-modal-in,
+  .ux-animated-gradient {
     animation: none !important;
     transition-duration: 0ms !important;
   }

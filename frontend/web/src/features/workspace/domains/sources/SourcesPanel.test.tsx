@@ -68,6 +68,7 @@ beforeEach(() => {
   toastInfoSpy = vi.spyOn(toast, 'info').mockImplementation(() => {});
 
   vi.clearAllMocks();
+  window.localStorage.removeItem('crystalith_search_mode');
 });
 
 const baseSources: SourceItem[] = [
@@ -218,6 +219,30 @@ test('supports sort/filter controls and multi-file upload', async () => {
   expect(sortBySpy).toHaveBeenCalledWith('name');
   expect(sortOrderSpy).toHaveBeenCalledWith('asc');
   expect(tagFilterSpy).toHaveBeenCalledWith('论文');
+});
+
+test('toggles deep research mode placeholder and hint', async () => {
+  const props = createProps();
+
+  render(
+    <LayerProvider>
+      <SourcesPanel {...props} />
+    </LayerProvider>,
+  );
+
+  expect(screen.getByPlaceholderText('在网络中搜索新来源')).toBeInTheDocument();
+
+  const toggleToDeep = screen.getByRole('button', { name: '切换到深度研究' });
+  fireEvent.click(toggleToDeep);
+
+  expect(screen.getByPlaceholderText('描述你的研究需求（目标、范围、输出形式…）')).toBeInTheDocument();
+  expect(
+    screen.getByText('深度研究会创建研究会话并生成报告；写清楚目标、范围和期望输出会更准确。'),
+  ).toBeInTheDocument();
+
+  const toggleToFast = screen.getByRole('button', { name: '切换到快速研究' });
+  fireEvent.click(toggleToFast);
+  expect(screen.getByPlaceholderText('在网络中搜索新来源')).toBeInTheDocument();
 });
 
 test('filters unsupported upload files and shows warning', () => {

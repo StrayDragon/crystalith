@@ -189,7 +189,8 @@ context_window:
 # ----------------------------------------------------------------------------
 search:
   searxng:
-    host: "http://host.docker.internal:50201"
+    # host: "http://host.docker.internal:50201"
+    host: "http://gateway.lan:50201"
     timeout: 10
     max_results: 10
 
@@ -233,11 +234,12 @@ optional_services:
 
   searxng:
     enabled: false
-    endpoint: "http://host.docker.internal:50201"
+    # endpoint: "http://host.docker.internal:50201"
+    endpoint: "http://gateway.lan:50201"
     timeout_s: 10
     probe:
       enabled: true
-      timeout_s: 3
+      timeout_s: 10
       interval_s: 30
       path: "/search?q=ping&format=json"
     degrade_policy: "core_available"
