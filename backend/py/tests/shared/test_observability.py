@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import httpx
 import openai
 from pydantic import BaseModel, ValidationError
@@ -44,7 +43,7 @@ def test_classify_error_kind_handles_sqlalchemy_errors() -> None:
 
 
 def test_classify_error_kind_handles_timeout_errors() -> None:
-    assert classify_error_kind(asyncio.TimeoutError()) == "model_error"
+    assert classify_error_kind(TimeoutError()) == "model_error"
     assert classify_error_kind(TimeoutError()) == "model_error"
 
 

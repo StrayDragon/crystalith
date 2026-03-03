@@ -5,7 +5,7 @@ from io import BytesIO
 import pytest
 from pypdf import PdfWriter
 
-from crystalith.shared.config import Settings
+from tests._support.settings import make_settings
 from crystalith.shared.parsers.audio import AudioParser
 from crystalith.shared.parsers.csv import CSVParser
 from crystalith.shared.parsers.factory import ParserFactory, _is_youtube_url
@@ -133,19 +133,27 @@ def test_video_parser_fetches_source_url_then_transcribes() -> None:
 
 def test_openai_transcriber_transcribe_handles_response_shapes_and_errors() -> None:
     class _AudioTranscriptions:
-        def __init__(self, response) -> None:  # noqa: ANN001 - test stub
+        def __init__(self, response: object) -> None:
             self._response = response
 
-        def create(self, *, model, file):  # noqa: ANN001 - test stub
+        def create(self, *, model: str, file: object) -> object:  # noqa: ARG002
             return self._response
 
     class _Audio:
-        def __init__(self, response) -> None:  # noqa: ANN001 - test stub
-            self.transcriptions = _AudioTranscriptions(response)
+        def __init__(self, response: object) -> None:
+            self._transcriptions = _AudioTranscriptions(response)
+
+        @property
+        def transcriptions(self) -> _AudioTranscriptions:
+            return self._transcriptions
 
     class _Client:
-        def __init__(self, response) -> None:  # noqa: ANN001 - test stub
-            self.audio = _Audio(response)
+        def __init__(self, response: object) -> None:
+            self._audio = _Audio(response)
+
+        @property
+        def audio(self) -> _Audio:
+            return self._audio
 
     transcriber = OpenAITranscriber(model="whisper-1", client=_Client("hello"))
     assert transcriber.transcribe(b"data") == "hello"
@@ -163,39 +171,53 @@ def test_openai_transcriber_transcribe_handles_response_shapes_and_errors() -> N
     with pytest.raises(ParserError, match="Empty audio"):
         transcriber4.transcribe(b"")
 
-    class _BoomClient(_Client):
-        def __init__(self) -> None:
-            self.audio = _AudioTranscriptions(response=None)  # type: ignore[assignment]
-
     class _BoomAudioTranscriptions:
-        def create(self, *, model, file):  # noqa: ANN001 - test stub
+        def create(self, *, model: str, file: object) -> object:  # noqa: ARG002
             raise RuntimeError("boom")
 
-    boom = OpenAITranscriber(model="whisper-1", client=type("C", (), {"audio": type("A", (), {"transcriptions": _BoomAudioTranscriptions()})()})())
+    class _BoomAudio:
+        def __init__(self) -> None:
+            self._transcriptions = _BoomAudioTranscriptions()
+
+        @property
+        def transcriptions(self) -> _BoomAudioTranscriptions:
+            return self._transcriptions
+
+    class _BoomClient:
+        def __init__(self) -> None:
+            self._audio = _BoomAudio()
+
+        @property
+        def audio(self) -> _BoomAudio:
+            return self._audio
+
+    boom = OpenAITranscriber(model="whisper-1", client=_BoomClient())
     with pytest.raises(ParserError, match="OpenAI transcription failed"):
         boom.transcribe(b"data")
 
 
 def test_create_transcription_provider_returns_disabled_when_no_openai_model() -> None:
-    settings = Settings(models={"available": []})
+    settings = make_settings({"models": {"available": []}})
     provider = create_transcription_provider(settings)
     assert isinstance(provider, DisabledTranscriber)
 
 
 def test_create_transcription_provider_returns_disabled_when_api_key_missing() -> None:
-    settings = Settings(
-        models={
-            "defaults": {"chat": "chat"},
-            "available": [
-                {
-                    "id": "chat",
-                    "provider": "openai",
-                    "model": "gpt",
-                    "display_name": "Chat",
-                    "roles": ["chat"],
-                    "provider_config": {"api_key": "   "},
-                }
-            ],
+    settings = make_settings(
+        {
+            "models": {
+                "defaults": {"chat": "chat"},
+                "available": [
+                    {
+                        "id": "chat",
+                        "provider": "openai",
+                        "model": "gpt",
+                        "display_name": "Chat",
+                        "roles": ["chat"],
+                        "provider_config": {"api_key": "   "},
+                    }
+                ],
+            }
         }
     )
     provider = create_transcription_provider(settings)
@@ -203,19 +225,21 @@ def test_create_transcription_provider_returns_disabled_when_api_key_missing() -
 
 
 def test_create_transcription_provider_returns_openai_transcriber_when_key_present() -> None:
-    settings = Settings(
-        models={
-            "defaults": {"chat": "chat"},
-            "available": [
-                {
-                    "id": "chat",
-                    "provider": "openai",
-                    "model": "gpt",
-                    "display_name": "Chat",
-                    "roles": ["chat"],
-                    "provider_config": {"api_key": "sk-test", "base_url": "http://localhost:9999"},
-                }
-            ],
+    settings = make_settings(
+        {
+            "models": {
+                "defaults": {"chat": "chat"},
+                "available": [
+                    {
+                        "id": "chat",
+                        "provider": "openai",
+                        "model": "gpt",
+                        "display_name": "Chat",
+                        "roles": ["chat"],
+                        "provider_config": {"api_key": "sk-test", "base_url": "http://localhost:9999"},
+                    }
+                ],
+            }
         }
     )
     provider = create_transcription_provider(settings)
@@ -230,6 +254,7 @@ def test_parser_factory_selects_youtube_video_parser_and_plugins() -> None:
     registry = PluginRegistry()
 
     class _Plugin:
+        api_version = "v1"
         parser_type = "custom"
         supported_mime_types = {"application/x-custom"}
         supported_extensions = {".cstm"}

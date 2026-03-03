@@ -10,25 +10,28 @@ from crystalith.shared.ai.effective_settings import (
     resolve_request_options,
 )
 from crystalith.shared.ai.openai_client_manager import OpenAIClientManager
-from crystalith.shared.config import CompletionOptions, RequestOptions, Settings
+from crystalith.shared.config import CompletionOptions, RequestOptions
+from tests._support.settings import make_settings
 
 
 def test_resolve_request_options_priority_model_over_global() -> None:
-    settings = Settings(
-        ai={"timeout": 60, "max_retries": 3},
-        models={
-            "available": [
-                {
-                    "id": "m1",
-                    "provider": "openai",
-                    "model": "gpt-test",
-                    "display_name": "M1",
-                    "roles": ["chat"],
-                    "provider_config": {"api_key": "sk-test"},
-                    "request_options": {"timeout": 12},
-                }
-            ]
-        },
+    settings = make_settings(
+        {
+            "ai": {"timeout": 60, "max_retries": 3},
+            "models": {
+                "available": [
+                    {
+                        "id": "m1",
+                        "provider": "openai",
+                        "model": "gpt-test",
+                        "display_name": "M1",
+                        "roles": ["chat"],
+                        "provider_config": {"api_key": "sk-test"},
+                        "request_options": {"timeout": 12},
+                    }
+                ]
+            },
+        }
     )
     model_config = settings.get_model_config("m1")
     assert model_config is not None
@@ -38,51 +41,62 @@ def test_resolve_request_options_priority_model_over_global() -> None:
 
 
 def test_resolve_request_options_priority_overrides_model() -> None:
-    settings = Settings(
-        ai={"timeout": 60, "max_retries": 3},
-        models={
-            "available": [
-                {
-                    "id": "m1",
-                    "provider": "openai",
-                    "model": "gpt-test",
-                    "display_name": "M1",
-                    "roles": ["chat"],
-                    "provider_config": {"api_key": "sk-test"},
-                    "request_options": {"timeout": 12, "verify_ssl": False},
-                }
-            ]
-        },
+    settings = make_settings(
+        {
+            "ai": {"timeout": 60, "max_retries": 3},
+            "models": {
+                "available": [
+                    {
+                        "id": "m1",
+                        "provider": "openai",
+                        "model": "gpt-test",
+                        "display_name": "M1",
+                        "roles": ["chat"],
+                        "provider_config": {"api_key": "sk-test"},
+                        "request_options": {"timeout": 12, "verify_ssl": False},
+                    }
+                ]
+            },
+        }
     )
     model_config = settings.get_model_config("m1")
     assert model_config is not None
 
-    resolved = resolve_request_options(settings, model_config, overrides=RequestOptions(timeout=5))
+    resolved = resolve_request_options(
+        settings,
+        model_config,
+        overrides=RequestOptions.model_validate({"timeout": 5}),
+    )
     assert resolved.timeout == 5
     # verify_ssl stays from model-level since overrides didn't explicitly set it
     assert resolved.verify_ssl is False
 
 
 def test_resolve_completion_options_priority_overrides_model() -> None:
-    settings = Settings(
-        models={
-            "available": [
-                {
-                    "id": "m1",
-                    "provider": "openai",
-                    "model": "gpt-test",
-                    "display_name": "M1",
-                    "roles": ["chat"],
-                    "provider_config": {"api_key": "sk-test"},
-                    "completion_options": {"temperature": 0.7},
-                }
-            ]
-        },
+    settings = make_settings(
+        {
+            "models": {
+                "available": [
+                    {
+                        "id": "m1",
+                        "provider": "openai",
+                        "model": "gpt-test",
+                        "display_name": "M1",
+                        "roles": ["chat"],
+                        "provider_config": {"api_key": "sk-test"},
+                        "completion_options": {"temperature": 0.7},
+                    }
+                ]
+            }
+        }
     )
     model_config = settings.get_model_config("m1")
     assert model_config is not None
 
-    resolved = resolve_completion_options(model_config, overrides=CompletionOptions(temperature=0.2))
+    resolved = resolve_completion_options(
+        model_config,
+        overrides=CompletionOptions.model_validate({"temperature": 0.2}),
+    )
     assert resolved is not None
     assert resolved.temperature == 0.2
 
@@ -97,19 +111,19 @@ def test_completion_options_to_pydantic_model_settings_maps_and_reports_unsuppor
         top_p=0.9,
         stop=["END"],
     )
-    request_options = RequestOptions(timeout=10, headers={"X-Test": "1"})
+    request_options = RequestOptions.model_validate({"timeout": 10, "headers": {"X-Test": "1"}})
 
     model_settings, unsupported = completion_options_to_pydantic_model_settings(
         completion_options,
         request_options=request_options,
     )
     assert model_settings is not None
-    assert model_settings["temperature"] == 0.3
-    assert model_settings["max_tokens"] == 120
-    assert model_settings["top_p"] == 0.9
-    assert model_settings["stop_sequences"] == ["END"]
-    assert model_settings["timeout"] == 10.0
-    assert model_settings["extra_headers"] == {"X-Test": "1"}
+    assert model_settings.get("temperature") == 0.3
+    assert model_settings.get("max_tokens") == 120
+    assert model_settings.get("top_p") == 0.9
+    assert model_settings.get("stop_sequences") == ["END"]
+    assert model_settings.get("timeout") == 10.0
+    assert model_settings.get("extra_headers") == {"X-Test": "1"}
     assert set(unsupported) == {"context_length", "top_k", "reasoning"}
 
 

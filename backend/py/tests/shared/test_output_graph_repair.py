@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import pytest
+from pydantic_graph import GraphRunContext
 
+from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.output_graph import OutputGraphState, PostprocessOutput
+from crystalith.shared.schemas.citations import Citation
 from crystalith.shared.types import OutputType
 
 
@@ -41,24 +44,35 @@ async def test_postprocess_output_runs_repair_when_enabled_and_quality(
     # Mock reason: isolate repair decision logic without invoking real LLM calls.
     monkeypatch.setattr(output_graph_mod, "Agent", _StubAgent)
 
+    citation = Citation(
+        source_id=1,
+        source_name="Doc.md",
+        chunk_id=1,
+        chunk_index=1,
+        snippet="hello",
+        score=0.9,
+    )
     state = OutputGraphState(
         notebook_id=1,
         output_type=OutputType.PARAGRAPH,
         prompt="",
         preference="quality",
         context="ctx",
-        citations=[object()],
+        citations=[citation],
         effective_prompt="P",
         content={"text": " ", "citations": [1]},
     )
     deps = type("Deps", (), {"model": object(), "limiters": None})()
 
-    await PostprocessOutput().run(_DummyCtx(state, deps))
+    ctx = cast(GraphRunContext[OutputGraphState, StudioDeps], _DummyCtx(state, deps))
+    await PostprocessOutput().run(ctx)
 
     assert called["runs"] == 1
     assert state.content["text"] == "fixed"
     assert state.content["_postprocessed"] is True
-    assert "llm_repaired" in (state.content.get("_warnings") or [])
+    warnings = state.content.get("_warnings")
+    assert isinstance(warnings, list)
+    assert "llm_repaired" in warnings
 
 
 @pytest.mark.asyncio
@@ -82,19 +96,28 @@ async def test_postprocess_output_skips_repair_when_speed_preference(
     # Mock reason: isolate repair gating logic without invoking real LLM calls.
     monkeypatch.setattr(output_graph_mod, "Agent", _StubAgent)
 
+    citation = Citation(
+        source_id=1,
+        source_name="Doc.md",
+        chunk_id=1,
+        chunk_index=1,
+        snippet="hello",
+        score=0.9,
+    )
     state = OutputGraphState(
         notebook_id=1,
         output_type=OutputType.PARAGRAPH,
         prompt="",
         preference="speed",
         context="ctx",
-        citations=[object()],
+        citations=[citation],
         effective_prompt="P",
         content={"text": "", "citations": [1]},
     )
     deps = type("Deps", (), {"model": object(), "limiters": None})()
 
-    await PostprocessOutput().run(_DummyCtx(state, deps))
+    ctx = cast(GraphRunContext[OutputGraphState, StudioDeps], _DummyCtx(state, deps))
+    await PostprocessOutput().run(ctx)
 
     assert called["runs"] == 0
     assert state.content.get("_fallback") is True
@@ -116,20 +139,29 @@ async def test_postprocess_output_skips_repair_for_plugin_schema(
     # Mock reason: assert plugin-schema bypass path without invoking real LLM calls.
     monkeypatch.setattr(output_graph_mod, "Agent", _StubAgent)
 
+    citation = Citation(
+        source_id=1,
+        source_name="Doc.md",
+        chunk_id=1,
+        chunk_index=1,
+        snippet="hello",
+        score=0.9,
+    )
     state = OutputGraphState(
         notebook_id=1,
         output_type=OutputType.PARAGRAPH,
         prompt="",
         preference="quality",
         context="ctx",
-        citations=[object()],
+        citations=[citation],
         effective_prompt="P",
         plugin_schema_used=True,
         content={"text": "", "citations": [1]},
     )
     deps = type("Deps", (), {"model": object(), "limiters": None})()
 
-    await PostprocessOutput().run(_DummyCtx(state, deps))
+    ctx = cast(GraphRunContext[OutputGraphState, StudioDeps], _DummyCtx(state, deps))
+    await PostprocessOutput().run(ctx)
     assert state.content["_postprocessed"] is True
 
 
@@ -152,19 +184,30 @@ async def test_postprocess_output_repair_failure_falls_back_to_deterministic(
     # Mock reason: force repair failure branch without invoking real LLM calls.
     monkeypatch.setattr(output_graph_mod, "Agent", _StubAgent)
 
+    citation = Citation(
+        source_id=1,
+        source_name="Doc.md",
+        chunk_id=1,
+        chunk_index=1,
+        snippet="hello",
+        score=0.9,
+    )
     state = OutputGraphState(
         notebook_id=1,
         output_type=OutputType.PARAGRAPH,
         prompt="",
         preference="quality",
         context="ctx",
-        citations=[object()],
+        citations=[citation],
         effective_prompt="P",
         content={"text": "", "citations": [1]},
     )
     deps = type("Deps", (), {"model": object(), "limiters": None})()
 
-    await PostprocessOutput().run(_DummyCtx(state, deps))
+    ctx = cast(GraphRunContext[OutputGraphState, StudioDeps], _DummyCtx(state, deps))
+    await PostprocessOutput().run(ctx)
 
     assert state.content.get("_fallback") is True
-    assert "llm_repair_failed" in (state.content.get("_warnings") or [])
+    warnings = state.content.get("_warnings")
+    assert isinstance(warnings, list)
+    assert "llm_repair_failed" in warnings

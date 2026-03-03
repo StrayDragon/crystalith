@@ -425,7 +425,7 @@ class ResolveContext(BaseNode[OutputGraphState, StudioDeps, Output]):
 
     async def run(
         self, ctx: GraphRunContext[OutputGraphState, StudioDeps]
-    ) -> "GenerateOutput":
+    ) -> GenerateOutput:
         state = ctx.state
         deps = ctx.deps
         started = perf_counter()
@@ -509,7 +509,7 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
 
     async def run(
         self, ctx: GraphRunContext[OutputGraphState, StudioDeps]
-    ) -> "PostprocessOutput":
+    ) -> PostprocessOutput:
         state = ctx.state
         deps = ctx.deps
 
@@ -622,7 +622,7 @@ class PostprocessOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
 
     async def run(
         self, ctx: GraphRunContext[OutputGraphState, StudioDeps]
-    ) -> "MapCitations":
+    ) -> MapCitations:
         state = ctx.state
         deps = ctx.deps
 
@@ -745,7 +745,7 @@ class MapCitations(BaseNode[OutputGraphState, StudioDeps, Output]):
 
     async def run(
         self, ctx: GraphRunContext[OutputGraphState, StudioDeps]
-    ) -> "PersistOutput":
+    ) -> PersistOutput:
         state = ctx.state
 
         log.debug(
@@ -756,7 +756,7 @@ class MapCitations(BaseNode[OutputGraphState, StudioDeps, Output]):
             citations_count=len(state.citations),
         )
 
-        citation_map = {index: cit for index, cit in enumerate(state.citations, start=1)}
+        citation_map = dict(enumerate(state.citations, start=1))
         fallback_citations = state.citations[:1]
         state.content = cast(dict[str, object], _map_citations(state.content, citation_map, fallback_citations))
         return PersistOutput()

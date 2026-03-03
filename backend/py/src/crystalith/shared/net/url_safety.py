@@ -4,7 +4,8 @@ import asyncio
 import ipaddress
 import socket
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Protocol, Sequence, TypeAlias
+from typing import Protocol
+from collections.abc import Awaitable, Callable, Sequence
 from urllib.parse import SplitResult, urlsplit
 
 
@@ -30,7 +31,7 @@ class UrlFetchSecurityPolicy(Protocol):
         ...
 
 
-IPAddress: TypeAlias = ipaddress.IPv4Address | ipaddress.IPv6Address
+type IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
 UrlFetchHostResolver = Callable[[str, int], Awaitable[Sequence[IPAddress]]]
 
 
@@ -42,7 +43,7 @@ class _Allowlist:
     allowlist_only: bool
 
     @classmethod
-    def from_policy(cls, policy: UrlFetchSecurityPolicy) -> "_Allowlist":
+    def from_policy(cls, policy: UrlFetchSecurityPolicy) -> _Allowlist:
         domains = tuple(_normalize_domain_suffix(d) for d in policy.allowlist_domains if d)
         hosts = frozenset(_normalize_host(h) for h in policy.allowlist_hosts if h)
         cidrs = tuple(ipaddress.ip_network(c, strict=False) for c in policy.allowlist_cidrs if c)

@@ -5,17 +5,18 @@ from collections.abc import Iterable, Sequence
 import pytest
 
 from crystalith.shared.cache import InMemoryCache
+from crystalith.shared.json_types import JsonValue
 from crystalith.shared.vector_storage import VectorEntry, VectorSearchResult, bump_vector_epoch, cached_vector_search
 
 
 class _FailingCache(InMemoryCache):
-    async def get(self, key: str):  # noqa: ANN001
+    async def get(self, key: str) -> JsonValue | None:
         raise RuntimeError(f"cache get unavailable: {key}")
 
-    async def set(self, key: str, value, *, ttl: float | None = None):  # noqa: ANN001
+    async def set(self, key: str, value: JsonValue, *, ttl: float | None = None) -> None:
         raise RuntimeError(f"cache set unavailable: {key}")
 
-    async def incr(self, key: str, *, ttl: float | None = None):  # noqa: ANN001
+    async def incr(self, key: str, amount: int = 1, *, ttl: float | None = None) -> int:  # noqa: ARG002
         raise RuntimeError(f"cache incr unavailable: {key}")
 
 

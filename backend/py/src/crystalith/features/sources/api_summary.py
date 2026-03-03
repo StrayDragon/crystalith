@@ -45,12 +45,12 @@ def _parse_summary_response(response: str) -> tuple[str, list[str], list[str]]:
         line = line.strip()
         if not line:
             continue
-        if line.startswith("摘要：") or line.startswith("摘要:"):
+        if line.startswith(("摘要：", "摘要:")):
             summary = line.split("：", 1)[-1].split(":", 1)[-1].strip()
             current_section = "summary"
-        elif line.startswith("要点：") or line.startswith("要点:"):
+        elif line.startswith(("要点：", "要点:")):
             current_section = "points"
-        elif line.startswith("主题：") or line.startswith("主题:"):
+        elif line.startswith(("主题：", "主题:")):
             topics_str = line.split("：", 1)[-1].split(":", 1)[-1].strip()
             topics = [t.strip() for t in topics_str.replace("、", ",").split(",") if t.strip()]
             current_section = "topics"

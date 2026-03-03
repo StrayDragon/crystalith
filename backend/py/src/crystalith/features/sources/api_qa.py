@@ -271,6 +271,7 @@ async def convert_source_qa_to_source(
     await session.commit()
     await session.refresh(source)
 
+    stage: str = "init"
     try:
         stage = "chunks"
         # Split into chunks
@@ -285,7 +286,7 @@ async def convert_source_qa_to_source(
         # Create chunks and store in vector store
         stage = "chunks"
         db_chunks: list[Chunk] = []
-        for idx, (chunk_text, embedding) in enumerate(zip(chunk_texts, embeddings)):
+        for idx, (chunk_text, _embedding) in enumerate(zip(chunk_texts, embeddings, strict=True)):
             chunk = Chunk(
                 source_id=source.id,
                 chunk_index=idx,

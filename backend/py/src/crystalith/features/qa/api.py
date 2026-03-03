@@ -235,7 +235,7 @@ async def ask_question(
     try:
         directive = parse_prompt_directive(payload.question)
     except ValueError:
-        raise HTTPException(status_code=400, detail=await _prompt_usage(session))
+        raise HTTPException(status_code=400, detail=await _prompt_usage(session)) from None
     if directive is not None:
         if not settings.app.features.chat_prompt_presets_enabled:
             raise HTTPException(status_code=400, detail="Prompt presets are disabled")

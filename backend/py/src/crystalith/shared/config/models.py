@@ -5,7 +5,7 @@ import re
 import ipaddress
 from pathlib import Path
 from collections.abc import Callable
-from typing import Literal, TypeVar, cast
+from typing import Literal, cast
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,11 +20,9 @@ from crystalith.shared.json_types import JsonValue
 
 _VAR_PATTERN = re.compile(r"\$\{\{\s*(env|secrets)\.(\w+)\s*\}\}")
 
-_T = TypeVar("_T")
 
-
-def _default_factory(factory: type[_T]) -> Callable[[], _T]:
-    return cast(Callable[[], _T], factory)
+def _default_factory[T](factory: type[T]) -> Callable[[], T]:
+    return cast(Callable[[], T], factory)
 
 
 def resolve_variables(value: JsonValue, secrets: dict[str, str] | None = None) -> JsonValue:
@@ -284,7 +282,7 @@ class ModelsSettings(BaseModel):
     available: list[ModelConfig] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def validate_defaults(self) -> "ModelsSettings":
+    def validate_defaults(self) -> ModelsSettings:
         """Validate that default model IDs exist in available models."""
         available_ids = {m.id for m in self.available}
 
@@ -361,7 +359,7 @@ class AppAuthSettings(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_api_key_required_when_enabled(self) -> "AppAuthSettings":
+    def validate_api_key_required_when_enabled(self) -> AppAuthSettings:
         if self.enabled and not (self.api_key and self.api_key.strip()):
             raise ValueError("app.auth.enabled=true requires app.auth.api_key to be set")
         return self
@@ -393,11 +391,11 @@ class AppSettings(BaseModel):
         default_factory=lambda: AppAuthSettings.model_validate({}),
         description="Optional API authentication settings.",
     )
-    cors: "CorsSettings" = Field(
+    cors: CorsSettings = Field(
         default_factory=lambda: CorsSettings.model_validate({}),
         description="CORS settings",
     )
-    startup: "StartupSettings" = Field(
+    startup: StartupSettings = Field(
         default_factory=lambda: StartupSettings.model_validate({}),
         description="Startup behaviors",
     )
@@ -468,7 +466,7 @@ class CacheSettings(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def _validate_redis_url(self) -> "CacheSettings":
+    def _validate_redis_url(self) -> CacheSettings:
         if self.provider == "redis" and (self.redis_url is None or not self.redis_url.strip()):
             raise ValueError("redis_url is required when cache.provider is 'redis'")
         return self
@@ -523,7 +521,6 @@ class ChatSettings(BaseModel):
     This section only contains chat-specific options.
     """
     # Future: add chat-specific options like system prompt template, etc.
-    pass
 
 
 class RefineSettings(BaseModel):
@@ -1000,7 +997,7 @@ class Settings(BaseSettings):
         cls,
         path: Path,
         secrets: dict[str, str] | None = None,
-    ) -> "Settings":
+    ) -> Settings:
         """
         Load settings from a YAML file with variable resolution.
 

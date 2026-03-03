@@ -141,7 +141,7 @@ class PlanSearches(BaseNode[ResearchGraphState, ResearchDeps, JsonDict]):
 
     async def run(
         self, ctx: GraphRunContext[ResearchGraphState, ResearchDeps]
-    ) -> "ExecuteSearches | WaitForApproval":
+    ) -> ExecuteSearches | WaitForApproval:
         state = ctx.state
         deps = ctx.deps
 
@@ -245,7 +245,15 @@ class PlanSearches(BaseNode[ResearchGraphState, ResearchDeps, JsonDict]):
             type=ResearchStepType.PLAN,
             input_data={"topic": state.topic, "iteration": state.current_iteration},
             output_data={
-                "queries": [{"query": q.query, "engine": q.engine, "priority": q.priority, "reason": q.reason} for q in state.search_plan.queries],
+                "queries": [
+                    {
+                        "query": q.query,
+                        "engine": q.engine,
+                        "priority": q.priority,
+                        "reason": q.reason,
+                    }
+                    for q in state.search_plan.queries
+                ],
                 "reasoning": state.search_plan.reasoning,
             },
             status=ResearchStepStatus.COMPLETED,
@@ -282,7 +290,7 @@ class WaitForApproval(BaseNode[ResearchGraphState, ResearchDeps, JsonDict]):
 
     async def run(
         self, ctx: GraphRunContext[ResearchGraphState, ResearchDeps]
-    ) -> "ExecuteSearches | AnalyzeResults | GenerateReport":
+    ) -> ExecuteSearches | AnalyzeResults | GenerateReport:
         import asyncio
 
         state = ctx.state
@@ -426,7 +434,7 @@ class ExecuteSearches(BaseNode[ResearchGraphState, ResearchDeps, JsonDict]):
 
     async def run(
         self, ctx: GraphRunContext[ResearchGraphState, ResearchDeps]
-    ) -> "AnalyzeResults":
+    ) -> AnalyzeResults:
         state = ctx.state
         deps = ctx.deps
 
@@ -606,7 +614,7 @@ class AnalyzeResults(BaseNode[ResearchGraphState, ResearchDeps, JsonDict]):
 
     async def run(
         self, ctx: GraphRunContext[ResearchGraphState, ResearchDeps]
-    ) -> "PlanSearches | GenerateReport":
+    ) -> PlanSearches | GenerateReport:
         state = ctx.state
         deps = ctx.deps
 

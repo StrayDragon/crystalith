@@ -13,33 +13,36 @@ from crystalith.shared.config import Settings
 from crystalith.shared.ai.openai_client_manager import get_openai_client_manager
 from crystalith.shared.vector_storage import InMemoryVectorStore
 from crystalith.web.app import create_app
+from tests._support.settings import make_settings
 
 
 @pytest.fixture
 def test_settings() -> Settings:
-    return Settings(
-        app={"cors": {"allow_origins": []}},
-        cache={"provider": "memory"},
-        vector_storage={"provider": "memory"},
-        models={
-            "defaults": {"chat": "test-chat", "embedding": "test-embed"},
-            "available": [
-                {
-                    "id": "test-chat",
-                    "provider": "test",
-                    "model": "test-chat",
-                    "display_name": "Test Chat",
-                    "roles": ["chat"],
-                },
-                {
-                    "id": "test-embed",
-                    "provider": "test",
-                    "model": "test-embed",
-                    "display_name": "Test Embed",
-                    "roles": ["embed"],
-                },
-            ],
-        },
+    return make_settings(
+        {
+            "app": {"cors": {"allow_origins": []}},
+            "cache": {"provider": "memory"},
+            "vector_storage": {"provider": "memory"},
+            "models": {
+                "defaults": {"chat": "test-chat", "embedding": "test-embed"},
+                "available": [
+                    {
+                        "id": "test-chat",
+                        "provider": "test",
+                        "model": "test-chat",
+                        "display_name": "Test Chat",
+                        "roles": ["chat"],
+                    },
+                    {
+                        "id": "test-embed",
+                        "provider": "test",
+                        "model": "test-embed",
+                        "display_name": "Test Embed",
+                        "roles": ["embed"],
+                    },
+                ],
+            },
+        }
     )
 
 

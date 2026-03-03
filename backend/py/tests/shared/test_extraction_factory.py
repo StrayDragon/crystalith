@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import contextlib
 import threading
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import cast
 
 import pytest
 
@@ -23,7 +25,7 @@ class _RequestCapture:
 
 
 @contextlib.contextmanager
-def _serve_http(payload: str) -> tuple[str, _RequestCapture]:
+def _serve_http(payload: str) -> Iterator[tuple[str, _RequestCapture]]:
     capture = _RequestCapture()
 
     class Handler(BaseHTTPRequestHandler):
@@ -45,7 +47,7 @@ def _serve_http(payload: str) -> tuple[str, _RequestCapture]:
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        host, port = server.server_address
+        host, port = cast(tuple[str, int], server.server_address)
         base_url = f"http://{host}:{port}/"
         yield base_url, capture
     finally:
@@ -56,11 +58,13 @@ def _serve_http(payload: str) -> tuple[str, _RequestCapture]:
 
 @pytest.mark.asyncio
 async def test_extractor_factory_reports_availability_and_extracts_html() -> None:
-    settings = WebExtractionSettings(
-        trafilatura={"enabled": True},
-        jina={"enabled": False},
-        firecrawl={"enabled": False},
-        browserless={"enabled": False},
+    settings = WebExtractionSettings.model_validate(
+        {
+            "trafilatura": {"enabled": True},
+            "jina": {"enabled": False},
+            "firecrawl": {"enabled": False},
+            "browserless": {"enabled": False},
+        }
     )
     factory = create_extractor(settings)
 
@@ -96,12 +100,14 @@ async def test_trafilatura_extractor_parse_error_includes_context() -> None:
 
 @pytest.mark.asyncio
 async def test_extractor_factory_errors_when_no_extractors_enabled() -> None:
-    settings = WebExtractionSettings(
-        trafilatura={"enabled": False},
-        jina={"enabled": False},
-        firecrawl={"enabled": False},
-        browserless={"enabled": False},
-        fallback_order=["trafilatura"],
+    settings = WebExtractionSettings.model_validate(
+        {
+            "trafilatura": {"enabled": False},
+            "jina": {"enabled": False},
+            "firecrawl": {"enabled": False},
+            "browserless": {"enabled": False},
+            "fallback_order": ["trafilatura"],
+        }
     )
     factory = create_extractor(settings)
 
@@ -116,11 +122,13 @@ async def test_extractor_factory_falls_back_to_jina_when_trafilatura_fails(monke
     with _serve_http(markdown) as (base_url, capture):
         # Mock reason: redirect extractor network target to local stub server for deterministic behavior.
         monkeypatch.setattr(JinaReaderExtractor, "BASE_URL", base_url)
-        settings = WebExtractionSettings(
-            trafilatura={"enabled": True},
-            jina={"enabled": True},
-            firecrawl={"enabled": False},
-            browserless={"enabled": False},
+        settings = WebExtractionSettings.model_validate(
+            {
+                "trafilatura": {"enabled": True},
+                "jina": {"enabled": True},
+                "firecrawl": {"enabled": False},
+                "browserless": {"enabled": False},
+            }
         )
         factory = create_extractor(settings)
 
@@ -140,11 +148,13 @@ async def test_extractor_factory_respects_preferred_extractor(monkeypatch: pytes
     with _serve_http(markdown) as (base_url, _capture):
         # Mock reason: redirect extractor network target to local stub server for deterministic behavior.
         monkeypatch.setattr(JinaReaderExtractor, "BASE_URL", base_url)
-        settings = WebExtractionSettings(
-            trafilatura={"enabled": True},
-            jina={"enabled": True},
-            firecrawl={"enabled": False},
-            browserless={"enabled": False},
+        settings = WebExtractionSettings.model_validate(
+            {
+                "trafilatura": {"enabled": True},
+                "jina": {"enabled": True},
+                "firecrawl": {"enabled": False},
+                "browserless": {"enabled": False},
+            }
         )
         factory = create_extractor(settings)
 
@@ -164,11 +174,13 @@ async def test_extractor_factory_respects_preferred_extractor(monkeypatch: pytes
 
 @pytest.mark.asyncio
 async def test_extractor_factory_stops_when_fallback_disabled() -> None:
-    settings = WebExtractionSettings(
-        trafilatura={"enabled": True},
-        jina={"enabled": False},
-        firecrawl={"enabled": False},
-        browserless={"enabled": False},
+    settings = WebExtractionSettings.model_validate(
+        {
+            "trafilatura": {"enabled": True},
+            "jina": {"enabled": False},
+            "firecrawl": {"enabled": False},
+            "browserless": {"enabled": False},
+        }
     )
     factory = create_extractor(settings)
 

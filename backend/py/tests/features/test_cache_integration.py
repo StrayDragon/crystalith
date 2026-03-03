@@ -26,10 +26,13 @@ class _SpyCache:
 
     async def incr(self, key: str, amount: int = 1, *, ttl=None) -> int:  # noqa: ANN001
         self.incr_calls.append(key)
-        try:
-            current = int(self.data.get(key, 0))
-        except (TypeError, ValueError):
-            current = 0
+        current = 0
+        value = self.data.get(key, 0)
+        if isinstance(value, (int, float, str)):
+            try:
+                current = int(value)
+            except ValueError:
+                current = 0
         next_value = current + int(amount)
         self.data[key] = next_value
         return next_value

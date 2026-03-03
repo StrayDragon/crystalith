@@ -80,7 +80,7 @@ class _Cluster:
 
 
 def _dot(left: Sequence[float], right: Sequence[float]) -> float:
-    return sum(a * b for a, b in zip(left, right))
+    return sum(a * b for a, b in zip(left, right, strict=True))
 
 
 def _norm(vector: Sequence[float]) -> float:

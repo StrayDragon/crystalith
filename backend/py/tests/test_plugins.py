@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
-from crystalith.shared.config import ModelConfig, ModelsSettings, Settings
+from crystalith.shared.config import ModelConfig, ModelsSettings, PluginsSettings, Settings
 from crystalith.shared.db import create_db_manager
 from crystalith.shared.db.migrations import upgrade_head
 from crystalith.shared.plugins import PluginRegistry
@@ -51,8 +51,8 @@ class _MockOutputSchema(BaseModel):
 class MockOutputTypePlugin:
     api_version = "v1"
 
-    output_type = "QUIZ"
-    schema = _MockOutputSchema
+    output_type: str = "QUIZ"
+    schema: type[BaseModel] = _MockOutputSchema
     default_prompt = "plugin prompt"
 
     metadata = OutputTypePluginMeta(
@@ -297,7 +297,7 @@ def test_plugin_registry_respects_disabled_list(monkeypatch: pytest.MonkeyPatch)
         lambda group: [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
     )
 
-    settings = Settings(plugins={"disabled": ["mock"]})
+    settings = Settings(plugins=PluginsSettings(enabled=None, disabled=["mock"]))
     registry = PluginRegistry()
     report = registry.load_from_entry_points(settings)
 
@@ -347,7 +347,7 @@ def test_plugin_registry_disables_plugin_not_in_allowlist(monkeypatch: pytest.Mo
         lambda group: [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
     )
 
-    settings = Settings(plugins={"enabled": ["some-other-plugin"]})
+    settings = Settings(plugins=PluginsSettings(enabled=["some-other-plugin"], disabled=[]))
     registry = PluginRegistry()
     report = registry.load_from_entry_points(settings)
 
@@ -665,7 +665,7 @@ def test_models_endpoint_hides_disabled_plugin_provider(monkeypatch: pytest.Monk
     )
 
     settings = Settings(
-        plugins={"disabled": ["mock"]},
+        plugins=PluginsSettings(enabled=None, disabled=["mock"]),
         models=ModelsSettings(
             available=[
                 ModelConfig(

@@ -23,6 +23,12 @@ class _ChatStub:
         self.current -= 1
         return "yes"
 
+    def chat_stream(self, messages):  # noqa: ANN001
+        async def _gen():
+            yield await self.chat(messages)
+
+        return _gen()
+
 
 @pytest.mark.asyncio
 async def test_detect_contradictions_uses_concurrency_limit() -> None:

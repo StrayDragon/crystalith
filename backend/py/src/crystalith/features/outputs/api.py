@@ -79,7 +79,7 @@ class OutputGenerateRequest(BaseModel):
         return cleaned or None
 
     @model_validator(mode="after")
-    def _apply_preference_defaults(self) -> "OutputGenerateRequest":
+    def _apply_preference_defaults(self) -> OutputGenerateRequest:
         if self.preference is None:
             return self
 
@@ -824,6 +824,7 @@ async def convert_output_to_source(
     await session.commit()
     await session.refresh(source)
 
+    stage: str = "init"
     try:
         stage = "chunks"
         # Split into chunks

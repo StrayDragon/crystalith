@@ -59,7 +59,7 @@ async def test_studio_repo_and_service_roundtrip(db_session) -> None:
     read = studio_schemas.SlideDraftRead.model_validate(updated)
     assert read.id == updated.id
 
-    create_payload = studio_schemas.SlideDraftCreate(title="t", source_ids=[source.id])
+    create_payload = studio_schemas.SlideDraftCreate(title="t", source_ids=[source.id], engine="slidev")
     assert create_payload.engine == "slidev"
     update_payload = studio_schemas.SlideDraftUpdate(title="u")
     assert update_payload.title == "u"

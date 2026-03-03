@@ -9,29 +9,33 @@ from crystalith.shared.ai.factory import (
 from crystalith.shared.ai.ollama_provider import OllamaChatProvider, OllamaEmbeddingProvider
 from crystalith.shared.ai.openai_provider import OpenAIChatProvider, OpenAIEmbeddingProvider
 from crystalith.shared.ai.test_provider import TestChatProvider, TestEmbeddingProvider
-from crystalith.shared.config import Settings
+from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
+from crystalith.shared.config import ModelConfig, Settings
 from crystalith.shared.plugins import PluginRegistry
+from tests._support.settings import make_settings
 
 
 def test_ai_factory_creates_test_providers() -> None:
-    settings = Settings(
-        models={
-            "available": [
-                {
-                    "id": "test-chat",
-                    "provider": "test",
-                    "model": "test-chat",
-                    "display_name": "Test Chat",
-                    "roles": ["chat"],
-                },
-                {
-                    "id": "test-embed",
-                    "provider": "test",
-                    "model": "test-embed",
-                    "display_name": "Test Embed",
-                    "roles": ["embed"],
-                },
-            ]
+    settings = make_settings(
+        {
+            "models": {
+                "available": [
+                    {
+                        "id": "test-chat",
+                        "provider": "test",
+                        "model": "test-chat",
+                        "display_name": "Test Chat",
+                        "roles": ["chat"],
+                    },
+                    {
+                        "id": "test-embed",
+                        "provider": "test",
+                        "model": "test-embed",
+                        "display_name": "Test Embed",
+                        "roles": ["embed"],
+                    },
+                ]
+            }
         }
     )
 
@@ -42,42 +46,44 @@ def test_ai_factory_creates_test_providers() -> None:
 
 
 def test_ai_factory_creates_openai_and_ollama_providers_without_network() -> None:
-    settings = Settings(
-        models={
-            "available": [
-                {
-                    "id": "openai-chat",
-                    "provider": "openai",
-                    "model": "gpt-test",
-                    "display_name": "OpenAI Chat",
-                    "roles": ["chat"],
-                    "provider_config": {"api_key": "sk-test"},
-                },
-                {
-                    "id": "openai-embed",
-                    "provider": "openai",
-                    "model": "text-embedding-3",
-                    "display_name": "OpenAI Embed",
-                    "roles": ["embed"],
-                    "provider_config": {"api_key": "sk-test"},
-                },
-                {
-                    "id": "ollama-chat",
-                    "provider": "ollama",
-                    "model": "qwen:latest",
-                    "display_name": "Ollama Chat",
-                    "roles": ["chat"],
-                    "provider_config": {"host": "http://localhost:11434"},
-                },
-                {
-                    "id": "ollama-embed",
-                    "provider": "ollama",
-                    "model": "bge:latest",
-                    "display_name": "Ollama Embed",
-                    "roles": ["embed"],
-                    "provider_config": {"host": "http://localhost:11434"},
-                },
-            ]
+    settings = make_settings(
+        {
+            "models": {
+                "available": [
+                    {
+                        "id": "openai-chat",
+                        "provider": "openai",
+                        "model": "gpt-test",
+                        "display_name": "OpenAI Chat",
+                        "roles": ["chat"],
+                        "provider_config": {"api_key": "sk-test"},
+                    },
+                    {
+                        "id": "openai-embed",
+                        "provider": "openai",
+                        "model": "text-embedding-3",
+                        "display_name": "OpenAI Embed",
+                        "roles": ["embed"],
+                        "provider_config": {"api_key": "sk-test"},
+                    },
+                    {
+                        "id": "ollama-chat",
+                        "provider": "ollama",
+                        "model": "qwen:latest",
+                        "display_name": "Ollama Chat",
+                        "roles": ["chat"],
+                        "provider_config": {"host": "http://localhost:11434"},
+                    },
+                    {
+                        "id": "ollama-embed",
+                        "provider": "ollama",
+                        "model": "bge:latest",
+                        "display_name": "Ollama Embed",
+                        "roles": ["embed"],
+                        "provider_config": {"host": "http://localhost:11434"},
+                    },
+                ]
+            }
         }
     )
 
@@ -88,18 +94,20 @@ def test_ai_factory_creates_openai_and_ollama_providers_without_network() -> Non
 
 
 def test_ai_factory_validates_openai_api_key_presence() -> None:
-    settings = Settings(
-        models={
-            "available": [
-                {
-                    "id": "openai-chat",
-                    "provider": "openai",
-                    "model": "gpt-test",
-                    "display_name": "OpenAI Chat",
-                    "roles": ["chat"],
-                    "provider_config": {"api_key": "   "},
-                }
-            ]
+    settings = make_settings(
+        {
+            "models": {
+                "available": [
+                    {
+                        "id": "openai-chat",
+                        "provider": "openai",
+                        "model": "gpt-test",
+                        "display_name": "OpenAI Chat",
+                        "roles": ["chat"],
+                        "provider_config": {"api_key": "   "},
+                    }
+                ]
+            }
         }
     )
     with pytest.raises(ValueError, match="Missing api_key"):
@@ -107,27 +115,35 @@ def test_ai_factory_validates_openai_api_key_presence() -> None:
 
 
 def test_ai_factory_supports_plugin_providers(monkeypatch) -> None:
-    settings = Settings(
-        models={
-            "available": [
-                {
-                    "id": "plugin-chat",
-                    "provider": "my-plugin",
-                    "model": "x",
-                    "display_name": "Plugin",
-                    "roles": ["chat"],
-                }
-            ]
+    settings = make_settings(
+        {
+            "models": {
+                "available": [
+                    {
+                        "id": "plugin-chat",
+                        "provider": "my-plugin",
+                        "model": "x",
+                        "display_name": "Plugin",
+                        "roles": ["chat"],
+                    }
+                ]
+            }
         }
     )
 
     registry = PluginRegistry()
 
     class _Plugin:
-        def create_chat_provider(self, _settings, _model_config):  # noqa: ANN001
+        api_version = "v1"
+
+        def create_chat_provider(self, settings: Settings, model_config: ModelConfig) -> ChatProvider:
+            assert settings
+            assert model_config
             return TestChatProvider(model="plugin")
 
-        def create_embedding_provider(self, _settings, _model_config):  # noqa: ANN001
+        def create_embedding_provider(self, settings: Settings, model_config: ModelConfig) -> EmbeddingProvider:
+            assert settings
+            assert model_config
             return TestEmbeddingProvider(model="plugin")
 
     registry.ai_providers["my-plugin"] = _Plugin()
@@ -137,17 +153,19 @@ def test_ai_factory_supports_plugin_providers(monkeypatch) -> None:
 
 
 def test_ai_factory_rejects_unknown_provider_without_plugin_registry() -> None:
-    settings = Settings(
-        models={
-            "available": [
-                {
-                    "id": "plugin-chat",
-                    "provider": "missing-plugin",
-                    "model": "x",
-                    "display_name": "Plugin",
-                    "roles": ["chat"],
-                }
-            ]
+    settings = make_settings(
+        {
+            "models": {
+                "available": [
+                    {
+                        "id": "plugin-chat",
+                        "provider": "missing-plugin",
+                        "model": "x",
+                        "display_name": "Plugin",
+                        "roles": ["chat"],
+                    }
+                ]
+            }
         }
     )
     with pytest.raises(ValueError, match="Unsupported provider"):
@@ -155,30 +173,32 @@ def test_ai_factory_rejects_unknown_provider_without_plugin_registry() -> None:
 
 
 def test_ai_factory_applies_request_options_timeout_per_model() -> None:
-    settings = Settings(
-        ai={"timeout": 60, "max_retries": 3},
-        models={
-            "available": [
-                {
-                    "id": "openai-chat",
-                    "provider": "openai",
-                    "model": "gpt-test",
-                    "display_name": "OpenAI Chat",
-                    "roles": ["chat"],
-                    "provider_config": {"api_key": "sk-test"},
-                    "request_options": {"timeout": 7},
-                },
-                {
-                    "id": "openai-embed",
-                    "provider": "openai",
-                    "model": "text-embedding-3",
-                    "display_name": "OpenAI Embed",
-                    "roles": ["embed"],
-                    "provider_config": {"api_key": "sk-test"},
-                    "request_options": {"timeout": 9},
-                },
-            ]
-        },
+    settings = make_settings(
+        {
+            "ai": {"timeout": 60, "max_retries": 3},
+            "models": {
+                "available": [
+                    {
+                        "id": "openai-chat",
+                        "provider": "openai",
+                        "model": "gpt-test",
+                        "display_name": "OpenAI Chat",
+                        "roles": ["chat"],
+                        "provider_config": {"api_key": "sk-test"},
+                        "request_options": {"timeout": 7},
+                    },
+                    {
+                        "id": "openai-embed",
+                        "provider": "openai",
+                        "model": "text-embedding-3",
+                        "display_name": "OpenAI Embed",
+                        "roles": ["embed"],
+                        "provider_config": {"api_key": "sk-test"},
+                        "request_options": {"timeout": 9},
+                    },
+                ]
+            },
+        }
     )
 
     chat = create_chat_provider_by_model_id(settings, "openai-chat")
@@ -191,26 +211,28 @@ def test_ai_factory_applies_request_options_timeout_per_model() -> None:
 
 
 def test_ai_factory_applies_completion_options_to_openai_chat_provider() -> None:
-    settings = Settings(
-        ai={"timeout": 60, "max_retries": 3},
-        models={
-            "available": [
-                {
-                    "id": "openai-chat",
-                    "provider": "openai",
-                    "model": "gpt-test",
-                    "display_name": "OpenAI Chat",
-                    "roles": ["chat"],
-                    "provider_config": {"api_key": "sk-test"},
-                    "completion_options": {
-                        "temperature": 0.1,
-                        "max_tokens": 50,
-                        "top_p": 0.95,
-                        "stop": ["END"],
-                    },
-                }
-            ]
-        },
+    settings = make_settings(
+        {
+            "ai": {"timeout": 60, "max_retries": 3},
+            "models": {
+                "available": [
+                    {
+                        "id": "openai-chat",
+                        "provider": "openai",
+                        "model": "gpt-test",
+                        "display_name": "OpenAI Chat",
+                        "roles": ["chat"],
+                        "provider_config": {"api_key": "sk-test"},
+                        "completion_options": {
+                            "temperature": 0.1,
+                            "max_tokens": 50,
+                            "top_p": 0.95,
+                            "stop": ["END"],
+                        },
+                    }
+                ]
+            },
+        }
     )
 
     chat = create_chat_provider_by_model_id(settings, "openai-chat")
@@ -231,18 +253,20 @@ def test_ai_factory_resolves_fallback_host_for_ollama_client(monkeypatch) -> Non
         def __init__(self, *, host: str | None = None) -> None:
             observed_hosts.append(host or "")
 
-    settings = Settings(
-        models={
-            "available": [
-                {
-                    "id": "ollama-embed",
-                    "provider": "ollama",
-                    "model": "bge-m3:latest",
-                    "display_name": "Ollama Embed",
-                    "roles": ["embed"],
-                    "provider_config": {"host": "http://host.docker.internal:11434"},
-                },
-            ]
+    settings = make_settings(
+        {
+            "models": {
+                "available": [
+                    {
+                        "id": "ollama-embed",
+                        "provider": "ollama",
+                        "model": "bge-m3:latest",
+                        "display_name": "Ollama Embed",
+                        "roles": ["embed"],
+                        "provider_config": {"host": "http://host.docker.internal:11434"},
+                    },
+                ]
+            }
         }
     )
 

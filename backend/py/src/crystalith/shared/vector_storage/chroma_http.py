@@ -19,7 +19,7 @@ class ChromaHttpVectorStore:
         database: str = "default_database",
         timeout: float = 30.0,
     ) -> None:
-        if host.startswith("http://") or host.startswith("https://"):
+        if host.startswith(("http://", "https://")):
             base_url = host.rstrip("/")
         else:
             base_url = f"http://{host}:{port}"
@@ -308,7 +308,7 @@ class ChromaHttpVectorStore:
         if notebook_id is not None:
             clauses.append({"notebook_id": int(notebook_id)})
         if source_ids:
-            clauses.append({"source_id": {"$in": list(sorted(set(int(value) for value in source_ids)))}})
+            clauses.append({"source_id": {"$in": sorted({int(value) for value in source_ids})}})
 
         where: dict[str, object]
         if not clauses:

@@ -130,5 +130,5 @@ def get_stage_limiters(request: Request) -> StageLimiters:
     return request.app.state.limiters
 
 
-def get_task_queue(request: Request) -> "TaskQueue":
+def get_task_queue(request: Request) -> TaskQueue:
     return request.app.state.task_queue

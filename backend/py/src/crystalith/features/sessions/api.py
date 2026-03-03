@@ -302,6 +302,7 @@ async def convert_session_to_source(
     await session.commit()
     await session.refresh(source)
 
+    stage: str = "init"
     try:
         stage = "chunks"
         chunk_texts = _split_text_to_chunks(text_content)

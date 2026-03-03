@@ -117,7 +117,7 @@ class MindmapNode(BaseModel):
 
     label: str
     citations: CitationIndices = Field(default_factory=list)
-    children: list["MindmapNode"] = Field(default_factory=list)
+    children: list[MindmapNode] = Field(default_factory=list)
 
 
 class MindmapOutput(BaseModel):

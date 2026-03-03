@@ -246,7 +246,7 @@ class ChromaVectorStore:
         if notebook_id is not None:
             clauses.append({"notebook_id": int(notebook_id)})
         if source_ids:
-            clauses.append({"source_id": {"$in": list(sorted(set(int(value) for value in source_ids)))}})
+            clauses.append({"source_id": {"$in": sorted({int(value) for value in source_ids})}})
 
         where_obj: dict[str, object] | None
         if not clauses:
@@ -268,7 +268,7 @@ class ChromaVectorStore:
             metadatas = []
 
         entries: list[VectorEntry] = []
-        for metadata, vector in zip(metadatas, embeddings):
+        for metadata, vector in zip(metadatas, embeddings, strict=True):
             if not isinstance(metadata, dict):
                 continue
             entries.append(

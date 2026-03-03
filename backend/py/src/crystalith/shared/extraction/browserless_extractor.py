@@ -5,7 +5,7 @@ from __future__ import annotations
 import importlib
 import time
 from collections.abc import Callable
-from typing import Protocol, TypeAlias, cast
+from typing import Protocol, cast
 
 import trafilatura
 
@@ -19,8 +19,9 @@ from .interfaces import (
 )
 from .types import ExtractedContent, ExtractorType
 
+
 class _Chromium(Protocol):
-    async def connect_over_cdp(self, connection_url: str, *, timeout: int) -> "_Browser": ...
+    async def connect_over_cdp(self, connection_url: str, *, timeout: int) -> _Browser: ...
 
 
 class _Playwright(Protocol):
@@ -33,7 +34,7 @@ class _PlaywrightManager(Protocol):
     async def start(self) -> _Playwright: ...
 
 
-AsyncPlaywrightFactory: TypeAlias = Callable[[], _PlaywrightManager]
+type AsyncPlaywrightFactory = Callable[[], _PlaywrightManager]
 
 
 def _load_async_playwright() -> AsyncPlaywrightFactory:

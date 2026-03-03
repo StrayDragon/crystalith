@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -10,8 +11,8 @@ if TYPE_CHECKING:
 
 
 def format_context(
-    results: list[VectorSearchResult],
-    chunk_map: dict[int, tuple[Chunk, Source]],
+    results: Sequence[VectorSearchResult],
+    chunk_map: Mapping[int, tuple[Chunk, Source]],
 ) -> str:
     """Format vector search results into context string with citations."""
     blocks: list[str] = []
@@ -24,8 +25,8 @@ def format_context(
 
 
 def format_context_from_chunk_ids(
-    chunk_ids: list[int],
-    chunk_map: dict[int, tuple[Chunk, Source]],
+    chunk_ids: Sequence[int],
+    chunk_map: Mapping[int, tuple[Chunk, Source]],
 ) -> str:
     """Format chunk IDs into context string with citations."""
     blocks: list[str] = []

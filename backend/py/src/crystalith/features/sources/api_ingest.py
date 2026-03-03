@@ -241,12 +241,13 @@ async def create_source_from_url(
     if payload.mode == SourceFromUrlMode.LINK:
         # Link mode: create a simple source with URL metadata
         content_text = f"# {title}\n\n{snippet}\n\n来源: {url}"
+        payload_metadata: JsonDict = {"url": url, "canonical_url": canonical_url, "title": title}
         chunks: list[ChunkPayload] = [
             ChunkPayload(
                 text=content_text,
                 start_offset=0,
                 end_offset=len(content_text),
-                metadata={"url": url, "canonical_url": canonical_url, "title": title},
+                metadata=payload_metadata,
             )
         ]
         parser_type = "link"
@@ -293,7 +294,7 @@ async def create_source_from_url(
                 raise HTTPException(
                     status_code=400,
                     detail=f"无效的提取器类型: {payload.extractor}",
-                )
+                ) from None
 
         # Extract content
         async def _extract_once():
@@ -455,6 +456,9 @@ async def create_source_from_url(
             chunk_ids=chunk_ids,
             vectors=embeddings,
         )
+
+        await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
+        return _source_to_read(source, chunk_count=len(chunk_ids))
     except HTTPException:
         await session.rollback()
         raise
@@ -495,9 +499,6 @@ async def create_source_from_url(
             error=str(exc)[:512],
         )
         raise_source_failure(failure)
-
-    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
-    return _source_to_read(source, chunk_count=len(chunk_models))
 
 
 @router.post("", response_model=SourceRead, status_code=status.HTTP_201_CREATED)
@@ -633,6 +634,9 @@ async def upload_source(
             chunk_ids=chunk_ids,
             vectors=embeddings,
         )
+
+        await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
+        return _source_to_read(source, chunk_count=len(chunk_ids))
     except HTTPException:
         await session.rollback()
         raise
@@ -681,6 +685,3 @@ async def upload_source(
             error=str(exc)[:512],
         )
         raise_source_failure(failure)
-
-    await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
-    return _source_to_read(source, chunk_count=len(chunk_ids))

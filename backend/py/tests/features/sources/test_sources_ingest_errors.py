@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 import contextlib
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -11,7 +12,7 @@ from crystalith.shared.db import Source
 
 
 @contextlib.contextmanager
-def _serve_html(html: str) -> str:
+def _serve_html(html: str) -> Iterator[str]:
     body = html.encode("utf-8")
 
     class Handler(BaseHTTPRequestHandler):
@@ -29,7 +30,8 @@ def _serve_html(html: str) -> str:
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        host, port = server.server_address
+        host = server.server_address[0]
+        port = server.server_address[1]
         yield f"http://{host}:{port}/"
     finally:
         server.shutdown()

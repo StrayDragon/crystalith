@@ -10,11 +10,11 @@ packages-test:
         uv run --project $package pytest --no-cov $package/tests
     done
 
-test: packages-test lint check-imports config-schema-check
+test: packages-test lint typecheck check-imports config-schema-check
     uv run pytest tests/ -v
 
 typecheck:
-    uv run basedpyright
+    uv run basedpyright --level error src
 
 lint:
     uv run ruff check src tests
@@ -29,6 +29,8 @@ check:
     just config-schema-check
     @echo "==> Running Python lint"
     just lint
+    @echo "==> Running Python typecheck"
+    just typecheck
     @echo "==> Running API contract tests"
     just contract
 

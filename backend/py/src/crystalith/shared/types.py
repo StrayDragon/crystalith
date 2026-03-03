@@ -85,7 +85,7 @@ class OutputType(MetaInfoStrEnum):
         return cast(OutputTypeMeta, self.x_meta)  # pyright: ignore[reportAttributeAccessIssue]
 
     @classmethod
-    def get_tool_types(cls) -> list["OutputType"]:
+    def get_tool_types(cls) -> list[OutputType]:
         return [t for t in cls if t.meta.is_tool]
 
 

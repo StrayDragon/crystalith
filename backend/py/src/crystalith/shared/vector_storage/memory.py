@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import sqrt
-from typing import Iterable, Sequence
+from collections.abc import Iterable, Sequence
 
 from .types import VectorEntry, VectorSearchResult
 
@@ -14,7 +14,7 @@ class _StoredEntry:
 
 
 def _dot(left: Sequence[float], right: Sequence[float]) -> float:
-    return sum(a * b for a, b in zip(left, right))
+    return sum(a * b for a, b in zip(left, right, strict=True))
 
 
 def _norm(vector: Sequence[float]) -> float:
@@ -46,7 +46,7 @@ class InMemoryVectorStore:
                 if len(vector) != expected_dim:
                     raise ValueError("vectors must have consistent dimensions")
 
-        for chunk_id, vector in zip(chunk_ids, vectors_list):
+        for chunk_id, vector in zip(chunk_ids, vectors_list, strict=True):
             norm = _norm(vector)
             entry = VectorEntry(
                 notebook_id=notebook_id,

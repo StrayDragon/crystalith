@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import AsyncIterator, Literal, Protocol, Sequence
+from collections.abc import Mapping
+from typing import Literal, Protocol, cast, overload
+from collections.abc import AsyncIterator, Sequence
 
 import ollama
 
@@ -34,6 +36,38 @@ class _OllamaChatChunk(Protocol):
         ...
 
 
+class OllamaEmbedClient(Protocol):
+    async def embed(
+        self,
+        *,
+        model: str,
+        input: str | Sequence[str],
+        options: Mapping[str, JsonValue] | None = None,
+    ) -> object: ...
+
+
+class OllamaChatClient(Protocol):
+    @overload
+    async def chat(
+        self,
+        *,
+        model: str,
+        messages: Sequence[Mapping[str, object]] | None = None,
+        stream: Literal[False] = False,
+        options: Mapping[str, JsonValue] | None = None,
+    ) -> object: ...
+
+    @overload
+    async def chat(
+        self,
+        *,
+        model: str,
+        messages: Sequence[Mapping[str, object]] | None = None,
+        stream: Literal[True] = True,
+        options: Mapping[str, JsonValue] | None = None,
+    ) -> object: ...
+
+
 class OllamaEmbeddingProvider:
     provider: Literal["ollama"] = "ollama"
 
@@ -41,7 +75,7 @@ class OllamaEmbeddingProvider:
         self,
         model: str,
         *,
-        client: ollama.AsyncClient | None = None,
+        client: OllamaEmbedClient | None = None,
         host: str | None = None,
         options: dict[str, JsonValue] | None = None,
         timeout: float | None = 60,
@@ -89,7 +123,7 @@ class OllamaEmbeddingProvider:
             end = start + batch_size
             chunk_texts = pending_texts[start:end]
             chunk_embeddings = await self._embed_chunk(chunk_texts)
-            for text, vector in zip(chunk_texts, chunk_embeddings):
+            for text, vector in zip(chunk_texts, chunk_embeddings, strict=True):
                 for idx in pending_positions_by_text.get(text, []):
                     embeddings[idx] = vector
                 if self._cache is not None:
@@ -102,15 +136,17 @@ class OllamaEmbeddingProvider:
     async def _embed_chunk(self, texts: Sequence[str]) -> list[list[float]]:
         async def _do_embed() -> _OllamaEmbedResponse:
             if self._options is None:
-                return await self._client.embed(
+                response = await self._client.embed(
                     model=self.model,
                     input=list(texts),
                 )
-            return await self._client.embed(
+                return cast(_OllamaEmbedResponse, response)
+            response = await self._client.embed(
                 model=self.model,
                 input=list(texts),
                 options=self._options,
             )
+            return cast(_OllamaEmbedResponse, response)
 
         response = await run_with_retry(
             _do_embed,
@@ -129,7 +165,7 @@ class OllamaChatProvider:
         self,
         model: str,
         *,
-        client: ollama.AsyncClient | None = None,
+        client: OllamaChatClient | None = None,
         host: str | None = None,
         options: dict[str, JsonValue] | None = None,
         timeout: float | None = 60,
@@ -146,19 +182,21 @@ class OllamaChatProvider:
         if not messages:
             raise ValueError("messages must not be empty")
 
-        payload = [{"role": m.role, "content": m.content} for m in messages]
+        payload: list[dict[str, str]] = [{"role": m.role, "content": m.content} for m in messages]
 
         async def _do_chat() -> _OllamaChatResponse:
             if self._options is None:
-                return await self._client.chat(
+                response = await self._client.chat(
                     model=self.model,
                     messages=payload,
                 )
-            return await self._client.chat(
+                return cast(_OllamaChatResponse, response)
+            response = await self._client.chat(
                 model=self.model,
                 messages=payload,
                 options=self._options,
             )
+            return cast(_OllamaChatResponse, response)
 
         response = await run_with_retry(
             _do_chat,
@@ -175,21 +213,23 @@ class OllamaChatProvider:
         if not messages:
             raise ValueError("messages must not be empty")
 
-        payload = [{"role": m.role, "content": m.content} for m in messages]
+        payload: list[dict[str, str]] = [{"role": m.role, "content": m.content} for m in messages]
 
         async def _do_chat_stream() -> AsyncIterator[_OllamaChatChunk]:
             if self._options is None:
-                return await self._client.chat(
+                response = await self._client.chat(
                     model=self.model,
                     messages=payload,
                     stream=True,
                 )
-            return await self._client.chat(
+                return cast(AsyncIterator[_OllamaChatChunk], response)
+            response = await self._client.chat(
                 model=self.model,
                 messages=payload,
                 stream=True,
                 options=self._options,
             )
+            return cast(AsyncIterator[_OllamaChatChunk], response)
 
         response = await run_with_retry(
             _do_chat_stream,

@@ -277,7 +277,7 @@ async def cached_vector_search_many(
                 fallback_values.append(None)
         cached_values = fallback_values
 
-    for idx, (key, query_vector, cached) in enumerate(zip(keys, query_vectors, cached_values)):
+    for idx, (key, query_vector, cached) in enumerate(zip(keys, query_vectors, cached_values, strict=True)):
         if isinstance(cached, list):
             logger.info(
                 "cache_hit",
@@ -334,7 +334,7 @@ async def cached_vector_search_many(
         )
 
         set_items: dict[str, JsonValue] = {}
-        for position, key, results in zip(missing_positions, missing_keys, miss_groups):
+        for position, key, results in zip(missing_positions, missing_keys, miss_groups, strict=True):
             groups[position] = results
             set_items[key] = cast(
                 JsonValue,

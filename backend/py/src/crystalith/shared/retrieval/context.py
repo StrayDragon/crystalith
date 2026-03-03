@@ -550,7 +550,7 @@ async def _make_retrieval_assembly_cache_key(
 
     seeds_digest = hashlib.sha256("\n\n".join(seeds).encode("utf-8")).hexdigest()
     payload = {
-        "source_ids": sorted(set(int(v) for v in source_ids)),
+        "source_ids": sorted({int(v) for v in source_ids}),
         "seeds": seeds_digest,
         "output_type": output_type.value,
         "preference": preference,

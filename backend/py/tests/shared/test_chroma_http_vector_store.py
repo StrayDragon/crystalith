@@ -21,7 +21,8 @@ def _make_stub_chroma_app(*, include_collection_id: bool = True) -> FastAPI:
     app = FastAPI()
 
     app.state.collection_id = "col1"
-    app.state.entries: dict[str, _Stored] = {}
+    entries: dict[str, _Stored] = {}
+    app.state.entries = entries
 
     @app.post("/api/v1/collections")
     async def create_collection(_request: Request):  # noqa: ANN001
@@ -37,7 +38,7 @@ def _make_stub_chroma_app(*, include_collection_id: bool = True) -> FastAPI:
         ids = body.get("ids") or []
         embeddings = body.get("embeddings") or []
         metadatas = body.get("metadatas") or []
-        for entry_id, embedding, metadata in zip(ids, embeddings, metadatas):
+        for entry_id, embedding, metadata in zip(ids, embeddings, metadatas, strict=True):
             app.state.entries[str(entry_id)] = _Stored(
                 embedding=list(embedding),
                 metadata=dict(metadata),

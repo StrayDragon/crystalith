@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Protocol
 
 from cl_logs import get_logger
@@ -16,7 +16,7 @@ from crystalith.shared.cache.epochs import bump_sources_epoch
 from crystalith.shared.db import Chunk, Source, SourceTag, SourceTagMap
 from crystalith.shared.parsers import Parser, ParserFactory, TranscriptionProvider, UnsupportedDocumentError
 from crystalith.shared.plugins import PluginRegistry
-from crystalith.shared.json_types import JsonDict
+from crystalith.shared.json_types import JsonDict, JsonValue
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
 
@@ -39,7 +39,7 @@ class _ChunkLike(Protocol):
         ...
 
     @property
-    def metadata(self) -> dict[str, object]:
+    def metadata(self) -> Mapping[str, JsonValue]:
         ...
 
 
@@ -234,6 +234,7 @@ async def _reembed_existing_source(
     await session.commit()
     await session.refresh(source)
 
+    stage: str = "init"
     try:
         stage = "embed"
         embeddings = await embedder.embed_batch([chunk.text for chunk in chunks])

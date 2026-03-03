@@ -70,7 +70,7 @@ async def test_run_with_retry_retries_timeout_then_success() -> None:
     async def _op() -> str:
         attempts["count"] += 1
         if attempts["count"] < 3:
-            raise asyncio.TimeoutError("timeout")
+            raise TimeoutError("timeout")
         return "ok"
 
     result = await run_with_retry(
@@ -125,7 +125,7 @@ async def test_with_retry_decorator_supports_async_method() -> None:
         async def run(self) -> str:
             self.calls += 1
             if self.calls < 3:
-                raise asyncio.TimeoutError("timeout")
+                raise TimeoutError("timeout")
             return "done"
 
     worker = _Worker()
@@ -150,16 +150,21 @@ class _ChatCompletionsClient:
     def __init__(self) -> None:
         self.calls = 0
 
-    async def create(self, *, model, messages):  # noqa: ANN001
+    async def create(self, *, model, messages, stream: bool | None = None, **_kwargs):  # noqa: ANN001
         self.calls += 1
+        assert stream in {None, False}
         if self.calls == 1:
-            raise asyncio.TimeoutError("timeout")
+            raise TimeoutError("timeout")
         return _ChatResponse("chat-ok")
+
+class _ChatClient:
+    def __init__(self) -> None:
+        self.completions = _ChatCompletionsClient()
 
 
 class _OpenAIChatClient:
     def __init__(self) -> None:
-        self.chat = type("Chat", (), {"completions": _ChatCompletionsClient()})()
+        self.chat = _ChatClient()
 
 
 @pytest.mark.asyncio
