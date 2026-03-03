@@ -179,7 +179,7 @@ class JinaReaderExtractor(BaseExtractor):
 
         lines = content.strip().split("\n")
 
-        for i, line in enumerate(lines):
+        for line in lines:
             line = line.strip()
 
             # Look for H1 title

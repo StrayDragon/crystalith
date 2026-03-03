@@ -6,15 +6,12 @@ from collections.abc import Awaitable, Callable, Mapping
 from email.utils import parsedate_to_datetime
 from functools import wraps
 from time import perf_counter
-from typing import ParamSpec, Protocol, TypeVar, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from cl_logs.logging import get_logger
 
 
 log = get_logger(__name__)
-
-P = ParamSpec("P")
-T = TypeVar("T")
 
 _RETRYABLE_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
 
@@ -110,9 +107,9 @@ def _parse_retry_after(value: str | int | float | None) -> float | None:
         return None
 
     if retry_at.tzinfo is None:
-        retry_at = retry_at.replace(tzinfo=dt.timezone.utc)
+        retry_at = retry_at.replace(tzinfo=dt.UTC)
 
-    seconds = (retry_at - dt.datetime.now(dt.timezone.utc)).total_seconds()
+    seconds = (retry_at - dt.datetime.now(dt.UTC)).total_seconds()
     return max(0.0, seconds)
 
 
@@ -151,7 +148,7 @@ def is_retryable_error(error: Exception) -> bool:
     return False
 
 
-async def run_with_retry(
+async def run_with_retry[T](
     operation: Callable[[], Awaitable[T]],
     *,
     timeout: float | None,
@@ -170,7 +167,7 @@ async def run_with_retry(
         if total_timeout is not None:
             remaining_budget = float(total_timeout) - (perf_counter() - started)
             if remaining_budget <= 0:
-                raise asyncio.TimeoutError("retry budget exceeded")
+                raise TimeoutError("retry budget exceeded")
 
         try:
             if timeout is None:
@@ -199,9 +196,9 @@ async def run_with_retry(
             if total_timeout is not None:
                 remaining_budget = float(total_timeout) - (perf_counter() - started)
                 if remaining_budget <= 0:
-                    raise asyncio.TimeoutError("retry budget exceeded") from error
+                    raise TimeoutError("retry budget exceeded") from error
                 if delay > remaining_budget:
-                    raise asyncio.TimeoutError("retry budget exceeded") from error
+                    raise TimeoutError("retry budget exceeded") from error
 
             attempt += 1
             log.warning(
@@ -214,7 +211,7 @@ async def run_with_retry(
             await asyncio.sleep(max(0.0, delay))
 
 
-def with_retry(
+def with_retry[**P, T](
     *,
     timeout: float | None = None,
     total_timeout: float | None = None,

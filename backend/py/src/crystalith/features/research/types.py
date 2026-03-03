@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
-from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING
+from enum import StrEnum
+from typing import TYPE_CHECKING, Protocol
 
 from crystalith.shared.json_types import JsonDict
 
@@ -12,7 +13,16 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from crystalith.shared.config import Settings
-    from crystalith.shared.search import SearXNGSearcher
+    from crystalith.shared.search import SearchResult as WebSearchResult
+
+
+class WebSearcher(Protocol):
+    async def search(
+        self,
+        query: str,
+        *,
+        mode: str = "Web",
+    ) -> Sequence[WebSearchResult]: ...
 
 
 @dataclass
@@ -66,10 +76,7 @@ AnalysisCallback = Callable[[IterationAnalysis | None], Awaitable[None]]
 ThinkingCallback = Callable[[JsonDict], Awaitable[None]]
 
 
-from enum import Enum
-
-
-class ResearchOutputType(str, Enum):
+class ResearchOutputType(StrEnum):
     """Type of research output/artifact."""
 
     REPORT = "report"  # Main research report
@@ -141,9 +148,9 @@ class ResearchGraphState:
 class ResearchDeps:
     """Dependencies for the research graph."""
 
-    settings: "Settings"
-    session: "AsyncSession"
-    searcher: "SearXNGSearcher"
+    settings: Settings
+    session: AsyncSession
+    searcher: WebSearcher
 
     # Optional callbacks for progress updates
     on_progress: ProgressCallback | None = None

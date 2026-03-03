@@ -64,7 +64,7 @@ class GenerateSummary(BaseNode[SearchGraphState, StudioDeps, SearchGraphOutput])
 
     async def run(
         self, ctx: GraphRunContext[SearchGraphState, StudioDeps]
-    ) -> "BuildResults":
+    ) -> BuildResults:
         state = ctx.state
         deps = ctx.deps
 

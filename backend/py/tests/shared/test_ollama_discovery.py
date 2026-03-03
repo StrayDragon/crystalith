@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from crystalith.shared.config import ModelConfig, Settings
+from crystalith.shared.config import ModelConfig
+from tests._support.settings import make_settings
 from crystalith.shared.config.ollama_discovery import (
     _is_embedding_model,
     _model_display_name,
@@ -37,17 +38,19 @@ def test_build_and_merge_discovered_models_skips_duplicates() -> None:
     )
     assert len(discovered) == 2
 
-    settings = Settings(
-        models={
-            "available": [
-                {
-                    "id": "existing-ollama",
-                    "provider": "ollama",
-                    "model": "qwen2.5:7b",
-                    "display_name": "Existing",
-                    "roles": ["chat"],
-                }
-            ]
+    settings = make_settings(
+        {
+            "models": {
+                "available": [
+                    {
+                        "id": "existing-ollama",
+                        "provider": "ollama",
+                        "model": "qwen2.5:7b",
+                        "display_name": "Existing",
+                        "roles": ["chat"],
+                    }
+                ]
+            }
         }
     )
     added = merge_discovered_models(settings, discovered)
@@ -56,18 +59,20 @@ def test_build_and_merge_discovered_models_skips_duplicates() -> None:
 
 
 def test_auto_discover_ollama_uses_env_host(monkeypatch) -> None:
-    settings = Settings(
-        models={
-            "available": [
-                {
-                    "id": "local",
-                    "provider": "ollama",
-                    "model": "qwen2.5:7b",
-                    "display_name": "Local",
-                    "roles": ["chat"],
-                    "provider_config": {"host": "http://localhost:11434"},
-                }
-            ]
+    settings = make_settings(
+        {
+            "models": {
+                "available": [
+                    {
+                        "id": "local",
+                        "provider": "ollama",
+                        "model": "qwen2.5:7b",
+                        "display_name": "Local",
+                        "roles": ["chat"],
+                        "provider_config": {"host": "http://localhost:11434"},
+                    }
+                ]
+            }
         }
     )
 
@@ -90,18 +95,20 @@ def test_auto_discover_ollama_uses_env_host(monkeypatch) -> None:
 
 
 def test_collect_ollama_hosts_without_fallback_and_without_env(monkeypatch) -> None:
-    settings = Settings(
-        models={
-            "available": [
-                {
-                    "id": "local-chat",
-                    "provider": "ollama",
-                    "model": "qwen2.5:7b",
-                    "display_name": "Local chat",
-                    "roles": ["chat"],
-                    "provider_config": {"host": "http://localhost:11434"},
-                }
-            ]
+    settings = make_settings(
+        {
+            "models": {
+                "available": [
+                    {
+                        "id": "local-chat",
+                        "provider": "ollama",
+                        "model": "qwen2.5:7b",
+                        "display_name": "Local chat",
+                        "roles": ["chat"],
+                        "provider_config": {"host": "http://localhost:11434"},
+                    }
+                ]
+            }
         }
     )
     monkeypatch.delenv("OLLAMA_HOST", raising=False)
@@ -110,18 +117,20 @@ def test_collect_ollama_hosts_without_fallback_and_without_env(monkeypatch) -> N
 
 
 def test_collect_ollama_hosts_adds_local_fallback_for_docker_internal(monkeypatch) -> None:
-    settings = Settings(
-        models={
-            "available": [
-                {
-                    "id": "local-chat",
-                    "provider": "ollama",
-                    "model": "qwen2.5:7b",
-                    "display_name": "Local chat",
-                    "roles": ["chat"],
-                    "provider_config": {"host": "http://host.docker.internal:11434"},
-                }
-            ]
+    settings = make_settings(
+        {
+            "models": {
+                "available": [
+                    {
+                        "id": "local-chat",
+                        "provider": "ollama",
+                        "model": "qwen2.5:7b",
+                        "display_name": "Local chat",
+                        "roles": ["chat"],
+                        "provider_config": {"host": "http://host.docker.internal:11434"},
+                    }
+                ]
+            }
         }
     )
     monkeypatch.delenv("OLLAMA_HOST", raising=False)
@@ -142,7 +151,7 @@ def test_probe_ollama_host_success(monkeypatch) -> None:
         def __init__(self, timeout: float) -> None:  # noqa: ARG002
             pass
 
-        def __enter__(self) -> "_Client":
+        def __enter__(self) -> _Client:
             return self
 
         def __exit__(self, exc_type, exc, tb) -> bool:  # noqa: ANN001, ARG002

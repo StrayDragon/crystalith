@@ -175,7 +175,7 @@ class CachedEmbeddingProvider:
         missing_keys: list[str] = []
         missing_texts: list[str] = []
         hit_keys: set[str] = set()
-        for key, cached in zip(keys, cached_values):
+        for key, cached in zip(keys, cached_values, strict=True):
             vector = _coerce_vector(cached)
             if vector is None:
                 missing_keys.append(key)
@@ -191,7 +191,7 @@ class CachedEmbeddingProvider:
                 return []
 
             set_items: dict[str, JsonValue] = {}
-            for key, vector in zip(missing_keys, miss_vectors):
+            for key, vector in zip(missing_keys, miss_vectors, strict=True):
                 coerced = _coerce_vector(vector)
                 if coerced is None:
                     return []

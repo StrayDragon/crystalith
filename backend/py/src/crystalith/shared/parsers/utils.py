@@ -1,9 +1,21 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+
+from crystalith.shared.json_types import JsonDict, JsonValue
+
 from .types import Chunk
 
 
-def chunk_paragraphs(text: str, *, metadata: dict[str, object] | None = None) -> list[Chunk]:
+def _build_chunk_metadata(metadata: Mapping[str, JsonValue] | None, *, paragraph_index: int) -> JsonDict:
+    chunk_metadata: JsonDict = {}
+    if metadata is not None:
+        chunk_metadata.update(metadata)
+    chunk_metadata["paragraph_index"] = paragraph_index
+    return chunk_metadata
+
+
+def chunk_paragraphs(text: str, *, metadata: Mapping[str, JsonValue] | None = None) -> list[Chunk]:
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     if not normalized.strip():
         return []
@@ -22,8 +34,7 @@ def chunk_paragraphs(text: str, *, metadata: dict[str, object] | None = None) ->
                 paragraph_text = "".join(current_parts).strip("\n")
                 if paragraph_text.strip():
                     end_offset = last_end if last_end is not None else offset
-                    chunk_metadata = dict(metadata) if metadata else {}
-                    chunk_metadata.setdefault("paragraph_index", paragraph_index)
+                    chunk_metadata = _build_chunk_metadata(metadata, paragraph_index=paragraph_index)
                     chunks.append(
                         Chunk(
                             text=paragraph_text,
@@ -47,8 +58,7 @@ def chunk_paragraphs(text: str, *, metadata: dict[str, object] | None = None) ->
         paragraph_text = "".join(current_parts).strip("\n")
         if paragraph_text.strip():
             end_offset = last_end if last_end is not None else offset
-            chunk_metadata = dict(metadata) if metadata else {}
-            chunk_metadata.setdefault("paragraph_index", paragraph_index)
+            chunk_metadata = _build_chunk_metadata(metadata, paragraph_index=paragraph_index)
             chunks.append(
                 Chunk(
                     text=paragraph_text,

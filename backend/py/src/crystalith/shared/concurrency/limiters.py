@@ -75,7 +75,7 @@ class StageLimiters:
         embedding: int,
         vector_search: int,
         llm_generate: int,
-    ) -> "StageLimiters":
+    ) -> StageLimiters:
         return cls(
             embedding=StageLimiter("embedding", limit=embedding),
             vector_search=StageLimiter("vector_search", limit=vector_search),

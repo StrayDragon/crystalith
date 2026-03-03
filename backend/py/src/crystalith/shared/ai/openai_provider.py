@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import AsyncIterator, Literal, Protocol, Sequence, cast
+from typing import Literal, Protocol, cast, overload
+from collections.abc import AsyncIterator, Sequence
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
@@ -63,6 +64,61 @@ class _OpenAIChatStreamChunk(Protocol):
         ...
 
 
+class _OpenAIEmbeddingsResource(Protocol):
+    async def create(
+        self,
+        *,
+        model: str,
+        input: list[str],
+    ) -> object: ...
+
+
+class _OpenAIChatCompletionsResource(Protocol):
+    @overload
+    async def create(
+        self,
+        *,
+        model: str,
+        messages: Sequence[ChatCompletionMessageParam],
+        stream: Literal[True],
+        temperature: float = ...,
+        max_completion_tokens: int = ...,
+        top_p: float = ...,
+        stop: list[str] = ...,
+    ) -> object: ...
+
+    @overload
+    async def create(
+        self,
+        *,
+        model: str,
+        messages: Sequence[ChatCompletionMessageParam],
+        stream: Literal[False] | None = None,
+        temperature: float = ...,
+        max_completion_tokens: int = ...,
+        top_p: float = ...,
+        stop: list[str] = ...,
+    ) -> object: ...
+
+
+class _OpenAIChatResource(Protocol):
+    @property
+    def completions(self) -> _OpenAIChatCompletionsResource:
+        ...
+
+
+class OpenAIEmbeddingsClient(Protocol):
+    @property
+    def embeddings(self) -> _OpenAIEmbeddingsResource:
+        ...
+
+
+class OpenAIChatClient(Protocol):
+    @property
+    def chat(self) -> _OpenAIChatResource:
+        ...
+
+
 def _to_openai_messages(messages: Sequence[ChatMessage]) -> list[ChatCompletionMessageParam]:
     payload: list[ChatCompletionMessageParam] = []
     for message in messages:
@@ -82,7 +138,7 @@ class OpenAIEmbeddingProvider:
         self,
         model: str,
         *,
-        client: AsyncOpenAI | None = None,
+        client: OpenAIEmbeddingsClient | None = None,
         api_key: str | None = None,
         base_url: str | None = None,
         organization: str | None = None,
@@ -141,7 +197,7 @@ class OpenAIEmbeddingProvider:
             end = start + batch_size
             chunk_texts = pending_texts[start:end]
             chunk_embeddings = await self._embed_chunk(chunk_texts)
-            for text, vector in zip(chunk_texts, chunk_embeddings):
+            for text, vector in zip(chunk_texts, chunk_embeddings, strict=True):
                 for idx in pending_positions_by_text.get(text, []):
                     embeddings[idx] = vector
                 if self._cache is not None:
@@ -153,10 +209,11 @@ class OpenAIEmbeddingProvider:
 
     async def _embed_chunk(self, texts: Sequence[str]) -> list[list[float]]:
         async def _do_embed() -> _OpenAIEmbeddingResponse:
-            return await self._client.embeddings.create(
+            response = await self._client.embeddings.create(
                 model=self.model,
                 input=list(texts),
             )
+            return cast(_OpenAIEmbeddingResponse, response)
 
         response = await run_with_retry(
             _do_embed,
@@ -180,7 +237,7 @@ class OpenAIChatProvider:
         self,
         model: str,
         *,
-        client: AsyncOpenAI | None = None,
+        client: OpenAIChatClient | None = None,
         api_key: str | None = None,
         base_url: str | None = None,
         organization: str | None = None,
@@ -213,11 +270,12 @@ class OpenAIChatProvider:
             raise ValueError("messages must not be empty")
 
         async def _do_chat() -> _OpenAIChatCompletionResponse:
-            return await self._client.chat.completions.create(
+            response = await self._client.chat.completions.create(
                 model=self.model,
                 messages=_to_openai_messages(messages),
                 **self._completion_kwargs,
             )
+            return cast(_OpenAIChatCompletionResponse, response)
 
         response = await run_with_retry(
             _do_chat,
@@ -234,12 +292,13 @@ class OpenAIChatProvider:
             raise ValueError("messages must not be empty")
 
         async def _create_stream() -> AsyncIterator[_OpenAIChatStreamChunk]:
-            return await self._client.chat.completions.create(
+            response = await self._client.chat.completions.create(
                 model=self.model,
                 messages=_to_openai_messages(messages),
                 stream=True,
                 **self._completion_kwargs,
             )
+            return cast(AsyncIterator[_OpenAIChatStreamChunk], response)
 
         response = await run_with_retry(
             _create_stream,

@@ -5,6 +5,7 @@ import io
 
 from .interfaces import ParserError
 from .types import Chunk
+from crystalith.shared.json_types import JsonDict
 
 
 class CSVParser:
@@ -46,7 +47,7 @@ class CSVParser:
             block = data_rows[start:end]
 
             table_lines = _to_markdown_table(header, block, max_cell_chars=self.max_cell_chars)
-            metadata = {
+            metadata: JsonDict = {
                 "csv_row_start": start + 1,
                 "csv_row_end": end,
             }
@@ -82,4 +83,3 @@ def _to_markdown_table(header: list[str], rows: list[list[str]], *, max_cell_cha
     for row in rows:
         lines.append("| " + " | ".join(normalize_row(row)) + " |")
     return lines
-

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
-from typing import Protocol, runtime_checkable
+from typing import Protocol, cast, runtime_checkable
 
 from openai import OpenAI
 
@@ -28,6 +28,22 @@ class _HasText(Protocol):
     text: str
 
 
+class _OpenAITranscriptions(Protocol):
+    def create(self, *, model: str, file: object) -> object: ...
+
+
+class _OpenAIAudio(Protocol):
+    @property
+    def transcriptions(self) -> _OpenAITranscriptions:
+        ...
+
+
+class OpenAITranscriberClient(Protocol):
+    @property
+    def audio(self) -> _OpenAIAudio:
+        ...
+
+
 class OpenAITranscriber:
     provider = "openai"
 
@@ -35,18 +51,25 @@ class OpenAITranscriber:
         self,
         model: str = "whisper-1",
         *,
-        client: OpenAI | None = None,
+        client: OpenAITranscriberClient | None = None,
         api_key: str | None = None,
         base_url: str | None = None,
         organization: str | None = None,
         project: str | None = None,
     ) -> None:
         self.model = model
-        self._client = client or OpenAI(
-            api_key=api_key,
-            base_url=base_url,
-            organization=organization,
-            project=project,
+        self._client: OpenAITranscriberClient = (
+            client
+            if client is not None
+            else cast(
+                OpenAITranscriberClient,
+                OpenAI(
+                    api_key=api_key,
+                    base_url=base_url,
+                    organization=organization,
+                    project=project,
+                ),
+            )
         )
 
     def transcribe(

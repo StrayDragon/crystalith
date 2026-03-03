@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from pydantic import BaseModel
+from pydantic_graph import GraphRunContext
 
+from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.output_graph import DEFAULT_PROMPTS, GenerateOutput, OutputGraphState, OUTPUT_SCHEMAS
 from crystalith.shared.types import OutputType
 
@@ -71,7 +73,8 @@ async def test_generate_output_prefers_plugin_schema_and_prompt(monkeypatch: pyt
         },
     )()
 
-    await GenerateOutput().run(_DummyCtx(state, deps))
+    ctx = cast(GraphRunContext[OutputGraphState, StudioDeps], _DummyCtx(state, deps))
+    await GenerateOutput().run(ctx)
 
     assert captured["schema"] is _PluginSchema
     assert _Plugin.default_prompt in captured["user_prompt"]
@@ -116,7 +119,8 @@ async def test_generate_output_falls_back_to_core_schema_and_prompt(monkeypatch:
         },
     )()
 
-    await GenerateOutput().run(_DummyCtx(state, deps))
+    ctx = cast(GraphRunContext[OutputGraphState, StudioDeps], _DummyCtx(state, deps))
+    await GenerateOutput().run(ctx)
 
     assert captured["schema"] is OUTPUT_SCHEMAS[OutputType.QUIZ]
     assert DEFAULT_PROMPTS[OutputType.QUIZ] in captured["user_prompt"]

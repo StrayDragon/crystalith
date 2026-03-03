@@ -75,7 +75,12 @@ TOOL_CONFIGS: dict[str, dict] = {
     "faq": {
         "quantity_options": DEFAULT_QUANTITY_OPTIONS,
         "difficulty_options": None,  # FAQ doesn't have difficulty
-        "topic_placeholder": "示例提示\n• 抽认卡必须仅限于一个特定来源（例如「一篇介绍意大利的文章」）\n• 抽认卡必须专注于一个特定主题（例如「牛顿第二定律」）\n• 卡片正面内容必须简短易记（1-5 个字词）",
+        "topic_placeholder": (
+            "示例提示\n"
+            "• 抽认卡必须仅限于一个特定来源（例如「一篇介绍意大利的文章」）\n"
+            "• 抽认卡必须专注于一个特定主题（例如「牛顿第二定律」）\n"
+            "• 卡片正面内容必须简短易记（1-5 个字词）"
+        ),
     },
     "guide": {
         "quantity_options": [

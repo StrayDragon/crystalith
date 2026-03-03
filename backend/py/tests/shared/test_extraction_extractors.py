@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import contextlib
 import threading
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import cast
 
 import pytest
 
@@ -27,7 +29,9 @@ class _RequestCapture:
 
 
 @contextlib.contextmanager
-def _serve_http(handler) -> tuple[str, _RequestCapture]:
+def _serve_http(
+    handler: Callable[[BaseHTTPRequestHandler, _RequestCapture], tuple[int, str]],
+) -> Iterator[tuple[str, _RequestCapture]]:
     capture = _RequestCapture()
 
     class Handler(BaseHTTPRequestHandler):
@@ -58,7 +62,7 @@ def _serve_http(handler) -> tuple[str, _RequestCapture]:
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        host, port = server.server_address
+        host, port = cast(tuple[str, int], server.server_address)
         base_url = f"http://{host}:{port}/"
         yield base_url, capture
     finally:
@@ -153,7 +157,9 @@ async def test_jina_reader_extract_success_and_headers(monkeypatch: pytest.Monke
     assert result.extractor == "jina"
     assert result.title == "Title"
     assert result.description == "First paragraph."
-    assert "https://example.com" in result.extra["jina_url"]
+    jina_url = result.extra.get("jina_url")
+    assert isinstance(jina_url, str)
+    assert "https://example.com" in jina_url
 
 
 @pytest.mark.asyncio

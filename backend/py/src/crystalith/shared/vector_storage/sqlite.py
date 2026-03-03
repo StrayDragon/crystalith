@@ -4,7 +4,7 @@ import asyncio
 import heapq
 import json
 from pathlib import Path
-from typing import Iterable, Sequence
+from collections.abc import Iterable, Sequence
 
 from sqlalchemy import text
 
@@ -20,7 +20,7 @@ _ENTRIES_TABLE = "vector_entries"
 
 
 def _dot(left: Sequence[float], right: Sequence[float]) -> float:
-    return sum(a * b for a, b in zip(left, right))
+    return sum(a * b for a, b in zip(left, right, strict=True))
 
 
 def _norm(vector: Sequence[float]) -> float:
@@ -86,7 +86,7 @@ class SQLiteVectorStore:
         await self._ensure_dimension(expected_dim)
 
         async with self._engine.begin() as conn:
-            for chunk_id, vector in zip(chunk_ids, vectors_list):
+            for chunk_id, vector in zip(chunk_ids, vectors_list, strict=True):
                 vector_json = json.dumps(vector, separators=(",", ":"))
                 result = await conn.execute(
                     text(
@@ -242,7 +242,7 @@ class SQLiteVectorStore:
             params["notebook_id"] = notebook_id
         if source_ids:
             placeholders = []
-            for idx, source_id in enumerate(sorted(set(int(value) for value in source_ids))):
+            for idx, source_id in enumerate(sorted({int(value) for value in source_ids})):
                 key = f"source_id_{idx}"
                 placeholders.append(f":{key}")
                 params[key] = source_id

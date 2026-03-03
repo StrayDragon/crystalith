@@ -40,9 +40,9 @@ class AIProviderPlugin(Protocol):
 
     api_version: str
 
-    def create_chat_provider(self, settings: Settings, model_config: ModelConfig) -> "ChatProvider": ...
+    def create_chat_provider(self, settings: Settings, model_config: ModelConfig) -> ChatProvider: ...
 
-    def create_embedding_provider(self, settings: Settings, model_config: ModelConfig) -> "EmbeddingProvider": ...
+    def create_embedding_provider(self, settings: Settings, model_config: ModelConfig) -> EmbeddingProvider: ...
 
 
 @runtime_checkable
@@ -64,9 +64,9 @@ class ParserPlugin(Protocol):
         *,
         filename: str | None,
         mime_type: str | None,
-        transcriber: "TranscriptionProvider | None" = None,
-        media_fetcher: "MediaFetcher | None" = None,
-    ) -> "Parser": ...
+        transcriber: TranscriptionProvider | None = None,
+        media_fetcher: MediaFetcher | None = None,
+    ) -> Parser: ...
 
 
 @runtime_checkable

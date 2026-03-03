@@ -79,7 +79,9 @@ async def test_create_all_ensures_sqlite_schema_adds_missing_columns(tmp_path) -
             result = await conn.exec_driver_sql(
                 "SELECT notebook_id, filename FROM sources WHERE id=1"
             )
-            notebook_id, filename = result.first()
+            row = result.first()
+            assert row is not None
+            notebook_id, filename = row
             assert notebook_id == 0
             assert filename == ""
     finally:

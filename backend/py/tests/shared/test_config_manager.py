@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from crystalith.shared.config import ConfigManager, Settings
+from tests._support.settings import make_settings
 
 
 def _write_yaml(path: Path, content: str) -> None:
@@ -105,29 +106,31 @@ def test_config_manager_load_secrets_from_file_and_directory(tmp_path) -> None:
 
 
 def test_config_manager_apply_env_overrides_updates_models_and_defaults(monkeypatch) -> None:
-    settings = Settings(
-        cache={"provider": "memory"},
-        models={
-            "defaults": {"chat": "test-chat", "embedding": "test-embed"},
-            "available": [
-                {
-                    "id": "test-chat",
-                    "provider": "openai",
-                    "model": "gpt-test",
-                    "display_name": "Test Chat",
-                    "roles": ["chat"],
-                    "provider_config": {"api_key": "old", "base_url": "http://old"},
-                },
-                {
-                    "id": "test-embed",
-                    "provider": "ollama",
-                    "model": "bge-test",
-                    "display_name": "Test Embed",
-                    "roles": ["embed"],
-                    "provider_config": {"host": "http://old"},
-                },
-            ],
-        },
+    settings = make_settings(
+        {
+            "cache": {"provider": "memory"},
+            "models": {
+                "defaults": {"chat": "test-chat", "embedding": "test-embed"},
+                "available": [
+                    {
+                        "id": "test-chat",
+                        "provider": "openai",
+                        "model": "gpt-test",
+                        "display_name": "Test Chat",
+                        "roles": ["chat"],
+                        "provider_config": {"api_key": "old", "base_url": "http://old"},
+                    },
+                    {
+                        "id": "test-embed",
+                        "provider": "ollama",
+                        "model": "bge-test",
+                        "display_name": "Test Embed",
+                        "roles": ["embed"],
+                        "provider_config": {"host": "http://old"},
+                    },
+                ],
+            },
+        }
     )
     manager = ConfigManager(config_path=Path("config/app.yaml"))
 
@@ -149,7 +152,9 @@ def test_config_manager_apply_env_overrides_updates_models_and_defaults(monkeypa
 
     assert settings.database.url.endswith("override.db")
     assert settings.cache.provider == "redis"
-    assert settings.cache.redis_url.startswith("redis://")
+    redis_url = settings.cache.redis_url
+    assert redis_url is not None
+    assert redis_url.startswith("redis://")
 
     openai_model = settings.models.get_model("test-chat")
     assert openai_model is not None
@@ -166,7 +171,7 @@ def test_config_manager_apply_env_overrides_updates_models_and_defaults(monkeypa
 
 
 def test_config_manager_apply_env_overrides_rejects_unknown_default_model(monkeypatch) -> None:
-    settings = Settings(models={"available": []})
+    settings = make_settings({"models": {"available": []}})
     manager = ConfigManager(config_path=Path("config/app.yaml"))
     # Mock reason: invalid default model id is injected through env variables in production.
     monkeypatch.setenv("CRYSTALITH_DEFAULT_CHAT_MODEL", "missing")
@@ -175,26 +180,28 @@ def test_config_manager_apply_env_overrides_rejects_unknown_default_model(monkey
 
 
 def test_config_manager_validate_config_returns_warnings() -> None:
-    settings = Settings(
-        models={
-            "available": [
-                {
-                    "id": "chat",
-                    "provider": "openai",
-                    "model": "gpt",
-                    "display_name": "Chat",
-                    "roles": ["chat"],
-                    "provider_config": {"api_key": ""},
-                },
-                {
-                    "id": "embed",
-                    "provider": "ollama",
-                    "model": "bge",
-                    "display_name": "Embed",
-                    "roles": ["embed"],
-                    "provider_config": {"host": ""},
-                },
-            ]
+    settings = make_settings(
+        {
+            "models": {
+                "available": [
+                    {
+                        "id": "chat",
+                        "provider": "openai",
+                        "model": "gpt",
+                        "display_name": "Chat",
+                        "roles": ["chat"],
+                        "provider_config": {"api_key": ""},
+                    },
+                    {
+                        "id": "embed",
+                        "provider": "ollama",
+                        "model": "bge",
+                        "display_name": "Embed",
+                        "roles": ["embed"],
+                        "provider_config": {"host": ""},
+                    },
+                ]
+            }
         }
     )
     manager = ConfigManager(config_path=Path("config/app.yaml"))

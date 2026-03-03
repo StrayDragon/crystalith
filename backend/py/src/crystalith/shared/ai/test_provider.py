@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from typing import AsyncIterator, Literal, Sequence
+from typing import Literal
+from collections.abc import AsyncIterator, Sequence
 
 from .types import ChatMessage
 

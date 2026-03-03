@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 
 from crystalith.shared.schemas.errors import (
     build_error_response,
@@ -62,7 +61,7 @@ def test_status_code_from_exception_detects_common_shapes() -> None:
     assert status_code_from_exception(_Err("x", status_code=429)) == 429
     assert status_code_from_exception(_Err("x", response=_Resp(502))) == 502
     assert status_code_from_exception(TimeoutError("timeout")) == 503
-    assert status_code_from_exception(asyncio.TimeoutError()) == 503
+    assert status_code_from_exception(TimeoutError()) == 503
 
 
 def test_build_error_response_accepts_multiple_detail_shapes() -> None:

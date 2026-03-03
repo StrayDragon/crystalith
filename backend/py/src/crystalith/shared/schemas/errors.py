@@ -106,9 +106,9 @@ def parse_retry_after(value: object) -> int | None:
         return None
 
     if retry_at.tzinfo is None:
-        retry_at = retry_at.replace(tzinfo=dt.timezone.utc)
+        retry_at = retry_at.replace(tzinfo=dt.UTC)
 
-    seconds = int((retry_at - dt.datetime.now(dt.timezone.utc)).total_seconds())
+    seconds = int((retry_at - dt.datetime.now(dt.UTC)).total_seconds())
     return max(0, seconds)
 
 

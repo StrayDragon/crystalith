@@ -107,7 +107,7 @@ def _normalize_frontmatter_override(value: str | None) -> str | None:
     if not cleaned:
         return None
     if cleaned.startswith("---"):
-        lines = [line for line in cleaned.splitlines()]
+        lines = list(cleaned.splitlines())
         if lines and lines[0].strip() == "---":
             lines = lines[1:]
         if lines and lines[-1].strip() == "---":

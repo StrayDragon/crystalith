@@ -1006,7 +1006,7 @@ async def stream_research_progress(
         heartbeat_interval = 30  # Send heartbeat every 30 seconds
         polls_since_heartbeat = 0
 
-        for poll_count in range(max_polls):
+        for _poll_count in range(max_polls):
             await asyncio.sleep(poll_interval)
             polls_since_heartbeat += 1
 
@@ -1318,6 +1318,7 @@ async def export_research(
         await session.commit()
         await session.refresh(source)
 
+        stage: str = "init"
         try:
             stage = "chunks"
             # Create embeddings and chunks
@@ -1347,7 +1348,7 @@ async def export_research(
 
             stage = "chunks"
             db_chunks: list[Chunk] = []
-            for idx, (chunk_text, embedding) in enumerate(zip(chunk_texts, embeddings)):
+            for idx, (chunk_text, _embedding) in enumerate(zip(chunk_texts, embeddings, strict=True)):
                 chunk = Chunk(
                     source_id=source.id,
                     chunk_index=idx,

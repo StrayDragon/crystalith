@@ -52,9 +52,9 @@ class SearXNGSearcher:
         self.api_key = api_key
         self.timeout = timeout
         self.max_results = max_results
-        self._wrapper: "SearxSearchWrapper | None" = None
+        self._wrapper: SearxSearchWrapper | None = None
 
-    def _get_wrapper(self) -> "SearxSearchWrapper":
+    def _get_wrapper(self) -> SearxSearchWrapper:
         """Lazy initialization of the SearxSearchWrapper."""
         if self._wrapper is None:
             from langchain_community.utilities import SearxSearchWrapper
@@ -136,7 +136,7 @@ class SearXNGSearcher:
             raise RuntimeError(f"Search failed: {error}") from error
 
     @classmethod
-    def from_settings(cls, settings: "Settings") -> "SearXNGSearcher":
+    def from_settings(cls, settings: Settings) -> SearXNGSearcher:
         """Create a SearXNGSearcher from application settings.
 
         Args:

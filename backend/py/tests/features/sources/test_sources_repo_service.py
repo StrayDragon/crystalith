@@ -62,6 +62,6 @@ async def test_sources_service_create_without_content_marks_processing(db_sessio
     assert chunk_count == 0
     assert await sources_repo.count_chunks(db_session, source_id=created.id) == 0
 
-    schema_payload = sources_schemas.SourceCreate(filename="a.txt", content="x")
+    schema_payload = sources_schemas.SourceCreate(filename="a.txt", content="x", parser_type="text")
     assert schema_payload.filename == "a.txt"
     assert schema_payload.content == "x"

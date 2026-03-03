@@ -9,12 +9,16 @@ from crystalith.shared.vector_storage import InMemoryVectorStore, VectorEntry
 
 
 def _cosine(left: list[float], right: list[float]) -> float:
-    dot = sum(a * b for a, b in zip(left, right))
+    dot = sum(a * b for a, b in zip(left, right, strict=True))
     left_norm = sqrt(sum(item * item for item in left))
     right_norm = sqrt(sum(item * item for item in right))
     if left_norm == 0 or right_norm == 0:
         return 0.0
     return dot / (left_norm * right_norm)
+
+
+def _ordered_pair(left: int, right: int) -> tuple[int, int]:
+    return (left, right) if left <= right else (right, left)
 
 
 def _bruteforce_pairs(entries: list[VectorEntry], *, min_score: float) -> set[tuple[int, int]]:
@@ -26,7 +30,7 @@ def _bruteforce_pairs(entries: list[VectorEntry], *, min_score: float) -> set[tu
             score = _cosine(left.vector, right.vector)
             if score < min_score:
                 continue
-            pairs.add(tuple(sorted((left.chunk_id, right.chunk_id))))
+            pairs.add(_ordered_pair(left.chunk_id, right.chunk_id))
     return pairs
 
 
@@ -63,7 +67,7 @@ async def test_detect_relations_excludes_same_source() -> None:
 
     assert relations
     pair_set = {
-        tuple(sorted((relation.source_chunk_id, relation.target_chunk_id)))
+        _ordered_pair(relation.source_chunk_id, relation.target_chunk_id)
         for relation in relations
     }
     assert (11, 12) not in pair_set
@@ -103,7 +107,7 @@ async def test_detect_relations_overlap_with_bruteforce_is_high() -> None:
     )
 
     ann_pairs = {
-        tuple(sorted((relation.source_chunk_id, relation.target_chunk_id)))
+        _ordered_pair(relation.source_chunk_id, relation.target_chunk_id)
         for relation in relations
     }
     brute_pairs = _bruteforce_pairs(entries, min_score=min_score)

@@ -105,18 +105,19 @@ class PluginRegistry:
             entry_point_value = str(entry_point.value)
 
             if not settings.plugins.is_enabled(plugin_id):
+                skip_details: dict[str, JsonValue]
                 if settings.plugins.enabled:
                     hint = f"Add {plugin_id!r} to plugins.enabled in config/app.yaml to load this plugin."
-                    details: dict[str, JsonValue] = {"policy": "allowlist"}
+                    skip_details = {"policy": "allowlist"}
                 else:
                     hint = f"Remove {plugin_id!r} from plugins.disabled in config/app.yaml to load this plugin."
-                    details = {"policy": "denylist"}
-                details["entry_point"] = entry_point_value
+                    skip_details = {"policy": "denylist"}
+                skip_details["entry_point"] = entry_point_value
                 report.skipped[plugin_id] = PluginSkipDetail(
                     error_code="disabled",
                     message="Plugin disabled by configuration",
                     hint=hint,
-                    details=details,
+                    details=skip_details,
                 )
                 continue
 
@@ -135,17 +136,17 @@ class PluginRegistry:
                     if error_code == "missing_dependency"
                     else "Verify the entry point is importable and the plugin dependencies are installed."
                 )
-                details: dict[str, JsonValue] = {
+                load_error_details: dict[str, JsonValue] = {
                     "entry_point": entry_point_value,
                     "error": type(exc).__name__,
                 }
                 if isinstance(exc, ModuleNotFoundError) and exc.name:
-                    details["missing_module"] = exc.name
+                    load_error_details["missing_module"] = exc.name
                 report.skipped[plugin_id] = PluginSkipDetail(
                     error_code=error_code,
                     message="Plugin failed to load",
                     hint=hint,
-                    details=details,
+                    details=load_error_details,
                 )
                 continue
 
@@ -300,6 +301,7 @@ class PluginRegistry:
 
         if api_version not in SUPPORTED_PLUGIN_API_VERSIONS:
             supported = sorted(SUPPORTED_PLUGIN_API_VERSIONS)
+            supported_payload: list[JsonValue] = list(supported)
             log.warning(
                 "plugin api_version unsupported; skipping",
                 plugin_id=plugin_id,
@@ -312,7 +314,7 @@ class PluginRegistry:
                 hint=f"Update the plugin to api_version {PLUGIN_API_VERSION!r} (supported: {supported!r}).",
                 details={
                     "api_version": api_version,
-                    "supported": supported,
+                    "supported": supported_payload,
                 },
             )
 

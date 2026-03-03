@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Iterator
 import contextlib
 import json
 import threading
@@ -33,7 +34,7 @@ class _SlowParser:
 
 
 @contextlib.contextmanager
-def _serve_searx_json(payload: dict) -> str:
+def _serve_searx_json(payload: dict[str, object]) -> Iterator[str]:
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
 
     class Handler(BaseHTTPRequestHandler):
@@ -51,7 +52,8 @@ def _serve_searx_json(payload: dict) -> str:
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        host, port = server.server_address
+        host = server.server_address[0]
+        port = server.server_address[1]
         yield f"http://{host}:{port}/"
     finally:
         server.shutdown()
@@ -60,7 +62,7 @@ def _serve_searx_json(payload: dict) -> str:
 
 
 @contextlib.contextmanager
-def _serve_html(html: str) -> str:
+def _serve_html(html: str) -> Iterator[str]:
     body = html.encode("utf-8")
 
     class Handler(BaseHTTPRequestHandler):
@@ -78,7 +80,8 @@ def _serve_html(html: str) -> str:
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        host, port = server.server_address
+        host = server.server_address[0]
+        port = server.server_address[1]
         yield f"http://{host}:{port}/"
     finally:
         server.shutdown()
@@ -87,7 +90,7 @@ def _serve_html(html: str) -> str:
 
 
 @contextlib.contextmanager
-def _serve_redirect(location: str) -> tuple[str, dict[str, int]]:
+def _serve_redirect(location: str) -> Iterator[tuple[str, dict[str, int]]]:
     hits: dict[str, int] = {"count": 0}
 
     class Handler(BaseHTTPRequestHandler):
@@ -104,7 +107,8 @@ def _serve_redirect(location: str) -> tuple[str, dict[str, int]]:
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        host, port = server.server_address
+        host = server.server_address[0]
+        port = server.server_address[1]
         yield f"http://{host}:{port}/", hits
     finally:
         server.shutdown()
@@ -113,7 +117,7 @@ def _serve_redirect(location: str) -> tuple[str, dict[str, int]]:
 
 
 @contextlib.contextmanager
-def _serve_html_counting(html: str) -> tuple[str, dict[str, int]]:
+def _serve_html_counting(html: str) -> Iterator[tuple[str, dict[str, int]]]:
     body = html.encode("utf-8")
     hits: dict[str, int] = {"count": 0}
 
@@ -133,7 +137,8 @@ def _serve_html_counting(html: str) -> tuple[str, dict[str, int]]:
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        host, port = server.server_address
+        host = server.server_address[0]
+        port = server.server_address[1]
         yield f"http://{host}:{port}/", hits
     finally:
         server.shutdown()

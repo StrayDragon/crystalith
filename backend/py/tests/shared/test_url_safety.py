@@ -14,11 +14,14 @@ def _policy(**kwargs) -> UrlFetchSecuritySettings:
 
 @pytest.mark.asyncio
 async def test_validate_url_for_fetch_blocks_userinfo():
+    async def resolver(_host: str, _port: int):
+        return ()
+
     with pytest.raises(UrlSafetyError):
         await validate_url_for_fetch(
             "http://user:pass@example.com/",
             policy=_policy(),
-            resolver=lambda *_: (),  # pragma: no cover - not used
+            resolver=resolver,  # pragma: no cover - not used
         )
 
 

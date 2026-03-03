@@ -119,7 +119,7 @@ def _env_float(name: str, default: float) -> float:
 
 
 def _iso_now() -> str:
-    return dt.datetime.now(dt.timezone.utc).isoformat()
+    return dt.datetime.now(dt.UTC).isoformat()
 
 
 def _probe_http_endpoint(
@@ -508,7 +508,7 @@ async def _run_optional_services_monitor(
 
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=interval_s)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             continue
 
 
@@ -618,7 +618,7 @@ def create_app(
             if optional_monitor_task is not None:
                 try:
                     await asyncio.wait_for(optional_monitor_task, timeout=2.0)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     optional_monitor_task.cancel()
                     with suppress(asyncio.CancelledError):
                         await optional_monitor_task

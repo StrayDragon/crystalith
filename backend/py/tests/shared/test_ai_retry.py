@@ -27,13 +27,13 @@ def test_extract_retry_after_supports_numeric_and_http_date_values() -> None:
     assert extract_retry_after(_Err("x", headers={"Retry-After": "2"})) == 2.0
     assert extract_retry_after(_Err("x", response=_Resp(429, headers={"retry-after": "3"}))) == 3.0
 
-    past = dt.datetime(2015, 10, 21, 7, 28, 0, tzinfo=dt.timezone.utc)
+    past = dt.datetime(2015, 10, 21, 7, 28, 0, tzinfo=dt.UTC)
     header_value = past.strftime("%a, %d %b %Y %H:%M:%S GMT")
     assert extract_retry_after(_Err("x", headers={"Retry-After": header_value})) == 0.0
 
 
 def test_is_retryable_error_detects_status_codes_and_messages() -> None:
-    assert is_retryable_error(asyncio.TimeoutError()) is True
+    assert is_retryable_error(TimeoutError()) is True
     assert is_retryable_error(_Err("x", status_code=429)) is True
     assert is_retryable_error(_Err("rate limit exceeded")) is True
     assert is_retryable_error(_Err("nope", status_code=400)) is False

@@ -4,6 +4,7 @@ import datetime
 from dataclasses import dataclass
 
 from fastapi import HTTPException
+from typing import NoReturn
 
 from crystalith.shared.db import Source
 from crystalith.shared.types import SourceStatus
@@ -36,7 +37,7 @@ def apply_source_failure(source: Source, failure: SourceFailure) -> None:
     source.last_error_at = datetime.datetime.now(datetime.UTC)
 
 
-def raise_source_failure(failure: SourceFailure) -> None:
+def raise_source_failure(failure: SourceFailure) -> NoReturn:
     payload: dict[str, object] = {
         "error_code": failure.error_code,
         "message": failure.message,

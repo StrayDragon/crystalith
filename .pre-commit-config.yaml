@@ -22,6 +22,22 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      - id: backend-lint
+        name: Backend Ruff Lint
+        entry: bash -c 'cd backend/py && uv run ruff check src tests'
+        language: system
+        files: ^backend/py/(src/|tests/|pyproject\.toml)
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: backend-typecheck
+        name: Backend Typecheck (basedpyright)
+        entry: bash -c 'cd backend/py && uv run basedpyright --level error src'
+        language: system
+        files: ^backend/py/(src/|pyproject\.toml)
+        pass_filenames: false
+        stages: [pre-commit]
+
       - id: config-schema-consistency
         name: Config Schema Consistency
         entry: bash -c 'cd backend/py && just config-schema-check'

@@ -29,9 +29,9 @@ class ExtractorFactory:
 
     def __init__(
         self,
-        settings: "WebExtractionSettings",
+        settings: WebExtractionSettings,
         *,
-        url_fetch_security: "UrlFetchSecuritySettings | None" = None,
+        url_fetch_security: UrlFetchSecuritySettings | None = None,
     ):
         """
         Initialize the factory with configuration.
@@ -312,7 +312,7 @@ class ExtractorFactory:
         self._initialized = False
 
 
-def create_extractor(settings: "WebExtractionSettings") -> ExtractorFactory:
+def create_extractor(settings: WebExtractionSettings) -> ExtractorFactory:
     """
     Create an ExtractorFactory with the given settings.
 

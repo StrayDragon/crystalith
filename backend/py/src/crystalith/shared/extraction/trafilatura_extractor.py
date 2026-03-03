@@ -175,7 +175,7 @@ class TrafilaturaExtractor(BaseExtractor):
                             error_class=ExtractionError,
                         ) from exc
 
-                for hop in range(max_redirects + 1):
+                for _ in range(max_redirects + 1):
                     response = await client.get(current_url, headers=headers)
 
                     if response.status_code in {301, 302, 303, 307, 308}:

@@ -58,10 +58,34 @@ def test_map_citations_recurses_and_replaces_citations_fields() -> None:
         ]
     }
     mapped = _map_citations(payload, citation_map={1: cit1, 2: cit2}, fallback=[cit1])
-    assert mapped["items"][0]["citations"][0]["source_id"] == 1
-    assert mapped["items"][0]["citations"][1]["source_id"] == 2
+    assert isinstance(mapped, dict)
+    items = mapped.get("items")
+    assert isinstance(items, list)
+    assert len(items) == 2
+
+    first_item = items[0]
+    assert isinstance(first_item, dict)
+    first_citations = first_item.get("citations")
+    assert isinstance(first_citations, list)
+    assert len(first_citations) == 2
+
+    first_citation = first_citations[0]
+    assert isinstance(first_citation, dict)
+    assert first_citation.get("source_id") == 1
+
+    second_citation = first_citations[1]
+    assert isinstance(second_citation, dict)
+    assert second_citation.get("source_id") == 2
+
     # Empty citations falls back to first citation when provided.
-    assert mapped["items"][1]["citations"][0]["source_id"] == 1
+    second_item = items[1]
+    assert isinstance(second_item, dict)
+    second_citations = second_item.get("citations")
+    assert isinstance(second_citations, list)
+    assert len(second_citations) == 1
+    fallback_citation = second_citations[0]
+    assert isinstance(fallback_citation, dict)
+    assert fallback_citation.get("source_id") == 1
 
 
 def test_normalize_source_ids_dedupes_and_validates() -> None:
@@ -117,15 +141,29 @@ def test_ensure_minimum_content_normalizes_known_shapes() -> None:
     assert paragraph["citations"] == [1]
 
     mindmap = _ensure_minimum_content(OutputType.MINDMAP, {"root": {"label": "L"}}, prompt)
-    assert mindmap["root"]["citations"] == [1]
-    assert mindmap["root"]["children"]
+    root = mindmap.get("root")
+    assert isinstance(root, dict)
+    assert root.get("citations") == [1]
+    children = root.get("children")
+    assert isinstance(children, list)
+    assert children
 
     guide = _ensure_minimum_content(OutputType.GUIDE, {"modules": [{}]}, prompt)
-    assert guide["modules"][0]["objective"]
-    assert guide["modules"][0]["key_points"]
+    modules = guide.get("modules")
+    assert isinstance(modules, list)
+    assert len(modules) == 1
+    module = modules[0]
+    assert isinstance(module, dict)
+    assert module.get("objective")
+    assert module.get("key_points")
 
     briefing = _ensure_minimum_content(OutputType.BRIEFING, {"sections": [{"heading": "H"}]}, prompt)
-    assert briefing["sections"][0]["points"]
+    sections = briefing.get("sections")
+    assert isinstance(sections, list)
+    assert len(sections) == 1
+    section = sections[0]
+    assert isinstance(section, dict)
+    assert section.get("points")
 
     structured = _ensure_minimum_content(OutputType.STRUCTURED, {"title": "T", "bullets": []}, prompt)
     assert structured.get("_fallback") is True

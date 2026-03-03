@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from crystalith.shared.json_types import JsonDict
+
 
 @dataclass(frozen=True, slots=True)
 class ChunkPayload:
     text: str
     start_offset: int
     end_offset: int
-    metadata: dict[str, object] = field(default_factory=dict)
+    metadata: JsonDict = field(default_factory=dict)
 
 
 def chunk_text(text: str, *, chunk_size: int = 800, overlap: int = 100) -> list[ChunkPayload]:

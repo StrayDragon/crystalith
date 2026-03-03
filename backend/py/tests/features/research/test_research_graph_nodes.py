@@ -13,9 +13,9 @@ from crystalith.features.research.graph import (
     WaitForApproval,
 )
 from crystalith.features.research.types import ResearchDeps, ResearchGraphState, SearchPlan, SearchQuery, SearchResult
-from crystalith.shared.config import Settings
 from crystalith.shared.db import Notebook, ResearchSession, ResearchStep
 from crystalith.shared.types import ResearchStatus, ResearchStepStatus, ResearchStepType
+from tests._support.settings import make_settings
 
 
 class _StubSearcher:
@@ -160,23 +160,25 @@ async def test_wait_for_approval_modify_updates_plan_and_executes(db_session, ap
 @pytest.mark.asyncio
 async def test_analyze_results_fallback_can_request_more_search(db_session) -> None:
     # Create settings that force build_chat_model() to fail, exercising fallback.
-    bad_settings = Settings(
-        app={"cors": {"allow_origins": []}},
-        cache={"provider": "memory"},
-        vector_storage={"provider": "memory"},
-        models={
-            "defaults": {"chat": "bad-openai"},
-            "available": [
-                {
-                    "id": "bad-openai",
-                    "provider": "openai",
-                    "model": "gpt-4o-mini",
-                    "display_name": "Bad OpenAI",
-                    "roles": ["chat"],
-                    "provider_config": {"api_key": ""},
-                }
-            ],
-        },
+    bad_settings = make_settings(
+        {
+            "app": {"cors": {"allow_origins": []}},
+            "cache": {"provider": "memory"},
+            "vector_storage": {"provider": "memory"},
+            "models": {
+                "defaults": {"chat": "bad-openai"},
+                "available": [
+                    {
+                        "id": "bad-openai",
+                        "provider": "openai",
+                        "model": "gpt-4o-mini",
+                        "display_name": "Bad OpenAI",
+                        "roles": ["chat"],
+                        "provider_config": {"api_key": ""},
+                    }
+                ],
+            },
+        }
     )
 
     notebook = Notebook(name="Research Analyze Fallback")

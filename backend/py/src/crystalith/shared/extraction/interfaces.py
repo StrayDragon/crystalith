@@ -28,22 +28,18 @@ class ExtractionError(Exception):
 
 class NetworkError(ExtractionError):
     """Network-related extraction error."""
-    pass
 
 
 class ParseError(ExtractionError):
     """Content parsing error."""
-    pass
 
 
 class ConfigurationError(ExtractionError):
     """Configuration error (e.g., missing API key)."""
-    pass
 
 
 class ServiceUnavailableError(ExtractionError):
     """External service unavailable."""
-    pass
 
 
 @runtime_checkable

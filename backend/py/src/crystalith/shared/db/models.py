@@ -45,26 +45,26 @@ class Notebook(AsyncSqlATableBase):
         onupdate=sa.sql.func.now(),
     )
 
-    sources: Mapped[list["Source"]] = relationship(
+    sources: Mapped[list[Source]] = relationship(
         back_populates="notebook",
         cascade="all, delete-orphan",
         passive_deletes=True,
         lazy="selectin",
     )
-    source_tags: Mapped[list["SourceTag"]] = relationship(
+    source_tags: Mapped[list[SourceTag]] = relationship(
         back_populates="notebook",
         cascade="all, delete-orphan",
         passive_deletes=True,
         lazy="selectin",
     )
-    sessions: Mapped[list["Session"]] = relationship(
+    sessions: Mapped[list[Session]] = relationship(
         back_populates="notebook",
         cascade="all, delete-orphan",
         passive_deletes=True,
         order_by="Session.updated_at.desc()",
         lazy="selectin",
     )
-    outputs: Mapped[list["Output"]] = relationship(
+    outputs: Mapped[list[Output]] = relationship(
         back_populates="notebook",
         cascade="all, delete-orphan",
         passive_deletes=True,
@@ -152,11 +152,11 @@ class Session(AsyncSqlATableBase):
         onupdate=sa.sql.func.now(),
     )
 
-    notebook: Mapped["Notebook"] = relationship(
+    notebook: Mapped[Notebook] = relationship(
         back_populates="sessions",
         lazy="selectin",
     )
-    messages: Mapped[list["Message"]] = relationship(
+    messages: Mapped[list[Message]] = relationship(
         back_populates="session",
         cascade="all, delete-orphan",
         passive_deletes=True,
@@ -193,7 +193,7 @@ class Message(AsyncSqlATableBase):
         onupdate=sa.sql.func.now(),
     )
 
-    session: Mapped["Session"] = relationship(
+    session: Mapped[Session] = relationship(
         back_populates="messages",
         lazy="selectin",
     )
@@ -248,24 +248,24 @@ class Source(AsyncSqlATableBase):
         onupdate=sa.sql.func.now(),
     )
 
-    notebook: Mapped["Notebook"] = relationship(
+    notebook: Mapped[Notebook] = relationship(
         back_populates="sources",
         lazy="selectin",
     )
-    chunks: Mapped[list["Chunk"]] = relationship(
+    chunks: Mapped[list[Chunk]] = relationship(
         back_populates="source",
         cascade="all, delete-orphan",
         passive_deletes=True,
         order_by="Chunk.chunk_index",
         lazy="selectin",
     )
-    tag_links: Mapped[list["SourceTagMap"]] = relationship(
+    tag_links: Mapped[list[SourceTagMap]] = relationship(
         back_populates="source",
         cascade="all, delete-orphan",
         passive_deletes=True,
         lazy="selectin",
     )
-    tags: Mapped[list["SourceTag"]] = relationship(
+    tags: Mapped[list[SourceTag]] = relationship(
         secondary="source_tag_map",
         back_populates="sources",
         lazy="selectin",
@@ -311,7 +311,7 @@ class Chunk(AsyncSqlATableBase):
         onupdate=sa.sql.func.now(),
     )
 
-    source: Mapped["Source"] = relationship(
+    source: Mapped[Source] = relationship(
         back_populates="chunks",
         lazy="selectin",
     )
@@ -346,17 +346,17 @@ class SourceTag(AsyncSqlATableBase):
         onupdate=sa.sql.func.now(),
     )
 
-    notebook: Mapped["Notebook"] = relationship(
+    notebook: Mapped[Notebook] = relationship(
         back_populates="source_tags",
         lazy="selectin",
     )
-    source_links: Mapped[list["SourceTagMap"]] = relationship(
+    source_links: Mapped[list[SourceTagMap]] = relationship(
         back_populates="tag",
         cascade="all, delete-orphan",
         passive_deletes=True,
         lazy="selectin",
     )
-    sources: Mapped[list["Source"]] = relationship(
+    sources: Mapped[list[Source]] = relationship(
         secondary="source_tag_map",
         back_populates="tags",
         lazy="selectin",
@@ -389,11 +389,11 @@ class SourceTagMap(AsyncSqlATableBase):
         server_default=sa.sql.func.now(),
     )
 
-    source: Mapped["Source"] = relationship(
+    source: Mapped[Source] = relationship(
         back_populates="tag_links",
         lazy="selectin",
     )
-    tag: Mapped["SourceTag"] = relationship(
+    tag: Mapped[SourceTag] = relationship(
         back_populates="source_links",
         lazy="selectin",
     )
@@ -431,7 +431,7 @@ class Output(AsyncSqlATableBase):
         onupdate=sa.sql.func.now(),
     )
 
-    notebook: Mapped["Notebook"] = relationship(
+    notebook: Mapped[Notebook] = relationship(
         back_populates="outputs",
         lazy="selectin",
     )
@@ -490,10 +490,10 @@ class StudioSlide(AsyncSqlATableBase):
         onupdate=sa.sql.func.now(),
     )
 
-    notebook: Mapped["Notebook"] = relationship(
+    notebook: Mapped[Notebook] = relationship(
         lazy="selectin",
     )
-    output: Mapped["Output"] = relationship(
+    output: Mapped[Output] = relationship(
         lazy="selectin",
     )
 
@@ -556,10 +556,10 @@ class ResearchSession(AsyncSqlATableBase):
         onupdate=sa.sql.func.now(),
     )
 
-    notebook: Mapped["Notebook"] = relationship(
+    notebook: Mapped[Notebook] = relationship(
         lazy="selectin",
     )
-    steps: Mapped[list["ResearchStep"]] = relationship(
+    steps: Mapped[list[ResearchStep]] = relationship(
         back_populates="session",
         cascade="all, delete-orphan",
         passive_deletes=True,
@@ -602,7 +602,7 @@ class ResearchStep(AsyncSqlATableBase):
         server_default=sa.sql.func.now(),
     )
 
-    session: Mapped["ResearchSession"] = relationship(
+    session: Mapped[ResearchSession] = relationship(
         back_populates="steps",
         lazy="selectin",
     )

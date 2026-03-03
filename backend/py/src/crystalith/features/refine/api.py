@@ -317,7 +317,7 @@ async def refine_batch(
         return format_name, _apply_format(format_name, answer, payload.prompt, citations)
 
     generated = await asyncio.gather(*[_generate_output(format_name) for format_name in formats])
-    outputs: dict[str, RefineBatchOutput] = {name: output for name, output in generated}
+    outputs: dict[str, RefineBatchOutput] = dict(generated)
 
     return RefineBatchResponse(
         outputs=outputs,

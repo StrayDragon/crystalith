@@ -5,6 +5,7 @@ from collections.abc import Iterable, Mapping, Sequence
 import pytest
 
 from crystalith.shared.cache import InMemoryCache
+from crystalith.shared.json_types import JsonValue
 from crystalith.shared.vector_storage import (
     VectorEntry,
     VectorSearchResult,
@@ -21,34 +22,34 @@ class _CountingCache(InMemoryCache):
         self.set_calls = 0
         self.set_many_calls = 0
 
-    async def get(self, key: str):  # noqa: ANN001
+    async def get(self, key: str) -> JsonValue | None:
         self.get_calls += 1
         return await super().get(key)
 
-    async def get_many(self, keys: Sequence[str]):  # noqa: ANN001
+    async def get_many(self, keys: Sequence[str]) -> list[JsonValue | None]:
         self.get_many_calls += 1
         return await super().get_many(keys)
 
-    async def set(self, key: str, value, *, ttl: float | None = None):  # noqa: ANN001
+    async def set(self, key: str, value: JsonValue, *, ttl: float | None = None) -> None:
         self.set_calls += 1
         return await super().set(key, value, ttl=ttl)
 
-    async def set_many(self, items: Mapping[str, object], *, ttl: float | None = None):  # noqa: ANN001
+    async def set_many(self, items: Mapping[str, JsonValue], *, ttl: float | None = None) -> None:
         self.set_many_calls += 1
         return await super().set_many(items, ttl=ttl)
 
 
 class _FailingBulkCache(InMemoryCache):
-    async def get_many(self, keys: Sequence[str]):  # noqa: ANN001
+    async def get_many(self, keys: Sequence[str]) -> list[JsonValue | None]:
         raise RuntimeError("cache get_many unavailable")
 
-    async def set_many(self, items: Mapping[str, object], *, ttl: float | None = None):  # noqa: ANN001
+    async def set_many(self, items: Mapping[str, JsonValue], *, ttl: float | None = None) -> None:
         raise RuntimeError("cache set_many unavailable")
 
-    async def get(self, key: str):  # noqa: ANN001
+    async def get(self, key: str) -> JsonValue | None:
         raise RuntimeError("cache get unavailable")
 
-    async def incr(self, key: str, *, ttl: float | None = None):  # noqa: ANN001
+    async def incr(self, key: str, amount: int = 1, *, ttl: float | None = None) -> int:  # noqa: ARG002
         raise RuntimeError("cache incr unavailable")
 
 

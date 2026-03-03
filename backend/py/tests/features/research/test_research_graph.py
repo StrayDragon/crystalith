@@ -151,7 +151,9 @@ async def test_run_research_graph_from_session_runs_search_analyze_and_report(db
     output = await run_research_graph_from_session(research, deps)
 
     assert output["status"] == "completed"
-    assert output["total_results"] >= 1
+    total_results = output.get("total_results")
+    assert isinstance(total_results, int)
+    assert total_results >= 1
     assert searcher.calls
 
     refreshed = await db_session.get(ResearchSession, research.id)
