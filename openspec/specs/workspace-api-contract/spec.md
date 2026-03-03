@@ -143,6 +143,14 @@ citation 对象 MUST 在 QA/messages/outputs 等对外 API 中保持字段语义
 - **WHEN** 前端依赖 `/v1/workspace/tools` 与 outputs/slides 端点
 - **THEN** 系统 SHALL 保持端点可用且向后兼容
 
+### Requirement: Workspace tools can expose frontend_bundle descriptor
+`/v1/workspace/tools` 返回的 tool 对象 MUST 支持可选字段 `frontend_bundle`，用于声明该输出类型的前端渲染 bundle。
+
+#### Scenario: Tools response includes optional frontend_bundle
+- **WHEN** 客户端请求 `/v1/workspace/tools`
+- **THEN** 每个 tool 对象 MAY 包含 `frontend_bundle`
+- **AND** `frontend_bundle` 缺省或为 null 时 SHALL 表示该 tool 没有可用的前端 bundle
+
 ### Requirement: Workspace tools expose a complete config_schema
 `/v1/workspace/tools` 返回的工具对象 MUST 包含可直接驱动 UI 的 `config_schema`（如支持主题、数量/难度选项与默认值）。
 

@@ -53,3 +53,11 @@ Agent 运行依赖 MUST 通过显式依赖声明/注入传入，不得隐式读�
 #### Scenario: Plugin imports shared types
 - **WHEN** 外部插件需要引用宿主提供的 schema/render 类型
 - **THEN** 这些类型 SHALL 可被稳定导入而不依赖私有实现细节
+
+### Requirement: OutputTypePlugin may declare frontend_bundle metadata
+宿主 MUST 允许 `OutputTypePlugin` 通过稳定共享类型声明可选的 `frontend_bundle` 元数据，以支持插件携带前端交互 UI 渲染器的发现与装配。
+
+#### Scenario: Host accepts OutputTypePlugin.frontend_bundle
+- **WHEN** 一个插件实现 `OutputTypePlugin` 且提供 `frontend_bundle`
+- **THEN** 宿主 SHALL 校验该值符合共享类型 `FrontendBundleDescriptor`
+- **AND** 校验失败时宿主 SHALL 忽略该字段并给出可诊断信息（日志或合规报告）

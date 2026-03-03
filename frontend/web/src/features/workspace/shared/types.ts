@@ -148,6 +148,17 @@ export interface PluginConfigSchema {
   supports_topic: boolean;
 }
 
+export type FrontendBundleKind = 'builtin';
+export type FrontendBundleApiVersion = 'v1';
+
+export interface FrontendBundleDescriptor {
+  api_version: FrontendBundleApiVersion;
+  kind: FrontendBundleKind;
+  id: string;
+  export: string;
+  meta: Record<string, unknown>;
+}
+
 export interface Notebook {
   id: number;
   title: string;
@@ -212,6 +223,7 @@ export interface WorkspaceTool {
   enabled: boolean;
   renderDescriptor?: RenderDescriptor | null;
   configSchema?: PluginConfigSchema | null;
+  frontendBundle?: FrontendBundleDescriptor | null;
 }
 
 export interface SlideOutlineItem {

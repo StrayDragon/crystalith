@@ -376,6 +376,13 @@ class AppFeaturesSettings(BaseModel):
         False,
         description="Embed UI envelopes into assistant message content.",
     )
+    workspace_frontend_bundles_enabled: bool = Field(
+        True,
+        description=(
+            "If true, expose frontend bundle descriptors for workspace tools/outputs "
+            "(enables interactive renderers in the web UI). Set false to force fallback rendering."
+        ),
+    )
 
 
 class AppSettings(BaseModel):

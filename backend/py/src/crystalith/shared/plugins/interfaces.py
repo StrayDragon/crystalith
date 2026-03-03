@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 from pydantic import BaseModel
 
 from crystalith.shared.config import ModelConfig, Settings
-from .render_types import OutputTypePluginMeta, PluginConfigSchema, RenderDescriptor
+from .render_types import FrontendBundleDescriptor, OutputTypePluginMeta, PluginConfigSchema, RenderDescriptor
 if TYPE_CHECKING:
     from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
     from crystalith.shared.parsers.interfaces import Parser
@@ -88,3 +88,15 @@ class OutputTypePlugin(Protocol):
     metadata: OutputTypePluginMeta | None
     render_descriptor: RenderDescriptor | None
     config_schema: PluginConfigSchema | None
+
+
+@runtime_checkable
+class OutputTypeFrontendBundle(Protocol):
+    """
+    Optional frontend bundle metadata for OutputType plugins.
+
+    Kept as a separate protocol so adding this attribute does not break
+    existing OutputTypePlugin implementations loaded via runtime checks.
+    """
+
+    frontend_bundle: FrontendBundleDescriptor | None

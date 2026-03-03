@@ -10,6 +10,7 @@ import type {
   OutputItem,
   OutputTypeId,
   PanelId,
+  FrontendBundleDescriptor,
   RenderDescriptor,
   RefineJob,
   RefineMode,
@@ -48,6 +49,7 @@ export interface WorkspaceStoreState {
   outputs: OutputItem[];
   outputType: OutputTypeId;
   outputTypeRenderDescriptors: Partial<Record<OutputTypeId, RenderDescriptor>>;
+  outputTypeFrontendBundles: Partial<Record<OutputTypeId, FrontendBundleDescriptor>>;
 
   // --- Refine ---
   refineMode: RefineMode;
@@ -101,6 +103,9 @@ export interface WorkspaceStoreActions {
   setOutputTypeRenderDescriptors: (
     descriptors: Partial<Record<OutputTypeId, RenderDescriptor>>,
   ) => void;
+  setOutputTypeFrontendBundles: (
+    bundles: Partial<Record<OutputTypeId, FrontendBundleDescriptor>>,
+  ) => void;
 
   // --- Refine ---
   setRefineMode: (mode: RefineMode) => void;
@@ -142,6 +147,7 @@ const initialState: WorkspaceStoreState = {
   outputs: [],
   outputType: 'FAQ',
   outputTypeRenderDescriptors: {},
+  outputTypeFrontendBundles: {},
   refineMode: 'paragraph',
   refinePrompt: '',
   refineJobs: [],
@@ -264,6 +270,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   setOutputType: (type) => set({ outputType: type }),
   setOutputTypeRenderDescriptors: (descriptors) =>
     set({ outputTypeRenderDescriptors: descriptors }),
+  setOutputTypeFrontendBundles: (bundles) =>
+    set({ outputTypeFrontendBundles: bundles }),
 
   // --- Refine ---
   setRefineMode: (mode) => set({ refineMode: mode }),

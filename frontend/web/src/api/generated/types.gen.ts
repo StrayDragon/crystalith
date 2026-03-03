@@ -506,6 +506,39 @@ export type FieldDescriptor = {
 };
 
 /**
+ * FrontendBundleDescriptor
+ *
+ * Declarative frontend renderer bundle descriptor.
+ *
+ * v1 only supports `kind="builtin"`: the bundle must be shipped inside the
+ * frontend build and resolved via a deterministic registry (id -> loader).
+ */
+export type FrontendBundleDescriptor = {
+    /**
+     * Api Version
+     */
+    api_version?: 'v1';
+    /**
+     * Export
+     */
+    export?: string;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Kind
+     */
+    kind?: 'builtin';
+    /**
+     * Meta
+     */
+    meta?: {
+        [key: string]: unknown;
+    };
+};
+
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -2681,6 +2714,7 @@ export type WorkspaceTool = {
      * Enabled
      */
     enabled?: boolean;
+    frontend_bundle?: FrontendBundleDescriptor | null;
     /**
      * Id
      */

@@ -1,14 +1,14 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Menu, MenuHandler, MenuList, MenuItem, Spinner } from '@material-tailwind/react';
 import { Download as DownloadIcon } from '@mui/icons-material';
 
-import type { OutputItem, OutputTypeId } from '../../shared/types';
+import type { FrontendBundleDescriptor, OutputItem, OutputTypeId } from '../../shared/types';
 import { getOutputPayloadWarnings, isFallbackOutputPayload } from '../../shared/outputPayload';
 import { LAYER_LEVELS } from '../../../../shared/layer';
 import { t } from '../../../../shared/i18n';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
-import { pluginRegistry } from './plugins';
-import { initializePlugins } from './plugins/registerPlugins';
+import { getBuiltinBundleLoader } from '../../../../plugins/official/registry';
 import { EXPORT_FORMAT_LABELS } from './exporters';
 import { useExport } from './useExport';
 import GenericOutputRenderer from './GenericOutputRenderer';
@@ -17,8 +17,15 @@ interface OutputContentProps {
   output: OutputItem;
 }
 
-// Ensure plugins are initialized
-initializePlugins();
+type BundleRenderer = (content: unknown, isFallback?: boolean) => ReactNode;
+
+function isSupportedFrontendBundle(bundle: FrontendBundleDescriptor | null): bundle is FrontendBundleDescriptor {
+  if (!bundle) return false;
+  if (bundle.api_version !== 'v1') return false;
+  if (bundle.kind !== 'builtin') return false;
+  if (!bundle.id.trim() || !bundle.export.trim()) return false;
+  return true;
+}
 
 export default function OutputContent({ output }: OutputContentProps) {
   const content = output.content ?? {};
@@ -27,15 +34,57 @@ export default function OutputContent({ output }: OutputContentProps) {
   const typeId = output.type as OutputTypeId;
   const { isExporting, activeFormat, getSupportedFormats, exportOutput } = useExport();
   const renderDescriptor = useWorkspaceStore((s) => s.outputTypeRenderDescriptors[typeId] ?? null);
+  const frontendBundle = useWorkspaceStore((s) => s.outputTypeFrontendBundles[typeId] ?? null);
+  const [bundleRenderer, setBundleRenderer] = useState<BundleRenderer | null>(null);
 
   const supportedFormats = useMemo(() => getSupportedFormats(typeId), [getSupportedFormats, typeId]);
 
-  // Get the plugin for this output type
-  const plugin = useMemo(() => pluginRegistry.get(typeId), [typeId]);
-  const pluginCanRender = plugin ? plugin.validateContent(content) : false;
+  useEffect(() => {
+    let cancelled = false;
+    setBundleRenderer(null);
 
-  const body = plugin && pluginCanRender ? (
-    plugin.render(content, isFallback)
+    if (!isSupportedFrontendBundle(frontendBundle)) return () => {};
+
+    const loader = getBuiltinBundleLoader(frontendBundle.id);
+    if (!loader) {
+      if (import.meta.env.DEV) {
+        console.warn(`Missing builtin frontend bundle loader: ${frontendBundle.id}`);
+      }
+      return () => {};
+    }
+
+    void loader()
+      .then((mod) => {
+        const exported = (mod as unknown as Record<string, unknown>)[frontendBundle.export];
+        if (typeof exported !== 'function') {
+          if (import.meta.env.DEV) {
+            console.warn(
+              `Invalid frontend bundle export "${frontendBundle.export}" for "${frontendBundle.id}"`,
+            );
+          }
+          return;
+        }
+        if (cancelled) return;
+        setBundleRenderer(() => exported as BundleRenderer);
+      })
+      .catch((error: unknown) => {
+        if (import.meta.env.DEV) {
+          console.warn(`Failed to load frontend bundle "${frontendBundle.id}"`, error);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    frontendBundle?.api_version,
+    frontendBundle?.export,
+    frontendBundle?.id,
+    frontendBundle?.kind,
+  ]);
+
+  const body = bundleRenderer ? (
+    bundleRenderer(content, isFallback)
   ) : renderDescriptor ? (
     <GenericOutputRenderer content={content} renderDescriptor={renderDescriptor} />
   ) : (

@@ -756,6 +756,43 @@
         "title": "FieldDescriptor",
         "type": "object"
       },
+      "FrontendBundleDescriptor": {
+        "additionalProperties": false,
+        "description": "Declarative frontend renderer bundle descriptor.\n\nv1 only supports `kind=\"builtin\"`: the bundle must be shipped inside the\nfrontend build and resolved via a deterministic registry (id -> loader).",
+        "properties": {
+          "api_version": {
+            "const": "v1",
+            "default": "v1",
+            "title": "Api Version",
+            "type": "string"
+          },
+          "export": {
+            "default": "render",
+            "title": "Export",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "builtin",
+            "default": "builtin",
+            "title": "Kind",
+            "type": "string"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "FrontendBundleDescriptor",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -4504,6 +4541,16 @@
             "default": true,
             "title": "Enabled",
             "type": "boolean"
+          },
+          "frontend_bundle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FrontendBundleDescriptor"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "id": {
             "title": "Id",
