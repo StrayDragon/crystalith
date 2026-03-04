@@ -225,3 +225,64 @@ def test_config_manager_load_roundtrip_with_schema(tmp_path, monkeypatch) -> Non
     settings = manager.load(validate_schema=True)
     assert isinstance(settings, Settings)
     assert settings.models.get_default_for_role("chat") is not None
+
+
+def test_config_manager_normalizes_data_paths_from_config_root(tmp_path, monkeypatch) -> None:
+    root = tmp_path / "repo"
+    config_dir = root / "config"
+    config_dir.mkdir(parents=True)
+    config_path = config_dir / "app.yaml"
+
+    _write_yaml(config_path, _minimal_config_yaml())
+
+    manager = ConfigManager(config_path=config_path)
+
+    # Mock reason: keep config load test deterministic and independent of local Ollama availability.
+    monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
+
+    settings = manager.load(validate_schema=False)
+
+    assert settings.database.url.startswith("sqlite")
+    assert root.as_posix() in settings.database.url
+    assert "/config/" not in settings.database.url
+    assert settings.vector_storage.sqlite.path.startswith(root.as_posix())
+    assert settings.vector_storage.chroma.path.startswith(root.as_posix())
+
+
+def test_config_manager_apply_env_overrides_updates_search_settings(monkeypatch) -> None:
+    settings = make_settings(
+        {
+            "models": {
+                "defaults": {"chat": "test-chat", "embedding": "test-embed"},
+                "available": [
+                    {
+                        "id": "test-chat",
+                        "provider": "test",
+                        "model": "test-chat",
+                        "display_name": "Test Chat",
+                        "roles": ["chat"],
+                    },
+                    {
+                        "id": "test-embed",
+                        "provider": "test",
+                        "model": "test-embed",
+                        "display_name": "Test Embed",
+                        "roles": ["embed"],
+                    },
+                ],
+            }
+        }
+    )
+    manager = ConfigManager(config_path=Path("config/app.yaml"))
+
+    monkeypatch.setenv("CRYSTALITH_SEARCH__SEARXNG__HOST", "http://127.0.0.1:50201")
+    monkeypatch.setenv("CRYSTALITH_SEARCH__SEARXNG__API_KEY", "k")
+    monkeypatch.setenv("CRYSTALITH_SEARCH__SEARXNG__TIMEOUT", "12")
+    monkeypatch.setenv("CRYSTALITH_SEARCH__SEARXNG__MAX_RESULTS", "7")
+
+    manager._apply_env_overrides(settings, secrets={})
+
+    assert settings.search.searxng.host == "http://127.0.0.1:50201"
+    assert settings.search.searxng.api_key == "k"
+    assert settings.search.searxng.timeout == 12
+    assert settings.search.searxng.max_results == 7

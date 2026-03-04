@@ -19,6 +19,23 @@ Crystalith runtime configuration lives in `config/app.yaml`.
 - `vector_storage.provider`: `chroma` or `sqlite`
 - `database.url`: SQLAlchemy URL (async)
 - `embedding.batch_size`: embedding batch size (perf tuning)
+- `search.searxng.host`: SearXNG base URL (empty disables web search)
+
+## Web search (SearXNG)
+
+Crystalith’s web search / deep research uses SearXNG. When `search.searxng.host` is empty, web search is disabled.
+
+Ways to enable:
+- Config: set `search.searxng.host` in `config/app.yaml`
+- Env overrides:
+  - `CRYSTALITH_SEARCH__SEARXNG__HOST`
+  - `CRYSTALITH_SEARCH__SEARXNG__API_KEY` (optional)
+  - `CRYSTALITH_SEARCH__SEARXNG__TIMEOUT`
+  - `CRYSTALITH_SEARCH__SEARXNG__MAX_RESULTS`
+
+Compose options:
+- Prod-like: add `deployments/prod/docker-compose.searxng.yml`
+- Hybrid dev: keep SearXNG enabled in `DEV_DEPS_OPTIONALS` (default)
 
 ## API authentication (self-host)
 

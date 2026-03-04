@@ -1,0 +1,28 @@
+x-logging-default: &logging-default
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  logging: *logging-default
+
+services:
+  searxng:
+    <<: *service-defaults
+    image: ${SEARXNG_IMAGE:-searxng/searxng:latest}
+    container_name: crystalith-deps-searxng
+    ports:
+      - "${CL_DEPS_SEARXNG_PORT:-50201}:8080"
+    volumes:
+      - ../searxng/settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      # NOTE: dev-only defaults. Do not expose this service publicly.
+      SEARXNG_BASE_URL: "http://localhost:${CL_DEPS_SEARXNG_PORT:-50201}/"
+      SEARXNG_SECRET: ${SEARXNG_SECRET:-dev}
+    networks:
+      - deps-net
+
+networks:
+  deps-net: {}

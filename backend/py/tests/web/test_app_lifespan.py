@@ -154,6 +154,7 @@ async def test_lifespan_starts_ollama_monitor_when_enabled(
             }
         )
     )
+    settings.models.defaults.embedding = "local-embed"
 
     calls = {"probe": 0, "discover": 0}
 

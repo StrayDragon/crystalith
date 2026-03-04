@@ -76,7 +76,7 @@ COPY backend/py/alembic.ini ./
 COPY backend/py/alembic ./alembic
 COPY backend/py/scripts ./scripts
 
-RUN mkdir -p ./data \
+RUN mkdir -p /app/data \
   && chown -R crystalith:crystalith /app
 
 USER crystalith

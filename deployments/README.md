@@ -11,6 +11,7 @@ Core terminology mapping:
 - Core: `deployments/prod/docker-compose.yml`
 - Optional storage: `deployments/prod/docker-compose.storage.yml`
 - Optional redis: `deployments/prod/docker-compose.redis.yml`
+- Optional searxng: `deployments/prod/docker-compose.searxng.yml`
 - Optional ollama: `deployments/prod/docker-compose.ollama.yml`
 - Optional slidev: `deployments/prod/docker-compose.slidev.yml`
 - Optional host remap: `deployments/prod/docker-compose.host-remap.yml`
@@ -22,12 +23,24 @@ cp .env.example .env
 just dev-docker-up
 ```
 
-Default `just dev-docker-up` starts a developer stack: core + `storage redis`.
+Default `just dev-docker-up` starts a developer stack: core + `storage redis searxng`.
 
-Dev-friendly preset (core + storage + redis, with China mirrors as build defaults):
+Dev-friendly preset (core + storage + redis + searxng, with China mirrors as build defaults):
 
 ```bash
 just dev-docker-up
+```
+
+## Dev deps (host hot reload)
+
+If you want fast reload (backend/frontend on host) but still want Docker-managed
+dependencies (Postgres/Chroma/Redis/Ollama/SearXNG), use the dev deps composition:
+
+```bash
+cp .env.example .env
+just dev
+# or (deps only):
+just dev-deps-up
 ```
 
 ## Optional Composition Examples
@@ -41,13 +54,14 @@ docker compose --env-file .env \
   up -d --build
 ```
 
-Core + storage + redis + ollama:
+Core + storage + redis + searxng + ollama:
 
 ```bash
 docker compose --env-file .env \
   -f deployments/prod/docker-compose.yml \
   -f deployments/prod/docker-compose.storage.yml \
   -f deployments/prod/docker-compose.redis.yml \
+  -f deployments/prod/docker-compose.searxng.yml \
   -f deployments/prod/docker-compose.ollama.yml \
   up -d --build
 ```
@@ -56,8 +70,9 @@ With `just`:
 
 ```bash
 just DEV_OPTIONALS="storage" dev-docker-up
-just DEV_OPTIONALS="storage redis ollama" dev-docker-up
-just DEV_OPTIONALS="storage redis ollama slidev" dev-docker-up
+just DEV_OPTIONALS="storage redis searxng" dev-docker-up
+just DEV_OPTIONALS="storage redis searxng ollama" dev-docker-up
+just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up
 just DEV_OPTIONALS="storage redis" dev-docker-down
 ```
 
@@ -65,6 +80,7 @@ just DEV_OPTIONALS="storage redis" dev-docker-down
 
 - `storage`: runs `postgres` + `chromadb`. You can replace with external services by setting `DATABASE_URL` / `CHROMA_HOST` / `CHROMA_PORT`.
 - `redis`: enables redis cache via `CACHE_PROVIDER=redis` and `REDIS_URL`.
+- `searxng`: runs a local SearXNG instance for web search. If you use external SearXNG, set `CRYSTALITH_SEARCH__SEARXNG__HOST` and skip this overlay.
 - `ollama`: runs local ollama. If you use external/host ollama, set `OLLAMA_HOST` and skip this overlay.
 - `slidev`: local slide preview service.
 - `host-remap`: host-network socat bridge for VPN/Tailscale scenarios.
@@ -100,6 +116,15 @@ Enable when you want fully local models (no external LLM provider).
 - External replacement: set `OLLAMA_HOST=...` and omit the overlay service.
 - Acceptance:
   - Verify `optional.ollama.enabled == true` and endpoint matches `OLLAMA_HOST`.
+
+### searxng
+
+Enable when you want built-in web search / deep research to run without an external search provider.
+
+- Enable: add `-f deployments/prod/docker-compose.searxng.yml`.
+- External replacement: set `CRYSTALITH_SEARCH__SEARXNG__HOST=...` and omit the overlay service.
+- Acceptance:
+  - Verify `optional.search_searxng.enabled == true` and status is not `unknown`.
 
 ### slidev
 
@@ -169,4 +194,4 @@ Old command calls are removed; switch to new entrypoints directly:
 Rollback path (temporary):
 
 - To emulate previous “full dependency” startup behavior, explicitly enable all overlays:
-  `just DEV_OPTIONALS="storage redis ollama slidev" dev-docker-up`
+  `just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up`

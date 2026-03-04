@@ -1,0 +1,7 @@
+use_default_settings: true
+
+search:
+  # Enable JSON output for programmatic usage (LangChain wrapper, health probes).
+  formats:
+    - html
+    - json

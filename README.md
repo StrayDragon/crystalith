@@ -23,6 +23,17 @@ Notebook-centric AI workspace with RAG over your sources.
 
 ## Quick start (local dev)
 
+Recommended (host hot reload + docker deps):
+
+```bash
+cp .env.example .env
+just dev
+```
+
+Profiles / tuning: see `docs/content/optimal-config.md`.
+
+No-docker (SQLite + embedded Chroma):
+
 Backend:
 
 ```bash
@@ -40,7 +51,7 @@ pnpm install
 pnpm dev
 ```
 
-## Quick start (Docker Compose)
+## Quick start (Docker Compose, prod-like)
 
 ```bash
 cp .env.example .env

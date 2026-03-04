@@ -1,0 +1,54 @@
+x-healthcheck-default: &healthcheck-default
+  interval: 10s
+  timeout: 5s
+  retries: 20
+
+x-logging-default: &logging-default
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  logging: *logging-default
+
+x-deploy-small: &deploy-small
+  resources:
+    limits:
+      cpus: "0.50"
+      memory: 512M
+
+services:
+  api:
+    environment:
+      CRYSTALITH_SEARCH__SEARXNG__HOST: ${CRYSTALITH_SEARCH__SEARXNG__HOST:-http://searxng:8080}
+    depends_on:
+      searxng:
+        condition: service_healthy
+
+  searxng:
+    <<: *service-defaults
+    image: ${SEARXNG_IMAGE:-searxng/searxng:latest}
+    container_name: crystalith-searxng
+    volumes:
+      - ../searxng/settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      # NOTE: Default is safe for internal-only use (no published ports).
+      # If you expose SearXNG publicly, set a strong secret and a correct public base URL.
+      SEARXNG_BASE_URL: ${SEARXNG_BASE_URL:-http://searxng:8080/}
+      SEARXNG_SECRET: ${SEARXNG_SECRET:-dev}
+    healthcheck:
+      <<: *healthcheck-default
+      # Avoid hitting external search engines during container health checks.
+      # Empty-query JSON requests return HTTP 400 quickly when JSON is enabled.
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request as u, urllib.error, sys; url='http://localhost:8080/search?q=&format=json';\ntry:\n  r=u.urlopen(url, timeout=2); r.read(1); sys.exit(0)\nexcept urllib.error.HTTPError as e:\n  sys.exit(0 if e.code==400 else 1)\n",
+        ]
+    deploy: *deploy-small
+    networks:
+      - frontend-net

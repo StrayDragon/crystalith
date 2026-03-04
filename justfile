@@ -404,14 +404,14 @@ docs-build *ARGS='':
 # --------------------------------------------------------------------------
 # Dev Compose (developer defaults)
 #
-# Default overlays: storage + redis.
-# Available overlays: storage redis ollama slidev host-remap
+# Default overlays: storage + redis + searxng.
+# Available overlays: storage redis searxng ollama slidev host-remap
 # Example:
-#   just DEV_OPTIONALS="storage redis ollama" dev-docker-up
+#   just DEV_OPTIONALS="storage redis searxng ollama" dev-docker-up
 # --------------------------------------------------------------------------
 
 COMPOSE_CORE_FILE := "deployments/prod/docker-compose.yml"
-DEV_OPTIONALS := "storage redis"
+DEV_OPTIONALS := "storage redis searxng"
 CHINA_APT_MIRROR := "https://mirrors.tuna.tsinghua.edu.cn/debian"
 CHINA_UV_INDEX_URL := "https://mirrors.aliyun.com/pypi/simple/"
 CHINA_NPM_REGISTRY := "https://registry.npmmirror.com"
@@ -419,10 +419,17 @@ CHINA_NPM_REGISTRY := "https://registry.npmmirror.com"
 dev-docker-up *ARGS='':
     #!/usr/bin/env bash
     set -euo pipefail
+    ENV_FILE="${ENV_FILE:-.env}"
+    if [[ ! -f "$ENV_FILE" ]]; then
+      ENV_FILE=".env.example"
+      echo "[dev-docker-up] ENV_FILE not found; using $ENV_FILE (copy to .env to customize)."
+    fi
     FILES=(-f {{COMPOSE_CORE_FILE}})
     for optional in {{DEV_OPTIONALS}}; do
       FILES+=(-f "deployments/prod/docker-compose.${optional}.yml")
     done
+    BUILD_FLAG="--build"
+    case "${DEV_BUILD:-1}" in 0|false|no|off) BUILD_FLAG="" ;; esac
     EXTRA_ARGS=({{ARGS}})
     if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
       EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
@@ -430,11 +437,16 @@ dev-docker-up *ARGS='':
     APT_MIRROR="${APT_MIRROR:-{{CHINA_APT_MIRROR}}}" \
     UV_INDEX_URL="${UV_INDEX_URL:-{{CHINA_UV_INDEX_URL}}}" \
     NPM_REGISTRY="${NPM_REGISTRY:-{{CHINA_NPM_REGISTRY}}}" \
-    docker compose --env-file .env "${FILES[@]}" up -d --build "${EXTRA_ARGS[@]}"
+    docker compose --env-file "$ENV_FILE" "${FILES[@]}" up -d ${BUILD_FLAG} "${EXTRA_ARGS[@]}"
 
 dev-docker-down *ARGS='':
     #!/usr/bin/env bash
     set -euo pipefail
+    ENV_FILE="${ENV_FILE:-.env}"
+    if [[ ! -f "$ENV_FILE" ]]; then
+      ENV_FILE=".env.example"
+      echo "[dev-docker-down] ENV_FILE not found; using $ENV_FILE (copy to .env to customize)."
+    fi
     FILES=(-f {{COMPOSE_CORE_FILE}})
     for optional in {{DEV_OPTIONALS}}; do
       FILES+=(-f "deployments/prod/docker-compose.${optional}.yml")
@@ -443,20 +455,30 @@ dev-docker-down *ARGS='':
     if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
       EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
     fi
-    docker compose --env-file .env "${FILES[@]}" down "${EXTRA_ARGS[@]}"
+    docker compose --env-file "$ENV_FILE" "${FILES[@]}" down "${EXTRA_ARGS[@]}"
 
 dev-docker-ps:
     #!/usr/bin/env bash
     set -euo pipefail
+    ENV_FILE="${ENV_FILE:-.env}"
+    if [[ ! -f "$ENV_FILE" ]]; then
+      ENV_FILE=".env.example"
+      echo "[dev-docker-ps] ENV_FILE not found; using $ENV_FILE (copy to .env to customize)."
+    fi
     FILES=(-f {{COMPOSE_CORE_FILE}})
     for optional in {{DEV_OPTIONALS}}; do
       FILES+=(-f "deployments/prod/docker-compose.${optional}.yml")
     done
-    docker compose --env-file .env "${FILES[@]}" ps
+    docker compose --env-file "$ENV_FILE" "${FILES[@]}" ps
 
 dev-docker-logs *ARGS='':
     #!/usr/bin/env bash
     set -euo pipefail
+    ENV_FILE="${ENV_FILE:-.env}"
+    if [[ ! -f "$ENV_FILE" ]]; then
+      ENV_FILE=".env.example"
+      echo "[dev-docker-logs] ENV_FILE not found; using $ENV_FILE (copy to .env to customize)."
+    fi
     FILES=(-f {{COMPOSE_CORE_FILE}})
     for optional in {{DEV_OPTIONALS}}; do
       FILES+=(-f "deployments/prod/docker-compose.${optional}.yml")
@@ -465,11 +487,16 @@ dev-docker-logs *ARGS='':
     if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
       EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
     fi
-    docker compose --env-file .env "${FILES[@]}" logs -f "${EXTRA_ARGS[@]}"
+    docker compose --env-file "$ENV_FILE" "${FILES[@]}" logs -f "${EXTRA_ARGS[@]}"
 
 dev-docker-rebuild SERVICE:
     #!/usr/bin/env bash
     set -euo pipefail
+    ENV_FILE="${ENV_FILE:-.env}"
+    if [[ ! -f "$ENV_FILE" ]]; then
+      ENV_FILE=".env.example"
+      echo "[dev-docker-rebuild] ENV_FILE not found; using $ENV_FILE (copy to .env to customize)."
+    fi
     FILES=(-f {{COMPOSE_CORE_FILE}})
     for optional in {{DEV_OPTIONALS}}; do
       FILES+=(-f "deployments/prod/docker-compose.${optional}.yml")
@@ -477,7 +504,7 @@ dev-docker-rebuild SERVICE:
     APT_MIRROR="${APT_MIRROR:-{{CHINA_APT_MIRROR}}}" \
     UV_INDEX_URL="${UV_INDEX_URL:-{{CHINA_UV_INDEX_URL}}}" \
     NPM_REGISTRY="${NPM_REGISTRY:-{{CHINA_NPM_REGISTRY}}}" \
-    docker compose --env-file .env "${FILES[@]}" up -d --build --no-deps {{SERVICE}}
+    docker compose --env-file "$ENV_FILE" "${FILES[@]}" up -d --build --no-deps {{SERVICE}}
 
 dev-docker-smoke:
     #!/usr/bin/env bash
@@ -496,6 +523,192 @@ dev-docker-smoke:
 
 composition-smoke:
     ./scripts/composition_smoke.sh
+
+# --------------------------------------------------------------------------
+# Dev (host hot reload + docker deps)
+#
+# Default overlays: storage + redis + searxng.
+# Available overlays: storage redis ollama searxng
+# Example:
+#   just DEV_DEPS_OPTIONALS="storage redis ollama" dev-deps-up
+# --------------------------------------------------------------------------
+
+DEV_DEPS_CORE_FILE := "deployments/dev/docker-compose.deps.yml"
+DEV_DEPS_OPTIONALS := "storage redis searxng"
+DEV_DEPS_PROJECT := "crystalith-dev-deps"
+
+dev-deps-up *ARGS='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ENV_FILE="${ENV_FILE:-.env}"
+    if [[ ! -f "$ENV_FILE" ]]; then
+      ENV_FILE=".env.example"
+      echo "[dev-deps-up] ENV_FILE not found; using $ENV_FILE (copy to .env to customize)."
+    fi
+    PROJECT="${DEV_DEPS_PROJECT:-{{DEV_DEPS_PROJECT}}}"
+    FILES=(-f {{DEV_DEPS_CORE_FILE}})
+    for optional in {{DEV_DEPS_OPTIONALS}}; do
+      FILES+=(-f "deployments/dev/docker-compose.deps.${optional}.yml")
+    done
+    EXTRA_ARGS=({{ARGS}})
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
+      EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
+    fi
+    docker compose -p "$PROJECT" --env-file "$ENV_FILE" "${FILES[@]}" up -d "${EXTRA_ARGS[@]}"
+
+dev-deps-down *ARGS='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ENV_FILE="${ENV_FILE:-.env}"
+    if [[ ! -f "$ENV_FILE" ]]; then
+      ENV_FILE=".env.example"
+      echo "[dev-deps-down] ENV_FILE not found; using $ENV_FILE (copy to .env to customize)."
+    fi
+    PROJECT="${DEV_DEPS_PROJECT:-{{DEV_DEPS_PROJECT}}}"
+    FILES=(-f {{DEV_DEPS_CORE_FILE}})
+    for optional in {{DEV_DEPS_OPTIONALS}}; do
+      FILES+=(-f "deployments/dev/docker-compose.deps.${optional}.yml")
+    done
+    EXTRA_ARGS=({{ARGS}})
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
+      EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
+    fi
+    docker compose -p "$PROJECT" --env-file "$ENV_FILE" "${FILES[@]}" down "${EXTRA_ARGS[@]}"
+
+dev-deps-ps:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ENV_FILE="${ENV_FILE:-.env}"
+    if [[ ! -f "$ENV_FILE" ]]; then
+      ENV_FILE=".env.example"
+      echo "[dev-deps-ps] ENV_FILE not found; using $ENV_FILE (copy to .env to customize)."
+    fi
+    PROJECT="${DEV_DEPS_PROJECT:-{{DEV_DEPS_PROJECT}}}"
+    FILES=(-f {{DEV_DEPS_CORE_FILE}})
+    for optional in {{DEV_DEPS_OPTIONALS}}; do
+      FILES+=(-f "deployments/dev/docker-compose.deps.${optional}.yml")
+    done
+    docker compose -p "$PROJECT" --env-file "$ENV_FILE" "${FILES[@]}" ps
+
+dev-deps-logs *ARGS='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ENV_FILE="${ENV_FILE:-.env}"
+    if [[ ! -f "$ENV_FILE" ]]; then
+      ENV_FILE=".env.example"
+      echo "[dev-deps-logs] ENV_FILE not found; using $ENV_FILE (copy to .env to customize)."
+    fi
+    PROJECT="${DEV_DEPS_PROJECT:-{{DEV_DEPS_PROJECT}}}"
+    FILES=(-f {{DEV_DEPS_CORE_FILE}})
+    for optional in {{DEV_DEPS_OPTIONALS}}; do
+      FILES+=(-f "deployments/dev/docker-compose.deps.${optional}.yml")
+    done
+    EXTRA_ARGS=({{ARGS}})
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
+      EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
+    fi
+    docker compose -p "$PROJECT" --env-file "$ENV_FILE" "${FILES[@]}" logs -f "${EXTRA_ARGS[@]}"
+
+dev-backend:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    optionals="{{DEV_DEPS_OPTIONALS}}"
+    has_optional() { for o in $optionals; do [[ "$o" == "$1" ]] && return 0; done; return 1; }
+
+    postgres_port="${CL_DEPS_POSTGRES_PORT:-5434}"
+    chroma_port="${CL_DEPS_CHROMA_PORT:-8001}"
+    redis_port="${CL_DEPS_REDIS_PORT:-6380}"
+    ollama_port="${CL_DEPS_OLLAMA_PORT:-11434}"
+    searxng_port="${CL_DEPS_SEARXNG_PORT:-50201}"
+
+    wait_tcp() {
+      local host="$1"
+      local port="$2"
+      local timeout_s="${3:-120}"
+      local start
+      start="$(date +%s)"
+      while true; do
+        if python -c 'import socket, sys; host = sys.argv[1]; port = int(sys.argv[2]); s = socket.socket(); s.settimeout(1.0); s.connect((host, port)); s.close()' "$host" "$port" >/dev/null 2>&1
+        then
+          return 0
+        fi
+        if (( "$(date +%s)" - start >= timeout_s )); then
+          echo "timeout waiting for tcp ${host}:${port}" >&2
+          return 1
+        fi
+        sleep 1
+      done
+    }
+
+    wait_http() {
+      local url="$1"
+      local timeout_s="${2:-120}"
+      local start
+      start="$(date +%s)"
+      while true; do
+        if python -c 'import sys, urllib.request; urllib.request.urlopen(sys.argv[1], timeout=2).read()' "$url" >/dev/null 2>&1
+        then
+          return 0
+        fi
+        if (( "$(date +%s)" - start >= timeout_s )); then
+          echo "timeout waiting for http ${url}" >&2
+          return 1
+        fi
+        sleep 1
+      done
+    }
+
+    if has_optional storage; then
+      wait_tcp 127.0.0.1 "$postgres_port" 120
+      wait_http "http://127.0.0.1:${chroma_port}/api/v1/heartbeat" 120
+    fi
+
+    if has_optional redis; then
+      wait_tcp 127.0.0.1 "$redis_port" 60
+    fi
+
+    if has_optional searxng; then
+      wait_http "http://127.0.0.1:${searxng_port}/search?q=ping&format=json" 60
+    fi
+
+    env_args=()
+    env_args+=(HOST="${HOST:-0.0.0.0}")
+    env_args+=(PORT="${PORT:-8032}")
+    env_args+=(RELOAD="${RELOAD:-1}")
+    env_args+=(AUTO_DB_INIT="${AUTO_DB_INIT:-1}")
+
+    if has_optional storage; then
+      env_args+=(DATABASE_URL="${DATABASE_URL:-postgresql+asyncpg://crystalith:crystalith@127.0.0.1:${postgres_port}/crystalith}")
+      env_args+=(CHROMA_HOST="${CHROMA_HOST:-127.0.0.1}")
+      env_args+=(CHROMA_PORT="${CHROMA_PORT:-${chroma_port}}")
+    fi
+
+    if has_optional redis; then
+      env_args+=(CACHE_PROVIDER="${CACHE_PROVIDER:-redis}")
+      env_args+=(REDIS_URL="${REDIS_URL:-redis://127.0.0.1:${redis_port}/0}")
+    fi
+
+    if has_optional ollama; then
+      env_args+=(OLLAMA_HOST="${OLLAMA_HOST:-http://127.0.0.1:${ollama_port}}")
+    fi
+
+    if has_optional searxng; then
+      env_args+=(CRYSTALITH_SEARCH__SEARXNG__HOST="${CRYSTALITH_SEARCH__SEARXNG__HOST:-http://127.0.0.1:${searxng_port}}")
+    fi
+
+    exec env "${env_args[@]}" uv run --project backend/py python backend/py/main.py
+
+dev-frontend:
+    just -f frontend/web/justfile dev
+
+dev:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just dev-deps-up
+    just dev-backend &
+    backend_pid="$!"
+    trap 'kill "$backend_pid" >/dev/null 2>&1 || true' EXIT
+    just dev-frontend
 
 # --------------------------------------------------------------------------
 # Misc

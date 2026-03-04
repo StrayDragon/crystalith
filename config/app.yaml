@@ -189,8 +189,10 @@ context_window:
 # ----------------------------------------------------------------------------
 search:
   searxng:
-    # host: "http://host.docker.internal:50201"
-    host: "http://gateway.lan:50201"
+    # Empty host disables web search by default.
+    # Enable via env: CRYSTALITH_SEARCH__SEARXNG__HOST="http://127.0.0.1:50201" (dev deps)
+    # or "http://searxng:8080" (compose overlay).
+    host: ""
     timeout: 10
     max_results: 10
 
@@ -234,8 +236,7 @@ optional_services:
 
   searxng:
     enabled: false
-    # endpoint: "http://host.docker.internal:50201"
-    endpoint: "http://gateway.lan:50201"
+    endpoint: "http://localhost:50201"
     timeout_s: 10
     probe:
       enabled: true

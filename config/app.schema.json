@@ -1216,8 +1216,8 @@
       "description": "SearXNG search engine settings.",
       "properties": {
         "host": {
-          "default": "http://localhost:8888",
-          "description": "SearXNG instance URL",
+          "default": "",
+          "description": "SearXNG instance URL. Empty disables web search.",
           "title": "Host",
           "type": "string"
         },

@@ -10,6 +10,14 @@ Prerequisites:
 - Python 3.12
 - Node 20 + `pnpm`
 - `uv` (Python package manager)
+- Docker (recommended for local deps)
+
+Recommended (host hot reload + docker deps):
+
+```bash
+cp .env.example .env
+just dev
+```
 
 Backend (FastAPI):
 
