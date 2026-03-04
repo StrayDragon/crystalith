@@ -6,9 +6,11 @@ from typing import Literal, cast
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from crystalith.shared.config import Settings
 from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.plugins.render_types import (
     ConfigOption as PluginConfigOption,
+    FrontendBundleDescriptor,
     PluginConfigSchema,
     RenderDescriptor,
 )
@@ -30,6 +32,7 @@ class WorkspaceTool(BaseModel):
     prompt: str
     render_descriptor: RenderDescriptor | None = None
     config_schema: PluginConfigSchema | None = None
+    frontend_bundle: FrontendBundleDescriptor | None = None
     badge: str | None = None
     enabled: bool = True
 
@@ -184,6 +187,17 @@ def _build_tools() -> list[WorkspaceTool]:
     return tools
 
 
+_BUILTIN_FRONTEND_BUNDLES: dict[str, FrontendBundleDescriptor] = {
+    OutputType.FAQ.value: FrontendBundleDescriptor(id="output-faq", export="render"),
+    OutputType.GUIDE.value: FrontendBundleDescriptor(id="output-guide", export="render"),
+    OutputType.TIMELINE.value: FrontendBundleDescriptor(id="output-timeline", export="render"),
+    OutputType.MINDMAP.value: FrontendBundleDescriptor(id="output-mindmap", export="render"),
+    OutputType.QUIZ.value: FrontendBundleDescriptor(id="output-quiz", export="render"),
+    OutputType.BRIEFING.value: FrontendBundleDescriptor(id="output-briefing", export="render"),
+    OutputType.SLIDES.value: FrontendBundleDescriptor(id="output-slides", export="render"),
+}
+
+
 def _get_tool_by_id(tool_id: str) -> WorkspaceTool | None:
     """Get a tool by its ID."""
     for tool in _build_tools():
@@ -194,12 +208,28 @@ def _get_tool_by_id(tool_id: str) -> WorkspaceTool | None:
 
 @router.get("/tools", response_model=WorkspaceToolsResponse)
 async def list_workspace_tools(request: Request) -> WorkspaceToolsResponse:
+    frontend_bundles_enabled = True
+    try:
+        settings = cast(Settings, request.app.state.settings)
+        frontend_bundles_enabled = settings.app.features.workspace_frontend_bundles_enabled
+    except AttributeError:
+        frontend_bundles_enabled = True
+
     try:
         plugins = cast(PluginRegistry, request.app.state.plugins)
     except AttributeError:
         return WorkspaceToolsResponse(
             tools=[
-                tool.model_copy(update={"config_schema": _build_base_config_schema(tool.id)})
+                tool.model_copy(
+                    update={
+                        "config_schema": _build_base_config_schema(tool.id),
+                        "frontend_bundle": (
+                            _BUILTIN_FRONTEND_BUNDLES.get(tool.output_type.value)
+                            if frontend_bundles_enabled
+                            else None
+                        ),
+                    }
+                )
                 for tool in _build_tools()
             ]
         )
@@ -218,6 +248,14 @@ async def list_workspace_tools(request: Request) -> WorkspaceToolsResponse:
                 update={
                     "render_descriptor": plugins.get_render_descriptor(tool.output_type.value),
                     "config_schema": resolved_schema,
+                    "frontend_bundle": (
+                        (
+                            plugins.get_frontend_bundle(tool.output_type.value)
+                            or _BUILTIN_FRONTEND_BUNDLES.get(tool.output_type.value)
+                        )
+                        if frontend_bundles_enabled
+                        else None
+                    ),
                 }
             )
         )

@@ -67,7 +67,30 @@ class PluginConfigSchema(BaseModel):
     supports_topic: bool = True
 
 
+FrontendBundleKind = Literal["builtin"]
+FrontendBundleApiVersion = Literal["v1"]
+
+
+class FrontendBundleDescriptor(BaseModel):
+    """
+    Declarative frontend renderer bundle descriptor.
+
+    v1 only supports `kind="builtin"`: the bundle must be shipped inside the
+    frontend build and resolved via a deterministic registry (id -> loader).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    api_version: FrontendBundleApiVersion = "v1"
+    kind: FrontendBundleKind = "builtin"
+
+    id: str
+    export: str = "render"
+    meta: dict[str, object] = Field(default_factory=dict)
+
+
 FieldDescriptor.model_rebuild()
 ItemSchema.model_rebuild()
 RenderDescriptor.model_rebuild()
 PluginConfigSchema.model_rebuild()
+FrontendBundleDescriptor.model_rebuild()

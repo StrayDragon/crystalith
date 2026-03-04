@@ -5,6 +5,7 @@ import {
   listWorkspaceToolsV1WorkspaceToolsGet as listWorkspaceTools,
   refineBatchV1NotebooksNotebookIdRefineBatchPost as refineBatch,
   type FieldDescriptor as ApiFieldDescriptor,
+  type FrontendBundleDescriptor as ApiFrontendBundleDescriptor,
   type PluginConfigSchema as ApiPluginConfigSchema,
   type RenderDescriptor as ApiRenderDescriptor,
   type WorkspaceTool as ApiWorkspaceTool,
@@ -13,6 +14,7 @@ import { unwrapData } from '../../../../api/unwrap';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type {
   FieldDescriptor,
+  FrontendBundleDescriptor,
   OutputItem,
   OutputTypeId,
   PluginConfigSchema,
@@ -65,6 +67,17 @@ function normalizeConfigSchema(schema?: ApiPluginConfigSchema | null): PluginCon
   };
 }
 
+function normalizeFrontendBundle(bundle?: ApiFrontendBundleDescriptor | null): FrontendBundleDescriptor | null {
+  if (!bundle) return null;
+  return {
+    api_version: bundle.api_version ?? 'v1',
+    kind: bundle.kind ?? 'builtin',
+    id: bundle.id,
+    export: bundle.export ?? 'render',
+    meta: bundle.meta ?? {},
+  };
+}
+
 function normalizeTool(tool: ApiWorkspaceTool): WorkspaceTool {
   return {
     id: tool.id,
@@ -75,6 +88,7 @@ function normalizeTool(tool: ApiWorkspaceTool): WorkspaceTool {
     prompt: tool.prompt,
     renderDescriptor: normalizeRenderDescriptor(tool.render_descriptor),
     configSchema: normalizeConfigSchema(tool.config_schema),
+    frontendBundle: normalizeFrontendBundle(tool.frontend_bundle),
     badge: tool.badge ?? undefined,
     enabled: tool.enabled !== false,
   };
@@ -121,12 +135,17 @@ export function useRefine() {
 
   useEffect(() => {
     const descriptors: Partial<Record<OutputTypeId, RenderDescriptor>> = {};
+    const bundles: Partial<Record<OutputTypeId, FrontendBundleDescriptor>> = {};
     for (const tool of tools) {
       if (tool.outputType && tool.renderDescriptor) {
         descriptors[tool.outputType] = tool.renderDescriptor;
       }
+      if (tool.outputType && tool.frontendBundle) {
+        bundles[tool.outputType] = tool.frontendBundle;
+      }
     }
     store.getState().setOutputTypeRenderDescriptors(descriptors);
+    store.getState().setOutputTypeFrontendBundles(bundles);
   }, [store, tools]);
 
   const outputTypeOptions = useMemo(() => {

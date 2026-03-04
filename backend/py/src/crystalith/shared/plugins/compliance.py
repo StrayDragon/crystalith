@@ -5,11 +5,12 @@ from pydantic import BaseModel
 from .interfaces import (
     AIProviderPlugin,
     BasePlugin,
+    OutputTypeFrontendBundle,
     OutputTypePlugin,
     ParserPlugin,
     SUPPORTED_PLUGIN_API_VERSIONS,
 )
-from .render_types import OutputTypePluginMeta, PluginConfigSchema, RenderDescriptor
+from .render_types import FrontendBundleDescriptor, OutputTypePluginMeta, PluginConfigSchema, RenderDescriptor
 
 
 def check_plugin(plugin_id: str, plugin: object) -> list[str]:
@@ -63,6 +64,11 @@ def check_plugin(plugin_id: str, plugin: object) -> list[str]:
         config_schema = plugin.config_schema
         if config_schema is not None and not isinstance(config_schema, PluginConfigSchema):
             issues.append("OutputTypePlugin.config_schema must be a PluginConfigSchema instance")
+
+        if isinstance(plugin, OutputTypeFrontendBundle):
+            frontend_bundle = plugin.frontend_bundle
+            if frontend_bundle is not None and not isinstance(frontend_bundle, FrontendBundleDescriptor):
+                issues.append("OutputTypePlugin.frontend_bundle must be a FrontendBundleDescriptor instance")
 
     if not has_interface:
         issues.append("plugin does not implement any supported plugin interfaces")

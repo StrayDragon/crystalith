@@ -12,11 +12,12 @@ from crystalith.shared.json_types import JsonValue
 from .interfaces import (
     AIProviderPlugin,
     OutputTypePlugin,
+    OutputTypeFrontendBundle,
     ParserPlugin,
     PLUGIN_API_VERSION,
     SUPPORTED_PLUGIN_API_VERSIONS,
 )
-from .render_types import OutputTypePluginMeta, PluginConfigSchema, RenderDescriptor
+from .render_types import FrontendBundleDescriptor, OutputTypePluginMeta, PluginConfigSchema, RenderDescriptor
 
 
 log = get_logger(__name__)
@@ -77,6 +78,7 @@ class PluginRegistry:
         self.output_type_metadata: dict[str, OutputTypePluginMeta] = {}
         self.render_descriptors: dict[str, RenderDescriptor] = {}
         self.config_schemas: dict[str, PluginConfigSchema] = {}
+        self.frontend_bundles: dict[str, FrontendBundleDescriptor] = {}
         self._output_type_plugin_ids: dict[str, str] = {}
         self._loaded_entrypoints: dict[str, str] = {}
 
@@ -88,6 +90,7 @@ class PluginRegistry:
         self.output_type_metadata.clear()
         self.render_descriptors.clear()
         self.config_schemas.clear()
+        self.frontend_bundles.clear()
         self._output_type_plugin_ids.clear()
         self._loaded_entrypoints.clear()
 
@@ -233,6 +236,7 @@ class PluginRegistry:
         self.output_type_metadata.pop(output_type, None)
         self.render_descriptors.pop(output_type, None)
         self.config_schemas.pop(output_type, None)
+        self.frontend_bundles.pop(output_type, None)
 
         metadata = plugin.metadata
         if metadata is not None:
@@ -269,6 +273,19 @@ class PluginRegistry:
                     output_type=output_type,
                     config_schema_type=type(config_schema).__name__,
                 )
+
+        if isinstance(plugin, OutputTypeFrontendBundle):
+            frontend_bundle = plugin.frontend_bundle
+            if frontend_bundle is not None:
+                if isinstance(frontend_bundle, FrontendBundleDescriptor):
+                    self.frontend_bundles[output_type] = frontend_bundle
+                else:
+                    log.warning(
+                        "OutputTypePlugin.frontend_bundle must be FrontendBundleDescriptor; ignoring",
+                        plugin_id=plugin_id,
+                        output_type=output_type,
+                        frontend_bundle_type=type(frontend_bundle).__name__,
+                    )
 
     def _normalize_loaded_plugin(self, plugin_id: str, loaded: object) -> object | None:
         if isinstance(loaded, type):
@@ -344,3 +361,6 @@ class PluginRegistry:
 
     def get_config_schema(self, output_type: str) -> PluginConfigSchema | None:
         return self.config_schemas.get(output_type)
+
+    def get_frontend_bundle(self, output_type: str) -> FrontendBundleDescriptor | None:
+        return self.frontend_bundles.get(output_type)

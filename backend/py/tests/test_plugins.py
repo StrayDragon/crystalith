@@ -17,6 +17,7 @@ from crystalith.shared.plugins.render_types import (
     ConfigOption,
     ItemSchema,
     FieldDescriptor,
+    FrontendBundleDescriptor,
     OutputTypePluginMeta,
     PluginConfigSchema,
     RenderDescriptor,
@@ -79,6 +80,8 @@ class MockOutputTypePlugin:
         topic_placeholder="Topic",
         supports_topic=True,
     )
+
+    frontend_bundle = FrontendBundleDescriptor(id="output-quiz-custom", export="render")
 
 
 def test_plugin_registry_loads_ai_provider_plugin(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -173,6 +176,7 @@ def test_plugin_registry_loads_output_type_plugin_and_extension_attributes(
     assert registry.get_output_type_metadata("QUIZ") == plugin.metadata
     assert registry.get_render_descriptor("QUIZ") == plugin.render_descriptor
     assert registry.get_config_schema("QUIZ") == plugin.config_schema
+    assert registry.get_frontend_bundle("QUIZ") == plugin.frontend_bundle
 
 
 def test_plugin_registry_output_type_conflict_overwrites_and_logs_warning(
@@ -245,6 +249,7 @@ def test_plugin_registry_output_type_plugin_without_extensions_is_ok(
     assert registry.get_output_type_metadata("QUIZ") is None
     assert registry.get_render_descriptor("QUIZ") is None
     assert registry.get_config_schema("QUIZ") is None
+    assert registry.get_frontend_bundle("QUIZ") is None
 
 
 def test_workspace_tools_endpoint_includes_render_descriptor_when_plugin_available(
@@ -280,10 +285,49 @@ def test_workspace_tools_endpoint_includes_render_descriptor_when_plugin_availab
 
     assert quiz_tool["render_descriptor"]["layout"] == "cards"
     assert quiz_tool["config_schema"]["topic_placeholder"] == "Topic"
+    assert quiz_tool["frontend_bundle"]["id"] == "output-quiz-custom"
     assert config_payload["tool_id"] == "quiz"
     assert config_payload["topic_placeholder"] == "Topic"
     assert config_payload["quantity_options"] == quiz_tool["config_schema"]["quantity_options"]
     assert faq_tool["render_descriptor"] is None
+    assert faq_tool["frontend_bundle"]["id"] == "output-faq"
+
+
+def test_workspace_tools_endpoint_omits_frontend_bundle_when_feature_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from crystalith.shared.plugins import registry as registry_mod
+    from crystalith.web.app import create_app
+
+    plugin = MockOutputTypePlugin()
+    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
+    monkeypatch.setattr(
+        registry_mod,
+        "_iter_entry_points",
+        lambda group: [StubEntryPoint(name="mock-output", value="x:y", plugin=plugin)],
+    )
+
+    settings = Settings.model_validate(
+        {"app": {"features": {"workspace_frontend_bundles_enabled": False}}},
+    )
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        db_path = Path(tempdir) / "test.db"
+        db_url = f"sqlite+aiosqlite:///{db_path}"
+        upgrade_head(db_url)
+        manager = create_db_manager(db_url)
+        vector_store = InMemoryVectorStore()
+        app = create_app(settings=settings, db_manager=manager, vector_store=vector_store)
+        with TestClient(app) as client:
+            payload = client.get("/v1/workspace/tools").json()
+
+    tools = payload["tools"]
+    quiz_tool = next(tool for tool in tools if tool["output_type"] == "QUIZ")
+    faq_tool = next(tool for tool in tools if tool["output_type"] == "FAQ")
+
+    assert quiz_tool["render_descriptor"]["layout"] == "cards"
+    assert quiz_tool["frontend_bundle"] is None
+    assert faq_tool["frontend_bundle"] is None
 
 
 def test_plugin_registry_respects_disabled_list(monkeypatch: pytest.MonkeyPatch) -> None:

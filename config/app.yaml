@@ -19,6 +19,11 @@ schema: v1
 # App / web server
 # ----------------------------------------------------------------------------
 app:
+  features:
+    # Enables interactive output renderers (frontend bundle loading) in the web UI.
+    # Set to false to force fallback rendering (GenericOutputRenderer / raw JSON).
+    workspace_frontend_bundles_enabled: true
+
   auth:
     # Optional API key auth for self-host deployments.
     # When enabled, all /v1/** endpoints require `Authorization: Bearer <token>`.

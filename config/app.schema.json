@@ -63,6 +63,12 @@
           "description": "Embed UI envelopes into assistant message content.",
           "title": "Chat Ui Envelope Enabled",
           "type": "boolean"
+        },
+        "workspace_frontend_bundles_enabled": {
+          "default": true,
+          "description": "If true, expose frontend bundle descriptors for workspace tools/outputs (enables interactive renderers in the web UI). Set false to force fallback rendering.",
+          "title": "Workspace Frontend Bundles Enabled",
+          "type": "boolean"
         }
       },
       "title": "AppFeaturesSettings",
