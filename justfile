@@ -675,26 +675,6 @@ dev-backend:
     env_args+=(HOST="${HOST:-0.0.0.0}")
     env_args+=(PORT="${PORT:-8032}")
     env_args+=(RELOAD="${RELOAD:-1}")
-    env_args+=(AUTO_DB_INIT="${AUTO_DB_INIT:-1}")
-
-    if has_optional storage; then
-      env_args+=(DATABASE_URL="${DATABASE_URL:-postgresql+asyncpg://crystalith:crystalith@127.0.0.1:${postgres_port}/crystalith}")
-      env_args+=(CHROMA_HOST="${CHROMA_HOST:-127.0.0.1}")
-      env_args+=(CHROMA_PORT="${CHROMA_PORT:-${chroma_port}}")
-    fi
-
-    if has_optional redis; then
-      env_args+=(CACHE_PROVIDER="${CACHE_PROVIDER:-redis}")
-      env_args+=(REDIS_URL="${REDIS_URL:-redis://127.0.0.1:${redis_port}/0}")
-    fi
-
-    if has_optional ollama; then
-      env_args+=(OLLAMA_HOST="${OLLAMA_HOST:-http://127.0.0.1:${ollama_port}}")
-    fi
-
-    if has_optional searxng; then
-      env_args+=(CRYSTALITH_SEARCH__SEARXNG__HOST="${CRYSTALITH_SEARCH__SEARXNG__HOST:-http://127.0.0.1:${searxng_port}}")
-    fi
 
     exec env "${env_args[@]}" uv run --project backend/py python backend/py/main.py
 

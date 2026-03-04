@@ -31,7 +31,7 @@ Minimal backup set:
 
 Optional (nice-to-have):
 - `data/output/` (generated artifacts/previews)
-- Any secrets file referenced by `CRYSTALITH_SECRETS_PATH` (do not commit it)
+- `config/secrets.yaml` (if present; do not commit it) or any path referenced by `CRYSTALITH_SECRETS_PATH`
 
 Restore steps (core-only):
 1. Stop the stack: `docker compose ... down`
@@ -94,12 +94,12 @@ Checks:
 
 Fixes:
 - If you intended to use an overlay, ensure you started it (compose `-f docker-compose.<overlay>.yml`).
-- If using external services, verify env vars:
-  - Postgres: `DATABASE_URL`
-  - Chroma: `CHROMA_HOST`, `CHROMA_PORT`
-  - Redis: `REDIS_URL` (compose redis overlay forces `CACHE_PROVIDER=redis`)
-  - Ollama: `OLLAMA_HOST`
-  - SearXNG: `CRYSTALITH_SEARCH__SEARXNG__HOST`
+- If using external services, verify `config/app.yaml`:
+  - Postgres: `database.url` / `database.url_candidates` (+ secrets for password)
+  - Chroma: `vector_storage.chroma.host/port` or `vector_storage.chroma.endpoint_candidates`
+  - Redis: `cache.provider` + `cache.redis_url` / `cache.redis_url_candidates`
+  - Ollama: `optional_services.ollama.endpoint_candidates` (and ollama model provider host)
+  - SearXNG: `search.searxng.host` / `search.searxng.endpoint_candidates`
 
 ### “Source from URL” fails (SSRF protections)
 

@@ -10,6 +10,7 @@ Core terminology mapping:
 
 ```bash
 cp .env.example .env
+cp config/secrets.yaml.example config/secrets.yaml
 docker compose --env-file .env -f deployments/prod/docker-compose.yml up -d --build
 ```
 
@@ -43,11 +44,9 @@ docker pull "ghcr.io/${OWNER}/crystalith-web:${VERSION}"
 docker network create crystalith-smoke >/dev/null 2>&1 || true
 
 docker run -d --name crystalith-api --network crystalith-smoke --network-alias api \
-  -e AUTO_DB_INIT=1 \
   -e CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED=0 \
   -v "$PWD/data:/app/data" \
   -v "$PWD/config:/app/config:ro" \
-  -e CRYSTALITH_CONFIG_PATH=/app/config/app.yaml \
   -p 8032:8032 \
   "ghcr.io/${OWNER}/crystalith-api:${VERSION}"
 
@@ -143,10 +142,17 @@ curl -fsS -X POST "http://localhost:${CL_WEB_PORT:-8080}/v1/notebooks" \
 
 ## External Service Replacement
 
-- Storage: set `DATABASE_URL`, `CHROMA_HOST`, `CHROMA_PORT` to your own services.
-- Redis: use the redis overlay (forces `CACHE_PROVIDER=redis`) and set `REDIS_URL=...` to point at an external Redis if desired.
-- Ollama: set `OLLAMA_HOST` to external/host Ollama and skip local ollama overlay.
-- SearXNG: set `CRYSTALITH_SEARCH__SEARXNG__HOST` and skip the local searxng overlay.
+- Storage: edit `config/app.yaml`:
+  - `database.url` / `database.url_candidates` (+ secrets for password)
+  - `vector_storage.chroma.host/port` or `vector_storage.chroma.endpoint_candidates`
+- Redis: edit `config/app.yaml`:
+  - `cache.provider: redis|auto`
+  - `cache.redis_url` / `cache.redis_url_candidates`
+- Ollama: edit `config/app.yaml`:
+  - `optional_services.ollama.endpoint_candidates`
+  - (Optional) switch `models.defaults.*` to an ollama-backed model id
+- SearXNG: edit `config/app.yaml`:
+  - `search.searxng.host` / `search.searxng.endpoint_candidates`
 
 ## Notes
 

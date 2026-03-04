@@ -5,6 +5,7 @@ Provides web search capabilities via SearXNG integration.
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 
 from cl_logs.logging import get_logger
@@ -16,6 +17,8 @@ if TYPE_CHECKING:
 
     from crystalith.shared.config import Settings
     from langchain_community.utilities import SearxSearchWrapper
+
+from crystalith.shared.config.endpoint_candidates import order_endpoint_candidates
 
 __all__ = ["SearchResult", "SearXNGSearcher"]
 
@@ -36,6 +39,7 @@ class SearXNGSearcher:
         self,
         host: str,
         *,
+        endpoint_candidates: Sequence[str] | None = None,
         api_key: str | None = None,
         timeout: int = 10,
         max_results: int = 10,
@@ -49,10 +53,12 @@ class SearXNGSearcher:
             max_results: Maximum number of results to return
         """
         self.host = host
+        self.endpoint_candidates = list(endpoint_candidates or [])
         self.api_key = api_key
         self.timeout = timeout
         self.max_results = max_results
         self._wrapper: SearxSearchWrapper | None = None
+        self._resolve_lock = asyncio.Lock()
 
     def _get_wrapper(self) -> SearxSearchWrapper:
         """Lazy initialization of the SearxSearchWrapper."""
@@ -70,6 +76,46 @@ class SearXNGSearcher:
                 headers=headers if headers else None,
             )
         return self._wrapper
+
+    async def _resolve_host(self) -> str:
+        if self.host and self.host.strip():
+            return self.host.strip()
+
+        candidates = order_endpoint_candidates(self.endpoint_candidates)
+        if not candidates:
+            raise RuntimeError(
+                "SearXNG is not configured. Set `search.searxng.host` in config/app.yaml "
+                "or provide `search.searxng.endpoint_candidates` (compose overlays/dev-deps can supply endpoints)."
+            )
+
+        async with self._resolve_lock:
+            if self.host and self.host.strip():
+                return self.host.strip()
+
+            for candidate in candidates:
+                target = candidate.rstrip("/")
+                probe_url = f"{target}/search?q=ping&format=json"
+                try:
+                    import httpx
+
+                    async with httpx.AsyncClient(
+                        timeout=max(0.5, min(float(self.timeout), 5.0)),
+                        follow_redirects=True,
+                    ) as client:
+                        resp = await client.get(probe_url)
+                    if 200 <= resp.status_code < 300:
+                        self.host = target
+                        # Host changed: rebuild wrapper with the resolved endpoint.
+                        self._wrapper = None
+                        return target
+                except Exception:  # noqa: BLE001 - best-effort probe
+                    continue
+
+        # None reachable: keep host empty and surface an actionable error.
+        raise RuntimeError(
+            "SearXNG endpoints are configured but unreachable. "
+            "Check your `search.searxng.endpoint_candidates` and ensure the service is running."
+        )
 
     async def search(
         self,
@@ -93,11 +139,7 @@ class SearXNGSearcher:
         if not query or not query.strip():
             raise ValueError("Search query cannot be empty")
 
-        if not self.host or not self.host.strip():
-            raise RuntimeError(
-                "SearXNG is not configured. Set `search.searxng.host` in config/app.yaml "
-                "or set env `CRYSTALITH_SEARCH__SEARXNG__HOST` (compose overlays can provide this)."
-            )
+        await self._resolve_host()
 
         target_engines = MODE_ENGINE_MAP.get(mode, MODE_ENGINE_MAP["Web"])
 
@@ -152,8 +194,19 @@ class SearXNGSearcher:
             Configured SearXNGSearcher instance
         """
         searxng_config = settings.search.searxng
+        endpoint_candidates: list[str] = []
+        if not (searxng_config.host or "").strip():
+            endpoint_candidates.extend(searxng_config.endpoint_candidates)
+            if (
+                settings.optional_services.searxng.enabled
+                or settings.optional_services.searxng.endpoint_candidates
+            ):
+                endpoint_candidates.extend(settings.optional_services.searxng.endpoint_candidates)
+                if settings.optional_services.searxng.endpoint:
+                    endpoint_candidates.append(settings.optional_services.searxng.endpoint)
         return cls(
             host=searxng_config.host,
+            endpoint_candidates=endpoint_candidates,
             api_key=searxng_config.api_key,
             timeout=searxng_config.timeout,
             max_results=searxng_config.max_results,

@@ -24,6 +24,7 @@ from crystalith.shared.ai.openai_client_manager import get_openai_client_manager
 from crystalith.shared.cache import CacheProvider, create_cache_provider
 from crystalith.shared.concurrency import StageLimiters
 from crystalith.shared.config import ConfigManager, ModelConfig, Settings
+from crystalith.shared.config.endpoint_candidates import order_endpoint_candidates
 from crystalith.shared.config.ollama_discovery import (
     auto_discover_ollama,
     collect_ollama_hosts,
@@ -100,14 +101,6 @@ def _env_bool(name: str, default: bool = False) -> bool:
         return default
     return value.strip().lower() not in {"0", "false", "no", "off"}
 
-
-def _env_bool_optional(name: str) -> bool | None:
-    value = os.getenv(name)
-    if value is None:
-        return None
-    return value.strip().lower() not in {"0", "false", "no", "off"}
-
-
 def _env_float(name: str, default: float) -> float:
     value = os.getenv(name)
     if value is None:
@@ -171,11 +164,11 @@ def _probe_redis_endpoint(
 
 def _optional_recovery_hint(service_key: ServiceKey) -> str:
     if service_key == "storage_chroma":
-        return "启动 storage overlay，或设置 CHROMA_HOST/CHROMA_PORT 指向可用 Chroma 服务。"
+        return "启动 storage overlay，或在 config/app.yaml 配置 Chroma 端点（vector_storage.chroma.*）。"
     if service_key == "cache_redis":
-        return "启动 redis overlay，或设置 REDIS_URL 指向可用 Redis。"
+        return "启动 redis overlay，或在 config/app.yaml 配置 cache.provider/redis_url_candidates。"
     if service_key == "ollama":
-        return "启动 ollama overlay，或设置 OLLAMA_HOST 指向可用 Ollama。"
+        return "启动 ollama overlay，或在 config/app.yaml 配置 optional_services.ollama.endpoint_candidates。"
     return "检查服务地址与网络连通性，或禁用该可选服务。"
 
 
@@ -194,7 +187,7 @@ def _model_provider(model: ModelConfig) -> str:
 
 
 def _is_ollama_enabled(settings: Settings) -> bool:
-    if settings.optional_services.ollama.enabled or bool(os.getenv("OLLAMA_HOST")):
+    if settings.optional_services.ollama.enabled or bool(settings.optional_services.ollama.endpoint_candidates):
         return True
 
     default_chat = settings.get_default_chat_model()
@@ -218,14 +211,35 @@ def _build_optional_status_template(settings: Settings) -> OptionalServicesStatu
             if chroma_host_set
             else settings.optional_services.chroma.endpoint
         )
-    redis_endpoint = settings.cache.redis_url or settings.optional_services.redis.endpoint
-    ollama_endpoint = os.getenv("OLLAMA_HOST") or settings.optional_services.ollama.endpoint
+    redis_endpoint = settings.cache.redis_url
+    if not (redis_endpoint and redis_endpoint.strip()):
+        redis_candidates = []
+        redis_candidates.extend(settings.cache.redis_url_candidates)
+        redis_candidates.extend(settings.optional_services.redis.endpoint_candidates)
+        if settings.optional_services.redis.endpoint:
+            redis_candidates.append(settings.optional_services.redis.endpoint)
+        redis_endpoint = order_endpoint_candidates(redis_candidates)[0] if redis_candidates else None
+
+    ollama_endpoint = settings.optional_services.ollama.endpoint
     searxng_host = settings.search.searxng.host
     searxng_host_set = bool(searxng_host and searxng_host.strip())
-    searxng_enabled = settings.optional_services.searxng.enabled or searxng_host_set
+    searxng_enabled = bool(
+        settings.optional_services.searxng.enabled
+        or searxng_host_set
+        or settings.search.searxng.endpoint_candidates
+        or settings.optional_services.searxng.endpoint_candidates
+    )
     searxng_endpoint = None
     if searxng_enabled:
-        searxng_endpoint = searxng_host.strip() if searxng_host_set else settings.optional_services.searxng.endpoint
+        if searxng_host_set:
+            searxng_endpoint = searxng_host.strip()
+        else:
+            searxng_candidates = []
+            searxng_candidates.extend(settings.search.searxng.endpoint_candidates)
+            searxng_candidates.extend(settings.optional_services.searxng.endpoint_candidates)
+            if settings.optional_services.searxng.endpoint:
+                searxng_candidates.append(settings.optional_services.searxng.endpoint)
+            searxng_endpoint = order_endpoint_candidates(searxng_candidates)[0] if searxng_candidates else None
 
     chroma_probe = settings.optional_services.chroma.probe
     redis_probe = settings.optional_services.redis.probe
@@ -254,7 +268,12 @@ def _build_optional_status_template(settings: Settings) -> OptionalServicesStatu
         },
         "cache_redis": {
             "service": "redis",
-            "enabled": settings.optional_services.redis.enabled or cache_provider == "redis",
+            "enabled": bool(
+                settings.optional_services.redis.enabled
+                or cache_provider in {"redis", "auto"}
+                or settings.cache.redis_url_candidates
+                or settings.optional_services.redis.endpoint_candidates
+            ),
             "provider": cache_provider,
             "endpoint": redis_endpoint,
             "status": "unknown",
@@ -344,7 +363,6 @@ async def _refresh_optional_services_status(
     app: FastAPIX,
     *,
     timeout_s: float,
-    include_env_host: bool,
 ) -> None:
     settings: Settings = app.state.settings
     statuses = _build_optional_status_template(settings)
@@ -371,13 +389,35 @@ async def _refresh_optional_services_status(
     if redis["enabled"] and redis_probe["enabled"]:
         service_timeout = max(0.1, float(redis_probe["timeout_s"] or timeout_s))
         redis["last_probe"] = probe_time
-        healthy, error = await asyncio.to_thread(
-            _probe_redis_endpoint,
-            redis["endpoint"],
-            timeout_s=service_timeout,
-        )
-        redis["healthy"] = healthy
-        redis["error"] = error
+        redis_candidates = []
+        if settings.cache.redis_url:
+            redis_candidates.append(settings.cache.redis_url)
+        redis_candidates.extend(settings.cache.redis_url_candidates)
+        redis_candidates.extend(settings.optional_services.redis.endpoint_candidates)
+        if settings.optional_services.redis.endpoint:
+            redis_candidates.append(settings.optional_services.redis.endpoint)
+        ordered = order_endpoint_candidates(redis_candidates)
+        if not ordered:
+            redis["healthy"] = False
+            redis["error"] = "endpoint is empty"
+        else:
+            redis_last_error: str | None = None
+            for candidate in ordered:
+                healthy, error = await asyncio.to_thread(
+                    _probe_redis_endpoint,
+                    candidate,
+                    timeout_s=service_timeout,
+                )
+                if healthy:
+                    redis["endpoint"] = candidate
+                    redis["healthy"] = True
+                    redis["error"] = None
+                    break
+                redis_last_error = error
+            else:
+                redis["endpoint"] = ordered[0]
+                redis["healthy"] = False
+                redis["error"] = redis_last_error or "probe failed"
     _finalize_optional_status("cache_redis", redis)
 
     ollama = statuses["ollama"]
@@ -387,7 +427,6 @@ async def _refresh_optional_services_status(
         ollama["last_probe"] = probe_time
         hosts = collect_ollama_hosts(
             settings,
-            include_env=include_env_host,
             include_fallback=True,
         )
         endpoint = ollama["endpoint"]
@@ -430,14 +469,37 @@ async def _refresh_optional_services_status(
         service_timeout = max(0.1, float(searxng_probe["timeout_s"] or timeout_s))
         service_path = searxng_probe["path"]
         searxng["last_probe"] = probe_time
-        healthy, error = await asyncio.to_thread(
-            _probe_http_endpoint,
-            searxng["endpoint"],
-            timeout_s=service_timeout,
-            path=service_path,
-        )
-        searxng["healthy"] = healthy
-        searxng["error"] = error
+        searxng_candidates = []
+        if settings.search.searxng.host:
+            searxng_candidates.append(settings.search.searxng.host)
+        searxng_candidates.extend(settings.search.searxng.endpoint_candidates)
+        searxng_candidates.extend(settings.optional_services.searxng.endpoint_candidates)
+        if settings.optional_services.searxng.endpoint:
+            searxng_candidates.append(settings.optional_services.searxng.endpoint)
+
+        ordered = order_endpoint_candidates(searxng_candidates)
+        if not ordered:
+            searxng["healthy"] = False
+            searxng["error"] = "endpoint is empty"
+        else:
+            searxng_last_error: str | None = None
+            for candidate in ordered:
+                healthy, error = await asyncio.to_thread(
+                    _probe_http_endpoint,
+                    candidate,
+                    timeout_s=service_timeout,
+                    path=service_path,
+                )
+                if healthy:
+                    searxng["endpoint"] = candidate
+                    searxng["healthy"] = True
+                    searxng["error"] = None
+                    break
+                searxng_last_error = error
+            else:
+                searxng["endpoint"] = ordered[0]
+                searxng["healthy"] = False
+                searxng["error"] = searxng_last_error or "probe failed"
     _finalize_optional_status("search_searxng", searxng)
 
     app.state.optional_services_status = statuses
@@ -452,6 +514,7 @@ def _optional_services_snapshot(app: FastAPIX) -> OptionalServicesStatus:
 
     snapshot["storage_chroma"]["status"] = current["storage_chroma"]["status"]
     snapshot["storage_chroma"]["healthy"] = current["storage_chroma"]["healthy"]
+    snapshot["storage_chroma"]["endpoint"] = current["storage_chroma"]["endpoint"]
     snapshot["storage_chroma"]["error"] = current["storage_chroma"]["error"]
     snapshot["storage_chroma"]["error_code"] = current["storage_chroma"]["error_code"]
     snapshot["storage_chroma"]["recovery_hint"] = current["storage_chroma"]["recovery_hint"]
@@ -459,6 +522,7 @@ def _optional_services_snapshot(app: FastAPIX) -> OptionalServicesStatus:
 
     snapshot["cache_redis"]["status"] = current["cache_redis"]["status"]
     snapshot["cache_redis"]["healthy"] = current["cache_redis"]["healthy"]
+    snapshot["cache_redis"]["endpoint"] = current["cache_redis"]["endpoint"]
     snapshot["cache_redis"]["error"] = current["cache_redis"]["error"]
     snapshot["cache_redis"]["error_code"] = current["cache_redis"]["error_code"]
     snapshot["cache_redis"]["recovery_hint"] = current["cache_redis"]["recovery_hint"]
@@ -466,6 +530,7 @@ def _optional_services_snapshot(app: FastAPIX) -> OptionalServicesStatus:
 
     snapshot["search_searxng"]["status"] = current["search_searxng"]["status"]
     snapshot["search_searxng"]["healthy"] = current["search_searxng"]["healthy"]
+    snapshot["search_searxng"]["endpoint"] = current["search_searxng"]["endpoint"]
     snapshot["search_searxng"]["error"] = current["search_searxng"]["error"]
     snapshot["search_searxng"]["error_code"] = current["search_searxng"]["error_code"]
     snapshot["search_searxng"]["recovery_hint"] = current["search_searxng"]["recovery_hint"]
@@ -473,6 +538,7 @@ def _optional_services_snapshot(app: FastAPIX) -> OptionalServicesStatus:
 
     snapshot["ollama"]["status"] = current["ollama"]["status"]
     snapshot["ollama"]["healthy"] = current["ollama"]["healthy"]
+    snapshot["ollama"]["endpoint"] = current["ollama"]["endpoint"]
     snapshot["ollama"]["hosts"] = dict(current["ollama"]["hosts"])
     snapshot["ollama"]["error"] = current["ollama"]["error"]
     snapshot["ollama"]["error_code"] = current["ollama"]["error_code"]
@@ -503,14 +569,12 @@ async def _run_optional_services_monitor(
     *,
     interval_s: float,
     timeout_s: float,
-    include_env_host: bool,
 ) -> None:
     while not stop_event.is_set():
         try:
             await _refresh_optional_services_status(
                 app,
                 timeout_s=timeout_s,
-                include_env_host=include_env_host,
             )
         except Exception:  # noqa: BLE001 - best-effort background probe
             logger.exception("Optional services monitor probe failed")
@@ -552,7 +616,7 @@ def create_app(
         optional_monitor_stop: asyncio.Event | None = None
         optional_monitor_task: asyncio.Task[None] | None = None
 
-        if _env_bool("AUTO_DB_INIT", False):
+        if app.state.settings.app.startup.auto_db_init:
             await asyncio.to_thread(upgrade_head, app.state.settings.database.url)
 
         try:
@@ -578,11 +642,7 @@ def create_app(
             except Exception:  # noqa: BLE001
                 logger.exception("Failed to initialize built-in templates")
 
-        cleanup_failed_sources = _env_bool_optional("AUTO_CLEANUP_FAILED_SOURCES")
-        if cleanup_failed_sources is None:
-            cleanup_failed_sources = app.state.settings.app.startup.cleanup_failed_sources
-
-        if cleanup_failed_sources:
+        if app.state.settings.app.startup.cleanup_failed_sources:
             async with app.state.db.got_manual_session() as session:
                 failed_sources = await session.execute(
                     select(Source).where(Source.status == SourceStatus.FAILED)
@@ -606,7 +666,6 @@ def create_app(
         if _env_bool("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED", True):
             interval_s = max(0.1, _env_float("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_INTERVAL_S", 15.0))
             timeout_s = max(0.1, _env_float("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_TIMEOUT_S", 3.0))
-            include_env_host = _env_bool("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_INCLUDE_ENV_HOST", True)
             optional_monitor_stop = asyncio.Event()
             optional_monitor_task = asyncio.create_task(
                 _run_optional_services_monitor(
@@ -614,7 +673,6 @@ def create_app(
                     optional_monitor_stop,
                     interval_s=interval_s,
                     timeout_s=timeout_s,
-                    include_env_host=include_env_host,
                 )
             )
 
@@ -679,7 +737,6 @@ def create_app(
                 await _refresh_optional_services_status(
                     app,
                     timeout_s=1.0,
-                    include_env_host=True,
                 )
             except Exception:  # noqa: BLE001 - keep dependency health non-blocking
                 logger.exception("Dependency health probe refresh failed")

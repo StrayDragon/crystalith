@@ -170,7 +170,8 @@
           "default": "memory",
           "enum": [
             "memory",
-            "redis"
+            "redis",
+            "auto"
           ],
           "title": "Provider",
           "type": "string"
@@ -199,6 +200,14 @@
           "default": null,
           "description": "Redis connection URL when provider=redis",
           "title": "Redis Url"
+        },
+        "redis_url_candidates": {
+          "description": "Optional candidate Redis URLs. When provider=auto, the loader may probe and select the first reachable Redis and upgrade cache.provider to redis. When none are reachable, it falls back to memory.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Redis Url Candidates",
+          "type": "array"
         }
       },
       "title": "CacheSettings",
@@ -429,6 +438,14 @@
           "default": "sqlite+aiosqlite:///./data/app.db",
           "title": "Url",
           "type": "string"
+        },
+        "url_candidates": {
+          "description": "Optional candidate database URLs. When set, the loader may probe and select the first reachable URL for the active runtime environment (e.g. compose service name vs host dev ports).",
+          "items": {
+            "type": "string"
+          },
+          "title": "Url Candidates",
+          "type": "array"
         }
       },
       "title": "DatabaseSettings",
@@ -1073,6 +1090,14 @@
           "description": "Service endpoint/base URL",
           "title": "Endpoint"
         },
+        "endpoint_candidates": {
+          "description": "Optional candidate endpoints for this service. Used for probing/selection across environments.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Endpoint Candidates",
+          "type": "array"
+        },
         "timeout_s": {
           "default": 3.0,
           "description": "Connection timeout in seconds",
@@ -1227,6 +1252,14 @@
           "title": "Host",
           "type": "string"
         },
+        "endpoint_candidates": {
+          "description": "Optional candidate SearXNG endpoints. When host is empty, the runtime may lazily probe and select the first reachable endpoint on first use.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Endpoint Candidates",
+          "type": "array"
+        },
         "api_key": {
           "anyOf": [
             {
@@ -1304,6 +1337,12 @@
     "StartupSettings": {
       "description": "Startup behaviors.",
       "properties": {
+        "auto_db_init": {
+          "default": false,
+          "description": "If true, automatically runs DB migrations on startup. Recommended for local/dev; for production, prefer controlled migrations.",
+          "title": "Auto Db Init",
+          "type": "boolean"
+        },
         "cleanup_failed_sources": {
           "default": false,
           "description": "If true, delete sources with status='failed' on backend startup. WARNING: this removes DB rows and may orphan related files/vectors.",
@@ -1469,7 +1508,7 @@
           "type": "boolean"
         },
         "host": {
-          "default": "localhost",
+          "default": "",
           "title": "Host",
           "type": "string"
         },
@@ -1477,6 +1516,14 @@
           "default": 8000,
           "title": "Port",
           "type": "integer"
+        },
+        "endpoint_candidates": {
+          "description": "Optional candidate Chroma HTTP endpoints (e.g. http://chromadb:8000, http://127.0.0.1:8001). When set, the loader may probe and select the first reachable endpoint and populate host/port.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Endpoint Candidates",
+          "type": "array"
         }
       },
       "title": "VectorStorageChromaSettings",

@@ -3,7 +3,7 @@
 # Crystalith Configuration (safe defaults for public repo)
 # ============================================================================
 # Notes:
-# - Do NOT commit secrets. Use `.env` (Docker Compose) or `CRYSTALITH_SECRETS_PATH`.
+# - Do NOT commit secrets. Prefer `config/secrets.yaml` (auto-discovered) or set `CRYSTALITH_SECRETS_PATH`.
 # - Supports YAML anchors, environment interpolation (${{ env.VAR }}),
 #   and secrets interpolation (${{ secrets.VAR }}).
 %YAML 1.1
@@ -28,7 +28,7 @@ app:
     # Optional API key auth for self-host deployments.
     # When enabled, all /v1/** endpoints require `Authorization: Bearer <token>`.
     enabled: false
-    # api_key: "${{ env.CRYSTALITH_API_KEY }}"
+    # api_key: "${{ secrets.CRYSTALITH_API_KEY }}"
 
   cors:
     # Allowed origins for browser clients (CORS).
@@ -38,6 +38,9 @@ app:
       - "http://127.0.0.1:3000"
 
   startup:
+    # If true, automatically runs DB migrations on startup.
+    # Recommended for local/dev; for production, prefer controlled migrations.
+    auto_db_init: true
     # If true, deletes sources with status=failed on backend startup.
     # WARNING: This removes DB rows and may orphan related files/vectors.
     cleanup_failed_sources: false
@@ -48,7 +51,7 @@ app:
 providers:
   # OpenAI-compatible API
   openai_default: &openai_default
-    api_key: "${{ env.OPENAI_API_KEY }}"
+    api_key: "${{ secrets.OPENAI_API_KEY }}"
     base_url: "https://api.openai.com/v1"
 
   # Local Ollama
@@ -150,10 +153,7 @@ embedding:
 # - vector_search: vector DB search calls
 # - llm_generate: chat/completions (including streaming) calls
 #
-# Set to 0 to disable a limiter. Env overrides:
-# - CRYSTALITH_CONCURRENCY__EMBEDDING
-# - CRYSTALITH_CONCURRENCY__VECTOR_SEARCH
-# - CRYSTALITH_CONCURRENCY__LLM_GENERATE
+# Set to 0 to disable a limiter.
 concurrency:
   embedding: 8
   vector_search: 8
@@ -170,11 +170,28 @@ vector_storage:
     # Empty host => embedded Chroma (no separate Chroma server required).
     host: ""
     port: 8000
+    # Optional: auto-select a reachable remote Chroma endpoint (host dev port first, then compose service name).
+    endpoint_candidates:
+      - "http://127.0.0.1:8001"
+      - "http://chromadb:8000"
   sqlite:
     path: "./data/vectors.db"
 
 database:
   url: "sqlite+aiosqlite:///./data/app.db"
+  # Optional: auto-select a reachable external DB when available.
+  url_candidates:
+    - "postgresql+asyncpg://crystalith:${{ secrets.POSTGRES_PASSWORD }}@127.0.0.1:5434/crystalith"
+    - "postgresql+asyncpg://crystalith:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/crystalith"
+
+cache:
+  # memory|redis|auto. auto selects a reachable redis if configured, else falls back to memory.
+  provider: "auto"
+  ttl: 60
+  max_size: 2048
+  redis_url_candidates:
+    - "redis://127.0.0.1:6380/0"
+    - "redis://redis:6379/0"
 
 # ----------------------------------------------------------------------------
 # Context window
@@ -195,9 +212,11 @@ context_window:
 search:
   searxng:
     # Empty host disables web search by default.
-    # Enable via env: CRYSTALITH_SEARCH__SEARXNG__HOST="http://127.0.0.1:50201" (dev deps)
-    # or "http://searxng:8080" (compose overlay).
+    # Prefer enabling via YAML endpoint candidates (dev deps / compose overlay).
     host: ""
+    endpoint_candidates:
+      - "http://127.0.0.1:50201"
+      - "http://searxng:8080"
     timeout: 10
     max_results: 10
 
@@ -209,6 +228,9 @@ optional_services:
   ollama:
     enabled: false
     endpoint: "http://localhost:11434"
+    endpoint_candidates:
+      - "http://127.0.0.1:11434"
+      - "http://ollama:11434"
     timeout_s: 3
     probe:
       enabled: true
@@ -220,6 +242,9 @@ optional_services:
   chroma:
     enabled: false
     endpoint: "http://localhost:8000"
+    endpoint_candidates:
+      - "http://127.0.0.1:8001"
+      - "http://chromadb:8000"
     timeout_s: 3
     probe:
       enabled: true
@@ -231,6 +256,9 @@ optional_services:
   redis:
     enabled: false
     endpoint: "redis://localhost:6379/0"
+    endpoint_candidates:
+      - "redis://127.0.0.1:6380/0"
+      - "redis://redis:6379/0"
     timeout_s: 3
     probe:
       enabled: true
@@ -242,6 +270,9 @@ optional_services:
   searxng:
     enabled: false
     endpoint: "http://localhost:50201"
+    endpoint_candidates:
+      - "http://127.0.0.1:50201"
+      - "http://searxng:8080"
     timeout_s: 10
     probe:
       enabled: true
@@ -307,7 +338,7 @@ source_ingestion:
 
     firecrawl:
       enabled: false
-      api_key: "${{ env.FIRECRAWL_API_KEY }}"
+      api_key: "${{ secrets.FIRECRAWL_API_KEY }}"
       timeout: 60
 
     browserless:

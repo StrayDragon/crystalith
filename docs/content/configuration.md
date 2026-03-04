@@ -4,7 +4,7 @@ Crystalith runtime configuration lives in `config/app.yaml`.
 
 ## Basics
 
-- Keep secrets out of git. Prefer `.env` (Docker Compose) or `CRYSTALITH_SECRETS_PATH`.
+- Keep secrets out of git. Prefer `config/secrets.yaml` (auto-discovered) or `CRYSTALITH_SECRETS_PATH` (file or Docker secrets dir).
 - The config supports:
   - `${{ env.VAR }}` interpolation
   - `${{ secrets.VAR }}` interpolation
@@ -14,24 +14,20 @@ Crystalith runtime configuration lives in `config/app.yaml`.
 
 - `app.cors.allow_origins`: browser client origins (CORS)
 - `app.auth.enabled`: require API key auth for `/v1/**` (self-host)
-- `app.auth.api_key`: shared API key (prefer env/secrets injection)
+- `app.auth.api_key`: shared API key (prefer secrets injection)
 - `models.defaults.chat` / `models.defaults.embedding`: default model ids
 - `vector_storage.provider`: `chroma` or `sqlite`
 - `database.url`: SQLAlchemy URL (async)
 - `embedding.batch_size`: embedding batch size (perf tuning)
 - `search.searxng.host`: SearXNG base URL (empty disables web search)
+- `search.searxng.endpoint_candidates`: candidate endpoints for auto/lazy selection
 
 ## Web search (SearXNG)
 
 Crystalith’s web search / deep research uses SearXNG. When `search.searxng.host` is empty, web search is disabled.
 
 Ways to enable:
-- Config: set `search.searxng.host` in `config/app.yaml`
-- Env overrides:
-  - `CRYSTALITH_SEARCH__SEARXNG__HOST`
-  - `CRYSTALITH_SEARCH__SEARXNG__API_KEY` (optional)
-  - `CRYSTALITH_SEARCH__SEARXNG__TIMEOUT`
-  - `CRYSTALITH_SEARCH__SEARXNG__MAX_RESULTS`
+- Config: set `search.searxng.host` **or** `search.searxng.endpoint_candidates` in `config/app.yaml`
 
 Compose options:
 - Prod-like: add `deployments/prod/docker-compose.searxng.yml`
@@ -47,7 +43,7 @@ Config:
 app:
   auth:
     enabled: true
-    api_key: "${{ env.CRYSTALITH_API_KEY }}"
+    api_key: "${{ secrets.CRYSTALITH_API_KEY }}"
 ```
 
 Notes:
@@ -61,8 +57,8 @@ When `cache.provider=redis`, the backend can enable a cross-request embedding ca
 embedding cost.
 
 Config:
-- `cache.provider: redis`
-- `cache.redis_url: redis://...`
+- `cache.provider: redis|auto`
+- `cache.redis_url` / `cache.redis_url_candidates`
 
 Env (defaults match `backend/py/src/crystalith/shared/deps.py`):
 - `CRYSTALITH_EMBEDDING_CACHE_ENABLED` (default: true)
@@ -154,5 +150,7 @@ Many generation endpoints accept `preference: "quality" | "speed"`.
 
 - a YAML file (mapping of `KEY: value`), or
 - a directory (Docker secrets style: one file per key)
+
+If `CRYSTALITH_SECRETS_PATH` is unset, the backend will auto-discover `config/secrets.yaml` next to `config/app.yaml` (if present).
 
 See `docs/deployment.md` for examples.

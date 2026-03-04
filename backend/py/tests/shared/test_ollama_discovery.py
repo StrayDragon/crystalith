@@ -58,9 +58,10 @@ def test_build_and_merge_discovered_models_skips_duplicates() -> None:
     assert any(m.model == "bge-m3:latest" for m in settings.models.available)
 
 
-def test_auto_discover_ollama_uses_env_host(monkeypatch) -> None:
+def test_auto_discover_ollama_uses_optional_service_candidates(monkeypatch) -> None:
     settings = make_settings(
         {
+            "optional_services": {"ollama": {"endpoint_candidates": ["http://example.invalid"]}},
             "models": {
                 "available": [
                     {
@@ -76,11 +77,10 @@ def test_auto_discover_ollama_uses_env_host(monkeypatch) -> None:
         }
     )
 
-    # Mock reason: env host override is part of runtime resolution path under test.
-    monkeypatch.setenv("OLLAMA_HOST", "http://example.invalid")
+    seen_hosts: list[str] = []
 
     def stub_discover(host: str, *, timeout: float = 5.0):  # noqa: ANN001
-        assert host in {"http://localhost:11434", "http://example.invalid"}
+        seen_hosts.append(host)
         return [{"name": "bge-m3:latest", "details": {"family": "bge"}}]
 
     # Mock reason: avoid external Ollama dependency while validating host resolution/merge behavior.
@@ -91,10 +91,11 @@ def test_auto_discover_ollama_uses_env_host(monkeypatch) -> None:
 
     added = auto_discover_ollama(settings)
     assert added == 1
+    assert "http://example.invalid" in set(seen_hosts)
     assert any(isinstance(m, ModelConfig) and m.model == "bge-m3:latest" for m in settings.models.available)
 
 
-def test_collect_ollama_hosts_without_fallback_and_without_env(monkeypatch) -> None:
+def test_collect_ollama_hosts_without_fallback() -> None:
     settings = make_settings(
         {
             "models": {
@@ -111,12 +112,11 @@ def test_collect_ollama_hosts_without_fallback_and_without_env(monkeypatch) -> N
             }
         }
     )
-    monkeypatch.delenv("OLLAMA_HOST", raising=False)
-    hosts = collect_ollama_hosts(settings, include_env=False, include_fallback=False)
+    hosts = collect_ollama_hosts(settings, include_fallback=False)
     assert hosts == {"http://localhost:11434"}
 
 
-def test_collect_ollama_hosts_adds_local_fallback_for_docker_internal(monkeypatch) -> None:
+def test_collect_ollama_hosts_adds_local_fallback_for_docker_internal() -> None:
     settings = make_settings(
         {
             "models": {
@@ -133,8 +133,7 @@ def test_collect_ollama_hosts_adds_local_fallback_for_docker_internal(monkeypatc
             }
         }
     )
-    monkeypatch.delenv("OLLAMA_HOST", raising=False)
-    hosts = collect_ollama_hosts(settings, include_env=False, include_fallback=True)
+    hosts = collect_ollama_hosts(settings, include_fallback=True)
     assert "http://host.docker.internal:11434" in hosts
     assert "http://127.0.0.1:11434" in hosts
 
@@ -179,6 +178,5 @@ def test_resolve_reachable_ollama_host_falls_back_to_localhost(monkeypatch) -> N
 
     host = resolve_reachable_ollama_host(
         preferred_host="http://host.docker.internal:11434",
-        include_env=False,
     )
     assert host == "http://localhost:11434"

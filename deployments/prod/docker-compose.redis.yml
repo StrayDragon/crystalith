@@ -21,10 +21,6 @@ x-deploy-small: &deploy-small
 
 services:
   api:
-    environment:
-      # Force redis cache when the redis overlay is enabled.
-      CACHE_PROVIDER: redis
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     depends_on:
       redis:
         condition: service_healthy

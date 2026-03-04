@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
+import socket
+import threading
 from pathlib import Path
-
-import pytest
 
 from crystalith.shared.config import ConfigManager, Settings
 from tests._support.settings import make_settings
@@ -105,78 +105,74 @@ def test_config_manager_load_secrets_from_file_and_directory(tmp_path) -> None:
     assert manager2._load_secrets()["TOKEN"] == "t"
 
 
-def test_config_manager_apply_env_overrides_updates_models_and_defaults(monkeypatch) -> None:
-    settings = make_settings(
-        {
-            "cache": {"provider": "memory"},
-            "models": {
-                "defaults": {"chat": "test-chat", "embedding": "test-embed"},
-                "available": [
-                    {
-                        "id": "test-chat",
-                        "provider": "openai",
-                        "model": "gpt-test",
-                        "display_name": "Test Chat",
-                        "roles": ["chat"],
-                        "provider_config": {"api_key": "old", "base_url": "http://old"},
-                    },
-                    {
-                        "id": "test-embed",
-                        "provider": "ollama",
-                        "model": "bge-test",
-                        "display_name": "Test Embed",
-                        "roles": ["embed"],
-                        "provider_config": {"host": "http://old"},
-                    },
-                ],
-            },
-        }
+def test_config_manager_autodiscovers_secrets_file_next_to_config(tmp_path, monkeypatch) -> None:
+    config_path = tmp_path / "app.yaml"
+    secrets_path = tmp_path / "secrets.yaml"
+    _write_yaml(secrets_path, "OPENAI_API_KEY: sk-test\n")
+
+    _write_yaml(
+        config_path,
+        """\
+%YAML 1.1
+---
+name: "Test"
+version: "1.0.0"
+schema: v1
+providers:
+  openai_main: &openai_main
+    api_key: "${{ secrets.OPENAI_API_KEY }}"
+    base_url: "https://example.invalid/v1"
+models:
+  defaults:
+    chat: "test-chat"
+    embedding: "test-embed"
+  available:
+    - id: "test-chat"
+      provider: "openai"
+      model: "gpt-test"
+      display_name: "Test Chat"
+      roles: [chat]
+      provider_config:
+        <<: *openai_main
+    - id: "test-embed"
+      provider: "openai"
+      model: "embed-test"
+      display_name: "Test Embed"
+      roles: [embed]
+      provider_config:
+        <<: *openai_main
+""",
     )
-    manager = ConfigManager(config_path=Path("config/app.yaml"))
 
-    # Mock reason: env overrides are the public contract this method applies onto loaded config.
+    manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.json")
+
+    # Mock reason: keep config load test deterministic and independent of local Ollama availability.
+    monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
+
+    settings = manager.load(validate_schema=False)
+    model = settings.models.get_model("test-chat")
+    assert model is not None
+    assert model.get_openai_config().api_key == "sk-test"
+
+
+def test_config_manager_ignores_legacy_env_overrides(tmp_path, monkeypatch) -> None:
+    config_path = tmp_path / "app.yaml"
+    _write_yaml(config_path, _minimal_config_yaml())
+
+    manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.json")
+
+    # Mock reason: legacy env vars may be set in developer shells; the loader must ignore them.
     monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./override.db")
+    monkeypatch.setenv("CRYSTALITH_SEARCH__SEARXNG__HOST", "http://example.invalid")
     monkeypatch.setenv("CACHE_PROVIDER", "redis")
-    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-new")
-    monkeypatch.setenv("OPENAI_BASE_URL", "http://new")
-    monkeypatch.setenv("OLLAMA_HOST", "http://ollama")
-    monkeypatch.setenv("CRYSTALITH_OPTIONAL_OLLAMA_ENABLED", "1")
-    monkeypatch.setenv("CRYSTALITH_OPTIONAL_OLLAMA_ENDPOINT", "http://ollama:11434")
-    monkeypatch.setenv("CRYSTALITH_OPTIONAL_OLLAMA_PROBE_INTERVAL_S", "30")
-    monkeypatch.setenv("CRYSTALITH_OPTIONAL_OLLAMA_DEGRADE_POLICY", "core_available")
-    # Mock reason: default model selection is configured via env in production deployments.
-    monkeypatch.setenv("CRYSTALITH_DEFAULT_CHAT_MODEL", "test-chat")
+    monkeypatch.setenv("REDIS_URL", "redis://example.invalid:6379/0")
 
-    manager._apply_env_overrides(settings, secrets={})
+    # Mock reason: keep config load test deterministic and independent of local Ollama availability.
+    monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
 
-    assert settings.database.url.endswith("override.db")
-    assert settings.cache.provider == "redis"
-    redis_url = settings.cache.redis_url
-    assert redis_url is not None
-    assert redis_url.startswith("redis://")
-
-    openai_model = settings.models.get_model("test-chat")
-    assert openai_model is not None
-    assert openai_model.get_openai_config().api_key == "sk-new"
-    assert openai_model.get_openai_config().base_url == "http://new"
-
-    ollama_model = settings.models.get_model("test-embed")
-    assert ollama_model is not None
-    assert ollama_model.get_ollama_config().host == "http://ollama"
-    assert settings.optional_services.ollama.enabled is True
-    assert settings.optional_services.ollama.endpoint == "http://ollama:11434"
-    assert settings.optional_services.ollama.probe.interval_s == 30
-    assert settings.optional_services.ollama.degrade_policy == "core_available"
-
-
-def test_config_manager_apply_env_overrides_rejects_unknown_default_model(monkeypatch) -> None:
-    settings = make_settings({"models": {"available": []}})
-    manager = ConfigManager(config_path=Path("config/app.yaml"))
-    # Mock reason: invalid default model id is injected through env variables in production.
-    monkeypatch.setenv("CRYSTALITH_DEFAULT_CHAT_MODEL", "missing")
-    with pytest.raises(ValueError, match="Invalid default chat model id"):
-        manager._apply_env_overrides(settings, secrets={})
+    settings = manager.load(validate_schema=False)
+    assert "override.db" not in settings.database.url
+    assert settings.search.searxng.host == ""
 
 
 def test_config_manager_validate_config_returns_warnings() -> None:
@@ -249,40 +245,105 @@ def test_config_manager_normalizes_data_paths_from_config_root(tmp_path, monkeyp
     assert settings.vector_storage.chroma.path.startswith(root.as_posix())
 
 
-def test_config_manager_apply_env_overrides_updates_search_settings(monkeypatch) -> None:
-    settings = make_settings(
-        {
-            "models": {
-                "defaults": {"chat": "test-chat", "embedding": "test-embed"},
-                "available": [
-                    {
-                        "id": "test-chat",
-                        "provider": "test",
-                        "model": "test-chat",
-                        "display_name": "Test Chat",
-                        "roles": ["chat"],
-                    },
-                    {
-                        "id": "test-embed",
-                        "provider": "test",
-                        "model": "test-embed",
-                        "display_name": "Test Embed",
-                        "roles": ["embed"],
-                    },
-                ],
-            }
-        }
-    )
-    manager = ConfigManager(config_path=Path("config/app.yaml"))
+def test_config_manager_selects_first_reachable_database_candidate(tmp_path, monkeypatch) -> None:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.listen(5)
 
-    monkeypatch.setenv("CRYSTALITH_SEARCH__SEARXNG__HOST", "http://127.0.0.1:50201")
-    monkeypatch.setenv("CRYSTALITH_SEARCH__SEARXNG__API_KEY", "k")
-    monkeypatch.setenv("CRYSTALITH_SEARCH__SEARXNG__TIMEOUT", "12")
-    monkeypatch.setenv("CRYSTALITH_SEARCH__SEARXNG__MAX_RESULTS", "7")
+    stop = threading.Event()
 
-    manager._apply_env_overrides(settings, secrets={})
+    def _accept_loop() -> None:
+        while not stop.is_set():
+            try:
+                sock.settimeout(0.1)
+                conn, _addr = sock.accept()
+                conn.close()
+            except TimeoutError:
+                continue
+            except OSError:
+                break
 
-    assert settings.search.searxng.host == "http://127.0.0.1:50201"
-    assert settings.search.searxng.api_key == "k"
-    assert settings.search.searxng.timeout == 12
-    assert settings.search.searxng.max_results == 7
+    thread = threading.Thread(target=_accept_loop, daemon=True)
+    thread.start()
+
+    try:
+        config_path = tmp_path / "app.yaml"
+        reachable = f"postgresql+asyncpg://user:pw@127.0.0.1:{port}/db"
+        _write_yaml(
+            config_path,
+            _minimal_config_yaml()
+            + "\n"
+            + f"""\
+database:
+  url: "sqlite+aiosqlite:///./data/app.db"
+  url_candidates:
+    - "postgresql+asyncpg://user:pw@127.0.0.1:1/db"
+    - "{reachable}"
+""",
+        )
+        manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.json")
+
+        # Mock reason: keep config load test deterministic and independent of local Ollama availability.
+        monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
+
+        settings = manager.load(validate_schema=False)
+        assert settings.database.url == reachable
+    finally:
+        stop.set()
+        try:
+            sock.close()
+        except OSError:
+            pass
+
+
+def test_config_manager_skips_postgres_candidate_without_password(tmp_path, monkeypatch) -> None:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.listen(5)
+
+    stop = threading.Event()
+
+    def _accept_loop() -> None:
+        while not stop.is_set():
+            try:
+                sock.settimeout(0.1)
+                conn, _addr = sock.accept()
+                conn.close()
+            except TimeoutError:
+                continue
+            except OSError:
+                break
+
+    thread = threading.Thread(target=_accept_loop, daemon=True)
+    thread.start()
+
+    try:
+        config_path = tmp_path / "app.yaml"
+        candidate = f"postgresql+asyncpg://user:@127.0.0.1:{port}/db"
+        _write_yaml(
+            config_path,
+            _minimal_config_yaml()
+            + "\n"
+            + f"""\
+database:
+  url: "sqlite+aiosqlite:///./data/app.db"
+  url_candidates:
+    - "{candidate}"
+""",
+        )
+        manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.json")
+
+        # Mock reason: keep config load test deterministic and independent of local Ollama availability.
+        monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
+
+        settings = manager.load(validate_schema=False)
+        assert "sqlite" in settings.database.url
+        assert settings.database.url != candidate
+    finally:
+        stop.set()
+        try:
+            sock.close()
+        except OSError:
+            pass

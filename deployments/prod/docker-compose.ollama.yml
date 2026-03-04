@@ -15,10 +15,6 @@ x-service-defaults: &service-defaults
 
 services:
   api:
-    environment:
-      OLLAMA_HOST: ${OLLAMA_HOST:-http://ollama:11434}
-      CRYSTALITH_DEFAULT_CHAT_MODEL: ${CRYSTALITH_DEFAULT_CHAT_MODEL:-qwen-local}
-      CRYSTALITH_DEFAULT_EMBEDDING_MODEL: ${CRYSTALITH_DEFAULT_EMBEDDING_MODEL:-bge-m3-local}
     depends_on:
       ollama:
         condition: service_healthy

@@ -27,10 +27,6 @@ x-deploy-postgres: &deploy-postgres
 
 services:
   api:
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://crystalith:crystalith@postgres:5432/crystalith}
-      CHROMA_HOST: ${CHROMA_HOST:-chromadb}
-      CHROMA_PORT: ${CHROMA_PORT:-8000}
     depends_on:
       postgres:
         condition: service_healthy
