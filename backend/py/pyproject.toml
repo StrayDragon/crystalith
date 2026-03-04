@@ -41,6 +41,40 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+official-outputs = [
+    "crystalith-output-faq",
+    "crystalith-output-guide",
+    "crystalith-output-timeline",
+    "crystalith-output-mindmap",
+    "crystalith-output-quiz",
+    "crystalith-output-briefing",
+]
+official-parsers = [
+    "crystalith-parser-pdf",
+    "crystalith-parser-html",
+    "crystalith-parser-media",
+]
+official-extractors = [
+    "crystalith-extractor-trafilatura",
+    "crystalith-extractor-jina",
+    "crystalith-extractor-firecrawl",
+    "crystalith-extractor-browserless",
+]
+official-full = [
+    "crystalith-output-faq",
+    "crystalith-output-guide",
+    "crystalith-output-timeline",
+    "crystalith-output-mindmap",
+    "crystalith-output-quiz",
+    "crystalith-output-briefing",
+    "crystalith-parser-pdf",
+    "crystalith-parser-html",
+    "crystalith-parser-media",
+    "crystalith-extractor-trafilatura",
+    "crystalith-extractor-jina",
+    "crystalith-extractor-firecrawl",
+    "crystalith-extractor-browserless",
+]
 browserless = [
     "playwright>=1.40.0",
 ]
@@ -53,7 +87,7 @@ requires = ["uv_build>=0.9.24,<0.10.0"]
 build-backend = "uv_build"
 
 [tool.uv.workspace]
-members = ["packages/*", "examples/crystalith-output-*"]
+members = ["packages/*", "plugins/*"]
 
 [tool.uv.sources]
 crystalith = { workspace = true }
@@ -62,6 +96,9 @@ cl-logs = { workspace = true }
 cl-pydanticx = { workspace = true }
 cl-sqlalchemyx = { workspace = true }
 cl-stdx = { workspace = true }
+crystalith-output-faq = { workspace = true }
+crystalith-output-guide = { workspace = true }
+crystalith-output-briefing = { workspace = true }
 crystalith-output-quiz = { workspace = true }
 crystalith-output-timeline = { workspace = true }
 crystalith-output-mindmap = { workspace = true }
@@ -76,6 +113,9 @@ dev = [
     "pytest-cov>=5.0.0",
     "pytest-xdist>=3.5.0",
     "ruff>=0.13.1",
+    "crystalith-output-faq",
+    "crystalith-output-guide",
+    "crystalith-output-briefing",
     "crystalith-output-quiz",
     "crystalith-output-timeline",
     "crystalith-output-mindmap",

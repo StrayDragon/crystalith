@@ -81,6 +81,7 @@ class PluginRegistry:
         self.frontend_bundles: dict[str, FrontendBundleDescriptor] = {}
         self._output_type_plugin_ids: dict[str, str] = {}
         self._loaded_entrypoints: dict[str, str] = {}
+        self._load_report = PluginLoadReport()
 
     def reset(self) -> None:
         self.plugins.clear()
@@ -93,6 +94,7 @@ class PluginRegistry:
         self.frontend_bundles.clear()
         self._output_type_plugin_ids.clear()
         self._loaded_entrypoints.clear()
+        self._load_report = PluginLoadReport()
 
     def load_from_entry_points(self, settings: Settings) -> PluginLoadReport:
         """
@@ -216,6 +218,7 @@ class PluginRegistry:
                 has_output_type=has_output_type,
             )
 
+        self._load_report = report
         return report
 
     def _register_output_type_plugin(self, plugin_id: str, plugin: OutputTypePlugin) -> None:
@@ -352,6 +355,9 @@ class PluginRegistry:
 
     def list_output_types(self) -> list[str]:
         return sorted(self.output_types.keys())
+
+    def get_load_report(self) -> PluginLoadReport:
+        return self._load_report
 
     def get_output_type_metadata(self, output_type: str) -> OutputTypePluginMeta | None:
         return self.output_type_metadata.get(output_type)

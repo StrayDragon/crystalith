@@ -1,0 +1,22 @@
+[project]
+name = "crystalith-output-guide"
+version = "0.1.0"
+description = "Official Crystalith OutputTypePlugin (GUIDE)."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "crystalith", email = "devnull@example.com" }]
+dependencies = [
+  "crystalith",
+  "pydantic>=2.0.0",
+]
+
+[project.entry-points."crystalith.plugins"]
+output-guide = "crystalith_output_guide.plugin:plugin"
+
+[build-system]
+requires = ["uv_build>=0.9.24,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+package = true
+

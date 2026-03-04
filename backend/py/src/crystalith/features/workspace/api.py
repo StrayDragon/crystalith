@@ -1,26 +1,25 @@
 from __future__ import annotations
 
-from functools import lru_cache
 from typing import Literal, cast
 
-from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 
 from crystalith.shared.config import Settings
+from crystalith.shared.deps import get_plugin_registry, get_settings
+from crystalith.shared.json_types import JsonValue
 from crystalith.shared.plugins import PluginRegistry
+from crystalith.shared.plugins.official_catalog import OFFICIAL_PLUGIN_CATALOG
 from crystalith.shared.plugins.render_types import (
-    ConfigOption as PluginConfigOption,
     FrontendBundleDescriptor,
     PluginConfigSchema,
     RenderDescriptor,
+    ToolTone,
 )
-from crystalith.shared.types import OutputType, OutputTypeMeta
+from crystalith.shared.types import OutputType
 
 
 router = APIRouter(prefix="/v1/workspace", tags=["workspace-tools"])
-
-
-ToolTone = Literal["slate", "blue", "green", "rose", "amber", "teal", "indigo"]
 
 
 class WorkspaceTool(BaseModel):
@@ -37,21 +36,44 @@ class WorkspaceTool(BaseModel):
     enabled: bool = True
 
 
+class PluginSkipDetailResponse(BaseModel):
+    error_code: str
+    message: str
+    hint: str | None = None
+    details: dict[str, JsonValue] | None = None
+
+
+class ToolsPluginDiagnostics(BaseModel):
+    loaded: list[str] = Field(default_factory=list)
+    skipped: dict[str, PluginSkipDetailResponse] = Field(default_factory=dict)
+
+
+OfficialPluginStatus = Literal["loaded", "skipped", "not_installed"]
+
+
+class OfficialPluginDiagnostic(BaseModel):
+    status: OfficialPluginStatus
+    hint: str | None = None
+    details: dict[str, JsonValue] | None = None
+
+
+class WorkspaceToolsDiagnostics(BaseModel):
+    plugins: ToolsPluginDiagnostics
+    official: dict[str, OfficialPluginDiagnostic] = Field(default_factory=dict)
+
+
 class WorkspaceToolsResponse(BaseModel):
     tools: list[WorkspaceTool]
+    diagnostics: WorkspaceToolsDiagnostics
 
 
 class ConfigOption(BaseModel):
-    """A single configuration option."""
-
     id: str
     label: str
     is_default: bool = False
 
 
 class ToolConfigResponse(BaseModel):
-    """Configuration options for a specific tool."""
-
     tool_id: str
     tool_label: str
     quantity_options: list[ConfigOption] | None = None
@@ -60,243 +82,177 @@ class ToolConfigResponse(BaseModel):
     supports_topic: bool = True
 
 
-# Default configuration options
-DEFAULT_QUANTITY_OPTIONS = [
-    ConfigOption(id="less", label="更少"),
-    ConfigOption(id="standard", label="标准（默认）", is_default=True),
-    ConfigOption(id="more", label="更多"),
-]
-
-DEFAULT_DIFFICULTY_OPTIONS = [
-    ConfigOption(id="easy", label="简单"),
-    ConfigOption(id="medium", label="中等（默认）", is_default=True),
-    ConfigOption(id="hard", label="困难"),
-]
-
-# Tool-specific configurations
-TOOL_CONFIGS: dict[str, dict] = {
-    "faq": {
-        "quantity_options": DEFAULT_QUANTITY_OPTIONS,
-        "difficulty_options": None,  # FAQ doesn't have difficulty
-        "topic_placeholder": (
-            "示例提示\n"
-            "• 抽认卡必须仅限于一个特定来源（例如「一篇介绍意大利的文章」）\n"
-            "• 抽认卡必须专注于一个特定主题（例如「牛顿第二定律」）\n"
-            "• 卡片正面内容必须简短易记（1-5 个字词）"
-        ),
-    },
-    "guide": {
-        "quantity_options": [
-            ConfigOption(id="brief", label="简要"),
-            ConfigOption(id="standard", label="标准（默认）", is_default=True),
-            ConfigOption(id="detailed", label="详细"),
-        ],
-        "difficulty_options": DEFAULT_DIFFICULTY_OPTIONS,
-        "topic_placeholder": "指南应该聚焦于什么主题？\n例如：入门指南、最佳实践、常见问题解决方案",
-    },
-    "timeline": {
-        "quantity_options": DEFAULT_QUANTITY_OPTIONS,
-        "difficulty_options": None,
-        "topic_placeholder": "时间轴应该覆盖什么时间范围或事件类型？\n例如：技术发展历程、项目里程碑",
-    },
-    "mindmap": {
-        "quantity_options": [
-            ConfigOption(id="shallow", label="浅层（2层）"),
-            ConfigOption(id="standard", label="标准（3层）", is_default=True),
-            ConfigOption(id="deep", label="深层（4层）"),
-        ],
-        "difficulty_options": None,
-        "topic_placeholder": "思维导图的核心主题是什么？\n例如：系统架构、知识体系",
-    },
-    "quiz": {
-        "quantity_options": DEFAULT_QUANTITY_OPTIONS,
-        "difficulty_options": DEFAULT_DIFFICULTY_OPTIONS,
-        "topic_placeholder": "测验应该测试什么知识点？\n例如：基础概念、高级应用、综合理解",
-    },
-    "briefing": {
-        "quantity_options": [
-            ConfigOption(id="executive", label="高管摘要"),
-            ConfigOption(id="standard", label="标准报告（默认）", is_default=True),
-            ConfigOption(id="comprehensive", label="详尽报告"),
-        ],
-        "difficulty_options": None,
-        "topic_placeholder": "报告应该重点关注什么方面？\n例如：技术分析、市场趋势、风险评估",
-    },
-    "slides": {
-        "quantity_options": [
-            ConfigOption(id="short", label="精简"),
-            ConfigOption(id="standard", label="标准（默认）", is_default=True),
-            ConfigOption(id="detailed", label="详尽"),
-        ],
-        "difficulty_options": None,
-        "topic_placeholder": "演示应该围绕什么主题？\n例如：项目复盘、产品发布、技术方案介绍",
-    },
-}
-
-
-def _build_base_config_schema(tool_id: str) -> PluginConfigSchema:
-    config = TOOL_CONFIGS.get(tool_id, {})
-    quantity_options = config.get("quantity_options", DEFAULT_QUANTITY_OPTIONS)
-    difficulty_options = config.get("difficulty_options", DEFAULT_DIFFICULTY_OPTIONS)
-
-    def _to_plugin_options(options: list[ConfigOption] | None) -> list[PluginConfigOption]:
-        if not options:
-            return []
-        return [
-            PluginConfigOption(id=option.id, label=option.label, is_default=option.is_default)
-            for option in options
-        ]
-
-    return PluginConfigSchema(
-        quantity_options=_to_plugin_options(quantity_options),
-        difficulty_options=_to_plugin_options(difficulty_options),
-        topic_placeholder=config.get("topic_placeholder", "主题应该是什么？"),
-        supports_topic=bool(config.get("supports_topic", True)),
-    )
-
-
-def _merge_config_schema(
+def _tool_from_output_plugin(
     *,
-    base: PluginConfigSchema,
-    override: PluginConfigSchema,
-) -> PluginConfigSchema:
-    return PluginConfigSchema(
-        quantity_options=override.quantity_options or base.quantity_options,
-        difficulty_options=override.difficulty_options or base.difficulty_options,
-        topic_placeholder=(override.topic_placeholder or "").strip() or base.topic_placeholder,
-        supports_topic=override.supports_topic,
+    output_type: OutputType,
+    plugins: PluginRegistry,
+    frontend_bundles_enabled: bool,
+) -> WorkspaceTool | None:
+    plugin = plugins.output_types.get(output_type.value)
+    if plugin is None:
+        return None
+
+    meta = plugins.get_output_type_metadata(output_type.value)
+    if meta is None:
+        return None
+
+    frontend_bundle: FrontendBundleDescriptor | None = None
+    if frontend_bundles_enabled:
+        frontend_bundle = plugins.get_frontend_bundle(output_type.value)
+
+    return WorkspaceTool(
+        id=output_type.value.lower(),
+        label=meta.display_text,
+        description=meta.description,
+        tone=meta.tone,
+        output_type=output_type,
+        prompt=plugin.default_prompt or "",
+        render_descriptor=plugins.get_render_descriptor(output_type.value),
+        config_schema=plugins.get_config_schema(output_type.value),
+        frontend_bundle=frontend_bundle,
+        enabled=True,
     )
 
 
-@lru_cache(maxsize=1)
-def _build_tools() -> list[WorkspaceTool]:
-    """Build workspace tools from OutputType metadata."""
-    tools: list[WorkspaceTool] = []
-    for output_type in OutputType.get_tool_types():
-        meta: OutputTypeMeta = output_type.meta
-        tools.append(
-            WorkspaceTool(
-                id=output_type.value.lower(),
-                label=meta.display_text,
-                description=meta.description,
-                tone=cast(ToolTone, meta.tone),
-                output_type=output_type,
-                prompt=meta.prompt,
-            )
+def _slides_tool(*, frontend_bundles_enabled: bool) -> WorkspaceTool:
+    meta = OutputType.SLIDES.meta
+    frontend_bundle = (
+        FrontendBundleDescriptor(id="output-slides", export="render") if frontend_bundles_enabled else None
+    )
+    return WorkspaceTool(
+        id=OutputType.SLIDES.value.lower(),
+        label=meta.display_text,
+        description=meta.description,
+        tone=cast(ToolTone, meta.tone),
+        output_type=OutputType.SLIDES,
+        prompt=meta.prompt,
+        render_descriptor=None,
+        config_schema=None,
+        frontend_bundle=frontend_bundle,
+        enabled=True,
+    )
+
+
+def _build_diagnostics(*, plugins: PluginRegistry) -> WorkspaceToolsDiagnostics:
+    report = plugins.get_load_report()
+
+    skipped: dict[str, PluginSkipDetailResponse] = {}
+    for plugin_id, detail in report.skipped.items():
+        payload = detail.to_dict()
+        details = payload.get("details")
+        skipped[plugin_id] = PluginSkipDetailResponse(
+            error_code=str(payload.get("error_code") or ""),
+            message=str(payload.get("message") or ""),
+            hint=cast(str | None, payload.get("hint")),
+            details=cast(dict[str, JsonValue] | None, details) if isinstance(details, dict) else None,
         )
-    return tools
 
+    loaded = list(report.loaded)
 
-_BUILTIN_FRONTEND_BUNDLES: dict[str, FrontendBundleDescriptor] = {
-    OutputType.FAQ.value: FrontendBundleDescriptor(id="output-faq", export="render"),
-    OutputType.GUIDE.value: FrontendBundleDescriptor(id="output-guide", export="render"),
-    OutputType.TIMELINE.value: FrontendBundleDescriptor(id="output-timeline", export="render"),
-    OutputType.MINDMAP.value: FrontendBundleDescriptor(id="output-mindmap", export="render"),
-    OutputType.QUIZ.value: FrontendBundleDescriptor(id="output-quiz", export="render"),
-    OutputType.BRIEFING.value: FrontendBundleDescriptor(id="output-briefing", export="render"),
-    OutputType.SLIDES.value: FrontendBundleDescriptor(id="output-slides", export="render"),
-}
+    official: dict[str, OfficialPluginDiagnostic] = {}
+    loaded_set = set(loaded)
+    for plugin_id, catalog_entry in OFFICIAL_PLUGIN_CATALOG.items():
+        if plugin_id in loaded_set:
+            official[plugin_id] = OfficialPluginDiagnostic(status="loaded")
+            continue
+        skip_detail = report.skipped.get(plugin_id)
+        if skip_detail is not None:
+            official[plugin_id] = OfficialPluginDiagnostic(
+                status="skipped",
+                hint=skip_detail.hint,
+                details=cast(dict[str, JsonValue], skip_detail.to_dict()),
+            )
+            continue
+        official[plugin_id] = OfficialPluginDiagnostic(
+            status="not_installed",
+            hint=catalog_entry.default_install_hint(),
+            details={"package": catalog_entry.package, "kind": catalog_entry.kind},
+        )
 
-
-def _get_tool_by_id(tool_id: str) -> WorkspaceTool | None:
-    """Get a tool by its ID."""
-    for tool in _build_tools():
-        if tool.id == tool_id:
-            return tool
-    return None
+    return WorkspaceToolsDiagnostics(
+        plugins=ToolsPluginDiagnostics(loaded=loaded, skipped=skipped),
+        official=official,
+    )
 
 
 @router.get("/tools", response_model=WorkspaceToolsResponse)
-async def list_workspace_tools(request: Request) -> WorkspaceToolsResponse:
-    frontend_bundles_enabled = True
-    try:
-        settings = cast(Settings, request.app.state.settings)
-        frontend_bundles_enabled = settings.app.features.workspace_frontend_bundles_enabled
-    except AttributeError:
-        frontend_bundles_enabled = True
-
-    try:
-        plugins = cast(PluginRegistry, request.app.state.plugins)
-    except AttributeError:
-        return WorkspaceToolsResponse(
-            tools=[
-                tool.model_copy(
-                    update={
-                        "config_schema": _build_base_config_schema(tool.id),
-                        "frontend_bundle": (
-                            _BUILTIN_FRONTEND_BUNDLES.get(tool.output_type.value)
-                            if frontend_bundles_enabled
-                            else None
-                        ),
-                    }
-                )
-                for tool in _build_tools()
-            ]
-        )
+async def list_workspace_tools(
+    settings: Settings = Depends(get_settings),
+    plugins: PluginRegistry = Depends(get_plugin_registry),
+) -> WorkspaceToolsResponse:
+    frontend_bundles_enabled = settings.app.features.workspace_frontend_bundles_enabled
 
     tools: list[WorkspaceTool] = []
-    for tool in _build_tools():
-        base_schema = _build_base_config_schema(tool.id)
-        plugin_schema = plugins.get_config_schema(tool.output_type.value)
-        resolved_schema = (
-            _merge_config_schema(base=base_schema, override=plugin_schema)
-            if plugin_schema is not None
-            else base_schema
-        )
-        tools.append(
-            tool.model_copy(
-                update={
-                    "render_descriptor": plugins.get_render_descriptor(tool.output_type.value),
-                    "config_schema": resolved_schema,
-                    "frontend_bundle": (
-                        (
-                            plugins.get_frontend_bundle(tool.output_type.value)
-                            or _BUILTIN_FRONTEND_BUNDLES.get(tool.output_type.value)
-                        )
-                        if frontend_bundles_enabled
-                        else None
-                    ),
-                }
-            )
-        )
 
-    return WorkspaceToolsResponse(tools=tools)
+    # Built-in tool (kept in this change): SLIDES
+    tools.append(_slides_tool(frontend_bundles_enabled=frontend_bundles_enabled))
+
+    # Plugin-provided tool output types
+    order_index = {item.value: idx for idx, item in enumerate(OutputType)}
+    for output_type in OutputType:
+        if output_type == OutputType.SLIDES:
+            continue
+        tool = _tool_from_output_plugin(
+            output_type=output_type,
+            plugins=plugins,
+            frontend_bundles_enabled=frontend_bundles_enabled,
+        )
+        if tool is not None:
+            tools.append(tool)
+
+    tools.sort(key=lambda item: order_index.get(item.output_type.value, 10_000))
+
+    return WorkspaceToolsResponse(
+        tools=tools,
+        diagnostics=_build_diagnostics(plugins=plugins),
+    )
 
 
 @router.get("/tools/{tool_id}/config", response_model=ToolConfigResponse)
-async def get_tool_config(tool_id: str, request: Request) -> ToolConfigResponse:
-    """Get configuration options for a specific tool."""
-    tool = _get_tool_by_id(tool_id)
-    if tool is None:
-        raise HTTPException(status_code=404, detail="Tool not found")
-
-    base_schema = _build_base_config_schema(tool_id)
+async def get_tool_config(
+    tool_id: str,
+    plugins: PluginRegistry = Depends(get_plugin_registry),
+) -> ToolConfigResponse:
+    normalized = tool_id.strip().upper()
+    if normalized == OutputType.SLIDES.value:
+        raise HTTPException(status_code=404, detail="Use /v1/workspace/tools/slides/config")
 
     try:
-        plugins = cast(PluginRegistry, request.app.state.plugins)
-    except AttributeError:
-        plugins = None
+        output_type = OutputType(normalized)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Tool not found") from None
 
-    plugin_schema = plugins.get_config_schema(tool.output_type.value) if plugins is not None else None
-    resolved_schema = (
-        _merge_config_schema(base=base_schema, override=plugin_schema)
-        if plugin_schema is not None
-        else base_schema
-    )
+    plugin = plugins.output_types.get(output_type.value)
+    if plugin is None:
+        raise HTTPException(status_code=404, detail="Tool not found")
 
-    def _to_response_options(options: list[PluginConfigOption]) -> list[ConfigOption] | None:
-        if not options:
+    meta = plugins.get_output_type_metadata(output_type.value)
+    label = meta.display_text if meta is not None else output_type.value
+
+    schema = plugins.get_config_schema(output_type.value)
+
+    def _to_options(value: list[object] | None) -> list[ConfigOption] | None:
+        if not value:
             return None
-        return [
-            ConfigOption(id=option.id, label=option.label, is_default=option.is_default)
-            for option in options
-        ]
+        options: list[ConfigOption] = []
+        for option in value:
+            if not hasattr(option, "id") or not hasattr(option, "label"):
+                continue
+            options.append(
+                ConfigOption(
+                    id=str(getattr(option, "id")),
+                    label=str(getattr(option, "label")),
+                    is_default=bool(getattr(option, "is_default", False)),
+                )
+            )
+        return options or None
 
     return ToolConfigResponse(
         tool_id=tool_id,
-        tool_label=tool.label,
-        quantity_options=_to_response_options(resolved_schema.quantity_options),
-        difficulty_options=_to_response_options(resolved_schema.difficulty_options),
-        topic_placeholder=resolved_schema.topic_placeholder,
-        supports_topic=resolved_schema.supports_topic,
+        tool_label=label,
+        quantity_options=_to_options(schema.quantity_options) if schema is not None else None,
+        difficulty_options=_to_options(schema.difficulty_options) if schema is not None else None,
+        topic_placeholder=schema.topic_placeholder if schema is not None else None,
+        supports_topic=bool(schema.supports_topic) if schema is not None else True,
     )
+
