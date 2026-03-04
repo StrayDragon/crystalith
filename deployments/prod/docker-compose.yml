@@ -31,6 +31,11 @@ x-api-env: &api-env
   HOST: 0.0.0.0
   PORT: 8032
   RELOAD: "0"
+  # Optional: pass through OpenAI-compatible base URL override for config interpolation.
+  # Keep OPENAI_API_KEY out of compose env; use config/secrets.yaml instead.
+  OPENAI_BASE_URL: ${OPENAI_BASE_URL_DOCKER:-}
+  # Optional: default model overrides (non-secret)
+  CRYSTALITH_DEFAULT_EMBEDDING_MODEL: ${CRYSTALITH_DEFAULT_EMBEDDING_MODEL_DOCKER:-}
 
 services:
   # ---------------------------------------------------------------------------
