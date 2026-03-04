@@ -1,0 +1,54 @@
+x-healthcheck-default: &healthcheck-default
+  interval: 5s
+  timeout: 5s
+  retries: 20
+
+x-logging-default: &logging-default
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  logging: *logging-default
+
+services:
+  postgres:
+    <<: *service-defaults
+    image: ${POSTGRES_IMAGE:-postgres:18.1-trixie}
+    container_name: crystalith-deps-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-crystalith}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crystalith}
+      POSTGRES_DB: ${POSTGRES_DB:-crystalith}
+    ports:
+      - "${CL_DEPS_POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+    networks:
+      - deps-net
+
+  chromadb:
+    <<: *service-defaults
+    image: ${CHROMADB_IMAGE:-chromadb/chroma:0.5.15}
+    container_name: crystalith-deps-chromadb
+    ports:
+      - "${CL_DEPS_CHROMA_PORT:-8001}:8000"
+    volumes:
+      - chromadata:/chroma/chroma
+    healthcheck:
+      <<: *healthcheck-default
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/api/v1/heartbeat')"]
+    networks:
+      - deps-net
+
+volumes:
+  pgdata: {}
+  chromadata: {}
+
+networks:
+  deps-net: {}

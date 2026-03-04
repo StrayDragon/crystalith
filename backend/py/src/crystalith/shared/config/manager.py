@@ -245,6 +245,22 @@ class ConfigManager:
                 else:
                     model.provider_config = {"host": ollama_host}
 
+        searxng_host = _read_text("CRYSTALITH_SEARCH__SEARXNG__HOST")
+        if searxng_host:
+            settings.search.searxng.host = searxng_host
+
+        searxng_api_key = _read_text_with_secrets("CRYSTALITH_SEARCH__SEARXNG__API_KEY")
+        if searxng_api_key:
+            settings.search.searxng.api_key = searxng_api_key
+
+        searxng_timeout = _read_int("CRYSTALITH_SEARCH__SEARXNG__TIMEOUT")
+        if searxng_timeout is not None and searxng_timeout > 0:
+            settings.search.searxng.timeout = searxng_timeout
+
+        searxng_max_results = _read_int("CRYSTALITH_SEARCH__SEARXNG__MAX_RESULTS")
+        if searxng_max_results is not None and searxng_max_results > 0:
+            settings.search.searxng.max_results = searxng_max_results
+
         services = {
             "ollama": settings.optional_services.ollama,
             "chroma": settings.optional_services.chroma,
@@ -340,6 +356,56 @@ class ConfigManager:
                 )
             settings.models.defaults.embedding = default_embedding_model
 
+    def _normalize_storage_paths(self, settings: Settings) -> None:
+        """
+        Normalize relative storage paths to be stable regardless of CWD.
+
+        Rule:
+        - When config is at <root>/config/app.yaml, treat <root> as project root and
+          rewrite relative paths (./data/...) to absolute paths under <root>.
+        - Otherwise, treat the config directory as the root anchor.
+        """
+        config_path = self.config_path.resolve()
+        config_dir = config_path.parent
+        root_dir = config_dir.parent if config_dir.name == "config" else config_dir
+
+        def _abs_path(path_value: str) -> str:
+            raw = (path_value or "").strip()
+            if not raw:
+                return path_value
+            path = Path(raw)
+            if path.is_absolute():
+                return path.as_posix()
+            return (root_dir / path).resolve().as_posix()
+
+        def _normalize_sqlite_url(url_value: str) -> str:
+            url = (url_value or "").strip()
+            if not url.startswith("sqlite"):
+                return url_value
+
+            scheme, rest = url.split(":", 1)
+            if rest.startswith("////"):
+                return url_value
+            if not rest.startswith("///"):
+                return url_value
+
+            raw_path = rest[3:]
+            path_part, sep, query = raw_path.partition("?")
+            if path_part in {":memory:", ""} or path_part.startswith(":memory:"):
+                return url_value
+            if path_part.startswith("file:"):
+                return url_value
+
+            abs_path = (root_dir / Path(path_part)).resolve().as_posix().lstrip("/")
+            normalized = f"{scheme}:////{abs_path}"
+            if sep:
+                normalized = f"{normalized}?{query}"
+            return normalized
+
+        settings.database.url = _normalize_sqlite_url(settings.database.url)
+        settings.vector_storage.sqlite.path = _abs_path(settings.vector_storage.sqlite.path)
+        settings.vector_storage.chroma.path = _abs_path(settings.vector_storage.chroma.path)
+
     def _validate_with_jsonschema(self, data: dict[str, JsonValue]) -> list[str]:
         """
         Validate configuration data against JSON Schema.
@@ -425,14 +491,28 @@ class ConfigManager:
             # Load and validate settings with Pydantic
             settings = Settings.from_yaml(self.config_path, secrets=secrets)
             self._apply_env_overrides(settings, secrets)
+            self._normalize_storage_paths(settings)
 
-            # Auto-discover Ollama models (non-fatal)
-            try:
-                added = auto_discover_ollama(settings)
-                if added:
-                    logger.info("Auto-discovered %d Ollama models", added)
-            except Exception as exc:
-                logger.debug("Ollama auto-discovery skipped: %s", exc)
+            def _should_discover_ollama() -> bool:
+                if os.environ.get("OLLAMA_HOST"):
+                    return True
+                if settings.optional_services.ollama.enabled:
+                    return True
+                default_chat = settings.get_default_chat_model()
+                default_embed = settings.get_default_embedding_model()
+                return bool(
+                    (default_chat and default_chat.provider == "ollama")
+                    or (default_embed and default_embed.provider == "ollama")
+                )
+
+            if _should_discover_ollama():
+                # Auto-discover Ollama models (non-fatal)
+                try:
+                    added = auto_discover_ollama(settings)
+                    if added:
+                        logger.info("Auto-discovered %d Ollama models", added)
+                except Exception as exc:
+                    logger.debug("Ollama auto-discovery skipped: %s", exc)
 
         except FileNotFoundError as exc:
             raise FileNotFoundError(f"Config file not found: {self.config_path}") from exc

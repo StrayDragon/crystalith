@@ -1,0 +1,10 @@
+x-logging-default: &logging-default
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services: {}
+
+networks:
+  deps-net: {}

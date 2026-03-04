@@ -15,7 +15,14 @@ async def test_searxng_searcher_validates_query() -> None:
 
 def test_searxng_searcher_from_settings_uses_defaults() -> None:
     searcher = SearXNGSearcher.from_settings(Settings())
-    assert searcher.host
+    assert searcher.host == ""
+
+
+@pytest.mark.asyncio
+async def test_searxng_searcher_rejects_unconfigured_host() -> None:
+    searcher = SearXNGSearcher.from_settings(Settings())
+    with pytest.raises(RuntimeError, match="not configured"):
+        await searcher.search("query")
 
 
 @pytest.mark.asyncio

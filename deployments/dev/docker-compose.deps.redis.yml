@@ -1,5 +1,5 @@
 x-healthcheck-default: &healthcheck-default
-  interval: 10s
+  interval: 5s
   timeout: 5s
   retries: 20
 
@@ -13,34 +13,23 @@ x-service-defaults: &service-defaults
   restart: unless-stopped
   logging: *logging-default
 
-x-deploy-small: &deploy-small
-  resources:
-    limits:
-      cpus: "0.50"
-      memory: 256M
-
 services:
-  api:
-    environment:
-      # Force redis cache when the redis overlay is enabled.
-      CACHE_PROVIDER: redis
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-    depends_on:
-      redis:
-        condition: service_healthy
-
   redis:
     <<: *service-defaults
     image: ${REDIS_IMAGE:-redis:7.4-alpine}
-    container_name: crystalith-redis
+    container_name: crystalith-deps-redis
+    ports:
+      - "${CL_DEPS_REDIS_PORT:-6380}:6379"
     volumes:
       - redisdata:/data
     healthcheck:
       <<: *healthcheck-default
       test: ["CMD", "redis-cli", "ping"]
-    deploy: *deploy-small
     networks:
-      - backend-net
+      - deps-net
 
 volumes:
   redisdata: {}
+
+networks:
+  deps-net: {}

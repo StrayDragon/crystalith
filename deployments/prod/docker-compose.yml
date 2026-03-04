@@ -37,6 +37,10 @@ x-api-env: &api-env
   OPENAI_API_KEY: ${OPENAI_API_KEY:-}
   OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
   OLLAMA_HOST: ${OLLAMA_HOST:-}
+  CRYSTALITH_SEARCH__SEARXNG__HOST: ${CRYSTALITH_SEARCH__SEARXNG__HOST:-}
+  CRYSTALITH_SEARCH__SEARXNG__API_KEY: ${CRYSTALITH_SEARCH__SEARXNG__API_KEY:-}
+  CRYSTALITH_SEARCH__SEARXNG__TIMEOUT: ${CRYSTALITH_SEARCH__SEARXNG__TIMEOUT:-}
+  CRYSTALITH_SEARCH__SEARXNG__MAX_RESULTS: ${CRYSTALITH_SEARCH__SEARXNG__MAX_RESULTS:-}
   CRYSTALITH_DEFAULT_CHAT_MODEL: ${CRYSTALITH_DEFAULT_CHAT_MODEL:-}
   CRYSTALITH_DEFAULT_EMBEDDING_MODEL: ${CRYSTALITH_DEFAULT_EMBEDDING_MODEL:-}
   CRYSTALITH_CONFIG_PATH: /app/config/app.yaml
@@ -104,7 +108,7 @@ services:
     container_name: crystalith-api
     environment: *api-env
     volumes:
-      - ../../data:/app/backend/py/data
+      - ../../data:/app/data
       - ../../config:/app/config:ro
     depends_on:
       data-init:

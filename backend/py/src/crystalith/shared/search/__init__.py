@@ -93,6 +93,12 @@ class SearXNGSearcher:
         if not query or not query.strip():
             raise ValueError("Search query cannot be empty")
 
+        if not self.host or not self.host.strip():
+            raise RuntimeError(
+                "SearXNG is not configured. Set `search.searxng.host` in config/app.yaml "
+                "or set env `CRYSTALITH_SEARCH__SEARXNG__HOST` (compose overlays can provide this)."
+            )
+
         target_engines = MODE_ENGINE_MAP.get(mode, MODE_ENGINE_MAP["Web"])
 
         try:

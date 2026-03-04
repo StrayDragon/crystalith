@@ -5,6 +5,28 @@
 - Python 3.12
 - Node 20 + pnpm
 - `uv` (Python package manager)
+- Docker (recommended for local deps)
+
+## Recommended dev (host hot reload + docker deps)
+
+Starts Postgres + Chroma + Redis + SearXNG in Docker, and runs the backend + frontend on your host machine.
+
+```bash
+cp .env.example .env
+just dev
+```
+
+Optional deps:
+
+```bash
+# Minimal deps (no web search):
+just DEV_DEPS_OPTIONALS="storage redis" dev
+
+# Add local Ollama:
+just DEV_DEPS_OPTIONALS="storage redis searxng ollama" dev
+```
+
+## No-docker dev (SQLite + embedded Chroma)
 
 ## Backend (FastAPI)
 

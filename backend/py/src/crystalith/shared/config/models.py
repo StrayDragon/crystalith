@@ -540,7 +540,7 @@ class ContextWindowSettings(BaseModel):
 
 class SearXNGSettings(BaseModel):
     """SearXNG search engine settings."""
-    host: str = Field("http://localhost:8888", description="SearXNG instance URL")
+    host: str = Field("", description="SearXNG instance URL. Empty disables web search.")
     api_key: str | None = Field(None, description="Optional API key for authentication")
     timeout: int = Field(10, ge=1, description="Request timeout in seconds")
     max_results: int = Field(10, ge=1, le=50, description="Maximum number of results")

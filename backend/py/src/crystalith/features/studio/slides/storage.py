@@ -1,14 +1,35 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
-OUTPUT_ROOT = Path("./data/output")
-PREVIEW_DIR = OUTPUT_ROOT / "preview"
 PREVIEW_MARKDOWN_NAME = "slides.md"
 
 
+def _data_dir() -> Path:
+    data_dir_value = os.environ.get("CRYSTALITH_DATA_DIR")
+    if data_dir_value and data_dir_value.strip():
+        return Path(data_dir_value)
+
+    cwd = Path.cwd()
+    for parent in (cwd, *cwd.parents):
+        candidate = parent / "config/app.yaml"
+        if candidate.is_file():
+            return candidate.parent.parent / "data"
+
+    return Path("./data")
+
+
+def _output_root() -> Path:
+    return _data_dir() / "output"
+
+
+def _preview_dir() -> Path:
+    return _output_root() / "preview"
+
+
 def get_slide_dir(notebook_id: int, slide_id: int) -> Path:
-    return OUTPUT_ROOT / str(notebook_id) / str(slide_id)
+    return _output_root() / str(notebook_id) / str(slide_id)
 
 
 def get_slide_markdown_path(notebook_id: int, slide_id: int) -> Path:
@@ -16,7 +37,7 @@ def get_slide_markdown_path(notebook_id: int, slide_id: int) -> Path:
 
 
 def get_preview_markdown_path() -> Path:
-    return PREVIEW_DIR / PREVIEW_MARKDOWN_NAME
+    return _preview_dir() / PREVIEW_MARKDOWN_NAME
 
 
 def write_slide_markdown(notebook_id: int, slide_id: int, markdown: str) -> Path:
@@ -32,7 +53,8 @@ def write_slide_markdown(notebook_id: int, slide_id: int, markdown: str) -> Path
 
 
 def write_preview_markdown(markdown: str) -> Path:
-    PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
+    preview_dir = _preview_dir()
+    preview_dir.mkdir(parents=True, exist_ok=True)
     path = get_preview_markdown_path()
     if path.exists():
         existing = path.read_text(encoding="utf-8")

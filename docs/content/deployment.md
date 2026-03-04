@@ -45,7 +45,7 @@ docker network create crystalith-smoke >/dev/null 2>&1 || true
 docker run -d --name crystalith-api --network crystalith-smoke --network-alias api \
   -e AUTO_DB_INIT=1 \
   -e CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED=0 \
-  -v "$PWD/data:/app/backend/py/data" \
+  -v "$PWD/data:/app/data" \
   -v "$PWD/config:/app/config:ro" \
   -e CRYSTALITH_CONFIG_PATH=/app/config/app.yaml \
   -p 8032:8032 \
@@ -79,30 +79,33 @@ Security note: by default the API is **unauthenticated**. Do not expose `CL_WEB_
 
 - `deployments/prod/docker-compose.storage.yml`: postgres + chromadb
 - `deployments/prod/docker-compose.redis.yml`: redis cache
+- `deployments/prod/docker-compose.searxng.yml`: searxng web search
 - `deployments/prod/docker-compose.ollama.yml`: local ollama
 - `deployments/prod/docker-compose.slidev.yml`: slidev preview
 - `deployments/prod/docker-compose.host-remap.yml`: host-network remap bridge
 
-Example: core + storage + redis + ollama
+Example: core + storage + redis + searxng + ollama
 
 ```bash
 docker compose --env-file .env \
   -f deployments/prod/docker-compose.yml \
   -f deployments/prod/docker-compose.storage.yml \
   -f deployments/prod/docker-compose.redis.yml \
+  -f deployments/prod/docker-compose.searxng.yml \
   -f deployments/prod/docker-compose.ollama.yml \
   up -d --build
 ```
 
 ## Using `just`
 
-`just dev-docker-up` 默认使用开发者组合：`storage redis`，并内置中国镜像构建默认值。
+`just dev-docker-up` 默认使用开发者组合：`storage redis searxng`，并内置中国镜像构建默认值。
 
 ```bash
 just dev-docker-up
 just DEV_OPTIONALS="storage" dev-docker-up
-just DEV_OPTIONALS="storage redis ollama" dev-docker-up
-just DEV_OPTIONALS="storage redis ollama slidev" dev-docker-up
+just DEV_OPTIONALS="storage redis searxng" dev-docker-up
+just DEV_OPTIONALS="storage redis searxng ollama" dev-docker-up
+just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up
 just DEV_OPTIONALS="storage redis" dev-docker-down
 ```
 
@@ -141,8 +144,9 @@ curl -fsS -X POST "http://localhost:${CL_WEB_PORT:-8080}/v1/notebooks" \
 ## External Service Replacement
 
 - Storage: set `DATABASE_URL`, `CHROMA_HOST`, `CHROMA_PORT` to your own services.
-- Redis: set `CACHE_PROVIDER=redis`, `REDIS_URL=...`.
+- Redis: use the redis overlay (forces `CACHE_PROVIDER=redis`) and set `REDIS_URL=...` to point at an external Redis if desired.
 - Ollama: set `OLLAMA_HOST` to external/host Ollama and skip local ollama overlay.
+- SearXNG: set `CRYSTALITH_SEARCH__SEARXNG__HOST` and skip the local searxng overlay.
 
 ## Notes
 
@@ -172,4 +176,4 @@ Old local-entry commands are removed; switch to:
 Rollback path:
 
 - Explicitly turn on all overlays to approximate previous full stack behavior:
-  `just DEV_OPTIONALS="storage redis ollama slidev" dev-docker-up`
+  `just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up`

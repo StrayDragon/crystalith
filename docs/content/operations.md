@@ -20,7 +20,7 @@ Crystalith deployments are typically **core + optional overlays**. The minimal b
 
 ### Core-only (local SQLite + embedded vector store)
 
-In the default core compose, the host `./data` directory is mounted into the API container at `/app/backend/py/data`.
+In the default core compose, the host `./data` directory is mounted into the API container at `/app/data`.
 
 Minimal backup set:
 - `config/app.yaml` (configuration)
@@ -97,8 +97,9 @@ Fixes:
 - If using external services, verify env vars:
   - Postgres: `DATABASE_URL`
   - Chroma: `CHROMA_HOST`, `CHROMA_PORT`
-  - Redis: `CACHE_PROVIDER=redis`, `REDIS_URL`
+  - Redis: `REDIS_URL` (compose redis overlay forces `CACHE_PROVIDER=redis`)
   - Ollama: `OLLAMA_HOST`
+  - SearXNG: `CRYSTALITH_SEARCH__SEARXNG__HOST`
 
 ### “Source from URL” fails (SSRF protections)
 

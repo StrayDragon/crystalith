@@ -194,10 +194,14 @@ def _model_provider(model: ModelConfig) -> str:
 
 
 def _is_ollama_enabled(settings: Settings) -> bool:
-    return (
-        settings.optional_services.ollama.enabled
-        or any(_model_provider(model) == "ollama" for model in settings.models.available)
-        or bool(os.getenv("OLLAMA_HOST"))
+    if settings.optional_services.ollama.enabled or bool(os.getenv("OLLAMA_HOST")):
+        return True
+
+    default_chat = settings.get_default_chat_model()
+    default_embed = settings.get_default_embedding_model()
+    return bool(
+        (default_chat and _model_provider(default_chat) == "ollama")
+        or (default_embed and _model_provider(default_embed) == "ollama")
     )
 
 
@@ -216,7 +220,12 @@ def _build_optional_status_template(settings: Settings) -> OptionalServicesStatu
         )
     redis_endpoint = settings.cache.redis_url or settings.optional_services.redis.endpoint
     ollama_endpoint = os.getenv("OLLAMA_HOST") or settings.optional_services.ollama.endpoint
-    searxng_endpoint = settings.optional_services.searxng.endpoint or settings.search.searxng.host
+    searxng_host = settings.search.searxng.host
+    searxng_host_set = bool(searxng_host and searxng_host.strip())
+    searxng_enabled = settings.optional_services.searxng.enabled or searxng_host_set
+    searxng_endpoint = None
+    if searxng_enabled:
+        searxng_endpoint = searxng_host.strip() if searxng_host_set else settings.optional_services.searxng.endpoint
 
     chroma_probe = settings.optional_services.chroma.probe
     redis_probe = settings.optional_services.redis.probe
@@ -283,7 +292,7 @@ def _build_optional_status_template(settings: Settings) -> OptionalServicesStatu
         },
         "search_searxng": {
             "service": "searxng",
-            "enabled": settings.optional_services.searxng.enabled or bool(searxng_endpoint),
+            "enabled": searxng_enabled,
             "endpoint": searxng_endpoint,
             "timeout_s": settings.search.searxng.timeout,
             "status": "unknown",
