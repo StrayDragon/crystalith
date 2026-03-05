@@ -52,7 +52,9 @@ providers:
   # OpenAI-compatible API
   openai_default: &openai_default
     api_key: "${{ secrets.OPENAI_API_KEY }}"
-    base_url: "https://api.openai.com/v1"
+    # Optional override: set OPENAI_BASE_URL to use an OpenAI-compatible endpoint/proxy.
+    # When empty/unset, the OpenAI SDK default (https://api.openai.com/v1) is used.
+    base_url: "${{ env.OPENAI_BASE_URL }}"
 
   # Local Ollama
   ollama_local: &ollama_local
@@ -78,7 +80,10 @@ models:
   defaults:
     # One-click default path: OpenAI
     chat: "gpt-5.2"
-    embedding: "text-embedding-3-small"
+    # Override example:
+    #   export CRYSTALITH_DEFAULT_EMBEDDING_MODEL="bge-m3-openai"
+    # When empty/unset, the first `roles: [embed]` model in `models.available` is used.
+    embedding: "${{ env.CRYSTALITH_DEFAULT_EMBEDDING_MODEL }}"
 
   available:
     # -------------------- OpenAI (chat) --------------------
@@ -113,6 +118,26 @@ models:
       model: "text-embedding-3-small"
       display_name: "text-embedding-3-small"
       description: "OpenAI embedding model"
+      roles: [embed]
+      provider_config:
+        <<: *openai_default
+
+    # -------------------- OpenAI-compatible gateway (embedding) --------------------
+    # NOTE: These model ids are commonly provided by OpenAI-compatible gateways (not by api.openai.com).
+    - id: "bge-m3-openai"
+      provider: "openai"
+      model: "BAAI/bge-m3"
+      display_name: "BGE-M3 (gateway)"
+      description: "Embedding model via OpenAI-compatible gateway"
+      roles: [embed]
+      provider_config:
+        <<: *openai_default
+
+    - id: "qwen3-embedding-openai"
+      provider: "openai"
+      model: "Qwen/Qwen3-Embedding-8B"
+      display_name: "Qwen3 Embedding 8B (gateway)"
+      description: "Embedding model via OpenAI-compatible gateway"
       roles: [embed]
       provider_config:
         <<: *openai_default

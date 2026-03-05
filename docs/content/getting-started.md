@@ -2,10 +2,75 @@
 
 ## Prerequisites
 
-- Python 3.12
-- Node 20 + pnpm
-- `uv` (Python package manager)
-- Docker (recommended for local deps)
+- Docker (recommended)
+- Python 3.12 + `uv`
+- Node 20 + `pnpm`
+- `just` (task runner)
+
+## Configuration model (important)
+
+Crystalith is **YAML-first** for runtime/business configuration:
+
+- Runtime config: `config/app.yaml` (committable)
+- Secrets (do not commit): `config/secrets.yaml` (auto-discovered) or `CRYSTALITH_SECRETS_PATH`
+- Compose/build parameters: `.env` (ports/images/mirrors) + optional non-secret runtime hints (e.g. `OPENAI_BASE_URL_DOCKER`)
+
+Legacy runtime env overrides (e.g. `DATABASE_URL`, `OPENAI_API_KEY`, `REDIS_URL`) are intentionally **not** used.
+
+## Provider setup (choose one)
+
+### Option A: OpenAI (direct)
+
+1) Create a local secrets file:
+
+```bash
+cp config/secrets.yaml.example config/secrets.yaml
+# edit config/secrets.yaml and set OPENAI_API_KEY
+```
+
+2) Leave `OPENAI_BASE_URL` empty/unset to use the OpenAI SDK default (`https://api.openai.com/v1`).
+
+```yaml
+providers:
+  openai_default: &openai_default
+    base_url: "${{ env.OPENAI_BASE_URL }}"
+```
+
+### Option B: OpenAI-compatible endpoint (proxy / self-host)
+
+1) Put your API key in `config/secrets.yaml` (`OPENAI_API_KEY`).
+2) Set `OPENAI_BASE_URL` to your endpoint (host env / compose env):
+
+```bash
+export OPENAI_BASE_URL="http://llm.internal:50256/v1"
+```
+
+If your gateway does not provide OpenAI embedding models (e.g. `text-embedding-3-*`), set:
+
+```bash
+export CRYSTALITH_DEFAULT_EMBEDDING_MODEL="bge-m3-openai"
+```
+
+If the endpoint is only reachable from your host network (VPN / Tailscale), use the `host-remap` overlay in
+**Docker Compose (prod-like)**:
+
+- Set `BRIDGE_FORWARDS` in `.env` (example): `BRIDGE_FORWARDS="50256:llm.internal:50256"`
+- Set `OPENAI_BASE_URL_DOCKER` in `.env` (example): `OPENAI_BASE_URL_DOCKER="http://host.docker.internal:50256/v1"`
+- If your gateway does not provide OpenAI embedding models, set `CRYSTALITH_DEFAULT_EMBEDDING_MODEL_DOCKER` (example): `CRYSTALITH_DEFAULT_EMBEDDING_MODEL_DOCKER="bge-m3-openai"`
+- Start with: `just DEV_OPTIONALS="storage redis searxng host-remap" dev-docker-up`
+
+### Option C: Ollama (fully local, no API key)
+
+1) Install Ollama and ensure it’s reachable at `http://localhost:11434`.
+2) Enable it in dev deps (optional): `just DEV_DEPS_OPTIONALS="storage redis searxng ollama" dev`
+3) In `config/app.yaml`, switch defaults to local models:
+
+```yaml
+models:
+  defaults:
+    chat: "qwen-local"
+    embedding: "bge-m3-local"
+```
 
 ## Recommended dev (host hot reload + docker deps)
 
@@ -13,6 +78,8 @@ Starts Postgres + Chroma + Redis + SearXNG in Docker, and runs the backend + fro
 
 ```bash
 cp .env.example .env
+cp config/secrets.yaml.example config/secrets.yaml
+# configure a provider (see Provider setup above)
 just dev
 ```
 
@@ -26,9 +93,25 @@ just DEV_DEPS_OPTIONALS="storage redis" dev
 just DEV_DEPS_OPTIONALS="storage redis searxng ollama" dev
 ```
 
+URLs:
+
+- Frontend (Vite): `http://127.0.0.1:3000`
+- Backend (FastAPI): `http://127.0.0.1:8032`
+- API docs (Scalar): `http://127.0.0.1:8032/v1/codev/openapi-ui/scalar`
+
+Stop / cleanup:
+
+```bash
+# Stop deps containers created by just dev
+just dev-deps-down
+
+# Tail deps logs
+just dev-deps-logs
+```
+
 ## No-docker dev (SQLite + embedded Chroma)
 
-## Backend (FastAPI)
+### Backend (FastAPI)
 
 ```bash
 cd backend/py
@@ -39,7 +122,7 @@ just dev
 
 API docs (Scalar): `http://127.0.0.1:8032/v1/codev/openapi-ui/scalar`
 
-## Frontend (Vite + React)
+### Frontend (Vite + React)
 
 ```bash
 cd frontend/web
@@ -64,4 +147,28 @@ pnpm dev
 
 ## Docker Compose (prod-like)
 
-See `Deployment` for the canonical stack.
+This mode runs `web` (Nginx) + `api` (FastAPI) in containers and mounts `./config` and `./data`.
+
+```bash
+cp .env.example .env
+cp config/secrets.yaml.example config/secrets.yaml
+# edit config/secrets.yaml (OPENAI_API_KEY, POSTGRES_PASSWORD if using storage overlay)
+just dev-docker-up
+just dev-docker-smoke
+```
+
+Customize overlays (optional deps):
+
+```bash
+# Core only:
+just DEV_OPTIONALS="" dev-docker-up
+
+# Full local stack:
+just DEV_OPTIONALS="storage redis searxng ollama" dev-docker-up
+```
+
+Next:
+
+- `Optimal Config` for recommended profiles
+- `Deployment` for compose overlays and production notes
+- `Operations` for diagnostics and runbooks

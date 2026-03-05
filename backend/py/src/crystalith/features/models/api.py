@@ -96,11 +96,19 @@ async def list_models(
     # Filter out models whose provider is disabled/missing.
     available = [m for m in available if plugins.is_provider_available(m.provider)]
 
+    resolved_default_chat = settings.get_default_chat_model()
+    if resolved_default_chat and not plugins.is_provider_available(resolved_default_chat.provider):
+        resolved_default_chat = None
+
+    resolved_default_embedding = settings.get_default_embedding_model()
+    if resolved_default_embedding and not plugins.is_provider_available(resolved_default_embedding.provider):
+        resolved_default_embedding = None
+
     return ModelsListResponse(
         models=[_model_config_to_read(m) for m in available],
         providers=sorted({"openai", "ollama", *plugins.list_ai_providers()}),
-        default_chat=models_settings.defaults.chat,
-        default_embedding=models_settings.defaults.embedding,
+        default_chat=resolved_default_chat.id if resolved_default_chat else None,
+        default_embedding=resolved_default_embedding.id if resolved_default_embedding else None,
     )
 
 

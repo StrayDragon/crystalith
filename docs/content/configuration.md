@@ -9,6 +9,10 @@ Crystalith runtime configuration lives in `config/app.yaml`.
   - `${{ env.VAR }}` interpolation
   - `${{ secrets.VAR }}` interpolation
   - YAML anchors for reuse
+- Non-secret overrides commonly used in deployments:
+  - `OPENAI_BASE_URL` (OpenAI-compatible endpoint/proxy)
+  - `CRYSTALITH_DEFAULT_EMBEDDING_MODEL` (default embedding model id)
+  - Docker Compose convenience: set `OPENAI_BASE_URL_DOCKER` / `CRYSTALITH_DEFAULT_EMBEDDING_MODEL_DOCKER` in `.env`
 
 ## Common settings
 

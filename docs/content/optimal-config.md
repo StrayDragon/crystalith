@@ -105,8 +105,9 @@ In `config/app.yaml`:
 - ollama: `optional_services.ollama.endpoint` / `optional_services.ollama.endpoint_candidates`
 - startup: `app.startup.auto_db_init`
 
-In `.env` (compose/build static parameters only):
+In `.env` (compose/build parameters + a few non-secret runtime overrides):
 - `CL_WEB_PORT`, images (`*_IMAGE`), mirrors (`APT_MIRROR`, `UV_INDEX_URL`, `NPM_REGISTRY`), dev-deps ports (`CL_DEPS_*`)
+- Optional runtime hints: `OPENAI_BASE_URL_DOCKER`, `CRYSTALITH_DEFAULT_EMBEDDING_MODEL_DOCKER`
 
 ## Troubleshooting
 

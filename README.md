@@ -27,6 +27,8 @@ Recommended (host hot reload + docker deps):
 
 ```bash
 cp .env.example .env
+cp config/secrets.yaml.example config/secrets.yaml
+# edit config/secrets.yaml (OPENAI_API_KEY)
 just dev
 ```
 
@@ -55,6 +57,8 @@ pnpm dev
 
 ```bash
 cp .env.example .env
+cp config/secrets.yaml.example config/secrets.yaml
+# edit config/secrets.yaml (OPENAI_API_KEY, POSTGRES_PASSWORD if using storage overlay)
 just dev-docker-up
 just composition-smoke
 ```
