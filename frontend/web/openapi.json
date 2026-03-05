@@ -638,6 +638,16 @@
             "title": "Description",
             "type": "string"
           },
+          "details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JsonDict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "display_name": {
             "title": "Display Name",
             "type": "string"
@@ -646,9 +656,53 @@
             "title": "Enabled",
             "type": "boolean"
           },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Message"
+          },
+          "plugin_id": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Plugin Id"
+          },
           "priority": {
             "title": "Priority",
             "type": "integer"
+          },
+          "recovery_hint": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Recovery Hint"
           },
           "requires_api_key": {
             "default": false,
@@ -701,6 +755,9 @@
             "default": true,
             "title": "Fallback Enabled",
             "type": "boolean"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/NotebookExtractorsPolicy"
           }
         },
         "required": [
@@ -1088,6 +1145,28 @@
         "title": "NotebookCreate",
         "type": "object"
       },
+      "NotebookExtractorsPolicy": {
+        "properties": {
+          "enabled_extractors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Enabled Extractors",
+            "type": "array"
+          },
+          "mode": {
+            "default": "inherit_global",
+            "enum": [
+              "custom",
+              "inherit_global"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "title": "NotebookExtractorsPolicy",
+        "type": "object"
+      },
       "NotebookRead": {
         "properties": {
           "created_at": {
@@ -1131,6 +1210,49 @@
           "name"
         ],
         "title": "NotebookUpdate",
+        "type": "object"
+      },
+      "OfficialPluginDiagnostic": {
+        "properties": {
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Hint"
+          },
+          "status": {
+            "enum": [
+              "loaded",
+              "not_installed",
+              "skipped"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "OfficialPluginDiagnostic",
         "type": "object"
       },
       "OutputExportJson": {
@@ -1442,6 +1564,41 @@
         "x-enum-class": "OutputType",
         "x-enum-module": "crystalith.shared.types"
       },
+      "PatchNotebookExtractorsPolicyRequest": {
+        "properties": {
+          "enabled_extractors": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled Extractors"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "custom",
+                  "inherit_global"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          }
+        },
+        "title": "PatchNotebookExtractorsPolicyRequest",
+        "type": "object"
+      },
       "PluginConfigSchema": {
         "additionalProperties": false,
         "properties": {
@@ -1471,6 +1628,49 @@
           }
         },
         "title": "PluginConfigSchema",
+        "type": "object"
+      },
+      "PluginSkipDetailResponse": {
+        "properties": {
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "error_code": {
+            "title": "Error Code",
+            "type": "string"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Hint"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error_code",
+          "message"
+        ],
+        "title": "PluginSkipDetailResponse",
         "type": "object"
       },
       "PromptPresetCreate": {
@@ -4381,7 +4581,6 @@
         "type": "object"
       },
       "ToolConfigResponse": {
-        "description": "Configuration options for a specific tool.",
         "properties": {
           "difficulty_options": {
             "anyOf": [
@@ -4441,6 +4640,26 @@
           "tool_label"
         ],
         "title": "ToolConfigResponse",
+        "type": "object"
+      },
+      "ToolsPluginDiagnostics": {
+        "properties": {
+          "loaded": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Loaded",
+            "type": "array"
+          },
+          "skipped": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PluginSkipDetailResponse"
+            },
+            "title": "Skipped",
+            "type": "object"
+          }
+        },
+        "title": "ToolsPluginDiagnostics",
         "type": "object"
       },
       "Topic": {
@@ -4618,8 +4837,30 @@
         "title": "WorkspaceTool",
         "type": "object"
       },
+      "WorkspaceToolsDiagnostics": {
+        "properties": {
+          "official": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/OfficialPluginDiagnostic"
+            },
+            "title": "Official",
+            "type": "object"
+          },
+          "plugins": {
+            "$ref": "#/components/schemas/ToolsPluginDiagnostics"
+          }
+        },
+        "required": [
+          "plugins"
+        ],
+        "title": "WorkspaceToolsDiagnostics",
+        "type": "object"
+      },
       "WorkspaceToolsResponse": {
         "properties": {
+          "diagnostics": {
+            "$ref": "#/components/schemas/WorkspaceToolsDiagnostics"
+          },
           "tools": {
             "items": {
               "$ref": "#/components/schemas/WorkspaceTool"
@@ -4629,13 +4870,13 @@
           }
         },
         "required": [
+          "diagnostics",
           "tools"
         ],
         "title": "WorkspaceToolsResponse",
         "type": "object"
       },
       "crystalith__features__workspace__api__ConfigOption": {
-        "description": "A single configuration option.",
         "properties": {
           "id": {
             "title": "Id",
@@ -7873,6 +8114,56 @@
         "tags": [
           "sources"
         ]
+      },
+      "patch": {
+        "operationId": "patch_extractors_policy_v1_notebooks__notebook_id__sources_extractors_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notebook_id",
+            "required": true,
+            "schema": {
+              "title": "Notebook Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchNotebookExtractorsPolicyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractorsListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Patch Extractors Policy",
+        "tags": [
+          "sources"
+        ]
       }
     },
     "/v1/notebooks/{notebook_id}/sources/from-url": {
@@ -9206,7 +9497,6 @@
     },
     "/v1/workspace/tools/{tool_id}/config": {
       "get": {
-        "description": "Get configuration options for a specific tool.",
         "operationId": "get_tool_config_v1_workspace_tools__tool_id__config_get",
         "parameters": [
           {

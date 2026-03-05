@@ -118,11 +118,13 @@ export function useRefine() {
     [refineTemplates],
   );
 
-  const { data: toolsData, error: toolsError, isLoading: toolsLoading } = useSWR(
+  const { data: toolsData, error: toolsError, isLoading: toolsLoading, mutate: refreshTools } = useSWR(
     isConnected ? 'workspace/tools' : null,
     () => unwrapData(listWorkspaceTools<true>()),
     { revalidateOnFocus: false },
   );
+
+  const toolsDiagnostics = useMemo(() => toolsData?.diagnostics ?? null, [toolsData]);
 
   const tools = useMemo<WorkspaceTool[]>(() => {
     // Return backend data if available
@@ -723,8 +725,10 @@ export function useRefine() {
     refineTemplates,
     compareTemplate,
     tools,
+    toolsDiagnostics,
     toolsLoading,
     toolsError: !isConnected ? '未连接到后端服务。' : toolsError ? '工具加载失败' : '',
+    refreshTools,
     selectedSourceIds,
     refineMode: refineModeCurrent,
     setRefineMode,
