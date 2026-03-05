@@ -113,3 +113,24 @@ Fix:
   - `source_ingestion.url_fetch.security.allowlist_cidrs`
 
 Security note: keep allowlists tight; avoid enabling `allowlist_only` unless you understand the trade‑off.
+
+### “Source from URL” fetch fails (missing extractors / policy)
+
+Symptoms:
+- Fetch mode returns `503 OPTIONAL_SERVICE_UNAVAILABLE` with a `recovery_hint` mentioning `extractor-*` plugins.
+
+Fixes:
+- Install the official extractor bundle: `pip install 'crystalith[official-extractors]'` (or `crystalith[official-full]`).
+- Ensure the plugin isn’t disabled by config:
+  - `plugins.disabled` (denylist)
+  - `plugins.enabled` (allowlist; if set, required plugin ids must be included)
+- If using notebook-level custom policy, enable at least one extractor (or switch the notebook back to `inherit_global`).
+
+### Uploading PDF/HTML/audio/video fails (missing parsers)
+
+Symptoms:
+- Upload returns `415 PARSER_PLUGIN_REQUIRED` and includes `details.required_plugin_id` (e.g. `parser-pdf`).
+
+Fixes:
+- Install the official parser bundle: `pip install 'crystalith[official-parsers]'` (or `crystalith[official-full]`).
+- Ensure the plugin isn’t disabled by `plugins.*` config.
