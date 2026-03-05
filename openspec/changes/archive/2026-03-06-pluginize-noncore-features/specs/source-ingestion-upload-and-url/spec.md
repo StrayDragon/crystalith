@@ -17,4 +17,3 @@
 - **WHEN** 用户指定 `preferred_extractor=X` 但 X 不可用
 - **THEN** 系统 SHALL 返回明确的不可用原因（或在回退后返回回退链路的诊断信息）
 - **AND** SHALL 提供可执行的恢复提示（启用插件/配置 endpoint/API key/稍后重试）
-
