@@ -21,8 +21,6 @@ x-deploy-small: &deploy-small
 
 services:
   api:
-    environment:
-      CRYSTALITH_SEARCH__SEARXNG__HOST: ${CRYSTALITH_SEARCH__SEARXNG__HOST:-http://searxng:8080}
     depends_on:
       searxng:
         condition: service_healthy

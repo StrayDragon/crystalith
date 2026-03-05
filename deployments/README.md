@@ -20,10 +20,16 @@ Core terminology mapping:
 
 ```bash
 cp .env.example .env
+cp config/secrets.yaml.example config/secrets.yaml
+# Edit config/secrets.yaml (e.g. OPENAI_API_KEY, POSTGRES_PASSWORD if using storage overlay)
 just dev-docker-up
 ```
 
 Default `just dev-docker-up` starts a developer stack: core + `storage redis searxng`.
+
+Notes:
+- Runtime/business config lives in `config/app.yaml` (validated by `config/app.schema.json`).
+- Secrets live in `config/secrets.yaml` (do not commit). `.env` is only for build/deploy static params.
 
 Dev-friendly preset (core + storage + redis + searxng, with China mirrors as build defaults):
 
@@ -38,6 +44,7 @@ dependencies (Postgres/Chroma/Redis/Ollama/SearXNG), use the dev deps compositio
 
 ```bash
 cp .env.example .env
+cp config/secrets.yaml.example config/secrets.yaml
 just dev
 # or (deps only):
 just dev-deps-up
@@ -78,10 +85,10 @@ just DEV_OPTIONALS="storage redis" dev-docker-down
 
 ## Optional Services and External Replacement
 
-- `storage`: runs `postgres` + `chromadb`. You can replace with external services by setting `DATABASE_URL` / `CHROMA_HOST` / `CHROMA_PORT`.
-- `redis`: enables redis cache via `CACHE_PROVIDER=redis` and `REDIS_URL`.
-- `searxng`: runs a local SearXNG instance for web search. If you use external SearXNG, set `CRYSTALITH_SEARCH__SEARXNG__HOST` and skip this overlay.
-- `ollama`: runs local ollama. If you use external/host ollama, set `OLLAMA_HOST` and skip this overlay.
+- `storage`: runs `postgres` + `chromadb`. External replacement is configured in `config/app.yaml` (`database.url*`, `vector_storage.chroma.*`).
+- `redis`: enables redis cache via `config/app.yaml` (`cache.provider`, `cache.redis_url*`).
+- `searxng`: runs a local SearXNG instance for web search. External replacement is configured in `config/app.yaml` (`search.searxng.host` / `search.searxng.endpoint_candidates`).
+- `ollama`: runs local ollama. External replacement is configured in `config/app.yaml` (`optional_services.ollama.endpoint_candidates` and ollama model provider host).
 - `slidev`: local slide preview service.
 - `host-remap`: host-network socat bridge for VPN/Tailscale scenarios.
 
@@ -94,7 +101,9 @@ Use `/health/dependencies` (or the Workspace Diagnostics panel) as the single so
 Enable when you need durable DB + vector storage outside the API container (recommended for long‑running self-host setups).
 
 - Enable: add `-f deployments/prod/docker-compose.storage.yml` (or `just DEV_OPTIONALS="storage ..."`).
-- External replacement: set `DATABASE_URL`, `CHROMA_HOST`, `CHROMA_PORT` and omit the overlay services.
+- External replacement: edit `config/app.yaml`:
+  - `database.url` / `database.url_candidates`
+  - `vector_storage.chroma.host/port` or `vector_storage.chroma.endpoint_candidates`
 - Acceptance:
   - `curl -fsS "http://localhost:${CL_WEB_PORT:-8080}/health/dependencies" | python3 -m json.tool | head -80`
   - Verify `optional.storage_chroma.enabled == true` and status is not `unknown`.
@@ -104,7 +113,9 @@ Enable when you need durable DB + vector storage outside the API container (reco
 Enable when you want caching for embeddings/vector search and lower latency.
 
 - Enable: add `-f deployments/prod/docker-compose.redis.yml`.
-- External replacement: set `CACHE_PROVIDER=redis`, `REDIS_URL=...` and omit the overlay service.
+- External replacement: edit `config/app.yaml`:
+  - `cache.provider: redis|auto`
+  - `cache.redis_url` / `cache.redis_url_candidates`
 - Acceptance:
   - Verify `optional.cache_redis.enabled == true` and status is not `unknown`.
 
@@ -113,16 +124,19 @@ Enable when you want caching for embeddings/vector search and lower latency.
 Enable when you want fully local models (no external LLM provider).
 
 - Enable: add `-f deployments/prod/docker-compose.ollama.yml`.
-- External replacement: set `OLLAMA_HOST=...` and omit the overlay service.
+- External replacement: edit `config/app.yaml`:
+  - `optional_services.ollama.endpoint_candidates`
+  - (Optional) switch `models.defaults.*` to an ollama-backed model id
 - Acceptance:
-  - Verify `optional.ollama.enabled == true` and endpoint matches `OLLAMA_HOST`.
+  - Verify `optional.ollama.enabled == true` and `/health/dependencies` shows at least one healthy ollama host.
 
 ### searxng
 
 Enable when you want built-in web search / deep research to run without an external search provider.
 
 - Enable: add `-f deployments/prod/docker-compose.searxng.yml`.
-- External replacement: set `CRYSTALITH_SEARCH__SEARXNG__HOST=...` and omit the overlay service.
+- External replacement: edit `config/app.yaml`:
+  - `search.searxng.host` or `search.searxng.endpoint_candidates`
 - Acceptance:
   - Verify `optional.search_searxng.enabled == true` and status is not `unknown`.
 
@@ -149,12 +163,14 @@ Enable only for special networking setups (VPN/Tailscale, host-network forwardin
 just dev-docker-smoke
 ```
 
-Full composition smoke (core-only + optional late start + external service wiring):
+Full composition smoke (core-only + optional late start + overlay composition):
 
 ```bash
 just composition-smoke
 # or:
 SMOKE_SCENARIOS="core-only single-optional" ./scripts/composition_smoke.sh
+# (include heavier overlays when needed)
+# SMOKE_SCENARIOS="core-only single-optional key-optionals" ./scripts/composition_smoke.sh
 # optional: clean compose volumes during reset
 SMOKE_PRUNE_VOLUMES=1 ./scripts/composition_smoke.sh
 ```

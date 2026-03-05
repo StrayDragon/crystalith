@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from pathlib import Path
-from typing import Literal, cast
+from urllib.parse import urlparse
 
 import yaml
 from jsonschema import Draft7Validator
@@ -12,12 +11,15 @@ from pydantic import ValidationError
 
 from crystalith.shared.json_types import JsonValue
 
-from .models import OllamaProviderSettings, OpenAIProviderSettings, Settings
+from .endpoint_candidates import (
+    order_endpoint_candidates,
+    probe_tcp_endpoint,
+    tcp_target_from_endpoint,
+)
+from .models import OllamaProviderSettings, Settings
 from .ollama_discovery import auto_discover_ollama
 
 logger = logging.getLogger(__name__)
-
-OptionalServiceDegradePolicy = Literal["core_available", "fail_closed"]
 
 
 class ConfigManager:
@@ -77,10 +79,18 @@ class ConfigManager:
         if self._secrets is not None:
             return self._secrets
 
-        if self.secrets_path is None or not self.secrets_path.is_file():
-            if self.secrets_path is not None and self.secrets_path.is_dir():
+        secrets_path = self.secrets_path
+        if secrets_path is None:
+            for candidate_name in ("secrets.yaml", "secrets.yml"):
+                candidate = self.config_path.parent / candidate_name
+                if candidate.is_file():
+                    secrets_path = candidate
+                    break
+
+        if secrets_path is None or not secrets_path.is_file():
+            if secrets_path is not None and secrets_path.is_dir():
                 secrets: dict[str, str] = {}
-                for item in self.secrets_path.iterdir():
+                for item in secrets_path.iterdir():
                     if not item.is_file():
                         continue
                     try:
@@ -88,273 +98,22 @@ class ConfigManager:
                     except Exception as exc:
                         logger.warning("Failed to read secret %s: %s", item, exc)
                 self._secrets = secrets
-                logger.info("Loaded %d docker secrets from %s", len(secrets), self.secrets_path.resolve())
+                logger.info("Loaded %d docker secrets from %s", len(secrets), secrets_path.resolve())
                 return self._secrets
 
             self._secrets = {}
             return self._secrets
 
         try:
-            with open(self.secrets_path, encoding="utf-8") as f:
+            with open(secrets_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
                 self._secrets = {str(k): str(v) for k, v in (data or {}).items()}
-                logger.info("Loaded secrets from %s", self.secrets_path.resolve())
+                logger.info("Loaded secrets from %s", secrets_path.resolve())
         except Exception as exc:
-            logger.warning("Failed to load secrets from %s: %s", self.secrets_path, exc)
+            logger.warning("Failed to load secrets from %s: %s", secrets_path, exc)
             self._secrets = {}
 
         return self._secrets
-
-    def _apply_env_overrides(self, settings: Settings, secrets: dict[str, str]) -> None:
-        def _read_text(*names: str) -> str | None:
-            for name in names:
-                value = os.environ.get(name)
-                if value is None:
-                    continue
-                text = value.strip()
-                if text:
-                    return text
-            return None
-
-        def _read_text_with_secrets(*names: str) -> str | None:
-            value = _read_text(*names)
-            if value:
-                return value
-            for name in names:
-                secret_value = secrets.get(name)
-                if secret_value:
-                    return secret_value.strip() or None
-            return None
-
-        def _read_int(*names: str) -> int | None:
-            value = _read_text(*names)
-            if value is None:
-                return None
-            try:
-                return int(value)
-            except ValueError:
-                logger.warning("Invalid int for %s: %s", names[0], value)
-                return None
-
-        def _read_float(*names: str) -> float | None:
-            value = _read_text(*names)
-            if value is None:
-                return None
-            try:
-                return float(value)
-            except ValueError:
-                logger.warning("Invalid float for %s: %s", names[0], value)
-                return None
-
-        def _read_bool(*names: str) -> bool | None:
-            value = _read_text(*names)
-            if value is None:
-                return None
-            lowered = value.strip().lower()
-            if lowered in {"1", "true", "yes", "on"}:
-                return True
-            if lowered in {"0", "false", "no", "off"}:
-                return False
-            logger.warning("Invalid bool for %s: %s", names[0], value)
-            return None
-
-        database_url = _read_text("DATABASE_URL", "CRYSTALITH_DATABASE__URL")
-        if database_url:
-            settings.database.url = database_url
-
-        chroma_host = _read_text(
-            "CHROMA_HOST",
-            "CRYSTALITH_VECTOR_STORAGE__CHROMA__HOST",
-        )
-        if chroma_host:
-            settings.vector_storage.chroma.host = chroma_host
-
-        chroma_port = _read_int(
-            "CHROMA_PORT",
-            "CRYSTALITH_VECTOR_STORAGE__CHROMA__PORT",
-        )
-        if chroma_port is not None:
-            settings.vector_storage.chroma.port = chroma_port
-
-        chroma_path = _read_text(
-            "CHROMA_PATH",
-            "CRYSTALITH_VECTOR_STORAGE__CHROMA__PATH",
-        )
-        if chroma_path:
-            settings.vector_storage.chroma.path = chroma_path
-
-        cache_provider = _read_text("CACHE_PROVIDER", "CRYSTALITH_CACHE__PROVIDER")
-        redis_url = _read_text("REDIS_URL", "CRYSTALITH_CACHE__REDIS_URL")
-        if cache_provider:
-            normalized = cache_provider.strip().lower()
-            if normalized in {"memory", "redis"}:
-                settings.cache.provider = normalized  # type: ignore[assignment]
-        if redis_url:
-            settings.cache.redis_url = redis_url
-            # Only auto-promote to redis when no explicit CACHE_PROVIDER was set.
-            # If the user explicitly chose "memory", respect that choice even if
-            # REDIS_URL is pre-configured for later use.
-            if not cache_provider and settings.cache.provider != "redis":
-                settings.cache.provider = "redis"
-
-        embedding_concurrency = _read_int("CRYSTALITH_CONCURRENCY__EMBEDDING")
-        if embedding_concurrency is not None and embedding_concurrency >= 0:
-            settings.concurrency.embedding = embedding_concurrency
-
-        vector_search_concurrency = _read_int("CRYSTALITH_CONCURRENCY__VECTOR_SEARCH")
-        if vector_search_concurrency is not None and vector_search_concurrency >= 0:
-            settings.concurrency.vector_search = vector_search_concurrency
-
-        llm_concurrency = _read_int("CRYSTALITH_CONCURRENCY__LLM_GENERATE")
-        if llm_concurrency is not None and llm_concurrency >= 0:
-            settings.concurrency.llm_generate = llm_concurrency
-
-        openai_api_key = _read_text_with_secrets("OPENAI_API_KEY")
-        openai_base_url = _read_text("OPENAI_BASE_URL")
-        if openai_api_key or openai_base_url:
-            for model in settings.models.available:
-                if model.provider != "openai":
-                    continue
-                if isinstance(model.provider_config, OpenAIProviderSettings):
-                    if openai_api_key:
-                        model.provider_config.api_key = openai_api_key
-                    if openai_base_url:
-                        model.provider_config.base_url = openai_base_url
-                elif isinstance(model.provider_config, dict):
-                    if openai_api_key:
-                        model.provider_config["api_key"] = openai_api_key
-                    if openai_base_url:
-                        model.provider_config["base_url"] = openai_base_url
-                else:
-                    config: dict[str, JsonValue] = {}
-                    if openai_api_key:
-                        config["api_key"] = openai_api_key
-                    if openai_base_url:
-                        config["base_url"] = openai_base_url
-                    model.provider_config = config
-
-        ollama_host = _read_text("OLLAMA_HOST")
-        if ollama_host:
-            for model in settings.models.available:
-                if model.provider != "ollama":
-                    continue
-                if isinstance(model.provider_config, OllamaProviderSettings):
-                    model.provider_config.host = ollama_host
-                elif isinstance(model.provider_config, dict):
-                    model.provider_config["host"] = ollama_host
-                else:
-                    model.provider_config = {"host": ollama_host}
-
-        searxng_host = _read_text("CRYSTALITH_SEARCH__SEARXNG__HOST")
-        if searxng_host:
-            settings.search.searxng.host = searxng_host
-
-        searxng_api_key = _read_text_with_secrets("CRYSTALITH_SEARCH__SEARXNG__API_KEY")
-        if searxng_api_key:
-            settings.search.searxng.api_key = searxng_api_key
-
-        searxng_timeout = _read_int("CRYSTALITH_SEARCH__SEARXNG__TIMEOUT")
-        if searxng_timeout is not None and searxng_timeout > 0:
-            settings.search.searxng.timeout = searxng_timeout
-
-        searxng_max_results = _read_int("CRYSTALITH_SEARCH__SEARXNG__MAX_RESULTS")
-        if searxng_max_results is not None and searxng_max_results > 0:
-            settings.search.searxng.max_results = searxng_max_results
-
-        services = {
-            "ollama": settings.optional_services.ollama,
-            "chroma": settings.optional_services.chroma,
-            "redis": settings.optional_services.redis,
-            "searxng": settings.optional_services.searxng,
-        }
-
-        def _apply_optional_service_env(service_name: str) -> None:
-            upper = service_name.upper()
-            service = services[service_name]
-
-            enabled = _read_bool(
-                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__ENABLED",
-                f"CRYSTALITH_OPTIONAL_{upper}_ENABLED",
-            )
-            if enabled is not None:
-                service.enabled = enabled
-
-            endpoint = _read_text(
-                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__ENDPOINT",
-                f"CRYSTALITH_OPTIONAL_{upper}_ENDPOINT",
-            )
-            if endpoint:
-                service.endpoint = endpoint
-
-            timeout_s = _read_float(
-                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__TIMEOUT_S",
-                f"CRYSTALITH_OPTIONAL_{upper}_TIMEOUT_S",
-            )
-            if timeout_s is not None and timeout_s > 0:
-                service.timeout_s = timeout_s
-
-            probe_enabled = _read_bool(
-                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__PROBE__ENABLED",
-                f"CRYSTALITH_OPTIONAL_{upper}_PROBE_ENABLED",
-            )
-            if probe_enabled is not None:
-                service.probe.enabled = probe_enabled
-
-            probe_timeout_s = _read_float(
-                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__PROBE__TIMEOUT_S",
-                f"CRYSTALITH_OPTIONAL_{upper}_PROBE_TIMEOUT_S",
-            )
-            if probe_timeout_s is not None and probe_timeout_s > 0:
-                service.probe.timeout_s = probe_timeout_s
-
-            probe_interval_s = _read_float(
-                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__PROBE__INTERVAL_S",
-                f"CRYSTALITH_OPTIONAL_{upper}_PROBE_INTERVAL_S",
-            )
-            if probe_interval_s is not None and probe_interval_s > 0:
-                service.probe.interval_s = probe_interval_s
-
-            probe_path = _read_text(
-                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__PROBE__PATH",
-                f"CRYSTALITH_OPTIONAL_{upper}_PROBE_PATH",
-            )
-            if probe_path:
-                service.probe.path = probe_path
-
-            degrade_policy = _read_text(
-                f"CRYSTALITH_OPTIONAL_SERVICES__{upper}__DEGRADE_POLICY",
-                f"CRYSTALITH_OPTIONAL_{upper}_DEGRADE_POLICY",
-            )
-            if degrade_policy in {"core_available", "fail_closed"}:
-                service.degrade_policy = cast(OptionalServiceDegradePolicy, degrade_policy)
-
-        for optional_service in ("ollama", "chroma", "redis", "searxng"):
-            _apply_optional_service_env(optional_service)
-
-        if ollama_host and not settings.optional_services.ollama.endpoint:
-            settings.optional_services.ollama.endpoint = ollama_host
-
-        available_ids = [m.id for m in settings.models.available]
-
-        default_chat_model = _read_text("CRYSTALITH_DEFAULT_CHAT_MODEL", "DEFAULT_CHAT_MODEL")
-        if default_chat_model:
-            if settings.models.get_model(default_chat_model) is None:
-                raise ValueError(
-                    f"Invalid default chat model id: {default_chat_model!r}. "
-                    f"Available model ids: {available_ids}. "
-                    f"Hint: use the model 'id' from config/app.yaml, not the raw provider model name."
-                )
-            settings.models.defaults.chat = default_chat_model
-
-        default_embedding_model = _read_text("CRYSTALITH_DEFAULT_EMBEDDING_MODEL", "DEFAULT_EMBEDDING_MODEL")
-        if default_embedding_model:
-            if settings.models.get_model(default_embedding_model) is None:
-                raise ValueError(
-                    f"Invalid default embedding model id: {default_embedding_model!r}. "
-                    f"Available model ids: {available_ids}. "
-                    f"Hint: use the model 'id' from config/app.yaml, not the raw provider model name."
-                )
-            settings.models.defaults.embedding = default_embedding_model
 
     def _normalize_storage_paths(self, settings: Settings) -> None:
         """
@@ -405,6 +164,83 @@ class ConfigManager:
         settings.database.url = _normalize_sqlite_url(settings.database.url)
         settings.vector_storage.sqlite.path = _abs_path(settings.vector_storage.sqlite.path)
         settings.vector_storage.chroma.path = _abs_path(settings.vector_storage.chroma.path)
+
+    def _apply_endpoint_candidates(self, settings: Settings) -> None:
+        """
+        Resolve optional service endpoint candidates into concrete settings.
+
+        This intentionally avoids environment-variable based overrides and instead relies
+        on explicit YAML configuration (with optional probing for reachability).
+        """
+
+        def _is_postgres_url_missing_password(url_value: str) -> bool:
+            raw = (url_value or "").strip()
+            if not raw or "://" not in raw:
+                return False
+            parsed = urlparse(raw)
+            scheme = (parsed.scheme or "").lower()
+            if not scheme.startswith("postgres"):
+                return False
+            username = parsed.username
+            password = parsed.password
+            return bool(username and not (password or "").strip())
+
+        # Database: keep sqlite unless a candidate is reachable and safe to use.
+        db_candidates = [c for c in order_endpoint_candidates(settings.database.url_candidates) if c.strip()]
+        if db_candidates:
+            for candidate in db_candidates:
+                if _is_postgres_url_missing_password(candidate):
+                    logger.info(
+                        "Skipping postgres candidate without password. "
+                        "Hint: set secrets.POSTGRES_PASSWORD or explicitly set database.url.",
+                    )
+                    continue
+                ok, _ = probe_tcp_endpoint(candidate, timeout_s=0.4)
+                if ok:
+                    settings.database.url = candidate
+                    break
+
+        # Vector store: prefer remote Chroma when reachable; otherwise keep YAML host/port as-is.
+        if settings.vector_storage.provider == "chroma":
+            chroma_candidates = [
+                c for c in order_endpoint_candidates(settings.vector_storage.chroma.endpoint_candidates) if c.strip()
+            ]
+            for candidate in chroma_candidates:
+                ok, _ = probe_tcp_endpoint(candidate, timeout_s=0.4)
+                if not ok:
+                    continue
+                target = tcp_target_from_endpoint(candidate)
+                if target is None:
+                    continue
+                settings.vector_storage.chroma.host = target.host
+                settings.vector_storage.chroma.port = target.port
+                # Keep diagnostics aligned with the chosen endpoint.
+                settings.optional_services.chroma.endpoint = candidate
+                break
+
+        # Ollama: align all ollama model hosts to the first reachable candidate (if any).
+        ollama_candidates = [
+            c for c in order_endpoint_candidates(settings.optional_services.ollama.endpoint_candidates) if c.strip()
+        ]
+        if ollama_candidates:
+            selected_ollama: str | None = None
+            for candidate in ollama_candidates:
+                ok, _ = probe_tcp_endpoint(candidate, timeout_s=0.4)
+                if ok:
+                    selected_ollama = candidate
+                    break
+
+            if selected_ollama:
+                for model in settings.models.available:
+                    if model.provider != "ollama":
+                        continue
+                    if isinstance(model.provider_config, OllamaProviderSettings):
+                        model.provider_config.host = selected_ollama
+                    elif isinstance(model.provider_config, dict):
+                        model.provider_config["host"] = selected_ollama
+                    else:
+                        model.provider_config = {"host": selected_ollama}
+                settings.optional_services.ollama.endpoint = selected_ollama
 
     def _validate_with_jsonschema(self, data: dict[str, JsonValue]) -> list[str]:
         """
@@ -490,12 +326,10 @@ class ConfigManager:
 
             # Load and validate settings with Pydantic
             settings = Settings.from_yaml(self.config_path, secrets=secrets)
-            self._apply_env_overrides(settings, secrets)
+            self._apply_endpoint_candidates(settings)
             self._normalize_storage_paths(settings)
 
             def _should_discover_ollama() -> bool:
-                if os.environ.get("OLLAMA_HOST"):
-                    return True
                 if settings.optional_services.ollama.enabled:
                     return True
                 default_chat = settings.get_default_chat_model()

@@ -112,8 +112,8 @@ async def test_api_smoke_error_envelope_contracts(client) -> None:
 
 
 @pytest.mark.asyncio
-async def test_api_smoke_dependency_health_reports_ollama_runtime(client, app, monkeypatch) -> None:
-    monkeypatch.setenv("OLLAMA_HOST", "http://localhost:11434")
+async def test_api_smoke_dependency_health_reports_ollama_runtime(client, app) -> None:
+    app.state.settings.optional_services.ollama.enabled = True
     app.state.ollama_hosts_status = {
         "http://localhost:11434": {"healthy": True, "error": None, "model_count": 2}
     }
@@ -156,7 +156,7 @@ async def test_api_smoke_dependency_health_optional_failure_is_recoverable(clien
 async def test_api_smoke_dependency_health_refreshes_when_monitor_disabled(client, app, monkeypatch) -> None:
     calls = {"refresh": 0}
 
-    async def _refresh(_app, *, timeout_s: float, include_env_host: bool) -> None:  # noqa: ARG001
+    async def _refresh(_app, *, timeout_s: float) -> None:  # noqa: ARG001
         calls["refresh"] += 1
         _app.state.optional_services_last_probe = f"probe-{calls['refresh']}"
 

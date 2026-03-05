@@ -10,7 +10,6 @@ without needing to manually add it to config/app.yaml.
 from __future__ import annotations
 
 import logging
-import os
 from typing import TypedDict, cast
 
 import httpx
@@ -127,10 +126,9 @@ def discover_ollama_models(
 def collect_ollama_hosts(
     settings: Settings,
     *,
-    include_env: bool = True,
     include_fallback: bool = True,
 ) -> set[str]:
-    """Collect unique Ollama hosts from settings and optional environment."""
+    """Collect unique Ollama hosts from YAML settings."""
     hosts: set[str] = set()
 
     for model in settings.models.available:
@@ -140,10 +138,10 @@ def collect_ollama_hosts(
         if ollama_config.host:
             hosts.add(ollama_config.host)
 
-    if include_env:
-        env_host = os.environ.get("OLLAMA_HOST")
-        if env_host:
-            hosts.add(env_host)
+    endpoint = settings.optional_services.ollama.endpoint
+    if endpoint and endpoint.strip():
+        hosts.add(endpoint.strip())
+    hosts.update({host.strip() for host in settings.optional_services.ollama.endpoint_candidates if host.strip()})
 
     if include_fallback:
         should_add_fallback = not hosts or any("host.docker.internal" in host for host in hosts)
@@ -157,7 +155,6 @@ def _collect_ollama_hosts_in_order(
     settings: Settings | None,
     *,
     preferred_host: str | None = None,
-    include_env: bool,
     include_fallback: bool,
 ) -> list[str]:
     ordered_hosts: list[str] = []
@@ -175,13 +172,15 @@ def _collect_ollama_hosts_in_order(
     _append(preferred_host)
 
     if settings is not None:
+        endpoint = settings.optional_services.ollama.endpoint
+        if endpoint and endpoint.strip():
+            _append(endpoint.strip())
+        for host in settings.optional_services.ollama.endpoint_candidates:
+            _append(host)
         for model in settings.models.available:
             if model.provider != "ollama":
                 continue
             _append(model.get_ollama_config().host)
-
-    if include_env:
-        _append(os.environ.get("OLLAMA_HOST"))
 
     if include_fallback:
         for host in _FALLBACK_OLLAMA_HOSTS:
@@ -216,7 +215,6 @@ def resolve_reachable_ollama_host(
     preferred_host: str | None = None,
     settings: Settings | None = None,
     timeout: float = 0.8,
-    include_env: bool = True,
     include_fallback: bool = True,
 ) -> str:
     """Return the first healthy Ollama host from ordered candidates.
@@ -226,7 +224,6 @@ def resolve_reachable_ollama_host(
     hosts = _collect_ollama_hosts_in_order(
         settings,
         preferred_host=preferred_host,
-        include_env=include_env,
         include_fallback=include_fallback,
     )
 
@@ -330,7 +327,7 @@ def auto_discover_ollama(settings: Settings) -> int:
 
     Returns the total number of newly added models.
     """
-    hosts = collect_ollama_hosts(settings, include_env=True, include_fallback=True)
+    hosts = collect_ollama_hosts(settings, include_fallback=True)
 
     total_added = 0
     for host in hosts:

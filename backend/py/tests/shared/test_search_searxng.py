@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from crystalith.shared.config import Settings
@@ -18,11 +20,159 @@ def test_searxng_searcher_from_settings_uses_defaults() -> None:
     assert searcher.host == ""
 
 
+def test_searxng_searcher_builds_wrapper_with_auth_header(monkeypatch: pytest.MonkeyPatch) -> None:
+    created: dict[str, object] = {}
+
+    class StubWrapper:
+        def __init__(self, *, searx_host: str, k: int, headers=None):  # noqa: ANN001
+            created["searx_host"] = searx_host
+            created["k"] = k
+            created["headers"] = headers
+
+        def results(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+            return []
+
+    # Mock reason: avoid importing/instantiating the real LangChain wrapper while validating config wiring.
+    import langchain_community.utilities as util
+
+    monkeypatch.setattr(util, "SearxSearchWrapper", StubWrapper)
+
+    searcher = SearXNGSearcher(host="http://searx.example", api_key="k", max_results=7)
+    wrapper = searcher._get_wrapper()
+    assert wrapper is not None
+    assert created["searx_host"] == "http://searx.example"
+    assert created["k"] == 7
+    assert created["headers"] == {"Authorization": "Bearer k"}
+
+
 @pytest.mark.asyncio
 async def test_searxng_searcher_rejects_unconfigured_host() -> None:
     searcher = SearXNGSearcher.from_settings(Settings())
     with pytest.raises(RuntimeError, match="not configured"):
         await searcher.search("query")
+
+
+@pytest.mark.asyncio
+async def test_searxng_searcher_resolves_host_from_endpoint_candidates(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _Resp:
+        status_code = 200
+
+    class _Client:
+        def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            pass
+
+        async def __aenter__(self):  # noqa: ANN001
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):  # noqa: ANN001, ARG002
+            return False
+
+        async def get(self, url: str):  # noqa: ARG002
+            return _Resp()
+
+    # Mock reason: deterministic reachability probe without external SearXNG dependency.
+    import httpx
+
+    monkeypatch.setattr(httpx, "AsyncClient", _Client)
+
+    searcher = SearXNGSearcher(host="", endpoint_candidates=["http://a/", "http://b/"], timeout=1)
+    searcher._wrapper = object()  # type: ignore[assignment]
+
+    resolved = await searcher._resolve_host()
+    assert resolved == "http://a"
+    assert searcher.host == "http://a"
+    assert searcher._wrapper is None
+
+
+def test_searxng_searcher_from_settings_includes_optional_service_candidates_when_enabled() -> None:
+    settings = Settings()
+    settings.search.searxng.endpoint_candidates = ["http://search-a"]
+    settings.optional_services.searxng.enabled = True
+    settings.optional_services.searxng.endpoint_candidates = ["http://optional-a"]
+    settings.optional_services.searxng.endpoint = "http://optional-b"
+
+    searcher = SearXNGSearcher.from_settings(settings)
+    assert searcher.host == ""
+    assert searcher.endpoint_candidates == [
+        "http://search-a",
+        "http://optional-a",
+        "http://optional-b",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_searxng_searcher_resolve_host_returns_existing_host_inside_lock() -> None:
+    searcher = SearXNGSearcher(host="", endpoint_candidates=["http://a"], timeout=1)
+
+    async with searcher._resolve_lock:
+        task = asyncio.create_task(searcher._resolve_host())
+        await asyncio.sleep(0)
+        searcher.host = "http://already"
+
+    resolved = await task
+    assert resolved == "http://already"
+
+
+@pytest.mark.asyncio
+async def test_searxng_searcher_resolves_host_skipping_failures(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = {"get": 0}
+
+    class _Resp:
+        status_code = 204
+
+    class _Client:
+        def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            pass
+
+        async def __aenter__(self):  # noqa: ANN001
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):  # noqa: ANN001, ARG002
+            return False
+
+        async def get(self, url: str):  # noqa: ARG002
+            calls["get"] += 1
+            if calls["get"] == 1:
+                raise RuntimeError("boom")
+            return _Resp()
+
+    # Mock reason: cover exception path in the probe loop without external SearXNG dependency.
+    import httpx
+
+    monkeypatch.setattr(httpx, "AsyncClient", _Client)
+
+    searcher = SearXNGSearcher(host="", endpoint_candidates=["http://bad", "http://good"], timeout=1)
+    resolved = await searcher._resolve_host()
+    assert resolved == "http://good"
+    assert calls["get"] == 2
+
+
+@pytest.mark.asyncio
+async def test_searxng_searcher_reports_unreachable_endpoint_candidates(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _Resp:
+        status_code = 503
+
+    class _Client:
+        def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            pass
+
+        async def __aenter__(self):  # noqa: ANN001
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):  # noqa: ANN001, ARG002
+            return False
+
+        async def get(self, url: str):  # noqa: ARG002
+            return _Resp()
+
+    # Mock reason: cover the "configured but unreachable" error branch deterministically.
+    import httpx
+
+    monkeypatch.setattr(httpx, "AsyncClient", _Client)
+
+    searcher = SearXNGSearcher(host="", endpoint_candidates=["http://a", "http://b"], timeout=1)
+    with pytest.raises(RuntimeError, match="unreachable"):
+        await searcher._resolve_host()
 
 
 @pytest.mark.asyncio

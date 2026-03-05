@@ -23,6 +23,8 @@ Start:
 
 ```bash
 cp .env.example .env
+cp config/secrets.yaml.example config/secrets.yaml
+# edit config/secrets.yaml (OPENAI_API_KEY, POSTGRES_PASSWORD if using Postgres dev-deps)
 just dev
 ```
 
@@ -42,11 +44,10 @@ just DEV_DEPS_OPTIONALS="storage redis searxng ollama" dev
 ```
 
 Notes:
-- `just dev-backend` automatically wires env vars for enabled deps:
-  - `DATABASE_URL`, `CHROMA_HOST`, `CHROMA_PORT` (storage)
-  - `CACHE_PROVIDER=redis`, `REDIS_URL` (redis)
-  - `CRYSTALITH_SEARCH__SEARXNG__HOST` (searxng)
-  - `OLLAMA_HOST` (ollama)
+- Runtime configuration is YAML-first:
+  - `config/app.yaml` is the single source of truth for endpoints/providers.
+  - `config/secrets.yaml` holds secrets for `${{ secrets.* }}` interpolation (do not commit it).
+- Optional deps are connected via YAML candidate lists (compose service name first, then host dev ports).
 - Web search / deep research requires SearXNG. If it’s disabled/unavailable you’ll see failures when search is used.
 
 ## Profile 2: Prod-like Docker Compose
@@ -92,17 +93,20 @@ pnpm dev
 
 If you want web search in this profile, run SearXNG yourself and set:
 
-- `CRYSTALITH_SEARCH__SEARXNG__HOST=http://127.0.0.1:<port>`
+- `search.searxng.host` in `config/app.yaml` (or add an entry to `search.searxng.endpoint_candidates`)
 
-## Recommended env knobs
+## Recommended YAML knobs
 
-In `.env`:
+In `config/app.yaml`:
 
-- `CL_WEB_PORT`: UI port for compose (`web`)
-- `REDIS_URL`: override Redis endpoint (the redis compose overlay forces `CACHE_PROVIDER=redis`)
-- `DATABASE_URL` / `CHROMA_HOST` / `CHROMA_PORT`: external storage replacement (omit storage overlay)
-- `OLLAMA_HOST`: use host/external Ollama (omit ollama overlay)
-- `CRYSTALITH_SEARCH__SEARXNG__HOST`: use external SearXNG (omit searxng overlay)
+- storage (DB + chroma): `database.url_candidates`, `vector_storage.chroma.endpoint_candidates`
+- cache: `cache.provider`, `cache.redis_url_candidates`
+- search: `search.searxng.host` / `search.searxng.endpoint_candidates`
+- ollama: `optional_services.ollama.endpoint` / `optional_services.ollama.endpoint_candidates`
+- startup: `app.startup.auto_db_init`
+
+In `.env` (compose/build static parameters only):
+- `CL_WEB_PORT`, images (`*_IMAGE`), mirrors (`APT_MIRROR`, `UV_INDEX_URL`, `NPM_REGISTRY`), dev-deps ports (`CL_DEPS_*`)
 
 ## Troubleshooting
 

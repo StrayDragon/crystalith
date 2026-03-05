@@ -9,7 +9,6 @@ WEB_PORT="${CL_WEB_PORT:-8080}"
 BASE_URL="http://localhost:${WEB_PORT}"
 SKIP_BUILD="${SKIP_BUILD:-0}"
 SMOKE_PRUNE_VOLUMES="${SMOKE_PRUNE_VOLUMES:-0}"
-EXTERNAL_OLLAMA_HOST="${EXTERNAL_OLLAMA_HOST:-http://host.docker.internal:11434}"
 
 CORE_FILE="deployments/prod/docker-compose.yml"
 REDIS_FILE="deployments/prod/docker-compose.redis.yml"
@@ -17,6 +16,10 @@ STORAGE_FILE="deployments/prod/docker-compose.storage.yml"
 OLLAMA_FILE="deployments/prod/docker-compose.ollama.yml"
 SLIDEV_FILE="deployments/prod/docker-compose.slidev.yml"
 HOST_REMAP_FILE="deployments/prod/docker-compose.host-remap.yml"
+
+if [[ "$ENV_FILE" == ".env" && ! -f "$ENV_FILE" && -f ".env.example" ]]; then
+  ENV_FILE=".env.example"
+fi
 
 if [[ -f "$ENV_FILE" ]]; then
   # Do NOT `source` compose env files: they are not guaranteed to be valid shell.
@@ -148,18 +151,19 @@ run_core_only() {
 run_single_optional() {
   echo "==> Scenario: single-optional(redis)"
   compose_reset
-  CACHE_PROVIDER=redis REDIS_URL="redis://redis:6379/0" compose_core_redis up "${up_flags[@]}"
+  compose_core_redis up "${up_flags[@]}"
   wait_http "${BASE_URL}/health"
-  assert_dependency_expr "data['optional']['cache_redis']['enabled'] is True"
+  wait_dependency_expr "data['optional']['cache_redis']['enabled'] is True"
+  wait_dependency_expr "data['optional']['cache_redis']['status'] == 'healthy'"
 }
 
 run_late_optional() {
   echo "==> Scenario: optional-late-start(redis)"
   compose_reset
-  CACHE_PROVIDER=redis REDIS_URL="redis://redis:6379/0" compose_core up "${up_flags[@]}"
+  compose_core up "${up_flags[@]}"
   wait_http "${BASE_URL}/health"
 
-  CACHE_PROVIDER=redis REDIS_URL="redis://redis:6379/0" compose_core_redis up -d redis
+  compose_core_redis up -d redis
 
   local start
   start="$(date +%s)"
@@ -183,19 +187,10 @@ raise SystemExit(0 if status == "healthy" else 1)
   done
 }
 
-run_external_service() {
-  echo "==> Scenario: external-service(ollama-host)"
-  compose_reset
-  OLLAMA_HOST="$EXTERNAL_OLLAMA_HOST" compose_core up "${up_flags[@]}"
-  wait_http "${BASE_URL}/health"
-  OLLAMA_HOST="$EXTERNAL_OLLAMA_HOST" assert_dependency_expr "data['optional']['ollama']['enabled'] is True"
-  OLLAMA_HOST="$EXTERNAL_OLLAMA_HOST" assert_dependency_expr "data['optional']['ollama']['endpoint'] == '$EXTERNAL_OLLAMA_HOST'"
-}
-
 run_key_optionals() {
   echo "==> Scenario: key-optionals(storage+redis+ollama)"
   compose_reset
-  CACHE_PROVIDER=redis REDIS_URL="redis://redis:6379/0" compose_core_key_optionals up "${up_flags[@]}"
+  compose_core_key_optionals up "${up_flags[@]}"
   wait_http "${BASE_URL}/health"
   wait_dependency_expr "data['optional']['storage_chroma']['enabled'] is True"
   wait_dependency_expr "data['optional']['cache_redis']['enabled'] is True"
@@ -208,14 +203,14 @@ run_key_optionals() {
 run_all_optionals() {
   echo "==> Scenario: all-optionals(storage+redis+ollama+slidev)"
   compose_reset
-  CACHE_PROVIDER=redis REDIS_URL="redis://redis:6379/0" compose_core_all_optionals up "${up_flags[@]}"
+  compose_core_all_optionals up "${up_flags[@]}"
   wait_http "${BASE_URL}/health"
   wait_dependency_expr "data['optional']['storage_chroma']['enabled'] is True"
   wait_dependency_expr "data['optional']['cache_redis']['enabled'] is True"
   wait_dependency_expr "data['optional']['ollama']['enabled'] is True"
 }
 
-SCENARIOS="${SMOKE_SCENARIOS:-core-only late-optional external-service}"
+SCENARIOS="${SMOKE_SCENARIOS:-core-only late-optional}"
 for scenario in $SCENARIOS; do
   case "$scenario" in
     core-only)
@@ -226,9 +221,6 @@ for scenario in $SCENARIOS; do
       ;;
     late-optional)
       run_late_optional
-      ;;
-    external-service)
-      run_external_service
       ;;
     key-optionals)
       run_key_optionals

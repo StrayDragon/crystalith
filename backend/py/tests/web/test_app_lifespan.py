@@ -51,18 +51,18 @@ async def _create_test_db() -> tuple[tempfile.TemporaryDirectory[str], str]:
     ("env_value", "settings_value", "should_delete_failed"),
     [
         (None, True, True),
-        ("1", False, True),
-        ("0", True, False),
+        ("0", True, True),
+        ("1", False, False),
     ],
 )
-async def test_startup_cleanup_failed_sources_respects_env_override(
+async def test_startup_cleanup_failed_sources_ignores_env_override(
     test_settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
     env_value: str | None,
     settings_value: bool,
     should_delete_failed: bool,
 ) -> None:
-    # Mock reason: override process env to verify startup cleanup precedence (env > config).
+    # Mock reason: legacy env override must be ignored in YAML-first config mode.
     if env_value is None:
         monkeypatch.delenv("AUTO_CLEANUP_FAILED_SOURCES", raising=False)
     else:
@@ -158,7 +158,7 @@ async def test_lifespan_starts_ollama_monitor_when_enabled(
 
     calls = {"probe": 0, "discover": 0}
 
-    def _collect_hosts(_settings, *, include_env: bool, include_fallback: bool):  # noqa: ANN001, ARG001
+    def _collect_hosts(_settings, *, include_fallback: bool):  # noqa: ANN001, ARG001
         return {"http://localhost:11434"}
 
     def _probe_host(host: str, *, timeout: float):  # noqa: ARG001
@@ -176,7 +176,6 @@ async def test_lifespan_starts_ollama_monitor_when_enabled(
     monkeypatch.setenv("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED", "1")
     monkeypatch.setenv("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_INTERVAL_S", "0.02")
     monkeypatch.setenv("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_TIMEOUT_S", "0.02")
-    monkeypatch.setenv("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_INCLUDE_ENV_HOST", "0")
 
     tempdir, db_url = await _create_test_db()
     manager = create_db_manager(db_url)

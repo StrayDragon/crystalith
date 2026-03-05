@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import socket
+import threading
 import time
 
 import pytest
 
 from crystalith.shared.cache import InMemoryCache, bump_sources_epoch, get_sources_epoch
+from crystalith.shared.cache.auto_cache import AutoCache
 from crystalith.shared.config import Settings
 from crystalith.shared.vector_storage import bump_vector_epoch, get_vector_epoch
 
@@ -114,3 +117,232 @@ async def test_epoch_bumps_do_not_lose_increments_under_concurrency() -> None:
 def test_cache_settings_validation_requires_redis_url() -> None:
     with pytest.raises(ValueError, match="redis_url"):
         Settings.model_validate({"cache": {"provider": "redis"}})
+
+
+@pytest.mark.asyncio
+async def test_auto_cache_upgrades_to_redis_when_reachable(monkeypatch: pytest.MonkeyPatch) -> None:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.listen(5)
+
+    stop = threading.Event()
+
+    def _accept_loop() -> None:
+        while not stop.is_set():
+            try:
+                sock.settimeout(0.1)
+                conn, _addr = sock.accept()
+                conn.close()
+            except TimeoutError:
+                continue
+            except OSError:
+                break
+
+    thread = threading.Thread(target=_accept_loop, daemon=True)
+    thread.start()
+
+    class _DummyRedis:
+        def __init__(self, *, redis_url: str, ttl: float):  # noqa: ARG002
+            self.redis_url = redis_url
+
+        async def get(self, key: str):  # noqa: ARG002
+            return None
+
+        async def get_many(self, keys):  # noqa: ANN001
+            return [None for _ in keys]
+
+        async def set(self, key: str, value, *, ttl=None):  # noqa: ANN001, ARG002
+            return None
+
+        async def incr(self, key: str, amount: int = 1, *, ttl=None) -> int:  # noqa: ANN001, ARG002
+            return amount
+
+        async def set_many(self, items, *, ttl=None):  # noqa: ANN001, ARG002
+            return None
+
+        async def delete(self, key: str):  # noqa: ARG002
+            return None
+
+        async def invalidate_pattern(self, pattern: str) -> int:  # noqa: ARG002
+            return 0
+
+        async def close(self) -> None:
+            return None
+
+    try:
+        candidate = f"redis://127.0.0.1:{port}/0"
+        settings = Settings.model_validate(
+            {"cache": {"provider": "auto", "redis_url_candidates": [candidate], "ttl": 60, "max_size": 10}}
+        )
+
+        # Mock reason: avoid requiring a real Redis server while validating auto-upgrade behavior.
+        monkeypatch.setattr("crystalith.shared.cache.auto_cache.RedisCache", _DummyRedis)
+
+        cache = AutoCache(settings=settings)
+        await cache.get("missing")
+
+        assert settings.cache.provider == "redis"
+        assert settings.cache.redis_url == candidate
+    finally:
+        stop.set()
+        try:
+            sock.close()
+        except OSError:
+            pass
+
+
+@pytest.mark.asyncio
+async def test_auto_cache_falls_back_to_memory_on_redis_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.listen(5)
+
+    stop = threading.Event()
+
+    def _accept_loop() -> None:
+        while not stop.is_set():
+            try:
+                sock.settimeout(0.1)
+                conn, _addr = sock.accept()
+                conn.close()
+            except TimeoutError:
+                continue
+            except OSError:
+                break
+
+    thread = threading.Thread(target=_accept_loop, daemon=True)
+    thread.start()
+
+    class _FailingRedis:
+        def __init__(self, *, redis_url: str, ttl: float):  # noqa: ARG002
+            self.redis_url = redis_url
+
+        async def get(self, key: str):  # noqa: ARG002
+            raise RuntimeError("redis down")
+
+        async def get_many(self, keys):  # noqa: ANN001
+            raise RuntimeError("redis down")
+
+        async def set(self, key: str, value, *, ttl=None):  # noqa: ANN001, ARG002
+            raise RuntimeError("redis down")
+
+        async def incr(self, key: str, amount: int = 1, *, ttl=None) -> int:  # noqa: ANN001, ARG002
+            raise RuntimeError("redis down")
+
+        async def set_many(self, items, *, ttl=None):  # noqa: ANN001, ARG002
+            raise RuntimeError("redis down")
+
+        async def delete(self, key: str):  # noqa: ARG002
+            raise RuntimeError("redis down")
+
+        async def invalidate_pattern(self, pattern: str) -> int:  # noqa: ARG002
+            raise RuntimeError("redis down")
+
+        async def close(self) -> None:
+            return None
+
+    try:
+        candidate = f"redis://127.0.0.1:{port}/0"
+        settings = Settings.model_validate(
+            {"cache": {"provider": "auto", "redis_url_candidates": [candidate], "ttl": 60, "max_size": 10}}
+        )
+
+        # Mock reason: simulate Redis runtime errors without requiring a real Redis server.
+        monkeypatch.setattr("crystalith.shared.cache.auto_cache.RedisCache", _FailingRedis)
+
+        cache = AutoCache(settings=settings)
+        assert await cache.get("missing") is None
+
+        assert settings.cache.provider == "memory"
+    finally:
+        stop.set()
+        try:
+            sock.close()
+        except OSError:
+            pass
+
+
+@pytest.mark.asyncio
+async def test_auto_cache_supports_all_cache_provider_methods_after_upgrade(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.listen(5)
+
+    stop = threading.Event()
+
+    def _accept_loop() -> None:
+        while not stop.is_set():
+            try:
+                sock.settimeout(0.1)
+                conn, _addr = sock.accept()
+                conn.close()
+            except TimeoutError:
+                continue
+            except OSError:
+                break
+
+    thread = threading.Thread(target=_accept_loop, daemon=True)
+    thread.start()
+
+    class _DummyRedis:
+        def __init__(self, *, redis_url: str, ttl: float):  # noqa: ARG002
+            self.redis_url = redis_url
+            self.closed = False
+
+        async def get(self, key: str):  # noqa: ARG002
+            return None
+
+        async def get_many(self, keys):  # noqa: ANN001
+            return [None for _ in keys]
+
+        async def set(self, key: str, value, *, ttl=None):  # noqa: ANN001, ARG002
+            return None
+
+        async def incr(self, key: str, amount: int = 1, *, ttl=None) -> int:  # noqa: ANN001, ARG002
+            return amount
+
+        async def set_many(self, items, *, ttl=None):  # noqa: ANN001, ARG002
+            return None
+
+        async def delete(self, key: str):  # noqa: ARG002
+            return None
+
+        async def invalidate_pattern(self, pattern: str) -> int:  # noqa: ARG002
+            return 0
+
+        async def close(self) -> None:
+            self.closed = True
+
+    try:
+        candidate = f"redis://127.0.0.1:{port}/0"
+        settings = Settings.model_validate(
+            {"cache": {"provider": "auto", "redis_url_candidates": [candidate], "ttl": 60, "max_size": 10}}
+        )
+
+        # Mock reason: avoid requiring a real Redis server while covering AutoCache call paths.
+        monkeypatch.setattr("crystalith.shared.cache.auto_cache.RedisCache", _DummyRedis)
+
+        cache = AutoCache(settings=settings)
+
+        # Exercise the full CacheProvider surface to keep AutoCache behavior covered.
+        assert await cache.get("k") is None
+        assert await cache.get_many(["a", "b"]) == [None, None]
+        await cache.set("k", {"v": 1})
+        assert await cache.incr("counter", 2) == 2
+        await cache.set_many({"a": 1, "b": 2})
+        await cache.delete("k")
+        assert await cache.invalidate_pattern("x*") == 0
+        await cache.close()
+
+        assert settings.cache.provider == "redis"
+    finally:
+        stop.set()
+        try:
+            sock.close()
+        except OSError:
+            pass

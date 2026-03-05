@@ -77,7 +77,7 @@ class ProvidersSettings(BaseModel):
     Example:
         providers:
           openai_main: &openai_main
-            api_key: ${{ env.OPENAI_API_KEY }}
+            api_key: ${{ secrets.OPENAI_API_KEY }}
             base_url: "https://api.openai.com/v1"
 
           ollama_local: &ollama_local
@@ -423,6 +423,14 @@ class CorsSettings(BaseModel):
 class StartupSettings(BaseModel):
     """Startup behaviors."""
 
+    auto_db_init: bool = Field(
+        False,
+        description=(
+            "If true, automatically runs DB migrations on startup. "
+            "Recommended for local/dev; for production, prefer controlled migrations."
+        ),
+    )
+
     cleanup_failed_sources: bool = Field(
         False,
         description=(
@@ -435,6 +443,13 @@ class StartupSettings(BaseModel):
 class DatabaseSettings(BaseModel):
     """Database settings."""
     url: str = "sqlite+aiosqlite:///./data/app.db"
+    url_candidates: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Optional candidate database URLs. When set, the loader may probe and select the first reachable URL "
+            "for the active runtime environment (e.g. compose service name vs host dev ports)."
+        ),
+    )
 
 
 class VectorStorageSQLiteSettings(BaseModel):
@@ -446,8 +461,16 @@ class VectorStorageChromaSettings(BaseModel):
     """Chroma vector storage settings."""
     path: str = "./data/chroma"
     telemetry: bool = False
-    host: str = "localhost"
+    # Empty host => embedded Chroma (no separate Chroma server required).
+    host: str = ""
     port: int = 8000
+    endpoint_candidates: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Optional candidate Chroma HTTP endpoints (e.g. http://chromadb:8000, http://127.0.0.1:8001). "
+            "When set, the loader may probe and select the first reachable endpoint and populate host/port."
+        ),
+    )
 
 
 class VectorStorageSettings(BaseModel):
@@ -460,10 +483,17 @@ class VectorStorageSettings(BaseModel):
 class CacheSettings(BaseModel):
     """Cache settings."""
 
-    provider: Literal["memory", "redis"] = "memory"
+    provider: Literal["memory", "redis", "auto"] = "memory"
     ttl: int = Field(60, description="Default cache TTL in seconds (0 disables TTL)")
     max_size: int = Field(2048, description="Maximum number of cached keys for in-memory cache")
     redis_url: str | None = Field(None, description="Redis connection URL when provider=redis")
+    redis_url_candidates: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Optional candidate Redis URLs. When provider=auto, the loader may probe and select the first "
+            "reachable Redis and upgrade cache.provider to redis. When none are reachable, it falls back to memory."
+        ),
+    )
 
     @field_validator("ttl", "max_size")
     @classmethod
@@ -476,6 +506,12 @@ class CacheSettings(BaseModel):
     def _validate_redis_url(self) -> CacheSettings:
         if self.provider == "redis" and (self.redis_url is None or not self.redis_url.strip()):
             raise ValueError("redis_url is required when cache.provider is 'redis'")
+        if self.provider == "auto" and not (
+            (self.redis_url and self.redis_url.strip()) or any(url.strip() for url in self.redis_url_candidates)
+        ):
+            raise ValueError(
+                "cache.provider='auto' requires cache.redis_url or cache.redis_url_candidates to be set"
+            )
         return self
 
 
@@ -548,6 +584,13 @@ class ContextWindowSettings(BaseModel):
 class SearXNGSettings(BaseModel):
     """SearXNG search engine settings."""
     host: str = Field("", description="SearXNG instance URL. Empty disables web search.")
+    endpoint_candidates: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Optional candidate SearXNG endpoints. When host is empty, the runtime may lazily probe and select "
+            "the first reachable endpoint on first use."
+        ),
+    )
     api_key: str | None = Field(None, description="Optional API key for authentication")
     timeout: int = Field(10, ge=1, description="Request timeout in seconds")
     max_results: int = Field(10, ge=1, le=50, description="Maximum number of results")
@@ -572,6 +615,12 @@ class OptionalServiceSettings(BaseModel):
 
     enabled: bool = Field(False, description="Whether this optional service is enabled")
     endpoint: str | None = Field(None, description="Service endpoint/base URL")
+    endpoint_candidates: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Optional candidate endpoints for this service. Used for probing/selection across environments."
+        ),
+    )
     timeout_s: float = Field(3.0, ge=0.1, le=120, description="Connection timeout in seconds")
     probe: OptionalServiceProbeSettings = Field(
         default_factory=_default_factory(OptionalServiceProbeSettings),
@@ -923,7 +972,7 @@ class Settings(BaseSettings):
         # Reusable provider configs (use YAML anchors)
         providers:
           openai_main: &openai_main
-            api_key: ${{ env.OPENAI_API_KEY }}
+            api_key: ${{ secrets.OPENAI_API_KEY }}
             base_url: "https://api.openai.com/v1"
 
           ollama_local: &ollama_local
