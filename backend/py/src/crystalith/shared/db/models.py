@@ -170,6 +170,18 @@ class Session(AsyncSqlATableBase):
         index=True,
     )
     title: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
+    shared_state: Mapped[JsonDict] = mapped_column(
+        sa.JSON,
+        nullable=False,
+        default=dict,
+        server_default=sa.text("'{}'"),
+    )
+    shared_state_revision: Mapped[int] = mapped_column(
+        sa.Integer,
+        nullable=False,
+        default=0,
+        server_default=sa.text("0"),
+    )
 
     created_at: Mapped[datetime.datetime] = mapped_column(
         sa.DateTime,
@@ -194,8 +206,57 @@ class Session(AsyncSqlATableBase):
         order_by="Message.created_at",
         lazy="selectin",
     )
+    ui_event_receipts: Mapped[list[UiEventReceipt]] = relationship(
+        back_populates="session",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="UiEventReceipt.created_at",
+        lazy="selectin",
+    )
 
     __table_args__ = (sa.Index("ix_sessions_notebook_id_updated_at", "notebook_id", "updated_at"),)
+
+
+class UiEventReceipt(AsyncSqlATableBase):
+    __tablename__ = "ui_event_receipts"
+
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(
+        sa.Integer,
+        sa.ForeignKey("sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    client_request_id: Mapped[str] = mapped_column(sa.String(128), nullable=False)
+    component_id: Mapped[str] = mapped_column(sa.String(255), nullable=False)
+    event_name: Mapped[str] = mapped_column(sa.String(128), nullable=False)
+    base_revision: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    shared_state_revision: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    state_delta: Mapped[list[JsonDict] | JsonDict] = mapped_column(sa.JSON, nullable=False)
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+    )
+
+    session: Mapped[Session] = relationship(
+        back_populates="ui_event_receipts",
+        lazy="selectin",
+    )
+
+    __table_args__ = (
+        sa.UniqueConstraint(
+            "session_id",
+            "client_request_id",
+            name="uq_ui_event_receipts_session_id_client_request_id",
+        ),
+        sa.Index(
+            "ix_ui_event_receipts_session_id_created_at",
+            "session_id",
+            "created_at",
+        ),
+    )
 
 
 class Message(AsyncSqlATableBase):
@@ -210,7 +271,7 @@ class Message(AsyncSqlATableBase):
     )
     role: Mapped[str] = mapped_column(sa.String(32), nullable=False)
     content: Mapped[str] = mapped_column(sa.Text, nullable=False)
-    citations: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
+    citations: Mapped[list[JsonDict] | JsonDict | None] = mapped_column(sa.JSON, nullable=True)
 
     created_at: Mapped[datetime.datetime] = mapped_column(
         sa.DateTime,
@@ -230,6 +291,8 @@ class Message(AsyncSqlATableBase):
     )
 
     __table_args__ = (sa.Index("ix_messages_session_id_created_at", "session_id", "created_at"),)
+
+
 
 
 class Source(AsyncSqlATableBase):

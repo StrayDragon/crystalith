@@ -27,10 +27,10 @@ import { toast } from '../../../../shared/toast';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { useCommands } from '../../shared/hooks/useCommands';
 import { exportQaJsonDownload, exportQaMarkdownDownload } from '../../shared/evidenceExport';
-import { parseChatUiEnvelope } from './chatUiEnvelope';
-import { chatUiComponentRegistry } from './chatUiRegistry';
-import JsonFallbackCard from './components/JsonFallbackCard';
-import ToolActionCard from './components/ToolActionCard';
+import { selectMountedUiComponentsV1, type RivuKernel } from 'rivu-kernel';
+import { ComponentRenderer } from 'rivu-react/component-renderer';
+import type { RivuHost } from 'rivu-react/registry';
+import { useKernelState } from 'rivu-react/use-kernel-state';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -59,6 +59,8 @@ interface ChatPanelProps {
   onConvertToSource?: () => Promise<void>;
   onConvertToOutput?: (outputType: OutputTypeId) => Promise<void>;
   isConverting?: boolean;
+  rivuKernel?: RivuKernel | null;
+  rivuHost?: RivuHost | null;
 }
 
 function ChatPanel({
@@ -87,7 +89,43 @@ function ChatPanel({
   onConvertToSource,
   onConvertToOutput,
   isConverting = false,
+  rivuKernel = null,
+  rivuHost = null,
 }: ChatPanelProps) {
+
+function MessageMounts({
+  kernel,
+  host,
+  messageId,
+}: {
+  kernel: RivuKernel;
+  host: RivuHost;
+  messageId: string;
+}) {
+  const mountedComponentIds = useKernelState(kernel, (state) =>
+    selectMountedUiComponentsV1({ state, messageId, slot: 'inline' }).map(
+      (mount) => mount.componentId,
+    ),
+  );
+
+  if (mountedComponentIds.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="w-full max-w-full flex flex-col gap-3">
+      {mountedComponentIds.map((componentId) => (
+        <ComponentRenderer
+          key={componentId}
+          kernel={kernel}
+          host={host}
+          componentId={componentId}
+        />
+      ))}
+    </div>
+  );
+}
+
   const notebookId = useWorkspaceStore((s) => s.activeNotebookId);
   const sessionId = useWorkspaceStore((s) => s.activeSessionId);
   const latestAssistantMessageId = useMemo(() => {
@@ -275,24 +313,6 @@ function ChatPanel({
       Number.isFinite(numericMessageId) &&
       numericMessageId > 0;
 
-    const parsedAssistantContent =
-      message.role === 'assistant' ? parseChatUiEnvelope(message.content) : null;
-    const assistantFallbackText = parsedAssistantContent?.fallbackText ?? message.content;
-    const assistantEnvelope = parsedAssistantContent?.envelope ?? null;
-
-    const toolResultByUseId = new Map<string, { status: 'success' | 'error'; outputText?: string | null; errorMessage?: string | null }>();
-    if (assistantEnvelope) {
-      for (const part of assistantEnvelope.parts) {
-        if (part.type !== 'tool_result') continue;
-        const outputText = part.output ? JSON.stringify(part.output, null, 2) : null;
-        toolResultByUseId.set(part.tool_use_id, {
-          status: part.status,
-          outputText: outputText && outputText.length > 4000 ? outputText.slice(0, 4000) + '\n…' : outputText,
-          errorMessage: part.error_message ?? null,
-        });
-      }
-    }
-
     const messageCitationEntries =
       message.citations && message.citations.length > 0
         ? message.citations.map((citation, index) => {
@@ -327,128 +347,18 @@ function ChatPanel({
               : 'text-gray-800 dark:text-slate-100'
           }`}
         >
-          {message.role === 'assistant' && assistantEnvelope ? (
-            <div className="flex flex-col gap-2">
-              {assistantEnvelope.parts.map((part, index) => {
-                if (part.type === 'text') {
-                  return (
-                    <div
-                      key={`text:${index}`}
-                      className="whitespace-pre-wrap"
-                    >
-                      {part.text}
-                    </div>
-                  );
-                }
-                if (part.type === 'component') {
-                  const registration = chatUiComponentRegistry[part.name] ?? null;
-                  if (!registration) {
-                    return (
-                      <JsonFallbackCard
-                        key={`component:${part.id}`}
-                        title={`Unknown component: ${part.name}`}
-                        json={part}
-                      />
-                    );
-                  }
-                  const validated = registration.validateProps(part.props);
-                  if (!validated.ok) {
-                    return (
-                      <JsonFallbackCard
-                        key={`component:${part.id}`}
-                        title={`Invalid props: ${part.name}`}
-                        json={{ part, issues: validated.issues }}
-                      />
-                    );
-                  }
-                  const Component = registration.Component;
-                  return (
-                    <Component
-                      key={`component:${part.id}`}
-                      {...validated.data}
-                    />
-                  );
-                }
-                if (part.type === 'tool_result') {
-                  // Rendered alongside its corresponding tool_use when possible.
-                  return null;
-                }
-                if (part.type === 'tool_use') {
-                  const runKey = `${message.id}:${part.id}`;
-                  const runState = toolRuns[runKey] ?? { status: 'pending' as const };
-                  const persisted = toolResultByUseId.get(part.id) ?? null;
-                  const status = persisted ? (persisted.status === 'success' ? 'success' : 'error') : runState.status;
-                  const outputText = persisted?.outputText ?? runState.outputText ?? null;
-                  const errorMessage = persisted?.errorMessage ?? runState.errorMessage ?? null;
-
-                  const autoExecWhitelist = new Set(['qa_export_markdown_preview']);
-                  const isWhitelisted = autoExecWhitelist.has(part.name);
-                  const requiresConfirm = Boolean(part.requires_confirm) || !isWhitelisted;
-                  const autoExecute =
-                    Boolean(part.auto_execute) &&
-                    isWhitelisted &&
-                    latestAssistantMessageId === message.id;
-
-                  const canExecute = canExportMessage && (part.name === 'qa_export_markdown_preview' || part.name === 'qa_export_json_preview');
-
-                  const onExecute = async () => {
-                    if (!canExecute) return;
-                    if (toolInFlightRef.current.has(runKey)) return;
-                    if (autoExecute) {
-                      if (autoExecSeenRef.current.has(runKey)) return;
-                      autoExecSeenRef.current.add(runKey);
-                    }
-                    toolInFlightRef.current.add(runKey);
-                    setToolRuns((prev) => ({
-                      ...prev,
-                      [runKey]: { status: 'running', outputText: null, errorMessage: null },
-                    }));
-                    try {
-                      const preview = await runQaExportPreview({
-                        format: part.name === 'qa_export_json_preview' ? 'json' : 'markdown',
-                        messageId: numericMessageId,
-                      });
-                      setToolRuns((prev) => ({
-                        ...prev,
-                        [runKey]: { status: 'success', outputText: preview, errorMessage: null },
-                      }));
-                    } catch (error) {
-                      const message = error instanceof Error ? error.message : '请求失败';
-                      setToolRuns((prev) => ({
-                        ...prev,
-                        [runKey]: { status: 'error', outputText: null, errorMessage: message },
-                      }));
-                    } finally {
-                      toolInFlightRef.current.delete(runKey);
-                    }
-                  };
-
-                  return (
-                    <ToolActionCard
-                      key={`tool:${part.id}`}
-                      title={part.name}
-                      description={requiresConfirm ? '需要确认后执行' : '可自动执行'}
-                      status={status}
-                      outputText={outputText}
-                      errorMessage={errorMessage}
-                      canExecute={canExecute}
-                      requiresConfirm={requiresConfirm}
-                      autoExecute={autoExecute}
-                      onExecute={onExecute}
-                    />
-                  );
-                }
-                return null;
-              })}
-              {typingCursor}
-            </div>
-          ) : (
-            <div className="whitespace-pre-wrap">
-              {message.role === 'assistant' ? assistantFallbackText : message.content}
-              {typingCursor}
-            </div>
-          )}
+          <div className="whitespace-pre-wrap">
+            {message.role === 'assistant' ? message.content : message.content}
+            {typingCursor}
+          </div>
         </div>
+        {message.role === 'assistant' && rivuKernel && rivuHost ? (
+          <MessageMounts
+            kernel={rivuKernel}
+            host={rivuHost}
+            messageId={message.id}
+          />
+        ) : null}
         {message.role === 'assistant' && message.content ? (
           <div className="flex items-center gap-1 mt-1 flex-wrap">
             {messageCitationEntries.length > 0 && (
@@ -464,7 +374,7 @@ function ChatPanel({
             <button
               type="button"
               className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
-              onClick={() => onSaveToNote?.(assistantFallbackText)}
+              onClick={() => onSaveToNote?.(message.content)}
             >
               <IconSave className="w-3.5 h-3.5" />
               保存到笔记
@@ -472,7 +382,7 @@ function ChatPanel({
             <button
               type="button"
               className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
-              onClick={() => handleCopy(message.id, assistantFallbackText)}
+              onClick={() => handleCopy(message.id, message.content)}
             >
               <IconCopy className="w-3.5 h-3.5" />
               {copiedId === message.id ? '已复制' : '复制'}
@@ -587,6 +497,8 @@ function ChatPanel({
     );
   };
 
+  const messageListKey = `${sessionId ?? 'none'}:${rivuKernel && rivuHost ? 'rivu' : 'plain'}`;
+
   const renderNotice = useMemo(() => {
     if (!notice) return null;
 
@@ -640,6 +552,7 @@ function ChatPanel({
 
         {shouldRenderMessageList ? (
           <Virtuoso
+            key={messageListKey}
             className="h-full"
             data={messages}
             computeItemKey={(index, message) => message?.id ?? `chat-message-${index}`}

@@ -13,11 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.ai.types import ChatMessage, ChatRole
 from crystalith.shared.cache import CacheProvider
-from crystalith.shared.chat_ui_envelope import strip_ui_envelope
 from crystalith.shared.config import Settings
 from crystalith.shared.concurrency import StageLimiters
 from crystalith.shared.context import ContextStats, ContextWindow, TokenCounter
 from crystalith.shared.db import Chunk, Message, Session, Source
+from crystalith.shared.json_types import JsonDict
 from crystalith.shared.schemas.citations import Citation
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.utils import extract_page_number, extract_paragraph_index, format_context
@@ -72,7 +72,6 @@ def normalize_source_ids(source_ids: list[int] | None) -> list[int]:
     normalized = [int(value) for value in source_ids]
     if any(value <= 0 for value in normalized):
         raise HTTPException(status_code=400, detail="Unknown source_id in source_ids")
-    # Deduplicate while preserving order.
     return list(dict.fromkeys(normalized))
 
 
@@ -117,8 +116,12 @@ async def load_session_history(
         role = message.role
         if role not in {"system", "user", "assistant"}:
             role = "user"
-        content = strip_ui_envelope(message.content) if role == "assistant" else message.content
-        history_messages.append(ChatMessage(role=cast(ChatRole, role), content=content))
+        history_messages.append(
+            ChatMessage(
+                role=cast(ChatRole, role),
+                content=message.content,
+            )
+        )
     return db_session, history_messages
 
 
@@ -131,9 +134,9 @@ async def persist_qa_messages(
     answer: str,
     citations: list[Citation],
     created_at: datetime.datetime,
-) -> None:
+) -> Message | None:
     if db_session is None:
-        return
+        return None
     if not history_messages and not db_session.title:
         db_session.title = generate_session_title(question)
     db_session.updated_at = created_at.replace(tzinfo=None)
@@ -145,14 +148,82 @@ async def persist_qa_messages(
             citations=None,
         )
     )
+    assistant_message = Message(
+        session_id=db_session.id,
+        role="assistant",
+        content=answer,
+        citations=[citation.model_dump() for citation in citations],
+    )
+    session.add(assistant_message)
+    await session.commit()
+    await session.refresh(assistant_message)
+    return assistant_message
+
+
+async def create_provisional_assistant_message(
+    session: AsyncSession,
+    *,
+    db_session: Session,
+    history_messages: list[ChatMessage],
+    question: str,
+    created_at: datetime.datetime,
+) -> Message:
+    if not history_messages and not db_session.title:
+        db_session.title = generate_session_title(question)
+    db_session.updated_at = created_at.replace(tzinfo=None)
     session.add(
         Message(
             session_id=db_session.id,
-            role="assistant",
-            content=answer,
-            citations=[citation.model_dump() for citation in citations],
+            role="user",
+            content=question,
+            citations=None,
         )
     )
+    assistant_message = Message(
+        session_id=db_session.id,
+        role="assistant",
+        content="",
+        citations=None,
+    )
+    session.add(assistant_message)
+    await session.commit()
+    await session.refresh(assistant_message)
+    return assistant_message
+
+
+async def finalize_provisional_assistant_message(
+    session: AsyncSession,
+    *,
+    db_session: Session,
+    assistant_message_id: int,
+    answer: str,
+    citations: list[Citation],
+    created_at: datetime.datetime,
+) -> Message:
+    assistant_message = await session.get(Message, assistant_message_id)
+    if assistant_message is None or assistant_message.session_id != db_session.id:
+        raise HTTPException(status_code=404, detail="Assistant message not found")
+    assistant_message.content = answer
+    assistant_message.citations = cast(list[JsonDict], [citation.model_dump(mode="json") for citation in citations])
+    assistant_message.updated_at = created_at.replace(tzinfo=None)
+    db_session.updated_at = created_at.replace(tzinfo=None)
+    await session.commit()
+    await session.refresh(assistant_message)
+    return assistant_message
+
+
+async def delete_provisional_assistant_message(
+    session: AsyncSession,
+    *,
+    db_session: Session,
+    assistant_message_id: int,
+    created_at: datetime.datetime,
+) -> None:
+    assistant_message = await session.get(Message, assistant_message_id)
+    if assistant_message is None or assistant_message.session_id != db_session.id:
+        return
+    await session.delete(assistant_message)
+    db_session.updated_at = created_at.replace(tzinfo=None)
     await session.commit()
 
 
@@ -225,6 +296,7 @@ async def run_qa_pipeline(
         db_session = None
         history_messages: list[ChatMessage] = []
     else:
+
         async def _embed_question() -> list[list[float]]:
             async with limiters.embedding.acquire():
                 return await embedder.embed_batch([question])
@@ -288,7 +360,10 @@ async def run_qa_pipeline(
         .where(Chunk.id.in_(chunk_ids))
     )
 
-    chunk_map: dict[int, tuple[Chunk, Source]] = {chunk.id: (chunk, source) for chunk, source in rows.all()}
+    chunk_map: dict[int, tuple[Chunk, Source]] = {
+        chunk.id: (chunk, source)
+        for chunk, source in rows.all()
+    }
 
     valid_results: list[VectorSearchResult] = []
     for result in results:

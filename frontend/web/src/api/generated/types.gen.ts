@@ -64,7 +64,7 @@ export type ChunkRead = {
      * Id
      */
     id: number;
-    metadata?: JsonDict | null;
+    metadata?: JsonDictOutput | null;
     /**
      * Start Offset
      */
@@ -177,7 +177,7 @@ export type CommandRead = {
      * Kind
      */
     kind: 'prompt_preset';
-    meta?: JsonDict | null;
+    meta?: JsonDictOutput | null;
     /**
      * Source
      */
@@ -437,7 +437,7 @@ export type ExtractorInfoResponse = {
      * Description
      */
     description: string;
-    details?: JsonDict | null;
+    details?: JsonDictOutput | null;
     /**
      * Display Name
      */
@@ -576,15 +576,23 @@ export type ItemSchema = {
     fields?: Array<FieldDescriptor>;
 };
 
-export type JsonDict = {
-    [key: string]: JsonValue;
+export type JsonDictInput = {
+    [key: string]: JsonValueInput;
+};
+
+export type JsonDictOutput = {
+    [key: string]: JsonValueOutput;
 };
 
 export type JsonPrimitive = boolean | number | null | number | string;
 
-export type JsonValue = JsonPrimitive | {
-    [key: string]: JsonValue;
-} | Array<JsonValue>;
+export type JsonValueInput = JsonPrimitive | {
+    [key: string]: JsonValueInput;
+} | Array<JsonValueInput>;
+
+export type JsonValueOutput = JsonPrimitive | {
+    [key: string]: JsonValueOutput;
+} | Array<JsonValueOutput>;
 
 /**
  * MessageCreate
@@ -780,7 +788,7 @@ export type OfficialPluginDiagnostic = {
      * Details
      */
     details?: {
-        [key: string]: JsonValue;
+        [key: string]: JsonValueOutput;
     } | null;
     /**
      * Hint
@@ -800,7 +808,7 @@ export type OutputExportJson = {
      * Citations
      */
     citations: Array<Citation>;
-    content: JsonDict;
+    content: JsonDictOutput;
     /**
      * Exported At
      */
@@ -904,7 +912,7 @@ export type OutputRead = {
      * Chunk Ids
      */
     chunk_ids: Array<number> | null;
-    content: JsonDict;
+    content: JsonDictOutput;
     /**
      * Created At
      */
@@ -1024,7 +1032,7 @@ export type PluginSkipDetailResponse = {
      * Details
      */
     details?: {
-        [key: string]: JsonValue;
+        [key: string]: JsonValueOutput;
     } | null;
     /**
      * Error Code
@@ -1249,6 +1257,15 @@ export type QaResponse = {
      * Evidence
      */
     evidence: boolean;
+    /**
+     * Message Id
+     */
+    message_id: number | null;
+    shared_state: JsonDictOutput;
+    /**
+     * Shared State Revision
+     */
+    shared_state_revision: number;
 };
 
 /**
@@ -1496,7 +1513,7 @@ export type ResearchSessionResponse = {
     /**
      * Aggregated Results
      */
-    aggregated_results: Array<JsonDict> | null;
+    aggregated_results: Array<JsonDictOutput> | null;
     /**
      * Created At
      */
@@ -1576,12 +1593,12 @@ export type ResearchStepResponse = {
      * Id
      */
     id: number;
-    input_data: JsonDict | null;
+    input_data: JsonDictOutput | null;
     /**
      * Iteration
      */
     iteration: number;
-    output_data: JsonDict | null;
+    output_data: JsonDictOutput | null;
     /**
      * Session Id
      */
@@ -1734,6 +1751,21 @@ export type SessionRead = {
      * Updated At
      */
     updated_at: string;
+};
+
+/**
+ * SessionUiStateResponse
+ */
+export type SessionUiStateResponse = {
+    /**
+     * Session Id
+     */
+    session_id: number;
+    shared_state: JsonDictOutput;
+    /**
+     * Shared State Revision
+     */
+    shared_state_revision: number;
 };
 
 /**
@@ -2045,7 +2077,7 @@ export type SlidesThemePreset = {
      * Label
      */
     label: string;
-    template: JsonDict;
+    template: JsonDictOutput;
 };
 
 /**
@@ -2241,7 +2273,7 @@ export type SourceRead = {
      * Last Error At
      */
     last_error_at?: string | null;
-    metadata?: JsonDict | null;
+    metadata?: JsonDictOutput | null;
     /**
      * Mime Type
      */
@@ -2781,6 +2813,58 @@ export type Topic = {
      * Name
      */
     name: string;
+};
+
+/**
+ * UiEventRequest
+ */
+export type UiEventRequest = {
+    /**
+     * Name
+     */
+    name: 'ui.v1.event';
+    /**
+     * Type
+     */
+    type: 'CUSTOM';
+    value: UiEventValueRequest;
+};
+
+/**
+ * UiEventResponse
+ */
+export type UiEventResponse = {
+    /**
+     * Delta
+     */
+    delta: Array<JsonDictOutput>;
+    /**
+     * Shared State Revision
+     */
+    shared_state_revision: number;
+};
+
+/**
+ * UiEventValueRequest
+ */
+export type UiEventValueRequest = {
+    /**
+     * Baserevision
+     */
+    baseRevision: number;
+    /**
+     * Clientrequestid
+     */
+    clientRequestId: string;
+    /**
+     * Componentid
+     */
+    componentId: string;
+    /**
+     * Eventname
+     */
+    eventName: string;
+    payload?: JsonDictInput;
 };
 
 /**
@@ -4375,6 +4459,74 @@ export type CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostRespo
 };
 
 export type CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponse = CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses[keyof CreateMessageV1NotebooksNotebookIdSessionsSessionIdMessagesPostResponses];
+
+export type PostUiEventV1NotebooksNotebookIdSessionsSessionIdUiEventPostData = {
+    body: UiEventRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Session Id
+         */
+        session_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/ui/event';
+};
+
+export type PostUiEventV1NotebooksNotebookIdSessionsSessionIdUiEventPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostUiEventV1NotebooksNotebookIdSessionsSessionIdUiEventPostError = PostUiEventV1NotebooksNotebookIdSessionsSessionIdUiEventPostErrors[keyof PostUiEventV1NotebooksNotebookIdSessionsSessionIdUiEventPostErrors];
+
+export type PostUiEventV1NotebooksNotebookIdSessionsSessionIdUiEventPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: UiEventResponse;
+};
+
+export type PostUiEventV1NotebooksNotebookIdSessionsSessionIdUiEventPostResponse = PostUiEventV1NotebooksNotebookIdSessionsSessionIdUiEventPostResponses[keyof PostUiEventV1NotebooksNotebookIdSessionsSessionIdUiEventPostResponses];
+
+export type GetUiStateV1NotebooksNotebookIdSessionsSessionIdUiStateGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+        /**
+         * Session Id
+         */
+        session_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sessions/{session_id}/ui/state';
+};
+
+export type GetUiStateV1NotebooksNotebookIdSessionsSessionIdUiStateGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetUiStateV1NotebooksNotebookIdSessionsSessionIdUiStateGetError = GetUiStateV1NotebooksNotebookIdSessionsSessionIdUiStateGetErrors[keyof GetUiStateV1NotebooksNotebookIdSessionsSessionIdUiStateGetErrors];
+
+export type GetUiStateV1NotebooksNotebookIdSessionsSessionIdUiStateGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: SessionUiStateResponse;
+};
+
+export type GetUiStateV1NotebooksNotebookIdSessionsSessionIdUiStateGetResponse = GetUiStateV1NotebooksNotebookIdSessionsSessionIdUiStateGetResponses[keyof GetUiStateV1NotebooksNotebookIdSessionsSessionIdUiStateGetResponses];
 
 export type CreateDraftV1NotebooksNotebookIdSlidesDraftsPostData = {
     body: SlideDraftCreate;

@@ -52,35 +52,29 @@ Workspace UI MUST 提供“系统配置”入口，并允许用户对 custom `/p
 - **WHEN** 用户在“系统配置”中创建/更新/删除 custom preset
 - **THEN** UI SHALL 刷新 `GET /v1/commands` 的缓存并更新补全列表
 
-### Requirement: Chat panel renders UI envelopes embedded in assistant messages
-Chat 面板 MUST 能识别 assistant `content` 中的 delimiter `[[crystalith-ui:v1]]` 并解析其 JSON envelope；解析成功后 MUST 按 `parts[]` 渲染结构化 UI（text/component/tool_use/tool_result）。
+### Requirement: Chat panel renders plain assistant text plus Rivu mounts
+Chat 面板 MUST 将 assistant `message.content` 作为纯文本/markdown 渲染，并 MUST 基于 session `shared_state.ui` 的 mounts 在消息气泡下方渲染结构化 UI。前端 MUST 不再解析 `message.content` 中的 legacy envelope。
 
-#### Scenario: Render a registered component from an envelope
-- **WHEN** assistant 消息包含有效的 UI envelope，且其中 `component.name` 已在前端 registry 注册
-- **THEN** Chat 面板 SHALL 渲染对应组件并展示其 props 表达的内容
-- **AND** 消息的 `fallback_text` SHALL 不作为主要正文重复展示（仅用于解析失败回退）
-
-#### Scenario: Envelope parse failure falls back to fallback_text
-- **WHEN** assistant 消息包含 delimiter 但 JSON 解析失败、`schema` 不匹配或超过资源上限
-- **THEN** Chat 面板 SHALL 展示 `fallback_text`
-- **AND** UI SHALL 保持可用且不影响其它消息渲染
+#### Scenario: Render mounted components for a message
+- **WHEN** `shared_state.ui` 中存在 `messageId` 指向某条 assistant message、且 `slot="inline"` 的 mounts
+- **THEN** Chat 面板 SHALL 在该消息正文下方渲染对应的 Rivu components
 
 #### Scenario: Unknown component falls back safely
-- **WHEN** envelope 中出现未注册的 `component.name` 或 props 校验失败
-- **THEN** Chat 面板 SHALL 使用安全回退渲染（例如 JSON 摘要）
-- **AND** 同一消息中的其它 parts SHALL 继续渲染
+- **WHEN** `shared_state.ui` 中出现未注册的 component type 或 props 校验失败
+- **THEN** Chat 面板 SHALL 使用安全回退渲染
+- **AND** 同一消息中的其它 mounts SHALL 继续渲染
 
-### Requirement: Streaming UX integrates with streaming-updatable components
-当一次对话响应以流式方式生成时，Chat 面板 MUST 支持将增量内容反映到 `streaming: true` 的 component props 中，并保持取消语义一致。
+### Requirement: Streaming UX applies server-authoritative snapshots and deltas
+当一次对话响应以流式方式生成时，Chat 面板 MUST 使用服务端发送的 `state_snapshot`/`state_delta` 驱动 UI，并以服务端稳定 `message_id` 关联消息与 mounts。
 
-#### Scenario: Streaming updates component props
-- **WHEN** 用户发起一次流式问答且 UI 采用 component 表达回答
-- **THEN** Chat 面板 SHALL 在收到增量 chunk 时更新组件 props 并触发重渲染
-- **AND** 用户 SHALL 能观察到回答逐步增长
+#### Scenario: Streaming restores mounts after reload
+- **WHEN** 用户刷新页面后重新进入同一个 session
+- **THEN** Chat 面板 SHALL 通过 `/ui/state` 恢复此前已持久化的 mounts
 
-#### Scenario: Cancel stops streaming updates
-- **WHEN** 用户在流式生成过程中点击取消
-- **THEN** Chat 面板 SHALL 停止继续追加增量内容并进入可恢复状态（如可重试）
+#### Scenario: Cancel rolls back provisional UI
+- **WHEN** 用户在流式生成过程中点击取消，且该次回答尚未 `done`
+- **THEN** Chat 面板 SHALL 停止继续追加内容
+- **AND** 后续刷新时不应看到该次未完成回答留下的 provisional mounts
 
 ### Requirement: Tool/action cards enforce confirmation and auto-exec whitelist
 当消息包含 `tool_use` parts 时，Chat 面板 MUST：

@@ -45,22 +45,28 @@ notebook、session、message 的范围归属与 404/400 语义 MUST 稳定。
 - **WHEN** 请求引用了不存在或不属于当前 notebook 的 session/message
 - **THEN** 系统 SHALL 以稳定的 404/400 语义响应
 
-### Requirement: Message content can embed a UI envelope without changing /v1 payload shape
-系统 MUST 支持在 assistant 消息 `content: string` 中内嵌 UI envelope，以表达结构化 UI 内容；该能力 MUST 不要求引入新的 `/v1` 字段或新的 major 版本。
+### Requirement: Assistant message content remains plain text while UI is transported out-of-band
+系统 MUST 将 assistant 消息 `content: string` 保持为纯文本/markdown 回答；结构化 UI MUST 通过 session-scoped `shared_state.ui` 提供，而不是嵌入 `content`。
 
-#### Scenario: List messages returns envelope inside content
-- **WHEN** 后端在某条 assistant 消息中启用 UI envelope 且客户端调用 messages 列表端点获取该消息
-- **THEN** 响应中的 `content` SHALL 包含 delimiter `[[crystalith-ui:v1]]` 与随后的 JSON envelope
-- **AND** `content` 在协议层面仍 SHALL 是普通字符串字段（无额外必需字段）
+#### Scenario: List messages returns plain assistant content
+- **WHEN** 客户端调用 messages 列表端点获取某条 assistant 消息
+- **THEN** 响应中的 `content` SHALL 仅包含回答文本
+- **AND** 任何对应的交互 UI SHALL 通过同 session 的 `shared_state.ui` 恢复
 
-### Requirement: Embedded UI envelope is backward-compatible at the transport level
-当 `content` 内嵌 UI envelope 时：
-- `content` MUST 仍为有效 UTF-8 字符串
-- delimiter 前的 `fallback_text` MUST 为非空人类可读文本
+### Requirement: Session UI state endpoints are stable and server-authoritative
+系统 MUST 提供 session-scoped UI 状态端点：
+- `GET /v1/notebooks/{notebook_id}/sessions/{session_id}/ui/state`
+- `POST /v1/notebooks/{notebook_id}/sessions/{session_id}/ui/event`
 
-#### Scenario: Non-UI clients remain functional
-- **WHEN** 客户端不识别 UI envelope，仅把 `content` 当作纯文本展示
-- **THEN** 用户 SHALL 仍能通过 `fallback_text` 获得可读的最小信息
+`GET` MUST 返回 `session_id`、`shared_state`、`shared_state_revision`；`POST` MUST 接收 `CUSTOM(name="ui.v1.event")`，并返回 `delta` 与最新 `shared_state_revision`。
+
+#### Scenario: UI state snapshot restores a session
+- **WHEN** 客户端请求 `/ui/state`
+- **THEN** 系统 SHALL 返回该 session 当前的完整 `shared_state` snapshot 与 revision
+
+#### Scenario: UI event endpoint is revision-aware and idempotent
+- **WHEN** 客户端向 `/ui/event` 发送带 `clientRequestId` 与 `baseRevision` 的 `ui.v1.event`
+- **THEN** 系统 SHALL 做幂等处理与 revision 冲突检查
 
 ### Requirement: Commands endpoint is available for autocomplete
 系统 MUST 提供 `GET /v1/commands` 端点，供前端获取结构化命令列表以驱动自动补全。
@@ -107,9 +113,10 @@ QA 端点 MUST 支持在 `question: string` 中内嵌 `/prompt:<preset> <query>`
 - **WHEN** 客户端使用 `/qa/stream` 发起问答
 - **THEN** stream SHALL 至少包含 `chunk|done|error` 事件并保持字段语义稳定
 
-#### Scenario: QA stream remains stable while enabling UI envelopes
-- **WHEN** 客户端使用 `/qa/stream` 发起问答且后端在最终 assistant 消息中内嵌 UI envelope
-- **THEN** stream SHALL 仍保持 `chunk|done|error` 的最小事件集与既有字段语义稳定
+#### Scenario: QA stream carries shared UI state updates
+- **WHEN** 客户端使用 `/qa/stream` 发起问答且该回答包含交互 UI
+- **THEN** stream SHALL 保持 `chunk|done|error` 的最小事件集稳定
+- **AND** SHALL 额外发送 `state_snapshot` 与可选的 `state_delta` 事件来传递 `shared_state.ui`
 
 ### Requirement: Citation model is unified across APIs
 citation 对象 MUST 在 QA/messages/outputs 等对外 API 中保持字段语义一致，并包含最小可定位字段集。
@@ -129,12 +136,12 @@ citation 对象 MUST 在 QA/messages/outputs 等对外 API 中保持字段语义
 
 ### Requirement: Exports can include citations
 系统 MUST 支持将 QA/Outputs 导出为包含 citations 的格式（Markdown/JSON 或等价），以便分享与复盘。
-当被导出的 assistant `content` 内嵌 UI envelope 时，导出正文 MUST 使用 delimiter 前的 `fallback_text`，且 MUST 不包含 delimiter 与 JSON 元数据。
 
 #### Scenario: Export includes citation list
 - **WHEN** 用户导出 QA 或某个 Output
 - **THEN** 导出结果 SHALL 包含引用清单与可定位信息（source_id 或可解析来源标识）
-- **AND** 导出正文 SHALL 不包含 `[[crystalith-ui:v1]]` delimiter 与随后的 JSON 元数据（如存在）
+- **AND** 导出正文 SHALL 使用纯 assistant 文本内容
+- **AND** 导出正文 SHALL 不包含 `[[crystalith-ui:v1]]` 或其他 legacy UI metadata
 
 ### Requirement: Workspace tools and outputs endpoints are stable
 `/v1/workspace/tools` 与 outputs/slides 相关端点 MUST 保持可用与向后兼容；其中 `/v1/workspace/tools` 的“可用工具集合”允许随已安装/已启用插件变化而变化，但响应形状与字段语义 MUST 稳定。

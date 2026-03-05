@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定义 Chat 输入中的 `/prompt:*` 指令与后端 preset registry（built-in + custom）的稳定行为：如何解析指令、如何选择生成策略，以及各 preset 的最小输出契约（包含纯文本回退与可选的 UI envelope）。
+定义 Chat 输入中的 `/prompt:*` 指令与后端 preset registry（built-in + custom）的稳定行为：如何解析指令、如何选择生成策略，以及各 preset 的最小输出契约（包含纯文本回答与可选的 session `shared_state.ui` 更新）。
 
 ## Non-goals
 
@@ -79,17 +79,13 @@
 - **WHEN** 模型输出无法被解析/校验为 stats JSON
 - **THEN** 系统 SHALL 回退生成纯文本回答并正常返回 citations/evidence/confidence
 
-### Requirement: Stats can optionally embed a UI envelope in assistant content
-当 `app.features.chat_ui_envelope_enabled=true` 时，系统 MUST 将 stats 结果持久化为“可读回退 + UI envelope”：
+### Requirement: Stats persists plain answer text and shared UI state
+当 `stats` preset 生成合法的结构化结果时，系统 MUST：
+- 将 `fallback_markdown` 持久化为 assistant `content`
+- 通过 session `shared_state.ui` 提供图表/表格 mounts
+- 不再依赖 `chat_ui_envelope_enabled` 或在 `content` 中嵌入 envelope
 
-`<fallback_text> + "\\n\\n[[crystalith-ui:v1]]\\n" + <json_envelope>`
-
-其中：
-- `<fallback_text>` MUST 等于 stats JSON 的 `fallback_markdown`
-- `<json_envelope>` MUST 为 JSON object，且 MUST 包含：
-  - `schema = "crystalith.ui.message.v1"`
-  - `parts`（至少包含一个 `component` part，用于渲染 `BarChartCard`）
-
-#### Scenario: Envelope is appended only when enabled
-- **WHEN** `stats` preset 执行完成且 `app.features.chat_ui_envelope_enabled=false`
-- **THEN** assistant 消息 `content` SHALL 仅包含 `fallback_text`（不应追加 delimiter 与 JSON）
+#### Scenario: Stats returns mounts through shared_state
+- **WHEN** `stats` preset 执行完成且结构化输出校验通过
+- **THEN** assistant 消息 `content` SHALL 仅包含 `fallback_markdown`
+- **AND** 响应或 stream SHALL 通过 `shared_state` / `state_delta` 传递对应的 UI mounts

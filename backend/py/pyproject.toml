@@ -32,6 +32,7 @@ dependencies = [
     "tiktoken>=0.12.0",
     "jsonschema>=4.26.0",
     "chromadb>=0.5.15",
+    "rivu-server-sdk",
 ]
 
 [project.optional-dependencies]
@@ -107,6 +108,7 @@ crystalith-extractor-trafilatura = { workspace = true }
 crystalith-extractor-jina = { workspace = true }
 crystalith-extractor-firecrawl = { workspace = true }
 crystalith-extractor-browserless = { workspace = true }
+rivu-server-sdk = { git = "https://github.com/StrayDragon/rivu.git", subdirectory = "python", rev = "d9dcb31c29285208c7ffc0bef6ae203357a2b570" }
 
 [dependency-groups]
 dev = [

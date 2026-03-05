@@ -372,10 +372,6 @@ class AppFeaturesSettings(BaseModel):
         False,
         description="Enable /prompt:* directives in QA.",
     )
-    chat_ui_envelope_enabled: bool = Field(
-        False,
-        description="Embed UI envelopes into assistant message content.",
-    )
     workspace_frontend_bundles_enabled: bool = Field(
         True,
         description=(

@@ -125,3 +125,11 @@ URL 抓取安全配置 MUST 默认拒绝高风险目标（localhost/私网/元�
 #### Scenario: Optional service starts after backend
 - **WHEN** 后端已启动后可选服务才启动
 - **THEN** 系统 SHALL 在后续探活周期中发现服务恢复并更新可用状态
+
+### Requirement: Interactive chat UI transport is not feature-flagged
+系统的对话内交互 UI 传输 MUST 固定使用 session `shared_state.ui`；运行时 MUST 不要求额外 feature flag 才能启用该能力。
+
+#### Scenario: Stats shared UI works without envelope flag
+- **WHEN** `chat_prompt_presets_enabled=true` 且 stats preset 生成了结构化结果
+- **THEN** 系统 SHALL 直接返回/推送 `shared_state.ui`
+- **AND** SHALL 不依赖 `chat_ui_envelope_enabled` 一类 legacy 开关
