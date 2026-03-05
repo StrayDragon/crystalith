@@ -34,7 +34,7 @@ def apply_source_failure(source: Source, failure: SourceFailure) -> None:
     source.error_code = failure.error_code
     source.error_message = (failure.message or "").strip()[:512] or None
     source.recovery_hint = (failure.recovery_hint or "").strip() or None
-    source.last_error_at = datetime.datetime.now(datetime.UTC)
+    source.last_error_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
 
 
 def raise_source_failure(failure: SourceFailure) -> NoReturn:

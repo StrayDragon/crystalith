@@ -136,7 +136,7 @@ async def persist_qa_messages(
         return
     if not history_messages and not db_session.title:
         db_session.title = generate_session_title(question)
-    db_session.updated_at = created_at
+    db_session.updated_at = created_at.replace(tzinfo=None)
     session.add(
         Message(
             session_id=db_session.id,
