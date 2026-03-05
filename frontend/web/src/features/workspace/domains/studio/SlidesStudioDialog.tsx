@@ -30,6 +30,7 @@ import {
   updateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePut as updateSlidesOutline,
   updateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPut as updateSlidesMarkdown,
 } from '../../../../api/generated';
+import { unwrapData } from '../../../../api/unwrap';
 import { buildSlidevPreviewUrl } from '@crystalith-slidev';
 import { toast } from '../../../../shared/toast';
 import { t } from '../../../../shared/i18n';
@@ -220,9 +221,13 @@ export default function SlidesStudioDialog({
     data: slidesConfigData,
     error: slidesConfigError,
     isLoading: slidesConfigLoading,
-  } = useSWR(open && isConnected ? 'workspace/slides-config' : null, () => getSlidesConfig(), {
+  } = useSWR(
+    open && isConnected ? 'workspace/slides-config' : null,
+    () => unwrapData(getSlidesConfig<true>()),
+    {
     revalidateOnFocus: false,
-  });
+    },
+  );
   const slidesConfig = useMemo(() => normalizeSlidesConfig(slidesConfigData), [slidesConfigData]);
   const slidesConfigErrorMessage = !isConnected
     ? t('studio.slides.connection_required')
@@ -383,8 +388,8 @@ export default function SlidesStudioDialog({
     setError('');
     try {
       const latest = draftId
-        ? await getSlidesDraft({ path: { notebook_id: notebookId, slide_id: draftId } })
-        : await getLatestSlidesDraft({ path: { notebook_id: notebookId } });
+        ? await unwrapData(getSlidesDraft<true>({ path: { notebook_id: notebookId, slide_id: draftId } }))
+        : await unwrapData(getLatestSlidesDraft<true>({ path: { notebook_id: notebookId } }));
       syncFromDraft(normalizeDraft(latest));
     } catch (err: any) {
       const status = resolveErrorStatus(err);
@@ -402,7 +407,7 @@ export default function SlidesStudioDialog({
     if (!notebookId || !isConnected) return;
     const targetId = slideId ?? draft?.id;
     if (!targetId) return;
-    const latest = await getSlidesDraft({ path: { notebook_id: notebookId, slide_id: targetId } });
+    const latest = await unwrapData(getSlidesDraft<true>({ path: { notebook_id: notebookId, slide_id: targetId } }));
     syncFromDraft(normalizeDraft(latest));
   }, [draft?.id, isConnected, notebookId, syncFromDraft]);
 
@@ -556,18 +561,18 @@ export default function SlidesStudioDialog({
       generation_config: buildGenerationConfigPayload(),
     };
     if (!draft) {
-      const created = await createSlidesDraft({
+      const created = await unwrapData(createSlidesDraft<true>({
         path: { notebook_id: notebookId },
         body: payload,
-      });
+      }));
       const normalized = normalizeDraft(created);
       syncFromDraft(normalized);
       return normalized;
     }
-    const updated = await updateSlidesDraft({
+    const updated = await unwrapData(updateSlidesDraft<true>({
       path: { notebook_id: notebookId, slide_id: draft.id },
       body: payload,
-    });
+    }));
     const normalized = normalizeDraft(updated);
     syncFromDraft(normalized);
     return normalized;
@@ -646,10 +651,10 @@ export default function SlidesStudioDialog({
         bullets: item.bullets.map((bullet) => bullet.trim()).filter(Boolean),
       })),
     };
-    const updated = await updateSlidesOutline({
+    const updated = await unwrapData(updateSlidesOutline<true>({
       path: { notebook_id: notebookId, slide_id: draft.id },
       body: { outline },
-    });
+    }));
     syncFromDraft(normalizeDraft(updated));
   }, [draft, isConnected, notebookId, outlineItems, outlineTitle, syncFromDraft, title]);
 
@@ -659,10 +664,10 @@ export default function SlidesStudioDialog({
       setError(t('studio.slides.connection_required'));
       return;
     }
-    const updated = await updateSlidesMarkdown({
+    const updated = await unwrapData(updateSlidesMarkdown<true>({
       path: { notebook_id: notebookId, slide_id: draft.id },
       body: { markdown: markdown },
-    });
+    }));
     syncFromDraft(normalizeDraft(updated));
     onOutputsUpdated();
   }, [draft, isConnected, markdown, notebookId, onOutputsUpdated, syncFromDraft]);
@@ -1406,7 +1411,7 @@ export default function SlidesStudioDialog({
     );
   };
 
-  const canBuildPreview = Boolean(markdown.trim());
+  const canBuildPreview = Boolean(draft?.id && markdown.trim());
   const showPreviewPanel = !isConfigOnly;
   const gridLayoutClass = showPreviewPanel
     ? (isPreviewMode || activeStage === 'markdown'
@@ -1676,7 +1681,7 @@ export default function SlidesStudioDialog({
                     <div className="h-full w-full flex flex-col items-center justify-center gap-2 text-xs text-gray-500 dark:text-slate-400 px-6 text-center">
                       <span>暂无预览，请先生成 Markdown 或点击“同步预览”。</span>
                       <span className="text-[11px] text-gray-400 dark:text-slate-500">
-                        预览基于本地 Slidev 服务（默认 http://localhost:3030）。
+                        预览基于 Slidev 服务（本地开发默认 http://localhost:3030，Docker 部署默认 /slidev/）。
                       </span>
                     </div>
                   )}
