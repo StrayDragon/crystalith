@@ -1,192 +1,248 @@
 from __future__ import annotations
 
-import contextlib
-import threading
-from collections.abc import Iterator
-from dataclasses import dataclass, field
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import cast
+from dataclasses import dataclass
 
 import pytest
 
-from crystalith.shared.config.models import WebExtractionSettings
-from crystalith.shared.extraction.factory import create_extractor
-from crystalith.shared.extraction.interfaces import ExtractionError, ParseError
-from crystalith.shared.extraction.jina_extractor import JinaReaderExtractor
-from crystalith.shared.extraction.trafilatura_extractor import TrafilaturaExtractor
-from crystalith.shared.extraction.types import ExtractorType
+from crystalith.shared.config import Settings
+from crystalith.shared.extraction.factory import ExtractorFactory
+from crystalith.shared.extraction.interfaces import ConfigurationError, ExtractionError
+from crystalith.shared.extraction.types import ExtractedContent, ExtractorType
+from crystalith.shared.plugins import PluginRegistry
 
 
 @dataclass(slots=True)
-class _RequestCapture:
-    headers: dict[str, str] = field(default_factory=dict)
-    method: str | None = None
-    path: str | None = None
+class _StubExtractor:
+    kind: ExtractorType
+    available: bool = True
+    text: str = "ok"
+
+    @property
+    def extractor_type(self) -> ExtractorType:
+        return self.kind
+
+    async def is_available(self) -> bool:
+        return self.available
+
+    async def extract(self, url: str, html: str | None = None) -> ExtractedContent:  # noqa: ARG002
+        return ExtractedContent(text=self.text, url=url, extractor=self.kind.value)
+
+    async def close(self) -> None:
+        return None
 
 
-@contextlib.contextmanager
-def _serve_http(payload: str) -> Iterator[tuple[str, _RequestCapture]]:
-    capture = _RequestCapture()
+class _StubWebExtractorPlugin:
+    api_version = "v1"
 
-    class Handler(BaseHTTPRequestHandler):
-        def log_message(self, format: str, *args) -> None:  # noqa: A003 - base signature
-            return
+    def __init__(self, extractor: _StubExtractor) -> None:
+        self.extractor_type = extractor.kind.value
+        self.display_name = f"Stub {extractor.kind.value}"
+        self.description = "Stub extractor"
+        self.requires_api_key = False
+        self.requires_service = False
+        self._extractor = extractor
 
-        def do_GET(self) -> None:  # noqa: N802 - http.server naming
-            capture.method = "GET"
-            capture.path = self.path
-            capture.headers = dict(self.headers)
-            body = payload.encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "text/plain; charset=utf-8")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
+    def create_extractor(self, settings: Settings, *, url_fetch_security=None):  # noqa: ANN001, ARG002
+        return self._extractor
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    try:
-        host, port = cast(tuple[str, int], server.server_address)
-        base_url = f"http://{host}:{port}/"
-        yield base_url, capture
-    finally:
-        server.shutdown()
-        thread.join(timeout=5)
-        server.server_close()
+
+def _registry_with_plugins(*items: tuple[str, _StubWebExtractorPlugin]) -> PluginRegistry:
+    registry = PluginRegistry()
+    for plugin_id, plugin in items:
+        registry.web_extractors[plugin.extractor_type] = plugin
+        registry.plugins[plugin_id] = plugin
+        registry._web_extractor_plugin_ids[plugin.extractor_type] = plugin_id  # noqa: SLF001
+        registry._load_report.loaded.append(plugin_id)  # noqa: SLF001
+    return registry
 
 
 @pytest.mark.asyncio
-async def test_extractor_factory_reports_availability_and_extracts_html() -> None:
-    settings = WebExtractionSettings.model_validate(
+async def test_extractor_factory_reports_enabled_and_available_for_loaded_plugin() -> None:
+    settings = Settings.model_validate(
         {
-            "trafilatura": {"enabled": True},
-            "jina": {"enabled": False},
-            "firecrawl": {"enabled": False},
-            "browserless": {"enabled": False},
+            "source_ingestion": {
+                "web_extraction": {
+                    "trafilatura": {"enabled": True},
+                    "jina": {"enabled": False},
+                    "firecrawl": {"enabled": False},
+                    "browserless": {"enabled": False},
+                    "fallback_order": ["trafilatura"],
+                }
+            }
         }
     )
-    factory = create_extractor(settings)
+    registry = _registry_with_plugins(
+        ("extractor-trafilatura", _StubWebExtractorPlugin(_StubExtractor(ExtractorType.TRAFILATURA))),
+    )
+    factory = ExtractorFactory(settings, plugins=registry)
 
-    infos = factory.get_available_extractors()
+    infos = await factory.get_available_extractors()
     traf = next(info for info in infos if info.type == ExtractorType.TRAFILATURA)
     assert traf.enabled is True
     assert traf.available is True
+    assert traf.plugin_id == "extractor-trafilatura"
 
-    html = (
-        "<html><head><title>Example</title></head>"
-        "<body><article><p>Hello world</p></article></body></html>"
+
+@pytest.mark.asyncio
+async def test_extractor_factory_reports_not_installed_when_plugin_missing() -> None:
+    settings = Settings.model_validate(
+        {"source_ingestion": {"web_extraction": {"fallback_order": ["trafilatura"]}}}
     )
-    result = await factory.extract("http://example.test", html=html)
-    assert result.extractor == "trafilatura"
-    assert "Hello world" in result.text
+    registry = PluginRegistry()
+    factory = ExtractorFactory(settings, plugins=registry)
 
-    await factory.close()
-
-
-@pytest.mark.asyncio
-async def test_trafilatura_extractor_parse_error_includes_context() -> None:
-    extractor = TrafilaturaExtractor()
-
-    with pytest.raises(ParseError) as exc_info:
-        await extractor.extract("http://example.test", html="<html><body></body></html>")
-
-    err = exc_info.value
-    assert err.extractor == "trafilatura"
-    assert err.url == "http://example.test"
-    assert "extractor=trafilatura" in str(err)
-    assert "url=http://example.test" in str(err)
+    infos = await factory.get_available_extractors()
+    traf = next(info for info in infos if info.type == ExtractorType.TRAFILATURA)
+    assert traf.enabled is False
+    assert traf.available is False
+    assert traf.error_code == "not_installed"
+    assert traf.recovery_hint
+    assert "official-full" in traf.recovery_hint
 
 
 @pytest.mark.asyncio
-async def test_extractor_factory_errors_when_no_extractors_enabled() -> None:
-    settings = WebExtractionSettings.model_validate(
+async def test_extractor_factory_falls_back_when_preferred_returns_empty() -> None:
+    settings = Settings.model_validate(
         {
-            "trafilatura": {"enabled": False},
-            "jina": {"enabled": False},
-            "firecrawl": {"enabled": False},
-            "browserless": {"enabled": False},
-            "fallback_order": ["trafilatura"],
+            "source_ingestion": {
+                "web_extraction": {
+                    "trafilatura": {"enabled": True},
+                    "jina": {"enabled": True},
+                    "fallback_order": ["trafilatura", "jina"],
+                }
+            }
         }
     )
-    factory = create_extractor(settings)
+    registry = _registry_with_plugins(
+        (
+            "extractor-trafilatura",
+            _StubWebExtractorPlugin(_StubExtractor(ExtractorType.TRAFILATURA, text="")),
+        ),
+        ("extractor-jina", _StubWebExtractorPlugin(_StubExtractor(ExtractorType.JINA, text="Hello"))),
+    )
+    factory = ExtractorFactory(settings, plugins=registry)
 
-    with pytest.raises(ExtractionError, match="No extractors available"):
-        await factory.extract("http://example.test", html="<html></html>")
-
-
-@pytest.mark.asyncio
-async def test_extractor_factory_falls_back_to_jina_when_trafilatura_fails(monkeypatch: pytest.MonkeyPatch) -> None:
-    markdown = "# Title\n\nFallback content."
-
-    with _serve_http(markdown) as (base_url, capture):
-        # Mock reason: redirect extractor network target to local stub server for deterministic behavior.
-        monkeypatch.setattr(JinaReaderExtractor, "BASE_URL", base_url)
-        settings = WebExtractionSettings.model_validate(
-            {
-                "trafilatura": {"enabled": True},
-                "jina": {"enabled": True},
-                "firecrawl": {"enabled": False},
-                "browserless": {"enabled": False},
-            }
-        )
-        factory = create_extractor(settings)
-
-        # Trafilatura fails on empty content; Jina returns Markdown.
-        result = await factory.extract("http://example.test", html="<html><body></body></html>")
-
+    result = await factory.extract(
+        "http://example.test",
+        preferred_extractor=ExtractorType.TRAFILATURA,
+        enable_fallback=True,
+    )
     assert result.extractor == "jina"
-    assert result.title == "Title"
-    assert "Fallback content" in result.text
-    assert capture.method == "GET"
-
-
-@pytest.mark.asyncio
-async def test_extractor_factory_respects_preferred_extractor(monkeypatch: pytest.MonkeyPatch) -> None:
-    markdown = "# Preferred\n\nJina wins."
-
-    with _serve_http(markdown) as (base_url, _capture):
-        # Mock reason: redirect extractor network target to local stub server for deterministic behavior.
-        monkeypatch.setattr(JinaReaderExtractor, "BASE_URL", base_url)
-        settings = WebExtractionSettings.model_validate(
-            {
-                "trafilatura": {"enabled": True},
-                "jina": {"enabled": True},
-                "firecrawl": {"enabled": False},
-                "browserless": {"enabled": False},
-            }
-        )
-        factory = create_extractor(settings)
-
-        html = (
-            "<html><head><title>Example</title></head>"
-            "<body><article><p>Hello world</p></article></body></html>"
-        )
-        result = await factory.extract(
-            "http://example.test",
-            html=html,
-            preferred_extractor=ExtractorType.JINA,
-        )
-
-    assert result.extractor == "jina"
-    assert result.title == "Preferred"
+    assert "Hello" in result.text
 
 
 @pytest.mark.asyncio
 async def test_extractor_factory_stops_when_fallback_disabled() -> None:
-    settings = WebExtractionSettings.model_validate(
+    settings = Settings.model_validate(
         {
-            "trafilatura": {"enabled": True},
-            "jina": {"enabled": False},
-            "firecrawl": {"enabled": False},
-            "browserless": {"enabled": False},
+            "source_ingestion": {
+                "web_extraction": {
+                    "trafilatura": {"enabled": True},
+                    "jina": {"enabled": True},
+                    "fallback_order": ["trafilatura", "jina"],
+                }
+            }
         }
     )
-    factory = create_extractor(settings)
+    registry = _registry_with_plugins(
+        (
+            "extractor-trafilatura",
+            _StubWebExtractorPlugin(_StubExtractor(ExtractorType.TRAFILATURA, text="")),
+        ),
+        ("extractor-jina", _StubWebExtractorPlugin(_StubExtractor(ExtractorType.JINA, text="Hello"))),
+    )
+    factory = ExtractorFactory(settings, plugins=registry)
 
     with pytest.raises(ExtractionError, match="All extractors failed"):
         await factory.extract(
             "http://example.test",
-            html="<html><body></body></html>",
+            preferred_extractor=ExtractorType.TRAFILATURA,
             enable_fallback=False,
         )
+
+
+@pytest.mark.asyncio
+async def test_extractor_factory_custom_policy_can_disable_extractors() -> None:
+    settings = Settings.model_validate(
+        {
+            "source_ingestion": {
+                "web_extraction": {
+                    "trafilatura": {"enabled": True},
+                    "jina": {"enabled": True},
+                    "fallback_order": ["trafilatura", "jina"],
+                }
+            }
+        }
+    )
+    registry = _registry_with_plugins(
+        ("extractor-trafilatura", _StubWebExtractorPlugin(_StubExtractor(ExtractorType.TRAFILATURA))),
+        ("extractor-jina", _StubWebExtractorPlugin(_StubExtractor(ExtractorType.JINA))),
+    )
+    factory = ExtractorFactory(
+        settings,
+        plugins=registry,
+        policy_mode="custom",
+        enabled_extractors={"jina"},
+    )
+
+    infos = await factory.get_available_extractors()
+    traf = next(info for info in infos if info.type == ExtractorType.TRAFILATURA)
+    jina = next(info for info in infos if info.type == ExtractorType.JINA)
+
+    assert traf.enabled is False
+    assert traf.available is False
+    assert traf.error_code == "disabled"
+
+    assert jina.enabled is True
+    assert jina.available is True
+
+    with pytest.raises(ConfigurationError, match="No extractors available"):
+        await ExtractorFactory(
+            settings,
+            plugins=PluginRegistry(),
+            policy_mode="custom",
+            enabled_extractors=set(),
+        ).extract("http://example.test")
+
+
+@pytest.mark.asyncio
+async def test_extractor_factory_reports_missing_config_when_unavailable() -> None:
+    settings = Settings.model_validate(
+        {
+            "source_ingestion": {
+                "web_extraction": {
+                    "trafilatura": {"enabled": False},
+                    "jina": {"enabled": False},
+                    "firecrawl": {"enabled": True, "api_key": None},
+                    "browserless": {"enabled": True, "endpoint": ""},
+                    "fallback_order": ["firecrawl", "browserless"],
+                }
+            }
+        }
+    )
+    registry = _registry_with_plugins(
+        (
+            "extractor-firecrawl",
+            _StubWebExtractorPlugin(_StubExtractor(ExtractorType.FIRECRAWL, available=False)),
+        ),
+        (
+            "extractor-browserless",
+            _StubWebExtractorPlugin(_StubExtractor(ExtractorType.BROWSERLESS, available=False)),
+        ),
+    )
+    factory = ExtractorFactory(settings, plugins=registry)
+
+    infos = await factory.get_available_extractors()
+    firecrawl = next(info for info in infos if info.type == ExtractorType.FIRECRAWL)
+    assert firecrawl.enabled is True
+    assert firecrawl.available is False
+    assert firecrawl.error_code == "missing_config"
+    assert firecrawl.message == "Firecrawl API key is required"
+    assert firecrawl.recovery_hint
+
+    browserless = next(info for info in infos if info.type == ExtractorType.BROWSERLESS)
+    assert browserless.enabled is True
+    assert browserless.available is False
+    assert browserless.error_code == "missing_config"
+    assert browserless.message == "Browserless endpoint is required"
+    assert browserless.recovery_hint

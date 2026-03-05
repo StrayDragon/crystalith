@@ -16,7 +16,7 @@ from crystalith.shared.agents.search_graph import run_search_graph
 from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import Settings
-from crystalith.shared.db import Chunk as ChunkModel, Notebook, Source
+from crystalith.shared.db import Chunk as ChunkModel, Notebook, NotebookExtractorPolicy, Source
 from crystalith.shared.deps import (
     get_cache_provider,
     get_db_session,
@@ -27,7 +27,7 @@ from crystalith.shared.deps import (
     get_vector_store,
 )
 from crystalith.shared.plugins import PluginRegistry
-from crystalith.shared.json_types import JsonDict
+from crystalith.shared.json_types import JsonDict, JsonValue
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore
 from crystalith.shared.parsers import TranscriptionProvider
@@ -44,6 +44,9 @@ from .api_common import (
 from .api_schemas import (
     ExtractorInfoResponse,
     ExtractorsListResponse,
+    ExtractorPolicyMode,
+    NotebookExtractorsPolicy,
+    PatchNotebookExtractorsPolicyRequest,
     SourceFromUrlMode,
     SourceFromUrlRequest,
     SourceRead,
@@ -76,6 +79,7 @@ async def list_extractors(
     notebook_id: int,
     session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_settings),
+    plugins: PluginRegistry = Depends(get_plugin_registry),
 ) -> ExtractorsListResponse:
     """List available web content extractors.
 
@@ -95,12 +99,25 @@ async def list_extractors(
     from crystalith.shared.extraction import ExtractorFactory
 
     web_extraction_settings = settings.source_ingestion.web_extraction
+    policy_row = await session.get(NotebookExtractorPolicy, notebook_id)
+    policy_mode_raw = (policy_row.mode if policy_row is not None else "inherit_global") or "inherit_global"
+    enabled_extractors = list(policy_row.enabled_extractors or []) if policy_row is not None else []
+    policy_mode: ExtractorPolicyMode
+    if policy_mode_raw in {"inherit_global", "custom"}:
+        policy_mode = cast(ExtractorPolicyMode, policy_mode_raw)
+    else:
+        policy_mode = "inherit_global"
+        enabled_extractors = []
+    enabled_set = set(enabled_extractors) if policy_mode == "custom" else set()
     factory = ExtractorFactory(
-        web_extraction_settings,
+        settings,
+        plugins=plugins,
         url_fetch_security=settings.source_ingestion.url_fetch.security,
+        policy_mode=policy_mode,
+        enabled_extractors=enabled_set,
     )
 
-    extractor_infos = factory.get_available_extractors()
+    extractor_infos = await factory.get_available_extractors()
 
     # Find the default (first available) extractor
     default_extractor: str | None = None
@@ -113,6 +130,7 @@ async def list_extractors(
         extractors=[
             ExtractorInfoResponse(
                 type=info.type.value,
+                plugin_id=info.plugin_id,
                 enabled=info.enabled,
                 available=info.available,
                 display_name=info.display_name,
@@ -120,11 +138,128 @@ async def list_extractors(
                 priority=info.priority,
                 requires_api_key=info.requires_api_key,
                 requires_service=info.requires_service,
+                error_code=info.error_code,
+                message=info.message,
+                recovery_hint=info.recovery_hint,
+                details=cast(JsonDict, info.details) if isinstance(info.details, dict) else None,
             )
             for info in extractor_infos
         ],
         default_extractor=default_extractor,
         fallback_enabled=web_extraction_settings.enable_fallback,
+        policy=NotebookExtractorsPolicy(mode=policy_mode, enabled_extractors=sorted(enabled_extractors)),
+    )
+
+
+@router.patch("/extractors", response_model=ExtractorsListResponse)
+async def patch_extractors_policy(
+    notebook_id: int,
+    payload: PatchNotebookExtractorsPolicyRequest,
+    session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
+    plugins: PluginRegistry = Depends(get_plugin_registry),
+) -> ExtractorsListResponse:
+    notebook = await session.get(Notebook, notebook_id)
+    if notebook is None:
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
+    valid_extractors = {"trafilatura", "jina", "firecrawl", "browserless"}
+
+    policy_row = await session.get(NotebookExtractorPolicy, notebook_id)
+    if policy_row is None:
+        policy_row = NotebookExtractorPolicy(
+            notebook_id=notebook_id,
+            mode="inherit_global",
+            enabled_extractors=[],
+        )
+        session.add(policy_row)
+
+    if payload.mode is not None:
+        next_mode = payload.mode
+        if next_mode not in {"inherit_global", "custom"}:
+            raise HTTPException(status_code=400, detail="Invalid extractor policy mode")
+
+        if next_mode == "custom" and policy_row.mode != "custom" and payload.enabled_extractors is None:
+            # Initialize custom enabled set from current global policy.
+            enabled_from_global: list[str] = []
+            web_settings = settings.source_ingestion.web_extraction
+            if web_settings.trafilatura.enabled:
+                enabled_from_global.append("trafilatura")
+            if web_settings.jina.enabled:
+                enabled_from_global.append("jina")
+            if web_settings.firecrawl.enabled:
+                enabled_from_global.append("firecrawl")
+            if web_settings.browserless.enabled:
+                enabled_from_global.append("browserless")
+            policy_row.enabled_extractors = enabled_from_global
+
+        policy_row.mode = next_mode
+
+    if payload.enabled_extractors is not None:
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for raw in payload.enabled_extractors:
+            value = str(raw or "").strip().lower()
+            if not value or value in seen:
+                continue
+            if value not in valid_extractors:
+                raise HTTPException(status_code=400, detail=f"Invalid extractor type: {value}")
+            normalized.append(value)
+            seen.add(value)
+        policy_row.enabled_extractors = normalized
+
+    await session.commit()
+
+    # Return the updated view.
+    web_extraction_settings = settings.source_ingestion.web_extraction
+    policy_mode_raw = policy_row.mode or "inherit_global"
+    policy_mode: ExtractorPolicyMode = (
+        cast(ExtractorPolicyMode, policy_mode_raw)
+        if policy_mode_raw in {"inherit_global", "custom"}
+        else "inherit_global"
+    )
+    enabled_extractors = list(policy_row.enabled_extractors or [])
+    enabled_set = set(enabled_extractors) if policy_mode == "custom" else set()
+
+    from crystalith.shared.extraction import ExtractorFactory
+
+    factory = ExtractorFactory(
+        settings,
+        plugins=plugins,
+        url_fetch_security=settings.source_ingestion.url_fetch.security,
+        policy_mode=policy_mode,
+        enabled_extractors=enabled_set,
+    )
+    extractor_infos = await factory.get_available_extractors()
+
+    default_extractor: str | None = None
+    for info in extractor_infos:
+        if info.available:
+            default_extractor = info.type.value
+            break
+
+    return ExtractorsListResponse(
+        extractors=[
+            ExtractorInfoResponse(
+                type=info.type.value,
+                plugin_id=info.plugin_id,
+                enabled=info.enabled,
+                available=info.available,
+                display_name=info.display_name,
+                description=info.description,
+                priority=info.priority,
+                requires_api_key=info.requires_api_key,
+                requires_service=info.requires_service,
+                error_code=info.error_code,
+                message=info.message,
+                recovery_hint=info.recovery_hint,
+                details=cast(JsonDict, info.details) if isinstance(info.details, dict) else None,
+            )
+            for info in extractor_infos
+        ],
+        default_extractor=default_extractor,
+        fallback_enabled=web_extraction_settings.enable_fallback,
+        policy=NotebookExtractorsPolicy(mode=policy_mode, enabled_extractors=sorted(enabled_extractors)),
     )
 
 
@@ -179,6 +314,7 @@ async def create_source_from_url(
     vector_store: VectorStore = Depends(get_vector_store),
     settings: Settings = Depends(get_settings),
     cache: CacheProvider = Depends(get_cache_provider),
+    plugins: PluginRegistry = Depends(get_plugin_registry),
 ) -> SourceRead:
     """Create a source from a URL.
 
@@ -266,11 +402,21 @@ async def create_source_from_url(
 
         web_extraction_settings = settings.source_ingestion.web_extraction
         url_fetch_security = settings.source_ingestion.url_fetch.security
+        policy_row = await session.get(NotebookExtractorPolicy, notebook_id)
+        policy_mode = (policy_row.mode if policy_row is not None else "inherit_global") or "inherit_global"
+        enabled_extractors = list(policy_row.enabled_extractors or []) if policy_row is not None else []
+        if policy_mode not in {"inherit_global", "custom"}:
+            policy_mode = "inherit_global"
+            enabled_extractors = []
+        enabled_set = set(enabled_extractors) if policy_mode == "custom" else set()
 
-        # Create extractor factory
+        # Create extractor factory (extractors are provided by plugins)
         factory = ExtractorFactory(
-            web_extraction_settings,
+            settings,
+            plugins=plugins,
             url_fetch_security=url_fetch_security,
+            policy_mode=policy_mode,
+            enabled_extractors=enabled_set,
         )
 
         try:
@@ -295,6 +441,78 @@ async def create_source_from_url(
                     status_code=400,
                     detail=f"无效的提取器类型: {payload.extractor}",
                 ) from None
+
+        # Fail fast when no extractors are enabled for this notebook.
+        enabled_extractors = [
+            ext_type
+            for ext_type in factory.get_fallback_order()
+            if factory.get_extractor(ext_type).extractor is not None
+        ]
+        if not enabled_extractors:
+            if policy_mode == "custom":
+                hint = "该 notebook 当前使用 custom 策略但未启用任何提取器。请在 UI 中启用提取器，或切换为 inherit_global。"
+            else:
+                hint = "未安装或未启用任何网页提取器插件。安装 crystalith[official-full]（推荐）或安装并启用 extractor-* 官方插件。"
+            raise_source_failure(
+                SourceFailure(
+                    error_code=SOURCE_ERROR_OPTIONAL_SERVICE_UNAVAILABLE,
+                    message="没有可用的网页提取器",
+                    recovery_hint=hint,
+                    status_code=503,
+                    details={
+                        "policy_mode": policy_mode,
+                        "enabled_extractors": [item.value for item in enabled_extractors],
+                    },
+                )
+            )
+
+        # Preferred extractor diagnostics (for user-actionable errors or metadata).
+        preferred_diagnostic: JsonDict | None = None
+        if preferred_extractor is not None:
+            preferred_state = factory.get_extractor(preferred_extractor)
+            preferred_error_code = preferred_state.error_code
+            preferred_message = preferred_state.message
+            preferred_hint = preferred_state.recovery_hint
+            preferred_details = preferred_state.details
+
+            preferred_available = False
+            if preferred_state.extractor is not None:
+                try:
+                    preferred_available = await preferred_state.extractor.is_available()
+                except Exception:  # noqa: BLE001 - extractor boundary
+                    preferred_available = False
+
+            if preferred_state.extractor is None or not preferred_available:
+                if preferred_error_code is None:
+                    preferred_error_code = "unavailable"
+                if preferred_message is None:
+                    preferred_message = "Preferred extractor is unavailable"
+                if preferred_hint is None:
+                    preferred_hint = "检查提取器配置（API key / 服务地址）与网络连通性，或启用 fallback。"
+
+                preferred_details_payload: JsonValue | None = None
+                if preferred_details is not None:
+                    preferred_details_payload = cast(JsonValue, dict(preferred_details))
+                preferred_diagnostic = {
+                    "error_code": preferred_error_code,
+                    "message": preferred_message,
+                    "recovery_hint": preferred_hint,
+                    "details": preferred_details_payload,
+                }
+
+                if not web_extraction_settings.enable_fallback:
+                    raise_source_failure(
+                        SourceFailure(
+                            error_code=SOURCE_ERROR_OPTIONAL_SERVICE_UNAVAILABLE,
+                            message=f"提取器不可用: {preferred_extractor.value}",
+                            recovery_hint=preferred_hint,
+                            status_code=503,
+                            details={
+                                "preferred_extractor": preferred_extractor.value,
+                                "diagnostic": preferred_diagnostic,
+                            },
+                        )
+                    )
 
         # Extract content
         async def _extract_once():
@@ -380,6 +598,13 @@ async def create_source_from_url(
 
         # Store extraction metadata
         extraction_metadata = cast(JsonDict, extracted.to_metadata())
+        if preferred_extractor is not None:
+            extraction_metadata["preferred_extractor"] = preferred_extractor.value
+        if preferred_diagnostic is not None:
+            extraction_metadata["preferred_extractor_diagnostic"] = preferred_diagnostic
+        if preferred_extractor is not None and extracted.extractor != preferred_extractor.value:
+            extraction_metadata["fallback_extractor"] = extracted.extractor
+            extraction_metadata["fallback_used"] = True
 
     # Create the source record
     source = Source(
@@ -402,6 +627,7 @@ async def create_source_from_url(
         metadata = _build_source_metadata(
             chunks,
             parser_type=parser_type,
+            parser_plugin_id=None,
             parse_time_ms=parse_time_ms,
             page_count=page_count,
         )
@@ -519,7 +745,8 @@ async def upload_source(
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
 
-    parser = _resolve_parser(file, transcriber, plugins)
+    parser_resolution = _resolve_parser(file, transcriber, plugins)
+    parser = parser_resolution.parser
     filename = file.filename or "upload.txt"
     mime_type = file.content_type
 
@@ -592,6 +819,7 @@ async def upload_source(
         source.metadata_ = _build_source_metadata(
             chunks,
             parser_type=parser.parser_type,
+            parser_plugin_id=parser_resolution.parser_plugin_id,
             parse_time_ms=parse_time_ms,
             page_count=page_count,
         )

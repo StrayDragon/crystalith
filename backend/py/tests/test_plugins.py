@@ -152,6 +152,38 @@ def test_plugin_registry_loads_parser_plugin(monkeypatch: pytest.MonkeyPatch) ->
     assert registry.list_parsers() == ["mock-parser"]
 
 
+def test_plugin_registry_loads_web_extractor_plugin(monkeypatch: pytest.MonkeyPatch) -> None:
+    from crystalith.shared.plugins import registry as registry_mod
+
+    class MockWebExtractorPlugin:
+        api_version = "v1"
+        extractor_type = "jina"
+        display_name = "Jina"
+        description = "Jina Reader"
+        requires_api_key = False
+        requires_service = True
+
+        def create_extractor(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+            raise AssertionError("should not be called")
+
+    plugin = MockWebExtractorPlugin()
+    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
+    monkeypatch.setattr(
+        registry_mod,
+        "_iter_entry_points",
+        lambda group: [StubEntryPoint(name="extractor-jina", value="x:y", plugin=plugin)],
+    )
+
+    settings = Settings()
+    registry = PluginRegistry()
+    report = registry.load_from_entry_points(settings)
+
+    assert report.loaded == ["extractor-jina"]
+    assert registry.web_extractors["jina"] is plugin
+    assert registry.get_web_extractor_plugin_id("jina") == "extractor-jina"
+    assert registry.list_web_extractors() == ["jina"]
+
+
 def test_plugin_registry_loads_output_type_plugin_and_extension_attributes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -512,6 +544,30 @@ def test_plugin_registry_reports_no_compatible_interfaces(monkeypatch: pytest.Mo
     assert skipped.error_code == "no_compatible_interfaces"
     assert skipped.details["entry_point"] == "x:y"
 
+
+def test_plugin_registry_honors_plugins_load_order(monkeypatch: pytest.MonkeyPatch) -> None:
+    from crystalith.shared.plugins import registry as registry_mod
+
+    plugin_a = MockProviderPlugin()
+    plugin_b = MockProviderPlugin()
+    plugin_c = MockProviderPlugin()
+
+    # Mock reason: entry point ordering drives conflict behavior and must be deterministic in tests.
+    monkeypatch.setattr(
+        registry_mod,
+        "_iter_entry_points",
+        lambda group: [
+            StubEntryPoint(name="b", value="x:b", plugin=plugin_b),
+            StubEntryPoint(name="a", value="x:a", plugin=plugin_a),
+            StubEntryPoint(name="c", value="x:c", plugin=plugin_c),
+        ],
+    )
+
+    settings = Settings(plugins=PluginsSettings(enabled=None, disabled=[], load_order=["a"]))
+    registry = PluginRegistry()
+    report = registry.load_from_entry_points(settings)
+
+    assert report.loaded == ["b", "c", "a"]
 
 def test_plugin_registry_reports_invalid_api_version_type(monkeypatch: pytest.MonkeyPatch) -> None:
     from crystalith.shared.plugins import registry as registry_mod

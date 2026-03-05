@@ -75,6 +75,37 @@ class Notebook(AsyncSqlATableBase):
     __table_args__ = (sa.Index("ix_notebooks_name", "name"),)
 
 
+class NotebookExtractorPolicy(AsyncSqlATableBase):
+    __tablename__ = "notebook_extractor_policies"
+
+    notebook_id: Mapped[int] = mapped_column(
+        sa.Integer,
+        sa.ForeignKey("notebooks.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    mode: Mapped[str] = mapped_column(
+        sa.String(32),
+        nullable=False,
+        server_default=sa.text("'inherit_global'"),
+    )
+    enabled_extractors: Mapped[list[str] | None] = mapped_column(
+        sa.JSON,
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+        onupdate=sa.sql.func.now(),
+    )
+
+
 class Template(AsyncSqlATableBase):
     __tablename__ = "templates"
 

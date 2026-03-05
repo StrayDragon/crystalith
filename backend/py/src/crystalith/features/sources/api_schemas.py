@@ -189,6 +189,7 @@ class ExtractorInfoResponse(BaseModel):
     """Information about an available extractor."""
 
     type: str
+    plugin_id: str | None = None
     enabled: bool
     available: bool
     display_name: str
@@ -196,6 +197,18 @@ class ExtractorInfoResponse(BaseModel):
     priority: int
     requires_api_key: bool = False
     requires_service: bool = False
+    error_code: str | None = None
+    message: str | None = None
+    recovery_hint: str | None = None
+    details: JsonDict | None = None
+
+
+ExtractorPolicyMode = Literal["inherit_global", "custom"]
+
+
+class NotebookExtractorsPolicy(BaseModel):
+    mode: ExtractorPolicyMode = "inherit_global"
+    enabled_extractors: list[str] = Field(default_factory=list)
 
 
 class ExtractorsListResponse(BaseModel):
@@ -204,6 +217,12 @@ class ExtractorsListResponse(BaseModel):
     extractors: list[ExtractorInfoResponse]
     default_extractor: str | None = None
     fallback_enabled: bool = True
+    policy: NotebookExtractorsPolicy = Field(default_factory=NotebookExtractorsPolicy)
+
+
+class PatchNotebookExtractorsPolicyRequest(BaseModel):
+    mode: ExtractorPolicyMode | None = None
+    enabled_extractors: list[str] | None = None
 
 
 class SourceFromUrlRequest(BaseModel):

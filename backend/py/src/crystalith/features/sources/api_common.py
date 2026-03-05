@@ -14,13 +14,19 @@ from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.cache.epochs import bump_sources_epoch
 from crystalith.shared.db import Chunk, Source, SourceTag, SourceTagMap
-from crystalith.shared.parsers import Parser, ParserFactory, TranscriptionProvider, UnsupportedDocumentError
+from crystalith.shared.parsers import (
+    ParserFactory,
+    ParserResolution,
+    TranscriptionProvider,
+    UnsupportedDocumentError,
+)
 from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.json_types import JsonDict, JsonValue
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
 
 from .api_schemas import SourceRead
+from crystalith.shared.plugins.official_catalog import OFFICIAL_PLUGIN_CATALOG
 from crystalith.shared.source_diagnostics import (
     SOURCE_ERROR_EMBEDDING_FAILED,
     SOURCE_ERROR_INGESTION_FAILED,
@@ -78,10 +84,10 @@ async def _invalidate_notebook_source_caches(
             )
 
 
-def _resolve_parser(file: UploadFile, transcriber: TranscriptionProvider, plugins: PluginRegistry) -> Parser:
+def _resolve_parser(file: UploadFile, transcriber: TranscriptionProvider, plugins: PluginRegistry) -> ParserResolution:
     try:
         try:
-            return ParserFactory.from_file(
+            return ParserFactory.resolve_from_file(
                 filename=file.filename,
                 mime_type=file.content_type,
                 transcriber=transcriber,
@@ -90,13 +96,43 @@ def _resolve_parser(file: UploadFile, transcriber: TranscriptionProvider, plugin
         except TypeError as exc:
             if "plugins" not in str(exc):
                 raise
-            return ParserFactory.from_file(
+            return ParserFactory.resolve_from_file(
                 filename=file.filename,
                 mime_type=file.content_type,
                 transcriber=transcriber,
             )
     except UnsupportedDocumentError as exc:
-        raise HTTPException(status_code=415, detail="Unsupported file type") from exc
+        required_plugin_id = exc.required_plugin_id
+        skipped_detail = plugins.get_load_report().skipped.get(required_plugin_id) if required_plugin_id else None
+        catalog_entry = OFFICIAL_PLUGIN_CATALOG.get(required_plugin_id) if required_plugin_id else None
+        recovery_hint = (
+            skipped_detail.hint
+            if skipped_detail is not None and skipped_detail.hint
+            else catalog_entry.default_install_hint()
+            if catalog_entry is not None
+            else f"安装并启用 {required_plugin_id!r} 插件。"
+            if required_plugin_id
+            else "请检查文件格式与内容，或将文件转换为可解析的文本后重试。"
+        )
+        details: dict[str, object] = {
+            "filename": file.filename,
+            "mime_type": file.content_type,
+            "recovery_hint": recovery_hint,
+        }
+        if required_plugin_id:
+            details["required_plugin_id"] = required_plugin_id
+        if exc.details:
+            details["parser_details"] = exc.details
+        if skipped_detail is not None:
+            details["plugin_diagnostic"] = skipped_detail.to_dict()
+        raise HTTPException(
+            status_code=415,
+            detail={
+                "error_code": "PARSER_PLUGIN_REQUIRED" if required_plugin_id else "UNSUPPORTED_FILE_TYPE",
+                "message": "不支持的文件类型（缺少或未启用对应解析器插件）" if required_plugin_id else "不支持的文件类型",
+                "details": details,
+            },
+        ) from exc
 
 
 def _page_count_from_chunks(chunks: Iterable[_ChunkLike]) -> int | None:
@@ -112,18 +148,22 @@ def _build_source_metadata(
     chunks: Iterable[_ChunkLike],
     *,
     parser_type: str,
+    parser_plugin_id: str | None,
     parse_time_ms: int,
     page_count: int | None,
 ) -> JsonDict:
     word_count = 0
     for chunk in chunks:
         word_count += len(chunk.text.split())
-    return {
+    payload: JsonDict = {
         "parser_type": parser_type,
         "word_count": word_count,
         "parse_time_ms": parse_time_ms,
         "page_count": page_count,
     }
+    if parser_plugin_id:
+        payload["parser_plugin_id"] = parser_plugin_id
+    return payload
 
 
 def _source_to_read(

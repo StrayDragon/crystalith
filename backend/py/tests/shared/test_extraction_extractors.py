@@ -84,6 +84,115 @@ async def test_browserless_extractor_builds_connection_url_and_requires_playwrig
     assert await extractor.is_available() is False
 
 
+@pytest.mark.asyncio
+async def test_browserless_extractor_extract_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    import crystalith.shared.extraction.browserless_extractor as browserless_module
+
+    class _FakePage:
+        async def goto(self, url: str, *, wait_until: str, timeout: int) -> object:
+            assert url == "https://example.com"
+            assert wait_until == "networkidle"
+            assert timeout == 60_000
+            return object()
+
+        async def content(self) -> str:
+            return "<html><body><main>Hello</main></body></html>"
+
+        async def title(self) -> str:
+            return "Rendered Title"
+
+        async def close(self) -> None:
+            return None
+
+    class _FakeContext:
+        async def new_page(self) -> _FakePage:
+            return _FakePage()
+
+        async def close(self) -> None:
+            return None
+
+    class _FakeBrowser:
+        def is_connected(self) -> bool:
+            return True
+
+        async def new_context(self, *, user_agent: str) -> _FakeContext:
+            assert "Mozilla" in user_agent
+            return _FakeContext()
+
+        async def close(self) -> None:
+            return None
+
+    class _FakeChromium:
+        async def connect_over_cdp(self, connection_url: str, *, timeout: int) -> _FakeBrowser:
+            assert connection_url == "ws://browserless.test?launch=1&token=abc"
+            assert timeout == 60_000
+            return _FakeBrowser()
+
+    class _FakePlaywright:
+        chromium = _FakeChromium()
+
+        async def stop(self) -> None:
+            return None
+
+    class _FakePlaywrightManager:
+        async def start(self) -> _FakePlaywright:
+            return _FakePlaywright()
+
+    def _fake_async_playwright() -> _FakePlaywrightManager:
+        return _FakePlaywrightManager()
+
+    class _FakeTrafilaturaMetadata:
+        title = "Meta Title"
+        author = "Author"
+        date = "2020-01-01"
+        description = "Desc"
+        language = "en"
+        sitename = "Site"
+
+    class _FakeTrafilatura:
+        def extract(  # noqa: PLR0913 - test stub mirrors integration signature
+            self,
+            html: str,
+            *,
+            url: str,
+            include_tables: bool,
+            include_links: bool,
+            include_images: bool,
+            include_comments: bool,
+            output_format: str,
+            with_metadata: bool,
+        ) -> str | None:
+            assert "Hello" in html
+            assert url == "https://example.com"
+            assert include_tables is True
+            assert include_links is True
+            assert include_images is False
+            assert include_comments is False
+            assert output_format == "markdown"
+            assert with_metadata is True
+            return "# Hello"
+
+        def extract_metadata(self, html: str, *, default_url: str) -> _FakeTrafilaturaMetadata | None:
+            assert "Hello" in html
+            assert default_url == "https://example.com"
+            return _FakeTrafilaturaMetadata()
+
+    monkeypatch.setattr(browserless_module, "_load_async_playwright", lambda: _fake_async_playwright)
+    monkeypatch.setattr(browserless_module, "_load_trafilatura", lambda: _FakeTrafilatura())
+
+    extractor = BrowserlessExtractor(endpoint="ws://browserless.test?launch=1", token="abc")
+    result = await extractor.extract("https://example.com")
+
+    assert result.extractor == "browserless"
+    assert result.url == "https://example.com"
+    assert result.text.startswith("# Hello")
+    assert result.title == "Rendered Title"
+    assert result.author == "Author"
+    assert result.description == "Desc"
+    assert result.extra.get("rendered") is True
+    assert result.extra.get("title") == "Meta Title"
+
+
 def test_firecrawl_extractor_requires_api_key() -> None:
     extractor = FirecrawlExtractor()
     with pytest.raises(ConfigurationError, match="API key"):

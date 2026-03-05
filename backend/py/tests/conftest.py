@@ -55,6 +55,13 @@ async def app(test_settings: Settings):
     manager = create_db_manager(db_url)
     vector_store = InMemoryVectorStore()
     app = create_app(settings=test_settings, db_manager=manager, vector_store=vector_store)
+    # NOTE: httpx.ASGITransport does not run ASGI lifespan events, so we
+    # manually perform the essential startup actions that tests depend on.
+    app.state.plugins.load_from_entry_points(app.state.settings)
+    async with manager.got_manual_session() as session:
+        from crystalith.features.templates.service import ensure_builtin_templates
+
+        await ensure_builtin_templates(session)
     yield app
     await manager.close()
     tempdir.cleanup()

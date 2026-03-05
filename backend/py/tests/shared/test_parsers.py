@@ -253,7 +253,7 @@ def test_parser_factory_selects_youtube_video_parser_and_plugins() -> None:
 
     registry = PluginRegistry()
 
-    class _Plugin:
+    class _CustomPlugin:
         api_version = "v1"
         parser_type = "custom"
         supported_mime_types = {"application/x-custom"}
@@ -262,7 +262,12 @@ def test_parser_factory_selects_youtube_video_parser_and_plugins() -> None:
         def create_parser(self, *, filename, mime_type, transcriber=None, media_fetcher=None):  # noqa: ANN001
             return TextParser()
 
-    registry.parsers["custom"] = _Plugin()
+    custom_plugin_id = "parser-custom"
+    custom = _CustomPlugin()
+    registry.parsers[custom.parser_type] = custom
+    registry.plugins[custom_plugin_id] = custom
+    registry._parser_plugin_ids[custom.parser_type] = custom_plugin_id  # noqa: SLF001
+    registry._load_report.loaded.append(custom_plugin_id)  # noqa: SLF001
 
     parser = ParserFactory.from_file(filename="file.cstm", mime_type=None, plugins=registry)
     assert isinstance(parser, TextParser)
@@ -281,22 +286,61 @@ def test_parser_factory_selects_youtube_video_parser_and_plugins() -> None:
         def transcribe(self, content: bytes, *, filename: str | None = None, mime_type: str | None = None) -> str:
             return "ok"
 
-    youtube = ParserFactory.from_file(
+    with pytest.raises(UnsupportedDocumentError) as exc_info:
+        ParserFactory.from_file(
+            filename="https://youtu.be/abc",
+            mime_type=None,
+            media_fetcher=_Fetcher(),
+            transcriber=_Transcriber(),
+        )
+    assert exc_info.value.required_plugin_id == "parser-media"
+
+    class _MediaPlugin:
+        api_version = "v1"
+        parser_type = "media"
+        supported_mime_types = {"video/mp4"}
+        supported_extensions: set[str] = set()
+
+        def create_parser(self, *, filename, mime_type, transcriber=None, media_fetcher=None):  # noqa: ANN001
+            return VideoParser(
+                transcriber,
+                filename=filename,
+                mime_type=mime_type,
+                source_url=filename,
+                media_fetcher=media_fetcher,
+            )
+
+    media_plugin_id = "parser-media"
+    media = _MediaPlugin()
+    registry.parsers[media.parser_type] = media
+    registry.plugins[media_plugin_id] = media
+    registry._parser_plugin_ids[media.parser_type] = media_plugin_id  # noqa: SLF001
+    registry._load_report.loaded.append(media_plugin_id)  # noqa: SLF001
+
+    youtube_resolution = ParserFactory.resolve_from_file(
         filename="https://youtu.be/abc",
         mime_type=None,
         media_fetcher=_Fetcher(),
         transcriber=_Transcriber(),
+        plugins=registry,
     )
-    assert isinstance(youtube, VideoParser)
-    assert youtube.parse(b"ignored")[0].text == "ok"
+    assert youtube_resolution.parser_plugin_id == "parser-media"
+    assert isinstance(youtube_resolution.parser, VideoParser)
+    assert youtube_resolution.parser.parse(b"ignored")[0].text == "ok"
 
 
 def test_parser_factory_selects_parsers_by_mime_and_extension() -> None:
     assert isinstance(ParserFactory.from_file(filename="a.txt", mime_type="text/plain"), TextParser)
-    assert isinstance(ParserFactory.from_file(filename="a.html", mime_type="text/html"), HTMLParser)
-    assert isinstance(ParserFactory.from_file(filename="a.pdf", mime_type="application/pdf"), PDFParser)
     assert isinstance(ParserFactory.from_file(filename="a.csv", mime_type="text/csv"), CSVParser)
     assert isinstance(ParserFactory.from_file(filename="a.csv", mime_type=None), CSVParser)
+
+    with pytest.raises(UnsupportedDocumentError) as html_exc:
+        ParserFactory.from_file(filename="a.html", mime_type="text/html")
+    assert html_exc.value.required_plugin_id == "parser-html"
+
+    with pytest.raises(UnsupportedDocumentError) as pdf_exc:
+        ParserFactory.from_file(filename="a.pdf", mime_type="application/pdf")
+    assert pdf_exc.value.required_plugin_id == "parser-pdf"
 
     class _Transcriber:
         provider = "test"
@@ -305,8 +349,66 @@ def test_parser_factory_selects_parsers_by_mime_and_extension() -> None:
         def transcribe(self, content: bytes, *, filename: str | None = None, mime_type: str | None = None) -> str:
             return "ok"
 
+    with pytest.raises(UnsupportedDocumentError) as audio_exc:
+        ParserFactory.from_file(filename="a.mp3", mime_type=None, transcriber=_Transcriber())
+    assert audio_exc.value.required_plugin_id == "parser-media"
+
+    class _HTMLPlugin:
+        api_version = "v1"
+        parser_type = "html"
+        supported_mime_types = {"text/html"}
+        supported_extensions = {".html", ".htm"}
+
+        def create_parser(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+            return HTMLParser()
+
+    class _PDFPlugin:
+        api_version = "v1"
+        parser_type = "pdf"
+        supported_mime_types = {"application/pdf"}
+        supported_extensions = {".pdf"}
+
+        def create_parser(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+            return PDFParser()
+
+    class _MediaPlugin:
+        api_version = "v1"
+        parser_type = "media"
+        supported_mime_types = {"audio/mpeg", "video/mp4"}
+        supported_extensions = {".mp3", ".mp4"}
+
+        def create_parser(self, *, filename, mime_type, transcriber=None, media_fetcher=None):  # noqa: ANN001
+            if (filename or "").lower().endswith(".mp3") or (mime_type or "").startswith("audio/"):
+                return AudioParser(transcriber, filename=filename, mime_type=mime_type)
+            return VideoParser(
+                transcriber,
+                filename=filename,
+                mime_type=mime_type,
+                source_url=filename if _is_youtube_url(filename or "") else None,
+                media_fetcher=media_fetcher,
+            )
+
+    registry = PluginRegistry()
+    for plugin_id, plugin in [
+        ("parser-html", _HTMLPlugin()),
+        ("parser-pdf", _PDFPlugin()),
+        ("parser-media", _MediaPlugin()),
+    ]:
+        registry.parsers[plugin.parser_type] = plugin
+        registry.plugins[plugin_id] = plugin
+        registry._parser_plugin_ids[plugin.parser_type] = plugin_id  # noqa: SLF001
+        registry._load_report.loaded.append(plugin_id)  # noqa: SLF001
+
     assert isinstance(
-        ParserFactory.from_file(filename="a.mp3", mime_type=None, transcriber=_Transcriber()),
+        ParserFactory.from_file(filename="a.html", mime_type="text/html", plugins=registry),
+        HTMLParser,
+    )
+    assert isinstance(
+        ParserFactory.from_file(filename="a.pdf", mime_type="application/pdf", plugins=registry),
+        PDFParser,
+    )
+    assert isinstance(
+        ParserFactory.from_file(filename="a.mp3", mime_type=None, transcriber=_Transcriber(), plugins=registry),
         AudioParser,
     )
 

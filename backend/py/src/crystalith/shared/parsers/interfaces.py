@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from .types import Chunk
+from crystalith.shared.json_types import JsonValue
 
 
 class Parser(Protocol):
@@ -19,4 +20,13 @@ class ParserError(RuntimeError):
 
 
 class UnsupportedDocumentError(ValueError):
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        required_plugin_id: str | None = None,
+        details: dict[str, JsonValue] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.required_plugin_id = required_plugin_id
+        self.details = details or {}

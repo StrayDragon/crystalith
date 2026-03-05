@@ -3,6 +3,7 @@ from .interfaces import (
     OutputTypePlugin,
     OutputTypeFrontendBundle,
     ParserPlugin,
+    WebExtractorPlugin,
     PLUGIN_API_VERSION,
     SUPPORTED_PLUGIN_API_VERSIONS,
 )
@@ -13,6 +14,7 @@ __all__ = [
     "OutputTypePlugin",
     "OutputTypeFrontendBundle",
     "ParserPlugin",
+    "WebExtractorPlugin",
     "PLUGIN_API_VERSION",
     "SUPPORTED_PLUGIN_API_VERSIONS",
     "PluginLoadReport",

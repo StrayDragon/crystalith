@@ -104,7 +104,7 @@ async def test_generate_output_falls_back_to_core_schema_and_prompt(monkeypatch:
 
     state = OutputGraphState(
         notebook_id=1,
-        output_type=OutputType.QUIZ,
+        output_type=OutputType.PARAGRAPH,
         prompt="",
     )
 
@@ -122,5 +122,29 @@ async def test_generate_output_falls_back_to_core_schema_and_prompt(monkeypatch:
     ctx = cast(GraphRunContext[OutputGraphState, StudioDeps], _DummyCtx(state, deps))
     await GenerateOutput().run(ctx)
 
-    assert captured["schema"] is OUTPUT_SCHEMAS[OutputType.QUIZ]
-    assert DEFAULT_PROMPTS[OutputType.QUIZ] in captured["user_prompt"]
+    assert captured["schema"] is OUTPUT_SCHEMAS[OutputType.PARAGRAPH]
+    assert DEFAULT_PROMPTS[OutputType.PARAGRAPH] in captured["user_prompt"]
+
+
+@pytest.mark.asyncio
+async def test_generate_output_requires_plugin_for_tool_output_types() -> None:
+    state = OutputGraphState(
+        notebook_id=1,
+        output_type=OutputType.QUIZ,
+        prompt="",
+    )
+
+    deps = type(
+        "Deps",
+        (),
+        {
+            "plugins": _DummyPlugins(None),
+            "settings": object(),
+            "model": object(),
+            "limiters": None,
+        },
+    )()
+
+    ctx = cast(GraphRunContext[OutputGraphState, StudioDeps], _DummyCtx(state, deps))
+    with pytest.raises(ValueError, match="install/enable"):
+        await GenerateOutput().run(ctx)

@@ -8,6 +8,7 @@ from .interfaces import (
     OutputTypeFrontendBundle,
     OutputTypePlugin,
     ParserPlugin,
+    WebExtractorPlugin,
     SUPPORTED_PLUGIN_API_VERSIONS,
 )
 from .render_types import FrontendBundleDescriptor, OutputTypePluginMeta, PluginConfigSchema, RenderDescriptor
@@ -69,6 +70,21 @@ def check_plugin(plugin_id: str, plugin: object) -> list[str]:
             frontend_bundle = plugin.frontend_bundle
             if frontend_bundle is not None and not isinstance(frontend_bundle, FrontendBundleDescriptor):
                 issues.append("OutputTypePlugin.frontend_bundle must be a FrontendBundleDescriptor instance")
+
+    if isinstance(plugin, WebExtractorPlugin):
+        has_interface = True
+        if not isinstance(plugin.extractor_type, str) or not plugin.extractor_type:
+            issues.append("WebExtractorPlugin.extractor_type must be a non-empty string")
+        if plugin.display_name is not None and not isinstance(plugin.display_name, str):
+            issues.append("WebExtractorPlugin.display_name must be a string or None")
+        if plugin.description is not None and not isinstance(plugin.description, str):
+            issues.append("WebExtractorPlugin.description must be a string or None")
+        if not isinstance(plugin.requires_api_key, bool):
+            issues.append("WebExtractorPlugin.requires_api_key must be a bool")
+        if not isinstance(plugin.requires_service, bool):
+            issues.append("WebExtractorPlugin.requires_service must be a bool")
+        if not callable(plugin.create_extractor):
+            issues.append("WebExtractorPlugin missing callable: create_extractor")
 
     if not has_interface:
         issues.append("plugin does not implement any supported plugin interfaces")

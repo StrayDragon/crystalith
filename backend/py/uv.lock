@@ -14,9 +14,19 @@ members = [
     "cl-sqlalchemyx",
     "cl-stdx",
     "crystalith",
+    "crystalith-extractor-browserless",
+    "crystalith-extractor-firecrawl",
+    "crystalith-extractor-jina",
+    "crystalith-extractor-trafilatura",
+    "crystalith-output-briefing",
+    "crystalith-output-faq",
+    "crystalith-output-guide",
     "crystalith-output-mindmap",
     "crystalith-output-quiz",
     "crystalith-output-timeline",
+    "crystalith-parser-html",
+    "crystalith-parser-media",
+    "crystalith-parser-pdf",
 ]
 
 [[package]]
@@ -921,7 +931,6 @@ dependencies = [
     { name = "aiosqlite" },
     { name = "alembic" },
     { name = "asyncpg" },
-    { name = "beautifulsoup4" },
     { name = "chromadb" },
     { name = "cl-fastapix" },
     { name = "cl-logs" },
@@ -929,29 +938,63 @@ dependencies = [
     { name = "cl-sqlalchemyx" },
     { name = "cl-stdx" },
     { name = "fastapi" },
-    { name = "firecrawl-py" },
     { name = "httpx" },
     { name = "jsonschema" },
     { name = "langchain-community" },
-    { name = "lxml" },
     { name = "ollama" },
     { name = "openai" },
     { name = "pydantic-ai" },
     { name = "pydantic-graph" },
     { name = "pydantic-settings" },
-    { name = "pypdf" },
     { name = "python-multipart" },
     { name = "pyyaml" },
     { name = "scalar-fastapi" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "tiktoken" },
-    { name = "trafilatura" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
 [package.optional-dependencies]
 browserless = [
     { name = "playwright" },
+]
+official-extractors = [
+    { name = "crystalith-extractor-browserless" },
+    { name = "crystalith-extractor-firecrawl" },
+    { name = "crystalith-extractor-jina" },
+    { name = "crystalith-extractor-trafilatura" },
+]
+official-full = [
+    { name = "crystalith-extractor-browserless" },
+    { name = "crystalith-extractor-firecrawl" },
+    { name = "crystalith-extractor-jina" },
+    { name = "crystalith-extractor-trafilatura" },
+    { name = "crystalith-output-briefing" },
+    { name = "crystalith-output-faq" },
+    { name = "crystalith-output-guide" },
+    { name = "crystalith-output-mindmap" },
+    { name = "crystalith-output-quiz" },
+    { name = "crystalith-output-timeline" },
+    { name = "crystalith-parser-html" },
+    { name = "crystalith-parser-media" },
+    { name = "crystalith-parser-pdf" },
+]
+official-outputs = [
+    { name = "crystalith-output-briefing" },
+    { name = "crystalith-output-faq" },
+    { name = "crystalith-output-guide" },
+    { name = "crystalith-output-mindmap" },
+    { name = "crystalith-output-quiz" },
+    { name = "crystalith-output-timeline" },
+]
+official-parsers = [
+    { name = "crystalith-extractor-browserless" },
+    { name = "crystalith-extractor-firecrawl" },
+    { name = "crystalith-extractor-jina" },
+    { name = "crystalith-extractor-trafilatura" },
+    { name = "crystalith-parser-html" },
+    { name = "crystalith-parser-media" },
+    { name = "crystalith-parser-pdf" },
 ]
 redis = [
     { name = "redis" },
@@ -960,9 +1003,16 @@ redis = [
 [package.dev-dependencies]
 dev = [
     { name = "basedpyright" },
+    { name = "crystalith-extractor-trafilatura" },
+    { name = "crystalith-output-briefing" },
+    { name = "crystalith-output-faq" },
+    { name = "crystalith-output-guide" },
     { name = "crystalith-output-mindmap" },
     { name = "crystalith-output-quiz" },
     { name = "crystalith-output-timeline" },
+    { name = "crystalith-parser-html" },
+    { name = "crystalith-parser-media" },
+    { name = "crystalith-parser-pdf" },
     { name = "freezegun" },
     { name = "jinja2sql" },
     { name = "pytest" },
@@ -977,43 +1027,75 @@ requires-dist = [
     { name = "aiosqlite", specifier = ">=0.20.0" },
     { name = "alembic", specifier = ">=1.13.0" },
     { name = "asyncpg", specifier = ">=0.29.0" },
-    { name = "beautifulsoup4", specifier = ">=4.12.3" },
     { name = "chromadb", specifier = ">=0.5.15" },
     { name = "cl-fastapix", editable = "packages/cl-fastapix" },
     { name = "cl-logs", editable = "packages/cl-logs" },
     { name = "cl-pydanticx", editable = "packages/cl-pydanticx" },
     { name = "cl-sqlalchemyx", editable = "packages/cl-sqlalchemyx" },
     { name = "cl-stdx", editable = "packages/cl-stdx" },
+    { name = "crystalith-extractor-browserless", marker = "extra == 'official-extractors'", editable = "plugins/crystalith-extractor-browserless" },
+    { name = "crystalith-extractor-browserless", marker = "extra == 'official-full'", editable = "plugins/crystalith-extractor-browserless" },
+    { name = "crystalith-extractor-browserless", marker = "extra == 'official-parsers'", editable = "plugins/crystalith-extractor-browserless" },
+    { name = "crystalith-extractor-firecrawl", marker = "extra == 'official-extractors'", editable = "plugins/crystalith-extractor-firecrawl" },
+    { name = "crystalith-extractor-firecrawl", marker = "extra == 'official-full'", editable = "plugins/crystalith-extractor-firecrawl" },
+    { name = "crystalith-extractor-firecrawl", marker = "extra == 'official-parsers'", editable = "plugins/crystalith-extractor-firecrawl" },
+    { name = "crystalith-extractor-jina", marker = "extra == 'official-extractors'", editable = "plugins/crystalith-extractor-jina" },
+    { name = "crystalith-extractor-jina", marker = "extra == 'official-full'", editable = "plugins/crystalith-extractor-jina" },
+    { name = "crystalith-extractor-jina", marker = "extra == 'official-parsers'", editable = "plugins/crystalith-extractor-jina" },
+    { name = "crystalith-extractor-trafilatura", marker = "extra == 'official-extractors'", editable = "plugins/crystalith-extractor-trafilatura" },
+    { name = "crystalith-extractor-trafilatura", marker = "extra == 'official-full'", editable = "plugins/crystalith-extractor-trafilatura" },
+    { name = "crystalith-extractor-trafilatura", marker = "extra == 'official-parsers'", editable = "plugins/crystalith-extractor-trafilatura" },
+    { name = "crystalith-output-briefing", marker = "extra == 'official-full'", editable = "plugins/crystalith-output-briefing" },
+    { name = "crystalith-output-briefing", marker = "extra == 'official-outputs'", editable = "plugins/crystalith-output-briefing" },
+    { name = "crystalith-output-faq", marker = "extra == 'official-full'", editable = "plugins/crystalith-output-faq" },
+    { name = "crystalith-output-faq", marker = "extra == 'official-outputs'", editable = "plugins/crystalith-output-faq" },
+    { name = "crystalith-output-guide", marker = "extra == 'official-full'", editable = "plugins/crystalith-output-guide" },
+    { name = "crystalith-output-guide", marker = "extra == 'official-outputs'", editable = "plugins/crystalith-output-guide" },
+    { name = "crystalith-output-mindmap", marker = "extra == 'official-full'", editable = "plugins/crystalith-output-mindmap" },
+    { name = "crystalith-output-mindmap", marker = "extra == 'official-outputs'", editable = "plugins/crystalith-output-mindmap" },
+    { name = "crystalith-output-quiz", marker = "extra == 'official-full'", editable = "plugins/crystalith-output-quiz" },
+    { name = "crystalith-output-quiz", marker = "extra == 'official-outputs'", editable = "plugins/crystalith-output-quiz" },
+    { name = "crystalith-output-timeline", marker = "extra == 'official-full'", editable = "plugins/crystalith-output-timeline" },
+    { name = "crystalith-output-timeline", marker = "extra == 'official-outputs'", editable = "plugins/crystalith-output-timeline" },
+    { name = "crystalith-parser-html", marker = "extra == 'official-full'", editable = "plugins/crystalith-parser-html" },
+    { name = "crystalith-parser-html", marker = "extra == 'official-parsers'", editable = "plugins/crystalith-parser-html" },
+    { name = "crystalith-parser-media", marker = "extra == 'official-full'", editable = "plugins/crystalith-parser-media" },
+    { name = "crystalith-parser-media", marker = "extra == 'official-parsers'", editable = "plugins/crystalith-parser-media" },
+    { name = "crystalith-parser-pdf", marker = "extra == 'official-full'", editable = "plugins/crystalith-parser-pdf" },
+    { name = "crystalith-parser-pdf", marker = "extra == 'official-parsers'", editable = "plugins/crystalith-parser-pdf" },
     { name = "fastapi", specifier = ">=0.117.1" },
-    { name = "firecrawl-py", specifier = ">=4.0.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "langchain-community", specifier = ">=0.3.0" },
-    { name = "lxml", specifier = ">=5.2.2" },
     { name = "ollama", specifier = ">=0.3.3" },
     { name = "openai", specifier = ">=1.40.0" },
     { name = "playwright", marker = "extra == 'browserless'", specifier = ">=1.40.0" },
     { name = "pydantic-ai", specifier = ">=0.0.49" },
     { name = "pydantic-graph", specifier = ">=0.1.0" },
     { name = "pydantic-settings", specifier = ">=2.2.1" },
-    { name = "pypdf", specifier = ">=4.3.1" },
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "redis", marker = "extra == 'redis'", specifier = ">=5.0.0" },
     { name = "scalar-fastapi", specifier = ">=1.6.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.43" },
     { name = "tiktoken", specifier = ">=0.12.0" },
-    { name = "trafilatura", specifier = ">=2.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0" },
 ]
-provides-extras = ["browserless", "redis"]
+provides-extras = ["official-outputs", "official-parsers", "official-extractors", "official-full", "browserless", "redis"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "basedpyright", specifier = ">=1.31.0" },
-    { name = "crystalith-output-mindmap", editable = "examples/crystalith-output-mindmap" },
-    { name = "crystalith-output-quiz", editable = "examples/crystalith-output-quiz" },
-    { name = "crystalith-output-timeline", editable = "examples/crystalith-output-timeline" },
+    { name = "crystalith-extractor-trafilatura", editable = "plugins/crystalith-extractor-trafilatura" },
+    { name = "crystalith-output-briefing", editable = "plugins/crystalith-output-briefing" },
+    { name = "crystalith-output-faq", editable = "plugins/crystalith-output-faq" },
+    { name = "crystalith-output-guide", editable = "plugins/crystalith-output-guide" },
+    { name = "crystalith-output-mindmap", editable = "plugins/crystalith-output-mindmap" },
+    { name = "crystalith-output-quiz", editable = "plugins/crystalith-output-quiz" },
+    { name = "crystalith-output-timeline", editable = "plugins/crystalith-output-timeline" },
+    { name = "crystalith-parser-html", editable = "plugins/crystalith-parser-html" },
+    { name = "crystalith-parser-media", editable = "plugins/crystalith-parser-media" },
+    { name = "crystalith-parser-pdf", editable = "plugins/crystalith-parser-pdf" },
     { name = "freezegun", specifier = ">=1.5.1" },
     { name = "jinja2sql", specifier = ">=0.3.4" },
     { name = "pytest", specifier = ">=8.4.1" },
@@ -1024,9 +1106,112 @@ dev = [
 ]
 
 [[package]]
+name = "crystalith-extractor-browserless"
+version = "0.1.0"
+source = { editable = "plugins/crystalith-extractor-browserless" }
+dependencies = [
+    { name = "crystalith" },
+    { name = "playwright" },
+    { name = "trafilatura" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "crystalith", editable = "." },
+    { name = "playwright", specifier = ">=1.40.0" },
+    { name = "trafilatura", specifier = ">=2.0.0" },
+]
+
+[[package]]
+name = "crystalith-extractor-firecrawl"
+version = "0.1.0"
+source = { editable = "plugins/crystalith-extractor-firecrawl" }
+dependencies = [
+    { name = "crystalith" },
+    { name = "firecrawl-py" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "crystalith", editable = "." },
+    { name = "firecrawl-py", specifier = ">=4.0.0" },
+]
+
+[[package]]
+name = "crystalith-extractor-jina"
+version = "0.1.0"
+source = { editable = "plugins/crystalith-extractor-jina" }
+dependencies = [
+    { name = "crystalith" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "crystalith", editable = "." }]
+
+[[package]]
+name = "crystalith-extractor-trafilatura"
+version = "0.1.0"
+source = { editable = "plugins/crystalith-extractor-trafilatura" }
+dependencies = [
+    { name = "crystalith" },
+    { name = "trafilatura" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "crystalith", editable = "." },
+    { name = "trafilatura", specifier = ">=2.0.0" },
+]
+
+[[package]]
+name = "crystalith-output-briefing"
+version = "0.1.0"
+source = { editable = "plugins/crystalith-output-briefing" }
+dependencies = [
+    { name = "crystalith" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "crystalith", editable = "." },
+    { name = "pydantic", specifier = ">=2.0.0" },
+]
+
+[[package]]
+name = "crystalith-output-faq"
+version = "0.1.0"
+source = { editable = "plugins/crystalith-output-faq" }
+dependencies = [
+    { name = "crystalith" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "crystalith", editable = "." },
+    { name = "pydantic", specifier = ">=2.0.0" },
+]
+
+[[package]]
+name = "crystalith-output-guide"
+version = "0.1.0"
+source = { editable = "plugins/crystalith-output-guide" }
+dependencies = [
+    { name = "crystalith" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "crystalith", editable = "." },
+    { name = "pydantic", specifier = ">=2.0.0" },
+]
+
+[[package]]
 name = "crystalith-output-mindmap"
 version = "0.1.0"
-source = { editable = "examples/crystalith-output-mindmap" }
+source = { editable = "plugins/crystalith-output-mindmap" }
 dependencies = [
     { name = "crystalith" },
     { name = "pydantic" },
@@ -1041,7 +1226,7 @@ requires-dist = [
 [[package]]
 name = "crystalith-output-quiz"
 version = "0.1.0"
-source = { editable = "examples/crystalith-output-quiz" }
+source = { editable = "plugins/crystalith-output-quiz" }
 dependencies = [
     { name = "crystalith" },
     { name = "pydantic" },
@@ -1056,7 +1241,7 @@ requires-dist = [
 [[package]]
 name = "crystalith-output-timeline"
 version = "0.1.0"
-source = { editable = "examples/crystalith-output-timeline" }
+source = { editable = "plugins/crystalith-output-timeline" }
 dependencies = [
     { name = "crystalith" },
     { name = "pydantic" },
@@ -1066,6 +1251,49 @@ dependencies = [
 requires-dist = [
     { name = "crystalith", editable = "." },
     { name = "pydantic", specifier = ">=2.0.0" },
+]
+
+[[package]]
+name = "crystalith-parser-html"
+version = "0.1.0"
+source = { editable = "plugins/crystalith-parser-html" }
+dependencies = [
+    { name = "beautifulsoup4" },
+    { name = "crystalith" },
+    { name = "lxml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "beautifulsoup4", specifier = ">=4.12.3" },
+    { name = "crystalith", editable = "." },
+    { name = "lxml", specifier = ">=5.2.2" },
+]
+
+[[package]]
+name = "crystalith-parser-media"
+version = "0.1.0"
+source = { editable = "plugins/crystalith-parser-media" }
+dependencies = [
+    { name = "crystalith" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "crystalith", editable = "." }]
+
+[[package]]
+name = "crystalith-parser-pdf"
+version = "0.1.0"
+source = { editable = "plugins/crystalith-parser-pdf" }
+dependencies = [
+    { name = "crystalith" },
+    { name = "pypdf" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "crystalith", editable = "." },
+    { name = "pypdf", specifier = ">=4.3.1" },
 ]
 
 [[package]]

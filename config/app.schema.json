@@ -1169,6 +1169,14 @@
           },
           "title": "Disabled",
           "type": "array"
+        },
+        "load_order": {
+          "description": "Optional deterministic plugin load order. Plugins listed here (and enabled) are loaded last in the given order, so they win tie-breaks under last-wins conflict resolution.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Load Order",
+          "type": "array"
         }
       },
       "title": "PluginsSettings",

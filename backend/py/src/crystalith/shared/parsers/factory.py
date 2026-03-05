@@ -1,18 +1,15 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
-from .audio import AudioParser
 from .csv import CSVParser
-from .html import HTMLParser
 from .interfaces import Parser, UnsupportedDocumentError
 from .media import DisabledMediaFetcher, MediaFetcher
-from .pdf import PDFParser
 from .text import TextParser
 from .transcription import DisabledTranscriber, TranscriptionProvider
-from .video import VideoParser
-from crystalith.shared.plugins import PluginRegistry
+from crystalith.shared.plugins import ParserPlugin, PluginRegistry
 
 _YOUTUBE_HOSTS = {"youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"}
 
@@ -28,7 +25,85 @@ def _is_youtube_url(value: str) -> bool:
     return host in _YOUTUBE_HOSTS
 
 
+@dataclass(frozen=True, slots=True)
+class ParserResolution:
+    parser: Parser
+    parser_plugin_id: str | None = None
+
+
+def _recommend_parser_plugin_id(*, extension: str, mime_type: str, filename: str | None) -> str | None:
+    if extension == ".pdf" or mime_type == "application/pdf":
+        return "parser-pdf"
+    if extension in {".html", ".htm"} or mime_type == "text/html":
+        return "parser-html"
+
+    if _is_youtube_url(filename or ""):
+        return "parser-media"
+
+    if extension in {".mp3", ".wav", ".mp4"}:
+        return "parser-media"
+    if mime_type.startswith(("audio/", "video/")):
+        return "parser-media"
+
+    return None
+
+
 class ParserFactory:
+    @classmethod
+    def resolve_from_file(
+        cls,
+        *,
+        filename: str | None,
+        mime_type: str | None,
+        transcriber: TranscriptionProvider | None = None,
+        media_fetcher: MediaFetcher | None = None,
+        plugins: PluginRegistry | None = None,
+    ) -> ParserResolution:
+        extension = Path(filename or "").suffix.lower()
+        normalized_mime = (mime_type or "").split(";")[0].strip().lower()
+        resolved_transcriber = transcriber or DisabledTranscriber()
+        resolved_fetcher = media_fetcher or DisabledMediaFetcher()
+
+        if filename and _is_youtube_url(filename) and not normalized_mime:
+            normalized_mime = "video/mp4"
+
+        if plugins is not None:
+            resolution = cls._resolve_from_plugins(
+                filename=filename,
+                mime_type=normalized_mime,
+                extension=extension,
+                transcriber=resolved_transcriber,
+                media_fetcher=resolved_fetcher,
+                plugins=plugins,
+            )
+            if resolution is not None:
+                return resolution
+
+        # Core-only minimal parsers: txt/md/markdown/csv
+        if normalized_mime in CSVParser.supported_mime_types:
+            return ParserResolution(parser=CSVParser())
+        if normalized_mime in TextParser.supported_mime_types:
+            return ParserResolution(parser=TextParser())
+
+        if extension in CSVParser.supported_extensions:
+            return ParserResolution(parser=CSVParser())
+        if extension in TextParser.supported_extensions:
+            return ParserResolution(parser=TextParser())
+
+        required_plugin_id = _recommend_parser_plugin_id(
+            extension=extension,
+            mime_type=normalized_mime,
+            filename=filename,
+        )
+        raise UnsupportedDocumentError(
+            "Unsupported file type",
+            required_plugin_id=required_plugin_id,
+            details={
+                "mime_type": normalized_mime or None,
+                "extension": extension or None,
+            },
+        )
+
     @classmethod
     def from_file(
         cls,
@@ -39,79 +114,70 @@ class ParserFactory:
         media_fetcher: MediaFetcher | None = None,
         plugins: PluginRegistry | None = None,
     ) -> Parser:
-        extension = Path(filename or "").suffix.lower()
-        normalized_mime = (mime_type or "").split(";")[0].strip()
-        resolved_transcriber = transcriber or DisabledTranscriber()
-        resolved_fetcher = media_fetcher or DisabledMediaFetcher()
+        return cls.resolve_from_file(
+            filename=filename,
+            mime_type=mime_type,
+            transcriber=transcriber,
+            media_fetcher=media_fetcher,
+            plugins=plugins,
+        ).parser
 
-        if filename and _is_youtube_url(filename):
-            return VideoParser(
-                resolved_transcriber,
-                source_url=filename,
-                media_fetcher=resolved_fetcher,
-            )
+    @classmethod
+    def _resolve_from_plugins(
+        cls,
+        *,
+        filename: str | None,
+        mime_type: str,
+        extension: str,
+        transcriber: TranscriptionProvider,
+        media_fetcher: MediaFetcher,
+        plugins: PluginRegistry,
+    ) -> ParserResolution | None:
+        plugin_parsers_by_id: dict[str, list[ParserPlugin]] = {}
+        for parser_type, plugin in plugins.parsers.items():
+            plugin_id = plugins.get_parser_plugin_id(parser_type)
+            if plugin_id is None:
+                continue
+            plugin_parsers_by_id.setdefault(plugin_id, []).append(plugin)
 
-        if normalized_mime:
-            if normalized_mime in AudioParser.supported_mime_types:
-                return AudioParser(
-                    resolved_transcriber,
-                    filename=filename,
-                    mime_type=normalized_mime,
-                )
-            if normalized_mime in VideoParser.supported_mime_types:
-                return VideoParser(
-                    resolved_transcriber,
-                    filename=filename,
-                    mime_type=normalized_mime,
-                    media_fetcher=resolved_fetcher,
-                )
-            if normalized_mime in CSVParser.supported_mime_types:
-                return CSVParser()
-            if normalized_mime in TextParser.supported_mime_types:
-                return TextParser()
-            if normalized_mime in PDFParser.supported_mime_types:
-                return PDFParser()
-            if normalized_mime in HTMLParser.supported_mime_types:
-                return HTMLParser()
+        def matches(candidate: ParserPlugin) -> bool:
+            if mime_type and mime_type in candidate.supported_mime_types:
+                return True
+            if extension and extension in candidate.supported_extensions:
+                return True
+            return False
 
-        if extension:
-            if extension in AudioParser.supported_extensions:
-                return AudioParser(
-                    resolved_transcriber,
-                    filename=filename,
-                    mime_type=normalized_mime or None,
-                )
-            if extension in VideoParser.supported_extensions:
-                return VideoParser(
-                    resolved_transcriber,
-                    filename=filename,
-                    mime_type=normalized_mime or None,
-                    media_fetcher=resolved_fetcher,
-                )
-            if extension in CSVParser.supported_extensions:
-                return CSVParser()
-            if extension in TextParser.supported_extensions:
-                return TextParser()
-            if extension in PDFParser.supported_extensions:
-                return PDFParser()
-            if extension in HTMLParser.supported_extensions:
-                return HTMLParser()
-
-        if plugins is not None:
-            for plugin in plugins.parsers.values():
-                if normalized_mime and normalized_mime in plugin.supported_mime_types:
-                    return plugin.create_parser(
+        # Prefer the last-loaded matching plugin (load order is deterministic and honors plugins.load_order).
+        loaded_order = list(plugins.get_load_report().loaded)
+        for plugin_id in reversed(loaded_order):
+            for plugin in plugin_parsers_by_id.get(plugin_id, []):
+                if not matches(plugin):
+                    continue
+                return ParserResolution(
+                    parser=plugin.create_parser(
                         filename=filename,
-                        mime_type=normalized_mime or None,
-                        transcriber=resolved_transcriber,
-                        media_fetcher=resolved_fetcher,
-                    )
-                if extension and extension in plugin.supported_extensions:
-                    return plugin.create_parser(
-                        filename=filename,
-                        mime_type=normalized_mime or None,
-                        transcriber=resolved_transcriber,
-                        media_fetcher=resolved_fetcher,
-                    )
+                        mime_type=mime_type or None,
+                        transcriber=transcriber,
+                        media_fetcher=media_fetcher,
+                    ),
+                    parser_plugin_id=plugin_id,
+                )
 
-        raise UnsupportedDocumentError("Unsupported file type")
+        # Defensive: handle parsers that were registered without a corresponding loaded plugin id.
+        for plugin_id in sorted(plugin_parsers_by_id.keys()):
+            if plugin_id in set(loaded_order):
+                continue
+            for plugin in plugin_parsers_by_id.get(plugin_id, []):
+                if not matches(plugin):
+                    continue
+                return ParserResolution(
+                    parser=plugin.create_parser(
+                        filename=filename,
+                        mime_type=mime_type or None,
+                        transcriber=transcriber,
+                        media_fetcher=media_fetcher,
+                    ),
+                    parser_plugin_id=plugin_id,
+                )
+
+        return None

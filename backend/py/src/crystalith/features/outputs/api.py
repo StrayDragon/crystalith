@@ -217,25 +217,27 @@ async def create_output(
     } and plugins.output_types.get(output_type.value) is None:
         required_plugin_id = f"output-{output_type.value.lower()}"
         skipped_detail = plugins.get_load_report().skipped.get(required_plugin_id)
+        catalog_entry = OFFICIAL_PLUGIN_CATALOG.get(required_plugin_id)
         recovery_hint = (
             skipped_detail.hint
             if skipped_detail is not None and skipped_detail.hint
-            else OFFICIAL_PLUGIN_CATALOG.get(required_plugin_id, None).default_install_hint()
-            if required_plugin_id in OFFICIAL_PLUGIN_CATALOG
+            else catalog_entry.default_install_hint()
+            if catalog_entry is not None
             else f"安装并启用 {required_plugin_id!r} 插件。"
         )
-        detail: dict[str, object] = {
-            "error_code": "OUTPUT_TYPE_PLUGIN_REQUIRED",
-            "message": f"{output_type.value} 输出类型不可用：缺少或未启用对应插件。",
-            "details": {
-                "output_type": output_type.value,
-                "required_plugin_id": required_plugin_id,
-                "recovery_hint": recovery_hint,
-            },
+        details: dict[str, object] = {
+            "output_type": output_type.value,
+            "required_plugin_id": required_plugin_id,
+            "recovery_hint": recovery_hint,
         }
         if skipped_detail is not None:
-            detail["details"]["plugin_diagnostic"] = skipped_detail.to_dict()  # type: ignore[index]
-        raise HTTPException(status_code=409, detail=detail)
+            details["plugin_diagnostic"] = skipped_detail.to_dict()
+        plugin_missing_detail: dict[str, object] = {
+            "error_code": "OUTPUT_TYPE_PLUGIN_REQUIRED",
+            "message": f"{output_type.value} 输出类型不可用：缺少或未启用对应插件。",
+            "details": details,
+        }
+        raise HTTPException(status_code=409, detail=plugin_missing_detail)
 
     trace_id = new_trace_id()
     request_id = request.headers.get("x-request-id") or request.headers.get("x-correlation-id") or trace_id

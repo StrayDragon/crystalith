@@ -673,6 +673,14 @@ class PluginsSettings(BaseModel):
         default_factory=list,
         description="Plugins to skip loading (denylist).",
     )
+    load_order: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Optional deterministic plugin load order. "
+            "Plugins listed here (and enabled) are loaded last in the given order, "
+            "so they win tie-breaks under last-wins conflict resolution."
+        ),
+    )
 
     def is_enabled(self, plugin_id: str) -> bool:
         normalized = plugin_id.strip()

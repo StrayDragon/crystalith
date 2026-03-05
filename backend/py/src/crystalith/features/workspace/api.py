@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Literal, cast
+from collections.abc import Sequence
+from typing import Literal, Protocol, cast
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -80,6 +81,12 @@ class ToolConfigResponse(BaseModel):
     difficulty_options: list[ConfigOption] | None = None
     topic_placeholder: str | None = None
     supports_topic: bool = True
+
+
+class _OptionLike(Protocol):
+    id: str
+    label: str
+    is_default: bool
 
 
 def _tool_from_output_plugin(
@@ -231,18 +238,16 @@ async def get_tool_config(
 
     schema = plugins.get_config_schema(output_type.value)
 
-    def _to_options(value: list[object] | None) -> list[ConfigOption] | None:
+    def _to_options(value: Sequence[_OptionLike] | None) -> list[ConfigOption] | None:
         if not value:
             return None
         options: list[ConfigOption] = []
         for option in value:
-            if not hasattr(option, "id") or not hasattr(option, "label"):
-                continue
             options.append(
                 ConfigOption(
-                    id=str(getattr(option, "id")),
-                    label=str(getattr(option, "label")),
-                    is_default=bool(getattr(option, "is_default", False)),
+                    id=str(option.id),
+                    label=str(option.label),
+                    is_default=bool(option.is_default),
                 )
             )
         return options or None
@@ -255,4 +260,3 @@ async def get_tool_config(
         topic_placeholder=schema.topic_placeholder if schema is not None else None,
         supports_topic=bool(schema.supports_topic) if schema is not None else True,
     )
-

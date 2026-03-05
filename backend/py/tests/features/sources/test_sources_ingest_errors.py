@@ -9,6 +9,7 @@ import pytest
 from sqlalchemy import select
 
 from crystalith.shared.db import Source
+from crystalith.shared.plugins import PluginRegistry
 
 
 @contextlib.contextmanager
@@ -60,6 +61,22 @@ async def test_sources_ingest_errors_and_validation(client, db_session, app) -> 
     )
     assert unsupported.status_code == 415
 
+    # Core-only: HTML requires the official parser plugin.
+    original_plugins = app.state.plugins
+    app.state.plugins = PluginRegistry()
+    try:
+        html_upload = await client.post(
+            f"/v1/notebooks/{notebook_id}/sources",
+            files={"file": ("page.html", b"<html><body><main>Hello</main></body></html>", "text/html")},
+        )
+    finally:
+        app.state.plugins = original_plugins
+
+    assert html_upload.status_code == 415
+    detail = html_upload.json()
+    assert detail["error_code"] == "PARSER_PLUGIN_REQUIRED"
+    assert detail["details"]["required_plugin_id"] == "parser-html"
+
     empty = await client.post(
         f"/v1/notebooks/{notebook_id}/sources",
         files={"file": ("empty.txt", b"", "text/plain")},
@@ -75,12 +92,19 @@ async def test_sources_ingest_errors_and_validation(client, db_session, app) -> 
     html = "<html><head><title>Empty</title></head><body></body></html>"
     app.state.settings.source_ingestion.url_fetch.security.allowlist_hosts = ["127.0.0.1"]
     with _serve_html(html) as base_url:
-        fetch = await client.post(
-            f"/v1/notebooks/{notebook_id}/sources/from-url",
-            json={
-                "url": base_url,
-                "mode": "fetch",
-                "extractor": "trafilatura",
-            },
-        )
-    assert fetch.status_code == 400
+        original_plugins = app.state.plugins
+        app.state.plugins = PluginRegistry()
+        try:
+            fetch = await client.post(
+                f"/v1/notebooks/{notebook_id}/sources/from-url",
+                json={
+                    "url": base_url,
+                    "mode": "fetch",
+                    "extractor": "trafilatura",
+                },
+            )
+        finally:
+            app.state.plugins = original_plugins
+    assert fetch.status_code == 503
+    detail = fetch.json()
+    assert detail["error_code"] == "OPTIONAL_SERVICE_UNAVAILABLE"
