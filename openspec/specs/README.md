@@ -1,12 +1,13 @@
 # OpenSpec Canonical Specs (Consolidated)
 
-本目录已按“最新主干 + 去重合并”完成收敛。当前 canonical 规范为统一命名的 22 个 spec；旧路径 deprecated 薄壳已在 batch-2 中移除。
+本目录已按“最新主干 + 去重合并”完成收敛。当前 canonical 规范为统一命名的 24 个 spec；旧路径 deprecated 薄壳已在 batch-2 中移除。
 
 ## Canonical Reading Order
 
 1. 架构与基础
    - `architecture-core/spec.md`
    - `architecture-plugin-and-agent/spec.md`
+   - `official-plugins/spec.md`
    - `config-and-models/spec.md`
    - `data-and-storage/spec.md`
    - `retrieval-and-cache/spec.md`
@@ -20,6 +21,7 @@
 4. Source 与生成
    - `source-ingestion-core/spec.md`
    - `source-ingestion-upload-and-url/spec.md`
+   - `web-extractor-plugins/spec.md`
    - `source-ingestion-management-and-tags/spec.md`
    - `source-ingestion-summary-and-conversion/spec.md`
    - `generation-core/spec.md`

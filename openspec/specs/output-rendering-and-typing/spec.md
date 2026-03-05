@@ -12,11 +12,12 @@
 ## Requirements
 
 ### Requirement: Output payload is modeled as discriminated union
-前端 MUST 以 `output.type` 作为判别字段建模 payload，保证类型 narrowing 可用。
+前端 MUST 以 `output.type` 作为判别字段建模 payload，保证类型 narrowing 可用；当输出类型来自插件且客户端未知时，类型系统 MUST 提供一个 “unknown/other” 分支以避免编译期与运行期崩溃。
 
-#### Scenario: Type narrowing by output.type
-- **WHEN** 前端收到一个带有 `output.type` 的输出 payload
-- **THEN** 系统 SHALL 能基于该字段进行判别联合的类型 narrowing
+#### Scenario: Type narrowing supports unknown plugin output types
+- **WHEN** 前端收到一个带有未知 `output.type` 的输出 payload（未在客户端枚举/联合类型中声明）
+- **THEN** 系统 SHALL 将其归入 unknown 分支并进入安全降级渲染路径
+- **AND** 不得因类型缺失导致渲染链路崩溃
 
 ### Requirement: Runtime decode provides safe fallback
 运行时 decoder/guard MUST 在 shape 不匹配时回退到 raw/unknown 渲染，不得崩溃。
