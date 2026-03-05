@@ -281,7 +281,7 @@ def test_workspace_tools_endpoint_includes_render_descriptor_when_plugin_availab
 
     tools = payload["tools"]
     quiz_tool = next(tool for tool in tools if tool["output_type"] == "QUIZ")
-    faq_tool = next(tool for tool in tools if tool["output_type"] == "FAQ")
+    slides_tool = next(tool for tool in tools if tool["output_type"] == "SLIDES")
 
     assert quiz_tool["render_descriptor"]["layout"] == "cards"
     assert quiz_tool["config_schema"]["topic_placeholder"] == "Topic"
@@ -289,8 +289,11 @@ def test_workspace_tools_endpoint_includes_render_descriptor_when_plugin_availab
     assert config_payload["tool_id"] == "quiz"
     assert config_payload["topic_placeholder"] == "Topic"
     assert config_payload["quantity_options"] == quiz_tool["config_schema"]["quantity_options"]
-    assert faq_tool["render_descriptor"] is None
-    assert faq_tool["frontend_bundle"]["id"] == "output-faq"
+    assert slides_tool["frontend_bundle"]["id"] == "output-slides"
+    assert all(tool["output_type"] != "FAQ" for tool in tools)
+    assert "diagnostics" in payload
+    assert "plugins" in payload["diagnostics"]
+    assert "official" in payload["diagnostics"]
 
 
 def test_workspace_tools_endpoint_omits_frontend_bundle_when_feature_disabled(
@@ -323,11 +326,11 @@ def test_workspace_tools_endpoint_omits_frontend_bundle_when_feature_disabled(
 
     tools = payload["tools"]
     quiz_tool = next(tool for tool in tools if tool["output_type"] == "QUIZ")
-    faq_tool = next(tool for tool in tools if tool["output_type"] == "FAQ")
+    slides_tool = next(tool for tool in tools if tool["output_type"] == "SLIDES")
 
     assert quiz_tool["render_descriptor"]["layout"] == "cards"
     assert quiz_tool["frontend_bundle"] is None
-    assert faq_tool["frontend_bundle"] is None
+    assert slides_tool["frontend_bundle"] is None
 
 
 def test_plugin_registry_respects_disabled_list(monkeypatch: pytest.MonkeyPatch) -> None:

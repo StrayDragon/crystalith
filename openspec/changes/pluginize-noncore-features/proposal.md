@@ -4,11 +4,13 @@ Crystalith 已具备后端插件系统，但当前大量“非系统核心”的
 
 ## What Changes
 
-- **BREAKING**：core 不再默认内置“工具输出类型”（FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING/SLIDES）的 schema/prompt/UI 配置；这些能力迁移为官方 `OutputTypePlugin`（可携带 `render_descriptor/config_schema/frontend_bundle`）。
+- **BREAKING**：core 不再默认内置“工具输出类型”（FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING）的 schema/prompt/UI 配置；这些能力迁移为官方 `OutputTypePlugin`（可携带 `render_descriptor/config_schema/frontend_bundle`）。当对应插件未安装/未启用时，生成这些输出类型将返回可执行的恢复提示（而不是回退到 core 内置 schema）。
+- `SLIDES` 工作流暂不在本变更内插件化：保留现有 slides endpoints 与 `GET /v1/workspace/tools/slides/config`；相关插件化工作另立变更 `pluginize-slides-workflow`（先占位 proposal，后续补齐）。
 - **BREAKING**：core 解析器瘦身，仅保留最小 ingestion（txt/md/markdown/csv）。PDF/HTML/音视频等迁移为官方 `ParserPlugin`，并把对应重依赖随插件下沉。
 - **BREAKING**：网页提取器（trafilatura/jina/firecrawl/browserless）迁移为插件化装配：core 仅保留提取框架与降级编排；具体 extractor 由插件提供并按配置启用。
-- 新增：官方插件套件的 monorepo 组织形式（建议 `backend/py/plugins/*` + 前端 builtin bundle registry），统一命名/版本策略与默认启用策略。
-- 修改：`/v1/workspace/tools` 由“固定枚举工具集”演进为“基于已安装/已启用插件的动态可用工具集”（必要时提供显式诊断信息与迁移说明）。
+- 新增：提取器启用策略支持“YAML 全局策略 + notebook 级 UI 持久化策略”（存数据库）；每个 notebook 可选择 `inherit_global|custom` 是否遵循全局启用集合。
+- 新增：官方插件套件的 monorepo 组织形式（建议 `backend/py/plugins/*`；`backend/py/examples/*` 继续仅作为示例），统一命名/版本策略与默认启用策略。
+- 修改：`/v1/workspace/tools` 由“固定枚举工具集”演进为“动态可用工具集”：仅返回可用工具项，并通过 `diagnostics` 字段输出插件加载/缺失的结构化诊断信息与迁移说明（面向 UI 与自托管排障）。
 
 ## Capabilities
 
@@ -24,13 +26,14 @@ Crystalith 已具备后端插件系统，但当前大量“非系统核心”的
 - `workspace-api-contract`: tools 端点语义从稳定固定集合转为“动态可用集合”，并明确客户端行为与错误语义。
 - `output-rendering-and-typing`: 输出渲染优先级与数据契约在“插件拆分后”的稳定行为（含 bundle/descriptor 回退）。
 - `config-and-models`: 插件启用策略（allowlist/denylist）、以及官方插件的默认配置入口（如需新增配置项）。
+- `generation-core`: 工具输出类型的生成门禁与缺失能力的错误语义（可执行 recovery_hint）。
 
 ## Impact
 
 - Backend
   - 大量模块迁移：输出 schemas/prompt/default config、解析器实现、网页提取器实现拆包至 `backend/py/plugins/*`。
   - `backend/py/pyproject.toml` 依赖拆分与 workspace members 调整；core 依赖显著收敛。
-  - API 语义改变：tools 列表、输出生成能力、解析器支持范围随插件安装/启用变化。
+  - API 语义改变：tools 列表、工具输出类型生成门禁、解析器支持范围随插件安装/启用变化。
 - Frontend
   - 输出渲染依赖后端声明（`render_descriptor/frontend_bundle`）；官方交互 UI 以 builtin bundle 形式随前端构建提供，但是否启用由后端控制。
   - 需要在 UI 上明确“能力未安装/未启用”的提示与指引（基于后端返回的诊断信息）。

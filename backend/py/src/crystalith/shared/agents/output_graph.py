@@ -23,15 +23,9 @@ from crystalith.shared.agents.models import (
 from crystalith.shared.observability import classify_error_kind
 from crystalith.shared.agents.output_postprocess import needs_repair, postprocess_output
 from crystalith.shared.agents.output_schemas import (
-    BriefingOutput,
     BulletsOutput,
-    FAQOutput,
-    GuideOutput,
-    MindmapOutput,
     ParagraphOutput,
-    QuizOutput,
     StructuredOutput,
-    TimelineOutput,
 )
 from crystalith.shared.db import Chunk, Output, Source
 from crystalith.shared.types import OutputType
@@ -105,12 +99,6 @@ class OutputGraphState:
 
 
 DEFAULT_PROMPTS: dict[OutputType, str] = {
-    OutputType.FAQ: "Generate a FAQ from the sources.",
-    OutputType.GUIDE: "Create a study guide from the sources.",
-    OutputType.TIMELINE: "Create a timeline from the sources.",
-    OutputType.MINDMAP: "Create a mindmap from the sources.",
-    OutputType.QUIZ: "Create a quiz from the sources.",
-    OutputType.BRIEFING: "Create an executive briefing from the sources.",
     OutputType.PARAGRAPH: "Summarize the sources as a paragraph.",
     OutputType.BULLETS: "Summarize the sources as bullet points.",
     OutputType.STRUCTURED: "Create a structured summary from the sources.",
@@ -123,12 +111,6 @@ SYSTEM_PROMPT = (
 )
 
 OUTPUT_SCHEMAS = {
-    OutputType.FAQ: FAQOutput,
-    OutputType.GUIDE: GuideOutput,
-    OutputType.TIMELINE: TimelineOutput,
-    OutputType.MINDMAP: MindmapOutput,
-    OutputType.QUIZ: QuizOutput,
-    OutputType.BRIEFING: BriefingOutput,
     OutputType.PARAGRAPH: ParagraphOutput,
     OutputType.BULLETS: BulletsOutput,
     OutputType.STRUCTURED: StructuredOutput,
@@ -513,17 +495,22 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
         state = ctx.state
         deps = ctx.deps
 
-        schema = OUTPUT_SCHEMAS[state.output_type]
-        default_prompt = DEFAULT_PROMPTS.get(state.output_type, "")
+        default_prompt = ""
 
         plugins = deps.plugins
-        if plugins is not None:
-            plugin = plugins.output_types.get(state.output_type.value)
-            if plugin is not None:
-                state.plugin_schema_used = True
-                schema = plugin.schema
-                if plugin.default_prompt:
-                    default_prompt = plugin.default_prompt
+        plugin = plugins.output_types.get(state.output_type.value) if plugins is not None else None
+        if plugin is not None:
+            state.plugin_schema_used = True
+            schema = plugin.schema
+            default_prompt = (plugin.default_prompt or "").strip()
+        else:
+            schema = OUTPUT_SCHEMAS.get(state.output_type)
+            default_prompt = DEFAULT_PROMPTS.get(state.output_type, "")
+            if schema is None:
+                raise ValueError(
+                    f"Output type {state.output_type.value!r} is not available in core-only mode; "
+                    "install/enable the corresponding OutputTypePlugin."
+                )
 
         # Build model: prefer state.model_id, then deps.model, then default from settings
         if state.model_id:
@@ -663,9 +650,12 @@ class PostprocessOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                     model = deps.model or build_chat_model(deps.settings)
 
                 model_settings_log = extract_effective_model_settings_for_log(model)
+                repair_schema = OUTPUT_SCHEMAS.get(state.output_type)
+                if repair_schema is None:
+                    raise ValueError(f"Output type {state.output_type.value!r} has no core repair schema")
                 agent = Agent(
                     model,
-                    output_type=OUTPUT_SCHEMAS[state.output_type],
+                    output_type=repair_schema,
                     deps_type=StudioDeps,
                     system_prompt=SYSTEM_PROMPT,
                     retries=repair_retries,

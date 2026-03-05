@@ -41,6 +41,7 @@ from crystalith.shared.deps import (
 )
 from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.json_types import JsonDict, JsonValue
+from crystalith.shared.plugins.official_catalog import OFFICIAL_PLUGIN_CATALOG
 
 from time import perf_counter
 from crystalith.shared.source_diagnostics import (
@@ -205,6 +206,36 @@ async def create_output(
         raise HTTPException(status_code=404, detail="Notebook not found")
     if output_type == OutputType.SLIDES:
         raise HTTPException(status_code=400, detail="Use slides endpoints for SLIDES output")
+
+    if output_type in {
+        OutputType.FAQ,
+        OutputType.GUIDE,
+        OutputType.TIMELINE,
+        OutputType.MINDMAP,
+        OutputType.QUIZ,
+        OutputType.BRIEFING,
+    } and plugins.output_types.get(output_type.value) is None:
+        required_plugin_id = f"output-{output_type.value.lower()}"
+        skipped_detail = plugins.get_load_report().skipped.get(required_plugin_id)
+        recovery_hint = (
+            skipped_detail.hint
+            if skipped_detail is not None and skipped_detail.hint
+            else OFFICIAL_PLUGIN_CATALOG.get(required_plugin_id, None).default_install_hint()
+            if required_plugin_id in OFFICIAL_PLUGIN_CATALOG
+            else f"安装并启用 {required_plugin_id!r} 插件。"
+        )
+        detail: dict[str, object] = {
+            "error_code": "OUTPUT_TYPE_PLUGIN_REQUIRED",
+            "message": f"{output_type.value} 输出类型不可用：缺少或未启用对应插件。",
+            "details": {
+                "output_type": output_type.value,
+                "required_plugin_id": required_plugin_id,
+                "recovery_hint": recovery_hint,
+            },
+        }
+        if skipped_detail is not None:
+            detail["details"]["plugin_diagnostic"] = skipped_detail.to_dict()  # type: ignore[index]
+        raise HTTPException(status_code=409, detail=detail)
 
     trace_id = new_trace_id()
     request_id = request.headers.get("x-request-id") or request.headers.get("x-correlation-id") or trace_id

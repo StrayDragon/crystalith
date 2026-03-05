@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
@@ -67,95 +67,6 @@ class CitedText(BaseModel):
         return value
 
 
-class FAQItem(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    question: str
-    answer: str
-    citations: CitationIndices = Field(default_factory=list)
-
-
-class FAQOutput(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    items: list[FAQItem]
-
-
-class GuideModule(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    title: str
-    objective: CitedText
-    key_points: list[CitedText] = Field(default_factory=list)
-    examples: list[CitedText] = Field(default_factory=list)
-    exercises: list[CitedText] = Field(default_factory=list)
-
-
-class GuideOutput(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    modules: list[GuideModule]
-
-
-class TimelineEvent(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    date: str
-    event: str
-    description: str
-    citations: CitationIndices = Field(default_factory=list)
-
-
-class TimelineOutput(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    events: list[TimelineEvent]
-
-
-class MindmapNode(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    label: str
-    citations: CitationIndices = Field(default_factory=list)
-    children: list[MindmapNode] = Field(default_factory=list)
-
-
-class MindmapOutput(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    root: MindmapNode
-
-
-class QuizQuestion(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    type: Literal["multiple_choice", "true_false", "short_answer"]
-    question: str
-    options: list[str] = Field(default_factory=list)
-    answer: str
-    explanation: str
-    citations: CitationIndices = Field(default_factory=list)
-
-
-class QuizOutput(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    questions: list[QuizQuestion]
-
-
-class BriefingSection(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    heading: str
-    points: list[CitedText] = Field(default_factory=list)
-
-
-class BriefingOutput(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    sections: list[BriefingSection]
-
-
 class ParagraphOutput(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -175,3 +86,4 @@ class StructuredOutput(BaseModel):
     title: str
     bullets: list[CitedText]
     terms: list[str] = Field(default_factory=list)
+
