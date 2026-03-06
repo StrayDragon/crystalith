@@ -4,24 +4,19 @@ import asyncio
 import datetime
 import json
 from collections.abc import AsyncGenerator
-from typing import Literal
+from typing import Literal, cast
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi import Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
+from crystalith.shared.ai.types import ChatMessage
 from crystalith.shared.cache import CacheProvider
-from crystalith.shared.chat_ui_envelope import strip_ui_envelope
-from crystalith.shared.chat_ui_envelope import embed_ui_envelope
 from crystalith.shared.config import Settings
 from crystalith.shared.db import Message, Notebook, Session, Source
-from crystalith.shared.schemas.citations import Citation
-from crystalith.shared.vector_storage import VectorStore
-
 from crystalith.shared.deps import (
     get_ai_provider,
     get_cache_provider,
@@ -31,23 +26,30 @@ from crystalith.shared.deps import (
     get_stage_limiters,
     get_vector_store,
 )
+from crystalith.shared.json_types import JsonDict
+from crystalith.shared.schemas.citations import Citation
+from crystalith.shared.ui_state import (
+    apply_state_delta,
+    build_default_shared_state,
+    ensure_session_shared_state,
+    remove_message_components,
+)
+from crystalith.shared.vector_storage import VectorStore
 
+from ..prompt_presets.service import list_all_presets as list_all_prompt_presets
+from ..prompt_presets.service import resolve_preset as resolve_prompt_preset
+from .presets import parse_prompt_directive, parse_stats_preset_output, stats_output_to_ui_delta
 from .service import (
     NO_EVIDENCE_ANSWER,
     QAPipelineResult,
+    create_provisional_assistant_message,
+    delete_provisional_assistant_message,
+    finalize_provisional_assistant_message,
     normalize_source_ids,
     persist_qa_messages,
     run_qa_pipeline,
     validate_source_ids,
 )
-from .presets import (
-    parse_prompt_directive,
-    parse_stats_preset_output,
-    stats_output_to_ui_envelope,
-)
-from ..prompt_presets.service import list_all_presets as list_all_prompt_presets
-from ..prompt_presets.service import resolve_preset as resolve_prompt_preset
-from crystalith.shared.ai.types import ChatMessage
 
 
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/qa", tags=["qa"])
@@ -80,6 +82,49 @@ class QAResponse(BaseModel):
     confidence: float
     created_at: datetime.datetime
     context: ContextStatsResponse
+    message_id: int | None
+    shared_state: JsonDict
+    shared_state_revision: int
+
+
+class QAStateSnapshotData(BaseModel):
+    message_id: int | None
+    shared_state: JsonDict
+    shared_state_revision: int
+
+
+class QAStateDeltaData(BaseModel):
+    message_id: int | None
+    delta: list[JsonDict]
+    shared_state_revision: int
+
+
+class QAStreamDoneData(BaseModel):
+    citations: list[Citation]
+    evidence: bool
+    confidence: float
+    created_at: datetime.datetime
+    context: ContextStatsResponse
+    message_id: int | None
+    shared_state_revision: int
+
+
+class QAExportSource(BaseModel):
+    source_id: int
+    source_name: str
+    mime_type: str | None = None
+    parser_type: str | None = None
+
+
+class QAExportJson(BaseModel):
+    notebook_id: int
+    session_id: int
+    message_id: int
+    question: str | None
+    answer: str
+    citations: list[Citation]
+    sources: list[QAExportSource]
+    exported_at: datetime.datetime
 
 
 def _ensure_inline_citations(answer: str, citations: list[Citation]) -> str:
@@ -110,64 +155,15 @@ async def _prompt_usage(session: AsyncSession) -> str:
     return _format_prompt_usage(triggers)
 
 
-def _build_answer_envelope(*, answer: str) -> dict[str, object]:
-    return {
-        "schema": "crystalith.ui.message.v1",
-        "parts": [
-            {
-                "type": "component",
-                "name": "AnswerCard",
-                "id": "answer",
-                "props": {"markdown": answer},
-            },
-            {
-                "type": "tool_use",
-                "id": "qa_export_markdown_preview",
-                "name": "qa_export_markdown_preview",
-                "input": {},
-                "auto_execute": True,
-            },
-            {
-                "type": "tool_use",
-                "id": "qa_export_json_preview",
-                "name": "qa_export_json_preview",
-                "input": {},
-                "requires_confirm": True,
-            },
-        ],
-    }
-
-
-def _maybe_embed_answer(*, answer: str, settings: Settings, envelope: dict[str, object] | None = None) -> str:
-    if not settings.app.features.chat_ui_envelope_enabled:
-        return answer
-    resolved_envelope = envelope or _build_answer_envelope(answer=answer)
-    return embed_ui_envelope(answer, resolved_envelope)
-
-
 def _context_stats_from_result(result: QAPipelineResult) -> ContextStatsResponse:
     return ContextStatsResponse.model_validate(result.context_stats)
 
 
-async def _persist_qa_completion(
-    *,
-    session: AsyncSession,
-    result: QAPipelineResult,
-    question: str,
-    answer: str,
-    citations: list[Citation],
-) -> datetime.datetime:
-    created_at = datetime.datetime.now(datetime.UTC)
-    await persist_qa_messages(
-        session,
-        db_session=result.db_session,
-        history_messages=result.history_messages,
-        question=question,
-        answer=answer,
-        citations=citations,
-        created_at=created_at,
-    )
-    return created_at
+def _resolve_shared_state(db_session: Session | None) -> tuple[JsonDict, int]:
+    if db_session is None:
+        return build_default_shared_state(), 0
+    shared_state = ensure_session_shared_state(db_session)
+    return shared_state, int(db_session.shared_state_revision)
 
 
 async def _build_qa_response(
@@ -180,13 +176,17 @@ async def _build_qa_response(
     evidence: bool,
     confidence: float,
 ) -> QAResponse:
-    created_at = await _persist_qa_completion(
-        session=session,
-        result=result,
+    created_at = datetime.datetime.now(datetime.UTC)
+    assistant_message = await persist_qa_messages(
+        session,
+        db_session=result.db_session,
+        history_messages=result.history_messages,
         question=question,
         answer=answer,
         citations=citations,
+        created_at=created_at,
     )
+    shared_state, shared_state_revision = _resolve_shared_state(result.db_session)
     return QAResponse(
         answer=answer,
         citations=citations,
@@ -194,16 +194,51 @@ async def _build_qa_response(
         confidence=confidence,
         created_at=created_at,
         context=_context_stats_from_result(result),
+        message_id=assistant_message.id if assistant_message is not None else None,
+        shared_state=shared_state,
+        shared_state_revision=shared_state_revision,
     )
 
 
-def _build_qa_stream_done_data(
+def _sse_event(event: str, data: dict[str, object]) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _build_snapshot_data(
+    *,
+    db_session: Session | None,
+    message_id: int | None,
+) -> QAStateSnapshotData:
+    shared_state, shared_state_revision = _resolve_shared_state(db_session)
+    return QAStateSnapshotData(
+        message_id=message_id,
+        shared_state=shared_state,
+        shared_state_revision=shared_state_revision,
+    )
+
+
+def _build_delta_data(
+    *,
+    message_id: int | None,
+    delta: list[JsonDict],
+    shared_state_revision: int,
+) -> QAStateDeltaData:
+    return QAStateDeltaData(
+        message_id=message_id,
+        delta=delta,
+        shared_state_revision=shared_state_revision,
+    )
+
+
+def _build_done_data(
     *,
     result: QAPipelineResult,
     citations: list[Citation],
     evidence: bool,
     confidence: float,
     created_at: datetime.datetime,
+    message_id: int | None,
+    shared_state_revision: int,
 ) -> QAStreamDoneData:
     return QAStreamDoneData(
         citations=citations,
@@ -211,6 +246,23 @@ def _build_qa_stream_done_data(
         confidence=confidence,
         created_at=created_at,
         context=_context_stats_from_result(result),
+        message_id=message_id,
+        shared_state_revision=shared_state_revision,
+    )
+
+
+async def _single_error_stream(message: str) -> StreamingResponse:
+    async def generate() -> AsyncGenerator[str, None]:
+        yield _sse_event("error", {"message": message})
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 
@@ -236,6 +288,7 @@ async def ask_question(
         directive = parse_prompt_directive(payload.question)
     except ValueError:
         raise HTTPException(status_code=400, detail=await _prompt_usage(session)) from None
+
     if directive is not None:
         if not settings.app.features.chat_prompt_presets_enabled:
             raise HTTPException(status_code=400, detail="Prompt presets are disabled")
@@ -251,12 +304,21 @@ async def ask_question(
             raise HTTPException(status_code=400, detail="Prompt preset is disabled")
         pipeline_question = directive.query
 
+    normalized_source_ids = normalize_source_ids(payload.source_ids)
+    if normalized_source_ids:
+        await validate_source_ids(session, notebook_id=notebook_id, source_ids=normalized_source_ids)
+
+    if payload.session_id is not None:
+        db_session = await session.get(Session, payload.session_id)
+        if db_session is None or db_session.notebook_id != notebook_id:
+            raise HTTPException(status_code=404, detail="Session not found")
+
     result = await run_qa_pipeline(
         session=session,
         settings=settings,
         notebook_id=notebook_id,
         question=pipeline_question,
-        source_ids=payload.source_ids,
+        source_ids=normalized_source_ids,
         top_k=payload.top_k,
         min_score=payload.min_score,
         session_id=payload.session_id,
@@ -264,6 +326,7 @@ async def ask_question(
         vector_store=vector_store,
         cache=cache,
         limiters=limiters,
+        source_ids_validated=True,
     )
 
     if not result.evidence:
@@ -271,7 +334,7 @@ async def ask_question(
             session=session,
             result=result,
             question=payload.question,
-            answer=_maybe_embed_answer(answer=NO_EVIDENCE_ANSWER, settings=settings),
+            answer=NO_EVIDENCE_ANSWER,
             citations=[],
             evidence=False,
             confidence=0.0,
@@ -287,34 +350,25 @@ async def ask_question(
         async with limiters.llm_generate.acquire():
             raw = await chatter.chat(messages_for_llm)
         parsed = parse_stats_preset_output(raw)
-        if parsed is None:
-            async with limiters.llm_generate.acquire():
-                answer = await chatter.chat(result.messages)
-            answer = _ensure_inline_citations(answer, result.citations)
-            return await _build_qa_response(
+        if parsed is not None:
+            answer = _ensure_inline_citations(parsed.fallback_markdown, result.citations)
+            response = await _build_qa_response(
                 session=session,
                 result=result,
                 question=payload.question,
-                answer=_maybe_embed_answer(answer=answer, settings=settings),
+                answer=answer,
                 citations=result.citations,
                 evidence=True,
                 confidence=result.confidence,
             )
-        fallback = _ensure_inline_citations(parsed.fallback_markdown, result.citations)
-        content = _maybe_embed_answer(
-            answer=fallback,
-            settings=settings,
-            envelope=stats_output_to_ui_envelope(parsed),
-        )
-        return await _build_qa_response(
-            session=session,
-            result=result,
-            question=payload.question,
-            answer=content,
-            citations=result.citations,
-            evidence=True,
-            confidence=result.confidence,
-        )
+            if response.message_id is not None and result.db_session is not None:
+                ui_delta = stats_output_to_ui_delta(parsed, message_id=response.message_id)
+                _shared_state, shared_state_revision = apply_state_delta(result.db_session, delta=ui_delta)
+                await session.commit()
+                response.shared_state, _ = _resolve_shared_state(result.db_session)
+                response.shared_state_revision = shared_state_revision
+            return response
+        messages_for_llm = result.messages
 
     async with limiters.llm_generate.acquire():
         answer = await chatter.chat(messages_for_llm)
@@ -323,27 +377,11 @@ async def ask_question(
         session=session,
         result=result,
         question=payload.question,
-        answer=_maybe_embed_answer(answer=answer, settings=settings),
+        answer=answer,
         citations=result.citations,
         evidence=True,
         confidence=result.confidence,
     )
-
-
-# SSE event formatting helpers
-def _sse_event(event: str, data: dict) -> str:
-    """Format a Server-Sent Event."""
-    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
-
-
-class QAStreamDoneData(BaseModel):
-    """Data sent in the 'done' SSE event."""
-
-    citations: list[Citation]
-    evidence: bool
-    confidence: float
-    created_at: datetime.datetime
-    context: ContextStatsResponse
 
 
 @router.post(
@@ -367,118 +405,50 @@ async def ask_question_stream(
     settings: Settings = Depends(get_settings),
     limiters=Depends(get_stage_limiters),
 ) -> StreamingResponse:
-    """
-    Stream QA response using Server-Sent Events.
-
-    Events:
-    - `chunk`: Text chunk `{"text": "..."}`
-    - `done`: Completion `{"citations": [...], "evidence": bool, "confidence": float, ...}`
-    - `error`: Error `{"message": "..."}`
-    """
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
-
-    resolved_preset = None
-    pipeline_question = payload.question
-    try:
-        directive = parse_prompt_directive(payload.question)
-    except ValueError:
-        directive = None
-        usage = await _prompt_usage(session)
-
-        async def generate_stream_invalid_directive() -> AsyncGenerator[str, None]:
-            yield _sse_event("error", {"message": usage})
-
-        return StreamingResponse(
-            generate_stream_invalid_directive(),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-                "X-Accel-Buffering": "no",
-            },
-        )
-
-    if directive is not None:
-        if not settings.app.features.chat_prompt_presets_enabled:
-
-            async def generate_stream_presets_disabled() -> AsyncGenerator[str, None]:
-                yield _sse_event("error", {"message": "Prompt presets are disabled"})
-
-            return StreamingResponse(
-                generate_stream_presets_disabled(),
-                media_type="text/event-stream",
-                headers={
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive",
-                    "X-Accel-Buffering": "no",
-                },
-            )
-        if not directive.query:
-            usage = await _prompt_usage(session)
-
-            async def generate_stream_empty_query() -> AsyncGenerator[str, None]:
-                yield _sse_event("error", {"message": usage})
-
-            return StreamingResponse(
-                generate_stream_empty_query(),
-                media_type="text/event-stream",
-                headers={
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive",
-                    "X-Accel-Buffering": "no",
-                },
-            )
-        resolved_preset = await resolve_prompt_preset(session, directive.preset)
-        if resolved_preset is None:
-            usage = await _prompt_usage(session)
-
-            async def generate_stream_unknown_preset() -> AsyncGenerator[str, None]:
-                yield _sse_event(
-                    "error",
-                    {"message": f"Unknown preset: {directive.preset}. {usage}"},
-                )
-
-            return StreamingResponse(
-                generate_stream_unknown_preset(),
-                media_type="text/event-stream",
-                headers={
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive",
-                    "X-Accel-Buffering": "no",
-                },
-            )
-        if not resolved_preset.enabled:
-
-            async def generate_stream_disabled_preset() -> AsyncGenerator[str, None]:
-                yield _sse_event("error", {"message": "Prompt preset is disabled"})
-
-            return StreamingResponse(
-                generate_stream_disabled_preset(),
-                media_type="text/event-stream",
-                headers={
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive",
-                    "X-Accel-Buffering": "no",
-                },
-            )
-        pipeline_question = directive.query
-
-    normalized_source_ids = normalize_source_ids(payload.source_ids)
-    if normalized_source_ids:
-        await validate_source_ids(session, notebook_id=notebook_id, source_ids=normalized_source_ids)
-
-    if payload.session_id is not None:
-        db_session = await session.get(Session, payload.session_id)
-        if db_session is None or db_session.notebook_id != notebook_id:
-            raise HTTPException(status_code=404, detail="Session not found")
 
     async def generate_stream() -> AsyncGenerator[str, None]:
         if await request.is_disconnected():
             return
 
+        resolved_preset = None
+        pipeline_question = payload.question
+        result: QAPipelineResult | None = None
+        assistant_message: Message | None = None
+        completed = False
+
         try:
+            try:
+                directive = parse_prompt_directive(payload.question)
+            except ValueError:
+                yield _sse_event("error", {"message": await _prompt_usage(session)})
+                return
+
+            if directive is not None:
+                if not settings.app.features.chat_prompt_presets_enabled:
+                    yield _sse_event("error", {"message": "Prompt presets are disabled"})
+                    return
+                if not directive.query:
+                    yield _sse_event("error", {"message": await _prompt_usage(session)})
+                    return
+                resolved_preset = await resolve_prompt_preset(session, directive.preset)
+                if resolved_preset is None:
+                    yield _sse_event(
+                        "error",
+                        {"message": f"Unknown preset: {directive.preset}. {await _prompt_usage(session)}"},
+                    )
+                    return
+                if not resolved_preset.enabled:
+                    yield _sse_event("error", {"message": "Prompt preset is disabled"})
+                    return
+                pipeline_question = directive.query
+
+            normalized_source_ids = normalize_source_ids(payload.source_ids)
+            if normalized_source_ids:
+                await validate_source_ids(session, notebook_id=notebook_id, source_ids=normalized_source_ids)
+
             result = await run_qa_pipeline(
                 session=session,
                 settings=settings,
@@ -496,128 +466,189 @@ async def ask_question_stream(
             )
         except asyncio.CancelledError:
             raise
-        except HTTPException:
-            raise
         except Exception as exc:  # noqa: BLE001
             yield _sse_event("error", {"message": f"Embedding 服务暂时不可用: {exc}"})
             return
 
-        if not result.evidence:
-            if await request.is_disconnected():
+        try:
+            if result.db_session is not None:
+                assistant_message = await create_provisional_assistant_message(
+                    session,
+                    db_session=result.db_session,
+                    history_messages=result.history_messages,
+                    question=payload.question,
+                    created_at=datetime.datetime.now(datetime.UTC),
+                )
+            snapshot_data = _build_snapshot_data(
+                db_session=result.db_session,
+                message_id=assistant_message.id if assistant_message is not None else None,
+            )
+            yield _sse_event("state_snapshot", cast(dict[str, object], snapshot_data.model_dump(mode="json")))
+
+            if not result.evidence:
+                if await request.is_disconnected():
+                    return
+                yield _sse_event("chunk", {"text": NO_EVIDENCE_ANSWER})
+                created_at = datetime.datetime.now(datetime.UTC)
+                if result.db_session is not None and assistant_message is not None:
+                    await finalize_provisional_assistant_message(
+                        session,
+                        db_session=result.db_session,
+                        assistant_message_id=assistant_message.id,
+                        answer=NO_EVIDENCE_ANSWER,
+                        citations=[],
+                        created_at=created_at,
+                    )
+                _shared_state, shared_state_revision = _resolve_shared_state(result.db_session)
+                yield _sse_event(
+                    "done",
+                    cast(
+                        dict[str, object],
+                        _build_done_data(
+                            result=result,
+                            citations=[],
+                            evidence=False,
+                            confidence=0.0,
+                            created_at=created_at,
+                            message_id=assistant_message.id if assistant_message is not None else None,
+                            shared_state_revision=shared_state_revision,
+                        ).model_dump(mode="json"),
+                    ),
+                )
+                completed = True
                 return
-            persisted_answer = _maybe_embed_answer(answer=NO_EVIDENCE_ANSWER, settings=settings)
-            created_at = await _persist_qa_completion(
-                session=session,
-                result=result,
-                question=payload.question,
-                answer=persisted_answer,
-                citations=[],
-            )
-            yield _sse_event("chunk", {"text": NO_EVIDENCE_ANSWER})
-            yield _sse_event(
-                "done",
-                _build_qa_stream_done_data(
-                    result=result,
-                    citations=[],
-                    evidence=False,
-                    confidence=0.0,
-                    created_at=created_at,
-                ).model_dump(mode="json"),
-            )
-            return
 
-        messages_for_llm = (
-            _override_system_prompt(result.messages, resolved_preset.system_prompt)
-            if resolved_preset is not None
-            else result.messages
-        )
+            messages_for_llm = (
+                _override_system_prompt(result.messages, resolved_preset.system_prompt)
+                if resolved_preset is not None
+                else result.messages
+            )
 
-        if resolved_preset is not None and resolved_preset.trigger == "stats" and resolved_preset.source == "builtin":
+            if resolved_preset is not None and resolved_preset.trigger == "stats" and resolved_preset.source == "builtin":
+                try:
+                    async with limiters.llm_generate.acquire():
+                        raw = await chatter.chat(messages_for_llm)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:  # noqa: BLE001
+                    yield _sse_event("error", {"message": str(exc)})
+                    return
+
+                parsed = parse_stats_preset_output(raw)
+                if parsed is not None:
+                    if await request.is_disconnected():
+                        return
+                    answer = _ensure_inline_citations(parsed.fallback_markdown, result.citations)
+                    chunk_size = 240
+                    for idx in range(0, len(answer), chunk_size):
+                        if await request.is_disconnected():
+                            return
+                        yield _sse_event("chunk", {"text": answer[idx : idx + chunk_size]})
+
+                    created_at = datetime.datetime.now(datetime.UTC)
+                    shared_state_revision = 0
+                    if result.db_session is not None and assistant_message is not None:
+                        await finalize_provisional_assistant_message(
+                            session,
+                            db_session=result.db_session,
+                            assistant_message_id=assistant_message.id,
+                            answer=answer,
+                            citations=result.citations,
+                            created_at=created_at,
+                        )
+                        ui_delta = stats_output_to_ui_delta(parsed, message_id=assistant_message.id)
+                        _shared_state, shared_state_revision = apply_state_delta(result.db_session, delta=ui_delta)
+                        await session.commit()
+                        yield _sse_event(
+                            "state_delta",
+                            cast(
+                                dict[str, object],
+                                _build_delta_data(
+                                    message_id=assistant_message.id,
+                                    delta=ui_delta,
+                                    shared_state_revision=shared_state_revision,
+                                ).model_dump(mode="json"),
+                            ),
+                        )
+                    else:
+                        _shared_state, shared_state_revision = _resolve_shared_state(result.db_session)
+
+                    yield _sse_event(
+                        "done",
+                        cast(
+                            dict[str, object],
+                            _build_done_data(
+                                result=result,
+                                citations=result.citations,
+                                evidence=True,
+                                confidence=result.confidence,
+                                created_at=created_at,
+                                message_id=assistant_message.id if assistant_message is not None else None,
+                                shared_state_revision=shared_state_revision,
+                            ).model_dump(mode="json"),
+                        ),
+                    )
+                    completed = True
+                    return
+                messages_for_llm = result.messages
+
+            answer_chunks: list[str] = []
             try:
                 async with limiters.llm_generate.acquire():
-                    raw = await chatter.chat(messages_for_llm)
+                    async for chunk in chatter.chat_stream(messages_for_llm):
+                        if await request.is_disconnected():
+                            return
+                        answer_chunks.append(chunk)
+                        yield _sse_event("chunk", {"text": chunk})
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001
                 yield _sse_event("error", {"message": str(exc)})
                 return
 
-            parsed = parse_stats_preset_output(raw)
-            if parsed is None:
-                # Fallback to default streaming QA.
-                messages_for_llm = result.messages
-            else:
-                if await request.is_disconnected():
-                    return
+            if await request.is_disconnected():
+                return
 
-                fallback = _ensure_inline_citations(parsed.fallback_markdown, result.citations)
-                chunk_size = 240
-                for idx in range(0, len(fallback), chunk_size):
-                    if await request.is_disconnected():
-                        return
-                    yield _sse_event("chunk", {"text": fallback[idx : idx + chunk_size]})
-
-                persisted_answer = _maybe_embed_answer(
-                    answer=fallback,
-                    settings=settings,
-                    envelope=stats_output_to_ui_envelope(parsed),
-                )
-                created_at = await _persist_qa_completion(
-                    session=session,
-                    result=result,
-                    question=payload.question,
-                    answer=persisted_answer,
+            answer = _ensure_inline_citations("".join(answer_chunks), result.citations)
+            created_at = datetime.datetime.now(datetime.UTC)
+            if result.db_session is not None and assistant_message is not None:
+                await finalize_provisional_assistant_message(
+                    session,
+                    db_session=result.db_session,
+                    assistant_message_id=assistant_message.id,
+                    answer=answer,
                     citations=result.citations,
+                    created_at=created_at,
                 )
-                yield _sse_event(
-                    "done",
-                    _build_qa_stream_done_data(
+            _shared_state, shared_state_revision = _resolve_shared_state(result.db_session)
+            yield _sse_event(
+                "done",
+                cast(
+                    dict[str, object],
+                    _build_done_data(
                         result=result,
                         citations=result.citations,
                         evidence=True,
                         confidence=result.confidence,
                         created_at=created_at,
+                        message_id=assistant_message.id if assistant_message is not None else None,
+                        shared_state_revision=shared_state_revision,
                     ).model_dump(mode="json"),
+                ),
+            )
+            completed = True
+        finally:
+            if not completed and result is not None and result.db_session is not None and assistant_message is not None:
+                _shared_state, _revision, _delta = remove_message_components(
+                    result.db_session,
+                    message_id=assistant_message.id,
                 )
-                return
-
-        answer_chunks: list[str] = []
-        try:
-            async with limiters.llm_generate.acquire():
-                async for chunk in chatter.chat_stream(messages_for_llm):
-                    if await request.is_disconnected():
-                        return
-                    answer_chunks.append(chunk)
-                    yield _sse_event("chunk", {"text": chunk})
-        except asyncio.CancelledError:
-            raise
-        except Exception as exc:  # noqa: BLE001
-            yield _sse_event("error", {"message": str(exc)})
-            return
-
-        if await request.is_disconnected():
-            return
-
-        answer = "".join(answer_chunks)
-        answer = _ensure_inline_citations(answer, result.citations)
-        persisted_answer = _maybe_embed_answer(answer=answer, settings=settings)
-        created_at = await _persist_qa_completion(
-            session=session,
-            result=result,
-            question=payload.question,
-            answer=persisted_answer,
-            citations=result.citations,
-        )
-        yield _sse_event(
-            "done",
-            _build_qa_stream_done_data(
-                result=result,
-                citations=result.citations,
-                evidence=True,
-                confidence=result.confidence,
-                created_at=created_at,
-            ).model_dump(mode="json"),
-        )
+                await delete_provisional_assistant_message(
+                    session,
+                    db_session=result.db_session,
+                    assistant_message_id=assistant_message.id,
+                    created_at=datetime.datetime.now(datetime.UTC),
+                )
 
     return StreamingResponse(
         generate_stream(),
@@ -628,24 +659,6 @@ async def ask_question_stream(
             "X-Accel-Buffering": "no",
         },
     )
-
-
-class QAExportSource(BaseModel):
-    source_id: int
-    source_name: str
-    mime_type: str | None = None
-    parser_type: str | None = None
-
-
-class QAExportJson(BaseModel):
-    notebook_id: int
-    session_id: int
-    message_id: int
-    question: str | None
-    answer: str
-    citations: list[Citation]
-    sources: list[QAExportSource]
-    exported_at: datetime.datetime
 
 
 def _build_sources_meta(
@@ -698,7 +711,6 @@ async def export_qa(
     format: Literal["markdown", "json"] = Query("markdown"),
     session: AsyncSession = Depends(get_db_session),
 ) -> object:
-    """Export a QA answer with citations as Markdown or JSON."""
     notebook = await session.get(Notebook, notebook_id)
     if notebook is None:
         raise HTTPException(status_code=404, detail="Notebook not found")
@@ -727,7 +739,7 @@ async def export_qa(
     if assistant_message is None:
         raise HTTPException(status_code=404, detail="No assistant message found to export")
 
-    answer_text = strip_ui_envelope(assistant_message.content)
+    answer_text = assistant_message.content
 
     question_result = await session.execute(
         select(Message)
@@ -767,36 +779,32 @@ async def export_qa(
             exported_at=exported_at,
         )
 
-    lines: list[str] = []
-    lines.append("# QA Export")
-    lines.append("")
-    if question:
-        lines.append("## Question")
-        lines.append("")
-        lines.append(question)
-        lines.append("")
-    lines.append("## Answer")
-    lines.append("")
-    lines.append(answer_text)
-    lines.append("")
-
-    if citations:
-        lines.append("## Citations")
-        lines.append("")
-        for index, citation in enumerate(citations, start=1):
-            lines.append(_format_citation_line(index, citation))
-            lines.append("")
-
-    if sources_meta:
-        lines.append("## Sources")
-        lines.append("")
-        for item in sources_meta:
-            mime = f" ({item.mime_type})" if item.mime_type else ""
-            lines.append(f"- {item.source_name}{mime} (id: {item.source_id})")
-
-    filename = f"qa-session-{session_id}-message-{assistant_message.id}.md"
+    citation_lines = [
+        _format_citation_line(index, citation)
+        for index, citation in enumerate(citations, start=1)
+    ]
+    citations_block = "\n\n".join(citation_lines) if citation_lines else "无引用"
+    markdown = [
+        f"# QA Export #{assistant_message.id}",
+        "",
+        f"- Notebook ID: {notebook_id}",
+        f"- Session ID: {session_id}",
+        f"- Message ID: {assistant_message.id}",
+        f"- Exported At: {exported_at.isoformat()}",
+        "",
+        "## Question",
+        question or "(unknown)",
+        "",
+        "## Answer",
+        answer_text,
+        "",
+        "## Citations",
+        citations_block,
+    ]
     return Response(
-        "\n".join(lines).rstrip() + "\n",
-        media_type="text/markdown",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        content="\n".join(markdown),
+        media_type="text/markdown; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="qa-export-{assistant_message.id}.md"',
+        },
     )

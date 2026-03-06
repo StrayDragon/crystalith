@@ -19,6 +19,7 @@ from crystalith.features.citations.api import router as citations_router
 from crystalith.features.studio.tools_api import router as workspace_slides_router
 from crystalith.features.tasks.api import router as tasks_router
 from crystalith.features.templates.api import router as templates_router
+from crystalith.features.ui.api import router as ui_router
 from crystalith.features.workspace.api import router as workspace_router
 from crystalith.features.studio.api import router as slides_router
 
@@ -44,5 +45,6 @@ def register_routers(app: FastAPIX) -> None:
     app.include_router(research_router, dependencies=auth_dependencies)
     app.include_router(tasks_router, dependencies=auth_dependencies)
     app.include_router(templates_router, dependencies=auth_dependencies)
+    app.include_router(ui_router, dependencies=auth_dependencies)
     app.include_router(workspace_slides_router, dependencies=auth_dependencies)
     app.include_router(workspace_router, dependencies=auth_dependencies)

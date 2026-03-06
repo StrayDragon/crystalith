@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=./app.schema.json
+%YAML 1.1
+---
+name: "Crystalith Dev Artifacts"
+version: "1.0.0"
+schema: v1
+app:
+  auth:
+    enabled: false
+  features:
+    workspace_frontend_bundles_enabled: true
+    chat_prompt_presets_enabled: true
+  startup:
+    auto_db_init: true
+    cleanup_failed_sources: false
+models:
+  defaults:
+    chat: "test-chat"
+    embedding: "test-embed"
+  available:
+    - id: "test-chat"
+      provider: "test"
+      model: "test-chat"
+      display_name: "Test Chat"
+      roles: [chat]
+    - id: "test-embed"
+      provider: "test"
+      model: "test-embed"
+      display_name: "Test Embed"
+      roles: [embed]
+database:
+  url: "sqlite+aiosqlite:///../../artifacts/dev/data/app.db"
+vector_storage:
+  provider: "memory"
+cache:
+  provider: "memory"
+  ttl: 60
+  max_size: 2048

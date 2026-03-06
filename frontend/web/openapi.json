@@ -91,7 +91,7 @@
           "metadata": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/JsonDict"
+                "$ref": "#/components/schemas/JsonDict-Output"
               },
               {
                 "type": "null"
@@ -292,7 +292,7 @@
           "meta": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/JsonDict"
+                "$ref": "#/components/schemas/JsonDict-Output"
               },
               {
                 "type": "null"
@@ -641,7 +641,7 @@
           "details": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/JsonDict"
+                "$ref": "#/components/schemas/JsonDict-Output"
               },
               {
                 "type": "null"
@@ -877,9 +877,15 @@
         "title": "ItemSchema",
         "type": "object"
       },
-      "JsonDict": {
+      "JsonDict-Input": {
         "additionalProperties": {
-          "$ref": "#/components/schemas/JsonValue"
+          "$ref": "#/components/schemas/JsonValue-Input"
+        },
+        "type": "object"
+      },
+      "JsonDict-Output": {
+        "additionalProperties": {
+          "$ref": "#/components/schemas/JsonValue-Output"
         },
         "type": "object"
       },
@@ -902,20 +908,39 @@
           }
         ]
       },
-      "JsonValue": {
+      "JsonValue-Input": {
         "anyOf": [
           {
             "$ref": "#/components/schemas/JsonPrimitive"
           },
           {
             "additionalProperties": {
-              "$ref": "#/components/schemas/JsonValue"
+              "$ref": "#/components/schemas/JsonValue-Input"
             },
             "type": "object"
           },
           {
             "items": {
-              "$ref": "#/components/schemas/JsonValue"
+              "$ref": "#/components/schemas/JsonValue-Input"
+            },
+            "type": "array"
+          }
+        ]
+      },
+      "JsonValue-Output": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/JsonPrimitive"
+          },
+          {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue-Output"
+            },
+            "type": "object"
+          },
+          {
+            "items": {
+              "$ref": "#/components/schemas/JsonValue-Output"
             },
             "type": "array"
           }
@@ -1218,7 +1243,7 @@
             "anyOf": [
               {
                 "additionalProperties": {
-                  "$ref": "#/components/schemas/JsonValue"
+                  "$ref": "#/components/schemas/JsonValue-Output"
                 },
                 "type": "object"
               },
@@ -1265,7 +1290,7 @@
             "type": "array"
           },
           "content": {
-            "$ref": "#/components/schemas/JsonDict"
+            "$ref": "#/components/schemas/JsonDict-Output"
           },
           "exported_at": {
             "format": "date-time",
@@ -1461,7 +1486,7 @@
             "title": "Chunk Ids"
           },
           "content": {
-            "$ref": "#/components/schemas/JsonDict"
+            "$ref": "#/components/schemas/JsonDict-Output"
           },
           "created_at": {
             "format": "date-time",
@@ -1636,7 +1661,7 @@
             "anyOf": [
               {
                 "additionalProperties": {
-                  "$ref": "#/components/schemas/JsonValue"
+                  "$ref": "#/components/schemas/JsonValue-Output"
                 },
                 "type": "object"
               },
@@ -2051,6 +2076,24 @@
           "evidence": {
             "title": "Evidence",
             "type": "boolean"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "shared_state": {
+            "$ref": "#/components/schemas/JsonDict-Output"
+          },
+          "shared_state_revision": {
+            "title": "Shared State Revision",
+            "type": "integer"
           }
         },
         "required": [
@@ -2059,7 +2102,10 @@
           "confidence",
           "context",
           "created_at",
-          "evidence"
+          "evidence",
+          "message_id",
+          "shared_state",
+          "shared_state_revision"
         ],
         "title": "QAResponse",
         "type": "object"
@@ -2480,7 +2526,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/JsonDict"
+                  "$ref": "#/components/schemas/JsonDict-Output"
                 },
                 "type": "array"
               },
@@ -2599,7 +2645,7 @@
           "input_data": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/JsonDict"
+                "$ref": "#/components/schemas/JsonDict-Output"
               },
               {
                 "type": "null"
@@ -2613,7 +2659,7 @@
           "output_data": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/JsonDict"
+                "$ref": "#/components/schemas/JsonDict-Output"
               },
               {
                 "type": "null"
@@ -2822,6 +2868,28 @@
           "updated_at"
         ],
         "title": "SessionRead",
+        "type": "object"
+      },
+      "SessionUiStateResponse": {
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "integer"
+          },
+          "shared_state": {
+            "$ref": "#/components/schemas/JsonDict-Output"
+          },
+          "shared_state_revision": {
+            "title": "Shared State Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "shared_state",
+          "shared_state_revision"
+        ],
+        "title": "SessionUiStateResponse",
         "type": "object"
       },
       "SessionUpdate": {
@@ -3440,7 +3508,7 @@
             "type": "string"
           },
           "template": {
-            "$ref": "#/components/schemas/JsonDict"
+            "$ref": "#/components/schemas/JsonDict-Output"
           }
         },
         "required": [
@@ -3763,7 +3831,7 @@
           "metadata": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/JsonDict"
+                "$ref": "#/components/schemas/JsonDict-Output"
               },
               {
                 "type": "null"
@@ -4694,6 +4762,86 @@
           "name"
         ],
         "title": "Topic",
+        "type": "object"
+      },
+      "UiEventRequest": {
+        "properties": {
+          "name": {
+            "const": "ui.v1.event",
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "const": "CUSTOM",
+            "title": "Type",
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/UiEventValueRequest"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "value"
+        ],
+        "title": "UiEventRequest",
+        "type": "object"
+      },
+      "UiEventResponse": {
+        "properties": {
+          "delta": {
+            "items": {
+              "$ref": "#/components/schemas/JsonDict-Output"
+            },
+            "title": "Delta",
+            "type": "array"
+          },
+          "shared_state_revision": {
+            "title": "Shared State Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "delta",
+          "shared_state_revision"
+        ],
+        "title": "UiEventResponse",
+        "type": "object"
+      },
+      "UiEventValueRequest": {
+        "properties": {
+          "baseRevision": {
+            "minimum": 0.0,
+            "title": "Baserevision",
+            "type": "integer"
+          },
+          "clientRequestId": {
+            "minLength": 1,
+            "title": "Clientrequestid",
+            "type": "string"
+          },
+          "componentId": {
+            "minLength": 1,
+            "title": "Componentid",
+            "type": "string"
+          },
+          "eventName": {
+            "minLength": 1,
+            "title": "Eventname",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/JsonDict-Input"
+          }
+        },
+        "required": [
+          "baseRevision",
+          "clientRequestId",
+          "componentId",
+          "eventName"
+        ],
+        "title": "UiEventValueRequest",
         "type": "object"
       },
       "ValidationError": {
@@ -5844,7 +5992,6 @@
     },
     "/v1/notebooks/{notebook_id}/qa/export": {
       "get": {
-        "description": "Export a QA answer with citations as Markdown or JSON.",
         "operationId": "export_qa_v1_notebooks__notebook_id__qa_export_get",
         "parameters": [
           {
@@ -5930,7 +6077,6 @@
     },
     "/v1/notebooks/{notebook_id}/qa/stream": {
       "post": {
-        "description": "Stream QA response using Server-Sent Events.\n\nEvents:\n- `chunk`: Text chunk `{\"text\": \"...\"}`\n- `done`: Completion `{\"citations\": [...], \"evidence\": bool, \"confidence\": float, ...}`\n- `error`: Error `{\"message\": \"...\"}`",
         "operationId": "ask_question_stream_v1_notebooks__notebook_id__qa_stream_post",
         "parameters": [
           {
@@ -7353,6 +7499,118 @@
         "summary": "Create Message",
         "tags": [
           "messages"
+        ]
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sessions/{session_id}/ui/event": {
+      "post": {
+        "operationId": "post_ui_event_v1_notebooks__notebook_id__sessions__session_id__ui_event_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notebook_id",
+            "required": true,
+            "schema": {
+              "title": "Notebook Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UiEventRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UiEventResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Ui Event",
+        "tags": [
+          "ui"
+        ]
+      }
+    },
+    "/v1/notebooks/{notebook_id}/sessions/{session_id}/ui/state": {
+      "get": {
+        "operationId": "get_ui_state_v1_notebooks__notebook_id__sessions__session_id__ui_state_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notebook_id",
+            "required": true,
+            "schema": {
+              "title": "Notebook Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionUiStateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ui State",
+        "tags": [
+          "ui"
         ]
       }
     },

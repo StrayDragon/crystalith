@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from crystalith.shared.json_types import JsonDict
 from crystalith.shared.db import Message
 
 
@@ -12,7 +13,7 @@ async def create_message(
     session_id: int,
     role: str,
     content: str,
-    citations: list[dict] | None,
+    citations: list[JsonDict] | None,
 ) -> Message:
     message = Message(
         session_id=session_id,

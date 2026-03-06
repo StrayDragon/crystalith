@@ -109,6 +109,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@crystalith-slidev': path.resolve(__dirname, '../packages/crystalith-slidev/src'),
+      'rivu-kernel': path.resolve(__dirname, 'vendor/rivu/packages/rivu-kernel/src'),
+      'rivu-ui-spec': path.resolve(__dirname, 'vendor/rivu/packages/rivu-ui-spec/src'),
+      'rivu-react': path.resolve(__dirname, 'vendor/rivu/packages/rivu-react/src'),
+      'rivu-react/tokens.css': path.resolve(__dirname, 'vendor/rivu/packages/rivu-react/src/tokens.css'),
     },
   },
   build: {
@@ -138,6 +142,6 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/setupTests.ts',
     globals: true,
-    exclude: [...configDefaults.exclude],
+    exclude: [...configDefaults.exclude, 'vendor/**'],
   },
 });

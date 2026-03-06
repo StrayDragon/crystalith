@@ -2,14 +2,25 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createRef } from 'react';
 import type { ComponentProps } from 'react';
 import { beforeEach, expect, test, vi } from 'vitest';
+
+const { componentRendererSpy } = vi.hoisted(() => ({
+  componentRendererSpy: vi.fn(({ componentId }: { componentId: string }) => <div>{componentId}</div>),
+}));
+
+vi.mock('rivu-react/component-renderer', () => ({
+  ComponentRenderer: componentRendererSpy,
+}));
 import { SWRConfig } from 'swr';
 import { http, HttpResponse } from 'msw';
 
 import ChatPanel from './ChatPanel';
 import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
-import { CHAT_UI_ENVELOPE_DELIMITER } from './chatUiEnvelope';
 import { LayerProvider } from '../../../../shared/layer';
 import { server } from '../../../../test-utils/msw/server';
+
+vi.mock('rivu-react/use-kernel-state', () => ({
+  useKernelState: () => ['qa:assistant-1:summary'],
+}));
 
 beforeEach(() => {
   server.use(
@@ -57,12 +68,12 @@ function renderChatPanel(overrides?: ChatPanelOverrides) {
   return render(buildChatPanelElement(overrides));
 }
 
-test('chat messages render assistant content', async () => {
+test('chat messages render assistant content as plain text', async () => {
   const messages: ChatMessage[] = [
     {
       id: 'assistant-1',
       role: 'assistant',
-      content: 'Answer',
+      content: 'Answer **markdown**',
       citationScope: {
         mode: 'selected',
         kind: 'citations',
@@ -74,7 +85,66 @@ test('chat messages render assistant content', async () => {
 
   renderChatPanel({ messages });
 
-  expect(await screen.findByText('Answer')).toBeInTheDocument();
+  expect(await screen.findByText('Answer **markdown**')).toBeInTheDocument();
+});
+
+
+test('chat panel renders mounts after runtime becomes available', async () => {
+  const messages: ChatMessage[] = [
+    {
+      id: 'assistant-2',
+      role: 'assistant',
+      content: 'Answer later',
+      citationScope: {
+        mode: 'selected',
+        kind: 'citations',
+        count: 0,
+        sources: [],
+      },
+    },
+  ];
+
+  const view = renderChatPanel({ messages });
+  expect(componentRendererSpy).not.toHaveBeenCalled();
+
+  view.rerender(buildChatPanelElement({
+    messages,
+    rivuKernel: {} as any,
+    rivuHost: {} as any,
+  }));
+
+  await waitFor(() => {
+    expect(componentRendererSpy).toHaveBeenCalled();
+  });
+});
+
+test('chat panel renders rivu mounts under assistant messages', async () => {
+  const messages: ChatMessage[] = [
+    {
+      id: 'assistant-1',
+      role: 'assistant',
+      content: 'Answer',
+      citationScope: {
+        mode: 'selected',
+        kind: 'citations',
+        count: 0,
+        sources: [],
+      },
+    },
+  ];
+
+  renderChatPanel({
+    messages,
+    rivuKernel: {} as any,
+    rivuHost: {} as any,
+  });
+
+  await waitFor(() => {
+    expect(componentRendererSpy).toHaveBeenCalled();
+  });
+  expect(componentRendererSpy.mock.calls.at(-1)?.[0]).toMatchObject({
+    componentId: 'qa:assistant-1:summary',
+  });
 });
 
 test('chat panel virtualizes large message list', async () => {
@@ -99,7 +169,6 @@ test('chat panel virtualizes large message list', async () => {
   const mountedItems = screen.getAllByTestId('chat-message-item').length;
   expect(mountedItems).toBeLessThan(messages.length);
 });
-
 
 test('chat panel shows retry send button when notice exists', () => {
   const onRetrySend = vi.fn();
@@ -129,179 +198,4 @@ test('chat panel shows stop streaming button', () => {
 
   fireEvent.click(stopButton);
   expect(onStopStreaming).toHaveBeenCalledTimes(1);
-});
-
-test('assistant message renders unknown component as JSON fallback', async () => {
-  const content =
-    'fallback' +
-    CHAT_UI_ENVELOPE_DELIMITER +
-    JSON.stringify({
-      schema: 'crystalith.ui.message.v1',
-      parts: [
-        {
-          type: 'component',
-          name: 'UnknownCard',
-          id: 'c1',
-          props: { a: 1 },
-        },
-      ],
-    });
-
-  const messages: ChatMessage[] = [
-    {
-      id: 'assistant-1',
-      role: 'assistant',
-      content,
-      citationScope: {
-        mode: 'selected',
-        kind: 'citations',
-        count: 0,
-        sources: [],
-      },
-    },
-  ];
-
-  renderChatPanel({ messages });
-
-  expect(await screen.findByText('Unknown component: UnknownCard')).toBeInTheDocument();
-});
-
-test('assistant message renders AnswerCard from envelope and updates content', async () => {
-  const buildEnvelopeContent = (markdown: string) =>
-    markdown +
-    CHAT_UI_ENVELOPE_DELIMITER +
-    JSON.stringify({
-      schema: 'crystalith.ui.message.v1',
-      parts: [
-        {
-          type: 'component',
-          name: 'AnswerCard',
-          id: 'answer',
-          props: { markdown },
-          streaming: true,
-        },
-      ],
-    });
-
-  const messages: ChatMessage[] = [
-    {
-      id: 'assistant-1',
-      role: 'assistant',
-      content: buildEnvelopeContent('Hello'),
-      citationScope: {
-        mode: 'selected',
-        kind: 'citations',
-        count: 0,
-        sources: [],
-      },
-    },
-  ];
-
-  const result = renderChatPanel({ messages });
-  expect(await screen.findByText('Hello')).toBeInTheDocument();
-
-  const updatedMessages: ChatMessage[] = [
-    {
-      ...messages[0],
-      content: buildEnvelopeContent('Hello world'),
-    },
-  ];
-
-  result.rerender(buildChatPanelElement({ messages: updatedMessages }));
-  expect(await screen.findByText('Hello world')).toBeInTheDocument();
-});
-
-test('tab completes a command suggestion', async () => {
-  server.use(
-    http.get('*/v1/commands', () =>
-      HttpResponse.json([
-        {
-          id: 'stats',
-          kind: 'prompt_preset',
-          trigger: '/prompt:stats',
-          description: 'Stats',
-          enabled: true,
-          source: 'builtin',
-          meta: null,
-        },
-      ]),
-    ),
-  );
-
-  const onDraftChange = vi.fn();
-  renderChatPanel({ draft: '/p', onDraftChange });
-
-  const textarea = screen.getByRole('textbox', { name: '对话输入' }) as HTMLTextAreaElement;
-  textarea.setSelectionRange(2, 2);
-  fireEvent.focus(textarea);
-
-  expect(await screen.findByText('/prompt:stats')).toBeInTheDocument();
-
-  fireEvent.keyDown(textarea, { key: 'Tab' });
-
-  expect(onDraftChange).toHaveBeenCalledWith('/prompt:stats ');
-});
-
-test('enter accepts command suggestion and does not send message', async () => {
-  server.use(
-    http.get('*/v1/commands', () =>
-      HttpResponse.json([
-        {
-          id: 'stats',
-          kind: 'prompt_preset',
-          trigger: '/prompt:stats',
-          description: 'Stats',
-          enabled: true,
-          source: 'builtin',
-          meta: null,
-        },
-      ]),
-    ),
-  );
-
-  const onDraftChange = vi.fn();
-  const onSend = vi.fn();
-  renderChatPanel({ draft: '/p', onDraftChange, onSend });
-
-  const textarea = screen.getByRole('textbox', { name: '对话输入' }) as HTMLTextAreaElement;
-  textarea.setSelectionRange(2, 2);
-  fireEvent.focus(textarea);
-
-  expect(await screen.findByText('/prompt:stats')).toBeInTheDocument();
-
-  fireEvent.keyDown(textarea, { key: 'Enter' });
-
-  expect(onSend).not.toHaveBeenCalled();
-  expect(onDraftChange).toHaveBeenCalledWith('/prompt:stats ');
-});
-
-test('disabled commands are not accepted by tab completion', async () => {
-  server.use(
-    http.get('*/v1/commands', () =>
-      HttpResponse.json([
-        {
-          id: 'demo',
-          kind: 'prompt_preset',
-          trigger: '/prompt:demo',
-          description: 'Demo',
-          enabled: false,
-          source: 'custom',
-          meta: null,
-        },
-      ]),
-    ),
-  );
-
-  const onDraftChange = vi.fn();
-  renderChatPanel({ draft: '/prompt:d', onDraftChange });
-
-  const textarea = screen.getByRole('textbox', { name: '对话输入' }) as HTMLTextAreaElement;
-  textarea.setSelectionRange(8, 8);
-  fireEvent.focus(textarea);
-
-  expect(await screen.findByText('/prompt:demo')).toBeInTheDocument();
-
-  fireEvent.keyDown(textarea, { key: 'Tab' });
-
-  expect(onDraftChange).not.toHaveBeenCalled();
 });

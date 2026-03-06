@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.db import Session
+from crystalith.shared.ui_state import build_default_shared_state
 
 
 async def create_session(
@@ -12,7 +13,12 @@ async def create_session(
     notebook_id: int,
     title: str | None,
 ) -> Session:
-    db_session = Session(notebook_id=notebook_id, title=title)
+    db_session = Session(
+        notebook_id=notebook_id,
+        title=title,
+        shared_state=build_default_shared_state(),
+        shared_state_revision=0,
+    )
     session.add(db_session)
     await session.commit()
     await session.refresh(db_session)
