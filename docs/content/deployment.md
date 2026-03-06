@@ -14,6 +14,10 @@ cp config/secrets.yaml.example config/secrets.yaml
 docker compose --env-file .env -f deployments/prod/docker-compose.yml up -d --build
 ```
 
+Note:
+- The default deployment images are **core-only**. Optional capabilities (studio tool output types, PDF/HTML/media parsers, URL fetch extractors) live in official plugins.
+- For a “full capability” self-host, build a custom API image that installs `crystalith[official-full]` (or the smaller `official-*` bundles) and ensure plugins are enabled via `config/app.yaml`.
+
 Build note (China mirrors):
 - By default, the Dockerfiles may use China mirrors to speed up builds.
 - In CI, mirrors are disabled automatically.

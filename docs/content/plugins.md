@@ -1,12 +1,34 @@
 # Plugins
 
-Crystalith supports a small backend-only plugin system for extending:
+Crystalith supports a backend plugin system (Python `entry_points`) for extending:
 
 - AI providers (chat + embeddings)
 - Document parsers (file ingestion)
 - Output generation schemas (override existing output types)
+- Web content extractors (URL fetch mode)
 
 Plugins are discovered via Python `entry_points` at app startup.
+
+## Official plugin suite
+
+This repo ships a set of **official, optional capability plugins** under `backend/py/plugins/*`.
+
+Install profiles:
+
+- Core-only: `pip install crystalith` (minimal ingestion + minimal outputs; default docker image)
+- Official full (recommended): `pip install 'crystalith[official-full]'`
+- Smaller bundles: `official-outputs`, `official-parsers`, `official-extractors`
+
+Official plugin ids follow a stable naming convention:
+
+- Output types: `output-<type>` (e.g. `output-quiz`)
+- Parsers: `parser-<kind>` (e.g. `parser-pdf`)
+- Web extractors: `extractor-<kind>` (e.g. `extractor-trafilatura`)
+
+When capabilities are missing or skipped, the API exposes actionable hints:
+
+- `GET /v1/workspace/tools` → `diagnostics.plugins` + `diagnostics.official`
+- `GET /v1/notebooks/{notebook_id}/sources/extractors` → per-extractor `error_code` + `recovery_hint`
 
 ## 1) Discovery
 
@@ -28,16 +50,22 @@ models:
       roles: [chat]
 ```
 
-## 2) Enable / Disable
+## 2) Enable / Disable / Order
 
 Use `plugins.enabled` (allowlist) or `plugins.disabled` (denylist):
 
 ```yaml
 plugins:
-  disabled: ["my-provider"]
+  enabled: ["output-faq", "parser-pdf", "extractor-trafilatura"]
+  disabled: ["output-quiz"]
+  # Optional deterministic order for conflict resolution.
+  # Plugins listed here (and enabled) are loaded last, in the given order.
+  # Under last-wins conflict resolution, later plugins win.
+  load_order: ["output-faq"]
 ```
 
-If `plugins.enabled` is set, only those ids are loaded.
+- If `plugins.enabled` is set, only those ids are loaded.
+- `plugins.disabled` always skips matching ids.
 
 ## 3) Interfaces
 
@@ -164,6 +192,19 @@ class MyPlugin:
 
 plugin = MyPlugin()
 ```
+
+### WebExtractorPlugin
+
+Implement a factory with:
+
+- `extractor_type: str` (e.g. `"trafilatura"`)
+- `display_name: str | None` / `description: str | None` (optional UI metadata)
+- `requires_api_key: bool` / `requires_service: bool` (UI hints)
+- `create_extractor(settings, url_fetch_security=...) -> Extractor`
+
+Notes:
+- The host `ExtractorFactory` owns fallback/retry semantics and SSRF redirect revalidation.
+- Notebook-level enablement is controlled by `PATCH /v1/notebooks/{notebook_id}/sources/extractors` (`mode=inherit_global|custom`).
 
 ## 4) Example plugin
 
