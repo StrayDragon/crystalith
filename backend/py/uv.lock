@@ -27,6 +27,7 @@ members = [
     "crystalith-parser-html",
     "crystalith-parser-media",
     "crystalith-parser-pdf",
+    "crystalith-slides-slidev",
 ]
 
 [[package]]
@@ -979,6 +980,7 @@ official-full = [
     { name = "crystalith-parser-html" },
     { name = "crystalith-parser-media" },
     { name = "crystalith-parser-pdf" },
+    { name = "crystalith-slides-slidev" },
 ]
 official-outputs = [
     { name = "crystalith-output-briefing" },
@@ -997,6 +999,9 @@ official-parsers = [
     { name = "crystalith-parser-media" },
     { name = "crystalith-parser-pdf" },
 ]
+official-slides = [
+    { name = "crystalith-slides-slidev" },
+]
 redis = [
     { name = "redis" },
 ]
@@ -1014,6 +1019,7 @@ dev = [
     { name = "crystalith-parser-html" },
     { name = "crystalith-parser-media" },
     { name = "crystalith-parser-pdf" },
+    { name = "crystalith-slides-slidev" },
     { name = "freezegun" },
     { name = "jinja2sql" },
     { name = "pytest" },
@@ -1064,6 +1070,8 @@ requires-dist = [
     { name = "crystalith-parser-media", marker = "extra == 'official-parsers'", editable = "plugins/crystalith-parser-media" },
     { name = "crystalith-parser-pdf", marker = "extra == 'official-full'", editable = "plugins/crystalith-parser-pdf" },
     { name = "crystalith-parser-pdf", marker = "extra == 'official-parsers'", editable = "plugins/crystalith-parser-pdf" },
+    { name = "crystalith-slides-slidev", marker = "extra == 'official-full'", editable = "plugins/crystalith-slides-slidev" },
+    { name = "crystalith-slides-slidev", marker = "extra == 'official-slides'", editable = "plugins/crystalith-slides-slidev" },
     { name = "fastapi", specifier = ">=0.117.1" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "jsonschema", specifier = ">=4.26.0" },
@@ -1083,7 +1091,7 @@ requires-dist = [
     { name = "tiktoken", specifier = ">=0.12.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0" },
 ]
-provides-extras = ["official-outputs", "official-parsers", "official-extractors", "official-full", "browserless", "redis"]
+provides-extras = ["official-slides", "official-outputs", "official-parsers", "official-extractors", "official-full", "browserless", "redis"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1098,6 +1106,7 @@ dev = [
     { name = "crystalith-parser-html", editable = "plugins/crystalith-parser-html" },
     { name = "crystalith-parser-media", editable = "plugins/crystalith-parser-media" },
     { name = "crystalith-parser-pdf", editable = "plugins/crystalith-parser-pdf" },
+    { name = "crystalith-slides-slidev", editable = "plugins/crystalith-slides-slidev" },
     { name = "freezegun", specifier = ">=1.5.1" },
     { name = "jinja2sql", specifier = ">=0.3.4" },
     { name = "pytest", specifier = ">=8.4.1" },
@@ -1296,6 +1305,21 @@ dependencies = [
 requires-dist = [
     { name = "crystalith", editable = "." },
     { name = "pypdf", specifier = ">=4.3.1" },
+]
+
+[[package]]
+name = "crystalith-slides-slidev"
+version = "0.1.0"
+source = { editable = "plugins/crystalith-slides-slidev" }
+dependencies = [
+    { name = "crystalith" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "crystalith", editable = "." },
+    { name = "pydantic", specifier = ">=2.0.0" },
 ]
 
 [[package]]

@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 class ErrorResponse(BaseModel):
     error_code: str
     message: str
+    hint: str | None = None
     details: object | None = None
     retry_after: int | None = Field(default=None, ge=0)
 
@@ -195,6 +196,7 @@ def build_error_response(
         model = ErrorResponse(
             error_code=str(detail.get("error_code") or error_code_for_status(status_code)),
             message=str(detail.get("message") or default_message_for_status(status_code)),
+            hint=str(detail.get("hint")) if detail.get("hint") is not None else None,
             details=detail.get("details"),
             retry_after=parse_retry_after(detail.get("retry_after")) or retry_after,
         )

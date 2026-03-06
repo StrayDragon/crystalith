@@ -8,6 +8,17 @@ from crystalith.shared.config import Settings
 from crystalith.shared.search import SearXNGSearcher
 
 
+class _AsyncStreamResponse:
+    def __init__(self, status_code: int) -> None:
+        self.status_code = status_code
+
+    async def __aenter__(self) -> "_AsyncStreamResponse":
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):  # noqa: ANN001, ARG002
+        return False
+
+
 @pytest.mark.asyncio
 async def test_searxng_searcher_validates_query() -> None:
     searcher = SearXNGSearcher(host="http://localhost:8888")
@@ -53,10 +64,7 @@ async def test_searxng_searcher_rejects_unconfigured_host() -> None:
 
 
 @pytest.mark.asyncio
-async def test_searxng_searcher_resolves_host_from_endpoint_candidates(monkeypatch: pytest.MonkeyPatch) -> None:
-    class _Resp:
-        status_code = 200
-
+async def test_searxng_searcher_accepts_empty_query_healthcheck_response(monkeypatch: pytest.MonkeyPatch) -> None:
     class _Client:
         def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
             pass
@@ -67,8 +75,32 @@ async def test_searxng_searcher_resolves_host_from_endpoint_candidates(monkeypat
         async def __aexit__(self, exc_type, exc, tb):  # noqa: ANN001, ARG002
             return False
 
-        async def get(self, url: str):  # noqa: ARG002
-            return _Resp()
+        def stream(self, method: str, url: str):  # noqa: ARG002
+            return _AsyncStreamResponse(400)
+
+    import httpx
+
+    monkeypatch.setattr(httpx, "AsyncClient", _Client)
+
+    searcher = SearXNGSearcher(host="", endpoint_candidates=["http://a/"], timeout=1)
+    resolved = await searcher._resolve_host()
+    assert resolved == "http://a"
+
+
+@pytest.mark.asyncio
+async def test_searxng_searcher_resolves_host_from_endpoint_candidates(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _Client:
+        def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
+            pass
+
+        async def __aenter__(self):  # noqa: ANN001
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):  # noqa: ANN001, ARG002
+            return False
+
+        def stream(self, method: str, url: str):  # noqa: ARG002
+            return _AsyncStreamResponse(200)
 
     # Mock reason: deterministic reachability probe without external SearXNG dependency.
     import httpx
@@ -115,10 +147,7 @@ async def test_searxng_searcher_resolve_host_returns_existing_host_inside_lock()
 
 @pytest.mark.asyncio
 async def test_searxng_searcher_resolves_host_skipping_failures(monkeypatch: pytest.MonkeyPatch) -> None:
-    calls = {"get": 0}
-
-    class _Resp:
-        status_code = 204
+    calls = {"stream": 0}
 
     class _Client:
         def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
@@ -130,11 +159,11 @@ async def test_searxng_searcher_resolves_host_skipping_failures(monkeypatch: pyt
         async def __aexit__(self, exc_type, exc, tb):  # noqa: ANN001, ARG002
             return False
 
-        async def get(self, url: str):  # noqa: ARG002
-            calls["get"] += 1
-            if calls["get"] == 1:
+        def stream(self, method: str, url: str):  # noqa: ARG002
+            calls["stream"] += 1
+            if calls["stream"] == 1:
                 raise RuntimeError("boom")
-            return _Resp()
+            return _AsyncStreamResponse(204)
 
     # Mock reason: cover exception path in the probe loop without external SearXNG dependency.
     import httpx
@@ -144,14 +173,11 @@ async def test_searxng_searcher_resolves_host_skipping_failures(monkeypatch: pyt
     searcher = SearXNGSearcher(host="", endpoint_candidates=["http://bad", "http://good"], timeout=1)
     resolved = await searcher._resolve_host()
     assert resolved == "http://good"
-    assert calls["get"] == 2
+    assert calls["stream"] == 2
 
 
 @pytest.mark.asyncio
 async def test_searxng_searcher_reports_unreachable_endpoint_candidates(monkeypatch: pytest.MonkeyPatch) -> None:
-    class _Resp:
-        status_code = 503
-
     class _Client:
         def __init__(self, *args, **kwargs):  # noqa: ANN002, ANN003
             pass
@@ -162,8 +188,8 @@ async def test_searxng_searcher_reports_unreachable_endpoint_candidates(monkeypa
         async def __aexit__(self, exc_type, exc, tb):  # noqa: ANN001, ARG002
             return False
 
-        async def get(self, url: str):  # noqa: ARG002
-            return _Resp()
+        def stream(self, method: str, url: str):  # noqa: ARG002
+            return _AsyncStreamResponse(503)
 
     # Mock reason: cover the "configured but unreachable" error branch deterministically.
     import httpx

@@ -18,23 +18,25 @@ from cl_logs.logging import get_logger
 from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.models import ModelConfigurationError
 from crystalith.shared.cache import CacheProvider
+from crystalith.shared.config import Settings
+from crystalith.shared.json_types import JsonValue
 from crystalith.shared.observability import new_trace_id
 from crystalith.shared.deps import (
     get_cache_provider,
     get_db_session,
     get_embedding_provider,
+    get_plugin_registry,
     get_settings,
     get_stage_limiters,
     get_vector_store,
 )
 from crystalith.shared.db import Notebook, Output, Source, StudioSlide
+from crystalith.shared.plugins import PluginRegistry, SlidesWorkflowPlugin
 from crystalith.shared.types import SlideStage, SlideStatus
 from crystalith.shared.types import OutputType
 from .slides import (
     SlideGenerationConfig,
     SlideOutline,
-    generate_slides_markdown,
-    generate_slides_outline,
     write_preview_markdown,
     write_slide_markdown,
 )
@@ -58,7 +60,6 @@ def _env_bool(name: str, default: bool = False) -> bool:
 class SlideDraftCreate(BaseModel):
     title: str | None = None
     prompt: str | None = None
-    engine: str = Field("slidev", description="Rendering engine (default: slidev)")
     source_ids: list[int] | None = None
     generation_config: SlideGenerationConfig | None = None
 
@@ -66,7 +67,6 @@ class SlideDraftCreate(BaseModel):
 class SlideDraftUpdate(BaseModel):
     title: str | None = None
     prompt: str | None = None
-    engine: str | None = None
     source_ids: list[int] | None = None
     generation_config: SlideGenerationConfig | None = None
 
@@ -166,6 +166,37 @@ async def _validate_source_ids(
         raise HTTPException(status_code=400, detail="Unknown source_id in source_ids")
 
 
+def _plugin_default_generation_config(plugin: SlidesWorkflowPlugin) -> SlideGenerationConfig | None:
+    defaults = plugin.config_schema.defaults
+    if not defaults:
+        return None
+    return SlideGenerationConfig.model_validate(defaults)
+
+
+def _resolve_generation_config_payload(
+    *,
+    requested: SlideGenerationConfig | None,
+    plugin: SlidesWorkflowPlugin,
+) -> dict[str, JsonValue] | None:
+    config = requested or _plugin_default_generation_config(plugin)
+    if config is None:
+        return None
+    return config.model_dump(exclude_none=True)
+
+
+def _require_active_slides_plugin(
+    *,
+    settings: Settings,
+    plugins: PluginRegistry,
+    status_code: int = 409,
+) -> SlidesWorkflowPlugin:
+    selection = plugins.resolve_active_slides_workflow(settings)
+    plugin = selection.plugin
+    if plugin is None:
+        raise HTTPException(status_code=status_code, detail=selection.to_error_detail())
+    return plugin
+
+
 async def _sync_output(session: AsyncSession, slide: StudioSlide) -> Output:
     title = slide.title or "演示"
     outline = slide.outline or {}
@@ -227,8 +258,11 @@ async def create_draft(
     notebook_id: int,
     payload: SlideDraftCreate,
     session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
+    plugins: PluginRegistry = Depends(get_plugin_registry),
 ) -> SlideDraftRead:
     await _get_notebook(session, notebook_id)
+    plugin = _require_active_slides_plugin(settings=settings, plugins=plugins)
     normalized_source_ids = _normalize_source_ids(payload.source_ids)
     if not normalized_source_ids:
         raise HTTPException(status_code=400, detail="source_ids must not be empty")
@@ -237,9 +271,9 @@ async def create_draft(
         notebook_id=notebook_id,
         title=payload.title,
         prompt=payload.prompt,
-        engine=payload.engine,
+        engine=plugin.engine,
         source_ids=normalized_source_ids,
-        generation_config=payload.generation_config.model_dump() if payload.generation_config else None,
+        generation_config=_resolve_generation_config_payload(requested=payload.generation_config, plugin=plugin),
         stage=SlideStage.INPUT,
         status=SlideStatus.IDLE,
     )
@@ -271,8 +305,6 @@ async def update_draft(
         slide.title = payload.title
     if payload.prompt is not None:
         slide.prompt = payload.prompt
-    if payload.engine is not None:
-        slide.engine = payload.engine
     if payload.source_ids is not None:
         normalized_source_ids = _normalize_source_ids(payload.source_ids)
         if not normalized_source_ids:
@@ -330,14 +362,16 @@ async def generate_outline_stream(
     slide_id: int,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    settings=Depends(get_settings),
+    settings: Settings = Depends(get_settings),
     cache: CacheProvider = Depends(get_cache_provider),
     embedder=Depends(get_embedding_provider),
     vector_store=Depends(get_vector_store),
     limiters=Depends(get_stage_limiters),
+    plugins: PluginRegistry = Depends(get_plugin_registry),
     model_id: str | None = None,
 ) -> StreamingResponse:
     slide = await _get_slide(session, notebook_id, slide_id)
+    plugin = _require_active_slides_plugin(settings=settings, plugins=plugins)
     trace_id = new_trace_id()
     request_id = request.headers.get("x-request-id") or request.headers.get("x-correlation-id") or trace_id
     normalized_source_ids = _normalize_source_ids(slide.source_ids)
@@ -366,13 +400,14 @@ async def generate_outline_stream(
             embedder=embedder,
             cache=cache,
             limiters=limiters,
+            plugins=plugins,
         )
 
         yield _sse_event("progress", {"trace_id": trace_id, "stage": "outline", "message": "开始生成大纲", "progress": 5})
         yield _sse_event("toolcall", {"trace_id": trace_id, "name": "slides_generate_outline"})
 
         try:
-            outline, resolved_chunk_ids = await generate_slides_outline(
+            outline, resolved_chunk_ids = await plugin.generate_outline(
                 deps,
                 notebook_id=notebook_id,
                 title=slide.title,
@@ -385,6 +420,7 @@ async def generate_outline_stream(
                 timings_ms=timings_ms,
             )
             persist_started = perf_counter()
+            slide.engine = plugin.engine
             slide.outline = outline.model_dump()
             slide.stage = SlideStage.OUTLINE
             slide.status = SlideStatus.IDLE
@@ -426,14 +462,16 @@ async def generate_markdown_stream(
     slide_id: int,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    settings=Depends(get_settings),
+    settings: Settings = Depends(get_settings),
     cache: CacheProvider = Depends(get_cache_provider),
     embedder=Depends(get_embedding_provider),
     vector_store=Depends(get_vector_store),
     limiters=Depends(get_stage_limiters),
+    plugins: PluginRegistry = Depends(get_plugin_registry),
     model_id: str | None = None,
 ) -> StreamingResponse:
     slide = await _get_slide(session, notebook_id, slide_id)
+    plugin = _require_active_slides_plugin(settings=settings, plugins=plugins)
     trace_id = new_trace_id()
     request_id = request.headers.get("x-request-id") or request.headers.get("x-correlation-id") or trace_id
     normalized_source_ids = _normalize_source_ids(slide.source_ids)
@@ -465,6 +503,7 @@ async def generate_markdown_stream(
             embedder=embedder,
             cache=cache,
             limiters=limiters,
+            plugins=plugins,
         )
 
         outline = SlideOutline.model_validate(slide.outline)
@@ -473,7 +512,7 @@ async def generate_markdown_stream(
         yield _sse_event("toolcall", {"trace_id": trace_id, "name": "slides_generate_markdown"})
 
         try:
-            markdown, resolved_chunk_ids = await generate_slides_markdown(
+            markdown, resolved_chunk_ids = await plugin.generate_markdown(
                 deps,
                 notebook_id=notebook_id,
                 title=slide.title,
@@ -488,6 +527,7 @@ async def generate_markdown_stream(
                 timings_ms=timings_ms,
             )
             persist_started = perf_counter()
+            slide.engine = plugin.engine
             slide.markdown = markdown
             slide.stage = SlideStage.MARKDOWN
             slide.status = SlideStatus.IDLE

@@ -84,7 +84,7 @@ Security note: by default the API is **unauthenticated**. Do not expose `CL_WEB_
 - `deployments/prod/docker-compose.redis.yml`: redis cache
 - `deployments/prod/docker-compose.searxng.yml`: searxng web search
 - `deployments/prod/docker-compose.ollama.yml`: local ollama
-- `deployments/prod/docker-compose.slidev.yml`: slidev preview
+- `deployments/prod/docker-compose.slidev.yml`: slidev preview (and, by default, installs `official-slides` into the API image)
 - `deployments/prod/docker-compose.host-remap.yml`: host-network remap bridge
 
 Example: core + storage + redis + searxng + ollama
@@ -108,7 +108,7 @@ just dev-docker-up
 just DEV_OPTIONALS="storage" dev-docker-up
 just DEV_OPTIONALS="storage redis searxng" dev-docker-up
 just DEV_OPTIONALS="storage redis searxng ollama" dev-docker-up
-just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up
+CRYSTALITH_BACKEND_EXTRAS=official-slides just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up
 just DEV_OPTIONALS="storage redis" dev-docker-down
 ```
 

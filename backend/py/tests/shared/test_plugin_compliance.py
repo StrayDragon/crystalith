@@ -92,3 +92,26 @@ def test_check_plugin_validates_web_extractor_plugin_fields() -> None:
     assert "WebExtractorPlugin.requires_api_key must be a bool" in issues
     assert "WebExtractorPlugin.requires_service must be a bool" in issues
     assert "WebExtractorPlugin missing callable: create_extractor" in issues
+
+
+
+def test_check_plugin_validates_slides_workflow_plugin_fields() -> None:
+    class Plugin:
+        api_version = PLUGIN_API_VERSION
+        engine = ""
+        default_prompt = None
+        metadata = "bad"
+        config_schema = "bad"
+        preview_descriptor = "bad"
+        frontend_bundle = "bad"
+        generate_outline = 123
+        generate_markdown = 123
+
+    issues = check_plugin("slides", Plugin())
+    assert "SlidesWorkflowPlugin.engine must be a non-empty string" in issues
+    assert "SlidesWorkflowPlugin.metadata must be an OutputTypePluginMeta instance" in issues
+    assert "SlidesWorkflowPlugin.config_schema must be a PluginConfigSchema instance" in issues
+    assert "SlidesWorkflowPlugin.preview_descriptor must be a PreviewDescriptor instance" in issues
+    assert "SlidesWorkflowPlugin.frontend_bundle must be a FrontendBundleDescriptor instance" in issues
+    assert "SlidesWorkflowPlugin missing callable: generate_outline" in issues
+    assert "SlidesWorkflowPlugin missing callable: generate_markdown" in issues

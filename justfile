@@ -555,8 +555,13 @@ dev-deps-up *ARGS='':
         if python -c 'import socket, sys; host=sys.argv[1]; port=int(sys.argv[2]); s=socket.socket(); s.settimeout(0.2); s.connect((host, port)); s.close()' \
           "127.0.0.1" "$searxng_port" >/dev/null 2>&1
         then
-          if python -c 'import json, sys, urllib.request; data=json.loads(urllib.request.urlopen(sys.argv[1], timeout=3).read()); assert "results" in data' \
-            "http://127.0.0.1:${searxng_port}/search?q=ping&format=json" >/dev/null 2>&1
+          if python -c 'import sys, urllib.request, urllib.error; url=sys.argv[1]
+try:
+    urllib.request.urlopen(url, timeout=3).read(1)
+    raise SystemExit(0)
+except urllib.error.HTTPError as exc:
+    raise SystemExit(0 if exc.code == 400 else 1)' \
+            "http://127.0.0.1:${searxng_port}/search?q=&format=json" >/dev/null 2>&1
           then
             echo "[dev-deps-up] Detected existing searxng on :${searxng_port}; skipping deps overlay (searxng)."
             continue
@@ -686,7 +691,24 @@ dev-backend:
     fi
 
     if has_optional searxng; then
-      wait_http "http://127.0.0.1:${searxng_port}/search?q=ping&format=json" 60
+      if ! python -c 'import sys, time, urllib.request, urllib.error; url=sys.argv[1]; timeout_s=int(sys.argv[2]); start=time.time()
+while True:
+    try:
+        urllib.request.urlopen(url, timeout=2).read(1)
+        raise SystemExit(0)
+    except urllib.error.HTTPError as exc:
+        if exc.code == 400:
+            raise SystemExit(0)
+    except Exception:
+        pass
+    if time.time() - start >= timeout_s:
+        print(f"timeout waiting for http {url}", file=sys.stderr)
+        raise SystemExit(1)
+    time.sleep(1)' \
+        "http://127.0.0.1:${searxng_port}/search?q=&format=json" 60
+      then
+        exit 1
+      fi
     fi
 
     env_args=()

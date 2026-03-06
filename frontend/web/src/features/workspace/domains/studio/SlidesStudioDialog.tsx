@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import useSWR from 'swr';
 import {
   Button,
   Dialog,
@@ -20,15 +19,25 @@ import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 
 import { ModelSelector } from './ModelSelector';
-import type { GenerationPreferenceSetting, SlideDraft, SlideGenerationConfig, SlideOutline, SlideOutlineItem, SlideStage } from '../../shared/types';
+import type {
+  ConfigOption,
+  GenerationPreferenceSetting,
+  PreviewDescriptor,
+  SlideDraft,
+  SlideGenerationConfig,
+  SlideOutline,
+  SlideOutlineItem,
+  SlideStage,
+  WorkspaceTool,
+} from '../../shared/types';
 import {
   createDraftV1NotebooksNotebookIdSlidesDraftsPost as createSlidesDraft,
   getLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGet as getLatestSlidesDraft,
-  getSlidesConfigV1WorkspaceToolsSlidesConfigGet as getSlidesConfig,
   getDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGet as getSlidesDraft,
   updateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatch as updateSlidesDraft,
   updateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePut as updateSlidesOutline,
   updateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPut as updateSlidesMarkdown,
+  type WorkspaceToolsDiagnostics,
 } from '../../../../api/generated';
 import { unwrapData } from '../../../../api/unwrap';
 import { buildSlidevPreviewUrl } from '@crystalith-slidev';
@@ -38,76 +47,19 @@ import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
 import { toApiGenerationPreference, useGenerationPreference } from '../../shared/hooks/useGenerationPreference';
 import { buildFrontmatterPreview, normalizeGenerationConfig } from './utils/slides';
 
+
 const STAGES: { id: SlideStage; label: string }[] = [
   { id: 'input', label: '输入' },
   { id: 'outline', label: '大纲' },
   { id: 'markdown', label: 'Markdown' },
 ];
 
-type SlidesConfigOption = {
-  id: string;
-  label: string;
-  isDefault?: boolean;
-};
-
-type SlidesThemePreset = {
-  id: string;
-  label: string;
-  template: Record<string, any>;
-};
-
-type SlidesConfig = {
-  defaults: SlideGenerationConfig;
-  quantityOptions: SlidesConfigOption[];
-  audienceOptions: SlidesConfigOption[];
-  structureOptions: SlidesConfigOption[];
-  toneOptions: SlidesConfigOption[];
-  languageOptions: SlidesConfigOption[];
-  densityOptions: SlidesConfigOption[];
-  themePresetOptions: SlidesThemePreset[];
-};
-
-function normalizeSlidesConfig(raw: any): SlidesConfig | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const defaults = normalizeGenerationConfig(raw.defaults) ?? {};
-  const normalizeOption = (option: any) => ({
-    id: option.id,
-    label: option.label,
-    isDefault: option.is_default ?? option.isDefault ?? false,
-  });
-  const normalizeTheme = (option: any) => ({
-    id: option.id,
-    label: option.label,
-    template: option.template ?? {},
-  });
-  return {
-    defaults: {
-      preference: defaults.preference ?? null,
-      quantity: defaults.quantity ?? null,
-      audience: defaults.audience ?? null,
-      structure: defaults.structure ?? null,
-      tone: defaults.tone ?? null,
-      language: defaults.language ?? null,
-      density: defaults.density ?? null,
-      themePreset: defaults.themePreset ?? null,
-      frontmatter: defaults.frontmatter ?? '',
-    },
-    quantityOptions: (raw.quantity_options ?? []).map(normalizeOption),
-    audienceOptions: (raw.audience_options ?? []).map(normalizeOption),
-    structureOptions: (raw.structure_options ?? []).map(normalizeOption),
-    toneOptions: (raw.tone_options ?? []).map(normalizeOption),
-    languageOptions: (raw.language_options ?? []).map(normalizeOption),
-    densityOptions: (raw.density_options ?? []).map(normalizeOption),
-    themePresetOptions: (raw.theme_preset_options ?? []).map(normalizeTheme),
-  };
-}
-
 function resolveOptionId(
   value: string | null | undefined,
-  options: SlidesConfigOption[],
+  options: ConfigOption[],
 ): string {
   if (value && options.some((option) => option.id === value)) return value;
-  const fallback = options.find((option) => option.isDefault)?.id ?? options[0]?.id ?? '';
+  const fallback = options.find((option) => option.is_default)?.id ?? options[0]?.id ?? '';
   return fallback;
 }
 
@@ -118,7 +70,7 @@ function normalizeDraft(raw: any): SlideDraft {
     outputId: raw.output_id ?? raw.outputId ?? null,
     title: raw.title ?? null,
     prompt: raw.prompt ?? null,
-    engine: raw.engine ?? 'slidev',
+    engine: typeof raw.engine === 'string' ? raw.engine : '',
     chunkIds: raw.chunk_ids ?? raw.chunkIds ?? null,
     sourceIds: raw.source_ids ?? raw.sourceIds ?? null,
     outline: raw.outline ?? null,
@@ -147,6 +99,53 @@ function resolveErrorStatus(error: any): number | undefined {
   return undefined;
 }
 
+function appendRefreshToken(url: string, refreshKey: number): string {
+  try {
+    const resolved = new URL(
+      url,
+      typeof window !== 'undefined' ? window.location.origin : 'http://localhost',
+    );
+    resolved.searchParams.set('__refresh', String(refreshKey));
+    return resolved.toString();
+  } catch {
+    return url;
+  }
+}
+
+function buildSlidesPreviewUrl(
+  preview: PreviewDescriptor | null | undefined,
+  refreshKey: number,
+): string {
+  if (!preview || preview.kind !== 'external_url') return '';
+  if (preview.url) {
+    return appendRefreshToken(preview.url, refreshKey);
+  }
+  if (preview.service === 'slidev') {
+    return buildSlidevPreviewUrl(refreshKey);
+  }
+  return '';
+}
+
+function resolvePreviewProviderLabel(
+  preview: PreviewDescriptor | null | undefined,
+  engine: string | null | undefined,
+): string {
+  if (preview?.service?.trim()) return preview.service.trim();
+  if (engine?.trim()) return engine.trim();
+  return 'slides';
+}
+
+function resolveSlidesRecoveryHint(
+  toolsDiagnostics: WorkspaceToolsDiagnostics | null | undefined,
+): string {
+  return (
+    toolsDiagnostics?.slides?.hint ??
+    toolsDiagnostics?.slides?.message ??
+    toolsDiagnostics?.official?.['slides-slidev']?.hint ??
+    ''
+  );
+}
+
 interface SlidesStudioDialogProps {
   open: boolean;
   onClose: () => void;
@@ -154,6 +153,8 @@ interface SlidesStudioDialogProps {
   selectedSourceIds?: number[];
   isConnected: boolean;
   onOutputsUpdated: () => void;
+  slidesTool?: WorkspaceTool | null;
+  toolsDiagnostics?: WorkspaceToolsDiagnostics | null;
   openMode?: 'config' | 'preview';
   draftId?: number | null;
   queueStatus?: 'queued' | 'running' | 'error' | 'done' | 'cancelled' | null;
@@ -173,6 +174,8 @@ export default function SlidesStudioDialog({
   selectedSourceIds = [],
   isConnected,
   onOutputsUpdated,
+  slidesTool = null,
+  toolsDiagnostics = null,
   openMode = 'config',
   draftId = null,
   queueStatus = null,
@@ -217,23 +220,19 @@ export default function SlidesStudioDialog({
   const maxEvents = 200;
   const isConfigOnly = openMode === 'config';
   const isPreviewMode = openMode === 'preview';
-  const {
-    data: slidesConfigData,
-    error: slidesConfigError,
-    isLoading: slidesConfigLoading,
-  } = useSWR(
-    open && isConnected ? 'workspace/slides-config' : null,
-    () => unwrapData(getSlidesConfig<true>()),
-    {
-    revalidateOnFocus: false,
-    },
+  const slidesConfigLoading = false;
+  const slidesConfig = slidesTool?.configSchema ?? null;
+  const slidesRecoveryHint = useMemo(
+    () => resolveSlidesRecoveryHint(toolsDiagnostics),
+    [toolsDiagnostics],
   );
-  const slidesConfig = useMemo(() => normalizeSlidesConfig(slidesConfigData), [slidesConfigData]);
   const slidesConfigErrorMessage = !isConnected
     ? t('studio.slides.connection_required')
-    : slidesConfigError
-      ? '演示配置加载失败。'
-      : '';
+    : !slidesTool
+      ? slidesRecoveryHint || '演示能力当前不可用。'
+      : !slidesConfig
+        ? '演示配置不可用。'
+        : '';
 
   const selectionLabel = useMemo(() => {
     const draftSourceIds = isPreviewMode ? draft?.sourceIds ?? [] : [];
@@ -245,10 +244,10 @@ export default function SlidesStudioDialog({
   }, [draft?.sourceIds, isPreviewMode, selectedSourceIds]);
 
   const selectedThemePreset = useMemo(() => {
-    const options = slidesConfig?.themePresetOptions ?? [];
+    const options = slidesConfig?.theme_preset_options ?? [];
     if (!options.length) return null;
     return options.find((option) => option.id === configThemePreset) ?? options[0] ?? null;
-  }, [configThemePreset, slidesConfig?.themePresetOptions]);
+  }, [configThemePreset, slidesConfig?.theme_preset_options]);
   const configDefaults = slidesConfig?.defaults ?? null;
 
   const frontmatterPreview = useMemo(
@@ -266,7 +265,17 @@ export default function SlidesStudioDialog({
     [previewMarkdown, markdown],
   );
   const previewReady = Boolean(previewMarkdown);
-  const previewUrl = useMemo(() => buildSlidevPreviewUrl(previewKey), [previewKey]);
+  const previewDescriptor = slidesConfig?.preview ?? null;
+  const slidesEngine = draft?.engine || slidesConfig?.engine || null;
+  const previewProviderLabel = useMemo(
+    () => resolvePreviewProviderLabel(previewDescriptor, slidesEngine),
+    [previewDescriptor, slidesEngine],
+  );
+  const previewUrl = useMemo(
+    () => buildSlidesPreviewUrl(previewDescriptor, previewKey),
+    [previewDescriptor, previewKey],
+  );
+  const previewSupported = Boolean(previewUrl);
   const previewStatus = isPreviewSyncing ? '同步中' : previewReady ? '已同步' : '未同步';
   const hasSelectedSources = useMemo(() => {
     const draftSourceIds = draft?.sourceIds ?? [];
@@ -285,13 +294,13 @@ export default function SlidesStudioDialog({
 
   const resetDraftState = useCallback(() => {
     const defaults = configDefaults;
-    const quantityOptions = slidesConfig?.quantityOptions ?? [];
-    const audienceOptions = slidesConfig?.audienceOptions ?? [];
-    const structureOptions = slidesConfig?.structureOptions ?? [];
-    const toneOptions = slidesConfig?.toneOptions ?? [];
-    const languageOptions = slidesConfig?.languageOptions ?? [];
-    const densityOptions = slidesConfig?.densityOptions ?? [];
-    const themeOptions = slidesConfig?.themePresetOptions ?? [];
+    const quantityOptions = slidesConfig?.quantity_options ?? [];
+    const audienceOptions = slidesConfig?.audience_options ?? [];
+    const structureOptions = slidesConfig?.structure_options ?? [];
+    const toneOptions = slidesConfig?.tone_options ?? [];
+    const languageOptions = slidesConfig?.language_options ?? [];
+    const densityOptions = slidesConfig?.density_options ?? [];
+    const themeOptions = slidesConfig?.theme_preset_options ?? [];
     setDraft(null);
     setActiveStage('input');
     setLoading(false);
@@ -325,13 +334,13 @@ export default function SlidesStudioDialog({
 
   const applyGenerationConfig = useCallback((config: SlideGenerationConfig | null | undefined) => {
     const defaults = configDefaults;
-    const quantityOptions = slidesConfig?.quantityOptions ?? [];
-    const audienceOptions = slidesConfig?.audienceOptions ?? [];
-    const structureOptions = slidesConfig?.structureOptions ?? [];
-    const toneOptions = slidesConfig?.toneOptions ?? [];
-    const languageOptions = slidesConfig?.languageOptions ?? [];
-    const densityOptions = slidesConfig?.densityOptions ?? [];
-    const themeOptions = slidesConfig?.themePresetOptions ?? [];
+    const quantityOptions = slidesConfig?.quantity_options ?? [];
+    const audienceOptions = slidesConfig?.audience_options ?? [];
+    const structureOptions = slidesConfig?.structure_options ?? [];
+    const toneOptions = slidesConfig?.tone_options ?? [];
+    const languageOptions = slidesConfig?.language_options ?? [];
+    const densityOptions = slidesConfig?.density_options ?? [];
+    const themeOptions = slidesConfig?.theme_preset_options ?? [];
     const preferenceValue =
       config?.preference === 'quality' || config?.preference === 'speed'
         ? config.preference
@@ -439,25 +448,25 @@ export default function SlidesStudioDialog({
   useEffect(() => {
     if (!open || !slidesConfig) return;
     setConfigQuantity((prev) =>
-      prev || resolveOptionId(configDefaults?.quantity ?? null, slidesConfig.quantityOptions),
+      prev || resolveOptionId(configDefaults?.quantity ?? null, slidesConfig.quantity_options),
     );
     setConfigAudience((prev) =>
-      prev || resolveOptionId(configDefaults?.audience ?? null, slidesConfig.audienceOptions),
+      prev || resolveOptionId(configDefaults?.audience ?? null, slidesConfig.audience_options),
     );
     setConfigStructure((prev) =>
-      prev || resolveOptionId(configDefaults?.structure ?? null, slidesConfig.structureOptions),
+      prev || resolveOptionId(configDefaults?.structure ?? null, slidesConfig.structure_options),
     );
     setConfigTone((prev) =>
-      prev || resolveOptionId(configDefaults?.tone ?? null, slidesConfig.toneOptions),
+      prev || resolveOptionId(configDefaults?.tone ?? null, slidesConfig.tone_options),
     );
     setConfigLanguage((prev) =>
-      prev || resolveOptionId(configDefaults?.language ?? null, slidesConfig.languageOptions),
+      prev || resolveOptionId(configDefaults?.language ?? null, slidesConfig.language_options),
     );
     setConfigDensity((prev) =>
-      prev || resolveOptionId(configDefaults?.density ?? null, slidesConfig.densityOptions),
+      prev || resolveOptionId(configDefaults?.density ?? null, slidesConfig.density_options),
     );
     setConfigThemePreset((prev) =>
-      prev || resolveOptionId(configDefaults?.themePreset ?? null, slidesConfig.themePresetOptions),
+      prev || resolveOptionId(configDefaults?.themePreset ?? null, slidesConfig.theme_preset_options),
     );
     setConfigFrontmatter((prev) => prev || configDefaults?.frontmatter || '');
   }, [configDefaults, open, slidesConfig]);
@@ -848,6 +857,18 @@ export default function SlidesStudioDialog({
       setPreviewError(t('studio.slides.connection_required'));
       return;
     }
+    if (!slidesTool || !slidesConfig) {
+      setPreviewError(slidesConfigErrorMessage || '演示能力当前不可用。');
+      return;
+    }
+    if (!previewDescriptor) {
+      setPreviewError('当前 slides 插件未声明预览入口。');
+      return;
+    }
+    if (!previewSupported) {
+      setPreviewError(`当前 slides 插件声明了暂不支持的预览服务：${previewProviderLabel}。`);
+      return;
+    }
     if (!markdown.trim()) {
       setPreviewError('请先生成 Markdown。');
       return;
@@ -865,7 +886,18 @@ export default function SlidesStudioDialog({
     } finally {
       setIsPreviewSyncing(false);
     }
-  }, [draft?.markdown, handleSaveMarkdown, isConnected, markdown, previewMarkdown]);
+  }, [
+    handleSaveMarkdown,
+    isConnected,
+    markdown,
+    previewDescriptor,
+    previewProviderLabel,
+    previewSupported,
+    previewMarkdown,
+    slidesConfig,
+    slidesConfigErrorMessage,
+    slidesTool,
+  ]);
 
   const handlePreview = useCallback(() => {
     void buildPreview(false);
@@ -885,10 +917,11 @@ export default function SlidesStudioDialog({
   }, [buildPreview, draft?.id, isPreviewMode, markdown, open, previewMarkdown]);
 
   const handleOpenPreviewWindow = useCallback(() => {
-    if (!previewMarkdown) return;
-    const url = buildSlidevPreviewUrl(previewKey || Date.now());
+    if (!previewMarkdown || !previewSupported) return;
+    const url = buildSlidesPreviewUrl(previewDescriptor, previewKey || Date.now());
+    if (!url) return;
     window.open(url, '_blank', 'noopener,noreferrer');
-  }, [previewKey, previewMarkdown]);
+  }, [previewDescriptor, previewKey, previewMarkdown, previewSupported]);
 
   const handleAddSlide = () => {
     setOutlineItems((prev) => [...prev, { title: '', bullets: [] }]);
@@ -1014,7 +1047,7 @@ export default function SlidesStudioDialog({
             )}
             <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-slate-300">
               <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1">
-                引擎：{draft?.engine || 'slidev'}
+                引擎：{slidesEngine || '未配置'}
               </div>
               <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1">
                 状态：{queueLabel || '就绪'}
@@ -1024,7 +1057,7 @@ export default function SlidesStudioDialog({
           {showMarkdownEditor && (
             <div className="space-y-2">
               <Textarea
-                label="Slidev Markdown"
+                label="Slides Markdown"
                 value={markdown}
                 onChange={(event) => setMarkdown(event.target.value)}
                 rows={12}
@@ -1288,7 +1321,7 @@ export default function SlidesStudioDialog({
     return (
       <div className="space-y-4">
         <Textarea
-          label="Slidev Markdown"
+          label="Slides Markdown"
           value={markdown}
           onChange={(event) => setMarkdown(event.target.value)}
           rows={16}
@@ -1442,15 +1475,15 @@ export default function SlidesStudioDialog({
     return null;
   })();
   const configActionsDisabled =
-    !isConnected || slidesConfigLoading || Boolean(slidesConfigError) || !hasSelectedSources;
+    !isConnected || slidesConfigLoading || Boolean(slidesConfigErrorMessage) || !hasSelectedSources;
 
-  const quantityOptions = slidesConfig?.quantityOptions ?? [];
-  const structureOptions = slidesConfig?.structureOptions ?? [];
-  const audienceOptions = slidesConfig?.audienceOptions ?? [];
-  const toneOptions = slidesConfig?.toneOptions ?? [];
-  const languageOptions = slidesConfig?.languageOptions ?? [];
-  const densityOptions = slidesConfig?.densityOptions ?? [];
-  const themePresetOptions = slidesConfig?.themePresetOptions ?? [];
+  const quantityOptions = slidesConfig?.quantity_options ?? [];
+  const structureOptions = slidesConfig?.structure_options ?? [];
+  const audienceOptions = slidesConfig?.audience_options ?? [];
+  const toneOptions = slidesConfig?.tone_options ?? [];
+  const languageOptions = slidesConfig?.language_options ?? [];
+  const densityOptions = slidesConfig?.density_options ?? [];
+  const themePresetOptions = slidesConfig?.theme_preset_options ?? [];
 
   useFocusTrap({
     active: open,
@@ -1485,7 +1518,7 @@ export default function SlidesStudioDialog({
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <Chip value={draft?.engine || 'slidev'} size="sm" variant="ghost" />
+          <Chip value={slidesEngine || '未配置'} size="sm" variant="ghost" />
           <IconButton
             variant="text"
             size="sm"
@@ -1659,14 +1692,14 @@ export default function SlidesStudioDialog({
                   </div>
                 )}
                 <div className="mt-3 flex-1 min-h-0 rounded-lg border border-slate-200 bg-slate-900/5 overflow-hidden flex items-center justify-center p-3">
-                  {previewReady ? (
+                  {previewReady && previewSupported ? (
                     <div className="h-full w-auto max-w-full aspect-video rounded-lg overflow-hidden shadow-lg bg-white dark:bg-slate-800 relative">
                       <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-800 z-0">
                         <Spinner className="h-5 w-5 text-gray-400" />
                       </div>
                       <iframe
                         key={previewKey}
-                        title="Slidev 预览"
+                        title={`${previewProviderLabel} 预览`}
                         src={previewUrl}
                         className="h-full w-full border-0 bg-white dark:bg-slate-800 relative z-10"
                         loading="lazy"
@@ -1681,7 +1714,7 @@ export default function SlidesStudioDialog({
                     <div className="h-full w-full flex flex-col items-center justify-center gap-2 text-xs text-gray-500 dark:text-slate-400 px-6 text-center">
                       <span>暂无预览，请先生成 Markdown 或点击“同步预览”。</span>
                       <span className="text-[11px] text-gray-400 dark:text-slate-500">
-                        预览基于 Slidev 服务（本地开发默认 http://localhost:3030，Docker 部署默认 /slidev/）。
+                        {previewDescriptor ? `预览基于 ${previewProviderLabel} 服务。` : '当前 slides 插件未声明预览入口。'}
                       </span>
                     </div>
                   )}

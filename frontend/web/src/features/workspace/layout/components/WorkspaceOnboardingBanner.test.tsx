@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
@@ -8,7 +9,11 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-function renderBanner(readiness: WorkspaceReadiness, showReadyGuide = true) {
+function renderBanner(
+  readiness: WorkspaceReadiness,
+  showReadyGuide = true,
+  overrides: Partial<ComponentProps<typeof WorkspaceOnboardingBanner>> = {},
+) {
   const props = {
     readiness,
     showReadyGuide,
@@ -22,8 +27,12 @@ function renderBanner(readiness: WorkspaceReadiness, showReadyGuide = true) {
     onStartSession: vi.fn(),
     onFocusChat: vi.fn(),
     onOpenSlidesStudio: vi.fn(),
+    slidesAvailable: true,
+    slidesRecoveryHint: null,
+    onRecoverSlides: vi.fn(),
     onOpenCommandPalette: vi.fn(),
     onOpenShortcutHelp: vi.fn(),
+    ...overrides,
   };
   const view = render(<WorkspaceOnboardingBanner {...props} />);
   return { ...view, props };
@@ -59,4 +68,22 @@ test('renders not connected guide without dismiss button', () => {
   expect(screen.getByLabelText('Workspace 引导提示')).toBeInTheDocument();
   expect(screen.getByText('后端连接失败')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '关闭引导提示' })).toBeNull();
+});
+
+
+test('renders slides recovery CTA when slides tool is unavailable', () => {
+  const { props } = renderBanner(
+    { kind: 'ready', notebookId: 1 },
+    true,
+    {
+      slidesAvailable: false,
+      slidesRecoveryHint: 'pip install crystalith[official-slides]',
+    },
+  );
+
+  expect(screen.queryByRole('button', { name: '生成 Slides' })).toBeNull();
+  expect(screen.getByText('pip install crystalith[official-slides]')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: '查看 Slides 指引' }));
+  expect(props.onRecoverSlides).toHaveBeenCalledTimes(1);
 });

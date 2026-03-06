@@ -118,3 +118,67 @@ test('onGenerateRefine enqueues job with selected source ids', async () => {
     source_ids: [101, 102],
   });
 });
+
+
+test('normalizes slides tool config schema from workspace tools', async () => {
+  server.use(
+    http.get('*/v1/workspace/tools', () =>
+      HttpResponse.json({
+        tools: [
+          {
+            id: 'slides-slidev',
+            label: '演示',
+            description: '演示文稿',
+            tone: 'indigo',
+            output_type: 'SLIDES',
+            prompt: '生成 slides',
+            enabled: true,
+            config_schema: {
+              engine: 'slidev',
+              preview: {
+                kind: 'external_url',
+                service: 'slidev',
+              },
+              theme_preset_options: [
+                {
+                  id: 'default',
+                  label: 'Default',
+                },
+              ],
+            },
+          },
+        ],
+        diagnostics: {
+          plugins: {
+            loaded: ['slides-slidev'],
+            skipped: {},
+          },
+          slides: {
+            active_plugin_id: 'slides-slidev',
+            engine: 'slidev',
+          },
+        },
+      }),
+    ),
+  );
+
+  const { result } = renderHook(() => useRefine(), { wrapper: wrapSWR });
+
+  act(() => {
+    const s = useWorkspaceStore.getState();
+    s.setConnectionState('live');
+  });
+
+  await waitFor(() => {
+    expect(result.current.tools).toHaveLength(1);
+  });
+
+  expect(result.current.tools[0].configSchema?.theme_preset_options).toEqual([
+    {
+      id: 'default',
+      label: 'Default',
+      template: {},
+    },
+  ]);
+  expect(result.current.tools[0].configSchema?.preview?.service).toBe('slidev');
+});

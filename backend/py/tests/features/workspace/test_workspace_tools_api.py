@@ -19,12 +19,21 @@ async def test_workspace_tools_and_config(client):
 
 
 @pytest.mark.asyncio
-async def test_workspace_slides_config(client):
+async def test_workspace_slides_config_comes_from_unified_tool_config(client):
+    tools_resp = await client.get("/v1/workspace/tools")
+    assert tools_resp.status_code == 200
+    tools_payload = tools_resp.json()
+
+    slides_tool = next(tool for tool in tools_payload["tools"] if tool["output_type"] == "SLIDES")
+
     resp = await client.get("/v1/workspace/tools/slides/config")
     assert resp.status_code == 200
     payload = resp.json()
-    assert "defaults" in payload
-    assert payload["quantity_options"]
+    assert payload["tool_id"] == "slides"
+    assert payload["defaults"] == slides_tool["config_schema"]["defaults"]
+    assert payload["engine"] == slides_tool["config_schema"]["engine"]
+    assert payload["preview"] == slides_tool["config_schema"]["preview"]
+    assert payload["quantity_options"] == slides_tool["config_schema"]["quantity_options"]
 
 
 @pytest.mark.asyncio
@@ -35,10 +44,6 @@ async def test_tool_config_endpoint_matches_tools_config_schema(client):
 
     for tool in tools_payload["tools"]:
         tool_id = tool["id"]
-        if tool_id == "slides":
-            # `/v1/workspace/tools/slides/config` is reserved for the slides-specific
-            # configuration endpoint.
-            continue
         schema = tool.get("config_schema")
         assert schema is not None
 
@@ -51,3 +56,40 @@ async def test_tool_config_endpoint_matches_tools_config_schema(client):
         assert config.get("supports_topic") == schema.get("supports_topic")
         assert (config.get("quantity_options") or []) == (schema.get("quantity_options") or [])
         assert (config.get("difficulty_options") or []) == (schema.get("difficulty_options") or [])
+
+
+
+@pytest.mark.asyncio
+async def test_workspace_tools_reports_slides_unavailable_diagnostics(client, app) -> None:
+    from crystalith.shared.plugins import PluginRegistry
+
+    original_plugins = app.state.plugins
+    app.state.plugins = PluginRegistry()
+    try:
+        resp = await client.get("/v1/workspace/tools")
+    finally:
+        app.state.plugins = original_plugins
+
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert all(tool["output_type"] != "SLIDES" for tool in payload["tools"])
+    assert payload["diagnostics"]["slides"]["error_code"] == "slides_plugin_required"
+    assert payload["diagnostics"]["official"]["slides-slidev"]["status"] == "not_installed"
+
+
+@pytest.mark.asyncio
+async def test_workspace_slides_config_returns_structured_detail_when_unavailable(client, app) -> None:
+    from crystalith.shared.plugins import PluginRegistry
+
+    original_plugins = app.state.plugins
+    app.state.plugins = PluginRegistry()
+    try:
+        resp = await client.get("/v1/workspace/tools/slides/config")
+    finally:
+        app.state.plugins = original_plugins
+
+    assert resp.status_code == 404
+    payload = resp.json(); payload = payload.get("detail", payload)
+    assert payload["error_code"] == "slides_plugin_required"
+    assert "hint" in payload
+    assert payload["details"]["available_plugin_ids"] == []

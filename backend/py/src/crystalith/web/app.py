@@ -120,6 +120,7 @@ def _probe_http_endpoint(
     *,
     timeout_s: float,
     path: str | None = None,
+    healthy_status_codes: set[int] | None = None,
 ) -> tuple[bool, str | None]:
     if not endpoint:
         return False, "endpoint is empty"
@@ -133,10 +134,12 @@ def _probe_http_endpoint(
 
     try:
         with httpx.Client(timeout=max(0.1, timeout_s), follow_redirects=True) as client:
-            response = client.get(target)
-        if 200 <= response.status_code < 300:
+            with client.stream("GET", target) as response:
+                status_code = response.status_code
+        accepted_status_codes = set(healthy_status_codes or set())
+        if 200 <= status_code < 300 or status_code in accepted_status_codes:
             return True, None
-        return False, f"HTTP {response.status_code}"
+        return False, f"HTTP {status_code}"
     except Exception as exc:  # noqa: BLE001 - endpoint-specific failures are expected
         return False, str(exc)
 
@@ -469,15 +472,16 @@ async def _refresh_optional_services_status(
         service_timeout = max(0.1, float(searxng_probe["timeout_s"] or timeout_s))
         service_path = searxng_probe["path"]
         searxng["last_probe"] = probe_time
-        searxng_candidates = []
-        if settings.search.searxng.host:
-            searxng_candidates.append(settings.search.searxng.host)
-        searxng_candidates.extend(settings.search.searxng.endpoint_candidates)
-        searxng_candidates.extend(settings.optional_services.searxng.endpoint_candidates)
-        if settings.optional_services.searxng.endpoint:
-            searxng_candidates.append(settings.optional_services.searxng.endpoint)
-
-        ordered = order_endpoint_candidates(searxng_candidates)
+        searxng_host = (settings.search.searxng.host or "").strip()
+        if searxng_host:
+            ordered = [searxng_host]
+        else:
+            searxng_candidates = []
+            searxng_candidates.extend(settings.search.searxng.endpoint_candidates)
+            searxng_candidates.extend(settings.optional_services.searxng.endpoint_candidates)
+            if settings.optional_services.searxng.endpoint:
+                searxng_candidates.append(settings.optional_services.searxng.endpoint)
+            ordered = order_endpoint_candidates(searxng_candidates)
         if not ordered:
             searxng["healthy"] = False
             searxng["error"] = "endpoint is empty"
@@ -489,6 +493,7 @@ async def _refresh_optional_services_status(
                     candidate,
                     timeout_s=service_timeout,
                     path=service_path,
+                    healthy_status_codes={400},
                 )
                 if healthy:
                     searxng["endpoint"] = candidate
@@ -725,10 +730,10 @@ def create_app(
         return {"status": "ok"}
 
     @app.get("/health/dependencies", include_in_schema=False)
-    async def dependency_health() -> dict[str, object]:
+    async def dependency_health(force: bool = False) -> dict[str, object]:
         has_legacy_ollama_state = bool(app.state.ollama_hosts_status)
         monitor_enabled = _env_bool("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED", True)
-        needs_refresh = (
+        needs_refresh = force or (
             not monitor_enabled
             or (app.state.optional_services_last_probe is None and not has_legacy_ollama_state)
         )

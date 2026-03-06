@@ -79,7 +79,7 @@ With `just`:
 just DEV_OPTIONALS="storage" dev-docker-up
 just DEV_OPTIONALS="storage redis searxng" dev-docker-up
 just DEV_OPTIONALS="storage redis searxng ollama" dev-docker-up
-just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up
+CRYSTALITH_BACKEND_EXTRAS=official-slides just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up
 just DEV_OPTIONALS="storage redis" dev-docker-down
 ```
 
@@ -89,7 +89,7 @@ just DEV_OPTIONALS="storage redis" dev-docker-down
 - `redis`: enables redis cache via `config/app.yaml` (`cache.provider`, `cache.redis_url*`).
 - `searxng`: runs a local SearXNG instance for web search. External replacement is configured in `config/app.yaml` (`search.searxng.host` / `search.searxng.endpoint_candidates`).
 - `ollama`: runs local ollama. External replacement is configured in `config/app.yaml` (`optional_services.ollama.endpoint_candidates` and ollama model provider host).
-- `slidev`: local slide preview service.
+- `slidev`: local slide preview service. When this overlay is enabled, the API image defaults to installing `official-slides` unless `CRYSTALITH_BACKEND_EXTRAS` overrides it.
 - `host-remap`: host-network socat bridge for VPN/Tailscale scenarios.
 
 ## Overlay Enablement & Acceptance
@@ -144,9 +144,13 @@ Enable when you want built-in web search / deep research to run without an exter
 
 Enable when you want slide preview service in the same compose project.
 
-- Enable: add `-f deployments/prod/docker-compose.slidev.yml`.
+- Enable: add `-f deployments/prod/docker-compose.slidev.yml`. This overlay defaults `CRYSTALITH_BACKEND_EXTRAS=official-slides` for the API image so the `slides-slidev` workflow plugin is installed together with the preview service.
+- This overlay also rebuilds `api` with `CRYSTALITH_BACKEND_EXTRAS=official-slides` by default so the
+  `slides-slidev` workflow plugin is actually installed inside the backend container.
+- Override backend extras if needed: `CRYSTALITH_BACKEND_EXTRAS="official-slides ..."`.
 - Acceptance:
   - Verify the Slidev container is running: `docker compose ps slidev`
+  - Verify `/v1/workspace/tools` exposes `SLIDES` and diagnostics report `active: slides-slidev`
   - (Optional) check `http://localhost:${CL_SLIDEV_PORT:-3030}`.
 
 ### host-remap

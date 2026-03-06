@@ -8,10 +8,17 @@ from .interfaces import (
     OutputTypeFrontendBundle,
     OutputTypePlugin,
     ParserPlugin,
-    WebExtractorPlugin,
+    SlidesWorkflowPlugin,
     SUPPORTED_PLUGIN_API_VERSIONS,
+    WebExtractorPlugin,
 )
-from .render_types import FrontendBundleDescriptor, OutputTypePluginMeta, PluginConfigSchema, RenderDescriptor
+from .render_types import (
+    FrontendBundleDescriptor,
+    OutputTypePluginMeta,
+    PluginConfigSchema,
+    PreviewDescriptor,
+    RenderDescriptor,
+)
 
 
 def check_plugin(plugin_id: str, plugin: object) -> list[str]:
@@ -70,6 +77,26 @@ def check_plugin(plugin_id: str, plugin: object) -> list[str]:
             frontend_bundle = plugin.frontend_bundle
             if frontend_bundle is not None and not isinstance(frontend_bundle, FrontendBundleDescriptor):
                 issues.append("OutputTypePlugin.frontend_bundle must be a FrontendBundleDescriptor instance")
+
+    if isinstance(plugin, SlidesWorkflowPlugin):
+        has_interface = True
+        if not isinstance(plugin.engine, str) or not plugin.engine:
+            issues.append("SlidesWorkflowPlugin.engine must be a non-empty string")
+        metadata = plugin.metadata
+        if metadata is not None and not isinstance(metadata, OutputTypePluginMeta):
+            issues.append("SlidesWorkflowPlugin.metadata must be an OutputTypePluginMeta instance")
+        if not isinstance(plugin.config_schema, PluginConfigSchema):
+            issues.append("SlidesWorkflowPlugin.config_schema must be a PluginConfigSchema instance")
+        preview_descriptor = plugin.preview_descriptor
+        if preview_descriptor is not None and not isinstance(preview_descriptor, PreviewDescriptor):
+            issues.append("SlidesWorkflowPlugin.preview_descriptor must be a PreviewDescriptor instance")
+        frontend_bundle = plugin.frontend_bundle
+        if frontend_bundle is not None and not isinstance(frontend_bundle, FrontendBundleDescriptor):
+            issues.append("SlidesWorkflowPlugin.frontend_bundle must be a FrontendBundleDescriptor instance")
+        if not callable(plugin.generate_outline):
+            issues.append("SlidesWorkflowPlugin missing callable: generate_outline")
+        if not callable(plugin.generate_markdown):
+            issues.append("SlidesWorkflowPlugin missing callable: generate_markdown")
 
     if isinstance(plugin, WebExtractorPlugin):
         has_interface = True

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Literal, Protocol, cast
+from typing import Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -58,9 +57,19 @@ class OfficialPluginDiagnostic(BaseModel):
     details: dict[str, JsonValue] | None = None
 
 
+class SlidesWorkflowDiagnostic(BaseModel):
+    active_plugin_id: str | None = None
+    engine: str | None = None
+    error_code: str | None = None
+    message: str | None = None
+    hint: str | None = None
+    details: dict[str, JsonValue] | None = None
+
+
 class WorkspaceToolsDiagnostics(BaseModel):
     plugins: ToolsPluginDiagnostics
     official: dict[str, OfficialPluginDiagnostic] = Field(default_factory=dict)
+    slides: SlidesWorkflowDiagnostic | None = None
 
 
 class WorkspaceToolsResponse(BaseModel):
@@ -68,25 +77,9 @@ class WorkspaceToolsResponse(BaseModel):
     diagnostics: WorkspaceToolsDiagnostics
 
 
-class ConfigOption(BaseModel):
-    id: str
-    label: str
-    is_default: bool = False
-
-
-class ToolConfigResponse(BaseModel):
+class ToolConfigResponse(PluginConfigSchema):
     tool_id: str
     tool_label: str
-    quantity_options: list[ConfigOption] | None = None
-    difficulty_options: list[ConfigOption] | None = None
-    topic_placeholder: str | None = None
-    supports_topic: bool = True
-
-
-class _OptionLike(Protocol):
-    id: str
-    label: str
-    is_default: bool
 
 
 def _tool_from_output_plugin(
@@ -121,26 +114,36 @@ def _tool_from_output_plugin(
     )
 
 
-def _slides_tool(*, frontend_bundles_enabled: bool) -> WorkspaceTool:
-    meta = OutputType.SLIDES.meta
-    frontend_bundle = (
-        FrontendBundleDescriptor(id="output-slides", export="render") if frontend_bundles_enabled else None
-    )
+def _tool_from_slides_workflow(
+    *,
+    settings: Settings,
+    plugins: PluginRegistry,
+    frontend_bundles_enabled: bool,
+) -> WorkspaceTool | None:
+    selection = plugins.resolve_active_slides_workflow(settings)
+    plugin = selection.plugin
+    if plugin is None:
+        return None
+
+    fallback_meta = OutputType.SLIDES.meta
+    meta = plugin.metadata or OutputType.SLIDES.meta
+    frontend_bundle = plugin.frontend_bundle if frontend_bundles_enabled else None
+
     return WorkspaceTool(
         id=OutputType.SLIDES.value.lower(),
         label=meta.display_text,
         description=meta.description,
         tone=cast(ToolTone, meta.tone),
         output_type=OutputType.SLIDES,
-        prompt=meta.prompt,
+        prompt=(plugin.default_prompt or fallback_meta.prompt),
         render_descriptor=None,
-        config_schema=None,
+        config_schema=plugin.config_schema,
         frontend_bundle=frontend_bundle,
         enabled=True,
     )
 
 
-def _build_diagnostics(*, plugins: PluginRegistry) -> WorkspaceToolsDiagnostics:
+def _build_diagnostics(*, settings: Settings, plugins: PluginRegistry) -> WorkspaceToolsDiagnostics:
     report = plugins.get_load_report()
 
     skipped: dict[str, PluginSkipDetailResponse] = {}
@@ -176,9 +179,20 @@ def _build_diagnostics(*, plugins: PluginRegistry) -> WorkspaceToolsDiagnostics:
             details={"package": catalog_entry.package, "kind": catalog_entry.kind},
         )
 
+    slides_selection = plugins.resolve_active_slides_workflow(settings)
+    slides_diagnostic = SlidesWorkflowDiagnostic(
+        active_plugin_id=slides_selection.plugin_id,
+        engine=slides_selection.plugin.engine if slides_selection.plugin is not None else None,
+        error_code=slides_selection.error_code,
+        message=slides_selection.message,
+        hint=slides_selection.hint,
+        details=slides_selection.details or None,
+    )
+
     return WorkspaceToolsDiagnostics(
         plugins=ToolsPluginDiagnostics(loaded=loaded, skipped=skipped),
         official=official,
+        slides=slides_diagnostic,
     )
 
 
@@ -191,10 +205,14 @@ async def list_workspace_tools(
 
     tools: list[WorkspaceTool] = []
 
-    # Built-in tool (kept in this change): SLIDES
-    tools.append(_slides_tool(frontend_bundles_enabled=frontend_bundles_enabled))
+    slides_tool = _tool_from_slides_workflow(
+        settings=settings,
+        plugins=plugins,
+        frontend_bundles_enabled=frontend_bundles_enabled,
+    )
+    if slides_tool is not None:
+        tools.append(slides_tool)
 
-    # Plugin-provided tool output types
     order_index = {item.value: idx for idx, item in enumerate(OutputType)}
     for output_type in OutputType:
         if output_type == OutputType.SLIDES:
@@ -211,23 +229,36 @@ async def list_workspace_tools(
 
     return WorkspaceToolsResponse(
         tools=tools,
-        diagnostics=_build_diagnostics(plugins=plugins),
+        diagnostics=_build_diagnostics(settings=settings, plugins=plugins),
     )
 
 
 @router.get("/tools/{tool_id}/config", response_model=ToolConfigResponse)
 async def get_tool_config(
     tool_id: str,
+    settings: Settings = Depends(get_settings),
     plugins: PluginRegistry = Depends(get_plugin_registry),
 ) -> ToolConfigResponse:
     normalized = tool_id.strip().upper()
-    if normalized == OutputType.SLIDES.value:
-        raise HTTPException(status_code=404, detail="Use /v1/workspace/tools/slides/config")
 
     try:
         output_type = OutputType(normalized)
     except ValueError:
         raise HTTPException(status_code=404, detail="Tool not found") from None
+
+    if output_type == OutputType.SLIDES:
+        selection = plugins.resolve_active_slides_workflow(settings)
+        plugin = selection.plugin
+        if plugin is None:
+            raise HTTPException(status_code=404, detail=selection.to_error_detail())
+
+        meta = plugin.metadata or OutputType.SLIDES.meta
+        schema = plugin.config_schema
+        return ToolConfigResponse(
+            tool_id=tool_id,
+            tool_label=meta.display_text,
+            **schema.model_dump(),
+        )
 
     plugin = plugins.output_types.get(output_type.value)
     if plugin is None:
@@ -235,28 +266,10 @@ async def get_tool_config(
 
     meta = plugins.get_output_type_metadata(output_type.value)
     label = meta.display_text if meta is not None else output_type.value
-
-    schema = plugins.get_config_schema(output_type.value)
-
-    def _to_options(value: Sequence[_OptionLike] | None) -> list[ConfigOption] | None:
-        if not value:
-            return None
-        options: list[ConfigOption] = []
-        for option in value:
-            options.append(
-                ConfigOption(
-                    id=str(option.id),
-                    label=str(option.label),
-                    is_default=bool(option.is_default),
-                )
-            )
-        return options or None
+    schema = plugins.get_config_schema(output_type.value) or PluginConfigSchema()
 
     return ToolConfigResponse(
         tool_id=tool_id,
         tool_label=label,
-        quantity_options=_to_options(schema.quantity_options) if schema is not None else None,
-        difficulty_options=_to_options(schema.difficulty_options) if schema is not None else None,
-        topic_placeholder=schema.topic_placeholder if schema is not None else None,
-        supports_topic=bool(schema.supports_topic) if schema is not None else True,
+        **schema.model_dump(),
     )

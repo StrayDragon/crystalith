@@ -5,14 +5,24 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 from pydantic import BaseModel
 
 from crystalith.shared.config import ModelConfig, Settings
-from .render_types import FrontendBundleDescriptor, OutputTypePluginMeta, PluginConfigSchema, RenderDescriptor
+from crystalith.shared.json_types import JsonDict
+from .render_types import (
+    FrontendBundleDescriptor,
+    OutputTypePluginMeta,
+    PluginConfigSchema,
+    PreviewDescriptor,
+    RenderDescriptor,
+)
+
 if TYPE_CHECKING:
+    from crystalith.features.studio.slides.schemas import SlideGenerationConfig, SlideOutline
+    from crystalith.shared.agents.deps import StudioDeps
     from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
+    from crystalith.shared.config.models import UrlFetchSecuritySettings
     from crystalith.shared.extraction.interfaces import Extractor
     from crystalith.shared.parsers.interfaces import Parser
     from crystalith.shared.parsers.media import MediaFetcher
     from crystalith.shared.parsers.transcription import TranscriptionProvider
-    from crystalith.shared.config.models import UrlFetchSecuritySettings
 
 
 PLUGIN_API_VERSION = "v1"
@@ -102,6 +112,57 @@ class OutputTypeFrontendBundle(Protocol):
     """
 
     frontend_bundle: FrontendBundleDescriptor | None
+
+
+@runtime_checkable
+class SlidesWorkflowPlugin(Protocol):
+    """
+    Slides workflow plugin for the SLIDES tool.
+
+    Unlike OutputTypePlugin, this contract owns a multi-stage workflow:
+    draft config, outline generation, markdown generation, and preview metadata.
+    """
+
+    api_version: str
+
+    engine: str
+    default_prompt: str | None
+    metadata: OutputTypePluginMeta | None
+    config_schema: PluginConfigSchema
+    preview_descriptor: PreviewDescriptor | None
+    frontend_bundle: FrontendBundleDescriptor | None
+
+    async def generate_outline(
+        self,
+        deps: StudioDeps,
+        *,
+        notebook_id: int,
+        title: str | None,
+        prompt: str | None,
+        source_ids: list[int],
+        generation_config: SlideGenerationConfig | JsonDict | None = None,
+        model_id: str | None = None,
+        trace_id: str | None = None,
+        request_id: str | None = None,
+        timings_ms: dict[str, int] | None = None,
+    ) -> tuple[SlideOutline, list[int]]: ...
+
+    async def generate_markdown(
+        self,
+        deps: StudioDeps,
+        *,
+        notebook_id: int,
+        title: str | None,
+        prompt: str | None,
+        outline: SlideOutline,
+        source_ids: list[int],
+        chunk_ids: list[int] | None = None,
+        generation_config: SlideGenerationConfig | JsonDict | None = None,
+        model_id: str | None = None,
+        trace_id: str | None = None,
+        request_id: str | None = None,
+        timings_ms: dict[str, int] | None = None,
+    ) -> tuple[str, list[int]]: ...
 
 
 @runtime_checkable

@@ -22,6 +22,12 @@ def test_probe_http_endpoint_treats_4xx_as_unhealthy(monkeypatch: pytest.MonkeyP
     class _DummyResponse:
         status_code = 404
 
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):  # noqa: ANN001, ARG002
+            return False
+
     class _DummyClient:
         def __enter__(self):
             return self
@@ -29,13 +35,43 @@ def test_probe_http_endpoint_treats_4xx_as_unhealthy(monkeypatch: pytest.MonkeyP
         def __exit__(self, exc_type, exc, tb):  # noqa: ANN001
             return False
 
-        def get(self, url: str):  # noqa: ARG002
+        def stream(self, method: str, url: str):  # noqa: ARG002
             return _DummyResponse()
 
     monkeypatch.setattr(app_module.httpx, "Client", lambda **kwargs: _DummyClient())
     healthy, error = app_module._probe_http_endpoint("http://service.test", timeout_s=1.0)
     assert healthy is False
     assert error == "HTTP 404"
+
+
+def test_probe_http_endpoint_accepts_configured_status_codes(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _DummyResponse:
+        status_code = 400
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):  # noqa: ANN001, ARG002
+            return False
+
+    class _DummyClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):  # noqa: ANN001
+            return False
+
+        def stream(self, method: str, url: str):  # noqa: ARG002
+            return _DummyResponse()
+
+    monkeypatch.setattr(app_module.httpx, "Client", lambda **kwargs: _DummyClient())
+    healthy, error = app_module._probe_http_endpoint(
+        "http://service.test",
+        timeout_s=1.0,
+        healthy_status_codes={400},
+    )
+    assert healthy is True
+    assert error is None
 
 
 async def _create_test_db() -> tuple[tempfile.TemporaryDirectory[str], str]:

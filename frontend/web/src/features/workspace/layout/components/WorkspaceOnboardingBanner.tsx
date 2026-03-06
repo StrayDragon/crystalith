@@ -36,6 +36,9 @@ interface WorkspaceOnboardingBannerProps {
   onStartSession: () => void;
   onFocusChat: () => void;
   onOpenSlidesStudio: () => void;
+  slidesAvailable?: boolean;
+  slidesRecoveryHint?: string | null;
+  onRecoverSlides?: () => void;
   onOpenCommandPalette: () => void;
   onOpenShortcutHelp: () => void;
 }
@@ -79,6 +82,9 @@ export default function WorkspaceOnboardingBanner({
   onStartSession,
   onFocusChat,
   onOpenSlidesStudio,
+  slidesAvailable = false,
+  slidesRecoveryHint = null,
+  onRecoverSlides,
   onOpenCommandPalette,
   onOpenShortcutHelp,
 }: WorkspaceOnboardingBannerProps) {
@@ -98,6 +104,19 @@ export default function WorkspaceOnboardingBanner({
   }, []);
 
   const content = useMemo(() => {
+    const slidesHint = !slidesAvailable
+      ? (slidesRecoveryHint?.trim() || 'Slides 当前由插件提供，请先安装并启用对应插件。')
+      : null;
+    const slidesAction = slidesAvailable ? (
+      <ActionButton variant="secondary" onClick={onOpenSlidesStudio}>
+        {t('workspace.onboarding.generate_slides')}
+      </ActionButton>
+    ) : (
+      <ActionButton variant="secondary" onClick={onRecoverSlides ?? onOpenDiagnostics}>
+        {t('workspace.onboarding.recover_slides')}
+      </ActionButton>
+    );
+
     switch (readiness.kind) {
       case 'not_connected': {
         const title =
@@ -181,11 +200,18 @@ export default function WorkspaceOnboardingBanner({
               <ActionButton variant="secondary" onClick={onFocusChat}>
                 {t('workspace.onboarding.focus_chat')}
               </ActionButton>
-              <ActionButton variant="secondary" onClick={onOpenSlidesStudio}>
-                {t('workspace.onboarding.open_slides_studio')}
-              </ActionButton>
+              {slidesAvailable ? (
+                <ActionButton variant="secondary" onClick={onOpenSlidesStudio}>
+                  {t('workspace.onboarding.open_slides_studio')}
+                </ActionButton>
+              ) : (
+                <ActionButton variant="secondary" onClick={onRecoverSlides ?? onOpenDiagnostics}>
+                  {t('workspace.onboarding.recover_slides')}
+                </ActionButton>
+              )}
             </>
           ),
+          hint: slidesHint,
         } as const;
 
       case 'ready':
@@ -198,14 +224,13 @@ export default function WorkspaceOnboardingBanner({
               <ActionButton variant="primary" onClick={onFocusChat}>
                 {t('workspace.onboarding.ask_question')}
               </ActionButton>
-              <ActionButton variant="secondary" onClick={onOpenSlidesStudio}>
-                {t('workspace.onboarding.generate_slides')}
-              </ActionButton>
+              {slidesAction}
               <ActionButton variant="ghost" onClick={onOpenCommandPalette}>
                 {t('workspace.onboarding.command_palette')}
               </ActionButton>
             </>
           ),
+          hint: slidesHint,
         } as const;
 
       default:
@@ -221,10 +246,13 @@ export default function WorkspaceOnboardingBanner({
     onOpenDiagnostics,
     onOpenShortcutHelp,
     onOpenSlidesStudio,
+    onRecoverSlides,
     onRetryConnection,
     onStartSession,
     onUploadSources,
     readiness,
+    slidesAvailable,
+    slidesRecoveryHint,
   ]);
 
   if (!shouldRender || !content) return null;
@@ -249,6 +277,9 @@ export default function WorkspaceOnboardingBanner({
           <div className="mt-0.5 text-xs text-gray-700 dark:text-slate-300">
             {content.description}
           </div>
+          {content.hint ? (
+            <div className="mt-2 text-xs text-gray-600 dark:text-slate-400">{content.hint}</div>
+          ) : null}
           <div className="mt-2 flex flex-wrap gap-2">{content.actions}</div>
         </div>
 

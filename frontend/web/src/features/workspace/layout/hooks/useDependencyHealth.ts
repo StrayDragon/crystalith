@@ -80,10 +80,12 @@ export function toOptionalServiceDiagnostics(
   });
 }
 
-async function fetchDependencyHealth(): Promise<DependencyHealthResponse> {
-  const res = await fetch('/health/dependencies', {
+async function fetchDependencyHealth(force = false): Promise<DependencyHealthResponse> {
+  const query = force ? `?force=1&_ts=${Date.now()}` : '';
+  const res = await fetch(`/health/dependencies${query}`, {
     method: 'GET',
     headers: { accept: 'application/json' },
+    cache: force ? 'no-store' : 'default',
   });
   if (!res.ok) {
     throw new Error(`诊断请求失败（HTTP ${res.status}）`);
@@ -96,7 +98,7 @@ export function useDependencyHealth(options?: { enabled?: boolean }) {
 
   const swr = useSWR<DependencyHealthResponse>(
     enabled ? 'workspace/health/dependencies' : null,
-    fetchDependencyHealth,
+    () => fetchDependencyHealth(false),
     { revalidateOnFocus: false },
   );
 
@@ -104,6 +106,10 @@ export function useDependencyHealth(options?: { enabled?: boolean }) {
     data: swr.data ?? null,
     error: swr.error instanceof Error ? swr.error.message : (swr.error ? String(swr.error) : ''),
     isLoading: swr.isLoading,
-    refresh: swr.mutate,
+    refresh: async () => {
+      const next = await fetchDependencyHealth(true);
+      await swr.mutate(next, { revalidate: false, populateCache: true });
+      return next;
+    },
   };
 }

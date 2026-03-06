@@ -96,6 +96,7 @@ services:
         PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12-slim-trixie}
         APT_MIRROR: ${APT_MIRROR:-}
         UV_INDEX_URL: ${UV_INDEX_URL:-}
+        CRYSTALITH_BACKEND_EXTRAS: ${CRYSTALITH_BACKEND_EXTRAS:-}
     container_name: crystalith-api
     environment: *api-env
     volumes:

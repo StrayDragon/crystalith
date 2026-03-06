@@ -114,6 +114,8 @@ export default function DiagnosticsDialog({
     () => officialEntries.filter(([, item]) => item.status !== 'loaded'),
     [officialEntries],
   );
+  const slidesDiagnostic = useMemo(() => toolsDiagnostics?.slides ?? null, [toolsDiagnostics]);
+  const slidesOfficial = useMemo(() => toolsDiagnostics?.official?.['slides-slidev'] ?? null, [toolsDiagnostics]);
 
   const handleCopy = useCallback(async (value: string) => {
     await copyToClipboard(value);
@@ -387,6 +389,59 @@ export default function DiagnosticsDialog({
                       未检测到已加载插件（可能为 core-only 安装或连接未建立）。
                     </div>
                   )}
+                </div>
+
+                <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">Slides 工作流</div>
+                      <div className="mt-0.5 text-[11px] text-gray-700 dark:text-slate-300">
+                        {slidesDiagnostic?.active_plugin_id
+                          ? `active: ${slidesDiagnostic.active_plugin_id}${slidesDiagnostic.engine ? ` · engine: ${slidesDiagnostic.engine}` : ''}`
+                          : '当前未激活 slides workflow plugin'}
+                      </div>
+                    </div>
+                    <div
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${toneForPluginStatus(
+                        slidesDiagnostic?.active_plugin_id ? 'loaded' : slidesOfficial?.status ?? 'not_installed',
+                      ).bg} ${toneForPluginStatus(
+                        slidesDiagnostic?.active_plugin_id ? 'loaded' : slidesOfficial?.status ?? 'not_installed',
+                      ).text}`}
+                    >
+                      {slidesDiagnostic?.active_plugin_id
+                        ? '可用'
+                        : slidesOfficial?.status === 'loaded'
+                          ? '待配置'
+                          : slidesOfficial?.status === 'skipped'
+                            ? '已跳过'
+                            : '未安装'}
+                    </div>
+                  </div>
+                  {slidesDiagnostic?.error_code ? (
+                    <div className="mt-2 text-[11px] text-gray-700 dark:text-slate-300">
+                      <span className="font-mono">{slidesDiagnostic.error_code}</span>
+                      {slidesDiagnostic.message ? ` · ${slidesDiagnostic.message}` : ''}
+                    </div>
+                  ) : slidesDiagnostic?.message ? (
+                    <div className="mt-2 text-[11px] text-gray-700 dark:text-slate-300">{slidesDiagnostic.message}</div>
+                  ) : null}
+                  {slidesDiagnostic?.hint || slidesOfficial?.hint ? (
+                    <div className="mt-2 rounded-lg border border-amber-200 dark:border-amber-900/30 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 text-[11px] text-amber-800 dark:text-amber-200">
+                          {slidesDiagnostic?.hint ?? slidesOfficial?.hint}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void handleCopy(slidesDiagnostic?.hint ?? slidesOfficial?.hint ?? '')}
+                          className="px-2 py-1 rounded-md text-[11px] bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/30 hover:bg-amber-50 dark:hover:bg-amber-950/30 flex items-center gap-1"
+                        >
+                          <ContentCopyIcon sx={{ fontSize: 14 }} />
+                          {t('common.copy')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 {Object.entries(skippedPlugins).length > 0 ? (

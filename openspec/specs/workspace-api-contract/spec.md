@@ -152,12 +152,17 @@ citation 对象 MUST 在 QA/messages/outputs 等对外 API 中保持字段语义
 - **AND** 前端 SHALL 将 tools 列表视为权威来源，不得假设固定枚举集合
 
 ### Requirement: Workspace tools list returns available tools only
-`/v1/workspace/tools` 返回的 tools 列表 MUST 仅包含“当前可用”的工具项（可用 = core 内置能力 + 已安装且已启用、并通过兼容性门禁的插件能力）。
+`/v1/workspace/tools` 返回的 tools 列表 MUST 仅包含“当前可用”的工具项（可用 = core 内置能力 + 已安装且已启用、并通过兼容性门禁的插件能力）。对于 `SLIDES`，其可用性 MUST 由当前 active `SlidesWorkflowPlugin` 决定，而不是由 core 默认内置。
 
 #### Scenario: Disabled plugin removes tool but yields diagnostics
 - **WHEN** 某输出类型插件被禁用或加载失败
 - **THEN** tools 列表 SHALL 不包含该 tool
 - **AND** 响应中的 `diagnostics` SHALL 提供结构化诊断信息（error_code/message/hint/details）说明不可用原因与恢复提示
+
+#### Scenario: Missing or ambiguous slides plugin removes tool and yields diagnostics
+- **WHEN** 系统未加载任何可生效的 slides workflow plugin，或同时发现多个候选但未能唯一确定 active plugin
+- **THEN** tools 列表 SHALL 不包含 `SLIDES`
+- **AND** 响应中的 `diagnostics` SHALL 提供结构化诊断信息（error_code / message / hint / details）说明不可用原因与恢复提示
 
 ### Requirement: Tools endpoint exposes diagnostics in a machine-readable form
 `/v1/workspace/tools` 响应 MUST 暴露 `diagnostics` 字段，用于解释插件能力为什么可用/不可用，并为 UI 与自托管排障提供可执行提示。
@@ -169,7 +174,7 @@ citation 对象 MUST 在 QA/messages/outputs 等对外 API 中保持字段语义
 
 为覆盖“官方插件未安装（无 entry point，因此不会出现在 skipped）”的场景，`diagnostics` MUST 额外包含一个轻量的 official catalog（仅字符串/提示，不引入重依赖），用于给出明确的安装/启用指引。
 
-official catalog MUST 覆盖当前版本所定义的**全部官方插件**（不仅是本次迁移涉及的子集），以便 UI 能一致呈现官方能力矩阵与安装指引：
+official catalog MUST 覆盖当前版本所定义的**全部官方插件**，包括官方 slides workflow plugins，以便 UI 能一致呈现官方能力矩阵与安装指引：
 
 - `diagnostics.official: { [plugin_id: string]: { status: \"loaded\"|\"skipped\"|\"not_installed\", hint?: string, details?: object } }`
 
@@ -177,13 +182,7 @@ official catalog MUST 覆盖当前版本所定义的**全部官方插件**（不
 - **WHEN** 客户端收到 tools 响应
 - **THEN** 客户端 SHALL 能定位到缺失/禁用/未安装的插件条目
 - **AND** SHALL 能将其中的 hint 直接展示为用户可执行的恢复步骤
-
-### Requirement: SLIDES remains a built-in tool in this change
-在本变更范围内，`SLIDES` 工具 MUST 仍作为 core 内置能力存在（其工作流插件化由独立变更 `pluginize-slides-workflow` 处理）。
-
-#### Scenario: Core-only profile still exposes slides tool
-- **WHEN** 系统仅以 core-only 形态运行（未安装官方插件套件）
-- **THEN** `/v1/workspace/tools` 返回的 tools 列表 SHALL 仍包含 `SLIDES`
+- **AND** 对 `SLIDES` SHALL 能区分“未安装/未启用/未选定 active plugin”等不可用原因
 
 ### Requirement: Workspace tools can expose frontend_bundle descriptor
 `/v1/workspace/tools` 返回的 tool 对象 MUST 支持可选字段 `frontend_bundle`，用于声明该输出类型的前端渲染 bundle。
@@ -194,12 +193,17 @@ official catalog MUST 覆盖当前版本所定义的**全部官方插件**（不
 - **AND** `frontend_bundle` 缺省或为 null 时 SHALL 表示该 tool 没有可用的前端 bundle
 
 ### Requirement: Workspace tools expose a complete config_schema
-`/v1/workspace/tools` 返回的工具对象 MUST 包含可直接驱动 UI 的 `config_schema`（如支持主题、数量/难度选项与默认值）。
+`/v1/workspace/tools` 返回的工具对象 MUST 包含可直接驱动 UI 的 `config_schema`（如支持主题、数量/难度选项与默认值）。对于 `SLIDES`，该 `config_schema` MUST 覆盖 defaults、quantity / audience / structure / tone / language / density / theme / frontmatter，以及 active plugin 声明的 engine / preview 相关元数据；客户端 MUST NOT 依赖独立 slides config 端点。
 
 #### Scenario: Studio UI renders from tools list only
 - **WHEN** 客户端请求 `/v1/workspace/tools`
 - **THEN** 返回的每个 tool SHALL 包含其 `config_schema`（若该 tool 支持配置）
 - **AND** UI SHALL 能仅依赖该响应渲染配置弹窗而无需额外请求
+
+#### Scenario: Slides config is derived from tools response only
+- **WHEN** 客户端请求 `/v1/workspace/tools`
+- **THEN** `SLIDES` tool（若存在） SHALL 在其 `config_schema` 中返回完整配置语义
+- **AND** 客户端 SHALL 能仅依赖该响应渲染 slides 配置界面而无需额外请求
 
 ### Requirement: Tool config endpoint stays consistent (if present)
 若 `/v1/workspace/tools/{tool_id}/config` 端点存在，其返回值 MUST 与 tools 列表中的 `config_schema` 语义一致。

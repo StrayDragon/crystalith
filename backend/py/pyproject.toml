@@ -36,6 +36,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+official-slides = [
+    "crystalith-slides-slidev",
+]
 official-outputs = [
     "crystalith-output-faq",
     "crystalith-output-guide",
@@ -66,6 +69,7 @@ official-full = [
     "crystalith-output-mindmap",
     "crystalith-output-quiz",
     "crystalith-output-briefing",
+    "crystalith-slides-slidev",
     "crystalith-parser-pdf",
     "crystalith-parser-html",
     "crystalith-parser-media",
@@ -101,6 +105,7 @@ crystalith-output-briefing = { workspace = true }
 crystalith-output-quiz = { workspace = true }
 crystalith-output-timeline = { workspace = true }
 crystalith-output-mindmap = { workspace = true }
+crystalith-slides-slidev = { workspace = true }
 crystalith-parser-pdf = { workspace = true }
 crystalith-parser-html = { workspace = true }
 crystalith-parser-media = { workspace = true }
@@ -126,6 +131,7 @@ dev = [
     "crystalith-output-quiz",
     "crystalith-output-timeline",
     "crystalith-output-mindmap",
+    "crystalith-slides-slidev",
     "crystalith-parser-pdf",
     "crystalith-parser-html",
     "crystalith-parser-media",

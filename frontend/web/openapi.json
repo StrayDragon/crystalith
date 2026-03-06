@@ -1627,12 +1627,59 @@
       "PluginConfigSchema": {
         "additionalProperties": false,
         "properties": {
+          "audience_options": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigOption"
+            },
+            "title": "Audience Options",
+            "type": "array"
+          },
+          "defaults": {
+            "additionalProperties": true,
+            "title": "Defaults",
+            "type": "object"
+          },
+          "density_options": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigOption"
+            },
+            "title": "Density Options",
+            "type": "array"
+          },
           "difficulty_options": {
             "items": {
               "$ref": "#/components/schemas/ConfigOption"
             },
             "title": "Difficulty Options",
             "type": "array"
+          },
+          "engine": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Engine"
+          },
+          "language_options": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigOption"
+            },
+            "title": "Language Options",
+            "type": "array"
+          },
+          "preview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreviewDescriptor"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "quantity_options": {
             "items": {
@@ -1641,10 +1688,31 @@
             "title": "Quantity Options",
             "type": "array"
           },
+          "structure_options": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigOption"
+            },
+            "title": "Structure Options",
+            "type": "array"
+          },
           "supports_topic": {
             "default": true,
             "title": "Supports Topic",
             "type": "boolean"
+          },
+          "theme_preset_options": {
+            "items": {
+              "$ref": "#/components/schemas/ThemePresetOption"
+            },
+            "title": "Theme Preset Options",
+            "type": "array"
+          },
+          "tone_options": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigOption"
+            },
+            "title": "Tone Options",
+            "type": "array"
           },
           "topic_placeholder": {
             "default": "",
@@ -1696,6 +1764,51 @@
           "message"
         ],
         "title": "PluginSkipDetailResponse",
+        "type": "object"
+      },
+      "PreviewDescriptor": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "external_url",
+            "default": "external_url",
+            "title": "Kind",
+            "type": "string"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          },
+          "open_in_new_tab": {
+            "default": false,
+            "title": "Open In New Tab",
+            "type": "boolean"
+          },
+          "service": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Service"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "title": "PreviewDescriptor",
         "type": "object"
       },
       "PromptPresetCreate": {
@@ -2912,12 +3025,6 @@
       },
       "SlideDraftCreate": {
         "properties": {
-          "engine": {
-            "default": "slidev",
-            "description": "Rendering engine (default: slidev)",
-            "title": "Engine",
-            "type": "string"
-          },
           "generation_config": {
             "anyOf": [
               {
@@ -3143,17 +3250,6 @@
       },
       "SlideDraftUpdate": {
         "properties": {
-          "engine": {
-            "anyOf": [
-              {
-                "type": "null"
-              },
-              {
-                "type": "string"
-              }
-            ],
-            "title": "Engine"
-          },
           "generation_config": {
             "anyOf": [
               {
@@ -3406,117 +3502,79 @@
         "x-enum-class": "SlideStatus",
         "x-enum-module": "crystalith.shared.types"
       },
-      "SlidesConfigOption": {
+      "SlidesWorkflowDiagnostic": {
         "properties": {
-          "id": {
-            "title": "Id",
-            "type": "string"
+          "active_plugin_id": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Active Plugin Id"
           },
-          "is_default": {
-            "default": false,
-            "title": "Is Default",
-            "type": "boolean"
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue-Output"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
           },
-          "label": {
-            "title": "Label",
-            "type": "string"
+          "engine": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Engine"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Hint"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Message"
           }
         },
-        "required": [
-          "id",
-          "label"
-        ],
-        "title": "SlidesConfigOption",
-        "type": "object"
-      },
-      "SlidesConfigResponse": {
-        "properties": {
-          "audience_options": {
-            "items": {
-              "$ref": "#/components/schemas/SlidesConfigOption"
-            },
-            "title": "Audience Options",
-            "type": "array"
-          },
-          "defaults": {
-            "$ref": "#/components/schemas/SlideGenerationConfig"
-          },
-          "density_options": {
-            "items": {
-              "$ref": "#/components/schemas/SlidesConfigOption"
-            },
-            "title": "Density Options",
-            "type": "array"
-          },
-          "language_options": {
-            "items": {
-              "$ref": "#/components/schemas/SlidesConfigOption"
-            },
-            "title": "Language Options",
-            "type": "array"
-          },
-          "quantity_options": {
-            "items": {
-              "$ref": "#/components/schemas/SlidesConfigOption"
-            },
-            "title": "Quantity Options",
-            "type": "array"
-          },
-          "structure_options": {
-            "items": {
-              "$ref": "#/components/schemas/SlidesConfigOption"
-            },
-            "title": "Structure Options",
-            "type": "array"
-          },
-          "theme_preset_options": {
-            "items": {
-              "$ref": "#/components/schemas/SlidesThemePreset"
-            },
-            "title": "Theme Preset Options",
-            "type": "array"
-          },
-          "tone_options": {
-            "items": {
-              "$ref": "#/components/schemas/SlidesConfigOption"
-            },
-            "title": "Tone Options",
-            "type": "array"
-          }
-        },
-        "required": [
-          "audience_options",
-          "defaults",
-          "density_options",
-          "language_options",
-          "quantity_options",
-          "structure_options",
-          "theme_preset_options",
-          "tone_options"
-        ],
-        "title": "SlidesConfigResponse",
-        "type": "object"
-      },
-      "SlidesThemePreset": {
-        "properties": {
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "label": {
-            "title": "Label",
-            "type": "string"
-          },
-          "template": {
-            "$ref": "#/components/schemas/JsonDict-Output"
-          }
-        },
-        "required": [
-          "id",
-          "label",
-          "template"
-        ],
-        "title": "SlidesThemePreset",
+        "title": "SlidesWorkflowDiagnostic",
         "type": "object"
       },
       "SourceBatchDeleteRequest": {
@@ -4648,40 +4706,119 @@
         "title": "TemplateUpdate",
         "type": "object"
       },
-      "ToolConfigResponse": {
+      "ThemePresetOption": {
+        "additionalProperties": false,
         "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "template": {
+            "additionalProperties": true,
+            "title": "Template",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "ThemePresetOption",
+        "type": "object"
+      },
+      "ToolConfigResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "audience_options": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigOption"
+            },
+            "title": "Audience Options",
+            "type": "array"
+          },
+          "defaults": {
+            "additionalProperties": true,
+            "title": "Defaults",
+            "type": "object"
+          },
+          "density_options": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigOption"
+            },
+            "title": "Density Options",
+            "type": "array"
+          },
           "difficulty_options": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigOption"
+            },
+            "title": "Difficulty Options",
+            "type": "array"
+          },
+          "engine": {
             "anyOf": [
               {
-                "items": {
-                  "$ref": "#/components/schemas/crystalith__features__workspace__api__ConfigOption"
-                },
-                "type": "array"
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Engine"
+          },
+          "language_options": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigOption"
+            },
+            "title": "Language Options",
+            "type": "array"
+          },
+          "preview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreviewDescriptor"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Difficulty Options"
+            ]
           },
           "quantity_options": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/crystalith__features__workspace__api__ConfigOption"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Quantity Options"
+            "items": {
+              "$ref": "#/components/schemas/ConfigOption"
+            },
+            "title": "Quantity Options",
+            "type": "array"
+          },
+          "structure_options": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigOption"
+            },
+            "title": "Structure Options",
+            "type": "array"
           },
           "supports_topic": {
             "default": true,
             "title": "Supports Topic",
             "type": "boolean"
+          },
+          "theme_preset_options": {
+            "items": {
+              "$ref": "#/components/schemas/ThemePresetOption"
+            },
+            "title": "Theme Preset Options",
+            "type": "array"
+          },
+          "tone_options": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigOption"
+            },
+            "title": "Tone Options",
+            "type": "array"
           },
           "tool_id": {
             "title": "Tool Id",
@@ -4692,15 +4829,9 @@
             "type": "string"
           },
           "topic_placeholder": {
-            "anyOf": [
-              {
-                "type": "null"
-              },
-              {
-                "type": "string"
-              }
-            ],
-            "title": "Topic Placeholder"
+            "default": "",
+            "title": "Topic Placeholder",
+            "type": "string"
           }
         },
         "required": [
@@ -4767,7 +4898,6 @@
       "UiEventRequest": {
         "properties": {
           "name": {
-            "const": "ui.v1.event",
             "title": "Name",
             "type": "string"
           },
@@ -4996,6 +5126,16 @@
           },
           "plugins": {
             "$ref": "#/components/schemas/ToolsPluginDiagnostics"
+          },
+          "slides": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SlidesWorkflowDiagnostic"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -5022,29 +5162,6 @@
           "tools"
         ],
         "title": "WorkspaceToolsResponse",
-        "type": "object"
-      },
-      "crystalith__features__workspace__api__ConfigOption": {
-        "properties": {
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "is_default": {
-            "default": false,
-            "title": "Is Default",
-            "type": "boolean"
-          },
-          "label": {
-            "title": "Label",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "label"
-        ],
-        "title": "ConfigOption",
         "type": "object"
       }
     }
@@ -9727,27 +9844,6 @@
           }
         },
         "summary": "List Workspace Tools",
-        "tags": [
-          "workspace-tools"
-        ]
-      }
-    },
-    "/v1/workspace/tools/slides/config": {
-      "get": {
-        "operationId": "get_slides_config_v1_workspace_tools_slides_config_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SlidesConfigResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Get Slides Config",
         "tags": [
           "workspace-tools"
         ]
