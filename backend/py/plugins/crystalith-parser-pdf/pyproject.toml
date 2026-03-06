@@ -1,0 +1,21 @@
+[project]
+name = "crystalith-parser-pdf"
+version = "0.1.0"
+description = "Official Crystalith ParserPlugin (PDF)."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "crystalith", email = "devnull@example.com" }]
+dependencies = [
+  "crystalith",
+  "pypdf>=4.3.1",
+]
+
+[project.entry-points."crystalith.plugins"]
+parser-pdf = "crystalith_parser_pdf.plugin:plugin"
+
+[build-system]
+requires = ["uv_build>=0.9.24,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+package = true

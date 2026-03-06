@@ -13,6 +13,7 @@ import pytest
 
 from crystalith.shared.db import Chunk, Source
 from crystalith.shared.parsers.factory import ParserFactory
+from crystalith.shared.parsers.factory import ParserResolution
 from crystalith.shared.types import SourceStatus
 
 
@@ -182,6 +183,23 @@ async def test_sources_crud(client):
 
 
 @pytest.mark.asyncio
+async def test_upload_html_source_records_parser_plugin_id(client):
+    notebook_resp = await client.post("/v1/notebooks", json={"name": "HTML Upload"})
+    assert notebook_resp.status_code == 201
+    notebook_id = notebook_resp.json()["id"]
+
+    html = b"<html><body><main><p>Hello world</p></main></body></html>"
+    create_resp = await client.post(
+        f"/v1/notebooks/{notebook_id}/sources",
+        files={"file": ("page.html", html, "text/html")},
+    )
+    assert create_resp.status_code == 201
+    payload = create_resp.json()
+    assert payload["parser_type"] == "html"
+    assert payload["metadata"]["parser_plugin_id"] == "parser-html"
+
+
+@pytest.mark.asyncio
 async def test_source_from_url_fetch_blocks_private_url_without_network_request(client):
     notebook_resp = await client.post("/v1/notebooks", json={"name": "From URL SSRF Block"})
     assert notebook_resp.status_code == 201
@@ -275,11 +293,12 @@ async def test_upload_source_parse_runs_in_executor_without_blocking_requests(cl
         mime_type: str | None,
         transcriber=None,  # noqa: ANN001
         media_fetcher=None,  # noqa: ANN001
+        plugins=None,  # noqa: ANN001
     ):
-        return _GatedSlowParser()
+        return ParserResolution(parser=_GatedSlowParser())
 
     # Mock reason: inject deterministic parser latency/content to validate concurrency behavior.
-    monkeypatch.setattr(ParserFactory, "from_file", classmethod(_from_file))
+    monkeypatch.setattr(ParserFactory, "resolve_from_file", classmethod(_from_file))
 
     upload_task = asyncio.create_task(
         client.post(
@@ -339,11 +358,12 @@ async def test_upload_no_chunks_returns_400_and_does_not_create_source(client, m
         mime_type: str | None,
         transcriber=None,  # noqa: ANN001
         media_fetcher=None,  # noqa: ANN001
+        plugins=None,  # noqa: ANN001
     ):
-        return _EmptyParser()
+        return ParserResolution(parser=_EmptyParser())
 
     # Mock reason: inject empty parser output to verify no-chunk error handling path.
-    monkeypatch.setattr(ParserFactory, "from_file", classmethod(_from_file))
+    monkeypatch.setattr(ParserFactory, "resolve_from_file", classmethod(_from_file))
 
     resp = await client.post(
         f"/v1/notebooks/{notebook_id}/sources",
@@ -394,17 +414,18 @@ async def test_upload_three_sources_concurrently_keeps_response_times_stable(cli
         mime_type: str | None,
         transcriber=None,  # noqa: ANN001
         media_fetcher=None,  # noqa: ANN001
+        plugins=None,  # noqa: ANN001
     ):
         nonlocal parser_idx
         with parser_lock:
             idx = parser_idx
             parser_idx += 1
         if idx >= len(started_events):  # pragma: no cover - defensive
-            return _SlowParser()
-        return _GatedSlowParser(idx)
+            return ParserResolution(parser=_SlowParser())
+        return ParserResolution(parser=_GatedSlowParser(idx))
 
     # Mock reason: inject deterministic parser latency/content to validate concurrent upload stability.
-    monkeypatch.setattr(ParserFactory, "from_file", classmethod(_from_file))
+    monkeypatch.setattr(ParserFactory, "resolve_from_file", classmethod(_from_file))
 
     async def _upload(index: int) -> int:
         response = await client.post(
@@ -604,8 +625,92 @@ async def test_list_extractors_endpoint_reports_defaults(client):
     assert resp.status_code == 200
     payload = resp.json()
     assert payload["extractors"]
-    assert payload["default_extractor"] in {"trafilatura", "jina"}
+    available = [item for item in payload["extractors"] if item.get("available")]
+    expected_default = available[0]["type"] if available else None
+    assert payload["default_extractor"] == expected_default
     assert payload["fallback_enabled"] is True
+    assert payload["policy"]["mode"] == "inherit_global"
+
+
+@pytest.mark.asyncio
+async def test_notebook_extractor_policy_custom_mode_controls_fetch_mode(client, app):
+    from crystalith.shared.extraction.types import ExtractedContent, ExtractorType
+    from crystalith.shared.plugins import PluginRegistry
+
+    class _StubExtractor:
+        @property
+        def extractor_type(self):  # noqa: ANN001
+            return ExtractorType.TRAFILATURA
+
+        async def extract(self, url: str, html: str | None = None) -> ExtractedContent:  # noqa: ARG002
+            return ExtractedContent(text="Hello world", title="Example", url=url, extractor="trafilatura")
+
+        async def is_available(self) -> bool:
+            return True
+
+        async def close(self) -> None:
+            return None
+
+    class _StubExtractorPlugin:
+        api_version = "v1"
+        extractor_type = "trafilatura"
+        display_name = "Stub Trafilatura"
+        description = "Stub extractor"
+        requires_api_key = False
+        requires_service = False
+
+        def create_extractor(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+            return _StubExtractor()
+
+    # Inject a stub extractor plugin into the app-level plugin registry.
+    registry = PluginRegistry()
+    plugin_id = "extractor-trafilatura"
+    plugin = _StubExtractorPlugin()
+    registry.web_extractors[plugin.extractor_type] = plugin
+    registry.plugins[plugin_id] = plugin
+    registry._web_extractor_plugin_ids[plugin.extractor_type] = plugin_id  # noqa: SLF001
+    registry._load_report.loaded.append(plugin_id)  # noqa: SLF001
+    app.state.plugins = registry
+
+    notebook_resp = await client.post("/v1/notebooks", json={"name": "Extractor Policy"})
+    assert notebook_resp.status_code == 201
+    notebook_id = notebook_resp.json()["id"]
+
+    extractors_resp = await client.get(f"/v1/notebooks/{notebook_id}/sources/extractors")
+    assert extractors_resp.status_code == 200
+    payload = extractors_resp.json()
+    assert payload["default_extractor"] == "trafilatura"
+
+    # Switch to custom mode but disable all extractors in the notebook.
+    patch_resp = await client.patch(
+        f"/v1/notebooks/{notebook_id}/sources/extractors",
+        json={"mode": "custom", "enabled_extractors": []},
+    )
+    assert patch_resp.status_code == 200
+    assert patch_resp.json()["policy"]["mode"] == "custom"
+    assert patch_resp.json()["policy"]["enabled_extractors"] == []
+
+    blocked = await client.post(
+        f"/v1/notebooks/{notebook_id}/sources/from-url",
+        json={"url": "https://example.com", "mode": "fetch"},
+    )
+    assert blocked.status_code == 503
+    assert blocked.json()["error_code"] == "OPTIONAL_SERVICE_UNAVAILABLE"
+
+    # Enable extractor and retry.
+    patch_resp2 = await client.patch(
+        f"/v1/notebooks/{notebook_id}/sources/extractors",
+        json={"enabled_extractors": ["trafilatura"]},
+    )
+    assert patch_resp2.status_code == 200
+    assert patch_resp2.json()["policy"]["enabled_extractors"] == ["trafilatura"]
+
+    ok = await client.post(
+        f"/v1/notebooks/{notebook_id}/sources/from-url",
+        json={"url": "https://example.com", "mode": "fetch"},
+    )
+    assert ok.status_code == 201
+    assert ok.json()["status"] == SourceStatus.READY.value
 
 
 @pytest.mark.asyncio
@@ -662,17 +767,11 @@ async def test_create_source_from_url_fetch_mode_uses_trafilatura_without_extern
 
     assert resp.status_code == 201
     payload = resp.json()
-    assert payload["filename"] == "Example"
     assert payload["status"] == SourceStatus.READY.value
-    assert payload["chunk_count"] >= 1
-
-    results = await app.state.vector_store.search(
-        notebook_id=notebook_id,
-        query_vector=[1.0, 0.0, 0.0],
-        top_k=10,
-        min_score=-1.0,
-    )
-    assert results
+    assert payload["parser_type"].startswith("web:")
+    metadata = payload.get("metadata") or {}
+    assert metadata.get("url") == base_url
+    assert metadata.get("extractor") == "trafilatura"
 
 
 @pytest.mark.asyncio

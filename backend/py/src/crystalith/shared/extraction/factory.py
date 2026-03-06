@@ -2,47 +2,74 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from cl_logs import get_logger
 
-from .interfaces import ExtractionError, Extractor
+from crystalith.shared.config import Settings
+from crystalith.shared.plugins import PluginRegistry
+from crystalith.shared.plugins.official_catalog import OFFICIAL_PLUGIN_CATALOG
+
+from .interfaces import ConfigurationError, ExtractionError, Extractor
 from .types import ExtractedContent, ExtractorInfo, ExtractorType
 
 if TYPE_CHECKING:
-    from crystalith.shared.config.models import WebExtractionSettings
     from crystalith.shared.config.models import UrlFetchSecuritySettings
 
 logger = get_logger(__name__)
+
+def _clean_optional_str(value: object | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    return str(value).strip()
+
+
+@dataclass(frozen=True, slots=True)
+class _ExtractorState:
+    extractor: Extractor | None
+    error_code: str | None = None
+    message: str | None = None
+    recovery_hint: str | None = None
+    details: Mapping[str, object] | None = None
 
 
 class ExtractorFactory:
     """
     Factory for creating and managing web content extractors.
 
-    Supports multiple extraction strategies with automatic fallback:
-    - trafilatura: Local extraction (default, always available)
-    - jina: Jina Reader API (free, supports JS rendering)
-    - firecrawl: External API (requires API key)
-    - browserless: Browser rendering (requires service)
+    Supports multiple extraction strategies with automatic fallback.
+
+    Extractor implementations are provided by plugins (WebExtractorPlugin).
     """
 
     def __init__(
         self,
-        settings: WebExtractionSettings,
+        settings: Settings,
         *,
+        plugins: PluginRegistry,
         url_fetch_security: UrlFetchSecuritySettings | None = None,
+        policy_mode: str = "inherit_global",
+        enabled_extractors: set[str] | None = None,
     ):
         """
         Initialize the factory with configuration.
 
         Args:
-            settings: Web extraction configuration.
+            settings: Host settings.
+            plugins: Plugin registry (extractor implementations are provided by plugins).
             url_fetch_security: URL fetch SSRF 安全策略（用于本地抓取器逐跳重定向重验）。
         """
         self.settings = settings
+        self.plugins = plugins
+        self.web_settings = settings.source_ingestion.web_extraction
         self.url_fetch_security = url_fetch_security
-        self._extractors: dict[ExtractorType, Extractor] = {}
+        self.policy_mode = policy_mode
+        self.enabled_extractors = set(enabled_extractors or set())
+        self._extractors: dict[ExtractorType, _ExtractorState] = {}
         self._initialized = False
 
     def _ensure_initialized(self) -> None:
@@ -50,64 +77,94 @@ class ExtractorFactory:
         if self._initialized:
             return
 
-        # Initialize Trafilatura (always available)
-        if self.settings.trafilatura.enabled:
-            from .trafilatura_extractor import TrafilaturaExtractor
-
-            traf_settings = self.settings.trafilatura
-            proxy_url = None
-            if traf_settings.proxy and traf_settings.proxy.enabled:
-                proxy_url = traf_settings.proxy.get_proxy_url()
-
-            self._extractors[ExtractorType.TRAFILATURA] = TrafilaturaExtractor(
-                include_tables=traf_settings.include_tables,
-                include_links=traf_settings.include_links,
-                output_format=traf_settings.output_format,
-                timeout=traf_settings.timeout,
-                proxy_url=proxy_url,
-                url_fetch_security=self.url_fetch_security,
-            )
-
-        # Initialize Jina Reader (if enabled)
-        if self.settings.jina.enabled:
-            from .jina_extractor import JinaReaderExtractor
-
-            jina_settings = self.settings.jina
-            proxy_url = None
-            if jina_settings.proxy and jina_settings.proxy.enabled:
-                proxy_url = jina_settings.proxy.get_proxy_url()
-
-            self._extractors[ExtractorType.JINA] = JinaReaderExtractor(
-                api_key=jina_settings.api_key,
-                timeout=jina_settings.timeout,
-                proxy_url=proxy_url,
-            )
-
-        # Initialize Firecrawl (if configured)
-        if self.settings.firecrawl.enabled and self.settings.firecrawl.api_key:
-            from .firecrawl_extractor import FirecrawlExtractor
-
-            fc_settings = self.settings.firecrawl
-            self._extractors[ExtractorType.FIRECRAWL] = FirecrawlExtractor(
-                api_key=fc_settings.api_key,
-                timeout=fc_settings.timeout,
-            )
-
-        # Initialize Browserless (if configured)
-        if self.settings.browserless.enabled and self.settings.browserless.endpoint:
-            from .browserless_extractor import BrowserlessExtractor
-
-            bl_settings = self.settings.browserless
-            self._extractors[ExtractorType.BROWSERLESS] = BrowserlessExtractor(
-                endpoint=bl_settings.endpoint,
-                token=bl_settings.token,
-                timeout=bl_settings.timeout,
-                wait_until=bl_settings.wait_until,
-            )
+        for ext_type in ExtractorType:
+            self._extractors[ext_type] = self._build_extractor_state(ext_type)
 
         self._initialized = True
 
-    def get_extractor(self, extractor_type: ExtractorType) -> Extractor | None:
+    def _is_globally_enabled(self, extractor_type: ExtractorType) -> bool:
+        if extractor_type == ExtractorType.TRAFILATURA:
+            return bool(self.web_settings.trafilatura.enabled)
+        if extractor_type == ExtractorType.JINA:
+            return bool(self.web_settings.jina.enabled)
+        if extractor_type == ExtractorType.FIRECRAWL:
+            return bool(self.web_settings.firecrawl.enabled)
+        if extractor_type == ExtractorType.BROWSERLESS:
+            return bool(self.web_settings.browserless.enabled)
+        return False
+
+    def _is_effectively_enabled(self, extractor_type: ExtractorType) -> bool:
+        if self.policy_mode == "custom":
+            return extractor_type.value in self.enabled_extractors
+        return self._is_globally_enabled(extractor_type)
+
+    def _build_extractor_state(self, extractor_type: ExtractorType) -> _ExtractorState:
+        default_plugin_id = f"extractor-{extractor_type.value}"
+        plugin_id = self.plugins.get_web_extractor_plugin_id(extractor_type.value) or default_plugin_id
+
+        report = self.plugins.get_load_report()
+        plugin = self.plugins.web_extractors.get(extractor_type.value)
+        if plugin is None:
+            skipped = report.skipped.get(default_plugin_id)
+            if skipped is not None:
+                return _ExtractorState(
+                    extractor=None,
+                    error_code=skipped.error_code,
+                    message=skipped.message,
+                    recovery_hint=skipped.hint,
+                    details=skipped.to_dict(),
+                )
+            if default_plugin_id in OFFICIAL_PLUGIN_CATALOG:
+                entry = OFFICIAL_PLUGIN_CATALOG[default_plugin_id]
+                return _ExtractorState(
+                    extractor=None,
+                    error_code="not_installed",
+                    message="Extractor plugin is not installed",
+                    recovery_hint=entry.default_install_hint(),
+                    details={"plugin_id": default_plugin_id, "package": entry.package},
+                )
+            return _ExtractorState(
+                extractor=None,
+                error_code="not_installed",
+                message="Extractor plugin is not installed",
+                recovery_hint=f"安装并启用 {default_plugin_id!r} 插件。",
+                details={"plugin_id": default_plugin_id},
+            )
+
+        if not self._is_effectively_enabled(extractor_type):
+            if self.policy_mode == "custom":
+                return _ExtractorState(
+                    extractor=None,
+                    error_code="disabled",
+                    message="Extractor disabled by notebook policy",
+                    recovery_hint="在该 notebook 中启用此提取器，或切换为 inherit_global 使用全局策略。",
+                    details={"plugin_id": plugin_id, "policy": "notebook"},
+                )
+            return _ExtractorState(
+                extractor=None,
+                error_code="disabled",
+                message="Extractor disabled by configuration",
+                recovery_hint=f"在 config/app.yaml 中启用 source_ingestion.web_extraction.{extractor_type.value}.enabled。",
+                details={"plugin_id": plugin_id, "policy": "web_extraction"},
+            )
+
+        try:
+            extractor = plugin.create_extractor(
+                self.settings,
+                url_fetch_security=self.url_fetch_security,
+            )
+        except Exception as exc:  # noqa: BLE001 - plugin boundary
+            return _ExtractorState(
+                extractor=None,
+                error_code="init_error",
+                message="Extractor plugin failed to initialize",
+                recovery_hint="检查插件依赖与配置是否正确。",
+                details={"plugin_id": plugin_id, "error": type(exc).__name__},
+            )
+
+        return _ExtractorState(extractor=extractor)
+
+    def get_extractor(self, extractor_type: ExtractorType) -> _ExtractorState:
         """
         Get a specific extractor by type.
 
@@ -115,10 +172,10 @@ class ExtractorFactory:
             extractor_type: The type of extractor to get.
 
         Returns:
-            The extractor instance or None if not available.
+            The extractor state (extractor instance + diagnostics).
         """
         self._ensure_initialized()
-        return self._extractors.get(extractor_type)
+        return self._extractors.get(extractor_type, self._build_extractor_state(extractor_type))
 
     def get_fallback_order(self) -> list[ExtractorType]:
         """
@@ -129,8 +186,8 @@ class ExtractorFactory:
         """
         # Default order: trafilatura > jina > firecrawl > browserless
         # User can override via settings.fallback_order
-        if self.settings.fallback_order:
-            return [ExtractorType(t) for t in self.settings.fallback_order]
+        if self.web_settings.fallback_order:
+            return [ExtractorType(t) for t in self.web_settings.fallback_order]
 
         return [
             ExtractorType.TRAFILATURA,
@@ -139,7 +196,7 @@ class ExtractorFactory:
             ExtractorType.BROWSERLESS,
         ]
 
-    def get_available_extractors(self) -> list[ExtractorInfo]:
+    async def get_available_extractors(self) -> list[ExtractorInfo]:
         """
         Get information about all configured extractors.
 
@@ -150,43 +207,80 @@ class ExtractorFactory:
 
         infos: list[ExtractorInfo] = []
         fallback_order = self.get_fallback_order()
+        priority_map = {ext_type: idx for idx, ext_type in enumerate(fallback_order)}
 
-        for priority, ext_type in enumerate(fallback_order):
-            extractor = self._extractors.get(ext_type)
-            enabled = extractor is not None
+        ordered_types: list[ExtractorType] = []
+        seen: set[ExtractorType] = set()
+        for ext_type in fallback_order:
+            if ext_type in seen:
+                continue
+            ordered_types.append(ext_type)
+            seen.add(ext_type)
+        for ext_type in ExtractorType:
+            if ext_type in seen:
+                continue
+            ordered_types.append(ext_type)
+            seen.add(ext_type)
 
-            # Determine availability based on type
-            if ext_type == ExtractorType.TRAFILATURA:
-                available = enabled
-                requires_api_key = False
-                requires_service = False
-            elif ext_type == ExtractorType.JINA:
-                available = enabled
-                requires_api_key = False  # API key is optional for Jina
-                requires_service = True  # Uses external service
-            elif ext_type == ExtractorType.FIRECRAWL:
-                available = enabled and bool(self.settings.firecrawl.api_key)
-                requires_api_key = True
-                requires_service = False
-            elif ext_type == ExtractorType.BROWSERLESS:
-                available = enabled and bool(self.settings.browserless.endpoint)
-                requires_api_key = False
-                requires_service = True
-            else:
-                available = enabled
-                requires_api_key = False
-                requires_service = False
+        extra_priority = len(priority_map)
+        for ext_type in ordered_types:
+            priority = priority_map.get(ext_type)
+            if priority is None:
+                priority = extra_priority
+                extra_priority += 1
+            default_plugin_id = f"extractor-{ext_type.value}"
+            plugin_id = self.plugins.get_web_extractor_plugin_id(ext_type.value) or default_plugin_id
+            plugin = self.plugins.web_extractors.get(ext_type.value)
 
-            infos.append(ExtractorInfo(
-                type=ext_type,
-                enabled=enabled,
-                available=available,
-                display_name=ext_type.display_name,
-                description=ext_type.description,
-                priority=priority,
-                requires_api_key=requires_api_key,
-                requires_service=requires_service,
-            ))
+            state = self.get_extractor(ext_type)
+            enabled = state.extractor is not None
+
+            available = False
+            if enabled and state.extractor is not None:
+                try:
+                    available = await state.extractor.is_available()
+                except Exception:  # noqa: BLE001 - extractor boundary
+                    available = False
+
+            error_code = state.error_code
+            message = state.message
+            recovery_hint = state.recovery_hint
+            details = state.details
+
+            if enabled and not available and error_code is None:
+                error_code = "unavailable"
+                message = "Extractor is unavailable"
+                recovery_hint = "检查网络连通性与提取器配置（API key / 服务地址），或稍后重试。"
+                details = {"plugin_id": plugin_id}
+                if ext_type == ExtractorType.FIRECRAWL and not self.web_settings.firecrawl.api_key:
+                    error_code = "missing_config"
+                    message = "Firecrawl API key is required"
+                    recovery_hint = "在 config/app.yaml 中设置 source_ingestion.web_extraction.firecrawl.api_key。"
+                if ext_type == ExtractorType.BROWSERLESS and not self.web_settings.browserless.endpoint:
+                    error_code = "missing_config"
+                    message = "Browserless endpoint is required"
+                    recovery_hint = "在 config/app.yaml 中设置 source_ingestion.web_extraction.browserless.endpoint。"
+
+            requires_api_key = bool(getattr(plugin, "requires_api_key", False)) if plugin is not None else False
+            requires_service = bool(getattr(plugin, "requires_service", False)) if plugin is not None else False
+
+            infos.append(
+                ExtractorInfo(
+                    type=ext_type,
+                    enabled=enabled,
+                    available=available,
+                    display_name=_clean_optional_str(getattr(plugin, "display_name", None)) or ext_type.display_name,
+                    description=_clean_optional_str(getattr(plugin, "description", None)) or ext_type.description,
+                    priority=priority,
+                    requires_api_key=requires_api_key,
+                    requires_service=requires_service,
+                    plugin_id=plugin_id,
+                    error_code=error_code,
+                    message=message,
+                    recovery_hint=recovery_hint,
+                    details=details,
+                )
+            )
 
         return infos
 
@@ -219,19 +313,26 @@ class ExtractorFactory:
         extraction_order = self._build_extraction_order(preferred_extractor)
 
         if not extraction_order:
-            raise ExtractionError(
-                "No extractors available. Please configure at least one extractor.",
+            raise ConfigurationError(
+                "No extractors available. Install/enable an extractor plugin.",
                 url=url,
             )
 
         errors: list[tuple[ExtractorType, Exception]] = []
 
         for ext_type in extraction_order:
-            extractor = self._extractors.get(ext_type)
+            state = self.get_extractor(ext_type)
+            extractor = state.extractor
             if extractor is None:
                 continue
 
             try:
+                if not await extractor.is_available():
+                    errors.append((ext_type, ExtractionError("Extractor unavailable")))
+                    if not enable_fallback:
+                        break
+                    continue
+
                 logger.info(
                     "Attempting extraction",
                     extractor=ext_type.value,
@@ -290,7 +391,7 @@ class ExtractorFactory:
         # Filter to only available extractors
         available = [
             ext_type for ext_type in fallback_order
-            if ext_type in self._extractors
+            if self.get_extractor(ext_type).extractor is not None
         ]
 
         if preferred and preferred in available:
@@ -302,9 +403,10 @@ class ExtractorFactory:
 
     async def close(self) -> None:
         """Close all extractors and cleanup resources."""
-        for extractor in self._extractors.values():
+        for state in self._extractors.values():
             try:
-                await extractor.close()
+                if state.extractor is not None:
+                    await state.extractor.close()
             except Exception:
                 pass
 
@@ -312,14 +414,15 @@ class ExtractorFactory:
         self._initialized = False
 
 
-def create_extractor(settings: WebExtractionSettings) -> ExtractorFactory:
+def create_extractor(settings: Settings, *, plugins: PluginRegistry) -> ExtractorFactory:
     """
-    Create an ExtractorFactory with the given settings.
+    Create an ExtractorFactory with the given settings and plugin registry.
 
     Args:
-        settings: Web extraction configuration.
+        settings: Host settings.
+        plugins: Plugin registry.
 
     Returns:
         Configured ExtractorFactory instance.
     """
-    return ExtractorFactory(settings)
+    return ExtractorFactory(settings, plugins=plugins)

@@ -1,0 +1,22 @@
+[project]
+name = "crystalith-parser-html"
+version = "0.1.0"
+description = "Official Crystalith ParserPlugin (HTML)."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "crystalith", email = "devnull@example.com" }]
+dependencies = [
+  "crystalith",
+  "beautifulsoup4>=4.12.3",
+  "lxml>=5.2.2",
+]
+
+[project.entry-points."crystalith.plugins"]
+parser-html = "crystalith_parser_html.plugin:plugin"
+
+[build-system]
+requires = ["uv_build>=0.9.24,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+package = true

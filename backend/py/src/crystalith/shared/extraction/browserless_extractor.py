@@ -7,8 +7,6 @@ import time
 from collections.abc import Callable
 from typing import Protocol, cast
 
-import trafilatura
-
 from .interfaces import (
     BaseExtractor,
     ConfigurationError,
@@ -43,6 +41,42 @@ def _load_async_playwright() -> AsyncPlaywrightFactory:
     if not callable(factory):
         raise RuntimeError("playwright.async_api.async_playwright is missing")
     return cast(AsyncPlaywrightFactory, factory)
+
+
+class _TrafilaturaMetadata(Protocol):
+    title: str | None
+    author: str | None
+    date: str | None
+    description: str | None
+    language: str | None
+    sitename: str | None
+
+
+class _TrafilaturaModule(Protocol):
+    def extract(
+        self,
+        html: str,
+        *,
+        url: str,
+        include_tables: bool,
+        include_links: bool,
+        include_images: bool,
+        include_comments: bool,
+        output_format: str,
+        with_metadata: bool,
+    ) -> str | None: ...
+
+    def extract_metadata(self, html: str, *, default_url: str) -> _TrafilaturaMetadata | None: ...
+
+
+def _load_trafilatura() -> _TrafilaturaModule:
+    try:
+        return cast(_TrafilaturaModule, importlib.import_module("trafilatura"))
+    except ImportError as exc:
+        raise ConfigurationError(
+            "trafilatura package is not installed. Install it with: pip install trafilatura",
+            extractor="browserless",
+        ) from exc
 
 
 class _Page(Protocol):
@@ -226,6 +260,8 @@ class BrowserlessExtractor(BaseExtractor):
         finally:
             await context.close()
 
+        trafilatura = _load_trafilatura()
+
         # Extract content using trafilatura
         try:
             result = trafilatura.extract(
@@ -253,7 +289,7 @@ class BrowserlessExtractor(BaseExtractor):
             )
 
         # Extract metadata
-        metadata = self._extract_metadata(rendered_html, url)
+        metadata = self._extract_metadata(trafilatura, rendered_html, url)
 
         extraction_time_ms = int((time.perf_counter() - start_time) * 1000)
 
@@ -274,7 +310,7 @@ class BrowserlessExtractor(BaseExtractor):
             },
         )
 
-    def _extract_metadata(self, html: str, url: str) -> dict[str, str | None]:
+    def _extract_metadata(self, trafilatura: _TrafilaturaModule, html: str, url: str) -> dict[str, str | None]:
         """Extract metadata from rendered HTML."""
         try:
             metadata = trafilatura.extract_metadata(html, default_url=url)

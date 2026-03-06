@@ -46,6 +46,24 @@ app:
     cleanup_failed_sources: false
 
 # ----------------------------------------------------------------------------
+# Plugins (Python entry points)
+# ----------------------------------------------------------------------------
+# Plugins are discovered via Python entry points (group: `crystalith.plugins`).
+#
+# Install profiles:
+# - core-only: `pip install crystalith` (default docker image)
+# - official-full (recommended): `pip install 'crystalith[official-full]'`
+#
+# Tips:
+# - `enabled` (allowlist) overrides default enablement (only listed ids load).
+# - `disabled` (denylist) always takes precedence.
+# - `load_order` makes conflict resolution deterministic (loaded last wins).
+plugins:
+  # enabled: ["output-faq", "parser-pdf", "extractor-trafilatura"]
+  disabled: []
+  load_order: []
+
+# ----------------------------------------------------------------------------
 # Providers (use YAML anchors for reuse)
 # ----------------------------------------------------------------------------
 providers:
@@ -338,6 +356,8 @@ source_ingestion:
       max_redirects: 5
 
   web_extraction:
+    # NOTE: Extractor implementations are provided by plugins.
+    # Install: `pip install 'crystalith[official-full]'` (recommended) or the individual `crystalith-extractor-*` packages.
     fallback_order:
       - trafilatura
       - jina
@@ -356,7 +376,7 @@ source_ingestion:
 
     jina:
       enabled: true
-      api_key: ""
+      api_key: "${{ secrets.JINA_API_KEY }}"
       timeout: 30
       proxy:
         <<: *default_proxy
@@ -369,3 +389,4 @@ source_ingestion:
     browserless:
       enabled: false
       endpoint: "ws://localhost:3000"
+      token: "${{ secrets.BROWSERLESS_TOKEN }}"

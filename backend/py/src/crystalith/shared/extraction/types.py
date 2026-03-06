@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 
@@ -130,9 +131,24 @@ class ExtractorInfo:
     requires_service: bool = False
     """Whether this extractor requires an external service."""
 
+    plugin_id: str | None = None
+    """Plugin id that provides this extractor (if any)."""
+
+    error_code: str | None = None
+    """Machine-readable diagnostic code when unavailable."""
+
+    message: str | None = None
+    """User-facing diagnostic message when unavailable."""
+
+    recovery_hint: str | None = None
+    """Actionable hint to recover this capability (install/enable/configure)."""
+
+    details: Mapping[str, object] | None = None
+    """Optional structured diagnostic details."""
+
     def to_dict(self) -> dict[str, object]:
         """Convert to dict for API response."""
-        return {
+        payload: dict[str, object] = {
             "type": self.type.value,
             "enabled": self.enabled,
             "available": self.available,
@@ -142,3 +158,14 @@ class ExtractorInfo:
             "requires_api_key": self.requires_api_key,
             "requires_service": self.requires_service,
         }
+        if self.plugin_id is not None:
+            payload["plugin_id"] = self.plugin_id
+        if self.error_code is not None:
+            payload["error_code"] = self.error_code
+        if self.message is not None:
+            payload["message"] = self.message
+        if self.recovery_hint is not None:
+            payload["recovery_hint"] = self.recovery_hint
+        if self.details is not None:
+            payload["details"] = self.details
+        return payload

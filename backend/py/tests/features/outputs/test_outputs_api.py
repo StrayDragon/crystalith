@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from crystalith.shared.db import Chunk, Source
 from crystalith.shared.db import Output
+from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.types import OutputType, SourceStatus
 
 
@@ -192,6 +193,31 @@ async def test_outputs_error_responses(client, db_session):
         f"/v1/notebooks/{notebook_id}/outputs/{empty_output.id}/convert-to-source"
     )
     assert convert_empty.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_outputs_tool_output_requires_plugin(client, app) -> None:
+    notebook_resp = await client.post("/v1/notebooks", json={"name": "Tool Outputs Plugin Gate"})
+    assert notebook_resp.status_code == 201
+    notebook_id = notebook_resp.json()["id"]
+
+    original_plugins = app.state.plugins
+    app.state.plugins = PluginRegistry()
+    try:
+        resp = await client.post(
+            f"/v1/notebooks/{notebook_id}/outputs/QUIZ",
+            json={},
+        )
+    finally:
+        app.state.plugins = original_plugins
+
+    assert resp.status_code == 409
+    payload = resp.json()
+    assert payload["error_code"] == "OUTPUT_TYPE_PLUGIN_REQUIRED"
+    assert payload["details"]["output_type"] == "QUIZ"
+    assert payload["details"]["required_plugin_id"] == "output-quiz"
+    assert isinstance(payload["details"]["recovery_hint"], str)
+    assert payload["details"]["recovery_hint"]
 
 
 @pytest.mark.asyncio

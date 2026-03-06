@@ -73,3 +73,22 @@ def test_check_plugin_validates_output_type_plugin_fields() -> None:
     assert "OutputTypePlugin.metadata must be an OutputTypePluginMeta instance" in issues
     assert "OutputTypePlugin.render_descriptor must be a RenderDescriptor instance" in issues
     assert "OutputTypePlugin.config_schema must be a PluginConfigSchema instance" in issues
+
+
+def test_check_plugin_validates_web_extractor_plugin_fields() -> None:
+    class Plugin:
+        api_version = PLUGIN_API_VERSION
+        extractor_type = ""
+        display_name = 123
+        description = 123
+        requires_api_key = "no"
+        requires_service = "no"
+        create_extractor = 123
+
+    issues = check_plugin("extractor", Plugin())
+    assert "WebExtractorPlugin.extractor_type must be a non-empty string" in issues
+    assert "WebExtractorPlugin.display_name must be a string or None" in issues
+    assert "WebExtractorPlugin.description must be a string or None" in issues
+    assert "WebExtractorPlugin.requires_api_key must be a bool" in issues
+    assert "WebExtractorPlugin.requires_service must be a bool" in issues
+    assert "WebExtractorPlugin missing callable: create_extractor" in issues

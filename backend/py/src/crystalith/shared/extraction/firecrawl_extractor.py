@@ -88,7 +88,12 @@ class FirecrawlExtractor(BaseExtractor):
                 )
 
             try:
-                from firecrawl import Firecrawl
+                import importlib
+
+                module = importlib.import_module("firecrawl")
+                Firecrawl = getattr(module, "Firecrawl", None)
+                if Firecrawl is None:
+                    raise ImportError("firecrawl.Firecrawl is missing")
                 self._client = Firecrawl(api_key=self.api_key)
             except ImportError as exc:
                 raise self._create_error(

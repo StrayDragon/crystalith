@@ -8,9 +8,11 @@ from crystalith.shared.config import ModelConfig, Settings
 from .render_types import FrontendBundleDescriptor, OutputTypePluginMeta, PluginConfigSchema, RenderDescriptor
 if TYPE_CHECKING:
     from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
+    from crystalith.shared.extraction.interfaces import Extractor
     from crystalith.shared.parsers.interfaces import Parser
     from crystalith.shared.parsers.media import MediaFetcher
     from crystalith.shared.parsers.transcription import TranscriptionProvider
+    from crystalith.shared.config.models import UrlFetchSecuritySettings
 
 
 PLUGIN_API_VERSION = "v1"
@@ -100,3 +102,28 @@ class OutputTypeFrontendBundle(Protocol):
     """
 
     frontend_bundle: FrontendBundleDescriptor | None
+
+
+@runtime_checkable
+class WebExtractorPlugin(Protocol):
+    """
+    Web extractor plugin factory.
+
+    `extractor_type` is the stable key used for selection and diagnostics.
+    """
+
+    api_version: str
+
+    extractor_type: str
+
+    display_name: str | None
+    description: str | None
+    requires_api_key: bool
+    requires_service: bool
+
+    def create_extractor(
+        self,
+        settings: Settings,
+        *,
+        url_fetch_security: UrlFetchSecuritySettings | None = None,
+    ) -> Extractor: ...
