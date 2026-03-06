@@ -14,6 +14,7 @@ import {
   deleteSourceV1NotebooksNotebookIdSourcesSourceIdDelete as deleteSource,
   deleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDelete as deleteSourceTag,
   listExtractorsV1NotebooksNotebookIdSourcesExtractorsGet as listExtractors,
+  patchExtractorsPolicyV1NotebooksNotebookIdSourcesExtractorsPatch as patchExtractorsPolicy,
   listSourceTagsV1NotebooksNotebookIdSourcesTagsGet as listSourceTags,
   listSourcesV1NotebooksNotebookIdSourcesGet as listSources,
   reembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPost as reembedSource,
@@ -27,6 +28,8 @@ import {
 import type {
   ExtractorInfoResponse as ExtractorInfo,
   ExtractorsListResponse,
+  NotebookExtractorsPolicy,
+  PatchNotebookExtractorsPolicyRequest,
   SourceFromUrlMode,
 } from '../../../../api/generated';
 import { unwrapData } from '../../../../api/unwrap';
@@ -759,6 +762,7 @@ export function useSources() {
   const {
     data: extractorsData,
     isLoading: extractorsLoading,
+    mutate: mutateExtractors,
   } = useSWR<ExtractorsListResponse>(
     activeNotebookId && isConnected
       ? ['workspace/extractors', activeNotebookId]
@@ -772,12 +776,42 @@ export function useSources() {
   }, [extractorsData]);
 
   const availableExtractors = useMemo<ExtractorInfo[]>(() => {
-    return extractors.filter((e) => e.available);
+    return extractors.filter((e) => e.enabled && e.available);
   }, [extractors]);
 
   const defaultExtractor = useMemo<ExtractorType | null>(() => {
     return extractorsData?.default_extractor ?? null;
   }, [extractorsData]);
+
+  const extractorsPolicy = useMemo<NotebookExtractorsPolicy | null>(() => {
+    return extractorsData?.policy ?? null;
+  }, [extractorsData]);
+
+  const extractorFallbackEnabled = useMemo<boolean | null>(() => {
+    if (typeof extractorsData?.fallback_enabled === 'boolean') return extractorsData.fallback_enabled;
+    return null;
+  }, [extractorsData]);
+
+  const handlePatchExtractorsPolicy = useCallback(
+    async (patch: PatchNotebookExtractorsPolicyRequest) => {
+      if (!isConnected) {
+        throw new Error('未连接到后端服务，暂不支持此功能');
+      }
+      if (!activeNotebookId) {
+        throw new Error('请先创建笔记本');
+      }
+      await unwrapData(patchExtractorsPolicy<true>({
+        path: { notebook_id: activeNotebookId },
+        body: patch,
+      }));
+      await mutateExtractors();
+    },
+    [activeNotebookId, isConnected, mutateExtractors],
+  );
+
+  const refreshExtractors = useCallback(async () => {
+    await mutateExtractors();
+  }, [mutateExtractors]);
 
   const sourceTags = useMemo<SourceTagRead[]>(() => tagsData ?? [], [tagsData]);
 
@@ -859,6 +893,10 @@ export function useSources() {
     availableExtractors,
     defaultExtractor,
     extractorsLoading,
+    extractorsPolicy,
+    extractorFallbackEnabled,
+    patchExtractorsPolicy: handlePatchExtractorsPolicy,
+    refreshExtractors,
     convertSourceQAToSource: handleConvertSourceQAToSource,
     reembedSource: handleReembedSource,
     batchReembedSources: handleBatchReembedSources,

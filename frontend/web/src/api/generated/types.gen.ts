@@ -437,6 +437,7 @@ export type ExtractorInfoResponse = {
      * Description
      */
     description: string;
+    details?: JsonDict | null;
     /**
      * Display Name
      */
@@ -446,9 +447,25 @@ export type ExtractorInfoResponse = {
      */
     enabled: boolean;
     /**
+     * Error Code
+     */
+    error_code?: null | string;
+    /**
+     * Message
+     */
+    message?: null | string;
+    /**
+     * Plugin Id
+     */
+    plugin_id?: null | string;
+    /**
      * Priority
      */
     priority: number;
+    /**
+     * Recovery Hint
+     */
+    recovery_hint?: null | string;
     /**
      * Requires Api Key
      */
@@ -481,6 +498,7 @@ export type ExtractorsListResponse = {
      * Fallback Enabled
      */
     fallback_enabled?: boolean;
+    policy?: NotebookExtractorsPolicy;
 };
 
 /**
@@ -709,6 +727,20 @@ export type NotebookCreate = {
 };
 
 /**
+ * NotebookExtractorsPolicy
+ */
+export type NotebookExtractorsPolicy = {
+    /**
+     * Enabled Extractors
+     */
+    enabled_extractors?: Array<string>;
+    /**
+     * Mode
+     */
+    mode?: 'custom' | 'inherit_global';
+};
+
+/**
  * NotebookRead
  */
 export type NotebookRead = {
@@ -738,6 +770,26 @@ export type NotebookUpdate = {
      * Name
      */
     name: string;
+};
+
+/**
+ * OfficialPluginDiagnostic
+ */
+export type OfficialPluginDiagnostic = {
+    /**
+     * Details
+     */
+    details?: {
+        [key: string]: JsonValue;
+    } | null;
+    /**
+     * Hint
+     */
+    hint?: null | string;
+    /**
+     * Status
+     */
+    status: 'loaded' | 'not_installed' | 'skipped';
 };
 
 /**
@@ -929,6 +981,20 @@ export type OutputTypeInput = 'BRIEFING' | 'BULLETS' | 'FAQ' | 'GUIDE' | 'MINDMA
 export type OutputTypeOutput = 'BRIEFING' | 'BULLETS' | 'FAQ' | 'GUIDE' | 'MINDMAP' | 'PARAGRAPH' | 'QUIZ' | 'SLIDES' | 'STRUCTURED' | 'TIMELINE';
 
 /**
+ * PatchNotebookExtractorsPolicyRequest
+ */
+export type PatchNotebookExtractorsPolicyRequest = {
+    /**
+     * Enabled Extractors
+     */
+    enabled_extractors?: Array<string> | null;
+    /**
+     * Mode
+     */
+    mode?: 'custom' | 'inherit_global' | null;
+};
+
+/**
  * PluginConfigSchema
  */
 export type PluginConfigSchema = {
@@ -948,6 +1014,30 @@ export type PluginConfigSchema = {
      * Topic Placeholder
      */
     topic_placeholder?: string;
+};
+
+/**
+ * PluginSkipDetailResponse
+ */
+export type PluginSkipDetailResponse = {
+    /**
+     * Details
+     */
+    details?: {
+        [key: string]: JsonValue;
+    } | null;
+    /**
+     * Error Code
+     */
+    error_code: string;
+    /**
+     * Hint
+     */
+    hint?: null | string;
+    /**
+     * Message
+     */
+    message: string;
 };
 
 /**
@@ -2627,8 +2717,6 @@ export type TemplateUpdate = {
 
 /**
  * ToolConfigResponse
- *
- * Configuration options for a specific tool.
  */
 export type ToolConfigResponse = {
     /**
@@ -2655,6 +2743,22 @@ export type ToolConfigResponse = {
      * Topic Placeholder
      */
     topic_placeholder?: null | string;
+};
+
+/**
+ * ToolsPluginDiagnostics
+ */
+export type ToolsPluginDiagnostics = {
+    /**
+     * Loaded
+     */
+    loaded?: Array<string>;
+    /**
+     * Skipped
+     */
+    skipped?: {
+        [key: string]: PluginSkipDetailResponse;
+    };
 };
 
 /**
@@ -2752,9 +2856,23 @@ export type WorkspaceTool = {
 };
 
 /**
+ * WorkspaceToolsDiagnostics
+ */
+export type WorkspaceToolsDiagnostics = {
+    /**
+     * Official
+     */
+    official?: {
+        [key: string]: OfficialPluginDiagnostic;
+    };
+    plugins: ToolsPluginDiagnostics;
+};
+
+/**
  * WorkspaceToolsResponse
  */
 export type WorkspaceToolsResponse = {
+    diagnostics: WorkspaceToolsDiagnostics;
     /**
      * Tools
      */
@@ -2763,8 +2881,6 @@ export type WorkspaceToolsResponse = {
 
 /**
  * ConfigOption
- *
- * A single configuration option.
  */
 export type CrystalithFeaturesWorkspaceApiConfigOption = {
     /**
@@ -4699,6 +4815,36 @@ export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses = {
 };
 
 export type ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponse = ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses[keyof ListExtractorsV1NotebooksNotebookIdSourcesExtractorsGetResponses];
+
+export type PatchExtractorsPolicyV1NotebooksNotebookIdSourcesExtractorsPatchData = {
+    body: PatchNotebookExtractorsPolicyRequest;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/sources/extractors';
+};
+
+export type PatchExtractorsPolicyV1NotebooksNotebookIdSourcesExtractorsPatchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PatchExtractorsPolicyV1NotebooksNotebookIdSourcesExtractorsPatchError = PatchExtractorsPolicyV1NotebooksNotebookIdSourcesExtractorsPatchErrors[keyof PatchExtractorsPolicyV1NotebooksNotebookIdSourcesExtractorsPatchErrors];
+
+export type PatchExtractorsPolicyV1NotebooksNotebookIdSourcesExtractorsPatchResponses = {
+    /**
+     * Successful Response
+     */
+    200: ExtractorsListResponse;
+};
+
+export type PatchExtractorsPolicyV1NotebooksNotebookIdSourcesExtractorsPatchResponse = PatchExtractorsPolicyV1NotebooksNotebookIdSourcesExtractorsPatchResponses[keyof PatchExtractorsPolicyV1NotebooksNotebookIdSourcesExtractorsPatchResponses];
 
 export type CreateSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPostData = {
     body: SourceFromUrlRequest;

@@ -692,8 +692,14 @@ export default function WorkspaceLayout() {
               searchQueue={sources.searchQueue}
               onRemoveSearchQueueItem={sources.removeSearchQueueItem}
               onRemoveResultsFromQueue={sources.removeResultsFromQueue}
+              extractors={sources.extractors}
               availableExtractors={sources.availableExtractors}
               defaultExtractor={sources.defaultExtractor}
+              extractorsLoading={sources.extractorsLoading}
+              extractorsPolicy={sources.extractorsPolicy}
+              extractorFallbackEnabled={sources.extractorFallbackEnabled}
+              onPatchExtractorsPolicy={sources.patchExtractorsPolicy}
+              onRefreshExtractors={sources.refreshExtractors}
               onConvertSourceQAToSource={sources.convertSourceQAToSource}
               onReembedSource={sources.reembedSource}
               notebookId={activeNotebookId ?? undefined}
@@ -820,7 +826,13 @@ export default function WorkspaceLayout() {
         isLoading={dependencyHealth.isLoading}
         error={dependencyHealth.error}
         data={dependencyHealth.data}
-        onRefresh={dependencyHealth.refresh}
+        toolsDiagnostics={refine.toolsDiagnostics}
+        toolsLoading={refine.toolsLoading}
+        toolsError={refine.toolsError}
+        onRefresh={() => {
+          void dependencyHealth.refresh();
+          void refine.refreshTools();
+        }}
       />
 
       <SystemConfigDialog

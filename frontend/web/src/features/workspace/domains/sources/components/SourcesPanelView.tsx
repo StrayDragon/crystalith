@@ -26,6 +26,7 @@ import {
   Close as CloseIcon,
   Replay as ReplayIcon,
   ContentCopy as ContentCopyIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { Virtuoso } from 'react-virtuoso';
 import type { VirtuosoHandle } from 'react-virtuoso';
@@ -33,6 +34,8 @@ import type { VirtuosoHandle } from 'react-virtuoso';
 import type { AsyncStatus } from '../../../../../shared/types';
 import type {
   ExtractorInfoResponse as ExtractorInfo,
+  NotebookExtractorsPolicy,
+  PatchNotebookExtractorsPolicyRequest,
   QaMessage,
   SourceFromUrlMode,
   SourceTagRead,
@@ -62,6 +65,7 @@ import AddSearchResultDialog from '../AddSearchResultDialog';
 import ResearchCapsule from '../../research/ResearchCapsule';
 import type { SearchResultItem } from '../SearchResultCard';
 import type { useResearch } from '../../research/useResearch';
+import ExtractorPolicyDialog from './ExtractorPolicyDialog';
 
 const SourceDetailDialog = lazy(() => import('../SourceDetailDialog'));
 const ResearchDetailPanel = lazy(() => import('../../research/ResearchDetailPanel'));
@@ -145,8 +149,20 @@ export interface SourcesPanelProps {
   onRemoveResultsFromQueue?: (urls: string[]) => void;
   /** 可用的提取器列表 */
   availableExtractors?: ExtractorInfo[];
+  /** 全量提取器列表（含不可用/禁用项） */
+  extractors?: ExtractorInfo[];
   /** 默认提取器 */
   defaultExtractor?: ExtractorType | null;
+  /** notebook 级别提取器策略 */
+  extractorsPolicy?: NotebookExtractorsPolicy | null;
+  /** 是否启用提取器回退 */
+  extractorFallbackEnabled?: boolean | null;
+  /** 提取器清单加载中 */
+  extractorsLoading?: boolean;
+  /** 更新 notebook 级提取器策略 */
+  onPatchExtractorsPolicy?: (patch: PatchNotebookExtractorsPolicyRequest) => Promise<void>;
+  /** 刷新提取器可用性 */
+  onRefreshExtractors?: () => Promise<void> | void;
   /** 将来源问答转换为新来源 */
   onConvertSourceQAToSource?: (sourceId: number, messages: QaMessage[]) => Promise<unknown>;
   /** 重新嵌入失败来源 */
@@ -199,7 +215,13 @@ function SourcesPanelView({
   onRemoveSearchQueueItem,
   onRemoveResultsFromQueue,
   availableExtractors = [],
+  extractors = [],
   defaultExtractor = null,
+  extractorsPolicy = null,
+  extractorFallbackEnabled = null,
+  extractorsLoading = false,
+  onPatchExtractorsPolicy,
+  onRefreshExtractors,
   onConvertSourceQAToSource,
   onReembedSource,
   research,
@@ -250,6 +272,7 @@ function SourcesPanelView({
   const [selectedExtractor, setSelectedExtractor] = useState<ExtractorType | undefined>(undefined);
   const [isAddingFromUrl, setIsAddingFromUrl] = useState(false);
   const [isDetailFullscreen, setIsDetailFullscreen] = useState(false);
+  const [extractorPolicyOpen, setExtractorPolicyOpen] = useState(false);
 
   // Deep Research state
   const [researchDetailOpen, setResearchDetailOpen] = useState(false);
@@ -317,6 +340,16 @@ function SourcesPanelView({
   const handleCloseAddDialog = useCallback(() => {
     setAddDialogOpen(false);
   }, []);
+
+  const extractorModeLabel = useMemo(() => {
+    const mode = extractorsPolicy?.mode ?? 'inherit_global';
+    return mode === 'custom' ? '自定义' : '遵循全局';
+  }, [extractorsPolicy?.mode]);
+
+  const usableExtractorCount = useMemo(
+    () => extractors.filter((ext) => ext.enabled && ext.available).length,
+    [extractors],
+  );
 
   useEffect(() => {
     if (!sources.length) {
@@ -865,6 +898,25 @@ function SourcesPanelView({
                 </Typography>
               </div>
             ) : null}
+
+            <div className={`px-3 pb-2 ${isDeepResearchMode ? '' : '-mt-1'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[11px] text-gray-600 dark:text-slate-400">
+                  提取器：{extractorModeLabel}
+                  {extractorsLoading ? ' · 加载中…' : ` · 可用 ${usableExtractorCount}/${extractors.length}`}
+                  {extractorFallbackEnabled == null ? '' : ` · 回退 ${extractorFallbackEnabled ? '开启' : '关闭'}`}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setExtractorPolicyOpen(true)}
+                  disabled={!isConnected}
+                  className="text-[11px] text-blue-600 hover:text-blue-700 disabled:opacity-60 flex items-center gap-1"
+                >
+                  <SettingsIcon style={{ fontSize: 14 }} />
+                  提取器设置
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1327,6 +1379,18 @@ function SourcesPanelView({
         mode={addMode}
         onAddSource={handleAddSource}
         onComplete={handleAddComplete}
+      />
+
+      <ExtractorPolicyDialog
+        open={extractorPolicyOpen}
+        onClose={() => setExtractorPolicyOpen(false)}
+        isConnected={isConnected}
+        isLoading={extractorsLoading}
+        extractors={extractors}
+        policy={extractorsPolicy}
+        fallbackEnabled={extractorFallbackEnabled}
+        onPatchPolicy={onPatchExtractorsPolicy}
+        onRefresh={onRefreshExtractors}
       />
 
       {/* Research Detail Panel - Modal Overlay */}
