@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import ipaddress
 import json
 import logging
+import os
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -242,6 +244,81 @@ class ConfigManager:
                         model.provider_config = {"host": selected_ollama}
                 settings.optional_services.ollama.endpoint = selected_ollama
 
+    def _apply_model_defaults(self, settings: Settings) -> None:
+        """
+        Apply runtime-friendly model defaults when config does not specify one.
+
+        Motivation:
+        - When `OPENAI_BASE_URL` points to an OpenAI-compatible gateway, the gateway may not serve
+          OpenAI-native embedding models (e.g. `text-embedding-3-*`). In that case, leaving the
+          embedding default unset can lead to confusing runtime failures on first ingestion.
+
+        Behavior:
+        - If `models.defaults.embedding` is not set and an OpenAI-compatible gateway is detected,
+          prefer the first embedding model whose id ends with `-openai` (gateway-friendly convention).
+        """
+        if (settings.models.defaults.embedding or "").strip():
+            return
+
+        openai_base_url = ""
+        openai_default = settings.providers.get("openai_default")
+        if isinstance(openai_default, dict):
+            base_url_value = openai_default.get("base_url")
+            if isinstance(base_url_value, str):
+                openai_base_url = base_url_value.strip()
+            elif base_url_value is not None:
+                openai_base_url = str(base_url_value).strip()
+
+        if not openai_base_url:
+            for model in settings.models.available:
+                if model.provider != "openai":
+                    continue
+                openai_base_url = (model.get_openai_config().base_url or "").strip()
+                if openai_base_url:
+                    break
+
+        if not openai_base_url:
+            openai_base_url = os.environ.get("OPENAI_BASE_URL", "").strip()
+
+        if not openai_base_url:
+            return
+
+        try:
+            parsed = urlparse(openai_base_url)
+        except Exception:
+            return
+        scheme = (parsed.scheme or "").lower()
+        host = (parsed.hostname or "").lower()
+        if not host:
+            return
+
+        if host == "api.openai.com" or host.endswith(".openai.com"):
+            return
+
+        is_localish_gateway = scheme == "http" or host in {"localhost", "host.docker.internal"}
+        if not is_localish_gateway and host.endswith((".lan", ".local", ".internal")):
+            is_localish_gateway = True
+        if not is_localish_gateway:
+            try:
+                ip = ipaddress.ip_address(host)
+                is_localish_gateway = bool(ip.is_private or ip.is_loopback)
+            except ValueError:
+                pass
+        if not is_localish_gateway:
+            return
+
+        for model in settings.models.available:
+            if not model.has_role("embed"):
+                continue
+            if model.provider != "openai":
+                continue
+            model_id = (model.id or "").strip()
+            if not model_id or not model_id.endswith("-openai"):
+                continue
+            settings.models.defaults.embedding = model_id
+            logger.info("Auto-selected gateway embedding model: %s (base_url=%s)", model_id, openai_base_url)
+            return
+
     def _validate_with_jsonschema(self, data: dict[str, JsonValue]) -> list[str]:
         """
         Validate configuration data against JSON Schema.
@@ -327,6 +404,7 @@ class ConfigManager:
             # Load and validate settings with Pydantic
             settings = Settings.from_yaml(self.config_path, secrets=secrets)
             self._apply_endpoint_candidates(settings)
+            self._apply_model_defaults(settings)
             self._normalize_storage_paths(settings)
 
             def _should_discover_ollama() -> bool:

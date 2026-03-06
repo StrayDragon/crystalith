@@ -547,7 +547,25 @@ dev-deps-up *ARGS='':
     fi
     PROJECT="${DEV_DEPS_PROJECT:-{{DEV_DEPS_PROJECT}}}"
     FILES=(-f {{DEV_DEPS_CORE_FILE}})
-    for optional in {{DEV_DEPS_OPTIONALS}}; do
+
+    optionals="{{DEV_DEPS_OPTIONALS}}"
+    for optional in $optionals; do
+      if [[ "$optional" == "searxng" ]]; then
+        searxng_port="${CL_DEPS_SEARXNG_PORT:-50201}"
+        if python -c 'import socket, sys; host=sys.argv[1]; port=int(sys.argv[2]); s=socket.socket(); s.settimeout(0.2); s.connect((host, port)); s.close()' \
+          "127.0.0.1" "$searxng_port" >/dev/null 2>&1
+        then
+          if python -c 'import json, sys, urllib.request; data=json.loads(urllib.request.urlopen(sys.argv[1], timeout=3).read()); assert "results" in data' \
+            "http://127.0.0.1:${searxng_port}/search?q=ping&format=json" >/dev/null 2>&1
+          then
+            echo "[dev-deps-up] Detected existing searxng on :${searxng_port}; skipping deps overlay (searxng)."
+            continue
+          fi
+          echo "[dev-deps-up] Port ${searxng_port} is already in use, but it does not look like a SearXNG instance." >&2
+          echo "  - Stop the process using :${searxng_port}, or set CL_DEPS_SEARXNG_PORT to a free port, or remove 'searxng' from DEV_DEPS_OPTIONALS." >&2
+          exit 1
+        fi
+      fi
       FILES+=(-f "deployments/dev/docker-compose.deps.${optional}.yml")
     done
     EXTRA_ARGS=({{ARGS}})

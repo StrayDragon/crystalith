@@ -175,6 +175,109 @@ def test_config_manager_ignores_legacy_env_overrides(tmp_path, monkeypatch) -> N
     assert settings.search.searxng.host == ""
 
 
+def test_config_manager_auto_selects_gateway_embedding_model(tmp_path, monkeypatch) -> None:
+    config_path = tmp_path / "app.yaml"
+    _write_yaml(
+        config_path,
+        """\
+%YAML 1.1
+---
+name: "Test"
+version: "1.0.0"
+schema: v1
+providers:
+  openai_default: &openai_default
+    api_key: "sk-test"
+    base_url: "http://gateway.lan:50256/v1"
+models:
+  defaults:
+    chat: "test-chat"
+    embedding: ""
+  available:
+    - id: "test-chat"
+      provider: "openai"
+      model: "gpt-test"
+      display_name: "Test Chat"
+      roles: [chat]
+      provider_config:
+        <<: *openai_default
+    - id: "text-embedding-3-small"
+      provider: "openai"
+      model: "text-embedding-3-small"
+      display_name: "OpenAI Embed"
+      roles: [embed]
+      provider_config:
+        <<: *openai_default
+    - id: "bge-m3-openai"
+      provider: "openai"
+      model: "BAAI/bge-m3"
+      display_name: "BGE-M3 (gateway)"
+      roles: [embed]
+      provider_config:
+        <<: *openai_default
+""",
+    )
+    manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.json")
+
+    # Mock reason: keep config load test deterministic and independent of local Ollama availability.
+    monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
+
+    settings = manager.load(validate_schema=False)
+    assert settings.models.defaults.embedding == "bge-m3-openai"
+
+
+def test_config_manager_does_not_override_official_openai_embedding_default(tmp_path, monkeypatch) -> None:
+    config_path = tmp_path / "app.yaml"
+    _write_yaml(
+        config_path,
+        """\
+%YAML 1.1
+---
+name: "Test"
+version: "1.0.0"
+schema: v1
+providers:
+  openai_default: &openai_default
+    api_key: "sk-test"
+    base_url: "https://api.openai.com/v1"
+models:
+  defaults:
+    chat: "test-chat"
+    embedding: ""
+  available:
+    - id: "test-chat"
+      provider: "openai"
+      model: "gpt-test"
+      display_name: "Test Chat"
+      roles: [chat]
+      provider_config:
+        <<: *openai_default
+    - id: "text-embedding-3-small"
+      provider: "openai"
+      model: "text-embedding-3-small"
+      display_name: "OpenAI Embed"
+      roles: [embed]
+      provider_config:
+        <<: *openai_default
+    - id: "bge-m3-openai"
+      provider: "openai"
+      model: "BAAI/bge-m3"
+      display_name: "BGE-M3 (gateway)"
+      roles: [embed]
+      provider_config:
+        <<: *openai_default
+""",
+    )
+    manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.json")
+
+    # Mock reason: keep config load test deterministic and independent of local Ollama availability.
+    monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
+
+    settings = manager.load(validate_schema=False)
+    assert settings.get_default_embedding_model() is not None
+    assert settings.get_default_embedding_model().id == "text-embedding-3-small"
+
+
 def test_config_manager_validate_config_returns_warnings() -> None:
     settings = make_settings(
         {
