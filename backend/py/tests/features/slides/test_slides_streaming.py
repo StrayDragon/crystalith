@@ -200,3 +200,45 @@ async def test_slide_outline_stream_busy_and_stale_clear(client, db_session) -> 
         assert response.status_code == 200
         lines = await _read_sse_until_event(response, want_event="done")
         assert any("event: progress" in line for line in lines)
+
+
+
+@pytest.mark.asyncio
+async def test_slide_outline_stream_returns_unavailable_detail_when_plugin_missing(client, app, db_session) -> None:
+    from crystalith.shared.plugins import PluginRegistry
+
+    notebook_resp = await client.post("/v1/notebooks", json={"name": "Slides Missing Plugin Stream"})
+    assert notebook_resp.status_code == 201
+    notebook_id = notebook_resp.json()["id"]
+
+    source = Source(notebook_id=notebook_id, filename="Doc.md", status=SourceStatus.READY)
+    db_session.add(source)
+    await db_session.commit()
+    await db_session.refresh(source)
+
+    slide = StudioSlide(
+        notebook_id=notebook_id,
+        title="Deck",
+        prompt="p",
+        engine="slidev",
+        source_ids=[source.id],
+        stage=SlideStage.INPUT,
+        status=SlideStatus.IDLE,
+    )
+    db_session.add(slide)
+    await db_session.commit()
+    await db_session.refresh(slide)
+
+    original_plugins = app.state.plugins
+    app.state.plugins = PluginRegistry()
+    try:
+        response = await client.get(
+            f"/v1/notebooks/{notebook_id}/slides/drafts/{slide.id}/outline/stream",
+        )
+    finally:
+        app.state.plugins = original_plugins
+
+    assert response.status_code == 409
+    detail = response.json(); detail = detail.get("detail", detail)
+    assert detail["error_code"] == "slides_plugin_required"
+    assert "hint" in detail

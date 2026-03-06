@@ -1304,6 +1304,26 @@
       "title": "SearchSettings",
       "type": "object"
     },
+    "SlidesSettings": {
+      "description": "Slides workflow plugin selection settings.",
+      "properties": {
+        "default_plugin": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional slides workflow plugin id to use as the active SLIDES provider.",
+          "title": "Default Plugin"
+        }
+      },
+      "title": "SlidesSettings",
+      "type": "object"
+    },
     "SourceDedupSettings": {
       "description": "来源去重配置（可选）。",
       "properties": {
@@ -1674,6 +1694,10 @@
     "plugins": {
       "$ref": "#/$defs/PluginsSettings",
       "description": "插件加载配置"
+    },
+    "slides": {
+      "$ref": "#/$defs/SlidesSettings",
+      "description": "Slides 工作流插件选择"
     },
     "source_ingestion": {
       "$ref": "#/$defs/SourceIngestionSettings",

@@ -5,6 +5,7 @@ import {
   createDraftV1NotebooksNotebookIdSlidesDraftsPost as createSlidesDraft,
   createOutputV1NotebooksNotebookIdOutputsOutputTypePost as createOutput,
   deleteOutputV1NotebooksNotebookIdOutputsOutputIdDelete as deleteOutputApi,
+  getDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGet as getSlidesDraft,
   getOutputV1NotebooksNotebookIdOutputsOutputIdGet as getOutput,
   listOutputsV1NotebooksNotebookIdOutputsGet as listOutputs,
 } from '../../../../api/generated';
@@ -15,6 +16,18 @@ import { createId, formatTimestamp, normalizeOutput } from '../utils';
 import { readInitialGenerationPreferenceForApi } from './useGenerationPreference';
 
 type OutputQueueStatus = 'queued' | 'running' | 'done' | 'error' | 'cancelled';
+type SlidesStreamStage = 'outline' | 'markdown';
+
+type SlidesDraftSnapshot = {
+  stage?: string | null;
+  status?: string | null;
+  output_id?: number | null;
+  error_message?: string | null;
+  markdown?: string | null;
+};
+
+const SLIDES_STREAM_POLL_INTERVAL_MS = 1000;
+const SLIDES_STREAM_TIMEOUT_MS = 180000;
 
 export interface OutputQueueJob {
   id: string;
@@ -86,15 +99,42 @@ function isAbortSignalCompatibleWithRequest(signal: AbortSignal): boolean {
   }
 }
 
-function runSlidesStream(url: string, signal?: AbortSignal): Promise<void> {
+function hasSlidesStageCompleted(stage: SlidesStreamStage, draft: SlidesDraftSnapshot): boolean {
+  if (draft.status !== 'idle') return false;
+  if (stage === 'outline') {
+    return draft.stage === 'outline' || draft.stage === 'markdown';
+  }
+  return draft.stage === 'markdown' && (draft.output_id != null || Boolean(draft.markdown?.trim()));
+}
+
+function runSlidesStream(
+  url: string,
+  stage: SlidesStreamStage,
+  options?: {
+    signal?: AbortSignal;
+    pollDraft?: () => Promise<SlidesDraftSnapshot>;
+  },
+): Promise<void> {
+  const signal = options?.signal;
+  const pollDraft = options?.pollDraft;
+
   return new Promise((resolve, reject) => {
     let settled = false;
+    let polling = false;
+    let pollTimer: number | null = null;
+    let timeoutTimer: number | null = null;
     const eventSource = new EventSource(url);
 
     const cleanup = () => {
       eventSource.close();
       if (signal) {
         signal.removeEventListener('abort', handleAbort);
+      }
+      if (pollTimer != null) {
+        window.clearInterval(pollTimer);
+      }
+      if (timeoutTimer != null) {
+        window.clearTimeout(timeoutTimer);
       }
     };
 
@@ -103,6 +143,29 @@ function runSlidesStream(url: string, signal?: AbortSignal): Promise<void> {
       settled = true;
       cleanup();
       fn();
+    };
+
+    const rejectWithMessage = (message: string) => {
+      finalize(() => reject(new Error(message)));
+    };
+
+    const pollDraftState = async () => {
+      if (!pollDraft || polling || settled) return;
+      polling = true;
+      try {
+        const draft = await pollDraft();
+        if (settled) return;
+        if (draft.status === 'error') {
+          rejectWithMessage(draft.error_message?.trim() || '生成失败，请稍后重试。');
+          return;
+        }
+        if (hasSlidesStageCompleted(stage, draft)) {
+          finalize(resolve);
+        }
+      } catch {
+      } finally {
+        polling = false;
+      }
     };
 
     const handleAbort = () => {
@@ -126,19 +189,33 @@ function runSlidesStream(url: string, signal?: AbortSignal): Promise<void> {
       const data = parseSseMessage(event);
       const message =
         typeof data.message === 'string' ? data.message : '演示正在生成中，请稍后重试。';
-      finalize(() => reject(new Error(message)));
+      rejectWithMessage(message);
     });
 
     eventSource.addEventListener('error', (event) => {
       const data = parseSseMessage(event);
       const message =
         typeof data.message === 'string' ? data.message : '生成失败，请稍后重试。';
-      finalize(() => reject(new Error(message)));
+      rejectWithMessage(message);
     });
 
     eventSource.onerror = () => {
-      finalize(() => reject(new Error('生成失败，请稍后重试。')));
+      if (!pollDraft) {
+        rejectWithMessage('生成失败，请稍后重试。');
+        return;
+      }
+      void pollDraftState();
     };
+
+    if (pollDraft) {
+      pollTimer = window.setInterval(() => {
+        void pollDraftState();
+      }, SLIDES_STREAM_POLL_INTERVAL_MS);
+      timeoutTimer = window.setTimeout(() => {
+        rejectWithMessage('生成超时，请稍后重试。');
+      }, SLIDES_STREAM_TIMEOUT_MS);
+      void pollDraftState();
+    }
   });
 }
 
@@ -382,8 +459,18 @@ export function useOutputQueue({
               'markdown',
               job.modelId,
             );
-            await runSlidesStream(outlineUrl, abortController.signal);
-            await runSlidesStream(markdownUrl, abortController.signal);
+            const pollDraft = async () =>
+              unwrapData(getSlidesDraft<true>({
+                path: { notebook_id: job.notebookId ?? 0, slide_id: job.draftId ?? 0 },
+              }));
+            await runSlidesStream(outlineUrl, 'outline', {
+              signal: abortController.signal,
+              pollDraft,
+            });
+            await runSlidesStream(markdownUrl, 'markdown', {
+              signal: abortController.signal,
+              pollDraft,
+            });
             if (!isCancelled()) {
               await mutateOutputs();
             }

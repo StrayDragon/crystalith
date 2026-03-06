@@ -7,6 +7,7 @@ import {
   type FieldDescriptor as ApiFieldDescriptor,
   type FrontendBundleDescriptor as ApiFrontendBundleDescriptor,
   type PluginConfigSchema as ApiPluginConfigSchema,
+  type PreviewDescriptor as ApiPreviewDescriptor,
   type RenderDescriptor as ApiRenderDescriptor,
   type WorkspaceTool as ApiWorkspaceTool,
 } from '../../../../api/generated';
@@ -18,10 +19,12 @@ import type {
   OutputItem,
   OutputTypeId,
   PluginConfigSchema,
+  PreviewDescriptor,
   RefineOutput,
   RenderDescriptor,
   RefineJob,
   RefineMode,
+  SlideGenerationConfig,
   WorkspaceTool,
 } from '../../shared/types';
 import {
@@ -57,13 +60,52 @@ function normalizeRenderDescriptor(descriptor?: ApiRenderDescriptor | null): Ren
   };
 }
 
+function normalizeSlideGenerationDefaults(raw: Record<string, unknown> | null | undefined): SlideGenerationConfig | null {
+  if (!raw || typeof raw !== 'object') return null;
+  return {
+    preference: (raw.preference as SlideGenerationConfig['preference']) ?? null,
+    quantity: (raw.quantity as string | null | undefined) ?? null,
+    audience: (raw.audience as string | null | undefined) ?? null,
+    structure: (raw.structure as string | null | undefined) ?? null,
+    tone: (raw.tone as string | null | undefined) ?? null,
+    language: (raw.language as string | null | undefined) ?? null,
+    density: (raw.density as string | null | undefined) ?? null,
+    themePreset: (raw.themePreset as string | null | undefined) ?? (raw.theme_preset as string | null | undefined) ?? null,
+    frontmatter: (raw.frontmatter as string | null | undefined) ?? null,
+  };
+}
+
+function normalizePreviewDescriptor(descriptor?: ApiPreviewDescriptor | null): PreviewDescriptor | null {
+  if (!descriptor) return null;
+  return {
+    kind: descriptor.kind ?? 'external_url',
+    service: descriptor.service ?? null,
+    url: descriptor.url ?? null,
+    open_in_new_tab: descriptor.open_in_new_tab ?? false,
+    meta: descriptor.meta ?? {},
+  };
+}
+
 function normalizeConfigSchema(schema?: ApiPluginConfigSchema | null): PluginConfigSchema | null {
   if (!schema) return null;
   return {
+    defaults: normalizeSlideGenerationDefaults(schema.defaults ?? null),
     quantity_options: schema.quantity_options ?? [],
     difficulty_options: schema.difficulty_options ?? [],
+    audience_options: schema.audience_options ?? [],
+    structure_options: schema.structure_options ?? [],
+    tone_options: schema.tone_options ?? [],
+    language_options: schema.language_options ?? [],
+    density_options: schema.density_options ?? [],
+    theme_preset_options: (schema.theme_preset_options ?? []).map((option) => ({
+      id: option.id,
+      label: option.label,
+      template: option.template ?? {},
+    })),
     topic_placeholder: schema.topic_placeholder ?? '',
     supports_topic: schema.supports_topic ?? false,
+    engine: schema.engine ?? null,
+    preview: normalizePreviewDescriptor(schema.preview ?? null),
   };
 }
 

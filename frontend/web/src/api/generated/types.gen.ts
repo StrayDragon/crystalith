@@ -1007,17 +1007,52 @@ export type PatchNotebookExtractorsPolicyRequest = {
  */
 export type PluginConfigSchema = {
     /**
+     * Audience Options
+     */
+    audience_options?: Array<ConfigOption>;
+    /**
+     * Defaults
+     */
+    defaults?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Density Options
+     */
+    density_options?: Array<ConfigOption>;
+    /**
      * Difficulty Options
      */
     difficulty_options?: Array<ConfigOption>;
+    /**
+     * Engine
+     */
+    engine?: null | string;
+    /**
+     * Language Options
+     */
+    language_options?: Array<ConfigOption>;
+    preview?: PreviewDescriptor | null;
     /**
      * Quantity Options
      */
     quantity_options?: Array<ConfigOption>;
     /**
+     * Structure Options
+     */
+    structure_options?: Array<ConfigOption>;
+    /**
      * Supports Topic
      */
     supports_topic?: boolean;
+    /**
+     * Theme Preset Options
+     */
+    theme_preset_options?: Array<ThemePresetOption>;
+    /**
+     * Tone Options
+     */
+    tone_options?: Array<ConfigOption>;
     /**
      * Topic Placeholder
      */
@@ -1046,6 +1081,34 @@ export type PluginSkipDetailResponse = {
      * Message
      */
     message: string;
+};
+
+/**
+ * PreviewDescriptor
+ */
+export type PreviewDescriptor = {
+    /**
+     * Kind
+     */
+    kind?: 'external_url';
+    /**
+     * Meta
+     */
+    meta?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Open In New Tab
+     */
+    open_in_new_tab?: boolean;
+    /**
+     * Service
+     */
+    service?: null | string;
+    /**
+     * Url
+     */
+    url?: null | string;
 };
 
 /**
@@ -1782,12 +1845,6 @@ export type SessionUpdate = {
  * SlideDraftCreate
  */
 export type SlideDraftCreate = {
-    /**
-     * Engine
-     *
-     * Rendering engine (default: slidev)
-     */
-    engine?: string;
     generation_config?: SlideGenerationConfig | null;
     /**
      * Prompt
@@ -1883,10 +1940,6 @@ export type SlideDraftRead = {
  * SlideDraftUpdate
  */
 export type SlideDraftUpdate = {
-    /**
-     * Engine
-     */
-    engine?: null | string;
     generation_config?: SlideGenerationConfig | null;
     /**
      * Prompt
@@ -2013,71 +2066,35 @@ export type SlideStage = 'input' | 'markdown' | 'outline';
 export type SlideStatus = 'error' | 'idle' | 'running';
 
 /**
- * SlidesConfigOption
+ * SlidesWorkflowDiagnostic
  */
-export type SlidesConfigOption = {
+export type SlidesWorkflowDiagnostic = {
     /**
-     * Id
+     * Active Plugin Id
      */
-    id: string;
+    active_plugin_id?: null | string;
     /**
-     * Is Default
+     * Details
      */
-    is_default?: boolean;
+    details?: {
+        [key: string]: JsonValueOutput;
+    } | null;
     /**
-     * Label
+     * Engine
      */
-    label: string;
-};
-
-/**
- * SlidesConfigResponse
- */
-export type SlidesConfigResponse = {
+    engine?: null | string;
     /**
-     * Audience Options
+     * Error Code
      */
-    audience_options: Array<SlidesConfigOption>;
-    defaults: SlideGenerationConfig;
+    error_code?: null | string;
     /**
-     * Density Options
+     * Hint
      */
-    density_options: Array<SlidesConfigOption>;
+    hint?: null | string;
     /**
-     * Language Options
+     * Message
      */
-    language_options: Array<SlidesConfigOption>;
-    /**
-     * Quantity Options
-     */
-    quantity_options: Array<SlidesConfigOption>;
-    /**
-     * Structure Options
-     */
-    structure_options: Array<SlidesConfigOption>;
-    /**
-     * Theme Preset Options
-     */
-    theme_preset_options: Array<SlidesThemePreset>;
-    /**
-     * Tone Options
-     */
-    tone_options: Array<SlidesConfigOption>;
-};
-
-/**
- * SlidesThemePreset
- */
-export type SlidesThemePreset = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Label
-     */
-    label: string;
-    template: JsonDictOutput;
+    message?: null | string;
 };
 
 /**
@@ -2748,21 +2765,76 @@ export type TemplateUpdate = {
 };
 
 /**
+ * ThemePresetOption
+ */
+export type ThemePresetOption = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Template
+     */
+    template?: {
+        [key: string]: unknown;
+    };
+};
+
+/**
  * ToolConfigResponse
  */
 export type ToolConfigResponse = {
     /**
+     * Audience Options
+     */
+    audience_options?: Array<ConfigOption>;
+    /**
+     * Defaults
+     */
+    defaults?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Density Options
+     */
+    density_options?: Array<ConfigOption>;
+    /**
      * Difficulty Options
      */
-    difficulty_options?: Array<CrystalithFeaturesWorkspaceApiConfigOption> | null;
+    difficulty_options?: Array<ConfigOption>;
+    /**
+     * Engine
+     */
+    engine?: null | string;
+    /**
+     * Language Options
+     */
+    language_options?: Array<ConfigOption>;
+    preview?: PreviewDescriptor | null;
     /**
      * Quantity Options
      */
-    quantity_options?: Array<CrystalithFeaturesWorkspaceApiConfigOption> | null;
+    quantity_options?: Array<ConfigOption>;
+    /**
+     * Structure Options
+     */
+    structure_options?: Array<ConfigOption>;
     /**
      * Supports Topic
      */
     supports_topic?: boolean;
+    /**
+     * Theme Preset Options
+     */
+    theme_preset_options?: Array<ThemePresetOption>;
+    /**
+     * Tone Options
+     */
+    tone_options?: Array<ConfigOption>;
     /**
      * Tool Id
      */
@@ -2774,7 +2846,7 @@ export type ToolConfigResponse = {
     /**
      * Topic Placeholder
      */
-    topic_placeholder?: null | string;
+    topic_placeholder?: string;
 };
 
 /**
@@ -2822,7 +2894,7 @@ export type UiEventRequest = {
     /**
      * Name
      */
-    name: 'ui.v1.event';
+    name: string;
     /**
      * Type
      */
@@ -2950,6 +3022,7 @@ export type WorkspaceToolsDiagnostics = {
         [key: string]: OfficialPluginDiagnostic;
     };
     plugins: ToolsPluginDiagnostics;
+    slides?: SlidesWorkflowDiagnostic | null;
 };
 
 /**
@@ -2961,24 +3034,6 @@ export type WorkspaceToolsResponse = {
      * Tools
      */
     tools: Array<WorkspaceTool>;
-};
-
-/**
- * ConfigOption
- */
-export type CrystalithFeaturesWorkspaceApiConfigOption = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Is Default
-     */
-    is_default?: boolean;
-    /**
-     * Label
-     */
-    label: string;
 };
 
 export type ListCommandsV1CommandsGetData = {
@@ -5840,22 +5895,6 @@ export type ListWorkspaceToolsV1WorkspaceToolsGetResponses = {
 };
 
 export type ListWorkspaceToolsV1WorkspaceToolsGetResponse = ListWorkspaceToolsV1WorkspaceToolsGetResponses[keyof ListWorkspaceToolsV1WorkspaceToolsGetResponses];
-
-export type GetSlidesConfigV1WorkspaceToolsSlidesConfigGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/v1/workspace/tools/slides/config';
-};
-
-export type GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: SlidesConfigResponse;
-};
-
-export type GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponse = GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses[keyof GetSlidesConfigV1WorkspaceToolsSlidesConfigGetResponses];
 
 export type GetToolConfigV1WorkspaceToolsToolIdConfigGetData = {
     body?: never;

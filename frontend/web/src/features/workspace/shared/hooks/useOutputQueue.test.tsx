@@ -272,3 +272,138 @@ test('enqueueSlidesJob returns null when disconnected', async () => {
   expect(created).toBeNull();
   expect(useWorkspaceStore.getState().errors.outputs).toBe('未连接到后端服务。');
 });
+
+
+test('enqueueSlidesJob settles from draft polling when stream terminal event is missed', async () => {
+  const OriginalEventSource = globalThis.EventSource;
+
+  class SilentEventSource {
+    url: string;
+    onerror: ((event: Event) => void) | null = null;
+
+    constructor(url: string) {
+      this.url = url;
+    }
+
+    addEventListener(_type: string, _listener: EventListenerOrEventListenerObject) {}
+
+    close() {}
+  }
+
+  globalThis.EventSource = SilentEventSource as unknown as typeof EventSource;
+
+  let outputsReady = false;
+  let draftReads = 0;
+  let capturedBody: Record<string, unknown> | null = null;
+
+  server.use(
+    http.post('*/v1/notebooks/:notebook_id/slides/drafts', async ({ request }) => {
+      capturedBody = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({
+        id: 5,
+        notebook_id: 1,
+        output_id: null,
+        title: 'Deck',
+        prompt: 'Outline',
+        engine: 'slidev',
+        chunk_ids: null,
+        source_ids: [1],
+        outline: null,
+        markdown: null,
+        generation_config: {},
+        stage: 'input',
+        status: 'idle',
+        error_message: null,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      });
+    }),
+    http.get('*/v1/notebooks/:notebook_id/slides/drafts/:slide_id', () => {
+      draftReads += 1;
+      if (draftReads === 1) {
+        return HttpResponse.json({
+          id: 5,
+          notebook_id: 1,
+          output_id: null,
+          title: 'Deck',
+          prompt: 'Outline',
+          engine: 'slidev',
+          chunk_ids: [1],
+          source_ids: [1],
+          outline: { title: 'Deck', slides: [{ title: 'Intro', bullets: [] }] },
+          markdown: null,
+          generation_config: {},
+          stage: 'outline',
+          status: 'idle',
+          error_message: null,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:01Z',
+        });
+      }
+      outputsReady = true;
+      return HttpResponse.json({
+        id: 5,
+        notebook_id: 1,
+        output_id: 21,
+        title: 'Deck',
+        prompt: 'Outline',
+        engine: 'slidev',
+        chunk_ids: [1],
+        source_ids: [1],
+        outline: { title: 'Deck', slides: [{ title: 'Intro', bullets: [] }] },
+        markdown: '# Deck',
+        generation_config: {},
+        stage: 'markdown',
+        status: 'idle',
+        error_message: null,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:02Z',
+      });
+    }),
+    http.get('*/v1/notebooks/:notebook_id/outputs', () => HttpResponse.json(outputsReady ? [{
+      id: 21,
+      type: 'SLIDES',
+      prompt: 'Outline',
+      chunk_ids: [1],
+      content: {
+        title: 'Deck',
+        slide_id: 5,
+        markdown: '# Deck',
+      },
+      created_at: '2024-01-01T00:00:02Z',
+      updated_at: '2024-01-01T00:00:02Z',
+    }] : [])),
+  );
+
+  try {
+    setWorkspaceStateForOutputQueue({ isConnected: true, activeNotebookId: 1 });
+    const { result } = renderHook(() => useOutputQueueHarness({ isConnected: true }), { wrapper: wrapSWR });
+
+    await act(async () => {
+      await result.current.enqueueSlidesJob({
+        title: 'Deck',
+        prompt: 'Outline',
+        sourceIds: [1],
+        generationConfig: {},
+      } as any);
+    });
+
+    await waitFor(() => {
+      expect(result.current.outputQueueJobs[0].status).toBe('done');
+    });
+
+    await waitFor(() => {
+      expect(useWorkspaceStore.getState().outputs).toHaveLength(1);
+    });
+
+    expect(capturedBody).toEqual({
+      title: 'Deck',
+      prompt: 'Outline',
+      source_ids: [1],
+      generation_config: {},
+    });
+    expect(markJobCompleted).toHaveBeenCalled();
+  } finally {
+    globalThis.EventSource = OriginalEventSource;
+  }
+});

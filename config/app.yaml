@@ -321,7 +321,7 @@ optional_services:
       enabled: true
       timeout_s: 10
       interval_s: 30
-      path: "/search?q=ping&format=json"
+      path: "/search?q=&format=json"
     degrade_policy: "core_available"
 
 # ----------------------------------------------------------------------------

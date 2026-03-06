@@ -141,11 +141,36 @@ export interface ConfigOption {
   is_default?: boolean;
 }
 
+export interface ThemePresetOption {
+  id: string;
+  label: string;
+  template: Record<string, unknown>;
+}
+
+export type PreviewKind = 'external_url';
+
+export interface PreviewDescriptor {
+  kind: PreviewKind;
+  service?: string | null;
+  url?: string | null;
+  open_in_new_tab?: boolean;
+  meta: Record<string, unknown>;
+}
+
 export interface PluginConfigSchema {
+  defaults?: SlideGenerationConfig | null;
   quantity_options: ConfigOption[];
   difficulty_options: ConfigOption[];
+  audience_options: ConfigOption[];
+  structure_options: ConfigOption[];
+  tone_options: ConfigOption[];
+  language_options: ConfigOption[];
+  density_options: ConfigOption[];
+  theme_preset_options: ThemePresetOption[];
   topic_placeholder: string;
   supports_topic: boolean;
+  engine?: string | null;
+  preview?: PreviewDescriptor | null;
 }
 
 export type FrontendBundleKind = 'builtin';
@@ -399,6 +424,7 @@ export interface ApiWorkspaceTool {
 
 export interface ApiWorkspaceToolsResponse {
   tools: ApiWorkspaceTool[];
+  diagnostics?: Record<string, unknown>;
 }
 
 interface ApiOutputBase {

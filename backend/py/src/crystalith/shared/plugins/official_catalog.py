@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 
-OfficialPluginKind = Literal["output", "parser", "extractor"]
+OfficialPluginKind = Literal["output", "parser", "extractor", "slides"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,7 +14,8 @@ class OfficialPluginCatalogEntry:
     package: str
 
     def default_install_hint(self) -> str:
-        return f"安装 crystalith[official-full]（推荐）或单独安装 {self.package!r}，并确保未在 plugins.disabled 中禁用。"
+        recommended_extra = "official-slides" if self.kind == "slides" else "official-full"
+        return f"安装 crystalith[{recommended_extra}]（推荐）或单独安装 {self.package!r}，并确保未在 plugins.disabled 中禁用。"
 
 
 OFFICIAL_PLUGIN_CATALOG: dict[str, OfficialPluginCatalogEntry] = {
@@ -25,6 +26,8 @@ OFFICIAL_PLUGIN_CATALOG: dict[str, OfficialPluginCatalogEntry] = {
     "output-mindmap": OfficialPluginCatalogEntry(plugin_id="output-mindmap", kind="output", package="crystalith-output-mindmap"),
     "output-quiz": OfficialPluginCatalogEntry(plugin_id="output-quiz", kind="output", package="crystalith-output-quiz"),
     "output-briefing": OfficialPluginCatalogEntry(plugin_id="output-briefing", kind="output", package="crystalith-output-briefing"),
+    # Slides workflow plugins
+    "slides-slidev": OfficialPluginCatalogEntry(plugin_id="slides-slidev", kind="slides", package="crystalith-slides-slidev"),
     # Parser plugins
     "parser-pdf": OfficialPluginCatalogEntry(plugin_id="parser-pdf", kind="parser", package="crystalith-parser-pdf"),
     "parser-html": OfficialPluginCatalogEntry(plugin_id="parser-html", kind="parser", package="crystalith-parser-html"),
@@ -47,4 +50,3 @@ OFFICIAL_PLUGIN_CATALOG: dict[str, OfficialPluginCatalogEntry] = {
         package="crystalith-extractor-browserless",
     ),
 }
-

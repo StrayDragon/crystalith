@@ -1,6 +1,6 @@
 import { Suspense, lazy } from 'react';
 
-import type { AnalysisResult } from '../../../../api/generated';
+import type { AnalysisResult, WorkspaceToolsDiagnostics } from '../../../../api/generated';
 import type { ChatMessage as SourceDialogMessage } from '../../domains/sources/SourceDetailDialog';
 import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
 import { SkeletonCard } from '../../shared/components/Skeleton';
@@ -10,6 +10,7 @@ import type {
   OutputItem,
   SessionSummary,
   SourceItem,
+  WorkspaceTool,
 } from '../../shared/types';
 import { WORKSPACE_SHORTCUTS } from '../../shared/shortcuts';
 import { CommandPalette, type CommandItem, WidgetCatalog, WIDGET_REGISTRY } from '../modular-canvas';
@@ -52,6 +53,8 @@ interface WorkspaceOverlaysProps {
   slidesOpenMode: 'config' | 'preview';
   slidesDraftId: number | null;
   slidesQueueStatus: OutputQueueJob['status'] | null;
+  slidesTool: WorkspaceTool | null;
+  toolsDiagnostics: WorkspaceToolsDiagnostics | null;
   onQueueSlides: (payload: {
     title: string;
     prompt: string;
@@ -136,6 +139,8 @@ export function WorkspaceOverlays({
   slidesOpenMode,
   slidesDraftId,
   slidesQueueStatus,
+  slidesTool,
+  toolsDiagnostics,
   onQueueSlides,
   graphViewOpen,
   onCloseGraphView,
@@ -223,6 +228,8 @@ export function WorkspaceOverlays({
             openMode={slidesOpenMode}
             draftId={slidesDraftId}
             queueStatus={slidesQueueStatus}
+            slidesTool={slidesTool}
+            toolsDiagnostics={toolsDiagnostics}
             onQueueSlides={onQueueSlides}
           />
         </Suspense>

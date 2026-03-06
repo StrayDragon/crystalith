@@ -8,6 +8,7 @@ ARG USE_CN_MIRROR=1
 ARG CI=""
 ARG APT_MIRROR=""
 ARG UV_INDEX_URL=""
+ARG CRYSTALITH_BACKEND_EXTRAS=""
 
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 ENV UV_LINK_MODE=copy
@@ -39,6 +40,7 @@ RUN set -eux; \
 COPY backend/py/pyproject.toml backend/py/uv.lock ./
 COPY backend/py/README.md ./
 COPY backend/py/packages ./packages
+COPY backend/py/plugins ./plugins
 COPY backend/py/src ./src
 COPY backend/py/main.py ./
 COPY backend/py/alembic.ini ./
@@ -53,10 +55,14 @@ RUN set -eux; \
   if [ -z "$uv_index_url" ] && [ "$use_cn_mirror" = "1" ]; then \
     uv_index_url="https://mirrors.aliyun.com/pypi/simple/"; \
   fi; \
+  extra_args=(); \
+  for extra in ${CRYSTALITH_BACKEND_EXTRAS:-}; do \
+    extra_args+=(--extra "$extra"); \
+  done; \
   if [ -n "$uv_index_url" ]; then \
-    UV_INDEX_URL="$uv_index_url" UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable; \
+    UV_INDEX_URL="$uv_index_url" UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable "${extra_args[@]}"; \
   else \
-    UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable; \
+    UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable "${extra_args[@]}"; \
   fi
 
 FROM ${PYTHON_IMAGE} AS runtime

@@ -15,6 +15,11 @@ x-deploy-medium: &deploy-medium
       memory: 1G
 
 services:
+  api:
+    build:
+      args:
+        CRYSTALITH_BACKEND_EXTRAS: ${CRYSTALITH_BACKEND_EXTRAS:-official-slides}
+
   slidev:
     <<: *service-defaults
     build:

@@ -14,6 +14,7 @@ from .interfaces import (
     OutputTypePlugin,
     OutputTypeFrontendBundle,
     ParserPlugin,
+    SlidesWorkflowPlugin,
     WebExtractorPlugin,
     PLUGIN_API_VERSION,
     SUPPORTED_PLUGIN_API_VERSIONS,
@@ -23,7 +24,7 @@ from .render_types import FrontendBundleDescriptor, OutputTypePluginMeta, Plugin
 
 log = get_logger(__name__)
 
-SupportedPlugin = AIProviderPlugin | ParserPlugin | OutputTypePlugin | WebExtractorPlugin
+SupportedPlugin = AIProviderPlugin | ParserPlugin | OutputTypePlugin | SlidesWorkflowPlugin | WebExtractorPlugin
 
 
 def _iter_entry_points(group: str) -> list[metadata.EntryPoint]:
@@ -98,6 +99,37 @@ class PluginLoadReport:
     skipped: dict[str, PluginSkipDetail] = field(default_factory=dict)
 
 
+@dataclass(slots=True)
+class SlidesWorkflowSelection:
+    plugin_id: str | None = None
+    plugin: SlidesWorkflowPlugin | None = None
+    error_code: str | None = None
+    message: str | None = None
+    hint: str | None = None
+    details: dict[str, JsonValue] = field(default_factory=dict)
+
+    @property
+    def available(self) -> bool:
+        return self.plugin_id is not None and self.plugin is not None
+
+    def to_error_detail(self) -> dict[str, JsonValue]:
+        details = dict(self.details)
+        if self.plugin_id is not None:
+            details.setdefault("plugin_id", self.plugin_id)
+        if self.plugin is not None:
+            details.setdefault("engine", self.plugin.engine)
+
+        payload: dict[str, JsonValue] = {
+            "error_code": self.error_code or "slides_workflow_unavailable",
+            "message": self.message or "Slides workflow capability is unavailable",
+        }
+        if self.hint is not None:
+            payload["hint"] = self.hint
+        if details:
+            payload["details"] = details
+        return payload
+
+
 class PluginRegistry:
     """
     A simple startup-time plugin registry.
@@ -116,6 +148,7 @@ class PluginRegistry:
         self.parsers: dict[str, ParserPlugin] = {}
         self.web_extractors: dict[str, WebExtractorPlugin] = {}
         self.output_types: dict[str, OutputTypePlugin] = {}
+        self.slides_workflows: dict[str, SlidesWorkflowPlugin] = {}
         self.output_type_metadata: dict[str, OutputTypePluginMeta] = {}
         self.render_descriptors: dict[str, RenderDescriptor] = {}
         self.config_schemas: dict[str, PluginConfigSchema] = {}
@@ -132,6 +165,7 @@ class PluginRegistry:
         self.parsers.clear()
         self.web_extractors.clear()
         self.output_types.clear()
+        self.slides_workflows.clear()
         self.output_type_metadata.clear()
         self.render_descriptors.clear()
         self.config_schemas.clear()
@@ -223,9 +257,10 @@ class PluginRegistry:
             has_ai_provider = isinstance(plugin, AIProviderPlugin)
             has_parser = isinstance(plugin, ParserPlugin)
             has_output_type = isinstance(plugin, OutputTypePlugin)
+            has_slides_workflow = isinstance(plugin, SlidesWorkflowPlugin)
             has_web_extractor = isinstance(plugin, WebExtractorPlugin)
 
-            if not (has_ai_provider or has_parser or has_output_type or has_web_extractor):
+            if not (has_ai_provider or has_parser or has_output_type or has_slides_workflow or has_web_extractor):
                 log.warning(
                     "plugin skipped (no compatible interfaces)",
                     plugin_id=plugin_id,
@@ -236,7 +271,8 @@ class PluginRegistry:
                     message="Plugin does not implement any supported plugin interfaces",
                     hint=(
                         "Implement AIProviderPlugin, ParserPlugin, OutputTypePlugin, "
-                        "or WebExtractorPlugin from crystalith.shared.plugins.interfaces."
+                        "SlidesWorkflowPlugin, or WebExtractorPlugin from "
+                        "crystalith.shared.plugins.interfaces."
                     ),
                     details={"entry_point": entry_point_value},
                 )
@@ -261,6 +297,9 @@ class PluginRegistry:
             if has_output_type:
                 self._register_output_type_plugin(plugin_id, cast(OutputTypePlugin, supported))
 
+            if has_slides_workflow:
+                self._register_slides_workflow_plugin(plugin_id, cast(SlidesWorkflowPlugin, supported))
+
             self._loaded_entrypoints[plugin_id] = entry_point_value
             self.plugins[plugin_id] = supported
             report.loaded.append(plugin_id)
@@ -271,6 +310,7 @@ class PluginRegistry:
                 has_ai_provider=has_ai_provider,
                 has_parser=has_parser,
                 has_output_type=has_output_type,
+                has_slides_workflow=has_slides_workflow,
                 has_web_extractor=has_web_extractor,
             )
 
@@ -376,6 +416,17 @@ class PluginRegistry:
                         frontend_bundle_type=type(frontend_bundle).__name__,
                     )
 
+    def _register_slides_workflow_plugin(self, plugin_id: str, plugin: SlidesWorkflowPlugin) -> None:
+        existing = self.slides_workflows.get(plugin_id)
+        if existing is not None:
+            log.warning(
+                "slides workflow plugin conflict; overwriting",
+                plugin_id=plugin_id,
+                existing_engine=existing.engine,
+                engine=plugin.engine,
+            )
+        self.slides_workflows[plugin_id] = plugin
+
     def _normalize_loaded_plugin(self, plugin_id: str, loaded: object) -> object | None:
         if isinstance(loaded, type):
             try:
@@ -445,6 +496,9 @@ class PluginRegistry:
     def list_output_types(self) -> list[str]:
         return sorted(self.output_types.keys())
 
+    def list_slides_workflows(self) -> list[str]:
+        return sorted(self.slides_workflows.keys())
+
     def get_load_report(self) -> PluginLoadReport:
         return self._load_report
 
@@ -486,3 +540,50 @@ class PluginRegistry:
 
     def get_frontend_bundle(self, output_type: str) -> FrontendBundleDescriptor | None:
         return self.frontend_bundles.get(output_type)
+
+    def resolve_active_slides_workflow(self, settings: Settings) -> SlidesWorkflowSelection:
+        configured_plugin_id = (settings.slides.default_plugin or '').strip() or None
+        available_ids = self.list_slides_workflows()
+
+        if configured_plugin_id is not None:
+            plugin = self.slides_workflows.get(configured_plugin_id)
+            if plugin is not None:
+                return SlidesWorkflowSelection(plugin_id=configured_plugin_id, plugin=plugin)
+
+            skip_detail = self._load_report.skipped.get(configured_plugin_id)
+            details: dict[str, JsonValue] = {
+                'configured_plugin_id': configured_plugin_id,
+                'available_plugin_ids': available_ids,
+            }
+            if skip_detail is not None:
+                details['plugin_diagnostic'] = skip_detail.to_dict()
+            hint = (
+                skip_detail.hint
+                if skip_detail is not None and skip_detail.hint
+                else f"Install or enable {configured_plugin_id!r}, or update slides.default_plugin."
+            )
+            return SlidesWorkflowSelection(
+                error_code='configured_plugin_unavailable',
+                message='Configured slides workflow plugin is unavailable',
+                hint=hint,
+                details=details,
+            )
+
+        if not available_ids:
+            return SlidesWorkflowSelection(
+                error_code='slides_plugin_required',
+                message='Slides workflow capability is unavailable because no slides plugin is active',
+                hint='Install and enable a slides-* plugin, or set slides.default_plugin after installation.',
+                details={'available_plugin_ids': available_ids},
+            )
+
+        if len(available_ids) == 1:
+            plugin_id = available_ids[0]
+            return SlidesWorkflowSelection(plugin_id=plugin_id, plugin=self.slides_workflows[plugin_id])
+
+        return SlidesWorkflowSelection(
+            error_code='ambiguous_slides_plugin',
+            message='Multiple slides workflow plugins are available but no default is configured',
+            hint='Set slides.default_plugin in config/app.yaml to one of the available slides plugin ids.',
+            details={'available_plugin_ids': available_ids},
+        )

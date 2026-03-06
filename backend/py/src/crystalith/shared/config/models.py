@@ -653,6 +653,15 @@ class OptionalServicesSettings(BaseModel):
     )
 
 
+class SlidesSettings(BaseModel):
+    """Slides workflow plugin selection settings."""
+
+    default_plugin: str | None = Field(
+        default=None,
+        description="Optional slides workflow plugin id to use as the active SLIDES provider.",
+    )
+
+
 class PluginsSettings(BaseModel):
     """
     Plugin loading configuration.
@@ -1033,6 +1042,7 @@ class Settings(BaseSettings):
         description="Optional dependency service contracts and probe policies",
     )
     plugins: PluginsSettings = Field(default_factory=_default_factory(PluginsSettings), description="插件加载配置")
+    slides: SlidesSettings = Field(default_factory=_default_factory(SlidesSettings), description="Slides 工作流插件选择")
     source_ingestion: SourceIngestionSettings = Field(
         default_factory=_default_factory(SourceIngestionSettings),
         description="来源导入配置（包含 URL 获取和代理设置）",

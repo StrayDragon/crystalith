@@ -48,6 +48,7 @@ const ZH_CN_MESSAGES = {
   'workspace.onboarding.ready_description': '试试提问（对话面板），或直接生成一个输出（例如 Slides）。',
   'workspace.onboarding.ask_question': '开始提问',
   'workspace.onboarding.generate_slides': '生成 Slides',
+  'workspace.onboarding.recover_slides': '查看 Slides 指引',
 
   'workspace.diagnostics.title': '健康 / 诊断',
   'workspace.diagnostics.description': '用于排查依赖服务状态与修复建议',

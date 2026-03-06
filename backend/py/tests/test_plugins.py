@@ -84,6 +84,33 @@ class MockOutputTypePlugin:
     frontend_bundle = FrontendBundleDescriptor(id="output-quiz-custom", export="render")
 
 
+
+class MockSlidesWorkflowPlugin:
+    api_version = "v1"
+
+    def __init__(self, engine: str = "slidev") -> None:
+        self.engine = engine
+        self.default_prompt = "slides prompt"
+        self.metadata = OutputTypePluginMeta(
+            description="Slides plugin",
+            display_text="Slides",
+            tone="indigo",
+        )
+        self.config_schema = PluginConfigSchema(
+            defaults={"quantity": "standard", "language": "zh"},
+            quantity_options=[ConfigOption(id="standard", label="Standard", is_default=True)],
+            engine=engine,
+        )
+        self.preview_descriptor = None
+        self.frontend_bundle = FrontendBundleDescriptor(id="output-slides", export="render")
+
+    async def generate_outline(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("should not be called")
+
+    async def generate_markdown(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+        raise AssertionError("should not be called")
+
+
 def test_plugin_registry_loads_ai_provider_plugin(monkeypatch: pytest.MonkeyPatch) -> None:
     from crystalith.shared.plugins import registry as registry_mod
 
@@ -313,7 +340,6 @@ def test_workspace_tools_endpoint_includes_render_descriptor_when_plugin_availab
 
     tools = payload["tools"]
     quiz_tool = next(tool for tool in tools if tool["output_type"] == "QUIZ")
-    slides_tool = next(tool for tool in tools if tool["output_type"] == "SLIDES")
 
     assert quiz_tool["render_descriptor"]["layout"] == "cards"
     assert quiz_tool["config_schema"]["topic_placeholder"] == "Topic"
@@ -321,8 +347,10 @@ def test_workspace_tools_endpoint_includes_render_descriptor_when_plugin_availab
     assert config_payload["tool_id"] == "quiz"
     assert config_payload["topic_placeholder"] == "Topic"
     assert config_payload["quantity_options"] == quiz_tool["config_schema"]["quantity_options"]
-    assert slides_tool["frontend_bundle"]["id"] == "output-slides"
     assert all(tool["output_type"] != "FAQ" for tool in tools)
+    assert all(tool["output_type"] != "SLIDES" for tool in tools)
+    assert payload["diagnostics"]["slides"]["error_code"] == "slides_plugin_required"
+    assert payload["diagnostics"]["official"]["slides-slidev"]["status"] == "not_installed"
     assert "diagnostics" in payload
     assert "plugins" in payload["diagnostics"]
     assert "official" in payload["diagnostics"]
@@ -358,11 +386,11 @@ def test_workspace_tools_endpoint_omits_frontend_bundle_when_feature_disabled(
 
     tools = payload["tools"]
     quiz_tool = next(tool for tool in tools if tool["output_type"] == "QUIZ")
-    slides_tool = next(tool for tool in tools if tool["output_type"] == "SLIDES")
 
     assert quiz_tool["render_descriptor"]["layout"] == "cards"
     assert quiz_tool["frontend_bundle"] is None
-    assert slides_tool["frontend_bundle"] is None
+    assert all(tool["output_type"] != "SLIDES" for tool in tools)
+    assert payload["diagnostics"]["slides"]["error_code"] == "slides_plugin_required"
 
 
 def test_plugin_registry_respects_disabled_list(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -795,3 +823,66 @@ def test_models_endpoint_hides_disabled_plugin_provider(monkeypatch: pytest.Monk
 
     assert "mock" not in payload["providers"]
     assert payload["models"] == []
+
+
+
+def test_plugin_registry_resolves_single_active_slides_workflow(monkeypatch: pytest.MonkeyPatch) -> None:
+    from crystalith.shared.plugins import registry as registry_mod
+
+    plugin = MockSlidesWorkflowPlugin()
+    monkeypatch.setattr(
+        registry_mod,
+        "_iter_entry_points",
+        lambda group: [StubEntryPoint(name="slides-slidev", value="x:y", plugin=plugin)],
+    )
+
+    settings = Settings()
+    registry = PluginRegistry()
+    registry.load_from_entry_points(settings)
+
+    selection = registry.resolve_active_slides_workflow(settings)
+    assert selection.available is True
+    assert selection.plugin_id == "slides-slidev"
+    assert selection.plugin is plugin
+
+
+def test_plugin_registry_reports_ambiguous_slides_workflow_selection(monkeypatch: pytest.MonkeyPatch) -> None:
+    from crystalith.shared.plugins import registry as registry_mod
+
+    monkeypatch.setattr(
+        registry_mod,
+        "_iter_entry_points",
+        lambda group: [
+            StubEntryPoint(name="slides-slidev", value="x:y", plugin=MockSlidesWorkflowPlugin("slidev")),
+            StubEntryPoint(name="slides-marp", value="x:z", plugin=MockSlidesWorkflowPlugin("marp")),
+        ],
+    )
+
+    settings = Settings()
+    registry = PluginRegistry()
+    registry.load_from_entry_points(settings)
+
+    selection = registry.resolve_active_slides_workflow(settings)
+    assert selection.available is False
+    assert selection.error_code == "ambiguous_slides_plugin"
+    assert selection.details["available_plugin_ids"] == ["slides-marp", "slides-slidev"]
+
+
+def test_plugin_registry_reports_configured_slides_plugin_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    from crystalith.shared.plugins import registry as registry_mod
+
+    monkeypatch.setattr(
+        registry_mod,
+        "_iter_entry_points",
+        lambda group: [],
+    )
+
+    settings = Settings.model_validate({"slides": {"default_plugin": "slides-slidev"}})
+    registry = PluginRegistry()
+    registry.load_from_entry_points(settings)
+
+    selection = registry.resolve_active_slides_workflow(settings)
+    assert selection.available is False
+    assert selection.error_code == "configured_plugin_unavailable"
+    assert selection.details["configured_plugin_id"] == "slides-slidev"
+    assert selection.to_error_detail()["error_code"] == "configured_plugin_unavailable"

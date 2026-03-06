@@ -140,6 +140,27 @@ export default function WorkspaceLayout() {
     return job?.status ?? null;
   }, [overlays.slidesQueueJobId, refine.outputQueueJobs]);
 
+  const slidesTool = useMemo(
+    () => refine.tools.find((tool) => tool.outputType === 'SLIDES') ?? null,
+    [refine.tools],
+  );
+
+  const slidesRecoveryHint = useMemo(() => {
+    return (
+      refine.toolsDiagnostics?.slides?.hint ??
+      refine.toolsDiagnostics?.slides?.message ??
+      refine.toolsDiagnostics?.official?.['slides-slidev']?.hint ??
+      'Slides 当前由插件提供，请先安装并启用 slides 插件。'
+    );
+  }, [refine.toolsDiagnostics]);
+
+  const handleOpenSlidesRecovery = useCallback(() => {
+    if (slidesRecoveryHint.trim()) {
+      toast.info(slidesRecoveryHint, 5000);
+    }
+    overlays.openDiagnostics();
+  }, [overlays, slidesRecoveryHint]);
+
   const handleSelectedSourceIdsChange = useCallback(
     (selected: Record<number, boolean>) => {
       store.getState().setSelectedSources(selected);
@@ -544,10 +565,10 @@ export default function WorkspaceLayout() {
     }
 
     cmds.push({
-      id: 'open-slides-studio',
-      label: '打开 Slides Studio',
+      id: slidesTool ? 'open-slides-studio' : 'recover-slides-workflow',
+      label: slidesTool ? '打开 Slides Studio' : '查看 Slides 诊断 / 安装指引',
       icon: '🖼️',
-      action: () => overlays.openSlidesDialog('config'),
+      action: slidesTool ? () => overlays.openSlidesDialog('config') : handleOpenSlidesRecovery,
     });
 
     cmds.push({
@@ -619,9 +640,11 @@ export default function WorkspaceLayout() {
     notebooks.activeNotebookId,
     notebooks.notebooks,
     notebooks.setActiveNotebookId,
+    handleOpenSlidesRecovery,
     openSessionSearch,
     overlays,
     refine.outputs,
+    slidesTool,
     toggleLock,
   ]);
 
@@ -882,6 +905,9 @@ export default function WorkspaceLayout() {
           onStartSession={handleStartSession}
           onFocusChat={handleFocusChat}
           onOpenSlidesStudio={() => overlays.openSlidesDialog('config')}
+          slidesAvailable={Boolean(slidesTool)}
+          slidesRecoveryHint={!slidesTool ? slidesRecoveryHint : null}
+          onRecoverSlides={handleOpenSlidesRecovery}
           onOpenCommandPalette={overlays.openCommandPalette}
           onOpenShortcutHelp={overlays.openShortcutHelp}
         />
@@ -928,6 +954,8 @@ export default function WorkspaceLayout() {
         slidesOpenMode={overlays.slidesOpenMode}
         slidesDraftId={overlays.slidesDraftId}
         slidesQueueStatus={slidesQueueStatus}
+        slidesTool={slidesTool}
+        toolsDiagnostics={refine.toolsDiagnostics}
         onQueueSlides={refine.onQueueSlides}
         graphViewOpen={overlays.isGraphViewOpen}
         onCloseGraphView={overlays.closeGraphView}

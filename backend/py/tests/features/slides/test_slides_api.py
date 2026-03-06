@@ -113,3 +113,38 @@ async def test_slides_create_rejects_empty_and_invalid_source_ids(client) -> Non
         json={"title": "Deck", "source_ids": [0]},
     )
     assert invalid.status_code == 400
+
+
+
+@pytest.mark.asyncio
+async def test_slides_create_returns_structured_unavailable_detail_when_plugin_missing(client, app, db_session) -> None:
+    from crystalith.shared.plugins import PluginRegistry
+
+    notebook_resp = await client.post("/v1/notebooks", json={"name": "Slides Missing Plugin"})
+    assert notebook_resp.status_code == 201
+    notebook_id = notebook_resp.json()["id"]
+
+    source = Source(
+        notebook_id=notebook_id,
+        filename="Slides Doc.md",
+        status=SourceStatus.READY,
+    )
+    db_session.add(source)
+    await db_session.commit()
+    await db_session.refresh(source)
+
+    original_plugins = app.state.plugins
+    app.state.plugins = PluginRegistry()
+    try:
+        create_resp = await client.post(
+            f"/v1/notebooks/{notebook_id}/slides/drafts",
+            json={"title": "Deck", "source_ids": [source.id]},
+        )
+    finally:
+        app.state.plugins = original_plugins
+
+    assert create_resp.status_code == 409
+    detail = create_resp.json(); detail = detail.get("detail", detail)
+    assert detail["error_code"] == "slides_plugin_required"
+    assert "hint" in detail
+    assert detail["details"]["available_plugin_ids"] == []

@@ -174,6 +174,71 @@ async def test_api_smoke_dependency_health_refreshes_when_monitor_disabled(clien
 
 
 @pytest.mark.asyncio
+async def test_api_smoke_dependency_health_searxng_prefers_explicit_host(client, app, monkeypatch) -> None:
+    app.state.settings.search.searxng.host = "http://preferred-searx.test"
+    app.state.settings.search.searxng.endpoint_candidates = ["http://candidate-searx.test"]
+    app.state.settings.optional_services.searxng.enabled = True
+    app.state.settings.optional_services.searxng.endpoint = "http://optional-searx.test"
+    app.state.settings.optional_services.searxng.endpoint_candidates = ["http://optional-candidate.test"]
+    app.state.settings.optional_services.searxng.probe.enabled = True
+    app.state.settings.optional_services.searxng.probe.path = "/search?q=&format=json"
+
+    calls: list[tuple[str | None, float, str | None, frozenset[int]]] = []
+
+    def _probe(
+        endpoint: str | None,
+        *,
+        timeout_s: float,
+        path: str | None = None,
+        healthy_status_codes: set[int] | None = None,
+    ) -> tuple[bool, str | None]:
+        calls.append((endpoint, timeout_s, path, frozenset(healthy_status_codes or set())))
+        return True, None
+
+    monkeypatch.setattr(app_module, "_probe_http_endpoint", _probe)
+
+    response = await client.get("/health/dependencies?force=1")
+    assert response.status_code == 200
+
+    payload = response.json()["optional"]["search_searxng"]
+    assert payload["endpoint"] == "http://preferred-searx.test"
+    assert payload["healthy"] is True
+    assert calls == [
+        (
+            "http://preferred-searx.test",
+            10.0,
+            "/search?q=&format=json",
+            frozenset({400}),
+        )
+    ]
+
+
+@pytest.mark.asyncio
+async def test_api_smoke_dependency_health_force_refreshes_when_monitor_enabled(client, app, monkeypatch) -> None:
+    calls = {"refresh": 0}
+
+    async def _refresh(_app, *, timeout_s: float) -> None:  # noqa: ARG001
+        calls["refresh"] += 1
+        _app.state.optional_services_last_probe = f"force-{calls['refresh']}"
+
+    monkeypatch.setenv("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED", "1")
+    monkeypatch.setattr(app_module, "_refresh_optional_services_status", _refresh)
+
+    app.state.optional_services_last_probe = "cached"
+
+    cached = await client.get("/health/dependencies")
+    forced = await client.get("/health/dependencies?force=1")
+    forced_again = await client.get("/health/dependencies?force=true")
+
+    assert cached.status_code == 200
+    assert forced.status_code == 200
+    assert forced_again.status_code == 200
+    assert calls["refresh"] == 2
+    assert forced.json()["last_probe"] == "force-1"
+    assert forced_again.json()["last_probe"] == "force-2"
+
+
+@pytest.mark.asyncio
 async def test_api_smoke_qa_and_outputs_contract(client, db_session, app) -> None:
     create_notebook = await client.post("/v1/notebooks", json={"name": "Outputs QA Smoke"})
     assert create_notebook.status_code == 201

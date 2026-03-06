@@ -17,6 +17,7 @@ RenderFieldType = Literal[
     "citation",
     "code",
 ]
+PreviewKind = Literal["external_url"]
 
 
 class OutputTypePluginMeta(BaseModel):
@@ -58,13 +59,40 @@ class ConfigOption(BaseModel):
     is_default: bool = False
 
 
+class ThemePresetOption(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    label: str
+    template: dict[str, object] = Field(default_factory=dict)
+
+
+class PreviewDescriptor(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: PreviewKind = "external_url"
+    service: str | None = None
+    url: str | None = None
+    open_in_new_tab: bool = False
+    meta: dict[str, object] = Field(default_factory=dict)
+
+
 class PluginConfigSchema(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    defaults: dict[str, object] = Field(default_factory=dict)
     quantity_options: list[ConfigOption] = Field(default_factory=list)
     difficulty_options: list[ConfigOption] = Field(default_factory=list)
+    audience_options: list[ConfigOption] = Field(default_factory=list)
+    structure_options: list[ConfigOption] = Field(default_factory=list)
+    tone_options: list[ConfigOption] = Field(default_factory=list)
+    language_options: list[ConfigOption] = Field(default_factory=list)
+    density_options: list[ConfigOption] = Field(default_factory=list)
+    theme_preset_options: list[ThemePresetOption] = Field(default_factory=list)
     topic_placeholder: str = ""
     supports_topic: bool = True
+    engine: str | None = None
+    preview: PreviewDescriptor | None = None
 
 
 FrontendBundleKind = Literal["builtin"]
@@ -93,4 +121,6 @@ FieldDescriptor.model_rebuild()
 ItemSchema.model_rebuild()
 RenderDescriptor.model_rebuild()
 PluginConfigSchema.model_rebuild()
+PreviewDescriptor.model_rebuild()
+ThemePresetOption.model_rebuild()
 FrontendBundleDescriptor.model_rebuild()

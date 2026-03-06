@@ -31,6 +31,8 @@ MODE_ENGINE_MAP: dict[str, list[str]] = {
     "Web": ["google", "bing", "duckduckgo"],
 }
 
+SEARXNG_HEALTHCHECK_PATH = "/search?q=&format=json"
+
 
 class SearXNGSearcher:
     """SearXNG-based web search provider using LangChain wrapper."""
@@ -94,7 +96,7 @@ class SearXNGSearcher:
 
             for candidate in candidates:
                 target = candidate.rstrip("/")
-                probe_url = f"{target}/search?q=ping&format=json"
+                probe_url = f"{target}{SEARXNG_HEALTHCHECK_PATH}"
                 try:
                     import httpx
 
@@ -102,8 +104,9 @@ class SearXNGSearcher:
                         timeout=max(0.5, min(float(self.timeout), 5.0)),
                         follow_redirects=True,
                     ) as client:
-                        resp = await client.get(probe_url)
-                    if 200 <= resp.status_code < 300:
+                        async with client.stream("GET", probe_url) as resp:
+                            status_code = resp.status_code
+                    if 200 <= status_code < 300 or status_code == 400:
                         self.host = target
                         # Host changed: rebuild wrapper with the resolved endpoint.
                         self._wrapper = None
