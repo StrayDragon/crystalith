@@ -30,7 +30,9 @@ RUN pnpm install --frozen-lockfile
 
 COPY frontend/web/ ./
 COPY frontend/packages/ ../packages/
+COPY scripts/ /app/scripts/
 
+ENV CRYSTALITH_SKIP_FRONTEND_READY_INSTALL=1
 RUN pnpm run build
 
 FROM ${NGINX_IMAGE} AS runtime

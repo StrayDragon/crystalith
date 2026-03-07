@@ -34,7 +34,7 @@ RUN set -eux; \
     fi; \
   fi; \
   apt-get update; \
-  apt-get install -y --no-install-recommends build-essential ca-certificates; \
+  apt-get install -y --no-install-recommends build-essential ca-certificates git; \
   rm -rf /var/lib/apt/lists/*
 
 COPY backend/py/pyproject.toml backend/py/uv.lock ./
@@ -55,14 +55,14 @@ RUN set -eux; \
   if [ -z "$uv_index_url" ] && [ "$use_cn_mirror" = "1" ]; then \
     uv_index_url="https://mirrors.aliyun.com/pypi/simple/"; \
   fi; \
-  extra_args=(); \
+  set --; \
   for extra in ${CRYSTALITH_BACKEND_EXTRAS:-}; do \
-    extra_args+=(--extra "$extra"); \
+    set -- "$@" --extra "$extra"; \
   done; \
   if [ -n "$uv_index_url" ]; then \
-    UV_INDEX_URL="$uv_index_url" UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable "${extra_args[@]}"; \
+    UV_INDEX_URL="$uv_index_url" UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable "$@"; \
   else \
-    UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable "${extra_args[@]}"; \
+    UV_HTTP_TIMEOUT=300 uv sync --frozen --no-dev --no-editable "$@"; \
   fi
 
 FROM ${PYTHON_IMAGE} AS runtime

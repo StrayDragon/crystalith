@@ -79,9 +79,13 @@ With `just`:
 just DEV_OPTIONALS="storage" dev-docker-up
 just DEV_OPTIONALS="storage redis searxng" dev-docker-up
 just DEV_OPTIONALS="storage redis searxng ollama" dev-docker-up
-CRYSTALITH_BACKEND_EXTRAS=official-slides just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up
+just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up
 just DEV_OPTIONALS="storage redis" dev-docker-down
 ```
+
+Proxy note:
+- If pulling images is slow, you can temporarily use `HTTPS_PROXY=http://127.0.0.1:20171 docker pull ...`.
+- Repo build helpers clear proxy env vars before Docker builds so local builds continue using the intended mirror settings.
 
 ## Optional Services and External Replacement
 
@@ -151,7 +155,8 @@ Enable when you want slide preview service in the same compose project.
 - Acceptance:
   - Verify the Slidev container is running: `docker compose ps slidev`
   - Verify `/v1/workspace/tools` exposes `SLIDES` and diagnostics report `active: slides-slidev`
-  - (Optional) check `http://localhost:${CL_SLIDEV_PORT:-3030}`.
+  - Verify `http://localhost:${CL_WEB_PORT:-8080}/slidev/` loads through Nginx.
+  - (Optional) check `http://localhost:${CL_SLIDEV_PORT:-3030}` directly.
 
 ### host-remap
 

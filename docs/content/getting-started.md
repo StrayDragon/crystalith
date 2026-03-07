@@ -130,6 +130,16 @@ pnpm install
 pnpm dev
 ```
 
+Optional Slidev preview service for slides workflow development:
+
+```bash
+just dev-slidev
+```
+
+Notes:
+- Frontend dev/build/test/typecheck commands auto-initialize `frontend/web/vendor/rivu` when needed.
+- The local Slidev preview service listens on `http://localhost:3030`.
+
 ## Workspace tips
 
 - Command palette: `Ctrl+K`
@@ -164,8 +174,12 @@ Customize overlays (optional deps):
 just DEV_OPTIONALS="" dev-docker-up
 
 # Full local stack:
-just DEV_OPTIONALS="storage redis searxng ollama" dev-docker-up
+just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up
 ```
+
+Notes:
+- If pulling images from GHCR is slow, you can temporarily use `HTTPS_PROXY=http://127.0.0.1:20171 docker pull ...`.
+- Repo build helpers such as `just dev-docker-up`, `just dev-docker-rebuild`, and `./scripts/composition_smoke.sh` clear proxy env vars before Docker builds to avoid slow mirror routing.
 
 Next:
 

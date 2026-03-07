@@ -31,6 +31,9 @@ sdk-gen-web:
 # Sync frontend: export schema + regenerate frontend SDK
 api-sync: api-export sdk-gen-web
 
+rivu-submodule-update:
+    bash ./scripts/ensure_rivu_submodule.sh
+
 # Ensure the SDK monorepo submodule is checked out (with a clearer error message than raw git output).
 sdk-submodule-update:
     #!/usr/bin/env bash
@@ -419,6 +422,7 @@ CHINA_NPM_REGISTRY := "https://registry.npmmirror.com"
 dev-docker-up *ARGS='':
     #!/usr/bin/env bash
     set -euo pipefail
+    bash ./scripts/ensure_rivu_submodule.sh
     ENV_FILE="${ENV_FILE:-.env}"
     if [[ ! -f "$ENV_FILE" ]]; then
       ENV_FILE=".env.example"
@@ -434,10 +438,13 @@ dev-docker-up *ARGS='':
     if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
       EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
     fi
-    APT_MIRROR="${APT_MIRROR:-{{CHINA_APT_MIRROR}}}" \
-    UV_INDEX_URL="${UV_INDEX_URL:-{{CHINA_UV_INDEX_URL}}}" \
-    NPM_REGISTRY="${NPM_REGISTRY:-{{CHINA_NPM_REGISTRY}}}" \
-    docker compose --env-file "$ENV_FILE" "${FILES[@]}" up -d ${BUILD_FLAG} "${EXTRA_ARGS[@]}"
+    env \
+      -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u NO_PROXY \
+      -u http_proxy -u https_proxy -u all_proxy -u no_proxy \
+      APT_MIRROR="${APT_MIRROR:-{{CHINA_APT_MIRROR}}}" \
+      UV_INDEX_URL="${UV_INDEX_URL:-{{CHINA_UV_INDEX_URL}}}" \
+      NPM_REGISTRY="${NPM_REGISTRY:-{{CHINA_NPM_REGISTRY}}}" \
+      docker compose --env-file "$ENV_FILE" "${FILES[@]}" up -d ${BUILD_FLAG} "${EXTRA_ARGS[@]}"
 
 dev-docker-down *ARGS='':
     #!/usr/bin/env bash
@@ -492,6 +499,7 @@ dev-docker-logs *ARGS='':
 dev-docker-rebuild SERVICE:
     #!/usr/bin/env bash
     set -euo pipefail
+    bash ./scripts/ensure_rivu_submodule.sh
     ENV_FILE="${ENV_FILE:-.env}"
     if [[ ! -f "$ENV_FILE" ]]; then
       ENV_FILE=".env.example"
@@ -501,10 +509,13 @@ dev-docker-rebuild SERVICE:
     for optional in {{DEV_OPTIONALS}}; do
       FILES+=(-f "deployments/prod/docker-compose.${optional}.yml")
     done
-    APT_MIRROR="${APT_MIRROR:-{{CHINA_APT_MIRROR}}}" \
-    UV_INDEX_URL="${UV_INDEX_URL:-{{CHINA_UV_INDEX_URL}}}" \
-    NPM_REGISTRY="${NPM_REGISTRY:-{{CHINA_NPM_REGISTRY}}}" \
-    docker compose --env-file "$ENV_FILE" "${FILES[@]}" up -d --build --no-deps {{SERVICE}}
+    env \
+      -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u NO_PROXY \
+      -u http_proxy -u https_proxy -u all_proxy -u no_proxy \
+      APT_MIRROR="${APT_MIRROR:-{{CHINA_APT_MIRROR}}}" \
+      UV_INDEX_URL="${UV_INDEX_URL:-{{CHINA_UV_INDEX_URL}}}" \
+      NPM_REGISTRY="${NPM_REGISTRY:-{{CHINA_NPM_REGISTRY}}}" \
+      docker compose --env-file "$ENV_FILE" "${FILES[@]}" up -d --build --no-deps {{SERVICE}}
 
 dev-docker-smoke:
     #!/usr/bin/env bash
@@ -555,13 +566,8 @@ dev-deps-up *ARGS='':
         if python -c 'import socket, sys; host=sys.argv[1]; port=int(sys.argv[2]); s=socket.socket(); s.settimeout(0.2); s.connect((host, port)); s.close()' \
           "127.0.0.1" "$searxng_port" >/dev/null 2>&1
         then
-          if python -c 'import sys, urllib.request, urllib.error; url=sys.argv[1]
-try:
-    urllib.request.urlopen(url, timeout=3).read(1)
-    raise SystemExit(0)
-except urllib.error.HTTPError as exc:
-    raise SystemExit(0 if exc.code == 400 else 1)' \
-            "http://127.0.0.1:${searxng_port}/search?q=&format=json" >/dev/null 2>&1
+          searxng_status="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "http://127.0.0.1:${searxng_port}/search?q=&format=json" || true)"
+          if [[ "$searxng_status" == "200" || "$searxng_status" == "400" ]]
           then
             echo "[dev-deps-up] Detected existing searxng on :${searxng_port}; skipping deps overlay (searxng)."
             continue
@@ -691,24 +697,19 @@ dev-backend:
     fi
 
     if has_optional searxng; then
-      if ! python -c 'import sys, time, urllib.request, urllib.error; url=sys.argv[1]; timeout_s=int(sys.argv[2]); start=time.time()
-while True:
-    try:
-        urllib.request.urlopen(url, timeout=2).read(1)
-        raise SystemExit(0)
-    except urllib.error.HTTPError as exc:
-        if exc.code == 400:
-            raise SystemExit(0)
-    except Exception:
-        pass
-    if time.time() - start >= timeout_s:
-        print(f"timeout waiting for http {url}", file=sys.stderr)
-        raise SystemExit(1)
-    time.sleep(1)' \
-        "http://127.0.0.1:${searxng_port}/search?q=&format=json" 60
-      then
-        exit 1
-      fi
+      searxng_url="http://127.0.0.1:${searxng_port}/search?q=&format=json"
+      start_ts="$(date +%s)"
+      while true; do
+        searxng_status="$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 "$searxng_url" || true)"
+        if [[ "$searxng_status" == "200" || "$searxng_status" == "400" ]]; then
+          break
+        fi
+        if (( "$(date +%s)" - start_ts >= 60 )); then
+          echo "timeout waiting for http ${searxng_url}" >&2
+          exit 1
+        fi
+        sleep 1
+      done
     fi
 
     env_args=()
@@ -720,6 +721,10 @@ while True:
 
 dev-frontend:
     just -f frontend/web/justfile dev
+
+dev-slidev:
+    pnpm -C frontend/packages/crystalith-slidev install --frozen-lockfile
+    pnpm -C frontend/packages/crystalith-slidev run dev
 
 dev:
     #!/usr/bin/env bash

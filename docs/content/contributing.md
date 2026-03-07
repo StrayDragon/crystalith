@@ -26,6 +26,16 @@ pnpm install
 pnpm dev
 ```
 
+Optional Slidev preview service during host development:
+
+```bash
+just dev-slidev
+```
+
+Notes:
+- Frontend dev/build/test/typecheck commands auto-initialize `frontend/web/vendor/rivu` when needed.
+- Manual fallback: `just rivu-submodule-update`
+
 ## Tests
 
 ```bash

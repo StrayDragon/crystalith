@@ -48,8 +48,13 @@ PY
   fi
 fi
 
+bash ./scripts/ensure_rivu_submodule.sh
+
 compose() {
-  docker compose --env-file "$ENV_FILE" "$@"
+  env \
+    -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u NO_PROXY \
+    -u http_proxy -u https_proxy -u all_proxy -u no_proxy \
+    docker compose --env-file "$ENV_FILE" "$@"
 }
 
 compose_core() {
@@ -118,6 +123,42 @@ ok = eval(expr, {"__builtins__": {}}, {"data": data})
 if not ok:
     raise SystemExit(f"assertion failed: {expr}")
 ' "$expr"
+}
+
+assert_json_expr() {
+  local url="$1"
+  local expr="$2"
+  curl -fsS "$url" | python3 -c '
+import json
+import sys
+
+expr = sys.argv[1]
+data = json.load(sys.stdin)
+safe_globals = {"__builtins__": {}}
+safe_locals = {"data": data, "any": any, "all": all, "len": len, "next": next}
+ok = eval(expr, safe_globals, safe_locals)
+if not ok:
+    raise SystemExit(f"assertion failed: {expr}")
+' "$expr"
+}
+
+wait_json_expr() {
+  local url="$1"
+  local expr="$2"
+  local timeout_s="${3:-120}"
+  local start
+  start="$(date +%s)"
+  while true; do
+    if assert_json_expr "$url" "$expr" >/dev/null 2>&1; then
+      return 0
+    fi
+    if (( "$(date +%s)" - start >= timeout_s )); then
+      echo "timeout waiting for JSON assertion: ${expr} (${url})" >&2
+      curl -fsS "$url" | python3 -m json.tool | head -120 >&2 || true
+      return 1
+    fi
+    sleep 2
+  done
 }
 
 wait_dependency_expr() {
@@ -208,6 +249,11 @@ run_all_optionals() {
   wait_dependency_expr "data['optional']['storage_chroma']['enabled'] is True"
   wait_dependency_expr "data['optional']['cache_redis']['enabled'] is True"
   wait_dependency_expr "data['optional']['ollama']['enabled'] is True"
+  wait_http "${BASE_URL}/slidev/"
+  wait_json_expr "${BASE_URL}/v1/workspace/tools" "any(tool.get('output_type') == 'SLIDES' for tool in data['tools'])"
+  wait_json_expr "${BASE_URL}/v1/workspace/tools" "data['diagnostics']['slides']['active_plugin_id'] == 'slides-slidev'"
+  wait_json_expr "${BASE_URL}/v1/workspace/tools" "data['diagnostics']['official']['slides-slidev'].get('status') != 'not_installed'"
+  wait_json_expr "${BASE_URL}/v1/workspace/tools" "next(tool for tool in data['tools'] if tool.get('output_type') == 'SLIDES')['config_schema']['preview']['service'] == 'slidev'"
 }
 
 SCENARIOS="${SMOKE_SCENARIOS:-core-only late-optional}"
