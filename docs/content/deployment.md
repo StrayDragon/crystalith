@@ -22,6 +22,7 @@ Build note (China mirrors):
 - By default, the Dockerfiles may use China mirrors to speed up builds.
 - In CI, mirrors are disabled automatically.
 - To disable locally: `USE_CN_MIRROR=0 docker compose ... --build`
+- Repo build helpers such as `just dev-docker-up`, `just dev-docker-rebuild`, and `./scripts/composition_smoke.sh` clear `HTTP(S)_PROXY` / `ALL_PROXY` / `NO_PROXY` before Docker builds to avoid accidentally routing builds through slower local mirrors.
 
 ## Using GHCR prebuilt images (no local build)
 
@@ -30,6 +31,7 @@ If you prefer not to build from source, you can pull the versioned runtime image
 Network note (proxy):
 - If you have trouble pulling images from GHCR, configure Docker to use a proxy.
 - Example one-off environment (adjust for your setup): `HTTPS_PROXY=http://127.0.0.1:20171`
+- Use the proxy for `docker pull` if needed, but unset it again before local image builds.
 
 Recommended tag selection:
 - Prefer an exact version tag: `X.Y.Z`
@@ -108,7 +110,7 @@ just dev-docker-up
 just DEV_OPTIONALS="storage" dev-docker-up
 just DEV_OPTIONALS="storage redis searxng" dev-docker-up
 just DEV_OPTIONALS="storage redis searxng ollama" dev-docker-up
-CRYSTALITH_BACKEND_EXTRAS=official-slides just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up
+just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up
 just DEV_OPTIONALS="storage redis" dev-docker-down
 ```
 
@@ -124,6 +126,8 @@ Full composition smoke:
 just composition-smoke
 # or:
 SMOKE_SCENARIOS="core-only single-optional" ./scripts/composition_smoke.sh
+# heavier overlays, including Slidev plugin + preview wiring:
+# SMOKE_SCENARIOS="core-only single-optional key-optionals all-optionals" ./scripts/composition_smoke.sh
 # optional: clean compose volumes during reset
 SMOKE_PRUNE_VOLUMES=1 ./scripts/composition_smoke.sh
 ```

@@ -53,6 +53,16 @@ pnpm install
 pnpm dev
 ```
 
+Optional Slidev preview during host dev:
+
+```bash
+just dev-slidev
+```
+
+Notes:
+- Frontend dev/build/test commands auto-initialize `frontend/web/vendor/rivu` when needed.
+- Manual fallback: `just rivu-submodule-update`
+
 ## Quick start (Docker Compose, prod-like)
 
 ```bash
@@ -61,4 +71,10 @@ cp config/secrets.yaml.example config/secrets.yaml
 # edit config/secrets.yaml (OPENAI_API_KEY, POSTGRES_PASSWORD if using storage overlay)
 just dev-docker-up
 just composition-smoke
+```
+
+Optional Slidev overlay:
+
+```bash
+just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up
 ```

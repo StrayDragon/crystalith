@@ -5,7 +5,7 @@ install:
     pnpm install
 
 ensure-deps:
-    if [ ! -f node_modules/.modules.yaml ] || [ pnpm-lock.yaml -nt node_modules/.modules.yaml ]; then pnpm install; fi
+    bash ../../scripts/ensure_frontend_web_ready.sh
 
 dev: ensure-deps
     pnpm dev
