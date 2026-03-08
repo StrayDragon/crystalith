@@ -12,7 +12,7 @@ class _AsyncStreamResponse:
     def __init__(self, status_code: int) -> None:
         self.status_code = status_code
 
-    async def __aenter__(self) -> "_AsyncStreamResponse":
+    async def __aenter__(self) -> _AsyncStreamResponse:
         return self
 
     async def __aexit__(self, exc_type, exc, tb):  # noqa: ANN001, ARG002

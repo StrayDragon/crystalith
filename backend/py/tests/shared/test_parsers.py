@@ -52,6 +52,20 @@ def test_text_parser_decodes_utf8_and_errors_on_invalid_bytes() -> None:
         parser.parse(b"\xff")
 
 
+def test_markdown_parser_normalizes_obsidian_wikilinks_and_embeds() -> None:
+    parser = ParserFactory.from_file(filename="vault/daily-note.md", mime_type="text/markdown")
+    chunks = parser.parse(
+        b"---\ntitle: Daily Note\ntags:\n  - inbox\n---\n\n"
+        b"Link [[Project Plan|the plan]] and ![[diagram.png]] here.\n\n"
+        b"Second paragraph with [[Roadmap]]."
+    )
+
+    assert [chunk.text for chunk in chunks] == [
+        "Link [the plan](Project Plan.md) and [嵌入: diagram.png] here.",
+        "Second paragraph with [Roadmap](Roadmap.md).",
+    ]
+
+
 def test_html_parser_strips_boilerplate_and_extracts_text() -> None:
     parser = HTMLParser()
     html = b"""

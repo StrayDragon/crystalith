@@ -89,7 +89,8 @@ async def test_workspace_slides_config_returns_structured_detail_when_unavailabl
         app.state.plugins = original_plugins
 
     assert resp.status_code == 404
-    payload = resp.json(); payload = payload.get("detail", payload)
+    payload = resp.json()
+    payload = payload.get("detail", payload)
     assert payload["error_code"] == "slides_plugin_required"
     assert "hint" in payload
     assert payload["details"]["available_plugin_ids"] == []

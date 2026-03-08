@@ -144,7 +144,8 @@ async def test_slides_create_returns_structured_unavailable_detail_when_plugin_m
         app.state.plugins = original_plugins
 
     assert create_resp.status_code == 409
-    detail = create_resp.json(); detail = detail.get("detail", detail)
+    detail = create_resp.json()
+    detail = detail.get("detail", detail)
     assert detail["error_code"] == "slides_plugin_required"
     assert "hint" in detail
     assert detail["details"]["available_plugin_ids"] == []

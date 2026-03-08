@@ -239,6 +239,7 @@ async def test_slide_outline_stream_returns_unavailable_detail_when_plugin_missi
         app.state.plugins = original_plugins
 
     assert response.status_code == 409
-    detail = response.json(); detail = detail.get("detail", detail)
+    detail = response.json()
+    detail = detail.get("detail", detail)
     assert detail["error_code"] == "slides_plugin_required"
     assert "hint" in detail

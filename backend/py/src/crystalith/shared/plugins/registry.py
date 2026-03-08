@@ -544,6 +544,7 @@ class PluginRegistry:
     def resolve_active_slides_workflow(self, settings: Settings) -> SlidesWorkflowSelection:
         configured_plugin_id = (settings.slides.default_plugin or '').strip() or None
         available_ids = self.list_slides_workflows()
+        available_plugin_ids_json: list[JsonValue] = list(available_ids)
 
         if configured_plugin_id is not None:
             plugin = self.slides_workflows.get(configured_plugin_id)
@@ -553,7 +554,7 @@ class PluginRegistry:
             skip_detail = self._load_report.skipped.get(configured_plugin_id)
             details: dict[str, JsonValue] = {
                 'configured_plugin_id': configured_plugin_id,
-                'available_plugin_ids': available_ids,
+                'available_plugin_ids': available_plugin_ids_json,
             }
             if skip_detail is not None:
                 details['plugin_diagnostic'] = skip_detail.to_dict()
@@ -574,7 +575,7 @@ class PluginRegistry:
                 error_code='slides_plugin_required',
                 message='Slides workflow capability is unavailable because no slides plugin is active',
                 hint='Install and enable a slides-* plugin, or set slides.default_plugin after installation.',
-                details={'available_plugin_ids': available_ids},
+                details={'available_plugin_ids': available_plugin_ids_json},
             )
 
         if len(available_ids) == 1:
@@ -585,5 +586,5 @@ class PluginRegistry:
             error_code='ambiguous_slides_plugin',
             message='Multiple slides workflow plugins are available but no default is configured',
             hint='Set slides.default_plugin in config/app.yaml to one of the available slides plugin ids.',
-            details={'available_plugin_ids': available_ids},
+            details={'available_plugin_ids': available_plugin_ids_json},
         )

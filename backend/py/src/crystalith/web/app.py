@@ -469,7 +469,7 @@ async def _refresh_optional_services_status(
     searxng = statuses["search_searxng"]
     searxng_probe = searxng["probe"]
     if searxng["enabled"] and searxng_probe["enabled"]:
-        service_timeout = max(0.1, float(searxng_probe["timeout_s"] or timeout_s))
+        service_timeout = max(0.1, float(searxng["timeout_s"] or timeout_s))
         service_path = searxng_probe["path"]
         searxng["last_probe"] = probe_time
         searxng_host = (settings.search.searxng.host or "").strip()

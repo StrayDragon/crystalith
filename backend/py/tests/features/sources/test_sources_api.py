@@ -200,6 +200,38 @@ async def test_upload_html_source_records_parser_plugin_id(client):
 
 
 @pytest.mark.asyncio
+async def test_upload_markdown_source_extracts_obsidian_frontmatter_metadata(client):
+    notebook_resp = await client.post("/v1/notebooks", json={"name": "Markdown Upload"})
+    assert notebook_resp.status_code == 201
+    notebook_id = notebook_resp.json()["id"]
+
+    markdown = (
+        b"---\n"
+        b"title: Daily Note\n"
+        b"tags:\n"
+        b"  - inbox\n"
+        b"  - project\n"
+        b"aliases: [Today]\n"
+        b"date: 2026-03-08\n"
+        b"---\n\n"
+        b"Body with [[Roadmap]].\n"
+    )
+    create_resp = await client.post(
+        f"/v1/notebooks/{notebook_id}/sources",
+        files={"file": ("daily-note.md", markdown, "text/markdown")},
+    )
+    assert create_resp.status_code == 201
+    payload = create_resp.json()
+    assert payload["parser_type"] == "text"
+    assert payload["metadata"]["frontmatter"] == {
+        "title": "Daily Note",
+        "tags": ["inbox", "project"],
+        "aliases": ["Today"],
+        "date": "2026-03-08",
+    }
+
+
+@pytest.mark.asyncio
 async def test_source_from_url_fetch_blocks_private_url_without_network_request(client):
     notebook_resp = await client.post("/v1/notebooks", json={"name": "From URL SSRF Block"})
     assert notebook_resp.status_code == 201
