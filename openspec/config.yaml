@@ -4,7 +4,7 @@ context: |
   Tech stack:
   - Backend: FastAPI (Python) in backend/py/src/crystalith; tests in backend/py/tests; workspace libs in backend/py/packages.
   - Frontend: Vite + React + TypeScript in frontend/web/src.
-  - Specs: canonical specs in openspec/specs; change workspaces in openspec/changes (archive in openspec/changes/archive).
+  - Specs: canonical specs in openspec/specs; active change workspaces in openspec/changes (archive in openspec/changes/archive); deferred proposals or parked changes in openspec/notplan-changes.
 
   Commands (from repo root):
   - Backend: cd backend/py && uv sync; just dev; just test; just db-init; just config-schema; just packages-test; just llm-eval; just embedding-cache-bench.

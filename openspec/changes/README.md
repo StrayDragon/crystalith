@@ -1,5 +1,65 @@
 # OpenSpec Changes Overview
 
+## Active Changes 简报（更新：2026-03-09）
+
+数据口径：
+- Active changes：`openspec list --json` 返回的 `status=in-progress`
+- 进度：`tasks.md` 顶层 checklist 的勾选数（`done/total`）
+- 结构校验：`openspec validate --changes --json`（最近一次扫描：14/14 通过）
+
+现状结论：
+- Active changes：14 个
+- 进度：仅 `obsidian-vault-plugin` 为 `4/23`，其余均为 `0/12`
+- 唯一硬依赖：`source-connectors-framework -> obsidian-vault-plugin`（其余为推荐顺序，不写成阻塞链）
+- 暂不纳入当前 active roadmap：`workflow-templates-and-recipes` 已移至 `openspec/notplan-changes/workflow-templates-and-recipes/`
+
+### 实现顺序推荐（按依赖与用户价值）
+
+Wave 1（可并行首开，先固化生成公共词汇与异步底座）：
+- `typed-generation-framework`（生成类型最小公共词汇）
+- `background-jobs-and-task-runtime`（长任务统一语义）
+
+Wave 1（在生成公共词汇初稳后补开）：
+- `generation-presets-and-constraints`（消费 typed-generation；可控生成）
+- `structural-refinement-for-generated-results`（消费 typed-generation；结果可改良）
+- `quality-gates-for-generation`（伴随治理信号；避免变审批流程）
+
+Wave 1（观察项，避免阻塞主线）：
+- `generation-variants-and-comparison`（非默认模式；用于对比选择）
+
+Wave 2（知识接入主线）：
+- `source-connectors-framework`（宿主连接器框架）
+- `obsidian-vault-plugin`（首个官方样板；硬依赖 `source-connectors-framework`）
+- `knowledge-curation-and-freshness`（接入后治理增强；建立在稳定来源对象上）
+- `source-aware-generation-modes`（观察项；依赖 typed-generation + connectors）
+
+Wave 3（可信结果闭环）：
+- `evidence-review-workflow`（证据审阅状态机）
+- `publishable-artifacts`（站内正式产物生命周期）
+- `cross-type-result-transformations`（后置演化项；依赖 typed-generation + refinement + artifacts）
+
+Wave 4（空间放大）：
+- `multi-notebook-collections`
+
+### Active Changes 一览（简要报告）
+
+| Change | 进度 | 摘要 | 关键前置/注意点 |
+|---|---:|---|---|
+| `typed-generation-framework` | 0/12 | 生成类型框架：生成类型一等对象，分离“生成类型”与“输出渲染类型”，固定最小公共词汇 | 下游变更只能消费扩展位，不允许反向写回公共框架 |
+| `background-jobs-and-task-runtime` | 0/12 | 后台任务运行时：统一长任务生命周期、进度事件、取消/重试与历史 | v1 先定 `queued/running/succeeded/failed/cancelled`；不做复杂调度策略 |
+| `generation-presets-and-constraints` | 0/12 | 可控生成：按生成类型提供可理解的预设与约束控制面，提高可复现性 | 依赖 `typed-generation-framework` 的公共词汇；预设不是黑盒 prompt 包 |
+| `structural-refinement-for-generated-results` | 0/12 | 结构化改良：围绕结果结构单元做局部扩写/压缩/重排/局部重生成 | 依赖稳定的结果结构与类型语义；不为 refinement 反向改写公共框架 |
+| `quality-gates-for-generation` | 0/12 | 质量门：运行时质量信号（通过/警告/阻断）+ 结构化原因，用于观测与回归 | 质量门是信号不是审阅；规则需跨类型复用、避免误报噪音 |
+| `generation-variants-and-comparison` | 0/12 | 多候选与对比：同一意图生成多个 variant，并提供对比与选定继续编辑 | 观察项；非默认生成模式；避免扩展成复杂 merge 工作台 |
+| `source-connectors-framework` | 0/12 | 连接器宿主框架：`binding/snapshot/import_scope/sync_check` 统一接入流程壳子 | 宿主先于 connector；binding 必须 notebook-scoped；v1 显式 `sync_check` |
+| `obsidian-vault-plugin` | 4/23 | Obsidian 作为首个官方 connector 插件，验证“大 vault + 选择性导入 + 显式 sync_check”模型 | 硬依赖 `source-connectors-framework`；已完成 Markdown 兼容层与测试 |
+| `knowledge-curation-and-freshness` | 0/12 | 知识维护：freshness、重复候选、re-ingest/re-embed 建议与来源健康信号 | 建立在稳定来源对象上；提供建议不自动整理/合并 |
+| `source-aware-generation-modes` | 0/12 | 来源模式：按生成类型定义“证据严格/综合归纳/启发发散”等来源使用语义 | 依赖 `typed-generation-framework` + connectors；避免把内部策略名词硬暴露成产品概念 |
+| `evidence-review-workflow` | 0/12 | 证据审阅：review 状态、逐条核查 citation、review note 与输出确认链路 | 审阅状态独立于生成成功；不做组织级审批树 |
+| `publishable-artifacts` | 0/12 | 正式产物：artifact（promotion+lineage+lifecycle），优先站内沉淀与持续演化而非导出 | artifact 不吞掉普通结果语义；保持与来源结果关系；生命周期优先于导出 |
+| `cross-type-result-transformations` | 0/12 | 跨类型演化：有限路径的结果转换，保留 lineage，继承结构与上下文 | 后置演化项；建立在类型/结果结构/artifact 语义稳定之后，不承诺万物互转 |
+| `multi-notebook-collections` | 0/12 | 工作空间放大：collection 聚合多个 notebook，提供 collection-scoped 检索/QA/产出 | 明确 collection 不吞掉 notebook；v1 不做万能空间平台 |
+
 ## 长期路线重排
 
 ### 规划原则
@@ -30,7 +90,6 @@
 
 #### 产品工作流层
 
-- `workflow-templates-and-recipes`
 - `generation-presets-and-constraints`
 - `structural-refinement-for-generated-results`
 - `generation-variants-and-comparison`
@@ -52,33 +111,31 @@
 
 ### 四波次安排
 
-#### Wave 1：起步体验 + 异步底座
+#### Wave 1：生成公共层 + 异步底座
 
 - `background-jobs-and-task-runtime` — 伴随底座
-- `workflow-templates-and-recipes` — 产品主线
-- `quality-gates-for-generation` — 轻量治理伴随项
 - `typed-generation-framework` — 生成公共底座
+- `quality-gates-for-generation` — 轻量治理伴随项
 - `generation-presets-and-constraints` — 生成主线增强
 - `structural-refinement-for-generated-results` — 结果改良主线
 - `generation-variants-and-comparison` — 候选观察项
 
 目标：
-- 先解决“更容易开始做事”
-- 同时把长任务、基础质量信号和生成类型最小公共层先垫上
+- 先固定生成类型最小公共词汇与长任务语义
+- 同时把基础质量信号先垫上，避免后续生成扩展缺少统一护栏
 - 让右侧生成入口从“多个按钮”逐步走向“清晰类型 + 可控生成 + 可持续改良”
 
 进入条件：
-- 起步路径、异步语义、基础质量信号与生成类型公共词汇仍未形成可直接交给实现 agent 的稳定工件组合。
+- 异步语义、基础质量信号与生成类型公共词汇仍未形成可直接交给实现 agent 的稳定工件组合。
 - 生成类型、控制项和结果改良之间的接口关系还没有写清楚。
-- 当前最值得优先收敛的抽象仍是“如何开始一项工作”和“如何生成更可用的第一版结果”。
+- 当前最值得优先收敛的抽象仍是“什么是生成类型”以及“如何让第一版结果更可控、更可持续改良”。
 
 退出条件：
-- `workflow-templates-and-recipes`、`background-jobs-and-task-runtime`、`quality-gates-for-generation`、`typed-generation-framework` 至少达到可实现状态，且 `openspec validate` 通过。
+- `background-jobs-and-task-runtime`、`quality-gates-for-generation`、`typed-generation-framework` 至少达到可实现状态，且 `openspec validate` 通过。
 - `generation-presets-and-constraints` 与 `structural-refinement-for-generated-results` 的边界已经稳定，不再反向改写 Wave 1 的公共词汇。
-- Wave 2 可以直接消费 Wave 1 在任务入口、长任务模型、生成类型与结果基础结构上的语义，而不是重新定义它们。
+- Wave 2 可以直接消费 Wave 1 在长任务模型、生成类型与结果基础结构上的语义，而不是重新定义它们。
 
 说明：
-- `workflow-templates-and-recipes` 不要求完全等 `background-jobs-and-task-runtime` 完成后再开始。
 - `generation-presets-and-constraints` 与 `structural-refinement-for-generated-results` 更适合在 `typed-generation-framework` 的最小公共词汇稳定后继续推进。
 - `generation-variants-and-comparison` 保留为观察项，不阻塞 Wave 1 核心退出条件。
 
@@ -159,9 +216,8 @@
 | Change | 层级 | 波次 | 角色 |
 |---|---|---:|---|
 | `background-jobs-and-task-runtime` | 平台底座层 | Wave 1 | 伴随底座 |
-| `workflow-templates-and-recipes` | 产品工作流层 | Wave 1 | 产品主线 |
-| `quality-gates-for-generation` | 治理与质量层 | Wave 1 | 轻量治理伴随项 |
 | `typed-generation-framework` | 平台底座层 | Wave 1 | 生成公共底座 |
+| `quality-gates-for-generation` | 治理与质量层 | Wave 1 | 轻量治理伴随项 |
 | `generation-presets-and-constraints` | 产品工作流层 | Wave 1 | 生成主线增强 |
 | `structural-refinement-for-generated-results` | 产品工作流层 | Wave 1 | 结果改良主线 |
 | `generation-variants-and-comparison` | 产品工作流层 | Wave 1 | 候选观察项 |
@@ -176,18 +232,17 @@
 
 ## 当前主线判断
 
-- 第一产品起步主线：`workflow-templates-and-recipes`
 - 第一生成公共底座：`typed-generation-framework`
-- 第一生成增强主线：`generation-presets-and-constraints`
-- 第一结果改良主线：`structural-refinement-for-generated-results`
 - 第一伴随底座：`background-jobs-and-task-runtime`
 - 第一轻量治理伴随项：`quality-gates-for-generation`
+- 第一生成增强主线：`generation-presets-and-constraints`
+- 第一结果改良主线：`structural-refinement-for-generated-results`
 - 第二平台主线：`source-connectors-framework`
 - 第二验证样板：`obsidian-vault-plugin`
 
 这条路线的核心思路是：
-- 先让用户**更容易开始做事**
-- 同时让右侧生成入口变得**类型清晰、可控、可持续改良**
+- 先让右侧生成入口变得**类型清晰、可控、可持续改良**
+- 同时把长任务与基础质量信号沉到稳定底座
 - 再让系统**更容易持续接入和延续工作**
 - 最后再把结果的可信闭环和更大工作空间逐步抬上来
 
@@ -200,21 +255,20 @@
 
 | 序号 | Agent 任务包 | 目标 change | 主要产出 | 硬前置 | 并行建议 |
 |---|---|---|---|---|---|
-| 1 | 固定起步路径模型 | `workflow-templates-and-recipes` | 明确模板 / recipe 的入口形态、任务起步路径与边界定义 | 无 | 可与 2/3 并行 |
-| 2 | 固定生成类型最小公共层 | `typed-generation-framework` | 明确生成类型、输出结构、控制面与完成语义的最小公共词汇 | 无 | 可与 1/3 并行，但不建议与 4/5 同时主开 |
-| 3 | 固定通用异步语义 | `background-jobs-and-task-runtime` | 明确后台任务 lifecycle / progress / cancel / retry / history 的统一语义 | 无 | 可与 1/2 并行 |
-| 4 | 固定可控生成体系 | `generation-presets-and-constraints` | 明确各生成类型的高价值预设、约束与控制项边界 | 无硬前置，建议在 2 最小词汇稳定后 | 可与 5 并行 |
-| 5 | 固定结果结构化改良 | `structural-refinement-for-generated-results` | 明确结果结构单元、refinement 动作与局部改写边界 | 无硬前置，建议在 2 最小词汇稳定后 | 可与 4 并行 |
-| 6 | 固定基础质量门 | `quality-gates-for-generation` | 明确最小可复用的质量信号与接入位置 | 无 | 建议在 2/4/5 语义初稳后插入 |
-| 7 | 固定多版本比较能力 | `generation-variants-and-comparison` | 明确候选结果、比较视图与选择语义 | 无硬前置，建议在 4/5 后 | 作为观察项推进 |
-| 8 | 固定 connector 宿主契约 | `source-connectors-framework` | 明确 connector 发现、binding、snapshot、import_scope、`sync_check` 的宿主语义 | 无强前置 | 建议在 1/3 初稳后推进 |
-| 9 | 做首个官方接入样板 | `obsidian-vault-plugin` | 用 Obsidian 验证大 vault、子集选择与显式 `sync_check` 模型 | `source-connectors-framework` | 不建议拆成独立体系并行 |
-| 10 | 固定接入后治理接口 | `knowledge-curation-and-freshness` | 明确 freshness、重复检测、维护建议与接入对象的关系 | 无强前置，建议在 8/9 后 | 可在 9 后半段启动 |
-| 11 | 固定按类型使用来源语义 | `source-aware-generation-modes` | 明确不同生成类型的来源使用模式与约束边界 | 无硬前置，建议在 2 和 8 语义稳定后 | 作为观察项推进 |
-| 12 | 固定结果审阅状态机 | `evidence-review-workflow` | 明确 citation / evidence 的审阅状态、转移条件与工作流边界 | 无强前置 | 建议在 5 和 10 语义稳定后启动 |
-| 13 | 固定正式产物生命周期 | `publishable-artifacts` | 明确正式产物的沉淀、继续编辑、引用、追踪与演化语义 | 无强前置，建议在 12 后 | 可在 12 边界稳定后启动 |
-| 14 | 固定跨类型结果演化 | `cross-type-result-transformations` | 明确不同结果类型之间的转换路径与演化边界 | 无硬前置，建议在 2/5/13 稳定后 | 明确后置，不建议抢主线 |
-| 15 | 固定更大空间层边界 | `multi-notebook-collections` | 明确 collection 与 notebook 的关系、空间边界与不该吞掉的语义 | 无强前置，建议最后 | 不建议与 8/12/14 同期主开 |
+| 1 | 固定生成类型最小公共层 | `typed-generation-framework` | 明确生成类型、输出结构、控制面与完成语义的最小公共词汇 | 无 | 可与 2 并行，但不建议与 3/4 同时主开 |
+| 2 | 固定通用异步语义 | `background-jobs-and-task-runtime` | 明确后台任务 lifecycle / progress / cancel / retry / history 的统一语义 | 无 | 可与 1 并行 |
+| 3 | 固定可控生成体系 | `generation-presets-and-constraints` | 明确各生成类型的高价值预设、约束与控制项边界 | 无硬前置，建议在 `typed-generation-framework` 最小词汇稳定后 | 可与 4 并行 |
+| 4 | 固定结果结构化改良 | `structural-refinement-for-generated-results` | 明确结果结构单元、refinement 动作与局部改写边界 | 无硬前置，建议在 `typed-generation-framework` 最小词汇稳定后 | 可与 3 并行 |
+| 5 | 固定基础质量门 | `quality-gates-for-generation` | 明确最小可复用的质量信号与接入位置 | 无 | 建议在 `typed-generation-framework` 和 3/4 语义初稳后插入 |
+| 6 | 固定多版本比较能力 | `generation-variants-and-comparison` | 明确候选结果、比较视图与选择语义 | 无硬前置，建议在 3/4 后 | 作为观察项推进 |
+| 7 | 固定 connector 宿主契约 | `source-connectors-framework` | 明确 connector 发现、binding、snapshot、import_scope、`sync_check` 的宿主语义 | 无强前置 | 建议在 `background-jobs-and-task-runtime` 初稳后推进 |
+| 8 | 做首个官方接入样板 | `obsidian-vault-plugin` | 用 Obsidian 验证大 vault、子集选择与显式 `sync_check` 模型 | `source-connectors-framework` | 不建议拆成独立体系并行 |
+| 9 | 固定接入后治理接口 | `knowledge-curation-and-freshness` | 明确 freshness、重复检测、维护建议与接入对象的关系 | 无强前置，建议在 7/8 后 | 可在 8 后半段启动 |
+| 10 | 固定按类型使用来源语义 | `source-aware-generation-modes` | 明确不同生成类型的来源使用模式与约束边界 | 无硬前置，建议在 1 和 7 语义稳定后 | 作为观察项推进 |
+| 11 | 固定结果审阅状态机 | `evidence-review-workflow` | 明确 citation / evidence 的审阅状态、转移条件与工作流边界 | 无强前置 | 建议在 4 和 9 语义稳定后启动 |
+| 12 | 固定正式产物生命周期 | `publishable-artifacts` | 明确正式产物的沉淀、继续编辑、引用、追踪与演化语义 | 无强前置，建议在 11 后 | 可在 11 边界稳定后启动 |
+| 13 | 固定跨类型结果演化 | `cross-type-result-transformations` | 明确不同结果类型之间的转换路径与演化边界 | 无硬前置，建议在 1/4/12 稳定后 | 明确后置，不建议抢主线 |
+| 14 | 固定更大空间层边界 | `multi-notebook-collections` | 明确 collection 与 notebook 的关系、空间边界与不该吞掉的语义 | 无强前置，建议最后 | 不建议与 7/11/13 同期主开 |
 
 ## Agent 分发规则
 
@@ -222,36 +276,38 @@
 - 每个任务包结束后先做工件校验与一致性检查，再决定是否启动下一个任务包，避免错误方向在后续 change 中级联放大。
 - 优先先补齐 OpenSpec 工件，再交给实现 agent 落代码；不要在边界不清时直接进入实现。
 - 只有 `source-connectors-framework -> obsidian-vault-plugin` 视为硬前置，其余一律按“推荐顺序 / 推荐并行”处理。
-- Wave 1 采用双主线并行时，`typed-generation-framework` 负责生成公共词汇，`workflow-templates-and-recipes` 负责任务起步入口，两者互相消费，但不互相改写核心定义。
+- Wave 1 默认由 `typed-generation-framework` 负责生成公共词汇定义，其它 Wave 1 change 只消费或扩展，不反向改写核心定义。
 - 若目标 change 在 README 中被标记为“候选观察项”或“后置演化项”，默认先确认其上游语义已经稳定，再决定是否继续补齐工件。
 - 若上游 change 的核心承诺或边界发生变化，优先回到当前 change 重写边界，不连带重写整条路线。
 
 ### 可立即启动的分发批次
 
-- **批次 A：现在就可以分发**
-  - `workflow-templates-and-recipes`
-  - `typed-generation-framework`
-  - `background-jobs-and-task-runtime`
-  - 说明：这是当前最稳的首批组合，分别覆盖任务起步入口、生成公共词汇与长任务底座。
-- **批次 B：批次 A 初稳后立即补开**
-  - `quality-gates-for-generation`
-  - `generation-presets-and-constraints`
-  - `structural-refinement-for-generated-results`
-  - `source-connectors-framework`
-  - 说明：这一批开始把“更可控生成”“继续把结果改好”“外部知识接入”接到稳定底层之上。
-- **批次 C：按触发条件补开**
-  - `generation-variants-and-comparison`：在 `generation-presets-and-constraints` 与 `structural-refinement-for-generated-results` 的边界稳定后再决定是否补开。
-  - `obsidian-vault-plugin`：在 `source-connectors-framework` 的宿主契约稳定后补开。
-  - `knowledge-curation-and-freshness`：在接入对象与 `sync_check` 语义稳定后补开。
-  - `source-aware-generation-modes`：在生成类型语义与来源接入语义同时稳定后补开。
-  - `evidence-review-workflow`：在结果结构与来源对象边界稳定后补开。
-  - `publishable-artifacts`：在审阅状态语义稳定后补开。
-- **批次 D：明确后置**
-  - `cross-type-result-transformations`
-  - `multi-notebook-collections`
-  - 说明：这两项都建立在上游对象模型已经稳定的前提上，不建议抢在前面主开。
+**批次 A：现在就可以分发**
+- `typed-generation-framework`
+- `background-jobs-and-task-runtime`
+- 说明：这是当前最稳的首批组合，先固定生成公共词汇与长任务底座。
 
-如果本轮只准备启动第一批 agent，就按 `workflow-templates-and-recipes`、`typed-generation-framework`、`background-jobs-and-task-runtime` 的顺序直接分发。
+**批次 B：批次 A 初稳后立即补开**
+- `quality-gates-for-generation`
+- `generation-presets-and-constraints`
+- `structural-refinement-for-generated-results`
+- `source-connectors-framework`
+- 说明：这一批开始把“更可控生成”“继续把结果改好”“外部知识接入”接到稳定底层之上。
+
+**批次 C：按触发条件补开**
+- `generation-variants-and-comparison`：在 `generation-presets-and-constraints` 与 `structural-refinement-for-generated-results` 的边界稳定后再决定是否补开。
+- `obsidian-vault-plugin`：在 `source-connectors-framework` 的宿主契约稳定后补开。
+- `knowledge-curation-and-freshness`：在接入对象与 `sync_check` 语义稳定后补开。
+- `source-aware-generation-modes`：在生成类型语义与来源接入语义同时稳定后补开。
+- `evidence-review-workflow`：在结果结构与来源对象边界稳定后补开。
+- `publishable-artifacts`：在审阅状态语义稳定后补开。
+
+**批次 D：明确后置**
+- `cross-type-result-transformations`
+- `multi-notebook-collections`
+- 说明：这两项都建立在上游对象模型已经稳定的前提上，不建议抢在前面主开。
+
+如果本轮只准备启动第一批 agent，就按 `typed-generation-framework`、`background-jobs-and-task-runtime`、`generation-presets-and-constraints` 的顺序直接分发。
 
 ## Agent Dispatch 清单
 
@@ -268,109 +324,102 @@
 
 | 序号 | 目标 change | 当前状态 | 本轮 agent 目标 | 完成定义 |
 |---|---|---|---|---|
-| 1 | `workflow-templates-and-recipes` | 仅有 `proposal.md` | 补齐起步路径模型的设计、任务和 delta specs | 可直接交给实现 agent，且 `openspec validate` 通过 |
-| 2 | `typed-generation-framework` | 仅有 `proposal.md` | 补齐生成类型最小公共词汇、设计、任务和 delta specs | 生成类型、输出类型、控制面与完成语义边界稳定，且可被后续 change 消费 |
-| 3 | `background-jobs-and-task-runtime` | 仅有 `proposal.md` | 补齐统一异步语义的设计、任务和 delta specs | runtime 边界清晰，不绑定单一业务流程 |
-| 4 | `generation-presets-and-constraints` | 仅有 `proposal.md` | 在公共词汇稳定后补齐预设与约束体系的设计、任务和 delta specs | 可控生成能力清晰，但不反向定义生成类型框架 |
-| 5 | `structural-refinement-for-generated-results` | 仅有 `proposal.md` | 在公共词汇稳定后补齐结构化改良的设计、任务和 delta specs | 结果结构单元与 refinement 动作清晰，但不重新发明结果类型模型 |
-| 6 | `quality-gates-for-generation` | 仅有 `proposal.md` | 补齐最小质量门模型，明确接入位置和非目标 | 质量门可以复用，不写成单一输出专用规则 |
-| 7 | `generation-variants-and-comparison` | 仅有 `proposal.md` | 在不抬升为主线前提下补齐多版本比较的设计、任务和 delta specs | 比较与选择语义清晰，但不要求所有生成都默认走多 variant |
-| 8 | `source-connectors-framework` | 仅有 `proposal.md` | 补齐 connector 宿主契约与 delta specs | binding / snapshot / import_scope / `sync_check` 语义清晰 |
-| 9 | `obsidian-vault-plugin` | 已有 proposal / design / tasks / specs，处于 in-progress | 审阅并收口现有工件，使其成为官方样板而非特制系统 | 与 connector framework 对齐，无额外特权模型 |
-| 10 | `knowledge-curation-and-freshness` | 仅有 `proposal.md` | 补齐接入后治理接口与长期维护边界 | freshness / duplicate / maintenance suggestion 语义清晰 |
-| 11 | `source-aware-generation-modes` | 仅有 `proposal.md` | 在来源与类型语义稳定后补齐来源模式的设计、任务和 delta specs | 来源模式清晰，但不把内部策略术语硬暴露成产品概念 |
-| 12 | `evidence-review-workflow` | 仅有 `proposal.md` | 补齐结果审阅状态机与流转边界 | 审阅状态可用，但不演化成重审批系统 |
-| 13 | `publishable-artifacts` | 仅有 `proposal.md` | 补齐正式产物生命周期设计 | 强调站内沉淀与演化，不退化成导出优化项目 |
-| 14 | `cross-type-result-transformations` | 仅有 `proposal.md` | 在类型框架与结果结构稳定后补齐跨类型演化的设计、任务和 delta specs | 转换路径有限、可控、可解释，不反向改写上游模型 |
-| 15 | `multi-notebook-collections` | 仅有 `proposal.md` | 补齐更大空间层的边界定义 | collection 成为工作现场，但不吞掉 notebook 语义 |
+| 1 | `typed-generation-framework` | 仅有 `proposal.md` | 补齐生成类型最小公共词汇、设计、任务和 delta specs | 生成类型、输出类型、控制面与完成语义边界稳定，且可被后续 change 消费 |
+| 2 | `background-jobs-and-task-runtime` | 仅有 `proposal.md` | 补齐统一异步语义的设计、任务和 delta specs | runtime 边界清晰，不绑定单一业务流程 |
+| 3 | `generation-presets-and-constraints` | 仅有 `proposal.md` | 在公共词汇稳定后补齐预设与约束体系的设计、任务和 delta specs | 可控生成能力清晰，但不反向定义生成类型框架 |
+| 4 | `structural-refinement-for-generated-results` | 仅有 `proposal.md` | 在公共词汇稳定后补齐结构化改良的设计、任务和 delta specs | 结果结构单元与 refinement 动作清晰，但不重新发明结果类型模型 |
+| 5 | `quality-gates-for-generation` | 仅有 `proposal.md` | 补齐最小质量门模型，明确接入位置和非目标 | 质量门可以复用，不写成单一输出专用规则 |
+| 6 | `generation-variants-and-comparison` | 仅有 `proposal.md` | 在不抬升为主线前提下补齐多版本比较的设计、任务和 delta specs | 比较与选择语义清晰，但不要求所有生成都默认走多 variant |
+| 7 | `source-connectors-framework` | 仅有 `proposal.md` | 补齐 connector 宿主契约与 delta specs | binding / snapshot / import_scope / `sync_check` 语义清晰 |
+| 8 | `obsidian-vault-plugin` | 已有 proposal / design / tasks / specs，处于 in-progress | 审阅并收口现有工件，使其成为官方样板而非特制系统 | 与 connector framework 对齐，无额外特权模型 |
+| 9 | `knowledge-curation-and-freshness` | 仅有 `proposal.md` | 补齐接入后治理接口与长期维护边界 | freshness / duplicate / maintenance suggestion 语义清晰 |
+| 10 | `source-aware-generation-modes` | 仅有 `proposal.md` | 在来源与类型语义稳定后补齐来源模式的设计、任务和 delta specs | 来源模式清晰，但不把内部策略术语硬暴露成产品概念 |
+| 11 | `evidence-review-workflow` | 仅有 `proposal.md` | 补齐结果审阅状态机与流转边界 | 审阅状态可用，但不演化成重审批系统 |
+| 12 | `publishable-artifacts` | 仅有 `proposal.md` | 补齐正式产物生命周期设计 | 强调站内沉淀与演化，不退化成导出优化项目 |
+| 13 | `cross-type-result-transformations` | 仅有 `proposal.md` | 在类型框架与结果结构稳定后补齐跨类型演化的设计、任务和 delta specs | 转换路径有限、可控、可解释，不反向改写上游模型 |
+| 14 | `multi-notebook-collections` | 仅有 `proposal.md` | 补齐更大空间层的边界定义 | collection 成为工作现场，但不吞掉 notebook 语义 |
 
 ### 可直接投递的 Prompt 模板
 
-**1. `workflow-templates-and-recipes`**
-
-```text
-你负责推进 `openspec/changes/workflow-templates-and-recipes/` 的 OpenSpec 工件，不实现代码。先阅读 `openspec/changes/README.md` 和该 change 的 `proposal.md`，对齐“更容易开始做事”的产品主线；补齐 `design.md`、`tasks.md` 和必要的 `specs/.../spec.md`，把模板 / recipe 的入口形态、任务起步路径、非目标与可延后项写清楚，不留未决项。最后运行 `openspec validate workflow-templates-and-recipes`，并用中文汇报修改的工件与完成定义。
-```
-
-**2. `typed-generation-framework`**
+**1. `typed-generation-framework`**
 
 ```text
 你负责推进 `openspec/changes/typed-generation-framework/` 的 OpenSpec 工件，不实现代码。先阅读 `openspec/changes/README.md`，尤其是“生成类型新 Proposal 筛选”“主 Roadmap 内部顺序”和 Wave 1 相关段落，再阅读该 change 的 `proposal.md`；补齐 `design.md`、`tasks.md` 和必要的 `specs/.../spec.md`，先固定最小公共词汇：生成类型、输入要求、输出结构、控制面、完成语义，以及它和输出类型的关系边界。不要把某个具体生成类型的特例直接写成公共框架。最后运行 `openspec validate typed-generation-framework`，并用中文汇报修改结果。
 ```
 
-**3. `background-jobs-and-task-runtime`**
+**2. `background-jobs-and-task-runtime`**
 
 ```text
 你负责推进 `openspec/changes/background-jobs-and-task-runtime/` 的 OpenSpec 工件，不实现代码。先阅读 `openspec/changes/README.md` 和该 change 的 `proposal.md`，补齐 `design.md`、`tasks.md` 和必要的 `specs/.../spec.md`，把后台任务的 lifecycle、progress、cancel、retry、history 统一语义写清楚，强调这是通用底座而不是某个业务流程的私有实现。最后运行 `openspec validate background-jobs-and-task-runtime`，并用中文汇报修改结果。
 ```
 
-**4. `generation-presets-and-constraints`**
+**3. `generation-presets-and-constraints`**
 
 ```text
 你负责推进 `openspec/changes/generation-presets-and-constraints/` 的 OpenSpec 工件，不实现代码。先阅读 `openspec/changes/README.md`，尤其是“主 Roadmap 内部顺序”和 Wave 1 相关段落，再阅读该 change 的 `proposal.md`；若 `typed-generation-framework` 的公共词汇已经稳定，就显式消费那套词汇；若尚未稳定，只记录依赖与边界，不擅自重写公共术语。补齐 `design.md`、`tasks.md` 和必要的 `specs/.../spec.md`，明确每类生成的高价值控制项、预设与约束边界，强调它回答的是“如何更可控生成”，而不是“什么是生成类型”。最后运行 `openspec validate generation-presets-and-constraints`，并用中文汇报修改结果。
 ```
 
-**5. `structural-refinement-for-generated-results`**
+**4. `structural-refinement-for-generated-results`**
 
 ```text
 你负责推进 `openspec/changes/structural-refinement-for-generated-results/` 的 OpenSpec 工件，不实现代码。先阅读 `openspec/changes/README.md`，尤其是“主 Roadmap 内部顺序”和 Wave 1 相关段落，再阅读该 change 的 `proposal.md`；若 `typed-generation-framework` 的公共词汇已经稳定，就消费那套词汇；若尚未稳定，不要重新发明结果类型模型。补齐 `design.md`、`tasks.md` 和必要的 `specs/.../spec.md`，把结果结构单元、可执行 refinement 动作、局部改写与整篇重生成的边界写清楚，强调它回答的是“已有结果如何继续变好”。最后运行 `openspec validate structural-refinement-for-generated-results`，并用中文汇报修改结果。
 ```
 
-**6. `quality-gates-for-generation`**
+**5. `quality-gates-for-generation`**
 
 ```text
 你负责推进 `openspec/changes/quality-gates-for-generation/` 的 OpenSpec 工件，不实现代码。先阅读 `openspec/changes/README.md` 和该 change 的 `proposal.md`，补齐 `design.md`、`tasks.md` 和必要的 `specs/.../spec.md`，明确最小可复用的质量信号、接入位置、非目标与可延后项，确保它服务多个结果类型而不是绑定单一输出。最后运行 `openspec validate quality-gates-for-generation`，并用中文汇报修改结果。
 ```
 
-**7. `generation-variants-and-comparison`**
+**6. `generation-variants-and-comparison`**
 
 ```text
 你负责推进 `openspec/changes/generation-variants-and-comparison/` 的 OpenSpec 工件，不实现代码。先阅读 `openspec/changes/README.md`，尤其是“生成类型新 Proposal 筛选”和 Wave 1 相关段落，再阅读该 change 的 `proposal.md`；在不把它抬成主线的前提下，补齐 `design.md`、`tasks.md` 和必要的 `specs/.../spec.md`，把多 variant 的候选结果、比较视图与选择语义写清楚，并明确哪些场景值得进入多版本流程、哪些仍保持单结果默认。最后运行 `openspec validate generation-variants-and-comparison`，并用中文汇报修改结果。
 ```
 
-**8. `source-connectors-framework`**
+**7. `source-connectors-framework`**
 
 ```text
 你负责推进 `openspec/changes/source-connectors-framework/` 的 OpenSpec 工件，不实现代码。先阅读 `openspec/changes/README.md` 和该 change 的 `proposal.md`，补齐 `design.md`、`tasks.md` 和必要的 `specs/.../spec.md`，把 connector 的宿主契约写清楚：发现、binding、snapshot、import_scope、sync_check，以及哪些能力属于宿主、哪些不应该下放给单个 connector。最后运行 `openspec validate source-connectors-framework`，并用中文汇报修改结果。
 ```
 
-**9. `obsidian-vault-plugin`**
+**8. `obsidian-vault-plugin`**
 
 ```text
 你负责继续收口 `openspec/changes/obsidian-vault-plugin/` 的 OpenSpec 工件，不实现代码。先阅读 `openspec/changes/README.md`、该 change 现有的 `proposal.md`、`design.md`、`tasks.md` 与 `specs/.../spec.md`，确认它严格作为 `source-connectors-framework` 的首个官方样板，而不是独立特制系统；补齐遗漏、消除不确定项，把大 vault、子集选择、显式 `sync_check` 的模型讲清楚。最后运行 `openspec validate obsidian-vault-plugin`，并用中文汇报修改结果。
 ```
 
-**10. `knowledge-curation-and-freshness`**
+**9. `knowledge-curation-and-freshness`**
 
 ```text
 你负责推进 `openspec/changes/knowledge-curation-and-freshness/` 的 OpenSpec 工件，不实现代码。先阅读 `openspec/changes/README.md` 和该 change 的 `proposal.md`，补齐 `design.md`、`tasks.md` 和必要的 `specs/.../spec.md`，把 freshness、重复检测、维护建议与接入后对象边界之间的关系写清楚，强调这是治理增强而不是自动接管整理。最后运行 `openspec validate knowledge-curation-and-freshness`，并用中文汇报修改结果。
 ```
 
-**11. `source-aware-generation-modes`**
+**10. `source-aware-generation-modes`**
 
 ```text
 你负责推进 `openspec/changes/source-aware-generation-modes/` 的 OpenSpec 工件，不实现代码。先阅读 `openspec/changes/README.md`，尤其是“生成类型新 Proposal 筛选”和 Wave 2 相关段落，再阅读该 change 的 `proposal.md`；只有在 `typed-generation-framework` 与接入语义已经稳定的前提下，才继续补齐 `design.md`、`tasks.md` 和必要的 `specs/.../spec.md`。把不同生成类型的来源使用模式、citation 预期和来源展示边界写清楚，但不要把内部策略术语硬暴露成产品概念。最后运行 `openspec validate source-aware-generation-modes`，并用中文汇报修改结果。
 ```
 
-**12. `evidence-review-workflow`**
+**11. `evidence-review-workflow`**
 
 ```text
 你负责推进 `openspec/changes/evidence-review-workflow/` 的 OpenSpec 工件，不实现代码。先阅读 `openspec/changes/README.md` 和该 change 的 `proposal.md`，补齐 `design.md`、`tasks.md` 和必要的 `specs/.../spec.md`，把 citation / evidence 的审阅状态、状态转移条件、工作流边界与非目标写清楚，确保它是正式审阅流程而不是重型审批系统。最后运行 `openspec validate evidence-review-workflow`，并用中文汇报修改结果。
 ```
 
-**13. `publishable-artifacts`**
+**12. `publishable-artifacts`**
 
 ```text
 你负责推进 `openspec/changes/publishable-artifacts/` 的 OpenSpec 工件，不实现代码。先阅读 `openspec/changes/README.md` 和该 change 的 `proposal.md`，补齐 `design.md`、`tasks.md` 和必要的 `specs/.../spec.md`，把正式产物的沉淀、继续编辑、引用、追踪与演化语义写清楚，明确它的重点是站内持续工作，不要把它写成“导出体验优化”项目。最后运行 `openspec validate publishable-artifacts`，并用中文汇报修改结果。
 ```
 
-**14. `cross-type-result-transformations`**
+**13. `cross-type-result-transformations`**
 
 ```text
 你负责推进 `openspec/changes/cross-type-result-transformations/` 的 OpenSpec 工件，不实现代码。先阅读 `openspec/changes/README.md`，尤其是“生成类型新 Proposal 筛选”“主 Roadmap 内部顺序”和 Wave 3 相关段落，再阅读该 change 的 `proposal.md`；只有在 `typed-generation-framework`、`structural-refinement-for-generated-results` 与 `publishable-artifacts` 的语义已经稳定后，才继续补齐 `design.md`、`tasks.md` 和必要的 `specs/.../spec.md`。把跨类型演化的有限路径、保留内容、丢弃内容和非目标写清楚，不要反向重写上游类型模型。最后运行 `openspec validate cross-type-result-transformations`，并用中文汇报修改结果。
 ```
 
-**15. `multi-notebook-collections`**
+**14. `multi-notebook-collections`**
 
 ```text
 你负责推进 `openspec/changes/multi-notebook-collections/` 的 OpenSpec 工件，不实现代码。先阅读 `openspec/changes/README.md` 和该 change 的 `proposal.md`，补齐 `design.md`、`tasks.md` 和必要的 `specs/.../spec.md`，把 collection 与 notebook 的关系、空间边界、导航与检索语义、不该吞掉的 notebook 能力写清楚，确保它是更大的工作现场而不是万能容器。最后运行 `openspec validate multi-notebook-collections`，并用中文汇报修改结果。
@@ -380,14 +429,13 @@
 
 | Wave | 建议首开 | 原因 |
 |---|---|---|
-| Wave 1 | `workflow-templates-and-recipes` + `typed-generation-framework` | Wave 1 是唯一建议双首开的波次：前者定义任务起步入口，后者定义生成类型公共词汇；其后再打开 `generation-presets-and-constraints` 与 `structural-refinement-for-generated-results`。 |
+| Wave 1 | `typed-generation-framework` | 先固定生成类型公共词汇，再打开 `generation-presets-and-constraints` 与 `structural-refinement-for-generated-results`，可以避免右侧生成入口继续扩张成特例集合。 |
 | Wave 2 | `source-connectors-framework` | 先定宿主契约，才能避免 `obsidian-vault-plugin` 演化成特制接入系统，也才能让来源模式建立在稳定接入语义上。 |
 | Wave 3 | `evidence-review-workflow` | 先定义结果的审阅状态与确认语义，再决定哪些结果值得沉淀为正式产物，以及哪些跨类型演化路径值得支持。 |
 | Wave 4 | `multi-notebook-collections` | 本波只有一个核心 change，本身就是空间层放大的定义入口。 |
 
 说明：
-- Wave 1 虽然建议双首开，但只有 `typed-generation-framework` 有权定义生成公共词汇。
-- `workflow-templates-and-recipes` 负责任务起步入口，不反向重写生成类型体系。
+- Wave 1 由 `typed-generation-framework` 负责公共词汇定义，其它生成相关 change 只消费或扩展，不反向重写核心术语。
 
 ## 依赖关系图
 
@@ -396,7 +444,6 @@ flowchart TD
   BJR[background-jobs-and-task-runtime]
   SCF[source-connectors-framework]
   OVP[obsidian-vault-plugin]
-  WTR[workflow-templates-and-recipes]
   QGG[quality-gates-for-generation]
   PA[publishable-artifacts]
   ERW[evidence-review-workflow]
@@ -414,15 +461,13 @@ flowchart TD
 
   SCF --> OVP
   BJR -.推荐先做.-> SCF
-  BJR -.推荐先做.-> WTR
-  QGG -.质量治理增强.-> WTR
+  BJR -.推荐先做.-> TGF
+  QGG -.质量治理增强.-> TGF
   QGG -.质量治理增强.-> PA
   ERW -.审阅闭环增强.-> PA
   KCF -.长期知识治理增强.-> SCF
-  MNC -.跨工作区聚合增强.-> WTR
   MNC -.跨工作区聚合增强.-> ERW
 
-  WTR -.生成入口组织增强.-> TGF
   TGF -.最小公共层.-> GPC
   TGF -.最小公共层.-> SRR
   GPC -.可控生成增强.-> GVC
@@ -444,7 +489,6 @@ flowchart TD
 
 | Proposal | 推荐指数 | 判断 |
 |---|---:|---|
-| `workflow-templates-and-recipes` | 9.5/10 | 最快提升产品价值，最容易被用户感知，仍然是最稳的产品起点。 |
 | `generation-presets-and-constraints` | 9.4/10 | 最直接提升“按意图生成”的能力，和右侧生成入口的产品价值最贴近。 |
 | `typed-generation-framework` | 9.2/10 | 是生成类型体系的最小公共层，越晚统一，后续类型优化越容易继续碎片化。 |
 | `structural-refinement-for-generated-results` | 9.1/10 | 非常贴近高频真实需求，能把“重新生成”升级为“继续把结果改好”。 |
@@ -550,18 +594,6 @@ flowchart TD
 - **可延后项**
   - 任务优先级调度、配额、公平性策略。
   - 跨 notebook / 跨用户级的任务编排视图。
-
-### `workflow-templates-and-recipes`
-
-- **核心承诺**
-  - 让用户更容易开始做事，用模板/recipe 作为高价值入口。
-  - 把现有能力组织成清晰的任务起步路径。
-- **非目标**
-  - 不在本 change 中解决所有底层能力统一问题。
-  - 不把模板系统扩展成通用自动化编排引擎。
-- **可延后项**
-  - 模板市场、模板分享、模板评分与推荐系统。
-  - 模板内复杂条件分支与多阶段自动化。
 
 ### `quality-gates-for-generation`
 
