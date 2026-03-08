@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import { analyzeNotebookV1NotebooksNotebookIdAnalysisGet as analyzeNotebook, type AnalysisResult } from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
-import { useWorkspaceStore } from '../../shared/state/workspaceStore';
+import {
+  analyzeNotebookV1NotebooksNotebookIdAnalysisGet as analyzeNotebook,
+  type AnalysisResult,
+} from "../../../../api/generated";
+import { unwrapData } from "../../../../api/unwrap";
+import { useWorkspaceStore } from "../../shared/state/workspaceStore";
 
 interface AnalysisState {
   analysis: AnalysisResult | null;
@@ -13,54 +16,56 @@ interface AnalysisState {
 export function useAnalysis() {
   const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
   const connectionState = useWorkspaceStore((s) => s.connectionState);
-  const isConnected = connectionState === 'live';
+  const isConnected = connectionState === "live";
 
   const [analysisState, setAnalysisState] = useState<AnalysisState>({
     analysis: null,
     isLoading: false,
-    error: '',
+    error: "",
   });
 
   // Clear analysis when notebook changes
   useEffect(() => {
-    setAnalysisState({ analysis: null, isLoading: false, error: '' });
+    setAnalysisState({ analysis: null, isLoading: false, error: "" });
   }, [activeNotebookId]);
 
   const fetchAnalysis = useCallback(async () => {
     if (!activeNotebookId) {
       setAnalysisState((prev) => ({
         ...prev,
-        error: '请先选择笔记本。',
+        error: "请先选择笔记本。",
       }));
       return null;
     }
     if (!isConnected) {
       setAnalysisState((prev) => ({
         ...prev,
-        error: '未连接到后端服务，无法分析。',
+        error: "未连接到后端服务，无法分析。",
       }));
       return null;
     }
 
-    setAnalysisState((prev) => ({ ...prev, isLoading: true, error: '' }));
+    setAnalysisState((prev) => ({ ...prev, isLoading: true, error: "" }));
     try {
-      const analysis = await unwrapData(analyzeNotebook<true>({
-        path: { notebook_id: activeNotebookId },
-      }));
-      setAnalysisState({ analysis, isLoading: false, error: '' });
+      const analysis = await unwrapData(
+        analyzeNotebook<true>({
+          path: { notebook_id: activeNotebookId },
+        }),
+      );
+      setAnalysisState({ analysis, isLoading: false, error: "" });
       return analysis;
     } catch (error) {
       setAnalysisState((prev) => ({
         ...prev,
         isLoading: false,
-        error: '分析失败，请稍后重试。',
+        error: "分析失败，请稍后重试。",
       }));
       return null;
     }
   }, [isConnected, activeNotebookId]);
 
   const clearAnalysis = useCallback(() => {
-    setAnalysisState({ analysis: null, isLoading: false, error: '' });
+    setAnalysisState({ analysis: null, isLoading: false, error: "" });
   }, []);
 
   return {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   Button,
   IconButton,
@@ -10,7 +10,7 @@ import {
   List,
   ListItem,
   Spinner,
-} from '@material-tailwind/react';
+} from "@material-tailwind/react";
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -19,11 +19,11 @@ import {
   Close as CloseIcon,
   Search as SearchIcon,
   ExpandMore as ExpandMoreIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
-import type { SessionSummary } from '../../shared/types';
-import ConfirmPopover from '../../../../shared/ConfirmPopover';
-import { LAYER_LEVELS } from '../../../../shared/layer';
+import type { SessionSummary } from "../../shared/types";
+import ConfirmPopover from "../../../../shared/ConfirmPopover";
+import { LAYER_LEVELS } from "../../../../shared/layer";
 
 interface SessionSwitcherProps {
   sessions: SessionSummary[];
@@ -58,9 +58,9 @@ export default function SessionSwitcher({
   onDelete,
   onRetry,
 }: SessionSwitcherProps) {
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = useState("");
   const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
-  const [editingTitle, setEditingTitle] = useState('');
+  const [editingTitle, setEditingTitle] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const editInputRef = useRef<HTMLInputElement | null>(null);
@@ -93,7 +93,7 @@ export default function SessionSwitcher({
       const success = await onUpdate(editingSessionId, editingTitle);
       if (success) {
         setEditingSessionId(null);
-        setEditingTitle('');
+        setEditingTitle("");
       }
     } finally {
       setIsUpdating(false);
@@ -107,7 +107,7 @@ export default function SessionSwitcher({
       await onDelete(sessionId);
       if (editingSessionId === sessionId) {
         setEditingSessionId(null);
-        setEditingTitle('');
+        setEditingTitle("");
       }
     } finally {
       setIsDeleting(false);
@@ -123,29 +123,22 @@ export default function SessionSwitcher({
 
   useEffect(() => {
     if (isOpen) {
-        // Focus search input when opened
+      // Focus search input when opened
     }
   }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) return;
-    setSearchValue('');
+    setSearchValue("");
     setEditingSessionId(null);
-    setEditingTitle('');
+    setEditingTitle("");
   }, [isOpen]);
 
   return (
     <div className="flex items-center border border-gray-300 rounded-lg bg-white overflow-hidden h-8">
-      <Popover
-        open={isOpen}
-        handler={handlePopoverHandler}
-        placement="bottom-start"
-        offset={4}
-      >
+      <Popover open={isOpen} handler={handlePopoverHandler} placement="bottom-start" offset={4}>
         <PopoverHandler>
-          <button
-            className="flex items-center gap-2 px-3 py-1 h-full hover:bg-gray-100 transition-colors text-left min-w-[120px] max-w-[200px]"
-          >
+          <button className="flex items-center gap-2 px-3 py-1 h-full hover:bg-gray-100 transition-colors text-left min-w-[120px] max-w-[200px]">
             <Typography variant="small" className="font-medium text-gray-600 text-[11px]">
               会话
             </Typography>
@@ -153,42 +146,48 @@ export default function SessionSwitcher({
               variant="small"
               className="font-semibold text-gray-900 text-xs truncate max-w-[100px]"
             >
-              {activeSession?.title ?? '未命名'}
+              {activeSession?.title ?? "未命名"}
             </Typography>
             <ExpandMoreIcon
-               className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+              className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`}
             />
           </button>
         </PopoverHandler>
-        <PopoverContent className="w-[340px] max-h-[420px] p-0 overflow-hidden" style={{ zIndex: LAYER_LEVELS.popover }}>
+        <PopoverContent
+          className="w-[340px] max-h-[420px] p-0 overflow-hidden"
+          style={{ zIndex: LAYER_LEVELS.popover }}
+        >
           <div className="p-3 border-b border-gray-200">
-             <div className="relative w-full">
-                <div className="absolute top-2/4 left-3 -translate-y-2/4 text-gray-500">
-                   <SearchIcon style={{ fontSize: 16 }} />
-                </div>
-                <input
-                  ref={searchInputRef}
-                  className="w-full h-8 pl-9 pr-3 rounded-lg bg-gray-100 border border-gray-300 text-xs text-gray-900 focus:outline-none focus:border-gray-500 focus:ring-0"
-                  placeholder="搜索会话"
-                  value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
-                  autoFocus
-                  id="session-search-input"
-                  name="sessionSearch"
-                  aria-label="搜索会话"
-                />
-             </div>
-             {/* Error State */}
-             {error && (
-               <div className="flex items-center gap-2 mt-2">
-                 <Typography variant="small" color="red" className="text-[11px]">
-                   {error}
-                 </Typography>
-                 <button onClick={() => onRetry && onRetry()} className="text-[11px] text-gray-800 underline">
-                   重试
-                 </button>
-               </div>
-             )}
+            <div className="relative w-full">
+              <div className="absolute top-2/4 left-3 -translate-y-2/4 text-gray-500">
+                <SearchIcon style={{ fontSize: 16 }} />
+              </div>
+              <input
+                ref={searchInputRef}
+                className="w-full h-8 pl-9 pr-3 rounded-lg bg-gray-100 border border-gray-300 text-xs text-gray-900 focus:outline-none focus:border-gray-500 focus:ring-0"
+                placeholder="搜索会话"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                autoFocus
+                id="session-search-input"
+                name="sessionSearch"
+                aria-label="搜索会话"
+              />
+            </div>
+            {/* Error State */}
+            {error && (
+              <div className="flex items-center gap-2 mt-2">
+                <Typography variant="small" color="red" className="text-[11px]">
+                  {error}
+                </Typography>
+                <button
+                  onClick={() => onRetry && onRetry()}
+                  className="text-[11px] text-gray-800 underline"
+                >
+                  重试
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="max-h-[260px] overflow-y-auto p-2 flex flex-col gap-1">
@@ -198,14 +197,14 @@ export default function SessionSwitcher({
               </div>
             ) : filteredSessions.length === 0 ? (
               <div className="py-4 text-center text-xs text-gray-600">
-                {searchValue ? '未找到匹配会话' : '暂无会话记录'}
+                {searchValue ? "未找到匹配会话" : "暂无会话记录"}
               </div>
             ) : (
               filteredSessions.map((item) => (
                 <div
                   key={item.id}
                   className={`group relative rounded-lg transition-colors ${
-                    item.id === activeSessionId ? 'bg-gray-200' : 'hover:bg-gray-100'
+                    item.id === activeSessionId ? "bg-gray-200" : "hover:bg-gray-100"
                   }`}
                 >
                   {editingSessionId === item.id ? (
@@ -216,12 +215,12 @@ export default function SessionSwitcher({
                         value={editingTitle}
                         onChange={(e) => setEditingTitle(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
+                          if (e.key === "Enter") {
                             e.preventDefault();
                             void handleSaveEdit();
-                          } else if (e.key === 'Escape') {
+                          } else if (e.key === "Escape") {
                             setEditingSessionId(null);
-                            setEditingTitle('');
+                            setEditingTitle("");
                           }
                         }}
                         disabled={isUpdating}
@@ -235,7 +234,11 @@ export default function SessionSwitcher({
                         onClick={handleSaveEdit}
                         disabled={isUpdating}
                       >
-                         {isUpdating ? <Spinner className="h-3 w-3" /> : <CheckIcon style={{ fontSize: 16 }} />}
+                        {isUpdating ? (
+                          <Spinner className="h-3 w-3" />
+                        ) : (
+                          <CheckIcon style={{ fontSize: 16 }} />
+                        )}
                       </IconButton>
                       <IconButton
                         size="sm"
@@ -243,74 +246,76 @@ export default function SessionSwitcher({
                         className="w-6 h-6 min-w-[24px] rounded text-gray-600 hover:bg-gray-200"
                         onClick={() => {
                           setEditingSessionId(null);
-                          setEditingTitle('');
+                          setEditingTitle("");
                         }}
                       >
-                         <CloseIcon style={{ fontSize: 16 }} />
+                        <CloseIcon style={{ fontSize: 16 }} />
                       </IconButton>
                     </div>
                   ) : (
                     <>
-                       <button
-                         className="w-full text-left p-2 pr-16"
-                         onClick={() => {
-                           onSelect(item.id);
-                           onClose();
-                         }}
-                       >
-                         <Typography
-                           variant="small"
-                           className={`text-xs truncate ${item.id === activeSessionId ? 'font-semibold text-gray-900' : 'font-medium text-gray-800'}`}
-                         >
-                           {item.title}
-                         </Typography>
-                         <Typography variant="small" className="text-[10px] text-gray-500 font-medium mt-0.5">
-                           {item.updatedAt}
-                         </Typography>
-                       </button>
+                      <button
+                        className="w-full text-left p-2 pr-16"
+                        onClick={() => {
+                          onSelect(item.id);
+                          onClose();
+                        }}
+                      >
+                        <Typography
+                          variant="small"
+                          className={`text-xs truncate ${item.id === activeSessionId ? "font-semibold text-gray-900" : "font-medium text-gray-800"}`}
+                        >
+                          {item.title}
+                        </Typography>
+                        <Typography
+                          variant="small"
+                          className="text-[10px] text-gray-500 font-medium mt-0.5"
+                        >
+                          {item.updatedAt}
+                        </Typography>
+                      </button>
 
-                       <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-inherit">
-                          {onUpdate && isConnected && (
-                             <IconButton
-                               size="sm"
-                               variant="text"
-                               className="w-6 h-6 min-w-[24px] rounded hover:bg-gray-300 text-gray-600"
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 startEditing(item);
-                               }}
-                             >
-                                <EditIcon style={{ fontSize: 14 }} />
-                             </IconButton>
-                          )}
-                          {onDelete && isConnected && (
-                            <ConfirmPopover
-                              message={`确定要删除会话「${item.title}」吗？`}
-                              onConfirm={() => void handleDeleteSession(item.id, item.title)}
-                              placement="left"
+                      <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-inherit">
+                        {onUpdate && isConnected && (
+                          <IconButton
+                            size="sm"
+                            variant="text"
+                            className="w-6 h-6 min-w-[24px] rounded hover:bg-gray-300 text-gray-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startEditing(item);
+                            }}
+                          >
+                            <EditIcon style={{ fontSize: 14 }} />
+                          </IconButton>
+                        )}
+                        {onDelete && isConnected && (
+                          <ConfirmPopover
+                            message={`确定要删除会话「${item.title}」吗？`}
+                            onConfirm={() => void handleDeleteSession(item.id, item.title)}
+                            placement="left"
+                            disabled={isDeleting}
+                          >
+                            <IconButton
+                              size="sm"
+                              variant="text"
+                              className="w-6 h-6 min-w-[24px] rounded hover:bg-red-50 text-gray-500 hover:text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
                               disabled={isDeleting}
                             >
-                              <IconButton
-                                size="sm"
-                                variant="text"
-                                className="w-6 h-6 min-w-[24px] rounded hover:bg-red-50 text-gray-500 hover:text-red-600"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                }}
-                                disabled={isDeleting}
-                              >
-                                <DeleteIcon style={{ fontSize: 14 }} />
-                              </IconButton>
-                            </ConfirmPopover>
-                          )}
-                       </div>
+                              <DeleteIcon style={{ fontSize: 14 }} />
+                            </IconButton>
+                          </ConfirmPopover>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>
               ))
             )}
           </div>
-
         </PopoverContent>
       </Popover>
 

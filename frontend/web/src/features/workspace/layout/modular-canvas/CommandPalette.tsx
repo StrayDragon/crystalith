@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from "react";
 
 export interface CommandItem {
   id: string;
@@ -14,12 +14,12 @@ interface CommandPaletteProps {
 }
 
 export default function CommandPalette({ open, onClose, commands }: CommandPaletteProps) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
-      setQuery('');
+      setQuery("");
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);
@@ -47,12 +47,12 @@ export default function CommandPalette({ open, onClose, commands }: CommandPalet
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Escape') {
+            if (e.key === "Escape") {
               e.preventDefault();
               e.stopPropagation();
               onClose();
             }
-            if (e.key === 'Enter' && filtered.length > 0) {
+            if (e.key === "Enter" && filtered.length > 0) {
               e.preventDefault();
               e.stopPropagation();
               filtered[0].action();

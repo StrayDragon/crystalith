@@ -1,21 +1,21 @@
-import type { MouseEvent as ReactMouseEvent } from 'react';
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import type { MouseEvent as ReactMouseEvent } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Close as CloseIcon,
   ContentCopy as ContentCopyIcon,
   Refresh as RefreshIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
 import type {
   ExtractorInfoResponse as ExtractorInfo,
   NotebookExtractorsPolicy,
   PatchNotebookExtractorsPolicyRequest,
-} from '../../../../../api/generated';
-import { copyToClipboard } from '../../../../../shared/clipboard';
-import { useLayer } from '../../../../../shared/layer';
-import { toast } from '../../../../../shared/toast';
-import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
+} from "../../../../../api/generated";
+import { copyToClipboard } from "../../../../../shared/clipboard";
+import { useLayer } from "../../../../../shared/layer";
+import { toast } from "../../../../../shared/toast";
+import { useFocusTrap } from "../../../shared/hooks/useFocusTrap";
 
 interface ExtractorPolicyDialogProps {
   open: boolean;
@@ -31,11 +31,11 @@ interface ExtractorPolicyDialogProps {
 
 function labelForMode(mode: string): string {
   switch (mode) {
-    case 'custom':
-      return '自定义';
-    case 'inherit_global':
+    case "custom":
+      return "自定义";
+    case "inherit_global":
     default:
-      return '遵循全局';
+      return "遵循全局";
   }
 }
 
@@ -50,7 +50,7 @@ export default function ExtractorPolicyDialog({
   onPatchPolicy,
   onRefresh,
 }: ExtractorPolicyDialogProps) {
-  const { style: modalStyle } = useLayer('modal');
+  const { style: modalStyle } = useLayer("modal");
   const modalRef = useRef<HTMLDivElement | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -60,8 +60,11 @@ export default function ExtractorPolicyDialog({
     onEscape: onClose,
   });
 
-  const mode = policy?.mode ?? 'inherit_global';
-  const enabledSet = useMemo(() => new Set(policy?.enabled_extractors ?? []), [policy?.enabled_extractors]);
+  const mode = policy?.mode ?? "inherit_global";
+  const enabledSet = useMemo(
+    () => new Set(policy?.enabled_extractors ?? []),
+    [policy?.enabled_extractors],
+  );
 
   const sortedExtractors = useMemo(() => {
     return [...extractors].sort((a, b) => {
@@ -78,7 +81,7 @@ export default function ExtractorPolicyDialog({
 
   const handleCopy = useCallback(async (value: string) => {
     await copyToClipboard(value);
-    toast.success('已复制到剪贴板');
+    toast.success("已复制到剪贴板");
   }, []);
 
   const handleBackdropClick = useCallback(
@@ -92,7 +95,7 @@ export default function ExtractorPolicyDialog({
   const canMutate = Boolean(isConnected && onPatchPolicy && !isLoading && !isSaving);
 
   const handleSetMode = useCallback(
-    async (nextMode: 'inherit_global' | 'custom') => {
+    async (nextMode: "inherit_global" | "custom") => {
       if (!canMutate) return;
       if (mode === nextMode) return;
       setIsSaving(true);
@@ -100,7 +103,7 @@ export default function ExtractorPolicyDialog({
         await onPatchPolicy?.({ mode: nextMode });
         toast.success(`已切换为：${labelForMode(nextMode)}`);
       } catch (error) {
-        const message = error instanceof Error ? error.message : '更新失败';
+        const message = error instanceof Error ? error.message : "更新失败";
         toast.error(message);
       } finally {
         setIsSaving(false);
@@ -112,7 +115,7 @@ export default function ExtractorPolicyDialog({
   const handleToggleExtractor = useCallback(
     async (extractorType: string) => {
       if (!canMutate) return;
-      if (mode !== 'custom') return;
+      if (mode !== "custom") return;
       const next = new Set(enabledSet);
       if (next.has(extractorType)) {
         next.delete(extractorType);
@@ -124,7 +127,7 @@ export default function ExtractorPolicyDialog({
       try {
         await onPatchPolicy?.({ enabled_extractors: nextList });
       } catch (error) {
-        const message = error instanceof Error ? error.message : '更新失败';
+        const message = error instanceof Error ? error.message : "更新失败";
         toast.error(message);
       } finally {
         setIsSaving(false);
@@ -138,7 +141,7 @@ export default function ExtractorPolicyDialog({
     try {
       await onRefresh();
     } catch (error) {
-      const message = error instanceof Error ? error.message : '刷新失败';
+      const message = error instanceof Error ? error.message : "刷新失败";
       toast.error(message);
     }
   }, [isSaving, onRefresh]);
@@ -168,7 +171,7 @@ export default function ExtractorPolicyDialog({
             </div>
             <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400">
               模式：{labelForMode(mode)} · 可用：{usableCount}/{extractors.length}
-              {fallbackEnabled == null ? '' : ` · 回退：${fallbackEnabled ? '开启' : '关闭'}`}
+              {fallbackEnabled == null ? "" : ` · 回退：${fallbackEnabled ? "开启" : "关闭"}`}
             </div>
           </div>
 
@@ -196,7 +199,9 @@ export default function ExtractorPolicyDialog({
         <div className="p-5 max-h-[70vh] overflow-y-auto">
           {!isConnected ? (
             <div className="mb-4 rounded-xl border border-amber-200 dark:border-amber-900/30 bg-amber-50/60 dark:bg-amber-950/20 px-4 py-3">
-              <div className="text-sm font-semibold text-amber-800 dark:text-amber-200">未连接到后端</div>
+              <div className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                未连接到后端
+              </div>
               <div className="mt-1 text-xs text-amber-700 dark:text-amber-300">
                 暂无法获取或修改提取器设置。
               </div>
@@ -208,24 +213,24 @@ export default function ExtractorPolicyDialog({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => void handleSetMode('inherit_global')}
+                onClick={() => void handleSetMode("inherit_global")}
                 disabled={!canMutate}
                 className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${
-                  mode === 'inherit_global'
-                    ? 'border-gray-900 bg-gray-900 text-white'
-                    : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800'
+                  mode === "inherit_global"
+                    ? "border-gray-900 bg-gray-900 text-white"
+                    : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
                 }`}
               >
                 遵循全局
               </button>
               <button
                 type="button"
-                onClick={() => void handleSetMode('custom')}
+                onClick={() => void handleSetMode("custom")}
                 disabled={!canMutate}
                 className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${
-                  mode === 'custom'
-                    ? 'border-gray-900 bg-gray-900 text-white'
-                    : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800'
+                  mode === "custom"
+                    ? "border-gray-900 bg-gray-900 text-white"
+                    : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
                 }`}
               >
                 自定义
@@ -247,15 +252,15 @@ export default function ExtractorPolicyDialog({
 
           <div className="space-y-2">
             {sortedExtractors.map((ext) => {
-              const desiredEnabled = mode === 'custom' ? enabledSet.has(ext.type) : ext.enabled;
-              const toggleDisabled = !canMutate || mode !== 'custom';
+              const desiredEnabled = mode === "custom" ? enabledSet.has(ext.type) : ext.enabled;
+              const toggleDisabled = !canMutate || mode !== "custom";
 
               const enabledTone = ext.enabled
-                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200'
-                : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200';
+                ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200"
+                : "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200";
               const availableTone = ext.available
-                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200'
-                : 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200';
+                ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200"
+                : "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200";
 
               return (
                 <div
@@ -271,11 +276,15 @@ export default function ExtractorPolicyDialog({
                         <div className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
                           <span className="font-mono">{ext.type}</span>
                         </div>
-                        <div className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${enabledTone}`}>
-                          {ext.enabled ? 'enabled' : 'disabled'}
+                        <div
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${enabledTone}`}
+                        >
+                          {ext.enabled ? "enabled" : "disabled"}
                         </div>
-                        <div className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${availableTone}`}>
-                          {ext.available ? 'available' : 'unavailable'}
+                        <div
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${availableTone}`}
+                        >
+                          {ext.available ? "available" : "unavailable"}
                         </div>
                         {ext.requires_api_key ? (
                           <div className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200">
@@ -302,7 +311,7 @@ export default function ExtractorPolicyDialog({
                       {ext.error_code ? (
                         <div className="mt-1 text-[11px] text-gray-600 dark:text-slate-400">
                           error_code: <span className="font-mono">{ext.error_code}</span>
-                          {ext.message ? ` · ${ext.message}` : ''}
+                          {ext.message ? ` · ${ext.message}` : ""}
                         </div>
                       ) : null}
 
@@ -314,7 +323,7 @@ export default function ExtractorPolicyDialog({
                             </div>
                             <button
                               type="button"
-                              onClick={() => void handleCopy(ext.recovery_hint ?? '')}
+                              onClick={() => void handleCopy(ext.recovery_hint ?? "")}
                               className="px-2 py-1 rounded-md text-[11px] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1"
                             >
                               <ContentCopyIcon sx={{ fontSize: 14 }} />
@@ -329,7 +338,9 @@ export default function ExtractorPolicyDialog({
                     </div>
 
                     <div className="flex-shrink-0">
-                      <label className={`flex items-center gap-2 text-[11px] ${toggleDisabled ? 'opacity-60' : ''}`}>
+                      <label
+                        className={`flex items-center gap-2 text-[11px] ${toggleDisabled ? "opacity-60" : ""}`}
+                      >
                         <input
                           type="checkbox"
                           checked={desiredEnabled}
@@ -338,7 +349,7 @@ export default function ExtractorPolicyDialog({
                           className="h-4 w-4"
                         />
                         <span className="text-gray-700 dark:text-slate-200">
-                          {mode === 'custom' ? '启用' : '（切换到自定义后可修改）'}
+                          {mode === "custom" ? "启用" : "（切换到自定义后可修改）"}
                         </span>
                       </label>
                     </div>

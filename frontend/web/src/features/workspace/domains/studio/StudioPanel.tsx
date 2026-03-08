@@ -1,5 +1,5 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Button,
   Dialog,
@@ -9,19 +9,19 @@ import {
   IconButton,
   Textarea,
   Typography,
-} from '@material-tailwind/react';
+} from "@material-tailwind/react";
 import {
   Add as AddIcon,
   Build as ToolsIcon,
   Close as CloseIcon,
   Edit as EditIcon,
   Save as SaveIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
-import type { Citation, OutputItem, OutputTypeId, WorkspaceTool } from '../../shared/types';
-import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
-import StudioOutputsList from './StudioOutputsList';
-import StudioToolsGrid from './StudioToolsGrid';
+import type { Citation, OutputItem, OutputTypeId, WorkspaceTool } from "../../shared/types";
+import type { OutputQueueJob } from "../../shared/hooks/useOutputQueue";
+import StudioOutputsList from "./StudioOutputsList";
+import StudioToolsGrid from "./StudioToolsGrid";
 
 interface StudioPanelProps {
   tools: WorkspaceTool[];
@@ -36,9 +36,9 @@ interface StudioPanelProps {
   onCancelOutputJob?: (jobId: string) => void;
   onGenerateOutput: (type?: OutputTypeId, modelId?: string | null) => void;
   onOpenSlides?: (options?: {
-    mode: 'config' | 'preview';
+    mode: "config" | "preview";
     slideId?: number | null;
-    queueStatus?: 'queued' | 'running' | 'error' | 'done' | 'cancelled' | null;
+    queueStatus?: "queued" | "running" | "error" | "done" | "cancelled" | null;
     queueJobId?: string | null;
   }) => void;
   onDeleteOutput: (outputId: number) => void;
@@ -62,9 +62,9 @@ interface ToolsPopoverProps {
   toolsError?: string;
   onGenerateOutput: (type?: OutputTypeId, modelId?: string | null) => void;
   onOpenSlides?: (options?: {
-    mode: 'config' | 'preview';
+    mode: "config" | "preview";
     slideId?: number | null;
-    queueStatus?: 'queued' | 'running' | 'error' | 'done' | 'cancelled' | null;
+    queueStatus?: "queued" | "running" | "error" | "done" | "cancelled" | null;
     queueJobId?: string | null;
   }) => void;
   isConnected: boolean;
@@ -92,14 +92,14 @@ function ToolsPopover({
     if (open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       setPopoverStyle({
-        position: 'fixed',
+        position: "fixed",
         bottom: window.innerHeight - rect.top + 8,
         right: window.innerWidth - rect.right,
-        minWidth: '280px',
-        width: 'max-content',
-        maxWidth: '360px',
+        minWidth: "280px",
+        width: "max-content",
+        maxWidth: "360px",
         zIndex: 9999,
-        animation: 'slideUp 150ms ease-out',
+        animation: "slideUp 150ms ease-out",
       });
     }
   }, [open]);
@@ -112,54 +112,51 @@ function ToolsPopover({
         onClick={onToggle}
         className={`w-full flex items-center justify-center gap-1.5 rounded-full py-2 text-xs font-medium transition-all border ${
           open
-            ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400'
-            : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600'
+            ? "bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400"
+            : "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
         }`}
       >
         <ToolsIcon sx={{ fontSize: 14 }} />
         <span>生成</span>
       </button>
 
-      {open && createPortal(
-        <>
-          {/* Click-outside backdrop */}
-          <div
-            className="fixed inset-0"
-            style={{ zIndex: 9998 }}
-            onClick={onClose}
-          />
-          {/* Popover panel — fixed positioning to escape overflow clipping */}
-          <div
-            className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-xl p-3"
-            style={popoverStyle}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider">
-                选择工具
-              </span>
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-5 h-5 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-slate-300 dark:hover:bg-slate-700 transition-colors text-xs"
-                aria-label="关闭工具面板"
-              >
-                ✕
-              </button>
+      {open &&
+        createPortal(
+          <>
+            {/* Click-outside backdrop */}
+            <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={onClose} />
+            {/* Popover panel — fixed positioning to escape overflow clipping */}
+            <div
+              className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-xl p-3"
+              style={popoverStyle}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+                  选择工具
+                </span>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-5 h-5 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-slate-300 dark:hover:bg-slate-700 transition-colors text-xs"
+                  aria-label="关闭工具面板"
+                >
+                  ✕
+                </button>
+              </div>
+              <StudioToolsGrid
+                tools={tools}
+                toolsLoading={toolsLoading}
+                toolsError={toolsError}
+                onGenerateOutput={onGenerateOutput}
+                onOpenSlides={onOpenSlides}
+                isConnected={isConnected}
+                isFullscreen={isFullscreen}
+                hasSelectedSources={hasSelectedSources}
+              />
             </div>
-            <StudioToolsGrid
-              tools={tools}
-              toolsLoading={toolsLoading}
-              toolsError={toolsError}
-              onGenerateOutput={onGenerateOutput}
-              onOpenSlides={onOpenSlides}
-              isConnected={isConnected}
-              isFullscreen={isFullscreen}
-              hasSelectedSources={hasSelectedSources}
-            />
-          </div>
-        </>,
-        document.body,
-      )}
+          </>,
+          document.body,
+        )}
     </>
   );
 }
@@ -188,7 +185,7 @@ function StudioPanel({
   hasSelectedSources,
 }: StudioPanelProps) {
   const [noteEditorOpen, setNoteEditorOpen] = useState(false);
-  const [noteEditorContent, setNoteEditorContent] = useState('');
+  const [noteEditorContent, setNoteEditorContent] = useState("");
   const [toolsPopoverOpen, setToolsPopoverOpen] = useState(false);
 
   const handleToggleToolsPopover = useCallback(() => {
@@ -204,13 +201,13 @@ function StudioPanel({
   }, [tools]);
 
   const handleOpenNoteEditor = useCallback(() => {
-    setNoteEditorContent('');
+    setNoteEditorContent("");
     setNoteEditorOpen(true);
   }, []);
 
   const handleCloseNoteEditor = useCallback(() => {
     setNoteEditorOpen(false);
-    setNoteEditorContent('');
+    setNoteEditorContent("");
   }, []);
 
   const handleSaveNote = useCallback(() => {
@@ -221,7 +218,9 @@ function StudioPanel({
   }, [noteEditorContent, onSaveNote, handleCloseNoteEditor]);
 
   return (
-    <div className={`flex flex-1 flex-col gap-3 p-3 sm:p-4 min-h-0 ${isFullscreen ? 'max-w-4xl mx-auto w-full' : ''}`}>
+    <div
+      className={`flex flex-1 flex-col gap-3 p-3 sm:p-4 min-h-0 ${isFullscreen ? "max-w-4xl mx-auto w-full" : ""}`}
+    >
       {!hasSelectedSources ? (
         <div className="rounded-xl border border-dashed border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-400">
           未选择来源，无法生成输出。请先在左侧勾选来源。
@@ -299,7 +298,12 @@ function StudioPanel({
               新建笔记
             </Typography>
           </div>
-          <IconButton variant="text" size="sm" onClick={handleCloseNoteEditor} className="rounded-full">
+          <IconButton
+            variant="text"
+            size="sm"
+            onClick={handleCloseNoteEditor}
+            className="rounded-full"
+          >
             <CloseIcon className="h-4 w-4" />
           </IconButton>
         </DialogHeader>

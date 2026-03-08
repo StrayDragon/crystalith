@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo } from "react";
 
 export type BarChartItem = {
   label: string;
@@ -20,9 +20,7 @@ export default function BarChartCard({ title, unit = null, items }: BarChartCard
 
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 shadow-sm">
-      <div className="text-xs font-semibold text-gray-900 dark:text-slate-100">
-        {title}
-      </div>
+      <div className="text-xs font-semibold text-gray-900 dark:text-slate-100">{title}</div>
       <div className="mt-3 flex flex-col gap-2">
         {items.length === 0 ? (
           <div className="text-xs text-gray-500 dark:text-slate-300">No data</div>
@@ -43,7 +41,7 @@ export default function BarChartCard({ title, unit = null, items }: BarChartCard
                 </div>
                 <div className="w-16 text-[11px] text-gray-600 dark:text-slate-300 tabular-nums text-right">
                   {item.value}
-                  {unit ? ` ${unit}` : ''}
+                  {unit ? ` ${unit}` : ""}
                 </div>
               </div>
             );
@@ -53,4 +51,3 @@ export default function BarChartCard({ title, unit = null, items }: BarChartCard
     </div>
   );
 }
-

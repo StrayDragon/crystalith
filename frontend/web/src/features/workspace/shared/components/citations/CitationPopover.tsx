@@ -1,9 +1,9 @@
-import { useEffect, useRef, useCallback, useMemo, type MouseEvent as ReactMouseEvent } from 'react';
-import { createPortal } from 'react-dom';
-import { MyLocation as LocateIcon } from '@mui/icons-material';
+import { useEffect, useRef, useCallback, useMemo, type MouseEvent as ReactMouseEvent } from "react";
+import { createPortal } from "react-dom";
+import { MyLocation as LocateIcon } from "@mui/icons-material";
 
-import type { Citation } from '../../types';
-import { useLayer } from '../../../../../shared/layer';
+import type { Citation } from "../../types";
+import { useLayer } from "../../../../../shared/layer";
 
 interface CitationPopoverProps {
   /** 引用列表 */
@@ -28,7 +28,7 @@ const POPOVER_WIDTH = 320;
 const POPOVER_MAX_HEIGHT = 400;
 const GAP = 8;
 
-type Placement = 'bottom' | 'top';
+type Placement = "bottom" | "top";
 
 interface PopoverPosition {
   x: number;
@@ -46,7 +46,7 @@ function calculatePosition(anchorRect: DOMRect): PopoverPosition {
   // 默认在按钮下方
   let x = anchorRect.left + anchorRect.width / 2;
   let y = anchorRect.bottom;
-  let placement: Placement = 'bottom';
+  let placement: Placement = "bottom";
 
   // 检查下方空间是否足够
   const spaceBelow = viewportHeight - anchorRect.bottom - GAP;
@@ -55,7 +55,7 @@ function calculatePosition(anchorRect: DOMRect): PopoverPosition {
   // 如果下方空间不足且上方空间更大，则显示在上方
   if (spaceBelow < POPOVER_MAX_HEIGHT && spaceAbove > spaceBelow) {
     y = anchorRect.top;
-    placement = 'top';
+    placement = "top";
   }
 
   // 水平边界检查
@@ -81,7 +81,7 @@ export default function CitationPopover({
 }: CitationPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   // 使用 tooltip layer 确保始终在最上层，或者使用 modal + slot 提升
-  const { style: popoverStyle } = useLayer(elevated ? 'tooltip' : 'popover');
+  const { style: popoverStyle } = useLayer(elevated ? "tooltip" : "popover");
 
   // 计算位置（带边界检测）
   const position = useMemo(() => {
@@ -94,22 +94,19 @@ export default function CitationPopover({
     if (!isOpen) return;
 
     function handleClickOutside(event: globalThis.MouseEvent) {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(event.target as Node)
-      ) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
         onClose();
       }
     }
 
     // 延迟添加监听器，避免立即触发
     const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }, 0);
 
     return () => {
       clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen, onClose]);
 
@@ -118,13 +115,13 @@ export default function CitationPopover({
     if (!isOpen) return;
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         onClose();
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
   const handleItemClick = useCallback(
@@ -132,14 +129,14 @@ export default function CitationPopover({
       onJumpToCitation?.(citation);
       onClose();
     },
-    [onJumpToCitation, onClose]
+    [onJumpToCitation, onClose],
   );
 
   const handleItemHover = useCallback(
     (chunkId: number | null) => {
       onCitationHover?.(chunkId);
     },
-    [onCitationHover]
+    [onCitationHover],
   );
 
   const handleLocateSource = useCallback(
@@ -148,15 +145,14 @@ export default function CitationPopover({
       onLocateSource?.(citation);
       onClose();
     },
-    [onLocateSource, onClose]
+    [onLocateSource, onClose],
   );
 
   if (!isOpen || !position) return null;
 
   // 根据 placement 决定 transform
-  const transform = position.placement === 'bottom'
-    ? 'translate(-50%, 8px)'
-    : 'translate(-50%, calc(-100% - 8px))';
+  const transform =
+    position.placement === "bottom" ? "translate(-50%, 8px)" : "translate(-50%, calc(-100% - 8px))";
 
   const popover = (
     <div className="fixed inset-0" style={popoverStyle} onClick={onClose}>
@@ -184,7 +180,13 @@ export default function CitationPopover({
             className="w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
             aria-label="关闭"
           >
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              viewBox="0 0 24 24"
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
             </svg>
           </button>
@@ -206,7 +208,7 @@ export default function CitationPopover({
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
+                  if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     handleItemClick(citation);
                   }
@@ -223,9 +225,7 @@ export default function CitationPopover({
                     {citation.sourceTitle}
                   </div>
                   {pageLabel && (
-                    <div className="text-[10px] font-medium text-gray-500 mt-0.5">
-                      {pageLabel}
-                    </div>
+                    <div className="text-[10px] font-medium text-gray-500 mt-0.5">{pageLabel}</div>
                   )}
                   {citation.snippet && (
                     <div className="text-[11px] text-gray-500 mt-1 line-clamp-2 leading-relaxed">
@@ -248,7 +248,13 @@ export default function CitationPopover({
                     </button>
                   )}
                   <span className="w-4 h-4 flex items-center justify-center text-gray-300 group-hover:text-gray-500 transition-colors">
-                    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="w-3.5 h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
                       <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </span>

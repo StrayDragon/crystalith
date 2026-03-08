@@ -1,31 +1,33 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import type { GenerationPreference, GenerationPreferenceSetting } from '../types';
+import type { GenerationPreference, GenerationPreferenceSetting } from "../types";
 
-export const GENERATION_PREFERENCE_STORAGE_KEY = 'crystalith_generation_preference';
-const GENERATION_PREFERENCE_EVENT = 'crystalith:generation_preference';
+export const GENERATION_PREFERENCE_STORAGE_KEY = "crystalith_generation_preference";
+const GENERATION_PREFERENCE_EVENT = "crystalith:generation_preference";
 
 function normalizeGenerationPreference(value: string | null): GenerationPreferenceSetting {
-  if (value === 'quality' || value === 'speed') {
+  if (value === "quality" || value === "speed") {
     return value;
   }
-  return 'default';
+  return "default";
 }
 
 export function toApiGenerationPreference(
   preference: GenerationPreferenceSetting,
 ): GenerationPreference | undefined {
-  if (preference === 'quality' || preference === 'speed') {
+  if (preference === "quality" || preference === "speed") {
     return preference;
   }
   return undefined;
 }
 
 export function readInitialGenerationPreference(): GenerationPreferenceSetting {
-  if (typeof window === 'undefined') {
-    return 'default';
+  if (typeof window === "undefined") {
+    return "default";
   }
-  return normalizeGenerationPreference(window.localStorage.getItem(GENERATION_PREFERENCE_STORAGE_KEY));
+  return normalizeGenerationPreference(
+    window.localStorage.getItem(GENERATION_PREFERENCE_STORAGE_KEY),
+  );
 }
 
 export function readInitialGenerationPreferenceForApi(): GenerationPreference | undefined {
@@ -33,12 +35,12 @@ export function readInitialGenerationPreferenceForApi(): GenerationPreference | 
 }
 
 export function useGenerationPreference() {
-  const [preference, setPreferenceState] = useState<GenerationPreferenceSetting>(
-    () => readInitialGenerationPreference(),
+  const [preference, setPreferenceState] = useState<GenerationPreferenceSetting>(() =>
+    readInitialGenerationPreference(),
   );
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
 
     const refresh = () => {
       setPreferenceState(readInitialGenerationPreference());
@@ -51,24 +53,26 @@ export function useGenerationPreference() {
     };
 
     window.addEventListener(GENERATION_PREFERENCE_EVENT, refresh);
-    window.addEventListener('storage', handleStorage);
+    window.addEventListener("storage", handleStorage);
 
     return () => {
       window.removeEventListener(GENERATION_PREFERENCE_EVENT, refresh);
-      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener("storage", handleStorage);
     };
   }, []);
 
   const setPreference = useCallback((nextPreference: GenerationPreferenceSetting) => {
     setPreferenceState(nextPreference);
 
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       return;
     }
 
-    if (nextPreference === 'default') {
+    if (nextPreference === "default") {
       window.localStorage.removeItem(GENERATION_PREFERENCE_STORAGE_KEY);
-      window.dispatchEvent(new CustomEvent(GENERATION_PREFERENCE_EVENT, { detail: nextPreference }));
+      window.dispatchEvent(
+        new CustomEvent(GENERATION_PREFERENCE_EVENT, { detail: nextPreference }),
+      );
       return;
     }
 

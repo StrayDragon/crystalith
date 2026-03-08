@@ -1,12 +1,5 @@
-import { memo, useState, useMemo, useCallback } from 'react';
-import {
-  Button,
-  Typography,
-  IconButton,
-  Checkbox,
-  Chip,
-  Spinner,
-} from '@material-tailwind/react';
+import { memo, useState, useMemo, useCallback } from "react";
+import { Button, Typography, IconButton, Checkbox, Chip, Spinner } from "@material-tailwind/react";
 import {
   Close as CloseIcon,
   Description as DescriptionIcon,
@@ -16,14 +9,14 @@ import {
   Download as DownloadIcon,
   FilterList as FilterIcon,
   SelectAll as SelectAllIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 import {
   exportResearchV1NotebooksNotebookIdResearchResearchIdExportPost as exportResearch,
   type ResearchSessionResponse,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
-import { toast } from '../../../../shared/toast';
-import { useLayer } from '../../../../shared/layer';
+} from "../../../../api/generated";
+import { unwrapData } from "../../../../api/unwrap";
+import { toast } from "../../../../shared/toast";
+import { useLayer } from "../../../../shared/layer";
 
 interface ResearchExportDialogProps {
   session: ResearchSessionResponse;
@@ -31,8 +24,8 @@ interface ResearchExportDialogProps {
   onExportComplete?: () => void;
 }
 
-type ExportTarget = 'source' | 'note';
-type ExportItemType = 'report' | 'reference';
+type ExportTarget = "source" | "note";
+type ExportItemType = "report" | "reference";
 
 interface ExportItem {
   id: string;
@@ -43,16 +36,12 @@ interface ExportItem {
   relevance?: number;
 }
 
-function ResearchExportDialog({
-  session,
-  onClose,
-  onExportComplete,
-}: ResearchExportDialogProps) {
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set(['report']));
-  const [exportTarget, setExportTarget] = useState<ExportTarget>('source');
+function ResearchExportDialog({ session, onClose, onExportComplete }: ResearchExportDialogProps) {
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set(["report"]));
+  const [exportTarget, setExportTarget] = useState<ExportTarget>("source");
   const [isExporting, setIsExporting] = useState(false);
-  const [relevanceFilter, setRelevanceFilter] = useState<'all' | 'high'>('all');
-  const { style: modalStyle } = useLayer('modal');
+  const [relevanceFilter, setRelevanceFilter] = useState<"all" | "high">("all");
+  const { style: modalStyle } = useLayer("modal");
 
   // Build exportable items from session data
   const exportItems = useMemo<ExportItem[]>(() => {
@@ -61,8 +50,8 @@ function ResearchExportDialog({
     // Add report as first item
     if (session.final_report) {
       items.push({
-        id: 'report',
-        type: 'report',
+        id: "report",
+        type: "report",
         title: `研究报告：${session.topic.slice(0, 30)}`,
       });
     }
@@ -71,16 +60,18 @@ function ResearchExportDialog({
     if (session.aggregated_results) {
       session.aggregated_results.forEach((rawResult, index) => {
         const result = rawResult as Record<string, unknown>;
-        const title = typeof result.title === 'string' && result.title.trim()
-          ? result.title
-          : `来源 ${index + 1}`;
-        const url = typeof result.url === 'string' ? result.url : undefined;
-        const snippetValue = typeof result.snippet === 'string' ? result.snippet : undefined;
+        const title =
+          typeof result.title === "string" && result.title.trim()
+            ? result.title
+            : `来源 ${index + 1}`;
+        const url = typeof result.url === "string" ? result.url : undefined;
+        const snippetValue = typeof result.snippet === "string" ? result.snippet : undefined;
         const snippet = snippetValue ? snippetValue.slice(0, 100) : undefined;
-        const relevance = typeof result.relevance_score === 'number' ? result.relevance_score : undefined;
+        const relevance =
+          typeof result.relevance_score === "number" ? result.relevance_score : undefined;
         items.push({
           id: `ref-${index}`,
-          type: 'reference',
+          type: "reference",
           title,
           url,
           snippet,
@@ -94,18 +85,18 @@ function ResearchExportDialog({
 
   // Filter items by relevance
   const filteredItems = useMemo(() => {
-    if (relevanceFilter === 'all') return exportItems;
-    return exportItems.filter(item =>
-      item.type === 'report' || (item.relevance && item.relevance >= 0.7)
+    if (relevanceFilter === "all") return exportItems;
+    return exportItems.filter(
+      (item) => item.type === "report" || (item.relevance && item.relevance >= 0.7),
     );
   }, [exportItems, relevanceFilter]);
 
   // Group items by type
-  const reportItems = filteredItems.filter(i => i.type === 'report');
-  const referenceItems = filteredItems.filter(i => i.type === 'reference');
+  const reportItems = filteredItems.filter((i) => i.type === "report");
+  const referenceItems = filteredItems.filter((i) => i.type === "reference");
 
   const toggleItem = useCallback((id: string) => {
-    setSelectedItems(prev => {
+    setSelectedItems((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -117,7 +108,7 @@ function ResearchExportDialog({
   }, []);
 
   const selectAll = useCallback(() => {
-    setSelectedItems(new Set(filteredItems.map(i => i.id)));
+    setSelectedItems(new Set(filteredItems.map((i) => i.id)));
   }, [filteredItems]);
 
   const selectNone = useCallback(() => {
@@ -126,39 +117,41 @@ function ResearchExportDialog({
 
   const handleExport = useCallback(async () => {
     if (selectedItems.size === 0) {
-      toast.error('请选择要导出的内容');
+      toast.error("请选择要导出的内容");
       return;
     }
 
     setIsExporting(true);
     try {
       // Check if report is selected
-      const includeReport = selectedItems.has('report');
+      const includeReport = selectedItems.has("report");
 
       // Get selected reference URLs
       const selectedRefs = referenceItems
-        .filter(item => selectedItems.has(item.id))
-        .map(item => item.url)
-        .filter((url): url is string => typeof url === 'string' && url.length > 0);
+        .filter((item) => selectedItems.has(item.id))
+        .map((item) => item.url)
+        .filter((url): url is string => typeof url === "string" && url.length > 0);
 
-      const data = await unwrapData(exportResearch<true>({
-        path: { notebook_id: session.notebook_id, research_id: session.id },
-        body: {
-          export_type: exportTarget,
-          include_report: includeReport,
-          include_results: selectedRefs.length > 0,
-        },
-      }));
+      const data = await unwrapData(
+        exportResearch<true>({
+          path: { notebook_id: session.notebook_id, research_id: session.id },
+          body: {
+            export_type: exportTarget,
+            include_report: includeReport,
+            include_results: selectedRefs.length > 0,
+          },
+        }),
+      );
 
       if (data?.success) {
         toast.success(data.message);
         onExportComplete?.();
         onClose();
       } else {
-        toast.error(data?.message || '导出失败');
+        toast.error(data?.message || "导出失败");
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : '导出失败';
+      const message = err instanceof Error ? err.message : "导出失败";
       toast.error(message);
     } finally {
       setIsExporting(false);
@@ -166,7 +159,10 @@ function ResearchExportDialog({
   }, [selectedItems, exportTarget, session, referenceItems, onExportComplete, onClose]);
 
   return (
-    <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4" style={modalStyle}>
+    <div
+      className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+      style={modalStyle}
+    >
       <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-2xl animate-in zoom-in-95 fade-in duration-200">
         {/* Header */}
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -179,11 +175,7 @@ function ResearchExportDialog({
               <p className="text-sm text-gray-500">选择要导出的内容和目标位置</p>
             </div>
           </div>
-          <IconButton
-            variant="text"
-            size="sm"
-            onClick={onClose}
-          >
+          <IconButton variant="text" size="sm" onClick={onClose}>
             <CloseIcon className="w-5 h-5" />
           </IconButton>
         </div>
@@ -196,19 +188,21 @@ function ResearchExportDialog({
             <div className="flex gap-3">
               <label
                 className={`flex-1 flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                  exportTarget === 'source'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                  exportTarget === "source"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
                 }`}
               >
                 <input
                   type="radio"
                   name="export-target"
-                  checked={exportTarget === 'source'}
-                  onChange={() => setExportTarget('source')}
+                  checked={exportTarget === "source"}
+                  onChange={() => setExportTarget("source")}
                   className="h-4 w-4 text-blue-600"
                 />
-                <SourceIcon className={`w-5 h-5 ${exportTarget === 'source' ? 'text-blue-600' : 'text-gray-400'}`} />
+                <SourceIcon
+                  className={`w-5 h-5 ${exportTarget === "source" ? "text-blue-600" : "text-gray-400"}`}
+                />
                 <div>
                   <p className="font-medium text-gray-900">来源</p>
                   <p className="text-xs text-gray-500">作为可搜索的知识来源</p>
@@ -216,19 +210,21 @@ function ResearchExportDialog({
               </label>
               <label
                 className={`flex-1 flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                  exportTarget === 'note'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                  exportTarget === "note"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
                 }`}
               >
                 <input
                   type="radio"
                   name="export-target"
-                  checked={exportTarget === 'note'}
-                  onChange={() => setExportTarget('note')}
+                  checked={exportTarget === "note"}
+                  onChange={() => setExportTarget("note")}
                   className="h-4 w-4 text-blue-600"
                 />
-                <NoteIcon className={`w-5 h-5 ${exportTarget === 'note' ? 'text-blue-600' : 'text-gray-400'}`} />
+                <NoteIcon
+                  className={`w-5 h-5 ${exportTarget === "note" ? "text-blue-600" : "text-gray-400"}`}
+                />
                 <div>
                   <p className="font-medium text-gray-900">笔记</p>
                   <p className="text-xs text-gray-500">作为 Studio 中的笔记</p>
@@ -242,15 +238,15 @@ function ResearchExportDialog({
             <h3 className="text-sm font-medium text-gray-700">选择内容</h3>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setRelevanceFilter(relevanceFilter === 'all' ? 'high' : 'all')}
+                onClick={() => setRelevanceFilter(relevanceFilter === "all" ? "high" : "all")}
                 className={`flex items-center gap-1 px-2 py-1 text-xs rounded-md transition-colors ${
-                  relevanceFilter === 'high'
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  relevanceFilter === "high"
+                    ? "bg-purple-100 text-purple-700"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
                 <FilterIcon className="w-3 h-3" />
-                {relevanceFilter === 'high' ? '仅高相关' : '全部'}
+                {relevanceFilter === "high" ? "仅高相关" : "全部"}
               </button>
               <button
                 onClick={selectAll}
@@ -275,13 +271,13 @@ function ResearchExportDialog({
                 <DescriptionIcon className="w-4 h-4 text-green-600" />
                 <span className="text-xs font-medium text-gray-500 uppercase">研究报告</span>
               </div>
-              {reportItems.map(item => (
+              {reportItems.map((item) => (
                 <label
                   key={item.id}
                   className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                     selectedItems.has(item.id)
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? "border-green-500 bg-green-50"
+                      : "border-gray-200 hover:border-gray-300"
                   }`}
                 >
                   <Checkbox
@@ -293,14 +289,10 @@ function ResearchExportDialog({
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900 truncate">{item.title}</p>
                     <p className="text-xs text-gray-500">
-                      {session.final_report ? `${session.final_report.length} 字` : ''}
+                      {session.final_report ? `${session.final_report.length} 字` : ""}
                     </p>
                   </div>
-                  <Chip
-                    size="sm"
-                    value="推荐"
-                    className="bg-green-100 text-green-700"
-                  />
+                  <Chip size="sm" value="推荐" className="bg-green-100 text-green-700" />
                 </label>
               ))}
             </div>
@@ -316,13 +308,13 @@ function ResearchExportDialog({
                 </span>
               </div>
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {referenceItems.map(item => (
+                {referenceItems.map((item) => (
                   <label
                     key={item.id}
                     className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                       selectedItems.has(item.id)
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
                     <Checkbox
@@ -366,12 +358,7 @@ function ResearchExportDialog({
             已选择 <span className="font-medium text-gray-900">{selectedItems.size}</span> 项
           </p>
           <div className="flex gap-2">
-            <Button
-              variant="outlined"
-              color="gray"
-              onClick={onClose}
-              disabled={isExporting}
-            >
+            <Button variant="outlined" color="gray" onClick={onClose} disabled={isExporting}>
               取消
             </Button>
             <Button
@@ -388,7 +375,7 @@ function ResearchExportDialog({
               ) : (
                 <>
                   <DownloadIcon className="w-4 h-4" />
-                  导出到{exportTarget === 'source' ? '来源' : '笔记'}
+                  导出到{exportTarget === "source" ? "来源" : "笔记"}
                 </>
               )}
             </Button>

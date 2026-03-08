@@ -1,5 +1,20 @@
-import { useState, useCallback, useMemo } from 'react';
-import { Button, Checkbox, Typography, Chip, Dialog, DialogHeader, DialogBody, IconButton, Tooltip, Spinner, Menu, MenuHandler, MenuList, MenuItem } from '@material-tailwind/react';
+import { useState, useCallback, useMemo } from "react";
+import {
+  Button,
+  Checkbox,
+  Typography,
+  Chip,
+  Dialog,
+  DialogHeader,
+  DialogBody,
+  IconButton,
+  Tooltip,
+  Spinner,
+  Menu,
+  MenuHandler,
+  MenuList,
+  MenuItem,
+} from "@material-tailwind/react";
 import {
   Close as CloseIcon,
   Add as AddIcon,
@@ -12,21 +27,25 @@ import {
   OpenInNew as OpenInNewIcon,
   Error as ErrorIcon,
   Settings as SettingsIcon,
-} from '@mui/icons-material';
-import { Virtuoso } from 'react-virtuoso';
+} from "@mui/icons-material";
+import { Virtuoso } from "react-virtuoso";
 
-import SearchResultCard, { type SearchResultItem } from './SearchResultCard';
-import type { SearchQueueItem } from './useSources';
-import type { ExtractorInfoResponse as ExtractorInfo } from '../../../../api/generated';
-import { LAYER_LEVELS } from '../../../../shared/layer';
+import SearchResultCard, { type SearchResultItem } from "./SearchResultCard";
+import type { SearchQueueItem } from "./useSources";
+import type { ExtractorInfoResponse as ExtractorInfo } from "../../../../api/generated";
+import { LAYER_LEVELS } from "../../../../shared/layer";
 
-type ExtractorType = ExtractorInfo['type'];
+type ExtractorType = ExtractorInfo["type"];
 
 interface SearchResultsQueueProps {
   results: SearchResultItem[];
   searchSummary?: string;
   onClear: () => void;
-  onAddToSources: (selected: SearchResultItem[], mode: 'fetch' | 'link', extractor?: ExtractorType) => void;
+  onAddToSources: (
+    selected: SearchResultItem[],
+    mode: "fetch" | "link",
+    extractor?: ExtractorType,
+  ) => void;
   isAdding?: boolean;
   /** 搜索队列项列表 */
   searchQueue?: SearchQueueItem[];
@@ -57,7 +76,7 @@ export default function SearchResultsQueue({
   const [expandedQueueItems, setExpandedQueueItems] = useState<Set<string>>(new Set());
   // 选中的提取器
   const [selectedExtractor, setSelectedExtractor] = useState<ExtractorType | undefined>(
-    defaultExtractor ?? undefined
+    defaultExtractor ?? undefined,
   );
 
   // 合并所有队列项的结果（用于全屏视图和批量操作）
@@ -119,15 +138,18 @@ export default function SearchResultsQueue({
 
   const handleAddAsLink = useCallback(() => {
     if (selectedResults.length > 0) {
-      onAddToSources(selectedResults, 'link');
+      onAddToSources(selectedResults, "link");
     }
   }, [selectedResults, onAddToSources]);
 
-  const handleAddWithFetch = useCallback((extractor?: ExtractorType) => {
-    if (selectedResults.length > 0) {
-      onAddToSources(selectedResults, 'fetch', extractor ?? selectedExtractor);
-    }
-  }, [selectedResults, onAddToSources, selectedExtractor]);
+  const handleAddWithFetch = useCallback(
+    (extractor?: ExtractorType) => {
+      if (selectedResults.length > 0) {
+        onAddToSources(selectedResults, "fetch", extractor ?? selectedExtractor);
+      }
+    },
+    [selectedResults, onAddToSources, selectedExtractor],
+  );
 
   const handleClear = useCallback(() => {
     setSelectedUrls(new Set());
@@ -138,58 +160,73 @@ export default function SearchResultsQueue({
     setExpandedResult(result);
   }, []);
 
-  const handleAddSingleAsLink = useCallback((result: SearchResultItem) => {
-    onAddToSources([result], 'link');
-  }, [onAddToSources]);
+  const handleAddSingleAsLink = useCallback(
+    (result: SearchResultItem) => {
+      onAddToSources([result], "link");
+    },
+    [onAddToSources],
+  );
 
-  const handleAddSingleWithFetch = useCallback((result: SearchResultItem, extractor?: ExtractorType) => {
-    onAddToSources([result], 'fetch', extractor ?? selectedExtractor);
-  }, [onAddToSources, selectedExtractor]);
+  const handleAddSingleWithFetch = useCallback(
+    (result: SearchResultItem, extractor?: ExtractorType) => {
+      onAddToSources([result], "fetch", extractor ?? selectedExtractor);
+    },
+    [onAddToSources, selectedExtractor],
+  );
 
   // 提取器选择器组件
-  const ExtractorSelector = useCallback(({ onSelect, compact = false }: { onSelect?: (extractor: ExtractorType) => void; compact?: boolean }) => {
-    if (availableExtractors.length === 0) return null;
+  const ExtractorSelector = useCallback(
+    ({
+      onSelect,
+      compact = false,
+    }: {
+      onSelect?: (extractor: ExtractorType) => void;
+      compact?: boolean;
+    }) => {
+      if (availableExtractors.length === 0) return null;
 
-    return (
-      <Menu placement="bottom-end">
-        <MenuHandler>
-          <IconButton
-            size="sm"
-            variant="text"
-            className={compact ? "w-5 h-5 min-w-[20px]" : "w-6 h-6 min-w-[24px]"}
-            title="选择提取方式"
-          >
-            <SettingsIcon style={{ fontSize: compact ? 12 : 14 }} className="text-gray-500" />
-          </IconButton>
-        </MenuHandler>
-        <MenuList className="p-1 min-w-[180px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
-          <Typography variant="small" className="px-3 py-1 text-[10px] text-gray-500 font-medium">
-            选择提取方式
-          </Typography>
-          {availableExtractors.map((ext) => (
-            <MenuItem
-              key={ext.type}
-              onClick={() => {
-                setSelectedExtractor(ext.type);
-                onSelect?.(ext.type);
-              }}
-              className={`flex items-center gap-2 py-2 px-3 text-xs ${
-                selectedExtractor === ext.type ? 'bg-blue-50' : ''
-              }`}
+      return (
+        <Menu placement="bottom-end">
+          <MenuHandler>
+            <IconButton
+              size="sm"
+              variant="text"
+              className={compact ? "w-5 h-5 min-w-[20px]" : "w-6 h-6 min-w-[24px]"}
+              title="选择提取方式"
             >
-              <div className="flex-1">
-                <div className="font-medium">{ext.display_name}</div>
-                <div className="text-[10px] text-gray-500 line-clamp-1">{ext.description}</div>
-              </div>
-              {selectedExtractor === ext.type && (
-                <div className="w-2 h-2 rounded-full bg-blue-600" />
-              )}
-            </MenuItem>
-          ))}
-        </MenuList>
-      </Menu>
-    );
-  }, [availableExtractors, selectedExtractor]);
+              <SettingsIcon style={{ fontSize: compact ? 12 : 14 }} className="text-gray-500" />
+            </IconButton>
+          </MenuHandler>
+          <MenuList className="p-1 min-w-[180px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
+            <Typography variant="small" className="px-3 py-1 text-[10px] text-gray-500 font-medium">
+              选择提取方式
+            </Typography>
+            {availableExtractors.map((ext) => (
+              <MenuItem
+                key={ext.type}
+                onClick={() => {
+                  setSelectedExtractor(ext.type);
+                  onSelect?.(ext.type);
+                }}
+                className={`flex items-center gap-2 py-2 px-3 text-xs ${
+                  selectedExtractor === ext.type ? "bg-blue-50" : ""
+                }`}
+              >
+                <div className="flex-1">
+                  <div className="font-medium">{ext.display_name}</div>
+                  <div className="text-[10px] text-gray-500 line-clamp-1">{ext.description}</div>
+                </div>
+                {selectedExtractor === ext.type && (
+                  <div className="w-2 h-2 rounded-full bg-blue-600" />
+                )}
+              </MenuItem>
+            ))}
+          </MenuList>
+        </Menu>
+      );
+    },
+    [availableExtractors, selectedExtractor],
+  );
 
   // 如果没有队列项且没有旧结果，不渲染
   if (searchQueue.length === 0 && results.length === 0) {
@@ -199,8 +236,8 @@ export default function SearchResultsQueue({
   // 渲染单个搜索队列项
   const renderQueueItem = (queueItem: SearchQueueItem) => {
     const isItemExpanded = expandedQueueItems.has(queueItem.id);
-    const isLoading = queueItem.status === 'loading';
-    const isError = queueItem.status === 'error';
+    const isLoading = queueItem.status === "loading";
+    const isError = queueItem.status === "error";
     const itemResults = queueItem.results;
     const itemSelectedCount = itemResults.filter((r) => selectedUrls.has(r.url)).length;
 
@@ -209,10 +246,10 @@ export default function SearchResultsQueue({
         key={queueItem.id}
         className={`border rounded-xl shadow-sm overflow-hidden ${
           isLoading
-            ? 'border-blue-300 bg-blue-50/30'
+            ? "border-blue-300 bg-blue-50/30"
             : isError
-              ? 'border-red-200 bg-red-50/50'
-              : 'border-blue-200 bg-blue-50/50'
+              ? "border-red-200 bg-red-50/50"
+              : "border-blue-200 bg-blue-50/50"
         }`}
         data-testid="search-queue-item"
         data-queue-query={queueItem.query}
@@ -225,13 +262,15 @@ export default function SearchResultsQueue({
           data-testid="search-queue-toggle"
         >
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className={`flex items-center justify-center w-5 h-5 rounded border flex-shrink-0 ${
-              isLoading
-                ? 'bg-blue-100 border-blue-300'
-                : isError
-                  ? 'bg-red-100 border-red-200'
-                  : 'bg-blue-100 border-blue-200'
-            }`}>
+            <div
+              className={`flex items-center justify-center w-5 h-5 rounded border flex-shrink-0 ${
+                isLoading
+                  ? "bg-blue-100 border-blue-300"
+                  : isError
+                    ? "bg-red-100 border-red-200"
+                    : "bg-blue-100 border-blue-200"
+              }`}
+            >
               {isLoading ? (
                 <Spinner className="h-3 w-3 text-blue-600" />
               ) : isError ? (
@@ -295,13 +334,13 @@ export default function SearchResultsQueue({
             >
               <CloseIcon style={{ fontSize: 14 }} className="text-blue-600" />
             </button>
-            {!isLoading && itemResults.length > 0 && (
-              isItemExpanded ? (
+            {!isLoading &&
+              itemResults.length > 0 &&
+              (isItemExpanded ? (
                 <ExpandLessIcon style={{ fontSize: 18 }} className="text-blue-600" />
               ) : (
                 <ExpandMoreIcon style={{ fontSize: 18 }} className="text-blue-600" />
-              )
-            )}
+              ))}
           </div>
         </button>
 
@@ -352,9 +391,9 @@ export default function SearchResultsQueue({
                       });
                     }
                   }}
-                  containerProps={{ className: 'p-0' }}
+                  containerProps={{ className: "p-0" }}
                   className="h-3.5 w-3.5 rounded border-gray-300 bg-white checked:bg-blue-600 checked:border-blue-600"
-                  iconProps={{ className: 'text-white' }}
+                  iconProps={{ className: "text-white" }}
                   aria-label="全选此搜索结果"
                 />
                 <Typography variant="small" className="text-[10px] text-blue-800 font-medium">
@@ -363,14 +402,19 @@ export default function SearchResultsQueue({
               </div>
               {itemSelectedCount > 0 && (
                 <div className="flex items-center gap-1">
-                  <Tooltip content="作为链接导入" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
+                  <Tooltip
+                    content="作为链接导入"
+                    placement="top"
+                    className=""
+                    style={{ zIndex: LAYER_LEVELS.tooltip }}
+                  >
                     <IconButton
                       size="sm"
                       variant="outlined"
                       onClick={() => {
                         const selected = itemResults.filter((r) => selectedUrls.has(r.url));
                         if (selected.length > 0) {
-                          onAddToSources(selected, 'link');
+                          onAddToSources(selected, "link");
                         }
                       }}
                       disabled={isAdding}
@@ -380,13 +424,18 @@ export default function SearchResultsQueue({
                       <LinkIcon style={{ fontSize: 14 }} />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip content="作为全文导入" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
+                  <Tooltip
+                    content="作为全文导入"
+                    placement="top"
+                    className=""
+                    style={{ zIndex: LAYER_LEVELS.tooltip }}
+                  >
                     <IconButton
                       size="sm"
                       onClick={() => {
                         const selected = itemResults.filter((r) => selectedUrls.has(r.url));
                         if (selected.length > 0) {
-                          onAddToSources(selected, 'fetch');
+                          onAddToSources(selected, "fetch");
                         }
                       }}
                       disabled={isAdding}
@@ -507,9 +556,9 @@ export default function SearchResultsQueue({
                   <Checkbox
                     checked={allSelected}
                     onChange={handleToggleAll}
-                    containerProps={{ className: 'p-0' }}
+                    containerProps={{ className: "p-0" }}
                     className="h-3.5 w-3.5 rounded border-gray-300 bg-white checked:bg-blue-600 checked:border-blue-600"
-                    iconProps={{ className: 'text-white' }}
+                    iconProps={{ className: "text-white" }}
                     aria-label="全选搜索结果"
                   />
                   <Typography variant="small" className="text-[10px] text-blue-800 font-medium">
@@ -518,7 +567,12 @@ export default function SearchResultsQueue({
                 </div>
                 {selectedUrls.size > 0 && (
                   <div className="flex items-center gap-1">
-                    <Tooltip content="作为链接导入" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
+                    <Tooltip
+                      content="作为链接导入"
+                      placement="top"
+                      className=""
+                      style={{ zIndex: LAYER_LEVELS.tooltip }}
+                    >
                       <IconButton
                         size="sm"
                         variant="outlined"
@@ -530,7 +584,12 @@ export default function SearchResultsQueue({
                         <LinkIcon style={{ fontSize: 14 }} />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip content="作为全文导入" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
+                    <Tooltip
+                      content="作为全文导入"
+                      placement="top"
+                      className=""
+                      style={{ zIndex: LAYER_LEVELS.tooltip }}
+                    >
                       <IconButton
                         size="sm"
                         onClick={() => handleAddWithFetch()}
@@ -633,7 +692,7 @@ export default function SearchResultsQueue({
                 <Button
                   variant="text"
                   size="sm"
-                  onClick={() => window.open(expandedResult.url, '_blank')}
+                  onClick={() => window.open(expandedResult.url, "_blank")}
                   className="ml-auto normal-case text-gray-700"
                 >
                   打开原链接
@@ -666,10 +725,7 @@ export default function SearchResultsQueue({
               </Typography>
             </div>
           </div>
-          <IconButton
-            variant="text"
-            onClick={() => setIsFullscreen(false)}
-          >
+          <IconButton variant="text" onClick={() => setIsFullscreen(false)}>
             <CloseIcon />
           </IconButton>
         </DialogHeader>
@@ -683,7 +739,7 @@ export default function SearchResultsQueue({
             </div>
           )}
           <Virtuoso
-            style={{ height: '56vh' }}
+            style={{ height: "56vh" }}
             data={effectiveResults}
             computeItemKey={(_index, result) => result.url}
             itemContent={(_index, result) => {
@@ -700,25 +756,32 @@ export default function SearchResultsQueue({
                 <div
                   className={`
                     flex gap-3 p-4 rounded-xl border transition-all mb-3
-                    ${isSelected
-                      ? 'bg-blue-50 border-blue-300 shadow-sm'
-                      : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                    ${
+                      isSelected
+                        ? "bg-blue-50 border-blue-300 shadow-sm"
+                        : "bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300"
                     }
                   `}
                 >
                   <Checkbox
                     checked={isSelected}
                     onChange={() => handleToggle(result)}
-                    containerProps={{ className: 'p-0 mt-1' }}
+                    containerProps={{ className: "p-0 mt-1" }}
                     className="h-5 w-5 rounded border-gray-300 bg-white checked:bg-blue-600 checked:border-blue-600"
-                    iconProps={{ className: 'text-white' }}
+                    iconProps={{ className: "text-white" }}
                   />
                   <div className="flex-1 min-w-0">
-                    <Typography variant="h6" className="text-gray-900 text-sm font-semibold line-clamp-2 mb-1">
+                    <Typography
+                      variant="h6"
+                      className="text-gray-900 text-sm font-semibold line-clamp-2 mb-1"
+                    >
                       {result.title}
                     </Typography>
                     {result.snippet && (
-                      <Typography variant="small" className="text-gray-600 text-xs line-clamp-3 mb-2">
+                      <Typography
+                        variant="small"
+                        className="text-gray-600 text-xs line-clamp-3 mb-2"
+                      >
                         {result.snippet}
                       </Typography>
                     )}
@@ -727,11 +790,20 @@ export default function SearchResultsQueue({
                         {hostname}
                       </Typography>
                       {result.source && (
-                        <Chip value={result.source} size="sm" className="bg-gray-200 text-gray-600 text-[9px] h-4 py-0 px-1.5" />
+                        <Chip
+                          value={result.source}
+                          size="sm"
+                          className="bg-gray-200 text-gray-600 text-[9px] h-4 py-0 px-1.5"
+                        />
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Tooltip content="仅保存标题、摘要和链接作为来源引用" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
+                      <Tooltip
+                        content="仅保存标题、摘要和链接作为来源引用"
+                        placement="top"
+                        className=""
+                        style={{ zIndex: LAYER_LEVELS.tooltip }}
+                      >
                         <Button
                           size="sm"
                           variant="outlined"
@@ -746,7 +818,12 @@ export default function SearchResultsQueue({
                           作为链接导入
                         </Button>
                       </Tooltip>
-                      <Tooltip content="抓取网页完整内容导入为来源" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
+                      <Tooltip
+                        content="抓取网页完整内容导入为来源"
+                        placement="top"
+                        className=""
+                        style={{ zIndex: LAYER_LEVELS.tooltip }}
+                      >
                         <Button
                           size="sm"
                           onClick={(e) => {
@@ -760,13 +837,18 @@ export default function SearchResultsQueue({
                           作为全文导入
                         </Button>
                       </Tooltip>
-                      <Tooltip content="在新窗口中打开原网页" placement="top" className="" style={{ zIndex: LAYER_LEVELS.tooltip }}>
+                      <Tooltip
+                        content="在新窗口中打开原网页"
+                        placement="top"
+                        className=""
+                        style={{ zIndex: LAYER_LEVELS.tooltip }}
+                      >
                         <Button
                           size="sm"
                           variant="text"
                           onClick={(e) => {
                             e.stopPropagation();
-                            window.open(result.url, '_blank');
+                            window.open(result.url, "_blank");
                           }}
                           className="flex items-center gap-1 py-1 px-2 text-[10px] font-semibold normal-case text-gray-600"
                         >
@@ -787,9 +869,9 @@ export default function SearchResultsQueue({
             <Checkbox
               checked={allSelected}
               onChange={handleToggleAll}
-              containerProps={{ className: 'p-0' }}
+              containerProps={{ className: "p-0" }}
               className="h-5 w-5 rounded border-gray-300 bg-white checked:bg-gray-900 checked:border-gray-900"
-              iconProps={{ className: 'text-white' }}
+              iconProps={{ className: "text-white" }}
               aria-label="全选搜索结果"
             />
             <Typography className="text-gray-700 text-sm font-medium">
@@ -840,8 +922,14 @@ export default function SearchResultsQueue({
                           <ExpandMoreIcon style={{ fontSize: 18 }} />
                         </Button>
                       </MenuHandler>
-                      <MenuList className="p-1 min-w-[200px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
-                        <Typography variant="small" className="px-3 py-1 text-[10px] text-gray-500 font-medium">
+                      <MenuList
+                        className="p-1 min-w-[200px]"
+                        style={{ zIndex: LAYER_LEVELS.dropdown }}
+                      >
+                        <Typography
+                          variant="small"
+                          className="px-3 py-1 text-[10px] text-gray-500 font-medium"
+                        >
                           选择提取方式
                         </Typography>
                         {availableExtractors.map((ext) => (
@@ -853,12 +941,14 @@ export default function SearchResultsQueue({
                               setIsFullscreen(false);
                             }}
                             className={`flex items-center gap-2 py-2 px-3 text-xs ${
-                              selectedExtractor === ext.type ? 'bg-blue-50' : ''
+                              selectedExtractor === ext.type ? "bg-blue-50" : ""
                             }`}
                           >
                             <div className="flex-1">
                               <div className="font-medium">{ext.display_name}</div>
-                              <div className="text-[10px] text-gray-500 line-clamp-1">{ext.description}</div>
+                              <div className="text-[10px] text-gray-500 line-clamp-1">
+                                {ext.description}
+                              </div>
                             </div>
                             {selectedExtractor === ext.type && (
                               <div className="w-2 h-2 rounded-full bg-blue-600" />

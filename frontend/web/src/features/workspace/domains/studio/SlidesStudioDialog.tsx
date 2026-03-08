@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Button,
   Dialog,
@@ -11,14 +11,14 @@ import {
   Typography,
   Chip,
   Spinner,
-} from '@material-tailwind/react';
-import SlideshowIcon from '@mui/icons-material/Slideshow';
-import CloseIcon from '@mui/icons-material/Close';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import OpenInFullIcon from '@mui/icons-material/OpenInFull';
-import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
+} from "@material-tailwind/react";
+import SlideshowIcon from "@mui/icons-material/Slideshow";
+import CloseIcon from "@mui/icons-material/Close";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import OpenInFullIcon from "@mui/icons-material/OpenInFull";
+import CloseFullscreenIcon from "@mui/icons-material/CloseFullscreen";
 
-import { ModelSelector } from './ModelSelector';
+import { ModelSelector } from "./ModelSelector";
 import type {
   ConfigOption,
   GenerationPreferenceSetting,
@@ -29,7 +29,7 @@ import type {
   SlideOutlineItem,
   SlideStage,
   WorkspaceTool,
-} from '../../shared/types';
+} from "../../shared/types";
 import {
   createDraftV1NotebooksNotebookIdSlidesDraftsPost as createSlidesDraft,
   getLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGet as getLatestSlidesDraft,
@@ -38,28 +38,27 @@ import {
   updateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePut as updateSlidesOutline,
   updateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPut as updateSlidesMarkdown,
   type WorkspaceToolsDiagnostics,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
-import { buildSlidevPreviewUrl } from '@crystalith-slidev';
-import { toast } from '../../../../shared/toast';
-import { t } from '../../../../shared/i18n';
-import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
-import { toApiGenerationPreference, useGenerationPreference } from '../../shared/hooks/useGenerationPreference';
-import { buildFrontmatterPreview, normalizeGenerationConfig } from './utils/slides';
-
+} from "../../../../api/generated";
+import { unwrapData } from "../../../../api/unwrap";
+import { buildSlidevPreviewUrl } from "@crystalith-slidev";
+import { toast } from "../../../../shared/toast";
+import { t } from "../../../../shared/i18n";
+import { useFocusTrap } from "../../shared/hooks/useFocusTrap";
+import {
+  toApiGenerationPreference,
+  useGenerationPreference,
+} from "../../shared/hooks/useGenerationPreference";
+import { buildFrontmatterPreview, normalizeGenerationConfig } from "./utils/slides";
 
 const STAGES: { id: SlideStage; label: string }[] = [
-  { id: 'input', label: '输入' },
-  { id: 'outline', label: '大纲' },
-  { id: 'markdown', label: 'Markdown' },
+  { id: "input", label: "输入" },
+  { id: "outline", label: "大纲" },
+  { id: "markdown", label: "Markdown" },
 ];
 
-function resolveOptionId(
-  value: string | null | undefined,
-  options: ConfigOption[],
-): string {
+function resolveOptionId(value: string | null | undefined, options: ConfigOption[]): string {
   if (value && options.some((option) => option.id === value)) return value;
-  const fallback = options.find((option) => option.is_default)?.id ?? options[0]?.id ?? '';
+  const fallback = options.find((option) => option.is_default)?.id ?? options[0]?.id ?? "";
   return fallback;
 }
 
@@ -70,22 +69,22 @@ function normalizeDraft(raw: any): SlideDraft {
     outputId: raw.output_id ?? raw.outputId ?? null,
     title: raw.title ?? null,
     prompt: raw.prompt ?? null,
-    engine: typeof raw.engine === 'string' ? raw.engine : '',
+    engine: typeof raw.engine === "string" ? raw.engine : "",
     chunkIds: raw.chunk_ids ?? raw.chunkIds ?? null,
     sourceIds: raw.source_ids ?? raw.sourceIds ?? null,
     outline: raw.outline ?? null,
     markdown: raw.markdown ?? null,
     generationConfig: normalizeGenerationConfig(raw.generation_config ?? raw.generationConfig),
-    stage: raw.stage ?? 'input',
-    status: raw.status ?? 'idle',
+    stage: raw.stage ?? "input",
+    status: raw.status ?? "idle",
     errorMessage: raw.error_message ?? raw.errorMessage ?? null,
-    createdAt: raw.created_at ?? raw.createdAt ?? '',
-    updatedAt: raw.updated_at ?? raw.updatedAt ?? '',
+    createdAt: raw.created_at ?? raw.createdAt ?? "",
+    updatedAt: raw.updated_at ?? raw.updatedAt ?? "",
   };
 }
 
 function outlineTitleFromDraft(draft: SlideDraft | null) {
-  return draft?.outline?.title || draft?.title || '演示';
+  return draft?.outline?.title || draft?.title || "演示";
 }
 
 function outlineItemsFromDraft(draft: SlideDraft | null): SlideOutlineItem[] {
@@ -94,8 +93,8 @@ function outlineItemsFromDraft(draft: SlideDraft | null): SlideOutlineItem[] {
 
 function resolveErrorStatus(error: any): number | undefined {
   if (!error) return undefined;
-  if (typeof error.status === 'number') return error.status;
-  if (typeof error?.response?.status === 'number') return error.response.status;
+  if (typeof error.status === "number") return error.status;
+  if (typeof error?.response?.status === "number") return error.response.status;
   return undefined;
 }
 
@@ -103,9 +102,9 @@ function appendRefreshToken(url: string, refreshKey: number): string {
   try {
     const resolved = new URL(
       url,
-      typeof window !== 'undefined' ? window.location.origin : 'http://localhost',
+      typeof window !== "undefined" ? window.location.origin : "http://localhost",
     );
-    resolved.searchParams.set('__refresh', String(refreshKey));
+    resolved.searchParams.set("__refresh", String(refreshKey));
     return resolved.toString();
   } catch {
     return url;
@@ -116,14 +115,14 @@ function buildSlidesPreviewUrl(
   preview: PreviewDescriptor | null | undefined,
   refreshKey: number,
 ): string {
-  if (!preview || preview.kind !== 'external_url') return '';
+  if (!preview || preview.kind !== "external_url") return "";
   if (preview.url) {
     return appendRefreshToken(preview.url, refreshKey);
   }
-  if (preview.service === 'slidev') {
+  if (preview.service === "slidev") {
     return buildSlidevPreviewUrl(refreshKey);
   }
-  return '';
+  return "";
 }
 
 function resolvePreviewProviderLabel(
@@ -132,7 +131,7 @@ function resolvePreviewProviderLabel(
 ): string {
   if (preview?.service?.trim()) return preview.service.trim();
   if (engine?.trim()) return engine.trim();
-  return 'slides';
+  return "slides";
 }
 
 function resolveSlidesRecoveryHint(
@@ -141,8 +140,8 @@ function resolveSlidesRecoveryHint(
   return (
     toolsDiagnostics?.slides?.hint ??
     toolsDiagnostics?.slides?.message ??
-    toolsDiagnostics?.official?.['slides-slidev']?.hint ??
-    ''
+    toolsDiagnostics?.official?.["slides-slidev"]?.hint ??
+    ""
   );
 }
 
@@ -155,9 +154,9 @@ interface SlidesStudioDialogProps {
   onOutputsUpdated: () => void;
   slidesTool?: WorkspaceTool | null;
   toolsDiagnostics?: WorkspaceToolsDiagnostics | null;
-  openMode?: 'config' | 'preview';
+  openMode?: "config" | "preview";
   draftId?: number | null;
-  queueStatus?: 'queued' | 'running' | 'error' | 'done' | 'cancelled' | null;
+  queueStatus?: "queued" | "running" | "error" | "done" | "cancelled" | null;
   onQueueSlides?: (payload: {
     title: string;
     prompt: string;
@@ -176,40 +175,43 @@ export default function SlidesStudioDialog({
   onOutputsUpdated,
   slidesTool = null,
   toolsDiagnostics = null,
-  openMode = 'config',
+  openMode = "config",
   draftId = null,
   queueStatus = null,
   onQueueSlides,
 }: SlidesStudioDialogProps) {
-  const { preference: globalPreference, setPreference: setGlobalPreference } = useGenerationPreference();
+  const { preference: globalPreference, setPreference: setGlobalPreference } =
+    useGenerationPreference();
   const [draft, setDraft] = useState<SlideDraft | null>(null);
-  const [activeStage, setActiveStage] = useState<SlideStage>('input');
+  const [activeStage, setActiveStage] = useState<SlideStage>("input");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isQueueing, setIsQueueing] = useState(false);
   const [events, setEvents] = useState<{ type: string; message: string }[]>([]);
   const [debugTimings, setDebugTimings] = useState<Record<string, number> | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [configPreference, setConfigPreference] = useState<GenerationPreferenceSetting>(() => globalPreference);
-  const [configQuantity, setConfigQuantity] = useState('');
-  const [configAudience, setConfigAudience] = useState('');
-  const [configStructure, setConfigStructure] = useState('');
-  const [configTone, setConfigTone] = useState('');
-  const [configLanguage, setConfigLanguage] = useState('');
-  const [configDensity, setConfigDensity] = useState('');
-  const [configThemePreset, setConfigThemePreset] = useState('');
-  const [configFrontmatter, setConfigFrontmatter] = useState('');
+  const [configPreference, setConfigPreference] = useState<GenerationPreferenceSetting>(
+    () => globalPreference,
+  );
+  const [configQuantity, setConfigQuantity] = useState("");
+  const [configAudience, setConfigAudience] = useState("");
+  const [configStructure, setConfigStructure] = useState("");
+  const [configTone, setConfigTone] = useState("");
+  const [configLanguage, setConfigLanguage] = useState("");
+  const [configDensity, setConfigDensity] = useState("");
+  const [configThemePreset, setConfigThemePreset] = useState("");
+  const [configFrontmatter, setConfigFrontmatter] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [configModelId, setConfigModelId] = useState<string | null>(null);
 
-  const [title, setTitle] = useState('');
-  const [prompt, setPrompt] = useState('');
-  const [outlineTitle, setOutlineTitle] = useState('');
+  const [title, setTitle] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [outlineTitle, setOutlineTitle] = useState("");
   const [outlineItems, setOutlineItems] = useState<SlideOutlineItem[]>([]);
-  const [markdown, setMarkdown] = useState('');
-  const [previewMarkdown, setPreviewMarkdown] = useState('');
-  const [previewError, setPreviewError] = useState('');
+  const [markdown, setMarkdown] = useState("");
+  const [previewMarkdown, setPreviewMarkdown] = useState("");
+  const [previewError, setPreviewError] = useState("");
   const [previewKey, setPreviewKey] = useState(0);
   const [isPreviewSyncing, setIsPreviewSyncing] = useState(false);
   const [showMarkdownEditor, setShowMarkdownEditor] = useState(false);
@@ -218,8 +220,8 @@ export default function SlidesStudioDialog({
   const autoPreviewRef = useRef<number | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const maxEvents = 200;
-  const isConfigOnly = openMode === 'config';
-  const isPreviewMode = openMode === 'preview';
+  const isConfigOnly = openMode === "config";
+  const isPreviewMode = openMode === "preview";
   const slidesConfigLoading = false;
   const slidesConfig = slidesTool?.configSchema ?? null;
   const slidesRecoveryHint = useMemo(
@@ -227,20 +229,20 @@ export default function SlidesStudioDialog({
     [toolsDiagnostics],
   );
   const slidesConfigErrorMessage = !isConnected
-    ? t('studio.slides.connection_required')
+    ? t("studio.slides.connection_required")
     : !slidesTool
-      ? slidesRecoveryHint || '演示能力当前不可用。'
+      ? slidesRecoveryHint || "演示能力当前不可用。"
       : !slidesConfig
-        ? '演示配置不可用。'
-        : '';
+        ? "演示配置不可用。"
+        : "";
 
   const selectionLabel = useMemo(() => {
-    const draftSourceIds = isPreviewMode ? draft?.sourceIds ?? [] : [];
+    const draftSourceIds = isPreviewMode ? (draft?.sourceIds ?? []) : [];
     const activeSourceIds = draftSourceIds.length ? draftSourceIds : selectedSourceIds;
     if (activeSourceIds.length) {
       return `已选择 ${activeSourceIds.length} 个来源，将仅基于选中来源生成。`;
     }
-    return '未选择来源，无法生成演示。';
+    return "未选择来源，无法生成演示。";
   }, [draft?.sourceIds, isPreviewMode, selectedSourceIds]);
 
   const selectedThemePreset = useMemo(() => {
@@ -253,7 +255,7 @@ export default function SlidesStudioDialog({
   const frontmatterPreview = useMemo(
     () =>
       buildFrontmatterPreview(
-        title.trim() || '演示',
+        title.trim() || "演示",
         selectedThemePreset?.template,
         configFrontmatter,
       ),
@@ -276,12 +278,12 @@ export default function SlidesStudioDialog({
     [previewDescriptor, previewKey],
   );
   const previewSupported = Boolean(previewUrl);
-  const previewStatus = isPreviewSyncing ? '同步中' : previewReady ? '已同步' : '未同步';
+  const previewStatus = isPreviewSyncing ? "同步中" : previewReady ? "已同步" : "未同步";
   const hasSelectedSources = useMemo(() => {
     const draftSourceIds = draft?.sourceIds ?? [];
     return draftSourceIds.length > 0 || selectedSourceIds.length > 0;
   }, [draft?.sourceIds, selectedSourceIds]);
-  const previewStatusTone = isPreviewSyncing ? 'blue' : previewReady ? 'green' : 'gray';
+  const previewStatusTone = isPreviewSyncing ? "blue" : previewReady ? "green" : "gray";
 
   const closeEventSource = useCallback(() => {
     if (eventSourceRef.current) {
@@ -302,7 +304,7 @@ export default function SlidesStudioDialog({
     const densityOptions = slidesConfig?.density_options ?? [];
     const themeOptions = slidesConfig?.theme_preset_options ?? [];
     setDraft(null);
-    setActiveStage('input');
+    setActiveStage("input");
     setLoading(false);
     setIsGenerating(false);
     setConfigPreference(globalPreference);
@@ -313,18 +315,18 @@ export default function SlidesStudioDialog({
     setConfigLanguage(resolveOptionId(defaults?.language ?? null, languageOptions));
     setConfigDensity(resolveOptionId(defaults?.density ?? null, densityOptions));
     setConfigThemePreset(resolveOptionId(defaults?.themePreset ?? null, themeOptions));
-    setConfigFrontmatter(defaults?.frontmatter ?? '');
+    setConfigFrontmatter(defaults?.frontmatter ?? "");
     setShowAdvanced(false);
     setConfigModelId(null);
-    setTitle('');
-    setPrompt('');
-    setOutlineTitle('');
+    setTitle("");
+    setPrompt("");
+    setOutlineTitle("");
     setOutlineItems([]);
-    setMarkdown('');
+    setMarkdown("");
     setEvents([]);
-    setError('');
-    setPreviewMarkdown('');
-    setPreviewError('');
+    setError("");
+    setPreviewMarkdown("");
+    setPreviewError("");
     setPreviewKey(0);
     setIsPreviewSyncing(false);
     setShowMarkdownEditor(false);
@@ -332,56 +334,62 @@ export default function SlidesStudioDialog({
     setIsQueueing(false);
   }, [configDefaults, globalPreference, slidesConfig]);
 
-  const applyGenerationConfig = useCallback((config: SlideGenerationConfig | null | undefined) => {
-    const defaults = configDefaults;
-    const quantityOptions = slidesConfig?.quantity_options ?? [];
-    const audienceOptions = slidesConfig?.audience_options ?? [];
-    const structureOptions = slidesConfig?.structure_options ?? [];
-    const toneOptions = slidesConfig?.tone_options ?? [];
-    const languageOptions = slidesConfig?.language_options ?? [];
-    const densityOptions = slidesConfig?.density_options ?? [];
-    const themeOptions = slidesConfig?.theme_preset_options ?? [];
-    const preferenceValue =
-      config?.preference === 'quality' || config?.preference === 'speed'
-        ? config.preference
-        : globalPreference;
-    setConfigPreference(preferenceValue);
-    setConfigQuantity(
-      resolveOptionId(config?.quantity ?? defaults?.quantity ?? null, quantityOptions),
-    );
-    setConfigAudience(
-      resolveOptionId(config?.audience ?? defaults?.audience ?? null, audienceOptions),
-    );
-    setConfigStructure(
-      resolveOptionId(config?.structure ?? defaults?.structure ?? null, structureOptions),
-    );
-    setConfigTone(resolveOptionId(config?.tone ?? defaults?.tone ?? null, toneOptions));
-    setConfigLanguage(
-      resolveOptionId(config?.language ?? defaults?.language ?? null, languageOptions),
-    );
-    setConfigDensity(
-      resolveOptionId(config?.density ?? defaults?.density ?? null, densityOptions),
-    );
-    setConfigThemePreset(
-      resolveOptionId(config?.themePreset ?? defaults?.themePreset ?? null, themeOptions),
-    );
-    setConfigFrontmatter(config?.frontmatter ?? defaults?.frontmatter ?? '');
-  }, [configDefaults, globalPreference, slidesConfig]);
+  const applyGenerationConfig = useCallback(
+    (config: SlideGenerationConfig | null | undefined) => {
+      const defaults = configDefaults;
+      const quantityOptions = slidesConfig?.quantity_options ?? [];
+      const audienceOptions = slidesConfig?.audience_options ?? [];
+      const structureOptions = slidesConfig?.structure_options ?? [];
+      const toneOptions = slidesConfig?.tone_options ?? [];
+      const languageOptions = slidesConfig?.language_options ?? [];
+      const densityOptions = slidesConfig?.density_options ?? [];
+      const themeOptions = slidesConfig?.theme_preset_options ?? [];
+      const preferenceValue =
+        config?.preference === "quality" || config?.preference === "speed"
+          ? config.preference
+          : globalPreference;
+      setConfigPreference(preferenceValue);
+      setConfigQuantity(
+        resolveOptionId(config?.quantity ?? defaults?.quantity ?? null, quantityOptions),
+      );
+      setConfigAudience(
+        resolveOptionId(config?.audience ?? defaults?.audience ?? null, audienceOptions),
+      );
+      setConfigStructure(
+        resolveOptionId(config?.structure ?? defaults?.structure ?? null, structureOptions),
+      );
+      setConfigTone(resolveOptionId(config?.tone ?? defaults?.tone ?? null, toneOptions));
+      setConfigLanguage(
+        resolveOptionId(config?.language ?? defaults?.language ?? null, languageOptions),
+      );
+      setConfigDensity(
+        resolveOptionId(config?.density ?? defaults?.density ?? null, densityOptions),
+      );
+      setConfigThemePreset(
+        resolveOptionId(config?.themePreset ?? defaults?.themePreset ?? null, themeOptions),
+      );
+      setConfigFrontmatter(config?.frontmatter ?? defaults?.frontmatter ?? "");
+    },
+    [configDefaults, globalPreference, slidesConfig],
+  );
 
-  const syncFromDraft = useCallback((nextDraft: SlideDraft | null) => {
-    if (!nextDraft) {
-      resetDraftState();
-      return;
-    }
-    setDraft(nextDraft);
-    applyGenerationConfig(nextDraft.generationConfig);
-    setTitle(nextDraft.title ?? '');
-    setPrompt(nextDraft.prompt ?? '');
-    setOutlineTitle(outlineTitleFromDraft(nextDraft));
-    setOutlineItems(outlineItemsFromDraft(nextDraft));
-    setMarkdown(nextDraft.markdown ?? '');
-    setActiveStage(nextDraft.stage ?? 'input');
-  }, [applyGenerationConfig, resetDraftState]);
+  const syncFromDraft = useCallback(
+    (nextDraft: SlideDraft | null) => {
+      if (!nextDraft) {
+        resetDraftState();
+        return;
+      }
+      setDraft(nextDraft);
+      applyGenerationConfig(nextDraft.generationConfig);
+      setTitle(nextDraft.title ?? "");
+      setPrompt(nextDraft.prompt ?? "");
+      setOutlineTitle(outlineTitleFromDraft(nextDraft));
+      setOutlineItems(outlineItemsFromDraft(nextDraft));
+      setMarkdown(nextDraft.markdown ?? "");
+      setActiveStage(nextDraft.stage ?? "input");
+    },
+    [applyGenerationConfig, resetDraftState],
+  );
 
   const loadDraft = useCallback(async () => {
     if (!open) return;
@@ -394,10 +402,12 @@ export default function SlidesStudioDialog({
       return;
     }
     setLoading(true);
-    setError('');
+    setError("");
     try {
       const latest = draftId
-        ? await unwrapData(getSlidesDraft<true>({ path: { notebook_id: notebookId, slide_id: draftId } }))
+        ? await unwrapData(
+            getSlidesDraft<true>({ path: { notebook_id: notebookId, slide_id: draftId } }),
+          )
         : await unwrapData(getLatestSlidesDraft<true>({ path: { notebook_id: notebookId } }));
       syncFromDraft(normalizeDraft(latest));
     } catch (err: any) {
@@ -405,20 +415,25 @@ export default function SlidesStudioDialog({
       if (status === 404) {
         resetDraftState();
       } else {
-        setError('加载演示草稿失败。');
+        setError("加载演示草稿失败。");
       }
     } finally {
       setLoading(false);
     }
   }, [draftId, isConfigOnly, isConnected, notebookId, open, resetDraftState, syncFromDraft]);
 
-  const refreshDraft = useCallback(async (slideId?: number) => {
-    if (!notebookId || !isConnected) return;
-    const targetId = slideId ?? draft?.id;
-    if (!targetId) return;
-    const latest = await unwrapData(getSlidesDraft<true>({ path: { notebook_id: notebookId, slide_id: targetId } }));
-    syncFromDraft(normalizeDraft(latest));
-  }, [draft?.id, isConnected, notebookId, syncFromDraft]);
+  const refreshDraft = useCallback(
+    async (slideId?: number) => {
+      if (!notebookId || !isConnected) return;
+      const targetId = slideId ?? draft?.id;
+      if (!targetId) return;
+      const latest = await unwrapData(
+        getSlidesDraft<true>({ path: { notebook_id: notebookId, slide_id: targetId } }),
+      );
+      syncFromDraft(normalizeDraft(latest));
+    },
+    [draft?.id, isConnected, notebookId, syncFromDraft],
+  );
 
   useEffect(() => {
     if (open) {
@@ -437,53 +452,60 @@ export default function SlidesStudioDialog({
   useEffect(() => {
     if (!open) return;
     if (isConfigOnly) {
-      setActiveStage('input');
+      setActiveStage("input");
       return;
     }
     if (isPreviewMode) {
-      setActiveStage('markdown');
+      setActiveStage("markdown");
     }
   }, [isConfigOnly, isPreviewMode, open]);
 
   useEffect(() => {
     if (!open || !slidesConfig) return;
-    setConfigQuantity((prev) =>
-      prev || resolveOptionId(configDefaults?.quantity ?? null, slidesConfig.quantity_options),
+    setConfigQuantity(
+      (prev) =>
+        prev || resolveOptionId(configDefaults?.quantity ?? null, slidesConfig.quantity_options),
     );
-    setConfigAudience((prev) =>
-      prev || resolveOptionId(configDefaults?.audience ?? null, slidesConfig.audience_options),
+    setConfigAudience(
+      (prev) =>
+        prev || resolveOptionId(configDefaults?.audience ?? null, slidesConfig.audience_options),
     );
-    setConfigStructure((prev) =>
-      prev || resolveOptionId(configDefaults?.structure ?? null, slidesConfig.structure_options),
+    setConfigStructure(
+      (prev) =>
+        prev || resolveOptionId(configDefaults?.structure ?? null, slidesConfig.structure_options),
     );
-    setConfigTone((prev) =>
-      prev || resolveOptionId(configDefaults?.tone ?? null, slidesConfig.tone_options),
+    setConfigTone(
+      (prev) => prev || resolveOptionId(configDefaults?.tone ?? null, slidesConfig.tone_options),
     );
-    setConfigLanguage((prev) =>
-      prev || resolveOptionId(configDefaults?.language ?? null, slidesConfig.language_options),
+    setConfigLanguage(
+      (prev) =>
+        prev || resolveOptionId(configDefaults?.language ?? null, slidesConfig.language_options),
     );
-    setConfigDensity((prev) =>
-      prev || resolveOptionId(configDefaults?.density ?? null, slidesConfig.density_options),
+    setConfigDensity(
+      (prev) =>
+        prev || resolveOptionId(configDefaults?.density ?? null, slidesConfig.density_options),
     );
-    setConfigThemePreset((prev) =>
-      prev || resolveOptionId(configDefaults?.themePreset ?? null, slidesConfig.theme_preset_options),
+    setConfigThemePreset(
+      (prev) =>
+        prev ||
+        resolveOptionId(configDefaults?.themePreset ?? null, slidesConfig.theme_preset_options),
     );
-    setConfigFrontmatter((prev) => prev || configDefaults?.frontmatter || '');
+    setConfigFrontmatter((prev) => prev || configDefaults?.frontmatter || "");
   }, [configDefaults, open, slidesConfig]);
 
   useEffect(() => () => closeEventSource(), [closeEventSource]);
 
   useEffect(() => {
     if (!draft?.id) {
-      setPreviewMarkdown('');
-      setPreviewError('');
+      setPreviewMarkdown("");
+      setPreviewError("");
       setPreviewKey(0);
       setIsPreviewSyncing(false);
       autoPreviewRef.current = null;
       return;
     }
-    setPreviewMarkdown('');
-    setPreviewError('');
+    setPreviewMarkdown("");
+    setPreviewError("");
     setPreviewKey(0);
     setIsPreviewSyncing(false);
     autoPreviewRef.current = null;
@@ -491,7 +513,7 @@ export default function SlidesStudioDialog({
 
   useEffect(() => {
     if (!open || !isPreviewMode || !draft?.id || !isConnected) return;
-    if (queueStatus !== 'running') return;
+    if (queueStatus !== "running") return;
     const timer = window.setInterval(() => {
       void refreshDraft(draft.id);
     }, 5000);
@@ -500,7 +522,7 @@ export default function SlidesStudioDialog({
 
   useEffect(() => {
     if (!open || !isPreviewMode || !draft?.id) return;
-    if (queueStatus !== 'done' && queueStatus !== 'cancelled') return;
+    if (queueStatus !== "done" && queueStatus !== "cancelled") return;
     void refreshDraft(draft.id);
   }, [draft?.id, isPreviewMode, open, queueStatus, refreshDraft]);
 
@@ -554,13 +576,13 @@ export default function SlidesStudioDialog({
   const saveInputStage = useCallback(async () => {
     if (!notebookId) return null;
     if (!isConnected) {
-      setError(t('studio.slides.connection_required'));
+      setError(t("studio.slides.connection_required"));
       return null;
     }
-    setError('');
+    setError("");
     const resolvedSourceIds = await resolveSourceIds();
     if (resolvedSourceIds.length === 0) {
-      setError(t('studio.slides.require_sources'));
+      setError(t("studio.slides.require_sources"));
       return null;
     }
     const payload = {
@@ -570,18 +592,22 @@ export default function SlidesStudioDialog({
       generation_config: buildGenerationConfigPayload(),
     };
     if (!draft) {
-      const created = await unwrapData(createSlidesDraft<true>({
-        path: { notebook_id: notebookId },
-        body: payload,
-      }));
+      const created = await unwrapData(
+        createSlidesDraft<true>({
+          path: { notebook_id: notebookId },
+          body: payload,
+        }),
+      );
       const normalized = normalizeDraft(created);
       syncFromDraft(normalized);
       return normalized;
     }
-    const updated = await unwrapData(updateSlidesDraft<true>({
-      path: { notebook_id: notebookId, slide_id: draft.id },
-      body: payload,
-    }));
+    const updated = await unwrapData(
+      updateSlidesDraft<true>({
+        path: { notebook_id: notebookId, slide_id: draft.id },
+        body: payload,
+      }),
+    );
     const normalized = normalizeDraft(updated);
     syncFromDraft(normalized);
     return normalized;
@@ -600,20 +626,20 @@ export default function SlidesStudioDialog({
     if (!onQueueSlides) return;
     if (isQueueing) return;
     if (!isConnected) {
-      toast.error(t('studio.slides.connection_required'));
+      toast.error(t("studio.slides.connection_required"));
       return;
     }
     if (!notebookId) {
-      toast.error(t('studio.slides.require_notebook'));
+      toast.error(t("studio.slides.require_notebook"));
       return;
     }
-    setError('');
+    setError("");
     setIsQueueing(true);
     try {
       const resolvedSourceIds = await resolveSourceIds();
       if (resolvedSourceIds.length === 0) {
-        setError(t('studio.slides.require_sources'));
-        toast.error(t('studio.slides.require_sources'));
+        setError(t("studio.slides.require_sources"));
+        toast.error(t("studio.slides.require_sources"));
         return;
       }
       const job = await onQueueSlides({
@@ -624,11 +650,11 @@ export default function SlidesStudioDialog({
         modelId: configModelId ?? undefined,
       });
       if (job) {
-        toast.success(t('studio.slides.queue.added'));
+        toast.success(t("studio.slides.queue.added"));
         onClose();
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('studio.slides.queue.failed_default');
+      const message = err instanceof Error ? err.message : t("studio.slides.queue.failed_default");
       setError(message);
       toast.error(message);
     } finally {
@@ -650,40 +676,44 @@ export default function SlidesStudioDialog({
   const handleSaveOutline = useCallback(async () => {
     if (!notebookId || !draft) return;
     if (!isConnected) {
-      setError(t('studio.slides.connection_required'));
+      setError(t("studio.slides.connection_required"));
       return;
     }
     const outline: SlideOutline = {
-      title: outlineTitle.trim() || title.trim() || '演示',
+      title: outlineTitle.trim() || title.trim() || "演示",
       slides: outlineItems.map((item) => ({
-        title: item.title.trim() || '未命名幻灯片',
+        title: item.title.trim() || "未命名幻灯片",
         bullets: item.bullets.map((bullet) => bullet.trim()).filter(Boolean),
       })),
     };
-    const updated = await unwrapData(updateSlidesOutline<true>({
-      path: { notebook_id: notebookId, slide_id: draft.id },
-      body: { outline },
-    }));
+    const updated = await unwrapData(
+      updateSlidesOutline<true>({
+        path: { notebook_id: notebookId, slide_id: draft.id },
+        body: { outline },
+      }),
+    );
     syncFromDraft(normalizeDraft(updated));
   }, [draft, isConnected, notebookId, outlineItems, outlineTitle, syncFromDraft, title]);
 
   const handleSaveMarkdown = useCallback(async () => {
     if (!notebookId || !draft) return;
     if (!isConnected) {
-      setError(t('studio.slides.connection_required'));
+      setError(t("studio.slides.connection_required"));
       return;
     }
-    const updated = await unwrapData(updateSlidesMarkdown<true>({
-      path: { notebook_id: notebookId, slide_id: draft.id },
-      body: { markdown: markdown },
-    }));
+    const updated = await unwrapData(
+      updateSlidesMarkdown<true>({
+        path: { notebook_id: notebookId, slide_id: draft.id },
+        body: { markdown: markdown },
+      }),
+    );
     syncFromDraft(normalizeDraft(updated));
     onOutputsUpdated();
   }, [draft, isConnected, markdown, notebookId, onOutputsUpdated, syncFromDraft]);
 
   const buildOutlineStreamUrl = useCallback(
     (slideId: number) => {
-      if (!notebookId) return '';
+      if (!notebookId) return "";
       const base = `/v1/notebooks/${notebookId}/slides/drafts/${slideId}/outline/stream`;
       return configModelId ? `${base}?model_id=${encodeURIComponent(configModelId)}` : base;
     },
@@ -692,7 +722,7 @@ export default function SlidesStudioDialog({
 
   const buildMarkdownStreamUrl = useCallback(
     (slideId: number) => {
-      if (!notebookId) return '';
+      if (!notebookId) return "";
       const base = `/v1/notebooks/${notebookId}/slides/drafts/${slideId}/markdown/stream`;
       return configModelId ? `${base}?model_id=${encodeURIComponent(configModelId)}` : base;
     },
@@ -708,7 +738,7 @@ export default function SlidesStudioDialog({
       setIsGenerating(true);
       setEvents([]);
       setDebugTimings(null);
-      setError('');
+      setError("");
       const eventSource = new EventSource(url);
       eventSourceRef.current = eventSource;
 
@@ -722,41 +752,46 @@ export default function SlidesStudioDialog({
         if (handlers.onDone) await handlers.onDone();
       };
 
-      eventSource.addEventListener('progress', (event) => {
-        const data = JSON.parse((event as MessageEvent).data || '{}');
+      eventSource.addEventListener("progress", (event) => {
+        const data = JSON.parse((event as MessageEvent).data || "{}");
         setEvents((prev) => {
-          const next = [...prev, { type: 'progress', message: data.message || '生成中...' }];
+          const next = [...prev, { type: "progress", message: data.message || "生成中..." }];
           return next.length > maxEvents ? next.slice(-maxEvents) : next;
         });
       });
 
-      eventSource.addEventListener('toolcall', (event) => {
-        const data = JSON.parse((event as MessageEvent).data || '{}');
+      eventSource.addEventListener("toolcall", (event) => {
+        const data = JSON.parse((event as MessageEvent).data || "{}");
         setEvents((prev) => {
-          const next = [...prev, { type: 'toolcall', message: data.name || '调用生成工具' }];
+          const next = [...prev, { type: "toolcall", message: data.name || "调用生成工具" }];
           return next.length > maxEvents ? next.slice(-maxEvents) : next;
         });
       });
 
-      eventSource.addEventListener('busy', (event) => {
-        const data = JSON.parse((event as MessageEvent).data || '{}');
-        setError(data.message || '当前演示正在生成中。');
+      eventSource.addEventListener("busy", (event) => {
+        const data = JSON.parse((event as MessageEvent).data || "{}");
+        setError(data.message || "当前演示正在生成中。");
         void handleFinish(true);
       });
 
-      eventSource.addEventListener('error', (event) => {
-        const data = JSON.parse((event as MessageEvent).data || '{}');
-        setError(data.message || '生成失败，请稍后重试。');
+      eventSource.addEventListener("error", (event) => {
+        const data = JSON.parse((event as MessageEvent).data || "{}");
+        setError(data.message || "生成失败，请稍后重试。");
         void handleFinish(true);
       });
 
-      eventSource.addEventListener('done', async (event) => {
+      eventSource.addEventListener("done", async (event) => {
         try {
-          const data = JSON.parse((event as MessageEvent).data || '{}');
-          if (data && typeof data === 'object' && data.timings_ms && typeof data.timings_ms === 'object') {
+          const data = JSON.parse((event as MessageEvent).data || "{}");
+          if (
+            data &&
+            typeof data === "object" &&
+            data.timings_ms &&
+            typeof data.timings_ms === "object"
+          ) {
             setDebugTimings(data.timings_ms);
             if (import.meta.env.DEV) {
-              console.log('slides done timings_ms', data.timings_ms);
+              console.log("slides done timings_ms", data.timings_ms);
             }
           }
         } catch {
@@ -771,7 +806,7 @@ export default function SlidesStudioDialog({
   const handleGenerateOutline = useCallback(async () => {
     if (!notebookId) return;
     if (!isConnected) {
-      setError(t('studio.slides.connection_required'));
+      setError(t("studio.slides.connection_required"));
       return;
     }
     const saved = await saveInputStage();
@@ -781,19 +816,26 @@ export default function SlidesStudioDialog({
     startEventSource(url, {
       onDone: async () => {
         await refreshDraft(saved.id);
-        setActiveStage('outline');
+        setActiveStage("outline");
       },
     });
-  }, [buildOutlineStreamUrl, isConnected, notebookId, refreshDraft, saveInputStage, startEventSource]);
+  }, [
+    buildOutlineStreamUrl,
+    isConnected,
+    notebookId,
+    refreshDraft,
+    saveInputStage,
+    startEventSource,
+  ]);
 
   const handleGenerateMarkdown = useCallback(async () => {
     if (!notebookId || !draft) return;
     if (!isConnected) {
-      setError(t('studio.slides.connection_required'));
+      setError(t("studio.slides.connection_required"));
       return;
     }
     if (!draft.sourceIds || draft.sourceIds.length === 0) {
-      setError(t('studio.slides.require_sources'));
+      setError(t("studio.slides.require_sources"));
       return;
     }
     await handleSaveOutline();
@@ -802,7 +844,7 @@ export default function SlidesStudioDialog({
     startEventSource(url, {
       onDone: async () => {
         await refreshDraft(draft.id);
-        setActiveStage('markdown');
+        setActiveStage("markdown");
         onOutputsUpdated();
       },
     });
@@ -820,7 +862,7 @@ export default function SlidesStudioDialog({
   const handleGenerateAll = useCallback(async () => {
     if (!notebookId) return;
     if (!isConnected) {
-      setError(t('studio.slides.connection_required'));
+      setError(t("studio.slides.connection_required"));
       return;
     }
     const saved = await saveInputStage();
@@ -835,7 +877,7 @@ export default function SlidesStudioDialog({
         startEventSource(markdownUrl, {
           onDone: async () => {
             await refreshDraft(saved.id);
-            setActiveStage('markdown');
+            setActiveStage("markdown");
             onOutputsUpdated();
           },
         });
@@ -852,52 +894,55 @@ export default function SlidesStudioDialog({
     startEventSource,
   ]);
 
-  const buildPreview = useCallback(async (force = false) => {
-    if (!isConnected) {
-      setPreviewError(t('studio.slides.connection_required'));
-      return;
-    }
-    if (!slidesTool || !slidesConfig) {
-      setPreviewError(slidesConfigErrorMessage || '演示能力当前不可用。');
-      return;
-    }
-    if (!previewDescriptor) {
-      setPreviewError('当前 slides 插件未声明预览入口。');
-      return;
-    }
-    if (!previewSupported) {
-      setPreviewError(`当前 slides 插件声明了暂不支持的预览服务：${previewProviderLabel}。`);
-      return;
-    }
-    if (!markdown.trim()) {
-      setPreviewError('请先生成 Markdown。');
-      return;
-    }
-    setPreviewError('');
-    setIsPreviewSyncing(true);
-    try {
-      await handleSaveMarkdown();
-      setPreviewMarkdown(markdown);
-      if (force || !previewMarkdown) {
-        setPreviewKey((prev) => prev + 1);
+  const buildPreview = useCallback(
+    async (force = false) => {
+      if (!isConnected) {
+        setPreviewError(t("studio.slides.connection_required"));
+        return;
       }
-    } catch {
-      setPreviewError('预览更新失败，请稍后重试。');
-    } finally {
-      setIsPreviewSyncing(false);
-    }
-  }, [
-    handleSaveMarkdown,
-    isConnected,
-    markdown,
-    previewDescriptor,
-    previewProviderLabel,
-    previewSupported,
-    previewMarkdown,
-    slidesConfig,
-    slidesConfigErrorMessage,
-    slidesTool,
-  ]);
+      if (!slidesTool || !slidesConfig) {
+        setPreviewError(slidesConfigErrorMessage || "演示能力当前不可用。");
+        return;
+      }
+      if (!previewDescriptor) {
+        setPreviewError("当前 slides 插件未声明预览入口。");
+        return;
+      }
+      if (!previewSupported) {
+        setPreviewError(`当前 slides 插件声明了暂不支持的预览服务：${previewProviderLabel}。`);
+        return;
+      }
+      if (!markdown.trim()) {
+        setPreviewError("请先生成 Markdown。");
+        return;
+      }
+      setPreviewError("");
+      setIsPreviewSyncing(true);
+      try {
+        await handleSaveMarkdown();
+        setPreviewMarkdown(markdown);
+        if (force || !previewMarkdown) {
+          setPreviewKey((prev) => prev + 1);
+        }
+      } catch {
+        setPreviewError("预览更新失败，请稍后重试。");
+      } finally {
+        setIsPreviewSyncing(false);
+      }
+    },
+    [
+      handleSaveMarkdown,
+      isConnected,
+      markdown,
+      previewDescriptor,
+      previewProviderLabel,
+      previewSupported,
+      previewMarkdown,
+      slidesConfig,
+      slidesConfigErrorMessage,
+      slidesTool,
+    ],
+  );
 
   const handlePreview = useCallback(() => {
     void buildPreview(false);
@@ -920,11 +965,11 @@ export default function SlidesStudioDialog({
     if (!previewMarkdown || !previewSupported) return;
     const url = buildSlidesPreviewUrl(previewDescriptor, previewKey || Date.now());
     if (!url) return;
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.open(url, "_blank", "noopener,noreferrer");
   }, [previewDescriptor, previewKey, previewMarkdown, previewSupported]);
 
   const handleAddSlide = () => {
-    setOutlineItems((prev) => [...prev, { title: '', bullets: [] }]);
+    setOutlineItems((prev) => [...prev, { title: "", bullets: [] }]);
   };
 
   const handleUpdateSlideTitle = (index: number, value: string) => {
@@ -935,7 +980,7 @@ export default function SlidesStudioDialog({
 
   const handleUpdateSlideBullets = (index: number, value: string) => {
     const bullets = value
-      .split('\n')
+      .split("\n")
       .map((line) => line.trim())
       .filter(Boolean);
     setOutlineItems((prev) =>
@@ -966,7 +1011,7 @@ export default function SlidesStudioDialog({
       );
     }
 
-    if ((isConfigOnly || activeStage === 'input') && slidesConfigLoading && !slidesConfig) {
+    if ((isConfigOnly || activeStage === "input") && slidesConfigLoading && !slidesConfig) {
       return (
         <div className="flex items-center justify-center py-12">
           <Spinner className="h-6 w-6" />
@@ -985,35 +1030,44 @@ export default function SlidesStudioDialog({
     }
 
     if (isPreviewMode) {
-      const previewTitle = title.trim() || outlineTitle.trim() || draft?.title || '演示';
+      const previewTitle = title.trim() || outlineTitle.trim() || draft?.title || "演示";
       const slideCount = outlineItems.length || draft?.outline?.slides?.length || 0;
       const outlinePreview = outlineItems.slice(0, 4);
       const queueLabel = queueStatus
         ? {
-            queued: '排队中',
-            running: '生成中',
-            error: '失败',
-            done: '已完成',
-            cancelled: '已取消',
+            queued: "排队中",
+            running: "生成中",
+            error: "失败",
+            done: "已完成",
+            cancelled: "已取消",
           }[queueStatus]
-        : draft?.status === 'running'
-          ? '生成中'
-          : draft?.status === 'error'
-            ? '失败'
-            : '就绪';
+        : draft?.status === "running"
+          ? "生成中"
+          : draft?.status === "error"
+            ? "失败"
+            : "就绪";
       return (
         <div className="space-y-4">
           <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 space-y-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <Typography variant="small" className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">
+                <Typography
+                  variant="small"
+                  className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold"
+                >
                   演示信息
                 </Typography>
-                <Typography variant="h6" className="text-base font-semibold text-gray-900 dark:text-slate-100 truncate">
+                <Typography
+                  variant="h6"
+                  className="text-base font-semibold text-gray-900 dark:text-slate-100 truncate"
+                >
                   {previewTitle}
                 </Typography>
-                <Typography variant="small" className="text-xs text-gray-600 dark:text-slate-300 font-medium">
-                  {slideCount ? `${slideCount} 张幻灯片` : '尚未生成大纲'}
+                <Typography
+                  variant="small"
+                  className="text-xs text-gray-600 dark:text-slate-300 font-medium"
+                >
+                  {slideCount ? `${slideCount} 张幻灯片` : "尚未生成大纲"}
                 </Typography>
               </div>
               <Button
@@ -1022,12 +1076,15 @@ export default function SlidesStudioDialog({
                 onClick={() => setShowMarkdownEditor((prev) => !prev)}
                 className="px-2 py-1 text-xs text-gray-600 dark:text-slate-300"
               >
-                {showMarkdownEditor ? '隐藏 Markdown' : '查看 Markdown'}
+                {showMarkdownEditor ? "隐藏 Markdown" : "查看 Markdown"}
               </Button>
             </div>
             {outlinePreview.length > 0 && (
               <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2">
-                <Typography variant="small" className="text-[11px] text-gray-500 dark:text-slate-400 font-semibold">
+                <Typography
+                  variant="small"
+                  className="text-[11px] text-gray-500 dark:text-slate-400 font-semibold"
+                >
                   大纲速览
                 </Typography>
                 <ul className="mt-2 space-y-1 text-xs text-gray-700 dark:text-slate-200">
@@ -1039,7 +1096,10 @@ export default function SlidesStudioDialog({
                   ))}
                 </ul>
                 {outlineItems.length > outlinePreview.length && (
-                  <Typography variant="small" className="mt-2 text-[11px] text-gray-500 dark:text-slate-400">
+                  <Typography
+                    variant="small"
+                    className="mt-2 text-[11px] text-gray-500 dark:text-slate-400"
+                  >
                     还有 {outlineItems.length - outlinePreview.length} 张幻灯片
                   </Typography>
                 )}
@@ -1047,10 +1107,10 @@ export default function SlidesStudioDialog({
             )}
             <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-slate-300">
               <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1">
-                引擎：{slidesEngine || '未配置'}
+                引擎：{slidesEngine || "未配置"}
               </div>
               <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1">
-                状态：{queueLabel || '就绪'}
+                状态：{queueLabel || "就绪"}
               </div>
             </div>
           </div>
@@ -1077,7 +1137,7 @@ export default function SlidesStudioDialog({
       );
     }
 
-    if (isConfigOnly || activeStage === 'input') {
+    if (isConfigOnly || activeStage === "input") {
       return (
         <div className="space-y-4">
           <Input
@@ -1094,7 +1154,10 @@ export default function SlidesStudioDialog({
           />
           <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 p-3 space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <Typography variant="small" className="text-gray-700 dark:text-slate-200 font-semibold">
+              <Typography
+                variant="small"
+                className="text-gray-700 dark:text-slate-200 font-semibold"
+              >
                 生成设置
               </Typography>
               <Button
@@ -1103,7 +1166,7 @@ export default function SlidesStudioDialog({
                 className="px-2 py-1 text-xs text-gray-600 dark:text-slate-300"
                 onClick={() => setShowAdvanced((prev) => !prev)}
               >
-                {showAdvanced ? '收起高级设置' : '高级设置'}
+                {showAdvanced ? "收起高级设置" : "高级设置"}
               </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1133,7 +1196,9 @@ export default function SlidesStudioDialog({
                   name="slideQuantity"
                 >
                   {quantityOptions.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label}</option>
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -1146,7 +1211,9 @@ export default function SlidesStudioDialog({
                   name="slideStructure"
                 >
                   {structureOptions.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label}</option>
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -1159,7 +1226,9 @@ export default function SlidesStudioDialog({
                   name="slideAudience"
                 >
                   {audienceOptions.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label}</option>
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -1172,7 +1241,9 @@ export default function SlidesStudioDialog({
                   name="slideTone"
                 >
                   {toneOptions.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label}</option>
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -1185,7 +1256,9 @@ export default function SlidesStudioDialog({
                   name="slideLanguage"
                 >
                   {languageOptions.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label}</option>
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -1198,7 +1271,9 @@ export default function SlidesStudioDialog({
                   name="slideDensity"
                 >
                   {densityOptions.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label}</option>
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -1211,7 +1286,9 @@ export default function SlidesStudioDialog({
                   name="slideThemePreset"
                 >
                   {themePresetOptions.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label}</option>
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -1219,7 +1296,10 @@ export default function SlidesStudioDialog({
             {showAdvanced && (
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Typography variant="small" className="text-gray-600 dark:text-slate-300 text-xs font-medium">
+                  <Typography
+                    variant="small"
+                    className="text-gray-600 dark:text-slate-300 text-xs font-medium"
+                  >
                     Frontmatter 覆盖（YAML，可选）
                   </Typography>
                   <Textarea
@@ -1227,14 +1307,22 @@ export default function SlidesStudioDialog({
                     onChange={(event) => setConfigFrontmatter(event.target.value)}
                     rows={5}
                     className="font-mono text-[11px]"
-                    placeholder={'theme: default\ncolorSchema: light\nfonts:\n  sans: "Manrope"\ntransition: fade'}
+                    placeholder={
+                      'theme: default\ncolorSchema: light\nfonts:\n  sans: "Manrope"\ntransition: fade'
+                    }
                   />
-                  <Typography variant="small" className="text-gray-500 dark:text-slate-400 text-[11px]">
+                  <Typography
+                    variant="small"
+                    className="text-gray-500 dark:text-slate-400 text-[11px]"
+                  >
                     留空将使用主题预设自动生成；如需覆盖请填写 YAML（不需要 --- 包裹）。
                   </Typography>
                 </div>
                 <div className="space-y-1">
-                  <Typography variant="small" className="text-gray-600 dark:text-slate-300 text-xs font-medium">
+                  <Typography
+                    variant="small"
+                    className="text-gray-600 dark:text-slate-300 text-xs font-medium"
+                  >
                     Frontmatter 预览
                   </Typography>
                   <pre className="rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 text-[11px] text-gray-700 dark:text-slate-200 whitespace-pre-wrap">
@@ -1243,7 +1331,10 @@ export default function SlidesStudioDialog({
                 </div>
                 {isConnected && (
                   <div className="space-y-1">
-                    <Typography variant="small" className="text-gray-600 dark:text-slate-300 text-xs font-medium">
+                    <Typography
+                      variant="small"
+                      className="text-gray-600 dark:text-slate-300 text-xs font-medium"
+                    >
                       AI 模型
                     </Typography>
                     <ModelSelector
@@ -1265,7 +1356,7 @@ export default function SlidesStudioDialog({
       );
     }
 
-    if (activeStage === 'outline') {
+    if (activeStage === "outline") {
       return (
         <div className="space-y-4">
           <Input
@@ -1281,7 +1372,10 @@ export default function SlidesStudioDialog({
               </div>
             ) : (
               outlineItems.map((item, index) => (
-                <div key={`outline-${index}`} className="rounded-lg border border-gray-200 dark:border-slate-700 p-3 space-y-2">
+                <div
+                  key={`outline-${index}`}
+                  className="rounded-lg border border-gray-200 dark:border-slate-700 p-3 space-y-2"
+                >
                   <div className="flex items-center justify-between gap-2">
                     <Input
                       label={`幻灯片 ${index + 1} 标题`}
@@ -1300,7 +1394,7 @@ export default function SlidesStudioDialog({
                   </div>
                   <Textarea
                     label="要点（每行一个）"
-                    value={item.bullets.join('\n')}
+                    value={item.bullets.join("\n")}
                     onChange={(event) => handleUpdateSlideBullets(index, event.target.value)}
                     rows={4}
                   />
@@ -1366,14 +1460,18 @@ export default function SlidesStudioDialog({
           <Button variant="outlined" onClick={onClose}>
             关闭
           </Button>
-          <Button variant="outlined" onClick={handleSaveMarkdown} disabled={isGenerating || !draft || !isConnected}>
+          <Button
+            variant="outlined"
+            onClick={handleSaveMarkdown}
+            disabled={isGenerating || !draft || !isConnected}
+          >
             保存 Markdown
           </Button>
         </div>
       );
     }
 
-    if (activeStage === 'input') {
+    if (activeStage === "input") {
       return (
         <div className="flex gap-2">
           <Button variant="outlined" onClick={onClose}>
@@ -1404,10 +1502,10 @@ export default function SlidesStudioDialog({
       );
     }
 
-    if (activeStage === 'outline') {
+    if (activeStage === "outline") {
       return (
         <div className="flex gap-2">
-          <Button variant="outlined" onClick={() => setActiveStage('input')}>
+          <Button variant="outlined" onClick={() => setActiveStage("input")}>
             返回输入
           </Button>
           <Button
@@ -1430,7 +1528,7 @@ export default function SlidesStudioDialog({
 
     return (
       <div className="flex gap-2">
-        <Button variant="outlined" onClick={() => setActiveStage('outline')}>
+        <Button variant="outlined" onClick={() => setActiveStage("outline")}>
           返回大纲
         </Button>
         <Button
@@ -1447,30 +1545,30 @@ export default function SlidesStudioDialog({
   const canBuildPreview = Boolean(draft?.id && markdown.trim());
   const showPreviewPanel = !isConfigOnly;
   const gridLayoutClass = showPreviewPanel
-    ? (isPreviewMode || activeStage === 'markdown'
-        ? 'lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]'
-        : 'lg:grid-cols-[minmax(0,1fr)_360px]')
-    : 'lg:grid-cols-1';
+    ? isPreviewMode || activeStage === "markdown"
+      ? "lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
+      : "lg:grid-cols-[minmax(0,1fr)_360px]"
+    : "lg:grid-cols-1";
   const headerSubtitle = isConfigOnly
-    ? '配置演示参数'
+    ? "配置演示参数"
     : isPreviewMode
-      ? '演示预览'
-      : '输入 → 大纲 → Markdown';
+      ? "演示预览"
+      : "输入 → 大纲 → Markdown";
   const statusMessage = (() => {
     if (isGenerating) {
-      return { tone: 'blue', message: '正在生成中，请稍候...' };
+      return { tone: "blue", message: "正在生成中，请稍候..." };
     }
-    if (queueStatus === 'queued') {
-      return { tone: 'gray', message: t('studio.slides.queue.pending') };
+    if (queueStatus === "queued") {
+      return { tone: "gray", message: t("studio.slides.queue.pending") };
     }
-    if (queueStatus === 'running') {
-      return { tone: 'blue', message: '正在生成中，请稍候...' };
+    if (queueStatus === "running") {
+      return { tone: "blue", message: "正在生成中，请稍候..." };
     }
-    if (queueStatus === 'error') {
-      return { tone: 'red', message: '生成失败，请稍后重试。' };
+    if (queueStatus === "error") {
+      return { tone: "red", message: "生成失败，请稍后重试。" };
     }
-    if (draft?.status === 'running') {
-      return { tone: 'blue', message: '正在生成中，请稍候...' };
+    if (draft?.status === "running") {
+      return { tone: "blue", message: "正在生成中，请稍候..." };
     }
     return null;
   })();
@@ -1498,235 +1596,276 @@ export default function SlidesStudioDialog({
       size="xxl"
       className={`rounded-xl overflow-hidden flex flex-col bg-white dark:bg-slate-900 ux-modal-in ${
         isFullscreen
-          ? 'absolute inset-0 min-w-[100vw] min-h-[100vh] h-[100vh] max-h-[100vh] w-[100vw] max-w-[100vw]'
-          : 'absolute left-[5vw] top-[5vh] min-w-[90vw] min-h-[90vh] h-[90vh] max-h-[90vh] w-[90vw] max-w-[90vw]'
+          ? "absolute inset-0 min-w-[100vw] min-h-[100vh] h-[100vh] max-h-[100vh] w-[100vw] max-w-[100vw]"
+          : "absolute left-[5vw] top-[5vh] min-w-[90vw] min-h-[90vh] h-[90vh] max-h-[90vh] w-[90vw] max-w-[90vw]"
       }`}
     >
       <div ref={dialogRef} tabIndex={-1} className="flex flex-col flex-1 min-h-0">
-      <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-slate-700 p-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 flex-shrink-0">
-            <SlideshowIcon fontSize="small" />
+        <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-slate-700 p-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 flex-shrink-0">
+              <SlideshowIcon fontSize="small" />
+            </div>
+            <div className="min-w-0">
+              <Typography
+                variant="h6"
+                className="text-[15px] font-semibold text-gray-900 dark:text-slate-100 truncate"
+              >
+                演示生成
+              </Typography>
+              <Typography
+                variant="small"
+                className="text-gray-500 dark:text-slate-400 text-xs font-medium"
+              >
+                {headerSubtitle}
+              </Typography>
+            </div>
           </div>
-          <div className="min-w-0">
-            <Typography variant="h6" className="text-[15px] font-semibold text-gray-900 dark:text-slate-100 truncate">
-              演示生成
-            </Typography>
-            <Typography variant="small" className="text-gray-500 dark:text-slate-400 text-xs font-medium">
-              {headerSubtitle}
-            </Typography>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Chip value={slidesEngine || '未配置'} size="sm" variant="ghost" />
-          <IconButton
-            variant="text"
-            size="sm"
-            onClick={() => setIsFullscreen((prev) => !prev)}
-            className="rounded-full"
-            aria-label={isFullscreen ? '退出全屏' : '进入全屏'}
-          >
-            {isFullscreen ? <CloseFullscreenIcon className="h-4 w-4" /> : <OpenInFullIcon className="h-4 w-4" />}
-          </IconButton>
-          <IconButton
-            variant="text"
-            size="sm"
-            onClick={onClose}
-            className="rounded-full"
-            aria-label="关闭演示配置"
-          >
-            <CloseIcon className="h-4 w-4" />
-          </IconButton>
-        </div>
-      </DialogHeader>
-      <DialogBody className="p-4 flex-1 overflow-hidden">
-        <div className="flex flex-col gap-4 h-full">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            {!isConfigOnly && !isPreviewMode && (
-              <div className="flex flex-wrap items-center gap-2">
-                {STAGES.map((stage) => (
-                  <Button
-                    key={stage.id}
-                    size="sm"
-                    variant={activeStage === stage.id ? 'filled' : 'outlined'}
-                    color={activeStage === stage.id ? 'blue' : 'gray'}
-                    onClick={() => setActiveStage(stage.id)}
-                    disabled={isGenerating}
-                  >
-                    {stage.label}
-                  </Button>
-                ))}
-              </div>
-            )}
-            <Typography variant="small" className="text-gray-500 dark:text-slate-400 text-xs">
-              {draft ? `草稿 ${draft.id}` : isConfigOnly ? '新建演示' : '暂无草稿'}
-            </Typography>
-          </div>
-          <div className={`grid grid-cols-1 ${gridLayoutClass} gap-4 flex-1 min-h-0`}>
-            <div className={`flex flex-col gap-3 min-h-0 ${isPreviewMode ? 'order-2 lg:order-1' : ''}`}>
-              {error && (
-                <div
-                  role="alert"
-                  aria-live="polite"
-                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-                >
-                  {error}
-                </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Chip value={slidesEngine || "未配置"} size="sm" variant="ghost" />
+            <IconButton
+              variant="text"
+              size="sm"
+              onClick={() => setIsFullscreen((prev) => !prev)}
+              className="rounded-full"
+              aria-label={isFullscreen ? "退出全屏" : "进入全屏"}
+            >
+              {isFullscreen ? (
+                <CloseFullscreenIcon className="h-4 w-4" />
+              ) : (
+                <OpenInFullIcon className="h-4 w-4" />
               )}
-              {statusMessage && !error && (
-                <div
-                  className={`rounded-lg border px-3 py-2 text-sm ${
-                    statusMessage.tone === 'red'
-                      ? 'border-red-200 bg-red-50 text-red-700'
-                      : statusMessage.tone === 'blue'
-                        ? 'border-blue-100 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-200'
-                  }`}
-                >
-                  {statusMessage.message}
-                </div>
-              )}
-              {events.length > 0 && !isConfigOnly && !isPreviewMode && (
-                <div className="space-y-2">
-                  {events.map((event, index) => (
-                    <div
-                      key={`${event.type}-${index}`}
-                      className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-3 py-2 text-xs text-gray-700 dark:text-slate-200 flex items-start gap-2"
+            </IconButton>
+            <IconButton
+              variant="text"
+              size="sm"
+              onClick={onClose}
+              className="rounded-full"
+              aria-label="关闭演示配置"
+            >
+              <CloseIcon className="h-4 w-4" />
+            </IconButton>
+          </div>
+        </DialogHeader>
+        <DialogBody className="p-4 flex-1 overflow-hidden">
+          <div className="flex flex-col gap-4 h-full">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              {!isConfigOnly && !isPreviewMode && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {STAGES.map((stage) => (
+                    <Button
+                      key={stage.id}
+                      size="sm"
+                      variant={activeStage === stage.id ? "filled" : "outlined"}
+                      color={activeStage === stage.id ? "blue" : "gray"}
+                      onClick={() => setActiveStage(stage.id)}
+                      disabled={isGenerating}
                     >
-                      <span
-                        className={`mt-1 h-1.5 w-1.5 rounded-full ${
-                          event.type === 'toolcall' ? 'bg-purple-500' : 'bg-blue-500'
-                        }`}
-                      />
-                      <span className="flex-1">{event.message}</span>
-                    </div>
+                      {stage.label}
+                    </Button>
                   ))}
                 </div>
               )}
-              {import.meta.env.DEV && debugTimings && !isConfigOnly && !isPreviewMode && (
-                <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-3 py-2 text-xs text-gray-700 dark:text-slate-200 space-y-2">
-                  <Typography variant="small" className="text-gray-500 dark:text-slate-400 text-xs">
-                    timings_ms
-                  </Typography>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(debugTimings)
-                      .sort(([a], [b]) => a.localeCompare(b))
-                      .map(([key, value]) => (
-                        <Chip key={key} value={`${key}: ${value}ms`} size="sm" variant="ghost" color="gray" />
-                      ))}
-                  </div>
-                </div>
-              )}
-              <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 flex-1 min-h-0 overflow-auto">
-                {stageContent()}
-              </div>
+              <Typography variant="small" className="text-gray-500 dark:text-slate-400 text-xs">
+                {draft ? `草稿 ${draft.id}` : isConfigOnly ? "新建演示" : "暂无草稿"}
+              </Typography>
             </div>
-            {showPreviewPanel && (
-              <div className={`rounded-xl border border-gray-200 dark:border-slate-700 bg-gradient-to-br from-white via-white to-slate-50 p-3 flex flex-col min-h-0 shadow-sm ${isPreviewMode ? 'order-1 lg:order-2' : ''}`}>
-                <div className="flex items-center justify-between gap-2 border-b border-gray-200 dark:border-slate-700 pb-2">
-                  <div className="flex items-center gap-2">
-                    <Typography variant="small" className="text-gray-700 dark:text-slate-200 font-semibold">
-                      幻灯片预览
-                    </Typography>
-                    <Chip value={previewStatus} size="sm" variant="ghost" color={previewStatusTone} />
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <IconButton
-                      variant="text"
-                      size="sm"
-                      onClick={handleOpenPreviewWindow}
-                      className="rounded-full"
-                      disabled={!previewReady}
-                      aria-label="在新窗口打开预览"
-                    >
-                      <OpenInNewIcon className="h-4 w-4" />
-                    </IconButton>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 pt-2">
-                  <Button
-                    size="sm"
-                    color="blue"
-                    onClick={handlePreview}
-                    disabled={!canBuildPreview || isGenerating || isPreviewSyncing || !isConnected}
-                  >
-                    {isPreviewSyncing ? (
-                      <span className="flex items-center gap-2">
-                        <Spinner className="h-3 w-3" />
-                        同步中
-                      </span>
-                    ) : previewReady ? (
-                      '同步预览'
-                    ) : (
-                      '生成预览'
-                    )}
-                  </Button>
-                  {previewReady && (
-                    <Button
-                      size="sm"
-                      variant="outlined"
-                      onClick={handleRefreshPreview}
-                      disabled={isGenerating || isPreviewSyncing || !isConnected}
-                    >
-                      强制刷新
-                    </Button>
-                  )}
-                </div>
-                {isPreviewMode && !previewReady && canBuildPreview && (
-                  <Typography variant="small" className="text-xs text-gray-500 dark:text-slate-400 mt-2">
-                    自动同步预览已开启，如未更新可点击“同步预览”。
-                  </Typography>
-                )}
-                {previewStale && (
-                  <Typography variant="small" className="text-amber-600 text-xs mt-2">
-                    预览已过期，请刷新以同步最新 Markdown。
-                  </Typography>
-                )}
-                {previewError && (
+            <div className={`grid grid-cols-1 ${gridLayoutClass} gap-4 flex-1 min-h-0`}>
+              <div
+                className={`flex flex-col gap-3 min-h-0 ${isPreviewMode ? "order-2 lg:order-1" : ""}`}
+              >
+                {error && (
                   <div
                     role="alert"
                     aria-live="polite"
-                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 mt-2"
+                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
                   >
-                    {previewError}
+                    {error}
                   </div>
                 )}
-                <div className="mt-3 flex-1 min-h-0 rounded-lg border border-slate-200 bg-slate-900/5 overflow-hidden flex items-center justify-center p-3">
-                  {previewReady && previewSupported ? (
-                    <div className="h-full w-auto max-w-full aspect-video rounded-lg overflow-hidden shadow-lg bg-white dark:bg-slate-800 relative">
-                      <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-800 z-0">
-                        <Spinner className="h-5 w-5 text-gray-400" />
+                {statusMessage && !error && (
+                  <div
+                    className={`rounded-lg border px-3 py-2 text-sm ${
+                      statusMessage.tone === "red"
+                        ? "border-red-200 bg-red-50 text-red-700"
+                        : statusMessage.tone === "blue"
+                          ? "border-blue-100 bg-blue-50 text-blue-700"
+                          : "border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-200"
+                    }`}
+                  >
+                    {statusMessage.message}
+                  </div>
+                )}
+                {events.length > 0 && !isConfigOnly && !isPreviewMode && (
+                  <div className="space-y-2">
+                    {events.map((event, index) => (
+                      <div
+                        key={`${event.type}-${index}`}
+                        className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-3 py-2 text-xs text-gray-700 dark:text-slate-200 flex items-start gap-2"
+                      >
+                        <span
+                          className={`mt-1 h-1.5 w-1.5 rounded-full ${
+                            event.type === "toolcall" ? "bg-purple-500" : "bg-blue-500"
+                          }`}
+                        />
+                        <span className="flex-1">{event.message}</span>
                       </div>
-                      <iframe
-                        key={previewKey}
-                        title={`${previewProviderLabel} 预览`}
-                        src={previewUrl}
-                        className="h-full w-full border-0 bg-white dark:bg-slate-800 relative z-10"
-                        loading="lazy"
-                      />
+                    ))}
+                  </div>
+                )}
+                {import.meta.env.DEV && debugTimings && !isConfigOnly && !isPreviewMode && (
+                  <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-3 py-2 text-xs text-gray-700 dark:text-slate-200 space-y-2">
+                    <Typography
+                      variant="small"
+                      className="text-gray-500 dark:text-slate-400 text-xs"
+                    >
+                      timings_ms
+                    </Typography>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(debugTimings)
+                        .sort(([a], [b]) => a.localeCompare(b))
+                        .map(([key, value]) => (
+                          <Chip
+                            key={key}
+                            value={`${key}: ${value}ms`}
+                            size="sm"
+                            variant="ghost"
+                            color="gray"
+                          />
+                        ))}
                     </div>
-                  ) : isPreviewSyncing || isGenerating || queueStatus === 'running' || draft?.status === 'running' ? (
-                    <div className="w-full max-w-full aspect-video rounded-lg border border-dashed border-slate-300 bg-white dark:bg-slate-900/70 flex flex-col items-center justify-center gap-2 text-xs text-gray-500 dark:text-slate-400">
-                      <Spinner className="h-4 w-4" />
-                      <span>预览同步中...</span>
-                    </div>
-                  ) : (
-                    <div className="h-full w-full flex flex-col items-center justify-center gap-2 text-xs text-gray-500 dark:text-slate-400 px-6 text-center">
-                      <span>暂无预览，请先生成 Markdown 或点击“同步预览”。</span>
-                      <span className="text-[11px] text-gray-400 dark:text-slate-500">
-                        {previewDescriptor ? `预览基于 ${previewProviderLabel} 服务。` : '当前 slides 插件未声明预览入口。'}
-                      </span>
-                    </div>
-                  )}
+                  </div>
+                )}
+                <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 flex-1 min-h-0 overflow-auto">
+                  {stageContent()}
                 </div>
               </div>
-            )}
+              {showPreviewPanel && (
+                <div
+                  className={`rounded-xl border border-gray-200 dark:border-slate-700 bg-gradient-to-br from-white via-white to-slate-50 p-3 flex flex-col min-h-0 shadow-sm ${isPreviewMode ? "order-1 lg:order-2" : ""}`}
+                >
+                  <div className="flex items-center justify-between gap-2 border-b border-gray-200 dark:border-slate-700 pb-2">
+                    <div className="flex items-center gap-2">
+                      <Typography
+                        variant="small"
+                        className="text-gray-700 dark:text-slate-200 font-semibold"
+                      >
+                        幻灯片预览
+                      </Typography>
+                      <Chip
+                        value={previewStatus}
+                        size="sm"
+                        variant="ghost"
+                        color={previewStatusTone}
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <IconButton
+                        variant="text"
+                        size="sm"
+                        onClick={handleOpenPreviewWindow}
+                        className="rounded-full"
+                        disabled={!previewReady}
+                        aria-label="在新窗口打开预览"
+                      >
+                        <OpenInNewIcon className="h-4 w-4" />
+                      </IconButton>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pt-2">
+                    <Button
+                      size="sm"
+                      color="blue"
+                      onClick={handlePreview}
+                      disabled={
+                        !canBuildPreview || isGenerating || isPreviewSyncing || !isConnected
+                      }
+                    >
+                      {isPreviewSyncing ? (
+                        <span className="flex items-center gap-2">
+                          <Spinner className="h-3 w-3" />
+                          同步中
+                        </span>
+                      ) : previewReady ? (
+                        "同步预览"
+                      ) : (
+                        "生成预览"
+                      )}
+                    </Button>
+                    {previewReady && (
+                      <Button
+                        size="sm"
+                        variant="outlined"
+                        onClick={handleRefreshPreview}
+                        disabled={isGenerating || isPreviewSyncing || !isConnected}
+                      >
+                        强制刷新
+                      </Button>
+                    )}
+                  </div>
+                  {isPreviewMode && !previewReady && canBuildPreview && (
+                    <Typography
+                      variant="small"
+                      className="text-xs text-gray-500 dark:text-slate-400 mt-2"
+                    >
+                      自动同步预览已开启，如未更新可点击“同步预览”。
+                    </Typography>
+                  )}
+                  {previewStale && (
+                    <Typography variant="small" className="text-amber-600 text-xs mt-2">
+                      预览已过期，请刷新以同步最新 Markdown。
+                    </Typography>
+                  )}
+                  {previewError && (
+                    <div
+                      role="alert"
+                      aria-live="polite"
+                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 mt-2"
+                    >
+                      {previewError}
+                    </div>
+                  )}
+                  <div className="mt-3 flex-1 min-h-0 rounded-lg border border-slate-200 bg-slate-900/5 overflow-hidden flex items-center justify-center p-3">
+                    {previewReady && previewSupported ? (
+                      <div className="h-full w-auto max-w-full aspect-video rounded-lg overflow-hidden shadow-lg bg-white dark:bg-slate-800 relative">
+                        <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-800 z-0">
+                          <Spinner className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <iframe
+                          key={previewKey}
+                          title={`${previewProviderLabel} 预览`}
+                          src={previewUrl}
+                          className="h-full w-full border-0 bg-white dark:bg-slate-800 relative z-10"
+                          loading="lazy"
+                        />
+                      </div>
+                    ) : isPreviewSyncing ||
+                      isGenerating ||
+                      queueStatus === "running" ||
+                      draft?.status === "running" ? (
+                      <div className="w-full max-w-full aspect-video rounded-lg border border-dashed border-slate-300 bg-white dark:bg-slate-900/70 flex flex-col items-center justify-center gap-2 text-xs text-gray-500 dark:text-slate-400">
+                        <Spinner className="h-4 w-4" />
+                        <span>预览同步中...</span>
+                      </div>
+                    ) : (
+                      <div className="h-full w-full flex flex-col items-center justify-center gap-2 text-xs text-gray-500 dark:text-slate-400 px-6 text-center">
+                        <span>暂无预览，请先生成 Markdown 或点击“同步预览”。</span>
+                        <span className="text-[11px] text-gray-400 dark:text-slate-500">
+                          {previewDescriptor
+                            ? `预览基于 ${previewProviderLabel} 服务。`
+                            : "当前 slides 插件未声明预览入口。"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </DialogBody>
-      <DialogFooter className="flex items-center justify-end border-t border-gray-100 dark:border-slate-700 p-4">
-        {stageActions()}
-      </DialogFooter>
+        </DialogBody>
+        <DialogFooter className="flex items-center justify-end border-t border-gray-100 dark:border-slate-700 p-4">
+          {stageActions()}
+        </DialogFooter>
       </div>
     </Dialog>
   );

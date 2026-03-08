@@ -49,11 +49,13 @@ cd frontend/web && pnpm test
 cd backend/py && just lint
 cd backend/py && just contract
 cd frontend/web && pnpm run lint
+cd frontend/web && pnpm run format:check
 ```
 
 Notes:
-- `pnpm -C frontend/web run lint` runs an incremental check (changed files vs `origin/main`).
-- Use `pnpm -C frontend/web run lint:all` to lint the whole frontend (may be stricter than the current baseline).
+- `pnpm -C frontend/web run lint` runs incremental `oxlint` on changed frontend source files (default base: `origin/main`, with local fallback when unavailable).
+- `pnpm -C frontend/web run lint:all` runs full `oxlint` on `frontend/web/src` and surfaces repository-baseline warnings without requiring immediate cleanup.
+- `pnpm -C frontend/web run format` applies `oxfmt`; use `pnpm -C frontend/web run format:check` in verification flows.
 
 ## Config schema
 

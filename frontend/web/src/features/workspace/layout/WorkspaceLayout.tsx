@@ -1,37 +1,45 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import ChatPanel from '../domains/messages/ChatPanel';
-import SessionSwitcher from '../domains/sessions/SessionSwitcher';
-import type { ChatMessage as SourceDialogMessage } from '../domains/sources/SourceDetailDialog';
-import SourcesPanel from '../domains/sources/SourcesPanel';
-import StudioPanel from '../domains/studio/StudioPanel';
-import { useAnalysis } from '../domains/analysis/useAnalysis';
-import { useChat } from '../domains/messages/useChat';
-import { useNotebooks } from '../domains/notebooks/useNotebooks';
-import { useRefine } from '../domains/refine/useRefine';
-import { useSessions } from '../domains/sessions/useSessions';
-import { useSources } from '../domains/sources/useSources';
-import { useKeyboardShortcuts, type KeyboardShortcutBinding } from '../shared/hooks/useKeyboardShortcuts';
-import { getSlideIdFromOutput } from '../shared/outputPayload';
-import { useWorkspaceStore } from '../shared/state/workspaceStore';
-import type { ChatMessage, Citation, SourceItem } from '../shared/types';
-import { SOURCE_UPLOAD_ACCEPT } from '../shared/uploadTypes';
-import { exportOutputJsonDownload, exportOutputMarkdownDownload, exportQaJsonDownload, exportQaMarkdownDownload } from '../shared/evidenceExport';
-import { toast } from '../../../shared/toast';
-import { computeWorkspaceReadiness, useDependencyHealth, useWorkspaceOverlays } from './hooks';
-import WorkspaceOnboardingBanner from './components/WorkspaceOnboardingBanner';
-import WorkspaceHeader from './WorkspaceHeader';
+import ChatPanel from "../domains/messages/ChatPanel";
+import SessionSwitcher from "../domains/sessions/SessionSwitcher";
+import type { ChatMessage as SourceDialogMessage } from "../domains/sources/SourceDetailDialog";
+import SourcesPanel from "../domains/sources/SourcesPanel";
+import StudioPanel from "../domains/studio/StudioPanel";
+import { useAnalysis } from "../domains/analysis/useAnalysis";
+import { useChat } from "../domains/messages/useChat";
+import { useNotebooks } from "../domains/notebooks/useNotebooks";
+import { useRefine } from "../domains/refine/useRefine";
+import { useSessions } from "../domains/sessions/useSessions";
+import { useSources } from "../domains/sources/useSources";
+import {
+  useKeyboardShortcuts,
+  type KeyboardShortcutBinding,
+} from "../shared/hooks/useKeyboardShortcuts";
+import { getSlideIdFromOutput } from "../shared/outputPayload";
+import { useWorkspaceStore } from "../shared/state/workspaceStore";
+import type { ChatMessage, Citation, SourceItem } from "../shared/types";
+import { SOURCE_UPLOAD_ACCEPT } from "../shared/uploadTypes";
+import {
+  exportOutputJsonDownload,
+  exportOutputMarkdownDownload,
+  exportQaJsonDownload,
+  exportQaMarkdownDownload,
+} from "../shared/evidenceExport";
+import { toast } from "../../../shared/toast";
+import { computeWorkspaceReadiness, useDependencyHealth, useWorkspaceOverlays } from "./hooks";
+import WorkspaceOnboardingBanner from "./components/WorkspaceOnboardingBanner";
+import WorkspaceHeader from "./WorkspaceHeader";
 import {
   ModularCanvas,
   type CommandItem,
   DEFAULT_LAYOUT,
   type ModularCanvasHandle,
   WIDGET_REGISTRY,
-} from './modular-canvas';
-import { WorkspaceOverlays } from './overlays';
-import AddSourceFromUrlDialog from './overlays/AddSourceFromUrlDialog';
-import DiagnosticsDialog from './overlays/DiagnosticsDialog';
-import SystemConfigDialog from './overlays/SystemConfigDialog';
+} from "./modular-canvas";
+import { WorkspaceOverlays } from "./overlays";
+import AddSourceFromUrlDialog from "./overlays/AddSourceFromUrlDialog";
+import DiagnosticsDialog from "./overlays/DiagnosticsDialog";
+import SystemConfigDialog from "./overlays/SystemConfigDialog";
 
 export default function WorkspaceLayout() {
   const selectedSourceIds_raw = useWorkspaceStore((s) => s.selectedSourceIds);
@@ -141,7 +149,7 @@ export default function WorkspaceLayout() {
   }, [overlays.slidesQueueJobId, refine.outputQueueJobs]);
 
   const slidesTool = useMemo(
-    () => refine.tools.find((tool) => tool.outputType === 'SLIDES') ?? null,
+    () => refine.tools.find((tool) => tool.outputType === "SLIDES") ?? null,
     [refine.tools],
   );
 
@@ -149,8 +157,8 @@ export default function WorkspaceLayout() {
     return (
       refine.toolsDiagnostics?.slides?.hint ??
       refine.toolsDiagnostics?.slides?.message ??
-      refine.toolsDiagnostics?.official?.['slides-slidev']?.hint ??
-      'Slides 当前由插件提供，请先安装并启用 slides 插件。'
+      refine.toolsDiagnostics?.official?.["slides-slidev"]?.hint ??
+      "Slides 当前由插件提供，请先安装并启用 slides 插件。"
     );
   }, [refine.toolsDiagnostics]);
 
@@ -161,12 +169,9 @@ export default function WorkspaceLayout() {
     overlays.openDiagnostics();
   }, [overlays, slidesRecoveryHint]);
 
-  const handleSelectedSourceIdsChange = useCallback(
-    (selected: Record<number, boolean>) => {
-      store.getState().setSelectedSources(selected);
-    },
-    [],
-  );
+  const handleSelectedSourceIdsChange = useCallback((selected: Record<number, boolean>) => {
+    store.getState().setSelectedSources(selected);
+  }, []);
 
   const hasSelectedSources = useMemo(
     () => Object.values(selectedSourceIds_raw).some(Boolean),
@@ -188,7 +193,7 @@ export default function WorkspaceLayout() {
     (citation: Citation) => {
       const source = resolveCitationSource(citation);
       if (!source) {
-        toast.error('未找到对应来源，请先同步来源列表。');
+        toast.error("未找到对应来源，请先同步来源列表。");
         return;
       }
       overlays.openCitationSourceDetail(source);
@@ -200,7 +205,7 @@ export default function WorkspaceLayout() {
     (citation: Citation) => {
       const source = resolveCitationSource(citation);
       if (!source) {
-        toast.error('未找到对应来源，请先同步来源列表。');
+        toast.error("未找到对应来源，请先同步来源列表。");
         return;
       }
       overlays.locateCitationSource(source.id);
@@ -259,8 +264,8 @@ export default function WorkspaceLayout() {
   );
 
   const focusPanel = useCallback(
-    (panel: 'sources' | 'chat' | 'studio') => {
-      const nextActivePanel = panel === 'studio' ? 'refine' : panel;
+    (panel: "sources" | "chat" | "studio") => {
+      const nextActivePanel = panel === "studio" ? "refine" : panel;
       store.getState().setActivePanel(nextActivePanel);
     },
     [store],
@@ -275,7 +280,7 @@ export default function WorkspaceLayout() {
   }, [overlays]);
 
   const createNotebookByShortcut = useCallback(() => {
-    void notebooks.createNotebookQuick('未命名笔记本');
+    void notebooks.createNotebookQuick("未命名笔记本");
   }, [notebooks]);
 
   const toggleLock = useCallback(() => {
@@ -285,43 +290,43 @@ export default function WorkspaceLayout() {
   const shortcutBindings = useMemo<KeyboardShortcutBinding[]>(
     () => [
       {
-        id: 'open-command-palette',
-        combo: 'Ctrl+K',
+        id: "open-command-palette",
+        combo: "Ctrl+K",
         handler: () => {
           overlays.toggleCommandPalette();
         },
       },
       {
-        id: 'create-notebook',
-        combo: 'Ctrl+N',
+        id: "create-notebook",
+        combo: "Ctrl+N",
         handler: () => {
           createNotebookByShortcut();
         },
       },
       {
-        id: 'focus-sources',
-        combo: 'Ctrl+1',
+        id: "focus-sources",
+        combo: "Ctrl+1",
         handler: () => {
-          focusPanel('sources');
+          focusPanel("sources");
         },
       },
       {
-        id: 'focus-chat',
-        combo: 'Ctrl+2',
+        id: "focus-chat",
+        combo: "Ctrl+2",
         handler: () => {
-          focusPanel('chat');
+          focusPanel("chat");
         },
       },
       {
-        id: 'focus-studio',
-        combo: 'Ctrl+3',
+        id: "focus-studio",
+        combo: "Ctrl+3",
         handler: () => {
-          focusPanel('studio');
+          focusPanel("studio");
         },
       },
       {
-        id: 'send-message',
-        combo: 'Ctrl+Enter',
+        id: "send-message",
+        combo: "Ctrl+Enter",
         allowInInput: true,
         handler: () => {
           if (!notebooks.activeNotebookId || chat.isSending) return;
@@ -329,8 +334,8 @@ export default function WorkspaceLayout() {
         },
       },
       {
-        id: 'close-overlay',
-        combo: 'Escape',
+        id: "close-overlay",
+        combo: "Escape",
         allowInInput: true,
         preventDefault: false,
         handler: (event) => {
@@ -340,8 +345,8 @@ export default function WorkspaceLayout() {
         },
       },
       {
-        id: 'open-shortcut-help',
-        combo: 'Ctrl+?',
+        id: "open-shortcut-help",
+        combo: "Ctrl+?",
         handler: () => {
           overlays.openShortcutHelp();
         },
@@ -400,14 +405,14 @@ export default function WorkspaceLayout() {
   );
 
   const showReadyGuide = useMemo(() => {
-    return readiness.kind === 'ready' && chat.messages.length === 0 && refine.outputs.length === 0;
+    return readiness.kind === "ready" && chat.messages.length === 0 && refine.outputs.length === 0;
   }, [chat.messages.length, readiness.kind, refine.outputs.length]);
 
   const handleOpenDeploymentDocs = useCallback(() => {
     window.open(
-      'https://github.com/StrayDragon/crystalith/blob/main/deployments/README.md',
-      '_blank',
-      'noopener,noreferrer',
+      "https://github.com/StrayDragon/crystalith/blob/main/deployments/README.md",
+      "_blank",
+      "noopener,noreferrer",
     );
   }, []);
 
@@ -420,9 +425,9 @@ export default function WorkspaceLayout() {
   }, []);
 
   const handleFocusSourceSearch = useCallback(() => {
-    const el = document.getElementById('source-search-input') as HTMLInputElement | null;
+    const el = document.getElementById("source-search-input") as HTMLInputElement | null;
     if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
     el.focus();
     el.select();
   }, []);
@@ -430,7 +435,7 @@ export default function WorkspaceLayout() {
   const handleFocusChat = useCallback(() => {
     const el = chatInputRef.current;
     if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
     el.focus();
   }, []);
 
@@ -442,9 +447,9 @@ export default function WorkspaceLayout() {
   }, [handleFocusChat, sessions.ensureSession]);
 
   const handleCreateNotebookFromOnboarding = useCallback(async () => {
-    const ok = await notebooks.createNotebookQuick('未命名笔记本');
+    const ok = await notebooks.createNotebookQuick("未命名笔记本");
     if (ok) {
-      toast.success('已创建笔记本');
+      toast.success("已创建笔记本");
     }
   }, [notebooks.createNotebookQuick]);
 
@@ -459,7 +464,7 @@ export default function WorkspaceLayout() {
   const handleAddSourceFromUrl = useCallback(
     async (url: string, mode: Parameters<typeof sources.addSourceFromUrl>[1]) => {
       await sources.addSourceFromUrl(url, mode);
-      toast.success('已添加来源');
+      toast.success("已添加来源");
     },
     [sources.addSourceFromUrl],
   );
@@ -469,9 +474,9 @@ export default function WorkspaceLayout() {
 
     // Core onboarding actions
     cmds.push({
-      id: 'create-notebook',
-      label: '新建笔记本',
-      icon: '📓',
+      id: "create-notebook",
+      label: "新建笔记本",
+      icon: "📓",
       action: () => {
         void handleCreateNotebookFromOnboarding();
       },
@@ -484,7 +489,7 @@ export default function WorkspaceLayout() {
           notebook.id === notebooks.activeNotebookId
             ? `切换笔记本: ${notebook.title}（当前）`
             : `切换笔记本: ${notebook.title}`,
-        icon: notebook.id === notebooks.activeNotebookId ? '✅' : '📓',
+        icon: notebook.id === notebooks.activeNotebookId ? "✅" : "📓",
         action: () => {
           notebooks.setActiveNotebookId(notebook.id);
         },
@@ -492,30 +497,30 @@ export default function WorkspaceLayout() {
     });
 
     cmds.push({
-      id: 'import-sources-upload',
-      label: '导入来源: 上传文件',
-      icon: '⬆️',
+      id: "import-sources-upload",
+      label: "导入来源: 上传文件",
+      icon: "⬆️",
       action: handleOpenUpload,
     });
 
     cmds.push({
-      id: 'import-sources-url',
-      label: '导入来源: 从 URL',
-      icon: '🔗',
+      id: "import-sources-url",
+      label: "导入来源: 从 URL",
+      icon: "🔗",
       action: handleOpenAddSourceFromUrl,
     });
 
     cmds.push({
-      id: 'import-sources-search',
-      label: '导入来源: 搜索',
-      icon: '🔍',
+      id: "import-sources-search",
+      label: "导入来源: 搜索",
+      icon: "🔍",
       action: handleFocusSourceSearch,
     });
 
     cmds.push({
-      id: 'start-session',
-      label: '开始会话',
-      icon: '💬',
+      id: "start-session",
+      label: "开始会话",
+      icon: "💬",
       action: () => {
         void handleStartSession();
       },
@@ -523,18 +528,18 @@ export default function WorkspaceLayout() {
 
     if (activeNotebookId && activeSessionId && isConnected) {
       cmds.push({
-        id: 'export-qa-markdown',
-        label: '导出当前会话（Markdown，含引用）',
-        icon: '⬇️',
+        id: "export-qa-markdown",
+        label: "导出当前会话（Markdown，含引用）",
+        icon: "⬇️",
         action: () => {
           exportQaMarkdownDownload({ notebookId: activeNotebookId, sessionId: activeSessionId });
         },
       });
 
       cmds.push({
-        id: 'export-qa-json',
-        label: '导出当前会话（JSON，含引用）',
-        icon: '⬇️',
+        id: "export-qa-json",
+        label: "导出当前会话（JSON，含引用）",
+        icon: "⬇️",
         action: () => {
           void exportQaJsonDownload({ notebookId: activeNotebookId, sessionId: activeSessionId });
         },
@@ -545,18 +550,18 @@ export default function WorkspaceLayout() {
       const outputId = overlays.viewerOutputId ?? refine.outputs[0]?.id ?? null;
       if (outputId) {
         cmds.push({
-          id: 'export-output-markdown',
-          label: '导出当前 Output（Markdown，含引用）',
-          icon: '📝',
+          id: "export-output-markdown",
+          label: "导出当前 Output（Markdown，含引用）",
+          icon: "📝",
           action: () => {
             exportOutputMarkdownDownload({ notebookId: activeNotebookId, outputId });
           },
         });
 
         cmds.push({
-          id: 'export-output-json',
-          label: '导出当前 Output（JSON，含引用）',
-          icon: '🧾',
+          id: "export-output-json",
+          label: "导出当前 Output（JSON，含引用）",
+          icon: "🧾",
           action: () => {
             void exportOutputJsonDownload({ notebookId: activeNotebookId, outputId });
           },
@@ -565,23 +570,23 @@ export default function WorkspaceLayout() {
     }
 
     cmds.push({
-      id: slidesTool ? 'open-slides-studio' : 'recover-slides-workflow',
-      label: slidesTool ? '打开 Slides Studio' : '查看 Slides 诊断 / 安装指引',
-      icon: '🖼️',
-      action: slidesTool ? () => overlays.openSlidesDialog('config') : handleOpenSlidesRecovery,
+      id: slidesTool ? "open-slides-studio" : "recover-slides-workflow",
+      label: slidesTool ? "打开 Slides Studio" : "查看 Slides 诊断 / 安装指引",
+      icon: "🖼️",
+      action: slidesTool ? () => overlays.openSlidesDialog("config") : handleOpenSlidesRecovery,
     });
 
     cmds.push({
-      id: 'open-diagnostics',
-      label: '健康 / 诊断',
-      icon: '🩺',
+      id: "open-diagnostics",
+      label: "健康 / 诊断",
+      icon: "🩺",
       action: overlays.openDiagnostics,
     });
 
     cmds.push({
-      id: 'shortcut-help',
-      label: '快捷键帮助',
-      icon: '⌨️',
+      id: "shortcut-help",
+      label: "快捷键帮助",
+      icon: "⌨️",
       action: overlays.openShortcutHelp,
     });
 
@@ -605,23 +610,23 @@ export default function WorkspaceLayout() {
     });
 
     cmds.push({
-      id: 'toggle-lock',
-      label: locked ? '解锁布局（进入编辑模式）' : '锁定布局',
-      icon: locked ? '🔓' : '🔒',
+      id: "toggle-lock",
+      label: locked ? "解锁布局（进入编辑模式）" : "锁定布局",
+      icon: locked ? "🔓" : "🔒",
       action: toggleLock,
     });
 
     cmds.push({
-      id: 'session-search',
-      label: '切换会话',
-      icon: '💬',
+      id: "session-search",
+      label: "切换会话",
+      icon: "💬",
       action: openSessionSearch,
     });
 
     cmds.push({
-      id: 'open-graph',
-      label: '打开知识图谱',
-      icon: '🕸',
+      id: "open-graph",
+      label: "打开知识图谱",
+      icon: "🕸",
       action: overlays.openGraphView,
     });
 
@@ -677,7 +682,7 @@ export default function WorkspaceLayout() {
   const renderWidget = useCallback(
     (widgetId: string) => {
       switch (widgetId) {
-        case 'sources':
+        case "sources":
           return (
             <SourcesPanel
               sources={sources.sources}
@@ -730,7 +735,7 @@ export default function WorkspaceLayout() {
             />
           );
 
-        case 'chat':
+        case "chat":
           return (
             <ChatPanel
               messages={chat.messages}
@@ -763,7 +768,7 @@ export default function WorkspaceLayout() {
             />
           );
 
-        case 'studio':
+        case "studio":
           return (
             <StudioPanel
               tools={refine.tools}
@@ -778,7 +783,7 @@ export default function WorkspaceLayout() {
               onCancelOutputJob={refine.cancelOutputJob}
               onGenerateOutput={refine.onGenerateOutput}
               onOpenSlides={(options) => {
-                const mode = options?.mode ?? 'config';
+                const mode = options?.mode ?? "config";
                 overlays.openSlidesDialog(
                   mode,
                   options?.slideId ?? null,
@@ -834,7 +839,7 @@ export default function WorkspaceLayout() {
         onChange={(event) => {
           sources.handleUpload(event.target.files);
           if (event.target) {
-            event.target.value = '';
+            event.target.value = "";
           }
         }}
       />
@@ -860,10 +865,7 @@ export default function WorkspaceLayout() {
         }}
       />
 
-      <SystemConfigDialog
-        open={overlays.isSystemConfigOpen}
-        onClose={overlays.closeSystemConfig}
-      />
+      <SystemConfigDialog open={overlays.isSystemConfigOpen} onClose={overlays.closeSystemConfig} />
 
       <div className="flex-shrink-0 relative z-10 px-4 pt-1">
         <WorkspaceHeader
@@ -904,7 +906,7 @@ export default function WorkspaceLayout() {
           onFocusSourceSearch={handleFocusSourceSearch}
           onStartSession={handleStartSession}
           onFocusChat={handleFocusChat}
-          onOpenSlidesStudio={() => overlays.openSlidesDialog('config')}
+          onOpenSlidesStudio={() => overlays.openSlidesDialog("config")}
           slidesAvailable={Boolean(slidesTool)}
           slidesRecoveryHint={!slidesTool ? slidesRecoveryHint : null}
           onRecoverSlides={handleOpenSlidesRecovery}

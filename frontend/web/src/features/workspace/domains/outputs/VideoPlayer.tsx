@@ -5,7 +5,7 @@ interface VideoPlayerProps {
 export default function VideoPlayer({ isBlocked }: VideoPlayerProps) {
   return (
     <section
-      className={`MediaPlayerCard ${isBlocked ? 'isBlocked' : ''}`}
+      className={`MediaPlayerCard ${isBlocked ? "isBlocked" : ""}`}
       aria-label="视频概述"
       aria-disabled="true"
     >
@@ -40,12 +40,7 @@ export default function VideoPlayer({ isBlocked }: VideoPlayerProps) {
                 <path d="M8 5v14l11-7-11-7Z" fill="currentColor" />
               </svg>
             </button>
-            <button
-              type="button"
-              className="MediaControlButton"
-              disabled
-              aria-label="切换字幕"
-            >
+            <button type="button" className="MediaControlButton" disabled aria-label="切换字幕">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path
                   d="M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Zm2.5 4.5h3v2h-3v-2Zm5 0h4v2h-4v-2Zm-5 4h7v2h-7v-2Z"
@@ -59,9 +54,7 @@ export default function VideoPlayer({ isBlocked }: VideoPlayerProps) {
       </div>
       <div className="MediaPlayerFooter">
         <span className="MediaMeta">分辨率：1080p · 自动字幕</span>
-        <span className="MediaMeta">
-          {isBlocked ? '请先创建笔记本' : '支持图表抓取与摘要画面'}
-        </span>
+        <span className="MediaMeta">{isBlocked ? "请先创建笔记本" : "支持图表抓取与摘要画面"}</span>
       </div>
     </section>
   );

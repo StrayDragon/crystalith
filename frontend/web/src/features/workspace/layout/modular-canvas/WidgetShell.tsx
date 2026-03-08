@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import ErrorBoundary from '../../shared/components/ErrorBoundary';
+import type { ReactNode } from "react";
+import ErrorBoundary from "../../shared/components/ErrorBoundary";
 
 interface WidgetShellProps {
   icon: ReactNode;
@@ -22,14 +22,14 @@ export default function WidgetShell({
     <div
       className={`flex flex-col h-full rounded-[14px] overflow-hidden bg-white dark:bg-slate-900 border shadow-sm transition-shadow duration-200 ${
         locked
-          ? 'border-gray-200 dark:border-slate-700 hover:shadow-md'
-          : 'border-dashed border-amber-300/40 dark:border-amber-600/30 hover:shadow-md'
+          ? "border-gray-200 dark:border-slate-700 hover:shadow-md"
+          : "border-dashed border-amber-300/40 dark:border-amber-600/30 hover:shadow-md"
       }`}
     >
       {/* Drag handle area */}
       <div
         className={`mc-draghandle flex items-center gap-1.5 px-3 py-2 border-b border-gray-100 dark:border-slate-700 bg-gray-50/60 dark:bg-slate-800/60 flex-shrink-0 select-none ${
-          locked ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'
+          locked ? "cursor-default" : "cursor-grab active:cursor-grabbing"
         }`}
       >
         {icon && <span className="text-sm flex-shrink-0">{icon}</span>}
@@ -37,9 +37,7 @@ export default function WidgetShell({
           {label}
         </span>
 
-        {headerExtras && (
-          <div className="flex items-center gap-1.5">{headerExtras}</div>
-        )}
+        {headerExtras && <div className="flex items-center gap-1.5">{headerExtras}</div>}
 
         <span className="flex-1" />
 
@@ -62,10 +60,7 @@ export default function WidgetShell({
 
       {/* Widget content */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        <ErrorBoundary
-          title={`${label}模块异常`}
-          description={`${label}模块渲染失败，请重试。`}
-        >
+        <ErrorBoundary title={`${label}模块异常`} description={`${label}模块渲染失败，请重试。`}>
           {children}
         </ErrorBoundary>
       </div>

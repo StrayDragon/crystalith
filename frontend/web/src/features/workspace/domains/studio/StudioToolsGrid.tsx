@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from "react";
 import {
   Button,
   Dialog,
@@ -9,19 +9,24 @@ import {
   Textarea,
   Tooltip,
   Typography,
-} from '@material-tailwind/react';
-import { Close as CloseIcon, Edit as EditIcon } from '@mui/icons-material';
+} from "@material-tailwind/react";
+import { Close as CloseIcon, Edit as EditIcon } from "@mui/icons-material";
 
-import { ModelSelector } from './ModelSelector';
-import type { ConfigOption, GenerationPreferenceSetting, OutputTypeId, WorkspaceTool } from '../../shared/types';
-import { useGenerationPreference } from '../../shared/hooks/useGenerationPreference';
-import { useWorkspaceStore } from '../../shared/state/workspaceStore';
-import { getToolIcon, resolveTypeLabel, type StudioTone, TONE_COLORS } from './studioUtils';
+import { ModelSelector } from "./ModelSelector";
+import type {
+  ConfigOption,
+  GenerationPreferenceSetting,
+  OutputTypeId,
+  WorkspaceTool,
+} from "../../shared/types";
+import { useGenerationPreference } from "../../shared/hooks/useGenerationPreference";
+import { useWorkspaceStore } from "../../shared/state/workspaceStore";
+import { getToolIcon, resolveTypeLabel, type StudioTone, TONE_COLORS } from "./studioUtils";
 
 const FALLBACK_QUANTITY_OPTIONS: ConfigOption[] = [
-  { id: 'less', label: '更少', is_default: false },
-  { id: 'standard', label: '标准（默认）', is_default: true },
-  { id: 'more', label: '更多', is_default: false },
+  { id: "less", label: "更少", is_default: false },
+  { id: "standard", label: "标准（默认）", is_default: true },
+  { id: "more", label: "更多", is_default: false },
 ];
 
 interface StudioToolsGridProps {
@@ -30,9 +35,9 @@ interface StudioToolsGridProps {
   toolsError?: string;
   onGenerateOutput: (type?: OutputTypeId, modelId?: string | null) => void;
   onOpenSlides?: (options?: {
-    mode: 'config' | 'preview';
+    mode: "config" | "preview";
     slideId?: number | null;
-    queueStatus?: 'queued' | 'running' | 'error' | 'done' | 'cancelled' | null;
+    queueStatus?: "queued" | "running" | "error" | "done" | "cancelled" | null;
     queueJobId?: string | null;
   }) => void;
   isConnected: boolean;
@@ -53,9 +58,9 @@ export default function StudioToolsGrid({
   const { preference, setPreference } = useGenerationPreference();
   const [toolConfigOpen, setToolConfigOpen] = useState(false);
   const [activeToolType, setActiveToolType] = useState<OutputTypeId | null>(null);
-  const [configQuantity, setConfigQuantity] = useState<string>('standard');
-  const [configDifficulty, setConfigDifficulty] = useState<string>('medium');
-  const [configTopic, setConfigTopic] = useState('');
+  const [configQuantity, setConfigQuantity] = useState<string>("standard");
+  const [configDifficulty, setConfigDifficulty] = useState<string>("medium");
+  const [configTopic, setConfigTopic] = useState("");
   const [configModelId, setConfigModelId] = useState<string | null>(null);
   const activeTool = useMemo(
     () => tools.find((tool) => tool.outputType === activeToolType) ?? null,
@@ -66,7 +71,10 @@ export default function StudioToolsGrid({
     const options = activeToolSchema?.quantity_options ?? [];
     return options.length > 0 ? options : FALLBACK_QUANTITY_OPTIONS;
   }, [activeToolSchema]);
-  const difficultyOptions = useMemo(() => activeToolSchema?.difficulty_options ?? [], [activeToolSchema]);
+  const difficultyOptions = useMemo(
+    () => activeToolSchema?.difficulty_options ?? [],
+    [activeToolSchema],
+  );
   const supportsTopic = activeToolSchema?.supports_topic !== false;
   const topicPlaceholder =
     activeToolSchema?.topic_placeholder ||
@@ -83,8 +91,8 @@ export default function StudioToolsGrid({
   const handleToolConfigOpen = useCallback(
     (event: React.MouseEvent<HTMLElement>, toolType: OutputTypeId) => {
       event.stopPropagation();
-      if (toolType === 'SLIDES') {
-        onOpenSlides?.({ mode: 'config' });
+      if (toolType === "SLIDES") {
+        onOpenSlides?.({ mode: "config" });
         return;
       }
       setActiveToolType(toolType);
@@ -96,9 +104,9 @@ export default function StudioToolsGrid({
           ? schema.quantity_options
           : FALLBACK_QUANTITY_OPTIONS;
       const localDifficultyOptions = schema?.difficulty_options ?? [];
-      setConfigQuantity(localQuantityOptions.find((o) => o.is_default)?.id || 'standard');
-      setConfigDifficulty(localDifficultyOptions.find((o) => o.is_default)?.id || 'medium');
-      setConfigTopic('');
+      setConfigQuantity(localQuantityOptions.find((o) => o.is_default)?.id || "standard");
+      setConfigDifficulty(localDifficultyOptions.find((o) => o.is_default)?.id || "medium");
+      setConfigTopic("");
       setConfigModelId(null);
     },
     [onOpenSlides, tools],
@@ -114,11 +122,9 @@ export default function StudioToolsGrid({
     if (!activeToolType) return;
 
     const quantityLabel =
-      quantityOptions.find((option) => option.id === configQuantity)?.label ??
-      configQuantity;
+      quantityOptions.find((option) => option.id === configQuantity)?.label ?? configQuantity;
     const difficultyLabel =
-      difficultyOptions.find((option) => option.id === configDifficulty)?.label ??
-      configDifficulty;
+      difficultyOptions.find((option) => option.id === configDifficulty)?.label ?? configDifficulty;
 
     const constraints: string[] = [];
     if (configQuantity) {
@@ -136,10 +142,10 @@ export default function StudioToolsGrid({
       promptParts.push(activeTool.prompt.trim());
     }
     if (constraints.length > 0) {
-      promptParts.push(`约束：\n${constraints.join('\n')}`);
+      promptParts.push(`约束：\n${constraints.join("\n")}`);
     }
 
-    const configuredPrompt = promptParts.join('\n\n').trim();
+    const configuredPrompt = promptParts.join("\n\n").trim();
 
     const s = useWorkspaceStore.getState();
     s.setOutputType(activeToolType);
@@ -164,7 +170,7 @@ export default function StudioToolsGrid({
 
   if (toolsLoading) {
     return (
-      <div className={`grid gap-2 ${isFullscreen ? 'grid-cols-3 sm:grid-cols-4' : 'grid-cols-2'}`}>
+      <div className={`grid gap-2 ${isFullscreen ? "grid-cols-3 sm:grid-cols-4" : "grid-cols-2"}`}>
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <div key={i} className="h-8 rounded-lg bg-gray-300 animate-pulse" />
         ))}
@@ -194,16 +200,16 @@ export default function StudioToolsGrid({
 
   return (
     <>
-      <div className={`grid gap-2 ${isFullscreen ? 'grid-cols-3 sm:grid-cols-4' : 'grid-cols-2'}`}>
+      <div className={`grid gap-2 ${isFullscreen ? "grid-cols-3 sm:grid-cols-4" : "grid-cols-2"}`}>
         {tools.map((tool) => {
           const isDisabled = !tool.enabled || !tool.outputType || !hasSelectedSources;
-          const isSlidesTool = tool.outputType === 'SLIDES';
-          const tone = (tool.tone as StudioTone) || 'slate';
+          const isSlidesTool = tool.outputType === "SLIDES";
+          const tone = (tool.tone as StudioTone) || "slate";
           const colors = TONE_COLORS[tone];
 
           const tooltipContent = !hasSelectedSources
-            ? '请先选择来源'
-            : (tool.description || tool.label);
+            ? "请先选择来源"
+            : tool.description || tool.label;
 
           return (
             <Tooltip
@@ -220,7 +226,7 @@ export default function StudioToolsGrid({
                 type="button"
                 disabled={isDisabled}
                 className={`group flex items-center gap-2 px-2 py-1.5 min-h-[34px] w-full rounded-lg border text-left font-semibold text-[11px] transition-all hover:shadow-sm hover:-translate-y-[1px] ${
-                  isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
                 }`}
                 style={{
                   backgroundColor: colors.bg,
@@ -230,7 +236,7 @@ export default function StudioToolsGrid({
                 onClick={() => {
                   if (isDisabled) return;
                   if (isSlidesTool) {
-                    onOpenSlides?.({ mode: 'config' });
+                    onOpenSlides?.({ mode: "config" });
                     return;
                   }
                   onGenerateOutput(tool.outputType);
@@ -258,7 +264,10 @@ export default function StudioToolsGrid({
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    handleToolConfigOpen(e as unknown as React.MouseEvent<HTMLElement>, tool.outputType);
+                    handleToolConfigOpen(
+                      e as unknown as React.MouseEvent<HTMLElement>,
+                      tool.outputType,
+                    );
                   }}
                   aria-label="自定义工具参数"
                 >
@@ -285,7 +294,12 @@ export default function StudioToolsGrid({
               自定义{activeToolType && resolveTypeLabel(activeToolType, typeLabelMap)}
             </Typography>
           </div>
-          <IconButton variant="text" size="sm" onClick={handleToolConfigClose} className="rounded-full">
+          <IconButton
+            variant="text"
+            size="sm"
+            onClick={handleToolConfigClose}
+            className="rounded-full"
+          >
             <CloseIcon className="h-4 w-4" />
           </IconButton>
         </DialogHeader>
@@ -299,14 +313,16 @@ export default function StudioToolsGrid({
                 {quantityOptions.map((option) => (
                   <Button
                     key={option.id}
-                    variant={configQuantity === option.id ? 'filled' : 'outlined'}
+                    variant={configQuantity === option.id ? "filled" : "outlined"}
                     size="sm"
                     onClick={() => setConfigQuantity(option.id)}
                     className={`rounded-full px-3 py-1.5 normal-case font-normal border-gray-200 ${
-                      configQuantity === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
+                      configQuantity === option.id ? "bg-slate-900 text-white" : "text-gray-700"
                     }`}
                   >
-                    {configQuantity === option.id && option.is_default && <span className="mr-1">✓</span>}
+                    {configQuantity === option.id && option.is_default && (
+                      <span className="mr-1">✓</span>
+                    )}
                     {option.label}
                   </Button>
                 ))}
@@ -323,14 +339,16 @@ export default function StudioToolsGrid({
                 {difficultyOptions.map((option) => (
                   <Button
                     key={option.id}
-                    variant={configDifficulty === option.id ? 'filled' : 'outlined'}
+                    variant={configDifficulty === option.id ? "filled" : "outlined"}
                     size="sm"
                     onClick={() => setConfigDifficulty(option.id)}
                     className={`rounded-full px-3 py-1.5 normal-case font-normal border-gray-200 ${
-                      configDifficulty === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
+                      configDifficulty === option.id ? "bg-slate-900 text-white" : "text-gray-700"
                     }`}
                   >
-                    {configDifficulty === option.id && option.is_default && <span className="mr-1">✓</span>}
+                    {configDifficulty === option.id && option.is_default && (
+                      <span className="mr-1">✓</span>
+                    )}
                     {option.label}
                   </Button>
                 ))}
@@ -349,7 +367,7 @@ export default function StudioToolsGrid({
                 onChange={(e) => setConfigTopic(e.target.value)}
                 className="!border-t-blue-gray-200 focus:!border-t-gray-900 min-h-[100px]"
                 labelProps={{
-                  className: 'before:content-none after:content-none',
+                  className: "before:content-none after:content-none",
                 }}
               />
             </div>
@@ -362,9 +380,9 @@ export default function StudioToolsGrid({
             <div className="flex flex-wrap gap-2">
               {(
                 [
-                  { id: 'default', label: '默认' },
-                  { id: 'quality', label: '质量' },
-                  { id: 'speed', label: '速度' },
+                  { id: "default", label: "默认" },
+                  { id: "quality", label: "质量" },
+                  { id: "speed", label: "速度" },
                 ] as const satisfies ReadonlyArray<{
                   id: GenerationPreferenceSetting;
                   label: string;
@@ -372,11 +390,11 @@ export default function StudioToolsGrid({
               ).map((option) => (
                 <Button
                   key={option.id}
-                  variant={preference === option.id ? 'filled' : 'outlined'}
+                  variant={preference === option.id ? "filled" : "outlined"}
                   size="sm"
                   onClick={() => setPreference(option.id)}
                   className={`rounded-full px-3 py-1.5 normal-case font-normal border-gray-200 ${
-                    preference === option.id ? 'bg-slate-900 text-white' : 'text-gray-700'
+                    preference === option.id ? "bg-slate-900 text-white" : "text-gray-700"
                   }`}
                 >
                   {option.label}

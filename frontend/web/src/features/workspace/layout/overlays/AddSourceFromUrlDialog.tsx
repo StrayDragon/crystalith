@@ -1,11 +1,15 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Close as CloseIcon, Link as LinkIcon, CloudDownload as CloudDownloadIcon } from '@mui/icons-material';
+import { useCallback, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  Close as CloseIcon,
+  Link as LinkIcon,
+  CloudDownload as CloudDownloadIcon,
+} from "@mui/icons-material";
 
-import { useLayer } from '../../../../shared/layer';
-import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
+import { useLayer } from "../../../../shared/layer";
+import { useFocusTrap } from "../../shared/hooks/useFocusTrap";
 
-type SourceFromUrlMode = 'link' | 'fetch';
+type SourceFromUrlMode = "link" | "fetch";
 
 interface AddSourceFromUrlDialogProps {
   open: boolean;
@@ -20,20 +24,20 @@ function normalizeUrl(value: string): string {
 
 function isLikelyHttpUrl(value: string): boolean {
   const url = value.trim().toLowerCase();
-  return url.startsWith('http://') || url.startsWith('https://');
+  return url.startsWith("http://") || url.startsWith("https://");
 }
 
 export default function AddSourceFromUrlDialog({
   open,
   onClose,
   onAdd,
-  defaultMode = 'link',
+  defaultMode = "link",
 }: AddSourceFromUrlDialogProps) {
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState("");
   const [mode, setMode] = useState<SourceFromUrlMode>(defaultMode);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isAdding, setIsAdding] = useState(false);
-  const { style: modalStyle } = useLayer('modal');
+  const { style: modalStyle } = useLayer("modal");
   const modalRef = useRef<HTMLDivElement | null>(null);
 
   const canSubmit = useMemo(() => {
@@ -43,8 +47,8 @@ export default function AddSourceFromUrlDialog({
 
   const handleClose = useCallback(() => {
     if (isAdding) return;
-    setUrl('');
-    setError('');
+    setUrl("");
+    setError("");
     setMode(defaultMode);
     onClose();
   }, [defaultMode, isAdding, onClose]);
@@ -53,12 +57,12 @@ export default function AddSourceFromUrlDialog({
     if (!canSubmit) return;
     const normalized = normalizeUrl(url);
     setIsAdding(true);
-    setError('');
+    setError("");
     try {
       await onAdd(normalized, mode);
       handleClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : '添加失败';
+      const message = err instanceof Error ? err.message : "添加失败";
       setError(message);
     } finally {
       setIsAdding(false);
@@ -89,9 +93,7 @@ export default function AddSourceFromUrlDialog({
         className="relative bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-lg mx-4 ux-modal-in"
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-slate-700">
-          <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">
-            从 URL 导入
-          </div>
+          <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">从 URL 导入</div>
           <button
             type="button"
             onClick={handleClose}
@@ -106,11 +108,11 @@ export default function AddSourceFromUrlDialog({
           <div className="flex items-center gap-2 mb-2">
             <button
               type="button"
-              onClick={() => setMode('link')}
+              onClick={() => setMode("link")}
               className={`px-2.5 py-1 rounded-lg border text-xs flex items-center gap-1.5 ${
-                mode === 'link'
-                  ? 'border-gray-900 bg-gray-900 text-white'
-                  : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800'
+                mode === "link"
+                  ? "border-gray-900 bg-gray-900 text-white"
+                  : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
               }`}
             >
               <LinkIcon sx={{ fontSize: 16 }} />
@@ -118,11 +120,11 @@ export default function AddSourceFromUrlDialog({
             </button>
             <button
               type="button"
-              onClick={() => setMode('fetch')}
+              onClick={() => setMode("fetch")}
               className={`px-2.5 py-1 rounded-lg border text-xs flex items-center gap-1.5 ${
-                mode === 'fetch'
-                  ? 'border-gray-900 bg-gray-900 text-white'
-                  : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800'
+                mode === "fetch"
+                  ? "border-gray-900 bg-gray-900 text-white"
+                  : "border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
               }`}
             >
               <CloudDownloadIcon sx={{ fontSize: 16 }} />
@@ -138,7 +140,7 @@ export default function AddSourceFromUrlDialog({
               placeholder="https://example.com/article"
               className="mt-1 w-full h-9 px-3 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-gray-900 dark:text-slate-100 focus:outline-none focus:border-gray-500"
               onKeyDown={(event) => {
-                if (event.key === 'Enter') {
+                if (event.key === "Enter") {
                   event.preventDefault();
                   void handleSubmit();
                 }
@@ -155,9 +157,7 @@ export default function AddSourceFromUrlDialog({
           ) : null}
 
           {error ? (
-            <div className="mt-2 text-[11px] text-red-700 dark:text-red-300">
-              {error}
-            </div>
+            <div className="mt-2 text-[11px] text-red-700 dark:text-red-300">{error}</div>
           ) : null}
 
           <div className="mt-4 flex items-center justify-end gap-2">
@@ -175,11 +175,11 @@ export default function AddSourceFromUrlDialog({
               disabled={!canSubmit}
               className={`px-3 py-1.5 rounded-lg text-xs ${
                 canSubmit
-                  ? 'bg-gray-900 text-white hover:bg-gray-800'
-                  : 'bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-slate-400 cursor-not-allowed'
+                  ? "bg-gray-900 text-white hover:bg-gray-800"
+                  : "bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-slate-400 cursor-not-allowed"
               }`}
             >
-              {isAdding ? '添加中…' : '添加'}
+              {isAdding ? "添加中…" : "添加"}
             </button>
           </div>
         </div>

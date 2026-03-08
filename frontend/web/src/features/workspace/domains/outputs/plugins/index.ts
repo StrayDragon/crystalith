@@ -6,8 +6,8 @@
  * that can be registered with the plugin registry.
  */
 
-import type { ReactNode } from 'react';
-import type { OutputPayload, OutputTypeId } from '../../../shared/types';
+import type { ReactNode } from "react";
+import type { OutputPayload, OutputTypeId } from "../../../shared/types";
 
 /**
  * Configuration option for an output plugin
@@ -47,7 +47,7 @@ export interface OutputPlugin {
   description: string;
 
   /** Color tone for UI theming */
-  tone: 'slate' | 'blue' | 'green' | 'rose' | 'amber' | 'teal' | 'indigo';
+  tone: "slate" | "blue" | "green" | "rose" | "amber" | "teal" | "indigo";
 
   /** Icon component for the output type */
   icon: ReactNode;

@@ -1,4 +1,4 @@
-import type { PointerEventHandler } from 'react';
+import type { PointerEventHandler } from "react";
 
 type WorkspaceResizeHandleProps = {
   ariaLabel: string;
@@ -11,7 +11,7 @@ export default function WorkspaceResizeHandle({
   ariaLabel,
   isResizing,
   onPointerDown,
-  className = '',
+  className = "",
 }: WorkspaceResizeHandleProps) {
   return (
     <button
@@ -22,7 +22,7 @@ export default function WorkspaceResizeHandle({
     >
       <div
         className={`w-0.5 h-12 rounded-full bg-gray-200 transition-colors group-hover:bg-gray-400 ${
-          isResizing ? 'bg-gray-500' : ''
+          isResizing ? "bg-gray-500" : ""
         }`}
       />
     </button>

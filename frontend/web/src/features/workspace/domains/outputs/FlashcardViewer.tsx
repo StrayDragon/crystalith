@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { ProgressIndicator } from './StudioPrimitives';
+import { ProgressIndicator } from "./StudioPrimitives";
 
 export interface FlashcardItem {
   question?: string | null;
@@ -42,24 +42,24 @@ export default function FlashcardViewer({ items, className }: FlashcardViewerPro
     const handleKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const tag = target?.tagName?.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) {
+      if (tag === "input" || tag === "textarea" || tag === "select" || target?.isContentEditable) {
         return;
       }
-      if (event.key === ' ' || event.code === 'Space') {
+      if (event.key === " " || event.code === "Space") {
         event.preventDefault();
         handleFlip();
       }
-      if (event.key === 'ArrowLeft') {
+      if (event.key === "ArrowLeft") {
         event.preventDefault();
         handlePrev();
       }
-      if (event.key === 'ArrowRight') {
+      if (event.key === "ArrowRight") {
         event.preventDefault();
         handleNext();
       }
     };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
   }, [handleFlip, handleNext, handlePrev]);
 
   if (total === 0) {
@@ -76,37 +76,41 @@ export default function FlashcardViewer({ items, className }: FlashcardViewerPro
             className="absolute inset-0 h-full w-full rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:shadow-none"
             onClick={handleFlip}
             aria-pressed={flipped}
-            aria-label={flipped ? '查看问题' : '查看答案'}
+            aria-label={flipped ? "查看问题" : "查看答案"}
           >
             <div
               className="relative h-full w-full rounded-2xl transition-transform duration-200"
               style={{
-                transformStyle: 'preserve-3d',
-                transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                transformStyle: "preserve-3d",
+                transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
               }}
             >
               <div
                 className="absolute inset-0 flex h-full w-full items-center justify-center rounded-2xl px-6 text-center"
-                style={{ backfaceVisibility: 'hidden' }}
+                style={{ backfaceVisibility: "hidden" }}
               >
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-400">问题</div>
+                  <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-400">
+                    问题
+                  </div>
                   <div className="mt-2 text-lg font-semibold text-gray-900 dark:text-slate-100">
-                    {card.question || '暂无问题'}
+                    {card.question || "暂无问题"}
                   </div>
                 </div>
               </div>
               <div
                 className="absolute inset-0 flex h-full w-full items-center justify-center rounded-2xl px-6 text-center"
                 style={{
-                  backfaceVisibility: 'hidden',
-                  transform: 'rotateY(180deg)',
+                  backfaceVisibility: "hidden",
+                  transform: "rotateY(180deg)",
                 }}
               >
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-400">答案</div>
+                  <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-400">
+                    答案
+                  </div>
                   <div className="mt-2 text-lg font-semibold text-gray-900 dark:text-slate-100">
-                    {card.answer || '暂无答案'}
+                    {card.answer || "暂无答案"}
                   </div>
                 </div>
               </div>

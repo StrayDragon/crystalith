@@ -1,13 +1,13 @@
-import { act, waitFor } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
-import { SWRConfig } from 'swr';
-import type { ReactNode } from 'react';
-import { http, HttpResponse } from 'msw';
+import { act, waitFor } from "@testing-library/react";
+import { beforeEach, expect, test, vi } from "vitest";
+import { SWRConfig } from "swr";
+import type { ReactNode } from "react";
+import { http, HttpResponse } from "msw";
 
-import { renderHook } from '../../../../test-utils/renderHook';
-import { server } from '../../../../test-utils/msw/server';
-import { useWorkspaceStore } from '../../shared/state/workspaceStore';
-import { useSources } from './useSources';
+import { renderHook } from "../../../../test-utils/renderHook";
+import { server } from "../../../../test-utils/msw/server";
+import { useWorkspaceStore } from "../../shared/state/workspaceStore";
+import { useSources } from "./useSources";
 
 function wrapSWR({ children }: { children: ReactNode }) {
   return (
@@ -26,42 +26,59 @@ beforeEach(() => {
     sources: [],
     selectedSourceIds: {},
     messages: [],
-    draft: '',
+    draft: "",
     citations: [],
     hoveredCitationChunkId: null,
     hoveredMessageChunkIds: [],
     jumpToCitationChunkId: null,
     outputs: [],
-    outputType: 'FAQ',
-    refineMode: 'paragraph',
-    refinePrompt: '',
+    outputType: "FAQ",
+    refineMode: "paragraph",
+    refinePrompt: "",
     refineJobs: [],
     refineSettings: { autoTrigger: false, asyncQueue: true },
     hasNewOutput: false,
     recentCompletedJobId: null,
-    activePanel: 'chat',
-    createState: 'idle',
-    createName: '',
-    connectionState: 'connecting',
-    uploadState: 'idle',
-    loading: { notebooks: false, sources: false, sessions: false, messages: false, outputs: false, send: false },
-    errors: { notebooks: '', sources: '', sessions: '', messages: '', outputs: '', send: '', create: '' },
+    activePanel: "chat",
+    createState: "idle",
+    createName: "",
+    connectionState: "connecting",
+    uploadState: "idle",
+    loading: {
+      notebooks: false,
+      sources: false,
+      sessions: false,
+      messages: false,
+      outputs: false,
+      send: false,
+    },
+    errors: {
+      notebooks: "",
+      sources: "",
+      sessions: "",
+      messages: "",
+      outputs: "",
+      send: "",
+      create: "",
+    },
   });
 
   server.use(
-    http.get('*/v1/notebooks/:notebook_id/sources', () => HttpResponse.json([])),
-    http.get('*/v1/notebooks/:notebook_id/sources/tags', () => HttpResponse.json([])),
-    http.get('*/v1/notebooks/:notebook_id/sources/extractors', () => HttpResponse.json({ extractors: [] })),
+    http.get("*/v1/notebooks/:notebook_id/sources", () => HttpResponse.json([])),
+    http.get("*/v1/notebooks/:notebook_id/sources/tags", () => HttpResponse.json([])),
+    http.get("*/v1/notebooks/:notebook_id/sources/extractors", () =>
+      HttpResponse.json({ extractors: [] }),
+    ),
   );
 });
 
-test('handleSearch updates queue status and notice on success', async () => {
+test("handleSearch updates queue status and notice on success", async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/sources/search', async ({ request }) => {
+    http.post("*/v1/notebooks/:notebook_id/sources/search", async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
-        results: [{ url: 'https://example.com', title: 'Example' }],
+        results: [{ url: "https://example.com", title: "Example" }],
       });
     }),
   );
@@ -69,41 +86,41 @@ test('handleSearch updates queue status and notice on success', async () => {
   const { result } = renderHook(() => useSources(), { wrapper: wrapSWR });
 
   act(() => {
-    useWorkspaceStore.getState().setConnectionState('live');
+    useWorkspaceStore.getState().setConnectionState("live");
     useWorkspaceStore.getState().setActiveNotebook(1);
   });
 
   await act(async () => {
     await result.current.handleSearch({
-      query: 'hello',
-      engine: 'bing',
-      mode: 'web',
+      query: "hello",
+      engine: "bing",
+      mode: "web",
     });
   });
 
   expect(capturedBody).toEqual({
-    query: 'hello',
-    engine: 'bing',
-    mode: 'web',
+    query: "hello",
+    engine: "bing",
+    mode: "web",
   });
 
   await waitFor(() => {
     expect(result.current.searchQueue).toHaveLength(1);
-    expect(result.current.searchQueue[0].status).toBe('success');
+    expect(result.current.searchQueue[0].status).toBe("success");
   });
 
-  expect(result.current.searchNotice).toBe('已找到 1 条结果。');
+  expect(result.current.searchNotice).toBe("已找到 1 条结果。");
 });
 
-test('removeSources calls batch delete endpoint and refreshes list', async () => {
+test("removeSources calls batch delete endpoint and refreshes list", async () => {
   let deleteCalls = 0;
   let sourceListHits = 0;
   server.use(
-    http.get('*/v1/notebooks/:notebook_id/sources', () => {
+    http.get("*/v1/notebooks/:notebook_id/sources", () => {
       sourceListHits += 1;
       return HttpResponse.json([]);
     }),
-    http.delete('*/v1/notebooks/:notebook_id/sources/batch', async () => {
+    http.delete("*/v1/notebooks/:notebook_id/sources/batch", async () => {
       deleteCalls += 1;
       return HttpResponse.json({
         deleted_count: 2,
@@ -115,7 +132,7 @@ test('removeSources calls batch delete endpoint and refreshes list', async () =>
   const { result } = renderHook(() => useSources(), { wrapper: wrapSWR });
 
   act(() => {
-    useWorkspaceStore.getState().setConnectionState('live');
+    useWorkspaceStore.getState().setConnectionState("live");
     useWorkspaceStore.getState().setActiveNotebook(7);
   });
 
@@ -131,10 +148,10 @@ test('removeSources calls batch delete endpoint and refreshes list', async () =>
   });
 });
 
-test('handleUpload supports multiple files and exposes queue', async () => {
+test("handleUpload supports multiple files and exposes queue", async () => {
   let uploaded = 0;
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/sources', async () => {
+    http.post("*/v1/notebooks/:notebook_id/sources", async () => {
       uploaded += 1;
       return HttpResponse.json({ id: uploaded });
     }),
@@ -143,12 +160,12 @@ test('handleUpload supports multiple files and exposes queue', async () => {
   const { result } = renderHook(() => useSources(), { wrapper: wrapSWR });
 
   act(() => {
-    useWorkspaceStore.getState().setConnectionState('live');
+    useWorkspaceStore.getState().setConnectionState("live");
     useWorkspaceStore.getState().setActiveNotebook(11);
   });
 
-  const fileA = new File(['aaa'], 'a.txt', { type: 'text/plain' });
-  const fileB = new File(['bbb'], 'b.md', { type: 'text/markdown' });
+  const fileA = new File(["aaa"], "a.txt", { type: "text/plain" });
+  const fileB = new File(["bbb"], "b.md", { type: "text/markdown" });
 
   await act(async () => {
     await result.current.handleUpload([fileA, fileB]);
@@ -156,13 +173,13 @@ test('handleUpload supports multiple files and exposes queue', async () => {
 
   expect(uploaded).toBe(2);
   expect(result.current.uploadQueue.length).toBeGreaterThanOrEqual(2);
-  expect(result.current.uploadQueue.every((item: any) => item.status === 'success')).toBe(true);
+  expect(result.current.uploadQueue.every((item: any) => item.status === "success")).toBe(true);
 });
 
-test('batchReembedSources calls dedicated batch endpoint', async () => {
+test("batchReembedSources calls dedicated batch endpoint", async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/sources/batch/re-embed', async ({ request }) => {
+    http.post("*/v1/notebooks/:notebook_id/sources/batch/re-embed", async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         reembedded_count: 2,
@@ -176,7 +193,7 @@ test('batchReembedSources calls dedicated batch endpoint', async () => {
   const { result } = renderHook(() => useSources(), { wrapper: wrapSWR });
 
   act(() => {
-    useWorkspaceStore.getState().setConnectionState('live');
+    useWorkspaceStore.getState().setConnectionState("live");
     useWorkspaceStore.getState().setActiveNotebook(9);
   });
 
@@ -189,10 +206,10 @@ test('batchReembedSources calls dedicated batch endpoint', async () => {
   expect(capturedBody).toEqual({ source_ids: [5, 6] });
 });
 
-test('assignTagToSources sends selected source ids', async () => {
+test("assignTagToSources sends selected source ids", async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/sources/tags/:tag_id/sources', async ({ request }) => {
+    http.post("*/v1/notebooks/:notebook_id/sources/tags/:tag_id/sources", async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         tag_id: 3,
@@ -205,7 +222,7 @@ test('assignTagToSources sends selected source ids', async () => {
   const { result } = renderHook(() => useSources(), { wrapper: wrapSWR });
 
   act(() => {
-    useWorkspaceStore.getState().setConnectionState('live');
+    useWorkspaceStore.getState().setConnectionState("live");
     useWorkspaceStore.getState().setActiveNotebook(12);
   });
 

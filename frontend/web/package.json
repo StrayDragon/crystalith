@@ -2,7 +2,27 @@
   "name": "crystalith-web",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@10.29.2",
+  "scripts": {
+    "start": "vite",
+    "predev": "bash ../../scripts/ensure_frontend_web_ready.sh",
+    "dev": "vite",
+    "prebuild": "bash ../../scripts/ensure_frontend_web_ready.sh",
+    "build": "vite build",
+    "prepreview": "bash ../../scripts/ensure_frontend_web_ready.sh",
+    "preview": "vite preview",
+    "pretest": "bash ../../scripts/ensure_frontend_web_ready.sh",
+    "lint": "node ./scripts/oxlint-changed.mjs",
+    "lint:all": "oxlint --config .oxlintrc.json --tsconfig tsconfig.json ./src",
+    "test": "vitest",
+    "pretypecheck": "bash ../../scripts/ensure_frontend_web_ready.sh",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "api:generate": "openapi-ts -i ./openapi.json -o ./src/api/generated -c @hey-api/client-fetch",
+    "api:fetch": "cd ../../backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.json",
+    "api:sync": "pnpm run api:fetch && pnpm run api:generate",
+    "api:check": "cd ../../backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.json",
+    "format": "oxfmt --write \"src/**/*.{ts,tsx,js,jsx,css}\" \"scripts/**/*.{js,mjs,cjs}\" \"!src/api/generated/**\" package.json tsconfig.json tsconfig.node.json vite.config.ts .oxlintrc.json .oxfmtrc.json",
+    "format:check": "oxfmt --check \"src/**/*.{ts,tsx,js,jsx,css}\" \"scripts/**/*.{js,mjs,cjs}\" \"!src/api/generated/**\" package.json tsconfig.json tsconfig.node.json vite.config.ts .oxlintrc.json .oxfmtrc.json"
+  },
   "dependencies": {
     "@ag-ui/core": "^0.0.47",
     "@material-tailwind/react": "^2.1.10",
@@ -29,30 +49,27 @@
     "zod-to-json-schema": "^3.25.1",
     "zustand": "^5.0.10"
   },
-  "scripts": {
-    "start": "vite",
-    "predev": "bash ../../scripts/ensure_frontend_web_ready.sh",
-    "dev": "vite",
-    "prebuild": "bash ../../scripts/ensure_frontend_web_ready.sh",
-    "build": "vite build",
-    "prepreview": "bash ../../scripts/ensure_frontend_web_ready.sh",
-    "preview": "vite preview",
-    "pretest": "bash ../../scripts/ensure_frontend_web_ready.sh",
-    "lint": "biome lint --changed --no-errors-on-unmatched ./src",
-    "lint:all": "biome lint ./src",
-    "test": "vitest",
-    "pretypecheck": "bash ../../scripts/ensure_frontend_web_ready.sh",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "api:generate": "openapi-ts -i ./openapi.json -o ./src/api/generated -c @hey-api/client-fetch",
-    "api:fetch": "cd ../../backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.json",
-    "api:sync": "pnpm run api:fetch && pnpm run api:generate",
-    "api:check": "cd ../../backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.json"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.90.8",
+    "@types/d3-array": "^3.2.2",
+    "@types/d3-scale": "^4.0.9",
+    "@types/d3-shape": "^3.1.8",
+    "@types/node": "^22.18.6",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.8",
+    "@vitejs/plugin-react": "^4.7.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "autoprefixer": "^10.4.23",
+    "jsdom": "^26.1.0",
+    "msw": "^2.12.10",
+    "oxfmt": "0.36.0",
+    "oxlint": "1.51.0",
+    "postcss": "^8.5.6",
+    "tailwind-scrollbar": "^3.1.0",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3",
+    "vitest": "^3.2.4"
   },
   "browserslist": {
     "production": [
@@ -66,25 +83,5 @@
       "last 1 safari version"
     ]
   },
-  "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
-    "@hey-api/openapi-ts": "^0.90.8",
-    "@types/d3-array": "^3.2.2",
-    "@types/d3-scale": "^4.0.9",
-    "@types/d3-shape": "^3.1.8",
-    "@types/node": "^22.18.6",
-    "@types/react": "^19.1.12",
-    "@types/react-dom": "^19.1.8",
-    "@vitejs/plugin-react": "^4.7.0",
-    "@vitest/coverage-v8": "^3.2.4",
-    "autoprefixer": "^10.4.23",
-    "jsdom": "^26.1.0",
-    "msw": "^2.12.10",
-    "postcss": "^8.5.6",
-    "tailwind-scrollbar": "^3.1.0",
-    "tailwindcss": "^3.4.19",
-    "typescript": "^5.9.2",
-    "vite": "^7.1.3",
-    "vitest": "^3.2.4"
-  }
+  "packageManager": "pnpm@10.29.2"
 }

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from "react";
 import {
   Button,
   IconButton,
@@ -8,7 +8,7 @@ import {
   MenuList,
   Spinner,
   Typography,
-} from '@material-tailwind/react';
+} from "@material-tailwind/react";
 import {
   ContentCopy as CopyIcon,
   Delete as DeleteIcon,
@@ -17,19 +17,19 @@ import {
   OpenInFull as OpenInFullIcon,
   Cancel as CancelIcon,
   Download as DownloadIcon,
-} from '@mui/icons-material';
-import { Virtuoso } from 'react-virtuoso';
+} from "@mui/icons-material";
+import { Virtuoso } from "react-virtuoso";
 
-import type { Citation, OutputItem, OutputTypeId } from '../../shared/types';
-import { getSlideIdFromOutput } from '../../shared/outputPayload';
-import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
-import ConfirmPopover from '../../../../shared/ConfirmPopover';
-import { LAYER_LEVELS } from '../../../../shared/layer';
-import { copyToClipboard } from '../../../../shared/clipboard';
-import { collectOutputCitations, formatStructuredOutputForCopy } from '../../shared/utils';
-import { EXPORT_FORMAT_LABELS } from '../outputs/exporters';
-import { useExport } from '../outputs/useExport';
-import { SkeletonCard } from '../../shared/components/Skeleton';
+import type { Citation, OutputItem, OutputTypeId } from "../../shared/types";
+import { getSlideIdFromOutput } from "../../shared/outputPayload";
+import type { OutputQueueJob } from "../../shared/hooks/useOutputQueue";
+import ConfirmPopover from "../../../../shared/ConfirmPopover";
+import { LAYER_LEVELS } from "../../../../shared/layer";
+import { copyToClipboard } from "../../../../shared/clipboard";
+import { collectOutputCitations, formatStructuredOutputForCopy } from "../../shared/utils";
+import { EXPORT_FORMAT_LABELS } from "../outputs/exporters";
+import { useExport } from "../outputs/useExport";
+import { SkeletonCard } from "../../shared/components/Skeleton";
 import {
   getToolIcon,
   resolveNoteMeta,
@@ -37,7 +37,7 @@ import {
   resolveTone,
   resolveTypeLabel,
   TONE_COLORS,
-} from './studioUtils';
+} from "./studioUtils";
 
 interface StudioOutputsListProps {
   outputs: OutputItem[];
@@ -53,9 +53,9 @@ interface StudioOutputsListProps {
   onConvertToSource?: (outputId: number) => void;
   onJumpToCitation?: (citation: Citation, citations: Citation[]) => void;
   onOpenSlides?: (options?: {
-    mode: 'config' | 'preview';
+    mode: "config" | "preview";
     slideId?: number | null;
-    queueStatus?: 'queued' | 'running' | 'error' | 'done' | 'cancelled' | null;
+    queueStatus?: "queued" | "running" | "error" | "done" | "cancelled" | null;
     queueJobId?: string | null;
   }) => void;
   typeLabelMap: Map<OutputTypeId, string>;
@@ -76,14 +76,14 @@ type PendingNote = {
   title: string;
   meta: string;
   type: OutputTypeId;
-  status: 'queued' | 'running' | 'error' | 'cancelled';
+  status: "queued" | "running" | "error" | "cancelled";
   slideId?: number | null;
   queueJobId?: string;
 };
 
 type StudioListItem =
-  | { kind: 'pending'; key: string; note: PendingNote }
-  | { kind: 'output'; key: string; note: StudioNote };
+  | { kind: "pending"; key: string; note: PendingNote }
+  | { kind: "output"; key: string; note: StudioNote };
 
 export default function StudioOutputsList({
   outputs,
@@ -153,31 +153,37 @@ export default function StudioOutputsList({
 
   const pendingNotes = useMemo<PendingNote[]>(() => {
     const statusLabels = {
-      queued: '排队中',
-      running: '生成中',
-      error: '生成失败',
-      cancelled: '已取消',
-    } satisfies Record<PendingNote['status'], string>;
+      queued: "排队中",
+      running: "生成中",
+      error: "生成失败",
+      cancelled: "已取消",
+    } satisfies Record<PendingNote["status"], string>;
     return outputQueueJobs
-      .filter((job) => job.status === 'queued' || job.status === 'running' || job.status === 'error' || job.status === 'cancelled')
+      .filter(
+        (job) =>
+          job.status === "queued" ||
+          job.status === "running" ||
+          job.status === "error" ||
+          job.status === "cancelled",
+      )
       .map((job) => {
         const typeLabel = resolveTypeLabel(job.type, typeLabelMap);
         const sourceLabel = job.sourceIds.length
           ? `基于 ${job.sourceIds.length} 个来源`
-          : '未选择来源';
-        const statusLabel = statusLabels[job.status as PendingNote['status']] || job.status;
+          : "未选择来源";
+        const statusLabel = statusLabels[job.status as PendingNote["status"]] || job.status;
         return {
           id: `pending-${job.id}`,
           title:
-            job.status === 'error'
+            job.status === "error"
               ? `${typeLabel} 生成失败`
-              : job.status === 'cancelled'
+              : job.status === "cancelled"
                 ? `${typeLabel} 已取消`
                 : `生成${typeLabel}...`,
           meta: `${sourceLabel} · ${statusLabel}`,
           type: job.type,
-          status: job.status as PendingNote['status'],
-          slideId: job.type === 'SLIDES' ? job.draftId ?? null : null,
+          status: job.status as PendingNote["status"],
+          slideId: job.type === "SLIDES" ? (job.draftId ?? null) : null,
           queueJobId: job.id,
         };
       });
@@ -189,8 +195,8 @@ export default function StudioOutputsList({
 
   const listItems = useMemo<StudioListItem[]>(
     () => [
-      ...pendingNotes.map((note) => ({ kind: 'pending' as const, key: note.id, note })),
-      ...notes.map((note) => ({ kind: 'output' as const, key: note.id, note })),
+      ...pendingNotes.map((note) => ({ kind: "pending" as const, key: note.id, note })),
+      ...notes.map((note) => ({ kind: "output" as const, key: note.id, note })),
     ],
     [notes, pendingNotes],
   );
@@ -209,7 +215,10 @@ export default function StudioOutputsList({
           <Typography variant="small" className="text-gray-700 dark:text-slate-200 font-semibold">
             选择来源 → 点击工具卡片生成
           </Typography>
-          <Typography variant="small" className="text-[11px] text-gray-500 dark:text-slate-400 mt-1">
+          <Typography
+            variant="small"
+            className="text-[11px] text-gray-500 dark:text-slate-400 mt-1"
+          >
             生成后的内容会显示在这里，可继续转换为来源或导出。
           </Typography>
         </div>
@@ -221,25 +230,33 @@ export default function StudioOutputsList({
           data={listItems}
           computeItemKey={(_index, item) => item.key}
           itemContent={(_index, item) => {
-            if (item.kind === 'pending') {
+            if (item.kind === "pending") {
               const note = item.note;
               const tone = resolveTone(note.type);
               const colors = TONE_COLORS[tone];
-              const isError = note.status === 'error';
-              const isCancelled = note.status === 'cancelled';
-              const canOpenSlides = note.type === 'SLIDES' && note.slideId;
+              const isError = note.status === "error";
+              const isCancelled = note.status === "cancelled";
+              const canOpenSlides = note.type === "SLIDES" && note.slideId;
 
               const content = (
                 <>
                   <div
                     className={`flex items-center justify-center w-6 h-6 rounded-md border border-dashed flex-shrink-0 ${
                       isError
-                        ? 'bg-red-50 border-red-300 text-red-500'
+                        ? "bg-red-50 border-red-300 text-red-500"
                         : isCancelled
-                          ? 'bg-gray-50 dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-400 dark:text-slate-500'
-                          : ''
+                          ? "bg-gray-50 dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-400 dark:text-slate-500"
+                          : ""
                     }`}
-                    style={!isError ? { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text } : undefined}
+                    style={
+                      !isError
+                        ? {
+                            backgroundColor: colors.bg,
+                            borderColor: colors.border,
+                            color: colors.text,
+                          }
+                        : undefined
+                    }
                   >
                     {isError ? (
                       <span className="text-xs font-bold">!</span>
@@ -253,7 +270,11 @@ export default function StudioOutputsList({
                     <Typography
                       variant="small"
                       className={`font-medium leading-snug truncate ${
-                        isError ? 'text-red-700' : isCancelled ? 'text-gray-600 dark:text-slate-300' : 'text-gray-900 dark:text-slate-100'
+                        isError
+                          ? "text-red-700"
+                          : isCancelled
+                            ? "text-gray-600 dark:text-slate-300"
+                            : "text-gray-900 dark:text-slate-100"
                       }`}
                     >
                       {note.title}
@@ -261,7 +282,11 @@ export default function StudioOutputsList({
                     <Typography
                       variant="small"
                       className={`text-[10px] font-medium leading-tight ${
-                        isError ? 'text-red-500' : isCancelled ? 'text-gray-500 dark:text-slate-400' : 'text-gray-600 dark:text-slate-300'
+                        isError
+                          ? "text-red-500"
+                          : isCancelled
+                            ? "text-gray-500 dark:text-slate-400"
+                            : "text-gray-600 dark:text-slate-300"
                       }`}
                     >
                       {note.meta}
@@ -274,9 +299,15 @@ export default function StudioOutputsList({
                 return (
                   <div
                     className={`flex items-center gap-2 p-2 rounded-lg border border-dashed mb-2 ux-slide-in ${
-                      isCancelled ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700' : ''
+                      isCancelled
+                        ? "bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700"
+                        : ""
                     }`}
-                    style={!isCancelled ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border } : undefined}
+                    style={
+                      !isCancelled
+                        ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border }
+                        : undefined
+                    }
                   >
                     <button
                       type="button"
@@ -284,7 +315,7 @@ export default function StudioOutputsList({
                       onClick={() => {
                         if (!note.slideId) return;
                         onOpenSlides?.({
-                          mode: 'preview',
+                          mode: "preview",
                           slideId: note.slideId,
                           queueStatus: note.status,
                           queueJobId: note.queueJobId ?? null,
@@ -309,9 +340,17 @@ export default function StudioOutputsList({
               return (
                 <div
                   className={`flex items-center gap-2 p-2 rounded-lg border border-dashed mb-2 ux-slide-in ${
-                    isError ? 'bg-red-50/80 border-red-200' : isCancelled ? 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700' : ''
+                    isError
+                      ? "bg-red-50/80 border-red-200"
+                      : isCancelled
+                        ? "bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700"
+                        : ""
                   }`}
-                  style={!isError && !isCancelled ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border } : undefined}
+                  style={
+                    !isError && !isCancelled
+                      ? { backgroundColor: `${colors.bg}80`, borderColor: colors.border }
+                      : undefined
+                  }
                 >
                   {content}
                   {isError && onRetryOutputJob && note.queueJobId ? (
@@ -340,7 +379,7 @@ export default function StudioOutputsList({
             const tone = resolveTone(note.type);
             const colors = TONE_COLORS[tone];
             const output = note.outputId
-              ? outputs.find((candidate) => candidate.id === note.outputId) ?? null
+              ? (outputs.find((candidate) => candidate.id === note.outputId) ?? null)
               : null;
             const exportFormats = output ? getSupportedFormats(output.type) : [];
 
@@ -351,8 +390,8 @@ export default function StudioOutputsList({
                   className="flex flex-1 items-center gap-2 p-2 text-left min-w-0"
                   data-testid="studio-output-item"
                   onClick={() => {
-                    if (note.type === 'SLIDES' && note.slideId) {
-                      onOpenSlides?.({ mode: 'preview', slideId: note.slideId });
+                    if (note.type === "SLIDES" && note.slideId) {
+                      onOpenSlides?.({ mode: "preview", slideId: note.slideId });
                       return;
                     }
                     if (!note.outputId) return;
@@ -402,7 +441,10 @@ export default function StudioOutputsList({
                         <MoreHorizIcon fontSize="small" />
                       </IconButton>
                     </MenuHandler>
-                    <MenuList className="p-1 min-w-[140px]" style={{ zIndex: LAYER_LEVELS.dropdown }}>
+                    <MenuList
+                      className="p-1 min-w-[140px]"
+                      style={{ zIndex: LAYER_LEVELS.dropdown }}
+                    >
                       {onSelectOutputFullscreen && note.outputId && (
                         <MenuItem
                           onClick={() => onSelectOutputFullscreen(note.outputId!)}
@@ -412,22 +454,25 @@ export default function StudioOutputsList({
                           <span>放大查看</span>
                         </MenuItem>
                       )}
-                      {output && exportFormats.map((format) => (
-                        <MenuItem
-                          key={`${note.id}-${format}`}
-                          onClick={() => {
-                            void exportOutput(output, format);
-                          }}
-                          className="flex items-center justify-between gap-2 py-2 px-3 text-xs"
-                          disabled={isExporting}
-                        >
-                          <span className="inline-flex items-center gap-2">
-                            <DownloadIcon className="h-3.5 w-3.5" />
-                            导出为 {EXPORT_FORMAT_LABELS[format]}
-                          </span>
-                          {isExporting && activeFormat === format ? <Spinner className="h-3.5 w-3.5" /> : null}
-                        </MenuItem>
-                      ))}
+                      {output &&
+                        exportFormats.map((format) => (
+                          <MenuItem
+                            key={`${note.id}-${format}`}
+                            onClick={() => {
+                              void exportOutput(output, format);
+                            }}
+                            className="flex items-center justify-between gap-2 py-2 px-3 text-xs"
+                            disabled={isExporting}
+                          >
+                            <span className="inline-flex items-center gap-2">
+                              <DownloadIcon className="h-3.5 w-3.5" />
+                              导出为 {EXPORT_FORMAT_LABELS[format]}
+                            </span>
+                            {isExporting && activeFormat === format ? (
+                              <Spinner className="h-3.5 w-3.5" />
+                            ) : null}
+                          </MenuItem>
+                        ))}
                       <MenuItem
                         onClick={() => handleConvertToSource(note.id)}
                         className="flex items-center gap-2 py-2 px-3 text-xs"

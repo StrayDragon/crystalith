@@ -1,20 +1,20 @@
-import type { MouseEvent as ReactMouseEvent } from 'react';
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import type { MouseEvent as ReactMouseEvent } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Add as AddIcon,
   Close as CloseIcon,
   ContentCopy as ContentCopyIcon,
   Edit as EditIcon,
   Refresh as RefreshIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
-import ConfirmPopover from '../../../../shared/ConfirmPopover';
-import { copyToClipboard } from '../../../../shared/clipboard';
-import { useLayer } from '../../../../shared/layer';
-import { toast } from '../../../../shared/toast';
-import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
-import { usePromptPresets } from '../../shared/hooks/usePromptPresets';
+import ConfirmPopover from "../../../../shared/ConfirmPopover";
+import { copyToClipboard } from "../../../../shared/clipboard";
+import { useLayer } from "../../../../shared/layer";
+import { toast } from "../../../../shared/toast";
+import { useFocusTrap } from "../../shared/hooks/useFocusTrap";
+import { usePromptPresets } from "../../shared/hooks/usePromptPresets";
 
 const TRIGGER_RE = /^[a-z0-9_-]{1,32}$/;
 
@@ -23,7 +23,7 @@ interface SystemConfigDialogProps {
   onClose: () => void;
 }
 
-type EditorMode = 'create' | 'edit';
+type EditorMode = "create" | "edit";
 
 interface EditorState {
   mode: EditorMode;
@@ -34,16 +34,16 @@ interface EditorState {
   enabled: boolean;
 }
 
-function labelForSource(source: 'builtin' | 'custom') {
-  return source === 'builtin' ? '内置' : '自定义';
+function labelForSource(source: "builtin" | "custom") {
+  return source === "builtin" ? "内置" : "自定义";
 }
 
 function toTextareaValue(value: string | null | undefined) {
-  return (value ?? '').toString();
+  return (value ?? "").toString();
 }
 
 export default function SystemConfigDialog({ open, onClose }: SystemConfigDialogProps) {
-  const { style: modalStyle } = useLayer('modal');
+  const { style: modalStyle } = useLayer("modal");
   const modalRef = useRef<HTMLDivElement | null>(null);
 
   const {
@@ -69,13 +69,16 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
   });
 
   const builtinPresets = useMemo(
-    () => presets.filter((item) => item.source === 'builtin').sort((a, b) => a.trigger.localeCompare(b.trigger)),
+    () =>
+      presets
+        .filter((item) => item.source === "builtin")
+        .sort((a, b) => a.trigger.localeCompare(b.trigger)),
     [presets],
   );
   const customPresets = useMemo(
     () =>
       presets
-        .filter((item) => item.source === 'custom')
+        .filter((item) => item.source === "custom")
         .sort((a, b) => a.trigger.localeCompare(b.trigger)),
     [presets],
   );
@@ -91,50 +94,56 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
 
   const startCreate = useCallback(() => {
     setEditor({
-      mode: 'create',
+      mode: "create",
       presetId: null,
-      trigger: '',
-      description: '',
-      systemPrompt: '',
+      trigger: "",
+      description: "",
+      systemPrompt: "",
       enabled: true,
     });
   }, []);
 
-  const startEdit = useCallback((preset: (typeof customPresets)[number]) => {
-    setEditor({
-      mode: 'edit',
-      presetId: preset.preset_id ?? null,
-      trigger: preset.trigger,
-      description: preset.description ?? '',
-      systemPrompt: preset.system_prompt,
-      enabled: preset.enabled,
-    });
-  }, [customPresets]);
+  const startEdit = useCallback(
+    (preset: (typeof customPresets)[number]) => {
+      setEditor({
+        mode: "edit",
+        presetId: preset.preset_id ?? null,
+        trigger: preset.trigger,
+        description: preset.description ?? "",
+        systemPrompt: preset.system_prompt,
+        enabled: preset.enabled,
+      });
+    },
+    [customPresets],
+  );
 
-  const startCopyBuiltin = useCallback((preset: (typeof builtinPresets)[number]) => {
-    const base = preset.trigger ? `${preset.trigger}-copy` : 'custom';
-    setEditor({
-      mode: 'create',
-      presetId: null,
-      trigger: base.slice(0, 32),
-      description: preset.description ?? '',
-      systemPrompt: preset.system_prompt,
-      enabled: true,
-    });
-  }, [builtinPresets]);
+  const startCopyBuiltin = useCallback(
+    (preset: (typeof builtinPresets)[number]) => {
+      const base = preset.trigger ? `${preset.trigger}-copy` : "custom";
+      setEditor({
+        mode: "create",
+        presetId: null,
+        trigger: base.slice(0, 32),
+        description: preset.description ?? "",
+        systemPrompt: preset.system_prompt,
+        enabled: true,
+      });
+    },
+    [builtinPresets],
+  );
 
   const handleCopySystemPrompt = useCallback(async (systemPrompt: string) => {
     await copyToClipboard(systemPrompt);
-    toast.success('已复制 system prompt');
+    toast.success("已复制 system prompt");
   }, []);
 
   const validateTrigger = useCallback((value: string) => {
     const normalized = value.trim().toLowerCase();
-    if (!normalized) return { ok: false, value: normalized, message: '触发词不能为空' };
+    if (!normalized) return { ok: false, value: normalized, message: "触发词不能为空" };
     if (!TRIGGER_RE.test(normalized)) {
-      return { ok: false, value: normalized, message: '触发词需匹配 [a-z0-9_-]{1,32}' };
+      return { ok: false, value: normalized, message: "触发词需匹配 [a-z0-9_-]{1,32}" };
     }
-    return { ok: true, value: normalized, message: '' };
+    return { ok: true, value: normalized, message: "" };
   }, []);
 
   const saveEditor = useCallback(async () => {
@@ -146,26 +155,26 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
     }
     const systemPrompt = editor.systemPrompt.trim();
     if (!systemPrompt) {
-      toast.error('system prompt 不能为空');
+      toast.error("system prompt 不能为空");
       return;
     }
 
     setSaving(true);
     try {
-      if (editor.mode === 'create') {
+      if (editor.mode === "create") {
         await createCustomPreset({
           trigger: triggerResult.value,
           description: editor.description.trim() || null,
           systemPrompt,
           enabled: editor.enabled,
         });
-        toast.success('已创建预设');
+        toast.success("已创建预设");
         setEditor(null);
         return;
       }
 
       if (!editor.presetId) {
-        toast.error('无效 preset id');
+        toast.error("无效 preset id");
         return;
       }
 
@@ -175,7 +184,7 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
         systemPrompt,
         enabled: editor.enabled,
       });
-      toast.success('已更新预设');
+      toast.success("已更新预设");
       setEditor(null);
     } catch (err) {
       toast.error(String(err));
@@ -219,7 +228,8 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
               系统配置
             </div>
             <div className="mt-0.5 text-[11px] text-gray-600 dark:text-slate-400">
-              管理 Chat 输入的 <span className="font-mono">/prompt:&lt;id&gt;</span> 预设（触发词 / 描述 / system prompt / 启用状态）
+              管理 Chat 输入的 <span className="font-mono">/prompt:&lt;id&gt;</span> 预设（触发词 /
+              描述 / system prompt / 启用状态）
             </div>
           </div>
 
@@ -272,7 +282,7 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
             <div className="mb-5 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
               <div className="flex items-center justify-between gap-2">
                 <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">
-                  {editor.mode === 'create' ? '新建预设' : '编辑预设'}
+                  {editor.mode === "create" ? "新建预设" : "编辑预设"}
                 </div>
                 <button
                   type="button"
@@ -290,7 +300,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                   </div>
                   <input
                     value={editor.trigger}
-                    onChange={(e) => setEditor((prev) => (prev ? { ...prev, trigger: e.target.value } : prev))}
+                    onChange={(e) =>
+                      setEditor((prev) => (prev ? { ...prev, trigger: e.target.value } : prev))
+                    }
                     className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm font-mono text-gray-900 dark:text-slate-100"
                     placeholder="demo"
                     disabled={saving}
@@ -306,7 +318,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                   </div>
                   <input
                     value={editor.description}
-                    onChange={(e) => setEditor((prev) => (prev ? { ...prev, description: e.target.value } : prev))}
+                    onChange={(e) =>
+                      setEditor((prev) => (prev ? { ...prev, description: e.target.value } : prev))
+                    }
                     className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-gray-900 dark:text-slate-100"
                     placeholder="一句话说明这个 preset 的用途…"
                     disabled={saving}
@@ -331,7 +345,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                 </div>
                 <textarea
                   value={editor.systemPrompt}
-                  onChange={(e) => setEditor((prev) => (prev ? { ...prev, systemPrompt: e.target.value } : prev))}
+                  onChange={(e) =>
+                    setEditor((prev) => (prev ? { ...prev, systemPrompt: e.target.value } : prev))
+                  }
                   className="mt-1 w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm font-mono text-gray-900 dark:text-slate-100 min-h-[140px]"
                   placeholder="写入将覆盖 QA 的 system message 的内容…"
                   disabled={saving}
@@ -343,7 +359,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                   <input
                     type="checkbox"
                     checked={editor.enabled}
-                    onChange={(e) => setEditor((prev) => (prev ? { ...prev, enabled: e.target.checked } : prev))}
+                    onChange={(e) =>
+                      setEditor((prev) => (prev ? { ...prev, enabled: e.target.checked } : prev))
+                    }
                     disabled={saving}
                   />
                   启用
@@ -355,7 +373,7 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                   className="px-3 py-2 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold hover:bg-slate-800 dark:hover:bg-slate-200 disabled:opacity-60 disabled:cursor-not-allowed"
                   disabled={saving}
                 >
-                  {saving ? '保存中…' : '保存'}
+                  {saving ? "保存中…" : "保存"}
                 </button>
               </div>
             </div>
@@ -405,7 +423,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                           </button>
                           <button
                             type="button"
-                            onClick={() => void handleCopySystemPrompt(toTextareaValue(preset.system_prompt))}
+                            onClick={() =>
+                              void handleCopySystemPrompt(toTextareaValue(preset.system_prompt))
+                            }
                             className="px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-white/80 dark:hover:bg-slate-800 text-[11px] flex items-center gap-1"
                           >
                             <ContentCopyIcon sx={{ fontSize: 14 }} />
@@ -443,7 +463,7 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                     const presetId = preset.preset_id ?? null;
                     return (
                       <div
-                        key={`custom:${preset.trigger}:${presetId ?? 'na'}`}
+                        key={`custom:${preset.trigger}:${presetId ?? "na"}`}
                         className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3"
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -474,7 +494,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                                 <input
                                   type="checkbox"
                                   checked={preset.enabled}
-                                  onChange={(e) => void toggleCustomEnabled(presetId, e.target.checked)}
+                                  onChange={(e) =>
+                                    void toggleCustomEnabled(presetId, e.target.checked)
+                                  }
                                 />
                                 启用
                               </label>
@@ -494,7 +516,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                               message={`确认删除 /prompt:${preset.trigger} ?`}
                               onConfirm={() => {
                                 if (!presetId) return;
-                                void deleteCustomPreset(presetId).then(() => toast.success('已删除预设'));
+                                void deleteCustomPreset(presetId).then(() =>
+                                  toast.success("已删除预设"),
+                                );
                               }}
                               placement="top"
                               disabled={!presetId}
@@ -517,7 +541,9 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                           <div className="mt-2 flex items-center justify-end">
                             <button
                               type="button"
-                              onClick={() => void handleCopySystemPrompt(toTextareaValue(preset.system_prompt))}
+                              onClick={() =>
+                                void handleCopySystemPrompt(toTextareaValue(preset.system_prompt))
+                              }
                               className="text-[11px] px-2 py-1 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1"
                             >
                               <ContentCopyIcon sx={{ fontSize: 14 }} />

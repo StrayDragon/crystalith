@@ -5,13 +5,13 @@
  * 这个文件覆盖了必要的类型声明来消除 TypeScript 错误
  */
 
-import type { ComponentProps, ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from "react";
 
-declare module '@material-tailwind/react' {
+declare module "@material-tailwind/react" {
   // Typography
   export interface TypographyProps {
     children?: ReactNode;
-    variant?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'lead' | 'paragraph' | 'small';
+    variant?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "lead" | "paragraph" | "small";
     color?: string;
     className?: string;
     as?: React.ElementType;
@@ -21,10 +21,10 @@ declare module '@material-tailwind/react' {
   export const Typography: React.FC<TypographyProps>;
 
   // Button
-  export interface ButtonProps extends Omit<ComponentProps<'button'>, 'ref'> {
+  export interface ButtonProps extends Omit<ComponentProps<"button">, "ref"> {
     children?: ReactNode;
-    variant?: 'filled' | 'outlined' | 'gradient' | 'text';
-    size?: 'sm' | 'md' | 'lg';
+    variant?: "filled" | "outlined" | "gradient" | "text";
+    size?: "sm" | "md" | "lg";
     color?: string;
     fullWidth?: boolean;
     ripple?: boolean;
@@ -36,10 +36,10 @@ declare module '@material-tailwind/react' {
   export const Button: React.FC<ButtonProps>;
 
   // IconButton
-  export interface IconButtonProps extends Omit<ComponentProps<'button'>, 'ref'> {
+  export interface IconButtonProps extends Omit<ComponentProps<"button">, "ref"> {
     children?: ReactNode;
-    variant?: 'filled' | 'outlined' | 'gradient' | 'text';
-    size?: 'sm' | 'md' | 'lg';
+    variant?: "filled" | "outlined" | "gradient" | "text";
+    size?: "sm" | "md" | "lg";
     color?: string;
     ripple?: boolean;
     className?: string;
@@ -49,9 +49,9 @@ declare module '@material-tailwind/react' {
   export const IconButton: React.FC<IconButtonProps>;
 
   // Input
-  export interface InputProps extends Omit<ComponentProps<'input'>, 'ref' | 'size'> {
-    variant?: 'standard' | 'outlined' | 'static';
-    size?: 'md' | 'lg';
+  export interface InputProps extends Omit<ComponentProps<"input">, "ref" | "size"> {
+    variant?: "standard" | "outlined" | "static";
+    size?: "md" | "lg";
     color?: string;
     label?: string;
     error?: boolean;
@@ -67,7 +67,7 @@ declare module '@material-tailwind/react' {
   export const Input: React.FC<InputProps>;
 
   // Checkbox
-  export interface CheckboxProps extends Omit<ComponentProps<'input'>, 'ref'> {
+  export interface CheckboxProps extends Omit<ComponentProps<"input">, "ref"> {
     color?: string;
     label?: ReactNode;
     icon?: ReactNode;
@@ -91,9 +91,9 @@ declare module '@material-tailwind/react' {
   export const Spinner: React.FC<SpinnerProps>;
 
   // Card
-  export interface CardProps extends Omit<ComponentProps<'div'>, 'ref'> {
+  export interface CardProps extends Omit<ComponentProps<"div">, "ref"> {
     children?: ReactNode;
-    variant?: 'filled' | 'gradient';
+    variant?: "filled" | "gradient";
     color?: string;
     shadow?: boolean;
     className?: string;
@@ -101,7 +101,7 @@ declare module '@material-tailwind/react' {
   }
   export const Card: React.FC<CardProps>;
 
-  export interface CardBodyProps extends Omit<ComponentProps<'div'>, 'ref'> {
+  export interface CardBodyProps extends Omit<ComponentProps<"div">, "ref"> {
     children?: ReactNode;
     className?: string;
     [key: string]: unknown;
@@ -111,8 +111,8 @@ declare module '@material-tailwind/react' {
   // Chip
   export interface ChipProps {
     children?: ReactNode;
-    variant?: 'filled' | 'gradient' | 'outlined' | 'ghost';
-    size?: 'sm' | 'md' | 'lg';
+    variant?: "filled" | "gradient" | "outlined" | "ghost";
+    size?: "sm" | "md" | "lg";
     color?: string;
     icon?: ReactNode;
     open?: boolean;
@@ -131,7 +131,7 @@ declare module '@material-tailwind/react' {
     children?: ReactNode;
     open: boolean;
     handler?: (value: boolean) => void;
-    size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+    size?: "xs" | "sm" | "md" | "lg" | "xl" | "xxl";
     dismiss?: object;
     animate?: object;
     className?: string;
@@ -139,14 +139,14 @@ declare module '@material-tailwind/react' {
   }
   export const Dialog: React.FC<DialogProps>;
 
-  export interface DialogHeaderProps extends Omit<ComponentProps<'div'>, 'ref'> {
+  export interface DialogHeaderProps extends Omit<ComponentProps<"div">, "ref"> {
     children?: ReactNode;
     className?: string;
     [key: string]: unknown;
   }
   export const DialogHeader: React.FC<DialogHeaderProps>;
 
-  export interface DialogBodyProps extends Omit<ComponentProps<'div'>, 'ref'> {
+  export interface DialogBodyProps extends Omit<ComponentProps<"div">, "ref"> {
     children?: ReactNode;
     className?: string;
     divider?: boolean;
@@ -154,7 +154,7 @@ declare module '@material-tailwind/react' {
   }
   export const DialogBody: React.FC<DialogBodyProps>;
 
-  export interface DialogFooterProps extends Omit<ComponentProps<'div'>, 'ref'> {
+  export interface DialogFooterProps extends Omit<ComponentProps<"div">, "ref"> {
     children?: ReactNode;
     className?: string;
     [key: string]: unknown;
@@ -180,7 +180,7 @@ declare module '@material-tailwind/react' {
   }
   export const PopoverHandler: React.FC<PopoverHandlerProps>;
 
-  export interface PopoverContentProps extends Omit<ComponentProps<'div'>, 'ref'> {
+  export interface PopoverContentProps extends Omit<ComponentProps<"div">, "ref"> {
     children?: ReactNode;
     className?: string;
     [key: string]: unknown;
@@ -208,14 +208,14 @@ declare module '@material-tailwind/react' {
   }
   export const MenuHandler: React.FC<MenuHandlerProps>;
 
-  export interface MenuListProps extends Omit<ComponentProps<'ul'>, 'ref'> {
+  export interface MenuListProps extends Omit<ComponentProps<"ul">, "ref"> {
     children?: ReactNode;
     className?: string;
     [key: string]: unknown;
   }
   export const MenuList: React.FC<MenuListProps>;
 
-  export interface MenuItemProps extends Omit<ComponentProps<'li'>, 'ref'> {
+  export interface MenuItemProps extends Omit<ComponentProps<"li">, "ref"> {
     children?: ReactNode;
     disabled?: boolean;
     className?: string;
@@ -226,8 +226,8 @@ declare module '@material-tailwind/react' {
   // Select
   export interface SelectProps {
     children?: ReactNode;
-    variant?: 'standard' | 'outlined' | 'static';
-    size?: 'md' | 'lg';
+    variant?: "standard" | "outlined" | "static";
+    size?: "md" | "lg";
     color?: string;
     label?: string;
     error?: boolean;
@@ -250,7 +250,7 @@ declare module '@material-tailwind/react' {
   }
   export const Select: React.FC<SelectProps>;
 
-  export interface OptionProps extends Omit<ComponentProps<'li'>, 'ref'> {
+  export interface OptionProps extends Omit<ComponentProps<"li">, "ref"> {
     children?: ReactNode;
     value: string;
     index?: number;
@@ -263,7 +263,7 @@ declare module '@material-tailwind/react' {
   // Alert
   export interface AlertProps {
     children?: ReactNode;
-    variant?: 'filled' | 'gradient' | 'outlined' | 'ghost';
+    variant?: "filled" | "gradient" | "outlined" | "ghost";
     color?: string;
     icon?: ReactNode;
     open?: boolean;
@@ -276,9 +276,9 @@ declare module '@material-tailwind/react' {
   export const Alert: React.FC<AlertProps>;
 
   // Avatar
-  export interface AvatarProps extends Omit<ComponentProps<'img'>, 'ref'> {
-    variant?: 'circular' | 'rounded' | 'square';
-    size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+  export interface AvatarProps extends Omit<ComponentProps<"img">, "ref"> {
+    variant?: "circular" | "rounded" | "square";
+    size?: "xs" | "sm" | "md" | "lg" | "xl" | "xxl";
     className?: string;
     withBorder?: boolean;
     color?: string;
@@ -287,14 +287,14 @@ declare module '@material-tailwind/react' {
   export const Avatar: React.FC<AvatarProps>;
 
   // List
-  export interface ListProps extends Omit<ComponentProps<'ul'>, 'ref'> {
+  export interface ListProps extends Omit<ComponentProps<"ul">, "ref"> {
     children?: ReactNode;
     className?: string;
     [key: string]: unknown;
   }
   export const List: React.FC<ListProps>;
 
-  export interface ListItemProps extends Omit<ComponentProps<'li'>, 'ref'> {
+  export interface ListItemProps extends Omit<ComponentProps<"li">, "ref"> {
     children?: ReactNode;
     className?: string;
     selected?: boolean;
@@ -304,14 +304,14 @@ declare module '@material-tailwind/react' {
   }
   export const ListItem: React.FC<ListItemProps>;
 
-  export interface ListItemPrefixProps extends Omit<ComponentProps<'div'>, 'ref'> {
+  export interface ListItemPrefixProps extends Omit<ComponentProps<"div">, "ref"> {
     children?: ReactNode;
     className?: string;
     [key: string]: unknown;
   }
   export const ListItemPrefix: React.FC<ListItemPrefixProps>;
 
-  export interface ListItemSuffixProps extends Omit<ComponentProps<'div'>, 'ref'> {
+  export interface ListItemSuffixProps extends Omit<ComponentProps<"div">, "ref"> {
     children?: ReactNode;
     className?: string;
     [key: string]: unknown;
@@ -335,9 +335,9 @@ declare module '@material-tailwind/react' {
   export const Tooltip: React.FC<TooltipProps>;
 
   // Textarea
-  export interface TextareaProps extends Omit<ComponentProps<'textarea'>, 'ref' | 'size'> {
-    variant?: 'standard' | 'outlined' | 'static';
-    size?: 'md' | 'lg';
+  export interface TextareaProps extends Omit<ComponentProps<"textarea">, "ref" | "size"> {
+    variant?: "standard" | "outlined" | "static";
+    size?: "md" | "lg";
     color?: string;
     label?: string;
     error?: boolean;
@@ -352,9 +352,9 @@ declare module '@material-tailwind/react' {
   export const Textarea: React.FC<TextareaProps>;
 
   // Progress
-  export interface ProgressProps extends Omit<ComponentProps<'div'>, 'ref'> {
+  export interface ProgressProps extends Omit<ComponentProps<"div">, "ref"> {
     value?: number;
-    size?: 'sm' | 'md' | 'lg';
+    size?: "sm" | "md" | "lg";
     color?: string;
     label?: ReactNode;
     className?: string;
@@ -363,16 +363,16 @@ declare module '@material-tailwind/react' {
   export const Progress: React.FC<ProgressProps>;
 
   // Tabs
-  export interface TabsProps extends Omit<ComponentProps<'div'>, 'ref'> {
+  export interface TabsProps extends Omit<ComponentProps<"div">, "ref"> {
     value?: string | number;
-    orientation?: 'horizontal' | 'vertical';
+    orientation?: "horizontal" | "vertical";
     className?: string;
     children?: ReactNode;
     [key: string]: unknown;
   }
   export const Tabs: React.FC<TabsProps>;
 
-  export interface TabsHeaderProps extends Omit<ComponentProps<'div'>, 'ref'> {
+  export interface TabsHeaderProps extends Omit<ComponentProps<"div">, "ref"> {
     indicatorProps?: Record<string, unknown>;
     className?: string;
     children?: ReactNode;
@@ -380,7 +380,7 @@ declare module '@material-tailwind/react' {
   }
   export const TabsHeader: React.FC<TabsHeaderProps>;
 
-  export interface TabsBodyProps extends Omit<ComponentProps<'div'>, 'ref'> {
+  export interface TabsBodyProps extends Omit<ComponentProps<"div">, "ref"> {
     animate?: Record<string, unknown>;
     className?: string;
     children?: ReactNode;
@@ -388,7 +388,7 @@ declare module '@material-tailwind/react' {
   }
   export const TabsBody: React.FC<TabsBodyProps>;
 
-  export interface TabProps extends Omit<ComponentProps<'button'>, 'ref'> {
+  export interface TabProps extends Omit<ComponentProps<"button">, "ref"> {
     value: string | number;
     className?: string;
     activeClassName?: string;
@@ -398,7 +398,7 @@ declare module '@material-tailwind/react' {
   }
   export const Tab: React.FC<TabProps>;
 
-  export interface TabPanelProps extends Omit<ComponentProps<'div'>, 'ref'> {
+  export interface TabPanelProps extends Omit<ComponentProps<"div">, "ref"> {
     value: string | number;
     className?: string;
     children?: ReactNode;

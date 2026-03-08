@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
-import { IconButton, Typography } from '@material-tailwind/react';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { useMemo } from "react";
+import { IconButton, Typography } from "@material-tailwind/react";
+import { Close as CloseIcon } from "@mui/icons-material";
 
-import { useLayer } from '../../../shared/layer';
-import type { ShortcutCategory, WorkspaceShortcutDefinition } from '../shared/shortcuts';
+import { useLayer } from "../../../shared/layer";
+import type { ShortcutCategory, WorkspaceShortcutDefinition } from "../shared/shortcuts";
 
 interface ShortcutHelpPanelProps {
   open: boolean;
@@ -11,11 +11,11 @@ interface ShortcutHelpPanelProps {
   onClose: () => void;
 }
 
-const CATEGORY_ORDER: ShortcutCategory[] = ['导航', '操作', '编辑'];
+const CATEGORY_ORDER: ShortcutCategory[] = ["导航", "操作", "编辑"];
 
 function renderShortcutCombo(combo: string) {
   return combo
-    .split('+')
+    .split("+")
     .map((part) => part.trim())
     .filter(Boolean)
     .map((part) => (
@@ -29,7 +29,7 @@ function renderShortcutCombo(combo: string) {
 }
 
 export default function ShortcutHelpPanel({ open, shortcuts, onClose }: ShortcutHelpPanelProps) {
-  const { style: modalStyle } = useLayer('modal', 20);
+  const { style: modalStyle } = useLayer("modal", 20);
 
   const groupedShortcuts = useMemo(() => {
     const groups = new Map<ShortcutCategory, WorkspaceShortcutDefinition[]>();
@@ -61,7 +61,10 @@ export default function ShortcutHelpPanel({ open, shortcuts, onClose }: Shortcut
       >
         <header className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-slate-700">
           <div className="space-y-0.5">
-            <Typography variant="h6" className="text-base font-semibold text-gray-900 dark:text-slate-100">
+            <Typography
+              variant="h6"
+              className="text-base font-semibold text-gray-900 dark:text-slate-100"
+            >
               快捷键帮助
             </Typography>
             <Typography variant="small" className="text-xs text-gray-500 dark:text-slate-400">
@@ -87,7 +90,10 @@ export default function ShortcutHelpPanel({ open, shortcuts, onClose }: Shortcut
 
               return (
                 <section key={category} className="space-y-2">
-                  <Typography variant="small" className="text-xs font-semibold tracking-wide text-gray-500 dark:text-slate-400">
+                  <Typography
+                    variant="small"
+                    className="text-xs font-semibold tracking-wide text-gray-500 dark:text-slate-400"
+                  >
                     {category}
                   </Typography>
                   <div className="space-y-2">
@@ -96,10 +102,16 @@ export default function ShortcutHelpPanel({ open, shortcuts, onClose }: Shortcut
                         key={shortcut.id}
                         className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/70"
                       >
-                        <Typography variant="small" className="text-sm text-gray-700 dark:text-slate-200">
+                        <Typography
+                          variant="small"
+                          className="text-sm text-gray-700 dark:text-slate-200"
+                        >
                           {shortcut.description}
                         </Typography>
-                        <div className="flex items-center gap-1.5" aria-label={`快捷键 ${shortcut.combo}`}>
+                        <div
+                          className="flex items-center gap-1.5"
+                          aria-label={`快捷键 ${shortcut.combo}`}
+                        >
                           {renderShortcutCombo(shortcut.combo)}
                         </div>
                       </div>

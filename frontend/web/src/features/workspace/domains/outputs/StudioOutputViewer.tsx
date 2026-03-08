@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from "react";
 import {
   Menu,
   MenuHandler,
@@ -7,18 +7,25 @@ import {
   IconButton,
   Typography,
   Tooltip,
-} from '@material-tailwind/react';
-import { MoreVert as MoreVertIcon, Delete as DeleteIcon, FileDownload as DownloadIcon } from '@mui/icons-material';
+} from "@material-tailwind/react";
+import {
+  MoreVert as MoreVertIcon,
+  Delete as DeleteIcon,
+  FileDownload as DownloadIcon,
+} from "@mui/icons-material";
 
-import type { Citation, OutputItem } from '../../shared/types';
-import { getOutputTitle } from '../../shared/outputPayload';
-import { collectOutputCitations, formatRelativeTime } from '../../shared/utils';
-import CitationsControl from '../../shared/components/citations/CitationsControl';
-import OutputContent from './OutputContent';
-import ConfirmPopover from '../../../../shared/ConfirmPopover';
-import { useLayer } from '../../../../shared/layer';
-import { useWorkspaceStore } from '../../shared/state/workspaceStore';
-import { exportOutputJsonDownload, exportOutputMarkdownDownload } from '../../shared/evidenceExport';
+import type { Citation, OutputItem } from "../../shared/types";
+import { getOutputTitle } from "../../shared/outputPayload";
+import { collectOutputCitations, formatRelativeTime } from "../../shared/utils";
+import CitationsControl from "../../shared/components/citations/CitationsControl";
+import OutputContent from "./OutputContent";
+import ConfirmPopover from "../../../../shared/ConfirmPopover";
+import { useLayer } from "../../../../shared/layer";
+import { useWorkspaceStore } from "../../shared/state/workspaceStore";
+import {
+  exportOutputJsonDownload,
+  exportOutputMarkdownDownload,
+} from "../../shared/evidenceExport";
 
 interface StudioOutputViewerProps {
   outputs: OutputItem[];
@@ -42,7 +49,7 @@ function resolveOutputMeta(output: OutputItem): string {
     formatRelativeTime(output.createdAtRaw ?? output.updatedAtRaw) ||
     output.createdAt ||
     output.updatedAt ||
-    '刚刚';
+    "刚刚";
   if (count > 0) {
     return `基于 ${count} 个来源 · ${relative}`;
   }
@@ -76,25 +83,28 @@ export default function StudioOutputViewer({
     [selectedOutput],
   );
 
-  const handleDelete = useCallback((outputId: number) => {
-    if (outputId && onDeleteOutput) {
-      onDeleteOutput(outputId);
-      // If deleting currently selected, close viewer if no more outputs
-      if (outputId === selectedOutputId && outputs.length <= 1) {
-        onClose();
+  const handleDelete = useCallback(
+    (outputId: number) => {
+      if (outputId && onDeleteOutput) {
+        onDeleteOutput(outputId);
+        // If deleting currently selected, close viewer if no more outputs
+        if (outputId === selectedOutputId && outputs.length <= 1) {
+          onClose();
+        }
       }
-    }
-    setActiveMenuId(null);
-  }, [onDeleteOutput, outputs, selectedOutputId, onClose]);
+      setActiveMenuId(null);
+    },
+    [onDeleteOutput, outputs, selectedOutputId, onClose],
+  );
 
   // 使用 slot 参数来提升 z-index（当从其他 modal 如知识图谱中打开时）
-  const { style: modalStyle } = useLayer('modal', elevated ? 10 : 0);
+  const { style: modalStyle } = useLayer("modal", elevated ? 10 : 0);
 
   if (!isOpen) return null;
 
   return (
     <div
-      className={`fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm ${isFullscreen ? 'p-0' : 'p-4 sm:p-6'}`}
+      className={`fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm ${isFullscreen ? "p-0" : "p-4 sm:p-6"}`}
       style={modalStyle}
       role="dialog"
       aria-modal="true"
@@ -104,18 +114,21 @@ export default function StudioOutputViewer({
       <div
         className={`flex flex-col overflow-hidden bg-white shadow-2xl transition-all dark:bg-slate-900 ${
           isFullscreen
-            ? 'h-full w-full rounded-none'
-            : 'h-[85vh] w-[90vw] max-w-6xl rounded-2xl border border-gray-300 dark:border-slate-700'
+            ? "h-full w-full rounded-none"
+            : "h-[85vh] w-[90vw] max-w-6xl rounded-2xl border border-gray-300 dark:border-slate-700"
         }`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 sm:px-6 dark:border-slate-700">
           <div className="flex flex-col min-w-0">
-            <Typography variant="h6" className="text-lg font-semibold text-gray-900 truncate dark:text-slate-100">
-              {selectedOutput ? getOutputTitle(selectedOutput) : '暂无输出'}
+            <Typography
+              variant="h6"
+              className="text-lg font-semibold text-gray-900 truncate dark:text-slate-100"
+            >
+              {selectedOutput ? getOutputTitle(selectedOutput) : "暂无输出"}
             </Typography>
             <Typography variant="small" className="text-gray-600 font-medium dark:text-slate-300">
-              {selectedOutput ? resolveOutputMeta(selectedOutput) : '请先生成输出内容'}
+              {selectedOutput ? resolveOutputMeta(selectedOutput) : "请先生成输出内容"}
             </Typography>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -134,13 +147,17 @@ export default function StudioOutputViewer({
                 </MenuHandler>
                 <MenuList className="p-1 min-w-[160px] dark:bg-slate-900 dark:border-slate-700">
                   <MenuItem
-                    onClick={() => exportOutputMarkdownDownload({ notebookId, outputId: selectedOutput.id })}
+                    onClick={() =>
+                      exportOutputMarkdownDownload({ notebookId, outputId: selectedOutput.id })
+                    }
                     className="flex items-center gap-2 py-2 px-3 text-xs"
                   >
                     <span>导出 Markdown</span>
                   </MenuItem>
                   <MenuItem
-                    onClick={() => void exportOutputJsonDownload({ notebookId, outputId: selectedOutput.id })}
+                    onClick={() =>
+                      void exportOutputJsonDownload({ notebookId, outputId: selectedOutput.id })
+                    }
                     className="flex items-center gap-2 py-2 px-3 text-xs"
                   >
                     <span>导出 JSON</span>
@@ -148,7 +165,7 @@ export default function StudioOutputViewer({
                 </MenuList>
               </Menu>
             ) : null}
-            <Tooltip content={isFullscreen ? '退出全屏' : '进入全屏'}>
+            <Tooltip content={isFullscreen ? "退出全屏" : "进入全屏"}>
               <IconButton
                 variant="text"
                 className="rounded-full text-gray-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -184,12 +201,17 @@ export default function StudioOutputViewer({
         </div>
         <div className="flex flex-1 min-h-0">
           <aside className="flex flex-col w-64 border-r border-gray-200 bg-gray-100/50 p-3 flex-shrink-0 dark:border-slate-700 dark:bg-slate-800/60">
-            <Typography variant="small" className="mb-2 font-semibold text-gray-600 text-xs px-2 dark:text-slate-300">
+            <Typography
+              variant="small"
+              className="mb-2 font-semibold text-gray-600 text-xs px-2 dark:text-slate-300"
+            >
               输出预览
             </Typography>
             {outputs.length === 0 ? (
               <div className="p-4 text-center border border-dashed border-gray-300 rounded-lg dark:border-slate-600">
-                <Typography variant="small" className="text-gray-500 dark:text-slate-400">暂无输出</Typography>
+                <Typography variant="small" className="text-gray-500 dark:text-slate-400">
+                  暂无输出
+                </Typography>
               </div>
             ) : (
               <div className="flex flex-col gap-1 overflow-y-auto flex-1">
@@ -199,7 +221,9 @@ export default function StudioOutputViewer({
                     <div
                       key={output.id}
                       className={`group relative flex items-center rounded-lg transition-colors ${
-                        isActive ? 'bg-white shadow-sm border border-gray-300 dark:bg-slate-800 dark:border-slate-600' : 'hover:bg-gray-200 border border-gray-200 dark:hover:bg-slate-800 dark:border-slate-700'
+                        isActive
+                          ? "bg-white shadow-sm border border-gray-300 dark:bg-slate-800 dark:border-slate-600"
+                          : "hover:bg-gray-200 border border-gray-200 dark:hover:bg-slate-800 dark:border-slate-700"
                       }`}
                     >
                       <button
@@ -210,11 +234,14 @@ export default function StudioOutputViewer({
                       >
                         <Typography
                           variant="small"
-                          className={`truncate text-sm ${isActive ? 'font-semibold text-gray-900 dark:text-slate-100' : 'font-medium text-gray-800 dark:text-slate-300'}`}
+                          className={`truncate text-sm ${isActive ? "font-semibold text-gray-900 dark:text-slate-100" : "font-medium text-gray-800 dark:text-slate-300"}`}
                         >
                           {getOutputTitle(output)}
                         </Typography>
-                        <Typography variant="small" className="text-[10px] text-gray-500 font-medium mt-0.5 truncate dark:text-slate-400">
+                        <Typography
+                          variant="small"
+                          className="text-[10px] text-gray-500 font-medium mt-0.5 truncate dark:text-slate-400"
+                        >
                           {resolveOutputMeta(output)}
                         </Typography>
                       </button>
@@ -226,7 +253,9 @@ export default function StudioOutputViewer({
                                 variant="text"
                                 size="sm"
                                 className={`rounded-full w-7 h-7 text-gray-500 opacity-0 transition-opacity dark:text-slate-300 dark:hover:bg-slate-700 ${
-                                  isActive || activeMenuId === output.id ? 'opacity-100' : 'group-hover:opacity-100'
+                                  isActive || activeMenuId === output.id
+                                    ? "opacity-100"
+                                    : "group-hover:opacity-100"
                                 }`}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -262,7 +291,10 @@ export default function StudioOutputViewer({
             {outputCitations.length > 0 ? (
               <div className="mt-6 border-t border-gray-100 pt-4 dark:border-slate-700">
                 <div className="flex items-center justify-between">
-                  <Typography variant="small" className="text-xs font-semibold text-gray-600 dark:text-slate-300">
+                  <Typography
+                    variant="small"
+                    className="text-xs font-semibold text-gray-600 dark:text-slate-300"
+                  >
                     引用
                   </Typography>
                   <CitationsControl

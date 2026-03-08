@@ -1,14 +1,14 @@
-import { act, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import type { ReactNode } from 'react';
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import type { ReactNode } from "react";
 
-import type { OutputItem } from '../../shared/types';
-import { useWorkspaceStore } from '../../shared/state/workspaceStore';
-import OutputContent from './OutputContent';
-import { useExport } from './useExport';
+import type { OutputItem } from "../../shared/types";
+import { useWorkspaceStore } from "../../shared/state/workspaceStore";
+import OutputContent from "./OutputContent";
+import { useExport } from "./useExport";
 
 // Mock reason: isolate OutputContent menu/dispatch behavior from export implementation side effects.
-vi.mock('./useExport', () => ({
+vi.mock("./useExport", () => ({
   useExport: vi.fn(),
 }));
 
@@ -16,9 +16,9 @@ let resolveBundleModule: ((value: { render: () => ReactNode }) => void) | null =
 let bundleModulePromise: Promise<{ render: () => ReactNode }> | null = null;
 
 // Mock reason: avoid relying on actual dynamic imports in unit tests.
-vi.mock('../../../../plugins/official/registry', () => ({
+vi.mock("../../../../plugins/official/registry", () => ({
   getBuiltinBundleLoader: (id: string) => {
-    if (id !== 'output-quiz') return null;
+    if (id !== "output-quiz") return null;
     if (!bundleModulePromise) {
       bundleModulePromise = new Promise((resolve) => {
         resolveBundleModule = resolve;
@@ -30,15 +30,15 @@ vi.mock('../../../../plugins/official/registry', () => ({
 
 const useExportMock = vi.mocked(useExport);
 
-function createOutput(type: OutputItem['type'], content: Record<string, unknown>): OutputItem {
+function createOutput(type: OutputItem["type"], content: Record<string, unknown>): OutputItem {
   return {
     id: 1,
     type,
     prompt: `${type} prompt`,
     chunkIds: [1],
     content,
-    createdAt: '2026-01-01 10:00',
-    updatedAt: '2026-01-01 10:00',
+    createdAt: "2026-01-01 10:00",
+    updatedAt: "2026-01-01 10:00",
   };
 }
 
@@ -49,7 +49,7 @@ beforeEach(() => {
   useExportMock.mockReturnValue({
     isExporting: false,
     activeFormat: null,
-    getSupportedFormats: () => ['markdown'],
+    getSupportedFormats: () => ["markdown"],
     exportOutput: vi.fn(),
   });
 
@@ -64,19 +64,19 @@ afterEach(async () => {
   });
 });
 
-test('renders with frontend_bundle renderer when available', async () => {
+test("renders with frontend_bundle renderer when available", async () => {
   useWorkspaceStore.getState().setOutputTypeFrontendBundles({
     QUIZ: {
-      api_version: 'v1',
-      kind: 'builtin',
-      id: 'output-quiz',
-      export: 'render',
+      api_version: "v1",
+      kind: "builtin",
+      id: "output-quiz",
+      export: "render",
       meta: {},
     },
   });
 
-  const output = createOutput('QUIZ', {
-    questions: [{ question: '2+2?', options: ['3', '4'], answer: '4' }],
+  const output = createOutput("QUIZ", {
+    questions: [{ question: "2+2?", options: ["3", "4"], answer: "4" }],
   });
 
   await act(async () => {
@@ -90,5 +90,5 @@ test('renders with frontend_bundle renderer when available', async () => {
     await bundleModulePromise;
   });
 
-  expect(screen.getByText('BUNDLE_RENDERED')).toBeInTheDocument();
+  expect(screen.getByText("BUNDLE_RENDERED")).toBeInTheDocument();
 });

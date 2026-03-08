@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useState } from "react";
 import {
   Button,
   Typography,
@@ -7,7 +7,7 @@ import {
   Tooltip,
   Card,
   CardBody,
-} from '@material-tailwind/react';
+} from "@material-tailwind/react";
 import {
   Refresh as RefreshIcon,
   Hub as HubIcon,
@@ -16,9 +16,9 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Circle as CircleIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
-import type { AnalysisResult, Topic, Relation } from '../../../../api/generated';
+import type { AnalysisResult, Topic, Relation } from "../../../../api/generated";
 
 interface AnalysisPanelProps {
   analysis: AnalysisResult | null;
@@ -31,14 +31,54 @@ interface AnalysisPanelProps {
 
 // Color palette for topics
 const TOPIC_COLORS = [
-  { bg: 'bg-blue-50 dark:bg-blue-500/10', border: 'border-blue-200 dark:border-blue-500/30', text: 'text-blue-700 dark:text-blue-300', dot: 'bg-blue-500' },
-  { bg: 'bg-green-50 dark:bg-green-500/10', border: 'border-green-200 dark:border-green-500/30', text: 'text-green-700 dark:text-green-300', dot: 'bg-green-500' },
-  { bg: 'bg-amber-50 dark:bg-amber-500/10', border: 'border-amber-200 dark:border-amber-500/30', text: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' },
-  { bg: 'bg-purple-50 dark:bg-purple-500/10', border: 'border-purple-200 dark:border-purple-500/30', text: 'text-purple-700 dark:text-purple-300', dot: 'bg-purple-500' },
-  { bg: 'bg-rose-50 dark:bg-rose-500/10', border: 'border-rose-200 dark:border-rose-500/30', text: 'text-rose-700 dark:text-rose-300', dot: 'bg-rose-500' },
-  { bg: 'bg-teal-50 dark:bg-teal-500/10', border: 'border-teal-200 dark:border-teal-500/30', text: 'text-teal-700 dark:text-teal-300', dot: 'bg-teal-500' },
-  { bg: 'bg-indigo-50 dark:bg-indigo-500/10', border: 'border-indigo-200 dark:border-indigo-500/30', text: 'text-indigo-700 dark:text-indigo-300', dot: 'bg-indigo-500' },
-  { bg: 'bg-orange-50 dark:bg-orange-500/10', border: 'border-orange-200 dark:border-orange-500/30', text: 'text-orange-700 dark:text-orange-300', dot: 'bg-orange-500' },
+  {
+    bg: "bg-blue-50 dark:bg-blue-500/10",
+    border: "border-blue-200 dark:border-blue-500/30",
+    text: "text-blue-700 dark:text-blue-300",
+    dot: "bg-blue-500",
+  },
+  {
+    bg: "bg-green-50 dark:bg-green-500/10",
+    border: "border-green-200 dark:border-green-500/30",
+    text: "text-green-700 dark:text-green-300",
+    dot: "bg-green-500",
+  },
+  {
+    bg: "bg-amber-50 dark:bg-amber-500/10",
+    border: "border-amber-200 dark:border-amber-500/30",
+    text: "text-amber-700 dark:text-amber-300",
+    dot: "bg-amber-500",
+  },
+  {
+    bg: "bg-purple-50 dark:bg-purple-500/10",
+    border: "border-purple-200 dark:border-purple-500/30",
+    text: "text-purple-700 dark:text-purple-300",
+    dot: "bg-purple-500",
+  },
+  {
+    bg: "bg-rose-50 dark:bg-rose-500/10",
+    border: "border-rose-200 dark:border-rose-500/30",
+    text: "text-rose-700 dark:text-rose-300",
+    dot: "bg-rose-500",
+  },
+  {
+    bg: "bg-teal-50 dark:bg-teal-500/10",
+    border: "border-teal-200 dark:border-teal-500/30",
+    text: "text-teal-700 dark:text-teal-300",
+    dot: "bg-teal-500",
+  },
+  {
+    bg: "bg-indigo-50 dark:bg-indigo-500/10",
+    border: "border-indigo-200 dark:border-indigo-500/30",
+    text: "text-indigo-700 dark:text-indigo-300",
+    dot: "bg-indigo-500",
+  },
+  {
+    bg: "bg-orange-50 dark:bg-orange-500/10",
+    border: "border-orange-200 dark:border-orange-500/30",
+    text: "text-orange-700 dark:text-orange-300",
+    dot: "bg-orange-500",
+  },
 ];
 
 function getTopicColor(index: number) {
@@ -54,11 +94,7 @@ function TopicCard({ topic, index }: { topic: Topic; index: number }) {
     <div
       className={`rounded-lg border ${color.border} ${color.bg} p-3 transition-all hover:shadow-sm`}
     >
-      <button
-        type="button"
-        className="w-full text-left"
-        onClick={() => setExpanded(!expanded)}
-      >
+      <button type="button" className="w-full text-left" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <div className={`w-2 h-2 rounded-full ${color.dot} flex-shrink-0`} />
@@ -72,13 +108,12 @@ function TopicCard({ topic, index }: { topic: Topic; index: number }) {
               size="sm"
               className="bg-white/80 text-gray-600 text-[10px] h-5 py-0 px-1.5 font-medium dark:bg-slate-900/70 dark:text-slate-200"
             />
-            {topic.keywords.length > 0 && (
-              expanded ? (
+            {topic.keywords.length > 0 &&
+              (expanded ? (
                 <ExpandLessIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
               ) : (
                 <ExpandMoreIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
-              )
-            )}
+              ))}
           </div>
         </div>
       </button>
@@ -101,30 +136,36 @@ function TopicCard({ topic, index }: { topic: Topic; index: number }) {
 }
 
 // Relation Item Component
-function RelationItem({ relation, type }: { relation: Relation; type: 'similar' | 'contradicts' }) {
-  const isContradiction = type === 'contradicts';
+function RelationItem({ relation, type }: { relation: Relation; type: "similar" | "contradicts" }) {
+  const isContradiction = type === "contradicts";
   const scorePercent = Math.round(relation.score * 100);
 
   return (
     <div
       className={`flex items-center gap-2 p-2 rounded-lg border ${
         isContradiction
-          ? 'bg-red-50/50 border-red-200 dark:bg-red-500/10 dark:border-red-500/30'
-          : 'bg-gray-50 border-gray-200 dark:bg-slate-800/70 dark:border-slate-700'
+          ? "bg-red-50/50 border-red-200 dark:bg-red-500/10 dark:border-red-500/30"
+          : "bg-gray-50 border-gray-200 dark:bg-slate-800/70 dark:border-slate-700"
       }`}
     >
       <div className="flex items-center gap-1.5 min-w-0 flex-1">
-        <span className="text-[10px] text-gray-500 font-mono dark:text-slate-400">#{relation.source_chunk_id}</span>
-        <span className={`text-[10px] ${isContradiction ? 'text-red-500 dark:text-red-300' : 'text-gray-400 dark:text-slate-500'}`}>
-          {isContradiction ? '⚡' : '↔'}
+        <span className="text-[10px] text-gray-500 font-mono dark:text-slate-400">
+          #{relation.source_chunk_id}
         </span>
-        <span className="text-[10px] text-gray-500 font-mono dark:text-slate-400">#{relation.target_chunk_id}</span>
+        <span
+          className={`text-[10px] ${isContradiction ? "text-red-500 dark:text-red-300" : "text-gray-400 dark:text-slate-500"}`}
+        >
+          {isContradiction ? "⚡" : "↔"}
+        </span>
+        <span className="text-[10px] text-gray-500 font-mono dark:text-slate-400">
+          #{relation.target_chunk_id}
+        </span>
       </div>
       <Tooltip content={`相似度: ${scorePercent}%`}>
         <div className="flex items-center gap-1">
           <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden dark:bg-slate-700">
             <div
-              className={`h-full rounded-full ${isContradiction ? 'bg-red-400' : 'bg-blue-400'}`}
+              className={`h-full rounded-full ${isContradiction ? "bg-red-400" : "bg-blue-400"}`}
               style={{ width: `${scorePercent}%` }}
             />
           </div>
@@ -144,21 +185,21 @@ function Section({
   count,
   children,
   emptyMessage,
-  color = 'gray',
+  color = "gray",
 }: {
   title: string;
   icon: React.ReactNode;
   count: number;
   children: React.ReactNode;
   emptyMessage: string;
-  color?: 'gray' | 'blue' | 'red';
+  color?: "gray" | "blue" | "red";
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
   const colorClasses = {
-    gray: 'text-gray-600 dark:text-slate-300',
-    blue: 'text-blue-600 dark:text-blue-300',
-    red: 'text-red-600 dark:text-red-300',
+    gray: "text-gray-600 dark:text-slate-300",
+    blue: "text-blue-600 dark:text-blue-300",
+    red: "text-red-600 dark:text-red-300",
   };
 
   return (
@@ -170,14 +211,19 @@ function Section({
       >
         <div className="flex items-center gap-2">
           <span className={colorClasses[color]}>{icon}</span>
-          <Typography variant="small" className="font-semibold text-xs text-gray-800 dark:text-slate-100">
+          <Typography
+            variant="small"
+            className="font-semibold text-xs text-gray-800 dark:text-slate-100"
+          >
             {title}
           </Typography>
           <Chip
             value={count}
             size="sm"
             className={`${
-              color === 'red' ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300' : 'bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-slate-200'
+              color === "red"
+                ? "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300"
+                : "bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-slate-200"
             } text-[10px] h-5 py-0 px-1.5 font-semibold`}
           />
         </div>
@@ -190,7 +236,10 @@ function Section({
       {!collapsed && (
         <div className="p-3">
           {count === 0 ? (
-            <Typography variant="small" className="text-gray-400 text-xs text-center py-2 dark:text-slate-500">
+            <Typography
+              variant="small"
+              className="text-gray-400 text-xs text-center py-2 dark:text-slate-500"
+            >
               {emptyMessage}
             </Typography>
           ) : (
@@ -288,7 +337,7 @@ function AnalysisPanel({
 
   // Analysis results
   const { topics, relations, contradictions } = analysis;
-  const similarRelations = relations.filter((r) => r.relation_type === 'similar');
+  const similarRelations = relations.filter((r) => r.relation_type === "similar");
 
   return (
     <div className="flex flex-col h-full">
@@ -296,7 +345,10 @@ function AnalysisPanel({
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700">
         <div className="flex items-center gap-2">
           <HubIcon style={{ fontSize: 18 }} className="text-gray-500 dark:text-slate-400" />
-          <Typography variant="small" className="font-semibold text-gray-800 text-xs dark:text-slate-100">
+          <Typography
+            variant="small"
+            className="font-semibold text-gray-800 text-xs dark:text-slate-100"
+          >
             跨文档分析
           </Typography>
         </div>
@@ -310,7 +362,7 @@ function AnalysisPanel({
           >
             <RefreshIcon
               style={{ fontSize: 16 }}
-              className={`text-gray-500 dark:text-slate-400 ${isLoading ? 'animate-spin' : ''}`}
+              className={`text-gray-500 dark:text-slate-400 ${isLoading ? "animate-spin" : ""}`}
             />
           </Button>
         </Tooltip>
@@ -345,7 +397,10 @@ function AnalysisPanel({
               <RelationItem key={index} relation={relation} type="similar" />
             ))}
             {similarRelations.length > 20 && (
-              <Typography variant="small" className="text-gray-400 text-[10px] text-center pt-1 dark:text-slate-500">
+              <Typography
+                variant="small"
+                className="text-gray-400 text-[10px] text-center pt-1 dark:text-slate-500"
+              >
                 还有 {similarRelations.length - 20} 个关联...
               </Typography>
             )}
@@ -372,26 +427,44 @@ function AnalysisPanel({
           <CardBody className="p-3">
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
-                <Typography variant="h6" className="text-lg font-bold text-gray-800 dark:text-slate-100">
+                <Typography
+                  variant="h6"
+                  className="text-lg font-bold text-gray-800 dark:text-slate-100"
+                >
                   {topics.length}
                 </Typography>
-                <Typography variant="small" className="text-[10px] text-gray-500 font-medium dark:text-slate-400">
+                <Typography
+                  variant="small"
+                  className="text-[10px] text-gray-500 font-medium dark:text-slate-400"
+                >
                   主题
                 </Typography>
               </div>
               <div>
-                <Typography variant="h6" className="text-lg font-bold text-gray-800 dark:text-slate-100">
+                <Typography
+                  variant="h6"
+                  className="text-lg font-bold text-gray-800 dark:text-slate-100"
+                >
                   {similarRelations.length}
                 </Typography>
-                <Typography variant="small" className="text-[10px] text-gray-500 font-medium dark:text-slate-400">
+                <Typography
+                  variant="small"
+                  className="text-[10px] text-gray-500 font-medium dark:text-slate-400"
+                >
                   关联
                 </Typography>
               </div>
               <div>
-                <Typography variant="h6" className="text-lg font-bold text-red-600 dark:text-red-300">
+                <Typography
+                  variant="h6"
+                  className="text-lg font-bold text-red-600 dark:text-red-300"
+                >
                   {contradictions.length}
                 </Typography>
-                <Typography variant="small" className="text-[10px] text-gray-500 font-medium dark:text-slate-400">
+                <Typography
+                  variant="small"
+                  className="text-[10px] text-gray-500 font-medium dark:text-slate-400"
+                >
                   矛盾
                 </Typography>
               </div>

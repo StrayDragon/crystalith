@@ -1,5 +1,5 @@
-import { useCallback, useMemo } from 'react';
-import useSWR from 'swr';
+import { useCallback, useMemo } from "react";
+import useSWR from "swr";
 
 import {
   createTemplateV1TemplatesPost as createTemplate,
@@ -7,20 +7,19 @@ import {
   listTemplatesV1TemplatesGet as listTemplates,
   saveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPost as saveNotebookAsTemplate,
   updateTemplateV1TemplatesTemplateIdPatch as updateTemplate,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
-import type { OutputTypeId } from '../../shared/types';
-import { normalizeTemplate, type WorkspaceTemplate } from './types';
+} from "../../../../api/generated";
+import { unwrapData } from "../../../../api/unwrap";
+import type { OutputTypeId } from "../../shared/types";
+import { normalizeTemplate, type WorkspaceTemplate } from "./types";
 
 export function useTemplates() {
-  const {
-    data,
-    error,
-    isLoading,
-    mutate,
-  } = useSWR('workspace/templates', () => unwrapData(listTemplates<true>()), {
-    revalidateOnFocus: false,
-  });
+  const { data, error, isLoading, mutate } = useSWR(
+    "workspace/templates",
+    () => unwrapData(listTemplates<true>()),
+    {
+      revalidateOnFocus: false,
+    },
+  );
 
   const templates = useMemo(() => (data ? data.map(normalizeTemplate) : []), [data]);
 
@@ -32,22 +31,23 @@ export function useTemplates() {
       outputType?: OutputTypeId | null;
       sourceTags?: string[];
     }) => {
-      const created = await unwrapData(createTemplate<true>({
-        body: {
-          name: payload.name,
-          description: payload.description ?? null,
-          config_json: {
-            session_titles: payload.sessionTitles ?? [],
-            output_type: payload.outputType ?? null,
-            source_tags: payload.sourceTags ?? [],
+      const created = await unwrapData(
+        createTemplate<true>({
+          body: {
+            name: payload.name,
+            description: payload.description ?? null,
+            config_json: {
+              session_titles: payload.sessionTitles ?? [],
+              output_type: payload.outputType ?? null,
+              source_tags: payload.sourceTags ?? [],
+            },
           },
-        },
-      }));
-
-      await mutate(
-        async (current) => (current ? [...current, created] : [created]),
-        { revalidate: false },
+        }),
       );
+
+      await mutate(async (current) => (current ? [...current, created] : [created]), {
+        revalidate: false,
+      });
       return normalizeTemplate(created);
     },
     [mutate],
@@ -55,10 +55,12 @@ export function useTemplates() {
 
   const updateTemplateDescription = useCallback(
     async (templateId: number, description: string) => {
-      const updated = await unwrapData(updateTemplate<true>({
-        path: { template_id: templateId },
-        body: { description },
-      }));
+      const updated = await unwrapData(
+        updateTemplate<true>({
+          path: { template_id: templateId },
+          body: { description },
+        }),
+      );
       await mutate(
         async (current) =>
           current?.map((item) => (item.id === templateId ? updated : item)) ?? [updated],
@@ -72,10 +74,9 @@ export function useTemplates() {
   const removeTemplate = useCallback(
     async (templateId: number) => {
       await unwrapData(deleteTemplate<true>({ path: { template_id: templateId } }));
-      await mutate(
-        async (current) => current?.filter((item) => item.id !== templateId) ?? [],
-        { revalidate: false },
-      );
+      await mutate(async (current) => current?.filter((item) => item.id !== templateId) ?? [], {
+        revalidate: false,
+      });
     },
     [mutate],
   );
@@ -87,18 +88,19 @@ export function useTemplates() {
       description?: string;
       outputType?: OutputTypeId | null;
     }) => {
-      const created = await unwrapData(saveNotebookAsTemplate<true>({
-        path: { notebook_id: payload.notebookId },
-        body: {
-          name: payload.name,
-          description: payload.description ?? null,
-          output_type: payload.outputType ?? null,
-        },
-      }));
-      await mutate(
-        async (current) => (current ? [...current, created] : [created]),
-        { revalidate: false },
+      const created = await unwrapData(
+        saveNotebookAsTemplate<true>({
+          path: { notebook_id: payload.notebookId },
+          body: {
+            name: payload.name,
+            description: payload.description ?? null,
+            output_type: payload.outputType ?? null,
+          },
+        }),
       );
+      await mutate(async (current) => (current ? [...current, created] : [created]), {
+        revalidate: false,
+      });
       return normalizeTemplate(created);
     },
     [mutate],
@@ -107,7 +109,7 @@ export function useTemplates() {
   return {
     templates,
     isLoading,
-    error: error ? String(error) : '',
+    error: error ? String(error) : "",
     createCustomTemplate,
     updateTemplateDescription,
     removeTemplate,

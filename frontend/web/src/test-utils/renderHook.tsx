@@ -1,9 +1,12 @@
-import { render } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { render } from "@testing-library/react";
+import type { ReactNode } from "react";
 
 type WrapperProps = { children: ReactNode };
 
-export function renderHook<T>(hook: () => T, options?: { wrapper?: (props: WrapperProps) => ReactNode }) {
+export function renderHook<T>(
+  hook: () => T,
+  options?: { wrapper?: (props: WrapperProps) => ReactNode },
+) {
   const result = { current: null as T | null };
 
   function HookHarness() {

@@ -1,4 +1,4 @@
-import { client } from './generated/client.gen';
+import { client } from "./generated/client.gen";
 
 type ApiClientError = Error & {
   status?: number;
@@ -8,7 +8,7 @@ type ApiClientError = Error & {
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== 'object') {
+  if (!value || typeof value !== "object") {
     return null;
   }
   return value as Record<string, unknown>;
@@ -17,7 +17,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 function readHeaderValue(headers: unknown, name: string): unknown {
   if (!headers) return undefined;
 
-  if (typeof (headers as { get?: unknown }).get === 'function') {
+  if (typeof (headers as { get?: unknown }).get === "function") {
     const getter = (headers as { get: (key: string) => unknown }).get;
     return getter(name) ?? getter(name.toLowerCase()) ?? getter(name.toUpperCase());
   }
@@ -40,11 +40,11 @@ function parseRetryAfter(value: unknown): number | undefined {
     return undefined;
   }
 
-  if (typeof value === 'number' && Number.isFinite(value)) {
+  if (typeof value === "number" && Number.isFinite(value)) {
     return Math.max(0, Math.floor(value));
   }
 
-  if (typeof value !== 'string') {
+  if (typeof value !== "string") {
     return undefined;
   }
 
@@ -68,21 +68,19 @@ function parseRetryAfter(value: unknown): number | undefined {
 }
 
 client.setConfig({
-  baseUrl: '',
-  responseStyle: 'fields',
+  baseUrl: "",
+  responseStyle: "fields",
   throwOnError: true,
 });
 
 client.interceptors.error.use(async (error, response) => {
-  const status = response && typeof response.status === 'number'
-    ? response.status
-    : undefined;
+  const status = response && typeof response.status === "number" ? response.status : undefined;
 
-  const retryAfterFromHeader = parseRetryAfter(readHeaderValue(response?.headers, 'retry-after'));
+  const retryAfterFromHeader = parseRetryAfter(readHeaderValue(response?.headers, "retry-after"));
 
   const attach = (
     err: Error,
-    extras?: Partial<Pick<ApiClientError, 'errorCode' | 'details' | 'retryAfter'>>,
+    extras?: Partial<Pick<ApiClientError, "errorCode" | "details" | "retryAfter">>,
   ): ApiClientError => {
     const enriched = err as ApiClientError;
     if (status !== undefined) {
@@ -106,25 +104,23 @@ client.interceptors.error.use(async (error, response) => {
 
   if (errorRecord) {
     const hasStandardFields =
-      typeof errorRecord.error_code === 'string' &&
-      typeof errorRecord.message === 'string';
+      typeof errorRecord.error_code === "string" && typeof errorRecord.message === "string";
 
     if (hasStandardFields) {
       return attach(new Error(String(errorRecord.message)), {
         errorCode: String(errorRecord.error_code),
         details: errorRecord.details,
-        retryAfter:
-          parseRetryAfter(errorRecord.retry_after) ?? retryAfterFromHeader,
+        retryAfter: parseRetryAfter(errorRecord.retry_after) ?? retryAfterFromHeader,
       });
     }
 
-    if (typeof errorRecord.detail === 'string') {
+    if (typeof errorRecord.detail === "string") {
       return attach(new Error(String(errorRecord.detail)), {
         details: errorRecord.details,
       });
     }
 
-    if (typeof errorRecord.message === 'string') {
+    if (typeof errorRecord.message === "string") {
       return attach(new Error(String(errorRecord.message)), {
         details: errorRecord.details,
       });
@@ -135,9 +131,9 @@ client.interceptors.error.use(async (error, response) => {
     return attach(error);
   }
 
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     return attach(new Error(error));
   }
 
-  return attach(new Error('Unknown error'));
+  return attach(new Error("Unknown error"));
 });

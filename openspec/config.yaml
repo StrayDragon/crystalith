@@ -8,13 +8,13 @@ context: |
 
   Commands (from repo root):
   - Backend: cd backend/py && uv sync; just dev; just test; just db-init; just config-schema; just packages-test; just llm-eval; just embedding-cache-bench.
-  - Frontend: cd frontend/web && pnpm install; pnpm dev; pnpm test; pnpm typecheck; pnpm run build; pnpm run api:sync.
+  - Frontend: cd frontend/web && pnpm install; pnpm dev; pnpm test; pnpm run lint; pnpm run lint:all; pnpm run format; pnpm run format:check; pnpm typecheck; pnpm run build; pnpm run api:sync.
 
   Conventions:
   - Python: 4-space indentation; prefer high-coverage type hints; minimize Any; avoid dynamic attribute access (getattr/hasattr/__getattr__); snake_case functions/vars; PascalCase classes.
   - TypeScript/React: 2-space indentation; PascalCase components; hooks named useX.
   - CSS/Tailwind: global styles in frontend/web/src/app/index.css; feature styles alongside components.
-  - No repo-wide formatter configured; match existing style and avoid unrelated reformatting.
+  - No repo-wide formatter configured outside frontend/web; frontend uses oxlint + oxfmt. Match existing style elsewhere and avoid unrelated reformatting.
 
   Testing:
   - Backend: pytest + pytest-asyncio.

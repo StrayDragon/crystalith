@@ -1,0 +1,11 @@
+{
+  "ignorePatterns": [
+    "dist/**",
+    "coverage/**",
+    "node_modules/**",
+    "vendor/**",
+    "src/api/generated/**",
+    "openapi.json",
+    "pnpm-lock.yaml"
+  ]
+}

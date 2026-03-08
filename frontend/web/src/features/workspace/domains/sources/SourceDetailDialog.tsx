@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogHeader,
@@ -16,7 +16,7 @@ import {
   MenuHandler,
   MenuList,
   MenuItem,
-} from '@material-tailwind/react';
+} from "@material-tailwind/react";
 import {
   Close as CloseIcon,
   Send as SendIcon,
@@ -33,22 +33,22 @@ import {
   ContentCopy as ContentCopyIcon,
   FileDownload as FileDownloadIcon,
   NoteAdd as NoteAddIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
 import {
   getSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGet as getSourceSummary,
   sourceQaV1NotebooksNotebookIdSourcesSourceIdQaPost as askSourceQuestion,
   listSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGet as listSourceChunks,
   type ChunkRead,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
-import { useWorkspaceStore } from '../../shared/state/workspaceStore';
-import type { SourceItem } from '../../shared/types';
-import { toast } from '../../../../shared/toast';
-import { useLayer } from '../../../../shared/layer';
-import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
-import { copyToClipboard } from '../../../../shared/clipboard';
-import { t } from '../../../../shared/i18n';
+} from "../../../../api/generated";
+import { unwrapData } from "../../../../api/unwrap";
+import { useWorkspaceStore } from "../../shared/state/workspaceStore";
+import type { SourceItem } from "../../shared/types";
+import { toast } from "../../../../shared/toast";
+import { useLayer } from "../../../../shared/layer";
+import { useFocusTrap } from "../../shared/hooks/useFocusTrap";
+import { copyToClipboard } from "../../../../shared/clipboard";
+import { t } from "../../../../shared/i18n";
 
 interface SourceDetailDialogProps {
   open: boolean;
@@ -61,7 +61,7 @@ interface SourceDetailDialogProps {
 
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   timestamp: Date;
 }
@@ -78,7 +78,7 @@ interface SourceBrief {
 const briefCache = new Map<number, SourceBrief>();
 const chunksCache = new Map<number, ChunkRead[]>();
 
-type TabValue = 'overview' | 'raw';
+type TabValue = "overview" | "raw";
 
 // Chunk item component with expand/collapse
 function ChunkItem({ chunk, index }: { chunk: ChunkRead; index: number }) {
@@ -90,11 +90,7 @@ function ChunkItem({ chunk, index }: { chunk: ChunkRead; index: number }) {
 
   return (
     <div className="border border-gray-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 hover:border-gray-300 dark:border-slate-600 transition-colors">
-      <button
-        type="button"
-        className="w-full p-3 text-left"
-        onClick={() => setExpanded(!expanded)}
-      >
+      <button type="button" className="w-full p-3 text-left" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 text-xs font-medium">
@@ -102,26 +98,28 @@ function ChunkItem({ chunk, index }: { chunk: ChunkRead; index: number }) {
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <Typography variant="small" className="text-xs text-gray-700 dark:text-slate-200 leading-relaxed">
-              {expanded || !needsTruncate
-                ? chunk.text
-                : `${chunk.text.slice(0, previewLength)}...`}
+            <Typography
+              variant="small"
+              className="text-xs text-gray-700 dark:text-slate-200 leading-relaxed"
+            >
+              {expanded || !needsTruncate ? chunk.text : `${chunk.text.slice(0, previewLength)}...`}
             </Typography>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
-            {needsTruncate && (
-              expanded ? (
+            {needsTruncate &&
+              (expanded ? (
                 <ExpandLessIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
               ) : (
                 <ExpandMoreIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
-              )
-            )}
+              ))}
           </div>
         </div>
         <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400 dark:text-slate-500">
           <span>{charCount} 字符</span>
           {chunk.start_offset !== null && chunk.end_offset !== null && (
-            <span>位置: {chunk.start_offset}-{chunk.end_offset}</span>
+            <span>
+              位置: {chunk.start_offset}-{chunk.end_offset}
+            </span>
           )}
           {chunk.metadata && Object.keys(chunk.metadata).length > 0 && (
             <span className="text-blue-400">有元数据</span>
@@ -139,21 +137,28 @@ function ChunkItem({ chunk, index }: { chunk: ChunkRead; index: number }) {
   );
 }
 
-export default function SourceDetailDialog({ open, source, onClose, isFullscreen = false, onToggleFullscreen, onSaveQAAsSource }: SourceDetailDialogProps) {
+export default function SourceDetailDialog({
+  open,
+  source,
+  onClose,
+  isFullscreen = false,
+  onToggleFullscreen,
+  onSaveQAAsSource,
+}: SourceDetailDialogProps) {
   const notebookId = useWorkspaceStore((s) => s.activeNotebookId);
   const connectionState = useWorkspaceStore((s) => s.connectionState);
-  const isConnected = connectionState === 'live';
+  const isConnected = connectionState === "live";
 
-  const [activeTab, setActiveTab] = useState<TabValue>('overview');
+  const [activeTab, setActiveTab] = useState<TabValue>("overview");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [brief, setBrief] = useState<SourceBrief | null>(null);
   const [isBriefLoading, setIsBriefLoading] = useState(false);
-  const [briefError, setBriefError] = useState<string>('');
+  const [briefError, setBriefError] = useState<string>("");
   const [chunks, setChunks] = useState<ChunkRead[]>([]);
   const [isChunksLoading, setIsChunksLoading] = useState(false);
-  const [chunksError, setChunksError] = useState<string>('');
+  const [chunksError, setChunksError] = useState<string>("");
   const [summaryCollapsed, setSummaryCollapsed] = useState(false);
   const [isSavingAsSource, setIsSavingAsSource] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState<string | null>(null);
@@ -162,7 +167,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
 
   // Scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
   useEffect(() => {
@@ -177,20 +182,20 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     const cached = briefCache.get(source.id);
     if (cached) {
       setBrief(cached);
-      setBriefError('');
+      setBriefError("");
       return;
     }
 
     if (!notebookId || !isConnected) {
       setBrief(null);
-      setBriefError('未连接到后端服务，无法生成摘要。');
+      setBriefError("未连接到后端服务，无法生成摘要。");
       setIsBriefLoading(false);
       return;
     }
 
     // Call real API
     setIsBriefLoading(true);
-    setBriefError('');
+    setBriefError("");
     unwrapData(getSourceSummary<true>({ path: { notebook_id: notebookId, source_id: source.id } }))
       .then((response) => {
         const newBrief: SourceBrief = {
@@ -204,7 +209,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
         setBrief(newBrief);
       })
       .catch((err) => {
-        setBriefError(err.message || '加载摘要失败');
+        setBriefError(err.message || "加载摘要失败");
       })
       .finally(() => {
         setIsBriefLoading(false);
@@ -213,33 +218,33 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
 
   // Load chunks when switching to raw tab
   useEffect(() => {
-    if (!source || !open || activeTab !== 'raw') return;
+    if (!source || !open || activeTab !== "raw") return;
 
     // Check cache first
     const cached = chunksCache.get(source.id);
     if (cached) {
       setChunks(cached);
-      setChunksError('');
+      setChunksError("");
       return;
     }
 
     if (!notebookId || !isConnected) {
       setChunks([]);
-      setChunksError('未连接到后端服务，无法加载原始内容。');
+      setChunksError("未连接到后端服务，无法加载原始内容。");
       setIsChunksLoading(false);
       return;
     }
 
     // Call real API
     setIsChunksLoading(true);
-    setChunksError('');
+    setChunksError("");
     unwrapData(listSourceChunks<true>({ path: { notebook_id: notebookId, source_id: source.id } }))
       .then((response) => {
         chunksCache.set(source.id, response);
         setChunks(response);
       })
       .catch((err) => {
-        setChunksError(err.message || '加载原始数据失败');
+        setChunksError(err.message || "加载原始数据失败");
       })
       .finally(() => {
         setIsChunksLoading(false);
@@ -250,12 +255,12 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
   useEffect(() => {
     if (!open) {
       setMessages([]);
-      setInputValue('');
+      setInputValue("");
       setBrief(null);
-      setBriefError('');
+      setBriefError("");
       setChunks([]);
-      setChunksError('');
-      setActiveTab('overview');
+      setChunksError("");
+      setActiveTab("overview");
     }
   }, [open]);
 
@@ -264,20 +269,20 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
-      role: 'user',
+      role: "user",
       content: inputValue.trim(),
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInputValue('');
+    setInputValue("");
     setIsLoading(true);
 
     if (!notebookId || !isConnected) {
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: '未连接到后端服务，无法生成回答。',
+        role: "assistant",
+        content: "未连接到后端服务，无法生成回答。",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, assistantMessage]);
@@ -287,13 +292,15 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
 
     // Call real API
     try {
-      const response = await unwrapData(askSourceQuestion<true>({
-        path: { notebook_id: notebookId, source_id: source.id },
-        body: { question: userMessage.content },
-      }));
+      const response = await unwrapData(
+        askSourceQuestion<true>({
+          path: { notebook_id: notebookId, source_id: source.id },
+          body: { question: userMessage.content },
+        }),
+      );
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
-        role: 'assistant',
+        role: "assistant",
         content: response.answer,
         timestamp: new Date(response.created_at),
       };
@@ -301,8 +308,8 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     } catch (err) {
       const errorMessage: ChatMessage = {
         id: `error-${Date.now()}`,
-        role: 'assistant',
-        content: `抱歉，回答生成失败：${err instanceof Error ? err.message : '未知错误'}`,
+        role: "assistant",
+        content: `抱歉，回答生成失败：${err instanceof Error ? err.message : "未知错误"}`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -315,11 +322,11 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     if (!source) return;
     briefCache.delete(source.id);
     setBrief(null);
-    setBriefError('');
+    setBriefError("");
     setIsBriefLoading(true);
 
     if (!notebookId || !isConnected) {
-      setBriefError('未连接到后端服务，无法刷新摘要。');
+      setBriefError("未连接到后端服务，无法刷新摘要。");
       setIsBriefLoading(false);
       return;
     }
@@ -338,7 +345,7 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
         setBrief(newBrief);
       })
       .catch((err) => {
-        setBriefError(err.message || '刷新摘要失败');
+        setBriefError(err.message || "刷新摘要失败");
       })
       .finally(() => {
         setIsBriefLoading(false);
@@ -347,16 +354,16 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
 
   // Generate QA content as markdown
   const generateQAContent = useCallback(() => {
-    if (!source || messages.length === 0) return '';
+    if (!source || messages.length === 0) return "";
 
-    const timestamp = new Date().toLocaleString('zh-CN');
+    const timestamp = new Date().toLocaleString("zh-CN");
     let content = `# 来源问答记录\n\n`;
     content += `**来源**: ${source.title}\n`;
     content += `**导出时间**: ${timestamp}\n\n`;
     content += `---\n\n`;
 
     for (const msg of messages) {
-      const role = msg.role === 'user' ? '**问**' : '**答**';
+      const role = msg.role === "user" ? "**问**" : "**答**";
       content += `${role}: ${msg.content}\n\n`;
     }
 
@@ -370,9 +377,9 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
 
     const success = await copyToClipboard(content);
     if (success) {
-      toast.success('问答内容已复制到剪贴板');
+      toast.success("问答内容已复制到剪贴板");
     } else {
-      toast.error('复制失败，请尝试下载文件');
+      toast.error("复制失败，请尝试下载文件");
     }
   }, [generateQAContent]);
 
@@ -382,14 +389,14 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     const content = generateQAContent();
     if (!content) return;
 
-    const blob = new Blob([content], { type: 'text/markdown' });
+    const blob = new Blob([content], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `${source.title}-问答记录.md`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('文件下载已开始');
+    toast.success("文件下载已开始");
   }, [source, generateQAContent]);
 
   // Save QA as a new source
@@ -399,9 +406,9 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     setIsSavingAsSource(true);
     try {
       await onSaveQAAsSource(source.title, messages);
-      toast.success('问答记录已保存为新来源');
+      toast.success("问答记录已保存为新来源");
     } catch (err) {
-      toast.error(`保存失败：${err instanceof Error ? err.message : '未知错误'}`);
+      toast.error(`保存失败：${err instanceof Error ? err.message : "未知错误"}`);
     } finally {
       setIsSavingAsSource(false);
     }
@@ -419,425 +426,491 @@ export default function SourceDetailDialog({ open, source, onClose, isFullscreen
     <Dialog
       open={open}
       handler={onClose}
-      size={isFullscreen ? 'xxl' : 'xl'}
-      className={`rounded-xl overflow-hidden flex flex-col ${isFullscreen ? 'h-[95vh] max-h-[95vh]' : 'h-[80vh] max-h-[80vh]'} ux-modal-in`}
+      size={isFullscreen ? "xxl" : "xl"}
+      className={`rounded-xl overflow-hidden flex flex-col ${isFullscreen ? "h-[95vh] max-h-[95vh]" : "h-[80vh] max-h-[80vh]"} ux-modal-in`}
     >
       <div ref={dialogRef} tabIndex={-1} className="flex flex-col flex-1 min-h-0">
-      {/* Header */}
-      <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-slate-700 p-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 flex-shrink-0">
-            <DescriptionIcon fontSize="small" />
+        {/* Header */}
+        <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-slate-700 p-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 flex-shrink-0">
+              <DescriptionIcon fontSize="small" />
+            </div>
+            <div className="min-w-0">
+              <Typography
+                variant="h6"
+                className="text-[15px] font-semibold text-gray-900 dark:text-slate-100 truncate"
+              >
+                {source.title}
+              </Typography>
+              <Typography
+                variant="small"
+                className="text-gray-500 dark:text-slate-400 text-xs font-medium"
+              >
+                {t("sources.detail.subtitle")}
+              </Typography>
+            </div>
           </div>
-          <div className="min-w-0">
-            <Typography variant="h6" className="text-[15px] font-semibold text-gray-900 dark:text-slate-100 truncate">
-              {source.title}
-            </Typography>
-            <Typography variant="small" className="text-gray-500 dark:text-slate-400 text-xs font-medium">
-              {t('sources.detail.subtitle')}
-            </Typography>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {onToggleFullscreen && (
-            <IconButton variant="text" size="sm" onClick={onToggleFullscreen} className="rounded-full">
-              {isFullscreen ? (
-                <FullscreenExitIcon className="h-4 w-4" />
-              ) : (
-                <FullscreenIcon className="h-4 w-4" />
-              )}
-            </IconButton>
-          )}
-          <IconButton
-            variant="text"
-            size="sm"
-            onClick={onClose}
-            className="rounded-full"
-            aria-label={t('sources.detail.close_aria')}
-          >
-            <CloseIcon className="h-4 w-4" />
-          </IconButton>
-        </div>
-      </DialogHeader>
-
-      <DialogBody className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden">
-        <Tabs value={activeTab} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          {/* Tab Header */}
-          <TabsHeader
-            className="bg-transparent border-b border-gray-100 dark:border-slate-700 rounded-none p-0"
-            indicatorProps={{
-              className: 'bg-blue-500/10 shadow-none rounded-none border-b-2 border-blue-500',
-            }}
-          >
-            <Tab
-              value="overview"
-              onClick={() => setActiveTab('overview')}
-              className={`py-3 px-4 text-xs font-medium ${activeTab === 'overview' ? 'text-blue-500' : 'text-gray-500 dark:text-slate-400'}`}
-            >
-              <div className="flex items-center gap-1.5">
-                <AutoAwesomeIcon style={{ fontSize: 14 }} />
-                <span>摘要 & 问答</span>
-              </div>
-            </Tab>
-            <Tab
-              value="raw"
-              onClick={() => setActiveTab('raw')}
-              className={`py-3 px-4 text-xs font-medium ${activeTab === 'raw' ? 'text-blue-500' : 'text-gray-500 dark:text-slate-400'}`}
-            >
-              <div className="flex items-center gap-1.5">
-                <DataObjectIcon style={{ fontSize: 14 }} />
-                <span>原始数据</span>
-                {source.chunks > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded text-[10px] text-gray-500 dark:text-slate-400">
-                    {source.chunks}
-                  </span>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {onToggleFullscreen && (
+              <IconButton
+                variant="text"
+                size="sm"
+                onClick={onToggleFullscreen}
+                className="rounded-full"
+              >
+                {isFullscreen ? (
+                  <FullscreenExitIcon className="h-4 w-4" />
+                ) : (
+                  <FullscreenIcon className="h-4 w-4" />
                 )}
-              </div>
-            </Tab>
-          </TabsHeader>
+              </IconButton>
+            )}
+            <IconButton
+              variant="text"
+              size="sm"
+              onClick={onClose}
+              className="rounded-full"
+              aria-label={t("sources.detail.close_aria")}
+            >
+              <CloseIcon className="h-4 w-4" />
+            </IconButton>
+          </div>
+        </DialogHeader>
 
-          <TabsBody className="flex-1 min-h-0 overflow-hidden">
-            {/* Overview Tab - Summary + QA combined */}
-            <TabPanel value="overview" className="p-0 h-full flex flex-col overflow-hidden">
-              {source.statusTone === 'FAILED' && (source.errorMessage || source.recoveryHint || source.errorCode) ? (
-                <div className="mx-4 mt-4 mb-2 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-3 py-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <Typography variant="small" className="text-xs font-semibold text-red-700 dark:text-red-300">
-                        来源处理失败
-                      </Typography>
-                      {source.errorCode ? (
-                        <Typography variant="small" className="mt-1 text-[11px] text-red-700 dark:text-red-300">
-                          错误码：<span className="font-mono">{source.errorCode}</span>
-                        </Typography>
-                      ) : null}
-                      {source.errorMessage ? (
-                        <Typography variant="small" className="mt-1 text-[11px] text-red-700 dark:text-red-300">
-                          原因：{source.errorMessage}
-                        </Typography>
-                      ) : null}
-                      {source.recoveryHint ? (
-                        <Typography variant="small" className="mt-1 text-[11px] text-red-700 dark:text-red-300">
-                          修复建议：{source.recoveryHint}
-                        </Typography>
-                      ) : null}
-                      {source.lastErrorAt ? (
-                        <Typography variant="small" className="mt-1 text-[11px] text-red-600/80 dark:text-red-300/80">
-                          发生时间：{new Date(source.lastErrorAt).toLocaleString('zh-CN')}
-                        </Typography>
-                      ) : null}
-                    </div>
-                    <IconButton
-                      variant="text"
-                      size="sm"
-                      onClick={async () => {
-                        const text = [
-                          source.errorCode ? `错误码: ${source.errorCode}` : null,
-                          source.errorMessage ? `原因: ${source.errorMessage}` : null,
-                          source.recoveryHint ? `修复建议: ${source.recoveryHint}` : null,
-                        ].filter(Boolean).join('\n');
-                        const ok = await copyToClipboard(text);
-                        if (ok) toast.success('已复制失败信息');
-                        else toast.error('复制失败');
-                      }}
-                      className="rounded-full text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50"
-                      aria-label="复制失败信息"
-                    >
-                      <ContentCopyIcon className="h-4 w-4" />
-                    </IconButton>
-                  </div>
+        <DialogBody className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden">
+          <Tabs value={activeTab} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            {/* Tab Header */}
+            <TabsHeader
+              className="bg-transparent border-b border-gray-100 dark:border-slate-700 rounded-none p-0"
+              indicatorProps={{
+                className: "bg-blue-500/10 shadow-none rounded-none border-b-2 border-blue-500",
+              }}
+            >
+              <Tab
+                value="overview"
+                onClick={() => setActiveTab("overview")}
+                className={`py-3 px-4 text-xs font-medium ${activeTab === "overview" ? "text-blue-500" : "text-gray-500 dark:text-slate-400"}`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <AutoAwesomeIcon style={{ fontSize: 14 }} />
+                  <span>摘要 & 问答</span>
                 </div>
-              ) : null}
-              {/* Summary Section - Collapsible */}
-              <div className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
-                <div
-                  role="button"
-                  tabIndex={0}
-                  aria-expanded={!summaryCollapsed}
-                  aria-controls="source-detail-auto-summary"
-                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-800/50 transition-colors cursor-pointer"
-                  onClick={() => setSummaryCollapsed((prev) => !prev)}
-                  onKeyDown={(e) => {
-                    if (e.currentTarget !== e.target) return;
-                    if (e.key !== 'Enter' && e.key !== ' ') return;
-                    e.preventDefault();
-                    setSummaryCollapsed((prev) => !prev);
-                  }}
-                >
-                  <div className="flex items-center gap-2 text-blue-500">
-                    <AutoAwesomeIcon style={{ fontSize: 16 }} />
-                    <Typography variant="small" className="font-semibold text-xs">
-                      自动摘要
-                    </Typography>
-                    {summaryCollapsed && brief && (
-                      <Typography variant="small" className="text-xs text-gray-400 dark:text-slate-500 font-normal ml-2 truncate max-w-[300px]">
-                        {brief.summary.slice(0, 50)}...
-                      </Typography>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {!summaryCollapsed && (
+              </Tab>
+              <Tab
+                value="raw"
+                onClick={() => setActiveTab("raw")}
+                className={`py-3 px-4 text-xs font-medium ${activeTab === "raw" ? "text-blue-500" : "text-gray-500 dark:text-slate-400"}`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <DataObjectIcon style={{ fontSize: 14 }} />
+                  <span>原始数据</span>
+                  {source.chunks > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded text-[10px] text-gray-500 dark:text-slate-400">
+                      {source.chunks}
+                    </span>
+                  )}
+                </div>
+              </Tab>
+            </TabsHeader>
+
+            <TabsBody className="flex-1 min-h-0 overflow-hidden">
+              {/* Overview Tab - Summary + QA combined */}
+              <TabPanel value="overview" className="p-0 h-full flex flex-col overflow-hidden">
+                {source.statusTone === "FAILED" &&
+                (source.errorMessage || source.recoveryHint || source.errorCode) ? (
+                  <div className="mx-4 mt-4 mb-2 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-3 py-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <Typography
+                          variant="small"
+                          className="text-xs font-semibold text-red-700 dark:text-red-300"
+                        >
+                          来源处理失败
+                        </Typography>
+                        {source.errorCode ? (
+                          <Typography
+                            variant="small"
+                            className="mt-1 text-[11px] text-red-700 dark:text-red-300"
+                          >
+                            错误码：<span className="font-mono">{source.errorCode}</span>
+                          </Typography>
+                        ) : null}
+                        {source.errorMessage ? (
+                          <Typography
+                            variant="small"
+                            className="mt-1 text-[11px] text-red-700 dark:text-red-300"
+                          >
+                            原因：{source.errorMessage}
+                          </Typography>
+                        ) : null}
+                        {source.recoveryHint ? (
+                          <Typography
+                            variant="small"
+                            className="mt-1 text-[11px] text-red-700 dark:text-red-300"
+                          >
+                            修复建议：{source.recoveryHint}
+                          </Typography>
+                        ) : null}
+                        {source.lastErrorAt ? (
+                          <Typography
+                            variant="small"
+                            className="mt-1 text-[11px] text-red-600/80 dark:text-red-300/80"
+                          >
+                            发生时间：{new Date(source.lastErrorAt).toLocaleString("zh-CN")}
+                          </Typography>
+                        ) : null}
+                      </div>
                       <IconButton
                         variant="text"
                         size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRefreshBrief();
+                        onClick={async () => {
+                          const text = [
+                            source.errorCode ? `错误码: ${source.errorCode}` : null,
+                            source.errorMessage ? `原因: ${source.errorMessage}` : null,
+                            source.recoveryHint ? `修复建议: ${source.recoveryHint}` : null,
+                          ]
+                            .filter(Boolean)
+                            .join("\n");
+                          const ok = await copyToClipboard(text);
+                          if (ok) toast.success("已复制失败信息");
+                          else toast.error("复制失败");
                         }}
-                        disabled={isBriefLoading}
-                        className={`rounded-full w-6 h-6 text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:text-slate-200 ${isBriefLoading ? 'animate-spin' : ''}`}
+                        className="rounded-full text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50"
+                        aria-label="复制失败信息"
                       >
-                        <RefreshIcon style={{ fontSize: 16 }} />
+                        <ContentCopyIcon className="h-4 w-4" />
                       </IconButton>
-                    )}
-                    {summaryCollapsed ? (
-                      <ExpandMoreIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
-                    ) : (
-                      <ExpandLessIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
-                    )}
+                    </div>
                   </div>
-                </div>
-
-                {!summaryCollapsed && (
-                  <div id="source-detail-auto-summary" className="px-4 pb-4">
-                    {isBriefLoading ? (
-                      <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-full animate-pulse" />
-                        <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse" />
-                        <div className="h-4 bg-gray-200 rounded w-4/6 animate-pulse" />
-                      </div>
-                    ) : briefError ? (
-                      <Typography variant="small" color="red" className="text-xs">
-                        {briefError}
+                ) : null}
+                {/* Summary Section - Collapsible */}
+                <div className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={!summaryCollapsed}
+                    aria-controls="source-detail-auto-summary"
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-800/50 transition-colors cursor-pointer"
+                    onClick={() => setSummaryCollapsed((prev) => !prev)}
+                    onKeyDown={(e) => {
+                      if (e.currentTarget !== e.target) return;
+                      if (e.key !== "Enter" && e.key !== " ") return;
+                      e.preventDefault();
+                      setSummaryCollapsed((prev) => !prev);
+                    }}
+                  >
+                    <div className="flex items-center gap-2 text-blue-500">
+                      <AutoAwesomeIcon style={{ fontSize: 16 }} />
+                      <Typography variant="small" className="font-semibold text-xs">
+                        自动摘要
                       </Typography>
-                    ) : brief ? (
-                      <div className="space-y-3">
-                        <Typography variant="small" className="text-xs text-gray-600 dark:text-slate-300 leading-relaxed">
-                          {brief.summary}
+                      {summaryCollapsed && brief && (
+                        <Typography
+                          variant="small"
+                          className="text-xs text-gray-400 dark:text-slate-500 font-normal ml-2 truncate max-w-[300px]"
+                        >
+                          {brief.summary.slice(0, 50)}...
                         </Typography>
-                        <div className="h-px bg-gray-200" />
-                        <div>
-                          <Typography variant="small" className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">
-                            关键要点
-                          </Typography>
-                          <div className="space-y-1">
-                            {brief.keyPoints.map((point, index) => (
-                              <div key={index} className="flex items-start gap-1.5">
-                                <span className="text-gray-400 dark:text-slate-500 text-xs">•</span>
-                                <Typography variant="small" className="text-[11px] text-gray-600 dark:text-slate-300 font-medium leading-tight">
-                                  {point}
-                                </Typography>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between pt-1">
-                          <div className="flex gap-1">
-                            {brief.topics.map((topic) => (
-                              <Chip key={topic} value={topic} size="sm" variant="ghost" className="h-5 px-2 py-0 text-[10px] bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 normal-case font-normal" />
-                            ))}
-                          </div>
-                          <Typography variant="small" className="text-[10px] text-gray-500 dark:text-slate-400 font-medium">
-                            约 {brief.wordCount.toLocaleString()} 字
-                          </Typography>
-                        </div>
-                      </div>
-                    ) : null}
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {!summaryCollapsed && (
+                        <IconButton
+                          variant="text"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRefreshBrief();
+                          }}
+                          disabled={isBriefLoading}
+                          className={`rounded-full w-6 h-6 text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:text-slate-200 ${isBriefLoading ? "animate-spin" : ""}`}
+                        >
+                          <RefreshIcon style={{ fontSize: 16 }} />
+                        </IconButton>
+                      )}
+                      {summaryCollapsed ? (
+                        <ExpandMoreIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
+                      ) : (
+                        <ExpandLessIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
 
-              {/* QA Section */}
-              <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-white dark:bg-slate-900">
-                {/* QA Header */}
-                <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
-                  <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400">
-                    <QuestionAnswerIcon style={{ fontSize: 14 }} />
-                    <Typography variant="small" className="font-medium text-xs">
-                      基于来源问答
-                    </Typography>
-                  </div>
+                  {!summaryCollapsed && (
+                    <div id="source-detail-auto-summary" className="px-4 pb-4">
+                      {isBriefLoading ? (
+                        <div className="space-y-2">
+                          <div className="h-4 bg-gray-200 rounded w-full animate-pulse" />
+                          <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse" />
+                          <div className="h-4 bg-gray-200 rounded w-4/6 animate-pulse" />
+                        </div>
+                      ) : briefError ? (
+                        <Typography variant="small" color="red" className="text-xs">
+                          {briefError}
+                        </Typography>
+                      ) : brief ? (
+                        <div className="space-y-3">
+                          <Typography
+                            variant="small"
+                            className="text-xs text-gray-600 dark:text-slate-300 leading-relaxed"
+                          >
+                            {brief.summary}
+                          </Typography>
+                          <div className="h-px bg-gray-200" />
+                          <div>
+                            <Typography
+                              variant="small"
+                              className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5"
+                            >
+                              关键要点
+                            </Typography>
+                            <div className="space-y-1">
+                              {brief.keyPoints.map((point, index) => (
+                                <div key={index} className="flex items-start gap-1.5">
+                                  <span className="text-gray-400 dark:text-slate-500 text-xs">
+                                    •
+                                  </span>
+                                  <Typography
+                                    variant="small"
+                                    className="text-[11px] text-gray-600 dark:text-slate-300 font-medium leading-tight"
+                                  >
+                                    {point}
+                                  </Typography>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between pt-1">
+                            <div className="flex gap-1">
+                              {brief.topics.map((topic) => (
+                                <Chip
+                                  key={topic}
+                                  value={topic}
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-5 px-2 py-0 text-[10px] bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 normal-case font-normal"
+                                />
+                              ))}
+                            </div>
+                            <Typography
+                              variant="small"
+                              className="text-[10px] text-gray-500 dark:text-slate-400 font-medium"
+                            >
+                              约 {brief.wordCount.toLocaleString()} 字
+                            </Typography>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
 
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                  {messages.length === 0 ? (
-                    <div className="text-center py-4">
-                      <Typography variant="small" className="text-gray-400 dark:text-slate-500 text-xs">
-                        在下方输入问题，获取基于此来源的针对性回答
+                {/* QA Section */}
+                <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-white dark:bg-slate-900">
+                  {/* QA Header */}
+                  <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
+                    <div className="flex items-center gap-2 text-gray-500 dark:text-slate-400">
+                      <QuestionAnswerIcon style={{ fontSize: 14 }} />
+                      <Typography variant="small" className="font-medium text-xs">
+                        基于来源问答
                       </Typography>
                     </div>
-                  ) : (
-                    messages.map((message, index) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed whitespace-pre-wrap ${
-                            message.role === 'user'
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200'
-                          }`}
+                  </div>
+
+                  {/* Messages */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    {messages.length === 0 ? (
+                      <div className="text-center py-4">
+                        <Typography
+                          variant="small"
+                          className="text-gray-400 dark:text-slate-500 text-xs"
                         >
-                          {message.content}
-                        </div>
-                        {/* Export button for assistant messages */}
-                        {message.role === 'assistant' && (
-                          <div className="flex items-end ml-1">
-                            <Menu
-                              placement="bottom-start"
-                              open={exportMenuOpen === message.id}
-                              handler={(open) => setExportMenuOpen(open ? message.id : null)}
-                            >
-                              <MenuHandler>
-                                <IconButton
-                                  variant="text"
-                                  size="sm"
-                                  className="rounded-full w-5 h-5 min-w-[20px] text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:text-slate-200 opacity-0 group-hover:opacity-100 hover:opacity-100"
-                                  title="导出问答记录"
-                                  disabled={isSavingAsSource}
-                                  style={{ opacity: 1 }}
-                                >
-                                  {isSavingAsSource ? (
-                                    <Spinner className="h-3 w-3" />
-                                  ) : (
-                                    <SaveAltIcon style={{ fontSize: 12 }} />
-                                  )}
-                                </IconButton>
-                              </MenuHandler>
-                              <MenuList className="min-w-[160px]">
-                                <MenuItem
-                                  className="flex items-center gap-2 text-xs"
-                                  onClick={() => {
-                                    handleCopyToClipboard();
-                                    setExportMenuOpen(null);
-                                  }}
-                                >
-                                  <ContentCopyIcon style={{ fontSize: 14 }} />
-                                  {t('common.copy_to_clipboard')}
-                                </MenuItem>
-                                <MenuItem
-                                  className="flex items-center gap-2 text-xs"
-                                  onClick={() => {
-                                    handleDownloadAsFile();
-                                    setExportMenuOpen(null);
-                                  }}
-                                >
-                                  <FileDownloadIcon style={{ fontSize: 14 }} />
-                                  {t('sources.detail.qa_export.download_markdown')}
-                                </MenuItem>
-                                {onSaveQAAsSource && (
+                          在下方输入问题，获取基于此来源的针对性回答
+                        </Typography>
+                      </div>
+                    ) : (
+                      messages.map((message, index) => (
+                        <div
+                          key={message.id}
+                          className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                        >
+                          <div
+                            className={`max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed whitespace-pre-wrap ${
+                              message.role === "user"
+                                ? "bg-blue-500 text-white"
+                                : "bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200"
+                            }`}
+                          >
+                            {message.content}
+                          </div>
+                          {/* Export button for assistant messages */}
+                          {message.role === "assistant" && (
+                            <div className="flex items-end ml-1">
+                              <Menu
+                                placement="bottom-start"
+                                open={exportMenuOpen === message.id}
+                                handler={(open) => setExportMenuOpen(open ? message.id : null)}
+                              >
+                                <MenuHandler>
+                                  <IconButton
+                                    variant="text"
+                                    size="sm"
+                                    className="rounded-full w-5 h-5 min-w-[20px] text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:text-slate-200 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                                    title="导出问答记录"
+                                    disabled={isSavingAsSource}
+                                    style={{ opacity: 1 }}
+                                  >
+                                    {isSavingAsSource ? (
+                                      <Spinner className="h-3 w-3" />
+                                    ) : (
+                                      <SaveAltIcon style={{ fontSize: 12 }} />
+                                    )}
+                                  </IconButton>
+                                </MenuHandler>
+                                <MenuList className="min-w-[160px]">
                                   <MenuItem
                                     className="flex items-center gap-2 text-xs"
                                     onClick={() => {
-                                      handleSaveAsSource();
+                                      handleCopyToClipboard();
                                       setExportMenuOpen(null);
                                     }}
-                                    disabled={isSavingAsSource}
                                   >
-                                    <NoteAddIcon style={{ fontSize: 14 }} />
-                                    保存为来源
+                                    <ContentCopyIcon style={{ fontSize: 14 }} />
+                                    {t("common.copy_to_clipboard")}
                                   </MenuItem>
-                                )}
-                              </MenuList>
-                            </Menu>
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  )}
-                  {isLoading && (
-                    <div className="flex justify-start">
-                      <div className="bg-gray-100 dark:bg-slate-800 px-3 py-2 rounded-xl flex items-center gap-2">
-                        <Spinner className="h-3 w-3" />
-                        <span className="text-xs text-gray-500 dark:text-slate-400">思考中...</span>
-                      </div>
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Input */}
-                <div className="p-3 border-t border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-900 flex-shrink-0">
-                  <div className="relative">
-                    <input
-                      className="w-full h-9 pl-3 pr-10 rounded-full bg-gray-50 dark:bg-slate-800 border border-transparent focus:bg-white dark:bg-slate-900 focus:border-gray-200 dark:border-slate-700 focus:ring-0 text-sm outline-none transition-all placeholder:text-gray-400 dark:text-slate-500"
-                      placeholder="基于此来源内容提问..."
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSend();
-                        }
-                      }}
-                      disabled={isLoading}
-                      id="source-question-input"
-                      name="sourceQuestion"
-                      aria-label="基于来源内容提问"
-                    />
-                    <div className="absolute right-1 top-1/2 -translate-y-1/2">
-                      <IconButton
-                        size="sm"
-                        className={`rounded-full w-7 h-7 ${!inputValue.trim() || isLoading ? 'bg-gray-200 text-gray-400 dark:text-slate-500' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
-                        onClick={handleSend}
-                        aria-label="发送问题"
-                        disabled={!inputValue.trim() || isLoading}
-                      >
-                        <SendIcon style={{ fontSize: 14 }} />
-                      </IconButton>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </TabPanel>
-
-            {/* Raw Data Tab */}
-            <TabPanel value="raw" className="p-0 h-full overflow-y-auto">
-              <div className="p-4">
-                {isChunksLoading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="border border-gray-200 dark:border-slate-700 rounded-lg p-3 animate-pulse">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-6 h-6 bg-gray-200 rounded" />
-                          <div className="h-4 bg-gray-200 rounded w-3/4" />
+                                  <MenuItem
+                                    className="flex items-center gap-2 text-xs"
+                                    onClick={() => {
+                                      handleDownloadAsFile();
+                                      setExportMenuOpen(null);
+                                    }}
+                                  >
+                                    <FileDownloadIcon style={{ fontSize: 14 }} />
+                                    {t("sources.detail.qa_export.download_markdown")}
+                                  </MenuItem>
+                                  {onSaveQAAsSource && (
+                                    <MenuItem
+                                      className="flex items-center gap-2 text-xs"
+                                      onClick={() => {
+                                        handleSaveAsSource();
+                                        setExportMenuOpen(null);
+                                      }}
+                                      disabled={isSavingAsSource}
+                                    >
+                                      <NoteAddIcon style={{ fontSize: 14 }} />
+                                      保存为来源
+                                    </MenuItem>
+                                  )}
+                                </MenuList>
+                              </Menu>
+                            </div>
+                          )}
                         </div>
-                        <div className="h-3 bg-gray-200 rounded w-1/4" />
+                      ))
+                    )}
+                    {isLoading && (
+                      <div className="flex justify-start">
+                        <div className="bg-gray-100 dark:bg-slate-800 px-3 py-2 rounded-xl flex items-center gap-2">
+                          <Spinner className="h-3 w-3" />
+                          <span className="text-xs text-gray-500 dark:text-slate-400">
+                            思考中...
+                          </span>
+                        </div>
                       </div>
-                    ))}
+                    )}
+                    <div ref={messagesEndRef} />
                   </div>
-                ) : chunksError ? (
-                  <div className="text-center py-8">
-                    <Typography variant="small" color="red" className="text-xs">
-                      {chunksError}
-                    </Typography>
+
+                  {/* Input */}
+                  <div className="p-3 border-t border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-900 flex-shrink-0">
+                    <div className="relative">
+                      <input
+                        className="w-full h-9 pl-3 pr-10 rounded-full bg-gray-50 dark:bg-slate-800 border border-transparent focus:bg-white dark:bg-slate-900 focus:border-gray-200 dark:border-slate-700 focus:ring-0 text-sm outline-none transition-all placeholder:text-gray-400 dark:text-slate-500"
+                        placeholder="基于此来源内容提问..."
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSend();
+                          }
+                        }}
+                        disabled={isLoading}
+                        id="source-question-input"
+                        name="sourceQuestion"
+                        aria-label="基于来源内容提问"
+                      />
+                      <div className="absolute right-1 top-1/2 -translate-y-1/2">
+                        <IconButton
+                          size="sm"
+                          className={`rounded-full w-7 h-7 ${!inputValue.trim() || isLoading ? "bg-gray-200 text-gray-400 dark:text-slate-500" : "bg-blue-500 text-white hover:bg-blue-600"}`}
+                          onClick={handleSend}
+                          aria-label="发送问题"
+                          disabled={!inputValue.trim() || isLoading}
+                        >
+                          <SendIcon style={{ fontSize: 14 }} />
+                        </IconButton>
+                      </div>
+                    </div>
                   </div>
-                ) : chunks.length === 0 ? (
-                  <div className="text-center py-8">
-                    <DataObjectIcon className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                    <Typography variant="small" className="text-gray-500 dark:text-slate-400 text-xs">
-                      暂无原始数据
-                    </Typography>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between mb-3">
-                      <Typography variant="small" className="text-xs text-gray-500 dark:text-slate-400 font-medium">
-                        共 {chunks.length} 个片段
+                </div>
+              </TabPanel>
+
+              {/* Raw Data Tab */}
+              <TabPanel value="raw" className="p-0 h-full overflow-y-auto">
+                <div className="p-4">
+                  {isChunksLoading ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <div
+                          key={i}
+                          className="border border-gray-200 dark:border-slate-700 rounded-lg p-3 animate-pulse"
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-6 h-6 bg-gray-200 rounded" />
+                            <div className="h-4 bg-gray-200 rounded w-3/4" />
+                          </div>
+                          <div className="h-3 bg-gray-200 rounded w-1/4" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : chunksError ? (
+                    <div className="text-center py-8">
+                      <Typography variant="small" color="red" className="text-xs">
+                        {chunksError}
                       </Typography>
                     </div>
-                    {chunks.map((chunk, index) => (
-                      <ChunkItem key={chunk.id} chunk={chunk} index={index} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </TabPanel>
-          </TabsBody>
-        </Tabs>
-      </DialogBody>
+                  ) : chunks.length === 0 ? (
+                    <div className="text-center py-8">
+                      <DataObjectIcon className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                      <Typography
+                        variant="small"
+                        className="text-gray-500 dark:text-slate-400 text-xs"
+                      >
+                        暂无原始数据
+                      </Typography>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between mb-3">
+                        <Typography
+                          variant="small"
+                          className="text-xs text-gray-500 dark:text-slate-400 font-medium"
+                        >
+                          共 {chunks.length} 个片段
+                        </Typography>
+                      </div>
+                      {chunks.map((chunk, index) => (
+                        <ChunkItem key={chunk.id} chunk={chunk} index={index} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </TabPanel>
+            </TabsBody>
+          </Tabs>
+        </DialogBody>
       </div>
     </Dialog>
   );

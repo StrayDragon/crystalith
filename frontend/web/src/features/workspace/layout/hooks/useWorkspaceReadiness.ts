@@ -1,12 +1,12 @@
-import type { ConnectionState } from '../../shared/types';
+import type { ConnectionState } from "../../shared/types";
 
 export type WorkspaceReadiness =
-  | { kind: 'loading' }
-  | { kind: 'not_connected'; connectionState: ConnectionState; error: string }
-  | { kind: 'no_notebook' }
-  | { kind: 'no_sources'; notebookId: number }
-  | { kind: 'no_session'; notebookId: number }
-  | { kind: 'ready'; notebookId: number };
+  | { kind: "loading" }
+  | { kind: "not_connected"; connectionState: ConnectionState; error: string }
+  | { kind: "no_notebook" }
+  | { kind: "no_sources"; notebookId: number }
+  | { kind: "no_session"; notebookId: number }
+  | { kind: "ready"; notebookId: number };
 
 export interface WorkspaceReadinessInput {
   connectionState: ConnectionState;
@@ -20,40 +20,40 @@ export interface WorkspaceReadinessInput {
 
 export function computeWorkspaceReadiness({
   connectionState,
-  connectionError = '',
+  connectionError = "",
   notebookId,
   sourcesLoading,
   sourcesCount,
   sessionsLoading,
   sessionId,
 }: WorkspaceReadinessInput): WorkspaceReadiness {
-  if (connectionState !== 'live') {
+  if (connectionState !== "live") {
     return {
-      kind: 'not_connected',
+      kind: "not_connected",
       connectionState,
       error: connectionError,
     };
   }
 
   if (!notebookId) {
-    return { kind: 'no_notebook' };
+    return { kind: "no_notebook" };
   }
 
   if (sourcesLoading) {
-    return { kind: 'loading' };
+    return { kind: "loading" };
   }
 
   if (sourcesCount === 0) {
-    return { kind: 'no_sources', notebookId };
+    return { kind: "no_sources", notebookId };
   }
 
   if (sessionsLoading) {
-    return { kind: 'loading' };
+    return { kind: "loading" };
   }
 
   if (!sessionId) {
-    return { kind: 'no_session', notebookId };
+    return { kind: "no_session", notebookId };
   }
 
-  return { kind: 'ready', notebookId };
+  return { kind: "ready", notebookId };
 }

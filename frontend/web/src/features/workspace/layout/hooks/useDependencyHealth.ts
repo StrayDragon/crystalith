@@ -1,8 +1,8 @@
-import useSWR from 'swr';
+import useSWR from "swr";
 
-export type OptionalServiceStatus = 'unknown' | 'disabled' | 'healthy' | 'degraded';
+export type OptionalServiceStatus = "unknown" | "disabled" | "healthy" | "degraded";
 
-export type OptionalServiceKey = 'storage_chroma' | 'cache_redis' | 'ollama' | 'search_searxng';
+export type OptionalServiceKey = "storage_chroma" | "cache_redis" | "ollama" | "search_searxng";
 
 export interface DependencyServiceStatus {
   service: string;
@@ -53,17 +53,17 @@ export interface DependencyDiagnosticItem {
 }
 
 const OPTIONAL_SERVICE_LABELS: Record<OptionalServiceKey, string> = {
-  storage_chroma: 'Chroma (Vector Store)',
-  cache_redis: 'Redis (Cache)',
-  ollama: 'Ollama (Local Models)',
-  search_searxng: 'SearXNG (Search)',
+  storage_chroma: "Chroma (Vector Store)",
+  cache_redis: "Redis (Cache)",
+  ollama: "Ollama (Local Models)",
+  search_searxng: "SearXNG (Search)",
 };
 
 export function toOptionalServiceDiagnostics(
-  optional: DependencyHealthResponse['optional'] | null | undefined,
+  optional: DependencyHealthResponse["optional"] | null | undefined,
 ): DependencyDiagnosticItem[] {
   if (!optional) return [];
-  const keys: OptionalServiceKey[] = ['storage_chroma', 'cache_redis', 'ollama', 'search_searxng'];
+  const keys: OptionalServiceKey[] = ["storage_chroma", "cache_redis", "ollama", "search_searxng"];
   return keys.map((key) => {
     const entry = optional[key];
     return {
@@ -81,11 +81,11 @@ export function toOptionalServiceDiagnostics(
 }
 
 async function fetchDependencyHealth(force = false): Promise<DependencyHealthResponse> {
-  const query = force ? `?force=1&_ts=${Date.now()}` : '';
+  const query = force ? `?force=1&_ts=${Date.now()}` : "";
   const res = await fetch(`/health/dependencies${query}`, {
-    method: 'GET',
-    headers: { accept: 'application/json' },
-    cache: force ? 'no-store' : 'default',
+    method: "GET",
+    headers: { accept: "application/json" },
+    cache: force ? "no-store" : "default",
   });
   if (!res.ok) {
     throw new Error(`诊断请求失败（HTTP ${res.status}）`);
@@ -97,14 +97,14 @@ export function useDependencyHealth(options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? true;
 
   const swr = useSWR<DependencyHealthResponse>(
-    enabled ? 'workspace/health/dependencies' : null,
+    enabled ? "workspace/health/dependencies" : null,
     () => fetchDependencyHealth(false),
     { revalidateOnFocus: false },
   );
 
   return {
     data: swr.data ?? null,
-    error: swr.error instanceof Error ? swr.error.message : (swr.error ? String(swr.error) : ''),
+    error: swr.error instanceof Error ? swr.error.message : swr.error ? String(swr.error) : "",
     isLoading: swr.isLoading,
     refresh: async () => {
       const next = await fetchDependencyHealth(true);

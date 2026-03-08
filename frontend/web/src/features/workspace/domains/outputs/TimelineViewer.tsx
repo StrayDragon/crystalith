@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 export interface TimelineEvent {
   date?: string | null;
@@ -46,10 +46,16 @@ export default function TimelineViewer({ events, className }: TimelineViewerProp
                   });
                 }}
               >
-                <div className="text-xs font-semibold text-gray-500 dark:text-slate-400">{item.date || '时间'}</div>
-                <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">{item.event || '事件'}</div>
+                <div className="text-xs font-semibold text-gray-500 dark:text-slate-400">
+                  {item.date || "时间"}
+                </div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                  {item.event || "事件"}
+                </div>
                 {isOpen ? (
-                  <div className="text-sm text-gray-600 dark:text-slate-300">{item.description || '暂无描述'}</div>
+                  <div className="text-sm text-gray-600 dark:text-slate-300">
+                    {item.description || "暂无描述"}
+                  </div>
                 ) : null}
               </button>
             </div>

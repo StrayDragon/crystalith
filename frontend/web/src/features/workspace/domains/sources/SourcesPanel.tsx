@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
-import { useResearch } from '../research/useResearch';
+import { useResearch } from "../research/useResearch";
 
-import SourcesPanelView, { type SourcesPanelProps } from './components/SourcesPanelView';
+import SourcesPanelView, { type SourcesPanelProps } from "./components/SourcesPanelView";
 
 export default function SourcesPanel(props: SourcesPanelProps) {
   const { notebookId } = props;
@@ -18,7 +18,7 @@ export default function SourcesPanel(props: SourcesPanelProps) {
   useEffect(() => {
     const session = activeSession;
     if (!session) return;
-    if (['planning', 'searching', 'analyzing', 'waiting_user'].includes(session.status)) {
+    if (["planning", "searching", "analyzing", "waiting_user"].includes(session.status)) {
       subscribeToSSE(session.id);
       return () => unsubscribeFromSSE();
     }

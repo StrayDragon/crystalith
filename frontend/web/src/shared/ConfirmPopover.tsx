@@ -1,9 +1,17 @@
-import { cloneElement, type ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Button, Typography } from '@material-tailwind/react';
-import { useLayer } from './layer';
+import {
+  cloneElement,
+  type ReactElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
+import { Button, Typography } from "@material-tailwind/react";
+import { useLayer } from "./layer";
 
-type Placement = 'top' | 'bottom' | 'left' | 'right';
+type Placement = "top" | "bottom" | "left" | "right";
 
 // Popover dimensions (width: 220px, estimated height: ~125px)
 const POPOVER_WIDTH = 220;
@@ -50,59 +58,79 @@ function calculateBestPlacement(anchorRect: DOMRect, preferredPlacement: Placeme
   };
 
   // If preferred placement works, use it
-  if (preferredPlacement === 'top' && !wouldOverflow.top && !wouldOverflowHorizontalCenter.leftSide && !wouldOverflowHorizontalCenter.rightSide) {
-    return 'top';
+  if (
+    preferredPlacement === "top" &&
+    !wouldOverflow.top &&
+    !wouldOverflowHorizontalCenter.leftSide &&
+    !wouldOverflowHorizontalCenter.rightSide
+  ) {
+    return "top";
   }
-  if (preferredPlacement === 'bottom' && !wouldOverflow.bottom && !wouldOverflowHorizontalCenter.leftSide && !wouldOverflowHorizontalCenter.rightSide) {
-    return 'bottom';
+  if (
+    preferredPlacement === "bottom" &&
+    !wouldOverflow.bottom &&
+    !wouldOverflowHorizontalCenter.leftSide &&
+    !wouldOverflowHorizontalCenter.rightSide
+  ) {
+    return "bottom";
   }
-  if (preferredPlacement === 'left' && !wouldOverflow.left && !wouldOverflowVerticalCenter.topSide && !wouldOverflowVerticalCenter.bottomSide) {
-    return 'left';
+  if (
+    preferredPlacement === "left" &&
+    !wouldOverflow.left &&
+    !wouldOverflowVerticalCenter.topSide &&
+    !wouldOverflowVerticalCenter.bottomSide
+  ) {
+    return "left";
   }
-  if (preferredPlacement === 'right' && !wouldOverflow.right && !wouldOverflowVerticalCenter.topSide && !wouldOverflowVerticalCenter.bottomSide) {
-    return 'right';
+  if (
+    preferredPlacement === "right" &&
+    !wouldOverflow.right &&
+    !wouldOverflowVerticalCenter.topSide &&
+    !wouldOverflowVerticalCenter.bottomSide
+  ) {
+    return "right";
   }
 
   // Try opposite placement first
   const opposites: Record<Placement, Placement> = {
-    top: 'bottom',
-    bottom: 'top',
-    left: 'right',
-    right: 'left',
+    top: "bottom",
+    bottom: "top",
+    left: "right",
+    right: "left",
   };
   const opposite = opposites[preferredPlacement];
 
-  if (opposite === 'top' && !wouldOverflow.top) return 'top';
-  if (opposite === 'bottom' && !wouldOverflow.bottom) return 'bottom';
-  if (opposite === 'left' && !wouldOverflow.left) return 'left';
-  if (opposite === 'right' && !wouldOverflow.right) return 'right';
+  if (opposite === "top" && !wouldOverflow.top) return "top";
+  if (opposite === "bottom" && !wouldOverflow.bottom) return "bottom";
+  if (opposite === "left" && !wouldOverflow.left) return "left";
+  if (opposite === "right" && !wouldOverflow.right) return "right";
 
   // Try all placements in order of preference
-  const fallbackOrder: Placement[] = ['bottom', 'top', 'right', 'left'];
+  const fallbackOrder: Placement[] = ["bottom", "top", "right", "left"];
   for (const p of fallbackOrder) {
-    if (p === 'top' && !wouldOverflow.top) return 'top';
-    if (p === 'bottom' && !wouldOverflow.bottom) return 'bottom';
-    if (p === 'left' && !wouldOverflow.left) return 'left';
-    if (p === 'right' && !wouldOverflow.right) return 'right';
+    if (p === "top" && !wouldOverflow.top) return "top";
+    if (p === "bottom" && !wouldOverflow.bottom) return "bottom";
+    if (p === "left" && !wouldOverflow.left) return "left";
+    if (p === "right" && !wouldOverflow.right) return "right";
   }
 
   // If all overflow, prefer bottom (most common fallback)
-  return 'bottom';
+  return "bottom";
 }
 
 export default function ConfirmPopover({
   message,
   onConfirm,
   children,
-  confirmText = '确认删除',
-  cancelText = '取消',
-  placement = 'top',
+  confirmText = "确认删除",
+  cancelText = "取消",
+  placement = "top",
   disabled = false,
 }: ConfirmPopoverProps) {
   const [open, setOpen] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
-  const { style } = useLayer('popover');
+  const { style } = useLayer("popover");
 
   const updateAnchor = useCallback(() => {
     if (triggerRef.current) {
@@ -135,18 +163,18 @@ export default function ConfirmPopover({
     if (!open) return;
     updateAnchor();
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         setOpen(false);
       }
     };
     const handleResize = () => updateAnchor();
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('scroll', handleResize, true);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("scroll", handleResize, true);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('scroll', handleResize, true);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("scroll", handleResize, true);
     };
   }, [open, updateAnchor]);
 
@@ -159,13 +187,13 @@ export default function ConfirmPopover({
   const anchor = useMemo(() => {
     if (!anchorRect) return null;
     switch (actualPlacement) {
-      case 'bottom':
+      case "bottom":
         return { x: anchorRect.left + anchorRect.width / 2, y: anchorRect.bottom };
-      case 'left':
+      case "left":
         return { x: anchorRect.left, y: anchorRect.top + anchorRect.height / 2 };
-      case 'right':
+      case "right":
         return { x: anchorRect.right, y: anchorRect.top + anchorRect.height / 2 };
-      case 'top':
+      case "top":
       default:
         return { x: anchorRect.left + anchorRect.width / 2, y: anchorRect.top };
     }
@@ -175,15 +203,15 @@ export default function ConfirmPopover({
   const transform = useMemo(() => {
     if (!anchorRect) {
       switch (actualPlacement) {
-        case 'bottom':
-          return 'translate(-50%, 8px)';
-        case 'left':
-          return 'translate(calc(-100% - 8px), -50%)';
-        case 'right':
-          return 'translate(8px, -50%)';
-        case 'top':
+        case "bottom":
+          return "translate(-50%, 8px)";
+        case "left":
+          return "translate(calc(-100% - 8px), -50%)";
+        case "right":
+          return "translate(8px, -50%)";
+        case "top":
         default:
-          return 'translate(-50%, calc(-100% - 8px))';
+          return "translate(-50%, calc(-100% - 8px))";
       }
     }
 
@@ -191,12 +219,12 @@ export default function ConfirmPopover({
     const viewportHeight = window.innerHeight;
 
     // For top/bottom placements, adjust horizontal position if needed
-    if (actualPlacement === 'top' || actualPlacement === 'bottom') {
+    if (actualPlacement === "top" || actualPlacement === "bottom") {
       const centerX = anchorRect.left + anchorRect.width / 2;
       const leftEdge = centerX - POPOVER_WIDTH / 2;
       const rightEdge = centerX + POPOVER_WIDTH / 2;
 
-      let translateX = '-50%';
+      let translateX = "-50%";
       if (leftEdge < 8) {
         // Would overflow left, align to left edge with padding
         const offsetX = -centerX + POPOVER_WIDTH / 2 + 8;
@@ -207,19 +235,19 @@ export default function ConfirmPopover({
         translateX = `calc(-50% + ${offsetX}px)`;
       }
 
-      if (actualPlacement === 'bottom') {
+      if (actualPlacement === "bottom") {
         return `translate(${translateX}, 8px)`;
       }
       return `translate(${translateX}, calc(-100% - 8px))`;
     }
 
     // For left/right placements, adjust vertical position if needed
-    if (actualPlacement === 'left' || actualPlacement === 'right') {
+    if (actualPlacement === "left" || actualPlacement === "right") {
       const centerY = anchorRect.top + anchorRect.height / 2;
       const topEdge = centerY - POPOVER_HEIGHT / 2;
       const bottomEdge = centerY + POPOVER_HEIGHT / 2;
 
-      let translateY = '-50%';
+      let translateY = "-50%";
       if (topEdge < 8) {
         // Would overflow top, align to top edge with padding
         const offsetY = -centerY + POPOVER_HEIGHT / 2 + 8;
@@ -230,13 +258,13 @@ export default function ConfirmPopover({
         translateY = `calc(-50% + ${offsetY}px)`;
       }
 
-      if (actualPlacement === 'left') {
+      if (actualPlacement === "left") {
         return `translate(calc(-100% - 8px), ${translateY})`;
       }
       return `translate(8px, ${translateY})`;
     }
 
-    return 'translate(-50%, calc(-100% - 8px))';
+    return "translate(-50%, calc(-100% - 8px))";
   }, [anchorRect, actualPlacement]);
 
   return (
@@ -246,35 +274,40 @@ export default function ConfirmPopover({
       })}
       {open && anchor
         ? createPortal(
-          <div className="fixed inset-0" style={style} onClick={handleClose}>
-            <div
-              className="absolute"
-              style={{ left: anchor.x, top: anchor.y, transform }}
-              onClick={(event) => event.stopPropagation()}
-              role="dialog"
-              aria-modal="true"
-            >
-              <div className="rounded-lg border border-gray-200 bg-white shadow-lg p-3 w-[220px]">
-                <Typography variant="small" className="text-xs text-gray-700">
-                  {message}
-                </Typography>
-                <div className="mt-3 flex items-center justify-end gap-2">
-                  <Button variant="text" size="sm" className="px-2 py-1 text-xs" onClick={handleClose}>
-                    {cancelText}
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="px-2 py-1 text-xs bg-red-500 hover:bg-red-600"
-                    onClick={handleConfirm}
-                  >
-                    {confirmText}
-                  </Button>
+            <div className="fixed inset-0" style={style} onClick={handleClose}>
+              <div
+                className="absolute"
+                style={{ left: anchor.x, top: anchor.y, transform }}
+                onClick={(event) => event.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+              >
+                <div className="rounded-lg border border-gray-200 bg-white shadow-lg p-3 w-[220px]">
+                  <Typography variant="small" className="text-xs text-gray-700">
+                    {message}
+                  </Typography>
+                  <div className="mt-3 flex items-center justify-end gap-2">
+                    <Button
+                      variant="text"
+                      size="sm"
+                      className="px-2 py-1 text-xs"
+                      onClick={handleClose}
+                    >
+                      {cancelText}
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="px-2 py-1 text-xs bg-red-500 hover:bg-red-600"
+                      onClick={handleConfirm}
+                    >
+                      {confirmText}
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>,
-          document.body,
-        )
+            </div>,
+            document.body,
+          )
         : null}
     </>
   );

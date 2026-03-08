@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from "react";
 
 export interface KeyboardShortcutBinding {
   id: string;
@@ -15,62 +15,72 @@ interface UseKeyboardShortcutsOptions {
   target?: Window | Document | HTMLElement | null;
 }
 
-const MODIFIER_TOKENS = new Set(['ctrl', 'control', 'meta', 'command', 'cmd', 'shift', 'alt', 'option', 'mod']);
+const MODIFIER_TOKENS = new Set([
+  "ctrl",
+  "control",
+  "meta",
+  "command",
+  "cmd",
+  "shift",
+  "alt",
+  "option",
+  "mod",
+]);
 
 function normalizeToken(raw: string): string {
   const token = raw.trim().toLowerCase();
-  if (token === 'control') return 'ctrl';
-  if (token === 'cmd' || token === 'command') return 'meta';
-  if (token === 'option') return 'alt';
-  if (token === 'esc') return 'escape';
-  if (token === 'return') return 'enter';
+  if (token === "control") return "ctrl";
+  if (token === "cmd" || token === "command") return "meta";
+  if (token === "option") return "alt";
+  if (token === "esc") return "escape";
+  if (token === "return") return "enter";
   return token;
 }
 
 function normalizeEventKey(key: string): string {
-  if (key === 'Esc') return 'escape';
-  if (key === ' ') return 'space';
+  if (key === "Esc") return "escape";
+  if (key === " ") return "space";
   return key.toLowerCase();
 }
 
 function isEditableElement(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tagName = target.tagName;
-  if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') {
+  if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT") {
     return true;
   }
   return target.isContentEditable || target.closest('[contenteditable="true"]') !== null;
 }
 
 function isEditableContext(eventTarget: EventTarget | null): boolean {
-  const activeElement = typeof document !== 'undefined' ? document.activeElement : null;
+  const activeElement = typeof document !== "undefined" ? document.activeElement : null;
   return isEditableElement(eventTarget) || isEditableElement(activeElement);
 }
 
 function normalizeCombo(combo: string): string {
   const normalizedTokens = combo
-    .split('+')
+    .split("+")
     .map((token) => normalizeToken(token))
     .filter(Boolean);
 
   const modifiers = normalizedTokens.filter((token) => MODIFIER_TOKENS.has(token)).sort();
-  const key = normalizedTokens.find((token) => !MODIFIER_TOKENS.has(token)) ?? '';
-  return [...modifiers, key].join('+');
+  const key = normalizedTokens.find((token) => !MODIFIER_TOKENS.has(token)) ?? "";
+  return [...modifiers, key].join("+");
 }
 
 export function matchShortcut(event: KeyboardEvent, combo: string): boolean {
   const tokens = combo
-    .split('+')
+    .split("+")
     .map((token) => normalizeToken(token))
     .filter(Boolean);
 
   if (tokens.length === 0) return false;
 
-  const requiresCtrl = tokens.includes('ctrl');
-  const requiresMeta = tokens.includes('meta');
-  const requiresShift = tokens.includes('shift');
-  const requiresAlt = tokens.includes('alt');
-  const requiresMod = tokens.includes('mod');
+  const requiresCtrl = tokens.includes("ctrl");
+  const requiresMeta = tokens.includes("meta");
+  const requiresShift = tokens.includes("shift");
+  const requiresAlt = tokens.includes("alt");
+  const requiresMod = tokens.includes("mod");
 
   const expectedKey = tokens.find((token) => !MODIFIER_TOKENS.has(token)) ?? null;
 
@@ -84,7 +94,8 @@ export function matchShortcut(event: KeyboardEvent, combo: string): boolean {
   if (event.altKey !== requiresAlt) return false;
 
   const eventKey = normalizeEventKey(event.key);
-  const isQuestionShortcut = expectedKey === '?' && (eventKey === '?' || (eventKey === '/' && event.shiftKey));
+  const isQuestionShortcut =
+    expectedKey === "?" && (eventKey === "?" || (eventKey === "/" && event.shiftKey));
 
   if (requiresShift !== event.shiftKey && !isQuestionShortcut) {
     return false;
@@ -126,15 +137,15 @@ export function useKeyboardShortcuts(
   useEffect(() => {
     if (conflicts.length === 0) return;
     conflicts.forEach(([combo, ids]) => {
-      console.warn(`[useKeyboardShortcuts] 检测到快捷键冲突: ${combo} -> ${ids.join(', ')}`);
+      console.warn(`[useKeyboardShortcuts] 检测到快捷键冲突: ${combo} -> ${ids.join(", ")}`);
     });
   }, [conflicts]);
 
   useEffect(() => {
     if (!enabled) return;
 
-    const target = options.target ?? (typeof window !== 'undefined' ? window : null);
-    if (!target || typeof target.addEventListener !== 'function') return;
+    const target = options.target ?? (typeof window !== "undefined" ? window : null);
+    if (!target || typeof target.addEventListener !== "function") return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
@@ -160,10 +171,10 @@ export function useKeyboardShortcuts(
       }
     };
 
-    target.addEventListener('keydown', handleKeyDown as EventListener);
+    target.addEventListener("keydown", handleKeyDown as EventListener);
 
     return () => {
-      target.removeEventListener('keydown', handleKeyDown as EventListener);
+      target.removeEventListener("keydown", handleKeyDown as EventListener);
     };
   }, [activeBindings, enabled, options.target]);
 }

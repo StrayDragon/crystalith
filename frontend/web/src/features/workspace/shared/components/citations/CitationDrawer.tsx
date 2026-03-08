@@ -1,15 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Close as CloseIcon,
   MyLocation as LocateIcon,
   OpenInNew as OpenInNewIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
-import { getCitationContextV1NotebooksNotebookIdCitationsContextGet, type CitationContextResponse } from '../../../../../api/generated';
-import { unwrapData } from '../../../../../api/unwrap';
-import { useWorkspaceStore } from '../../state/workspaceStore';
-import type { Citation } from '../../types';
-import { useLayer } from '../../../../../shared/layer';
+import {
+  getCitationContextV1NotebooksNotebookIdCitationsContextGet,
+  type CitationContextResponse,
+} from "../../../../../api/generated";
+import { unwrapData } from "../../../../../api/unwrap";
+import { useWorkspaceStore } from "../../state/workspaceStore";
+import type { Citation } from "../../types";
+import { useLayer } from "../../../../../shared/layer";
 
 interface CitationDrawerProps {
   open: boolean;
@@ -20,11 +23,15 @@ interface CitationDrawerProps {
   elevated?: boolean;
 }
 
-function formatChunkMeta(chunkIndex: number, pageNumber?: number | null, paragraphIndex?: number | null) {
+function formatChunkMeta(
+  chunkIndex: number,
+  pageNumber?: number | null,
+  paragraphIndex?: number | null,
+) {
   const parts: string[] = [`Chunk #${chunkIndex}`];
-  if (typeof pageNumber === 'number') parts.push(`第 ${pageNumber} 页`);
-  if (typeof paragraphIndex === 'number') parts.push(`段落 ${paragraphIndex}`);
-  return parts.join(' · ');
+  if (typeof pageNumber === "number") parts.push(`第 ${pageNumber} 页`);
+  if (typeof paragraphIndex === "number") parts.push(`段落 ${paragraphIndex}`);
+  return parts.join(" · ");
 }
 
 function ContextChunkBlock({
@@ -37,14 +44,20 @@ function ContextChunkBlock({
   muted?: boolean;
 }) {
   return (
-    <div className={`rounded-xl border ${muted ? 'border-gray-200 bg-gray-50/60 dark:border-slate-700 dark:bg-slate-800/40' : 'border-blue-200 bg-blue-50/50 dark:border-blue-900/50 dark:bg-blue-950/20'}`}>
+    <div
+      className={`rounded-xl border ${muted ? "border-gray-200 bg-gray-50/60 dark:border-slate-700 dark:bg-slate-800/40" : "border-blue-200 bg-blue-50/50 dark:border-blue-900/50 dark:bg-blue-950/20"}`}
+    >
       <div className="px-3 py-2 border-b border-gray-200/70 dark:border-slate-700/60">
-        <div className={`text-xs font-semibold ${muted ? 'text-gray-700 dark:text-slate-200' : 'text-blue-700 dark:text-blue-200'}`}>
+        <div
+          className={`text-xs font-semibold ${muted ? "text-gray-700 dark:text-slate-200" : "text-blue-700 dark:text-blue-200"}`}
+        >
           {title}
         </div>
       </div>
       <div className="px-3 py-2.5">
-        <div className={`text-xs leading-relaxed whitespace-pre-wrap ${muted ? 'text-gray-600 dark:text-slate-300' : 'text-gray-800 dark:text-slate-100'}`}>
+        <div
+          className={`text-xs leading-relaxed whitespace-pre-wrap ${muted ? "text-gray-600 dark:text-slate-300" : "text-gray-800 dark:text-slate-100"}`}
+        >
           {text}
         </div>
       </div>
@@ -62,16 +75,16 @@ export default function CitationDrawer({
 }: CitationDrawerProps) {
   const notebookId = useWorkspaceStore((s) => s.activeNotebookId);
   const connectionState = useWorkspaceStore((s) => s.connectionState);
-  const isConnected = connectionState === 'live';
+  const isConnected = connectionState === "live";
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [context, setContext] = useState<CitationContextResponse | null>(null);
 
-  const { style: modalStyle } = useLayer('modal', elevated ? 12 : 0);
+  const { style: modalStyle } = useLayer("modal", elevated ? 12 : 0);
 
   const canFetch = Boolean(open && citation?.chunkId && notebookId && isConnected);
-  const title = citation?.sourceTitle ?? '引用详情';
+  const title = citation?.sourceTitle ?? "引用详情";
 
   const handleLocate = useCallback(() => {
     if (!citation) return;
@@ -86,34 +99,34 @@ export default function CitationDrawer({
   useEffect(() => {
     if (!open) {
       setContext(null);
-      setError('');
+      setError("");
       setLoading(false);
       return;
     }
 
     if (!citation) {
       setContext(null);
-      setError('');
+      setError("");
       setLoading(false);
       return;
     }
 
     if (!citation.chunkId) {
       setContext(null);
-      setError('该引用缺少 chunkId，无法拉取上下文。');
+      setError("该引用缺少 chunkId，无法拉取上下文。");
       setLoading(false);
       return;
     }
 
     if (!notebookId || !isConnected) {
       setContext(null);
-      setError('未连接到后端服务，无法拉取引用上下文。');
+      setError("未连接到后端服务，无法拉取引用上下文。");
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
     setContext(null);
 
     unwrapData(
@@ -126,7 +139,7 @@ export default function CitationDrawer({
         setContext(response);
       })
       .catch((err) => {
-        setError(err?.message || '加载引用上下文失败');
+        setError(err?.message || "加载引用上下文失败");
       })
       .finally(() => {
         setLoading(false);
@@ -141,7 +154,7 @@ export default function CitationDrawer({
     if (citation) {
       return formatChunkMeta(citation.chunkIndex, citation.pageNumber, citation.paragraphIndex);
     }
-    return '';
+    return "";
   }, [context, citation]);
 
   if (!open) return null;
@@ -161,9 +174,13 @@ export default function CitationDrawer({
       >
         <div className="flex items-start justify-between gap-3 px-4 py-4 border-b border-gray-200 dark:border-slate-700">
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-gray-900 truncate dark:text-slate-100">{title}</div>
+            <div className="text-sm font-semibold text-gray-900 truncate dark:text-slate-100">
+              {title}
+            </div>
             {headerMeta ? (
-              <div className="mt-1 text-[11px] font-medium text-gray-500 dark:text-slate-300 truncate">{headerMeta}</div>
+              <div className="mt-1 text-[11px] font-medium text-gray-500 dark:text-slate-300 truncate">
+                {headerMeta}
+              </div>
             ) : null}
           </div>
           <button
@@ -178,7 +195,7 @@ export default function CitationDrawer({
 
         <div className="px-4 py-3 flex items-center justify-between gap-2 border-b border-gray-100 dark:border-slate-800">
           <div className="text-xs font-medium text-gray-500 dark:text-slate-300 truncate">
-            {citation?.snippet ? `“${citation.snippet}”` : '—'}
+            {citation?.snippet ? `“${citation.snippet}”` : "—"}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {onLocateSource && (
@@ -210,9 +227,7 @@ export default function CitationDrawer({
           {loading ? (
             <div className="text-sm text-gray-500 dark:text-slate-300">正在加载引用上下文…</div>
           ) : null}
-          {error ? (
-            <div className="text-sm text-red-600 dark:text-red-300">{error}</div>
-          ) : null}
+          {error ? <div className="text-sm text-red-600 dark:text-red-300">{error}</div> : null}
 
           {!loading && !error && context ? (
             <div className="flex flex-col gap-3">

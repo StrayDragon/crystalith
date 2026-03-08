@@ -1,8 +1,8 @@
-import type { OutputItem, OutputTypeId } from '../../shared/types';
-import { decodeOutputContent, decodeOutputItem, getOutputTitle } from '../../shared/outputPayload';
-import { formatStructuredOutputForCopy } from '../../shared/utils';
+import type { OutputItem, OutputTypeId } from "../../shared/types";
+import { decodeOutputContent, decodeOutputItem, getOutputTitle } from "../../shared/outputPayload";
+import { formatStructuredOutputForCopy } from "../../shared/utils";
 
-export type ExportFormat = 'markdown' | 'json' | 'pdf' | 'pptx';
+export type ExportFormat = "markdown" | "json" | "pdf" | "pptx";
 
 interface SlideExportItem {
   title: string;
@@ -10,26 +10,26 @@ interface SlideExportItem {
   paragraphs: string[];
 }
 
-const DEFAULT_EXPORT_FORMATS: ExportFormat[] = ['markdown'];
+const DEFAULT_EXPORT_FORMATS: ExportFormat[] = ["markdown"];
 
 export const EXPORT_FORMAT_LABELS: Record<ExportFormat, string> = {
-  markdown: 'Markdown',
-  json: 'JSON',
-  pdf: 'PDF',
-  pptx: 'PPTX',
+  markdown: "Markdown",
+  json: "JSON",
+  pdf: "PDF",
+  pptx: "PPTX",
 };
 
 export const OUTPUT_EXPORT_FORMATS: Record<OutputTypeId, ExportFormat[]> = {
-  FAQ: ['markdown', 'json'],
-  GUIDE: ['markdown'],
-  TIMELINE: ['markdown'],
-  MINDMAP: ['markdown'],
-  QUIZ: ['markdown', 'json'],
-  BRIEFING: ['markdown', 'pdf'],
-  SLIDES: ['markdown', 'pptx'],
-  PARAGRAPH: ['markdown'],
-  BULLETS: ['markdown'],
-  STRUCTURED: ['markdown'],
+  FAQ: ["markdown", "json"],
+  GUIDE: ["markdown"],
+  TIMELINE: ["markdown"],
+  MINDMAP: ["markdown"],
+  QUIZ: ["markdown", "json"],
+  BRIEFING: ["markdown", "pdf"],
+  SLIDES: ["markdown", "pptx"],
+  PARAGRAPH: ["markdown"],
+  BULLETS: ["markdown"],
+  STRUCTURED: ["markdown"],
 };
 
 function resolveOutputTitle(output: OutputItem): string {
@@ -39,11 +39,11 @@ function resolveOutputTitle(output: OutputItem): string {
 function sanitizeFileName(value: string): string {
   const sanitized = value
     .trim()
-    .replace(/[<>:"/\\|?*]+/g, '-')
-    .replace(/\s+/g, '_')
-    .replace(/_+/g, '_');
+    .replace(/[<>:"/\\|?*]+/g, "-")
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_");
 
-  return sanitized || 'output';
+  return sanitized || "output";
 }
 
 export function getSupportedExportFormats(type: OutputTypeId): ExportFormat[] {
@@ -56,48 +56,48 @@ export function buildMarkdownExport(output: OutputItem): string {
 
   return [
     `# ${title}`,
-    '',
+    "",
     `- 输出类型: ${output.type}`,
     `- 导出时间: ${new Date().toISOString()}`,
-    '',
-    body || '（空内容）',
-    '',
-  ].join('\n');
+    "",
+    body || "（空内容）",
+    "",
+  ].join("\n");
 }
 
 export function buildJsonExport(output: OutputItem): Record<string, unknown> {
   const typed = decodeOutputItem(output);
 
-  if (typed?.type === 'FAQ') {
+  if (typed?.type === "FAQ") {
     return {
-      schema: 'crystalith.flashcards.v1',
-      type: 'flashcard',
+      schema: "crystalith.flashcards.v1",
+      type: "flashcard",
       title: resolveOutputTitle(output),
       items: typed.content.items.map((item, index) => ({
         id: index + 1,
-        front: item.question ?? '',
-        back: item.answer ?? '',
+        front: item.question ?? "",
+        back: item.answer ?? "",
       })),
     };
   }
 
-  if (typed?.type === 'QUIZ') {
+  if (typed?.type === "QUIZ") {
     return {
-      schema: 'crystalith.quiz.v1',
-      type: 'quiz',
+      schema: "crystalith.quiz.v1",
+      type: "quiz",
       title: resolveOutputTitle(output),
       questions: typed.content.questions.map((question, index) => ({
         id: index + 1,
-        question: question.question ?? '',
+        question: question.question ?? "",
         options: Array.isArray(question.options) ? question.options : [],
-        answer: question.answer ?? '',
-        explanation: question.explanation ?? '',
+        answer: question.answer ?? "",
+        explanation: question.explanation ?? "",
       })),
     };
   }
 
   return {
-    schema: 'crystalith.output.v1',
+    schema: "crystalith.output.v1",
     type: output.type,
     title: resolveOutputTitle(output),
     content: output.content ?? {},
@@ -105,7 +105,7 @@ export function buildJsonExport(output: OutputItem): Record<string, unknown> {
 }
 
 function parseSlidesFromMarkdown(markdown: string): SlideExportItem[] {
-  const lines = markdown.split('\n');
+  const lines = markdown.split("\n");
   const slides: SlideExportItem[] = [];
   let current: SlideExportItem | null = null;
 
@@ -113,24 +113,24 @@ function parseSlidesFromMarkdown(markdown: string): SlideExportItem[] {
     const line = rawLine.trim();
     if (!line) continue;
 
-    if (line.startsWith('# ')) {
+    if (line.startsWith("# ")) {
       if (current) {
         slides.push(current);
       }
       current = {
-        title: line.replace(/^#\s+/, ''),
+        title: line.replace(/^#\s+/, ""),
         bullets: [],
         paragraphs: [],
       };
       continue;
     }
 
-    if (line.startsWith('## ')) {
+    if (line.startsWith("## ")) {
       if (current) {
         slides.push(current);
       }
       current = {
-        title: line.replace(/^##\s+/, ''),
+        title: line.replace(/^##\s+/, ""),
         bullets: [],
         paragraphs: [],
       };
@@ -139,14 +139,14 @@ function parseSlidesFromMarkdown(markdown: string): SlideExportItem[] {
 
     if (!current) {
       current = {
-        title: '导出幻灯片',
+        title: "导出幻灯片",
         bullets: [],
         paragraphs: [],
       };
     }
 
-    if (line.startsWith('- ') || line.startsWith('* ')) {
-      current.bullets.push(line.replace(/^[-*]\s+/, ''));
+    if (line.startsWith("- ") || line.startsWith("* ")) {
+      current.bullets.push(line.replace(/^[-*]\s+/, ""));
     } else {
       current.paragraphs.push(line);
     }
@@ -160,18 +160,18 @@ function parseSlidesFromMarkdown(markdown: string): SlideExportItem[] {
 }
 
 export function buildSlidesExportItems(output: OutputItem): SlideExportItem[] {
-  const slidesContent = decodeOutputContent('SLIDES', output.content);
+  const slidesContent = decodeOutputContent("SLIDES", output.content);
   const outlineSlides = slidesContent?.outline?.slides;
 
   if (Array.isArray(outlineSlides) && outlineSlides.length > 0) {
     return outlineSlides.map((slide) => ({
-      title: slide.title || '未命名幻灯片',
+      title: slide.title || "未命名幻灯片",
       bullets: Array.isArray(slide.bullets) ? slide.bullets.map((item) => String(item)) : [],
       paragraphs: [],
     }));
   }
 
-  const markdown = typeof slidesContent?.markdown === 'string' ? slidesContent.markdown : '';
+  const markdown = typeof slidesContent?.markdown === "string" ? slidesContent.markdown : "";
   const parsed = markdown ? parseSlidesFromMarkdown(markdown) : [];
   if (parsed.length > 0) return parsed;
 
@@ -185,7 +185,7 @@ export function buildSlidesExportItems(output: OutputItem): SlideExportItem[] {
 }
 
 export function buildExportFileName(output: OutputItem, format: ExportFormat): string {
-  const extension = format === 'markdown' ? 'md' : format;
+  const extension = format === "markdown" ? "md" : format;
   const title = sanitizeFileName(resolveOutputTitle(output));
   return `${title}.${extension}`;
 }

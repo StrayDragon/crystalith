@@ -22,6 +22,10 @@ Frontend:
 - `cd frontend/web && pnpm install` installs JS deps.
 - `cd frontend/web && pnpm dev` starts the Vite dev server.
 - `cd frontend/web && pnpm test` runs Vitest.
+- `cd frontend/web && pnpm run lint` runs incremental `oxlint` against changed frontend source files.
+- `cd frontend/web && pnpm run lint:all` runs full `oxlint` on the frontend source tree.
+- `cd frontend/web && pnpm run format` applies `oxfmt` to frontend source/config files.
+- `cd frontend/web && pnpm run format:check` verifies frontend formatting without writing changes.
 - `cd frontend/web && pnpm run build` creates a production build.
 - `cd frontend/web && pnpm typecheck` runs TypeScript typechecking.
 
@@ -31,7 +35,7 @@ Tip: `just -l` lists available tasks in each directory.
 - Python: 4-space indentation; prefer high-coverage type hints; minimize `Any`; avoid dynamic attribute access (`getattr`, `hasattr`, `__getattr__`); `snake_case` for functions/vars, `PascalCase` for classes.
 - TypeScript/React: 2-space indentation; `PascalCase` components; hooks named `useX`.
 - CSS/Tailwind: keep global styles in `frontend/web/src/app/index.css`; feature styles live alongside components.
-- No repo-wide formatter is configured; match existing style and avoid unrelated reformatting.
+- No repo-wide formatter is configured outside `frontend/web`; frontend uses `oxfmt`. Match existing style elsewhere and avoid unrelated reformatting.
 - If backend OpenAPI changed, run `cd frontend/web && pnpm run api:sync` and verify.
 
 ## Testing Guidelines

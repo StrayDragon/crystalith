@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import useSWR from 'swr';
+import { useCallback, useEffect, useRef, useState } from "react";
+import useSWR from "swr";
 
 import {
   createDraftV1NotebooksNotebookIdSlidesDraftsPost as createSlidesDraft,
@@ -8,15 +8,20 @@ import {
   getDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGet as getSlidesDraft,
   getOutputV1NotebooksNotebookIdOutputsOutputIdGet as getOutput,
   listOutputsV1NotebooksNotebookIdOutputsGet as listOutputs,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
-import type { GenerationPreference, OutputItem, OutputTypeId, SlideGenerationConfig } from '../types';
-import { useWorkspaceStore } from '../state/workspaceStore';
-import { createId, formatTimestamp, normalizeOutput } from '../utils';
-import { readInitialGenerationPreferenceForApi } from './useGenerationPreference';
+} from "../../../../api/generated";
+import { unwrapData } from "../../../../api/unwrap";
+import type {
+  GenerationPreference,
+  OutputItem,
+  OutputTypeId,
+  SlideGenerationConfig,
+} from "../types";
+import { useWorkspaceStore } from "../state/workspaceStore";
+import { createId, formatTimestamp, normalizeOutput } from "../utils";
+import { readInitialGenerationPreferenceForApi } from "./useGenerationPreference";
 
-type OutputQueueStatus = 'queued' | 'running' | 'done' | 'error' | 'cancelled';
-type SlidesStreamStage = 'outline' | 'markdown';
+type OutputQueueStatus = "queued" | "running" | "done" | "error" | "cancelled";
+type SlidesStreamStage = "outline" | "markdown";
 
 type SlidesDraftSnapshot = {
   stage?: string | null;
@@ -73,7 +78,7 @@ function normalizeSlideGenerationConfig(config?: SlideGenerationConfig | null) {
 function buildSlidesStreamUrl(
   notebookId: number,
   slideId: number,
-  stage: 'outline' | 'markdown',
+  stage: "outline" | "markdown",
   modelId?: string,
 ) {
   const base = `/v1/notebooks/${notebookId}/slides/drafts/${slideId}/${stage}/stream`;
@@ -82,7 +87,7 @@ function buildSlidesStreamUrl(
 
 function parseSseMessage(event: Event) {
   const raw = (event as MessageEvent).data;
-  if (!raw || typeof raw !== 'string') return {};
+  if (!raw || typeof raw !== "string") return {};
   try {
     return JSON.parse(raw) as Record<string, any>;
   } catch {
@@ -92,7 +97,7 @@ function parseSseMessage(event: Event) {
 
 function isAbortSignalCompatibleWithRequest(signal: AbortSignal): boolean {
   try {
-    new Request('http://localhost', { signal });
+    new Request("http://localhost", { signal });
     return true;
   } catch {
     return false;
@@ -100,11 +105,11 @@ function isAbortSignalCompatibleWithRequest(signal: AbortSignal): boolean {
 }
 
 function hasSlidesStageCompleted(stage: SlidesStreamStage, draft: SlidesDraftSnapshot): boolean {
-  if (draft.status !== 'idle') return false;
-  if (stage === 'outline') {
-    return draft.stage === 'outline' || draft.stage === 'markdown';
+  if (draft.status !== "idle") return false;
+  if (stage === "outline") {
+    return draft.stage === "outline" || draft.stage === "markdown";
   }
-  return draft.stage === 'markdown' && (draft.output_id != null || Boolean(draft.markdown?.trim()));
+  return draft.stage === "markdown" && (draft.output_id != null || Boolean(draft.markdown?.trim()));
 }
 
 function runSlidesStream(
@@ -128,7 +133,7 @@ function runSlidesStream(
     const cleanup = () => {
       eventSource.close();
       if (signal) {
-        signal.removeEventListener('abort', handleAbort);
+        signal.removeEventListener("abort", handleAbort);
       }
       if (pollTimer != null) {
         window.clearInterval(pollTimer);
@@ -155,8 +160,8 @@ function runSlidesStream(
       try {
         const draft = await pollDraft();
         if (settled) return;
-        if (draft.status === 'error') {
-          rejectWithMessage(draft.error_message?.trim() || '生成失败，请稍后重试。');
+        if (draft.status === "error") {
+          rejectWithMessage(draft.error_message?.trim() || "生成失败，请稍后重试。");
           return;
         }
         if (hasSlidesStageCompleted(stage, draft)) {
@@ -169,8 +174,8 @@ function runSlidesStream(
     };
 
     const handleAbort = () => {
-      const abortError = new Error('aborted');
-      abortError.name = 'AbortError';
+      const abortError = new Error("aborted");
+      abortError.name = "AbortError";
       finalize(() => reject(abortError));
     };
 
@@ -179,29 +184,28 @@ function runSlidesStream(
       return;
     }
 
-    signal?.addEventListener('abort', handleAbort);
+    signal?.addEventListener("abort", handleAbort);
 
-    eventSource.addEventListener('done', () => {
+    eventSource.addEventListener("done", () => {
       finalize(resolve);
     });
 
-    eventSource.addEventListener('busy', (event) => {
+    eventSource.addEventListener("busy", (event) => {
       const data = parseSseMessage(event);
       const message =
-        typeof data.message === 'string' ? data.message : '演示正在生成中，请稍后重试。';
+        typeof data.message === "string" ? data.message : "演示正在生成中，请稍后重试。";
       rejectWithMessage(message);
     });
 
-    eventSource.addEventListener('error', (event) => {
+    eventSource.addEventListener("error", (event) => {
       const data = parseSseMessage(event);
-      const message =
-        typeof data.message === 'string' ? data.message : '生成失败，请稍后重试。';
+      const message = typeof data.message === "string" ? data.message : "生成失败，请稍后重试。";
       rejectWithMessage(message);
     });
 
     eventSource.onerror = () => {
       if (!pollDraft) {
-        rejectWithMessage('生成失败，请稍后重试。');
+        rejectWithMessage("生成失败，请稍后重试。");
         return;
       }
       void pollDraftState();
@@ -212,7 +216,7 @@ function runSlidesStream(
         void pollDraftState();
       }, SLIDES_STREAM_POLL_INTERVAL_MS);
       timeoutTimer = window.setTimeout(() => {
-        rejectWithMessage('生成超时，请稍后重试。');
+        rejectWithMessage("生成超时，请稍后重试。");
       }, SLIDES_STREAM_TIMEOUT_MS);
       void pollDraftState();
     }
@@ -240,31 +244,35 @@ export function useOutputQueue({
   const outputAbortControllersRef = useRef(new Map<string, AbortController>());
   const requestSupportsAbortSignalRef = useRef<boolean | null>(null);
 
-  const { data: outputsData, error: outputsError, isLoading: outputsLoading, mutate: mutateOutputs } =
-    useSWR(
-    activeNotebookId && isConnected
-      ? ['workspace/outputs', activeNotebookId]
-      : null,
-      () =>
-        unwrapData(listOutputs<true>({
+  const {
+    data: outputsData,
+    error: outputsError,
+    isLoading: outputsLoading,
+    mutate: mutateOutputs,
+  } = useSWR(
+    activeNotebookId && isConnected ? ["workspace/outputs", activeNotebookId] : null,
+    () =>
+      unwrapData(
+        listOutputs<true>({
           path: { notebook_id: activeNotebookId ?? 0 },
-        })),
-      { revalidateOnFocus: false },
-    );
+        }),
+      ),
+    { revalidateOnFocus: false },
+  );
 
   useEffect(() => {
-    store.getState().setLoading('outputs', outputsLoading);
+    store.getState().setLoading("outputs", outputsLoading);
   }, [outputsLoading]);
 
   useEffect(() => {
     if (outputsError) {
-      store.getState().setError('outputs', '输出加载失败，请稍后重试。');
+      store.getState().setError("outputs", "输出加载失败，请稍后重试。");
       return;
     }
     if (!outputsData) return;
     const s = store.getState();
     s.setOutputs(outputsData.map(normalizeOutput));
-    s.setError('outputs', '');
+    s.setError("outputs", "");
   }, [outputsData, outputsError]);
 
   const updateOutputQueueJobs = useCallback(
@@ -278,7 +286,7 @@ export function useOutputQueue({
 
   const hasPendingJobs = useCallback(() => {
     const outputPending = outputQueueRef.current.some(
-      (job) => job.status === 'queued' || job.status === 'running',
+      (job) => job.status === "queued" || job.status === "running",
     );
     return hasPendingRefineJobs() || outputPending;
   }, [hasPendingRefineJobs]);
@@ -286,7 +294,7 @@ export function useOutputQueue({
   useEffect(() => {
     outputQueueRef.current = outputQueueJobs;
     if (outputRunningRef.current) return;
-    if (!outputQueueJobs.some((job) => job.status === 'queued')) return;
+    if (!outputQueueJobs.some((job) => job.status === "queued")) return;
     runNextOutputJobRef.current();
   }, [outputQueueJobs]);
 
@@ -312,7 +320,7 @@ export function useOutputQueue({
       modelId?: string;
     }) => {
       if (sourceIds.length === 0) {
-        store.getState().setError('outputs', '请先选择来源。');
+        store.getState().setError("outputs", "请先选择来源。");
         return null;
       }
       const createdAt = new Date().toISOString();
@@ -326,7 +334,7 @@ export function useOutputQueue({
         type,
         prompt,
         sourceIds,
-        status: 'queued',
+        status: "queued",
         createdAt,
         createdAtLabel: formatTimestamp(createdAt),
         notebookId: activeNotebookId,
@@ -354,15 +362,15 @@ export function useOutputQueue({
       modelId?: string | null;
     }) => {
       if (!isConnected) {
-        store.getState().setError('outputs', '未连接到后端服务。');
+        store.getState().setError("outputs", "未连接到后端服务。");
         return null;
       }
       if (!activeNotebookId) {
-        store.getState().setError('outputs', '请先创建笔记本。');
+        store.getState().setError("outputs", "请先创建笔记本。");
         return null;
       }
       if (sourceIds.length === 0) {
-        store.getState().setError('outputs', '请先选择来源。');
+        store.getState().setError("outputs", "请先选择来源。");
         return null;
       }
 
@@ -377,19 +385,21 @@ export function useOutputQueue({
         source_ids: sourceIds.length ? sourceIds : undefined,
         generation_config: normalizeSlideGenerationConfig(generationConfig),
       };
-      const created = await unwrapData(createSlidesDraft<true>({
-        path: { notebook_id: activeNotebookId },
-        body: payload,
-      }));
+      const created = await unwrapData(
+        createSlidesDraft<true>({
+          path: { notebook_id: activeNotebookId },
+          body: payload,
+        }),
+      );
       const draftId = created.id;
 
       onQueueTotal();
       const job: OutputQueueJob = {
         id: createId(),
-        type: 'SLIDES',
+        type: "SLIDES",
         prompt,
         sourceIds,
-        status: 'queued',
+        status: "queued",
         createdAt,
         createdAtLabel: formatTimestamp(createdAt),
         notebookId: activeNotebookId,
@@ -417,7 +427,9 @@ export function useOutputQueue({
       outputAbortControllersRef.current.set(job.id, abortController);
       let requestSignal: AbortSignal | undefined = undefined;
       if (requestSupportsAbortSignalRef.current === null) {
-        requestSupportsAbortSignalRef.current = isAbortSignalCompatibleWithRequest(abortController.signal);
+        requestSupportsAbortSignalRef.current = isAbortSignalCompatibleWithRequest(
+          abortController.signal,
+        );
       }
       if (requestSupportsAbortSignalRef.current) {
         requestSignal = abortController.signal;
@@ -425,49 +437,51 @@ export function useOutputQueue({
 
       const isCancelled = () => {
         const current = outputQueueRef.current.find((item) => item.id === job.id);
-        return abortController.signal.aborted || current?.status === 'cancelled';
+        return abortController.signal.aborted || current?.status === "cancelled";
       };
 
       try {
-        store.getState().setLoading('outputs', true);
-        store.getState().setError('outputs', '');
+        store.getState().setLoading("outputs", true);
+        store.getState().setError("outputs", "");
         let normalized: OutputItem[] = [];
 
         if (!isConnected) {
-          throw new Error('backend unavailable');
+          throw new Error("backend unavailable");
         }
         if (job.sourceIds.length === 0) {
-          throw new Error('请先选择来源。');
+          throw new Error("请先选择来源。");
         }
         if (isCancelled()) {
-          const abortError = new Error('aborted');
-          abortError.name = 'AbortError';
+          const abortError = new Error("aborted");
+          abortError.name = "AbortError";
           throw abortError;
         }
 
-        if (job.type === 'SLIDES') {
+        if (job.type === "SLIDES") {
           if (job.notebookId && job.draftId) {
             const outlineUrl = buildSlidesStreamUrl(
               job.notebookId,
               job.draftId,
-              'outline',
+              "outline",
               job.modelId,
             );
             const markdownUrl = buildSlidesStreamUrl(
               job.notebookId,
               job.draftId,
-              'markdown',
+              "markdown",
               job.modelId,
             );
             const pollDraft = async () =>
-              unwrapData(getSlidesDraft<true>({
-                path: { notebook_id: job.notebookId ?? 0, slide_id: job.draftId ?? 0 },
-              }));
-            await runSlidesStream(outlineUrl, 'outline', {
+              unwrapData(
+                getSlidesDraft<true>({
+                  path: { notebook_id: job.notebookId ?? 0, slide_id: job.draftId ?? 0 },
+                }),
+              );
+            await runSlidesStream(outlineUrl, "outline", {
               signal: abortController.signal,
               pollDraft,
             });
-            await runSlidesStream(markdownUrl, 'markdown', {
+            await runSlidesStream(markdownUrl, "markdown", {
               signal: abortController.signal,
               pollDraft,
             });
@@ -475,23 +489,25 @@ export function useOutputQueue({
               await mutateOutputs();
             }
           } else {
-            throw new Error('missing slide draft');
+            throw new Error("missing slide draft");
           }
         } else if (job.notebookId) {
           const preference = job.preference;
-          const response = await unwrapData(createOutput<true>({
-            path: { notebook_id: job.notebookId, output_type: job.type },
-            body: {
-              prompt: job.prompt || undefined,
-              source_ids: job.sourceIds.length ? job.sourceIds : undefined,
-              ...(preference ? { preference } : {}),
-              model_id: job.modelId || undefined,
-            },
-            signal: requestSignal,
-          }));
+          const response = await unwrapData(
+            createOutput<true>({
+              path: { notebook_id: job.notebookId, output_type: job.type },
+              body: {
+                prompt: job.prompt || undefined,
+                source_ids: job.sourceIds.length ? job.sourceIds : undefined,
+                ...(preference ? { preference } : {}),
+                model_id: job.modelId || undefined,
+              },
+              signal: requestSignal,
+            }),
+          );
           if (isCancelled()) {
-            const abortError = new Error('aborted');
-            abortError.name = 'AbortError';
+            const abortError = new Error("aborted");
+            abortError.name = "AbortError";
             throw abortError;
           }
           normalized = [normalizeOutput(response)];
@@ -499,12 +515,12 @@ export function useOutputQueue({
           s.setOutputs([...normalized, ...s.outputs]);
           await mutateOutputs();
         } else {
-          throw new Error('missing notebook');
+          throw new Error("missing notebook");
         }
 
         if (isCancelled()) {
           updateOutputQueueJobs((prev) =>
-            prev.map((item) => (item.id === job.id ? { ...item, status: 'cancelled' } : item)),
+            prev.map((item) => (item.id === job.id ? { ...item, status: "cancelled" } : item)),
           );
           const stillTracked = outputQueueRef.current.some((item) => item.id === job.id);
           if (stillTracked) {
@@ -514,23 +530,23 @@ export function useOutputQueue({
         }
 
         updateOutputQueueJobs((prev) =>
-          prev.map((item) => (item.id === job.id ? { ...item, status: 'done' } : item)),
+          prev.map((item) => (item.id === job.id ? { ...item, status: "done" } : item)),
         );
         const stillTracked = outputQueueRef.current.some((item) => item.id === job.id);
         const isCurrentNotebook =
           job.notebookId != null && job.notebookId === store.getState().activeNotebookId;
-        if ((normalized.length > 0 || job.type === 'SLIDES') && stillTracked && isCurrentNotebook) {
+        if ((normalized.length > 0 || job.type === "SLIDES") && stillTracked && isCurrentNotebook) {
           markJobCompleted(job.id);
         }
-        store.getState().setActivePanel('refine');
+        store.getState().setActivePanel("refine");
         if (stillTracked) {
           onQueueDone();
         }
       } catch (error) {
-        const cancelled = isCancelled() || (error instanceof Error && error.name === 'AbortError');
+        const cancelled = isCancelled() || (error instanceof Error && error.name === "AbortError");
         if (cancelled) {
           updateOutputQueueJobs((prev) =>
-            prev.map((item) => (item.id === job.id ? { ...item, status: 'cancelled' } : item)),
+            prev.map((item) => (item.id === job.id ? { ...item, status: "cancelled" } : item)),
           );
           const stillTracked = outputQueueRef.current.some((item) => item.id === job.id);
           if (stillTracked) {
@@ -539,55 +555,53 @@ export function useOutputQueue({
           return;
         }
 
-        let userFacingError = '输出生成失败，请稍后重试。';
+        let userFacingError = "输出生成失败，请稍后重试。";
 
         if (error instanceof Error) {
           const statusError = error as Error & { status?: number };
 
           if (statusError.status === 503) {
-            userFacingError = 'AI 服务配置错误，请联系管理员。';
+            userFacingError = "AI 服务配置错误，请联系管理员。";
           } else if (statusError.status === 404) {
-            userFacingError = '笔记本已失效，请刷新页面。';
+            userFacingError = "笔记本已失效，请刷新页面。";
           } else if (statusError.status === 400) {
-            userFacingError = '请求参数有误，请检查输入。';
+            userFacingError = "请求参数有误，请检查输入。";
           } else if (statusError.status === 500) {
-            userFacingError = '服务器错误，请稍后重试。';
-          } else if (error.message && error.message.length < 100 && !error.message.includes('fetch')) {
+            userFacingError = "服务器错误，请稍后重试。";
+          } else if (
+            error.message &&
+            error.message.length < 100 &&
+            !error.message.includes("fetch")
+          ) {
             userFacingError = error.message;
           }
         }
 
         updateOutputQueueJobs((prev) =>
-          prev.map((item) => (item.id === job.id ? { ...item, status: 'error' } : item)),
+          prev.map((item) => (item.id === job.id ? { ...item, status: "error" } : item)),
         );
         const stillTracked = outputQueueRef.current.some((item) => item.id === job.id);
-        store.getState().setError('outputs', userFacingError);
+        store.getState().setError("outputs", userFacingError);
         if (stillTracked) {
           onQueueDone();
         }
       } finally {
         outputAbortControllersRef.current.delete(job.id);
-        store.getState().setLoading('outputs', false);
+        store.getState().setLoading("outputs", false);
         outputRunningRef.current = false;
         runNextOutputJobRef.current();
       }
     },
-    [
-      isConnected,
-      markJobCompleted,
-      mutateOutputs,
-      onQueueDone,
-      updateOutputQueueJobs,
-    ],
+    [isConnected, markJobCompleted, mutateOutputs, onQueueDone, updateOutputQueueJobs],
   );
 
   const runNextOutputJob = useCallback(() => {
     if (outputRunningRef.current) return;
-    const nextJob = outputQueueRef.current.find((job) => job.status === 'queued');
+    const nextJob = outputQueueRef.current.find((job) => job.status === "queued");
     if (!nextJob) return;
     outputRunningRef.current = true;
     updateOutputQueueJobs((prev) =>
-      prev.map((job) => (job.id === nextJob.id ? { ...job, status: 'running' } : job)),
+      prev.map((job) => (job.id === nextJob.id ? { ...job, status: "running" } : job)),
     );
     void processOutputJob(nextJob);
   }, [processOutputJob, updateOutputQueueJobs]);
@@ -598,13 +612,13 @@ export function useOutputQueue({
     (jobId: string) => {
       const target = outputQueueRef.current.find((item) => item.id === jobId);
       if (!target) return;
-      if (target.status === 'done' || target.status === 'error' || target.status === 'cancelled') {
+      if (target.status === "done" || target.status === "error" || target.status === "cancelled") {
         return;
       }
 
-      if (target.status === 'queued') {
+      if (target.status === "queued") {
         updateOutputQueueJobs((prev) =>
-          prev.map((item) => (item.id === jobId ? { ...item, status: 'cancelled' } : item)),
+          prev.map((item) => (item.id === jobId ? { ...item, status: "cancelled" } : item)),
         );
         onQueueDone();
         return;
@@ -612,31 +626,27 @@ export function useOutputQueue({
 
       outputAbortControllersRef.current.get(jobId)?.abort();
       updateOutputQueueJobs((prev) =>
-        prev.map((item) => (item.id === jobId ? { ...item, status: 'cancelled' } : item)),
+        prev.map((item) => (item.id === jobId ? { ...item, status: "cancelled" } : item)),
       );
     },
     [onQueueDone, updateOutputQueueJobs],
   );
 
   const retryOutputs = useCallback(async () => {
-    store.getState().setError('outputs', '');
+    store.getState().setError("outputs", "");
     await mutateOutputs();
   }, [mutateOutputs]);
 
   const retryOutputJob = useCallback(
     (jobId: string) => {
       const target = outputQueueRef.current.find((item) => item.id === jobId);
-      if (!target || target.status !== 'error') return;
+      if (!target || target.status !== "error") return;
 
       onQueueTotal();
       updateOutputQueueJobs((prev) =>
-        prev.map((item) =>
-          item.id === jobId
-            ? { ...item, status: 'queued' }
-            : item,
-        ),
+        prev.map((item) => (item.id === jobId ? { ...item, status: "queued" } : item)),
       );
-      store.getState().setError('outputs', '');
+      store.getState().setError("outputs", "");
       runNextOutputJobRef.current();
     },
     [onQueueTotal, updateOutputQueueJobs],
@@ -647,18 +657,20 @@ export function useOutputQueue({
       const s = store.getState();
       if (!s.activeNotebookId) return;
       if (!isConnected) {
-        s.setError('outputs', '未连接到后端服务，无法删除输出。');
+        s.setError("outputs", "未连接到后端服务，无法删除输出。");
         return;
       }
 
       s.setOutputs(s.outputs.filter((item) => item.id !== outputId));
 
       try {
-        await unwrapData(deleteOutputApi<true>({
-          path: { notebook_id: s.activeNotebookId, output_id: outputId },
-        }));
+        await unwrapData(
+          deleteOutputApi<true>({
+            path: { notebook_id: s.activeNotebookId, output_id: outputId },
+          }),
+        );
       } catch (error) {
-        console.error('Failed to delete output:', error);
+        console.error("Failed to delete output:", error);
         await mutateOutputs();
       }
     },
@@ -674,19 +686,17 @@ export function useOutputQueue({
       const s = store.getState();
       if (!s.activeNotebookId || !isConnected) return null;
       try {
-        const output = await unwrapData(getOutput<true>({
-          path: { notebook_id: s.activeNotebookId, output_id: outputId },
-        }));
+        const output = await unwrapData(
+          getOutput<true>({
+            path: { notebook_id: s.activeNotebookId, output_id: outputId },
+          }),
+        );
         const normalized = normalizeOutput(output);
         const s2 = store.getState();
-        s2.setOutputs(
-          s2.outputs.map((item) =>
-            item.id === outputId ? normalized : item,
-          ),
-        );
+        s2.setOutputs(s2.outputs.map((item) => (item.id === outputId ? normalized : item)));
         return normalized;
       } catch (error) {
-        store.getState().setError('outputs', '获取输出详情失败。');
+        store.getState().setError("outputs", "获取输出详情失败。");
         return null;
       }
     },
