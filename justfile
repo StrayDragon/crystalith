@@ -365,6 +365,10 @@ check:
     cd backend/py && just check
     @echo "==> OpenAPI schema consistency"
     just api-check
+    @echo "==> Frontend incremental lint"
+    pnpm -C frontend/web run lint
+    @echo "==> Frontend format check"
+    pnpm -C frontend/web run format:check
     @echo "==> Frontend generated API client consistency"
     cd frontend/web && pnpm run api:generate
     git diff --exit-code -- frontend/web/src/api/generated
