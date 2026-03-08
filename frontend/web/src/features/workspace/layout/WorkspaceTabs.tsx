@@ -1,4 +1,4 @@
-import type { PanelId } from '../shared/types';
+import type { PanelId } from "../shared/types";
 
 interface WorkspaceTabsProps {
   activePanel: PanelId;
@@ -6,9 +6,9 @@ interface WorkspaceTabsProps {
 }
 
 const tabs: { id: PanelId; label: string }[] = [
-  { id: 'sources', label: '来源' },
-  { id: 'chat', label: '聊天' },
-  { id: 'refine', label: '输出中心' },
+  { id: "sources", label: "来源" },
+  { id: "chat", label: "聊天" },
+  { id: "refine", label: "输出中心" },
 ];
 
 export default function WorkspaceTabs({ activePanel, onChange }: WorkspaceTabsProps) {
@@ -18,8 +18,8 @@ export default function WorkspaceTabs({ activePanel, onChange }: WorkspaceTabsPr
         <button
           key={item.id}
           type="button"
-          className={`WorkspaceTab ${activePanel === item.id ? 'isActive' : ''}`}
-          aria-current={activePanel === item.id ? 'page' : undefined}
+          className={`WorkspaceTab ${activePanel === item.id ? "isActive" : ""}`}
+          aria-current={activePanel === item.id ? "page" : undefined}
           onClick={() => onChange(item.id)}
         >
           {item.label}

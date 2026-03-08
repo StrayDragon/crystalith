@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 import type {
   ChatMessage,
@@ -17,8 +17,8 @@ import type {
   RefineSettings,
   SessionSummary,
   SourceItem,
-} from '../types';
-import type { AsyncStatus } from '../../../../shared/types';
+} from "../types";
+import type { AsyncStatus } from "../../../../shared/types";
 
 // ---------------------------------------------------------------------------
 // State shape — identical to the former WorkspaceState
@@ -139,17 +139,17 @@ const initialState: WorkspaceStoreState = {
   sources: [],
   selectedSourceIds: {},
   messages: [],
-  draft: '',
+  draft: "",
   citations: [],
   hoveredCitationChunkId: null,
   hoveredMessageChunkIds: [],
   jumpToCitationChunkId: null,
   outputs: [],
-  outputType: 'FAQ',
+  outputType: "FAQ",
   outputTypeRenderDescriptors: {},
   outputTypeFrontendBundles: {},
-  refineMode: 'paragraph',
-  refinePrompt: '',
+  refineMode: "paragraph",
+  refinePrompt: "",
   refineJobs: [],
   refineSettings: {
     autoTrigger: false,
@@ -157,11 +157,11 @@ const initialState: WorkspaceStoreState = {
   },
   hasNewOutput: false,
   recentCompletedJobId: null,
-  activePanel: 'chat',
-  createState: 'idle',
-  createName: '',
-  connectionState: 'connecting',
-  uploadState: 'idle',
+  activePanel: "chat",
+  createState: "idle",
+  createName: "",
+  connectionState: "connecting",
+  uploadState: "idle",
   loading: {
     notebooks: false,
     sources: false,
@@ -171,13 +171,13 @@ const initialState: WorkspaceStoreState = {
     send: false,
   },
   errors: {
-    notebooks: '',
-    sources: '',
-    sessions: '',
-    messages: '',
-    outputs: '',
-    send: '',
-    create: '',
+    notebooks: "",
+    sources: "",
+    sessions: "",
+    messages: "",
+    outputs: "",
+    send: "",
+    create: "",
   },
 };
 
@@ -208,11 +208,11 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
       recentCompletedJobId: null,
       errors: {
         ...state.errors,
-        sources: '',
-        sessions: '',
-        messages: '',
-        outputs: '',
-        send: '',
+        sources: "",
+        sessions: "",
+        messages: "",
+        outputs: "",
+        send: "",
       },
     })),
   setAutoCreatedNotebookId: (autoCreatedNotebookId) => set({ autoCreatedNotebookId }),
@@ -230,8 +230,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
       jumpToCitationChunkId: null,
       errors: {
         ...state.errors,
-        messages: '',
-        send: '',
+        messages: "",
+        send: "",
       },
     })),
 
@@ -244,16 +244,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   appendMessageContent: (messageId, text) =>
     set((state) => ({
       messages: state.messages.map((msg) =>
-        msg.id === messageId
-          ? { ...msg, content: msg.content + text }
-          : msg,
+        msg.id === messageId ? { ...msg, content: msg.content + text } : msg,
       ),
     })),
   updateMessage: (messageId, updates) =>
     set((state) => ({
-      messages: state.messages.map((msg) =>
-        msg.id === messageId ? { ...msg, ...updates } : msg,
-      ),
+      messages: state.messages.map((msg) => (msg.id === messageId ? { ...msg, ...updates } : msg)),
     })),
   addStreamingMessage: (message) =>
     set((state) => ({
@@ -270,8 +266,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   setOutputType: (type) => set({ outputType: type }),
   setOutputTypeRenderDescriptors: (descriptors) =>
     set({ outputTypeRenderDescriptors: descriptors }),
-  setOutputTypeFrontendBundles: (bundles) =>
-    set({ outputTypeFrontendBundles: bundles }),
+  setOutputTypeFrontendBundles: (bundles) => set({ outputTypeFrontendBundles: bundles }),
 
   // --- Refine ---
   setRefineMode: (mode) => set({ refineMode: mode }),

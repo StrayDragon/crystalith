@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 
-import { CollapsibleSection, ProgressIndicator } from './StudioPrimitives';
+import { CollapsibleSection, ProgressIndicator } from "./StudioPrimitives";
 
 export interface GuideModule {
   title?: string | null;
@@ -37,9 +37,13 @@ export default function GuideChecklist({ modules, className }: GuideChecklistPro
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm font-semibold text-gray-900 dark:text-slate-100">学习进度</div>
-            <div className="text-xs text-gray-500 dark:text-slate-400">已完成 {progress.done} / {progress.total}</div>
+            <div className="text-xs text-gray-500 dark:text-slate-400">
+              已完成 {progress.done} / {progress.total}
+            </div>
           </div>
-          <div className="text-sm font-semibold text-gray-900 tabular-nums dark:text-slate-100">{progress.percent}%</div>
+          <div className="text-sm font-semibold text-gray-900 tabular-nums dark:text-slate-100">
+            {progress.percent}%
+          </div>
         </div>
         <div className="mt-3">
           <ProgressIndicator current={progress.done} total={progress.total} label="总体进度" />
@@ -49,7 +53,7 @@ export default function GuideChecklist({ modules, className }: GuideChecklistPro
         {modules.map((module, index) => {
           const isDone = completed.has(index);
           const keyPoints = module.key_points ?? [];
-          const summary = module.objective?.text || '';
+          const summary = module.objective?.text || "";
           return (
             <CollapsibleSection
               key={`module-${index}`}
@@ -57,7 +61,7 @@ export default function GuideChecklist({ modules, className }: GuideChecklistPro
               title={module.title || `模块 ${index + 1}`}
               summary={summary}
               defaultOpen={index === 0}
-              headerRight={(
+              headerRight={
                 <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-300">
                   <input
                     type="checkbox"
@@ -76,17 +80,19 @@ export default function GuideChecklist({ modules, className }: GuideChecklistPro
                     name={`guide-module-${index}-done`}
                     aria-label={`${module.title || `模块 ${index + 1}`} 完成状态`}
                   />
-                  {isDone ? '已完成' : '未完成'}
+                  {isDone ? "已完成" : "未完成"}
                 </label>
-              )}
+              }
             >
               {summary ? (
-                <div className="mb-3 text-sm text-gray-700 dark:text-slate-200">目标：{summary}</div>
+                <div className="mb-3 text-sm text-gray-700 dark:text-slate-200">
+                  目标：{summary}
+                </div>
               ) : null}
               {keyPoints.length > 0 ? (
                 <ul className="list-disc pl-5 text-sm text-gray-700 dark:text-slate-200">
                   {keyPoints.map((point, pointIndex) => (
-                    <li key={`${index}-${pointIndex}`}>{point.text || '要点'}</li>
+                    <li key={`${index}-${pointIndex}`}>{point.text || "要点"}</li>
                   ))}
                 </ul>
               ) : (

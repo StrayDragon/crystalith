@@ -1,9 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
 type ToolActionCardProps = {
   title: string;
   description?: string | null;
-  status: 'pending' | 'running' | 'success' | 'error';
+  status: "pending" | "running" | "success" | "error";
   outputText?: string | null;
   errorMessage?: string | null;
   canExecute: boolean;
@@ -27,12 +27,12 @@ export default function ToolActionCard({
     if (!autoExecute) return;
     if (!canExecute) return;
     if (requiresConfirm) return;
-    if (status !== 'pending') return;
+    if (status !== "pending") return;
     onExecute();
   }, [autoExecute, canExecute, requiresConfirm, onExecute, status]);
 
-  const isBusy = status === 'running';
-  const canClick = canExecute && !isBusy && (status === 'pending' || status === 'error');
+  const isBusy = status === "running";
+  const canClick = canExecute && !isBusy && (status === "pending" || status === "error");
 
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 px-4 py-3">
@@ -42,9 +42,7 @@ export default function ToolActionCard({
             {title}
           </div>
           {description ? (
-            <div className="mt-1 text-[11px] text-slate-600 dark:text-slate-300">
-              {description}
-            </div>
+            <div className="mt-1 text-[11px] text-slate-600 dark:text-slate-300">{description}</div>
           ) : null}
         </div>
         <button
@@ -53,15 +51,21 @@ export default function ToolActionCard({
           onClick={onExecute}
           disabled={!canClick}
         >
-          {isBusy ? '运行中…' : status === 'success' ? '已完成' : requiresConfirm ? '确认执行' : '执行'}
+          {isBusy
+            ? "运行中…"
+            : status === "success"
+              ? "已完成"
+              : requiresConfirm
+                ? "确认执行"
+                : "执行"}
         </button>
       </div>
-      {status === 'error' && errorMessage ? (
+      {status === "error" && errorMessage ? (
         <div className="mt-2 text-[11px] text-rose-700 dark:text-rose-300 whitespace-pre-wrap">
           {errorMessage}
         </div>
       ) : null}
-      {status === 'success' && outputText ? (
+      {status === "success" && outputText ? (
         <pre className="mt-2 text-[11px] leading-snug text-slate-800 dark:text-slate-100 overflow-x-auto whitespace-pre-wrap">
           {outputText}
         </pre>
@@ -69,4 +73,3 @@ export default function ToolActionCard({
     </div>
   );
 }
-

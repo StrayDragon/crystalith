@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -14,16 +14,9 @@ import {
   type NodeProps,
   ConnectionMode,
   Panel,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-import {
-  IconButton,
-  Typography,
-  Chip,
-  Tooltip,
-  Button,
-  Spinner,
-} from '@material-tailwind/react';
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import { IconButton, Typography, Chip, Tooltip, Button, Spinner } from "@material-tailwind/react";
 import {
   Close as CloseIcon,
   Refresh as RefreshIcon,
@@ -34,54 +27,54 @@ import {
   Warning as WarningIcon,
   OpenInNew as OpenInNewIcon,
   CenterFocusStrong as ResetLayoutIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
-import type { AnalysisResult } from '../../../../api/generated';
-import type { SourceItem, OutputItem, SessionSummary, ChatMessage } from '../../shared/types';
-import { useLayer } from '../../../../shared/layer';
-import { useTheme } from '../../shared/hooks/useTheme';
+import type { AnalysisResult } from "../../../../api/generated";
+import type { SourceItem, OutputItem, SessionSummary, ChatMessage } from "../../shared/types";
+import { useLayer } from "../../../../shared/layer";
+import { useTheme } from "../../shared/hooks/useTheme";
 
 // Cache for node positions (survives component unmount within session)
 const nodePositionsCache = new Map<string, { x: number; y: number }>();
 
 // Node type definitions
-type KnowledgeNodeType = 'source' | 'output' | 'session';
+type KnowledgeNodeType = "source" | "output" | "session";
 
 // Color schemes for different node types
 const NODE_COLORS = {
   source: {
-    bg: '#EFF6FF',
-    border: '#BFDBFE',
-    text: '#1D4ED8',
-    node: '#3B82F6',
-    label: '来源',
+    bg: "#EFF6FF",
+    border: "#BFDBFE",
+    text: "#1D4ED8",
+    node: "#3B82F6",
+    label: "来源",
   },
   output: {
-    bg: '#F5F3FF',
-    border: '#DDD6FE',
-    text: '#6D28D9',
-    node: '#8B5CF6',
-    label: '产出',
+    bg: "#F5F3FF",
+    border: "#DDD6FE",
+    text: "#6D28D9",
+    node: "#8B5CF6",
+    label: "产出",
   },
   session: {
-    bg: '#F0FDF4',
-    border: '#BBF7D0',
-    text: '#15803D',
-    node: '#22C55E',
-    label: '对话',
+    bg: "#F0FDF4",
+    border: "#BBF7D0",
+    text: "#15803D",
+    node: "#22C55E",
+    label: "对话",
   },
 };
 
 // Topic colors for sources
 const TOPIC_COLORS = [
-  { bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8', node: '#3B82F6' },
-  { bg: '#F0FDF4', border: '#BBF7D0', text: '#15803D', node: '#22C55E' },
-  { bg: '#FFFBEB', border: '#FDE68A', text: '#B45309', node: '#F59E0B' },
-  { bg: '#FAF5FF', border: '#E9D5FF', text: '#7E22CE', node: '#A855F7' },
-  { bg: '#FFF1F2', border: '#FECDD3', text: '#BE123C', node: '#F43F5E' },
-  { bg: '#F0FDFA', border: '#99F6E4', text: '#0F766E', node: '#14B8A6' },
-  { bg: '#EEF2FF', border: '#C7D2FE', text: '#4338CA', node: '#6366F1' },
-  { bg: '#FFF7ED', border: '#FED7AA', text: '#C2410C', node: '#F97316' },
+  { bg: "#EFF6FF", border: "#BFDBFE", text: "#1D4ED8", node: "#3B82F6" },
+  { bg: "#F0FDF4", border: "#BBF7D0", text: "#15803D", node: "#22C55E" },
+  { bg: "#FFFBEB", border: "#FDE68A", text: "#B45309", node: "#F59E0B" },
+  { bg: "#FAF5FF", border: "#E9D5FF", text: "#7E22CE", node: "#A855F7" },
+  { bg: "#FFF1F2", border: "#FECDD3", text: "#BE123C", node: "#F43F5E" },
+  { bg: "#F0FDFA", border: "#99F6E4", text: "#0F766E", node: "#14B8A6" },
+  { bg: "#EEF2FF", border: "#C7D2FE", text: "#4338CA", node: "#6366F1" },
+  { bg: "#FFF7ED", border: "#FED7AA", text: "#C2410C", node: "#F97316" },
 ];
 
 interface KnowledgeGraphViewProps {
@@ -128,15 +121,13 @@ function KnowledgeNode({ data }: NodeProps<Node<KnowledgeNodeData>>) {
 
   const baseColor = NODE_COLORS[nodeType];
   // For sources with topics, use topic color
-  const color = nodeType === 'source' && typeof topicIndex === 'number'
-    ? TOPIC_COLORS[topicIndex % TOPIC_COLORS.length]
-    : baseColor;
+  const color =
+    nodeType === "source" && typeof topicIndex === "number"
+      ? TOPIC_COLORS[topicIndex % TOPIC_COLORS.length]
+      : baseColor;
 
-  const Icon = nodeType === 'source'
-    ? DescriptionIcon
-    : nodeType === 'output'
-    ? OutputIcon
-    : ChatIcon;
+  const Icon =
+    nodeType === "source" ? DescriptionIcon : nodeType === "output" ? OutputIcon : ChatIcon;
 
   return (
     <>
@@ -145,12 +136,12 @@ function KnowledgeNode({ data }: NodeProps<Node<KnowledgeNodeData>>) {
         className={`
           relative px-3 py-2 rounded-xl shadow-lg cursor-pointer transition-all duration-200
           hover:shadow-xl hover:scale-105
-          ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
+          ${isSelected ? "ring-2 ring-blue-500 ring-offset-2" : ""}
         `}
         style={{
           backgroundColor: color.bg,
           borderWidth: 2,
-          borderColor: hasContradiction ? '#F87171' : color.border,
+          borderColor: hasContradiction ? "#F87171" : color.border,
           minWidth: 100,
           maxWidth: 160,
         }}
@@ -279,7 +270,10 @@ function buildGraphData(
   }
 
   // Calculate relations between sources
-  const sourceRelations = new Map<string, { count: number; maxScore: number; isContradiction: boolean }>();
+  const sourceRelations = new Map<
+    string,
+    { count: number; maxScore: number; isContradiction: boolean }
+  >();
   const sourceRelationCount = new Map<number, number>();
   const sourceHasContradiction = new Set<number>();
 
@@ -288,12 +282,12 @@ function buildGraphData(
       const sourceA = findSourceForChunk(relation.source_chunk_id);
       const sourceB = findSourceForChunk(relation.target_chunk_id);
       if (sourceA !== undefined && sourceB !== undefined && sourceA !== sourceB) {
-        const key = [Math.min(sourceA, sourceB), Math.max(sourceA, sourceB)].join('-');
+        const key = [Math.min(sourceA, sourceB), Math.max(sourceA, sourceB)].join("-");
         const existing = sourceRelations.get(key);
         sourceRelations.set(key, {
           count: (existing?.count || 0) + 1,
           maxScore: Math.max(existing?.maxScore || 0, relation.score),
-          isContradiction: existing?.isContradiction || relation.relation_type === 'contradicts',
+          isContradiction: existing?.isContradiction || relation.relation_type === "contradicts",
         });
         sourceRelationCount.set(sourceA, (sourceRelationCount.get(sourceA) || 0) + 1);
         sourceRelationCount.set(sourceB, (sourceRelationCount.get(sourceB) || 0) + 1);
@@ -371,13 +365,13 @@ function buildGraphData(
     const angle = (2 * Math.PI * index) / Math.max(visibleSources.length, 1) - Math.PI / 2;
     nodes.push({
       id: `source-${source.id}`,
-      type: 'knowledgeNode',
+      type: "knowledgeNode",
       position: {
         x: centerX + sourceRadius * Math.cos(angle),
         y: centerY + sourceRadius * Math.sin(angle),
       },
       data: {
-        nodeType: 'source',
+        nodeType: "source",
         id: source.id,
         title: source.title,
         subtitle: `${source.chunks} 片段`,
@@ -396,15 +390,15 @@ function buildGraphData(
     const relatedSources = outputSourceRelations.get(output.id);
     nodes.push({
       id: `output-${output.id}`,
-      type: 'knowledgeNode',
+      type: "knowledgeNode",
       position: {
         x: centerX + outputRadius * Math.cos(angle),
         y: centerY + outputRadius * Math.sin(angle),
       },
       data: {
-        nodeType: 'output',
+        nodeType: "output",
         id: output.id,
-        title: output.prompt.slice(0, 20) + (output.prompt.length > 20 ? '...' : ''),
+        title: output.prompt.slice(0, 20) + (output.prompt.length > 20 ? "..." : ""),
         subtitle: output.type,
         relationCount: relatedSources?.size || 0,
         hasContradiction: false,
@@ -420,13 +414,13 @@ function buildGraphData(
     const relatedSources = sessionSourceRelations.get(session.id);
     nodes.push({
       id: `session-${session.id}`,
-      type: 'knowledgeNode',
+      type: "knowledgeNode",
       position: {
         x: centerX + sessionRadius * Math.cos(angle),
         y: centerY + sessionRadius * Math.sin(angle),
       },
       data: {
-        nodeType: 'session',
+        nodeType: "session",
         id: session.id,
         title: session.title || `对话 ${session.id}`,
         relationCount: relatedSources?.size || 0,
@@ -440,20 +434,20 @@ function buildGraphData(
   // Add source ↔ source edges
   if (visibility.sources) {
     sourceRelations.forEach((relation, key) => {
-      const [sourceA, sourceB] = key.split('-').map(Number);
+      const [sourceA, sourceB] = key.split("-").map(Number);
       edges.push({
         id: `source-edge-${key}`,
         source: `source-${sourceA}`,
         target: `source-${sourceB}`,
         animated: relation.isContradiction,
         style: {
-          stroke: relation.isContradiction ? '#F87171' : '#9CA3AF',
+          stroke: relation.isContradiction ? "#F87171" : "#9CA3AF",
           strokeWidth: Math.max(1, Math.min(3, relation.maxScore * 4)),
           opacity: Math.max(0.3, relation.maxScore),
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color: relation.isContradiction ? '#F87171' : '#9CA3AF',
+          color: relation.isContradiction ? "#F87171" : "#9CA3AF",
         },
       });
     });
@@ -471,7 +465,7 @@ function buildGraphData(
             stroke: NODE_COLORS.output.node,
             strokeWidth: 1.5,
             opacity: 0.6,
-            strokeDasharray: '4 2',
+            strokeDasharray: "4 2",
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
@@ -494,7 +488,7 @@ function buildGraphData(
             stroke: NODE_COLORS.session.node,
             strokeWidth: 1.5,
             opacity: 0.5,
-            strokeDasharray: '6 3',
+            strokeDasharray: "6 3",
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
@@ -510,9 +504,9 @@ function buildGraphData(
 
 // Selected item type for detail panel
 type SelectedItem =
-  | { type: 'source'; data: SourceItem }
-  | { type: 'output'; data: OutputItem }
-  | { type: 'session'; data: SessionSummary }
+  | { type: "source"; data: SourceItem }
+  | { type: "output"; data: OutputItem }
+  | { type: "session"; data: SessionSummary }
   | null;
 
 function KnowledgeGraphView({
@@ -540,39 +534,30 @@ function KnowledgeGraphView({
   });
 
   // Click handlers only select, don't call external callbacks
-  const handleSourceClick = useCallback(
-    (source: SourceItem) => {
-      setSelectedId(`source-${source.id}`);
-      setSelectedItem({ type: 'source', data: source });
-    },
-    []
-  );
+  const handleSourceClick = useCallback((source: SourceItem) => {
+    setSelectedId(`source-${source.id}`);
+    setSelectedItem({ type: "source", data: source });
+  }, []);
 
-  const handleOutputClick = useCallback(
-    (output: OutputItem) => {
-      setSelectedId(`output-${output.id}`);
-      setSelectedItem({ type: 'output', data: output });
-    },
-    []
-  );
+  const handleOutputClick = useCallback((output: OutputItem) => {
+    setSelectedId(`output-${output.id}`);
+    setSelectedItem({ type: "output", data: output });
+  }, []);
 
-  const handleSessionClick = useCallback(
-    (session: SessionSummary) => {
-      setSelectedId(`session-${session.id}`);
-      setSelectedItem({ type: 'session', data: session });
-    },
-    []
-  );
+  const handleSessionClick = useCallback((session: SessionSummary) => {
+    setSelectedId(`session-${session.id}`);
+    setSelectedItem({ type: "session", data: session });
+  }, []);
 
   // Open detail (keep graph open, let dialog overlay on top)
   const handleOpenDetail = useCallback(() => {
     if (!selectedItem) return;
 
-    if (selectedItem.type === 'source') {
+    if (selectedItem.type === "source") {
       onSourceClick(selectedItem.data);
-    } else if (selectedItem.type === 'output') {
+    } else if (selectedItem.type === "output") {
       onOutputClick?.(selectedItem.data);
-    } else if (selectedItem.type === 'session') {
+    } else if (selectedItem.type === "session") {
       onSessionClick?.(selectedItem.data);
     }
     // Don't close graph - let the detail dialog overlay on top
@@ -602,27 +587,42 @@ function KnowledgeGraphView({
       handleSourceClick,
       handleOutputClick,
       handleSessionClick,
-      activeSessionId
+      activeSessionId,
     );
     // Apply cached positions to initial nodes
     return { nodes: applyPositionsFromCache(nodes), edges };
     // Only regenerate initial layout when data actually changes, not just selectedId
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sources, outputs, sessions, messages, analysis, visibility, handleSourceClick, handleOutputClick, handleSessionClick, activeSessionId, applyPositionsFromCache]);
+  }, [
+    sources,
+    outputs,
+    sessions,
+    messages,
+    analysis,
+    visibility,
+    handleSourceClick,
+    handleOutputClick,
+    handleSessionClick,
+    activeSessionId,
+    applyPositionsFromCache,
+  ]);
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   // Wrap onNodesChange to save positions to cache
-  const onNodesChange = useCallback((changes: Parameters<typeof onNodesChangeBase>[0]) => {
-    onNodesChangeBase(changes);
-    // Save position changes to cache
-    for (const change of changes) {
-      if (change.type === 'position' && change.position) {
-        nodePositionsCache.set(change.id, { x: change.position.x, y: change.position.y });
+  const onNodesChange = useCallback(
+    (changes: Parameters<typeof onNodesChangeBase>[0]) => {
+      onNodesChangeBase(changes);
+      // Save position changes to cache
+      for (const change of changes) {
+        if (change.type === "position" && change.position) {
+          nodePositionsCache.set(change.id, { x: change.position.x, y: change.position.y });
+        }
       }
-    }
-  }, [onNodesChangeBase]);
+    },
+    [onNodesChangeBase],
+  );
 
   // Reset positions function
   const handleResetPositions = useCallback(() => {
@@ -640,11 +640,25 @@ function KnowledgeGraphView({
       handleSourceClick,
       handleOutputClick,
       handleSessionClick,
-      activeSessionId
+      activeSessionId,
     );
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [sources, outputs, sessions, messages, analysis, visibility, selectedId, handleSourceClick, handleOutputClick, handleSessionClick, activeSessionId, setNodes, setEdges]);
+  }, [
+    sources,
+    outputs,
+    sessions,
+    messages,
+    analysis,
+    visibility,
+    selectedId,
+    handleSourceClick,
+    handleOutputClick,
+    handleSessionClick,
+    activeSessionId,
+    setNodes,
+    setEdges,
+  ]);
 
   // Track if we need full rebuild (data changed) vs just selection update
   const prevDataRef = useRef({ sources, outputs, sessions, analysis, visibility });
@@ -671,7 +685,7 @@ function KnowledgeGraphView({
         handleSourceClick,
         handleOutputClick,
         handleSessionClick,
-        activeSessionId
+        activeSessionId,
       );
       setNodes(applyPositionsFromCache(newNodes));
       setEdges(newEdges);
@@ -685,10 +699,25 @@ function KnowledgeGraphView({
             ...node.data,
             isSelected: node.id === selectedId,
           },
-        }))
+        })),
       );
     }
-  }, [sources, outputs, sessions, messages, analysis, visibility, selectedId, handleSourceClick, handleOutputClick, handleSessionClick, activeSessionId, setNodes, setEdges, applyPositionsFromCache]);
+  }, [
+    sources,
+    outputs,
+    sessions,
+    messages,
+    analysis,
+    visibility,
+    selectedId,
+    handleSourceClick,
+    handleOutputClick,
+    handleSessionClick,
+    activeSessionId,
+    setNodes,
+    setEdges,
+    applyPositionsFromCache,
+  ]);
 
   const toggleVisibility = (type: keyof VisibilityState) => {
     setVisibility((prev) => ({ ...prev, [type]: !prev[type] }));
@@ -700,9 +729,9 @@ function KnowledgeGraphView({
   const contradictionCount = analysis?.contradictions?.length || 0;
   const totalNodes = sources.length + outputs.length + sessions.length;
 
-  const { style: modalStyle } = useLayer('modal');
+  const { style: modalStyle } = useLayer("modal");
   const { resolvedTheme } = useTheme();
-  const isDarkTheme = resolvedTheme === 'dark';
+  const isDarkTheme = resolvedTheme === "dark";
 
   return (
     <div className="fixed inset-0 bg-gray-50 dark:bg-gray-900/95 flex flex-col" style={modalStyle}>
@@ -722,19 +751,28 @@ function KnowledgeGraphView({
               value={`${sources.length} 来源`}
               size="sm"
               className="text-xs"
-              style={{ backgroundColor: `${NODE_COLORS.source.node}30`, color: NODE_COLORS.source.node }}
+              style={{
+                backgroundColor: `${NODE_COLORS.source.node}30`,
+                color: NODE_COLORS.source.node,
+              }}
             />
             <Chip
               value={`${outputs.length} 产出`}
               size="sm"
               className="text-xs"
-              style={{ backgroundColor: `${NODE_COLORS.output.node}30`, color: NODE_COLORS.output.node }}
+              style={{
+                backgroundColor: `${NODE_COLORS.output.node}30`,
+                color: NODE_COLORS.output.node,
+              }}
             />
             <Chip
               value={`${sessions.length} 对话`}
               size="sm"
               className="text-xs"
-              style={{ backgroundColor: `${NODE_COLORS.session.node}30`, color: NODE_COLORS.session.node }}
+              style={{
+                backgroundColor: `${NODE_COLORS.session.node}30`,
+                color: NODE_COLORS.session.node,
+              }}
             />
             {contradictionCount > 0 && (
               <Chip
@@ -749,35 +787,41 @@ function KnowledgeGraphView({
         <div className="flex items-center gap-2">
           {/* Visibility toggles */}
           <div className="flex items-center gap-1 mr-4 bg-gray-100/80 rounded-lg p-1 dark:bg-gray-700/50">
-            <Tooltip content={visibility.sources ? '隐藏来源' : '显示来源'}>
+            <Tooltip content={visibility.sources ? "隐藏来源" : "显示来源"}>
               <button
                 type="button"
                 className={`p-1.5 rounded transition-colors ${
-                  visibility.sources ? 'bg-blue-500/20 text-blue-500 dark:bg-blue-500/30 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
+                  visibility.sources
+                    ? "bg-blue-500/20 text-blue-500 dark:bg-blue-500/30 dark:text-blue-400"
+                    : "text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
                 }`}
-                onClick={() => toggleVisibility('sources')}
+                onClick={() => toggleVisibility("sources")}
               >
                 <DescriptionIcon style={{ fontSize: 16 }} />
               </button>
             </Tooltip>
-            <Tooltip content={visibility.outputs ? '隐藏产出' : '显示产出'}>
+            <Tooltip content={visibility.outputs ? "隐藏产出" : "显示产出"}>
               <button
                 type="button"
                 className={`p-1.5 rounded transition-colors ${
-                  visibility.outputs ? 'bg-purple-500/20 text-purple-500 dark:bg-purple-500/30 dark:text-purple-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
+                  visibility.outputs
+                    ? "bg-purple-500/20 text-purple-500 dark:bg-purple-500/30 dark:text-purple-400"
+                    : "text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
                 }`}
-                onClick={() => toggleVisibility('outputs')}
+                onClick={() => toggleVisibility("outputs")}
               >
                 <OutputIcon style={{ fontSize: 16 }} />
               </button>
             </Tooltip>
-            <Tooltip content={visibility.sessions ? '隐藏对话' : '显示对话'}>
+            <Tooltip content={visibility.sessions ? "隐藏对话" : "显示对话"}>
               <button
                 type="button"
                 className={`p-1.5 rounded transition-colors ${
-                  visibility.sessions ? 'bg-green-500/20 text-green-500 dark:bg-green-500/30 dark:text-green-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'
+                  visibility.sessions
+                    ? "bg-green-500/20 text-green-500 dark:bg-green-500/30 dark:text-green-400"
+                    : "text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
                 }`}
-                onClick={() => toggleVisibility('sessions')}
+                onClick={() => toggleVisibility("sessions")}
               >
                 <ChatIcon style={{ fontSize: 16 }} />
               </button>
@@ -802,7 +846,7 @@ function KnowledgeGraphView({
               disabled={isLoading || !isConnected}
               className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
             >
-              <RefreshIcon className={isLoading ? 'animate-spin' : ''} />
+              <RefreshIcon className={isLoading ? "animate-spin" : ""} />
             </IconButton>
           </Tooltip>
           <Tooltip content="关闭">
@@ -873,36 +917,52 @@ function KnowledgeGraphView({
               showZoom={true}
               showFitView={true}
               showInteractive={false}
-              className={isDarkTheme
-                ? "!bg-gray-800 !border-gray-700 !shadow-lg [&_button]:!bg-gray-700 [&_button]:!border-gray-600 [&_button]:!text-gray-300 [&_button:hover]:!bg-gray-600"
-                : "!bg-white !border-gray-200 !shadow-lg [&_button]:!bg-white [&_button]:!border-gray-200 [&_button]:!text-gray-600 [&_button:hover]:!bg-gray-100"}
+              className={
+                isDarkTheme
+                  ? "!bg-gray-800 !border-gray-700 !shadow-lg [&_button]:!bg-gray-700 [&_button]:!border-gray-600 [&_button]:!text-gray-300 [&_button:hover]:!bg-gray-600"
+                  : "!bg-white !border-gray-200 !shadow-lg [&_button]:!bg-white [&_button]:!border-gray-200 [&_button]:!text-gray-600 [&_button:hover]:!bg-gray-100"
+              }
             />
             <MiniMap
               nodeColor={(node) => {
                 const data = node.data as KnowledgeNodeData;
-                if (data.hasContradiction) return '#F87171';
-                return NODE_COLORS[data.nodeType]?.node || '#6B7280';
+                if (data.hasContradiction) return "#F87171";
+                return NODE_COLORS[data.nodeType]?.node || "#6B7280";
               }}
               maskColor={isDarkTheme ? "rgba(0,0,0,0.8)" : "rgba(148, 163, 184, 0.35)"}
-              className={isDarkTheme ? "!bg-gray-800 !border-gray-700" : "!bg-white !border-gray-200"}
+              className={
+                isDarkTheme ? "!bg-gray-800 !border-gray-700" : "!bg-white !border-gray-200"
+              }
             />
 
             {/* Legend Panel */}
             <Panel position="bottom-left" className="!m-4">
               <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-lg p-3 border border-gray-200 dark:border-gray-700 space-y-2">
-                <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-2">
+                <Typography
+                  variant="small"
+                  className="text-gray-500 dark:text-gray-400 text-xs font-medium mb-2"
+                >
                   图例
                 </Typography>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: NODE_COLORS.source.node }} />
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: NODE_COLORS.source.node }}
+                  />
                   <span className="text-gray-700 dark:text-gray-300 text-xs">来源</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: NODE_COLORS.output.node }} />
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: NODE_COLORS.output.node }}
+                  />
                   <span className="text-gray-700 dark:text-gray-300 text-xs">产出</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: NODE_COLORS.session.node }} />
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: NODE_COLORS.session.node }}
+                  />
                   <span className="text-gray-700 dark:text-gray-300 text-xs">对话</span>
                 </div>
                 <div className="flex items-center gap-2 pt-1 border-t border-gray-200 dark:border-gray-700">
@@ -910,11 +970,17 @@ function KnowledgeGraphView({
                   <span className="text-gray-700 dark:text-gray-300 text-xs">语义关联</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-0.5 bg-red-400" style={{ animation: 'pulse 1s infinite' }} />
+                  <div
+                    className="w-8 h-0.5 bg-red-400"
+                    style={{ animation: "pulse 1s infinite" }}
+                  />
                   <span className="text-gray-700 dark:text-gray-300 text-xs">潜在矛盾</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-0.5 border-t-2 border-dashed" style={{ borderColor: NODE_COLORS.output.node }} />
+                  <div
+                    className="w-8 h-0.5 border-t-2 border-dashed"
+                    style={{ borderColor: NODE_COLORS.output.node }}
+                  />
                   <span className="text-gray-700 dark:text-gray-300 text-xs">引用关系</span>
                 </div>
               </div>
@@ -939,10 +1005,19 @@ function KnowledgeGraphView({
                     style={{ backgroundColor: `${NODE_COLORS[selectedItem.type].node}20` }}
                   >
                     <div className="flex items-center gap-2">
-                      {selectedItem.type === 'source' && <DescriptionIcon style={{ fontSize: 18, color: NODE_COLORS.source.node }} />}
-                      {selectedItem.type === 'output' && <OutputIcon style={{ fontSize: 18, color: NODE_COLORS.output.node }} />}
-                      {selectedItem.type === 'session' && <ChatIcon style={{ fontSize: 18, color: NODE_COLORS.session.node }} />}
-                      <Typography variant="small" className="font-semibold text-gray-900 dark:text-white text-sm">
+                      {selectedItem.type === "source" && (
+                        <DescriptionIcon style={{ fontSize: 18, color: NODE_COLORS.source.node }} />
+                      )}
+                      {selectedItem.type === "output" && (
+                        <OutputIcon style={{ fontSize: 18, color: NODE_COLORS.output.node }} />
+                      )}
+                      {selectedItem.type === "session" && (
+                        <ChatIcon style={{ fontSize: 18, color: NODE_COLORS.session.node }} />
+                      )}
+                      <Typography
+                        variant="small"
+                        className="font-semibold text-gray-900 dark:text-white text-sm"
+                      >
                         {NODE_COLORS[selectedItem.type].label}详情
                       </Typography>
                     </div>
@@ -961,57 +1036,121 @@ function KnowledgeGraphView({
 
                   {/* Detail Content */}
                   <div className="p-4 space-y-3">
-                    {selectedItem.type === 'source' && (
+                    {selectedItem.type === "source" && (
                       <>
                         <div>
-                          <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">标题</Typography>
-                          <Typography variant="small" className="text-gray-900 dark:text-white font-medium">
+                          <Typography
+                            variant="small"
+                            className="text-gray-500 dark:text-gray-400 text-xs mb-1"
+                          >
+                            标题
+                          </Typography>
+                          <Typography
+                            variant="small"
+                            className="text-gray-900 dark:text-white font-medium"
+                          >
                             {selectedItem.data.title}
                           </Typography>
                         </div>
                         <div className="flex gap-4">
                           <div>
-                            <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">类型</Typography>
-                            <Chip value={selectedItem.data.type} size="sm" className="bg-gray-200 text-gray-700 text-xs dark:bg-gray-700 dark:text-gray-200" />
+                            <Typography
+                              variant="small"
+                              className="text-gray-500 dark:text-gray-400 text-xs mb-1"
+                            >
+                              类型
+                            </Typography>
+                            <Chip
+                              value={selectedItem.data.type}
+                              size="sm"
+                              className="bg-gray-200 text-gray-700 text-xs dark:bg-gray-700 dark:text-gray-200"
+                            />
                           </div>
                           <div>
-                            <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">片段</Typography>
-                            <Typography variant="small" className="text-gray-900 dark:text-white">{selectedItem.data.chunks}</Typography>
+                            <Typography
+                              variant="small"
+                              className="text-gray-500 dark:text-gray-400 text-xs mb-1"
+                            >
+                              片段
+                            </Typography>
+                            <Typography variant="small" className="text-gray-900 dark:text-white">
+                              {selectedItem.data.chunks}
+                            </Typography>
                           </div>
                         </div>
                       </>
                     )}
-                    {selectedItem.type === 'output' && (
+                    {selectedItem.type === "output" && (
                       <>
                         <div>
-                          <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">提示词</Typography>
-                          <Typography variant="small" className="text-gray-900 dark:text-white font-medium line-clamp-3">
+                          <Typography
+                            variant="small"
+                            className="text-gray-500 dark:text-gray-400 text-xs mb-1"
+                          >
+                            提示词
+                          </Typography>
+                          <Typography
+                            variant="small"
+                            className="text-gray-900 dark:text-white font-medium line-clamp-3"
+                          >
                             {selectedItem.data.prompt}
                           </Typography>
                         </div>
                         <div className="flex gap-4">
                           <div>
-                            <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">类型</Typography>
-                            <Chip value={selectedItem.data.type} size="sm" className="bg-purple-100 text-purple-700 text-xs dark:bg-purple-500/30 dark:text-purple-200" />
+                            <Typography
+                              variant="small"
+                              className="text-gray-500 dark:text-gray-400 text-xs mb-1"
+                            >
+                              类型
+                            </Typography>
+                            <Chip
+                              value={selectedItem.data.type}
+                              size="sm"
+                              className="bg-purple-100 text-purple-700 text-xs dark:bg-purple-500/30 dark:text-purple-200"
+                            />
                           </div>
                           <div>
-                            <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">引用</Typography>
-                            <Typography variant="small" className="text-gray-900 dark:text-white">{selectedItem.data.chunkIds?.length || 0} 片段</Typography>
+                            <Typography
+                              variant="small"
+                              className="text-gray-500 dark:text-gray-400 text-xs mb-1"
+                            >
+                              引用
+                            </Typography>
+                            <Typography variant="small" className="text-gray-900 dark:text-white">
+                              {selectedItem.data.chunkIds?.length || 0} 片段
+                            </Typography>
                           </div>
                         </div>
                       </>
                     )}
-                    {selectedItem.type === 'session' && (
+                    {selectedItem.type === "session" && (
                       <>
                         <div>
-                          <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">标题</Typography>
-                          <Typography variant="small" className="text-gray-900 dark:text-white font-medium">
-                            {selectedItem.data.title || '未命名会话'}
+                          <Typography
+                            variant="small"
+                            className="text-gray-500 dark:text-gray-400 text-xs mb-1"
+                          >
+                            标题
+                          </Typography>
+                          <Typography
+                            variant="small"
+                            className="text-gray-900 dark:text-white font-medium"
+                          >
+                            {selectedItem.data.title || "未命名会话"}
                           </Typography>
                         </div>
                         <div>
-                          <Typography variant="small" className="text-gray-500 dark:text-gray-400 text-xs mb-1">创建时间</Typography>
-                          <Typography variant="small" className="text-gray-600 dark:text-gray-300 text-xs">
+                          <Typography
+                            variant="small"
+                            className="text-gray-500 dark:text-gray-400 text-xs mb-1"
+                          >
+                            创建时间
+                          </Typography>
+                          <Typography
+                            variant="small"
+                            className="text-gray-600 dark:text-gray-300 text-xs"
+                          >
                             {selectedItem.data.createdAt}
                           </Typography>
                         </div>

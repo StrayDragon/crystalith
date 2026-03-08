@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 
-import type { Citation } from '../../types';
-import { useLayer } from '../../../../../shared/layer';
+import type { Citation } from "../../types";
+import { useLayer } from "../../../../../shared/layer";
 
 interface CitationMarkProps {
   index: number;
@@ -17,7 +17,7 @@ export default function CitationMark({ index, citation, onHover, onJump }: Citat
   const buttonRef = useRef<HTMLButtonElement>(null);
   const chunkId = citation.chunkId ?? null;
   const pageLabel = citation.pageNumber ? `第 ${citation.pageNumber} 页` : null;
-  const { style: tooltipStyle } = useLayer('tooltip');
+  const { style: tooltipStyle } = useLayer("tooltip");
 
   useEffect(() => {
     if (isOpen && buttonRef.current) {
@@ -68,23 +68,28 @@ export default function CitationMark({ index, citation, onHover, onJump }: Citat
     onJump(chunkId);
   }
 
-  const tooltip = isOpen && position ? (
-    <div
-      className="fixed w-[280px] max-w-[90vw] rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-xl pointer-events-none"
-      style={{
-        ...tooltipStyle,
-        top: position.top,
-        left: position.left,
-      }}
-      role="tooltip"
-    >
-      <div className="text-xs font-semibold truncate text-gray-900">{citation.sourceTitle}</div>
-      {pageLabel && <div className="text-[10px] font-medium mt-0.5 text-gray-500">{pageLabel}</div>}
-      {citation.snippet && (
-        <div className="text-[11px] font-medium mt-1.5 line-clamp-3 leading-relaxed text-gray-500">{citation.snippet}</div>
-      )}
-    </div>
-  ) : null;
+  const tooltip =
+    isOpen && position ? (
+      <div
+        className="fixed w-[280px] max-w-[90vw] rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-xl pointer-events-none"
+        style={{
+          ...tooltipStyle,
+          top: position.top,
+          left: position.left,
+        }}
+        role="tooltip"
+      >
+        <div className="text-xs font-semibold truncate text-gray-900">{citation.sourceTitle}</div>
+        {pageLabel && (
+          <div className="text-[10px] font-medium mt-0.5 text-gray-500">{pageLabel}</div>
+        )}
+        {citation.snippet && (
+          <div className="text-[11px] font-medium mt-1.5 line-clamp-3 leading-relaxed text-gray-500">
+            {citation.snippet}
+          </div>
+        )}
+      </div>
+    ) : null;
 
   return (
     <span className="relative inline-flex items-center">
@@ -99,7 +104,7 @@ export default function CitationMark({ index, citation, onHover, onJump }: Citat
         onFocus={handleOpen}
         onBlur={handleClose}
         onClick={handleJump}
-        aria-label={`查看引用 ${index}，来源 ${citation.sourceTitle}，${pageLabel ?? '页码未知'}`}
+        aria-label={`查看引用 ${index}，来源 ${citation.sourceTitle}，${pageLabel ?? "页码未知"}`}
       >
         [{index}]
       </button>

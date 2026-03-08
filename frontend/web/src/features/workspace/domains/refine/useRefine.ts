@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import useSWR from 'swr';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import useSWR from "swr";
 
 import {
   listWorkspaceToolsV1WorkspaceToolsGet as listWorkspaceTools,
@@ -10,9 +10,9 @@ import {
   type PreviewDescriptor as ApiPreviewDescriptor,
   type RenderDescriptor as ApiRenderDescriptor,
   type WorkspaceTool as ApiWorkspaceTool,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
-import { useWorkspaceStore } from '../../shared/state/workspaceStore';
+} from "../../../../api/generated";
+import { unwrapData } from "../../../../api/unwrap";
+import { useWorkspaceStore } from "../../shared/state/workspaceStore";
 import type {
   FieldDescriptor,
   FrontendBundleDescriptor,
@@ -26,7 +26,7 @@ import type {
   RefineMode,
   SlideGenerationConfig,
   WorkspaceTool,
-} from '../../shared/types';
+} from "../../shared/types";
 import {
   buildJobTitle,
   collectOutputCitations,
@@ -34,9 +34,9 @@ import {
   formatTimestamp,
   normalizeCitation,
   resolveTemplateLabel,
-} from '../../shared/utils';
-import { REFINE_FORMATS, REFINE_TEMPLATES } from './data/refineTemplates';
-import { useOutputQueue } from '../../shared/hooks/useOutputQueue';
+} from "../../shared/utils";
+import { REFINE_FORMATS, REFINE_TEMPLATES } from "./data/refineTemplates";
+import { useOutputQueue } from "../../shared/hooks/useOutputQueue";
 
 function normalizeFieldDescriptor(field: ApiFieldDescriptor): FieldDescriptor {
   return {
@@ -47,7 +47,9 @@ function normalizeFieldDescriptor(field: ApiFieldDescriptor): FieldDescriptor {
   };
 }
 
-function normalizeRenderDescriptor(descriptor?: ApiRenderDescriptor | null): RenderDescriptor | null {
+function normalizeRenderDescriptor(
+  descriptor?: ApiRenderDescriptor | null,
+): RenderDescriptor | null {
   if (!descriptor) return null;
   return {
     layout: descriptor.layout,
@@ -60,25 +62,32 @@ function normalizeRenderDescriptor(descriptor?: ApiRenderDescriptor | null): Ren
   };
 }
 
-function normalizeSlideGenerationDefaults(raw: Record<string, unknown> | null | undefined): SlideGenerationConfig | null {
-  if (!raw || typeof raw !== 'object') return null;
+function normalizeSlideGenerationDefaults(
+  raw: Record<string, unknown> | null | undefined,
+): SlideGenerationConfig | null {
+  if (!raw || typeof raw !== "object") return null;
   return {
-    preference: (raw.preference as SlideGenerationConfig['preference']) ?? null,
+    preference: (raw.preference as SlideGenerationConfig["preference"]) ?? null,
     quantity: (raw.quantity as string | null | undefined) ?? null,
     audience: (raw.audience as string | null | undefined) ?? null,
     structure: (raw.structure as string | null | undefined) ?? null,
     tone: (raw.tone as string | null | undefined) ?? null,
     language: (raw.language as string | null | undefined) ?? null,
     density: (raw.density as string | null | undefined) ?? null,
-    themePreset: (raw.themePreset as string | null | undefined) ?? (raw.theme_preset as string | null | undefined) ?? null,
+    themePreset:
+      (raw.themePreset as string | null | undefined) ??
+      (raw.theme_preset as string | null | undefined) ??
+      null,
     frontmatter: (raw.frontmatter as string | null | undefined) ?? null,
   };
 }
 
-function normalizePreviewDescriptor(descriptor?: ApiPreviewDescriptor | null): PreviewDescriptor | null {
+function normalizePreviewDescriptor(
+  descriptor?: ApiPreviewDescriptor | null,
+): PreviewDescriptor | null {
   if (!descriptor) return null;
   return {
-    kind: descriptor.kind ?? 'external_url',
+    kind: descriptor.kind ?? "external_url",
     service: descriptor.service ?? null,
     url: descriptor.url ?? null,
     open_in_new_tab: descriptor.open_in_new_tab ?? false,
@@ -102,20 +111,22 @@ function normalizeConfigSchema(schema?: ApiPluginConfigSchema | null): PluginCon
       label: option.label,
       template: option.template ?? {},
     })),
-    topic_placeholder: schema.topic_placeholder ?? '',
+    topic_placeholder: schema.topic_placeholder ?? "",
     supports_topic: schema.supports_topic ?? false,
     engine: schema.engine ?? null,
     preview: normalizePreviewDescriptor(schema.preview ?? null),
   };
 }
 
-function normalizeFrontendBundle(bundle?: ApiFrontendBundleDescriptor | null): FrontendBundleDescriptor | null {
+function normalizeFrontendBundle(
+  bundle?: ApiFrontendBundleDescriptor | null,
+): FrontendBundleDescriptor | null {
   if (!bundle) return null;
   return {
-    api_version: bundle.api_version ?? 'v1',
-    kind: bundle.kind ?? 'builtin',
+    api_version: bundle.api_version ?? "v1",
+    kind: bundle.kind ?? "builtin",
     id: bundle.id,
-    export: bundle.export ?? 'render',
+    export: bundle.export ?? "render",
     meta: bundle.meta ?? {},
   };
 }
@@ -151,20 +162,23 @@ export function useRefine() {
   const outputTypeCurrent = useWorkspaceStore((s) => s.outputType);
 
   const store = useWorkspaceStore;
-  const isConnected = connectionState === 'live';
+  const isConnected = connectionState === "live";
 
   const refineFormats = useMemo(() => REFINE_FORMATS, []);
   const refineTemplates = useMemo(() => REFINE_TEMPLATES, []);
   const compareTemplate = useMemo(
-    () => refineTemplates.find((item) => item.id === 'compare-analysis') ?? null,
+    () => refineTemplates.find((item) => item.id === "compare-analysis") ?? null,
     [refineTemplates],
   );
 
-  const { data: toolsData, error: toolsError, isLoading: toolsLoading, mutate: refreshTools } = useSWR(
-    isConnected ? 'workspace/tools' : null,
-    () => unwrapData(listWorkspaceTools<true>()),
-    { revalidateOnFocus: false },
-  );
+  const {
+    data: toolsData,
+    error: toolsError,
+    isLoading: toolsLoading,
+    mutate: refreshTools,
+  } = useSWR(isConnected ? "workspace/tools" : null, () => unwrapData(listWorkspaceTools<true>()), {
+    revalidateOnFocus: false,
+  });
 
   const toolsDiagnostics = useMemo(() => toolsData?.diagnostics ?? null, [toolsData]);
 
@@ -226,7 +240,7 @@ export function useRefine() {
 
   useEffect(() => {
     activePanelRef.current = activePanel;
-    if (activePanel === 'refine') {
+    if (activePanel === "refine") {
       store.getState().setHasNewOutput(false);
     }
   }, [activePanel]);
@@ -238,7 +252,7 @@ export function useRefine() {
   useEffect(() => {
     refineQueueRef.current = refineJobsCurrent;
     if (refineRunningRef.current) return;
-    if (!refineJobsCurrent.some((job) => job.status === 'queued')) return;
+    if (!refineJobsCurrent.some((job) => job.status === "queued")) return;
     runNextRefineJobRef.current();
   }, [refineJobsCurrent]);
 
@@ -259,15 +273,11 @@ export function useRefine() {
 
   const resolveSelectedSourceIds = useCallback(async () => selectedSourceIds, [selectedSourceIds]);
 
-
-  const updateRefineJobs = useCallback(
-    (updater: (jobs: RefineJob[]) => RefineJob[]) => {
-      const next = updater(refineQueueRef.current);
-      refineQueueRef.current = next;
-      store.getState().setRefineJobs(next);
-    },
-    [],
-  );
+  const updateRefineJobs = useCallback((updater: (jobs: RefineJob[]) => RefineJob[]) => {
+    const next = updater(refineQueueRef.current);
+    refineQueueRef.current = next;
+    store.getState().setRefineJobs(next);
+  }, []);
 
   const resetQueueSummary = useCallback(() => {
     setQueueSummary({ total: 0, done: 0 });
@@ -281,24 +291,18 @@ export function useRefine() {
     setQueueSummary((prev) => ({ total: prev.total, done: prev.done + 1 }));
   }, []);
 
-  const markJobCompleted = useCallback(
-    (jobId: string) => {
-      if (activePanelRef.current !== 'refine') {
-        store.getState().setHasNewOutput(true);
-      }
-      store.getState().setRecentCompletedJob(jobId);
-      window.setTimeout(() => {
-        store.getState().setRecentCompletedJob(null);
-      }, 2000);
-    },
-    [],
-  );
+  const markJobCompleted = useCallback((jobId: string) => {
+    if (activePanelRef.current !== "refine") {
+      store.getState().setHasNewOutput(true);
+    }
+    store.getState().setRecentCompletedJob(jobId);
+    window.setTimeout(() => {
+      store.getState().setRecentCompletedJob(null);
+    }, 2000);
+  }, []);
 
   const hasPendingRefineJobs = useCallback(
-    () =>
-      refineQueueRef.current.some(
-        (job) => job.status === 'queued' || job.status === 'running',
-      ),
+    () => refineQueueRef.current.some((job) => job.status === "queued" || job.status === "running"),
     [],
   );
 
@@ -330,27 +334,29 @@ export function useRefine() {
         const normalizedOutputs: Partial<Record<RefineMode, RefineOutput>> = {};
         let resolvedCitations = null as ReturnType<typeof normalizeCitation>[] | null;
         if (jobNotebookId && isConnected) {
-          const response = await unwrapData(refineBatch<true>({
-            path: { notebook_id: jobNotebookId },
-            body: {
-              prompt,
-              formats: [...refineFormats],
-              source_ids: sourceIds,
-            },
-          }));
+          const response = await unwrapData(
+            refineBatch<true>({
+              path: { notebook_id: jobNotebookId },
+              body: {
+                prompt,
+                formats: [...refineFormats],
+                source_ids: sourceIds,
+              },
+            }),
+          );
           resolvedCitations = response.citations.map(normalizeCitation);
           for (const [format, output] of Object.entries(response.outputs ?? {})) {
             if (!output) continue;
             const key = format as RefineMode;
             normalizedOutputs[key] = {
-              paragraph: output.paragraph ?? '',
+              paragraph: output.paragraph ?? "",
               bullets: output.bullets ?? [],
               structured: output.structured ?? null,
               evidence: response.evidence,
             };
           }
         } else {
-          throw new Error('backend unavailable');
+          throw new Error("backend unavailable");
         }
 
         const completedAt = new Date().toISOString();
@@ -361,9 +367,9 @@ export function useRefine() {
             job.id === jobId
               ? {
                   ...job,
-                  status: 'done',
+                  status: "done",
                   outputs: normalizedOutputs,
-                  error: '',
+                  error: "",
                   citations: resolvedCitations ?? job.citations,
                   completedAt,
                   completedAtLabel: formatTimestamp(completedAt),
@@ -387,24 +393,24 @@ export function useRefine() {
           jobNotebookId != null && jobNotebookId === activeNotebookIdRef.current;
 
         // Extract meaningful error message
-        let errorMessage = '提炼失败，请稍后重试。';
-        let userFacingError = '提炼生成失败。';
+        let errorMessage = "提炼失败，请稍后重试。";
+        let userFacingError = "提炼生成失败。";
 
         if (error instanceof Error) {
           const statusError = error as Error & { status?: number };
 
           if (statusError.status === 503) {
-            errorMessage = '可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置。';
-            userFacingError = '可选 AI 服务暂时不可用，请稍后重试或切换模型。';
+            errorMessage = "可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置。";
+            userFacingError = "可选 AI 服务暂时不可用，请稍后重试或切换模型。";
           } else if (statusError.status === 404) {
-            errorMessage = '笔记本不存在或已被删除。';
-            userFacingError = '笔记本已失效，请刷新页面。';
+            errorMessage = "笔记本不存在或已被删除。";
+            userFacingError = "笔记本已失效，请刷新页面。";
           } else if (statusError.status === 400) {
-            errorMessage = '请求参数无效，请检查输入。';
-            userFacingError = '输入参数有误。';
+            errorMessage = "请求参数无效，请检查输入。";
+            userFacingError = "输入参数有误。";
           } else if (statusError.status === 500) {
-            errorMessage = '服务器内部错误，请稍后重试。';
-            userFacingError = '服务器错误，请稍后重试。';
+            errorMessage = "服务器内部错误，请稍后重试。";
+            userFacingError = "服务器错误，请稍后重试。";
           } else if (error.message && error.message.length < 100) {
             errorMessage = error.message;
             userFacingError = error.message;
@@ -416,7 +422,7 @@ export function useRefine() {
             job.id === jobId
               ? {
                   ...job,
-                  status: 'error',
+                  status: "error",
                   error: errorMessage,
                   completedAt,
                   completedAtLabel: formatTimestamp(completedAt),
@@ -430,37 +436,26 @@ export function useRefine() {
         }
         if (isCurrentNotebook && stillTracked) {
           markJobCompleted(jobId);
-          store.getState().setError('send', userFacingError);
+          store.getState().setError("send", userFacingError);
         }
       } finally {
         refineRunningRef.current = false;
         runNextRefineJobRef.current();
       }
     },
-    [
-      isConnected,
-      incrementQueueDone,
-      markJobCompleted,
-      refineFormats,
-      updateRefineJobs,
-    ],
+    [isConnected, incrementQueueDone, markJobCompleted, refineFormats, updateRefineJobs],
   );
 
   const runNextRefineJob = useCallback(() => {
     if (refineRunningRef.current) return;
-    const nextJob = refineQueueRef.current.find((job) => job.status === 'queued');
+    const nextJob = refineQueueRef.current.find((job) => job.status === "queued");
     if (!nextJob) return;
 
     refineRunningRef.current = true;
     updateRefineJobs((prev) =>
-      prev.map((job) => (job.id === nextJob.id ? { ...job, status: 'running' } : job)),
+      prev.map((job) => (job.id === nextJob.id ? { ...job, status: "running" } : job)),
     );
-    void processRefineJob(
-      nextJob.id,
-      nextJob.prompt,
-      nextJob.sourceIds ?? [],
-      nextJob.notebookId,
-    );
+    void processRefineJob(nextJob.id, nextJob.prompt, nextJob.sourceIds ?? [], nextJob.notebookId);
   }, [processRefineJob, updateRefineJobs]);
 
   runNextRefineJobRef.current = runNextRefineJob;
@@ -484,14 +479,14 @@ export function useRefine() {
       const job: RefineJob = {
         id: createId(),
         prompt: jobPrompt,
-        status: 'queued',
+        status: "queued",
         sourceIds,
         outputs: null,
-        error: '',
+        error: "",
         createdAt,
         createdAtLabel: formatTimestamp(createdAt),
         completedAt: null,
-        completedAtLabel: '',
+        completedAtLabel: "",
         pinned: false,
         title: buildJobTitle(jobLabel, createdAt),
         notebookId: activeNotebookId,
@@ -513,7 +508,7 @@ export function useRefine() {
     (type: OutputTypeId, prompt?: string) => {
       const normalized = prompt?.trim();
       if (normalized) return normalized;
-      const fallback = outputTypeOptions.find((item) => item.id === type)?.prompt ?? '';
+      const fallback = outputTypeOptions.find((item) => item.id === type)?.prompt ?? "";
       return fallback;
     },
     [outputTypeOptions],
@@ -522,11 +517,11 @@ export function useRefine() {
   const handleRefineGenerate = useCallback(async () => {
     const s = store.getState();
     if (!isConnected) {
-      s.setError('send', '未连接到后端服务。');
+      s.setError("send", "未连接到后端服务。");
       return;
     }
     if (!s.activeNotebookId) {
-      s.setError('send', '请先创建笔记本。');
+      s.setError("send", "请先创建笔记本。");
       return;
     }
     const trimmed = s.refinePrompt.trim();
@@ -537,35 +532,29 @@ export function useRefine() {
       sourceIds: resolvedSourceIds.length ? [...resolvedSourceIds] : [],
       label: resolveTemplateLabel(trimmed, refineTemplates),
     });
-    s.setActivePanel('refine');
-  }, [
-    enqueueRefineJob,
-    isConnected,
-    refineTemplates,
-    resolveSelectedSourceIds,
-  ]);
+    s.setActivePanel("refine");
+  }, [enqueueRefineJob, isConnected, refineTemplates, resolveSelectedSourceIds]);
 
   const handleCompareSelectedCitations = useCallback(async () => {
     const s = store.getState();
     if (!isConnected) {
-      s.setError('send', '未连接到后端服务。');
+      s.setError("send", "未连接到后端服务。");
       return;
     }
     if (!s.activeNotebookId) {
-      s.setError('send', '请先创建笔记本。');
+      s.setError("send", "请先创建笔记本。");
       return;
     }
     const resolvedSourceIds = await resolveSelectedSourceIds();
     const promptText =
-      compareTemplate?.prompt ??
-      '基于选中来源生成对比分析，输出相同点 / 差异点 / 结论。';
+      compareTemplate?.prompt ?? "基于选中来源生成对比分析，输出相同点 / 差异点 / 结论。";
     s.setRefinePrompt(promptText);
     enqueueRefineJob({
       prompt: promptText,
       sourceIds: [...resolvedSourceIds],
-      label: compareTemplate?.label ?? '对比分析',
+      label: compareTemplate?.label ?? "对比分析",
     });
-    s.setActivePanel('refine');
+    s.setActivePanel("refine");
   }, [
     compareTemplate?.label,
     compareTemplate?.prompt,
@@ -578,11 +567,11 @@ export function useRefine() {
     (job: RefineJob) => {
       const s = store.getState();
       if (!isConnected) {
-        s.setError('send', '未连接到后端服务。');
+        s.setError("send", "未连接到后端服务。");
         return;
       }
       if (!s.activeNotebookId) {
-        s.setError('send', '请先创建笔记本。');
+        s.setError("send", "请先创建笔记本。");
         return;
       }
       if (!job.prompt.trim()) return;
@@ -592,7 +581,7 @@ export function useRefine() {
         sourceIds: job.sourceIds ?? [],
         label: resolveTemplateLabel(job.prompt, refineTemplates),
       });
-      s.setActivePanel('refine');
+      s.setActivePanel("refine");
     },
     [enqueueRefineJob, isConnected, refineTemplates],
   );
@@ -621,95 +610,88 @@ export function useRefine() {
     s.setRecentCompletedJob(null);
   }, [updateRefineJobs]);
 
-  const handleToggleRefineSetting = useCallback(
-    (key: keyof typeof refineSettingsCurrent) => {
-      const s = store.getState();
-      s.setRefineSettings({ ...s.refineSettings, [key]: !s.refineSettings[key] });
-    },
-    [],
-  );
-
-  const setOutputType = useCallback(
-    (value: OutputTypeId) => {
-      store.getState().setOutputType(value);
-    },
-    [],
-  );
-
-  const setRefineMode = useCallback(
-    (mode: RefineMode) => {
-      store.getState().setRefineMode(mode);
-    },
-    [],
-  );
-
-  const setRefinePrompt = useCallback(
-    (value: string) => {
-      store.getState().setRefinePrompt(value);
-    },
-    [],
-  );
-
-  const handleGenerateOutput = useCallback(async (overrideType?: OutputTypeId, modelId?: string | null) => {
+  const handleToggleRefineSetting = useCallback((key: keyof typeof refineSettingsCurrent) => {
     const s = store.getState();
-    if (!isConnected) {
-      s.setError('outputs', '未连接到后端服务。');
-      return;
-    }
-    if (!s.activeNotebookId) {
-      s.setError('outputs', '请先创建笔记本。');
-      return;
-    }
-    const selectedType = overrideType ?? s.outputType;
-    if (selectedType === 'SLIDES') {
-      s.setError('outputs', '请使用演示工具进行生成。');
-      return;
-    }
-    const selectedOption = outputTypeOptions.find((item) => item.id === selectedType);
-    const promptSource = overrideType ? selectedOption?.prompt : s.refinePrompt || selectedOption?.prompt;
-    const prompt = resolveOutputPrompt(selectedType, promptSource);
-    if (!overrideType && prompt) {
-      s.setRefinePrompt(prompt);
-    }
-    if (overrideType) {
-      s.setOutputType(selectedType);
-    }
-    const resolvedSourceIds = await resolveSelectedSourceIds();
-    if (resolvedSourceIds.length === 0) {
-      s.setError('outputs', '请先选择来源。');
-      return;
-    }
-    enqueueOutputJob({
-      type: selectedType,
-      prompt,
-      sourceIds: resolvedSourceIds.length ? resolvedSourceIds : [],
-      modelId: modelId ?? undefined,
-    });
-    if (s.activePanel !== 'refine') {
-      s.setHasNewOutput(true);
-    }
-    s.setActivePanel('refine');
-  }, [
-    enqueueOutputJob,
-    isConnected,
-    outputTypeOptions,
-    resolveOutputPrompt,
-    resolveSelectedSourceIds,
-  ]);
+    s.setRefineSettings({ ...s.refineSettings, [key]: !s.refineSettings[key] });
+  }, []);
+
+  const setOutputType = useCallback((value: OutputTypeId) => {
+    store.getState().setOutputType(value);
+  }, []);
+
+  const setRefineMode = useCallback((mode: RefineMode) => {
+    store.getState().setRefineMode(mode);
+  }, []);
+
+  const setRefinePrompt = useCallback((value: string) => {
+    store.getState().setRefinePrompt(value);
+  }, []);
+
+  const handleGenerateOutput = useCallback(
+    async (overrideType?: OutputTypeId, modelId?: string | null) => {
+      const s = store.getState();
+      if (!isConnected) {
+        s.setError("outputs", "未连接到后端服务。");
+        return;
+      }
+      if (!s.activeNotebookId) {
+        s.setError("outputs", "请先创建笔记本。");
+        return;
+      }
+      const selectedType = overrideType ?? s.outputType;
+      if (selectedType === "SLIDES") {
+        s.setError("outputs", "请使用演示工具进行生成。");
+        return;
+      }
+      const selectedOption = outputTypeOptions.find((item) => item.id === selectedType);
+      const promptSource = overrideType
+        ? selectedOption?.prompt
+        : s.refinePrompt || selectedOption?.prompt;
+      const prompt = resolveOutputPrompt(selectedType, promptSource);
+      if (!overrideType && prompt) {
+        s.setRefinePrompt(prompt);
+      }
+      if (overrideType) {
+        s.setOutputType(selectedType);
+      }
+      const resolvedSourceIds = await resolveSelectedSourceIds();
+      if (resolvedSourceIds.length === 0) {
+        s.setError("outputs", "请先选择来源。");
+        return;
+      }
+      enqueueOutputJob({
+        type: selectedType,
+        prompt,
+        sourceIds: resolvedSourceIds.length ? resolvedSourceIds : [],
+        modelId: modelId ?? undefined,
+      });
+      if (s.activePanel !== "refine") {
+        s.setHasNewOutput(true);
+      }
+      s.setActivePanel("refine");
+    },
+    [
+      enqueueOutputJob,
+      isConnected,
+      outputTypeOptions,
+      resolveOutputPrompt,
+      resolveSelectedSourceIds,
+    ],
+  );
 
   const handleReplayOutput = useCallback(
     (output: OutputItem) => {
       const s = store.getState();
       if (!isConnected) {
-        s.setError('outputs', '未连接到后端服务。');
+        s.setError("outputs", "未连接到后端服务。");
         return;
       }
       if (!s.activeNotebookId) {
-        s.setError('outputs', '请先创建笔记本。');
+        s.setError("outputs", "请先创建笔记本。");
         return;
       }
-      if (output.type === 'SLIDES') {
-        s.setError('outputs', '请使用演示工具进行生成。');
+      if (output.type === "SLIDES") {
+        s.setError("outputs", "请使用演示工具进行生成。");
         return;
       }
       const prompt = resolveOutputPrompt(output.type, output.prompt);
@@ -721,11 +703,14 @@ export function useRefine() {
         new Set(
           collectOutputCitations(output.content)
             .map((citation) => citation.sourceId)
-            .filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0),
+            .filter(
+              (value): value is number =>
+                typeof value === "number" && Number.isFinite(value) && value > 0,
+            ),
         ),
       );
       if (outputSourceIds.length === 0) {
-        s.setError('outputs', '请先选择来源。');
+        s.setError("outputs", "请先选择来源。");
         return;
       }
       enqueueOutputJob({
@@ -733,7 +718,7 @@ export function useRefine() {
         prompt,
         sourceIds: outputSourceIds,
       });
-      s.setActivePanel('refine');
+      s.setActivePanel("refine");
     },
     [enqueueOutputJob, isConnected, resolveOutputPrompt],
   );
@@ -742,22 +727,22 @@ export function useRefine() {
     (content: string) => {
       const s = store.getState();
       if (!isConnected) {
-        s.setError('outputs', '未连接到后端服务。');
+        s.setError("outputs", "未连接到后端服务。");
         return;
       }
       if (!s.activeNotebookId) {
-        s.setError('outputs', '请先创建笔记本。');
+        s.setError("outputs", "请先创建笔记本。");
         return;
       }
       enqueueOutputJob({
-        type: 'PARAGRAPH',
+        type: "PARAGRAPH",
         prompt: content,
         sourceIds: [],
       });
-      if (s.activePanel !== 'refine') {
+      if (s.activePanel !== "refine") {
         s.setHasNewOutput(true);
       }
-      s.setActivePanel('refine');
+      s.setActivePanel("refine");
     },
     [enqueueOutputJob, isConnected],
   );
@@ -769,7 +754,7 @@ export function useRefine() {
     tools,
     toolsDiagnostics,
     toolsLoading,
-    toolsError: !isConnected ? '未连接到后端服务。' : toolsError ? '工具加载失败' : '',
+    toolsError: !isConnected ? "未连接到后端服务。" : toolsError ? "工具加载失败" : "",
     refreshTools,
     selectedSourceIds,
     refineMode: refineModeCurrent,

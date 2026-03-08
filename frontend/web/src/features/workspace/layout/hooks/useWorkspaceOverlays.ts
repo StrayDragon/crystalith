@@ -1,9 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState } from "react";
 
-import type { Citation, SourceItem } from '../../shared/types';
-import { useGraphSessionDetail, type GraphSessionTarget } from './useGraphSessionDetail';
+import type { Citation, SourceItem } from "../../shared/types";
+import { useGraphSessionDetail, type GraphSessionTarget } from "./useGraphSessionDetail";
 
-type SlideOpenMode = 'config' | 'preview';
+type SlideOpenMode = "config" | "preview";
 
 interface UseWorkspaceOverlaysOptions {
   activeNotebookId: number | null;
@@ -37,7 +37,7 @@ export function useWorkspaceOverlays({
   const [citationSourceDetailFullscreen, setCitationSourceDetailFullscreen] = useState(false);
   const [jumpToSource, setJumpToSource] = useState<{ id: number; token: number } | null>(null);
   const [isSlidesDialogOpen, setIsSlidesDialogOpen] = useState(false);
-  const [slidesOpenMode, setSlidesOpenMode] = useState<SlideOpenMode>('config');
+  const [slidesOpenMode, setSlidesOpenMode] = useState<SlideOpenMode>("config");
   const [slidesDraftId, setSlidesDraftId] = useState<number | null>(null);
   const [slidesQueueJobId, setSlidesQueueJobId] = useState<string | null>(null);
 
@@ -96,7 +96,7 @@ export function useWorkspaceOverlays({
 
   const closeSlidesDialog = useCallback(() => {
     setIsSlidesDialogOpen(false);
-    setSlidesOpenMode('config');
+    setSlidesOpenMode("config");
     setSlidesDraftId(null);
     setSlidesQueueJobId(null);
   }, []);
@@ -119,7 +119,7 @@ export function useWorkspaceOverlays({
     (outputId: number, elevated = false) => {
       const slideId = resolveSlideDraftId(outputId);
       if (slideId) {
-        openSlidesDialog('preview', slideId);
+        openSlidesDialog("preview", slideId);
         return;
       }
       setViewerOutputId(outputId);
@@ -134,7 +134,7 @@ export function useWorkspaceOverlays({
     (outputId: number) => {
       const slideId = resolveSlideDraftId(outputId);
       if (slideId) {
-        openSlidesDialog('preview', slideId);
+        openSlidesDialog("preview", slideId);
         return;
       }
       setViewerOutputId(outputId);
@@ -149,7 +149,7 @@ export function useWorkspaceOverlays({
     (outputId: number) => {
       const slideId = resolveSlideDraftId(outputId);
       if (slideId) {
-        openSlidesDialog('preview', slideId);
+        openSlidesDialog("preview", slideId);
         return;
       }
       setViewerOutputId(outputId);

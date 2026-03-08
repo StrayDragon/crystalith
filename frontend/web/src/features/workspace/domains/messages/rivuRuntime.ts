@@ -1,8 +1,13 @@
-import { createKernel, type RivuKernel } from 'rivu-kernel';
-import { createHost, createRegistry, type RivuComponentRegistry, type RivuHost } from 'rivu-react/registry';
-import { viewerRegistryV1 } from 'rivu-react/ui-kit/viewer';
-import { workflowRegistryV1 } from 'rivu-react/ui-kit/workflow';
-import type { UiV1CustomEvent } from 'rivu-ui-spec';
+import { createKernel, type RivuKernel } from "rivu-kernel";
+import {
+  createHost,
+  createRegistry,
+  type RivuComponentRegistry,
+  type RivuHost,
+} from "rivu-react/registry";
+import { viewerRegistryV1 } from "rivu-react/ui-kit/viewer";
+import { workflowRegistryV1 } from "rivu-react/ui-kit/workflow";
+import type { UiV1CustomEvent } from "rivu-ui-spec";
 
 interface CreateRivuSessionRuntimeOptions {
   notebookId: number;
@@ -38,14 +43,14 @@ const host = createHost({
 });
 
 function getErrorMessage(detail: unknown, fallback: string) {
-  if (typeof detail === 'string' && detail) {
+  if (typeof detail === "string" && detail) {
     return detail;
   }
   if (
     detail &&
-    typeof detail === 'object' &&
-    'detail' in detail &&
-    typeof (detail as { detail?: unknown }).detail === 'string'
+    typeof detail === "object" &&
+    "detail" in detail &&
+    typeof (detail as { detail?: unknown }).detail === "string"
   ) {
     return (detail as { detail: string }).detail;
   }
@@ -67,9 +72,9 @@ export function createRivuSessionRuntime(
       const response = await fetch(
         `/v1/notebooks/${options.notebookId}/sessions/${options.sessionId}/ui/event`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(action satisfies UiV1CustomEvent),
         },
@@ -87,7 +92,7 @@ export function createRivuSessionRuntime(
 
       const payload = (await response.json()) as SessionUiEventResponse;
       dispatchEnvelope({
-        type: 'STATE_DELTA',
+        type: "STATE_DELTA",
         delta: Array.isArray(payload.delta) ? payload.delta : [],
       });
     },
@@ -99,13 +104,13 @@ export function createRivuSessionRuntime(
     host,
     dispatchSnapshot: (snapshot) => {
       dispatchEnvelope({
-        type: 'STATE_SNAPSHOT',
+        type: "STATE_SNAPSHOT",
         snapshot,
       });
     },
     dispatchDelta: (delta) => {
       dispatchEnvelope({
-        type: 'STATE_DELTA',
+        type: "STATE_DELTA",
         delta,
       });
     },

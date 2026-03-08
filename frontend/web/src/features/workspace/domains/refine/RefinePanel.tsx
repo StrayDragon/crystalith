@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type SVGProps } from 'react';
+import { useEffect, useMemo, useRef, useState, type SVGProps } from "react";
 
 import type {
   Citation,
@@ -8,11 +8,14 @@ import type {
   RefineMode,
   RefineSettings,
   RefineTemplate,
-} from '../../shared/types';
-import { getOutputTitle } from '../../shared/outputPayload';
-import { formatOutputForCopy, formatRelativeTime, formatStructuredOutputForCopy } from '../../shared/utils';
-import { copyToClipboard } from '../../../../shared/clipboard';
-
+} from "../../shared/types";
+import { getOutputTitle } from "../../shared/outputPayload";
+import {
+  formatOutputForCopy,
+  formatRelativeTime,
+  formatStructuredOutputForCopy,
+} from "../../shared/utils";
+import { copyToClipboard } from "../../../../shared/clipboard";
 
 interface RefinePanelProps {
   mode: RefineMode;
@@ -39,7 +42,11 @@ interface RefinePanelProps {
   }[];
   outputType: OutputTypeId;
   outputs: OutputItem[];
-  outputQueueJobs: { id: string; type: OutputTypeId; status: 'queued' | 'running' | 'done' | 'error' }[];
+  outputQueueJobs: {
+    id: string;
+    type: OutputTypeId;
+    status: "queued" | "running" | "done" | "error";
+  }[];
   queueSummary: { total: number; done: number };
   outputsLoading: boolean;
   outputsError: string;
@@ -76,7 +83,7 @@ function RefineTemplateItem({
   onToggleFavorite,
 }: RefineTemplateItemProps) {
   return (
-    <div className={`RefineTemplateItem ${isActive ? 'isActive' : ''}`}>
+    <div className={`RefineTemplateItem ${isActive ? "isActive" : ""}`}>
       <button
         type="button"
         className="RefineTemplateButton"
@@ -87,7 +94,7 @@ function RefineTemplateItem({
       </button>
       <button
         type="button"
-        className={`RefineTemplateStar ${isFavorite ? 'isActive' : ''}`}
+        className={`RefineTemplateStar ${isFavorite ? "isActive" : ""}`}
         aria-label={isFavorite ? `取消收藏 ${item.label}` : `收藏 ${item.label}`}
         onClick={() => onToggleFavorite(item.id)}
       >
@@ -136,41 +143,41 @@ function RefineTemplateSection({
 }
 
 const STUDIO_ICON_PROPS: SVGProps<SVGSVGElement> = {
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
   strokeWidth: 1.6,
-  strokeLinecap: 'round',
-  strokeLinejoin: 'round',
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
 };
 
-type StudioIconId = OutputTypeId | 'AUDIO' | 'VIDEO' | 'REFINE';
+type StudioIconId = OutputTypeId | "AUDIO" | "VIDEO" | "REFINE";
 
-type StudioTone = 'slate' | 'blue' | 'green' | 'rose' | 'amber' | 'teal' | 'indigo';
+type StudioTone = "slate" | "blue" | "green" | "rose" | "amber" | "teal" | "indigo";
 
 const STUDIO_TONE_MAP: Record<StudioIconId, StudioTone> = {
-  AUDIO: 'blue',
-  VIDEO: 'green',
-  FAQ: 'rose',
-  GUIDE: 'teal',
-  TIMELINE: 'amber',
-  MINDMAP: 'indigo',
-  QUIZ: 'blue',
-  BRIEFING: 'slate',
-  SLIDES: 'slate',
-  PARAGRAPH: 'slate',
-  BULLETS: 'slate',
-  STRUCTURED: 'slate',
-  REFINE: 'slate',
+  AUDIO: "blue",
+  VIDEO: "green",
+  FAQ: "rose",
+  GUIDE: "teal",
+  TIMELINE: "amber",
+  MINDMAP: "indigo",
+  QUIZ: "blue",
+  BRIEFING: "slate",
+  SLIDES: "slate",
+  PARAGRAPH: "slate",
+  BULLETS: "slate",
+  STRUCTURED: "slate",
+  REFINE: "slate",
 };
 
 function resolveStudioTone(id: StudioIconId): StudioTone {
-  return STUDIO_TONE_MAP[id] ?? 'slate';
+  return STUDIO_TONE_MAP[id] ?? "slate";
 }
 
 function renderStudioIcon(id: StudioIconId) {
   switch (id) {
-    case 'FAQ':
+    case "FAQ":
       return (
         <svg {...STUDIO_ICON_PROPS} aria-hidden="true" focusable="false">
           <path d="M6.5 6.5h11a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H11l-4 3v-3h-.5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2Z" />
@@ -178,21 +185,21 @@ function renderStudioIcon(id: StudioIconId) {
           <circle cx="12" cy="14.75" r="0.75" />
         </svg>
       );
-    case 'GUIDE':
+    case "GUIDE":
       return (
         <svg {...STUDIO_ICON_PROPS} aria-hidden="true" focusable="false">
           <path d="M5 5.5h10a2 2 0 0 1 2 2v11.5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2V7.5a2 2 0 0 1 2-2Z" />
           <path d="M7 8.5h6M7 12h6" />
         </svg>
       );
-    case 'TIMELINE':
+    case "TIMELINE":
       return (
         <svg {...STUDIO_ICON_PROPS} aria-hidden="true" focusable="false">
           <circle cx="12" cy="12" r="7" />
           <path d="M12 8v4.5l3 1.5" />
         </svg>
       );
-    case 'MINDMAP':
+    case "MINDMAP":
       return (
         <svg {...STUDIO_ICON_PROPS} aria-hidden="true" focusable="false">
           <circle cx="6" cy="6" r="2" />
@@ -201,41 +208,41 @@ function renderStudioIcon(id: StudioIconId) {
           <path d="M8 6h8M12 8v6M9 15l3 3 3-3" />
         </svg>
       );
-    case 'QUIZ':
+    case "QUIZ":
       return (
         <svg {...STUDIO_ICON_PROPS} aria-hidden="true" focusable="false">
           <circle cx="12" cy="12" r="7" />
           <path d="m9.5 12.5 2 2 4-4" />
         </svg>
       );
-    case 'BRIEFING':
+    case "BRIEFING":
       return (
         <svg {...STUDIO_ICON_PROPS} aria-hidden="true" focusable="false">
           <rect x="5" y="5" width="14" height="8" rx="2" />
           <path d="M9 19h6M12 13v6M8 9h2M12 9h4" />
         </svg>
       );
-    case 'SLIDES':
+    case "SLIDES":
       return (
         <svg {...STUDIO_ICON_PROPS} aria-hidden="true" focusable="false">
           <rect x="4" y="5" width="16" height="10" rx="2" />
           <path d="M8 19h8M12 15v4M7.5 9.5h9" />
         </svg>
       );
-    case 'AUDIO':
+    case "AUDIO":
       return (
         <svg {...STUDIO_ICON_PROPS} aria-hidden="true" focusable="false">
           <path d="M6 14v-4M10 17V7M14 19V5M18 15v-6" />
         </svg>
       );
-    case 'VIDEO':
+    case "VIDEO":
       return (
         <svg {...STUDIO_ICON_PROPS} aria-hidden="true" focusable="false">
           <rect x="4" y="6" width="16" height="12" rx="2" />
           <path d="m10 9 5 3-5 3Z" />
         </svg>
       );
-    case 'REFINE':
+    case "REFINE":
     default:
       return (
         <svg {...STUDIO_ICON_PROPS} aria-hidden="true" focusable="false">
@@ -248,7 +255,7 @@ function renderStudioIcon(id: StudioIconId) {
 type OutputHistoryItem =
   | {
       key: string;
-      kind: 'refine';
+      kind: "refine";
       sortKey: number;
       job: RefineJob;
       hasOutput: boolean;
@@ -256,7 +263,7 @@ type OutputHistoryItem =
     }
   | {
       key: string;
-      kind: 'output';
+      kind: "output";
       sortKey: number;
       output: OutputItem;
       label: string;
@@ -267,7 +274,7 @@ type OutputHistoryItem =
     };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function resolveOutputTitle(output: OutputItem, fallbackLabel: string) {
@@ -277,15 +284,15 @@ function resolveOutputTitle(output: OutputItem, fallbackLabel: string) {
 }
 
 function readCitationSourceName(value: unknown): string {
-  if (!isRecord(value)) return '';
-  const keys = ['source_name', 'sourceName', 'source_title', 'sourceTitle'] as const;
+  if (!isRecord(value)) return "";
+  const keys = ["source_name", "sourceName", "source_title", "sourceTitle"] as const;
   for (const key of keys) {
     const raw = value[key];
-    if (typeof raw === 'string' && raw.trim()) {
+    if (typeof raw === "string" && raw.trim()) {
       return raw.trim();
     }
   }
-  return '';
+  return "";
 }
 
 function collectOutputSourceNames(value: unknown, names: Set<string>) {
@@ -294,10 +301,10 @@ function collectOutputSourceNames(value: unknown, names: Set<string>) {
     value.forEach((item) => collectOutputSourceNames(item, names));
     return;
   }
-  if (typeof value !== 'object') return;
+  if (typeof value !== "object") return;
   const record = value as Record<string, unknown>;
   for (const [key, entry] of Object.entries(record)) {
-    if (key === 'citations' && Array.isArray(entry)) {
+    if (key === "citations" && Array.isArray(entry)) {
       for (const citation of entry) {
         const sourceName = readCitationSourceName(citation);
         if (sourceName) names.add(sourceName);
@@ -309,7 +316,7 @@ function collectOutputSourceNames(value: unknown, names: Set<string>) {
 }
 
 function extractOutputSourceNames(content: unknown) {
-  if (!content || typeof content !== 'object' || Array.isArray(content)) {
+  if (!content || typeof content !== "object" || Array.isArray(content)) {
     return [] as string[];
   }
   const names = new Set<string>();
@@ -318,7 +325,7 @@ function extractOutputSourceNames(content: unknown) {
 }
 
 function formatSourceTitle(names: string[]) {
-  if (!names.length) return '';
+  if (!names.length) return "";
   if (names.length === 1) return names[0];
   if (names.length === 2) return `${names[0]}、${names[1]}`;
   return `${names[0]} 等${names.length}个来源`;
@@ -372,13 +379,9 @@ export default function RefinePanel({
   const [copiedOutputId, setCopiedOutputId] = useState<number | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | number | null>(null);
   const normalizedPrompt = prompt.trim();
-  const activeTemplate =
-    templates.find((item) => item.prompt.trim() === normalizedPrompt) ?? null;
+  const activeTemplate = templates.find((item) => item.prompt.trim() === normalizedPrompt) ?? null;
   const activeTemplateId = activeTemplate?.id ?? null;
-  const favoriteSet = useMemo(
-    () => new Set(favoriteTemplateIds),
-    [favoriteTemplateIds],
-  );
+  const favoriteSet = useMemo(() => new Set(favoriteTemplateIds), [favoriteTemplateIds]);
   const recentTemplates = useMemo(
     () =>
       recentTemplateIds
@@ -391,10 +394,10 @@ export default function RefinePanel({
     [templates, favoriteSet],
   );
   const templateGroups = useMemo(() => {
-    const order = ['决策', '行动', '风险', '分析', '洞察', '表达'];
+    const order = ["决策", "行动", "风险", "分析", "洞察", "表达"];
     const grouped = new Map<string, RefineTemplate[]>();
     for (const item of templates) {
-      const group = item.group ?? '其他';
+      const group = item.group ?? "其他";
       if (!grouped.has(group)) grouped.set(group, []);
       grouped.get(group)?.push(item);
     }
@@ -414,25 +417,25 @@ export default function RefinePanel({
     () => new Map(outputTypeOptions.map((option) => [option.id, option.label])),
     [outputTypeOptions],
   );
-  const statusLabels: Record<RefineJob['status'], string> = {
-    queued: '排队中',
-    running: '生成中',
-    done: '已完成',
-    error: '失败',
+  const statusLabels: Record<RefineJob["status"], string> = {
+    queued: "排队中",
+    running: "生成中",
+    done: "已完成",
+    error: "失败",
   };
   const pendingCount = jobs.filter(
-    (job) => job.status === 'queued' || job.status === 'running',
+    (job) => job.status === "queued" || job.status === "running",
   ).length;
   const outputPendingCount = outputQueueJobs.filter(
-    (job) => job.status === 'queued' || job.status === 'running',
+    (job) => job.status === "queued" || job.status === "running",
   ).length;
   const totalCount = jobs.length;
   const queuedCount =
-    jobs.filter((job) => job.status === 'queued').length +
-    outputQueueJobs.filter((job) => job.status === 'queued').length;
+    jobs.filter((job) => job.status === "queued").length +
+    outputQueueJobs.filter((job) => job.status === "queued").length;
   const runningCount =
-    jobs.filter((job) => job.status === 'running').length +
-    outputQueueJobs.filter((job) => job.status === 'running').length;
+    jobs.filter((job) => job.status === "running").length +
+    outputQueueJobs.filter((job) => job.status === "running").length;
   const combinedPendingCount = pendingCount + outputPendingCount;
   const progress = queueSummary.total
     ? Math.round((queueSummary.done / queueSummary.total) * 100)
@@ -440,7 +443,7 @@ export default function RefinePanel({
   const queueItems = useMemo(() => {
     const items: { id: string; label: string; status: string }[] = [];
     for (const job of jobs) {
-      if (job.status !== 'queued' && job.status !== 'running') continue;
+      if (job.status !== "queued" && job.status !== "running") continue;
       items.push({
         id: `refine-${job.id}`,
         label: job.title,
@@ -448,7 +451,7 @@ export default function RefinePanel({
       });
     }
     for (const job of outputQueueJobs) {
-      if (job.status !== 'queued' && job.status !== 'running') continue;
+      if (job.status !== "queued" && job.status !== "running") continue;
       items.push({
         id: `output-${job.id}`,
         label: `结构化输出 - ${outputTypeLabelMap.get(job.type) ?? job.type}`,
@@ -479,10 +482,10 @@ export default function RefinePanel({
       const output = job.outputs?.[mode];
       const hasOutput = Boolean(
         output?.paragraph ||
-          output?.bullets?.length ||
-          output?.structured?.title ||
-          output?.structured?.bullets?.length ||
-          output?.structured?.terms?.length,
+        output?.bullets?.length ||
+        output?.structured?.title ||
+        output?.structured?.bullets?.length ||
+        output?.structured?.terms?.length,
       );
       const timeValue = job.completedAt ?? job.createdAt;
       const timeLabel = formatRelativeTime(timeValue) || job.completedAtLabel || job.createdAtLabel;
@@ -490,7 +493,7 @@ export default function RefinePanel({
       const sortKey = sortValue ? new Date(sortValue).getTime() : 0;
       items.push({
         key: `refine-${job.id}`,
-        kind: 'refine',
+        kind: "refine",
         sortKey: Number.isNaN(sortKey) ? 0 : sortKey,
         job,
         hasOutput,
@@ -499,9 +502,8 @@ export default function RefinePanel({
     }
     for (const output of outputs) {
       const label = outputTypeLabelMap.get(output.type) ?? output.type;
-      const sortValue = output.updatedAtRaw ?? output.createdAtRaw ?? '';
-      const timeLabel =
-        formatRelativeTime(sortValue) || output.createdAt || output.updatedAt || '';
+      const sortValue = output.updatedAtRaw ?? output.createdAtRaw ?? "";
+      const timeLabel = formatRelativeTime(sortValue) || output.createdAt || output.updatedAt || "";
       const sortKey = sortValue ? new Date(sortValue).getTime() : 0;
       const sourceNames = extractOutputSourceNames(output.content);
       const sourceTitle = formatSourceTitle(sourceNames);
@@ -509,10 +511,10 @@ export default function RefinePanel({
         ? `${sourceNames.length} 个来源`
         : output.chunkIds?.length
           ? `${output.chunkIds.length} 条引用`
-          : '未选择来源';
+          : "未选择来源";
       items.push({
         key: `output-${output.id}`,
-        kind: 'output',
+        kind: "output",
         sortKey: Number.isNaN(sortKey) ? 0 : sortKey,
         output,
         label,
@@ -523,8 +525,8 @@ export default function RefinePanel({
       });
     }
     return items.sort((a, b) => {
-      const aPinned = a.kind === 'refine' && a.job.pinned;
-      const bPinned = b.kind === 'refine' && b.job.pinned;
+      const aPinned = a.kind === "refine" && a.job.pinned;
+      const bPinned = b.kind === "refine" && b.job.pinned;
       if (aPinned !== bPinned) return aPinned ? -1 : 1;
       return (b.sortKey || 0) - (a.sortKey || 0);
     });
@@ -532,10 +534,10 @@ export default function RefinePanel({
   const showHistorySkeleton = outputsLoading && outputHistory.length === 0;
   const showStudioHint = isBlocked || selectedCitationCount > 0;
   const studioHint = isBlocked
-    ? '请先创建笔记本后再生成输出。'
+    ? "请先创建笔记本后再生成输出。"
     : selectedCitationCount > 0
       ? `已选 ${selectedCitationCount} 个来源，将仅基于选中来源生成输出。`
-      : '未选择来源，将在空上下文生成。';
+      : "未选择来源，将在空上下文生成。";
 
   useEffect(() => {
     if (!isConfigOpen) return undefined;
@@ -544,9 +546,9 @@ export default function RefinePanel({
       if (configRef.current.contains(event.target as Node)) return;
       setIsConfigOpen(false);
     }
-    document.addEventListener('mousedown', handleClick);
+    document.addEventListener("mousedown", handleClick);
     return () => {
-      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener("mousedown", handleClick);
     };
   }, [isConfigOpen]);
 
@@ -554,13 +556,13 @@ export default function RefinePanel({
     if (!openMenuId) return undefined;
     function handleClick(event: MouseEvent) {
       const target = event.target as HTMLElement | null;
-      if (!target?.closest('[data-menu-root]')) {
+      if (!target?.closest("[data-menu-root]")) {
         setOpenMenuId(null);
       }
     }
-    document.addEventListener('mousedown', handleClick);
+    document.addEventListener("mousedown", handleClick);
     return () => {
-      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener("mousedown", handleClick);
     };
   }, [openMenuId]);
 
@@ -575,9 +577,7 @@ export default function RefinePanel({
 
   function handleToggleFavorite(templateId: string) {
     setFavoriteTemplateIds((prev) =>
-      prev.includes(templateId)
-        ? prev.filter((id) => id !== templateId)
-        : [...prev, templateId],
+      prev.includes(templateId) ? prev.filter((id) => id !== templateId) : [...prev, templateId],
     );
   }
 
@@ -629,12 +629,10 @@ export default function RefinePanel({
           <div className="OutputStudioHeader">
             <div>
               <div className="OutputStudioTitle">Studio</div>
-              {showStudioHint ? (
-                <div className="OutputStudioSubtitle">{studioHint}</div>
-              ) : null}
+              {showStudioHint ? <div className="OutputStudioSubtitle">{studioHint}</div> : null}
             </div>
             <div className="OutputStudioMeta">
-              {outputs.length ? `已生成 ${outputs.length} 项` : '结构化输出'}
+              {outputs.length ? `已生成 ${outputs.length} 项` : "结构化输出"}
             </div>
           </div>
           <div className="OutputStudioGrid">
@@ -647,8 +645,8 @@ export default function RefinePanel({
               return (
                 <div
                   key={tile.id}
-                  className={`OutputStudioTile ${isDisabled ? 'isDisabled' : ''} ${
-                    isActive ? 'isActive' : ''
+                  className={`OutputStudioTile ${isDisabled ? "isDisabled" : ""} ${
+                    isActive ? "isActive" : ""
                   }`}
                   data-tone={tone}
                 >
@@ -656,9 +654,7 @@ export default function RefinePanel({
                     type="button"
                     className="OutputStudioTile__main"
                     disabled={isDisabled}
-                    aria-label={
-                      tile.description ? `${tile.label} ${tile.description}` : tile.label
-                    }
+                    aria-label={tile.description ? `${tile.label} ${tile.description}` : tile.label}
                     onClick={() => {
                       if (!tile.type) return;
                       onGenerateOutput(tile.type);
@@ -782,7 +778,7 @@ export default function RefinePanel({
                   <div key={item.id} className="OutputQueueItem">
                     <span className="OutputQueueItem__label">{item.label}</span>
                     <span className={`OutputQueueItem__status is-${item.status}`}>
-                      {statusLabels[item.status as RefineJob['status']]}
+                      {statusLabels[item.status as RefineJob["status"]]}
                     </span>
                   </div>
                 ))}
@@ -796,10 +792,10 @@ export default function RefinePanel({
             <div className="OutputHistoryTitle">输出历史</div>
             <div className="OutputHistoryMeta">
               {outputsLoading
-                ? '同步中...'
+                ? "同步中..."
                 : outputHistory.length
                   ? `共 ${outputHistory.length} 条`
-                  : '暂无历史'}
+                  : "暂无历史"}
             </div>
           </div>
           {showHistorySkeleton ? (
@@ -816,7 +812,7 @@ export default function RefinePanel({
           ) : (
             <div className="OutputHistoryList">
               {outputHistory.map((item) => {
-                if (item.kind === 'refine') {
+                if (item.kind === "refine") {
                   const job = item.job;
                   const refineSources = extractCitationSourceNames(job.citations);
                   const refineTitle = formatSourceTitle(refineSources) || job.title;
@@ -824,21 +820,21 @@ export default function RefinePanel({
                     ? `${refineSources.length} 个来源`
                     : job.sourceIds?.length
                       ? `${job.sourceIds.length} 个来源`
-                      : '未选择来源';
-                  const isPending = job.status === 'queued' || job.status === 'running';
-                  const metaItems: { label: string; status?: RefineJob['status'] }[] = [
-                    ...(job.status !== 'done'
+                      : "未选择来源";
+                  const isPending = job.status === "queued" || job.status === "running";
+                  const metaItems: { label: string; status?: RefineJob["status"] }[] = [
+                    ...(job.status !== "done"
                       ? [{ label: statusLabels[job.status], status: job.status }]
                       : []),
                     { label: refineSourceLabel },
-                    { label: item.timeLabel || '刚刚生成' },
+                    { label: item.timeLabel || "刚刚生成" },
                   ];
                   return (
                     <div
                       key={item.key}
-                      className={`OutputHistoryItem ${job.pinned ? 'isPinned' : ''} ${
-                        isPending ? 'isLoading' : ''
-                      } ${highlightedJobId === job.id ? 'isHighlighted' : ''}`}
+                      className={`OutputHistoryItem ${job.pinned ? "isPinned" : ""} ${
+                        isPending ? "isLoading" : ""
+                      } ${highlightedJobId === job.id ? "isHighlighted" : ""}`}
                     >
                       <button
                         type="button"
@@ -847,9 +843,9 @@ export default function RefinePanel({
                       >
                         <span
                           className="OutputHistoryItem__icon"
-                          data-tone={resolveStudioTone('REFINE')}
+                          data-tone={resolveStudioTone("REFINE")}
                         >
-                          {renderStudioIcon('REFINE')}
+                          {renderStudioIcon("REFINE")}
                         </span>
                         <span className="OutputHistoryItem__content">
                           <span className="OutputHistoryItem__title">{refineTitle}</span>
@@ -858,7 +854,7 @@ export default function RefinePanel({
                               <span
                                 key={`${item.key}-${index}`}
                                 className={`OutputHistoryMetaItem${
-                                  meta.status ? ` is-${meta.status}` : ''
+                                  meta.status ? ` is-${meta.status}` : ""
                                 }`}
                               >
                                 {meta.label}
@@ -898,7 +894,7 @@ export default function RefinePanel({
                                   setOpenMenuId(null);
                                 }}
                               >
-                                {job.pinned ? '取消固定' : '固定'}
+                                {job.pinned ? "取消固定" : "固定"}
                               </button>
                               <button
                                 type="button"
@@ -936,7 +932,7 @@ export default function RefinePanel({
                 const output = item.output;
                 const metaItems = [
                   { label: item.sourcesLabel },
-                  { label: item.timeLabel || '刚刚生成' },
+                  { label: item.timeLabel || "刚刚生成" },
                 ];
                 return (
                   <div key={item.key} className="OutputHistoryItem">
@@ -1026,12 +1022,12 @@ export default function RefinePanel({
             <div className="RefineCard__subtitle">
               {selectedCitationCount > 0
                 ? `已选 ${selectedCitationCount} 个来源，将仅基于选中来源生成输出。`
-                : '选择模板或自定义提示词，点击提炼生成输出。'}
+                : "选择模板或自定义提示词，点击提炼生成输出。"}
             </div>
           </div>
           <div className="RefineCard__actions" ref={configRef}>
             <div className="RefineCard__badge">
-              {totalCount ? `历史 ${totalCount} 条` : '暂无历史'}
+              {totalCount ? `历史 ${totalCount} 条` : "暂无历史"}
             </div>
             <button
               type="button"
@@ -1071,7 +1067,7 @@ export default function RefinePanel({
                     <input
                       type="checkbox"
                       checked={settings.asyncQueue}
-                      onChange={() => onToggleSetting('asyncQueue')}
+                      onChange={() => onToggleSetting("asyncQueue")}
                       name="refineAsyncQueue"
                       aria-label="开启后台异步队列"
                     />
@@ -1126,20 +1122,22 @@ export default function RefinePanel({
           onChange={(event) => onPromptChange(event.target.value)}
           rows={3}
           disabled={isBlocked}
-          placeholder={isBlocked ? '请先创建笔记本' : '例如：提炼核心结论、行动项与风险点。'}
+          placeholder={isBlocked ? "请先创建笔记本" : "例如：提炼核心结论、行动项与风险点。"}
         />
         <div className="RefineModes" role="tablist" aria-label="输出格式">
-          {([
-            { id: 'paragraph', label: '段落' },
-            { id: 'bullets', label: '要点' },
-            { id: 'structured', label: '结构化' },
-          ] as { id: RefineMode; label: string }[]).map((item) => (
+          {(
+            [
+              { id: "paragraph", label: "段落" },
+              { id: "bullets", label: "要点" },
+              { id: "structured", label: "结构化" },
+            ] as { id: RefineMode; label: string }[]
+          ).map((item) => (
             <button
               key={item.id}
               type="button"
               role="tab"
               aria-selected={mode === item.id}
-              className={`RefineMode ${mode === item.id ? 'isActive' : ''}`}
+              className={`RefineMode ${mode === item.id ? "isActive" : ""}`}
               onClick={() => onModeChange(item.id)}
             >
               {item.label}

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo } from "react";
 import {
   Dialog,
   DialogHeader,
@@ -6,15 +6,15 @@ import {
   IconButton,
   Typography,
   Spinner,
-} from '@material-tailwind/react';
+} from "@material-tailwind/react";
 import {
   Close as CloseIcon,
   Chat as ChatIcon,
   Fullscreen as FullscreenIcon,
   FullscreenExit as FullscreenExitIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
-import type { ChatMessage, SessionSummary } from '../../shared/types';
+import type { ChatMessage, SessionSummary } from "../../shared/types";
 
 interface SessionDetailDialogProps {
   open: boolean;
@@ -41,13 +41,13 @@ export default function SessionDetailDialog({
     let currentQuestion: ChatMessage | null = null;
 
     for (const message of messages) {
-      if (message.role === 'user') {
+      if (message.role === "user") {
         // If there was a previous question without answer, add it
         if (currentQuestion) {
           pairs.push({ question: currentQuestion, answer: null });
         }
         currentQuestion = message;
-      } else if (message.role === 'assistant' && currentQuestion) {
+      } else if (message.role === "assistant" && currentQuestion) {
         pairs.push({ question: currentQuestion, answer: message });
         currentQuestion = null;
       }
@@ -66,8 +66,8 @@ export default function SessionDetailDialog({
     <Dialog
       open={open}
       handler={onClose}
-      size={isFullscreen ? 'xxl' : 'lg'}
-      className={`rounded-xl overflow-hidden flex flex-col ${isFullscreen ? 'h-[95vh] max-h-[95vh]' : 'h-[70vh] max-h-[70vh]'}`}
+      size={isFullscreen ? "xxl" : "lg"}
+      className={`rounded-xl overflow-hidden flex flex-col ${isFullscreen ? "h-[95vh] max-h-[95vh]" : "h-[70vh] max-h-[70vh]"}`}
     >
       {/* Header */}
       <DialogHeader className="flex items-start justify-between gap-4 border-b border-gray-100 p-4">
@@ -86,7 +86,12 @@ export default function SessionDetailDialog({
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {onToggleFullscreen && (
-            <IconButton variant="text" size="sm" onClick={onToggleFullscreen} className="rounded-full">
+            <IconButton
+              variant="text"
+              size="sm"
+              onClick={onToggleFullscreen}
+              className="rounded-full"
+            >
               {isFullscreen ? (
                 <FullscreenExitIcon className="h-4 w-4" />
               ) : (
@@ -122,14 +127,20 @@ export default function SessionDetailDialog({
         ) : (
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {qaPairs.map((pair, index) => (
-              <div key={pair.question.id} className="border border-gray-200 rounded-xl overflow-hidden">
+              <div
+                key={pair.question.id}
+                className="border border-gray-200 rounded-xl overflow-hidden"
+              >
                 {/* Question */}
                 <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
                   <div className="flex items-start gap-2">
                     <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-[10px] font-medium flex-shrink-0 mt-0.5">
                       Q
                     </span>
-                    <Typography variant="small" className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
+                    <Typography
+                      variant="small"
+                      className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap"
+                    >
                       {pair.question.content}
                     </Typography>
                   </div>
@@ -142,7 +153,10 @@ export default function SessionDetailDialog({
                       A
                     </span>
                     {pair.answer ? (
-                      <Typography variant="small" className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                      <Typography
+                        variant="small"
+                        className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap"
+                      >
                         {pair.answer.content}
                       </Typography>
                     ) : (

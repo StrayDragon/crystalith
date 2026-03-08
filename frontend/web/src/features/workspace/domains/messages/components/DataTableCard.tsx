@@ -4,17 +4,15 @@ type DataTableCardProps = {
 };
 
 function renderCell(value: string | number | null) {
-  if (value == null) return '';
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (value == null) return "";
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return String(value);
 }
 
 export default function DataTableCard({ columns, rows }: DataTableCardProps) {
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 shadow-sm">
-      <div className="text-xs font-semibold text-gray-900 dark:text-slate-100">
-        Table
-      </div>
+      <div className="text-xs font-semibold text-gray-900 dark:text-slate-100">Table</div>
       <div className="mt-3 overflow-x-auto">
         <table className="min-w-full border-collapse">
           <thead>
@@ -31,7 +29,10 @@ export default function DataTableCard({ columns, rows }: DataTableCardProps) {
           </thead>
           <tbody>
             {rows.map((row, rowIndex) => (
-              <tr key={`row-${rowIndex}`} className="border-b border-gray-100 dark:border-slate-800 last:border-b-0">
+              <tr
+                key={`row-${rowIndex}`}
+                className="border-b border-gray-100 dark:border-slate-800 last:border-b-0"
+              >
                 {columns.map((_col, colIndex) => (
                   <td
                     key={`cell-${rowIndex}-${colIndex}`}
@@ -58,4 +59,3 @@ export default function DataTableCard({ columns, rows }: DataTableCardProps) {
     </div>
   );
 }
-

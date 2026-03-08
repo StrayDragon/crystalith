@@ -12,6 +12,10 @@ Frontend (from repo root):
 - `cd frontend/web && pnpm install` — install dependencies.
 - `pnpm dev` — start the Vite dev server.
 - `pnpm test` — run Vitest and React Testing Library.
+- `pnpm run lint` — run incremental `oxlint` for changed frontend source files.
+- `pnpm run lint:all` — run full `oxlint` across `src/`.
+- `pnpm run format` — apply `oxfmt` to frontend source/config files.
+- `pnpm run format:check` — verify frontend formatting without writing changes.
 - `pnpm typecheck` — run TypeScript typechecking.
 - `pnpm run build` — create a production build.
 - `pnpm preview` — serve the production build locally.
@@ -29,7 +33,7 @@ Tip: `just -l` lists available tasks in each directory.
 - TypeScript/React: 2-space indentation; components use `PascalCase`; hooks are `useX`; tests named `*.test.tsx`.
 - Python (backend): 4-space indentation; prefer high-coverage type hints; minimize `Any`; avoid dynamic attribute access (`getattr`, `hasattr`, `__getattr__`); `snake_case` for functions/vars, `PascalCase` classes.
 - CSS/Tailwind: global styles in `frontend/web/src/app/index.css`; feature styles live alongside components.
-- No repo-wide formatter is configured; match existing style and avoid unrelated reformatting.
+- Frontend formatting uses `oxfmt`; keep reformatting scoped to intended style-only changes. Outside `frontend/web`, match existing style and avoid unrelated reformatting.
 - If backend OpenAPI changed, run `pnpm run api:sync` and verify.
 
 ## Layer System (z-index Management)

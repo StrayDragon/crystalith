@@ -6,8 +6,8 @@
  * all plugins are registered before they are needed.
  */
 
-import { pluginRegistry } from './index';
-import { allPlugins } from './allPlugins';
+import { pluginRegistry } from "./index";
+import { allPlugins } from "./allPlugins";
 
 let initialized = false;
 

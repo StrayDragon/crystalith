@@ -1,12 +1,12 @@
-import { decodeOutputContent } from '../../../features/workspace/shared/outputPayload';
+import { decodeOutputContent } from "../../../features/workspace/shared/outputPayload";
 
-import { FallbackWarning, OutputError } from '../shared';
+import { FallbackWarning, OutputError } from "../shared";
 
 export function render(content: unknown, isFallback?: boolean) {
-  const slides = decodeOutputContent('SLIDES', content);
+  const slides = decodeOutputContent("SLIDES", content);
   if (!slides) return <OutputError message="无效的演示数据" />;
 
-  const title = slides.title || '演示';
+  const title = slides.title || "演示";
   const outline = slides.outline;
   const markdown = slides.markdown;
 
@@ -16,7 +16,7 @@ export function render(content: unknown, isFallback?: boolean) {
       <div>
         <div className="text-lg font-semibold text-gray-900 dark:text-slate-100">{title}</div>
         <div className="text-xs text-gray-500 dark:text-slate-400">
-          引擎：{slides.engine || 'slidev'}
+          引擎：{slides.engine || "slidev"}
         </div>
       </div>
       {Array.isArray(outline?.slides) ? (

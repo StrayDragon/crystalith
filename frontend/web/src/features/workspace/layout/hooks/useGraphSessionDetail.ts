@@ -1,9 +1,9 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from "react";
 
-import { listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet as listMessages } from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
-import type { ChatMessage, SessionSummary } from '../../shared/types';
-import { normalizeMessage } from '../../shared/utils';
+import { listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet as listMessages } from "../../../../api/generated";
+import { unwrapData } from "../../../../api/unwrap";
+import type { ChatMessage, SessionSummary } from "../../shared/types";
+import { normalizeMessage } from "../../shared/utils";
 
 export interface GraphSessionTarget {
   id: number;
@@ -40,8 +40,8 @@ export function useGraphSessionDetail() {
       setSelectedSession({
         id: session.id,
         title: session.title || `对话 ${session.id}`,
-        createdAt: session.createdAt || '',
-        updatedAt: session.updatedAt || '',
+        createdAt: session.createdAt || "",
+        updatedAt: session.updatedAt || "",
       });
       setIsOpen(true);
       setIsFullscreen(false);
@@ -54,9 +54,11 @@ export function useGraphSessionDetail() {
 
       setIsLoading(true);
       try {
-        const response = await unwrapData(listMessages<true>({
-          path: { notebook_id: notebookId, session_id: session.id },
-        }));
+        const response = await unwrapData(
+          listMessages<true>({
+            path: { notebook_id: notebookId, session_id: session.id },
+          }),
+        );
         if (requestIdRef.current !== requestId) return;
         setMessages(response.map(normalizeMessage));
       } catch {

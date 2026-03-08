@@ -1,10 +1,10 @@
-import type { ReactNode, RefObject } from 'react';
-import { IconButton, Tooltip } from '@material-tailwind/react';
+import type { ReactNode, RefObject } from "react";
+import { IconButton, Tooltip } from "@material-tailwind/react";
 
-import { IconExitFullscreen, IconFullscreen } from '../../shared/components/Icons';
-import ErrorBoundary from '../../shared/components/ErrorBoundary';
+import { IconExitFullscreen, IconFullscreen } from "../../shared/components/Icons";
+import ErrorBoundary from "../../shared/components/ErrorBoundary";
 
-export type WorkspacePanelKey = 'sources' | 'chat' | 'studio';
+export type WorkspacePanelKey = "sources" | "chat" | "studio";
 
 export type WorkspaceExpandedPanel = WorkspacePanelKey | null;
 
@@ -41,7 +41,7 @@ export default function WorkspacePanelShell({
       tabIndex={-1}
       className="flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden ux-fade-in focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 dark:focus-visible:ring-blue-500"
       style={{
-        animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        animationTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
       }}
       aria-label={ariaLabel}
     >
@@ -51,7 +51,7 @@ export default function WorkspacePanelShell({
           {headerExtras}
         </div>
 
-        <Tooltip content={isExpanded ? '收起' : '展开'}>
+        <Tooltip content={isExpanded ? "收起" : "展开"}>
           <IconButton
             variant="text"
             size="sm"

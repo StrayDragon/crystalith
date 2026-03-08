@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import useSWR from 'swr';
+import { useCallback, useEffect, useRef, useState } from "react";
+import useSWR from "swr";
 
 import {
   askQuestionV1NotebooksNotebookIdQaPost as askQuestion,
@@ -8,25 +8,25 @@ import {
   listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet as listMessages,
   type Citation as ApiCitation,
   type OutputTypeInput,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
-import { client } from '../../../../api/generated/client.gen';
-import { toast } from '../../../../shared/toast';
-import { t } from '../../../../shared/i18n';
-import { useWorkspaceStore } from '../../shared/state/workspaceStore';
-import type { ChatMessage as WorkspaceChatMessage } from '../../shared/types';
+} from "../../../../api/generated";
+import { unwrapData } from "../../../../api/unwrap";
+import { client } from "../../../../api/generated/client.gen";
+import { toast } from "../../../../shared/toast";
+import { t } from "../../../../shared/i18n";
+import { useWorkspaceStore } from "../../shared/state/workspaceStore";
+import type { ChatMessage as WorkspaceChatMessage } from "../../shared/types";
 import {
   buildSourceScopeSnapshot,
   collectChunkIds,
   createId,
   normalizeCitation,
   normalizeMessage,
-} from '../../shared/utils';
+} from "../../shared/utils";
 import {
   createRivuSessionRuntime,
   type RivuSessionRuntime,
   type SessionUiStatePayload,
-} from './rivuRuntime';
+} from "./rivuRuntime";
 
 interface UseChatOptions {
   ensureSession: (title?: string | null) => Promise<number | null>;
@@ -38,7 +38,7 @@ interface UseChatOptions {
 
 function ensureAssistantMessage(
   messageId: string,
-  scope: WorkspaceChatMessage['citationScope'] | undefined,
+  scope: WorkspaceChatMessage["citationScope"] | undefined,
 ) {
   const state = useWorkspaceStore.getState();
   const existing = state.messages.find((message) => message.id === messageId);
@@ -48,19 +48,14 @@ function ensureAssistantMessage(
   }
   state.addStreamingMessage({
     id: messageId,
-    role: 'assistant',
-    content: '',
+    role: "assistant",
+    content: "",
     citationScope: scope,
   });
 }
 
-async function fetchUiState(
-  notebookId: number,
-  sessionId: number,
-): Promise<SessionUiStatePayload> {
-  const response = await fetch(
-    `/v1/notebooks/${notebookId}/sessions/${sessionId}/ui/state`,
-  );
+async function fetchUiState(notebookId: number, sessionId: number): Promise<SessionUiStatePayload> {
+  const response = await fetch(`/v1/notebooks/${notebookId}/sessions/${sessionId}/ui/state`);
   if (!response.ok) {
     throw new Error(`UI state request failed: HTTP ${response.status}`);
   }
@@ -85,15 +80,15 @@ export function useChat({
   const errMessages = useWorkspaceStore((s) => s.errors.messages);
 
   const store = useWorkspaceStore;
-  const isConnected = connectionState === 'live';
+  const isConnected = connectionState === "live";
 
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
-  const [lastFailedDraft, setLastFailedDraft] = useState('');
+  const [lastFailedDraft, setLastFailedDraft] = useState("");
   const [_runtimeVersion, setRuntimeVersion] = useState(0);
   const messagesRef = useRef(messages);
-  const streamingBufferRef = useRef('');
-  const streamingMarkdownRef = useRef('');
+  const streamingBufferRef = useRef("");
+  const streamingMarkdownRef = useRef("");
   const streamingFlushTimerRef = useRef<NodeJS.Timeout | null>(null);
   const streamingAbortControllerRef = useRef<AbortController | null>(null);
   const runtimeRef = useRef<{
@@ -104,11 +99,7 @@ export function useChat({
 
   const ensureRuntime = useCallback((notebookId: number, sessionId: number) => {
     const current = runtimeRef.current;
-    if (
-      current &&
-      current.notebookId === notebookId &&
-      current.sessionId === sessionId
-    ) {
+    if (current && current.notebookId === notebookId && current.sessionId === sessionId) {
       return current.runtime;
     }
     const runtime = createRivuSessionRuntime({ notebookId, sessionId });
@@ -127,14 +118,17 @@ export function useChat({
 
   const { data, error, isLoading, mutate } = useSWR(
     activeNotebookId && activeSessionId && isConnected
-      ? ['workspace/messages', activeNotebookId, activeSessionId]
+      ? ["workspace/messages", activeNotebookId, activeSessionId]
       : null,
-    () => unwrapData(listMessages<true>({
-      path: {
-        notebook_id: activeNotebookId ?? 0,
-        session_id: activeSessionId ?? 0,
-      },
-    })),
+    () =>
+      unwrapData(
+        listMessages<true>({
+          path: {
+            notebook_id: activeNotebookId ?? 0,
+            session_id: activeSessionId ?? 0,
+          },
+        }),
+      ),
     { revalidateOnFocus: false },
   );
 
@@ -183,57 +177,49 @@ export function useChat({
 
   useEffect(() => {
     if (error) {
-      store.getState().setError('messages', '会话消息加载失败，请稍后重试。');
+      store.getState().setError("messages", "会话消息加载失败，请稍后重试。");
       return;
     }
     if (!data) return;
-    const normalized = data
-      .filter((item) => item.role !== 'system')
-      .map(normalizeMessage);
-    const scopeMap = new Map<
-      string,
-      (typeof messagesRef.current)[number]['citationScope']
-    >();
+    const normalized = data.filter((item) => item.role !== "system").map(normalizeMessage);
+    const scopeMap = new Map<string, (typeof messagesRef.current)[number]["citationScope"]>();
     for (const message of messagesRef.current) {
-      if (message.role !== 'assistant') continue;
-      if (!message.citationScope || message.citationScope.mode !== 'selected') continue;
-      const key = `${message.role}::${message.content}::${(message.citationChunkIds ?? []).join(',')}`;
+      if (message.role !== "assistant") continue;
+      if (!message.citationScope || message.citationScope.mode !== "selected") continue;
+      const key = `${message.role}::${message.content}::${(message.citationChunkIds ?? []).join(",")}`;
       scopeMap.set(key, message.citationScope);
     }
     const merged = normalized.map((message) => {
-      if (message.role !== 'assistant') return message;
-      const key = `${message.role}::${message.content}::${(message.citationChunkIds ?? []).join(',')}`;
+      if (message.role !== "assistant") return message;
+      const key = `${message.role}::${message.content}::${(message.citationChunkIds ?? []).join(",")}`;
       const preservedScope = scopeMap.get(key);
       return preservedScope ? { ...message, citationScope: preservedScope } : message;
     });
     const s = store.getState();
     s.setMessages(merged);
-    s.setError('messages', '');
+    s.setError("messages", "");
   }, [data, error]);
 
-  const setDraft = useCallback(
-    (value: string) => store.getState().setDraft(value),
-    [],
-  );
+  const setDraft = useCallback((value: string) => store.getState().setDraft(value), []);
 
   const sendMessage = useCallback(async () => {
     const s = store.getState();
     const text = s.draft.trim();
     if (!text) return;
     if (!s.activeNotebookId) {
-      s.setError('send', '请先创建笔记本。');
+      s.setError("send", "请先创建笔记本。");
       return;
     }
-    if (s.connectionState !== 'live') {
-      s.setError('send', '未连接到后端服务。');
+    if (s.connectionState !== "live") {
+      s.setError("send", "未连接到后端服务。");
       return;
     }
 
     const notebookId = s.activeNotebookId;
 
-    s.setLoading('send', true);
-    s.setError('send', '');
-    s.setActivePanel('chat');
+    s.setLoading("send", true);
+    s.setError("send", "");
+    s.setActivePanel("chat");
 
     const explicitSourceIds = Object.entries(s.selectedSourceIds)
       .filter(([, selected]) => selected)
@@ -243,18 +229,18 @@ export function useChat({
       .filter((source) => explicitSourceIds.includes(source.id))
       .map((source) => source.title);
 
-    const selectedScope = buildSourceScopeSnapshot(selectedSourceTitles, 'selected');
+    const selectedScope = buildSourceScopeSnapshot(selectedSourceTitles, "selected");
 
-    const userMessage: WorkspaceChatMessage = { id: createId(), role: 'user', content: text };
+    const userMessage: WorkspaceChatMessage = { id: createId(), role: "user", content: text };
     const pendingMessages: WorkspaceChatMessage[] = [...s.messages, userMessage];
     s.setMessages(pendingMessages);
-    s.setDraft('');
+    s.setDraft("");
 
     const sessionId = await ensureSession();
     if (!sessionId) {
       setLastFailedDraft(text);
-      store.getState().setLoading('send', false);
-      store.getState().setError('send', '会话创建失败。');
+      store.getState().setLoading("send", false);
+      store.getState().setError("send", "会话创建失败。");
       return;
     }
 
@@ -265,26 +251,26 @@ export function useChat({
       streamingAbortControllerRef.current = abortController;
       setIsStreaming(true);
       setStreamingMessageId(null);
-      streamingMarkdownRef.current = '';
-      streamingBufferRef.current = '';
+      streamingMarkdownRef.current = "";
+      streamingBufferRef.current = "";
 
       let hadSseError = false;
       let receivedDone = false;
       let stableAssistantMessageId: string | null = null;
-      let terminalErrorMessage = '';
+      let terminalErrorMessage = "";
 
       const rollbackLocalStreamingState = () => {
         if (!stableAssistantMessageId) {
-          streamingMarkdownRef.current = '';
-          streamingBufferRef.current = '';
+          streamingMarkdownRef.current = "";
+          streamingBufferRef.current = "";
           return;
         }
         const state = store.getState();
         state.setMessages(
           state.messages.filter((message) => message.id !== stableAssistantMessageId),
         );
-        streamingMarkdownRef.current = '';
-        streamingBufferRef.current = '';
+        streamingMarkdownRef.current = "";
+        streamingBufferRef.current = "";
       };
 
       const resyncServerState = () => {
@@ -306,7 +292,7 @@ export function useChat({
         }
         if (!streamingBufferRef.current) return;
         const buffered = streamingBufferRef.current;
-        streamingBufferRef.current = '';
+        streamingBufferRef.current = "";
         streamingMarkdownRef.current += buffered;
         ensureAssistantMessage(stableAssistantMessageId, selectedScope ?? undefined);
         store.getState().updateMessage(stableAssistantMessageId, {
@@ -316,7 +302,7 @@ export function useChat({
 
       try {
         const { stream } = await client.sse.post({
-          url: '/v1/notebooks/{notebook_id}/qa/stream',
+          url: "/v1/notebooks/{notebook_id}/qa/stream",
           path: { notebook_id: notebookId },
           body: {
             question: text,
@@ -324,22 +310,26 @@ export function useChat({
             source_ids: explicitSourceIds.length ? explicitSourceIds : undefined,
           },
           headers: {
-            Accept: 'text/event-stream',
+            Accept: "text/event-stream",
           },
           signal: abortController.signal,
           sseMaxRetryAttempts: 1,
           onSseEvent: (event) => {
             const { event: eventType, data } = event;
-            if (eventType === 'state_snapshot' && data && typeof data === 'object') {
+            if (eventType === "state_snapshot" && data && typeof data === "object") {
               const payload = data as {
                 message_id?: unknown;
                 shared_state?: unknown;
               };
-              if (payload.shared_state && typeof payload.shared_state === 'object') {
+              if (payload.shared_state && typeof payload.shared_state === "object") {
                 runtime.dispatchSnapshot(payload.shared_state as Record<string, unknown>);
               }
               const nextMessageId = payload.message_id;
-              if (typeof nextMessageId === 'number' && Number.isFinite(nextMessageId) && nextMessageId > 0) {
+              if (
+                typeof nextMessageId === "number" &&
+                Number.isFinite(nextMessageId) &&
+                nextMessageId > 0
+              ) {
                 stableAssistantMessageId = String(nextMessageId);
                 setStreamingMessageId(stableAssistantMessageId);
                 ensureAssistantMessage(stableAssistantMessageId, selectedScope ?? undefined);
@@ -349,15 +339,15 @@ export function useChat({
               }
               return;
             }
-            if (eventType === 'state_delta' && data && typeof data === 'object') {
+            if (eventType === "state_delta" && data && typeof data === "object") {
               const payload = data as { delta?: unknown };
               if (Array.isArray(payload.delta)) {
                 runtime.dispatchDelta(payload.delta as Array<Record<string, unknown>>);
               }
               return;
             }
-            if (eventType === 'chunk' && data && typeof data === 'object' && 'text' in data) {
-              const chunkText = String((data as { text?: unknown }).text ?? '');
+            if (eventType === "chunk" && data && typeof data === "object" && "text" in data) {
+              const chunkText = String((data as { text?: unknown }).text ?? "");
               if (!chunkText) return;
               streamingBufferRef.current += chunkText;
               if (!streamingFlushTimerRef.current) {
@@ -368,14 +358,14 @@ export function useChat({
               }
               return;
             }
-            if (eventType === 'done' && data && typeof data === 'object') {
+            if (eventType === "done" && data && typeof data === "object") {
               receivedDone = true;
               const doneData = data as {
                 citations?: ApiCitation[];
                 message_id?: unknown;
               };
               const doneMessageId =
-                typeof doneData.message_id === 'number' &&
+                typeof doneData.message_id === "number" &&
                 Number.isFinite(doneData.message_id) &&
                 doneData.message_id > 0
                   ? String(doneData.message_id)
@@ -397,15 +387,15 @@ export function useChat({
               store.getState().setCitations(normalizedCitations);
               return;
             }
-            if (eventType === 'error') {
+            if (eventType === "error") {
               hadSseError = true;
               terminalErrorMessage =
-                data && typeof data === 'object' && 'message' in data
-                  ? String((data as { message?: unknown }).message ?? '请求失败')
-                  : typeof data === 'string'
+                data && typeof data === "object" && "message" in data
+                  ? String((data as { message?: unknown }).message ?? "请求失败")
+                  : typeof data === "string"
                     ? data
-                    : '请求失败';
-              store.getState().setError('send', terminalErrorMessage);
+                    : "请求失败";
+              store.getState().setError("send", terminalErrorMessage);
             }
           },
         });
@@ -418,8 +408,8 @@ export function useChat({
           rollbackLocalStreamingState();
           resyncServerState();
           if (!hadSseError) {
-            terminalErrorMessage = '请求已中断，请重试。';
-            store.getState().setError('send', terminalErrorMessage);
+            terminalErrorMessage = "请求已中断，请重试。";
+            store.getState().setError("send", terminalErrorMessage);
           }
         }
 
@@ -430,13 +420,13 @@ export function useChat({
           setLastFailedDraft(text);
         } else {
           void mutate();
-          setLastFailedDraft('');
+          setLastFailedDraft("");
         }
       } catch (error) {
         const isAborted =
           abortController.signal.aborted ||
-          (error instanceof DOMException && error.name === 'AbortError') ||
-          (error instanceof Error && error.name === 'AbortError');
+          (error instanceof DOMException && error.name === "AbortError") ||
+          (error instanceof Error && error.name === "AbortError");
 
         if (!receivedDone) {
           rollbackLocalStreamingState();
@@ -445,28 +435,28 @@ export function useChat({
 
         if (isAborted) {
           if (!receivedDone) {
-            const errorMessage = terminalErrorMessage || '请求已中断，请重试。';
-            store.getState().setError('send', errorMessage);
+            const errorMessage = terminalErrorMessage || "请求已中断，请重试。";
+            store.getState().setError("send", errorMessage);
             setLastFailedDraft(text);
           } else {
-            store.getState().setError('send', '');
-            setLastFailedDraft('');
+            store.getState().setError("send", "");
+            setLastFailedDraft("");
           }
         } else {
-          let errorMessage = terminalErrorMessage || '请求失败，请检查后端服务或稍后重试。';
+          let errorMessage = terminalErrorMessage || "请求失败，请检查后端服务或稍后重试。";
           if (error instanceof Error) {
             const statusError = error as Error & { status?: number };
             if (statusError.status === 503) {
-              errorMessage = '可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置或稍后重试。';
+              errorMessage = "可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置或稍后重试。";
             } else if (statusError.status === 404) {
-              errorMessage = '会话或笔记本不存在。';
+              errorMessage = "会话或笔记本不存在。";
             } else if (statusError.status === 500) {
-              errorMessage = '服务器内部错误，请稍后重试。';
+              errorMessage = "服务器内部错误，请稍后重试。";
             } else if (error.message && error.message.length < 100) {
               errorMessage = error.message;
             }
           }
-          store.getState().setError('send', errorMessage);
+          store.getState().setError("send", errorMessage);
           setLastFailedDraft(text);
         }
       } finally {
@@ -479,37 +469,39 @@ export function useChat({
         }
         setIsStreaming(false);
         setStreamingMessageId(null);
-        store.getState().setLoading('send', false);
+        store.getState().setLoading("send", false);
       }
       return;
     }
 
     try {
-      const qaResult = await unwrapData(askQuestion<true>({
-        path: { notebook_id: notebookId },
-        body: {
-          question: text,
-          session_id: sessionId,
-          source_ids: explicitSourceIds.length ? explicitSourceIds : undefined,
-        },
-      }));
+      const qaResult = await unwrapData(
+        askQuestion<true>({
+          path: { notebook_id: notebookId },
+          body: {
+            question: text,
+            session_id: sessionId,
+            source_ids: explicitSourceIds.length ? explicitSourceIds : undefined,
+          },
+        }),
+      );
       const normalizedCitations = qaResult.citations?.map(normalizeCitation) ?? [];
       const messageId =
-        typeof qaResult.message_id === 'number' &&
+        typeof qaResult.message_id === "number" &&
         Number.isFinite(qaResult.message_id) &&
         qaResult.message_id > 0
           ? String(qaResult.message_id)
           : createId();
       const assistantMessage: WorkspaceChatMessage = {
         id: messageId,
-        role: 'assistant',
+        role: "assistant",
         content: qaResult.answer,
         citationChunkIds: collectChunkIds(normalizedCitations),
         citations: normalizedCitations,
         citationScope: selectedScope ?? undefined,
       };
       const sharedState =
-        qaResult.shared_state && typeof qaResult.shared_state === 'object'
+        qaResult.shared_state && typeof qaResult.shared_state === "object"
           ? (qaResult.shared_state as Record<string, unknown>)
           : {};
       runtime.dispatchSnapshot(sharedState);
@@ -520,26 +512,26 @@ export function useChat({
       if (refreshSessions) {
         void refreshSessions();
       }
-      setLastFailedDraft('');
+      setLastFailedDraft("");
     } catch (error) {
-      let errorMessage = '请求失败，请检查后端服务或稍后重试。';
-      let userFacingError = '请求失败。';
+      let errorMessage = "请求失败，请检查后端服务或稍后重试。";
+      let userFacingError = "请求失败。";
 
       if (error instanceof Error) {
         const statusError = error as Error & { status?: number };
 
         if (statusError.status === 503) {
-          errorMessage = '可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置或稍后重试。';
-          userFacingError = '可选 AI 服务暂时不可用，请稍后重试或切换模型。';
+          errorMessage = "可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置或稍后重试。";
+          userFacingError = "可选 AI 服务暂时不可用，请稍后重试或切换模型。";
         } else if (statusError.status === 404) {
-          errorMessage = '会话或笔记本不存在。';
-          userFacingError = '会话已失效，请刷新页面。';
+          errorMessage = "会话或笔记本不存在。";
+          userFacingError = "会话已失效，请刷新页面。";
         } else if (statusError.status === 500) {
-          errorMessage = '服务器内部错误，请稍后重试。';
-          userFacingError = '服务器错误，请稍后重试。';
+          errorMessage = "服务器内部错误，请稍后重试。";
+          userFacingError = "服务器错误，请稍后重试。";
         } else if (error.message) {
           const msg = error.message;
-          if (msg.length < 100 && !msg.includes('fetch')) {
+          if (msg.length < 100 && !msg.includes("fetch")) {
             errorMessage = msg;
             userFacingError = msg;
           }
@@ -548,26 +540,20 @@ export function useChat({
 
       const assistantMessage: WorkspaceChatMessage = {
         id: createId(),
-        role: 'assistant',
+        role: "assistant",
         content: errorMessage,
       };
       const s2 = store.getState();
       s2.setMessages([...pendingMessages, assistantMessage]);
-      s2.setError('send', userFacingError);
+      s2.setError("send", userFacingError);
       setLastFailedDraft(text);
     } finally {
-      store.getState().setLoading('send', false);
+      store.getState().setLoading("send", false);
     }
-  }, [
-    enableStreaming,
-    ensureRuntime,
-    ensureSession,
-    mutate,
-    refreshSessions,
-  ]);
+  }, [enableStreaming, ensureRuntime, ensureSession, mutate, refreshSessions]);
 
   const retryMessages = useCallback(async () => {
-    store.getState().setError('messages', '');
+    store.getState().setError("messages", "");
     await mutate();
   }, [mutate]);
 
@@ -588,28 +574,31 @@ export function useChat({
   const handleConvertSessionToSource = useCallback(async () => {
     const s = store.getState();
     if (!s.activeNotebookId || !s.activeSessionId) return;
-    if (s.connectionState !== 'live') {
-      toast.warning(t('messages.convert.connection_required'));
+    if (s.connectionState !== "live") {
+      toast.warning(t("messages.convert.connection_required"));
       return;
     }
     setIsConverting(true);
     try {
-      const result = await unwrapData(convertSessionToSource<true>({
-        path: { notebook_id: s.activeNotebookId, session_id: s.activeSessionId },
-        body: { message_ids: null },
-      }));
+      const result = await unwrapData(
+        convertSessionToSource<true>({
+          path: { notebook_id: s.activeNotebookId, session_id: s.activeSessionId },
+          body: { message_ids: null },
+        }),
+      );
       if (refreshSources) {
         await refreshSources();
       }
       toast.success(
-        t('messages.convert.to_source.success', {
+        t("messages.convert.to_source.success", {
           filename: result.filename,
           chunkCount: result.chunk_count,
         }),
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : t('messages.convert.failure_default');
-      toast.error(t('messages.convert.failure', { message }));
+      const message =
+        error instanceof Error ? error.message : t("messages.convert.failure_default");
+      toast.error(t("messages.convert.failure", { message }));
     } finally {
       setIsConverting(false);
     }
@@ -619,23 +608,26 @@ export function useChat({
     async (outputType: OutputTypeInput) => {
       const s = store.getState();
       if (!s.activeNotebookId || !s.activeSessionId) return;
-      if (s.connectionState !== 'live') {
-        toast.warning(t('messages.convert.connection_required'));
+      if (s.connectionState !== "live") {
+        toast.warning(t("messages.convert.connection_required"));
         return;
       }
       setIsConverting(true);
       try {
-        const result = await unwrapData(convertSessionToOutput<true>({
-          path: { notebook_id: s.activeNotebookId, session_id: s.activeSessionId },
-          body: { message_ids: null, output_type: outputType },
-        }));
+        const result = await unwrapData(
+          convertSessionToOutput<true>({
+            path: { notebook_id: s.activeNotebookId, session_id: s.activeSessionId },
+            body: { message_ids: null, output_type: outputType },
+          }),
+        );
         if (refreshOutputs) {
           await refreshOutputs();
         }
-        toast.success(t('messages.convert.to_output.success', { title: result.title }));
+        toast.success(t("messages.convert.to_output.success", { title: result.title }));
       } catch (error) {
-        const message = error instanceof Error ? error.message : t('messages.convert.failure_default');
-        toast.error(t('messages.convert.failure', { message }));
+        const message =
+          error instanceof Error ? error.message : t("messages.convert.failure_default");
+        toast.error(t("messages.convert.failure", { message }));
       } finally {
         setIsConverting(false);
       }

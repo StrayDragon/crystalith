@@ -1,12 +1,5 @@
-import { memo, useCallback, useEffect, useMemo, useState, useRef, type CSSProperties } from 'react';
-import {
-  Button,
-  Typography,
-  IconButton,
-  Chip,
-  Checkbox,
-  Spinner,
-} from '@material-tailwind/react';
+import { memo, useCallback, useEffect, useMemo, useState, useRef, type CSSProperties } from "react";
+import { Button, Typography, IconButton, Chip, Checkbox, Spinner } from "@material-tailwind/react";
 import {
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
@@ -28,13 +21,13 @@ import {
   KeyboardArrowDown as KeyboardArrowDownIcon,
   Download as DownloadIcon,
   WarningAmber as WarningIcon,
-} from '@mui/icons-material';
-import type { ResearchSessionResponse, ResearchStepResponse } from '../../../../api/generated';
-import type { SSEEvent } from './useResearch';
-import { toast } from '../../../../shared/toast';
-import ResearchExportDialog from './ResearchExportDialog';
-import { useLayer } from '../../../../shared/layer';
-import { copyToClipboard } from '../../../../shared/clipboard';
+} from "@mui/icons-material";
+import type { ResearchSessionResponse, ResearchStepResponse } from "../../../../api/generated";
+import type { SSEEvent } from "./useResearch";
+import { toast } from "../../../../shared/toast";
+import ResearchExportDialog from "./ResearchExportDialog";
+import { useLayer } from "../../../../shared/layer";
+import { copyToClipboard } from "../../../../shared/clipboard";
 
 // Typewriter component for streaming text effect
 interface TypewriterTextProps {
@@ -44,13 +37,13 @@ interface TypewriterTextProps {
 }
 
 function TypewriterText({ text, speed = 30, onComplete }: TypewriterTextProps) {
-  const [displayedText, setDisplayedText] = useState('');
+  const [displayedText, setDisplayedText] = useState("");
   const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
     if (!text) return;
 
-    setDisplayedText('');
+    setDisplayedText("");
     setIsComplete(false);
     let index = 0;
 
@@ -92,33 +85,39 @@ interface ThinkingBlockProps {
 }
 
 const THINKING_BLOCK_VISIBILITY_STYLE: CSSProperties = {
-  contentVisibility: 'auto',
-  containIntrinsicSize: '120px 80px',
+  contentVisibility: "auto",
+  containIntrinsicSize: "120px 80px",
 };
 
-function ThinkingBlock({ item, isLatest, isCollapsed, onToggle, onTypewriterComplete }: ThinkingBlockProps) {
+function ThinkingBlock({
+  item,
+  isLatest,
+  isCollapsed,
+  onToggle,
+  onTypewriterComplete,
+}: ThinkingBlockProps) {
   // Style based on type - no icon needed since backend message already includes emoji
   const typeStyles: Record<string, { bg: string; border: string }> = {
-    start: { bg: 'bg-blue-50', border: 'border-blue-200' },
-    planning: { bg: 'bg-blue-50', border: 'border-blue-200' },
-    reasoning: { bg: 'bg-purple-50', border: 'border-purple-200' },
-    plan_generated: { bg: 'bg-indigo-50', border: 'border-indigo-200' },
-    searching: { bg: 'bg-cyan-50', border: 'border-cyan-200' },
-    search_complete: { bg: 'bg-teal-50', border: 'border-teal-200' },
-    search_result: { bg: 'bg-teal-50', border: 'border-teal-200' },
-    analyzing: { bg: 'bg-amber-50', border: 'border-amber-200' },
-    analysis_complete: { bg: 'bg-orange-50', border: 'border-orange-200' },
-    insight: { bg: 'bg-yellow-50', border: 'border-yellow-200' },
-    decision: { bg: 'bg-rose-50', border: 'border-rose-200' },
-    new_iteration: { bg: 'bg-violet-50', border: 'border-violet-200' },
-    generating_report: { bg: 'bg-green-50', border: 'border-green-200' },
-    report_complete: { bg: 'bg-emerald-50', border: 'border-emerald-200' },
-    waiting_user: { bg: 'bg-gray-50', border: 'border-gray-200' },
-    completed: { bg: 'bg-green-50', border: 'border-green-200' },
-    connection: { bg: 'bg-gray-50', border: 'border-gray-200' },
+    start: { bg: "bg-blue-50", border: "border-blue-200" },
+    planning: { bg: "bg-blue-50", border: "border-blue-200" },
+    reasoning: { bg: "bg-purple-50", border: "border-purple-200" },
+    plan_generated: { bg: "bg-indigo-50", border: "border-indigo-200" },
+    searching: { bg: "bg-cyan-50", border: "border-cyan-200" },
+    search_complete: { bg: "bg-teal-50", border: "border-teal-200" },
+    search_result: { bg: "bg-teal-50", border: "border-teal-200" },
+    analyzing: { bg: "bg-amber-50", border: "border-amber-200" },
+    analysis_complete: { bg: "bg-orange-50", border: "border-orange-200" },
+    insight: { bg: "bg-yellow-50", border: "border-yellow-200" },
+    decision: { bg: "bg-rose-50", border: "border-rose-200" },
+    new_iteration: { bg: "bg-violet-50", border: "border-violet-200" },
+    generating_report: { bg: "bg-green-50", border: "border-green-200" },
+    report_complete: { bg: "bg-emerald-50", border: "border-emerald-200" },
+    waiting_user: { bg: "bg-gray-50", border: "border-gray-200" },
+    completed: { bg: "bg-green-50", border: "border-green-200" },
+    connection: { bg: "bg-gray-50", border: "border-gray-200" },
   };
 
-  const style = typeStyles[item.type] || { bg: 'bg-gray-50', border: 'border-gray-200' };
+  const style = typeStyles[item.type] || { bg: "bg-gray-50", border: "border-gray-200" };
 
   // Collapsed view - show first line (which includes emoji from backend)
   if (isCollapsed && !isLatest) {
@@ -129,7 +128,7 @@ function ThinkingBlock({ item, isLatest, isCollapsed, onToggle, onTypewriterComp
         style={THINKING_BLOCK_VISIBILITY_STYLE}
       >
         <span className="text-gray-600 truncate flex-1 text-xs">
-          {item.message.split('\n')[0].slice(0, 50)}...
+          {item.message.split("\n")[0].slice(0, 50)}...
         </span>
         <KeyboardArrowDownIcon className="w-4 h-4 text-gray-400 group-hover:text-gray-600 flex-shrink-0" />
       </button>
@@ -138,18 +137,14 @@ function ThinkingBlock({ item, isLatest, isCollapsed, onToggle, onTypewriterComp
 
   return (
     <div
-      className={`text-sm p-3 rounded-lg border ${style.bg} ${style.border} transition-all ${!isLatest ? 'cursor-pointer hover:brightness-95' : ''}`}
+      className={`text-sm p-3 rounded-lg border ${style.bg} ${style.border} transition-all ${!isLatest ? "cursor-pointer hover:brightness-95" : ""}`}
       style={THINKING_BLOCK_VISIBILITY_STYLE}
       onClick={!isLatest ? onToggle : undefined}
     >
       <div className="flex-1 min-w-0">
         <p className="text-gray-700 leading-relaxed break-words whitespace-pre-wrap">
           {isLatest ? (
-            <TypewriterText
-              text={item.message}
-              speed={20}
-              onComplete={onTypewriterComplete}
-            />
+            <TypewriterText text={item.message} speed={20} onComplete={onTypewriterComplete} />
           ) : (
             item.message
           )}
@@ -158,16 +153,17 @@ function ThinkingBlock({ item, isLatest, isCollapsed, onToggle, onTypewriterComp
         {item.queries && item.queries.length > 0 && (
           <div className="mt-2 space-y-1">
             {item.queries.map((query, idx) => (
-              <div key={idx} className="flex items-start gap-2 text-xs bg-white/50 rounded px-2 py-1.5 border border-gray-200/50">
+              <div
+                key={idx}
+                className="flex items-start gap-2 text-xs bg-white/50 rounded px-2 py-1.5 border border-gray-200/50"
+              >
                 <SearchIcon className="w-3 h-3 mt-0.5 text-gray-400 flex-shrink-0" />
                 <span className="text-gray-600">{query}</span>
               </div>
             ))}
           </div>
         )}
-        {item.iteration && (
-          <p className="text-xs text-gray-400 mt-1">第 {item.iteration} 轮</p>
-        )}
+        {item.iteration && <p className="text-xs text-gray-400 mt-1">第 {item.iteration} 轮</p>}
       </div>
     </div>
   );
@@ -191,21 +187,21 @@ interface ResearchDetailPanelProps {
 
 // Status badge colors
 const STATUS_COLORS = {
-  planning: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200' },
-  searching: { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-200' },
-  analyzing: { bg: 'bg-indigo-100', text: 'text-indigo-700', border: 'border-indigo-200' },
-  waiting_user: { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200' },
-  completed: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-200' },
-  cancelled: { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-200' },
+  planning: { bg: "bg-blue-100", text: "text-blue-700", border: "border-blue-200" },
+  searching: { bg: "bg-purple-100", text: "text-purple-700", border: "border-purple-200" },
+  analyzing: { bg: "bg-indigo-100", text: "text-indigo-700", border: "border-indigo-200" },
+  waiting_user: { bg: "bg-amber-100", text: "text-amber-700", border: "border-amber-200" },
+  completed: { bg: "bg-green-100", text: "text-green-700", border: "border-green-200" },
+  cancelled: { bg: "bg-gray-100", text: "text-gray-700", border: "border-gray-200" },
 };
 
 const STATUS_LABELS = {
-  planning: '规划中',
-  searching: '搜索中',
-  analyzing: '分析中',
-  waiting_user: '待确认',
-  completed: '已完成',
-  cancelled: '已取消',
+  planning: "规划中",
+  searching: "搜索中",
+  analyzing: "分析中",
+  waiting_user: "待确认",
+  completed: "已完成",
+  cancelled: "已取消",
 };
 
 function ResearchDetailPanel({
@@ -242,14 +238,14 @@ function ResearchDetailPanel({
   const thinkingScrollRef = useRef<HTMLDivElement>(null);
   // Export dialog state
   const [showExportDialog, setShowExportDialog] = useState(false);
-  const { style: confirmModalStyle } = useLayer('modal', 1);
+  const { style: confirmModalStyle } = useLayer("modal", 1);
 
   // Extract latest search progress from SSE events
   const searchProgress = useMemo(() => {
-    const progressEvents = sseEvents.filter(e => e.type === 'search_progress');
+    const progressEvents = sseEvents.filter((e) => e.type === "search_progress");
     if (progressEvents.length === 0) return null;
     const latest = progressEvents[progressEvents.length - 1];
-    if (latest.type === 'search_progress') {
+    if (latest.type === "search_progress") {
       return latest.data;
     }
     return null;
@@ -257,17 +253,17 @@ function ResearchDetailPanel({
 
   // Extract latest analysis info from SSE events
   const analysisProgress = useMemo(() => {
-    const analysisEvents = sseEvents.filter(e => e.type === 'analysis');
+    const analysisEvents = sseEvents.filter((e) => e.type === "analysis");
     if (analysisEvents.length === 0) return null;
     const latest = analysisEvents[analysisEvents.length - 1];
-    if (latest.type === 'analysis') {
+    if (latest.type === "analysis") {
       return latest.data;
     }
     return null;
   }, [sseEvents]);
   const latestErrorEvent = useMemo(() => {
     const errorEvents = sseEvents.filter(
-      (event): event is Extract<SSEEvent, { type: 'error' }> => event.type === 'error'
+      (event): event is Extract<SSEEvent, { type: "error" }> => event.type === "error",
     );
     if (errorEvents.length === 0) return null;
     return errorEvents[errorEvents.length - 1];
@@ -280,12 +276,12 @@ function ResearchDetailPanel({
   const [isAddingSources, setIsAddingSources] = useState(false);
 
   // Get latest plan from SSE events or steps
-  const latestPlanEvent = [...sseEvents].reverse().find((e) => e.type === 'plan_ready');
+  const latestPlanEvent = [...sseEvents].reverse().find((e) => e.type === "plan_ready");
   const latestPlanFromSteps = useMemo(() => {
     if (!session.steps || session.steps.length === 0) return null;
     const planStep = [...session.steps]
       .reverse()
-      .find((step) => step.type === 'plan' && step.output_data);
+      .find((step) => step.type === "plan" && step.output_data);
     if (!planStep || !planStep.output_data) return null;
     const plan = planStep.output_data as {
       queries?: Array<{ query: string; engine: string; priority: number; reason: string }>;
@@ -294,10 +290,11 @@ function ResearchDetailPanel({
     if (!Array.isArray(plan.queries)) return null;
     return {
       queries: plan.queries,
-      reasoning: typeof plan.reasoning === 'string' ? plan.reasoning : '',
+      reasoning: typeof plan.reasoning === "string" ? plan.reasoning : "",
     };
   }, [session.steps]);
-  const latestPlan = latestPlanEvent?.type === 'plan_ready' ? latestPlanEvent.data.plan : latestPlanFromSteps;
+  const latestPlan =
+    latestPlanEvent?.type === "plan_ready" ? latestPlanEvent.data.plan : latestPlanFromSteps;
 
   // Get queries from plan
   const queries = latestPlan?.queries || [];
@@ -314,14 +311,14 @@ function ResearchDetailPanel({
 
     // For completed sessions, always reconstruct from steps for full history
     // For active sessions, use SSE events for real-time updates
-    const isCompletedSession = session.status === 'completed';
+    const isCompletedSession = session.status === "completed";
     const steps = session.steps ?? [];
     const hasSteps = steps.length > 0;
 
     if (!isCompletedSession && sseEvents.length > 0) {
       // Real-time mode: use SSE events
       sseEvents.forEach((event, index) => {
-        if (event.type === 'thinking') {
+        if (event.type === "thinking") {
           timeline.push({
             type: event.data.type,
             message: event.data.message,
@@ -330,9 +327,9 @@ function ResearchDetailPanel({
             queries: event.data.queries,
           });
         }
-        if (event.type === 'connection') {
+        if (event.type === "connection") {
           timeline.push({
-            type: 'connection',
+            type: "connection",
             message: `🔌 ${event.data.message}`,
             timestamp: index,
           });
@@ -344,7 +341,7 @@ function ResearchDetailPanel({
 
       // Add start message
       timeline.push({
-        type: 'start',
+        type: "start",
         message: `🚀 开始深度研究「${session.topic}」`,
         timestamp: timestampCounter++,
         iteration: 1,
@@ -364,14 +361,14 @@ function ResearchDetailPanel({
         const iteration = parseInt(iterStr, 10);
 
         steps.forEach((step) => {
-          if (step.type === 'plan' && step.output_data) {
+          if (step.type === "plan" && step.output_data) {
             // Plan step
             const reasoning = step.output_data.reasoning as string | undefined;
             const queries = step.output_data.queries as Array<{ query: string }> | undefined;
 
             if (reasoning) {
               timeline.push({
-                type: 'reasoning',
+                type: "reasoning",
                 message: `💭 ${reasoning}`,
                 timestamp: timestampCounter++,
                 iteration,
@@ -379,32 +376,32 @@ function ResearchDetailPanel({
             }
             if (queries) {
               timeline.push({
-                type: 'plan_generated',
+                type: "plan_generated",
                 message: `📋 已生成 ${queries.length} 个搜索查询`,
                 timestamp: timestampCounter++,
                 iteration,
                 queries: queries.map((q) => q.query),
               });
             }
-          } else if (step.type === 'search' && step.output_data) {
+          } else if (step.type === "search" && step.output_data) {
             // Search step
             const resultCount = step.output_data.result_count as number | undefined;
             const newResults = step.output_data.new_results as number | undefined;
 
             timeline.push({
-              type: 'search_complete',
+              type: "search_complete",
               message: `🔎 搜索完成，获取 ${resultCount || 0} 条结果，新增 ${newResults || 0} 条`,
               timestamp: timestampCounter++,
               iteration,
             });
-          } else if (step.type === 'analyze' && step.output_data) {
+          } else if (step.type === "analyze" && step.output_data) {
             // Analyze step
             const coverage = step.output_data.coverage as number | undefined;
             const summary = step.output_data.summary as string | undefined;
             const needMore = step.output_data.need_more_search as boolean | undefined;
 
             timeline.push({
-              type: 'analysis_complete',
+              type: "analysis_complete",
               message: `📈 分析完成，覆盖度 ${Math.round((coverage || 0) * 100)}%`,
               timestamp: timestampCounter++,
               iteration,
@@ -412,8 +409,8 @@ function ResearchDetailPanel({
 
             if (summary) {
               timeline.push({
-                type: 'insight',
-                message: `💡 ${summary.slice(0, 150)}${summary.length > 150 ? '...' : ''}`,
+                type: "insight",
+                message: `💡 ${summary.slice(0, 150)}${summary.length > 150 ? "..." : ""}`,
                 timestamp: timestampCounter++,
                 iteration,
               });
@@ -421,18 +418,18 @@ function ResearchDetailPanel({
 
             if (needMore && iteration < session.max_iterations) {
               timeline.push({
-                type: 'decision',
-                message: '🔄 需要更多搜索，准备下一轮...',
+                type: "decision",
+                message: "🔄 需要更多搜索，准备下一轮...",
                 timestamp: timestampCounter++,
                 iteration,
               });
             }
-          } else if (step.type === 'summary' && step.output_data) {
+          } else if (step.type === "summary" && step.output_data) {
             // Summary step
             const reportLength = step.output_data.report_length as number | undefined;
 
             timeline.push({
-              type: 'report_complete',
+              type: "report_complete",
               message: `📝 报告生成完成，共 ${reportLength || 0} 字`,
               timestamp: timestampCounter++,
               iteration,
@@ -441,9 +438,9 @@ function ResearchDetailPanel({
         });
 
         // Add iteration completion marker
-        if (iteration < session.max_iterations || session.status === 'completed') {
+        if (iteration < session.max_iterations || session.status === "completed") {
           timeline.push({
-            type: 'completed',
+            type: "completed",
             message: `✅ 已完成第 ${iteration} 轮研究`,
             timestamp: timestampCounter++,
             iteration,
@@ -464,7 +461,9 @@ function ResearchDetailPanel({
     const renderLimit = isVirtualized
       ? Math.min(maxThinkingRenderCount, desiredVisibleCount)
       : desiredVisibleCount;
-    const minStart = showAllThinking ? Math.max(0, total - expandedCap) : Math.max(0, total - desiredVisibleCount);
+    const minStart = showAllThinking
+      ? Math.max(0, total - expandedCap)
+      : Math.max(0, total - desiredVisibleCount);
     const maxStart = Math.max(0, total - renderLimit);
     const clampedStart = Math.min(Math.max(thinkingWindowStart, minStart), maxStart);
     const endIndex = Math.min(total, clampedStart + renderLimit);
@@ -515,7 +514,7 @@ function ResearchDetailPanel({
     const expand = () => {
       if (cancelled) return;
       setVisibleThinkingCount((prev) =>
-        Math.min(prev + renderBatchSize, thinkingWindow.expandedCap)
+        Math.min(prev + renderBatchSize, thinkingWindow.expandedCap),
       );
     };
 
@@ -523,7 +522,7 @@ function ResearchDetailPanel({
       requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
       cancelIdleCallback?: (handle: number) => void;
     };
-    const supportsIdleCallback = typeof idleWindow.requestIdleCallback === 'function';
+    const supportsIdleCallback = typeof idleWindow.requestIdleCallback === "function";
 
     if (supportsIdleCallback) {
       handle = idleWindow.requestIdleCallback!(expand, { timeout: 200 });
@@ -534,7 +533,7 @@ function ResearchDetailPanel({
     return () => {
       cancelled = true;
       if (handle !== null) {
-        if (supportsIdleCallback && typeof idleWindow.cancelIdleCallback === 'function') {
+        if (supportsIdleCallback && typeof idleWindow.cancelIdleCallback === "function") {
           idleWindow.cancelIdleCallback(handle);
           return;
         }
@@ -590,7 +589,7 @@ function ResearchDetailPanel({
   }, [showAllThinking]);
 
   const toggleBlockCollapse = useCallback((index: number) => {
-    setCollapsedBlocks(prev => {
+    setCollapsedBlocks((prev) => {
       const next = new Set(prev);
       if (next.has(index)) {
         next.delete(index);
@@ -629,7 +628,7 @@ function ResearchDetailPanel({
         return Math.min(Math.max(next, thinkingWindow.minStart), thinkingWindow.maxStart);
       });
     },
-    [thinkingWindow.minStart, thinkingWindow.maxStart]
+    [thinkingWindow.minStart, thinkingWindow.maxStart],
   );
 
   const jumpToLatestThinking = useCallback(() => {
@@ -723,15 +722,15 @@ function ResearchDetailPanel({
   }, [onRetry]);
 
   // Status helpers
-  const isWaiting = session.status === 'waiting_user';
-  const isCompleted = session.status === 'completed';
-  const isCancelled = session.status === 'cancelled';
-  const isSearching = session.status === 'searching';
-  const isAnalyzing = session.status === 'analyzing';
+  const isWaiting = session.status === "waiting_user";
+  const isCompleted = session.status === "completed";
+  const isCancelled = session.status === "cancelled";
+  const isSearching = session.status === "searching";
+  const isAnalyzing = session.status === "analyzing";
   // 只有当状态是 planning 且没有任何 steps 时才显示"开始研究"按钮
   // 如果有 steps，说明研究已经开始过，即使状态是 planning 也不应该显示
   const hasSteps = session.steps && session.steps.length > 0;
-  const isPlanning = session.status === 'planning' && !hasSteps;
+  const isPlanning = session.status === "planning" && !hasSteps;
   const statusColors = STATUS_COLORS[session.status] || STATUS_COLORS.planning;
 
   // Get completed steps for this session
@@ -744,7 +743,7 @@ function ResearchDetailPanel({
       acc[step.iteration].push(step);
       return acc;
     },
-    {} as Record<number, ResearchStepResponse[]>
+    {} as Record<number, ResearchStepResponse[]>,
   );
 
   const completedIterations = Object.keys(stepsByIteration).length;
@@ -752,12 +751,11 @@ function ResearchDetailPanel({
 
   // For completed sessions, use the actual completed iterations from steps
   // This handles cases where current_iteration wasn't properly updated in the database
-  const displayIteration = isCompleted && completedIterations > 0
-    ? completedIterations
-    : session.current_iteration;
+  const displayIteration =
+    isCompleted && completedIterations > 0 ? completedIterations : session.current_iteration;
 
   return (
-    <div className={`flex flex-col ${isFullscreen ? 'h-[90vh]' : 'h-[600px]'}`}>
+    <div className={`flex flex-col ${isFullscreen ? "h-[90vh]" : "h-[600px]"}`}>
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -769,11 +767,11 @@ function ResearchDetailPanel({
             <ArrowBackIcon className="w-5 h-5 text-gray-500" />
           </button>
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold text-gray-900 truncate">
-              {session.topic}
-            </h2>
+            <h2 className="text-base font-semibold text-gray-900 truncate">{session.topic}</h2>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${statusColors.bg} ${statusColors.text}`}>
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${statusColors.bg} ${statusColors.text}`}
+              >
                 {STATUS_LABELS[session.status]}
               </span>
               <span className="text-xs text-gray-400 flex-shrink-0">
@@ -787,7 +785,7 @@ function ResearchDetailPanel({
             <button
               onClick={onToggleFullscreen}
               className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-              aria-label={isFullscreen ? '缩小' : '全屏'}
+              aria-label={isFullscreen ? "缩小" : "全屏"}
             >
               {isFullscreen ? (
                 <CloseFullscreenIcon className="w-5 h-5 text-gray-400" />
@@ -807,7 +805,7 @@ function ResearchDetailPanel({
       </div>
 
       {/* Content Area - Two Column Layout in Fullscreen */}
-      <div className={`flex-1 overflow-hidden flex ${isFullscreen ? 'flex-row' : 'flex-col'}`}>
+      <div className={`flex-1 overflow-hidden flex ${isFullscreen ? "flex-row" : "flex-col"}`}>
         {/* Thinking Timeline Panel - Left Side in Fullscreen */}
         {isFullscreen && (
           <div className="w-80 border-r border-gray-100 flex flex-col flex-shrink-0 bg-gray-50/30">
@@ -827,14 +825,14 @@ function ResearchDetailPanel({
                     onClick={handleToggleShowAll}
                     className="text-[11px] text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100"
                   >
-                    {showAllThinking ? '仅显示最新' : '显示全部'}
+                    {showAllThinking ? "仅显示最新" : "显示全部"}
                   </button>
                 )}
                 <button
                   onClick={() => setShowThinking(!showThinking)}
                   className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100"
                 >
-                  {showThinking ? '收起' : '展开'}
+                  {showThinking ? "收起" : "展开"}
                 </button>
               </div>
             </div>
@@ -846,7 +844,8 @@ function ResearchDetailPanel({
                 {showAllThinking && thinkingWindow.total > 0 && (
                   <div className="flex items-center justify-between text-[11px] text-gray-500 bg-gray-100 rounded px-2 py-1">
                     <span>
-                      已展示 {thinkingWindow.start + 1}-{thinkingWindow.end} / {thinkingWindow.total} 条
+                      已展示 {thinkingWindow.start + 1}-{thinkingWindow.end} /{" "}
+                      {thinkingWindow.total} 条
                     </span>
                     <div className="flex items-center gap-1">
                       {thinkingWindow.start > thinkingWindow.minStart && (
@@ -874,7 +873,7 @@ function ResearchDetailPanel({
                     <button
                       onClick={() =>
                         setVisibleThinkingCount((prev) =>
-                          Math.min(prev + maxVisibleThinking, loadMoreCap)
+                          Math.min(prev + maxVisibleThinking, loadMoreCap),
                         )
                       }
                       className="text-[11px] text-purple-600 hover:text-purple-700"
@@ -886,7 +885,8 @@ function ResearchDetailPanel({
                 {showAllThinking && isExpandingThinking && (
                   <div className="flex items-center justify-between text-[11px] text-gray-500 bg-gray-100 rounded px-2 py-1">
                     <span>
-                      正在展开 {Math.min(visibleThinkingCount, thinkingWindow.expandedCap)}/{thinkingWindow.expandedCap} 条记录
+                      正在展开 {Math.min(visibleThinkingCount, thinkingWindow.expandedCap)}/
+                      {thinkingWindow.expandedCap} 条记录
                     </span>
                     <span className="text-purple-600">...</span>
                   </div>
@@ -937,10 +937,10 @@ function ResearchDetailPanel({
                 <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
-                      isCompleted ? 'bg-green-500' : 'bg-blue-500'
-                    } ${(isSearching || isAnalyzing) ? 'animate-pulse' : ''}`}
+                      isCompleted ? "bg-green-500" : "bg-blue-500"
+                    } ${isSearching || isAnalyzing ? "animate-pulse" : ""}`}
                     style={{
-                      width: `${isCompleted ? 100 : Math.round(((displayIteration - 1) / session.max_iterations) * 100 + (100 / session.max_iterations / 2))}%`
+                      width: `${isCompleted ? 100 : Math.round(((displayIteration - 1) / session.max_iterations) * 100 + 100 / session.max_iterations / 2)}%`,
                     }}
                   />
                 </div>
@@ -958,281 +958,325 @@ function ResearchDetailPanel({
           </div>
 
           <div className="p-5 space-y-4 flex-1 overflow-y-auto">
-          {/* Planning State - Show Start Button (only when no steps exist) */}
-          {isPlanning && (
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-5">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <ScienceIcon className="w-5 h-5 text-blue-600" />
+            {/* Planning State - Show Start Button (only when no steps exist) */}
+            {isPlanning && (
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <ScienceIcon className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900 mb-1">准备开始深度研究</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      系统将自动生成搜索策略，执行多轮搜索并分析结果。
+                    </p>
+                    <Button
+                      size="sm"
+                      color="blue"
+                      onClick={handleStart}
+                      disabled={isProcessing}
+                      className="flex items-center gap-2"
+                    >
+                      {isProcessing ? (
+                        <Spinner className="h-4 w-4" />
+                      ) : (
+                        <PlayIcon className="w-4 h-4" />
+                      )}
+                      开始研究
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900 mb-1">准备开始深度研究</h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    系统将自动生成搜索策略，执行多轮搜索并分析结果。
-                  </p>
+              </div>
+            )}
+
+            {/* Interrupted State - Research has steps but status is planning (connection lost) */}
+            {session.status === "planning" && hasSteps && (
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <ScienceIcon className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900 mb-1">研究已中断</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      此研究因连接中断而暂停。您可以基于已收集的数据重新生成报告，或停止并归档此研究。
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        color="blue"
+                        onClick={handleFinish}
+                        disabled={isProcessing}
+                        className="flex items-center gap-2"
+                      >
+                        {isProcessing ? (
+                          <Spinner className="h-4 w-4" />
+                        ) : (
+                          <AssignmentIcon className="w-4 h-4" />
+                        )}
+                        重新生成
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outlined"
+                        color="gray"
+                        onClick={handleCancel}
+                        disabled={isProcessing}
+                        className="flex items-center gap-2"
+                      >
+                        {isProcessing ? (
+                          <Spinner className="h-4 w-4" />
+                        ) : (
+                          <StopIcon className="w-4 h-4" />
+                        )}
+                        停止并归档
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Cancelled State */}
+            {isCancelled && (
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <StopIcon className="w-5 h-5 text-gray-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900 mb-1">研究已取消</h3>
+                    <p className="text-sm text-gray-600">
+                      此研究已被取消。您可以在左侧查看已完成的步骤记录。
+                    </p>
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        size="sm"
+                        color="blue"
+                        onClick={handleResume}
+                        disabled={isProcessing}
+                        className="flex items-center gap-2"
+                      >
+                        {isProcessing ? (
+                          <Spinner className="h-4 w-4" />
+                        ) : (
+                          <PlayIcon className="w-4 h-4" />
+                        )}
+                        继续研究
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outlined"
+                        color="gray"
+                        onClick={handleRetry}
+                        disabled={isProcessing}
+                        className="flex items-center gap-2"
+                      >
+                        {isProcessing ? (
+                          <Spinner className="h-4 w-4" />
+                        ) : (
+                          <AutoAwesomeIcon className="w-4 h-4" />
+                        )}
+                        重新开始
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Searching/Analyzing State */}
+            {(isSearching || isAnalyzing) && (
+              <div className="bg-purple-50 border border-purple-100 rounded-xl p-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                    {isSearching ? (
+                      <SearchIcon className="w-4 h-4 text-purple-600 animate-pulse" />
+                    ) : (
+                      <AnalyticsIcon className="w-4 h-4 text-purple-600 animate-pulse" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900">
+                      {isSearching ? "正在执行搜索..." : "正在分析结果..."}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {isSearching && searchProgress ? (
+                        <>
+                          已获取{" "}
+                          <span className="font-medium text-purple-600">
+                            {searchProgress.result_count}
+                          </span>{" "}
+                          条结果，新增{" "}
+                          <span className="font-medium text-purple-600">
+                            {searchProgress.new_results}
+                          </span>{" "}
+                          条
+                        </>
+                      ) : isAnalyzing && analysisProgress ? (
+                        <>
+                          覆盖度{" "}
+                          <span className="font-medium text-purple-600">
+                            {Math.round(analysisProgress.coverage * 100)}%
+                          </span>
+                        </>
+                      ) : (
+                        "请稍候，这可能需要几秒钟"
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Waiting State - Simplified Query Selection */}
+            {isWaiting && latestPlan && (
+              <div className="space-y-4">
+                {/* Reasoning Card */}
+                {latestPlan.reasoning && (
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <p className="text-sm text-gray-600 mb-1 font-medium">AI 分析</p>
+                    <p className="text-sm text-gray-800">{latestPlan.reasoning}</p>
+                  </div>
+                )}
+
+                {/* Query Selection */}
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">
+                      搜索查询 ({selectedQueries.size}/{queries.length} 已选)
+                    </span>
+                    <button
+                      onClick={() => {
+                        if (selectedQueries.size === queries.length) {
+                          setSelectedQueries(new Set());
+                        } else {
+                          setSelectedQueries(new Set(queries.map((_, i) => i)));
+                        }
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      {selectedQueries.size === queries.length ? "取消全选" : "全选"}
+                    </button>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {queries.map((query, index) => (
+                      <label
+                        key={index}
+                        className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${
+                          selectedQueries.has(index) ? "bg-blue-50/50" : ""
+                        }`}
+                      >
+                        <Checkbox
+                          checked={selectedQueries.has(index)}
+                          onChange={() => toggleQuery(index)}
+                          crossOrigin={undefined}
+                          className="w-4 h-4"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-900 truncate">{query.query}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {query.engine} ·{" "}
+                            {query.priority === 1
+                              ? "高优先级"
+                              : query.priority === 2
+                                ? "中优先级"
+                                : "低优先级"}
+                          </p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Action Buttons - Clear Visual Hierarchy */}
+                <div className="flex flex-col gap-2">
+                  <Button
+                    fullWidth
+                    color="blue"
+                    onClick={handleApprove}
+                    disabled={isProcessing || selectedQueries.size === 0}
+                    className="flex items-center justify-center gap-2 py-2.5"
+                  >
+                    {isProcessing ? (
+                      <Spinner className="h-4 w-4" />
+                    ) : (
+                      <SearchIcon className="w-4 h-4" />
+                    )}
+                    执行选中的 {selectedQueries.size} 个搜索
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      color="gray"
+                      onClick={handleSkip}
+                      disabled={isProcessing}
+                      className="flex items-center justify-center gap-2 py-2"
+                    >
+                      <SkipIcon className="w-4 h-4" />
+                      跳过本轮
+                    </Button>
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      color="amber"
+                      onClick={handleFinish}
+                      disabled={isProcessing}
+                      className="flex items-center justify-center gap-2 py-2"
+                    >
+                      <StopIcon className="w-4 h-4" />
+                      结束研究
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Final Report */}
+            {isCompleted && session.final_report && (
+              <div className="bg-green-50 border border-green-100 rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <AssignmentIcon className="w-5 h-5 text-green-600" />
+                  <h3 className="font-medium text-gray-900">研究报告</h3>
+                </div>
+                <div className="bg-white rounded-lg p-4 border border-green-100 max-h-64 overflow-y-auto">
+                  <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">
+                    {session.final_report}
+                  </pre>
+                </div>
+                <div className="flex gap-2 mt-4">
                   <Button
                     size="sm"
                     color="blue"
-                    onClick={handleStart}
-                    disabled={isProcessing}
-                    className="flex items-center gap-2"
+                    className="flex-1"
+                    onClick={() => setShowExportDialog(true)}
                   >
-                    {isProcessing ? <Spinner className="h-4 w-4" /> : <PlayIcon className="w-4 h-4" />}
-                    开始研究
+                    <DownloadIcon className="w-4 h-4 mr-1" />
+                    导出成果
                   </Button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Interrupted State - Research has steps but status is planning (connection lost) */}
-          {session.status === 'planning' && hasSteps && (
-            <div className="bg-amber-50 border border-amber-100 rounded-xl p-5">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                  <ScienceIcon className="w-5 h-5 text-amber-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900 mb-1">研究已中断</h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    此研究因连接中断而暂停。您可以基于已收集的数据重新生成报告，或停止并归档此研究。
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      color="blue"
-                      onClick={handleFinish}
-                      disabled={isProcessing}
-                      className="flex items-center gap-2"
-                    >
-                      {isProcessing ? <Spinner className="h-4 w-4" /> : <AssignmentIcon className="w-4 h-4" />}
-                      重新生成
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outlined"
-                      color="gray"
-                      onClick={handleCancel}
-                      disabled={isProcessing}
-                      className="flex items-center gap-2"
-                    >
-                      {isProcessing ? <Spinner className="h-4 w-4" /> : <StopIcon className="w-4 h-4" />}
-                      停止并归档
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Cancelled State */}
-          {isCancelled && (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                  <StopIcon className="w-5 h-5 text-gray-500" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900 mb-1">研究已取消</h3>
-                  <p className="text-sm text-gray-600">
-                    此研究已被取消。您可以在左侧查看已完成的步骤记录。
-                  </p>
-                  <div className="flex gap-2 mt-4">
-                    <Button
-                      size="sm"
-                      color="blue"
-                      onClick={handleResume}
-                      disabled={isProcessing}
-                      className="flex items-center gap-2"
-                    >
-                      {isProcessing ? <Spinner className="h-4 w-4" /> : <PlayIcon className="w-4 h-4" />}
-                      继续研究
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outlined"
-                      color="gray"
-                      onClick={handleRetry}
-                      disabled={isProcessing}
-                      className="flex items-center gap-2"
-                    >
-                      {isProcessing ? <Spinner className="h-4 w-4" /> : <AutoAwesomeIcon className="w-4 h-4" />}
-                      重新开始
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Searching/Analyzing State */}
-          {(isSearching || isAnalyzing) && (
-            <div className="bg-purple-50 border border-purple-100 rounded-xl p-5">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                  {isSearching ? (
-                    <SearchIcon className="w-4 h-4 text-purple-600 animate-pulse" />
-                  ) : (
-                    <AnalyticsIcon className="w-4 h-4 text-purple-600 animate-pulse" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900">
-                    {isSearching ? '正在执行搜索...' : '正在分析结果...'}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    {isSearching && searchProgress ? (
-                      <>已获取 <span className="font-medium text-purple-600">{searchProgress.result_count}</span> 条结果，新增 <span className="font-medium text-purple-600">{searchProgress.new_results}</span> 条</>
-                    ) : isAnalyzing && analysisProgress ? (
-                      <>覆盖度 <span className="font-medium text-purple-600">{Math.round(analysisProgress.coverage * 100)}%</span></>
-                    ) : (
-                      '请稍候，这可能需要几秒钟'
-                    )}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Waiting State - Simplified Query Selection */}
-          {isWaiting && latestPlan && (
-            <div className="space-y-4">
-              {/* Reasoning Card */}
-              {latestPlan.reasoning && (
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <p className="text-sm text-gray-600 mb-1 font-medium">AI 分析</p>
-                  <p className="text-sm text-gray-800">{latestPlan.reasoning}</p>
-                </div>
-              )}
-
-              {/* Query Selection */}
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">
-                    搜索查询 ({selectedQueries.size}/{queries.length} 已选)
-                  </span>
-                  <button
-                    onClick={() => {
-                      if (selectedQueries.size === queries.length) {
-                        setSelectedQueries(new Set());
-                      } else {
-                        setSelectedQueries(new Set(queries.map((_, i) => i)));
-                      }
-                    }}
-                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    {selectedQueries.size === queries.length ? '取消全选' : '全选'}
-                  </button>
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {queries.map((query, index) => (
-                    <label
-                      key={index}
-                      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${
-                        selectedQueries.has(index) ? 'bg-blue-50/50' : ''
-                      }`}
-                    >
-                      <Checkbox
-                        checked={selectedQueries.has(index)}
-                        onChange={() => toggleQuery(index)}
-                        crossOrigin={undefined}
-                        className="w-4 h-4"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-900 truncate">{query.query}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {query.engine} · {query.priority === 1 ? '高优先级' : query.priority === 2 ? '中优先级' : '低优先级'}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Action Buttons - Clear Visual Hierarchy */}
-              <div className="flex flex-col gap-2">
-                <Button
-                  fullWidth
-                  color="blue"
-                  onClick={handleApprove}
-                  disabled={isProcessing || selectedQueries.size === 0}
-                  className="flex items-center justify-center gap-2 py-2.5"
-                >
-                  {isProcessing ? <Spinner className="h-4 w-4" /> : <SearchIcon className="w-4 h-4" />}
-                  执行选中的 {selectedQueries.size} 个搜索
-                </Button>
-                <div className="flex gap-2">
                   <Button
-                    fullWidth
+                    size="sm"
                     variant="outlined"
                     color="gray"
-                    onClick={handleSkip}
-                    disabled={isProcessing}
-                    className="flex items-center justify-center gap-2 py-2"
+                    className="flex-1"
+                    onClick={() => {
+                      if (session.final_report) {
+                        void copyToClipboard(session.final_report).then((success) => {
+                          if (success) {
+                            toast.success("报告已复制到剪贴板");
+                          } else {
+                            toast.error("复制失败，请稍后重试");
+                          }
+                        });
+                      }
+                    }}
                   >
-                    <SkipIcon className="w-4 h-4" />
-                    跳过本轮
-                  </Button>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    color="amber"
-                    onClick={handleFinish}
-                    disabled={isProcessing}
-                    className="flex items-center justify-center gap-2 py-2"
-                  >
-                    <StopIcon className="w-4 h-4" />
-                    结束研究
+                    复制报告
                   </Button>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Final Report */}
-          {isCompleted && session.final_report && (
-            <div className="bg-green-50 border border-green-100 rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <AssignmentIcon className="w-5 h-5 text-green-600" />
-                <h3 className="font-medium text-gray-900">研究报告</h3>
-              </div>
-              <div className="bg-white rounded-lg p-4 border border-green-100 max-h-64 overflow-y-auto">
-                <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">
-                  {session.final_report}
-                </pre>
-              </div>
-              <div className="flex gap-2 mt-4">
-                <Button
-                  size="sm"
-                  color="blue"
-                  className="flex-1"
-                  onClick={() => setShowExportDialog(true)}
-                >
-                  <DownloadIcon className="w-4 h-4 mr-1" />
-                  导出成果
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outlined"
-                  color="gray"
-                  className="flex-1"
-                  onClick={() => {
-                    if (session.final_report) {
-                      void copyToClipboard(session.final_report).then((success) => {
-                        if (success) {
-                          toast.success('报告已复制到剪贴板');
-                        } else {
-                          toast.error('复制失败，请稍后重试');
-                        }
-                      });
-                    }
-                  }}
-                >
-                  复制报告
-                </Button>
-              </div>
-            </div>
-          )}
+            )}
           </div>
         </div>
       </div>
@@ -1248,70 +1292,61 @@ function ResearchDetailPanel({
             <span className="font-medium text-gray-900">{completedIterations}</span> 轮完成
           </span>
         </div>
-      {totalResults > 0 && (
-        <button
-          className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-          onClick={() => {
-            setShowResultsDialog(true);
-            setSelectedResults(new Set());
-          }}
-        >
-          查看所有结果
-        </button>
-      )}
-    </div>
+        {totalResults > 0 && (
+          <button
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            onClick={() => {
+              setShowResultsDialog(true);
+              setSelectedResults(new Set());
+            }}
+          >
+            查看所有结果
+          </button>
+        )}
+      </div>
 
-    {showAllConfirmOpen && (
-      <div
-        className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4"
-        style={confirmModalStyle}
-        onClick={handleCancelShowAll}
-        role="dialog"
-        aria-modal="true"
-      >
+      {showAllConfirmOpen && (
         <div
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-sm"
-          onClick={(e) => e.stopPropagation()}
+          className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4"
+          style={confirmModalStyle}
+          onClick={handleCancelShowAll}
+          role="dialog"
+          aria-modal="true"
         >
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900">展开全部思考记录？</h3>
-            <button
-              onClick={handleCancelShowAll}
-              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <CloseIcon className="w-5 h-5 text-gray-400" />
-            </button>
-          </div>
-          <div className="px-5 py-4 text-sm text-gray-600 space-y-2">
-            <p>思考记录已超过 {maxExpandedThinking} 条，全部展开可能影响性能。</p>
-            <p>默认仅展示最近 {maxExpandedThinking} 条，是否继续？</p>
-          </div>
-          <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
-            <Button
-              variant="text"
-              size="sm"
-              color="gray"
-              onClick={handleCancelShowAll}
-            >
-              取消
-            </Button>
-            <Button
-              size="sm"
-              color="blue"
-              onClick={handleConfirmShowAll}
-            >
-              继续展开
-            </Button>
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">展开全部思考记录？</h3>
+              <button
+                onClick={handleCancelShowAll}
+                className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <CloseIcon className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+            <div className="px-5 py-4 text-sm text-gray-600 space-y-2">
+              <p>思考记录已超过 {maxExpandedThinking} 条，全部展开可能影响性能。</p>
+              <p>默认仅展示最近 {maxExpandedThinking} 条，是否继续？</p>
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+              <Button variant="text" size="sm" color="gray" onClick={handleCancelShowAll}>
+                取消
+              </Button>
+              <Button size="sm" color="blue" onClick={handleConfirmShowAll}>
+                继续展开
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
 
-    {/* Results Dialog */}
-    {showResultsDialog && session.aggregated_results && (
-      <ResultsDialogContent
-        session={session}
-        selectedResults={selectedResults}
+      {/* Results Dialog */}
+      {showResultsDialog && session.aggregated_results && (
+        <ResultsDialogContent
+          session={session}
+          selectedResults={selectedResults}
           setSelectedResults={setSelectedResults}
           onClose={() => setShowResultsDialog(false)}
           onAddSourceFromUrl={onAddSourceFromUrl}
@@ -1322,10 +1357,7 @@ function ResearchDetailPanel({
 
       {/* Export Dialog */}
       {showExportDialog && (
-        <ResearchExportDialog
-          session={session}
-          onClose={() => setShowExportDialog(false)}
-        />
+        <ResearchExportDialog session={session} onClose={() => setShowExportDialog(false)} />
       )}
     </div>
   );
@@ -1351,18 +1383,18 @@ function ResultsDialogContent({
   isAddingSources,
   setIsAddingSources,
 }: ResultsDialogContentProps) {
-  const { style: modalStyle } = useLayer('modal');
+  const { style: modalStyle } = useLayer("modal");
   const aggregatedResults = session.aggregated_results ?? [];
 
   const handleCopyLinks = () => {
     const selectedUrls = Array.from(selectedResults)
       .map((i) => aggregatedResults[i]?.url)
-      .filter((url): url is string => typeof url === 'string' && url.length > 0);
-    void copyToClipboard(selectedUrls.join('\n')).then((success) => {
+      .filter((url): url is string => typeof url === "string" && url.length > 0);
+    void copyToClipboard(selectedUrls.join("\n")).then((success) => {
       if (success) {
         toast.success(`已复制 ${selectedUrls.length} 个链接`);
       } else {
-        toast.error('复制失败，请稍后重试');
+        toast.error("复制失败，请稍后重试");
       }
     });
   };
@@ -1373,14 +1405,14 @@ function ResultsDialogContent({
     try {
       const selectedUrls = Array.from(selectedResults)
         .map((i) => aggregatedResults[i]?.url)
-        .filter((url): url is string => typeof url === 'string' && url.length > 0);
+        .filter((url): url is string => typeof url === "string" && url.length > 0);
       let successCount = 0;
       for (const url of selectedUrls) {
         try {
           await onAddSourceFromUrl(url);
           successCount++;
         } catch (err) {
-          console.error('Failed to add source:', url, err);
+          console.error("Failed to add source:", url, err);
         }
       }
       if (successCount > 0) {
@@ -1424,7 +1456,7 @@ function ResultsDialogContent({
               }}
               className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1"
             >
-              {selectedResults.size === aggregatedResults.length ? '取消全选' : '全选'}
+              {selectedResults.size === aggregatedResults.length ? "取消全选" : "全选"}
             </button>
             <button
               onClick={onClose}
@@ -1438,73 +1470,64 @@ function ResultsDialogContent({
         {/* Results List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {aggregatedResults.map((result, index) => {
-            const url = typeof result.url === 'string' ? result.url : '';
-            const title = typeof result.title === 'string' ? result.title : null;
-            const snippet = typeof result.snippet === 'string' ? result.snippet : null;
-            const source = typeof result.source === 'string' ? result.source : null;
-            const iteration = typeof result.iteration === 'number' ? result.iteration : null;
+            const url = typeof result.url === "string" ? result.url : "";
+            const title = typeof result.title === "string" ? result.title : null;
+            const snippet = typeof result.snippet === "string" ? result.snippet : null;
+            const source = typeof result.source === "string" ? result.source : null;
+            const iteration = typeof result.iteration === "number" ? result.iteration : null;
             return (
-            <label
-              key={index}
-              className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                selectedResults.has(index)
-                  ? 'border-blue-300 bg-blue-50/50'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              <Checkbox
-                checked={selectedResults.has(index)}
-                onChange={() => {
-                  setSelectedResults((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(index)) {
-                      next.delete(index);
-                    } else {
-                      next.add(index);
-                    }
-                    return next;
-                  });
-                }}
-                crossOrigin={undefined}
-                className="mt-0.5"
-              />
-              <div className="flex-1 min-w-0">
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline line-clamp-1"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {title || '未知标题'}
-                </a>
-                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
-                  {snippet || '无摘要'}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-gray-400">{source || 'web'}</span>
-                  {iteration != null && (
-                    <span className="text-xs text-gray-400">· 第 {iteration} 轮</span>
-                  )}
+              <label
+                key={index}
+                className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  selectedResults.has(index)
+                    ? "border-blue-300 bg-blue-50/50"
+                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <Checkbox
+                  checked={selectedResults.has(index)}
+                  onChange={() => {
+                    setSelectedResults((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(index)) {
+                        next.delete(index);
+                      } else {
+                        next.add(index);
+                      }
+                      return next;
+                    });
+                  }}
+                  crossOrigin={undefined}
+                  className="mt-0.5"
+                />
+                <div className="flex-1 min-w-0">
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline line-clamp-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {title || "未知标题"}
+                  </a>
+                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{snippet || "无摘要"}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-gray-400">{source || "web"}</span>
+                    {iteration != null && (
+                      <span className="text-xs text-gray-400">· 第 {iteration} 轮</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </label>
+              </label>
             );
           })}
         </div>
 
         {/* Dialog Footer */}
         <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
-          <span className="text-sm text-gray-500">
-            选中的链接可以添加为来源
-          </span>
+          <span className="text-sm text-gray-500">选中的链接可以添加为来源</span>
           <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outlined"
-              color="gray"
-              onClick={onClose}
-            >
+            <Button size="sm" variant="outlined" color="gray" onClick={onClose}>
               取消
             </Button>
             <Button

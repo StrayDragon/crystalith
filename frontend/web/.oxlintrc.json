@@ -1,0 +1,11 @@
+{
+  "plugins": ["react", "import", "vitest", "jsx-a11y"],
+  "ignorePatterns": [
+    "dist/**",
+    "coverage/**",
+    "node_modules/**",
+    "vendor/**",
+    "src/api/generated/**",
+    "openapi.json"
+  ]
+}

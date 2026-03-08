@@ -1,17 +1,17 @@
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from "react";
 
 const FOCUSABLE_SELECTOR = [
-  'a[href]',
-  'button:not([disabled])',
-  'textarea:not([disabled])',
-  'input:not([disabled])',
-  'select:not([disabled])',
+  "a[href]",
+  "button:not([disabled])",
+  "textarea:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
   '[tabindex]:not([tabindex="-1"])',
-].join(', ');
+].join(", ");
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-    (element) => !element.hasAttribute('disabled') && element.tabIndex !== -1,
+    (element) => !element.hasAttribute("disabled") && element.tabIndex !== -1,
   );
 }
 
@@ -35,7 +35,7 @@ export function useFocusTrap({ active, containerRef, onEscape }: UseFocusTrapOpt
     const focusables = getFocusableElements(container);
     const initialFocus = focusables[0] ?? container;
 
-    if (!container.hasAttribute('tabindex')) {
+    if (!container.hasAttribute("tabindex")) {
       container.tabIndex = -1;
     }
 
@@ -46,12 +46,12 @@ export function useFocusTrap({ active, containerRef, onEscape }: UseFocusTrapOpt
     });
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         onEscape?.();
         return;
       }
 
-      if (event.key !== 'Tab') return;
+      if (event.key !== "Tab") return;
 
       const nodes = getFocusableElements(container);
       if (nodes.length === 0) {
@@ -78,10 +78,10 @@ export function useFocusTrap({ active, containerRef, onEscape }: UseFocusTrapOpt
       }
     };
 
-    container.addEventListener('keydown', handleKeyDown);
+    container.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      container.removeEventListener('keydown', handleKeyDown);
+      container.removeEventListener("keydown", handleKeyDown);
       previousFocusRef.current?.focus();
       previousFocusRef.current = null;
     };

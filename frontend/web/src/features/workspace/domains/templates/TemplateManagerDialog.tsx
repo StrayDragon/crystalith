@@ -1,24 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import {
-  Button,
-  IconButton,
-  Input,
-  Spinner,
-  Typography,
-} from '@material-tailwind/react';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Button, IconButton, Input, Spinner, Typography } from "@material-tailwind/react";
 import {
   Close as CloseIcon,
   Delete as DeleteIcon,
   Save as SaveIcon,
   Settings as SettingsIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
-import ConfirmPopover from '../../../../shared/ConfirmPopover';
-import { useLayer } from '../../../../shared/layer';
-import { toast } from '../../../../shared/toast';
-import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
-import type { WorkspaceTemplate } from './types';
+import ConfirmPopover from "../../../../shared/ConfirmPopover";
+import { useLayer } from "../../../../shared/layer";
+import { toast } from "../../../../shared/toast";
+import { useFocusTrap } from "../../shared/hooks/useFocusTrap";
+import type { WorkspaceTemplate } from "./types";
 
 interface TemplateManagerDialogProps {
   open: boolean;
@@ -47,21 +41,26 @@ export default function TemplateManagerDialog({
     if (!open) return;
     const next: Record<number, string> = {};
     for (const tpl of templates) {
-      next[tpl.id] = tpl.description ?? '';
+      next[tpl.id] = tpl.description ?? "";
     }
     setDrafts(next);
   }, [open, templates]);
 
   const items = useMemo(() => templates, [templates]);
 
-  const { style: modalStyle } = useLayer('modal');
+  const { style: modalStyle } = useLayer("modal");
   const modalRef = useRef<HTMLDivElement | null>(null);
   useFocusTrap({ active: open, containerRef: modalRef, onEscape: onClose });
 
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 flex items-center justify-center" style={modalStyle} role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={modalStyle}
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
       <div
@@ -72,7 +71,9 @@ export default function TemplateManagerDialog({
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
           <div className="flex items-center gap-2">
             <SettingsIcon style={{ fontSize: 20 }} className="text-gray-700 dark:text-slate-200" />
-            <span className="text-base font-semibold text-gray-900 dark:text-slate-100">模板管理</span>
+            <span className="text-base font-semibold text-gray-900 dark:text-slate-100">
+              模板管理
+            </span>
           </div>
           <button
             onClick={onClose}
@@ -95,8 +96,8 @@ export default function TemplateManagerDialog({
           ) : (
             <div className="flex flex-col gap-3">
               {items.map((tpl) => {
-                const draft = drafts[tpl.id] ?? '';
-                const dirty = (draft ?? '') !== (tpl.description ?? '');
+                const draft = drafts[tpl.id] ?? "";
+                const dirty = (draft ?? "") !== (tpl.description ?? "");
                 const disabled = tpl.isBuiltin;
                 return (
                   <div
@@ -106,7 +107,10 @@ export default function TemplateManagerDialog({
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <Typography variant="small" className="font-semibold text-gray-900 dark:text-slate-100 text-xs truncate">
+                          <Typography
+                            variant="small"
+                            className="font-semibold text-gray-900 dark:text-slate-100 text-xs truncate"
+                          >
                             {tpl.name}
                           </Typography>
                           {tpl.isBuiltin && (
@@ -115,8 +119,12 @@ export default function TemplateManagerDialog({
                             </span>
                           )}
                         </div>
-                        <Typography variant="small" className="text-[10px] text-gray-500 dark:text-slate-400">
-                          会话 {tpl.config.sessionTitles.length} · 标签 {tpl.config.sourceTags.length}
+                        <Typography
+                          variant="small"
+                          className="text-[10px] text-gray-500 dark:text-slate-400"
+                        >
+                          会话 {tpl.config.sessionTitles.length} · 标签{" "}
+                          {tpl.config.sourceTags.length}
                         </Typography>
                       </div>
 
@@ -130,16 +138,20 @@ export default function TemplateManagerDialog({
                             setSavingId(tpl.id);
                             try {
                               await onUpdateDescription(tpl.id, draft);
-                              toast.success('模板已更新');
+                              toast.success("模板已更新");
                             } catch {
-                              toast.error('更新失败');
+                              toast.error("更新失败");
                             } finally {
                               setSavingId(null);
                             }
                           }}
                           aria-label="保存模板"
                         >
-                          {savingId === tpl.id ? <Spinner className="h-3 w-3" /> : <SaveIcon style={{ fontSize: 18 }} />}
+                          {savingId === tpl.id ? (
+                            <Spinner className="h-3 w-3" />
+                          ) : (
+                            <SaveIcon style={{ fontSize: 18 }} />
+                          )}
                         </IconButton>
 
                         <ConfirmPopover
@@ -148,9 +160,9 @@ export default function TemplateManagerDialog({
                             setDeletingId(tpl.id);
                             try {
                               await onDelete(tpl.id);
-                              toast.success('模板已删除');
+                              toast.success("模板已删除");
                             } catch (err) {
-                              const msg = err instanceof Error ? err.message : '删除失败';
+                              const msg = err instanceof Error ? err.message : "删除失败";
                               toast.error(msg);
                             } finally {
                               setDeletingId(null);
@@ -166,24 +178,33 @@ export default function TemplateManagerDialog({
                             disabled={tpl.isBuiltin || deletingId === tpl.id}
                             aria-label="删除模板"
                           >
-                            {deletingId === tpl.id ? <Spinner className="h-3 w-3" /> : <DeleteIcon style={{ fontSize: 18 }} />}
+                            {deletingId === tpl.id ? (
+                              <Spinner className="h-3 w-3" />
+                            ) : (
+                              <DeleteIcon style={{ fontSize: 18 }} />
+                            )}
                           </IconButton>
                         </ConfirmPopover>
                       </div>
                     </div>
 
                     <div>
-                      <Typography variant="small" className="font-semibold text-gray-600 dark:text-slate-200 text-[11px] mb-1">
+                      <Typography
+                        variant="small"
+                        className="font-semibold text-gray-600 dark:text-slate-200 text-[11px] mb-1"
+                      >
                         描述
                       </Typography>
                       <Input
                         variant="outlined"
-                        labelProps={{ className: 'hidden' }}
+                        labelProps={{ className: "hidden" }}
                         className="!border !border-gray-300 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-lg shadow-gray-900/5 ring-4 ring-transparent placeholder:text-gray-500 focus:!border-gray-900 focus:!border-t-gray-900 focus:ring-gray-900/10"
-                        containerProps={{ className: 'min-w-0' }}
+                        containerProps={{ className: "min-w-0" }}
                         value={draft}
-                        onChange={(e) => setDrafts((prev) => ({ ...prev, [tpl.id]: e.target.value }))}
-                        placeholder={disabled ? '内置模板不可编辑' : '输入描述'}
+                        onChange={(e) =>
+                          setDrafts((prev) => ({ ...prev, [tpl.id]: e.target.value }))
+                        }
+                        placeholder={disabled ? "内置模板不可编辑" : "输入描述"}
                         disabled={disabled}
                       />
                     </div>

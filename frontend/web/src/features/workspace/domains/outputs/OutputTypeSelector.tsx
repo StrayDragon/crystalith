@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 
-import type { OutputTypeId } from '../../shared/types';
+import type { OutputTypeId } from "../../shared/types";
 
 interface OutputTypeOption {
   id: OutputTypeId;
@@ -35,9 +35,9 @@ export default function OutputTypeSelector({
       if (panelRef.current.contains(event.target as Node)) return;
       onClose();
     }
-    document.addEventListener('mousedown', handleClick);
+    document.addEventListener("mousedown", handleClick);
     return () => {
-      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener("mousedown", handleClick);
     };
   }, [isOpen, onClose]);
 
@@ -65,7 +65,7 @@ export default function OutputTypeSelector({
             <button
               key={option.id}
               type="button"
-              className={`OutputTypeOption ${option.id === value ? 'isActive' : ''}`}
+              className={`OutputTypeOption ${option.id === value ? "isActive" : ""}`}
               onClick={() => {
                 onSelect(option.id);
                 onClose();

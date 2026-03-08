@@ -1,20 +1,20 @@
-export type PanelId = 'sources' | 'chat' | 'refine';
-export type ConnectionState = 'connecting' | 'error' | 'live';
-export type RefineMode = 'paragraph' | 'bullets' | 'structured';
-export type RefineStatus = 'queued' | 'running' | 'done' | 'error';
-export type GenerationPreference = 'quality' | 'speed';
-export type GenerationPreferenceSetting = GenerationPreference | 'default';
+export type PanelId = "sources" | "chat" | "refine";
+export type ConnectionState = "connecting" | "error" | "live";
+export type RefineMode = "paragraph" | "bullets" | "structured";
+export type RefineStatus = "queued" | "running" | "done" | "error";
+export type GenerationPreference = "quality" | "speed";
+export type GenerationPreferenceSetting = GenerationPreference | "default";
 export type OutputTypeId =
-  | 'FAQ'
-  | 'GUIDE'
-  | 'TIMELINE'
-  | 'MINDMAP'
-  | 'QUIZ'
-  | 'BRIEFING'
-  | 'SLIDES'
-  | 'PARAGRAPH'
-  | 'BULLETS'
-  | 'STRUCTURED';
+  | "FAQ"
+  | "GUIDE"
+  | "TIMELINE"
+  | "MINDMAP"
+  | "QUIZ"
+  | "BRIEFING"
+  | "SLIDES"
+  | "PARAGRAPH"
+  | "BULLETS"
+  | "STRUCTURED";
 
 export interface OutputContentBase {
   title?: string | null;
@@ -102,21 +102,21 @@ export type OutputContentByType = {
 export type KnownOutputPayload = OutputContentByType[OutputTypeId];
 export type UnknownOutputPayload = OutputContentBase & Record<string, unknown>;
 export type OutputPayload = KnownOutputPayload | UnknownOutputPayload;
-export type SlideStage = 'input' | 'outline' | 'markdown';
-export type SlideStatus = 'idle' | 'running' | 'error';
-export type SourceSearchStatus = 'ok' | 'not_implemented';
-export type ToolTone = 'slate' | 'blue' | 'green' | 'rose' | 'amber' | 'teal' | 'indigo';
+export type SlideStage = "input" | "outline" | "markdown";
+export type SlideStatus = "idle" | "running" | "error";
+export type SourceSearchStatus = "ok" | "not_implemented";
+export type ToolTone = "slate" | "blue" | "green" | "rose" | "amber" | "teal" | "indigo";
 
-export type RenderLayout = 'list' | 'cards' | 'tree' | 'timeline' | 'sections' | 'table';
+export type RenderLayout = "list" | "cards" | "tree" | "timeline" | "sections" | "table";
 export type RenderFieldType =
-  | 'text'
-  | 'heading'
-  | 'badge'
-  | 'list'
-  | 'tree'
-  | 'date'
-  | 'citation'
-  | 'code';
+  | "text"
+  | "heading"
+  | "badge"
+  | "list"
+  | "tree"
+  | "date"
+  | "citation"
+  | "code";
 
 export interface FieldDescriptor {
   key: string;
@@ -147,7 +147,7 @@ export interface ThemePresetOption {
   template: Record<string, unknown>;
 }
 
-export type PreviewKind = 'external_url';
+export type PreviewKind = "external_url";
 
 export interface PreviewDescriptor {
   kind: PreviewKind;
@@ -173,8 +173,8 @@ export interface PluginConfigSchema {
   preview?: PreviewDescriptor | null;
 }
 
-export type FrontendBundleKind = 'builtin';
-export type FrontendBundleApiVersion = 'v1';
+export type FrontendBundleKind = "builtin";
+export type FrontendBundleApiVersion = "v1";
 
 export interface FrontendBundleDescriptor {
   api_version: FrontendBundleApiVersion;
@@ -219,18 +219,18 @@ export interface Citation {
   score?: number;
 }
 
-export type CitationScopeMode = 'selected' | 'auto';
+export type CitationScopeMode = "selected" | "auto";
 
 export interface CitationScopeSnapshot {
   mode: CitationScopeMode;
-  kind: 'citations' | 'sources';
+  kind: "citations" | "sources";
   count: number;
   sources: string[];
 }
 
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   citationChunkIds?: number[];
   citations?: Citation[];
@@ -354,7 +354,7 @@ export interface OutputItem {
 }
 
 export type TypedOutputItem = {
-  [K in OutputTypeId]: Omit<OutputItem, 'type' | 'content'> & {
+  [K in OutputTypeId]: Omit<OutputItem, "type" | "content"> & {
     type: K;
     content: OutputContentByType[K];
   };
@@ -362,7 +362,7 @@ export type TypedOutputItem = {
 
 export interface StatusLabel {
   text: string;
-  tone: 'isLoading' | 'isError' | 'isLive';
+  tone: "isLoading" | "isError" | "isLive";
   tooltip: string;
 }
 
@@ -402,7 +402,7 @@ export interface ApiSession {
 export interface ApiMessage {
   id: number;
   session_id: number;
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
   citations?: ApiCitation[] | null;
   created_at?: string | null;

@@ -1,4 +1,4 @@
-import type { WidgetMeta } from './types';
+import type { WidgetMeta } from "./types";
 
 interface WidgetCatalogProps {
   open: boolean;
@@ -43,8 +43,8 @@ export default function WidgetCatalog({
               disabled={isActive}
               className={`flex items-center gap-2.5 w-full px-2 py-2 rounded-lg text-left transition-colors ${
                 isActive
-                  ? 'opacity-40 cursor-not-allowed'
-                  : 'hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer'
+                  ? "opacity-40 cursor-not-allowed"
+                  : "hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer"
               }`}
             >
               <span className="text-base">{meta.icon}</span>
@@ -52,9 +52,7 @@ export default function WidgetCatalog({
                 {meta.label}
               </span>
               {isActive && (
-                <span className="ml-auto text-[9px] text-gray-400 dark:text-slate-500">
-                  已添加
-                </span>
+                <span className="ml-auto text-[9px] text-gray-400 dark:text-slate-500">已添加</span>
               )}
             </button>
           );

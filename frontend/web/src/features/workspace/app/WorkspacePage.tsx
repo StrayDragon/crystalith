@@ -1,4 +1,4 @@
-import WorkspaceLayout from '../layout/WorkspaceLayout';
+import WorkspaceLayout from "../layout/WorkspaceLayout";
 
 export default function WorkspacePage() {
   return <WorkspaceLayout />;

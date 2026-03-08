@@ -1,7 +1,7 @@
-import type { SlideGenerationConfig } from '../../../shared/types';
+import type { SlideGenerationConfig } from "../../../shared/types";
 
 export function normalizeGenerationConfig(raw: any): SlideGenerationConfig | null {
-  if (!raw || typeof raw !== 'object') return null;
+  if (!raw || typeof raw !== "object") return null;
   const config = raw as Record<string, any>;
   return {
     preference: config.preference ?? null,
@@ -17,20 +17,20 @@ export function normalizeGenerationConfig(raw: any): SlideGenerationConfig | nul
 }
 
 export function normalizeFrontmatterOverride(value: string | null | undefined): string {
-  const trimmed = value?.trim() ?? '';
-  if (!trimmed) return '';
-  if (!trimmed.startsWith('---')) return trimmed;
-  const lines = trimmed.split('\n');
-  const stripped = lines[0].trim() === '---' ? lines.slice(1) : lines;
-  const endIndex = stripped.findIndex((line, index) => index > 0 && line.trim() === '---');
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) return "";
+  if (!trimmed.startsWith("---")) return trimmed;
+  const lines = trimmed.split("\n");
+  const stripped = lines[0].trim() === "---" ? lines.slice(1) : lines;
+  const endIndex = stripped.findIndex((line, index) => index > 0 && line.trim() === "---");
   const body = endIndex >= 0 ? stripped.slice(0, endIndex) : stripped;
-  return body.join('\n').trim();
+  return body.join("\n").trim();
 }
 
 function yamlValue(value: unknown) {
-  if (value === null || value === undefined) return 'null';
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  if (typeof value === 'string') return JSON.stringify(value);
+  if (value === null || value === undefined) return "null";
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "string") return JSON.stringify(value);
   return JSON.stringify(value);
 }
 
@@ -41,7 +41,7 @@ export function buildFrontmatterPreview(
 ): string {
   const normalizedOverride = normalizeFrontmatterOverride(override);
   if (normalizedOverride) {
-    if (normalizedOverride.includes('title:')) {
+    if (normalizedOverride.includes("title:")) {
       return normalizedOverride;
     }
     return `title: ${yamlValue(title)}\n${normalizedOverride}`.trim();
@@ -51,8 +51,8 @@ export function buildFrontmatterPreview(
   }
   const lines: string[] = [`title: ${yamlValue(title)}`];
   Object.entries(themeTemplate).forEach(([key, value]) => {
-    if (key === 'fonts' && typeof value === 'object' && value) {
-      lines.push('fonts:');
+    if (key === "fonts" && typeof value === "object" && value) {
+      lines.push("fonts:");
       Object.entries(value as Record<string, string>).forEach(([fontKey, fontValue]) => {
         lines.push(`  ${fontKey}: ${yamlValue(fontValue)}`);
       });
@@ -60,5 +60,5 @@ export function buildFrontmatterPreview(
     }
     lines.push(`${key}: ${yamlValue(value)}`);
   });
-  return lines.join('\n');
+  return lines.join("\n");
 }

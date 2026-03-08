@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
-import { FormatQuote as QuoteIcon } from '@mui/icons-material';
+import { useCallback, useMemo, useState } from "react";
+import { FormatQuote as QuoteIcon } from "@mui/icons-material";
 
-import CitationPopover from './CitationPopover';
-import CitationDrawer from './CitationDrawer';
-import type { Citation } from '../../types';
+import CitationPopover from "./CitationPopover";
+import CitationDrawer from "./CitationDrawer";
+import type { Citation } from "../../types";
 
 interface CitationsControlProps {
   citations: Citation[];
@@ -53,7 +53,7 @@ export default function CitationsControl({
         type="button"
         className={
           triggerClassName ??
-          'inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer'
+          "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-500 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-700 dark:hover:text-slate-100 transition-colors cursor-pointer"
         }
         onClick={(e) => handleOpenPopover(e.currentTarget.getBoundingClientRect())}
         aria-label={ariaLabel}

@@ -1,12 +1,12 @@
-import { create } from 'zustand';
-import CloseIcon from '@mui/icons-material/Close';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
-import InfoIcon from '@mui/icons-material/Info';
-import WarningIcon from '@mui/icons-material/Warning';
-import { useLayer } from './layer';
+import { create } from "zustand";
+import CloseIcon from "@mui/icons-material/Close";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ErrorIcon from "@mui/icons-material/Error";
+import InfoIcon from "@mui/icons-material/Info";
+import WarningIcon from "@mui/icons-material/Warning";
+import { useLayer } from "./layer";
 
-export type ToastType = 'success' | 'error' | 'info' | 'warning';
+export type ToastType = "success" | "error" | "info" | "warning";
 
 export interface Toast {
   id: string;
@@ -30,7 +30,7 @@ const DEFAULT_TOAST_DURATION: Record<ToastType, number> = {
 
 export const useToastStore = create<ToastStore>((set) => ({
   toasts: [],
-  addToast: (message: string, type: ToastType = 'info', duration?: number) => {
+  addToast: (message: string, type: ToastType = "info", duration?: number) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     const resolvedDuration = duration ?? DEFAULT_TOAST_DURATION[type];
     set((state) => ({
@@ -53,13 +53,13 @@ export const useToastStore = create<ToastStore>((set) => ({
 
 export const toast = {
   success: (message: string, duration?: number) =>
-    useToastStore.getState().addToast(message, 'success', duration),
+    useToastStore.getState().addToast(message, "success", duration),
   error: (message: string, duration?: number) =>
-    useToastStore.getState().addToast(message, 'error', duration),
+    useToastStore.getState().addToast(message, "error", duration),
   info: (message: string, duration?: number) =>
-    useToastStore.getState().addToast(message, 'info', duration),
+    useToastStore.getState().addToast(message, "info", duration),
   warning: (message: string, duration?: number) =>
-    useToastStore.getState().addToast(message, 'warning', duration),
+    useToastStore.getState().addToast(message, "warning", duration),
 };
 
 const iconMap = {
@@ -70,10 +70,10 @@ const iconMap = {
 };
 
 const colorMap = {
-  success: 'bg-green-500',
-  error: 'bg-red-500',
-  info: 'bg-blue-500',
-  warning: 'bg-amber-500',
+  success: "bg-green-500",
+  error: "bg-red-500",
+  info: "bg-blue-500",
+  warning: "bg-amber-500",
 };
 
 function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
@@ -99,15 +99,12 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
 
 export function ToastContainer() {
   const { toasts, removeToast } = useToastStore();
-  const { style } = useLayer('toast');
+  const { style } = useLayer("toast");
 
   if (toasts.length === 0) return null;
 
   return (
-    <div
-      className="fixed top-4 right-4 flex flex-col gap-2 max-w-sm"
-      style={style}
-    >
+    <div className="fixed top-4 right-4 flex flex-col gap-2 max-w-sm" style={style}>
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} onClose={() => removeToast(t.id)} />
       ))}

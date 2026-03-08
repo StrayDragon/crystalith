@@ -1,17 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
-import { Menu, MenuHandler, MenuList, MenuItem, Spinner } from '@material-tailwind/react';
-import { Download as DownloadIcon } from '@mui/icons-material';
+import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { Menu, MenuHandler, MenuList, MenuItem, Spinner } from "@material-tailwind/react";
+import { Download as DownloadIcon } from "@mui/icons-material";
 
-import type { FrontendBundleDescriptor, OutputItem, OutputTypeId } from '../../shared/types';
-import { getOutputPayloadWarnings, isFallbackOutputPayload } from '../../shared/outputPayload';
-import { LAYER_LEVELS } from '../../../../shared/layer';
-import { t } from '../../../../shared/i18n';
-import { useWorkspaceStore } from '../../shared/state/workspaceStore';
-import { getBuiltinBundleLoader } from '../../../../plugins/official/registry';
-import { EXPORT_FORMAT_LABELS } from './exporters';
-import { useExport } from './useExport';
-import GenericOutputRenderer from './GenericOutputRenderer';
+import type { FrontendBundleDescriptor, OutputItem, OutputTypeId } from "../../shared/types";
+import { getOutputPayloadWarnings, isFallbackOutputPayload } from "../../shared/outputPayload";
+import { LAYER_LEVELS } from "../../../../shared/layer";
+import { t } from "../../../../shared/i18n";
+import { useWorkspaceStore } from "../../shared/state/workspaceStore";
+import { getBuiltinBundleLoader } from "../../../../plugins/official/registry";
+import { EXPORT_FORMAT_LABELS } from "./exporters";
+import { useExport } from "./useExport";
+import GenericOutputRenderer from "./GenericOutputRenderer";
 
 interface OutputContentProps {
   output: OutputItem;
@@ -19,10 +19,12 @@ interface OutputContentProps {
 
 type BundleRenderer = (content: unknown, isFallback?: boolean) => ReactNode;
 
-function isSupportedFrontendBundle(bundle: FrontendBundleDescriptor | null): bundle is FrontendBundleDescriptor {
+function isSupportedFrontendBundle(
+  bundle: FrontendBundleDescriptor | null,
+): bundle is FrontendBundleDescriptor {
   if (!bundle) return false;
-  if (bundle.api_version !== 'v1') return false;
-  if (bundle.kind !== 'builtin') return false;
+  if (bundle.api_version !== "v1") return false;
+  if (bundle.kind !== "builtin") return false;
   if (!bundle.id.trim() || !bundle.export.trim()) return false;
   return true;
 }
@@ -37,7 +39,10 @@ export default function OutputContent({ output }: OutputContentProps) {
   const frontendBundle = useWorkspaceStore((s) => s.outputTypeFrontendBundles[typeId] ?? null);
   const [bundleRenderer, setBundleRenderer] = useState<BundleRenderer | null>(null);
 
-  const supportedFormats = useMemo(() => getSupportedFormats(typeId), [getSupportedFormats, typeId]);
+  const supportedFormats = useMemo(
+    () => getSupportedFormats(typeId),
+    [getSupportedFormats, typeId],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -56,7 +61,7 @@ export default function OutputContent({ output }: OutputContentProps) {
     void loader()
       .then((mod) => {
         const exported = (mod as unknown as Record<string, unknown>)[frontendBundle.export];
-        if (typeof exported !== 'function') {
+        if (typeof exported !== "function") {
           if (import.meta.env.DEV) {
             console.warn(
               `Invalid frontend bundle export "${frontendBundle.export}" for "${frontendBundle.id}"`,
@@ -97,7 +102,7 @@ export default function OutputContent({ output }: OutputContentProps) {
     <div className="space-y-3">
       {import.meta.env.DEV && warnings.length > 0 ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-          <div className="font-semibold">{t('common.debug_warnings')}</div>
+          <div className="font-semibold">{t("common.debug_warnings")}</div>
           <div className="mt-1 flex flex-wrap gap-2">
             {warnings.map((warning, index) => (
               <span

@@ -2,17 +2,17 @@
 // allows you to do things like:
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
-import '@testing-library/jest-dom/vitest';
-import { afterAll, afterEach, beforeAll } from 'vitest';
+import "@testing-library/jest-dom/vitest";
+import { afterAll, afterEach, beforeAll } from "vitest";
 
-import { client } from './api/generated/client.gen';
-import { server } from './test-utils/msw/server';
+import { client } from "./api/generated/client.gen";
+import { server } from "./test-utils/msw/server";
 
 beforeAll(() => {
   client.setConfig({
-    baseUrl: 'http://localhost',
+    baseUrl: "http://localhost",
   });
-  server.listen({ onUnhandledRequest: 'bypass' });
+  server.listen({ onUnhandledRequest: "bypass" });
 });
 
 afterEach(() => {
@@ -31,7 +31,7 @@ if (!Element.prototype.animate) {
     }) as unknown as Animation;
 }
 
-if (typeof window !== 'undefined' && !window.ResizeObserver) {
+if (typeof window !== "undefined" && !window.ResizeObserver) {
   window.ResizeObserver = class ResizeObserver {
     observe() {}
 
@@ -41,11 +41,11 @@ if (typeof window !== 'undefined' && !window.ResizeObserver) {
   } as typeof ResizeObserver;
 }
 
-if (typeof window !== 'undefined' && !window.IntersectionObserver) {
+if (typeof window !== "undefined" && !window.IntersectionObserver) {
   window.IntersectionObserver = class IntersectionObserver {
     readonly root = null;
 
-    readonly rootMargin = '0px';
+    readonly rootMargin = "0px";
 
     readonly thresholds = [0];
 
@@ -61,15 +61,15 @@ if (typeof window !== 'undefined' && !window.IntersectionObserver) {
   } as typeof IntersectionObserver;
 }
 
-if (typeof URL !== 'undefined' && !('createObjectURL' in URL)) {
+if (typeof URL !== "undefined" && !("createObjectURL" in URL)) {
   // Some optional dependencies (e.g. media encoder helpers) expect these to exist.
   // jsdom does not implement them by default.
   (URL as unknown as { createObjectURL: (blob: Blob) => string }).createObjectURL = () =>
-    'blob:vitest-mock';
+    "blob:vitest-mock";
   (URL as unknown as { revokeObjectURL: (url: string) => void }).revokeObjectURL = () => {};
 }
 
-if (typeof window !== 'undefined' && !window.Worker) {
+if (typeof window !== "undefined" && !window.Worker) {
   window.Worker = class Worker {
     constructor() {}
 

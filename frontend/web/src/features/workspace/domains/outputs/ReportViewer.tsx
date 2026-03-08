@@ -1,6 +1,6 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef } from "react";
 
-import { CollapsibleSection } from './StudioPrimitives';
+import { CollapsibleSection } from "./StudioPrimitives";
 
 export interface ReportSection {
   heading?: string | null;
@@ -16,10 +16,11 @@ export default function ReportViewer({ sections, className }: ReportViewerProps)
   const sectionRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   const toc = useMemo(
-    () => sections.map((section, index) => ({
-      id: `report-section-${index}`,
-      title: section.heading || `章节 ${index + 1}`,
-    })),
+    () =>
+      sections.map((section, index) => ({
+        id: `report-section-${index}`,
+        title: section.heading || `章节 ${index + 1}`,
+      })),
     [sections],
   );
 
@@ -28,16 +29,20 @@ export default function ReportViewer({ sections, className }: ReportViewerProps)
   }
 
   return (
-    <div className={`grid gap-4 md:grid-cols-[220px_1fr] ${className ?? ''}`.trim()}>
+    <div className={`grid gap-4 md:grid-cols-[220px_1fr] ${className ?? ""}`.trim()}>
       <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-        <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-400">目录</div>
+        <div className="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-slate-400">
+          目录
+        </div>
         <div className="mt-3 space-y-1">
           {toc.map((item, index) => (
             <button
               key={item.id}
               type="button"
               className="block w-full truncate rounded-md px-2 py-1 text-left text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800"
-              onClick={() => sectionRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              onClick={() =>
+                sectionRefs.current[index]?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
             >
               {item.title}
             </button>
@@ -48,7 +53,12 @@ export default function ReportViewer({ sections, className }: ReportViewerProps)
         {sections.map((section, index) => {
           const points = section.points ?? [];
           return (
-            <div key={`section-${index}`} ref={(el) => { sectionRefs.current[index] = el; }}>
+            <div
+              key={`section-${index}`}
+              ref={(el) => {
+                sectionRefs.current[index] = el;
+              }}
+            >
               <CollapsibleSection
                 id={`report-section-${index}`}
                 title={section.heading || `章节 ${index + 1}`}
@@ -57,7 +67,7 @@ export default function ReportViewer({ sections, className }: ReportViewerProps)
                 {points.length > 0 ? (
                   <ul className="list-disc pl-5 text-sm text-gray-700 dark:text-slate-200">
                     {points.map((point, pointIndex) => (
-                      <li key={`${index}-${pointIndex}`}>{point.text || '内容'}</li>
+                      <li key={`${index}-${pointIndex}`}>{point.text || "内容"}</li>
                     ))}
                   </ul>
                 ) : (

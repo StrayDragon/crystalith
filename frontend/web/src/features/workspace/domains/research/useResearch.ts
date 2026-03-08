@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useRef, useState, useEffect } from "react";
 import {
   createResearchSessionV1NotebooksNotebookIdResearchPost,
   listResearchSessionsV1NotebooksNotebookIdResearchGet,
@@ -13,8 +13,8 @@ import {
   type ResearchSessionResponse,
   type ResearchSessionListItem,
   type ResearchStatus,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
+} from "../../../../api/generated";
+import { unwrapData } from "../../../../api/unwrap";
 
 // SSE Event types
 interface SSEStatusEvent {
@@ -68,21 +68,21 @@ interface SSEThinkingEvent {
 }
 
 interface SSEConnectionEvent {
-  status: 'reconnecting' | 'reconnected' | 'failed';
+  status: "reconnecting" | "reconnected" | "failed";
   message: string;
 }
 
 export type SSEEvent =
-  | { type: 'status'; data: SSEStatusEvent }
-  | { type: 'plan_ready'; data: SSEPlanEvent }
-  | { type: 'search_progress'; data: SSESearchProgressEvent }
-  | { type: 'analysis'; data: SSEAnalysisEvent }
-  | { type: 'report'; data: SSEReportEvent }
-  | { type: 'done'; data: SSEDoneEvent }
-  | { type: 'waiting'; data: SSEWaitingEvent }
-  | { type: 'thinking'; data: SSEThinkingEvent }
-  | { type: 'connection'; data: SSEConnectionEvent }
-  | { type: 'error'; data: { message: string } };
+  | { type: "status"; data: SSEStatusEvent }
+  | { type: "plan_ready"; data: SSEPlanEvent }
+  | { type: "search_progress"; data: SSESearchProgressEvent }
+  | { type: "analysis"; data: SSEAnalysisEvent }
+  | { type: "report"; data: SSEReportEvent }
+  | { type: "done"; data: SSEDoneEvent }
+  | { type: "waiting"; data: SSEWaitingEvent }
+  | { type: "thinking"; data: SSEThinkingEvent }
+  | { type: "connection"; data: SSEConnectionEvent }
+  | { type: "error"; data: { message: string } };
 
 interface UseResearchResult {
   // State
@@ -113,7 +113,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
   const [sessions, setSessions] = useState<ResearchSessionListItem[]>([]);
   const [activeSession, setActiveSession] = useState<ResearchSessionResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [sseEvents, setSSEEvents] = useState<SSEEvent[]>([]);
 
   const sessionsRef = useRef<ResearchSessionListItem[]>([]);
@@ -140,14 +140,16 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
   const fetchSessions = useCallback(async () => {
     if (!notebookId) return;
     setIsLoading(true);
-    setError('');
+    setError("");
     try {
-      const response = await unwrapData(listResearchSessionsV1NotebooksNotebookIdResearchGet<true>({
-        path: { notebook_id: notebookId },
-      }));
+      const response = await unwrapData(
+        listResearchSessionsV1NotebooksNotebookIdResearchGet<true>({
+          path: { notebook_id: notebookId },
+        }),
+      );
       setSessions(response);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '获取研究列表失败');
+      setError(err instanceof Error ? err.message : "获取研究列表失败");
     } finally {
       setIsLoading(false);
     }
@@ -157,33 +159,37 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     async (researchId: number): Promise<ResearchSessionResponse | null> => {
       if (!notebookId) return null;
       setIsLoading(true);
-      setError('');
+      setError("");
       try {
-        const response = await unwrapData(getResearchSessionV1NotebooksNotebookIdResearchResearchIdGet<true>({
-          path: { notebook_id: notebookId, research_id: researchId },
-        }));
+        const response = await unwrapData(
+          getResearchSessionV1NotebooksNotebookIdResearchResearchIdGet<true>({
+            path: { notebook_id: notebookId, research_id: researchId },
+          }),
+        );
         setActiveSession(response);
         return response;
       } catch (err) {
-        setError(err instanceof Error ? err.message : '获取研究详情失败');
+        setError(err instanceof Error ? err.message : "获取研究详情失败");
         return null;
       } finally {
         setIsLoading(false);
       }
     },
-    [notebookId]
+    [notebookId],
   );
 
   const createSession = useCallback(
     async (topic: string, maxIterations = 4): Promise<ResearchSessionResponse | null> => {
       if (!notebookId) return null;
       setIsLoading(true);
-      setError('');
+      setError("");
       try {
-        const data = await unwrapData(createResearchSessionV1NotebooksNotebookIdResearchPost<true>({
-          path: { notebook_id: notebookId },
-          body: { topic, max_iterations: maxIterations },
-        }));
+        const data = await unwrapData(
+          createResearchSessionV1NotebooksNotebookIdResearchPost<true>({
+            path: { notebook_id: notebookId },
+            body: { topic, max_iterations: maxIterations },
+          }),
+        );
         setSessions((prev) => [
           {
             id: data.id,
@@ -200,20 +206,20 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
         setActiveSession(data);
         return data;
       } catch (err) {
-        setError(err instanceof Error ? err.message : '创建研究失败');
+        setError(err instanceof Error ? err.message : "创建研究失败");
         return null;
       } finally {
         setIsLoading(false);
       }
     },
-    [notebookId]
+    [notebookId],
   );
 
   const deleteSession = useCallback(
     async (researchId: number) => {
       if (!notebookId) return;
       setIsLoading(true);
-      setError('');
+      setError("");
       try {
         await deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete<true>({
           path: { notebook_id: notebookId, research_id: researchId },
@@ -223,88 +229,98 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           setActiveSession(null);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : '删除研究失败');
+        setError(err instanceof Error ? err.message : "删除研究失败");
       } finally {
         setIsLoading(false);
       }
     },
-    [notebookId, activeSession]
+    [notebookId, activeSession],
   );
 
   const startResearch = useCallback(
     async (researchId: number) => {
       if (!notebookId) return;
-      setError('');
+      setError("");
       try {
-        const response = await unwrapData(startResearchV1NotebooksNotebookIdResearchResearchIdStartPost<true>({
-          path: { notebook_id: notebookId, research_id: researchId },
-        }));
+        const response = await unwrapData(
+          startResearchV1NotebooksNotebookIdResearchResearchIdStartPost<true>({
+            path: { notebook_id: notebookId, research_id: researchId },
+          }),
+        );
         setActiveSession(response);
       } catch (err) {
-        setError(err instanceof Error ? err.message : '启动研究失败');
+        setError(err instanceof Error ? err.message : "启动研究失败");
       }
     },
-    [notebookId]
+    [notebookId],
   );
 
   const approveSearchPlan = useCallback(
     async (researchId: number, feedback?: string) => {
       if (!notebookId) return;
-      setError('');
+      setError("");
       try {
-        const response = await unwrapData(approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost<true>({
-          path: { notebook_id: notebookId, research_id: researchId },
-          body: { feedback },
-        }));
+        const response = await unwrapData(
+          approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost<true>({
+            path: { notebook_id: notebookId, research_id: researchId },
+            body: { feedback },
+          }),
+        );
         setActiveSession(response);
       } catch (err) {
-        setError(err instanceof Error ? err.message : '批准计划失败');
+        setError(err instanceof Error ? err.message : "批准计划失败");
       }
     },
-    [notebookId]
+    [notebookId],
   );
 
   const skipIteration = useCallback(
     async (researchId: number) => {
       if (!notebookId) return;
-      setError('');
+      setError("");
       try {
-        const response = await unwrapData(skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost<true>({
-          path: { notebook_id: notebookId, research_id: researchId },
-        }));
+        const response = await unwrapData(
+          skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost<true>({
+            path: { notebook_id: notebookId, research_id: researchId },
+          }),
+        );
         setActiveSession(response);
       } catch (err) {
-        setError(err instanceof Error ? err.message : '跳过迭代失败');
+        setError(err instanceof Error ? err.message : "跳过迭代失败");
       }
     },
-    [notebookId]
+    [notebookId],
   );
 
   const finishResearch = useCallback(
     async (researchId: number) => {
       if (!notebookId) return;
-      setError('');
+      setError("");
       try {
-        const response = await unwrapData(finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost<true>({
-          path: { notebook_id: notebookId, research_id: researchId },
-        }));
+        const response = await unwrapData(
+          finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost<true>({
+            path: { notebook_id: notebookId, research_id: researchId },
+          }),
+        );
         setActiveSession(response);
       } catch (err) {
-        setError(err instanceof Error ? err.message : '结束研究失败');
+        setError(err instanceof Error ? err.message : "结束研究失败");
       }
     },
-    [notebookId]
+    [notebookId],
   );
 
   // Cancel research - marks as cancelled without generating report
   const cancelResearch = useCallback(
     async (researchId: number) => {
       if (!notebookId) return;
-      setError('');
+      setError("");
       try {
-        const response = await unwrapData(cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost<true>({
-          path: { notebook_id: notebookId, research_id: researchId },
-        }));
+        const response = await unwrapData(
+          cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost<true>({
+            path: { notebook_id: notebookId, research_id: researchId },
+          }),
+        );
         setActiveSession(response);
         // Update sessions list
         setSessions((prev) =>
@@ -320,20 +336,22 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           eventSourceRef.current = null;
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : '取消研究失败');
+        setError(err instanceof Error ? err.message : "取消研究失败");
       }
     },
-    [notebookId]
+    [notebookId],
   );
 
   const resumeResearch = useCallback(
     async (researchId: number): Promise<ResearchSessionResponse | null> => {
       if (!notebookId) return null;
-      setError('');
+      setError("");
       try {
-        const response = await unwrapData(resumeResearchV1NotebooksNotebookIdResearchResearchIdResumePost<true>({
-          path: { notebook_id: notebookId, research_id: researchId },
-        }));
+        const response = await unwrapData(
+          resumeResearchV1NotebooksNotebookIdResearchResearchIdResumePost<true>({
+            path: { notebook_id: notebookId, research_id: researchId },
+          }),
+        );
         setActiveSession(response);
         setSessions((prev) =>
           prev.map((s) =>
@@ -348,11 +366,11 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
         );
         return response;
       } catch (err) {
-        setError(err instanceof Error ? err.message : '继续研究失败');
+        setError(err instanceof Error ? err.message : "继续研究失败");
         return null;
       }
     },
-    [notebookId]
+    [notebookId],
   );
 
   const unsubscribeFromSSE = useCallback(() => {
@@ -377,11 +395,11 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
   const isResearchSessionActive = useCallback((researchId: number) => {
     const session = sessionsRef.current.find((s) => s.id === researchId);
     if (session) {
-      return ['planning', 'searching', 'analyzing', 'waiting_user'].includes(session.status);
+      return ["planning", "searching", "analyzing", "waiting_user"].includes(session.status);
     }
     const active = activeSessionRef.current;
     if (active?.id === researchId) {
-      return ['planning', 'searching', 'analyzing', 'waiting_user'].includes(active.status);
+      return ["planning", "searching", "analyzing", "waiting_user"].includes(active.status);
     }
     return false;
   }, []);
@@ -431,9 +449,9 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
             const next = [
               ...prev,
               {
-                type: 'connection',
+                type: "connection",
                 data: {
-                  status: 'reconnecting',
+                  status: "reconnecting",
                   message: `${message}${Math.round(delay / 1000)}秒后重连...`,
                 },
               },
@@ -450,14 +468,17 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           setSSEEvents((prev) => {
             const next = [
               ...prev,
-              { type: 'connection', data: { status: 'failed', message: '连接失败，请刷新页面重试' } },
+              {
+                type: "connection",
+                data: { status: "failed", message: "连接失败，请刷新页面重试" },
+              },
             ] as SSEEvent[];
             return next.length > maxSseEvents ? next.slice(-maxSseEvents) : next;
           });
         }
       };
 
-      const handleEvent = (eventType: SSEEvent['type']) => (event: MessageEvent) => {
+      const handleEvent = (eventType: SSEEvent["type"]) => (event: MessageEvent) => {
         // Reset reconnect attempts on successful event
         reconnectAttemptRef.current = 0;
         lastEventAtRef.current = Date.now();
@@ -470,7 +491,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
           });
 
           // Update session state from SSE events for real-time progress
-          if (eventType === 'status' && data.status) {
+          if (eventType === "status" && data.status) {
             // Update activeSession with iteration if provided
             setActiveSession((prev) => {
               if (!prev) return prev;
@@ -487,19 +508,19 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
                   ? {
                       ...s,
                       current_iteration: data.iteration ?? s.current_iteration,
-                      status: data.status
+                      status: data.status,
                     }
-                  : s
-              )
+                  : s,
+              ),
             );
 
-            if (!['planning', 'searching', 'analyzing', 'waiting_user'].includes(data.status)) {
+            if (!["planning", "searching", "analyzing", "waiting_user"].includes(data.status)) {
               unsubscribeFromSSE();
             }
           }
 
           // Update iteration from thinking events that include new_iteration type
-          if (eventType === 'thinking' && data.type === 'new_iteration' && data.iteration) {
+          if (eventType === "thinking" && data.type === "new_iteration" && data.iteration) {
             setActiveSession((prev) => {
               if (!prev) return prev;
               return {
@@ -509,15 +530,13 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
             });
             setSessions((prev) =>
               prev.map((s) =>
-                s.id === researchId
-                  ? { ...s, current_iteration: data.iteration }
-                  : s
-              )
+                s.id === researchId ? { ...s, current_iteration: data.iteration } : s,
+              ),
             );
           }
 
           // Update from analysis events which include iteration info
-          if (eventType === 'analysis' && data.iteration) {
+          if (eventType === "analysis" && data.iteration) {
             setActiveSession((prev) => {
               if (!prev) return prev;
               return {
@@ -527,43 +546,41 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
             });
             setSessions((prev) =>
               prev.map((s) =>
-                s.id === researchId
-                  ? { ...s, current_iteration: data.iteration }
-                  : s
-              )
+                s.id === researchId ? { ...s, current_iteration: data.iteration } : s,
+              ),
             );
           }
 
           // Full refresh on done or report to get final data
-          if (eventType === 'done' || eventType === 'report') {
+          if (eventType === "done" || eventType === "report") {
             fetchSession(researchId);
             // Also refresh sessions list
             fetchSessions();
-            if (eventType === 'done') {
+            if (eventType === "done") {
               unsubscribeFromSSE();
             }
           }
         } catch {
-          console.error('Failed to parse SSE event:', event.data);
+          console.error("Failed to parse SSE event:", event.data);
         }
       };
 
-      eventSource.addEventListener('status', handleEvent('status'));
-      eventSource.addEventListener('plan_ready', handleEvent('plan_ready'));
-      eventSource.addEventListener('search_progress', handleEvent('search_progress'));
-      eventSource.addEventListener('analysis', handleEvent('analysis'));
-      eventSource.addEventListener('report', handleEvent('report'));
-      eventSource.addEventListener('done', handleEvent('done'));
-      eventSource.addEventListener('waiting', handleEvent('waiting'));
-      eventSource.addEventListener('thinking', handleEvent('thinking'));
-      eventSource.addEventListener('heartbeat', () => {
+      eventSource.addEventListener("status", handleEvent("status"));
+      eventSource.addEventListener("plan_ready", handleEvent("plan_ready"));
+      eventSource.addEventListener("search_progress", handleEvent("search_progress"));
+      eventSource.addEventListener("analysis", handleEvent("analysis"));
+      eventSource.addEventListener("report", handleEvent("report"));
+      eventSource.addEventListener("done", handleEvent("done"));
+      eventSource.addEventListener("waiting", handleEvent("waiting"));
+      eventSource.addEventListener("thinking", handleEvent("thinking"));
+      eventSource.addEventListener("heartbeat", () => {
         lastEventAtRef.current = Date.now();
       });
 
       eventSource.onerror = () => {
         eventSource.close();
         eventSourceRef.current = null;
-        scheduleReconnect('连接中断，');
+        scheduleReconnect("连接中断，");
       };
 
       // Handle successful connection
@@ -571,12 +588,12 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
         lastEventAtRef.current = Date.now();
         if (isReconnect) {
           if (import.meta.env.DEV) {
-            console.log('SSE reconnected successfully');
+            console.log("SSE reconnected successfully");
           }
           setSSEEvents((prev) => {
             const next = [
               ...prev,
-              { type: 'connection', data: { status: 'reconnected', message: '连接已恢复' } },
+              { type: "connection", data: { status: "reconnected", message: "连接已恢复" } },
             ] as SSEEvent[];
             return next.length > maxSseEvents ? next.slice(-maxSseEvents) : next;
           });
@@ -591,11 +608,11 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
         if (elapsed > staleConnectionMs) {
           eventSourceRef.current.close();
           eventSourceRef.current = null;
-          scheduleReconnect('连接超时，');
+          scheduleReconnect("连接超时，");
         }
       }, staleCheckIntervalMs);
     },
-    [notebookId, fetchSession, fetchSessions, isResearchSessionActive, unsubscribeFromSSE]
+    [notebookId, fetchSession, fetchSessions, isResearchSessionActive, unsubscribeFromSSE],
   );
 
   // Cleanup on unmount

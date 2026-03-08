@@ -1,10 +1,10 @@
-import { act, waitFor } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { act, waitFor } from "@testing-library/react";
+import { beforeEach, expect, test, vi } from "vitest";
 
-import type { OutputItem } from '../../shared/types';
-import { renderHook } from '../../../../test-utils/renderHook';
-import { toast } from '../../../../shared/toast';
-import { useExport } from './useExport';
+import type { OutputItem } from "../../shared/types";
+import { renderHook } from "../../../../test-utils/renderHook";
+import { toast } from "../../../../shared/toast";
+import { useExport } from "./useExport";
 
 const writeFileMock = vi.fn(async (_options: { fileName: string }) => undefined);
 let toastSuccessSpy: ReturnType<typeof vi.spyOn>;
@@ -13,12 +13,12 @@ let toastInfoSpy: ReturnType<typeof vi.spyOn>;
 let toastWarningSpy: ReturnType<typeof vi.spyOn>;
 
 // Mock reason: export libs rely on browser/document internals not available in jsdom.
-vi.mock('jspdf', () => ({
+vi.mock("jspdf", () => ({
   jsPDF: class JsPdfMock {
     internal = { pageSize: { height: 800 } };
 
     splitTextToSize(text: string) {
-      return text.split('\n');
+      return text.split("\n");
     }
 
     text() {}
@@ -26,13 +26,13 @@ vi.mock('jspdf', () => ({
     addPage() {}
 
     output() {
-      return new Blob(['%PDF-1.4 mock']);
+      return new Blob(["%PDF-1.4 mock"]);
     }
   },
 }));
 
 // Mock reason: export libs rely on browser/document internals not available in jsdom.
-vi.mock('pptxgenjs', () => ({
+vi.mock("pptxgenjs", () => ({
   default: class PptxGenMock {
     layout?: string;
     author?: string;
@@ -51,24 +51,24 @@ vi.mock('pptxgenjs', () => ({
   },
 }));
 
-function createOutput(type: OutputItem['type'], content: Record<string, unknown>): OutputItem {
+function createOutput(type: OutputItem["type"], content: Record<string, unknown>): OutputItem {
   return {
     id: 1,
     type,
     prompt: `${type} prompt`,
     chunkIds: [1],
     content,
-    createdAt: '2026-01-01 10:00',
-    updatedAt: '2026-01-01 10:00',
+    createdAt: "2026-01-01 10:00",
+    updatedAt: "2026-01-01 10:00",
   };
 }
 
 beforeEach(() => {
   // Mock reason: suppress visual toast side effects while asserting notification calls.
-  toastSuccessSpy = vi.spyOn(toast, 'success').mockImplementation(() => {});
-  toastErrorSpy = vi.spyOn(toast, 'error').mockImplementation(() => {});
-  toastInfoSpy = vi.spyOn(toast, 'info').mockImplementation(() => {});
-  toastWarningSpy = vi.spyOn(toast, 'warning').mockImplementation(() => {});
+  toastSuccessSpy = vi.spyOn(toast, "success").mockImplementation(() => {});
+  toastErrorSpy = vi.spyOn(toast, "error").mockImplementation(() => {});
+  toastInfoSpy = vi.spyOn(toast, "info").mockImplementation(() => {});
+  toastWarningSpy = vi.spyOn(toast, "warning").mockImplementation(() => {});
 
   toastSuccessSpy.mockClear();
   toastErrorSpy.mockClear();
@@ -76,25 +76,25 @@ beforeEach(() => {
   toastWarningSpy.mockClear();
   writeFileMock.mockClear();
 
-  Object.defineProperty(URL, 'createObjectURL', {
+  Object.defineProperty(URL, "createObjectURL", {
     configurable: true,
-    value: vi.fn(() => 'blob:mock'),
+    value: vi.fn(() => "blob:mock"),
   });
-  Object.defineProperty(URL, 'revokeObjectURL', {
+  Object.defineProperty(URL, "revokeObjectURL", {
     configurable: true,
     value: vi.fn(),
   });
 });
 
-test('exports markdown via download and resets state', async () => {
+test("exports markdown via download and resets state", async () => {
   // Mock reason: jsdom has no real browser navigation/download pipeline; assert anchor click contract only.
-  const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   const { result } = renderHook(() => useExport());
 
   await act(async () => {
     await result.current.exportOutput(
-      createOutput('GUIDE', { modules: [{ title: '模块一', objective: { text: '理解基础' } }] }),
-      'markdown',
+      createOutput("GUIDE", { modules: [{ title: "模块一", objective: { text: "理解基础" } }] }),
+      "markdown",
     );
   });
 
@@ -108,15 +108,15 @@ test('exports markdown via download and resets state', async () => {
   clickSpy.mockRestore();
 });
 
-test('exports pdf and pptx via special exporters', async () => {
+test("exports pdf and pptx via special exporters", async () => {
   // Mock reason: jsdom has no real browser navigation/download pipeline; assert anchor click contract only.
-  const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   const { result } = renderHook(() => useExport());
 
   await act(async () => {
     await result.current.exportOutput(
-      createOutput('BRIEFING', { sections: [{ heading: '重点', points: [{ text: '性能提升' }] }] }),
-      'pdf',
+      createOutput("BRIEFING", { sections: [{ heading: "重点", points: [{ text: "性能提升" }] }] }),
+      "pdf",
     );
   });
 
@@ -125,10 +125,10 @@ test('exports pdf and pptx via special exporters', async () => {
 
   await act(async () => {
     await result.current.exportOutput(
-      createOutput('SLIDES', {
-        outline: { slides: [{ title: '第一页', bullets: ['A', 'B'] }] },
+      createOutput("SLIDES", {
+        outline: { slides: [{ title: "第一页", bullets: ["A", "B"] }] },
       }),
-      'pptx',
+      "pptx",
     );
   });
 

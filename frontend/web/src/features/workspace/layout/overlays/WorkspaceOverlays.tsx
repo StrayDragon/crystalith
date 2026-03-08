@@ -1,9 +1,9 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy } from "react";
 
-import type { AnalysisResult, WorkspaceToolsDiagnostics } from '../../../../api/generated';
-import type { ChatMessage as SourceDialogMessage } from '../../domains/sources/SourceDetailDialog';
-import type { OutputQueueJob } from '../../shared/hooks/useOutputQueue';
-import { SkeletonCard } from '../../shared/components/Skeleton';
+import type { AnalysisResult, WorkspaceToolsDiagnostics } from "../../../../api/generated";
+import type { ChatMessage as SourceDialogMessage } from "../../domains/sources/SourceDetailDialog";
+import type { OutputQueueJob } from "../../shared/hooks/useOutputQueue";
+import { SkeletonCard } from "../../shared/components/Skeleton";
 import type {
   ChatMessage,
   Citation,
@@ -11,16 +11,21 @@ import type {
   SessionSummary,
   SourceItem,
   WorkspaceTool,
-} from '../../shared/types';
-import { WORKSPACE_SHORTCUTS } from '../../shared/shortcuts';
-import { CommandPalette, type CommandItem, WidgetCatalog, WIDGET_REGISTRY } from '../modular-canvas';
-import ShortcutHelpPanel from '../ShortcutHelpPanel';
-import SessionDetailDialog from '../../domains/sessions/SessionDetailDialog';
+} from "../../shared/types";
+import { WORKSPACE_SHORTCUTS } from "../../shared/shortcuts";
+import {
+  CommandPalette,
+  type CommandItem,
+  WidgetCatalog,
+  WIDGET_REGISTRY,
+} from "../modular-canvas";
+import ShortcutHelpPanel from "../ShortcutHelpPanel";
+import SessionDetailDialog from "../../domains/sessions/SessionDetailDialog";
 
-const StudioOutputViewer = lazy(() => import('../../domains/outputs/StudioOutputViewer'));
-const KnowledgeGraphView = lazy(() => import('../../domains/analysis/KnowledgeGraphView'));
-const SlidesStudioDialog = lazy(() => import('../../domains/studio/SlidesStudioDialog'));
-const SourceDetailDialog = lazy(() => import('../../domains/sources/SourceDetailDialog'));
+const StudioOutputViewer = lazy(() => import("../../domains/outputs/StudioOutputViewer"));
+const KnowledgeGraphView = lazy(() => import("../../domains/analysis/KnowledgeGraphView"));
+const SlidesStudioDialog = lazy(() => import("../../domains/studio/SlidesStudioDialog"));
+const SourceDetailDialog = lazy(() => import("../../domains/sources/SourceDetailDialog"));
 
 interface WorkspaceOverlaysProps {
   commandPaletteOpen: boolean;
@@ -50,9 +55,9 @@ interface WorkspaceOverlaysProps {
   selectedSourceIds: number[];
   isConnected: boolean;
   onOutputsUpdated: () => void;
-  slidesOpenMode: 'config' | 'preview';
+  slidesOpenMode: "config" | "preview";
   slidesDraftId: number | null;
-  slidesQueueStatus: OutputQueueJob['status'] | null;
+  slidesQueueStatus: OutputQueueJob["status"] | null;
   slidesTool: WorkspaceTool | null;
   toolsDiagnostics: WorkspaceToolsDiagnostics | null;
   onQueueSlides: (payload: {
@@ -60,7 +65,7 @@ interface WorkspaceOverlaysProps {
     prompt: string;
     sourceIds: number[];
     generationConfig: {
-      preference?: 'quality' | 'speed' | null;
+      preference?: "quality" | "speed" | null;
       quantity?: string | null;
       audience?: string | null;
       structure?: string | null;
@@ -92,13 +97,19 @@ interface WorkspaceOverlaysProps {
   onCloseGraphSourceDetail: () => void;
   graphSourceDetailFullscreen: boolean;
   onToggleGraphSourceDetailFullscreen: () => void;
-  onSaveGraphSourceQAAsSource: (sourceTitle: string, messages: SourceDialogMessage[]) => Promise<void>;
+  onSaveGraphSourceQAAsSource: (
+    sourceTitle: string,
+    messages: SourceDialogMessage[],
+  ) => Promise<void>;
   citationSourceDetailOpen: boolean;
   citationSelectedSource: SourceItem | null;
   onCloseCitationSourceDetail: () => void;
   citationSourceDetailFullscreen: boolean;
   onToggleCitationSourceDetailFullscreen: () => void;
-  onSaveCitationSourceQAAsSource: (sourceTitle: string, messages: SourceDialogMessage[]) => Promise<void>;
+  onSaveCitationSourceQAAsSource: (
+    sourceTitle: string,
+    messages: SourceDialogMessage[],
+  ) => Promise<void>;
   graphSessionDetailOpen: boolean;
   graphSelectedSession: SessionSummary | null;
   graphSessionMessages: ChatMessage[];
@@ -199,7 +210,13 @@ export function WorkspaceOverlays({
         onClose={onCloseShortcutHelp}
       />
 
-      <Suspense fallback={<div className="fixed bottom-4 right-4 w-72"><SkeletonCard lines={3} /></div>}>
+      <Suspense
+        fallback={
+          <div className="fixed bottom-4 right-4 w-72">
+            <SkeletonCard lines={3} />
+          </div>
+        }
+      >
         <StudioOutputViewer
           outputs={outputs}
           selectedOutputId={viewerOutputId}
@@ -217,7 +234,15 @@ export function WorkspaceOverlays({
       </Suspense>
 
       {slidesDialogOpen && (
-        <Suspense fallback={<div className="fixed inset-0 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[420px]"><SkeletonCard lines={6} /></div></div>}>
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60">
+              <div className="w-[420px]">
+                <SkeletonCard lines={6} />
+              </div>
+            </div>
+          }
+        >
           <SlidesStudioDialog
             open={slidesDialogOpen}
             onClose={onCloseSlidesDialog}
@@ -236,7 +261,15 @@ export function WorkspaceOverlays({
       )}
 
       {graphViewOpen && (
-        <Suspense fallback={<div className="fixed inset-0 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[520px]"><SkeletonCard lines={6} /></div></div>}>
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60">
+              <div className="w-[520px]">
+                <SkeletonCard lines={6} />
+              </div>
+            </div>
+          }
+        >
           <KnowledgeGraphView
             sources={graphSources}
             outputs={graphOutputs}
@@ -257,7 +290,15 @@ export function WorkspaceOverlays({
       )}
 
       {graphSourceDetailOpen && (
-        <Suspense fallback={<div className="fixed inset-0 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[520px]"><SkeletonCard lines={5} /></div></div>}>
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60">
+              <div className="w-[520px]">
+                <SkeletonCard lines={5} />
+              </div>
+            </div>
+          }
+        >
           <SourceDetailDialog
             open={graphSourceDetailOpen}
             source={graphSelectedSource}
@@ -270,7 +311,15 @@ export function WorkspaceOverlays({
       )}
 
       {citationSourceDetailOpen && (
-        <Suspense fallback={<div className="fixed inset-0 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60"><div className="w-[520px]"><SkeletonCard lines={5} /></div></div>}>
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 flex items-center justify-center bg-gray-900/40 dark:bg-gray-950/60">
+              <div className="w-[520px]">
+                <SkeletonCard lines={5} />
+              </div>
+            </div>
+          }
+        >
           <SourceDetailDialog
             open={citationSourceDetailOpen}
             source={citationSelectedSource}

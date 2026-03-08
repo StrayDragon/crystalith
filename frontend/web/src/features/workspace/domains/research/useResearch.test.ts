@@ -1,28 +1,28 @@
-import { act, waitFor } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
-import { http, HttpResponse } from 'msw';
+import { act, waitFor } from "@testing-library/react";
+import { beforeEach, expect, test, vi } from "vitest";
+import { http, HttpResponse } from "msw";
 
-import { renderHook } from '../../../../test-utils/renderHook';
-import { server } from '../../../../test-utils/msw/server';
-import { useResearch } from './useResearch';
+import { renderHook } from "../../../../test-utils/renderHook";
+import { server } from "../../../../test-utils/msw/server";
+import { useResearch } from "./useResearch";
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-test('fetchSessions stores list data', async () => {
+test("fetchSessions stores list data", async () => {
   server.use(
-    http.get('*/v1/notebooks/:notebook_id/research', () =>
+    http.get("*/v1/notebooks/:notebook_id/research", () =>
       HttpResponse.json([
         {
           id: 1,
           notebook_id: 1,
-          topic: 'Topic',
-          status: 'planning',
+          topic: "Topic",
+          status: "planning",
           current_iteration: 0,
           max_iterations: 3,
-          created_at: '2024-01-01',
-          updated_at: '2024-01-01',
+          created_at: "2024-01-01",
+          updated_at: "2024-01-01",
         },
       ]),
     ),
@@ -37,22 +37,22 @@ test('fetchSessions stores list data', async () => {
   await waitFor(() => {
     expect(result.current.sessions).toHaveLength(1);
   });
-  expect(result.current.sessions[0].topic).toBe('Topic');
+  expect(result.current.sessions[0].topic).toBe("Topic");
 });
 
-test('createSession updates sessions and activeSession', async () => {
+test("createSession updates sessions and activeSession", async () => {
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/research', async ({ request, params }) => {
+    http.post("*/v1/notebooks/:notebook_id/research", async ({ request, params }) => {
       const body = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         id: 2,
         notebook_id: Number(params.notebook_id),
-        topic: String(body.topic ?? 'New Topic'),
-        status: 'planning',
+        topic: String(body.topic ?? "New Topic"),
+        status: "planning",
         current_iteration: 0,
         max_iterations: Number(body.max_iterations ?? 4),
-        created_at: '2024-01-02',
-        updated_at: '2024-01-02',
+        created_at: "2024-01-02",
+        updated_at: "2024-01-02",
       });
     }),
   );
@@ -61,7 +61,7 @@ test('createSession updates sessions and activeSession', async () => {
 
   let created: any = null;
   await act(async () => {
-    created = await result.current.createSession('New Topic', 4);
+    created = await result.current.createSession("New Topic", 4);
   });
 
   expect(created?.id).toBe(2);
@@ -71,28 +71,28 @@ test('createSession updates sessions and activeSession', async () => {
   expect(result.current.activeSession?.id).toBe(2);
 });
 
-test('deleteSession removes session and clears active session', async () => {
+test("deleteSession removes session and clears active session", async () => {
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/research', async ({ request, params }) => {
+    http.post("*/v1/notebooks/:notebook_id/research", async ({ request, params }) => {
       const body = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         id: 22,
         notebook_id: Number(params.notebook_id),
-        topic: String(body.topic ?? 'Topic'),
-        status: 'planning',
+        topic: String(body.topic ?? "Topic"),
+        status: "planning",
         current_iteration: 0,
         max_iterations: Number(body.max_iterations ?? 4),
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01',
+        created_at: "2024-01-01",
+        updated_at: "2024-01-01",
       });
     }),
-    http.delete('*/v1/notebooks/:notebook_id/research/:research_id', () => HttpResponse.json({})),
+    http.delete("*/v1/notebooks/:notebook_id/research/:research_id", () => HttpResponse.json({})),
   );
 
   const { result } = renderHook(() => useResearch(1));
 
   await act(async () => {
-    await result.current.createSession('Topic');
+    await result.current.createSession("Topic");
   });
 
   await act(async () => {
@@ -103,7 +103,7 @@ test('deleteSession removes session and clears active session', async () => {
   expect(result.current.activeSession).toBeNull();
 });
 
-test('SSE reconnect does not use stale session state after completion', async () => {
+test("SSE reconnect does not use stale session state after completion", async () => {
   vi.useFakeTimers();
 
   class MockEventSource {
@@ -132,27 +132,27 @@ test('SSE reconnect does not use stale session state after completion', async ()
   }
 
   // Mock reason: deterministic control of reconnect/error lifecycle is not reliable with real EventSource in jsdom.
-  vi.stubGlobal('EventSource', MockEventSource as any);
+  vi.stubGlobal("EventSource", MockEventSource as any);
 
   const baseSession = {
     id: 1,
     notebook_id: 1,
-    topic: 'Topic',
-    status: 'planning',
+    topic: "Topic",
+    status: "planning",
     current_iteration: 0,
     max_iterations: 3,
-    created_at: '2024-01-01',
-    updated_at: '2024-01-01',
+    created_at: "2024-01-01",
+    updated_at: "2024-01-01",
   };
 
   let listCount = 0;
   server.use(
-    http.get('*/v1/notebooks/:notebook_id/research', () => {
+    http.get("*/v1/notebooks/:notebook_id/research", () => {
       listCount += 1;
       if (listCount === 1) {
         return HttpResponse.json([baseSession]);
       }
-      return HttpResponse.json([{ ...baseSession, status: 'completed' }]);
+      return HttpResponse.json([{ ...baseSession, status: "completed" }]);
     }),
   );
 
@@ -173,7 +173,7 @@ test('SSE reconnect does not use stale session state after completion', async ()
       await result.current.fetchSessions();
     });
 
-    expect(result.current.sessions[0].status).toBe('completed');
+    expect(result.current.sessions[0].status).toBe("completed");
 
     act(() => {
       MockEventSource.instances[0].triggerError();

@@ -2,23 +2,21 @@
  * ModelSelector - Component for selecting AI models for generation tasks
  */
 
-import { useState, useEffect, useCallback, type ReactElement } from 'react';
-import {
-  Select,
-  Option,
-  Typography,
-  Chip,
-  Alert,
-} from '@material-tailwind/react';
+import { useState, useEffect, useCallback, type ReactElement } from "react";
+import { Select, Option, Typography, Chip, Alert } from "@material-tailwind/react";
 import {
   SmartToy as AIIcon,
   CloudQueue as CloudIcon,
   Computer as LocalIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
-import { listModelsV1ModelsGet as listModels, type ModelRead, type ModelsListResponse } from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
-import { LAYER_LEVELS } from '../../../../shared/layer';
+import {
+  listModelsV1ModelsGet as listModels,
+  type ModelRead,
+  type ModelsListResponse,
+} from "../../../../api/generated";
+import { unwrapData } from "../../../../api/unwrap";
+import { LAYER_LEVELS } from "../../../../shared/layer";
 
 export interface ModelSelectorProps {
   /** Currently selected model ID */
@@ -26,13 +24,13 @@ export interface ModelSelectorProps {
   /** Callback when selection changes */
   onChange: (modelId: string | null) => void;
   /** Filter by capability */
-  capability?: 'chat' | 'embedding';
+  capability?: "chat" | "embedding";
   /** Label for the selector */
   label?: string;
   /** Whether the selector is disabled */
   disabled?: boolean;
   /** Size variant */
-  size?: 'md' | 'lg';
+  size?: "md" | "lg";
   /** Full width - handled by className in MT */
   fullWidth?: boolean;
   /** Optional class name */
@@ -42,12 +40,12 @@ export interface ModelSelectorProps {
 export function ModelSelector({
   value,
   onChange,
-  capability = 'chat',
-  label = '选择模型',
+  capability = "chat",
+  label = "选择模型",
   disabled = false,
-  size = 'md',
+  size = "md",
   fullWidth = true, // Ignored in MT Select as it is block by default or controlled by container
-  className = '',
+  className = "",
 }: ModelSelectorProps) {
   const [modelsData, setModelsData] = useState<ModelsListResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,9 +59,11 @@ export function ModelSelector({
       try {
         setLoading(true);
         setError(null);
-        const data = await unwrapData(listModels<true>({
-          query: capability ? { capability } : undefined,
-        }));
+        const data = await unwrapData(
+          listModels<true>({
+            query: capability ? { capability } : undefined,
+          }),
+        );
         if (!cancelled) {
           setModelsData(data);
           // Set default value if not already set
@@ -73,7 +73,7 @@ export function ModelSelector({
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : '加载模型列表失败');
+          setError(err instanceof Error ? err.message : "加载模型列表失败");
         }
       } finally {
         if (!cancelled) {
@@ -92,14 +92,12 @@ export function ModelSelector({
     (newValue: string | undefined) => {
       onChange(newValue || null);
     },
-    [onChange]
+    [onChange],
   );
 
   // Render loading state
   if (loading) {
-    return (
-      <div className={`h-10 w-full rounded-lg bg-gray-200 animate-pulse ${className}`} />
-    );
+    return <div className={`h-10 w-full rounded-lg bg-gray-200 animate-pulse ${className}`} />;
   }
 
   // Render error state
@@ -129,7 +127,7 @@ export function ModelSelector({
     <div className={className}>
       <Select
         label={label}
-        value={value || ''}
+        value={value || ""}
         onChange={handleChange}
         disabled={disabled}
         size={size}
@@ -146,21 +144,21 @@ export function ModelSelector({
           if (!model) return element;
 
           return (
-             <div className="flex items-center gap-2">
-                {model.provider === 'openai' ? (
-                  <CloudIcon className="h-4 w-4 text-blue-500" />
-                ) : (
-                  <LocalIcon className="h-4 w-4 text-green-500" />
-                )}
-                <span className="text-sm text-gray-900">{model.display_name}</span>
-             </div>
+            <div className="flex items-center gap-2">
+              {model.provider === "openai" ? (
+                <CloudIcon className="h-4 w-4 text-blue-500" />
+              ) : (
+                <LocalIcon className="h-4 w-4 text-green-500" />
+              )}
+              <span className="text-sm text-gray-900">{model.display_name}</span>
+            </div>
           );
         }}
       >
         {models.map((model) => (
           <Option key={model.id} value={model.id} className="flex items-center gap-2 p-2">
             <div className="flex items-center gap-2 w-full">
-              {model.provider === 'openai' ? (
+              {model.provider === "openai" ? (
                 <CloudIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
               ) : (
                 <LocalIcon className="h-4 w-4 text-green-500 flex-shrink-0" />

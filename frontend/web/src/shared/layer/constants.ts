@@ -23,14 +23,7 @@ export const LAYER_LEVELS = {
 /**
  * 层级名称数组（按优先级排序）
  */
-export const LAYER_NAMES = [
-  'base',
-  'dropdown',
-  'popover',
-  'modal',
-  'toast',
-  'tooltip',
-] as const;
+export const LAYER_NAMES = ["base", "dropdown", "popover", "modal", "toast", "tooltip"] as const;
 
 /**
  * 每个层级内的最大 slot 数量

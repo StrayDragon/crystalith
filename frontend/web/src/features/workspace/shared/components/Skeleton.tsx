@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo } from "react";
 
 type SkeletonLineProps = {
   className?: string;
@@ -15,13 +15,13 @@ type SkeletonListProps = {
   className?: string;
 };
 
-export const SkeletonLine = memo(function SkeletonLine({ className = '' }: SkeletonLineProps) {
+export const SkeletonLine = memo(function SkeletonLine({ className = "" }: SkeletonLineProps) {
   return <div className={`h-3 rounded bg-gray-200 animate-pulse ${className}`.trim()} />;
 });
 
 export const SkeletonCard = memo(function SkeletonCard({
   lines = 3,
-  className = '',
+  className = "",
 }: SkeletonCardProps) {
   const safeLines = Math.max(1, lines);
   return (
@@ -30,7 +30,7 @@ export const SkeletonCard = memo(function SkeletonCard({
         {Array.from({ length: safeLines }).map((_, index) => (
           <SkeletonLine
             key={`skeleton-card-line-${index}`}
-            className={index === safeLines - 1 ? 'w-2/3' : 'w-full'}
+            className={index === safeLines - 1 ? "w-2/3" : "w-full"}
           />
         ))}
       </div>
@@ -41,7 +41,7 @@ export const SkeletonCard = memo(function SkeletonCard({
 export const SkeletonList = memo(function SkeletonList({
   items = 3,
   shortEvery = 3,
-  className = '',
+  className = "",
 }: SkeletonListProps) {
   const safeItems = Math.max(1, items);
   const safeShortEvery = Math.max(1, shortEvery);
@@ -51,7 +51,7 @@ export const SkeletonList = memo(function SkeletonList({
         <div
           key={`skeleton-list-item-${index}`}
           className={`h-10 rounded-lg bg-gray-100 animate-pulse ${
-            (index + 1) % safeShortEvery === 0 ? 'w-2/3' : 'w-full'
+            (index + 1) % safeShortEvery === 0 ? "w-2/3" : "w-full"
           }`}
         />
       ))}

@@ -1,6 +1,6 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { RefObject } from 'react';
-import { Virtuoso } from 'react-virtuoso';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { RefObject } from "react";
+import { Virtuoso } from "react-virtuoso";
 import {
   IconButton,
   Menu,
@@ -8,29 +8,29 @@ import {
   MenuList,
   MenuItem,
   Spinner,
-} from '@material-tailwind/react';
+} from "@material-tailwind/react";
 import {
   DriveFileMove as ConvertIcon,
   Notes as NotesIcon,
   Source as SourceIcon,
   ExpandMore as ExpandMoreIcon,
   FileDownload as DownloadIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
-import type { ChatMessage, Citation, OutputTypeId } from '../../shared/types';
-import CitationsControl from '../../shared/components/citations/CitationsControl';
-import { IconCopy, IconSave, IconSend } from '../../shared/components/Icons';
-import { SkeletonList } from '../../shared/components/Skeleton';
-import { LAYER_LEVELS, useLayer } from '../../../../shared/layer';
-import { copyToClipboard } from '../../../../shared/clipboard';
-import { toast } from '../../../../shared/toast';
-import { useWorkspaceStore } from '../../shared/state/workspaceStore';
-import { useCommands } from '../../shared/hooks/useCommands';
-import { exportQaJsonDownload, exportQaMarkdownDownload } from '../../shared/evidenceExport';
-import { selectMountedUiComponentsV1, type RivuKernel } from 'rivu-kernel';
-import { ComponentRenderer } from 'rivu-react/component-renderer';
-import type { RivuHost } from 'rivu-react/registry';
-import { useKernelState } from 'rivu-react/use-kernel-state';
+import type { ChatMessage, Citation, OutputTypeId } from "../../shared/types";
+import CitationsControl from "../../shared/components/citations/CitationsControl";
+import { IconCopy, IconSave, IconSend } from "../../shared/components/Icons";
+import { SkeletonList } from "../../shared/components/Skeleton";
+import { LAYER_LEVELS, useLayer } from "../../../../shared/layer";
+import { copyToClipboard } from "../../../../shared/clipboard";
+import { toast } from "../../../../shared/toast";
+import { useWorkspaceStore } from "../../shared/state/workspaceStore";
+import { useCommands } from "../../shared/hooks/useCommands";
+import { exportQaJsonDownload, exportQaMarkdownDownload } from "../../shared/evidenceExport";
+import { selectMountedUiComponentsV1, type RivuKernel } from "rivu-kernel";
+import { ComponentRenderer } from "rivu-react/component-renderer";
+import type { RivuHost } from "rivu-react/registry";
+import { useKernelState } from "rivu-react/use-kernel-state";
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -92,46 +92,45 @@ function ChatPanel({
   rivuKernel = null,
   rivuHost = null,
 }: ChatPanelProps) {
+  function MessageMounts({
+    kernel,
+    host,
+    messageId,
+  }: {
+    kernel: RivuKernel;
+    host: RivuHost;
+    messageId: string;
+  }) {
+    const mountedComponentIds = useKernelState(kernel, (state) =>
+      selectMountedUiComponentsV1({ state, messageId, slot: "inline" }).map(
+        (mount) => mount.componentId,
+      ),
+    );
 
-function MessageMounts({
-  kernel,
-  host,
-  messageId,
-}: {
-  kernel: RivuKernel;
-  host: RivuHost;
-  messageId: string;
-}) {
-  const mountedComponentIds = useKernelState(kernel, (state) =>
-    selectMountedUiComponentsV1({ state, messageId, slot: 'inline' }).map(
-      (mount) => mount.componentId,
-    ),
-  );
+    if (mountedComponentIds.length === 0) {
+      return null;
+    }
 
-  if (mountedComponentIds.length === 0) {
-    return null;
+    return (
+      <div className="w-full max-w-full flex flex-col gap-3">
+        {mountedComponentIds.map((componentId) => (
+          <ComponentRenderer
+            key={componentId}
+            kernel={kernel}
+            host={host}
+            componentId={componentId}
+          />
+        ))}
+      </div>
+    );
   }
-
-  return (
-    <div className="w-full max-w-full flex flex-col gap-3">
-      {mountedComponentIds.map((componentId) => (
-        <ComponentRenderer
-          key={componentId}
-          kernel={kernel}
-          host={host}
-          componentId={componentId}
-        />
-      ))}
-    </div>
-  );
-}
 
   const notebookId = useWorkspaceStore((s) => s.activeNotebookId);
   const sessionId = useWorkspaceStore((s) => s.activeSessionId);
   const latestAssistantMessageId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       const msg = messages[i];
-      if (msg?.role === 'assistant') return msg.id;
+      if (msg?.role === "assistant") return msg.id;
     }
     return null;
   }, [messages]);
@@ -146,11 +145,20 @@ function MessageMounts({
   }, [citations]);
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [toolRuns, setToolRuns] = useState<Record<string, { status: 'pending' | 'running' | 'success' | 'error'; outputText?: string | null; errorMessage?: string | null }>>({});
+  const [toolRuns, setToolRuns] = useState<
+    Record<
+      string,
+      {
+        status: "pending" | "running" | "success" | "error";
+        outputText?: string | null;
+        errorMessage?: string | null;
+      }
+    >
+  >({});
   const autoExecSeenRef = useRef(new Set<string>());
   const toolInFlightRef = useRef(new Set<string>());
 
-  const { style: dropdownStyle } = useLayer('dropdown');
+  const { style: dropdownStyle } = useLayer("dropdown");
   const {
     commands,
     isLoading: isCommandsLoading,
@@ -166,7 +174,7 @@ function MessageMounts({
   } | null>(null);
 
   const commandSuggestions = useMemo(() => {
-    if (!commandContext || !commandContext.token.startsWith('/')) return [];
+    if (!commandContext || !commandContext.token.startsWith("/")) return [];
     const token = commandContext.token.toLowerCase();
     return commands.filter((item) => item.trigger.toLowerCase().startsWith(token));
   }, [commands, commandContext]);
@@ -197,13 +205,13 @@ function MessageMounts({
       const cursor = Math.max(0, Math.min(cursorIndex, value.length));
       const before = value.slice(0, cursor);
       const tokenStart =
-        Math.max(before.lastIndexOf(' '), before.lastIndexOf('\n'), before.lastIndexOf('\t')) + 1;
+        Math.max(before.lastIndexOf(" "), before.lastIndexOf("\n"), before.lastIndexOf("\t")) + 1;
       const after = value.slice(cursor);
       const endOffset = after.search(/\s/);
       const tokenEnd = endOffset === -1 ? value.length : cursor + endOffset;
       const token = value.slice(tokenStart, tokenEnd);
 
-      if (!token.startsWith('/')) {
+      if (!token.startsWith("/")) {
         closeCommandMenu();
         return;
       }
@@ -218,16 +226,14 @@ function MessageMounts({
     (suggestion: (typeof commandSuggestions)[number]) => {
       if (!commandContext) return;
       if (!suggestion.enabled) {
-        toast.info('该指令已禁用');
+        toast.info("该指令已禁用");
         return;
       }
-      const afterChar = draft[commandContext.end] ?? '';
-      const needsSpace = afterChar === '' || !/\s/.test(afterChar);
-      const replacement = suggestion.trigger + (needsSpace ? ' ' : '');
+      const afterChar = draft[commandContext.end] ?? "";
+      const needsSpace = afterChar === "" || !/\s/.test(afterChar);
+      const replacement = suggestion.trigger + (needsSpace ? " " : "");
       const nextDraft =
-        draft.slice(0, commandContext.start) +
-        replacement +
-        draft.slice(commandContext.end);
+        draft.slice(0, commandContext.start) + replacement + draft.slice(commandContext.end);
       onDraftChange(nextDraft);
       closeCommandMenu();
 
@@ -264,11 +270,7 @@ function MessageMounts({
   );
 
   const shouldRenderMessageList =
-    isConnected &&
-    !isBlocked &&
-    !isLoadingMessages &&
-    !messagesError &&
-    messages.length > 0;
+    isConnected && !isBlocked && !isLoadingMessages && !messagesError && messages.length > 0;
 
   const handleCopy = useCallback(async (messageId: string, content: string) => {
     const success = await copyToClipboard(content);
@@ -279,26 +281,26 @@ function MessageMounts({
   }, []);
 
   const runQaExportPreview = useCallback(
-    async (params: { format: 'markdown' | 'json'; messageId: number }) => {
+    async (params: { format: "markdown" | "json"; messageId: number }) => {
       if (notebookId == null || sessionId == null) {
-        throw new Error('未选择会话，无法导出预览。');
+        throw new Error("未选择会话，无法导出预览。");
       }
       const query = new URLSearchParams();
-      query.set('session_id', String(sessionId));
-      query.set('message_id', String(params.messageId));
-      query.set('format', params.format);
+      query.set("session_id", String(sessionId));
+      query.set("message_id", String(params.messageId));
+      query.set("format", params.format);
       const url = `/v1/notebooks/${notebookId}/qa/export?${query.toString()}`;
       const resp = await fetch(url);
       if (!resp.ok) {
         throw new Error(`请求失败: HTTP ${resp.status}`);
       }
-      if (params.format === 'json') {
+      if (params.format === "json") {
         const data = (await resp.json()) as unknown;
         const text = JSON.stringify(data, null, 2);
-        return text.length > 4000 ? text.slice(0, 4000) + '\n…' : text;
+        return text.length > 4000 ? text.slice(0, 4000) + "\n…" : text;
       }
       const text = await resp.text();
-      return text.length > 4000 ? text.slice(0, 4000) + '\n…' : text;
+      return text.length > 4000 ? text.slice(0, 4000) + "\n…" : text;
     },
     [notebookId, sessionId],
   );
@@ -306,7 +308,7 @@ function MessageMounts({
   const renderMessage = (message: ChatMessage) => {
     const numericMessageId = Number(message.id);
     const canExportMessage =
-      message.role === 'assistant' &&
+      message.role === "assistant" &&
       isConnected &&
       notebookId != null &&
       sessionId != null &&
@@ -317,7 +319,7 @@ function MessageMounts({
       message.citations && message.citations.length > 0
         ? message.citations.map((citation, index) => {
             const chunkId = citation.chunkId ?? null;
-            const mapped = chunkId != null ? citationIndexMap.get(chunkId) ?? null : null;
+            const mapped = chunkId != null ? (citationIndexMap.get(chunkId) ?? null) : null;
             return {
               citation,
               index: mapped?.index ?? index + 1,
@@ -325,41 +327,34 @@ function MessageMounts({
           })
         : (message.citationChunkIds ?? [])
             .map((chunkId) => citationIndexMap.get(chunkId))
-            .filter(
-              (entry): entry is { citation: Citation; index: number } =>
-                Boolean(entry),
-            );
+            .filter((entry): entry is { citation: Citation; index: number } => Boolean(entry));
 
     const typingCursor =
-      message.role === 'assistant' && isStreaming && streamingMessageId === message.id ? (
+      message.role === "assistant" && isStreaming && streamingMessageId === message.id ? (
         <span className="TypingCursor" aria-hidden="true" />
       ) : null;
 
     return (
       <div
-        className={`flex flex-col gap-2 pb-4 ${message.role === 'user' ? 'items-end' : 'items-start'}`}
+        className={`flex flex-col gap-2 pb-4 ${message.role === "user" ? "items-end" : "items-start"}`}
         data-testid="chat-message-item"
       >
         <div
           className={`text-sm leading-relaxed ${
-            message.role === 'user'
-              ? 'rounded-2xl bg-gray-100 dark:bg-slate-800 px-4 py-2 text-gray-700 dark:text-slate-100'
-              : 'text-gray-800 dark:text-slate-100'
+            message.role === "user"
+              ? "rounded-2xl bg-gray-100 dark:bg-slate-800 px-4 py-2 text-gray-700 dark:text-slate-100"
+              : "text-gray-800 dark:text-slate-100"
           }`}
         >
           <div className="whitespace-pre-wrap">
-            {message.role === 'assistant' ? message.content : message.content}
+            {message.role === "assistant" ? message.content : message.content}
             {typingCursor}
           </div>
         </div>
-        {message.role === 'assistant' && rivuKernel && rivuHost ? (
-          <MessageMounts
-            kernel={rivuKernel}
-            host={rivuHost}
-            messageId={message.id}
-          />
+        {message.role === "assistant" && rivuKernel && rivuHost ? (
+          <MessageMounts kernel={rivuKernel} host={rivuHost} messageId={message.id} />
         ) : null}
-        {message.role === 'assistant' && message.content ? (
+        {message.role === "assistant" && message.content ? (
           <div className="flex items-center gap-1 mt-1 flex-wrap">
             {messageCitationEntries.length > 0 && (
               <>
@@ -385,7 +380,7 @@ function MessageMounts({
               onClick={() => handleCopy(message.id, message.content)}
             >
               <IconCopy className="w-3.5 h-3.5" />
-              {copiedId === message.id ? '已复制' : '复制'}
+              {copiedId === message.id ? "已复制" : "复制"}
             </button>
 
             {canExportMessage && (
@@ -463,7 +458,7 @@ function MessageMounts({
                         转为笔记
                       </div>
                       <MenuItem
-                        onClick={() => onConvertToOutput('PARAGRAPH')}
+                        onClick={() => onConvertToOutput("PARAGRAPH")}
                         className="flex items-center gap-2 py-2 px-3 text-xs"
                         disabled={isConverting}
                       >
@@ -471,7 +466,7 @@ function MessageMounts({
                         <span>段落</span>
                       </MenuItem>
                       <MenuItem
-                        onClick={() => onConvertToOutput('BULLETS')}
+                        onClick={() => onConvertToOutput("BULLETS")}
                         className="flex items-center gap-2 py-2 px-3 text-xs"
                         disabled={isConverting}
                       >
@@ -479,7 +474,7 @@ function MessageMounts({
                         <span>要点</span>
                       </MenuItem>
                       <MenuItem
-                        onClick={() => onConvertToOutput('STRUCTURED')}
+                        onClick={() => onConvertToOutput("STRUCTURED")}
                         className="flex items-center gap-2 py-2 px-3 text-xs"
                         disabled={isConverting}
                       >
@@ -497,7 +492,7 @@ function MessageMounts({
     );
   };
 
-  const messageListKey = `${sessionId ?? 'none'}:${rivuKernel && rivuHost ? 'rivu' : 'plain'}`;
+  const messageListKey = `${sessionId ?? "none"}:${rivuKernel && rivuHost ? "rivu" : "plain"}`;
 
   const renderNotice = useMemo(() => {
     if (!notice) return null;
@@ -520,7 +515,11 @@ function MessageMounts({
 
   return (
     <div className="flex flex-1 flex-col min-h-0 p-0 gap-0">
-      <div className="flex-1 min-h-0 px-4 sm:px-5 lg:px-6 py-3 sm:py-4" role="log" aria-label="对话内容">
+      <div
+        className="flex-1 min-h-0 px-4 sm:px-5 lg:px-6 py-3 sm:py-4"
+        role="log"
+        aria-label="对话内容"
+      >
         {!isConnected ? (
           <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-6 text-xs text-gray-500 dark:text-slate-300">
             未连接到后端服务，请检查服务状态后重试。
@@ -545,8 +544,8 @@ function MessageMounts({
         ) : messages.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-6 text-xs text-gray-500 dark:text-slate-300">
             {hasSources
-              ? '选择来源后提问：输入问题即可基于文档生成回答。'
-              : '添加文档开始分析：上传来源后即可开始提问。'}
+              ? "选择来源后提问：输入问题即可基于文档生成回答。"
+              : "添加文档开始分析：上传来源后即可开始提问。"}
           </div>
         ) : null}
 
@@ -557,8 +556,10 @@ function MessageMounts({
             data={messages}
             computeItemKey={(index, message) => message?.id ?? `chat-message-${index}`}
             initialItemCount={20}
-            followOutput={(isAtBottom) => (isAtBottom ? 'smooth' : false)}
-            itemContent={(_index, message) => (message ? renderMessage(message) : <div className="pb-4" />)}
+            followOutput={(isAtBottom) => (isAtBottom ? "smooth" : false)}
+            itemContent={(_index, message) =>
+              message ? renderMessage(message) : <div className="pb-4" />
+            }
             components={{
               Footer: () => (renderNotice ? <div className="pt-1">{renderNotice}</div> : null),
             }}
@@ -576,7 +577,7 @@ function MessageMounts({
         }}
       >
         <div className="relative flex items-center gap-2 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 sm:px-4 py-2 shadow-sm transition-all duration-200 focus-within:border-gray-400 dark:focus-within:border-slate-500 focus-within:ring-2 focus-within:ring-gray-100 dark:focus-within:ring-slate-700">
-          {isCommandMenuOpen && commandContext?.token.startsWith('/') ? (
+          {isCommandMenuOpen && commandContext?.token.startsWith("/") ? (
             <div
               className="absolute bottom-full left-0 right-0 mb-2"
               style={dropdownStyle}
@@ -589,13 +590,9 @@ function MessageMounts({
                   </div>
                   <div className="flex items-center gap-2">
                     {commandsError ? (
-                      <div className="text-[10px] text-red-600 dark:text-red-300">
-                        加载失败
-                      </div>
+                      <div className="text-[10px] text-red-600 dark:text-red-300">加载失败</div>
                     ) : null}
-                    {isCommandsLoading ? (
-                      <Spinner className="h-3 w-3" color="blue" />
-                    ) : null}
+                    {isCommandsLoading ? <Spinner className="h-3 w-3" color="blue" /> : null}
                   </div>
                 </div>
 
@@ -619,9 +616,9 @@ function MessageMounts({
                             type="button"
                             className={`w-full text-left px-3 py-2 flex items-start gap-3 ${
                               disabled
-                                ? 'opacity-50 cursor-not-allowed'
-                                : 'hover:bg-gray-50 dark:hover:bg-slate-800/70'
-                            } ${isSelected ? 'bg-gray-100 dark:bg-slate-800/70' : ''}`}
+                                ? "opacity-50 cursor-not-allowed"
+                                : "hover:bg-gray-50 dark:hover:bg-slate-800/70"
+                            } ${isSelected ? "bg-gray-100 dark:bg-slate-800/70" : ""}`}
                             onMouseDown={(event) => {
                               event.preventDefault();
                               acceptCommandSuggestion(item);
@@ -637,12 +634,12 @@ function MessageMounts({
                                 </span>
                                 <span
                                   className={`text-[10px] px-1.5 py-0.5 rounded-full border ${
-                                    item.source === 'builtin'
-                                      ? 'border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300'
-                                      : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-200'
+                                    item.source === "builtin"
+                                      ? "border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300"
+                                      : "border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-slate-200"
                                   }`}
                                 >
-                                  {item.source === 'builtin' ? '内置' : '自定义'}
+                                  {item.source === "builtin" ? "内置" : "自定义"}
                                 </span>
                                 {!item.enabled ? (
                                   <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-300">
@@ -683,34 +680,47 @@ function MessageMounts({
             }}
             onFocus={(event) => {
               void refreshCommands();
-              updateCommandMenu(event.currentTarget.value, event.currentTarget.selectionStart ?? event.currentTarget.value.length);
+              updateCommandMenu(
+                event.currentTarget.value,
+                event.currentTarget.selectionStart ?? event.currentTarget.value.length,
+              );
             }}
             onBlur={() => closeCommandMenu()}
-            onClick={(event) => updateCommandMenu(event.currentTarget.value, event.currentTarget.selectionStart ?? event.currentTarget.value.length)}
-            onKeyUp={(event) => updateCommandMenu(event.currentTarget.value, event.currentTarget.selectionStart ?? event.currentTarget.value.length)}
+            onClick={(event) =>
+              updateCommandMenu(
+                event.currentTarget.value,
+                event.currentTarget.selectionStart ?? event.currentTarget.value.length,
+              )
+            }
+            onKeyUp={(event) =>
+              updateCommandMenu(
+                event.currentTarget.value,
+                event.currentTarget.selectionStart ?? event.currentTarget.value.length,
+              )
+            }
             disabled={isSending || isBlocked}
             aria-label="对话输入"
-            placeholder={isBlocked ? '请先创建笔记本' : '开始输入...'}
+            placeholder={isBlocked ? "请先创建笔记本" : "开始输入..."}
             onKeyDown={(event) => {
               if (event.nativeEvent.isComposing) return;
 
-              if (isCommandMenuOpen && commandContext?.token.startsWith('/')) {
-                if (event.key === 'ArrowDown') {
+              if (isCommandMenuOpen && commandContext?.token.startsWith("/")) {
+                if (event.key === "ArrowDown") {
                   event.preventDefault();
                   moveCommandSelection(1);
                   return;
                 }
-                if (event.key === 'ArrowUp') {
+                if (event.key === "ArrowUp") {
                   event.preventDefault();
                   moveCommandSelection(-1);
                   return;
                 }
-                if (event.key === 'Escape') {
+                if (event.key === "Escape") {
                   event.preventDefault();
                   closeCommandMenu();
                   return;
                 }
-                if (event.key === 'Tab' || event.key === 'Enter') {
+                if (event.key === "Tab" || event.key === "Enter") {
                   const candidate =
                     (selectedCommandSuggestion?.enabled ? selectedCommandSuggestion : null) ??
                     commandSuggestions.find((item) => item.enabled) ??
@@ -723,7 +733,7 @@ function MessageMounts({
                 }
               }
 
-              if (event.key !== 'Enter') return;
+              if (event.key !== "Enter") return;
               if (event.shiftKey) return;
               event.preventDefault();
               onSend();

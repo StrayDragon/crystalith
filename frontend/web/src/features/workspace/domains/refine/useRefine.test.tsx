@@ -1,24 +1,24 @@
-import { act, waitFor } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
-import { SWRConfig } from 'swr';
-import type { ReactNode } from 'react';
-import { http, HttpResponse } from 'msw';
+import { act, waitFor } from "@testing-library/react";
+import { beforeEach, expect, test, vi } from "vitest";
+import { SWRConfig } from "swr";
+import type { ReactNode } from "react";
+import { http, HttpResponse } from "msw";
 
-import { renderHook } from '../../../../test-utils/renderHook';
-import { server } from '../../../../test-utils/msw/server';
-import { useWorkspaceStore } from '../../shared/state/workspaceStore';
-import { REFINE_TEMPLATES } from './data/refineTemplates';
-import { useRefine } from './useRefine';
+import { renderHook } from "../../../../test-utils/renderHook";
+import { server } from "../../../../test-utils/msw/server";
+import { useWorkspaceStore } from "../../shared/state/workspaceStore";
+import { REFINE_TEMPLATES } from "./data/refineTemplates";
+import { useRefine } from "./useRefine";
 
 // Mock reason: isolate refine job behavior from independent output queue scheduler lifecycle.
-vi.mock('../../shared/hooks/useOutputQueue', () => ({
+vi.mock("../../shared/hooks/useOutputQueue", () => ({
   useOutputQueue: () => ({
     outputQueueJobs: [],
     enqueueOutputJob: vi.fn(),
     enqueueSlidesJob: vi.fn(),
     hasPendingJobs: () => false,
     outputsLoading: false,
-    outputsError: '',
+    outputsError: "",
     retryOutputs: vi.fn(),
     retryOutputJob: vi.fn(),
     cancelOutputJob: vi.fn(),
@@ -45,34 +45,47 @@ beforeEach(() => {
     sources: [],
     selectedSourceIds: {},
     messages: [],
-    draft: '',
+    draft: "",
     citations: [],
     hoveredCitationChunkId: null,
     hoveredMessageChunkIds: [],
     jumpToCitationChunkId: null,
     outputs: [],
-    outputType: 'FAQ',
-    refineMode: 'paragraph',
-    refinePrompt: '',
+    outputType: "FAQ",
+    refineMode: "paragraph",
+    refinePrompt: "",
     refineJobs: [],
     refineSettings: { autoTrigger: false, asyncQueue: true },
     hasNewOutput: false,
     recentCompletedJobId: null,
-    activePanel: 'chat',
-    createState: 'idle',
-    createName: '',
-    connectionState: 'connecting',
-    uploadState: 'idle',
-    loading: { notebooks: false, sources: false, sessions: false, messages: false, outputs: false, send: false },
-    errors: { notebooks: '', sources: '', sessions: '', messages: '', outputs: '', send: '', create: '' },
+    activePanel: "chat",
+    createState: "idle",
+    createName: "",
+    connectionState: "connecting",
+    uploadState: "idle",
+    loading: {
+      notebooks: false,
+      sources: false,
+      sessions: false,
+      messages: false,
+      outputs: false,
+      send: false,
+    },
+    errors: {
+      notebooks: "",
+      sources: "",
+      sessions: "",
+      messages: "",
+      outputs: "",
+      send: "",
+      create: "",
+    },
   });
 
-  server.use(
-    http.get('*/v1/workspace/tools', () => HttpResponse.json({ tools: [] })),
-  );
+  server.use(http.get("*/v1/workspace/tools", () => HttpResponse.json({ tools: [] })));
 });
 
-test('sets default refine prompt when empty', async () => {
+test("sets default refine prompt when empty", async () => {
   const { result } = renderHook(() => useRefine(), { wrapper: wrapSWR });
 
   await waitFor(() => {
@@ -80,14 +93,14 @@ test('sets default refine prompt when empty', async () => {
   });
 });
 
-test('onGenerateRefine enqueues job with selected source ids', async () => {
+test("onGenerateRefine enqueues job with selected source ids", async () => {
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.post('*/v1/notebooks/:notebook_id/refine/batch', async ({ request }) => {
+    http.post("*/v1/notebooks/:notebook_id/refine/batch", async ({ request }) => {
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
-        outputs: { paragraph: { paragraph: 'Answer', bullets: [], structured: null } },
-        citations: [{ chunk_id: 9, chunk_index: 1, source_name: 'Doc', snippet: 'S' }],
+        outputs: { paragraph: { paragraph: "Answer", bullets: [], structured: null } },
+        citations: [{ chunk_id: 9, chunk_index: 1, source_name: "Doc", snippet: "S" }],
       });
     }),
   );
@@ -96,9 +109,9 @@ test('onGenerateRefine enqueues job with selected source ids', async () => {
 
   act(() => {
     const s = useWorkspaceStore.getState();
-    s.setConnectionState('live');
+    s.setConnectionState("live");
     s.setActiveNotebook(1);
-    s.setRefinePrompt('提炼核心结论');
+    s.setRefinePrompt("提炼核心结论");
     s.setSelectedSources({ 101: true, 102: true });
   });
 
@@ -111,38 +124,37 @@ test('onGenerateRefine enqueues job with selected source ids', async () => {
   });
 
   expect(result.current.refineJobs[0].sourceIds).toEqual([101, 102]);
-  expect(useWorkspaceStore.getState().activePanel).toBe('refine');
+  expect(useWorkspaceStore.getState().activePanel).toBe("refine");
   expect(capturedBody).toEqual({
-    prompt: '提炼核心结论',
+    prompt: "提炼核心结论",
     formats: expect.any(Array),
     source_ids: [101, 102],
   });
 });
 
-
-test('normalizes slides tool config schema from workspace tools', async () => {
+test("normalizes slides tool config schema from workspace tools", async () => {
   server.use(
-    http.get('*/v1/workspace/tools', () =>
+    http.get("*/v1/workspace/tools", () =>
       HttpResponse.json({
         tools: [
           {
-            id: 'slides-slidev',
-            label: '演示',
-            description: '演示文稿',
-            tone: 'indigo',
-            output_type: 'SLIDES',
-            prompt: '生成 slides',
+            id: "slides-slidev",
+            label: "演示",
+            description: "演示文稿",
+            tone: "indigo",
+            output_type: "SLIDES",
+            prompt: "生成 slides",
             enabled: true,
             config_schema: {
-              engine: 'slidev',
+              engine: "slidev",
               preview: {
-                kind: 'external_url',
-                service: 'slidev',
+                kind: "external_url",
+                service: "slidev",
               },
               theme_preset_options: [
                 {
-                  id: 'default',
-                  label: 'Default',
+                  id: "default",
+                  label: "Default",
                 },
               ],
             },
@@ -150,12 +162,12 @@ test('normalizes slides tool config schema from workspace tools', async () => {
         ],
         diagnostics: {
           plugins: {
-            loaded: ['slides-slidev'],
+            loaded: ["slides-slidev"],
             skipped: {},
           },
           slides: {
-            active_plugin_id: 'slides-slidev',
-            engine: 'slidev',
+            active_plugin_id: "slides-slidev",
+            engine: "slidev",
           },
         },
       }),
@@ -166,7 +178,7 @@ test('normalizes slides tool config schema from workspace tools', async () => {
 
   act(() => {
     const s = useWorkspaceStore.getState();
-    s.setConnectionState('live');
+    s.setConnectionState("live");
   });
 
   await waitFor(() => {
@@ -175,10 +187,10 @@ test('normalizes slides tool config schema from workspace tools', async () => {
 
   expect(result.current.tools[0].configSchema?.theme_preset_options).toEqual([
     {
-      id: 'default',
-      label: 'Default',
+      id: "default",
+      label: "Default",
       template: {},
     },
   ]);
-  expect(result.current.tools[0].configSchema?.preview?.service).toBe('slidev');
+  expect(result.current.tools[0].configSchema?.preview?.service).toBe("slidev");
 });

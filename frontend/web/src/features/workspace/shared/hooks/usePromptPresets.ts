@@ -1,5 +1,5 @@
-import { useCallback, useMemo } from 'react';
-import useSWR, { useSWRConfig } from 'swr';
+import { useCallback, useMemo } from "react";
+import useSWR, { useSWRConfig } from "swr";
 
 import {
   createPromptPresetV1PromptPresetsPost as createPromptPreset,
@@ -7,11 +7,11 @@ import {
   listPromptPresetsV1PromptPresetsGet as listPromptPresets,
   updatePromptPresetV1PromptPresetsPresetIdPatch as updatePromptPreset,
   type PromptPresetRead,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
-import { COMMANDS_CACHE_KEY } from './useCommands';
+} from "../../../../api/generated";
+import { unwrapData } from "../../../../api/unwrap";
+import { COMMANDS_CACHE_KEY } from "./useCommands";
 
-export const PROMPT_PRESETS_CACHE_KEY = 'workspace/prompt-presets';
+export const PROMPT_PRESETS_CACHE_KEY = "workspace/prompt-presets";
 
 function normalizePreset(preset: PromptPresetRead): PromptPresetRead {
   return {
@@ -27,12 +27,7 @@ export function usePromptPresets(options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? true;
   const { mutate: globalMutate } = useSWRConfig();
 
-  const {
-    data,
-    error,
-    isLoading,
-    mutate,
-  } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR(
     enabled ? PROMPT_PRESETS_CACHE_KEY : null,
     () => unwrapData(listPromptPresets<true>()),
     { revalidateOnFocus: false },
@@ -55,19 +50,20 @@ export function usePromptPresets(options?: { enabled?: boolean }) {
       systemPrompt: string;
       enabled?: boolean;
     }) => {
-      const created = await unwrapData(createPromptPreset<true>({
-        body: {
-          trigger: payload.trigger,
-          description: payload.description ?? null,
-          system_prompt: payload.systemPrompt,
-          enabled: payload.enabled ?? true,
-        },
-      }));
-
-      await mutate(
-        async (current) => (current ? [...current, created] : [created]),
-        { revalidate: false },
+      const created = await unwrapData(
+        createPromptPreset<true>({
+          body: {
+            trigger: payload.trigger,
+            description: payload.description ?? null,
+            system_prompt: payload.systemPrompt,
+            enabled: payload.enabled ?? true,
+          },
+        }),
       );
+
+      await mutate(async (current) => (current ? [...current, created] : [created]), {
+        revalidate: false,
+      });
       await refreshCommands();
       return normalizePreset(created);
     },
@@ -84,15 +80,17 @@ export function usePromptPresets(options?: { enabled?: boolean }) {
         enabled?: boolean | null;
       },
     ) => {
-      const updated = await unwrapData(updatePromptPreset<true>({
-        path: { preset_id: presetId },
-        body: {
-          trigger: payload.trigger ?? undefined,
-          description: payload.description ?? undefined,
-          system_prompt: payload.systemPrompt ?? undefined,
-          enabled: payload.enabled ?? undefined,
-        },
-      }));
+      const updated = await unwrapData(
+        updatePromptPreset<true>({
+          path: { preset_id: presetId },
+          body: {
+            trigger: payload.trigger ?? undefined,
+            description: payload.description ?? undefined,
+            system_prompt: payload.systemPrompt ?? undefined,
+            enabled: payload.enabled ?? undefined,
+          },
+        }),
+      );
 
       await mutate(
         async (current) =>
@@ -120,7 +118,7 @@ export function usePromptPresets(options?: { enabled?: boolean }) {
   return {
     presets,
     isLoading,
-    error: error ? String(error) : '',
+    error: error ? String(error) : "",
     refreshPresets,
     refreshCommands,
     createCustomPreset,

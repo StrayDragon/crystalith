@@ -1,6 +1,6 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { LAYER_LEVELS, MAX_SLOTS_PER_LAYER } from './constants';
-import type { LayerContextValue, LayerName } from './types';
+import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { LAYER_LEVELS, MAX_SLOTS_PER_LAYER } from "./constants";
+import type { LayerContextValue, LayerName } from "./types";
 
 /**
  * Layer 上下文
@@ -14,7 +14,7 @@ const LayerContext = createContext<LayerContextValue | null>(null);
 export function useLayerContext(): LayerContextValue {
   const context = useContext(LayerContext);
   if (!context) {
-    throw new Error('useLayerContext must be used within a LayerProvider');
+    throw new Error("useLayerContext must be used within a LayerProvider");
   }
   return context;
 }
@@ -45,10 +45,8 @@ export function LayerProvider({ children }: LayerProviderProps) {
         return baseZIndex + safeSlot;
       },
     }),
-    []
+    [],
   );
 
-  return (
-    <LayerContext.Provider value={value}>{children}</LayerContext.Provider>
-  );
+  return <LayerContext.Provider value={value}>{children}</LayerContext.Provider>;
 }
