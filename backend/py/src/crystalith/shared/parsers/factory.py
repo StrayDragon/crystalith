@@ -80,15 +80,17 @@ class ParserFactory:
                 return resolution
 
         # Core-only minimal parsers: txt/md/markdown/csv
+        markdown_mode = normalized_mime == "text/markdown" or extension in {".md", ".markdown"}
+
         if normalized_mime in CSVParser.supported_mime_types:
             return ParserResolution(parser=CSVParser())
         if normalized_mime in TextParser.supported_mime_types:
-            return ParserResolution(parser=TextParser())
+            return ParserResolution(parser=TextParser(preprocess_markdown=markdown_mode))
 
         if extension in CSVParser.supported_extensions:
             return ParserResolution(parser=CSVParser())
         if extension in TextParser.supported_extensions:
-            return ParserResolution(parser=TextParser())
+            return ParserResolution(parser=TextParser(preprocess_markdown=markdown_mode))
 
         required_plugin_id = _recommend_parser_plugin_id(
             extension=extension,

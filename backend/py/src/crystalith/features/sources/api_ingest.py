@@ -31,6 +31,7 @@ from crystalith.shared.json_types import JsonDict, JsonValue
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore
 from crystalith.shared.parsers import TranscriptionProvider
+from crystalith.shared.parsers.interfaces import ParserWithDocumentMetadata
 from crystalith.shared.net import UrlSafetyError, canonicalize_url_for_dedup, validate_url_for_fetch
 
 from .api_common import (
@@ -816,13 +817,16 @@ async def upload_source(
         page_count = parser.page_count
         if page_count is None:
             page_count = _page_count_from_chunks(chunks)
-        source.metadata_ = _build_source_metadata(
+        source_metadata = _build_source_metadata(
             chunks,
             parser_type=parser.parser_type,
             parser_plugin_id=parser_resolution.parser_plugin_id,
             parse_time_ms=parse_time_ms,
             page_count=page_count,
         )
+        if isinstance(parser, ParserWithDocumentMetadata) and parser.document_metadata:
+            source_metadata = {**source_metadata, **parser.document_metadata}
+        source.metadata_ = source_metadata
 
         stage = "embed"
         embeddings = await embedder.embed_batch([chunk.text for chunk in chunks])
