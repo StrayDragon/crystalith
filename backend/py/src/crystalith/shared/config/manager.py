@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import ipaddress
 import json
 import logging
@@ -22,6 +23,26 @@ from .models import OllamaProviderSettings, Settings
 from .ollama_discovery import auto_discover_ollama
 
 logger = logging.getLogger(__name__)
+
+
+def deep_merge(base: dict, overlay: dict) -> dict:
+    """
+    Recursively merge *overlay* into a deep copy of *base*.
+
+    - dict values are merged recursively.
+    - All other types (including lists) in overlay replace the base value.
+    """
+    result = copy.deepcopy(base)
+    for key, overlay_value in overlay.items():
+        if (
+            key in result
+            and isinstance(result[key], dict)
+            and isinstance(overlay_value, dict)
+        ):
+            result[key] = deep_merge(result[key], overlay_value)
+        else:
+            result[key] = copy.deepcopy(overlay_value)
+    return result
 
 
 class ConfigManager:
@@ -54,6 +75,7 @@ class ConfigManager:
         config_path: Path,
         schema_path: Path | None = None,
         secrets_path: Path | None = None,
+        overlay_paths: list[Path] | None = None,
     ) -> None:
         """
         Initialize the config manager.
@@ -62,10 +84,12 @@ class ConfigManager:
             config_path: Path to the main YAML config file
             schema_path: Path to write JSON schema (defaults to config/app.schema.gen.json)
             secrets_path: Optional path to secrets YAML file
+            overlay_paths: Optional list of overlay YAML files to deep-merge on top of base config
         """
         self.config_path = config_path
         self.schema_path = schema_path or Path("config/app.schema.gen.json")
         self.secrets_path = secrets_path
+        self.overlay_paths = overlay_paths or []
         self._settings: Settings | None = None
         self._secrets: dict[str, str] | None = None
 
@@ -116,6 +140,25 @@ class ConfigManager:
             self._secrets = {}
 
         return self._secrets
+
+    def _load_with_overlays(self, secrets: dict[str, str] | None) -> Settings:
+        """Load base config, deep-merge overlay files, then validate."""
+        from .models import resolve_variables
+
+        with open(self.config_path, encoding="utf-8") as f:
+            base_data: dict = yaml.safe_load(f) or {}
+
+        for overlay_path in self.overlay_paths:
+            if not overlay_path.is_file():
+                logger.warning("Config overlay not found, skipping: %s", overlay_path)
+                continue
+            with open(overlay_path, encoding="utf-8") as f:
+                overlay_data: dict = yaml.safe_load(f) or {}
+            base_data = deep_merge(base_data, overlay_data)
+            logger.info("Merged config overlay: %s", overlay_path.resolve())
+
+        resolved = resolve_variables(base_data, secrets)
+        return Settings.model_validate(resolved)
 
     def _normalize_storage_paths(self, settings: Settings) -> None:
         """
@@ -190,49 +233,67 @@ class ConfigManager:
         # Database: keep sqlite unless a candidate is reachable and safe to use.
         db_candidates = [c for c in order_endpoint_candidates(settings.database.url_candidates) if c.strip()]
         if db_candidates:
+            logger.info("Probing database candidates: %s", db_candidates)
+            db_selected = False
             for candidate in db_candidates:
                 if _is_postgres_url_missing_password(candidate):
                     logger.info(
-                        "Skipping postgres candidate without password. "
+                        "  [database] skip %s (no password). "
                         "Hint: set secrets.POSTGRES_PASSWORD or explicitly set database.url.",
+                        candidate,
                     )
                     continue
-                ok, _ = probe_tcp_endpoint(candidate, timeout_s=0.4)
+                ok, err = probe_tcp_endpoint(candidate, timeout_s=0.4)
                 if ok:
+                    logger.info("  [database] selected: %s", candidate)
                     settings.database.url = candidate
+                    db_selected = True
                     break
+                logger.debug("  [database] unreachable: %s (%s)", candidate, err)
+            if not db_selected:
+                logger.info("  [database] no candidate reachable, keeping default: %s", settings.database.url)
 
         # Vector store: prefer remote Chroma when reachable; otherwise keep YAML host/port as-is.
         if settings.vector_storage.provider == "chroma":
             chroma_candidates = [
                 c for c in order_endpoint_candidates(settings.vector_storage.chroma.endpoint_candidates) if c.strip()
             ]
+            if chroma_candidates:
+                logger.info("Probing chroma candidates: %s", chroma_candidates)
+            chroma_selected = False
             for candidate in chroma_candidates:
-                ok, _ = probe_tcp_endpoint(candidate, timeout_s=0.4)
+                ok, err = probe_tcp_endpoint(candidate, timeout_s=0.4)
                 if not ok:
+                    logger.debug("  [chroma] unreachable: %s (%s)", candidate, err)
                     continue
                 target = tcp_target_from_endpoint(candidate)
                 if target is None:
                     continue
+                logger.info("  [chroma] selected: %s", candidate)
                 settings.vector_storage.chroma.host = target.host
                 settings.vector_storage.chroma.port = target.port
-                # Keep diagnostics aligned with the chosen endpoint.
                 settings.optional_services.chroma.endpoint = candidate
+                chroma_selected = True
                 break
+            if chroma_candidates and not chroma_selected:
+                logger.info("  [chroma] no candidate reachable, using embedded chroma")
 
         # Ollama: align all ollama model hosts to the first reachable candidate (if any).
         ollama_candidates = [
             c for c in order_endpoint_candidates(settings.optional_services.ollama.endpoint_candidates) if c.strip()
         ]
         if ollama_candidates:
+            logger.info("Probing ollama candidates: %s", ollama_candidates)
             selected_ollama: str | None = None
             for candidate in ollama_candidates:
-                ok, _ = probe_tcp_endpoint(candidate, timeout_s=0.4)
+                ok, err = probe_tcp_endpoint(candidate, timeout_s=0.4)
                 if ok:
                     selected_ollama = candidate
                     break
+                logger.debug("  [ollama] unreachable: %s (%s)", candidate, err)
 
             if selected_ollama:
+                logger.info("  [ollama] selected: %s", selected_ollama)
                 for model in settings.models.available:
                     if model.provider != "ollama":
                         continue
@@ -243,6 +304,8 @@ class ConfigManager:
                     else:
                         model.provider_config = {"host": selected_ollama}
                 settings.optional_services.ollama.endpoint = selected_ollama
+            else:
+                logger.info("  [ollama] no candidate reachable")
 
     def _apply_model_defaults(self, settings: Settings) -> None:
         """
@@ -401,8 +464,11 @@ class ConfigManager:
             # Load secrets if available
             secrets = self._load_secrets()
 
-            # Load and validate settings with Pydantic
-            settings = Settings.from_yaml(self.config_path, secrets=secrets)
+            # Load base config and merge overlays
+            if self.overlay_paths:
+                settings = self._load_with_overlays(secrets)
+            else:
+                settings = Settings.from_yaml(self.config_path, secrets=secrets)
             self._apply_endpoint_candidates(settings)
             self._apply_model_defaults(settings)
             self._normalize_storage_paths(settings)
@@ -440,12 +506,18 @@ class ConfigManager:
             ) from exc
 
         self._settings = settings
+        overlay_info = ""
+        if self.overlay_paths:
+            names = [p.name for p in self.overlay_paths if p.is_file()]
+            if names:
+                overlay_info = f" + overlays: {names}"
         logger.info(
-            "Loaded config '%s' v%s (schema: %s) from %s",
+            "Loaded config '%s' v%s (schema: %s) from %s%s",
             settings.name,
             settings.version,
             settings.schema_version,
             self.config_path.resolve(),
+            overlay_info,
         )
         return settings
 
