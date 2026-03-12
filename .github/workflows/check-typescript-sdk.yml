@@ -7,7 +7,7 @@ on:
       - ".github/workflows/check-typescript-sdk.yml"
       - ".gitmodules"
       - "backend/py/**"
-      - "frontend/web/openapi.json"
+      - "frontend/web/openapi.gen.json"
       - "justfile"
       - "vendor/crystalith-sdks"
   pull_request:
@@ -15,7 +15,7 @@ on:
       - ".github/workflows/check-typescript-sdk.yml"
       - ".gitmodules"
       - "backend/py/**"
-      - "frontend/web/openapi.json"
+      - "frontend/web/openapi.gen.json"
       - "justfile"
       - "vendor/crystalith-sdks"
   workflow_dispatch:

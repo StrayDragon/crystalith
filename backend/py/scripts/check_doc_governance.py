@@ -5,9 +5,8 @@ from __future__ import annotations
 
 import os
 import sys
+import tomllib
 from pathlib import Path
-
-import yaml
 
 
 REQUIRED_REFERENCE_PAGES = [
@@ -27,6 +26,60 @@ def _repo_root() -> Path:
 
 def _fail(message: str) -> None:
     print(f"[doc-governance-check] {message}", file=sys.stderr)
+
+
+def _load_docs_project_config(*, repo_root: Path) -> tuple[Path, dict[str, object]] | None:
+    config_path = repo_root / "docs/zensical.toml"
+    if not config_path.is_file():
+        _fail("Missing docs/zensical.toml.")
+        return None
+
+    payload = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    project = payload.get("project")
+    if not isinstance(project, dict):
+        _fail("docs/zensical.toml missing required [project] table.")
+        return None
+
+    return config_path, project
+
+
+def _docs_root(*, repo_root: Path) -> Path | None:
+    loaded = _load_docs_project_config(repo_root=repo_root)
+    if loaded is None:
+        return None
+    config_path, project = loaded
+
+    docs_dir = project.get("docs_dir")
+    if not isinstance(docs_dir, str) or not docs_dir.strip():
+        _fail("docs/zensical.toml missing required project.docs_dir.")
+        return None
+    if docs_dir != "doc":
+        _fail(f'docs/zensical.toml project.docs_dir MUST be "doc" (got: {docs_dir!r}).')
+        return None
+
+    site_dir = project.get("site_dir")
+    if not isinstance(site_dir, str) or not site_dir.strip():
+        _fail("docs/zensical.toml missing required project.site_dir.")
+        return None
+    if site_dir != "site":
+        _fail(f'docs/zensical.toml project.site_dir MUST be "site" (got: {site_dir!r}).')
+        return None
+
+    docs_base = config_path.parent.resolve()
+    docs_root = (docs_base / Path(docs_dir)).resolve()
+    if not docs_root.is_relative_to(docs_base):
+        _fail(f"docs/zensical.toml project.docs_dir must resolve under {docs_base} (got: {docs_root}).")
+        return None
+    if not docs_root.is_dir():
+        _fail(f"docs/zensical.toml project.docs_dir does not exist: {docs_root}.")
+        return None
+
+    expected = (repo_root / "docs/doc").resolve()
+    if docs_root != expected:
+        _fail(f"docs root MUST be {expected} (got: {docs_root}).")
+        return None
+
+    return docs_root
 
 
 def _check_claude_symlink(repo_root: Path) -> bool:
@@ -69,28 +122,26 @@ def _collect_nav_paths(value: object) -> set[str]:
     return found
 
 
-def _check_mkdocs_nav(repo_root: Path) -> bool:
-    mkdocs_path = repo_root / "mkdocs.yml"
-    if not mkdocs_path.is_file():
-        _fail("Missing mkdocs.yml at repo root.")
+def _check_docs_nav(*, repo_root: Path) -> bool:
+    loaded = _load_docs_project_config(repo_root=repo_root)
+    if loaded is None:
         return False
-    payload = yaml.safe_load(mkdocs_path.read_text(encoding="utf-8")) or {}
-    nav = payload.get("nav")
+    _, project = loaded
+    nav = project.get("nav")
     nav_paths = _collect_nav_paths(nav)
 
     ok = True
     for rel in REQUIRED_REFERENCE_PAGES:
         if rel not in nav_paths:
-            _fail(f"mkdocs.yml nav MUST include: {rel}")
+            _fail(f"docs/zensical.toml nav MUST include: {rel}")
             ok = False
     return ok
 
 
-def _check_reference_headers(repo_root: Path) -> bool:
-    docs_dir = repo_root / "docs/content"
+def _check_reference_headers(*, docs_root: Path) -> bool:
     ok = True
     for rel in REQUIRED_REFERENCE_PAGES:
-        path = docs_dir / rel
+        path = docs_root / rel
         if not path.is_file():
             _fail(f"Missing generated reference page: {path}")
             ok = False
@@ -106,8 +157,12 @@ def main() -> int:
     repo_root = _repo_root()
     ok = True
     ok = _check_claude_symlink(repo_root) and ok
-    ok = _check_mkdocs_nav(repo_root) and ok
-    ok = _check_reference_headers(repo_root) and ok
+    docs_root = _docs_root(repo_root=repo_root)
+    if docs_root is None:
+        ok = False
+    else:
+        ok = _check_docs_nav(repo_root=repo_root) and ok
+        ok = _check_reference_headers(docs_root=docs_root) and ok
     return 0 if ok else 1
 
 

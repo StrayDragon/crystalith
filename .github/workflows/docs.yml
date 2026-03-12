@@ -6,7 +6,7 @@ on:
     paths:
       - ".github/workflows/docs.yml"
       - "docs/**"
-      - "mkdocs.yml"
+      - "docs/zensical.toml"
   workflow_dispatch:
 
 permissions:
@@ -45,12 +45,12 @@ jobs:
         run: uv sync --project docs --frozen
 
       - name: Build docs
-        run: uv run --project docs zensical build --clean -f mkdocs.yml
+        run: uv run --project docs zensical build --clean -f docs/zensical.toml
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: docs/site
 
   deploy:
     # GitHub Pages is not available for private repositories on all plans.

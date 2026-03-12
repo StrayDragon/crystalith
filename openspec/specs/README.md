@@ -1,6 +1,6 @@
 # OpenSpec Canonical Specs (Consolidated)
 
-本目录已按“最新主干 + 去重合并”完成收敛。当前 canonical 规范为统一命名的 25 个 spec；旧路径 deprecated 薄壳已在 batch-2 中移除。
+本目录已按“最新主干 + 去重合并”完成收敛；旧路径 deprecated 薄壳已在 batch-2 中移除。
 
 ## Canonical Reading Order
 
@@ -32,6 +32,7 @@
    - `studio-output-types/spec.md`
 6. 交付与质量
    - `doc-governance/spec.md`
+   - `docs-site/spec.md`
    - `delivery-and-deployment/spec.md`
    - `quality-and-regression/spec.md`
 
@@ -59,7 +60,7 @@
 - `output-rendering`, `output-payload-typing` -> `output-rendering-and-typing`
 - `studio-slides`, `studio-slides-drafts`, `studio-slides-sse`, `studio-slides-preview` -> `studio-slides-workflow`
 - `studio-briefing`, `studio-guide`, `studio-flashcard`, `studio-mindmap`, `studio-quiz`, `studio-timeline` -> `studio-output-types`
-- `deployment`, `deployments-layout`, `docs-site` -> `delivery-and-deployment`
+- `deployment`, `deployments-layout` -> `delivery-and-deployment`
 - `ci-cd`, `api-regression-suite`, `llm-evaluation`, `test-stability` -> `quality-and-regression`
 
 ## Deprecation Policy

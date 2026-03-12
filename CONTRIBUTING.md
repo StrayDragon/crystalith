@@ -2,7 +2,7 @@
 
 Thanks for your interest in contributing to Crystalith.
 
-If you want a more detailed walkthrough, see `docs/content/contributing.md`.
+If you want a more detailed walkthrough, see `docs/doc/contributing.md`.
 
 ## Quick start (local dev)
 

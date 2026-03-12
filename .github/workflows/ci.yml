@@ -5,13 +5,13 @@ on:
     branches: [main]
     paths-ignore:
       - "docs/**"
-      - "mkdocs.yml"
+      - "docs/zensical.toml"
       - "openspec/**"
       - "**/*.md"
   pull_request:
     paths-ignore:
       - "docs/**"
-      - "mkdocs.yml"
+      - "docs/zensical.toml"
       - "openspec/**"
       - "**/*.md"
   workflow_dispatch:
@@ -57,7 +57,7 @@ jobs:
           cd backend/py
           just config-schema
           cd ../..
-          git diff --exit-code -- config/app.schema.json
+          git diff --exit-code -- config/app.schema.gen.json
 
       - name: Lint (incremental baseline)
         run: |
@@ -96,7 +96,7 @@ jobs:
       - name: Check OpenAPI schema is up to date
         run: |
           cd backend/py
-          uv run scripts/api_schema.py check -s ../../frontend/web/openapi.json
+          uv run scripts/api_schema.py check -s ../../frontend/web/openapi.gen.json
 
   frontend:
     runs-on: ubuntu-latest
