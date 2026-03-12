@@ -20,6 +20,40 @@
 - 系统提供提醒、候选与建议。
 - 本次不自动执行批量整理、删除或重命名。
 
+## 已确定的具体定义
+
+### Freshness 对象模型
+
+```yaml
+FreshnessSignal:
+  source_id: string
+  last_ingested_at: datetime
+  source_modified_at: datetime | null   # 来自 connector sync_check
+  staleness_score: float                # 0.0 (fresh) ~ 1.0 (stale)
+  staleness_reason: enum                # time_decay | source_updated | manual_flag
+  suggested_action: enum                # none | re_ingest | re_embed | review
+
+DuplicateCandidate:
+  source_a_id: string
+  source_b_id: string
+  similarity_score: float
+  overlap_type: enum                    # exact | near_duplicate | partial_overlap
+  suggested_action: enum                # merge | ignore | review
+```
+
+### 建议 vs 自动处理
+
+- v1 大多数治理动作为 **建议**，用户确认后执行
+- **自动处理场景**（v1 支持）：
+  - connector sync_check 检测到 `source_updated` 时，自动标记 freshness 信号（不自动 re-ingest，但自动标记）
+  - 完全相同内容（exact duplicate）的自动提示（staleness_score = 1.0 时自动高亮）
+- 执行动作使用 background-jobs-and-task-runtime 的 Job 模型
+- 非 exact 的重复处理和批量清理保持为手动确认
+
+### 后置项说明
+
+- D4 中的"批量整理、删除或重命名"后置条件：**待自动标记功能验证后评估，属于"确认需要但延迟"类型**
+
 ## 非目标
 
 - 不自动接管用户知识库整理。

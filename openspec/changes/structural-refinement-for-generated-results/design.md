@@ -20,6 +20,35 @@
 - 结果结构和 refinement 动作都应消费上游稳定语义。
 - 不为了支持局部操作而改写生成类型框架。
 
+## 已确定的具体定义
+
+### 结构单元
+
+- `section`（章节/段落）
+- `evidence_block`（引用/证据块）
+- `conclusion`（结论/摘要）
+- `list_item`（列表项）
+
+### Refinement 动作集合
+
+| 动作 | 作用范围 | 描述 |
+|------|---------|------|
+| `expand` | section / evidence_block | 展开一个结构单元，增加深度 |
+| `compress` | section | 压缩，保留核心观点 |
+| `rewrite` | section / conclusion | 重写以改变风格/严谨度 |
+| `reorder` | 同级 sections | 调整章节顺序 |
+| `regenerate_local` | 任意单元 | 保留上下文，仅重新生成该单元 |
+
+### 局部 refinement vs 整篇重生成判定规则
+
+- 如果操作影响 **1-2 个相邻结构单元** → 局部 refinement
+- 如果操作影响 **>50% 的结构单元** 或 **改变核心论点** → 建议整篇重生成
+- 如果局部 refinement 后 **引用链断裂** → 提示用户选择：修复引用 or 整篇重生成
+
+### 后置项说明
+
+- D4 中的"反向重写公共框架"后置条件：**本 change 永远不允许反向修改上游框架**
+
 ## 非目标
 
 - 不把所有修改需求都写成局部 refinement。

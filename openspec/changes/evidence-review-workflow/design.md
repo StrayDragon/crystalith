@@ -20,6 +20,33 @@
 - 本次不扩展到多层审批、组织流或复杂权限会签。
 - 重点是把最小可用审阅闭环固定下来。
 
+## 已确定的具体定义
+
+### 最小审阅状态集
+
+| 状态 | 含义 |
+|------|------|
+| `draft` | 结果生成后的默认状态 |
+| `pending_review` | 用户显式点击"开始审阅"后进入 |
+| `confirmed` | 所有标记的 citation 均已确认通过 |
+| `needs_revision` | 至少一条 citation 被标记为需修订 |
+
+### 状态转移规则
+
+- `draft` → `pending_review`：用户显式点击"开始审阅"
+- `pending_review` → `confirmed`：所有标记的 citation 均已确认
+- `pending_review` → `needs_revision`：至少一条 citation 被标记为需修订
+- `needs_revision` → `pending_review`：用户完成修订后重新提交审阅
+
+### 与质量门的连接
+
+- 质量门的"警告"可以作为建议用户启动 evidence review 的触发提示
+- 质量门不强制启动审阅，审阅始终由用户显式发起
+
+### 后置项说明
+
+- D4 中的"多层审批、组织流或复杂权限会签"后置条件：**不确定是否需要，待用户反馈后观察**
+
 ## 非目标
 
 - 不构建组织级审批系统。

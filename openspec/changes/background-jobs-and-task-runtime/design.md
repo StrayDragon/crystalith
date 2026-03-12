@@ -31,6 +31,40 @@ Crystalith 已经有越来越多需要异步执行的动作，但它们的生命
 - `retry`: 对同一任务定义的重新执行动作。
 - `cancel`: 对正在进行任务的显式停止动作。
 
+## 已确定的具体定义
+
+### 任务与业务流程的装配关系
+
+```
+JobDefinition（通用）
+  ├── type: string        # "generation" | "import" | "sync_check" | "batch_generation"
+  ├── params: dict        # 业务参数（传给具体执行器）
+  └── executor: string    # 执行器标识
+
+JobExecutor（按业务注册）
+  ├── GenerationExecutor     → 消费 generation-core 管线
+  ├── ImportExecutor         → 消费 source-connectors 导入流程
+  ├── SyncCheckExecutor      → 消费 connector sync_check
+  └── BatchGenerationExecutor → 批量编排多个 GenerationExecutor
+```
+
+**装配原则**：Job runtime 提供 lifecycle + progress + retry；具体业务逻辑由 Executor 实现。Job 不了解业务细节，Executor 不关心任务状态管理。
+
+### 通用任务 UI vs 业务界面分工
+
+| 功能 | 归属 |
+|------|------|
+| 任务列表、状态展示、进度条 | **通用任务 UI** |
+| 取消、重试按钮 | **通用任务 UI** |
+| 任务历史查看 | **通用任务 UI** |
+| 生成结果预览/操作 | **业务界面**（Studio） |
+| 导入范围选择/确认 | **业务界面**（Connector UI） |
+| 同步检查 diff 展示 | **业务界面**（Connector UI） |
+
+### 后置项说明
+
+- D5 中的"优先级、公平性、配额或跨租户调度策略"后置条件：**确认需要但延迟到多租户场景出现后**
+
 ## 非目标
 
 - 不在本 change 中统一所有业务工作流本身。

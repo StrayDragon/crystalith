@@ -1,8 +1,8 @@
 ## 1. 转换路径与边界
 
-- [ ] 1.1 定义支持的跨类型转换路径集合与适用前提
-- [ ] 1.2 明确保留内容、丢弃内容与需要重建的部分
-- [ ] 1.3 明确哪些路径明确不支持并回退为重新生成
+- [x] 1.1 定义支持的跨类型转换路径集合与适用前提（已确定：briefing→slides, briefing→guide, timeline→briefing, QA→briefing，见 design.md）
+- [x] 1.2 明确保留内容、丢弃内容与需要重建的部分（已确定：每条路径有明确的保留/重建规则，见 design.md）
+- [x] 1.3 明确哪些路径明确不支持并回退为重新生成（已确定：flashcard→briefing, mindmap→slides, 任意→quiz 不支持）
 
 ## 2. lineage 与接口语义
 

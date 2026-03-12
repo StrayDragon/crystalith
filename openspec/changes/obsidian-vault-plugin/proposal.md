@@ -1,12 +1,16 @@
+## 合并说明
+
+> 本 change 已合并了 `source-connectors-framework` 的全部职责。框架定义和 Obsidian 官方插件统一在此管理。第二个框架验证连接器确定为 **Local Directory**。
+
 ## Why
 
-旧的 `add-obsidian-integration` 方案把 Obsidian 当作“文件夹批量上传”。这个方向对小型 vault 尚可，但不适合真实用户常见的中大型 vault（数百到数千篇笔记），主要问题有：
+旧的 `add-obsidian-integration` 方案把 Obsidian 当作"文件夹批量上传"。这个方向对小型 vault 尚可，但不适合真实用户常见的中大型 vault（数百到数千篇笔记），主要问题有：
 
 - 一次性全量导入成本过高，用户通常只想先接入一部分内容
 - vault 会持续变化，单次上传无法表达后续的同步检查
 - 如果每个连接器插件都各自实现一套 UI、范围选择、同步对比和导入流程，插件开发成本会持续膨胀，宿主体验也会碎片化
 
-因此，本变更不再把目标定义为“做一个 Obsidian 特制流程”，而是定义为：
+因此，本变更不再把目标定义为"做一个 Obsidian 特制流程"，而是定义为：
 **由宿主内置通用的 source connector framework，再由 Obsidian 作为第一个官方连接器插件接入。**
 
 ## What Changes
@@ -15,7 +19,8 @@
 - 已完成：标准 Markdown 上传链路增加 Obsidian 兼容预处理，支持 `wikilink`、`embed`、`frontmatter`。
 - 新增：定义 `source connector framework`，由宿主提供通用快照预览、范围选择、同步检查、进度与诊断能力。
 - 新增：定义 `SourceConnectorPlugin`，让插件只负责枚举外部资料、读取内容和提供少量特有配置。
-- 新增：Obsidian 官方插件作为该 framework 的首个实现，用于验证“大 vault + 选择性导入 + 显式 sync_check”模型。
+- 新增：Obsidian 官方插件作为该 framework 的首个实现，用于验证"大 vault + 选择性导入 + 显式 sync_check"模型。
+- 新增：Local Directory 作为第二个验证连接器，用于检验框架的通用性。
 
 ## Capabilities
 

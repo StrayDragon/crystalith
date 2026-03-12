@@ -1,3 +1,13 @@
+## ⚠️ 已合并
+
+> 本 change 已合并到 `obsidian-vault-plugin`。框架定义和 Obsidian 官方插件统一在一个 change 中管理，因为 Obsidian 是框架的唯一验证者，拆开讨论会造成两头都"待定"。第二个验证连接器确定为 **Local Directory**。
+>
+> 请查看 `openspec/changes/obsidian-vault-plugin/` 获取最新内容。
+
+---
+
+## （以下为合并前的原始内容，保留作为历史参考）
+
 ## Why
 
 Crystalith 现在已经有上传文件、从 URL 导入、以及正在讨论的 vault 类接入需求。但如果每新增一种资料源都单独做一套导入入口、预览界面、范围选择和同步逻辑，系统会很快碎片化：

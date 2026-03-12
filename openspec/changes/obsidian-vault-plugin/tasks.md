@@ -35,4 +35,12 @@
 - [ ] 5.2 准备 100+ 文件 vault 样本，验证快照与选择性导入模型
 - [ ] 5.3 准备 1000+ 文件 vault 样本，验证 `sync_check` 的响应时间和候选稳定性
 - [ ] 5.4 验证未确认前 `sync_check` 不会隐式修改现有来源
-- [ ] 5.5 验证第二个非 Obsidian 连接器可复用宿主通用 UI，而不需要重做整套流程
+- [ ] 5.5 验证第二个非 Obsidian 连接器（**Local Directory**）可复用宿主通用 UI，而不需要重做整套流程
+
+## 6. 框架通用性验证（合并自 source-connectors-framework）
+
+- [ ] 6.1 定义 connector、binding、snapshot、import_scope、sync_check 的宿主对象模型
+- [ ] 6.2 明确哪些能力属于宿主，哪些属于 connector 实现者（已在 design D2 确定）
+- [ ] 6.3 明确 notebook-scoped binding 的持久化边界（已在 design D3 确定）
+- [ ] 6.4 明确宿主通用 UI/流程壳子的责任范围（已在 design D2 确定）
+- [ ] 6.5 实现 Local Directory 连接器插件作为第二验证者
