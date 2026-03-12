@@ -3,11 +3,13 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from crystalith.shared.env import CRYSTALITH_DATA_DIR
+
 PREVIEW_MARKDOWN_NAME = "slides.md"
 
 
 def _data_dir() -> Path:
-    data_dir_value = os.environ.get("CRYSTALITH_DATA_DIR")
+    data_dir_value = os.environ.get(CRYSTALITH_DATA_DIR)
     if data_dir_value and data_dir_value.strip():
         return Path(data_dir_value)
 

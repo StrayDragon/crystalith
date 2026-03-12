@@ -40,16 +40,16 @@ models:
 
 def test_config_manager_schema_reference_and_comment(tmp_path) -> None:
     config_path = tmp_path / "app.yaml"
-    schema_path = tmp_path / "app.schema.json"
+    schema_path = tmp_path / "app.schema.gen.json"
 
     manager = ConfigManager(config_path=config_path, schema_path=schema_path)
-    assert manager.schema_reference() == "./app.schema.json"
+    assert manager.schema_reference() == "./app.schema.gen.json"
     assert manager.schema_comment().startswith("# yaml-language-server: $schema=")
 
 
 def test_config_manager_write_schema(tmp_path) -> None:
     config_path = tmp_path / "app.yaml"
-    schema_path = tmp_path / "app.schema.json"
+    schema_path = tmp_path / "app.schema.gen.json"
     manager = ConfigManager(config_path=config_path, schema_path=schema_path)
 
     written = manager.write_schema()
@@ -62,7 +62,7 @@ def test_config_manager_write_schema(tmp_path) -> None:
 
 def test_config_manager_validate_yaml_with_schema_reports_errors(tmp_path) -> None:
     config_path = tmp_path / "app.yaml"
-    schema_path = tmp_path / "app.schema.json"
+    schema_path = tmp_path / "app.schema.gen.json"
 
     manager = ConfigManager(config_path=config_path, schema_path=schema_path)
     manager.write_schema()
@@ -89,7 +89,7 @@ def test_config_manager_validate_yaml_with_schema_reports_errors(tmp_path) -> No
 
 def test_config_manager_load_secrets_from_file_and_directory(tmp_path) -> None:
     config_path = tmp_path / "app.yaml"
-    schema_path = tmp_path / "app.schema.json"
+    schema_path = tmp_path / "app.schema.gen.json"
 
     secrets_file = tmp_path / "secrets.yaml"
     _write_yaml(secrets_file, "OPENAI_API_KEY: sk-test\n")
@@ -144,7 +144,7 @@ models:
 """,
     )
 
-    manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.json")
+    manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.gen.json")
 
     # Mock reason: keep config load test deterministic and independent of local Ollama availability.
     monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
@@ -159,7 +159,7 @@ def test_config_manager_ignores_legacy_env_overrides(tmp_path, monkeypatch) -> N
     config_path = tmp_path / "app.yaml"
     _write_yaml(config_path, _minimal_config_yaml())
 
-    manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.json")
+    manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.gen.json")
 
     # Mock reason: legacy env vars may be set in developer shells; the loader must ignore them.
     monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./override.db")
@@ -217,7 +217,7 @@ models:
         <<: *openai_default
 """,
     )
-    manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.json")
+    manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.gen.json")
 
     # Mock reason: keep config load test deterministic and independent of local Ollama availability.
     monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
@@ -268,7 +268,7 @@ models:
         <<: *openai_default
 """,
     )
-    manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.json")
+    manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.gen.json")
 
     # Mock reason: keep config load test deterministic and independent of local Ollama availability.
     monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
@@ -312,7 +312,7 @@ def test_config_manager_validate_config_returns_warnings() -> None:
 
 def test_config_manager_load_roundtrip_with_schema(tmp_path, monkeypatch) -> None:
     config_path = tmp_path / "app.yaml"
-    schema_path = tmp_path / "app.schema.json"
+    schema_path = tmp_path / "app.schema.gen.json"
     _write_yaml(config_path, _minimal_config_yaml())
 
     manager = ConfigManager(config_path=config_path, schema_path=schema_path)
@@ -385,7 +385,7 @@ database:
     - "{reachable}"
 """,
         )
-        manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.json")
+        manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.gen.json")
 
         # Mock reason: keep config load test deterministic and independent of local Ollama availability.
         monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
@@ -436,7 +436,7 @@ database:
     - "{candidate}"
 """,
         )
-        manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.json")
+        manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.gen.json")
 
         # Mock reason: keep config load test deterministic and independent of local Ollama availability.
         monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)

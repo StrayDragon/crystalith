@@ -15,6 +15,17 @@ from crystalith.shared.agents.generation_preference import GenerationPreference,
 from crystalith.shared.cache.epochs import get_sources_epoch
 from crystalith.shared.context import TokenCounter
 from crystalith.shared.db import Chunk, Source
+from crystalith.shared.env import (
+    CRYSTALITH_RETRIEVAL_ASSEMBLY_CACHE,
+    CRYSTALITH_RETRIEVAL_ASSEMBLY_CACHE_TTL_S,
+    CRYSTALITH_RETRIEVAL_FUSION_STRATEGY,
+    CRYSTALITH_RETRIEVAL_MULTI_QUERY,
+    RETRIEVAL_ASSEMBLY_CACHE_TTL_S_DEFAULT,
+    RETRIEVAL_FUSION_STRATEGY_DEFAULT,
+    env_bool,
+    env_bool_optional,
+    env_float,
+)
 from crystalith.shared.json_types import JsonValue
 from crystalith.shared.types import OutputType, SourceStatus
 from crystalith.shared.utils import normalize_whitespace
@@ -58,14 +69,8 @@ class RetrievedContext:
     stats: RetrievalStats
     timings_ms: dict[str, int]
 
-MULTI_QUERY_ENV = "CRYSTALITH_RETRIEVAL_MULTI_QUERY"
-FUSION_STRATEGY_ENV = "CRYSTALITH_RETRIEVAL_FUSION_STRATEGY"
-ASSEMBLY_CACHE_ENV = "CRYSTALITH_RETRIEVAL_ASSEMBLY_CACHE"
-ASSEMBLY_CACHE_TTL_ENV = "CRYSTALITH_RETRIEVAL_ASSEMBLY_CACHE_TTL_S"
-
 FUSION_STRATEGY_RRF = "rrf"
 FUSION_STRATEGY_MAX_SCORE = "max_score"
-ASSEMBLY_CACHE_DEFAULT_TTL_S = 20.0
 
 OUTPUT_TYPE_SEED_HINTS: dict[OutputType, list[str]] = {
     OutputType.TIMELINE: ["提取日期/时间点与关键事件，并按时间顺序组织。"],
@@ -146,41 +151,17 @@ def _dedup_text_key(text: str) -> str:
     return hashlib.sha256(cleaned.encode("utf-8")).hexdigest()
 
 
-def _env_bool(name: str, default: bool = False) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() not in {"0", "false", "no", "off"}
-
-
-def _env_bool_optional(name: str) -> bool | None:
-    value = os.getenv(name)
-    if value is None:
-        return None
-    return value.strip().lower() not in {"0", "false", "no", "off"}
-
-
-def _env_float(name: str, default: float) -> float:
-    value = os.getenv(name)
-    if value is None:
-        return float(default)
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return float(default)
-
-
 def _resolve_fusion_strategy() -> str:
-    value = os.getenv(FUSION_STRATEGY_ENV)
+    value = os.getenv(CRYSTALITH_RETRIEVAL_FUSION_STRATEGY)
     if value is None:
-        return FUSION_STRATEGY_RRF
+        return RETRIEVAL_FUSION_STRATEGY_DEFAULT
 
     normalized = value.strip().lower()
     if normalized in {"max", "max_score", "maxscore"}:
         return FUSION_STRATEGY_MAX_SCORE
     if normalized in {FUSION_STRATEGY_RRF}:
         return FUSION_STRATEGY_RRF
-    return FUSION_STRATEGY_RRF
+    return RETRIEVAL_FUSION_STRATEGY_DEFAULT
 
 
 def _build_query_seeds(seed_text: str, output_type: OutputType) -> list[str]:
@@ -736,7 +717,7 @@ async def retrieve_context(
             return reused
 
     seed_text = seed.strip() or "Summarize the notebook sources."
-    multi_query_override = _env_bool_optional(MULTI_QUERY_ENV)
+    multi_query_override = env_bool_optional(CRYSTALITH_RETRIEVAL_MULTI_QUERY)
     multi_query_enabled = (
         bool(multi_query_override) if multi_query_override is not None else bool(tuning.multi_query)
     )
@@ -748,10 +729,10 @@ async def retrieve_context(
         seeds = _select_query_seeds(_build_query_seeds(seed_text, output_type), seed_cap=seed_cap)
 
     cache_key: str | None = None
-    cache_enabled = deps.cache is not None and _env_bool(ASSEMBLY_CACHE_ENV, default=False)
+    cache_enabled = deps.cache is not None and env_bool(CRYSTALITH_RETRIEVAL_ASSEMBLY_CACHE, default=False)
     assembly_cache_ttl_s = max(
         0.0,
-        _env_float(ASSEMBLY_CACHE_TTL_ENV, ASSEMBLY_CACHE_DEFAULT_TTL_S),
+        env_float(CRYSTALITH_RETRIEVAL_ASSEMBLY_CACHE_TTL_S, RETRIEVAL_ASSEMBLY_CACHE_TTL_S_DEFAULT),
     )
     if cache_enabled and deps.cache is not None:
         cache_key = await _make_retrieval_assembly_cache_key(

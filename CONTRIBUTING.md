@@ -56,7 +56,7 @@ cd frontend/web && pnpm run typecheck
 - `backend/py/`: FastAPI service (app code in `backend/py/src/crystalith/`)
 - `backend/py/packages/`: workspace Python libraries used by the service
 - `frontend/web/`: Vite + React UI
-- `config/`: runtime config (`app.yaml`) and generated schema (`app.schema.json`)
+- `config/`: runtime config (`app.yaml`) and generated schema (`app.schema.gen.json`)
 - `openspec/`: specs + change tracking
 - `sdk/`: generated SDKs + generator configs
 

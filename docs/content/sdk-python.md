@@ -56,7 +56,7 @@ print(output.id, output.type)
 
 ## CI constraints
 
-- `frontend/web/openapi.json` must stay in sync with the backend schema (CI runs `uv run scripts/api_schema.py check`).
+- `frontend/web/openapi.gen.json` must stay in sync with the backend schema (CI runs `uv run scripts/api_schema.py check`).
 - Generated API clients must be committed (CI runs `pnpm run api:generate` and checks for diff).
 - The Python SDK must build and its version must match the backend (CI runs `just sdk-version-check` + `just sdk-build-python`).
 

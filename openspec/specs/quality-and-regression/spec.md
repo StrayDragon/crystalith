@@ -24,10 +24,10 @@ CI MUST 执行后端测试与前端测试+构建。
 - **THEN** 系统 SHALL 执行后端测试与前端测试+构建（或等价验证）
 
 ### Requirement: API/codegen/schema drift checks are mandatory
-CI MUST 检查 OpenAPI、生成客户端、配置 schema 与导入分层一致性。
+CI MUST 检查 OpenAPI、生成客户端、配置 schema、docs 受控生成物/注入区块与导入分层一致性。
 
 #### Scenario: Drift causes CI failure
-- **WHEN** OpenAPI/生成客户端/配置 schema/导入分层与仓库内容不一致
+- **WHEN** OpenAPI/生成客户端/配置 schema/docs 受控生成物/注入区块/导入分层与仓库内容不一致
 - **THEN** CI SHALL 检测到漂移并失败提示
 
 ### Requirement: Local default test entrypoints include guardrails
@@ -65,7 +65,7 @@ CI 与本地默认检查入口 MUST 覆盖 lint、格式化检查与关键 API c
 #### Scenario: Format check targets hand-authored frontend files only
 - **WHEN** 开发者运行 `pnpm -C frontend/web run format:check`
 - **THEN** 系统 SHALL 使用 `oxfmt` 校验前端手写源码与关键配置文件的格式
-- **AND** SHALL 排除 `src/api/generated/**`、`openapi.json`、lock 文件与 vendor 内容
+- **AND** SHALL 排除 `src/api/generated/**`、`openapi.gen.json`、lock 文件与 vendor 内容
 
 #### Scenario: Full frontend format converges repository style
 - **WHEN** 仓库首次引入 `oxfmt`

@@ -109,7 +109,7 @@ def main() -> int:
         "--schema",
         "-s",
         type=Path,
-        default=Path("../../frontend/web/openapi.json"),
+        default=Path("../../frontend/web/openapi.gen.json"),
         help="Schema file to check against",
     )
 

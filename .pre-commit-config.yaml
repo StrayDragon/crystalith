@@ -48,7 +48,7 @@ repos:
 
       - id: api-schema-check
         name: API Schema Consistency
-        entry: bash -c 'cd backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.json'
+        entry: bash -c 'cd backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.gen.json'
         language: system
         files: ^backend/py/src/crystalith/(api|schemas|db/models)
         pass_filenames: false
@@ -70,12 +70,12 @@ repos:
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
-        exclude: ^(frontend/web/openapi\.json|frontend/web/src/api/generated/)
+        exclude: ^(frontend/web/openapi\.gen\.json|frontend/web/src/api/generated/)
       - id: end-of-file-fixer
-        exclude: ^(frontend/web/openapi\.json|frontend/web/src/api/generated/)
+        exclude: ^(frontend/web/openapi\.gen\.json|frontend/web/src/api/generated/)
       - id: check-yaml
       - id: check-json
-        exclude: ^frontend/web/openapi\.json$
+        exclude: ^frontend/web/openapi\.gen\.json$
       - id: check-added-large-files
         args: ['--maxkb=1000']
 

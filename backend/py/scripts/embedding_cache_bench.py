@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import os
 from dataclasses import asdict
 from pathlib import Path
 from time import perf_counter
@@ -18,38 +17,24 @@ from crystalith.shared.ai.test_provider import TestEmbeddingProvider
 from crystalith.shared.ai.wrappers import CachedEmbeddingProvider, DefaultBatchEmbeddingProvider
 from crystalith.shared.cache import CacheProvider, RedisCache, create_cache_provider
 from crystalith.shared.config import ConfigManager, Settings
+from crystalith.shared.env import (
+    CRYSTALITH_EMBEDDING_CACHE_ENABLED,
+    CRYSTALITH_EMBEDDING_CACHE_MAX_CHARS,
+    CRYSTALITH_EMBEDDING_CACHE_MAX_TEXTS,
+    CRYSTALITH_EMBEDDING_CACHE_TTL_S,
+    EMBEDDING_CACHE_ENABLED_DEFAULT,
+    EMBEDDING_CACHE_MAX_CHARS_DEFAULT,
+    EMBEDDING_CACHE_MAX_TEXTS_DEFAULT,
+    EMBEDDING_CACHE_TTL_S_DEFAULT,
+    env_bool,
+    env_float,
+    env_int,
+)
 
 
 def _repo_root() -> Path:
     # backend/py/scripts/embedding_cache_bench.py -> repo root
     return Path(__file__).resolve().parents[3]
-
-
-def _env_bool(name: str, default: bool) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() not in {"0", "false", "no", "off"}
-
-
-def _env_int(name: str, default: int) -> int:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-    try:
-        return int(raw.strip())
-    except ValueError:
-        return default
-
-
-def _env_float(name: str, default: float) -> float:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-    try:
-        return float(raw.strip())
-    except ValueError:
-        return default
 
 
 def _percentile(values: list[float], p: float) -> float:
@@ -101,20 +86,20 @@ async def _run(args: argparse.Namespace) -> int:
     if redis is None:
         raise SystemExit("redis is not installed. Install backend optional dependency 'redis' to run this benchmark.")
 
-    enabled = _env_bool("CRYSTALITH_EMBEDDING_CACHE_ENABLED", True)
-    ttl_s = _env_float("CRYSTALITH_EMBEDDING_CACHE_TTL_S", 600.0)
-    max_texts = _env_int("CRYSTALITH_EMBEDDING_CACHE_MAX_TEXTS", 8)
-    max_chars = _env_int("CRYSTALITH_EMBEDDING_CACHE_MAX_CHARS", 2000)
+    enabled = env_bool(CRYSTALITH_EMBEDDING_CACHE_ENABLED, EMBEDDING_CACHE_ENABLED_DEFAULT)
+    ttl_s = env_float(CRYSTALITH_EMBEDDING_CACHE_TTL_S, EMBEDDING_CACHE_TTL_S_DEFAULT)
+    max_texts = env_int(CRYSTALITH_EMBEDDING_CACHE_MAX_TEXTS, EMBEDDING_CACHE_MAX_TEXTS_DEFAULT)
+    max_chars = env_int(CRYSTALITH_EMBEDDING_CACHE_MAX_CHARS, EMBEDDING_CACHE_MAX_CHARS_DEFAULT)
 
     if not enabled:
-        raise SystemExit("CRYSTALITH_EMBEDDING_CACHE_ENABLED is disabled; benchmark would not exercise cache.")
+        raise SystemExit(f"{CRYSTALITH_EMBEDDING_CACHE_ENABLED} is disabled; benchmark would not exercise cache.")
     if ttl_s <= 0 or max_texts <= 0 or max_chars <= 0:
         raise SystemExit("Embedding cache guardrails must be positive to run benchmark.")
 
     if args.texts_per_batch > max_texts:
         raise SystemExit(
             f"--texts-per-batch={args.texts_per_batch} exceeds cache max_texts={max_texts}; "
-            "increase CRYSTALITH_EMBEDDING_CACHE_MAX_TEXTS or lower texts-per-batch."
+            f"increase {CRYSTALITH_EMBEDDING_CACHE_MAX_TEXTS} or lower texts-per-batch."
         )
 
     if args.use_real_embedder and not args.confirm_real_embedder:

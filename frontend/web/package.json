@@ -16,10 +16,10 @@
     "test": "vitest",
     "pretypecheck": "bash ../../scripts/ensure_frontend_web_ready.sh",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "api:generate": "openapi-ts -i ./openapi.json -o ./src/api/generated -c @hey-api/client-fetch",
-    "api:fetch": "cd ../../backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.json",
+    "api:generate": "openapi-ts -i ./openapi.gen.json -o ./src/api/generated -c @hey-api/client-fetch",
+    "api:fetch": "cd ../../backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.gen.json",
     "api:sync": "pnpm run api:fetch && pnpm run api:generate",
-    "api:check": "cd ../../backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.json",
+    "api:check": "cd ../../backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.gen.json",
     "format": "oxfmt --write \"src/**/*.{ts,tsx,js,jsx,css}\" \"scripts/**/*.{js,mjs,cjs}\" \"!src/api/generated/**\" package.json tsconfig.json tsconfig.node.json vite.config.ts .oxlintrc.json .oxfmtrc.json",
     "format:check": "oxfmt --check \"src/**/*.{ts,tsx,js,jsx,css}\" \"scripts/**/*.{js,mjs,cjs}\" \"!src/api/generated/**\" package.json tsconfig.json tsconfig.node.json vite.config.ts .oxlintrc.json .oxfmtrc.json"
   },

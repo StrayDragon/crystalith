@@ -28,4 +28,8 @@ nav:
   - Plugins: plugins.md
   - Evidence Chain: evidence-chain.md
   - Configuration: configuration.md
+  - Reference:
+    - Config Schema (Generated): reference/config-schema.gen.md
+    - Environment Variables (Generated): reference/env-vars.gen.md
+    - Official Plugins (Generated): reference/plugins.gen.md
   - Contributing: contributing.md

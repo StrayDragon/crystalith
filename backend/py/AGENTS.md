@@ -12,7 +12,7 @@ Run from `backend/py`:
 - `just dev` starts the API server (uvicorn wrapper).
 - `just test` runs the pytest suite.
 - `just db-init` creates local SQLite tables for development.
-- `just config-schema` regenerates `config/app.schema.json`.
+- `just config-schema` regenerates `config/app.schema.gen.json`.
 - `just packages-test` runs workspace package tests.
 - `just llm-eval` runs the local eval harness.
 - `just embedding-cache-bench` runs the Redis embedding cache benchmark.
@@ -37,7 +37,7 @@ Run from `backend/py`:
 - PRs should include a focused description, linked issue/spec (if any), and test results. Add screenshots/GIFs for UI changes.
 
 ## Security & Configuration Tips
-- Local config lives in `config/app.yaml`; schema in `config/app.schema.json`.
+- Local config lives in `config/app.yaml`; schema in `config/app.schema.gen.json`.
 - Never commit secrets or API keys. If config shape changes, document required keys.
 
 ## Agent-Specific Instructions

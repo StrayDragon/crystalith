@@ -975,7 +975,7 @@ class Settings(BaseSettings):
 
     Example config/app.yaml:
 
-        # yaml-language-server: $schema=./app.schema.json
+        # yaml-language-server: $schema=./app.schema.gen.json
         %YAML 1.1
         ---
         name: "My Crystalith Instance"
