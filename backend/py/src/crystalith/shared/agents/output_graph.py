@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 from dataclasses import dataclass, field
 from time import perf_counter
 from typing import cast
@@ -20,6 +19,7 @@ from crystalith.shared.agents.models import (
     build_chat_model_from_model_id,
     extract_effective_model_settings_for_log,
 )
+from crystalith.shared.env import CRYSTALITH_OUTPUT_REPAIR, OUTPUT_REPAIR_DEFAULT, env_bool
 from crystalith.shared.observability import classify_error_kind
 from crystalith.shared.agents.output_postprocess import needs_repair, postprocess_output
 from crystalith.shared.agents.output_schemas import (
@@ -35,16 +35,6 @@ from crystalith.shared.utils import extract_page_number, extract_paragraph_index
 
 
 log = get_logger(__name__)
-
-
-OUTPUT_REPAIR_ENV = "CRYSTALITH_OUTPUT_REPAIR"
-
-
-def _env_bool(name: str, default: bool = False) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() not in {"0", "false", "no", "off"}
 
 
 def _strip_internal_keys(payload: object) -> object:
@@ -619,7 +609,7 @@ class PostprocessOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
 
         if (
             state.preference == "quality"
-            and _env_bool(OUTPUT_REPAIR_ENV, default=False)
+            and env_bool(CRYSTALITH_OUTPUT_REPAIR, default=OUTPUT_REPAIR_DEFAULT)
             and not state.plugin_schema_used
             and bool(state.context.strip())
             and len(state.citations) > 0

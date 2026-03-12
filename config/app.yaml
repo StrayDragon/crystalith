@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=./app.schema.json
+# yaml-language-server: $schema=./app.schema.gen.json
 # ============================================================================
 # Crystalith Configuration (safe defaults for public repo)
 # ============================================================================

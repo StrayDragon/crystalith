@@ -26,6 +26,10 @@ context: |
   Notes:
   - If backend OpenAPI changes, run frontend `pnpm run api:sync` and verify.
   - See openspec/AGENTS.md for spec/change workflow conventions.
+  - Doc governance:
+    - Files named `*.gen.*` are generated; do not edit by hand.
+    - `<!-- BEGIN AUTOGEN:<id> -->...<!-- END AUTOGEN:<id> -->` blocks are injected; do not edit block contents by hand.
+    - Stable entrypoints: `just gen-docs`, `just docs-drift-check`, `just doc-governance-check` (expected to be part of `just check`).
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
@@ -36,3 +40,16 @@ context: |
 #       - Always include a "Non-goals" section
 #     tasks:
 #       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+    - If the change renames paths/contracts, mark them as **BREAKING** and list old -> new explicitly.
+    - If the change introduces/updates generated artifacts, specify the SSOT, generator entrypoint, and drift gate command.
+  design:
+    - For generated artifacts or injected blocks, include naming/marker rules and deterministic output expectations.
+    - For repo-wide refactors, include an explicit migration + rollback boundary.
+  specs:
+    - Use ADDED/MODIFIED/REMOVED/RENAMED sections as appropriate.
+    - For MODIFIED requirements, copy the full updated requirement block (do not do partial diffs).
+  tasks:
+    - Group tasks by dependency order and include explicit verification commands.
+    - Include drift-check commands whenever generated artifacts are involved.

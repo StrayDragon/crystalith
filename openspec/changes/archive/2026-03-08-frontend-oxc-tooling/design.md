@@ -4,7 +4,7 @@
 
 Oxc 目前已同时提供 `oxlint` 与 `oxfmt`。对本仓库而言，核心约束是：
 - 保持前端日常 lint 足够快，不能退化成每次全量扫描。
-- 引入 formatter 后要避免触碰生成产物（如 `src/api/generated`、`openapi.json`）与 vendor 内容。
+- 引入 formatter 后要避免触碰生成产物（如 `src/api/generated`、`openapi.gen.json`）与 vendor 内容。
 - 迁移应尽量只改变工具链，不顺手修复大量既有业务代码问题。
 
 ## Goals / Non-Goals
@@ -53,7 +53,7 @@ Oxc 目前已同时提供 `oxlint` 与 `oxfmt`。对本仓库而言，核心约�
 - `.oxlintrc.json`
 - `.oxfmtrc.json`
 
-不把 `openapi.json`、`src/api/generated/**`、`pnpm-lock.yaml`、`vendor/**` 纳入 `oxfmt`，避免对生成文件或第三方内容制造噪声。
+不把 `openapi.gen.json`、`src/api/generated/**`、`pnpm-lock.yaml`、`vendor/**` 纳入 `oxfmt`，避免对生成文件或第三方内容制造噪声。
 
 ### 4. 立即执行一次全量格式化收敛
 

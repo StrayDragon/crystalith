@@ -4,9 +4,13 @@
 
 - `backend/py/`: FastAPI service (app in `backend/py/src/crystalith/`)
 - `frontend/web/`: Vite + React UI
-- `config/`: runtime config (`app.yaml`) and schema (`app.schema.json`)
+- `config/`: runtime config (`app.yaml`) and schema (`app.schema.gen.json`)
 - `openspec/`: specs + change tracking
 - `sdk/`: generated SDKs + generator configs
+
+## Repo entrypoints
+
+See `justfile` for repo entrypoints (run `just -l`).
 
 ## Development
 
@@ -59,7 +63,7 @@ Notes:
 
 ## Config schema
 
-If you change config settings models, regenerate `config/app.schema.json`:
+If you change config settings models, regenerate `config/app.schema.gen.json`:
 
 ```bash
 cd backend/py && just config-schema

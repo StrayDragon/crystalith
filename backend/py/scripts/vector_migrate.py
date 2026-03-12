@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 from typing import Iterable
 
+from crystalith.shared.env import CRYSTALITH_DATA_DIR
 from crystalith.vector_storage import (
     ChromaVectorStore,
     SQLiteVectorStore,
@@ -20,7 +21,7 @@ def _is_repo_root(path: Path) -> bool:
     markers = [
         path / ".git",
         path / "config" / "app.yaml",
-        path / "config" / "app.schema.json",
+        path / "config" / "app.schema.gen.json",
         path / "backend" / "py" / "pyproject.toml",
         path / "backend" / "py" / "src" / "crystalith",
     ]
@@ -48,7 +49,7 @@ def _resolve_paths(
     if sqlite_value and chroma_value:
         return Path(sqlite_value), Path(chroma_value)
 
-    data_dir_value = data_dir or os.environ.get("CRYSTALITH_DATA_DIR")
+    data_dir_value = data_dir or os.environ.get(CRYSTALITH_DATA_DIR)
     if data_dir_value:
         data_root = Path(data_dir_value)
     else:

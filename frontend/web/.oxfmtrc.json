@@ -5,7 +5,7 @@
     "node_modules/**",
     "vendor/**",
     "src/api/generated/**",
-    "openapi.json",
+    "openapi.gen.json",
     "pnpm-lock.yaml"
   ]
 }

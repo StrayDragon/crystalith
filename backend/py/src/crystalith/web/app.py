@@ -32,6 +32,19 @@ from crystalith.shared.config.ollama_discovery import (
 )
 from crystalith.shared.db import Source, create_db_manager
 from crystalith.shared.db.migrations import upgrade_head
+from crystalith.shared.env import (
+    CRYSTALITH_CONFIG_DIR,
+    CRYSTALITH_CONFIG_PATH,
+    CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED,
+    CRYSTALITH_OPTIONAL_SERVICES_MONITOR_INTERVAL_S,
+    CRYSTALITH_OPTIONAL_SERVICES_MONITOR_TIMEOUT_S,
+    CRYSTALITH_SECRETS_PATH,
+    OPTIONAL_SERVICES_MONITOR_ENABLED_DEFAULT,
+    OPTIONAL_SERVICES_MONITOR_INTERVAL_S_DEFAULT,
+    OPTIONAL_SERVICES_MONITOR_TIMEOUT_S_DEFAULT,
+    env_bool,
+    env_float,
+)
 from crystalith.shared.schemas.errors import (
     build_error_response,
     build_error_response_from_exception,
@@ -64,13 +77,13 @@ def _find_config_path() -> Path | None:
 
 
 def _load_settings() -> Settings:
-    config_path_value = os.environ.get("CRYSTALITH_CONFIG_PATH")
+    config_path_value = os.environ.get(CRYSTALITH_CONFIG_PATH)
     if config_path_value:
         config_path = Path(config_path_value)
         if not config_path.is_file():
             raise FileNotFoundError(f"Config file not found: {config_path}")
     else:
-        config_dir_value = os.environ.get("CRYSTALITH_CONFIG_DIR")
+        config_dir_value = os.environ.get(CRYSTALITH_CONFIG_DIR)
         if config_dir_value:
             config_path = Path(config_dir_value) / "app.yaml"
             if not config_path.is_file():
@@ -79,8 +92,8 @@ def _load_settings() -> Settings:
             config_path = _find_config_path()
 
     if config_path is not None:
-        schema_path = config_path.parent / "app.schema.json"
-        secrets_path_value = os.environ.get("CRYSTALITH_SECRETS_PATH")
+        schema_path = config_path.parent / "app.schema.gen.json"
+        secrets_path_value = os.environ.get(CRYSTALITH_SECRETS_PATH)
         secrets_path = Path(secrets_path_value) if secrets_path_value else None
         manager = ConfigManager(config_path, schema_path, secrets_path=secrets_path)
         if not schema_path.exists():
@@ -93,22 +106,6 @@ def _load_settings() -> Settings:
         Path.cwd(),
     )
     return Settings()
-
-
-def _env_bool(name: str, default: bool = False) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() not in {"0", "false", "no", "off"}
-
-def _env_float(name: str, default: float) -> float:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    try:
-        return float(value.strip())
-    except ValueError:
-        return default
 
 
 def _iso_now() -> str:
@@ -668,9 +665,15 @@ def create_app(
         app.state.optional_services_status = _build_optional_status_template(app.state.settings)
         app.state.optional_services_last_probe = None
 
-        if _env_bool("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED", True):
-            interval_s = max(0.1, _env_float("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_INTERVAL_S", 15.0))
-            timeout_s = max(0.1, _env_float("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_TIMEOUT_S", 3.0))
+        if env_bool(CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED, OPTIONAL_SERVICES_MONITOR_ENABLED_DEFAULT):
+            interval_s = max(
+                0.1,
+                env_float(CRYSTALITH_OPTIONAL_SERVICES_MONITOR_INTERVAL_S, OPTIONAL_SERVICES_MONITOR_INTERVAL_S_DEFAULT),
+            )
+            timeout_s = max(
+                0.1,
+                env_float(CRYSTALITH_OPTIONAL_SERVICES_MONITOR_TIMEOUT_S, OPTIONAL_SERVICES_MONITOR_TIMEOUT_S_DEFAULT),
+            )
             optional_monitor_stop = asyncio.Event()
             optional_monitor_task = asyncio.create_task(
                 _run_optional_services_monitor(
@@ -732,7 +735,7 @@ def create_app(
     @app.get("/health/dependencies", include_in_schema=False)
     async def dependency_health(force: bool = False) -> dict[str, object]:
         has_legacy_ollama_state = bool(app.state.ollama_hosts_status)
-        monitor_enabled = _env_bool("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED", True)
+        monitor_enabled = env_bool(CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED, OPTIONAL_SERVICES_MONITOR_ENABLED_DEFAULT)
         needs_refresh = force or (
             not monitor_enabled
             or (app.state.optional_services_last_probe is None and not has_legacy_ollama_state)

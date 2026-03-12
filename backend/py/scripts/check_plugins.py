@@ -33,7 +33,7 @@ def main() -> int:
     parser.add_argument(
         "--schema-path",
         default=None,
-        help="Path to config/app.schema.json (default: auto-detect)",
+        help="Path to config/app.schema.gen.json (default: auto-detect)",
     )
     parser.add_argument(
         "--json",
@@ -43,7 +43,7 @@ def main() -> int:
     args = parser.parse_args()
 
     config_path = _resolve_default_path(args.config_path, relative="config/app.yaml")
-    schema_path = _resolve_default_path(args.schema_path, relative="config/app.schema.json")
+    schema_path = _resolve_default_path(args.schema_path, relative="config/app.schema.gen.json")
 
     manager = ConfigManager(config_path, schema_path)
     if args.json:

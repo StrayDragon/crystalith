@@ -19,6 +19,8 @@ Install profiles:
 - Official full (recommended): `pip install 'crystalith[official-full]'`
 - Smaller bundles: `official-outputs`, `official-parsers`, `official-extractors`
 
+See also: [Official Plugins (Generated)](reference/plugins.gen.md)
+
 Official plugin ids follow a stable naming convention:
 
 - Output types: `output-<type>` (e.g. `output-quiz`)

@@ -7,6 +7,7 @@ from pydantic_graph import GraphRunContext
 
 from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.output_graph import OutputGraphState, PostprocessOutput
+from crystalith.shared.env import CRYSTALITH_OUTPUT_REPAIR
 from crystalith.shared.schemas.citations import Citation
 from crystalith.shared.types import OutputType
 
@@ -24,7 +25,7 @@ async def test_postprocess_output_runs_repair_when_enabled_and_quality(
     import crystalith.shared.agents.output_graph as output_graph_mod
 
     # Mock reason: env flag is the supported switch for enabling repair flow.
-    monkeypatch.setenv(output_graph_mod.OUTPUT_REPAIR_ENV, "1")
+    monkeypatch.setenv(CRYSTALITH_OUTPUT_REPAIR, "1")
     called: dict[str, Any] = {"runs": 0}
 
     class _StubAgent:
@@ -82,7 +83,7 @@ async def test_postprocess_output_skips_repair_when_speed_preference(
     import crystalith.shared.agents.output_graph as output_graph_mod
 
     # Mock reason: env flag is the supported switch for enabling repair flow.
-    monkeypatch.setenv(output_graph_mod.OUTPUT_REPAIR_ENV, "1")
+    monkeypatch.setenv(CRYSTALITH_OUTPUT_REPAIR, "1")
     called: dict[str, Any] = {"runs": 0}
 
     class _StubAgent:
@@ -130,7 +131,7 @@ async def test_postprocess_output_skips_repair_for_plugin_schema(
     import crystalith.shared.agents.output_graph as output_graph_mod
 
     # Mock reason: env flag is the supported switch for enabling repair flow.
-    monkeypatch.setenv(output_graph_mod.OUTPUT_REPAIR_ENV, "1")
+    monkeypatch.setenv(CRYSTALITH_OUTPUT_REPAIR, "1")
 
     class _StubAgent:
         def __init__(self, model, *, output_type, deps_type, system_prompt, retries):  # noqa: ANN001
@@ -172,7 +173,7 @@ async def test_postprocess_output_repair_failure_falls_back_to_deterministic(
     import crystalith.shared.agents.output_graph as output_graph_mod
 
     # Mock reason: env flag is the supported switch for enabling repair flow.
-    monkeypatch.setenv(output_graph_mod.OUTPUT_REPAIR_ENV, "1")
+    monkeypatch.setenv(CRYSTALITH_OUTPUT_REPAIR, "1")
 
     class _StubAgent:
         def __init__(self, model, *, output_type, deps_type, system_prompt, retries):  # noqa: ANN001

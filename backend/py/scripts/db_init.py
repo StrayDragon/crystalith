@@ -10,6 +10,7 @@ from typing import Iterable
 
 from crystalith.shared.config import ConfigManager, Settings
 from crystalith.shared.db.migrations import upgrade_head
+from crystalith.shared.env import CRYSTALITH_CONFIG_DIR, CRYSTALITH_CONFIG_PATH, CRYSTALITH_SECRETS_PATH
 
 
 def _find_config_path(candidates: Iterable[Path]) -> Path | None:
@@ -23,11 +24,11 @@ def _find_config_path(candidates: Iterable[Path]) -> Path | None:
 
 
 def _resolve_config_path(args: argparse.Namespace) -> tuple[Path | None, bool]:
-    explicit_path = args.config_path or os.environ.get("CRYSTALITH_CONFIG_PATH")
+    explicit_path = args.config_path or os.environ.get(CRYSTALITH_CONFIG_PATH)
     if explicit_path:
         return Path(explicit_path), True
 
-    config_dir = args.config_dir or os.environ.get("CRYSTALITH_CONFIG_DIR")
+    config_dir = args.config_dir or os.environ.get(CRYSTALITH_CONFIG_DIR)
     if config_dir:
         return Path(config_dir) / "app.yaml", True
 
@@ -49,7 +50,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--schema-path",
         default=None,
-        help="Optional schema path (defaults to config/app.schema.json).",
+        help="Optional schema path (defaults to config/app.schema.gen.json).",
     )
     parser.add_argument(
         "--secrets-path",
@@ -77,8 +78,8 @@ def _load_settings(args: argparse.Namespace) -> Settings:
     if explicit and not config_path.is_file():
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
-    schema_path = Path(args.schema_path) if args.schema_path else config_path.parent / "app.schema.json"
-    secrets_path_value = args.secrets_path or os.environ.get("CRYSTALITH_SECRETS_PATH")
+    schema_path = Path(args.schema_path) if args.schema_path else config_path.parent / "app.schema.gen.json"
+    secrets_path_value = args.secrets_path or os.environ.get(CRYSTALITH_SECRETS_PATH)
     secrets_path = Path(secrets_path_value) if secrets_path_value else None
 
     manager = ConfigManager(

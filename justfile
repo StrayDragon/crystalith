@@ -6,7 +6,7 @@ SDK_PACKAGE_PATH := "vendor/crystalith-sdks/python/src/crystalith_sdk"
 SDK_TS_ROOT := "vendor/crystalith-sdks/typescript"
 SDK_GO_ROOT := "vendor/crystalith-sdks/go"
 SDK_RUST_ROOT := "vendor/crystalith-sdks/rust"
-SCHEMA_PATH := "frontend/web/openapi.json"
+SCHEMA_PATH := "frontend/web/openapi.gen.json"
 
 # --------------------------------------------------------------------------
 # API Schema
@@ -14,11 +14,11 @@ SCHEMA_PATH := "frontend/web/openapi.json"
 
 # Export latest API schema from backend
 api-export:
-    cd backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.json
+    cd backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.gen.json
 
 # Check if API schema is up to date (for CI/pre-commit)
 api-check:
-    cd backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.json
+    cd backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.gen.json
 
 # --------------------------------------------------------------------------
 # SDK Generation
@@ -339,7 +339,7 @@ sdk-release VERSION:
     git -C vendor/crystalith-sdks push origin "go/${TAG}" "python/${TAG}" "typescript/${TAG}" "rust/${TAG}"
 
     # Commit + push crystalith (schema/client + submodule pointer).
-    git add frontend/web/openapi.json frontend/web/src/api/generated vendor/crystalith-sdks
+    git add frontend/web/openapi.gen.json frontend/web/src/api/generated vendor/crystalith-sdks
     if [[ -n "$(git diff --cached --name-only)" ]]; then
       git commit -m "chore(release): ${TAG}"
       git push origin main
@@ -372,6 +372,10 @@ check:
     @echo "==> Frontend generated API client consistency"
     cd frontend/web && pnpm run api:generate
     git diff --exit-code -- frontend/web/src/api/generated
+    @echo "==> Doc governance checks"
+    just doc-governance-check
+    @echo "==> Docs drift check"
+    just docs-drift-check
 
 # Run all tests
 test: check test-backend test-frontend
@@ -407,6 +411,18 @@ docs-build *ARGS='':
       EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
     fi
     uv run --project docs zensical build -f mkdocs.yml "${EXTRA_ARGS[@]}"
+
+# Generate docs reference pages and injected blocks
+gen-docs:
+    cd backend/py && uv run scripts/gen_docs.py
+
+# Check drift for docs generated pages/blocks (for CI/pre-commit)
+docs-drift-check:
+    cd backend/py && uv run scripts/gen_docs.py --check
+
+# Fast repository governance checks for docs/instructions
+doc-governance-check:
+    cd backend/py && uv run scripts/check_doc_governance.py
 
 # --------------------------------------------------------------------------
 # Dev Compose (developer defaults)

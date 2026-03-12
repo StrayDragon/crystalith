@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING
 
@@ -15,6 +14,19 @@ from crystalith.shared.ai.wrappers import CachedEmbeddingProvider, DefaultBatchE
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.concurrency import StageLimiters
 from crystalith.shared.config import Settings
+from crystalith.shared.env import (
+    CRYSTALITH_EMBEDDING_CACHE_ENABLED,
+    CRYSTALITH_EMBEDDING_CACHE_MAX_CHARS,
+    CRYSTALITH_EMBEDDING_CACHE_MAX_TEXTS,
+    CRYSTALITH_EMBEDDING_CACHE_TTL_S,
+    EMBEDDING_CACHE_ENABLED_DEFAULT,
+    EMBEDDING_CACHE_MAX_CHARS_DEFAULT,
+    EMBEDDING_CACHE_MAX_TEXTS_DEFAULT,
+    EMBEDDING_CACHE_TTL_S_DEFAULT,
+    env_bool,
+    env_float,
+    env_int,
+)
 from crystalith.shared.parsers import TranscriptionProvider, create_transcription_provider
 from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.vector_storage import VectorStore
@@ -41,33 +53,6 @@ async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]
         yield session
 
 
-def _env_bool(name: str, default: bool = False) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() not in {"0", "false", "no", "off"}
-
-
-def _env_int(name: str, default: int) -> int:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-    try:
-        return int(raw.strip())
-    except ValueError:
-        return default
-
-
-def _env_float(name: str, default: float) -> float:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-    try:
-        return float(raw.strip())
-    except ValueError:
-        return default
-
-
 def get_embedding_provider(request: Request) -> EmbeddingProvider:
     provider = request.app.state.embedding_provider
     if provider is None:
@@ -80,11 +65,11 @@ def get_embedding_provider(request: Request) -> EmbeddingProvider:
         except TypeError:
             provider = create_embedding_provider(settings)
 
-        if settings.cache.provider == "redis" and _env_bool("CRYSTALITH_EMBEDDING_CACHE_ENABLED", True):
+        if settings.cache.provider == "redis" and env_bool(CRYSTALITH_EMBEDDING_CACHE_ENABLED, EMBEDDING_CACHE_ENABLED_DEFAULT):
             cache = get_cache_provider(request)
-            ttl_s = _env_float("CRYSTALITH_EMBEDDING_CACHE_TTL_S", 600.0)
-            max_texts = _env_int("CRYSTALITH_EMBEDDING_CACHE_MAX_TEXTS", 8)
-            max_chars = _env_int("CRYSTALITH_EMBEDDING_CACHE_MAX_CHARS", 2000)
+            ttl_s = env_float(CRYSTALITH_EMBEDDING_CACHE_TTL_S, EMBEDDING_CACHE_TTL_S_DEFAULT)
+            max_texts = env_int(CRYSTALITH_EMBEDDING_CACHE_MAX_TEXTS, EMBEDDING_CACHE_MAX_TEXTS_DEFAULT)
+            max_chars = env_int(CRYSTALITH_EMBEDDING_CACHE_MAX_CHARS, EMBEDDING_CACHE_MAX_CHARS_DEFAULT)
             if ttl_s > 0 and max_texts > 0 and max_chars > 0:
                 provider = CachedEmbeddingProvider(
                     provider,

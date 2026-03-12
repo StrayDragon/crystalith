@@ -28,7 +28,7 @@ just dev-docker-up
 Default `just dev-docker-up` starts a developer stack: core + `storage redis searxng`.
 
 Notes:
-- Runtime/business config lives in `config/app.yaml` (validated by `config/app.schema.json`).
+- Runtime/business config lives in `config/app.yaml` (validated by `config/app.schema.gen.json`).
 - Secrets live in `config/secrets.yaml` (do not commit). `.env` is only for build/deploy static params.
 
 Dev-friendly preset (core + storage + redis + searxng, with China mirrors as build defaults):

@@ -1,6 +1,6 @@
 # OpenSpec Canonical Specs (Consolidated)
 
-本目录已按“最新主干 + 去重合并”完成收敛。当前 canonical 规范为统一命名的 24 个 spec；旧路径 deprecated 薄壳已在 batch-2 中移除。
+本目录已按“最新主干 + 去重合并”完成收敛。当前 canonical 规范为统一命名的 25 个 spec；旧路径 deprecated 薄壳已在 batch-2 中移除。
 
 ## Canonical Reading Order
 
@@ -31,6 +31,7 @@
    - `studio-slides-workflow/spec.md`
    - `studio-output-types/spec.md`
 6. 交付与质量
+   - `doc-governance/spec.md`
    - `delivery-and-deployment/spec.md`
    - `quality-and-regression/spec.md`
 

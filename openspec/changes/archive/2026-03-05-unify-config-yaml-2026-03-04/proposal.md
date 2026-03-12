@@ -37,7 +37,7 @@
 ## Impact
 
 - Backend:
-  - 配置与 schema：`backend/py/src/crystalith/shared/config/*`、`config/app.schema.json`、`config/app.yaml`
+  - 配置与 schema：`backend/py/src/crystalith/shared/config/*`、`config/app.schema.gen.json`、`config/app.yaml`
   - 可选依赖接入与探测：cache/vector storage/search/database 的选择与回退逻辑
   - 启动行为：`AUTO_DB_INIT` 等启动开关迁入 YAML
 - Deployments:

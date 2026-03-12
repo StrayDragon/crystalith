@@ -9,22 +9,11 @@ Crystalith runtime configuration lives in `config/app.yaml`.
   - `${{ env.VAR }}` interpolation
   - `${{ secrets.VAR }}` interpolation
   - YAML anchors for reuse
-- Non-secret overrides commonly used in deployments:
-  - `OPENAI_BASE_URL` (OpenAI-compatible endpoint/proxy)
-  - `CRYSTALITH_DEFAULT_EMBEDDING_MODEL` (default embedding model id)
-  - Docker Compose convenience: set `OPENAI_BASE_URL_DOCKER` / `CRYSTALITH_DEFAULT_EMBEDDING_MODEL_DOCKER` in `.env`
+- Environment variables that affect runtime/deploy behavior are indexed in: [Environment Variables Reference (Generated)](reference/env-vars.gen.md)
 
 ## Common settings
 
-- `app.cors.allow_origins`: browser client origins (CORS)
-- `app.auth.enabled`: require API key auth for `/v1/**` (self-host)
-- `app.auth.api_key`: shared API key (prefer secrets injection)
-- `models.defaults.chat` / `models.defaults.embedding`: default model ids
-- `vector_storage.provider`: `chroma` or `sqlite`
-- `database.url`: SQLAlchemy URL (async)
-- `embedding.batch_size`: embedding batch size (perf tuning)
-- `search.searxng.host`: SearXNG base URL (empty disables web search)
-- `search.searxng.endpoint_candidates`: candidate endpoints for auto/lazy selection
+See [Configuration Schema Reference (Generated)](reference/config-schema.gen.md) for an up-to-date key index (including nested paths).
 
 ## Web search (SearXNG)
 
@@ -65,10 +54,7 @@ Config:
 - `cache.redis_url` / `cache.redis_url_candidates`
 
 Env (defaults match `backend/py/src/crystalith/shared/deps.py`):
-- `CRYSTALITH_EMBEDDING_CACHE_ENABLED` (default: true)
-- `CRYSTALITH_EMBEDDING_CACHE_TTL_S` (default: 600)
-- `CRYSTALITH_EMBEDDING_CACHE_MAX_TEXTS` (default: 8)
-- `CRYSTALITH_EMBEDDING_CACHE_MAX_CHARS` (default: 2000)
+- See [Environment Variables Reference (Generated)](reference/env-vars.gen.md)
 
 Benchmark (requires Redis + optional dependency `redis`):
 - `cd backend/py && just embedding-cache-bench`

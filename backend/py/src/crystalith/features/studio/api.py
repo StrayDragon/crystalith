@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import datetime
 import json
-import os
 from collections.abc import AsyncGenerator
 from time import perf_counter
 
@@ -19,6 +18,11 @@ from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.models import ModelConfigurationError
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import Settings
+from crystalith.shared.env import (
+    CRYSTALITH_OBSERVABILITY_SSE_TIMINGS,
+    OBSERVABILITY_SSE_TIMINGS_DEFAULT,
+    env_bool,
+)
 from crystalith.shared.json_types import JsonValue
 from crystalith.shared.observability import new_trace_id
 from crystalith.shared.deps import (
@@ -47,14 +51,6 @@ log = get_logger(__name__)
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/slides", tags=["slides"])
 
 SLIDE_RUNNING_STALE_AFTER = datetime.timedelta(minutes=10)
-SSE_TIMINGS_ENV = "CRYSTALITH_OBSERVABILITY_SSE_TIMINGS"
-
-
-def _env_bool(name: str, default: bool = False) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() not in {"0", "false", "no", "off"}
 
 
 class SlideDraftCreate(BaseModel):
@@ -432,7 +428,7 @@ async def generate_outline_stream(
 
             yield _sse_event("progress", {"trace_id": trace_id, "stage": "outline", "message": "大纲生成完成", "progress": 100})
             done_payload = {"trace_id": trace_id, "slide_id": slide.id}
-            if _env_bool(SSE_TIMINGS_ENV, False):
+            if env_bool(CRYSTALITH_OBSERVABILITY_SSE_TIMINGS, OBSERVABILITY_SSE_TIMINGS_DEFAULT):
                 done_payload["timings_ms"] = timings_ms
             yield _sse_event("done", done_payload)
         except asyncio.CancelledError:
@@ -542,7 +538,7 @@ async def generate_markdown_stream(
 
             yield _sse_event("progress", {"trace_id": trace_id, "stage": "markdown", "message": "Markdown 生成完成", "progress": 100})
             done_payload = {"trace_id": trace_id, "slide_id": slide.id}
-            if _env_bool(SSE_TIMINGS_ENV, False):
+            if env_bool(CRYSTALITH_OBSERVABILITY_SSE_TIMINGS, OBSERVABILITY_SSE_TIMINGS_DEFAULT):
                 done_payload["timings_ms"] = timings_ms
             yield _sse_event("done", done_payload)
         except asyncio.CancelledError:

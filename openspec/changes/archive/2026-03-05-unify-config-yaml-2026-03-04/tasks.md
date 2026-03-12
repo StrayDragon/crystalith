@@ -3,7 +3,7 @@
 - [x] 1.1 更新 `backend/py/src/crystalith/shared/config/models.py`：为“候选端点/自动适配”新增字段（database/cache/vector/search/optional services），并补齐 schema 描述。
 - [x] 1.2 更新 `config/app.yaml`：将敏感项从 `${{ env.* }}` 收敛为 `${{ secrets.* }}`，并补齐候选端点示例（compose service name + host dev 端口）。
 - [x] 1.3 更新 `config/secrets.yaml.example`：补齐需要的 secrets key，并在注释中强调不提交 `config/secrets.yaml`。
-- [x] 1.4 运行 `cd backend/py && just config-schema` 生成并校验 `config/app.schema.json`（确保 `config/app.yaml` schema 校验通过）。
+- [x] 1.4 运行 `cd backend/py && just config-schema` 生成并校验 `config/app.schema.gen.json`（确保 `config/app.yaml` schema 校验通过）。
 
 ## 2. 配置加载器：移除业务 env overrides + 自动发现 secrets
 

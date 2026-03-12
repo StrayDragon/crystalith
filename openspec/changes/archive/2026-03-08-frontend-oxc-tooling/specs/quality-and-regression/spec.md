@@ -20,7 +20,7 @@
 #### Scenario: Format check targets hand-authored frontend files only
 - **WHEN** 开发者运行 `pnpm -C frontend/web run format:check`
 - **THEN** 系统 SHALL 使用 `oxfmt` 校验前端手写源码与关键配置文件的格式
-- **AND** SHALL 排除 `src/api/generated/**`、`openapi.json`、lock 文件与 vendor 内容
+- **AND** SHALL 排除 `src/api/generated/**`、`openapi.gen.json`、lock 文件与 vendor 内容
 
 #### Scenario: Full frontend format converges repository style
 - **WHEN** 仓库首次引入 `oxfmt`
