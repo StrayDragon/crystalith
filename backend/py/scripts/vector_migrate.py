@@ -10,11 +10,9 @@ from pathlib import Path
 from typing import Iterable
 
 from crystalith.shared.env import CRYSTALITH_DATA_DIR
-from crystalith.vector_storage import (
-    ChromaVectorStore,
-    SQLiteVectorStore,
-    migrate_sqlite_to_chroma,
-)
+from crystalith.shared.vector_storage import SQLiteVectorStore
+from crystalith.shared.vector_storage.chroma import ChromaVectorStore
+from crystalith.shared.vector_storage.migration import migrate_sqlite_to_chroma
 
 
 def _is_repo_root(path: Path) -> bool:
