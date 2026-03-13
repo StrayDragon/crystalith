@@ -1,7 +1,7 @@
 ## 1. 正式产物对象与生命周期
 
-- [ ] 1.1 定义 artifact 对象、promotion 动作与生命周期状态
-- [ ] 1.2 明确普通结果与 artifact 的边界
+- [x] 1.1 定义 artifact 对象、promotion 动作与生命周期状态（已确定：draft → reviewed → finalized → archived，含 needs_edit 回退状态，见 design.md）
+- [x] 1.2 明确普通结果与 artifact 的边界（已确定：结果为探索产物可丢弃；artifact 为正式产物有版本/审阅/引用；promotion 为显式用户动作，系统不自动提升）
 - [ ] 1.3 明确 artifact 的归档、继续编辑与引用语义
 
 ## 2. 关系追踪与接口

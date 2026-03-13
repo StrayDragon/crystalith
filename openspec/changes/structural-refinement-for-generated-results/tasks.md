@@ -1,7 +1,7 @@
 ## 1. 结构单元与动作模型
 
-- [ ] 1.1 定义结果结构单元、局部上下文与 refinement 动作集合
-- [ ] 1.2 明确哪些改良动作属于局部 refinement，哪些回到整篇重生成
+- [x] 1.1 定义结果结构单元、局部上下文与 refinement 动作集合（已确定：section/evidence_block/conclusion/list_item 四种单元；expand/compress/rewrite/reorder/regenerate_local 五种动作，见 design.md）
+- [x] 1.2 明确哪些改良动作属于局部 refinement，哪些回到整篇重生成（已确定：1-2 个相邻单元 → 局部；>50% 或改变核心论点 → 整篇；引用链断裂 → 提示用户选择）
 - [ ] 1.3 明确 refinement 如何消费已有结果上下文
 
 ## 2. 接口与更新语义
