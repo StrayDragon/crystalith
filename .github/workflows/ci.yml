@@ -1,19 +1,13 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - "docs/**"
-      - "docs/zensical.toml"
-      - "openspec/**"
-      - "**/*.md"
-  pull_request:
-    paths-ignore:
-      - "docs/**"
-      - "docs/zensical.toml"
-      - "openspec/**"
-      - "**/*.md"
+  # push:
+  #   branches: [main]
+  #   paths-ignore:
+  #     - "docs/**"
+  #     - "docs/zensical.toml"
+  #     - "openspec/**"
+  #     - "**/*.md"
   workflow_dispatch:
 
 permissions:
