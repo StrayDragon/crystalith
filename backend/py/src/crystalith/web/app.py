@@ -76,6 +76,36 @@ def _find_config_path() -> Path | None:
     return None
 
 
+def _discover_overlay_paths(config_path: Path) -> list[Path]:
+    """
+    Auto-discover overlay config files to merge on top of the base config.
+
+    Discovery order (all existing files are merged in this order):
+      1. app.local.yaml   — user-local overrides (gitignored)
+      2. app.{env}.yaml   — environment-specific (CRYSTALITH_ENV, e.g. "dev", "staging")
+      3. app.{env}.local.yaml — environment + local overrides
+
+    All paths are relative to the base config's parent directory.
+    """
+    config_dir = config_path.parent
+    overlays: list[Path] = []
+
+    local = config_dir / "app.local.yaml"
+    if local.is_file():
+        overlays.append(local)
+
+    env_name = os.environ.get("CRYSTALITH_ENV", "").strip().lower()
+    if env_name:
+        env_file = config_dir / f"app.{env_name}.yaml"
+        if env_file.is_file():
+            overlays.append(env_file)
+        env_local = config_dir / f"app.{env_name}.local.yaml"
+        if env_local.is_file():
+            overlays.append(env_local)
+
+    return overlays
+
+
 def _load_settings() -> Settings:
     config_path_value = os.environ.get(CRYSTALITH_CONFIG_PATH)
     if config_path_value:
@@ -95,7 +125,17 @@ def _load_settings() -> Settings:
         schema_path = config_path.parent / "app.schema.gen.json"
         secrets_path_value = os.environ.get(CRYSTALITH_SECRETS_PATH)
         secrets_path = Path(secrets_path_value) if secrets_path_value else None
-        manager = ConfigManager(config_path, schema_path, secrets_path=secrets_path)
+        overlay_paths = _discover_overlay_paths(config_path)
+        if overlay_paths:
+            logger.info(
+                "Config overlay files discovered: %s",
+                [str(p.name) for p in overlay_paths],
+            )
+        manager = ConfigManager(
+            config_path, schema_path,
+            secrets_path=secrets_path,
+            overlay_paths=overlay_paths,
+        )
         if not schema_path.exists():
             manager.write_schema()
         return manager.load()
