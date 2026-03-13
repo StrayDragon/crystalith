@@ -32,7 +32,7 @@ cp config/secrets.yaml.example config/secrets.yaml
 just dev
 ```
 
-Profiles / tuning: see `docs/content/optimal-config.md`.
+Profiles / tuning: see `docs/doc/optimal-config.md`.
 
 No-docker (SQLite + embedded Chroma):
 

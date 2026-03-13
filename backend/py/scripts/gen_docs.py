@@ -8,6 +8,7 @@ import difflib
 import json
 import re
 import sys
+import tomllib
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,6 +34,30 @@ def _repo_root() -> Path:
         if (parent / "justfile").is_file() and (parent / "openspec").is_dir():
             return parent
     raise FileNotFoundError("Could not locate repo root (missing justfile/openspec markers).")
+
+
+def _docs_root(*, repo_root: Path) -> Path:
+    config_path = repo_root / "docs" / "zensical.toml"
+    if not config_path.is_file():
+        raise FileNotFoundError(f"Missing docs config: {config_path}")
+
+    payload = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    project = payload.get("project")
+    if not isinstance(project, dict):
+        raise ValueError(f"{config_path} missing required [project] table")
+
+    docs_dir = project.get("docs_dir")
+    if not isinstance(docs_dir, str) or not docs_dir.strip():
+        raise ValueError(f"{config_path} missing required project.docs_dir")
+
+    docs_base = config_path.parent.resolve()
+    docs_root = (docs_base / Path(docs_dir)).resolve()
+    if not docs_root.is_relative_to(docs_base):
+        raise ValueError(f"{config_path} project.docs_dir must resolve under {docs_base} (got: {docs_root})")
+    if not docs_root.is_dir():
+        raise FileNotFoundError(f"{config_path} project.docs_dir does not exist: {docs_root}")
+
+    return docs_root
 
 
 def _ensure_trailing_newline(text: str) -> str:
@@ -136,7 +161,7 @@ def _schema_type(schema: dict[str, object]) -> str:
     return "unknown"
 
 
-def _render_config_schema_reference(*, repo_root: Path) -> GeneratedTarget:
+def _render_config_schema_reference(*, repo_root: Path, docs_root: Path) -> GeneratedTarget:
     schema_path = repo_root / "config/app.schema.gen.json"
     payload_raw = json.loads(schema_path.read_text(encoding="utf-8"))
     payload = payload_raw if isinstance(payload_raw, dict) else {}
@@ -195,10 +220,11 @@ def _render_config_schema_reference(*, repo_root: Path) -> GeneratedTarget:
         lines.append(f"| `{path}` | `{typ}` | {desc_cell} |")
     lines.append("")
 
-    out_path = repo_root / "docs/content/reference/config-schema.gen.md"
+    out_path = docs_root / "reference/config-schema.gen.md"
     return GeneratedTarget(path=out_path, content="\n".join(lines))
 
-def _render_env_vars_reference(*, repo_root: Path) -> GeneratedTarget:
+
+def _render_env_vars_reference(*, repo_root: Path, docs_root: Path) -> GeneratedTarget:
     from crystalith.shared.env import ENV_VAR_DOCS  # local import: keep generator startup fast
 
     config_path = repo_root / "config/app.yaml"
@@ -264,11 +290,11 @@ def _render_env_vars_reference(*, repo_root: Path) -> GeneratedTarget:
         lines.append("- (none)")
     lines.append("")
 
-    out_path = repo_root / "docs/content/reference/env-vars.gen.md"
+    out_path = docs_root / "reference/env-vars.gen.md"
     return GeneratedTarget(path=out_path, content="\n".join(lines))
 
 
-def _render_plugins_reference(*, repo_root: Path) -> GeneratedTarget:
+def _render_plugins_reference(*, repo_root: Path, docs_root: Path) -> GeneratedTarget:
     from crystalith.shared.plugins.interfaces import PLUGIN_API_VERSION
     from crystalith.shared.plugins.official_catalog import OFFICIAL_PLUGIN_CATALOG
 
@@ -302,7 +328,7 @@ def _render_plugins_reference(*, repo_root: Path) -> GeneratedTarget:
     lines.append("```")
     lines.append("")
 
-    out_path = repo_root / "docs/content/reference/plugins.gen.md"
+    out_path = docs_root / "reference/plugins.gen.md"
     return GeneratedTarget(path=out_path, content="\n".join(lines))
 
 
@@ -355,8 +381,7 @@ def _apply_autogen_blocks(*, path: Path, text: str, repo_root: Path) -> str:
     return "".join(out)
 
 
-def _inject_or_check_autogen_blocks(*, repo_root: Path, check: bool) -> bool:
-    docs_root = repo_root / "docs/content"
+def _inject_or_check_autogen_blocks(*, repo_root: Path, docs_root: Path, check: bool) -> bool:
     ok = True
     for path in sorted(docs_root.rglob("*.md")):
         if path.name.endswith(".gen.md"):
@@ -390,18 +415,19 @@ def _main() -> int:
     args = parser.parse_args()
 
     repo_root = _repo_root()
+    docs_root = _docs_root(repo_root=repo_root)
 
     targets: list[GeneratedTarget] = [
-        _render_config_schema_reference(repo_root=repo_root),
-        _render_env_vars_reference(repo_root=repo_root),
-        _render_plugins_reference(repo_root=repo_root),
+        _render_config_schema_reference(repo_root=repo_root, docs_root=docs_root),
+        _render_env_vars_reference(repo_root=repo_root, docs_root=docs_root),
+        _render_plugins_reference(repo_root=repo_root, docs_root=docs_root),
     ]
 
     ok = True
     for target in targets:
         ok = _write_or_check(target, check=args.check) and ok
 
-    ok = _inject_or_check_autogen_blocks(repo_root=repo_root, check=args.check) and ok
+    ok = _inject_or_check_autogen_blocks(repo_root=repo_root, docs_root=docs_root, check=args.check) and ok
 
     if not ok and args.check:
         print(f"Docs drift detected. Fix by running: {JUST_ENTRYPOINT}", file=sys.stderr)

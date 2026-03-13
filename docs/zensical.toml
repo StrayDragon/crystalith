@@ -1,0 +1,38 @@
+[project]
+site_name = "Crystalith"
+
+# Relative to this file (docs/)
+docs_dir = "doc"
+site_dir = "site"
+
+plugins = ["search"]
+
+nav = [
+  { "Home" = "index.md" },
+  { "Getting Started" = "getting-started.md" },
+  { "Optimal Config" = "optimal-config.md" },
+  { "Deployment" = "deployment.md" },
+  { "Operations" = "operations.md" },
+  { "Python SDK" = "sdk-python.md" },
+  { "TypeScript SDK" = "sdk-typescript.md" },
+  { "Go SDK" = "sdk-go.md" },
+  { "Rust SDK" = "sdk-rust.md" },
+  { "Plugins" = "plugins.md" },
+  { "Evidence Chain" = "evidence-chain.md" },
+  { "Configuration" = "configuration.md" },
+  { "Reference" = [
+    { "Config Schema (Generated)" = "reference/config-schema.gen.md" },
+    { "Environment Variables (Generated)" = "reference/env-vars.gen.md" },
+    { "Official Plugins (Generated)" = "reference/plugins.gen.md" },
+  ] },
+  { "Contributing" = "contributing.md" },
+]
+
+[project.theme]
+variant = "modern"
+logo = "static/logo.webp"
+features = [
+  "navigation.sections",
+  "navigation.expand",
+  "content.code.copy",
+]

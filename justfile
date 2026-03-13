@@ -400,17 +400,17 @@ docs-serve *ARGS='':
     if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
       EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
     fi
-    uv run --project docs zensical serve -f mkdocs.yml "${EXTRA_ARGS[@]}"
+    uv run --project docs zensical serve -f docs/zensical.toml "${EXTRA_ARGS[@]}"
 
 # Build docs site (Zensical)
-docs-build *ARGS='':
+docs-build *ARGS='': gen-docs
     #!/usr/bin/env bash
     set -euo pipefail
     EXTRA_ARGS=({{ARGS}})
     if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
       EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
     fi
-    uv run --project docs zensical build -f mkdocs.yml "${EXTRA_ARGS[@]}"
+    uv run --project docs zensical build -f docs/zensical.toml "${EXTRA_ARGS[@]}"
 
 # Generate docs reference pages and injected blocks
 gen-docs:
