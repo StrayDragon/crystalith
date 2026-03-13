@@ -184,20 +184,32 @@ docs-serve *ARGS='':
     #!/usr/bin/env bash
     set -euo pipefail
     EXTRA_ARGS=({{ARGS}})
-    if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
-      EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+      if [[ "${EXTRA_ARGS[0]}" == "--" ]]; then
+        EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
+      fi
     fi
-    uv run --project docs zensical serve -f docs/zensical.toml "${EXTRA_ARGS[@]}"
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+      uv run --project docs zensical serve -f docs/zensical.toml "${EXTRA_ARGS[@]}"
+    else
+      uv run --project docs zensical serve -f docs/zensical.toml
+    fi
 
 # Build docs site (Zensical)
 docs-build *ARGS='': gen-docs
     #!/usr/bin/env bash
     set -euo pipefail
     EXTRA_ARGS=({{ARGS}})
-    if [[ ${#EXTRA_ARGS[@]} -gt 0 && "${EXTRA_ARGS[0]}" == "--" ]]; then
-      EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+      if [[ "${EXTRA_ARGS[0]}" == "--" ]]; then
+        EXTRA_ARGS=("${EXTRA_ARGS[@]:1}")
+      fi
     fi
-    uv run --project docs zensical build -f docs/zensical.toml "${EXTRA_ARGS[@]}"
+    if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+      uv run --project docs zensical build -f docs/zensical.toml "${EXTRA_ARGS[@]}"
+    else
+      uv run --project docs zensical build -f docs/zensical.toml
+    fi
 
 # Generate docs reference pages and injected blocks
 gen-docs:
