@@ -1,16 +1,16 @@
 name: Check Python SDK
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/check-python-sdk.yml"
-      - ".gitmodules"
-      - "backend/py/**"
-      - "frontend/web/openapi.gen.json"
-      - "justfile"
-      - "sdk/configs/**"
-      - "vendor/crystalith-sdks"
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - ".github/workflows/check-python-sdk.yml"
+  #     - ".gitmodules"
+  #     - "backend/py/**"
+  #     - "frontend/web/openapi.gen.json"
+  #     - "justfile"
+  #     - "sdk/configs/**"
+  #     - "vendor/crystalith-sdks"
   workflow_dispatch:
 
 permissions:
