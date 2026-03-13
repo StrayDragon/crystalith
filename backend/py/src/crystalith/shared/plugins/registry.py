@@ -15,6 +15,7 @@ from .interfaces import (
     OutputTypeFrontendBundle,
     ParserPlugin,
     SlidesWorkflowPlugin,
+    SourceConnectorPlugin,
     WebExtractorPlugin,
     PLUGIN_API_VERSION,
     SUPPORTED_PLUGIN_API_VERSIONS,
@@ -24,7 +25,14 @@ from .render_types import FrontendBundleDescriptor, OutputTypePluginMeta, Plugin
 
 log = get_logger(__name__)
 
-SupportedPlugin = AIProviderPlugin | ParserPlugin | OutputTypePlugin | SlidesWorkflowPlugin | WebExtractorPlugin
+SupportedPlugin = (
+    AIProviderPlugin
+    | ParserPlugin
+    | OutputTypePlugin
+    | SlidesWorkflowPlugin
+    | WebExtractorPlugin
+    | SourceConnectorPlugin
+)
 
 
 def _iter_entry_points(group: str) -> list[metadata.EntryPoint]:
@@ -149,6 +157,7 @@ class PluginRegistry:
         self.web_extractors: dict[str, WebExtractorPlugin] = {}
         self.output_types: dict[str, OutputTypePlugin] = {}
         self.slides_workflows: dict[str, SlidesWorkflowPlugin] = {}
+        self.source_connectors: dict[str, SourceConnectorPlugin] = {}
         self.output_type_metadata: dict[str, OutputTypePluginMeta] = {}
         self.render_descriptors: dict[str, RenderDescriptor] = {}
         self.config_schemas: dict[str, PluginConfigSchema] = {}
@@ -166,6 +175,7 @@ class PluginRegistry:
         self.web_extractors.clear()
         self.output_types.clear()
         self.slides_workflows.clear()
+        self.source_connectors.clear()
         self.output_type_metadata.clear()
         self.render_descriptors.clear()
         self.config_schemas.clear()
@@ -259,8 +269,16 @@ class PluginRegistry:
             has_output_type = isinstance(plugin, OutputTypePlugin)
             has_slides_workflow = isinstance(plugin, SlidesWorkflowPlugin)
             has_web_extractor = isinstance(plugin, WebExtractorPlugin)
+            has_source_connector = isinstance(plugin, SourceConnectorPlugin)
 
-            if not (has_ai_provider or has_parser or has_output_type or has_slides_workflow or has_web_extractor):
+            if not (
+                has_ai_provider
+                or has_parser
+                or has_output_type
+                or has_slides_workflow
+                or has_web_extractor
+                or has_source_connector
+            ):
                 log.warning(
                     "plugin skipped (no compatible interfaces)",
                     plugin_id=plugin_id,
@@ -271,7 +289,7 @@ class PluginRegistry:
                     message="Plugin does not implement any supported plugin interfaces",
                     hint=(
                         "Implement AIProviderPlugin, ParserPlugin, OutputTypePlugin, "
-                        "SlidesWorkflowPlugin, or WebExtractorPlugin from "
+                        "SlidesWorkflowPlugin, WebExtractorPlugin, or SourceConnectorPlugin from "
                         "crystalith.shared.plugins.interfaces."
                     ),
                     details={"entry_point": entry_point_value},
@@ -300,6 +318,9 @@ class PluginRegistry:
             if has_slides_workflow:
                 self._register_slides_workflow_plugin(plugin_id, cast(SlidesWorkflowPlugin, supported))
 
+            if has_source_connector:
+                self._register_source_connector_plugin(plugin_id, cast(SourceConnectorPlugin, supported))
+
             self._loaded_entrypoints[plugin_id] = entry_point_value
             self.plugins[plugin_id] = supported
             report.loaded.append(plugin_id)
@@ -312,6 +333,7 @@ class PluginRegistry:
                 has_output_type=has_output_type,
                 has_slides_workflow=has_slides_workflow,
                 has_web_extractor=has_web_extractor,
+                has_source_connector=has_source_connector,
             )
 
         self._load_report = report
@@ -346,6 +368,17 @@ class PluginRegistry:
 
         self.web_extractors[extractor_type] = plugin
         self._web_extractor_plugin_ids[extractor_type] = plugin_id
+
+    def _register_source_connector_plugin(self, plugin_id: str, plugin: SourceConnectorPlugin) -> None:
+        existing = self.source_connectors.get(plugin_id)
+        if existing is not None:
+            log.warning(
+                "source connector plugin conflict; overwriting",
+                plugin_id=plugin_id,
+                existing_display_name=existing.display_name,
+                display_name=plugin.display_name,
+            )
+        self.source_connectors[plugin_id] = plugin
 
     def _register_output_type_plugin(self, plugin_id: str, plugin: OutputTypePlugin) -> None:
         output_type = plugin.output_type
@@ -498,6 +531,9 @@ class PluginRegistry:
 
     def list_slides_workflows(self) -> list[str]:
         return sorted(self.slides_workflows.keys())
+
+    def list_source_connectors(self) -> list[str]:
+        return sorted(self.source_connectors.keys())
 
     def get_load_report(self) -> PluginLoadReport:
         return self._load_report
