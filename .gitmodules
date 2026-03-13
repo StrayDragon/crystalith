@@ -1,6 +1,6 @@
 [submodule "vendor/crystalith-sdks"]
 	path = vendor/crystalith-sdks
-	url = https://github.com/StrayDragon/crystalith-sdks.git
+	url = git@github.com:StrayDragon/crystalith-sdks.git
 [submodule "frontend/web/vendor/rivu"]
 	path = frontend/web/vendor/rivu
-	url = https://github.com/StrayDragon/rivu.git
+	url = git@github.com:StrayDragon/rivu.git
