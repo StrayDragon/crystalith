@@ -13,6 +13,8 @@ SSOT: `backend/py/src/crystalith/shared/plugins/official_catalog.py`
 
 | Plugin ID | Kind | Package | Install hint |
 | --- | --- | --- | --- |
+| `connector-local-directory` | `connector` | `crystalith-connector-local-directory` | 安装 crystalith[official-connectors]（推荐）或单独安装 'crystalith-connector-local-directory'，并确保未在 plugins.disabled 中禁用。 |
+| `connector-obsidian` | `connector` | `crystalith-connector-obsidian` | 安装 crystalith[official-connectors]（推荐）或单独安装 'crystalith-connector-obsidian'，并确保未在 plugins.disabled 中禁用。 |
 | `extractor-browserless` | `extractor` | `crystalith-extractor-browserless` | 安装 crystalith[official-full]（推荐）或单独安装 'crystalith-extractor-browserless'，并确保未在 plugins.disabled 中禁用。 |
 | `extractor-firecrawl` | `extractor` | `crystalith-extractor-firecrawl` | 安装 crystalith[official-full]（推荐）或单独安装 'crystalith-extractor-firecrawl'，并确保未在 plugins.disabled 中禁用。 |
 | `extractor-jina` | `extractor` | `crystalith-extractor-jina` | 安装 crystalith[official-full]（推荐）或单独安装 'crystalith-extractor-jina'，并确保未在 plugins.disabled 中禁用。 |
