@@ -50,7 +50,6 @@ import type {
 import { toast } from "../../../../../shared/toast";
 import { copyToClipboard } from "../../../../../shared/clipboard";
 import { t } from "../../../../../shared/i18n";
-import { useFocusTrap } from "../../../shared/hooks/useFocusTrap";
 import ConfirmPopover from "../../../../../shared/ConfirmPopover";
 import { LAYER_LEVELS } from "../../../../../shared/layer";
 import { SkeletonCard, SkeletonList } from "../../../shared/components/Skeleton";
@@ -66,6 +65,7 @@ import ResearchCapsule from "../../research/ResearchCapsule";
 import type { SearchResultItem } from "../SearchResultCard";
 import type { useResearch } from "../../research/useResearch";
 import ExtractorPolicyDialog from "./ExtractorPolicyDialog";
+import SourceConnectorsDialog from "./SourceConnectorsDialog";
 
 const SourceDetailDialog = lazy(() => import("../SourceDetailDialog"));
 const ResearchDetailPanel = lazy(() => import("../../research/ResearchDetailPanel"));
@@ -109,6 +109,8 @@ export interface SourcesPanelProps {
   /** 外部触发定位/高亮某个来源 */
   jumpToSource?: { id: number; token: number } | null;
   onUpload: (input: File | File[] | FileList | null) => void;
+  /** 刷新来源列表（例如连接器导入后） */
+  onRefreshSources?: () => Promise<void> | void;
   uploadState: AsyncStatus;
   uploadError?: string;
   uploadQueue?: SourceUploadItem[];
@@ -183,6 +185,7 @@ function SourcesPanelView({
   sources,
   jumpToSource = null,
   onUpload,
+  onRefreshSources,
   uploadState,
   uploadError = "",
   uploadQueue = [],
@@ -230,6 +233,7 @@ function SourcesPanelView({
   onSelectedSourceIdsChange,
 }: SourcesPanelViewProps) {
   const uploadDisabled = !isConnected || uploadState === "loading";
+  const connectorDisabled = !isConnected || !notebookId;
   const isSearching = searchState === "loading";
   const [searchQuery, setSearchQuery] = useState("");
   const engine: SearchEngine = SEARCH_ENGINE_WEB;
@@ -258,6 +262,7 @@ function SourcesPanelView({
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   const [uploadDragActive, setUploadDragActive] = useState(false);
   const [uploadHint, setUploadHint] = useState(t("sources.upload.hint.default"));
+  const [connectorsOpen, setConnectorsOpen] = useState(false);
   const isDeepResearchMode = mode === "Deep Research";
   const searchPlaceholder = isDeepResearchMode
     ? t("sources.search.placeholder.deep")
@@ -790,6 +795,21 @@ function SourcesPanelView({
               />
             </Button>
           </div>
+        </Tooltip>
+
+        {/* Source Connectors */}
+        <Tooltip content="通过连接器接入外部资料仓（如 Obsidian / 本地目录）">
+          <Button
+            variant="outlined"
+            fullWidth
+            size="sm"
+            disabled={connectorDisabled}
+            className="flex items-center justify-center gap-2 py-2 rounded-full border-gray-300 normal-case font-normal text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 hover:border-gray-400"
+            onClick={() => setConnectorsOpen(true)}
+          >
+            <SettingsIcon style={{ fontSize: 18 }} />
+            连接器
+          </Button>
         </Tooltip>
 
         <Typography variant="small" className="text-[10px] text-gray-500 dark:text-slate-400 px-1">
@@ -1497,6 +1517,14 @@ function SourcesPanelView({
         fallbackEnabled={extractorFallbackEnabled}
         onPatchPolicy={onPatchExtractorsPolicy}
         onRefresh={onRefreshExtractors}
+      />
+
+      <SourceConnectorsDialog
+        open={connectorsOpen}
+        onClose={() => setConnectorsOpen(false)}
+        notebookId={notebookId}
+        isConnected={isConnected}
+        onSourcesChanged={onRefreshSources}
       />
 
       {/* Research Detail Panel - Modal Overlay */}
