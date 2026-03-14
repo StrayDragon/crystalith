@@ -39,6 +39,10 @@ dependencies = [
 official-slides = [
     "crystalith-slides-slidev",
 ]
+official-connectors = [
+    "crystalith-connector-obsidian",
+    "crystalith-connector-local-directory",
+]
 official-outputs = [
     "crystalith-output-faq",
     "crystalith-output-guide",
@@ -63,6 +67,8 @@ official-extractors = [
     "crystalith-extractor-browserless",
 ]
 official-full = [
+    "crystalith-connector-obsidian",
+    "crystalith-connector-local-directory",
     "crystalith-output-faq",
     "crystalith-output-guide",
     "crystalith-output-timeline",
@@ -99,6 +105,8 @@ cl-logs = { workspace = true }
 cl-pydanticx = { workspace = true }
 cl-sqlalchemyx = { workspace = true }
 cl-stdx = { workspace = true }
+crystalith-connector-obsidian = { workspace = true }
+crystalith-connector-local-directory = { workspace = true }
 crystalith-output-faq = { workspace = true }
 crystalith-output-guide = { workspace = true }
 crystalith-output-briefing = { workspace = true }
@@ -125,6 +133,8 @@ dev = [
     "pytest-cov>=5.0.0",
     "pytest-xdist>=3.5.0",
     "ruff>=0.13.1",
+    "crystalith-connector-obsidian",
+    "crystalith-connector-local-directory",
     "crystalith-output-faq",
     "crystalith-output-guide",
     "crystalith-output-briefing",

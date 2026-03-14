@@ -246,6 +246,7 @@ def _get_connector_plugin_or_409(
         return plugin
 
     skipped_detail = plugins.get_load_report().skipped.get(connector_id)
+    catalog_entry = OFFICIAL_PLUGIN_CATALOG.get(connector_id)
     hint = skipped_detail.hint if skipped_detail is not None and skipped_detail.hint else None
     details: dict[str, JsonValue] = {"connector_id": connector_id}
     if skipped_detail is not None:
@@ -253,7 +254,11 @@ def _get_connector_plugin_or_409(
         if hint is None:
             hint = skipped_detail.hint
     if hint is None:
-        hint = f"安装并启用 {connector_id!r} 连接器插件。"
+        hint = (
+            catalog_entry.default_install_hint()
+            if catalog_entry is not None
+            else f"安装并启用 {connector_id!r} 连接器插件。"
+        )
     raise HTTPException(
         status_code=409,
         detail={
