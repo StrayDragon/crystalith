@@ -741,6 +741,47 @@ async def sync_check_binding(
         base_snapshot = Snapshot.model_validate(binding.last_confirmed_snapshot)
 
     current_snapshot = await _build_snapshot(plugin, settings=settings, connection_config=binding.connection_config)
+
+    scope_directories: list[str] = []
+    scope_files: list[str] = []
+    if binding.import_scope is not None:
+        try:
+            scope_directories, scope_files = _normalize_import_scope(ImportScope.model_validate(binding.import_scope))
+        except HTTPException as exc:
+            if isinstance(exc.detail, dict) and exc.detail.get("error_code") == "IMPORT_SCOPE_EMPTY":
+                scope_directories = []
+                scope_files = []
+            else:
+                raise
+
+    if scope_directories or scope_files:
+        if base_snapshot is not None:
+            base_snapshot = Snapshot(
+                generated_at=base_snapshot.generated_at,
+                entries=[
+                    entry
+                    for entry in base_snapshot.entries
+                    if path_in_scope(
+                        entry.relative_path,
+                        include_directories=scope_directories,
+                        include_files=scope_files,
+                    )
+                ],
+            )
+
+        current_snapshot = Snapshot(
+            generated_at=current_snapshot.generated_at,
+            entries=[
+                entry
+                for entry in current_snapshot.entries
+                if path_in_scope(
+                    entry.relative_path,
+                    include_directories=scope_directories,
+                    include_files=scope_files,
+                )
+            ],
+        )
+
     candidates = _build_sync_candidates(base_snapshot=base_snapshot, current_snapshot=current_snapshot)
     result = SyncCheckResult(
         id=str(uuid.uuid4()),
