@@ -5,9 +5,9 @@
 
 ## 2. 移动端单面板布局
 
-- [ ] 2.1 在 `WorkspaceLayout` 增加 mobile/desktop 分支渲染：mobile 渲染单面板容器；desktop 保持 `ModularCanvas`
-- [ ] 2.2 为 mobile 增加底部 TabBar（可复用/改造 `WorkspaceTabs`），支持切换 Sources / Chat / Studio
-- [ ] 2.3 确保 TabBar 切换不会清空关键状态（Chat 草稿、来源选择、输出列表/队列），并确保顶部 `WorkspaceHeader` 的关键入口在窄屏仍可用
+- [x] 2.1 在 `WorkspaceLayout` 增加 mobile/desktop 分支渲染：mobile 渲染单面板容器；desktop 保持 `ModularCanvas`
+- [x] 2.2 为 mobile 增加底部 TabBar（可复用/改造 `WorkspaceTabs`），支持切换 Sources / Chat / Studio
+- [x] 2.3 确保 TabBar 切换不会清空关键状态（Chat 草稿、来源选择、输出列表/队列），并确保顶部 `WorkspaceHeader` 的关键入口在窄屏仍可用
 
 ## 3. 安全区与视口高度
 
