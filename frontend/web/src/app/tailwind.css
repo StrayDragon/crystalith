@@ -93,6 +93,11 @@
 }
 
 @layer utilities {
+  .cl-h-dvh {
+    height: 100vh;
+    height: 100dvh;
+  }
+
   .TypingCursor {
     display: inline-block;
     width: 8px;

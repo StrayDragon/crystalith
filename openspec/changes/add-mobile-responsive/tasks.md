@@ -11,9 +11,9 @@
 
 ## 3. 安全区与视口高度
 
-- [ ] 3.1 TabBar 适配 `safe-area-inset-bottom`，避免被 iOS home indicator 遮挡
-- [ ] 3.2 将 Workspace 顶层高度策略从 `h-screen` 调整为 `100dvh`（或等价）以缓解移动端地址栏导致的裁切/跳动
-- [ ] 3.3 复核 Chat 输入区与底部 TabBar 的叠放关系（键盘弹起时不遮挡主要交互）
+- [x] 3.1 TabBar 适配 `safe-area-inset-bottom`，避免被 iOS home indicator 遮挡
+- [x] 3.2 将 Workspace 顶层高度策略从 `h-screen` 调整为 `100dvh`（或等价）以缓解移动端地址栏导致的裁切/跳动
+- [x] 3.3 复核 Chat 输入区与底部 TabBar 的叠放关系（键盘弹起时不遮挡主要交互）
 
 ## 4. 文档更新
 
