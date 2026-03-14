@@ -56,6 +56,90 @@
 - `reason`: 触发原因描述
 - `suggested_action`: 建议动作（如"检查引用完整性"、"补充来源后重试"）
 
+## 质量门模型（v1 最小公共模型）
+
+本 change 定义“质量门是运行时信号”的最小可复用对象模型，并明确它如何被 `typed-generation-framework` 的生成类型契约消费。
+
+### QualityGateResult（单个门的结果）
+
+```yaml
+QualityGateResult:
+  gate_id: string                 # 稳定标识（供配置/统计）
+  status: enum                    # pass | warn | block
+  dimension: string               # 维度（例如 schema_compliance/citation_coverage）
+  reason: string | null           # 人类可读原因
+  suggested_actions: list[string] # 1-3 条建议动作（用于 UI 引导）
+  metrics: object | null          # 可选结构化指标（例如 coverage=0.42）
+```
+
+### QualityStatus（结果级聚合）
+
+```yaml
+QualityStatus:
+  overall: enum                   # pass | warn | block（取最严重级别）
+  gates: list[QualityGateResult]
+```
+
+### 与上游类型契约的关系（消费 typed-generation-framework）
+
+- 每个 `GenerationType` 通过其 `completion_semantics.quality_gates` 声明适用的 `gate_id` 集合（上游公共词汇）。
+- 质量门本身是跨类型复用能力；不同类型只通过“启用哪些 gate / 门槛参数（后置可扩展）”进行适配，不复制一套规则体系。
+
+## 接入位置与结果暴露
+
+### 在生成流程中的接入时机（v1）
+
+质量门应在“生成结果产出并完成最小后处理”之后执行，确保能基于稳定输入判断：
+
+1) 生成完成（得到候选 payload）
+2) 最小后处理（结构解析/Schema 校验、citation 抽取等）
+3) **运行质量门**（得到 `QualityStatus`）
+4) 将质量状态写入结果元数据并返回给调用方
+
+### 阻断（block）语义
+
+- `block` 表示结果“不满足最小可用条件”，例如结构无法渲染或关键字段缺失。
+- `block` 不等价于“任务失败”：任务可以完成并返回结果对象，但 UI 必须明确标识为阻断，并引导用户采取建议动作（例如重新生成/补关键字段/修复结构）。
+- v1 不把所有结果都强制阻断；只有明确可判定为“不可用”的门才允许为 `block`（见分级表）。
+
+### 结果中如何暴露质量状态与告警信息
+
+- 结果对象的完成语义中应携带质量状态（与上游 `completion_semantics.quality_gates` 对齐）：
+  - `quality.overall`：pass/warn/block
+  - `quality.gates[]`：每个门的结构化原因与建议动作
+- 前端展示不依赖私有字符串拼接，而消费结构化字段。
+
+## 记录、观测与反馈（v1）
+
+### 质量门结果记录语义
+
+- 系统应记录每次生成结果的 `QualityStatus`，用于：
+  - 用户可见的解释与引导
+  - 质量回退的观测（warn/block 占比变化）
+  - 后续治理策略（例如把某类 warn 作为审阅触发建议）
+
+### 最小观测指标（建议）
+
+- 按 `gate_id`、`generation_type_id` 统计 pass/warn/block 计数与比例
+- `block` 的 Top reasons（用于发现系统性问题：结构解析/引用抽取等）
+
+### 前端展示：告警、阻断原因与建议动作
+
+- 在结果页展示一个质量状态 pill（通过/警告/阻断）。
+- 展开后按门展示：
+  - 触发维度 + 原因（reason）
+  - 建议动作（suggested_actions）
+- `warn`：允许继续使用，但提示“建议审阅/补证据/做 refinement”等。
+- `block`：对“发布/沉淀/导出”等动作做显式限制，并提供“修复路径”（例如整篇重生成或局部 refinement）。
+
+## 明确后置：复杂评分与回归能力
+
+以下能力明确后置（v1 不承诺）：
+
+- 连续评分（0-100）与多维加权打分模型
+- 自动回滚/自动修复策略
+- 与模型评估/离线回归体系的深度联动
+
 ### 后置项说明
 
 - D4 中的"更复杂的评分模型、回归体系联动和自动修复"后置条件：**待用户反馈后评估**，属于"确认需要但延迟"类型
