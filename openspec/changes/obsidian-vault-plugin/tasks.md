@@ -6,11 +6,11 @@
 
 ## 2. 宿主连接器框架：后端契约
 
-- [ ] 2.1 新增 `SourceConnectorPlugin` 接口，并接入统一插件发现、启用、兼容性和诊断体系
-- [ ] 2.2 新增 notebook-scoped `connector binding` 模型，持久化 `connector_id`、`connection_config`、`import_scope`、`last_confirmed_snapshot`
-- [ ] 2.3 新增连接器发现接口：列出可用连接器、配置 schema 与诊断信息
-- [ ] 2.4 新增 binding 的 `snapshot`、`import-scope`、`sync-check` 三组核心接口
-- [ ] 2.5 实现通用路径规范化、范围命中、快照差异计算与结构化恢复提示
+- [x] 2.1 新增 `SourceConnectorPlugin` 接口，并接入统一插件发现、启用、兼容性和诊断体系
+- [x] 2.2 新增 notebook-scoped `connector binding` 模型，持久化 `connector_id`、`connection_config`、`import_scope`、`last_confirmed_snapshot`
+- [x] 2.3 新增连接器发现接口：列出可用连接器、配置 schema 与诊断信息
+- [x] 2.4 新增 binding 的 `snapshot`、`import-scope`、`sync-check` 三组核心接口
+- [x] 2.5 实现通用路径规范化、范围命中、快照差异计算与结构化恢复提示
 
 ## 3. 宿主连接器框架：前端通用组件
 

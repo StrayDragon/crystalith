@@ -15,6 +15,7 @@ from crystalith.features.refine.api import router as refine_router
 from crystalith.features.research.api import router as research_router
 from crystalith.features.sessions.api import router as sessions_router
 from crystalith.features.sources.api import router as sources_router
+from crystalith.features.source_connectors.api import router as source_connectors_router
 from crystalith.features.citations.api import router as citations_router
 from crystalith.features.tasks.api import router as tasks_router
 from crystalith.features.templates.api import router as templates_router
@@ -35,6 +36,7 @@ def register_routers(app: FastAPIX) -> None:
     app.include_router(models_router, dependencies=auth_dependencies)
     app.include_router(qa_router, dependencies=auth_dependencies)
     app.include_router(sources_router, dependencies=auth_dependencies)
+    app.include_router(source_connectors_router, dependencies=auth_dependencies)
     app.include_router(citations_router, dependencies=auth_dependencies)
     app.include_router(commands_router, dependencies=auth_dependencies)
     app.include_router(prompt_presets_router, dependencies=auth_dependencies)
