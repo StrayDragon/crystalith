@@ -11,6 +11,7 @@
    - `config-and-models/spec.md`
    - `data-and-storage/spec.md`
    - `retrieval-and-cache/spec.md`
+   - `background-jobs-and-task-runtime/spec.md`
 2. API 与客户端
    - `workspace-api-contract/spec.md`
    - `workspace-command-registry/spec.md`
@@ -18,18 +19,30 @@
 3. Workspace UI
    - `workspace-ui-core/spec.md`
    - `workspace-ui-panels/spec.md`
+   - `multi-notebook-collections/spec.md`
 4. Source 与生成
    - `source-ingestion-core/spec.md`
    - `source-ingestion-upload-and-url/spec.md`
    - `web-extractor-plugins/spec.md`
    - `source-ingestion-management-and-tags/spec.md`
    - `source-ingestion-summary-and-conversion/spec.md`
+   - `source-connectors/spec.md`
    - `generation-core/spec.md`
    - `generation-observability-and-guardrails/spec.md`
+   - `typed-generation-framework/spec.md`
+   - `generation-presets-and-constraints/spec.md`
+   - `structural-refinement-for-generated-results/spec.md`
+   - `quality-gates-for-generation/spec.md`
+   - `generation-variants-and-comparison/spec.md`
+   - `source-aware-generation-modes/spec.md`
+   - `cross-type-result-transformations/spec.md`
+   - `knowledge-curation-and-freshness/spec.md`
    - `output-rendering-and-typing/spec.md`
 5. Studio 输出
    - `studio-slides-workflow/spec.md`
    - `studio-output-types/spec.md`
+   - `evidence-review-workflow/spec.md`
+   - `publishable-artifacts/spec.md`
 6. 交付与质量
    - `doc-governance/spec.md`
    - `docs-site/spec.md`
