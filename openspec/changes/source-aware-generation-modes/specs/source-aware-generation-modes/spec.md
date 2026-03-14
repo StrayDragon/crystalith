@@ -25,3 +25,37 @@
 - **WHEN** 系统新增或调整某个来源模式
 - **THEN** 该变更 SHALL 消费既有类型与来源对象模型
 - **AND** SHALL NOT 反向定义新的类型或接入基础语义
+
+### Requirement: 生成请求与结果必须显式表达生效的来源模式
+系统 MUST 在生成请求与结果元数据中显式表达本次生效的来源模式，以支持可解释行为与一致的 UI 呈现。
+
+#### Scenario: 客户端覆盖默认来源模式
+- **WHEN** 客户端在生成请求中显式指定来源模式
+- **THEN** 系统 SHALL 校验该模式是否被该生成类型允许
+- **AND** 系统 SHALL 使用该模式装配本次生成
+
+#### Scenario: 系统返回生成结果
+- **WHEN** 系统返回某次生成结果
+- **THEN** 结果元数据 SHALL 回传本次生效的来源模式
+- **AND** SHOULD 回传来源使用摘要（例如 sources_considered / sources_cited / citations_count）
+
+### Requirement: 来源模式必须影响检索与上下文构造行为
+系统 MUST 让来源模式影响检索、上下文构造与证据约束行为，而不是只改变展示文案。
+
+#### Scenario: strict_evidence 模式下的生成
+- **WHEN** 某次生成以 strict_evidence 模式执行
+- **THEN** 系统 SHALL 以可引用的来源片段构造上下文并强制 citation 预期
+- **AND** 在证据不足时 SHALL 显式提示不足，而不是伪造引用链
+
+#### Scenario: brainstorming 模式下的生成
+- **WHEN** 某次生成以 brainstorming 模式执行
+- **THEN** 系统 SHALL 允许在不强制 citation 的前提下生成
+- **AND** 若展示来源，SHALL 将其标识为背景参考而非证据
+
+### Requirement: 用户可见的来源模式标签不得直接暴露内部策略术语
+系统 MUST 使用可理解的产品概念向用户表达来源模式，而不是把内部策略术语直接当作产品标签。
+
+#### Scenario: UI 展示来源模式
+- **WHEN** UI 展示某次结果的来源依赖方式
+- **THEN** 系统/前端 SHALL 使用用户可理解的来源模式标签与解释文案
+- **AND** SHALL NOT 直接把内部枚举名或检索参数作为产品概念展示
