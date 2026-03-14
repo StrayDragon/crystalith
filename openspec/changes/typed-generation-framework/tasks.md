@@ -6,18 +6,18 @@
 
 ## 2. 接口与注册语义
 
-- [ ] 2.1 定义生成类型注册、查询与请求装配语义
-- [ ] 2.2 明确请求中如何显式携带生成类型信息
-- [ ] 2.3 明确结果对象如何回传类型与完成语义信息
+- [x] 2.1 定义生成类型注册、查询与请求装配语义
+- [x] 2.2 明确请求中如何显式携带生成类型信息
+- [x] 2.3 明确结果对象如何回传类型与完成语义信息
 
 ## 3. 对下游 change 的消费边界
 
-- [ ] 3.1 明确 `generation-presets-and-constraints` 与 `structural-refinement-for-generated-results` 如何消费公共词汇
-- [ ] 3.2 明确不允许的反向依赖和特例回写
-- [ ] 3.3 明确右侧生成入口如何基于类型模型组织
+- [x] 3.1 明确 `generation-presets-and-constraints` 与 `structural-refinement-for-generated-results` 如何消费公共词汇
+- [x] 3.2 明确不允许的反向依赖和特例回写
+- [x] 3.3 明确右侧生成入口如何基于类型模型组织
 
 ## 4. 验证
 
-- [ ] 4.1 运行 `openspec validate typed-generation-framework`
-- [ ] 4.2 复核公共词汇是否足以支撑控制项、改良、来源模式与结果演化
-- [ ] 4.3 复核文档中没有把输出类型和生成类型重新混在一起
+- [x] 4.1 运行 `openspec validate typed-generation-framework`
+- [x] 4.2 复核公共词汇是否足以支撑控制项、改良、来源模式与结果演化
+- [x] 4.3 复核文档中没有把输出类型和生成类型重新混在一起
