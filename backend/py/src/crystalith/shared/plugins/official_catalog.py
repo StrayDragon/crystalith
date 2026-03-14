@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 
-OfficialPluginKind = Literal["output", "parser", "extractor", "slides"]
+OfficialPluginKind = Literal["output", "parser", "extractor", "slides", "connector"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,7 +14,12 @@ class OfficialPluginCatalogEntry:
     package: str
 
     def default_install_hint(self) -> str:
-        recommended_extra = "official-slides" if self.kind == "slides" else "official-full"
+        if self.kind == "slides":
+            recommended_extra = "official-slides"
+        elif self.kind == "connector":
+            recommended_extra = "official-connectors"
+        else:
+            recommended_extra = "official-full"
         return f"安装 crystalith[{recommended_extra}]（推荐）或单独安装 {self.package!r}，并确保未在 plugins.disabled 中禁用。"
 
 
@@ -48,5 +53,16 @@ OFFICIAL_PLUGIN_CATALOG: dict[str, OfficialPluginCatalogEntry] = {
         plugin_id="extractor-browserless",
         kind="extractor",
         package="crystalith-extractor-browserless",
+    ),
+    # Source connector plugins
+    "connector-obsidian": OfficialPluginCatalogEntry(
+        plugin_id="connector-obsidian",
+        kind="connector",
+        package="crystalith-connector-obsidian",
+    ),
+    "connector-local-directory": OfficialPluginCatalogEntry(
+        plugin_id="connector-local-directory",
+        kind="connector",
+        package="crystalith-connector-local-directory",
     ),
 }

@@ -16,6 +16,7 @@ Official plugin ids follow a stable naming convention:
 - Parsers: `parser-<kind>` (e.g. `parser-pdf`)
 - Web extractors: `extractor-<kind>` (e.g. `extractor-trafilatura`)
 - Slides workflow plugins: `slides-<engine>` (e.g. `slides-slidev`)
+- Source connectors: `connector-<kind>` (e.g. `connector-obsidian`)
 
 ### Default enablement
 
@@ -35,6 +36,13 @@ Example install flows:
 ```bash
 cd backend/py
 uv sync --extra official-slides
+```
+
+For official source connector plugins:
+
+```bash
+cd backend/py
+uv sync --extra official-connectors
 ```
 
 Or install the plugin package directly during local development:

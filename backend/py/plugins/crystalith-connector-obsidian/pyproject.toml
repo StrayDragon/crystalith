@@ -1,0 +1,21 @@
+[project]
+name = "crystalith-connector-obsidian"
+version = "0.1.0"
+description = "Official Crystalith SourceConnectorPlugin (Obsidian vault)."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "crystalith", email = "devnull@example.com" }]
+dependencies = [
+  "crystalith",
+]
+
+[project.entry-points."crystalith.plugins"]
+connector-obsidian = "crystalith_connector_obsidian.plugin:plugin"
+
+[build-system]
+requires = ["uv_build>=0.9.24,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+package = true
+
