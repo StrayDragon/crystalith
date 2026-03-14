@@ -71,6 +71,13 @@ class Notebook(AsyncSqlATableBase):
         order_by="Output.created_at.desc()",
         lazy="selectin",
     )
+    source_connector_bindings: Mapped[list[SourceConnectorBinding]] = relationship(
+        back_populates="notebook",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="SourceConnectorBinding.updated_at.desc()",
+        lazy="selectin",
+    )
 
     __table_args__ = (sa.Index("ix_notebooks_name", "name"),)
 
@@ -369,6 +376,45 @@ class Source(AsyncSqlATableBase):
     __table_args__ = (
         sa.Index("ix_sources_notebook_id_status", "notebook_id", "status"),
         sa.Index("ix_sources_notebook_id_dedup_key", "notebook_id", "dedup_key"),
+    )
+
+
+class SourceConnectorBinding(AsyncSqlATableBase):
+    __tablename__ = "source_connector_bindings"
+
+    id: Mapped[int] = mapped_column(sa.Integer, primary_key=True, autoincrement=True)
+    notebook_id: Mapped[int] = mapped_column(
+        sa.Integer,
+        sa.ForeignKey("notebooks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    connector_id: Mapped[str] = mapped_column(sa.String(128), nullable=False)
+    connection_config: Mapped[JsonDict] = mapped_column(sa.JSON, nullable=False)
+    import_scope: Mapped[JsonDict | None] = mapped_column(sa.JSON, nullable=True)
+    last_confirmed_snapshot: Mapped[JsonDict | None] = mapped_column(sa.JSON, nullable=True)
+    last_sync_check_result: Mapped[JsonDict | None] = mapped_column(sa.JSON, nullable=True)
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        sa.DateTime,
+        nullable=False,
+        server_default=sa.sql.func.now(),
+        onupdate=sa.sql.func.now(),
+    )
+
+    notebook: Mapped[Notebook] = relationship(
+        back_populates="source_connector_bindings",
+        lazy="selectin",
+    )
+
+    __table_args__ = (
+        sa.Index("ix_source_connector_bindings_notebook_id_connector_id", "notebook_id", "connector_id"),
     )
 
 
