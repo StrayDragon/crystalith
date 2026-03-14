@@ -9,7 +9,7 @@
 - v1 不支持从远程 URL 动态执行第三方代码（ESM/iframe 等）；仅支持构建期集成的 `builtin` bundle。
 - 不定义插件市场、下载/安装、签名验证、CSP/沙箱等分发与安全体系（后续能力）。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Tools API can advertise optional frontend bundles
 系统 MUST 在 `/v1/workspace/tools` 的 tool 对象上支持可选字段 `frontend_bundle`，用于声明该 tool 对应输出类型的前端渲染 bundle。

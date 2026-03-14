@@ -26,7 +26,7 @@
 - **THEN** 仓库 SHALL 提供清晰的披露渠道与期望信息
 
 ### Requirement: Issue and PR templates capture actionable information
-仓库 SHOULD 提供最小的 Issue/PR 模板，以引导提交者提供复现步骤、期望/实际与环境信息，从而减少维护者追问。
+仓库 MUST 提供最小的 Issue/PR 模板，以引导提交者提供复现步骤、期望/实际与环境信息，从而减少维护者追问。
 
 #### Scenario: Bug report template includes reproduction details
 - **WHEN** 用户提交 bug
