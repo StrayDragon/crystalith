@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import ChatPanel from "../domains/messages/ChatPanel";
 import SessionSwitcher from "../domains/sessions/SessionSwitcher";
@@ -15,6 +15,7 @@ import {
   useKeyboardShortcuts,
   type KeyboardShortcutBinding,
 } from "../shared/hooks/useKeyboardShortcuts";
+import { useMediaQuery } from "../shared/hooks/useMediaQuery";
 import { getSlideIdFromOutput } from "../shared/outputPayload";
 import { useWorkspaceStore } from "../shared/state/workspaceStore";
 import type { ChatMessage, Citation, PanelId, SourceItem } from "../shared/types";
@@ -27,8 +28,10 @@ import {
 } from "../shared/evidenceExport";
 import { toast } from "../../../shared/toast";
 import { computeWorkspaceReadiness, useDependencyHealth, useWorkspaceOverlays } from "./hooks";
+import MobilePanelShell from "./components/MobilePanelShell";
 import WorkspaceOnboardingBanner from "./components/WorkspaceOnboardingBanner";
 import WorkspaceHeader from "./WorkspaceHeader";
+import WorkspaceTabs from "./WorkspaceTabs";
 import {
   ModularCanvas,
   type CommandItem,
@@ -47,12 +50,19 @@ const WORKSPACE_WIDGET_TO_PANEL: Record<"sources" | "chat" | "studio", PanelId> 
   studio: "refine",
 };
 
+const WORKSPACE_PANEL_TO_WIDGET: Record<PanelId, "sources" | "chat" | "studio"> = {
+  sources: "sources",
+  chat: "chat",
+  refine: "studio",
+};
+
 export default function WorkspaceLayout() {
   const selectedSourceIds_raw = useWorkspaceStore((s) => s.selectedSourceIds);
   const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
   const activeSessionId = useWorkspaceStore((s) => s.activeSessionId);
   const autoCreatedNotebookId = useWorkspaceStore((s) => s.autoCreatedNotebookId);
   const errMessages = useWorkspaceStore((s) => s.errors.messages);
+  const activePanel = useWorkspaceStore((s) => s.activePanel);
   const store = useWorkspaceStore;
 
   const canvasRef = useRef<ModularCanvasHandle>(null);
@@ -288,9 +298,19 @@ export default function WorkspaceLayout() {
     void notebooks.createNotebookQuick("未命名笔记本");
   }, [notebooks]);
 
+  const isDesktopLayout = useMediaQuery("(min-width: 768px)", { defaultState: true });
+  const showCanvasControls = isDesktopLayout;
+
   const toggleLock = useCallback(() => {
     setLocked((prev) => !prev);
   }, []);
+
+  const handleActivePanelChange = useCallback(
+    (panel: PanelId) => {
+      store.getState().setActivePanel(panel);
+    },
+    [store],
+  );
 
   const shortcutBindings = useMemo<KeyboardShortcutBinding[]>(
     () => [
@@ -595,31 +615,33 @@ export default function WorkspaceLayout() {
       action: overlays.openShortcutHelp,
     });
 
-    Object.entries(WIDGET_REGISTRY).forEach(([id, meta]) => {
-      const isActive = activeWidgetIds.includes(id);
-      if (!isActive) {
-        cmds.push({
-          id: `add-${id}`,
-          label: `添加模块: ${meta.label}`,
-          icon: meta.icon,
-          action: () => canvasRef.current?.addWidget(id),
-        });
-      } else {
-        cmds.push({
-          id: `remove-${id}`,
-          label: `移除模块: ${meta.label}`,
-          icon: meta.icon,
-          action: () => canvasRef.current?.removeWidget(id),
-        });
-      }
-    });
+    if (isDesktopLayout) {
+      Object.entries(WIDGET_REGISTRY).forEach(([id, meta]) => {
+        const isActive = activeWidgetIds.includes(id);
+        if (!isActive) {
+          cmds.push({
+            id: `add-${id}`,
+            label: `添加模块: ${meta.label}`,
+            icon: meta.icon,
+            action: () => canvasRef.current?.addWidget(id),
+          });
+        } else {
+          cmds.push({
+            id: `remove-${id}`,
+            label: `移除模块: ${meta.label}`,
+            icon: meta.icon,
+            action: () => canvasRef.current?.removeWidget(id),
+          });
+        }
+      });
 
-    cmds.push({
-      id: "toggle-lock",
-      label: locked ? "解锁布局（进入编辑模式）" : "锁定布局",
-      icon: locked ? "🔓" : "🔒",
-      action: toggleLock,
-    });
+      cmds.push({
+        id: "toggle-lock",
+        label: locked ? "解锁布局（进入编辑模式）" : "锁定布局",
+        icon: locked ? "🔓" : "🔒",
+        action: toggleLock,
+      });
+    }
 
     cmds.push({
       id: "session-search",
@@ -646,6 +668,7 @@ export default function WorkspaceLayout() {
     handleOpenUpload,
     handleStartSession,
     isConnected,
+    isDesktopLayout,
     locked,
     notebooks.activeNotebookId,
     notebooks.notebooks,
@@ -658,7 +681,7 @@ export default function WorkspaceLayout() {
     toggleLock,
   ]);
 
-  const widgetHeaderExtras = useMemo(
+  const widgetHeaderExtras = useMemo<Record<string, ReactNode>>(
     () => ({
       chat: (
         <SessionSwitcher
@@ -834,6 +857,8 @@ export default function WorkspaceLayout() {
     ],
   );
 
+  const mobileWidgetId = WORKSPACE_PANEL_TO_WIDGET[activePanel];
+
   return (
     <div className="flex flex-col h-screen bg-gray-50/50 dark:bg-slate-950 overflow-hidden text-gray-900 dark:text-gray-100">
       <input
@@ -894,9 +919,9 @@ export default function WorkspaceLayout() {
           onOpenDiagnostics={overlays.openDiagnostics}
           onOpenSystemConfig={overlays.openSystemConfig}
           onOpenShortcutHelp={overlays.openShortcutHelp}
-          locked={locked}
-          onToggleLock={toggleLock}
-          onOpenCatalog={overlays.toggleCatalog}
+          locked={showCanvasControls ? locked : undefined}
+          onToggleLock={showCanvasControls ? toggleLock : undefined}
+          onOpenCatalog={showCanvasControls ? overlays.toggleCatalog : undefined}
           onOpenCommandPalette={overlays.openCommandPalette}
         />
 
@@ -921,15 +946,29 @@ export default function WorkspaceLayout() {
         />
       </div>
 
-      <ModularCanvas
-        ref={canvasRef}
-        defaultLayout={DEFAULT_LAYOUT}
-        locked={locked}
-        widgetMeta={WIDGET_REGISTRY}
-        renderWidget={renderWidget}
-        widgetHeaderExtras={widgetHeaderExtras}
-        onWidgetIdsChange={setActiveWidgetIds}
-      />
+      {isDesktopLayout ? (
+        <ModularCanvas
+          ref={canvasRef}
+          defaultLayout={DEFAULT_LAYOUT}
+          locked={locked}
+          widgetMeta={WIDGET_REGISTRY}
+          renderWidget={renderWidget}
+          widgetHeaderExtras={widgetHeaderExtras}
+          onWidgetIdsChange={setActiveWidgetIds}
+        />
+      ) : (
+        <>
+          <div className="flex-1 min-h-0 px-4 pb-3 overflow-hidden">
+            <MobilePanelShell
+              title={WIDGET_REGISTRY[mobileWidgetId]?.label ?? "面板"}
+              headerExtras={widgetHeaderExtras[mobileWidgetId] ?? null}
+            >
+              {renderWidget(mobileWidgetId)}
+            </MobilePanelShell>
+          </div>
+          <WorkspaceTabs activePanel={activePanel} onChange={handleActivePanelChange} />
+        </>
+      )}
 
       <WorkspaceOverlays
         commandPaletteOpen={overlays.showCommandPalette}
