@@ -13,7 +13,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from crystalith.features.source_connectors.schemas import (
+from .schemas import (
     ApplySyncCheckRequest,
     ConnectorBindingRead,
     CreateConnectorBindingRequest,
@@ -44,7 +44,7 @@ from crystalith.shared.deps import (
     get_vector_store,
 )
 from crystalith.shared.json_types import JsonDict, JsonValue
-from crystalith.shared.parsers import ParserFactory, TranscriptionProvider, UnsupportedDocumentError
+from crystalith.shared.parsers import Parser, ParserFactory, TranscriptionProvider, UnsupportedDocumentError
 from crystalith.shared.parsers.interfaces import ParserWithDocumentMetadata
 from crystalith.shared.plugins import PluginRegistry, SourceConnectorPlugin
 from crystalith.shared.plugins.official_catalog import OFFICIAL_PLUGIN_CATALOG
@@ -65,7 +65,7 @@ from crystalith.shared.source_diagnostics import (
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore
 
-from crystalith.features.sources.api_common import (
+from ..sources.api_common import (
     _build_source_metadata,
     _invalidate_notebook_source_caches,
     _page_count_from_chunks,
@@ -486,7 +486,7 @@ def _resolve_parser_for_file(
     mime_type: str | None,
     transcriber: TranscriptionProvider,
     plugins: PluginRegistry,
-) -> tuple[object | None, str | None, Diagnostic | None]:
+) -> tuple[Parser | None, str | None, Diagnostic | None]:
     try:
         try:
             resolution = ParserFactory.resolve_from_file(
