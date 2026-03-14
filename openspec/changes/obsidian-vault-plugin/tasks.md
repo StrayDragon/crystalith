@@ -26,7 +26,7 @@
 - [ ] 4.2 实现 vault 快照枚举（路径、大小、修改时间、frontmatter 摘要）
 - [ ] 4.3 实现内容读取并复用现有 source ingestion 链路导入已选笔记
 - [ ] 4.4 实现显式 `sync_check`，输出范围内的新增 / 更新 / 缺失候选
-- [ ] 4.5 明确 v1 连接器插件不自带前端工作流 UI，Obsidian 插件仅提供配置与数据能力
+- [x] 4.5 明确 v1 连接器插件不自带前端工作流 UI，Obsidian 插件仅提供配置与数据能力
 
 ## 5. 验证
 
@@ -39,8 +39,8 @@
 
 ## 6. 框架通用性验证（合并自 source-connectors-framework）
 
-- [ ] 6.1 定义 connector、binding、snapshot、import_scope、sync_check 的宿主对象模型
-- [ ] 6.2 明确哪些能力属于宿主，哪些属于 connector 实现者（已在 design D2 确定）
-- [ ] 6.3 明确 notebook-scoped binding 的持久化边界（已在 design D3 确定）
-- [ ] 6.4 明确宿主通用 UI/流程壳子的责任范围（已在 design D2 确定）
+- [x] 6.1 定义 connector、binding、snapshot、import_scope、sync_check 的宿主对象模型
+- [x] 6.2 明确哪些能力属于宿主，哪些属于 connector 实现者（已在 design D2 确定）
+- [x] 6.3 明确 notebook-scoped binding 的持久化边界（已在 design D3 确定）
+- [x] 6.4 明确宿主通用 UI/流程壳子的责任范围（已在 design D2 确定）
 - [ ] 6.5 实现 Local Directory 连接器插件作为第二验证者
