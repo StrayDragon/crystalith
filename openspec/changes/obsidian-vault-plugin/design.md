@@ -89,6 +89,110 @@ v1 不再在实现阶段重新讨论是否需要新的 discovery path 或是否�
   - YAML frontmatter 提取到 `source.metadata.frontmatter`
 - 这样未来无论是手动上传、connector plugin 还是其他 parser/plugin，都能复用同一套语义清洗能力。
 
+## 宿主对象模型（v1）
+
+本节用于把 `connector / binding / snapshot / import_scope / sync_check` 的宿主对象模型收口为可实现的最小集合，避免后续实现阶段再次发散。
+
+### SourceConnectorDescriptor（连接器描述）
+
+宿主对外暴露的连接器列表条目（用于渲染入口与表单）：
+
+```yaml
+SourceConnectorDescriptor:
+  connector_id: string
+  display_name: string
+  description: string | null
+  connection_config_schema: object      # JSON Schema（由插件提供）
+  diagnostics: list[Diagnostic] | null  # 由插件提供的结构化诊断（例如“vault 路径不可读”）
+  capabilities:
+    supports_snapshot: bool
+    supports_sync_check: bool
+```
+
+### ConnectorBinding（notebook-scoped 持久化绑定）
+
+```yaml
+ConnectorBinding:
+  id: string
+  notebook_id: string
+  connector_id: string
+  connection_config: object            # 以 schema 校验后的配置对象
+  import_scope: ImportScope | null
+  last_confirmed_snapshot: Snapshot | null
+  last_sync_check_result: SyncCheckResult | null
+  created_at: time
+  updated_at: time
+```
+
+- `binding` 的持久化边界是 notebook：同一 notebook 下可存在多个 bindings（不同 connector 或同一 connector 的不同配置实例）。
+- v1 不要求跨 notebook 共享 binding（后置项）。
+
+### Snapshot（快照）与条目
+
+快照是“某次枚举的可预览结果”，用于范围选择与同步基线：
+
+```yaml
+Snapshot:
+  generated_at: time
+  entries: list[SnapshotEntry]
+
+SnapshotEntry:
+  relative_path: string                # 根目录相对路径，统一用 "/" 分隔
+  size_bytes: int
+  modified_at: string                  # ISO 8601
+  frontmatter_summary:
+    title: string | null
+    tags: list[string] | null
+    aliases: list[string] | null
+    date: string | null
+```
+
+路径规范化规则（宿主强制）：
+
+- `relative_path` MUST 为相对路径；SHALL NOT 含 `..`、`./`、绝对路径前缀。
+- 分隔符统一为 `/`；宿主负责对插件返回值做规范化与拒绝非法路径。
+
+### ImportScope（选择性导入范围）
+
+```yaml
+ImportScope:
+  include_directories: list[string] | null
+  include_files: list[string] | null
+```
+
+- 范围命中规则固定为：
+  - `relative_path` 精确命中 `include_files`，或
+  - `relative_path` 位于任一 `include_directories` 的前缀之下
+- `include_directories/include_files` 至少其一非空；v1 不支持排除规则与基于 tags 的持久化范围。
+
+### SyncCheckResult（显式同步检查结果）
+
+`sync_check` 的目标是“给出候选差异 + 等用户确认再应用”，而不是静默同步：
+
+```yaml
+SyncCheckResult:
+  id: string
+  checked_at: time
+  base_snapshot: Snapshot | null        # 上次已确认快照（可能为空：首次接入）
+  current_snapshot: Snapshot
+  candidates:
+    added: list[SyncCandidate]
+    updated: list[SyncCandidate]
+    missing: list[SyncCandidate]
+
+SyncCandidate:
+  relative_path: string
+  current: SnapshotEntry | null         # missing 时为空
+  base: SnapshotEntry | null            # added 时为空
+  reason: string | null                 # 轻量解释（例如“modified_at 变化”）
+```
+
+确认应用边界（v1）：
+
+- `sync_check` 返回候选集合，但 **不会** 在未确认前修改现有来源。
+- “确认应用”属于 `sync_check` 家族的第二阶段动作（路由命名可在实现阶段细化，但不得引入新的动作家族）。
+- v1 对 `missing` 只做提示与显式确认展示：不自动删除；是否支持“标记忽略/确认缺失”后置。
+
 ## 接口草图
 
 ```text
