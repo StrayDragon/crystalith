@@ -27,6 +27,14 @@ def _pick_connector(kind: str) -> tuple[SourceConnectorPlugin, str]:
     raise SystemExit(f"unsupported connector kind: {kind!r}")
 
 
+def _percentile(values: list[float], p: float) -> float:
+    if not values:
+        return 0.0
+    sorted_values = sorted(values)
+    idx = int(round((p / 100) * (len(sorted_values) - 1)))
+    return float(sorted_values[max(0, min(len(sorted_values) - 1, idx))])
+
+
 def _write_note(path: Path, *, title: str, body: str) -> None:
     content = (
         "---\n"
@@ -89,6 +97,25 @@ async def _snapshot(plugin: SourceConnectorPlugin, *, settings: Settings, connec
     return Snapshot(generated_at=datetime.datetime.now(datetime.UTC), entries=entries)
 
 
+async def _measure_snapshot(
+    plugin: SourceConnectorPlugin,
+    *,
+    settings: Settings,
+    connection_config: dict[str, str],
+    repeats: int,
+) -> tuple[Snapshot, list[float]]:
+    timings_ms: list[float] = []
+    last_snapshot: Snapshot | None = None
+    for _ in range(max(1, repeats)):
+        started = perf_counter()
+        last_snapshot = await _snapshot(plugin, settings=settings, connection_config=connection_config)
+        timings_ms.append((perf_counter() - started) * 1000)
+
+    if last_snapshot is None:  # pragma: no cover - defensive
+        raise RuntimeError("snapshot measurement produced no snapshot")
+    return last_snapshot, timings_ms
+
+
 async def _run(args: argparse.Namespace) -> int:
     plugin, key = _pick_connector(str(args.connector))
     settings = Settings()
@@ -98,9 +125,12 @@ async def _run(args: argparse.Namespace) -> int:
         vault = _build_vault(root, files=int(args.files))
         config = {key: str(vault)}
 
-        started = perf_counter()
-        base_snapshot = await _snapshot(plugin, settings=settings, connection_config=config)
-        snapshot_ms = (perf_counter() - started) * 1000
+        base_snapshot, base_snapshot_ms = await _measure_snapshot(
+            plugin,
+            settings=settings,
+            connection_config=config,
+            repeats=int(args.repeats),
+        )
 
         _mutate_vault(
             vault,
@@ -110,21 +140,43 @@ async def _run(args: argparse.Namespace) -> int:
             seed=int(args.seed),
         )
 
-        started = perf_counter()
-        current_snapshot = await _snapshot(plugin, settings=settings, connection_config=config)
-        current_ms = (perf_counter() - started) * 1000
+        current_snapshot, current_snapshot_ms = await _measure_snapshot(
+            plugin,
+            settings=settings,
+            connection_config=config,
+            repeats=int(args.repeats),
+        )
 
-        started = perf_counter()
         candidates = _build_sync_candidates(base_snapshot=base_snapshot, current_snapshot=current_snapshot)
-        diff_ms = (perf_counter() - started) * 1000
+        diff_ms_values: list[float] = []
+        for _ in range(max(1, int(args.repeats))):
+            started = perf_counter()
+            _build_sync_candidates(base_snapshot=base_snapshot, current_snapshot=current_snapshot)
+            diff_ms_values.append((perf_counter() - started) * 1000)
 
         print(f"connector={args.connector}")
         print(f"files={args.files}")
         print(f"base_entries={len(base_snapshot.entries)}")
         print(f"current_entries={len(current_snapshot.entries)}")
-        print(f"snapshot_ms={snapshot_ms:.3f}")
-        print(f"current_snapshot_ms={current_ms:.3f}")
-        print(f"sync_check_diff_ms={diff_ms:.3f}")
+        print(f"repeats={args.repeats}")
+        print(
+            "snapshot_ms="
+            f"p50:{_percentile(base_snapshot_ms, 50):.3f} "
+            f"p95:{_percentile(base_snapshot_ms, 95):.3f} "
+            f"p99:{_percentile(base_snapshot_ms, 99):.3f}"
+        )
+        print(
+            "current_snapshot_ms="
+            f"p50:{_percentile(current_snapshot_ms, 50):.3f} "
+            f"p95:{_percentile(current_snapshot_ms, 95):.3f} "
+            f"p99:{_percentile(current_snapshot_ms, 99):.3f}"
+        )
+        print(
+            "sync_check_diff_ms="
+            f"p50:{_percentile(diff_ms_values, 50):.3f} "
+            f"p95:{_percentile(diff_ms_values, 95):.3f} "
+            f"p99:{_percentile(diff_ms_values, 99):.3f}"
+        )
         print(f"candidates_added={len(candidates.added)}")
         print(f"candidates_updated={len(candidates.updated)}")
         print(f"candidates_missing={len(candidates.missing)}")
@@ -145,10 +197,10 @@ def main() -> None:
     parser.add_argument("--missing", type=int, default=10, help="How many files to delete before sync_check.")
     parser.add_argument("--added", type=int, default=10, help="How many files to add before sync_check.")
     parser.add_argument("--seed", type=int, default=7, help="RNG seed for selecting files to mutate.")
+    parser.add_argument("--repeats", type=int, default=5, help="How many times to repeat each measurement.")
     args = parser.parse_args()
     raise SystemExit(asyncio.run(_run(args)))
 
 
 if __name__ == "__main__":  # pragma: no cover
     main()
-
