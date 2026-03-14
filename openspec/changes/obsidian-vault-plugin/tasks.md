@@ -22,20 +22,27 @@
 
 ## 4. 官方 Obsidian 插件
 
-- [ ] 4.1 新建官方 Obsidian vault 插件包
-- [ ] 4.2 实现 vault 快照枚举（路径、大小、修改时间、frontmatter 摘要）
-- [ ] 4.3 实现内容读取并复用现有 source ingestion 链路导入已选笔记
-- [ ] 4.4 实现显式 `sync_check`，输出范围内的新增 / 更新 / 缺失候选
+- [x] 4.1 新建官方 Obsidian vault 插件包
+  - [x] `backend/py/plugins/crystalith-connector-obsidian`（plugin id：`connector-obsidian`）
+- [x] 4.2 实现 vault 快照枚举（路径、大小、修改时间、frontmatter 摘要）
+- [x] 4.3 实现内容读取并复用现有 source ingestion 链路导入已选笔记
+- [x] 4.4 实现显式 `sync_check`，输出范围内的新增 / 更新 / 缺失候选
 - [x] 4.5 明确 v1 连接器插件不自带前端工作流 UI，Obsidian 插件仅提供配置与数据能力
 
 ## 5. 验证
 
 - [x] 5.1 运行 backend 相关测试子集并记录结果
   - [x] `cd backend/py && uv run pytest --no-cov tests/shared/test_parsers.py tests/features/sources/test_sources_api.py -q` → `34 passed`
-- [ ] 5.2 准备 100+ 文件 vault 样本，验证快照与选择性导入模型
-- [ ] 5.3 准备 1000+ 文件 vault 样本，验证 `sync_check` 的响应时间和候选稳定性
-- [ ] 5.4 验证未确认前 `sync_check` 不会隐式修改现有来源
-- [ ] 5.5 验证第二个非 Obsidian 连接器（**Local Directory**）可复用宿主通用 UI，而不需要重做整套流程
+- [x] 5.2 准备 100+ 文件 vault 样本，验证快照与选择性导入模型
+  - [x] `cd backend/py && uv run python scripts/source_connectors_bench.py --connector obsidian --files 120 --updates 10 --missing 10 --added 10`
+    - `snapshot_ms=17.487`（120 entries）
+- [x] 5.3 准备 1000+ 文件 vault 样本，验证 `sync_check` 的响应时间和候选稳定性
+  - [x] `cd backend/py && uv run python scripts/source_connectors_bench.py --connector obsidian --files 1000 --updates 50 --missing 50 --added 50`
+    - `snapshot_ms=144.514` / `sync_check_diff_ms=0.283`（1000 entries；added/updated/missing 各 50）
+- [x] 5.4 验证未确认前 `sync_check` 不会隐式修改现有来源
+  - [x] `cd backend/py && uv run pytest --no-cov -q tests/features/source_connectors/test_source_connectors_api.py` → `3 passed`
+- [x] 5.5 验证第二个非 Obsidian 连接器（**Local Directory**）可复用宿主通用 UI，而不需要重做整套流程
+  - [x] `backend/py/plugins/crystalith-connector-local-directory`（plugin id：`connector-local-directory`；复用同一套 connectors 工作流对话框）
 
 ## 6. 框架通用性验证（合并自 source-connectors-framework）
 
@@ -43,4 +50,4 @@
 - [x] 6.2 明确哪些能力属于宿主，哪些属于 connector 实现者（已在 design D2 确定）
 - [x] 6.3 明确 notebook-scoped binding 的持久化边界（已在 design D3 确定）
 - [x] 6.4 明确宿主通用 UI/流程壳子的责任范围（已在 design D2 确定）
-- [ ] 6.5 实现 Local Directory 连接器插件作为第二验证者
+- [x] 6.5 实现 Local Directory 连接器插件作为第二验证者
