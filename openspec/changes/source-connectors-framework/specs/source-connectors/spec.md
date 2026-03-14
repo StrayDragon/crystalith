@@ -1,5 +1,7 @@
 # source-connectors 规范增量
 
+> 合并说明：本 change 已合并到 `obsidian-vault-plugin`，后续以该 change 中的框架定义与增量规范为准；此处仅保留历史参考。
+
 ## ADDED Requirements
 
 ### Requirement: 宿主必须暴露统一的连接器发现与绑定语义
