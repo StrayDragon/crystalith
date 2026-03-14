@@ -144,11 +144,15 @@ export default function WorkspaceLayout() {
     [refine.outputs],
   );
 
+  const analysisResult = analysis.analysis;
+  const isAnalysisLoading = analysis.isLoading;
+  const fetchAnalysis = analysis.fetchAnalysis;
+
   const fetchAnalysisIfNeeded = useCallback(() => {
-    if (!analysis.analysis && !analysis.isLoading) {
-      void analysis.fetchAnalysis();
+    if (!analysisResult && !isAnalysisLoading) {
+      void fetchAnalysis();
     }
-  }, [analysis.analysis, analysis.isLoading, analysis.fetchAnalysis]);
+  }, [analysisResult, fetchAnalysis, isAnalysisLoading]);
 
   const overlays = useWorkspaceOverlays({
     activeNotebookId,
@@ -187,7 +191,7 @@ export default function WorkspaceLayout() {
 
   const handleSelectedSourceIdsChange = useCallback((selected: Record<number, boolean>) => {
     store.getState().setSelectedSources(selected);
-  }, []);
+  }, [store]);
 
   const hasSelectedSources = useMemo(
     () => Object.values(selectedSourceIds_raw).some(Boolean),
@@ -229,28 +233,30 @@ export default function WorkspaceLayout() {
     [overlays, resolveCitationSource],
   );
 
+  const convertSourceQAToSource = sources.convertSourceQAToSource;
+
   const handleCitationSaveQAAsSource = useCallback(
     async (_sourceTitle: string, messages: SourceDialogMessage[]) => {
-      if (!overlays.citationSelectedSource || !sources.convertSourceQAToSource) return;
+      if (!overlays.citationSelectedSource || !convertSourceQAToSource) return;
       const qaMessages = messages.map((msg) => ({
         role: msg.role,
         content: msg.content,
       }));
-      await sources.convertSourceQAToSource(overlays.citationSelectedSource.id, qaMessages);
+      await convertSourceQAToSource(overlays.citationSelectedSource.id, qaMessages);
     },
-    [overlays.citationSelectedSource, sources.convertSourceQAToSource],
+    [convertSourceQAToSource, overlays.citationSelectedSource],
   );
 
   const handleSaveGraphSourceQAAsSource = useCallback(
     async (_sourceTitle: string, messages: SourceDialogMessage[]) => {
-      if (!overlays.graphSelectedSource || !sources.convertSourceQAToSource) return;
+      if (!overlays.graphSelectedSource || !convertSourceQAToSource) return;
       const qaMessages = messages.map((msg) => ({
         role: msg.role,
         content: msg.content,
       }));
-      await sources.convertSourceQAToSource(overlays.graphSelectedSource.id, qaMessages);
+      await convertSourceQAToSource(overlays.graphSelectedSource.id, qaMessages);
     },
-    [overlays.graphSelectedSource, sources.convertSourceQAToSource],
+    [convertSourceQAToSource, overlays.graphSelectedSource],
   );
 
   const handleChatCitationJump = useCallback(
@@ -263,7 +269,7 @@ export default function WorkspaceLayout() {
       }
       handleOpenCitationSourceDetail(citation);
     },
-    [handleOpenCitationSourceDetail, sources],
+    [handleOpenCitationSourceDetail, sources, store],
   );
 
   const handleOutputCitationJump = useCallback(
@@ -276,7 +282,7 @@ export default function WorkspaceLayout() {
       }
       handleOpenCitationSourceDetail(citation);
     },
-    [handleOpenCitationSourceDetail, sources],
+    [handleOpenCitationSourceDetail, sources, store],
   );
 
   const focusPanel = useCallback(
@@ -300,6 +306,9 @@ export default function WorkspaceLayout() {
 
   const isDesktopLayout = useMediaQuery("(min-width: 768px)", { defaultState: true });
   const showCanvasControls = isDesktopLayout;
+
+  const isChatSending = chat.isSending;
+  const sendChatMessage = chat.sendMessage;
 
   const toggleLock = useCallback(() => {
     setLocked((prev) => !prev);
@@ -354,8 +363,8 @@ export default function WorkspaceLayout() {
         combo: "Ctrl+Enter",
         allowInInput: true,
         handler: () => {
-          if (!notebooks.activeNotebookId || chat.isSending) return;
-          void chat.sendMessage();
+          if (!activeNotebookId || isChatSending) return;
+          void sendChatMessage();
         },
       },
       {
@@ -378,12 +387,12 @@ export default function WorkspaceLayout() {
       },
     ],
     [
-      chat.isSending,
-      chat.sendMessage,
+      activeNotebookId,
       createNotebookByShortcut,
       focusPanel,
-      notebooks.activeNotebookId,
+      isChatSending,
       overlays,
+      sendChatMessage,
     ],
   );
 
@@ -441,9 +450,11 @@ export default function WorkspaceLayout() {
     );
   }, []);
 
+  const openDiagnostics = overlays.openDiagnostics;
+
   const handleOpenDiagnostics = useCallback(() => {
-    overlays.openDiagnostics();
-  }, [overlays.openDiagnostics]);
+    openDiagnostics();
+  }, [openDiagnostics]);
 
   const handleOpenUpload = useCallback(() => {
     uploadFileInputRef.current?.click();
@@ -464,19 +475,23 @@ export default function WorkspaceLayout() {
     el.focus();
   }, []);
 
+  const ensureSession = sessions.ensureSession;
+
   const handleStartSession = useCallback(async () => {
-    await sessions.ensureSession();
+    await ensureSession();
     window.requestAnimationFrame(() => {
       handleFocusChat();
     });
-  }, [handleFocusChat, sessions.ensureSession]);
+  }, [ensureSession, handleFocusChat]);
+
+  const createNotebookQuick = notebooks.createNotebookQuick;
 
   const handleCreateNotebookFromOnboarding = useCallback(async () => {
-    const ok = await notebooks.createNotebookQuick("未命名笔记本");
+    const ok = await createNotebookQuick("未命名笔记本");
     if (ok) {
       toast.success("已创建笔记本");
     }
-  }, [notebooks.createNotebookQuick]);
+  }, [createNotebookQuick]);
 
   const handleOpenAddSourceFromUrl = useCallback(() => {
     setAddSourceFromUrlOpen(true);
@@ -486,13 +501,18 @@ export default function WorkspaceLayout() {
     setAddSourceFromUrlOpen(false);
   }, []);
 
+  const addSourceFromUrl = sources.addSourceFromUrl;
+
   const handleAddSourceFromUrl = useCallback(
-    async (url: string, mode: Parameters<typeof sources.addSourceFromUrl>[1]) => {
-      await sources.addSourceFromUrl(url, mode);
+    async (url: string, mode: Parameters<typeof addSourceFromUrl>[1]) => {
+      await addSourceFromUrl(url, mode);
       toast.success("已添加来源");
     },
-    [sources.addSourceFromUrl],
+    [addSourceFromUrl],
   );
+
+  const notebookList = notebooks.notebooks;
+  const setActiveNotebookId = notebooks.setActiveNotebookId;
 
   const cmdPaletteCommands = useMemo<CommandItem[]>(() => {
     const cmds: CommandItem[] = [];
@@ -507,16 +527,16 @@ export default function WorkspaceLayout() {
       },
     });
 
-    notebooks.notebooks.slice(0, 12).forEach((notebook) => {
+    notebookList.slice(0, 12).forEach((notebook) => {
       cmds.push({
         id: `switch-notebook-${notebook.id}`,
         label:
-          notebook.id === notebooks.activeNotebookId
+          notebook.id === activeNotebookId
             ? `切换笔记本: ${notebook.title}（当前）`
             : `切换笔记本: ${notebook.title}`,
-        icon: notebook.id === notebooks.activeNotebookId ? "✅" : "📓",
+        icon: notebook.id === activeNotebookId ? "✅" : "📓",
         action: () => {
-          notebooks.setActiveNotebookId(notebook.id);
+          setActiveNotebookId(notebook.id);
         },
       });
     });
@@ -670,13 +690,12 @@ export default function WorkspaceLayout() {
     isConnected,
     isDesktopLayout,
     locked,
-    notebooks.activeNotebookId,
-    notebooks.notebooks,
-    notebooks.setActiveNotebookId,
     handleOpenSlidesRecovery,
+    notebookList,
     openSessionSearch,
     overlays,
     refine.outputs,
+    setActiveNotebookId,
     slidesTool,
     toggleLock,
   ]);
