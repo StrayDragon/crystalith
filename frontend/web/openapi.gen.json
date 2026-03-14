@@ -33,6 +33,19 @@
         "title": "AnalysisResult",
         "type": "object"
       },
+      "ApplySyncCheckRequest": {
+        "properties": {
+          "sync_check_id": {
+            "title": "Sync Check Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sync_check_id"
+        ],
+        "title": "ApplySyncCheckRequest",
+        "type": "object"
+      },
       "ApproveRequest": {
         "description": "Request to approve a search plan.",
         "properties": {
@@ -346,6 +359,75 @@
         "title": "ConfigOption",
         "type": "object"
       },
+      "ConnectorBindingRead": {
+        "properties": {
+          "connection_config": {
+            "$ref": "#/components/schemas/JsonDict-Output"
+          },
+          "connector_id": {
+            "title": "Connector Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "import_scope": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImportScope"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_confirmed_snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Snapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_sync_check_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SyncCheckResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notebook_id": {
+            "title": "Notebook Id",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connection_config",
+          "connector_id",
+          "created_at",
+          "id",
+          "notebook_id",
+          "updated_at"
+        ],
+        "title": "ConnectorBindingRead",
+        "type": "object"
+      },
       "ContextStatsResponse": {
         "properties": {
           "compressed": {
@@ -559,6 +641,54 @@
           "source_id"
         ],
         "title": "ConvertToSourceResponse",
+        "type": "object"
+      },
+      "CreateConnectorBindingRequest": {
+        "properties": {
+          "connection_config": {
+            "$ref": "#/components/schemas/JsonDict-Input"
+          }
+        },
+        "title": "CreateConnectorBindingRequest",
+        "type": "object"
+      },
+      "Diagnostic": {
+        "properties": {
+          "details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JsonValue-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error_code": {
+            "title": "Error Code",
+            "type": "string"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Hint"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error_code",
+          "message"
+        ],
+        "title": "Diagnostic",
         "type": "object"
       },
       "ExportResearchRequest": {
@@ -850,6 +980,62 @@
         "title": "FrontendBundleDescriptor",
         "type": "object"
       },
+      "FrontmatterSummary": {
+        "properties": {
+          "aliases": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aliases"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Date"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "FrontmatterSummary",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -861,6 +1047,118 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ImportResultItem": {
+        "properties": {
+          "diagnostic": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Diagnostic"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "relative_path": {
+            "title": "Relative Path",
+            "type": "string"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "status": {
+            "enum": [
+              "failed",
+              "imported",
+              "reused",
+              "skipped"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "relative_path",
+          "status"
+        ],
+        "title": "ImportResultItem",
+        "type": "object"
+      },
+      "ImportScope": {
+        "properties": {
+          "include_directories": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Directories"
+          },
+          "include_files": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Files"
+          }
+        },
+        "title": "ImportScope",
+        "type": "object"
+      },
+      "ImportScopeApplyResponse": {
+        "properties": {
+          "binding": {
+            "$ref": "#/components/schemas/ConnectorBindingRead"
+          },
+          "imported_source_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Imported Source Ids",
+            "type": "array"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ImportResultItem"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "reused_source_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Reused Source Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "binding"
+        ],
+        "title": "ImportScopeApplyResponse",
         "type": "object"
       },
       "ItemSchema": {
@@ -3577,6 +3875,54 @@
         "title": "SlidesWorkflowDiagnostic",
         "type": "object"
       },
+      "Snapshot": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/SnapshotEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "generated_at"
+        ],
+        "title": "Snapshot",
+        "type": "object"
+      },
+      "SnapshotEntry": {
+        "properties": {
+          "frontmatter_summary": {
+            "$ref": "#/components/schemas/FrontmatterSummary"
+          },
+          "modified_at": {
+            "title": "Modified At",
+            "type": "string"
+          },
+          "relative_path": {
+            "title": "Relative Path",
+            "type": "string"
+          },
+          "size_bytes": {
+            "minimum": 0.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "modified_at",
+          "relative_path",
+          "size_bytes"
+        ],
+        "title": "SnapshotEntry",
+        "type": "object"
+      },
       "SourceBatchDeleteRequest": {
         "properties": {
           "source_ids": {
@@ -3718,6 +4064,86 @@
           "reembedded_ids"
         ],
         "title": "SourceBatchReembedResponse",
+        "type": "object"
+      },
+      "SourceConnectorCapabilities": {
+        "properties": {
+          "supports_snapshot": {
+            "default": true,
+            "title": "Supports Snapshot",
+            "type": "boolean"
+          },
+          "supports_sync_check": {
+            "default": true,
+            "title": "Supports Sync Check",
+            "type": "boolean"
+          }
+        },
+        "title": "SourceConnectorCapabilities",
+        "type": "object"
+      },
+      "SourceConnectorDescriptor": {
+        "properties": {
+          "capabilities": {
+            "$ref": "#/components/schemas/SourceConnectorCapabilities"
+          },
+          "connection_config_schema": {
+            "$ref": "#/components/schemas/JsonDict-Output"
+          },
+          "connector_id": {
+            "title": "Connector Id",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Description"
+          },
+          "diagnostics": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Diagnostic"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnostics"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "capabilities",
+          "connection_config_schema",
+          "connector_id",
+          "display_name"
+        ],
+        "title": "SourceConnectorDescriptor",
+        "type": "object"
+      },
+      "SourceConnectorsListResponse": {
+        "properties": {
+          "connectors": {
+            "items": {
+              "$ref": "#/components/schemas/SourceConnectorDescriptor"
+            },
+            "title": "Connectors",
+            "type": "array"
+          }
+        },
+        "title": "SourceConnectorsListResponse",
         "type": "object"
       },
       "SourceFromUrlMode": {
@@ -4308,6 +4734,114 @@
           "title"
         ],
         "title": "StructuredRefine",
+        "type": "object"
+      },
+      "SyncCandidate": {
+        "properties": {
+          "base": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SnapshotEntry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SnapshotEntry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Reason"
+          },
+          "relative_path": {
+            "title": "Relative Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "relative_path"
+        ],
+        "title": "SyncCandidate",
+        "type": "object"
+      },
+      "SyncCandidates": {
+        "properties": {
+          "added": {
+            "items": {
+              "$ref": "#/components/schemas/SyncCandidate"
+            },
+            "title": "Added",
+            "type": "array"
+          },
+          "missing": {
+            "items": {
+              "$ref": "#/components/schemas/SyncCandidate"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "updated": {
+            "items": {
+              "$ref": "#/components/schemas/SyncCandidate"
+            },
+            "title": "Updated",
+            "type": "array"
+          }
+        },
+        "title": "SyncCandidates",
+        "type": "object"
+      },
+      "SyncCheckResult": {
+        "properties": {
+          "base_snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Snapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "candidates": {
+            "$ref": "#/components/schemas/SyncCandidates"
+          },
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "current_snapshot": {
+            "$ref": "#/components/schemas/Snapshot"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidates",
+          "checked_at",
+          "current_snapshot",
+          "id"
+        ],
+        "title": "SyncCheckResult",
         "type": "object"
       },
       "TaskRead": {
@@ -8184,6 +8718,333 @@
         "summary": "Generate Outline Stream",
         "tags": [
           "slides"
+        ]
+      }
+    },
+    "/v1/notebooks/{notebook_id}/source-connector-bindings/{binding_id}/import-scope": {
+      "post": {
+        "operationId": "apply_import_scope_v1_notebooks__notebook_id__source_connector_bindings__binding_id__import_scope_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "binding_id",
+            "required": true,
+            "schema": {
+              "title": "Binding Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "notebook_id",
+            "required": true,
+            "schema": {
+              "title": "Notebook Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportScope"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportScopeApplyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Apply Import Scope",
+        "tags": [
+          "source-connectors"
+        ]
+      }
+    },
+    "/v1/notebooks/{notebook_id}/source-connector-bindings/{binding_id}/snapshot": {
+      "post": {
+        "operationId": "snapshot_binding_v1_notebooks__notebook_id__source_connector_bindings__binding_id__snapshot_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "binding_id",
+            "required": true,
+            "schema": {
+              "title": "Binding Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "notebook_id",
+            "required": true,
+            "schema": {
+              "title": "Notebook Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Snapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Snapshot Binding",
+        "tags": [
+          "source-connectors"
+        ]
+      }
+    },
+    "/v1/notebooks/{notebook_id}/source-connector-bindings/{binding_id}/sync-check": {
+      "post": {
+        "operationId": "sync_check_binding_v1_notebooks__notebook_id__source_connector_bindings__binding_id__sync_check_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "binding_id",
+            "required": true,
+            "schema": {
+              "title": "Binding Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "notebook_id",
+            "required": true,
+            "schema": {
+              "title": "Notebook Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncCheckResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sync Check Binding",
+        "tags": [
+          "source-connectors"
+        ]
+      }
+    },
+    "/v1/notebooks/{notebook_id}/source-connector-bindings/{binding_id}/sync-check/apply": {
+      "post": {
+        "operationId": "apply_sync_check_v1_notebooks__notebook_id__source_connector_bindings__binding_id__sync_check_apply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "binding_id",
+            "required": true,
+            "schema": {
+              "title": "Binding Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "notebook_id",
+            "required": true,
+            "schema": {
+              "title": "Notebook Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplySyncCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportScopeApplyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Apply Sync Check",
+        "tags": [
+          "source-connectors"
+        ]
+      }
+    },
+    "/v1/notebooks/{notebook_id}/source-connectors": {
+      "get": {
+        "operationId": "list_source_connectors_v1_notebooks__notebook_id__source_connectors_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notebook_id",
+            "required": true,
+            "schema": {
+              "title": "Notebook Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceConnectorsListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Source Connectors",
+        "tags": [
+          "source-connectors"
+        ]
+      }
+    },
+    "/v1/notebooks/{notebook_id}/source-connectors/{connector_id}/bindings": {
+      "post": {
+        "operationId": "create_connector_binding_v1_notebooks__notebook_id__source_connectors__connector_id__bindings_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connector_id",
+            "required": true,
+            "schema": {
+              "title": "Connector Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "notebook_id",
+            "required": true,
+            "schema": {
+              "title": "Notebook Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateConnectorBindingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorBindingRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Connector Binding",
+        "tags": [
+          "source-connectors"
         ]
       }
     },
