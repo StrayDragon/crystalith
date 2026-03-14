@@ -21,6 +21,6 @@
 
 ## 5. 验证
 
-- [ ] 5.1 运行前端检查：`cd frontend/web && pnpm test && pnpm typecheck && pnpm run lint && pnpm run build`
-- [ ] 5.2 运行后端回归：`cd backend/py && just test`
-- [ ] 5.3 手动验证：浏览器设备模拟（iPhone/Android）下可顺畅切换三面板，且 TabBar 不被 safe-area 遮挡
+- [x] 5.1 运行前端检查：`cd frontend/web && pnpm test && pnpm typecheck && pnpm run lint && pnpm run build`
+- [x] 5.2 运行后端回归：`cd backend/py && just test`
+- [x] 5.3 手动验证：浏览器设备模拟（iPhone/Android）下可顺畅切换三面板，且 TabBar 不被 safe-area 遮挡
