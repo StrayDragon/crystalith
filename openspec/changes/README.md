@@ -17,6 +17,18 @@
 └─← 6. 决策：继续下一个 / 等待指导 / 全部完成
 ```
 
+### Do Next（最短路径）
+
+当你不确定“现在该推进哪个 change / 该做哪一步”时，按下面做：
+
+1. 用 CLI 拉全局态：`openspec list --json` + `openspec validate --changes --json`
+2. 按本文件「优先级队列」选出第一个**进入条件满足**的 change
+3. 对选中的 change：
+   - 先看缺什么工件：`openspec status --change <change-name> --json`
+   - **如果某个 artifact 不是 `done`**：优先补齐该 artifact（用 `openspec instructions <artifact-id> --change <change-name>` 获取写作约束/模板）
+   - **如果 artifacts 都是 `done`**：打开该 change 的 `tasks.md`，从**序号最小的未勾选项**开始推进；完成后勾选
+4. 每推进一小步就校验：`openspec validate <change-name>`，并在汇报中写清楚本轮勾选了哪些 tasks
+
 ### 步骤 1：查状态
 
 ```bash
@@ -26,6 +38,20 @@ openspec validate --changes --json
 
 用 CLI 输出判断每个 change 的工件完整度和校验状态，不依赖本文件中的任何快照数据。
 
+当你需要判断某个 change “还缺哪个工件 / 先补哪个”时，额外运行：
+
+```bash
+openspec status --change <change-name> --json
+```
+
+当某个工件缺失或需要按最新规则重写时，用下面命令获取该工件的写作指引：
+
+```bash
+openspec instructions <artifact-id> --change <change-name>
+```
+
+`artifact-id` 通常是：`proposal` / `design` / `tasks` / `specs`
+
 ### 步骤 2：选任务
 
 从下方「优先级队列」中，选择**序号最小且进入条件已满足**的 change。如果有多个同序号的 change 可并行，优先选队列中靠前的。
@@ -33,17 +59,19 @@ openspec validate --changes --json
 跳过条件：
 - 该 change 的硬前置尚未完成
 - 该 change 的软前置中有标记为"建议先稳定"的上游 change 仍处于早期状态
+- 该 change 的 `tasks.md` 中已经没有“规格工件范围内”的未完成条目（只剩实现阶段条目）
 
 ### 步骤 3：执行
 
 1. 阅读目标 change 目录下所有已有工件（proposal.md、design.md、tasks.md、specs/）
 2. 阅读本文件中该 change 的「边界定义」
-3. 对照边界定义，收口工件：
+3. 打开该 change 的 `tasks.md`，从**序号最小的未勾选项**开始推进（一次只收口 1~3 条，避免大改）
+4. 对照边界定义，收口工件：
    - 核心承诺是否已在 design / specs 中体现
    - 非目标是否已明确排除
    - 是否存在未决占位或模糊描述
    - 是否违反了「禁止的反向依赖」
-4. 补齐遗漏、去掉不确定项，不推翻重写
+5. 补齐遗漏、去掉不确定项，不推翻重写；完成后回到 `tasks.md` 勾选对应条目
 
 ### 步骤 4：校验
 
@@ -53,7 +81,7 @@ openspec validate <change-name>
 
 ### 步骤 5：汇报
 
-用中文说明：修改了哪些文件、解决了什么问题、是否通过校验。
+用中文说明：修改了哪些文件、解决了什么问题、勾选了哪些 tasks、是否通过校验。
 
 ### 步骤 6：决策
 
@@ -66,6 +94,19 @@ openspec validate <change-name>
 ## 优先级队列
 
 一个 agent 一次只推进一个 change。序号越小优先级越高。同一波次内可并行，但不建议跨波次并行。
+
+### 进入条件术语（可操作定义）
+
+为了让“选下一个 change”更可重复，本文中出现的「稳定/初稳/边界稳定/可实现」等措辞，统一按 `tasks.md` 的勾选进度判定（默认每个 change 的 `tasks.md` 结构都是 1~4 段）：
+
+- **最小公共词汇稳定 / 对象边界稳定**：该 change 的 `tasks.md` 中 **1.x 全部勾选**
+- **语义初稳 / 契约初稳**：该 change 的 `tasks.md` 中 **1.x 与 2.x 全部勾选**
+- **边界稳定**：该 change 的 `tasks.md` 中 **1.x、2.x、3.x 全部勾选**
+- **可实现状态**：满足「边界稳定」并且：
+  - `openspec validate <change-name>` 通过
+  - 该 change 的工件中不存在未决占位（例如 TODO/TBD/“待定”）
+
+进入条件里引用“#N”的，默认指向上游 change 的上述状态（例如“建议在 #1 最小公共词汇稳定后” = `typed-generation-framework` 达到「最小公共词汇稳定」）。
 
 ### Wave 1：生成公共层 + 异步底座
 
