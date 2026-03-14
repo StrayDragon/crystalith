@@ -9,6 +9,7 @@ from .interfaces import (
     OutputTypePlugin,
     ParserPlugin,
     SlidesWorkflowPlugin,
+    SourceConnectorPlugin,
     SUPPORTED_PLUGIN_API_VERSIONS,
     WebExtractorPlugin,
 )
@@ -112,6 +113,25 @@ def check_plugin(plugin_id: str, plugin: object) -> list[str]:
             issues.append("WebExtractorPlugin.requires_service must be a bool")
         if not callable(plugin.create_extractor):
             issues.append("WebExtractorPlugin missing callable: create_extractor")
+
+    if isinstance(plugin, SourceConnectorPlugin):
+        has_interface = True
+        if not isinstance(plugin.display_name, str) or not plugin.display_name.strip():
+            issues.append("SourceConnectorPlugin.display_name must be a non-empty string")
+        if plugin.description is not None and not isinstance(plugin.description, str):
+            issues.append("SourceConnectorPlugin.description must be a string or None")
+        if not isinstance(plugin.connection_config_schema, dict):
+            issues.append("SourceConnectorPlugin.connection_config_schema must be a JSON Schema dict")
+        if not isinstance(plugin.supports_snapshot, bool):
+            issues.append("SourceConnectorPlugin.supports_snapshot must be a bool")
+        if not isinstance(plugin.supports_sync_check, bool):
+            issues.append("SourceConnectorPlugin.supports_sync_check must be a bool")
+        if not callable(plugin.get_diagnostics):
+            issues.append("SourceConnectorPlugin missing callable: get_diagnostics")
+        if not callable(plugin.list_snapshot_entries):
+            issues.append("SourceConnectorPlugin missing callable: list_snapshot_entries")
+        if not callable(plugin.read_file_bytes):
+            issues.append("SourceConnectorPlugin missing callable: read_file_bytes")
 
     if not has_interface:
         issues.append("plugin does not implement any supported plugin interfaces")

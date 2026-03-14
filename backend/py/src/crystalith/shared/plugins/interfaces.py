@@ -188,3 +188,45 @@ class WebExtractorPlugin(Protocol):
         *,
         url_fetch_security: UrlFetchSecuritySettings | None = None,
     ) -> Extractor: ...
+
+
+@runtime_checkable
+class SourceConnectorPlugin(Protocol):
+    """
+    Source connector plugin factory.
+
+    v1 plugins are backend-only: the host owns persistence and the workflow UI.
+    Connectors provide configuration schema, diagnostics, snapshot enumeration,
+    and file reads.
+    """
+
+    api_version: str
+
+    display_name: str
+    description: str | None
+    connection_config_schema: JsonDict
+
+    supports_snapshot: bool
+    supports_sync_check: bool
+
+    async def get_diagnostics(
+        self,
+        settings: Settings,
+        *,
+        connection_config: JsonDict | None = None,
+    ) -> list[JsonDict] | None: ...
+
+    async def list_snapshot_entries(
+        self,
+        settings: Settings,
+        *,
+        connection_config: JsonDict,
+    ) -> list[JsonDict]: ...
+
+    async def read_file_bytes(
+        self,
+        settings: Settings,
+        *,
+        connection_config: JsonDict,
+        relative_path: str,
+    ) -> bytes: ...

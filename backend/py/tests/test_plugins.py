@@ -111,6 +111,37 @@ class MockSlidesWorkflowPlugin:
         raise AssertionError("should not be called")
 
 
+class MockSourceConnectorPlugin:
+    api_version = "v1"
+
+    display_name = "Mock Connector"
+    description = "Mock connector plugin"
+    connection_config_schema = {
+        "type": "object",
+        "properties": {"path": {"type": "string", "minLength": 1}},
+        "required": ["path"],
+        "additionalProperties": False,
+    }
+
+    supports_snapshot = True
+    supports_sync_check = True
+
+    async def get_diagnostics(self, _settings: Any, *, connection_config: Any | None = None) -> Any:  # noqa: ANN401
+        return None
+
+    async def list_snapshot_entries(self, _settings: Any, *, connection_config: Any) -> Any:  # noqa: ANN401
+        return []
+
+    async def read_file_bytes(
+        self,
+        _settings: Any,
+        *,
+        connection_config: Any,
+        relative_path: str,
+    ) -> bytes:
+        return relative_path.encode()
+
+
 def test_plugin_registry_loads_ai_provider_plugin(monkeypatch: pytest.MonkeyPatch) -> None:
     from crystalith.shared.plugins import registry as registry_mod
 
@@ -236,6 +267,26 @@ def test_plugin_registry_loads_output_type_plugin_and_extension_attributes(
     assert registry.get_render_descriptor("QUIZ") == plugin.render_descriptor
     assert registry.get_config_schema("QUIZ") == plugin.config_schema
     assert registry.get_frontend_bundle("QUIZ") == plugin.frontend_bundle
+
+
+def test_plugin_registry_loads_source_connector_plugin(monkeypatch: pytest.MonkeyPatch) -> None:
+    from crystalith.shared.plugins import registry as registry_mod
+
+    plugin = MockSourceConnectorPlugin()
+    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
+    monkeypatch.setattr(
+        registry_mod,
+        "_iter_entry_points",
+        lambda group: [StubEntryPoint(name="mock-connector", value="x:y", plugin=plugin)],
+    )
+
+    settings = Settings()
+    registry = PluginRegistry()
+    report = registry.load_from_entry_points(settings)
+
+    assert report.loaded == ["mock-connector"]
+    assert registry.source_connectors["mock-connector"] is plugin
+    assert registry.list_source_connectors() == ["mock-connector"]
 
 
 def test_plugin_registry_output_type_conflict_overwrites_and_logs_warning(
