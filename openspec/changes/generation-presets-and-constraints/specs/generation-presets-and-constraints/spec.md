@@ -25,3 +25,18 @@
 - **WHEN** 系统为一种已有生成类型新增预设
 - **THEN** 该变更 SHALL 建立在既有类型契约之上
 - **AND** SHALL NOT 借由预设定义新的类型公共术语
+
+### Requirement: 预设必须绑定到生成类型（generation_type_id）
+系统 MUST 使用 `typed-generation-framework` 的公共词汇把预设绑定到某个生成类型，避免出现跨类型的隐式耦合。
+
+#### Scenario: 系统加载某个预设
+- **WHEN** 系统加载或创建某个预设
+- **THEN** 该预设 SHALL 显式声明其绑定的 `generation_type_id`
+- **AND** 系统 SHALL NOT 将一个预设隐式应用到其它生成类型
+
+### Requirement: 结果必须回传本次生效的控制配置（effective controls）
+系统 MUST 在生成结果中回传本次生效的预设与控制项配置，以支持复用与“保存为预设”。
+
+#### Scenario: 用户希望复用一次效果较好的生成
+- **WHEN** 用户查看某次生成结果并希望复用其配置
+- **THEN** 系统 SHALL 回传该次生效的 `preset_id` 与控制项值集合
