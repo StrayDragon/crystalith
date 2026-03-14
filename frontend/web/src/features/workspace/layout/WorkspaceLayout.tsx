@@ -17,7 +17,7 @@ import {
 } from "../shared/hooks/useKeyboardShortcuts";
 import { getSlideIdFromOutput } from "../shared/outputPayload";
 import { useWorkspaceStore } from "../shared/state/workspaceStore";
-import type { ChatMessage, Citation, SourceItem } from "../shared/types";
+import type { ChatMessage, Citation, PanelId, SourceItem } from "../shared/types";
 import { SOURCE_UPLOAD_ACCEPT } from "../shared/uploadTypes";
 import {
   exportOutputJsonDownload,
@@ -40,6 +40,12 @@ import { WorkspaceOverlays } from "./overlays";
 import AddSourceFromUrlDialog from "./overlays/AddSourceFromUrlDialog";
 import DiagnosticsDialog from "./overlays/DiagnosticsDialog";
 import SystemConfigDialog from "./overlays/SystemConfigDialog";
+
+const WORKSPACE_WIDGET_TO_PANEL: Record<"sources" | "chat" | "studio", PanelId> = {
+  sources: "sources",
+  chat: "chat",
+  studio: "refine",
+};
 
 export default function WorkspaceLayout() {
   const selectedSourceIds_raw = useWorkspaceStore((s) => s.selectedSourceIds);
@@ -265,8 +271,7 @@ export default function WorkspaceLayout() {
 
   const focusPanel = useCallback(
     (panel: "sources" | "chat" | "studio") => {
-      const nextActivePanel = panel === "studio" ? "refine" : panel;
-      store.getState().setActivePanel(nextActivePanel);
+      store.getState().setActivePanel(WORKSPACE_WIDGET_TO_PANEL[panel]);
     },
     [store],
   );
