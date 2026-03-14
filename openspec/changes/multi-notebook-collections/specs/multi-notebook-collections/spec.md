@@ -25,3 +25,15 @@
 - **WHEN** 用户在 collection 中查看某条结果或对象
 - **THEN** 系统 SHALL 能回溯其所属 notebook
 - **AND** notebook 原生能力 SHALL 保持可访问
+
+### Requirement: 系统必须提供 collection 的管理与 notebook 绑定接口
+系统 MUST 提供 collection 的列表/详情/更新能力，并允许用户将多个 notebook 绑定到同一个 collection 作为工作上下文。
+
+#### Scenario: 用户将 notebook 绑定到 collection
+- **WHEN** 用户把一个 notebook 加入某个 collection
+- **THEN** 系统 SHALL 更新该 collection 的绑定关系
+- **AND** 后续 collection-scoped 检索与生成 SHALL 在该绑定范围内生效
+
+#### Scenario: 用户从 collection 中移除 notebook
+- **WHEN** 用户将某个 notebook 从 collection 中移除
+- **THEN** 系统 SHALL 更新绑定关系并使其不再参与该 collection 的检索与生成
