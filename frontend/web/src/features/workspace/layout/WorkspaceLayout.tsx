@@ -860,7 +860,7 @@ export default function WorkspaceLayout() {
   const mobileWidgetId = WORKSPACE_PANEL_TO_WIDGET[activePanel];
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50/50 dark:bg-slate-950 overflow-hidden text-gray-900 dark:text-gray-100">
+    <div className="flex flex-col cl-h-dvh bg-gray-50/50 dark:bg-slate-950 overflow-hidden text-gray-900 dark:text-gray-100">
       <input
         ref={uploadFileInputRef}
         type="file"
