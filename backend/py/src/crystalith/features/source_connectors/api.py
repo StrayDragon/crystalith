@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.features.source_connectors.schemas import (
+    ApplySyncCheckRequest,
     ConnectorBindingRead,
     CreateConnectorBindingRequest,
     Diagnostic,
@@ -796,6 +797,201 @@ async def sync_check_binding(
     await session.commit()
 
     return result
+
+
+@router.post(
+    "/source-connector-bindings/{binding_id}/sync-check/apply",
+    response_model=ImportScopeApplyResponse,
+)
+async def apply_sync_check(
+    notebook_id: int,
+    binding_id: int,
+    payload: ApplySyncCheckRequest,
+    session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
+    embedder: EmbeddingProvider = Depends(get_embedding_provider),
+    transcriber: TranscriptionProvider = Depends(get_transcription_provider),
+    vector_store: VectorStore = Depends(get_vector_store),
+    cache: CacheProvider = Depends(get_cache_provider),
+    plugins: PluginRegistry = Depends(get_plugin_registry),
+) -> ImportScopeApplyResponse:
+    binding = await _get_binding_or_404(session, notebook_id=notebook_id, binding_id=binding_id)
+    plugin = _get_connector_plugin_or_409(binding.connector_id, plugins=plugins)
+    if not plugin.supports_sync_check:
+        raise HTTPException(status_code=400, detail="Connector does not support sync_check")
+
+    if binding.last_sync_check_result is None:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error_code": "SYNC_CHECK_REQUIRED",
+                "message": "请先执行 sync_check",
+            },
+        )
+
+    stored = SyncCheckResult.model_validate(binding.last_sync_check_result)
+    if stored.id != payload.sync_check_id:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error_code": "SYNC_CHECK_OUTDATED",
+                "message": "sync_check 已过期",
+                "hint": "请重新执行 sync_check 并确认后再应用。",
+                "details": {"expected": stored.id, "got": payload.sync_check_id},
+            },
+        )
+
+    entries_to_import: list[SnapshotEntry] = []
+    seen_paths: set[str] = set()
+    for candidate in [*stored.candidates.added, *stored.candidates.updated]:
+        entry = candidate.current
+        if entry is None:
+            continue
+        if entry.relative_path in seen_paths:
+            continue
+        seen_paths.add(entry.relative_path)
+        entries_to_import.append(entry)
+
+    results: list[ImportResultItem] = []
+    imported_source_ids: list[int] = []
+    reused_source_ids: list[int] = []
+    vectors_changed = False
+    had_failures = False
+
+    for entry in entries_to_import:
+        try:
+            raw = await plugin.read_file_bytes(
+                settings,
+                connection_config=binding.connection_config,
+                relative_path=entry.relative_path,
+            )
+        except Exception as exc:  # noqa: BLE001 - plugin boundary
+            had_failures = True
+            results.append(
+                ImportResultItem(
+                    relative_path=entry.relative_path,
+                    status="failed",
+                    source_id=None,
+                    diagnostic=Diagnostic(
+                        error_code="CONNECTOR_READ_FAILED",
+                        message="读取文件失败",
+                        hint="检查连接参数与文件权限，或查看后端日志。",
+                        details={"error": type(exc).__name__, "message": str(exc)[:512]},
+                    ),
+                )
+            )
+            continue
+
+        if not raw:
+            had_failures = True
+            results.append(
+                ImportResultItem(
+                    relative_path=entry.relative_path,
+                    status="failed",
+                    source_id=None,
+                    diagnostic=Diagnostic(
+                        error_code="EMPTY_DOCUMENT",
+                        message="空文档，无法导入",
+                        hint="请检查文件内容是否为空。",
+                    ),
+                )
+            )
+            continue
+
+        dedup_digest = hashlib.sha256(raw).hexdigest()
+        dedup_key = f"connector:{binding.connector_id}:sha256:{dedup_digest}"
+
+        if settings.source_ingestion.dedup.enabled:
+            existing_source = await session.scalar(
+                select(Source)
+                .where(Source.notebook_id == notebook_id, Source.dedup_key == dedup_key)
+                .order_by(Source.created_at.desc())
+            )
+            if existing_source is not None:
+                reused_source_ids.append(existing_source.id)
+                results.append(
+                    ImportResultItem(
+                        relative_path=entry.relative_path,
+                        status="reused",
+                        source_id=existing_source.id,
+                        diagnostic=None,
+                    )
+                )
+                continue
+
+        connector_metadata: JsonDict = {
+            "connector_id": binding.connector_id,
+            "binding_id": binding.id,
+            "relative_path": entry.relative_path,
+            "sync_check_id": stored.id,
+            "snapshot_entry": entry.model_dump(mode="json", exclude_none=True),
+        }
+        imported, diag = await _ingest_source_bytes(
+            notebook_id=notebook_id,
+            filename=entry.relative_path,
+            mime_type="text/markdown" if entry.relative_path.lower().endswith((".md", ".markdown")) else None,
+            raw=raw,
+            session=session,
+            settings=settings,
+            embedder=embedder,
+            transcriber=transcriber,
+            vector_store=vector_store,
+            plugins=plugins,
+            connector_metadata=connector_metadata,
+            dedup_key=dedup_key,
+        )
+
+        if imported is None:
+            had_failures = True
+            results.append(
+                ImportResultItem(
+                    relative_path=entry.relative_path,
+                    status="failed",
+                    source_id=None,
+                    diagnostic=diag,
+                )
+            )
+            continue
+
+        if diag is not None:
+            had_failures = True
+            results.append(
+                ImportResultItem(
+                    relative_path=entry.relative_path,
+                    status="failed",
+                    source_id=imported.id,
+                    diagnostic=diag,
+                )
+            )
+            continue
+
+        imported_source_ids.append(imported.id)
+        vectors_changed = True
+        results.append(
+            ImportResultItem(
+                relative_path=entry.relative_path,
+                status="imported",
+                source_id=imported.id,
+                diagnostic=None,
+            )
+        )
+
+    if not had_failures:
+        binding.last_confirmed_snapshot = cast(JsonDict, stored.current_snapshot.model_dump(mode="json", exclude_none=True))
+        binding.last_sync_check_result = None
+        session.add(binding)
+        await session.commit()
+        await session.refresh(binding)
+
+    if vectors_changed:
+        await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
+
+    return ImportScopeApplyResponse(
+        binding=ConnectorBindingRead.model_validate(binding, from_attributes=True),
+        imported_source_ids=imported_source_ids,
+        reused_source_ids=reused_source_ids,
+        results=results,
+    )
 
 
 @router.post(

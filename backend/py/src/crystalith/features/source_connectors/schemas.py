@@ -78,6 +78,10 @@ class SyncCheckResult(BaseModel):
     candidates: SyncCandidates
 
 
+class ApplySyncCheckRequest(BaseModel):
+    sync_check_id: str
+
+
 class CreateConnectorBindingRequest(BaseModel):
     connection_config: JsonDict = Field(default_factory=dict)
 
