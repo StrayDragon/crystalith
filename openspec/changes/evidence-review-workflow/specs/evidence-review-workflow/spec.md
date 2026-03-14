@@ -25,3 +25,26 @@
 - **WHEN** 审阅者执行通过或需修订动作
 - **THEN** 系统 SHALL 更新 evidence review 状态
 - **AND** SHALL 记录是谁在什么上下文下完成该动作
+
+### Requirement: 审阅记录必须关联到结果与 citation/evidence 对象
+系统 MUST 让 evidence review 记录能够关联到被审阅的结果对象以及其 citation/evidence 上下文，以支持逐条核查与可追溯性。
+
+#### Scenario: 审阅者标记某条 citation 需修订
+- **WHEN** 审阅者对某条 citation 标记为需修订
+- **THEN** 系统 SHALL 记录该 citation 的审阅状态
+- **AND** SHALL 将该记录关联到对应结果与 citation 标识
+
+### Requirement: 结果对象必须暴露 evidence review 摘要以支持列表与详情展示
+系统 MUST 在结果对象中暴露 evidence review 的摘要字段（状态与计数），以支持工作区列表与结果页一致展示。
+
+#### Scenario: 用户在结果列表查看审阅状态
+- **WHEN** 用户在工作区查看结果列表或详情
+- **THEN** 系统 SHALL 返回该结果的 evidence review 状态摘要
+- **AND** 用户 SHALL 能识别该结果是否待审、已审或需修订
+
+### Requirement: 工作区必须提供进入 evidence review 的稳定入口
+系统 MUST 在工作区为结果提供稳定的 evidence review 入口，避免审阅能力变成零散不可发现的隐藏功能。
+
+#### Scenario: 用户从结果页进入证据审阅
+- **WHEN** 用户打开某个结果
+- **THEN** 用户 SHALL 能进入 evidence review 流程并查看 citation 级状态与 review notes
