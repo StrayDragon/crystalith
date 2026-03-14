@@ -127,7 +127,9 @@ docker compose --env-file .env \
 
 启动后有 `web`（Nginx，端口 8080）+ `api`（FastAPI）+ `data-init`。
 
-默认镜像只包含核心功能。PDF/HTML 解析、URL 提取等在 official 插件里，需要的话构建时安装 `crystalith[official-full]`。
+默认镜像只包含核心功能。PDF/HTML 解析、URL 提取、Source Connectors 等在 official 插件里，需要的话构建时安装 `crystalith[official-full]`（或按需安装 `official-parsers` / `official-extractors` / `official-connectors`）。
+
+对于基于本地文件系统的连接器（如 Obsidian vault、Local Directory），还需要把宿主机目录挂载到 `api` 容器里，并在连接参数里填写**容器内路径**（建议 `:ro` 只读挂载）。
 
 ### 推荐部署（core + storage + redis）
 

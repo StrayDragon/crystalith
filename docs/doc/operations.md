@@ -134,3 +134,48 @@ Symptoms:
 Fixes:
 - Install the official parser bundle: `pip install 'crystalith[official-parsers]'` (or `crystalith[official-full]`).
 - Ensure the plugin isn’t disabled by `plugins.*` config.
+
+### Source connectors are missing / empty
+
+Symptoms:
+- The connectors list is empty in the UI.
+- `GET /v1/notebooks/{notebook_id}/source-connectors` returns an empty `connectors` list.
+- Creating a binding for `connector-obsidian` / `connector-local-directory` returns `404 Source connector not found`.
+
+Fixes:
+- Install connector plugins:
+  - `pip install 'crystalith[official-connectors]'` (or `crystalith[official-full]`)
+  - Dev: `cd backend/py && uv sync --extra official-connectors`
+- Ensure the plugin isn’t disabled:
+  - `plugins.disabled` (denylist)
+  - `plugins.enabled` (allowlist; if set, required plugin ids must be included)
+- Docker Compose: set `.env` `CRYSTALITH_BACKEND_EXTRAS="official-connectors"` (or `official-full`) and rebuild `api`.
+- Filesystem note: Obsidian/Local Directory connectors read from the backend filesystem. In containers, mount the target directories into `api` and use the container paths.
+
+## Benchmarks
+
+### Source connector snapshot + sync_check diff
+
+There is a small, repo-local benchmark script for connector snapshot enumeration + sync_check diff:
+
+```bash
+cd backend/py
+uv run python scripts/source_connectors_bench.py --connector obsidian --files 1000 --updates 50 --missing 50 --added 50 --repeats 5
+uv run python scripts/source_connectors_bench.py --connector local-directory --files 1000 --updates 50 --missing 50 --added 50 --repeats 5
+```
+
+Outputs include:
+- `snapshot_ms`: snapshot enumeration (including frontmatter sampling for Markdown)
+- `sync_check_diff_ms`: pure diff (`base_snapshot` vs `current_snapshot`)
+
+The script prints p50/p95/p99 percentiles over `--repeats`. Use it as a regression guard when changing connector enumeration logic.
+
+Example baseline (2026-03-14, `--repeats 5`, 1000 markdown files):
+
+```text
+obsidian:
+  snapshot_ms p50 ~280.909ms, sync_check_diff_ms p50 ~0.253ms
+
+local-directory:
+  snapshot_ms p50 ~328.951ms, sync_check_diff_ms p50 ~0.706ms
+```
