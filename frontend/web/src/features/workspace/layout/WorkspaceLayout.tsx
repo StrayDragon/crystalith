@@ -688,6 +688,7 @@ export default function WorkspaceLayout() {
               sources={sources.sources}
               jumpToSource={overlays.jumpToSource}
               onUpload={sources.handleUpload}
+              onRefreshSources={sources.retrySources}
               uploadState={sources.uploadState}
               uploadError={sources.uploadError}
               uploadQueue={sources.uploadQueue}
