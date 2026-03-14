@@ -6,6 +6,7 @@ Crystalith supports a backend plugin system (Python `entry_points`) for extendin
 - Document parsers (file ingestion)
 - Output generation schemas (override existing output types)
 - Web content extractors (URL fetch mode)
+- Source connectors (external repositories / folders)
 
 Plugins are discovered via Python `entry_points` at app startup.
 
@@ -17,7 +18,7 @@ Install profiles:
 
 - Core-only: `pip install crystalith` (minimal ingestion + minimal outputs; default docker image)
 - Official full (recommended): `pip install 'crystalith[official-full]'`
-- Smaller bundles: `official-outputs`, `official-parsers`, `official-extractors`
+- Smaller bundles: `official-connectors`, `official-outputs`, `official-parsers`, `official-extractors`
 
 See also: [Official Plugins (Generated)](reference/plugins.gen.md)
 
@@ -26,11 +27,13 @@ Official plugin ids follow a stable naming convention:
 - Output types: `output-<type>` (e.g. `output-quiz`)
 - Parsers: `parser-<kind>` (e.g. `parser-pdf`)
 - Web extractors: `extractor-<kind>` (e.g. `extractor-trafilatura`)
+- Source connectors: `connector-<kind>` (e.g. `connector-obsidian`)
 
 When capabilities are missing or skipped, the API exposes actionable hints:
 
 - `GET /v1/workspace/tools` → `diagnostics.plugins` + `diagnostics.official`
 - `GET /v1/notebooks/{notebook_id}/sources/extractors` → per-extractor `error_code` + `recovery_hint`
+- `GET /v1/notebooks/{notebook_id}/source-connectors` → available connectors + connector diagnostics (installed + enabled only)
 
 ## 1) Discovery
 
@@ -207,6 +210,32 @@ Implement a factory with:
 Notes:
 - The host `ExtractorFactory` owns fallback/retry semantics and SSRF redirect revalidation.
 - Notebook-level enablement is controlled by `PATCH /v1/notebooks/{notebook_id}/sources/extractors` (`mode=inherit_global|custom`).
+
+### SourceConnectorPlugin
+
+Source connectors are backend plugins that let the host enumerate and import files from external repositories
+(e.g. an Obsidian vault or a local directory).
+
+In v1, connector plugins are **backend-only**:
+- the host owns persistence (notebook-scoped bindings) and the workflow UI
+- connectors provide config schema, diagnostics, snapshot enumeration, and file reads
+
+Implement a factory with:
+
+- `display_name: str` / `description: str | None`
+- `connection_config_schema: dict` (JSON Schema)
+- capabilities: `supports_snapshot: bool`, `supports_sync_check: bool`
+- `get_diagnostics(settings, connection_config=...) -> list[dict] | None`
+- `list_snapshot_entries(settings, connection_config=...) -> list[dict]`
+- `read_file_bytes(settings, connection_config=..., relative_path=...) -> bytes`
+
+API surfaces (host-owned):
+- `GET /v1/notebooks/{notebook_id}/source-connectors`
+- `POST /v1/notebooks/{notebook_id}/source-connectors/{connector_id}/bindings`
+- `POST /v1/notebooks/{notebook_id}/source-connector-bindings/{binding_id}/snapshot`
+- `POST /v1/notebooks/{notebook_id}/source-connector-bindings/{binding_id}/import-scope`
+- `POST /v1/notebooks/{notebook_id}/source-connector-bindings/{binding_id}/sync-check`
+- `POST /v1/notebooks/{notebook_id}/source-connector-bindings/{binding_id}/sync-check/apply`
 
 ## 4) Example plugin
 

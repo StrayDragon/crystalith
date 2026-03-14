@@ -144,7 +144,12 @@ Notes:
 
 - Command palette: `Ctrl+K`
 - Shortcut help: `Ctrl+?`
-- Sources: upload `.txt`, `.md`, `.markdown`, or `.pdf` files in the Sources panel.
+- Sources:
+  - Upload: `.txt`, `.md`, `.markdown`, or `.pdf` files in the Sources panel.
+  - Connectors: Obsidian Vault + Local Directory (requires installing connector plugins, e.g. `crystalith[official-connectors]` or `crystalith[official-full]`).
+    - Local dev: `cd backend/py && uv sync --extra official-connectors`
+    - Docker Compose: set `.env` `CRYSTALITH_BACKEND_EXTRAS="official-connectors"` (or `official-full`) and rebuild the backend image.
+    - Note: filesystem-based connectors read from the backend process filesystem; mount host directories into the API container and use the container path.
 - Health / diagnostics: use the header button to inspect `/health/dependencies`
 
 ## Dev workflow tips
