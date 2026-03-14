@@ -23,6 +23,16 @@ export type AnalysisResult = {
 };
 
 /**
+ * ApplySyncCheckRequest
+ */
+export type ApplySyncCheckRequest = {
+    /**
+     * Sync Check Id
+     */
+    sync_check_id: string;
+};
+
+/**
  * ApproveRequest
  *
  * Request to approve a search plan.
@@ -209,6 +219,36 @@ export type ConfigOption = {
 };
 
 /**
+ * ConnectorBindingRead
+ */
+export type ConnectorBindingRead = {
+    connection_config: JsonDictOutput;
+    /**
+     * Connector Id
+     */
+    connector_id: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Id
+     */
+    id: number;
+    import_scope?: ImportScope | null;
+    last_confirmed_snapshot?: Snapshot | null;
+    last_sync_check_result?: SyncCheckResult | null;
+    /**
+     * Notebook Id
+     */
+    notebook_id: number;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+};
+
+/**
  * ContextStatsResponse
  */
 export type ContextStatsResponse = {
@@ -371,6 +411,32 @@ export type ConvertToSourceResponse = {
      * Source Id
      */
     source_id: number;
+};
+
+/**
+ * CreateConnectorBindingRequest
+ */
+export type CreateConnectorBindingRequest = {
+    connection_config?: JsonDictInput;
+};
+
+/**
+ * Diagnostic
+ */
+export type Diagnostic = {
+    details?: JsonValueOutput | null;
+    /**
+     * Error Code
+     */
+    error_code: string;
+    /**
+     * Hint
+     */
+    hint?: null | string;
+    /**
+     * Message
+     */
+    message: string;
 };
 
 /**
@@ -557,6 +623,28 @@ export type FrontendBundleDescriptor = {
 };
 
 /**
+ * FrontmatterSummary
+ */
+export type FrontmatterSummary = {
+    /**
+     * Aliases
+     */
+    aliases?: Array<string> | null;
+    /**
+     * Date
+     */
+    date?: null | string;
+    /**
+     * Tags
+     */
+    tags?: Array<string> | null;
+    /**
+     * Title
+     */
+    title?: null | string;
+};
+
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -564,6 +652,58 @@ export type HttpValidationError = {
      * Detail
      */
     detail?: Array<ValidationError>;
+};
+
+/**
+ * ImportResultItem
+ */
+export type ImportResultItem = {
+    diagnostic?: Diagnostic | null;
+    /**
+     * Relative Path
+     */
+    relative_path: string;
+    /**
+     * Source Id
+     */
+    source_id?: number | null;
+    /**
+     * Status
+     */
+    status: 'failed' | 'imported' | 'reused' | 'skipped';
+};
+
+/**
+ * ImportScope
+ */
+export type ImportScope = {
+    /**
+     * Include Directories
+     */
+    include_directories?: Array<string> | null;
+    /**
+     * Include Files
+     */
+    include_files?: Array<string> | null;
+};
+
+/**
+ * ImportScopeApplyResponse
+ */
+export type ImportScopeApplyResponse = {
+    binding: ConnectorBindingRead;
+    /**
+     * Imported Source Ids
+     */
+    imported_source_ids?: Array<number>;
+    /**
+     * Results
+     */
+    results?: Array<ImportResultItem>;
+    /**
+     * Reused Source Ids
+     */
+    reused_source_ids?: Array<number>;
 };
 
 /**
@@ -2098,6 +2238,39 @@ export type SlidesWorkflowDiagnostic = {
 };
 
 /**
+ * Snapshot
+ */
+export type Snapshot = {
+    /**
+     * Entries
+     */
+    entries?: Array<SnapshotEntry>;
+    /**
+     * Generated At
+     */
+    generated_at: string;
+};
+
+/**
+ * SnapshotEntry
+ */
+export type SnapshotEntry = {
+    frontmatter_summary?: FrontmatterSummary;
+    /**
+     * Modified At
+     */
+    modified_at: string;
+    /**
+     * Relative Path
+     */
+    relative_path: string;
+    /**
+     * Size Bytes
+     */
+    size_bytes: number;
+};
+
+/**
  * SourceBatchDeleteRequest
  */
 export type SourceBatchDeleteRequest = {
@@ -2181,6 +2354,54 @@ export type SourceBatchReembedResponse = {
      * Results
      */
     results?: Array<SourceBatchItemResult>;
+};
+
+/**
+ * SourceConnectorCapabilities
+ */
+export type SourceConnectorCapabilities = {
+    /**
+     * Supports Snapshot
+     */
+    supports_snapshot?: boolean;
+    /**
+     * Supports Sync Check
+     */
+    supports_sync_check?: boolean;
+};
+
+/**
+ * SourceConnectorDescriptor
+ */
+export type SourceConnectorDescriptor = {
+    capabilities: SourceConnectorCapabilities;
+    connection_config_schema: JsonDictOutput;
+    /**
+     * Connector Id
+     */
+    connector_id: string;
+    /**
+     * Description
+     */
+    description?: null | string;
+    /**
+     * Diagnostics
+     */
+    diagnostics?: Array<Diagnostic> | null;
+    /**
+     * Display Name
+     */
+    display_name: string;
+};
+
+/**
+ * SourceConnectorsListResponse
+ */
+export type SourceConnectorsListResponse = {
+    /**
+     * Connectors
+     */
+    connectors?: Array<SourceConnectorDescriptor>;
 };
 
 /**
@@ -2557,6 +2778,57 @@ export type StructuredRefine = {
      * Title
      */
     title: string;
+};
+
+/**
+ * SyncCandidate
+ */
+export type SyncCandidate = {
+    base?: SnapshotEntry | null;
+    current?: SnapshotEntry | null;
+    /**
+     * Reason
+     */
+    reason?: null | string;
+    /**
+     * Relative Path
+     */
+    relative_path: string;
+};
+
+/**
+ * SyncCandidates
+ */
+export type SyncCandidates = {
+    /**
+     * Added
+     */
+    added?: Array<SyncCandidate>;
+    /**
+     * Missing
+     */
+    missing?: Array<SyncCandidate>;
+    /**
+     * Updated
+     */
+    updated?: Array<SyncCandidate>;
+};
+
+/**
+ * SyncCheckResult
+ */
+export type SyncCheckResult = {
+    base_snapshot?: Snapshot | null;
+    candidates: SyncCandidates;
+    /**
+     * Checked At
+     */
+    checked_at: string;
+    current_snapshot: Snapshot;
+    /**
+     * Id
+     */
+    id: string;
 };
 
 /**
@@ -4852,6 +5124,206 @@ export type GenerateOutlineStreamV1NotebooksNotebookIdSlidesDraftsSlideIdOutline
      */
     200: unknown;
 };
+
+export type ApplyImportScopeV1NotebooksNotebookIdSourceConnectorBindingsBindingIdImportScopePostData = {
+    body: ImportScope;
+    path: {
+        /**
+         * Binding Id
+         */
+        binding_id: number;
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/source-connector-bindings/{binding_id}/import-scope';
+};
+
+export type ApplyImportScopeV1NotebooksNotebookIdSourceConnectorBindingsBindingIdImportScopePostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ApplyImportScopeV1NotebooksNotebookIdSourceConnectorBindingsBindingIdImportScopePostError = ApplyImportScopeV1NotebooksNotebookIdSourceConnectorBindingsBindingIdImportScopePostErrors[keyof ApplyImportScopeV1NotebooksNotebookIdSourceConnectorBindingsBindingIdImportScopePostErrors];
+
+export type ApplyImportScopeV1NotebooksNotebookIdSourceConnectorBindingsBindingIdImportScopePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ImportScopeApplyResponse;
+};
+
+export type ApplyImportScopeV1NotebooksNotebookIdSourceConnectorBindingsBindingIdImportScopePostResponse = ApplyImportScopeV1NotebooksNotebookIdSourceConnectorBindingsBindingIdImportScopePostResponses[keyof ApplyImportScopeV1NotebooksNotebookIdSourceConnectorBindingsBindingIdImportScopePostResponses];
+
+export type SnapshotBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSnapshotPostData = {
+    body?: never;
+    path: {
+        /**
+         * Binding Id
+         */
+        binding_id: number;
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/source-connector-bindings/{binding_id}/snapshot';
+};
+
+export type SnapshotBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSnapshotPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SnapshotBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSnapshotPostError = SnapshotBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSnapshotPostErrors[keyof SnapshotBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSnapshotPostErrors];
+
+export type SnapshotBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSnapshotPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: Snapshot;
+};
+
+export type SnapshotBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSnapshotPostResponse = SnapshotBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSnapshotPostResponses[keyof SnapshotBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSnapshotPostResponses];
+
+export type SyncCheckBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckPostData = {
+    body?: never;
+    path: {
+        /**
+         * Binding Id
+         */
+        binding_id: number;
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/source-connector-bindings/{binding_id}/sync-check';
+};
+
+export type SyncCheckBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SyncCheckBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckPostError = SyncCheckBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckPostErrors[keyof SyncCheckBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckPostErrors];
+
+export type SyncCheckBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: SyncCheckResult;
+};
+
+export type SyncCheckBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckPostResponse = SyncCheckBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckPostResponses[keyof SyncCheckBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckPostResponses];
+
+export type ApplySyncCheckV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckApplyPostData = {
+    body: ApplySyncCheckRequest;
+    path: {
+        /**
+         * Binding Id
+         */
+        binding_id: number;
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/source-connector-bindings/{binding_id}/sync-check/apply';
+};
+
+export type ApplySyncCheckV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckApplyPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ApplySyncCheckV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckApplyPostError = ApplySyncCheckV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckApplyPostErrors[keyof ApplySyncCheckV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckApplyPostErrors];
+
+export type ApplySyncCheckV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckApplyPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ImportScopeApplyResponse;
+};
+
+export type ApplySyncCheckV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckApplyPostResponse = ApplySyncCheckV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckApplyPostResponses[keyof ApplySyncCheckV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckApplyPostResponses];
+
+export type ListSourceConnectorsV1NotebooksNotebookIdSourceConnectorsGetData = {
+    body?: never;
+    path: {
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/source-connectors';
+};
+
+export type ListSourceConnectorsV1NotebooksNotebookIdSourceConnectorsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListSourceConnectorsV1NotebooksNotebookIdSourceConnectorsGetError = ListSourceConnectorsV1NotebooksNotebookIdSourceConnectorsGetErrors[keyof ListSourceConnectorsV1NotebooksNotebookIdSourceConnectorsGetErrors];
+
+export type ListSourceConnectorsV1NotebooksNotebookIdSourceConnectorsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: SourceConnectorsListResponse;
+};
+
+export type ListSourceConnectorsV1NotebooksNotebookIdSourceConnectorsGetResponse = ListSourceConnectorsV1NotebooksNotebookIdSourceConnectorsGetResponses[keyof ListSourceConnectorsV1NotebooksNotebookIdSourceConnectorsGetResponses];
+
+export type CreateConnectorBindingV1NotebooksNotebookIdSourceConnectorsConnectorIdBindingsPostData = {
+    body: CreateConnectorBindingRequest;
+    path: {
+        /**
+         * Connector Id
+         */
+        connector_id: string;
+        /**
+         * Notebook Id
+         */
+        notebook_id: number;
+    };
+    query?: never;
+    url: '/v1/notebooks/{notebook_id}/source-connectors/{connector_id}/bindings';
+};
+
+export type CreateConnectorBindingV1NotebooksNotebookIdSourceConnectorsConnectorIdBindingsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateConnectorBindingV1NotebooksNotebookIdSourceConnectorsConnectorIdBindingsPostError = CreateConnectorBindingV1NotebooksNotebookIdSourceConnectorsConnectorIdBindingsPostErrors[keyof CreateConnectorBindingV1NotebooksNotebookIdSourceConnectorsConnectorIdBindingsPostErrors];
+
+export type CreateConnectorBindingV1NotebooksNotebookIdSourceConnectorsConnectorIdBindingsPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: ConnectorBindingRead;
+};
+
+export type CreateConnectorBindingV1NotebooksNotebookIdSourceConnectorsConnectorIdBindingsPostResponse = CreateConnectorBindingV1NotebooksNotebookIdSourceConnectorsConnectorIdBindingsPostResponses[keyof CreateConnectorBindingV1NotebooksNotebookIdSourceConnectorsConnectorIdBindingsPostResponses];
 
 export type ListSourcesV1NotebooksNotebookIdSourcesGetData = {
     body?: never;
