@@ -144,6 +144,7 @@ Notes:
 
 - Command palette: `Ctrl+K`
 - Shortcut help: `Ctrl+?`
+- Mobile: on narrow screens (<768px), Workspace switches to a single-panel mode with a bottom tab bar (Sources / Chat / Notes). Layout editing (modules / lock toggle) is desktop-only.
 - Sources:
   - Upload: `.txt`, `.md`, `.markdown`, or `.pdf` files in the Sources panel.
   - Connectors: Obsidian Vault + Local Directory (requires installing connector plugins, e.g. `crystalith[official-connectors]` or `crystalith[official-full]`).
