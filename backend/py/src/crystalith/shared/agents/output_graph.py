@@ -586,6 +586,7 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                 llm_hit=llm_hit,
                 generate_ms=generate_ms,
                 duration_ms=generate_ms,
+                exc_info=error,
                 **model_settings_log,
             )
             state.content = _fallback_output(state.output_type, effective_prompt)
@@ -678,6 +679,7 @@ class PostprocessOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                     error_kind=classify_error_kind(error),
                     repair_ms=repair_ms,
                     duration_ms=repair_ms,
+                    exc_info=error,
                     **model_settings_log,
                 )
             else:

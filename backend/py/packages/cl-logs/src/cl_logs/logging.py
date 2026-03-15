@@ -363,6 +363,8 @@ def temporary_logging_config(config: LogConfig) -> Generator[None, None, None]:
 
 
 def _setup_stdlib_logging(config: LogConfig) -> None:
+    env_level = os.getenv("LOG_LEVEL", "").upper().strip()
+    effective_level = env_level if env_level in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"} else config.level
     use_json = config.use_json is True or (config.use_json is None and not sys.stderr.isatty())
 
     if use_json:  # JSON 输出:使用 ProcessorFormatter 统一处理 structlog 和标准库日志
@@ -406,7 +408,7 @@ def _setup_stdlib_logging(config: LogConfig) -> None:
         handlers = [rich_handler]
 
     logging.basicConfig(
-        level=getattr(logging, config.level, logging.INFO),
+        level=getattr(logging, effective_level, logging.INFO),
         handlers=handlers,
         force=True,  # 强制重新配置
     )

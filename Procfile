@@ -1,4 +1,4 @@
-b: HOST=0.0.0.0 PORT=8032 RELOAD=1 uv run --project backend/py python backend/py/main.py
+b: LOG_LEVEL=DEBUG LOGX_FORMAT=console HOST=0.0.0.0 PORT=8032 RELOAD=1 uv run --project backend/py python backend/py/main.py
 f: just -f frontend/web/justfile dev
 # Optional local preview:
 s: pnpm -C frontend/packages/crystalith-slidev dev
