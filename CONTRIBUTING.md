@@ -11,15 +11,17 @@ Prerequisites:
 - Node 20 + `pnpm`
 - `uv` (Python package manager)
 - Docker (recommended for local deps)
+- `overmind` (for local/hybrid profiles)
 
 Recommended (host hot reload + docker deps):
 
 ```bash
 cp .env.example .env
-just dev
+just upsert-env-configs
+just up                   # default: hybrid profile
 ```
 
-Backend (FastAPI):
+Backend only (no Docker):
 
 ```bash
 cd backend/py
@@ -28,7 +30,7 @@ just db-init
 just dev
 ```
 
-Frontend (Vite + React):
+Frontend only:
 
 ```bash
 cd frontend/web

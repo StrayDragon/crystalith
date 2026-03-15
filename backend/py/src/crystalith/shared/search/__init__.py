@@ -87,7 +87,7 @@ class SearXNGSearcher:
         if not candidates:
             raise RuntimeError(
                 "SearXNG is not configured. Set `search.searxng.host` in config/app.yaml "
-                "or provide `search.searxng.endpoint_candidates` (compose overlays/dev-deps can supply endpoints)."
+                "or provide `search.searxng.endpoint_candidates` (compose overlays supply endpoints automatically)."
             )
 
         async with self._resolve_lock:

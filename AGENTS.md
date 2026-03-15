@@ -8,6 +8,15 @@
 - `openspec/` contains specification/change-tracking docs; consult it for spec-driven work.
 
 ## Build, Test, and Development Commands
+Unified entry (from repo root):
+- `just up` starts with default profile (hybrid: Docker deps + host hot reload).
+- `just up local` starts without Docker (SQLite + embedded Chroma).
+- `just up docker` starts Docker Compose deployment.
+- `just up full` starts full Docker Compose with all overlays.
+- `just down` / `just status` / `just logs` manage the running profile.
+- `just upsert-env-configs` initializes `.env` and `config/secrets.yaml` from shell env vars.
+- `just cleanup` detects stale artifacts from old workflows (dry-run; `--apply` to execute).
+
 Backend (from repo root):
 - `cd backend/py && uv sync` installs Python deps.
 - `cd backend/py && just dev` runs the API server (uvicorn wrapper).

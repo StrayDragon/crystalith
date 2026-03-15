@@ -120,4 +120,4 @@ FULL_SERVICES=storage redis searxng ollama slidev    # 默认
 - 依赖状态：`GET /health/dependencies` 或 UI 顶部按钮
 - 日志：`just logs`（跟随当前 profile）
 - 状态：`just status`
-- Compose 日志（高级）：`just dev-docker-logs` / `just dev-deps-logs`
+- Compose 日志（高级）：`just logs docker` / `just logs hybrid`
