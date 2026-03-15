@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import os
 from typing import Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -18,7 +19,7 @@ from crystalith.shared.agents.generation_preference import (
     tuning_for_preference,
     tuning_for_request,
 )
-from crystalith.shared.agents.models import ModelConfigurationError
+from crystalith.shared.agents.models import ModelConfigurationError, build_chat_model
 from crystalith.shared.agents.output_graph import run_output_graph
 from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
@@ -268,6 +269,7 @@ async def create_output(
         vector_store=vector_store,
         embedder=embedder,
         cache=cache,
+        model=build_chat_model(settings),
         limiters=limiters,
         plugins=plugins,
     )
@@ -353,9 +355,12 @@ async def create_output(
             error_kind="unknown_error",
             exc_info=exc,
         )
+        detail = "Failed to generate output. Please try again later."
+        if os.getenv("LOG_LEVEL", "").upper().strip() == "DEBUG":
+            detail = f"{type(exc).__name__}: {exc}"
         raise HTTPException(
             status_code=500,
-            detail="Failed to generate output. Please try again later.",
+            detail=detail,
         ) from exc
 
     log.info(

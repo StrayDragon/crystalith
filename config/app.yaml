@@ -69,7 +69,7 @@ plugins:
 providers:
   # OpenAI-compatible API
   openai_default: &openai_default
-    api_key: "${{ secrets.OPENAI_API_KEY }}"
+    api_key: "${{ env.OPENAI_API_KEY }}"
     # Optional override: set OPENAI_BASE_URL to use an OpenAI-compatible endpoint/proxy.
     # When empty/unset, the OpenAI SDK default (https://api.openai.com/v1) is used.
     base_url: "${{ env.OPENAI_BASE_URL }}"
@@ -258,6 +258,7 @@ search:
     # Prefer enabling via YAML endpoint candidates (dev deps / compose overlay).
     host: ""
     endpoint_candidates:
+      - "http://gateway.lan:50201"
       - "http://127.0.0.1:50201"
       - "http://searxng:8080"
     timeout: 10
@@ -312,8 +313,9 @@ optional_services:
 
   searxng:
     enabled: false
-    endpoint: "http://localhost:50201"
+    endpoint: "http://gateway.lan:50201"
     endpoint_candidates:
+      - "http://gateway.lan:50201"
       - "http://127.0.0.1:50201"
       - "http://searxng:8080"
     timeout_s: 10
