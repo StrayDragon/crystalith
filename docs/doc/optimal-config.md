@@ -1,123 +1,123 @@
-# Optimal Configuration
+# 最佳配置
 
 ## TL;DR
 
 ```bash
-just up              # hybrid (default) — recommended for development
-just up local        # no Docker at all
-just up docker       # Docker deploy + optional external services
-just up full         # everything in Docker
+just up              # hybrid（默认）—— 推荐开发使用
+just up local        # 完全不用 Docker
+just up docker       # Docker 部署 + 可选外部服务
+just up full         # 全部 Docker
 ```
 
-## Profile comparison
+## Profile 对比
 
 | | local | hybrid | docker | full |
 |---|---|---|---|---|
-| Hot reload | instant | instant | rebuild needed | rebuild needed |
-| Docker required | no | deps only | yes | yes |
-| Startup speed | fast | fast | slow (build) | slow (build) |
-| Prod parity | low | medium | high | high |
-| Best for | quick edits, offline | daily dev (recommended) | staging / integration | demo / production |
+| 热重载 | 即时 | 即时 | 需 rebuild | 需 rebuild |
+| 需要 Docker | 否 | 仅依赖 | 是 | 是 |
+| 启动速度 | 快 | 快 | 慢（构建） | 慢（构建） |
+| 生产一致性 | 低 | 中 | 高 | 高 |
+| 适合场景 | 快速编辑、离线 | 日常开发（推荐） | 集成测试 / 预发布 | 演示 / 生产 |
 
-## Profile details
+## Profile 详情
 
-### local — Pure local dev
+### local — 纯本地开发
 
-No Docker. Backend uses SQLite + embedded Chroma + in-memory cache.
+不依赖 Docker。后端使用 SQLite + 内嵌 Chroma + 内存缓存。
 
 ```bash
 just up local
 ```
 
-Pros: zero dependencies beyond Python/Node, instant startup.
-Cons: no Postgres, no Redis, no web search.
+优点：除 Python/Node 外零依赖，秒级启动。
+缺点：无 Postgres、无 Redis、无网页搜索。
 
-To add web search, run SearXNG yourself and set `search.searxng.host` in `config/app.yaml`.
+如需网页搜索，自行运行 SearXNG 并在 `config/app.yaml` 中设置 `search.searxng.host`。
 
-### hybrid — Docker deps + local app (recommended)
+### hybrid — Docker 依赖 + 本地应用（推荐）
 
-Docker runs Postgres, ChromaDB, Redis, SearXNG. Backend + frontend run on host with hot reload.
-
-```bash
-just up              # or: just up hybrid
-```
-
-Customize deps in `.env`:
+Docker 运行 Postgres、ChromaDB、Redis、SearXNG。前后端在宿主机热重载。
 
 ```bash
-HYBRID_SERVICES=storage redis searxng          # default
-HYBRID_SERVICES=storage redis searxng ollama   # add local LLM
-HYBRID_SERVICES=storage redis                  # no web search
+just up              # 或：just up hybrid
 ```
 
-### docker — Docker deploy + external services
+在 `.env` 中自定义依赖：
 
-App runs in Docker. Choose which deps to include; the rest connect to external services via endpoint probing.
+```bash
+HYBRID_SERVICES=storage redis searxng          # 默认
+HYBRID_SERVICES=storage redis searxng ollama   # 加本地 LLM
+HYBRID_SERVICES=storage redis                  # 不要搜索
+```
+
+### docker — Docker 部署 + 外部服务
+
+应用在 Docker 中运行。选择哪些依赖包含在 Docker 中，其余通过 endpoint 探测连接外部服务。
 
 ```bash
 just up docker
 ```
 
-Customize in `.env`:
+在 `.env` 中自定义：
 
 ```bash
-DOCKER_SERVICES=storage redis searxng    # default: all deps in Docker
-DOCKER_SERVICES=redis                    # only Redis in Docker; DB/Chroma/SearXNG external
-DOCKER_SERVICES=                         # no deps; everything connects externally
+DOCKER_SERVICES=storage redis searxng    # 默认：所有依赖在 Docker
+DOCKER_SERVICES=redis                    # 只有 Redis 在 Docker；数据库/Chroma/SearXNG 外部
+DOCKER_SERVICES=                         # 无依赖；全部连接外部
 ```
 
-External services are found automatically via `endpoint_candidates` in `config/app.yaml`, or override in `config/app.local.yaml`.
+外部服务通过 `config/app.yaml` 中的 `endpoint_candidates` 自动发现，或在 `config/app.local.yaml` 中覆盖。
 
-### full — Full Docker deployment
+### full — 全 Docker 部署
 
-Everything in Docker, including Ollama and Slidev.
+所有服务在 Docker 中运行，包括 Ollama 和 Slidev。
 
 ```bash
 just up full
 ```
 
-Customize in `.env`:
+在 `.env` 中自定义：
 
 ```bash
-FULL_SERVICES=storage redis searxng ollama slidev    # default
+FULL_SERVICES=storage redis searxng ollama slidev    # 默认
 ```
 
-## Smart endpoint resolution
+## 智能 endpoint 解析
 
-All profiles share the same `config/app.yaml`. The backend automatically reorders endpoint candidates based on runtime context:
+所有 profile 共享同一份 `config/app.yaml`。后端会根据运行环境自动重排 endpoint 候选列表：
 
-- **On host** (local/hybrid): `127.0.0.1:5434` is tried before `postgres:5432`
-- **In Docker** (docker/full): `postgres:5432` is tried before `127.0.0.1:5434`
+- **宿主机上**（local/hybrid）：先尝试 `127.0.0.1:5434`，再尝试 `postgres:5432`
+- **Docker 内**（docker/full）：先尝试 `postgres:5432`，再尝试 `127.0.0.1:5434`
 
-This means you never need to maintain separate config files for different environments.
+这意味着你无需为不同环境维护不同的配置文件。
 
-## Recommended YAML knobs
+## 推荐 YAML 配置项
 
-In `config/app.yaml`:
+`config/app.yaml` 中：
 
-| Setting | Key |
-|---------|-----|
-| Database | `database.url_candidates` |
-| Vector store | `vector_storage.chroma.endpoint_candidates` |
-| Cache | `cache.redis_url_candidates` |
-| Search | `search.searxng.endpoint_candidates` |
+| 设置 | 键 |
+|------|-----|
+| 数据库 | `database.url_candidates` |
+| 向量存储 | `vector_storage.chroma.endpoint_candidates` |
+| 缓存 | `cache.redis_url_candidates` |
+| 搜索 | `search.searxng.endpoint_candidates` |
 | Ollama | `optional_services.ollama.endpoint_candidates` |
-| Auto DB init | `app.startup.auto_db_init` |
+| 自动建表 | `app.startup.auto_db_init` |
 
-In `.env`:
+`.env` 中：
 
-| Setting | Key |
-|---------|-----|
+| 设置 | 键 |
+|------|-----|
 | Profile | `CRYSTALITH_PROFILE` |
-| Services | `HYBRID_SERVICES`, `DOCKER_SERVICES`, `FULL_SERVICES` |
-| Web port | `CL_WEB_PORT` |
-| Dev dep ports | `CL_DEPS_POSTGRES_PORT`, `CL_DEPS_CHROMA_PORT`, etc. |
-| OpenAI override (Docker) | `OPENAI_BASE_URL_DOCKER` |
-| Embedding model (Docker) | `CRYSTALITH_DEFAULT_EMBEDDING_MODEL_DOCKER` |
+| 服务列表 | `HYBRID_SERVICES`、`DOCKER_SERVICES`、`FULL_SERVICES` |
+| Web 端口 | `CL_WEB_PORT` |
+| 开发依赖端口 | `CL_DEPS_POSTGRES_PORT`、`CL_DEPS_CHROMA_PORT` 等 |
+| OpenAI 覆盖（Docker） | `OPENAI_BASE_URL_DOCKER` |
+| Embedding 模型（Docker） | `CRYSTALITH_DEFAULT_EMBEDDING_MODEL_DOCKER` |
 
-## Troubleshooting
+## 故障排查
 
-- Dependency status: `GET /health/dependencies` or header button in UI
-- Logs: `just logs` (follows the active profile)
-- Status: `just status`
-- Compose logs (advanced): `just dev-docker-logs` / `just dev-deps-logs`
+- 依赖状态：`GET /health/dependencies` 或 UI 顶部按钮
+- 日志：`just logs`（跟随当前 profile）
+- 状态：`just status`
+- Compose 日志（高级）：`just dev-docker-logs` / `just dev-deps-logs`
