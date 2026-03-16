@@ -1,36 +1,36 @@
-# Configuration
+# 配置
 
-Crystalith runtime configuration lives in `config/app.yaml`.
+Crystalith 运行时配置位于 `config/app.yaml`。
 
-## Basics
+## 基础
 
-- Keep secrets out of git. Prefer `config/secrets.yaml` (auto-discovered) or `CRYSTALITH_SECRETS_PATH` (file or Docker secrets dir).
-- The config supports:
-  - `${{ env.VAR }}` interpolation
-  - `${{ secrets.VAR }}` interpolation
-  - YAML anchors for reuse
-- Environment variables that affect runtime/deploy behavior are indexed in: [Environment Variables Reference (Generated)](reference/env-vars.gen.md)
+- 密钥不要提交到 git。优先使用 `config/secrets.yaml`（自动发现）或 `CRYSTALITH_SECRETS_PATH`（文件或 Docker secrets 目录）。
+- 配置支持：
+  - `${{ env.VAR }}` 环境变量插值
+  - `${{ secrets.VAR }}` 密钥插值
+  - YAML 锚点复用
+- 影响运行时/部署行为的环境变量索引见：[环境变量参考（生成）](reference/env-vars.gen.md)
 
-## Common settings
+## 常用设置
 
-See [Configuration Schema Reference (Generated)](reference/config-schema.gen.md) for an up-to-date key index (including nested paths).
+完整的配置键索引（含嵌套路径）见 [配置 Schema 参考（生成）](reference/config-schema.gen.md)。
 
-## Web search (SearXNG)
+## 网页搜索（SearXNG）
 
-Crystalith’s web search / deep research uses SearXNG. When `search.searxng.host` is empty, web search is disabled.
+Crystalith 的网页搜索 / 深度研究功能使用 SearXNG。当 `search.searxng.host` 为空时，网页搜索被禁用。
 
-Ways to enable:
-- Config: set `search.searxng.host` **or** `search.searxng.endpoint_candidates` in `config/app.yaml`
+启用方式：
+- 配置：在 `config/app.yaml` 中设置 `search.searxng.host` **或** `search.searxng.endpoint_candidates`
 
-Profile options:
-- Include `searxng` in `HYBRID_SERVICES` / `DOCKER_SERVICES` / `FULL_SERVICES` in `.env` (included by default)
-- Or add the compose overlay manually: `deployments/prod/docker-compose.searxng.yml`
+Profile 选项：
+- 在 `.env` 中将 `searxng` 包含在 `HYBRID_SERVICES` / `DOCKER_SERVICES` / `FULL_SERVICES` 中（默认已包含）
+- 或手动添加 compose overlay：`deployments/prod/docker-compose.searxng.yml`
 
-## API authentication (self-host)
+## API 认证（自托管）
 
-Crystalith can optionally require an API key for all `/v1/**` endpoints.
+Crystalith 可选地要求所有 `/v1/**` 端点使用 API key。
 
-Config:
+配置：
 
 ```yaml
 app:
@@ -39,108 +39,105 @@ app:
     api_key: "${{ secrets.CRYSTALITH_API_KEY }}"
 ```
 
-Notes:
-- Prefer `${{ env.* }}` / `${{ secrets.* }}` to avoid committing secrets.
-- Clients should send `Authorization: Bearer <token>` (or `X-API-Key: <token>`).
-- `/health` and `/health/dependencies` stay anonymous for probes.
+注意：
+- 优先使用 `${{ env.* }}` / `${{ secrets.* }}` 避免提交密钥。
+- 客户端需发送 `Authorization: Bearer <token>`（或 `X-API-Key: <token>`）。
+- `/health` 和 `/health/dependencies` 保持匿名访问，用于健康探针。
 
-## Redis embedding cache
+## Redis embedding 缓存
 
-When `cache.provider=redis`, the backend can enable a cross-request embedding cache for small batches to reduce repeated
-embedding cost.
+当 `cache.provider=redis` 时，后端可启用跨请求的 embedding 缓存，减少小批量重复 embedding 开销。
 
-Config:
+配置：
 - `cache.provider: redis|auto`
 - `cache.redis_url` / `cache.redis_url_candidates`
 
-Env (defaults match `backend/py/src/crystalith/shared/deps.py`):
-- See [Environment Variables Reference (Generated)](reference/env-vars.gen.md)
+环境变量（默认值见 `backend/py/src/crystalith/shared/deps.py`）：
+- 参见 [环境变量参考（生成）](reference/env-vars.gen.md)
 
-Benchmark (requires Redis + optional dependency `redis`):
+基准测试（需要 Redis + 可选依赖 `redis`）：
 - `cd backend/py && just embedding-cache-bench`
-  - add `--reset-prefix` to clear the benchmark keyspace
-  - add `--scan-keys` to count keys for the benchmark prefix (can be slow on large DBs)
-  - add `--use-real-embedder --confirm-real-embedder` to use the configured embedding provider
+  - 加 `--reset-prefix` 清除基准测试 key 空间
+  - 加 `--scan-keys` 统计基准前缀的 key 数量（大库可能较慢）
+  - 加 `--use-real-embedder --confirm-real-embedder` 使用配置的 embedding 提供商
 
-## URL fetch SSRF protections
+## URL 抓取 SSRF 防护
 
-`POST /v1/notebooks/{notebook_id}/sources/from-url` supports `mode: fetch`, which makes server-side HTTP requests.
+`POST /v1/notebooks/{notebook_id}/sources/from-url` 支持 `mode: fetch`，会发起服务端 HTTP 请求。
 
-By default, Crystalith blocks high-risk targets (localhost / private networks / cloud metadata IPs) to mitigate SSRF.
+默认情况下，Crystalith 会阻止高风险目标（localhost / 私有网络 / 云元数据 IP）以缓解 SSRF。
 
-Config (in `config/app.yaml`):
-- `source_ingestion.url_fetch.security.allowlist_hosts`: exact hostnames to permit
-- `source_ingestion.url_fetch.security.allowlist_domains`: domain suffixes to permit (matches `example.com` and `*.example.com`)
-- `source_ingestion.url_fetch.security.allowlist_cidrs`: CIDR ranges to permit (use sparingly)
-- `source_ingestion.url_fetch.security.allowlist_only`: if true, block everything not allowlisted
-- `source_ingestion.url_fetch.security.max_redirects`: redirect hop limit (each hop is revalidated)
+配置（`config/app.yaml`）：
+- `source_ingestion.url_fetch.security.allowlist_hosts`：允许的精确主机名
+- `source_ingestion.url_fetch.security.allowlist_domains`：允许的域名后缀（匹配 `example.com` 和 `*.example.com`）
+- `source_ingestion.url_fetch.security.allowlist_cidrs`：允许的 CIDR 范围（谨慎使用）
+- `source_ingestion.url_fetch.security.allowlist_only`：为 true 时，阻止所有未在白名单中的目标
+- `source_ingestion.url_fetch.security.max_redirects`：重定向跳数限制（每跳都会重新验证）
 
-Security note: allowlisting internal ranges can re-enable SSRF impact (internal port access, metadata access, etc). Prefer
-allowlisting the smallest set of specific hosts/domains.
+安全提示：白名单内部网段可能重新引入 SSRF 风险（内部端口访问、元数据访问等）。优先白名单最小范围的特定主机/域名。
 
-## Source dedup (optional)
+## 资料去重（可选）
 
-Crystalith can optionally detect duplicate sources for:
-- file uploads: `POST /v1/notebooks/{notebook_id}/sources`
-- URL imports: `POST /v1/notebooks/{notebook_id}/sources/from-url`
+Crystalith 可选地检测重复资料：
+- 文件上传：`POST /v1/notebooks/{notebook_id}/sources`
+- URL 导入：`POST /v1/notebooks/{notebook_id}/sources/from-url`
 
-Config (in `config/app.yaml`):
-- `source_ingestion.dedup.enabled` (default: false)
+配置（`config/app.yaml`）：
+- `source_ingestion.dedup.enabled`（默认：false）
 
-Dedup keys (implementation):
-- uploads: `sha256(file_bytes)`
-- urls: canonicalized URL (strip tracking params like `utm_*`, normalize scheme/host/path, sort query) then hashed
+去重键（实现）：
+- 上传：`sha256(file_bytes)`
+- URL：规范化 URL（去除 `utm_*` 等跟踪参数，标准化 scheme/host/path，排序 query）后哈希
 
-When enabled, a dedup hit does **not** silently drop your request:
-- The API may return `409` with `error_code=SOURCE_DEDUP_HIT`, and the UI will prompt:
-  - reuse the existing source, or
-  - create a new source anyway.
-- You can also drive this explicitly via `dedup_action` query param:
+启用后，去重命中**不会**静默丢弃请求：
+- API 可能返回 `409`，`error_code=SOURCE_DEDUP_HIT`，UI 会提示：
+  - 复用已有资料，或
+  - 仍然创建新资料。
+- 也可通过 `dedup_action` 查询参数显式控制：
   - `dedup_action=reuse`
   - `dedup_action=create_new`
 
-## Source ingestion troubleshooting
+## 资料导入故障排查
 
-When a Source enters `FAILED`, the sources list/get APIs may include diagnostic fields:
+当资料进入 `FAILED` 状态时，资料列表/详情 API 可能包含诊断字段：
 - `error_code`
 - `error_message`
 - `recovery_hint`
 - `last_error_at`
 
-Common `error_code` values and fixes:
-- `PARSER_FAILED`: the parser crashed. Try converting to plain text/Markdown and re-upload.
-- `URL_FETCH_BLOCKED`: SSRF protections blocked the URL. Use a public URL or adjust the allowlist settings above.
-- `EXTRACTOR_TIMEOUT`: web extraction timed out. Retry or switch to another extractor.
-- `EXTRACTOR_FAILED`: web extraction failed. Retry, switch extractors, or check if the site requires login / blocks crawlers.
-- `OPTIONAL_SERVICE_UNAVAILABLE`: an optional dependency is down/misconfigured. Check service connectivity/config.
-- `EMBEDDING_FAILED`: embedding provider failed. Check model/provider config and availability.
-- `VECTOR_STORE_FAILED`: vector storage failed. Check vector store config/service status.
-- `SOURCE_INGESTION_FAILED`: generic fallback when a specific cause isn't available. Check logs and optional service health.
+常见 `error_code` 及修复方法：
+- `PARSER_FAILED`：解析器崩溃。尝试转换为纯文本/Markdown 后重新上传。
+- `URL_FETCH_BLOCKED`：SSRF 防护阻止了 URL。使用公网 URL 或调整上述白名单设置。
+- `EXTRACTOR_TIMEOUT`：网页提取超时。重试或切换其他提取器。
+- `EXTRACTOR_FAILED`：网页提取失败。重试、切换提取器，或检查网站是否需要登录/阻止爬虫。
+- `OPTIONAL_SERVICE_UNAVAILABLE`：可选依赖不可用/配置错误。检查服务连通性/配置。
+- `EMBEDDING_FAILED`：embedding 提供商失败。检查模型/提供商配置和可用性。
+- `VECTOR_STORE_FAILED`：向量存储失败。检查向量存储配置/服务状态。
+- `SOURCE_INGESTION_FAILED`：通用回退，无法确定具体原因。检查日志和可选服务健康状态。
 
-## Speed / quality tuning
+## 速度 / 质量调优
 
-Many generation endpoints accept `preference: "quality" | "speed"`.
+许多生成端点接受 `preference: "quality" | "speed"`。
 
-- Defaults are selected by `(OutputType, preference)` and applied only when the caller doesn't explicitly override
-  request parameters (e.g. `top_k`, `min_score`).
-- `quality` tends to trade higher latency for better context coverage (for example enabling multi-query retrieval).
-- `speed` tends to reduce retrieval/generation cost to lower latency.
+- 默认值由 `(OutputType, preference)` 选择，仅在调用方未显式覆盖请求参数（如 `top_k`、`min_score`）时应用。
+- `quality` 倾向于以更高延迟换取更好的上下文覆盖（例如启用多查询检索）。
+- `speed` 倾向于降低检索/生成开销以减少延迟。
 
-### Multi-query override (env)
+### 多查询覆盖（环境变量）
 
-`CRYSTALITH_RETRIEVAL_MULTI_QUERY` can force multi-query retrieval on/off globally:
+`CRYSTALITH_RETRIEVAL_MULTI_QUERY` 可全局强制开启/关闭多查询检索：
 
-- unset: follow the `(OutputType, preference)` default tuning
-- truthy: force on
-- falsy (`0`, `false`, `no`, `off`): force off
+- 未设置：遵循 `(OutputType, preference)` 默认调优
+- 真值：强制开启
+- 假值（`0`、`false`、`no`、`off`）：强制关闭
 
-## Secrets
+## 密钥
 
-`CRYSTALITH_SECRETS_PATH` can point to either:
+`CRYSTALITH_SECRETS_PATH` 可指向：
 
-- a YAML file (mapping of `KEY: value`), or
-- a directory (Docker secrets style: one file per key)
+- YAML 文件（`KEY: value` 映射），或
+- 目录（Docker secrets 风格：每个 key 一个文件）
 
-If `CRYSTALITH_SECRETS_PATH` is unset, the backend will auto-discover `config/secrets.yaml` next to `config/app.yaml` (if present).
+如果 `CRYSTALITH_SECRETS_PATH` 未设置，后端会自动发现 `config/app.yaml` 旁边的 `config/secrets.yaml`（如果存在）。
 
-See `docs/deployment.md` for examples.
+详见 `部署与开发`。

@@ -1,25 +1,27 @@
 # TypeScript SDK
 
-## Overview
-The TypeScript SDK is generated from the backend OpenAPI schema and packaged for npm.
+## 概述
 
-- npm package: `@crystalith/sdk`
-- Repo package root: `vendor/crystalith-sdks/typescript` (git submodule)
-- Generated client source: `vendor/crystalith-sdks/typescript/src/generated`
+TypeScript SDK 由后端 OpenAPI schema 生成，打包为 npm 包。
 
-The Web UI still uses a generated client under `frontend/web/src/api/generated`.
+- npm 包：`@crystalith/sdk`
+- 仓库包根目录：`vendor/crystalith-sdks/typescript`（git submodule）
+- 生成的客户端源码：`vendor/crystalith-sdks/typescript/src/generated`
 
-## Versioning / Alignment
-- SDK version matches `backend/py/pyproject.toml` and release tags (`vX.Y.Z`).
-- Check alignment: `just sdk-version-check`.
+Web UI 仍使用 `frontend/web/src/api/generated` 下的生成客户端。
 
-## Install
+## 版本 / 对齐
+
+- SDK 版本与 `backend/py/pyproject.toml` 和发布标签（`vX.Y.Z`）保持一致。
+- 检查对齐：`just sdk-version-check`。
+
+## 安装
 
 ```bash
 npm install @crystalith/sdk
 ```
 
-## Local generation (repo)
+## 本地生成（仓库内）
 
 ```bash
 git submodule update --init --recursive vendor/crystalith-sdks
@@ -27,37 +29,37 @@ just api-export
 just sdk-gen-typescript
 just sdk-build-typescript
 
-# Drift check (regenerate + git status)
+# 漂移检查（重新生成 + git status）
 just sdk-check-typescript
 ```
 
-## Release workflow (npm)
+## 发布流程（npm）
 
-Recommended: from the main `crystalith` repo, run:
+推荐：在 `crystalith` 主仓库中运行：
 
 ```bash
 just sdk-release X.Y.Z
 ```
 
-Because the npm package lives inside the `crystalith-sdks` git submodule, publishing is triggered by a tag in the SDK monorepo:
+由于 npm 包位于 `crystalith-sdks` git submodule 内，发布由 SDK monorepo 中的标签触发：
 
-- `typescript/vX.Y.Z` (in `crystalith-sdks`)
+- `typescript/vX.Y.Z`（在 `crystalith-sdks` 中）
 
-If you need to do it manually, the release flow is:
+如需手动操作，发布流程为：
 
-1. Generate + commit + push SDK changes in `crystalith-sdks`
-2. Update the submodule pointer in `crystalith` (commit + push)
-3. Run `just sdk-release-check`
-4. Tag `typescript/vX.Y.Z` in `crystalith-sdks` and push the tag (triggers publish)
+1. 在 `crystalith-sdks` 中生成 + 提交 + 推送 SDK 变更
+2. 在 `crystalith` 中更新 submodule 指针（提交 + 推送）
+3. 运行 `just sdk-release-check`
+4. 在 `crystalith-sdks` 中打标签 `typescript/vX.Y.Z` 并推送（触发发布）
 
-## Minimal example
+## 最小示例
 
-Base URL (no `/v1`):
-- Local dev (`cd backend/py && just dev`): `http://127.0.0.1:8032`
-- Docker Compose (same entrypoint as Web UI): `http://localhost:${CL_WEB_PORT:-8080}`
+Base URL（不含 `/v1`）：
+- 本地开发（`cd backend/py && just dev`）：`http://127.0.0.1:8032`
+- Docker Compose（与 Web UI 相同入口）：`http://localhost:${CL_WEB_PORT:-8080}`
 
-Note: Port `8000` is typically an optional dependency (e.g. Chroma), not the Crystalith API.
-Auth (optional): if `app.auth.enabled=true`, send `Authorization: Bearer <token>` (or `X-API-Key: <token>`).
+注意：端口 `8000` 通常是可选依赖（如 Chroma），不是 Crystalith API。
+认证（可选）：如果 `app.auth.enabled=true`，发送 `Authorization: Bearer <token>`（或 `X-API-Key: <token>`）。
 
 ```ts
 import {
@@ -65,7 +67,7 @@ import {
   client,
 } from '@crystalith/sdk';
 
-const apiKey = '<token>'; // optional
+const apiKey = '<token>'; // 可选
 
 client.setConfig({
   baseUrl: 'http://127.0.0.1:8032',

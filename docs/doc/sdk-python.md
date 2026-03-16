@@ -1,35 +1,35 @@
 # Python SDK
 
-## Overview
-The Python SDK is generated from the backend OpenAPI schema via Fern and stored in:
+## 概述
+Python SDK 由后端 OpenAPI schema 通过 Fern 生成，存放于：
 
-- `vendor/crystalith-sdks/python` (git submodule)
+- `vendor/crystalith-sdks/python`（git 子模块）
 
-The import package lives under:
+导入包路径为：
 - `vendor/crystalith-sdks/python/src/crystalith_sdk`
 
-Fern configuration lives in:
+Fern 配置位于：
 - `sdk/configs/fern/fern.config.json`
 - `sdk/configs/fern/generators.yml`
 
-## Versioning
-- SDK version is sourced from `backend/py/pyproject.toml` and written to `vendor/crystalith-sdks/python/.sdk-version` during generation.
-- You can override with `just sdk-gen-python VERSION=X.Y.Z`, but it must match the backend version.
+## 版本管理
+- SDK 版本来源于 `backend/py/pyproject.toml`，在生成时写入 `vendor/crystalith-sdks/python/.sdk-version`。
+- 可通过 `just sdk-gen-python VERSION=X.Y.Z` 覆盖，但必须与后端版本一致。
 
-## Install
+## 安装
 
 ```bash
 pip install crystalith-sdk
 ```
 
-## Minimal example
+## 最小示例
 
-Base URL (no `/v1`):
-- Local dev (`cd backend/py && just dev`): `http://127.0.0.1:8032`
-- Docker Compose (same entrypoint as Web UI): `http://localhost:${CL_WEB_PORT:-8080}`
+Base URL（不含 `/v1`）：
+- 本地开发（`cd backend/py && just dev`）：`http://127.0.0.1:8032`
+- Docker Compose（与 Web UI 同一入口）：`http://localhost:${CL_WEB_PORT:-8080}`
 
-Note: Port `8000` is typically an optional dependency (e.g. Chroma), not the Crystalith API.
-Auth (optional): if `app.auth.enabled=true`, send `Authorization: Bearer <token>` (or `X-API-Key: <token>`).
+注意：端口 `8000` 通常为可选依赖（如 Chroma），不是 Crystalith API。
+认证（可选）：若 `app.auth.enabled=true`，需发送 `Authorization: Bearer <token>`（或 `X-API-Key: <token>`）。
 
 ```python
 import os
@@ -54,21 +54,21 @@ output = client.outputs.create_output(notebook.id, "BRIEFING")
 print(output.id, output.type)
 ```
 
-## CI constraints
+## CI 约束
 
-- `frontend/web/openapi.gen.json` must stay in sync with the backend schema (CI runs `uv run scripts/api_schema.py check`).
-- Generated API clients must be committed (CI runs `pnpm run api:generate` and checks for diff).
-- The Python SDK must build and its version must match the backend (CI runs `just sdk-version-check` + `just sdk-build-python`).
+- `frontend/web/openapi.gen.json` 必须与后端 schema 保持同步（CI 会执行 `uv run scripts/api_schema.py check`）。
+- 生成的 API 客户端必须提交（CI 会执行 `pnpm run api:generate` 并检查 diff）。
+- Python SDK 必须能成功构建，且版本需与后端一致（CI 会执行 `just sdk-version-check` + `just sdk-build-python`）。
 
-## Automation
+## 自动化
 
-- GitHub Actions:
-  - `Check Python SDK`: runs `just api-check` + `just sdk-version-check` + `just sdk-build-python`.
-- Fern:
-  - Local generation uses Fern CLI (`npm install -g fern-api@3.73.1`) and Docker (`fern generate --local`).
-  - `FERN_TOKEN` / `fern login` is only required for remote generation.
+- GitHub Actions：
+  - `Check Python SDK`：执行 `just api-check` + `just sdk-version-check` + `just sdk-build-python`。
+- Fern：
+  - 本地生成使用 Fern CLI（`npm install -g fern-api@3.73.1`）和 Docker（`fern generate --local`）。
+  - 仅远程生成时需要 `FERN_TOKEN` / `fern login`。
 
-## Local generation
+## 本地生成
 
 ```bash
 # Ensure the SDK monorepo submodule is present
@@ -90,26 +90,26 @@ just sdk-build-python
 just sdk-version-check
 ```
 
-## Release workflow (PyPI)
+## 发布流程（PyPI）
 
-Recommended: from the main `crystalith` repo, run:
+推荐：在主 `crystalith` 仓库中执行：
 
 ```bash
 just sdk-release X.Y.Z
 ```
 
-Because the Python package lives inside the `crystalith-sdks` git submodule, publishing is triggered by a tag in the SDK monorepo:
+由于 Python 包位于 `crystalith-sdks` git 子模块内，发布由 SDK 单体仓库中的 tag 触发：
 
-- `python/vX.Y.Z` (in `crystalith-sdks`)
+- `python/vX.Y.Z`（在 `crystalith-sdks` 中）
 
-If you need to do it manually, the release flow is:
+如需手动发布，流程如下：
 
-1. Generate + commit + push SDK changes in `crystalith-sdks`
-2. Update the submodule pointer in `crystalith` (commit + push)
-3. Run `just sdk-release-check`
-4. Tag `python/vX.Y.Z` in `crystalith-sdks` and push the tag (triggers publish)
+1. 在 `crystalith-sdks` 中生成、提交并推送 SDK 变更
+2. 在 `crystalith` 中更新子模块指针（提交并推送）
+3. 执行 `just sdk-release-check`
+4. 在 `crystalith-sdks` 中创建 tag `python/vX.Y.Z` 并推送（触发发布）
 
-## Notes
-- The generated README.md is owned by the Fern generator.
-- Do not manually edit generated files; changes should be made in backend APIs.
-- Fern may require login or `FERN_TOKEN` to generate SDKs.
+## 说明
+- 生成的 README.md 由 Fern 生成器管理。
+- 请勿手动编辑生成的文件；修改应通过后端 API 进行。
+- Fern 生成 SDK 时可能需要登录或配置 `FERN_TOKEN`。

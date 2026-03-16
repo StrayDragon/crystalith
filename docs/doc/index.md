@@ -1,20 +1,20 @@
 # Crystalith
 
-Crystalith is a notebook-centric AI workspace with RAG over your sources.
+Crystalith 是一个以笔记本为中心的 AI 工作空间，支持对你的资料进行 RAG 检索增强生成。
 
-## Demo
+## 演示
 
 <video controls muted playsinline width="100%" style="max-width: 960px;" poster="static/logo.webp">
   <source src="static/demo.webm" type="video/webm" />
-  Your browser does not support the video tag.
+  你的浏览器不支持 video 标签。
 </video>
 
-## Links
+## 链接
 
-- Docs: https://straydragon.github.io/crystalith/
-- Repo: `https://github.com/StrayDragon/crystalith`
+- 文档: https://straydragon.github.io/crystalith/
+- 仓库: `https://github.com/StrayDragon/crystalith`
 
-## Quick start
+## 快速开始
 
 ```bash
 cp .env.example .env          # 选择 profile（默认 hybrid）
@@ -31,4 +31,4 @@ just up                       # 一键启动
 | `docker` | `just up docker` | Docker 部署 + 可选外部服务 |
 | `full` | `just up full` | 全 Docker 部署 |
 
-详见：`Getting Started` · `Optimal Config` · `Deployment`
+详见：`快速上手` · `最佳配置` · `部署与开发`

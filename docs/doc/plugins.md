@@ -1,50 +1,50 @@
-# Plugins
+# 插件
 
-Crystalith supports a backend plugin system (Python `entry_points`) for extending:
+Crystalith 支持通过后端插件系统（Python `entry_points`）扩展：
 
-- AI providers (chat + embeddings)
-- Document parsers (file ingestion)
-- Output generation schemas (override existing output types)
-- Web content extractors (URL fetch mode)
-- Source connectors (external repositories / folders)
+- AI 提供商（chat + embeddings）
+- 文档解析器（文件摄入）
+- 输出生成 schema（覆盖现有输出类型）
+- Web 内容提取器（URL 抓取模式）
+- 源连接器（外部仓库 / 文件夹）
 
-Plugins are discovered via Python `entry_points` at app startup.
+插件在应用启动时通过 Python `entry_points` 被发现。
 
-## Official plugin suite
+## 官方插件套件
 
-This repo ships a set of **official, optional capability plugins** under `backend/py/plugins/*`.
+本仓库在 `backend/py/plugins/*` 下提供了一套**官方可选能力插件**。
 
-Install profiles:
+安装配置：
 
-- Core-only: `pip install crystalith` (minimal ingestion + minimal outputs; default docker image)
-- Official full (recommended): `pip install 'crystalith[official-full]'`
-- Smaller bundles: `official-connectors`, `official-outputs`, `official-parsers`, `official-extractors`
+- 仅核心: `pip install crystalith`（最小摄入 + 最小输出；默认 docker 镜像）
+- 官方完整版（推荐）: `pip install 'crystalith[official-full]'`
+- 较小 bundles: `official-connectors`、`official-outputs`、`official-parsers`、`official-extractors`
 
-See also: [Official Plugins (Generated)](reference/plugins.gen.md)
+另见：[官方插件（自动生成）](reference/plugins.gen.md)
 
-Official plugin ids follow a stable naming convention:
+官方插件 ID 遵循稳定命名约定：
 
-- Output types: `output-<type>` (e.g. `output-quiz`)
-- Parsers: `parser-<kind>` (e.g. `parser-pdf`)
-- Web extractors: `extractor-<kind>` (e.g. `extractor-trafilatura`)
-- Source connectors: `connector-<kind>` (e.g. `connector-obsidian`)
+- 输出类型: `output-<type>`（如 `output-quiz`）
+- 解析器: `parser-<kind>`（如 `parser-pdf`）
+- Web 提取器: `extractor-<kind>`（如 `extractor-trafilatura`）
+- 源连接器: `connector-<kind>`（如 `connector-obsidian`）
 
-When capabilities are missing or skipped, the API exposes actionable hints:
+当能力缺失或被跳过时，API 会暴露可操作的提示：
 
 - `GET /v1/workspace/tools` → `diagnostics.plugins` + `diagnostics.official`
-- `GET /v1/notebooks/{notebook_id}/sources/extractors` → per-extractor `error_code` + `recovery_hint`
-- `GET /v1/notebooks/{notebook_id}/source-connectors` → available connectors + connector diagnostics (installed + enabled only)
+- `GET /v1/notebooks/{notebook_id}/sources/extractors` → 每个 extractor 的 `error_code` + `recovery_hint`
+- `GET /v1/notebooks/{notebook_id}/source-connectors` → 可用连接器 + 连接器诊断（仅已安装且已启用）
 
-## 1) Discovery
+## 1) 发现
 
-Plugins MUST be registered under the entry point group `crystalith.plugins`:
+插件必须在 entry point 组 `crystalith.plugins` 下注册：
 
 ```toml
 [project.entry-points."crystalith.plugins"]
 my-provider = "my_pkg.plugin:plugin"
 ```
 
-The **entry point name** (`my-provider`) is used as the provider id in config:
+**entry point 名称**（`my-provider`）在配置中用作 provider id：
 
 ```yaml
 models:
@@ -55,9 +55,9 @@ models:
       roles: [chat]
 ```
 
-## 2) Enable / Disable / Order
+## 2) 启用 / 禁用 / 排序
 
-Use `plugins.enabled` (allowlist) or `plugins.disabled` (denylist):
+使用 `plugins.enabled`（白名单）或 `plugins.disabled`（黑名单）：
 
 ```yaml
 plugins:
@@ -69,41 +69,40 @@ plugins:
   load_order: ["output-faq"]
 ```
 
-- If `plugins.enabled` is set, only those ids are loaded.
-- `plugins.disabled` always skips matching ids.
+- 若设置了 `plugins.enabled`，则仅加载列出的 id。
+- `plugins.disabled` 始终跳过匹配的 id。
 
-## 3) Interfaces
+## 3) 接口
 
-All plugin interfaces live in `backend/py/src/crystalith/shared/plugins/interfaces.py`.
+所有插件接口位于 `backend/py/src/crystalith/shared/plugins/interfaces.py`。
 
-Plugins MUST declare `api_version` and it MUST be one of `SUPPORTED_PLUGIN_API_VERSIONS`
-(currently `v1`). Incompatible plugins are skipped at startup with a structured reason.
+插件必须声明 `api_version`，且必须是 `SUPPORTED_PLUGIN_API_VERSIONS` 之一（当前为 `v1`）。不兼容的插件在启动时会被跳过，并附带结构化原因。
 
-## 3.1) Compliance checker
+## 3.1) 合规检查脚本
 
-There is a lightweight compliance checker script:
+提供轻量级合规检查脚本：
 
 ```bash
 cd backend/py
 uv run python scripts/check_plugins.py --json
 ```
 
-The JSON report includes:
+JSON 报告包含：
 - `host.plugin_api_version` + `host.supported_api_versions`
-- `loaded`: loaded plugin ids
-- `skipped`: plugin id → `{ error_code, message, hint?, details? }`
-- `issues`: compliance issues for loaded plugins (human-readable strings)
+- `loaded`: 已加载的插件 id
+- `skipped`: 插件 id → `{ error_code, message, hint?, details? }`
+- `issues`: 已加载插件的合规问题（人类可读字符串）
 
 ### AIProviderPlugin
 
-Implement `create_chat_provider()` and `create_embedding_provider()` to return objects that satisfy:
+实现 `create_chat_provider()` 和 `create_embedding_provider()`，返回满足以下接口的对象：
 
 - `crystalith.shared.ai.interfaces.ChatProvider`
 - `crystalith.shared.ai.interfaces.EmbeddingProvider`
 
 ### ParserPlugin
 
-Implement a factory with:
+实现一个工厂，包含：
 
 - `parser_type: str`
 - `supported_mime_types: set[str]`
@@ -112,34 +111,34 @@ Implement a factory with:
 
 ### OutputTypePlugin
 
-Output plugins currently **override existing** output types (by `OutputType.value`) because outputs are persisted with a DB enum.
+输出插件当前**覆盖现有**输出类型（按 `OutputType.value`），因为输出以 DB enum 持久化。
 
-- `output_type: str` (e.g. `"FAQ"`, `"GUIDE"`)
+- `output_type: str`（如 `"FAQ"`、`"GUIDE"`）
 - `schema: type[pydantic.BaseModel]`
 - `default_prompt: str | None`
 
-#### Optional extension attributes
+#### 可选扩展属性
 
-Output type plugins can optionally provide additional UI metadata:
+输出类型插件可选择性提供额外 UI 元数据：
 
-- `metadata: OutputTypePluginMeta | None` — UI metadata (description, display_text, tone)
-- `render_descriptor: RenderDescriptor | None` — declarative frontend layout descriptor
-- `config_schema: PluginConfigSchema | None` — generation dialog configuration
+- `metadata: OutputTypePluginMeta | None` — UI 元数据（description、display_text、tone）
+- `render_descriptor: RenderDescriptor | None` — 声明式前端布局描述符
+- `config_schema: PluginConfigSchema | None` — 生成对话框配置
 
-These Pydantic models live in:
+这些 Pydantic 模型位于：
 
 - `backend/py/src/crystalith/shared/plugins/render_types.py`
 
-Notes:
-- The Studio tool configuration dialog renders from `GET /v1/workspace/tools` only (using `config_schema`).
-- `GET /v1/workspace/tools/{tool_id}/config` is kept for backwards compatibility and derived from the same schema.
-- Default option selection uses `is_default=true` when present; otherwise the UI falls back to stable defaults.
+说明：
+- Studio 工具配置对话框仅从 `GET /v1/workspace/tools` 渲染（使用 `config_schema`）。
+- `GET /v1/workspace/tools/{tool_id}/config` 保留用于向后兼容，并从同一 schema 派生。
+- 默认选项选择在存在时使用 `is_default=true`；否则 UI 回退到稳定默认值。
 
-If an extension attribute is present but has the wrong type, the registry logs a warning and ignores it.
+若扩展属性存在但类型错误，注册表会记录警告并忽略。
 
-If multiple plugins register the same `output_type`, the last one wins and the registry logs a warning.
+若多个插件注册相同 `output_type`，后者生效，注册表会记录警告。
 
-#### Example (OutputTypePlugin)
+#### 示例（OutputTypePlugin）
 
 ```py
 from pydantic import BaseModel, Field
@@ -200,36 +199,35 @@ plugin = MyPlugin()
 
 ### WebExtractorPlugin
 
-Implement a factory with:
+实现一个工厂，包含：
 
-- `extractor_type: str` (e.g. `"trafilatura"`)
-- `display_name: str | None` / `description: str | None` (optional UI metadata)
-- `requires_api_key: bool` / `requires_service: bool` (UI hints)
+- `extractor_type: str`（如 `"trafilatura"`）
+- `display_name: str | None` / `description: str | None`（可选 UI 元数据）
+- `requires_api_key: bool` / `requires_service: bool`（UI 提示）
 - `create_extractor(settings, url_fetch_security=...) -> Extractor`
 
-Notes:
-- The host `ExtractorFactory` owns fallback/retry semantics and SSRF redirect revalidation.
-- Notebook-level enablement is controlled by `PATCH /v1/notebooks/{notebook_id}/sources/extractors` (`mode=inherit_global|custom`).
+说明：
+- 宿主 `ExtractorFactory` 负责 fallback/retry 语义及 SSRF 重定向重新校验。
+- Notebook 级启用由 `PATCH /v1/notebooks/{notebook_id}/sources/extractors` 控制（`mode=inherit_global|custom`）。
 
 ### SourceConnectorPlugin
 
-Source connectors are backend plugins that let the host enumerate and import files from external repositories
-(e.g. an Obsidian vault or a local directory).
+源连接器是后端插件，允许宿主枚举并从外部仓库导入文件（如 Obsidian vault 或本地目录）。
 
-In v1, connector plugins are **backend-only**:
-- the host owns persistence (notebook-scoped bindings) and the workflow UI
-- connectors provide config schema, diagnostics, snapshot enumeration, and file reads
+在 v1 中，连接器插件为**仅后端**：
+- 宿主负责持久化（notebook 级绑定）和工作流 UI
+- 连接器提供 config schema、诊断、快照枚举和文件读取
 
-Implement a factory with:
+实现一个工厂，包含：
 
 - `display_name: str` / `description: str | None`
-- `connection_config_schema: dict` (JSON Schema)
-- capabilities: `supports_snapshot: bool`, `supports_sync_check: bool`
+- `connection_config_schema: dict`（JSON Schema）
+- 能力: `supports_snapshot: bool`、`supports_sync_check: bool`
 - `get_diagnostics(settings, connection_config=...) -> list[dict] | None`
 - `list_snapshot_entries(settings, connection_config=...) -> list[dict]`
 - `read_file_bytes(settings, connection_config=..., relative_path=...) -> bytes`
 
-API surfaces (host-owned):
+API 表面（宿主所有）：
 - `GET /v1/notebooks/{notebook_id}/source-connectors`
 - `POST /v1/notebooks/{notebook_id}/source-connectors/{connector_id}/bindings`
 - `POST /v1/notebooks/{notebook_id}/source-connector-bindings/{binding_id}/snapshot`
@@ -237,11 +235,11 @@ API surfaces (host-owned):
 - `POST /v1/notebooks/{notebook_id}/source-connector-bindings/{binding_id}/sync-check`
 - `POST /v1/notebooks/{notebook_id}/source-connector-bindings/{binding_id}/sync-check/apply`
 
-## 4) Example plugin
+## 4) 示例插件
 
-See `backend/py/examples/crystalith-echo-plugin/`.
+参见 `backend/py/examples/crystalith-echo-plugin/`。
 
-Install it (editable) and start the backend:
+以可编辑方式安装并启动后端：
 
 ```bash
 cd backend/py
@@ -249,23 +247,23 @@ pip install -e examples/crystalith-echo-plugin
 just dev
 ```
 
-Then add a model using `provider: "echo"` and restart.
+然后添加使用 `provider: "echo"` 的 model 并重启。
 
-For OutputTypePlugin examples, see:
+OutputTypePlugin 示例参见：
 
 - `backend/py/examples/crystalith-output-quiz/`
 - `backend/py/examples/crystalith-output-timeline/`
 - `backend/py/examples/crystalith-output-mindmap/`
 
-## 5) Copier template
+## 5) Copier 模板
 
-See `backend/py/tools/copier-crystalith-plugin/`:
+参见 `backend/py/tools/copier-crystalith-plugin/`：
 
 ```bash
 copier copy backend/py/tools/copier-crystalith-plugin path/to/destination
 ```
 
-The template will prompt for package name, module name, plugin id, etc. Answers are recorded in `.copier-answers.yml` so you can later update with:
+模板会提示输入包名、模块名、插件 id 等。答案记录在 `.copier-answers.yml` 中，之后可通过以下命令更新：
 
 ```bash
 copier update path/to/destination
