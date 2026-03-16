@@ -37,9 +37,9 @@ recommended for compose.
 - `DATABASE_URL` → `config/app.yaml: database.url` (or use `database.url_candidates` for auto-adapt)
 - `POSTGRES_PASSWORD` → `config/secrets.yaml: POSTGRES_PASSWORD` (used by `database.url_candidates`)
 - `CHROMA_HOST` / `CHROMA_PORT` → `config/app.yaml: vector_storage.chroma.host/port`
-  - Prefer: `vector_storage.chroma.endpoint_candidates` for compose/dev-deps auto-adapt
+  - Prefer: `vector_storage.chroma.endpoint_candidates` for auto-adapt across profiles
 - `CACHE_PROVIDER` / `REDIS_URL` → `config/app.yaml: cache.provider` + `cache.redis_url` / `cache.redis_url_candidates`
 - `CRYSTALITH_SEARCH__SEARXNG__HOST` → `config/app.yaml: search.searxng.host`
-  - Prefer: `search.searxng.endpoint_candidates` for compose/dev-deps auto-adapt
+  - Prefer: `search.searxng.endpoint_candidates` for auto-adapt across profiles
 - `OLLAMA_HOST` → `config/app.yaml: optional_services.ollama.endpoint` (or `optional_services.ollama.endpoint_candidates`)
 - `AUTO_DB_INIT` → `config/app.yaml: app.startup.auto_db_init`

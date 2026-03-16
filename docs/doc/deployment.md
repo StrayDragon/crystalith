@@ -295,4 +295,4 @@ just up
 | `just dev-deps-down` | `just down hybrid` |
 | `just dev-docker-down` | `just down docker` |
 
-旧命令仍然可用，但推荐使用统一入口。
+旧命令已移除。如果你的 `.env` 中存在旧变量（如 `DEV_OPTIONALS`），运行 `just cleanup` 检测并清理。

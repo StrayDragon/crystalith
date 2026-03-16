@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Unified docker compose wrapper for dev-docker-* and dev-deps-* recipes.
+# Docker compose wrapper used by scripts/orchestrate.sh.
 #
 # Usage:
 #   scripts/dev_compose.sh <mode> <action> [extra-args...]

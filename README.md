@@ -21,22 +21,24 @@ Notebook-centric AI workspace with RAG over your sources.
 - Changelog: `CHANGELOG.md`
 - License: `LICENSE` (Apache-2.0)
 
-## Quick start (local dev)
-
-Recommended (host hot reload + docker deps):
+## Quick start
 
 ```bash
 cp .env.example .env
-cp config/secrets.yaml.example config/secrets.yaml
-# edit config/secrets.yaml (OPENAI_API_KEY)
-just dev
+just upsert-env-configs       # fill secrets from shell env vars
+just up                       # start with default profile (hybrid)
 ```
 
-Profiles / tuning: see `docs/doc/optimal-config.md`.
+Four profiles, one command:
 
-No-docker (SQLite + embedded Chroma):
+| Profile | Command | Description |
+|---------|---------|-------------|
+| `local` | `just up local` | No Docker, SQLite + embedded Chroma |
+| `hybrid` | `just up` | Docker deps + host hot reload (recommended) |
+| `docker` | `just up docker` | Docker Compose deploy + optional external services |
+| `full` | `just up full` | Full Docker Compose deployment |
 
-Backend:
+No-docker backend only (SQLite + embedded Chroma):
 
 ```bash
 cd backend/py
@@ -45,7 +47,7 @@ just db-init
 just dev
 ```
 
-Frontend:
+Frontend only:
 
 ```bash
 cd frontend/web
@@ -63,18 +65,11 @@ Notes:
 - Frontend dev/build/test commands auto-initialize `frontend/web/vendor/rivu` when needed.
 - Manual fallback: `just rivu-submodule-update`
 
-## Quick start (Docker Compose, prod-like)
+## Maintenance
 
 ```bash
-cp .env.example .env
-cp config/secrets.yaml.example config/secrets.yaml
-# edit config/secrets.yaml (OPENAI_API_KEY, POSTGRES_PASSWORD if using storage overlay)
-just dev-docker-up
-just composition-smoke
+just cleanup              # dry-run: detect stale artifacts
+just cleanup --apply      # execute cleanup
 ```
 
-Optional Slidev overlay:
-
-```bash
-just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up
-```
+Profiles / tuning: see `docs/doc/optimal-config.md`.

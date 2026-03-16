@@ -386,8 +386,3 @@ data/
 # Allow workspace refine template data to be tracked.
 !frontend/web/src/features/workspace/data/
 !frontend/web/src/features/workspace/data/refineTemplates.ts
-
-# Generated Python SDK artifacts
-sdk/client/python/dist/
-sdk/client/python/build/
-sdk/client/python/__pycache__/

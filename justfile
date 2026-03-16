@@ -251,34 +251,8 @@ doc-governance-check:
     cd backend/py && uv run scripts/check_doc_governance.py
 
 # --------------------------------------------------------------------------
-# Dev Compose (developer defaults)
-#
-# Default overlays: storage + redis + searxng.
-# Available overlays: storage redis searxng ollama slidev host-remap
-# Example:
-#   just DEV_OPTIONALS="storage redis searxng ollama" dev-docker-up
+# Smoke Tests
 # --------------------------------------------------------------------------
-
-COMPOSE_CORE_FILE := "deployments/prod/docker-compose.yml"
-DEV_OPTIONALS := "storage redis searxng"
-CHINA_APT_MIRROR := "https://mirrors.tuna.tsinghua.edu.cn/debian"
-CHINA_UV_INDEX_URL := "https://mirrors.aliyun.com/pypi/simple/"
-CHINA_NPM_REGISTRY := "https://registry.npmmirror.com"
-
-dev-docker-up *ARGS='':
-    DEV_OPTIONALS="{{DEV_OPTIONALS}}" bash ./scripts/dev_compose.sh prod up {{ARGS}}
-
-dev-docker-down *ARGS='':
-    DEV_OPTIONALS="{{DEV_OPTIONALS}}" bash ./scripts/dev_compose.sh prod down {{ARGS}}
-
-dev-docker-ps:
-    DEV_OPTIONALS="{{DEV_OPTIONALS}}" bash ./scripts/dev_compose.sh prod ps
-
-dev-docker-logs *ARGS='':
-    DEV_OPTIONALS="{{DEV_OPTIONALS}}" bash ./scripts/dev_compose.sh prod logs {{ARGS}}
-
-dev-docker-rebuild SERVICE:
-    DEV_OPTIONALS="{{DEV_OPTIONALS}}" bash ./scripts/dev_compose.sh prod rebuild {{SERVICE}}
 
 dev-docker-smoke:
     #!/usr/bin/env bash
@@ -299,60 +273,8 @@ composition-smoke:
     ./scripts/composition_smoke.sh
 
 # --------------------------------------------------------------------------
-# Dev (host hot reload + docker deps)
-#
-# Default overlays: storage + redis + searxng.
-# Available overlays: storage redis ollama searxng
-# Example:
-#   just DEV_DEPS_OPTIONALS="storage redis ollama" dev-deps-up
+# Standalone Dev Helpers (used by Procfile / independent workflows)
 # --------------------------------------------------------------------------
-
-DEV_DEPS_CORE_FILE := "deployments/dev/docker-compose.deps.yml"
-DEV_DEPS_OPTIONALS := "storage redis searxng"
-DEV_DEPS_PROJECT := "crystalith-dev-deps"
-
-dev-deps-up *ARGS='':
-    DEV_DEPS_OPTIONALS="{{DEV_DEPS_OPTIONALS}}" DEV_DEPS_PROJECT="{{DEV_DEPS_PROJECT}}" bash ./scripts/dev_compose.sh deps up {{ARGS}}
-
-dev-deps-down *ARGS='':
-    DEV_DEPS_OPTIONALS="{{DEV_DEPS_OPTIONALS}}" DEV_DEPS_PROJECT="{{DEV_DEPS_PROJECT}}" bash ./scripts/dev_compose.sh deps down {{ARGS}}
-
-dev-deps-ps:
-    DEV_DEPS_OPTIONALS="{{DEV_DEPS_OPTIONALS}}" DEV_DEPS_PROJECT="{{DEV_DEPS_PROJECT}}" bash ./scripts/dev_compose.sh deps ps
-
-dev-deps-logs *ARGS='':
-    DEV_DEPS_OPTIONALS="{{DEV_DEPS_OPTIONALS}}" DEV_DEPS_PROJECT="{{DEV_DEPS_PROJECT}}" bash ./scripts/dev_compose.sh deps logs {{ARGS}}
-
-dev-backend:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    optionals="{{DEV_DEPS_OPTIONALS}}"
-    has_optional() { for o in $optionals; do [[ "$o" == "$1" ]] && return 0; done; return 1; }
-
-    postgres_port="${CL_DEPS_POSTGRES_PORT:-5434}"
-    chroma_port="${CL_DEPS_CHROMA_PORT:-8001}"
-    redis_port="${CL_DEPS_REDIS_PORT:-6380}"
-    searxng_port="${CL_DEPS_SEARXNG_PORT:-50201}"
-
-    if has_optional storage; then
-      bash ./scripts/wait_ready.sh tcp 127.0.0.1 "$postgres_port" 120
-      bash ./scripts/wait_ready.sh http "http://127.0.0.1:${chroma_port}/api/v1/heartbeat" 120
-    fi
-
-    if has_optional redis; then
-      bash ./scripts/wait_ready.sh tcp 127.0.0.1 "$redis_port" 60
-    fi
-
-    if has_optional searxng; then
-      bash ./scripts/wait_ready.sh searxng "$searxng_port" 60
-    fi
-
-    env_args=()
-    env_args+=(HOST="${HOST:-0.0.0.0}")
-    env_args+=(PORT="${PORT:-8032}")
-    env_args+=(RELOAD="${RELOAD:-1}")
-
-    exec env "${env_args[@]}" uv run --project backend/py python backend/py/main.py
 
 dev-frontend:
     just -f frontend/web/justfile dev
@@ -361,18 +283,13 @@ dev-slidev:
     pnpm -C frontend/packages/crystalith-slidev install --frozen-lockfile
     pnpm -C frontend/packages/crystalith-slidev run dev
 
-dev:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    just dev-deps-up
-    just dev-backend &
-    backend_pid="$!"
-    trap 'kill "$backend_pid" >/dev/null 2>&1 || true' EXIT
-    just dev-frontend
+# --------------------------------------------------------------------------
+# Maintenance
+# --------------------------------------------------------------------------
 
-# --------------------------------------------------------------------------
-# Misc
-# --------------------------------------------------------------------------
+# Detect stale artifacts from old dev workflow (dry-run by default, pass --apply to execute)
+cleanup *ARGS='':
+    bash ./scripts/cleanup.sh {{ARGS}}
 
 # Run pre-commit checks
 check-pre-commit-hooks:
