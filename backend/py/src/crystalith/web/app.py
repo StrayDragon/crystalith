@@ -90,18 +90,16 @@ def _discover_overlay_paths(config_path: Path) -> list[Path]:
     config_dir = config_path.parent
     overlays: list[Path] = []
 
-    local = config_dir / "app.local.yaml"
-    if local.is_file():
-        overlays.append(local)
+    def _append_unique(path: Path) -> None:
+        if path.is_file() and path not in overlays:
+            overlays.append(path)
+
+    _append_unique(config_dir / "app.local.yaml")
 
     env_name = os.environ.get("CRYSTALITH_ENV", "").strip().lower()
     if env_name:
-        env_file = config_dir / f"app.{env_name}.yaml"
-        if env_file.is_file():
-            overlays.append(env_file)
-        env_local = config_dir / f"app.{env_name}.local.yaml"
-        if env_local.is_file():
-            overlays.append(env_local)
+        _append_unique(config_dir / f"app.{env_name}.yaml")
+        _append_unique(config_dir / f"app.{env_name}.local.yaml")
 
     return overlays
 
