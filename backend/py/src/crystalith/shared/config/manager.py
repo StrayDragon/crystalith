@@ -15,6 +15,7 @@ from pydantic import ValidationError
 from crystalith.shared.json_types import JsonValue
 
 from .endpoint_candidates import (
+    is_running_in_docker,
     order_endpoint_candidates,
     probe_tcp_endpoint,
     tcp_target_from_endpoint,
@@ -214,9 +215,15 @@ class ConfigManager:
         """
         Resolve optional service endpoint candidates into concrete settings.
 
-        This intentionally avoids environment-variable based overrides and instead relies
-        on explicit YAML configuration (with optional probing for reachability).
+        Candidate ordering is environment-aware: inside Docker, docker-internal
+        hostnames (e.g. ``postgres``, ``chromadb``) are probed first; on the host,
+        localhost endpoints take priority.  See :func:`order_endpoint_candidates`.
         """
+        in_docker = is_running_in_docker()
+        logger.info("Runtime environment: %s", "docker" if in_docker else "host")
+
+        def _order(candidates: list[str]) -> list[str]:
+            return [c for c in order_endpoint_candidates(candidates, in_docker=in_docker) if c.strip()]
 
         def _is_postgres_url_missing_password(url_value: str) -> bool:
             raw = (url_value or "").strip()
@@ -231,7 +238,7 @@ class ConfigManager:
             return bool(username and not (password or "").strip())
 
         # Database: keep sqlite unless a candidate is reachable and safe to use.
-        db_candidates = [c for c in order_endpoint_candidates(settings.database.url_candidates) if c.strip()]
+        db_candidates = _order(settings.database.url_candidates)
         if db_candidates:
             logger.info("Probing database candidates: %s", db_candidates)
             db_selected = False
@@ -255,9 +262,7 @@ class ConfigManager:
 
         # Vector store: prefer remote Chroma when reachable; otherwise keep YAML host/port as-is.
         if settings.vector_storage.provider == "chroma":
-            chroma_candidates = [
-                c for c in order_endpoint_candidates(settings.vector_storage.chroma.endpoint_candidates) if c.strip()
-            ]
+            chroma_candidates = _order(settings.vector_storage.chroma.endpoint_candidates)
             if chroma_candidates:
                 logger.info("Probing chroma candidates: %s", chroma_candidates)
             chroma_selected = False
@@ -279,9 +284,7 @@ class ConfigManager:
                 logger.info("  [chroma] no candidate reachable, using embedded chroma")
 
         # Ollama: align all ollama model hosts to the first reachable candidate (if any).
-        ollama_candidates = [
-            c for c in order_endpoint_candidates(settings.optional_services.ollama.endpoint_candidates) if c.strip()
-        ]
+        ollama_candidates = _order(settings.optional_services.ollama.endpoint_candidates)
         if ollama_candidates:
             logger.info("Probing ollama candidates: %s", ollama_candidates)
             selected_ollama: str | None = None

@@ -61,18 +61,44 @@ def endpoint_kind(hostname: str) -> EndpointKind:
     return "external"
 
 
+_KIND_PRIORITY_DOCKER: dict[EndpointKind, int] = {
+    "docker_internal": 0,
+    "external": 1,
+    "host_local": 2,
+    "unknown": 3,
+}
+
+_KIND_PRIORITY_HOST: dict[EndpointKind, int] = {
+    "host_local": 0,
+    "external": 1,
+    "docker_internal": 2,
+    "unknown": 3,
+}
+
+
+def _endpoint_sort_key(ep: str, priority_map: dict[EndpointKind, int]) -> int:
+    hostname = endpoint_hostname(ep)
+    kind = endpoint_kind(hostname or "")
+    return priority_map.get(kind, 99)
+
+
 def order_endpoint_candidates(
     endpoints: list[str],
     *,
     in_docker: bool | None = None,
 ) -> list[str]:
     """
-    Normalize candidates (trim + de-dup) while preserving the declared priority order.
+    Normalize candidates (trim + de-dup) and reorder by runtime context.
 
-    The primary "priority" signal is the YAML list order (top = highest priority).
-    Implementations can probe candidates in order to pick a reachable endpoint.
+    When running inside Docker, docker-internal hostnames (e.g. ``postgres``,
+    ``chromadb``) are preferred over localhost.  On the host the order is
+    reversed so that ``127.0.0.1`` candidates come first.
+
+    Within the same kind the original YAML declaration order is preserved
+    (stable sort).
     """
-    _ = in_docker  # Reserved for future ordering strategies.
+    if in_docker is None:
+        in_docker = is_running_in_docker()
 
     ordered: list[str] = []
     seen: set[str] = set()
@@ -84,6 +110,9 @@ def order_endpoint_candidates(
             continue
         seen.add(normalized)
         ordered.append(normalized)
+
+    priority_map = _KIND_PRIORITY_DOCKER if in_docker else _KIND_PRIORITY_HOST
+    ordered.sort(key=lambda ep: _endpoint_sort_key(ep, priority_map))
     return ordered
 
 

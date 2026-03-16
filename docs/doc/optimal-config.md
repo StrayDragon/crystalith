@@ -1,117 +1,123 @@
 # Optimal Configuration
 
-This page describes Crystalith’s recommended “optimal” setup profiles for:
-
-- fast local iteration (hot reload)
-- production‑like behavior (Docker Compose)
-- predictable storage paths (`data/` is anchored to the config root)
-
 ## TL;DR
 
-- Recommended local dev: `just dev`
-  - backend + frontend run on the host (fast reload)
-  - Docker runs deps: Postgres + Chroma + Redis + SearXNG (default)
-- Prod-like compose: `just dev-docker-up`
-- Minimal/no-docker: `cd backend/py && just dev` (SQLite + embedded Chroma)
-
-## Profile 1: Hybrid dev (recommended)
-
-Hybrid dev is the best day‑to‑day experience: you edit code on the host with fast reload, while Docker provides the
-dependency services.
-
-Start:
-
 ```bash
-cp .env.example .env
-cp config/secrets.yaml.example config/secrets.yaml
-# edit config/secrets.yaml (OPENAI_API_KEY, POSTGRES_PASSWORD if using Postgres dev-deps)
-just dev
+just up              # hybrid (default) — recommended for development
+just up local        # no Docker at all
+just up docker       # Docker deploy + optional external services
+just up full         # everything in Docker
 ```
 
-Defaults:
-- deps: `storage redis searxng`
-- backend: `http://127.0.0.1:8032`
-- frontend: `http://127.0.0.1:3000`
+## Profile comparison
 
-Optional deps:
+| | local | hybrid | docker | full |
+|---|---|---|---|---|
+| Hot reload | instant | instant | rebuild needed | rebuild needed |
+| Docker required | no | deps only | yes | yes |
+| Startup speed | fast | fast | slow (build) | slow (build) |
+| Prod parity | low | medium | high | high |
+| Best for | quick edits, offline | daily dev (recommended) | staging / integration | demo / production |
 
-```bash
-# Minimal deps (no web search):
-just DEV_DEPS_OPTIONALS="storage redis" dev
+## Profile details
 
-# Full deps (add local Ollama):
-just DEV_DEPS_OPTIONALS="storage redis searxng ollama" dev
-```
+### local — Pure local dev
 
-Notes:
-- Runtime configuration is YAML-first:
-  - `config/app.yaml` is the single source of truth for endpoints/providers.
-  - `config/secrets.yaml` holds secrets for `${{ secrets.* }}` interpolation (do not commit it).
-- Optional deps are connected via YAML candidate lists (compose service name first, then host dev ports).
-- Web search / deep research requires SearXNG. If it’s disabled/unavailable you’ll see failures when search is used.
-
-## Profile 2: Prod-like Docker Compose
-
-Use this profile when you want to validate the deployment topology (Nginx front door + API in containers).
-
-Start:
+No Docker. Backend uses SQLite + embedded Chroma + in-memory cache.
 
 ```bash
-cp .env.example .env
-just dev-docker-up
-just dev-docker-smoke
+just up local
 ```
 
-Customize overlays:
+Pros: zero dependencies beyond Python/Node, instant startup.
+Cons: no Postgres, no Redis, no web search.
+
+To add web search, run SearXNG yourself and set `search.searxng.host` in `config/app.yaml`.
+
+### hybrid — Docker deps + local app (recommended)
+
+Docker runs Postgres, ChromaDB, Redis, SearXNG. Backend + frontend run on host with hot reload.
 
 ```bash
-# Core only:
-just DEV_OPTIONALS="" dev-docker-up
-
-# Add local Ollama:
-just DEV_OPTIONALS="storage redis searxng ollama" dev-docker-up
+just up              # or: just up hybrid
 ```
 
-## Profile 3: Minimal (no Docker)
-
-This mode is the lightest: SQLite + embedded Chroma (local files under `data/`).
+Customize deps in `.env`:
 
 ```bash
-cd backend/py
-uv sync
-just db-init
-just dev
+HYBRID_SERVICES=storage redis searxng          # default
+HYBRID_SERVICES=storage redis searxng ollama   # add local LLM
+HYBRID_SERVICES=storage redis                  # no web search
 ```
 
-Frontend (optional):
+### docker — Docker deploy + external services
+
+App runs in Docker. Choose which deps to include; the rest connect to external services via endpoint probing.
 
 ```bash
-cd frontend/web
-pnpm install
-pnpm dev
+just up docker
 ```
 
-If you want web search in this profile, run SearXNG yourself and set:
+Customize in `.env`:
 
-- `search.searxng.host` in `config/app.yaml` (or add an entry to `search.searxng.endpoint_candidates`)
+```bash
+DOCKER_SERVICES=storage redis searxng    # default: all deps in Docker
+DOCKER_SERVICES=redis                    # only Redis in Docker; DB/Chroma/SearXNG external
+DOCKER_SERVICES=                         # no deps; everything connects externally
+```
+
+External services are found automatically via `endpoint_candidates` in `config/app.yaml`, or override in `config/app.local.yaml`.
+
+### full — Full Docker deployment
+
+Everything in Docker, including Ollama and Slidev.
+
+```bash
+just up full
+```
+
+Customize in `.env`:
+
+```bash
+FULL_SERVICES=storage redis searxng ollama slidev    # default
+```
+
+## Smart endpoint resolution
+
+All profiles share the same `config/app.yaml`. The backend automatically reorders endpoint candidates based on runtime context:
+
+- **On host** (local/hybrid): `127.0.0.1:5434` is tried before `postgres:5432`
+- **In Docker** (docker/full): `postgres:5432` is tried before `127.0.0.1:5434`
+
+This means you never need to maintain separate config files for different environments.
 
 ## Recommended YAML knobs
 
 In `config/app.yaml`:
 
-- storage (DB + chroma): `database.url_candidates`, `vector_storage.chroma.endpoint_candidates`
-- cache: `cache.provider`, `cache.redis_url_candidates`
-- search: `search.searxng.host` / `search.searxng.endpoint_candidates`
-- ollama: `optional_services.ollama.endpoint` / `optional_services.ollama.endpoint_candidates`
-- startup: `app.startup.auto_db_init`
+| Setting | Key |
+|---------|-----|
+| Database | `database.url_candidates` |
+| Vector store | `vector_storage.chroma.endpoint_candidates` |
+| Cache | `cache.redis_url_candidates` |
+| Search | `search.searxng.endpoint_candidates` |
+| Ollama | `optional_services.ollama.endpoint_candidates` |
+| Auto DB init | `app.startup.auto_db_init` |
 
-In `.env` (compose/build parameters + a few non-secret runtime overrides):
-- `CL_WEB_PORT`, images (`*_IMAGE`), mirrors (`APT_MIRROR`, `UV_INDEX_URL`, `NPM_REGISTRY`), dev-deps ports (`CL_DEPS_*`)
-- Optional runtime hints: `OPENAI_BASE_URL_DOCKER`, `CRYSTALITH_DEFAULT_EMBEDDING_MODEL_DOCKER`
+In `.env`:
+
+| Setting | Key |
+|---------|-----|
+| Profile | `CRYSTALITH_PROFILE` |
+| Services | `HYBRID_SERVICES`, `DOCKER_SERVICES`, `FULL_SERVICES` |
+| Web port | `CL_WEB_PORT` |
+| Dev dep ports | `CL_DEPS_POSTGRES_PORT`, `CL_DEPS_CHROMA_PORT`, etc. |
+| OpenAI override (Docker) | `OPENAI_BASE_URL_DOCKER` |
+| Embedding model (Docker) | `CRYSTALITH_DEFAULT_EMBEDDING_MODEL_DOCKER` |
 
 ## Troubleshooting
 
-- Dependency status: `GET /health/dependencies`
-- Logs:
-  - prod-like compose: `just dev-docker-logs`
-  - dev deps only: `just dev-deps-logs`
+- Dependency status: `GET /health/dependencies` or header button in UI
+- Logs: `just logs` (follows the active profile)
+- Status: `just status`
+- Compose logs (advanced): `just dev-docker-logs` / `just dev-deps-logs`

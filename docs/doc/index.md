@@ -16,10 +16,19 @@ Crystalith is a notebook-centric AI workspace with RAG over your sources.
 
 ## Quick start
 
-If you want a production-like stack quickly, use Docker Compose:
+```bash
+cp .env.example .env          # 选择 profile（默认 hybrid）
+just upsert-env-configs       # 从 shell 环境变量填充 secrets
+just up                       # 一键启动
+```
 
-- See: `Deployment`
+四种运行模式，一条命令切换：
 
-If you want to develop locally (FastAPI + Vite):
+| Profile | 命令 | 说明 |
+|---------|------|------|
+| `local` | `just up local` | 纯本地开发，无 Docker |
+| `hybrid` | `just up hybrid` | Docker 依赖 + 本地热重载（推荐） |
+| `docker` | `just up docker` | Docker 部署 + 可选外部服务 |
+| `full` | `just up full` | 全 Docker 部署 |
 
-- See: `Getting Started`
+详见：`Getting Started` · `Optimal Config` · `Deployment`

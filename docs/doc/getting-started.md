@@ -2,68 +2,105 @@
 
 ## Prerequisites
 
-- Docker (recommended)
-- Python 3.12 + `uv`
-- Node 20 + `pnpm`
-- `just` (task runner)
+- Python 3.12 + [uv](https://docs.astral.sh/uv/)
+- Node 20 + [pnpm](https://pnpm.io/)
+- [just](https://just.systems/) (task runner)
+- [overmind](https://github.com/DarthSim/overmind) (for `local` / `hybrid` profiles)
+- Docker + Compose (for `hybrid` / `docker` / `full` profiles)
 
-## Configuration model (important)
+## 1. Initialize config
 
-Crystalith is **YAML-first** for runtime/business configuration:
+```bash
+cp .env.example .env
+just upsert-env-configs
+```
 
-- Runtime config: `config/app.yaml` (committable)
-- Secrets (do not commit): `config/secrets.yaml` (auto-discovered) or `CRYSTALITH_SECRETS_PATH`
-- Compose/build parameters: `.env` (ports/images/mirrors) + optional non-secret runtime hints (e.g. `OPENAI_BASE_URL_DOCKER`)
+`just upsert-env-configs` reads well-known env vars from your shell (e.g. `OPENAI_API_KEY`, `POSTGRES_PASSWORD`) and writes them into `.env` and `config/secrets.yaml`. Existing values are never overwritten.
 
-Legacy runtime env overrides (e.g. `DATABASE_URL`, `OPENAI_API_KEY`, `REDIS_URL`) are intentionally **not** used.
-
-## Provider setup (choose one)
-
-### Option A: OpenAI (direct)
-
-1) Create a local secrets file:
+If you prefer manual setup:
 
 ```bash
 cp config/secrets.yaml.example config/secrets.yaml
-# edit config/secrets.yaml and set OPENAI_API_KEY
+# edit config/secrets.yaml — at minimum set OPENAI_API_KEY
 ```
 
-2) Leave `OPENAI_BASE_URL` empty/unset to use the OpenAI SDK default (`https://api.openai.com/v1`).
+## 2. Choose a profile
 
-```yaml
-providers:
-  openai_default: &openai_default
-    base_url: "${{ env.OPENAI_BASE_URL }}"
-```
+Edit `CRYSTALITH_PROFILE` in `.env`, or pass it directly:
 
-### Option B: OpenAI-compatible endpoint (proxy / self-host)
+| Profile | Command | What it does |
+|---------|---------|-------------|
+| `local` | `just up local` | overmind starts backend + frontend on host. No Docker. SQLite + embedded Chroma. |
+| **`hybrid`** | `just up` (default) | Docker runs deps (Postgres, Chroma, Redis, SearXNG). Backend + frontend run on host with hot reload. |
+| `docker` | `just up docker` | Docker Compose deploys app + selected deps. Remaining services connect externally. |
+| `full` | `just up full` | Full Docker Compose with all optional overlays. |
 
-1) Put your API key in `config/secrets.yaml` (`OPENAI_API_KEY`).
-2) Set `OPENAI_BASE_URL` to your endpoint (host env / compose env):
+## 3. Start
 
 ```bash
-export OPENAI_BASE_URL="http://llm.internal:50256/v1"
+just up
 ```
 
-If your gateway does not provide OpenAI embedding models (e.g. `text-embedding-3-*`), set:
+Stop:
+
+```bash
+just down
+```
+
+Status / logs:
+
+```bash
+just status
+just logs
+```
+
+## Configuration model
+
+Crystalith is **YAML-first** for runtime configuration:
+
+- `config/app.yaml` — main config (committable, safe defaults)
+- `config/secrets.yaml` — secrets for `${{ secrets.VAR }}` interpolation (gitignored)
+- `.env` — compose/build parameters + profile selection
+
+Config overlays are auto-discovered and deep-merged:
+
+```
+config/app.yaml              ← base (committed)
+config/app.local.yaml        ← local overrides (gitignored)
+config/app.{env}.yaml        ← per-environment (CRYSTALITH_ENV)
+config/app.{env}.local.yaml  ← environment + local
+config/secrets.yaml          ← secrets
+```
+
+Endpoint candidates in `config/app.yaml` are automatically reordered based on runtime context — docker-internal names are preferred inside containers, localhost is preferred on the host. You don't need separate configs for different profiles.
+
+## Provider setup
+
+### OpenAI (direct)
+
+Set `OPENAI_API_KEY` in your shell, then `just upsert-env-configs`. Or manually edit `config/secrets.yaml`.
+
+### OpenAI-compatible endpoint (proxy / self-host)
+
+```bash
+export OPENAI_API_KEY="sk-..."
+export OPENAI_BASE_URL="http://llm.internal:50256/v1"
+just upsert-env-configs
+```
+
+If your gateway doesn't serve OpenAI embedding models:
 
 ```bash
 export CRYSTALITH_DEFAULT_EMBEDDING_MODEL="bge-m3-openai"
 ```
 
-If the endpoint is only reachable from your host network (VPN / Tailscale), use the `host-remap` overlay in
-**Docker Compose (prod-like)**:
+For VPN/Tailscale endpoints in Docker mode, set `BRIDGE_FORWARDS` and `OPENAI_BASE_URL_DOCKER` in `.env` and add `host-remap` to `DOCKER_SERVICES`.
 
-- Set `BRIDGE_FORWARDS` in `.env` (example): `BRIDGE_FORWARDS="50256:llm.internal:50256"`
-- Set `OPENAI_BASE_URL_DOCKER` in `.env` (example): `OPENAI_BASE_URL_DOCKER="http://host.docker.internal:50256/v1"`
-- If your gateway does not provide OpenAI embedding models, set `CRYSTALITH_DEFAULT_EMBEDDING_MODEL_DOCKER` (example): `CRYSTALITH_DEFAULT_EMBEDDING_MODEL_DOCKER="bge-m3-openai"`
-- Start with: `just DEV_OPTIONALS="storage redis searxng host-remap" dev-docker-up`
+### Ollama (fully local)
 
-### Option C: Ollama (fully local, no API key)
-
-1) Install Ollama and ensure it’s reachable at `http://localhost:11434`.
-2) Enable it in dev deps (optional): `just DEV_DEPS_OPTIONALS="storage redis searxng ollama" dev`
-3) In `config/app.yaml`, switch defaults to local models:
+1. Install Ollama at `http://localhost:11434`
+2. Add `ollama` to `HYBRID_SERVICES` in `.env`
+3. In `config/app.yaml`, switch defaults:
 
 ```yaml
 models:
@@ -72,123 +109,63 @@ models:
     embedding: "bge-m3-local"
 ```
 
-## Recommended dev (host hot reload + docker deps)
+## Customizing services per profile
 
-Starts Postgres + Chroma + Redis + SearXNG in Docker, and runs the backend + frontend on your host machine.
-
-```bash
-cp .env.example .env
-cp config/secrets.yaml.example config/secrets.yaml
-# configure a provider (see Provider setup above)
-just dev
-```
-
-Optional deps:
+In `.env`, control which services each profile includes:
 
 ```bash
-# Minimal deps (no web search):
-just DEV_DEPS_OPTIONALS="storage redis" dev
-
-# Add local Ollama:
-just DEV_DEPS_OPTIONALS="storage redis searxng ollama" dev
+CRYSTALITH_PROFILE=hybrid
+HYBRID_SERVICES=storage redis searxng        # deps for hybrid mode
+DOCKER_SERVICES=storage redis searxng        # overlays for docker mode
+FULL_SERVICES=storage redis searxng ollama slidev
 ```
 
-URLs:
+Available overlays: `storage`, `redis`, `searxng`, `ollama`, `slidev`, `host-remap`.
 
-- Frontend (Vite): `http://127.0.0.1:3000`
-- Backend (FastAPI): `http://127.0.0.1:8032`
-- API docs (Scalar): `http://127.0.0.1:8032/v1/codev/openapi-ui/scalar`
-
-Stop / cleanup:
+For mode C (Docker + external services), reduce `DOCKER_SERVICES` to only what you need in Docker, and let endpoint probing find your external services:
 
 ```bash
-# Stop deps containers created by just dev
-just dev-deps-down
-
-# Tail deps logs
-just dev-deps-logs
+CRYSTALITH_PROFILE=docker
+DOCKER_SERVICES=redis    # only Redis in Docker; Postgres/Chroma/etc. connect externally
 ```
 
-## No-docker dev (SQLite + embedded Chroma)
+## URLs
 
-### Backend (FastAPI)
-
-```bash
-cd backend/py
-uv sync
-just db-init
-just dev
-```
-
-API docs (Scalar): `http://127.0.0.1:8032/v1/codev/openapi-ui/scalar`
-
-### Frontend (Vite + React)
-
-```bash
-cd frontend/web
-pnpm install
-pnpm dev
-```
-
-Optional Slidev preview service for slides workflow development:
-
-```bash
-just dev-slidev
-```
-
-Notes:
-- Frontend dev/build/test/typecheck commands auto-initialize `frontend/web/vendor/rivu` when needed.
-- The local Slidev preview service listens on `http://localhost:3030`.
+| Service | Dev (local/hybrid) | Docker |
+|---------|-------------------|--------|
+| Frontend | `http://127.0.0.1:3000` | `http://localhost:8080` |
+| Backend API | `http://127.0.0.1:8032` | via Nginx at `:8080/v1/` |
+| API docs (Scalar) | `http://127.0.0.1:8032/v1/codev/openapi-ui/scalar` | `http://localhost:8080/v1/codev/openapi-ui/scalar` |
 
 ## Workspace tips
 
 - Command palette: `Ctrl+K`
 - Shortcut help: `Ctrl+?`
-- Mobile: on narrow screens (<768px), Workspace switches to a single-panel mode with a bottom tab bar (Sources / Chat / Notes). Layout editing (modules / lock toggle) is desktop-only.
-- Sources:
-  - Upload: `.txt`, `.md`, `.markdown`, or `.pdf` files in the Sources panel.
-  - Connectors: Obsidian Vault + Local Directory (requires installing connector plugins, e.g. `crystalith[official-connectors]` or `crystalith[official-full]`).
-    - Local dev: `cd backend/py && uv sync --extra official-connectors`
-    - Docker Compose: set `.env` `CRYSTALITH_BACKEND_EXTRAS="official-connectors"` (or `official-full`) and rebuild the backend image.
-    - Note: filesystem-based connectors read from the backend process filesystem; mount host directories into the API container and use the container path.
-- Health / diagnostics: use the header button to inspect `/health/dependencies`
+- Mobile: narrow screens (<768px) switch to single-panel mode with bottom tab bar.
+- Sources: upload `.txt`, `.md`, `.pdf` files, or use connectors (Obsidian Vault, Local Directory).
+- Health / diagnostics: header button → `/health/dependencies`
 
 ## Dev workflow tips
 
 - Backend tests: `cd backend/py && just test`
 - Frontend tests: `cd frontend/web && pnpm test`
-- If backend OpenAPI changes:
-  - Sync schema + regenerate client: `pnpm -C frontend/web run api:sync`
-  - Or from repo root: `just api-sync`
+- OpenAPI changes: `just api-sync`
+- Config schema: `cd backend/py && just config-schema`
 
-## Docker Compose (prod-like)
+## Multi-machine sync
 
-This mode runs `web` (Nginx) + `api` (FastAPI) in containers and mounts `./config` and `./data`.
-
-```bash
-cp .env.example .env
-cp config/secrets.yaml.example config/secrets.yaml
-# edit config/secrets.yaml (OPENAI_API_KEY, POSTGRES_PASSWORD if using storage overlay)
-just dev-docker-up
-just dev-docker-smoke
-```
-
-Customize overlays (optional deps):
+Set env vars in your shell profile (`~/.bashrc`, `~/.zshrc`), then on any machine:
 
 ```bash
-# Core only:
-just DEV_OPTIONALS="" dev-docker-up
-
-# Full local stack:
-just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up
+git clone <repo> && cd crystalith
+just upsert-env-configs
+just up
 ```
 
-Notes:
-- If pulling images from GHCR is slow, you can temporarily use `HTTPS_PROXY=http://127.0.0.1:20171 docker pull ...`.
-- Repo build helpers such as `just dev-docker-up`, `just dev-docker-rebuild`, and `./scripts/composition_smoke.sh` clear proxy env vars before Docker builds to avoid slow mirror routing.
+Recognized env vars: `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `POSTGRES_PASSWORD`, `CRYSTALITH_API_KEY`, `JINA_API_KEY`, `FIRECRAWL_API_KEY`, `BROWSERLESS_TOKEN`, `CRYSTALITH_PROFILE`, `CRYSTALITH_DEFAULT_EMBEDDING_MODEL`, `BRIDGE_FORWARDS`.
 
-Next:
+## Next
 
-- `Optimal Config` for recommended profiles
-- `Deployment` for compose overlays and production notes
-- `Operations` for diagnostics and runbooks
+- `Optimal Config` — profile comparison and YAML tuning knobs
+- `Deployment` — compose overlays, GHCR images, production notes
+- `Operations` — diagnostics and runbooks

@@ -9,6 +9,33 @@ SDK_RUST_ROOT := "vendor/crystalith-sdks/rust"
 SCHEMA_PATH := "frontend/web/openapi.gen.json"
 
 # --------------------------------------------------------------------------
+# Unified Entry (just up [profile])
+#
+# Profiles: local | hybrid | docker | full
+# See scripts/orchestrate.sh or .env.example for details.
+# --------------------------------------------------------------------------
+
+# Upsert .env and config/secrets.yaml from shell environment variables (safe: never overwrites existing values)
+upsert-env-configs:
+    bash ./scripts/init_config.sh
+
+# Start Crystalith with the given profile (default: hybrid)
+up PROFILE='' *ARGS='':
+    bash ./scripts/orchestrate.sh up "{{PROFILE}}" {{ARGS}}
+
+# Stop Crystalith for the given profile
+down PROFILE='' *ARGS='':
+    bash ./scripts/orchestrate.sh down "{{PROFILE}}" {{ARGS}}
+
+# Show running status for the given profile
+status PROFILE='':
+    bash ./scripts/orchestrate.sh status "{{PROFILE}}"
+
+# Show logs for the given profile
+logs PROFILE='' *ARGS='':
+    bash ./scripts/orchestrate.sh logs "{{PROFILE}}" {{ARGS}}
+
+# --------------------------------------------------------------------------
 # API Schema
 # --------------------------------------------------------------------------
 

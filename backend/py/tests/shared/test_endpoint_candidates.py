@@ -12,9 +12,77 @@ from crystalith.shared.config.endpoint_candidates import (
 )
 
 
-def test_order_endpoint_candidates_trims_and_dedups_preserving_order() -> None:
-    ordered = order_endpoint_candidates(["  a  ", "a", "", "b", "  b", "c"])
-    assert ordered == ["a", "b", "c"]
+def test_order_endpoint_candidates_trims_and_dedups() -> None:
+    ordered = order_endpoint_candidates(["  a  ", "a", "", "b", "  b", "c"], in_docker=False)
+    assert set(ordered) == {"a", "b", "c"}
+    assert len(ordered) == 3
+
+
+def test_order_on_host_prefers_localhost_over_docker_internal() -> None:
+    candidates = [
+        "http://chromadb:8000",
+        "http://127.0.0.1:8001",
+        "http://example.com:8000",
+    ]
+    ordered = order_endpoint_candidates(candidates, in_docker=False)
+    assert ordered[0] == "http://127.0.0.1:8001"
+    assert ordered[-1] == "http://chromadb:8000"
+
+
+def test_order_in_docker_prefers_docker_internal_over_localhost() -> None:
+    candidates = [
+        "http://127.0.0.1:8001",
+        "http://chromadb:8000",
+        "http://example.com:8000",
+    ]
+    ordered = order_endpoint_candidates(candidates, in_docker=True)
+    assert ordered[0] == "http://chromadb:8000"
+    assert ordered[-1] == "http://127.0.0.1:8001"
+
+
+def test_order_preserves_declaration_order_within_same_kind() -> None:
+    candidates = [
+        "http://127.0.0.1:5434",
+        "http://127.0.0.1:5432",
+    ]
+    ordered = order_endpoint_candidates(candidates, in_docker=False)
+    assert ordered == ["http://127.0.0.1:5434", "http://127.0.0.1:5432"]
+
+
+def test_order_database_candidates_host_mode() -> None:
+    candidates = [
+        "postgresql+asyncpg://user:pw@127.0.0.1:5434/db",
+        "postgresql+asyncpg://user:pw@postgres:5432/db",
+    ]
+    ordered = order_endpoint_candidates(candidates, in_docker=False)
+    assert ordered[0] == "postgresql+asyncpg://user:pw@127.0.0.1:5434/db"
+
+
+def test_order_database_candidates_docker_mode() -> None:
+    candidates = [
+        "postgresql+asyncpg://user:pw@127.0.0.1:5434/db",
+        "postgresql+asyncpg://user:pw@postgres:5432/db",
+    ]
+    ordered = order_endpoint_candidates(candidates, in_docker=True)
+    assert ordered[0] == "postgresql+asyncpg://user:pw@postgres:5432/db"
+
+
+def test_order_redis_candidates_host_mode() -> None:
+    candidates = [
+        "redis://127.0.0.1:6380/0",
+        "redis://redis:6379/0",
+    ]
+    ordered = order_endpoint_candidates(candidates, in_docker=False)
+    assert ordered[0] == "redis://127.0.0.1:6380/0"
+
+
+def test_order_redis_candidates_docker_mode() -> None:
+    candidates = [
+        "redis://127.0.0.1:6380/0",
+        "redis://redis:6379/0",
+    ]
+    ordered = order_endpoint_candidates(candidates, in_docker=True)
+    assert ordered[0] == "redis://redis:6379/0"
 
 
 def test_endpoint_hostname_supports_url_and_host_port() -> None:

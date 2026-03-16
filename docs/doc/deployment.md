@@ -8,7 +8,15 @@
 | [pnpm](https://pnpm.io/) | Node 包管理 | `npm i -g pnpm` |
 | [just](https://just.systems/) | 任务运行器 | `cargo install just` 或系统包管理器 |
 | [Docker](https://docs.docker.com/) + Compose | 容器运行时 | Docker Desktop 或 `docker-ce` |
-| [overmind](https://github.com/DarthSim/overmind) | 进程管理（可选） | `brew install overmind` 或二进制发布 |
+| [overmind](https://github.com/DarthSim/overmind) | 进程管理（local/hybrid 模式） | `brew install overmind` 或二进制发布 |
+
+## 快速开始
+
+```bash
+cp .env.example .env          # 选择 profile，默认 hybrid
+just upsert-env-configs       # 从 shell 环境变量填充 .env 和 config/secrets.yaml
+just up                       # 一键启动
+```
 
 ## 配置体系
 
@@ -28,32 +36,18 @@ config/secrets.yaml            ← 密钥（gitignored，自动发现）
 - `${{ secrets.VAR }}` — 从 `config/secrets.yaml` 解析，用于 API key、密码
 - `${{ env.VAR }}` — 从环境变量解析，用于运行时动态值（如 `OPENAI_BASE_URL`）
 
-## 通用准备
+智能 endpoint 解析：`config/app.yaml` 中的 `endpoint_candidates` 列表会根据运行环境自动重排——Docker 内优先 docker-internal 名称，宿主机上优先 localhost。同一份配置全场景通用。
+
+## 运行 Profile
+
+所有模式通过 `just up [profile]` 统一入口启动。
+
+### local — 纯本地开发
+
+后端前端跑在宿主机，热重载最快。不依赖 Docker。
 
 ```bash
-cd backend/py && uv sync
-cd ../../frontend/web && pnpm install
-cd ../..
-
-cp config/secrets.yaml.example config/secrets.yaml
-# 编辑 secrets.yaml，至少填 OPENAI_API_KEY
-
-cp .env.example .env  # compose 参数，可选
-```
-
----
-
-## 本地开发
-
-三种模式，按日常使用频率排列。
-
-### Procfile + overmind
-
-后端前端跑在宿主机，热重载最快。不依赖 Docker 运行应用本身。
-
-```bash
-overmind s            # 启动全部（backend + frontend + slidev）
-overmind s -l b,f     # 只启动 backend + frontend
+just up local
 ```
 
 Procfile 进程：
@@ -64,56 +58,74 @@ Procfile 进程：
 | `f` | Frontend（Vite dev server） | 3000 |
 | `s` | Slidev 预览（可选） | 3030 |
 
-需要外部依赖（Postgres、ChromaDB、Redis、SearXNG）时：
-
-```bash
-just dev-deps-up      # 启动依赖容器
-overmind s -l b,f     # 应用跑在宿主机
-```
-
 不启动依赖也能跑——默认用 SQLite + 内存缓存。
 
-### just dev
+### hybrid — Docker 依赖 + 本地热重载（推荐开发）
 
-和 overmind 类似，用 `just` 代替：
+Docker 运行依赖服务，应用跑在宿主机。
 
 ```bash
-just dev              # dev-deps-up → dev-backend（后台）→ dev-frontend
-# 或分开：
-just dev-deps-up
-just dev-backend
-just dev-frontend
+just up                # 默认 hybrid
+just up hybrid         # 显式指定
 ```
 
-### 全容器模式
-
-全部跑在容器里，迭代慢但接近生产环境。
+在 `.env` 中自定义依赖：
 
 ```bash
-just dev-docker-up                                          # core + storage + redis + searxng
-just dev-docker-logs                                        # 跟踪日志
-just dev-docker-rebuild api                                 # 重建单个服务
-just dev-docker-down                                        # 停止
-just DEV_OPTIONALS="storage redis searxng ollama" dev-docker-up  # 自定义 overlay
+HYBRID_SERVICES=storage redis searxng          # 默认
+HYBRID_SERVICES=storage redis searxng ollama   # 加本地 LLM
+HYBRID_SERVICES=storage redis                  # 不要搜索
+```
+
+### docker — Docker 部署 + 可选外部服务
+
+应用和选定的依赖跑在 Docker 中，其余直连外部服务。
+
+```bash
+just up docker
+```
+
+在 `.env` 中控制哪些服务用 Docker：
+
+```bash
+DOCKER_SERVICES=storage redis searxng    # 默认
+DOCKER_SERVICES=redis                    # 只 Redis 用 Docker，其余外部
+DOCKER_SERVICES=                         # 全部外部
+```
+
+### full — 全 Docker 部署
+
+```bash
+just up full
 ```
 
 ### 对比
 
-| | Procfile (overmind) | just dev | 全容器 |
-|---|---|---|---|
-| 热重载 | 即时 | 即时 | 需要 rebuild |
-| 外部依赖 | 手动或 `dev-deps-up` | `dev-deps-up` 自动 | 全在容器内 |
-| 启动速度 | 快 | 快 | 慢（构建） |
-| 生产一致性 | 低 | 低 | 高 |
-| 适合场景 | 日常编码 | 日常编码 | 集成测试 |
+| | local | hybrid | docker | full |
+|---|---|---|---|---|
+| 热重载 | 即时 | 即时 | 需 rebuild | 需 rebuild |
+| Docker 依赖 | 无 | 仅 deps | 是 | 是 |
+| 启动速度 | 快 | 快 | 慢 | 慢 |
+| 生产一致性 | 低 | 中 | 高 | 高 |
+| 适合场景 | 快速编辑 | 日常开发 | 集成测试 | 演示/生产 |
+
+### 通用操作
+
+```bash
+just down              # 停止（自动匹配 profile）
+just status            # 查看状态
+just logs              # 查看日志
+```
 
 ---
 
-## 生产部署
+## 生产部署（高级）
 
-Compose 服务名映射：`frontend` → `web`，`backend` → `api`。
+以下内容面向需要直接操作 Docker Compose 的高级用户。一般情况下 `just up docker` 或 `just up full` 已足够。
 
-部署走 Docker Compose 的 `-f` 合并，核心栈 + 按需叠加 overlay。
+### Compose 服务名映射
+
+`frontend` → `web`，`backend` → `api`。
 
 ### 最小部署（core only）
 
@@ -127,13 +139,7 @@ docker compose --env-file .env \
 
 启动后有 `web`（Nginx，端口 8080）+ `api`（FastAPI）+ `data-init`。
 
-默认镜像只包含核心功能。PDF/HTML 解析、URL 提取、Source Connectors 等在 official 插件里，需要的话构建时安装 `crystalith[official-full]`（或按需安装 `official-parsers` / `official-extractors` / `official-connectors`）。
-
-对于基于本地文件系统的连接器（如 Obsidian vault、Local Directory），还需要把宿主机目录挂载到 `api` 容器里，并在连接参数里填写**容器内路径**（建议 `:ro` 只读挂载）。
-
 ### 推荐部署（core + storage + redis）
-
-PostgreSQL + ChromaDB 持久存储，Redis 缓存。
 
 ```bash
 docker compose --env-file .env \
@@ -203,22 +209,16 @@ Dockerfile 默认可能使用国内镜像加速。CI 中自动关闭。本地关
 
 所有 overlay 文件在 `deployments/prod/` 下。
 
-用 `just` 快捷操作：
-
-```bash
-just DEV_OPTIONALS="storage" dev-docker-up
-just DEV_OPTIONALS="storage redis searxng ollama" dev-docker-up
-just DEV_OPTIONALS="storage redis" dev-docker-down
-```
-
 ### 外部替换
 
 每个 overlay 对应的服务都可以换成外部实例，在 `config/app.yaml` 里配：
 
-- storage → `database.url` / `database.url_candidates`，`vector_storage.chroma.host/port`
-- redis → `cache.provider: redis|auto`，`cache.redis_url` / `cache.redis_url_candidates`
+- storage → `database.url_candidates`，`vector_storage.chroma.endpoint_candidates`
+- redis → `cache.redis_url_candidates`
 - ollama → `optional_services.ollama.endpoint_candidates`
-- searxng → `search.searxng.host` / `search.searxng.endpoint_candidates`
+- searxng → `search.searxng.endpoint_candidates`
+
+endpoint 探测会自动找到可达的服务。
 
 ### slidev 补充
 
@@ -244,9 +244,10 @@ just DEV_OPTIONALS="storage redis" dev-docker-down
 
 | 变量 | 用途 | 默认值 |
 |------|------|--------|
+| `CRYSTALITH_PROFILE` | 运行 profile | `hybrid` |
 | `CRYSTALITH_CONFIG_PATH` | 指定配置文件路径 | 自动发现 `config/app.yaml` |
 | `CRYSTALITH_CONFIG_DIR` | 指定配置目录 | — |
-| `CRYSTALITH_ENV` | 环境名，用于配置分层（`dev`、`staging`、`prod`） | — |
+| `CRYSTALITH_ENV` | 环境名，用于配置分层 | 由 profile 自动设置 |
 | `CRYSTALITH_SECRETS_PATH` | 指定密钥文件/目录路径 | 自动发现 `config/secrets.yaml` |
 | `OPENAI_BASE_URL` | 覆盖 OpenAI 兼容 API 端点 | `https://api.openai.com/v1` |
 | `CRYSTALITH_DEFAULT_EMBEDDING_MODEL` | 覆盖默认 embedding 模型 ID | 第一个 `embed` 角色模型 |
@@ -272,16 +273,26 @@ just composition-smoke
 - API 默认无认证。公网暴露前在配置里开启 `app.auth.enabled: true`
 - URL 抓取默认启用 SSRF 防护（`source_ingestion.url_fetch.security`）
 
+## 多机同步
+
+在 `~/.bashrc` 或 `~/.zshrc` 中设置环境变量，然后在任意机器上：
+
+```bash
+git clone <repo> && cd crystalith
+just upsert-env-configs    # 从 shell 环境变量填充配置
+just up
+```
+
 ## 迁移（旧命令映射）
 
 | 旧命令 | 新命令 |
 |--------|--------|
-| `just dev-up` | `just dev-docker-up` |
-| `just dev-down` | `just dev-docker-down` |
-| `just dev-ps` | `just dev-docker-ps` |
-| `just dev-logs` | `just dev-docker-logs` |
-| `just dev-rebuild <svc>` | `just dev-docker-rebuild <svc>` |
-| `just dev-smoke` | `just dev-docker-smoke` |
-| `CRYSTALITH_OLLAMA_MONITOR_*` | `CRYSTALITH_OPTIONAL_SERVICES_MONITOR_*` |
+| `just dev` | `just up hybrid` |
+| `just dev-deps-up` | `just up hybrid`（自动启动 deps） |
+| `just dev-docker-up` | `just up docker` |
+| `just DEV_OPTIONALS="..." dev-docker-up` | 编辑 `.env` 中 `DOCKER_SERVICES`，然后 `just up docker` |
+| `overmind s` | `just up local` |
+| `just dev-deps-down` | `just down hybrid` |
+| `just dev-docker-down` | `just down docker` |
 
-回滚到旧的"全依赖启动"行为：`just DEV_OPTIONALS="storage redis searxng ollama slidev" dev-docker-up`
+旧命令仍然可用，但推荐使用统一入口。
