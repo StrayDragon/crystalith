@@ -22,7 +22,7 @@ from .render_types import (
 )
 
 
-def check_plugin(plugin_id: str, plugin: object) -> list[str]:
+def check_plugin(_plugin_id: str, plugin: object) -> list[str]:
     """
     Lightweight compliance checker for a loaded plugin object.
 

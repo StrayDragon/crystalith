@@ -119,14 +119,22 @@ function TopicCard({ topic, index }: { topic: Topic; index: number }) {
       {expanded && topic.keywords.length > 0 && (
         <div className="mt-2 pt-2 border-t border-gray-200/50 dark:border-slate-600/60">
           <div className="flex flex-wrap gap-1">
-            {topic.keywords.map((keyword, i) => (
-              <span
-                key={i}
-                className="px-1.5 py-0.5 bg-white/60 rounded text-[10px] text-gray-600 font-medium dark:bg-slate-800/80 dark:text-slate-200"
-              >
-                {keyword}
-              </span>
-            ))}
+            {(() => {
+              const keywordCounts = new Map<string, number>();
+              return topic.keywords.map((keyword) => {
+                const ordinal = keywordCounts.get(keyword) ?? 0;
+                keywordCounts.set(keyword, ordinal + 1);
+                const keywordKey = `${keyword}:${ordinal}`;
+                return (
+                  <span
+                    key={keywordKey}
+                    className="px-1.5 py-0.5 bg-white/60 rounded text-[10px] text-gray-600 font-medium dark:bg-slate-800/80 dark:text-slate-200"
+                  >
+                    {keyword}
+                  </span>
+                );
+              });
+            })()}
           </div>
         </div>
       )}
@@ -392,8 +400,12 @@ function AnalysisPanel({
           emptyMessage="未发现显著的来源关联"
         >
           <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-            {similarRelations.slice(0, 20).map((relation, index) => (
-              <RelationItem key={index} relation={relation} type="similar" />
+            {similarRelations.slice(0, 20).map((relation) => (
+              <RelationItem
+                key={`${relation.source_chunk_id}:${relation.target_chunk_id}`}
+                relation={relation}
+                type="similar"
+              />
             ))}
             {similarRelations.length > 20 && (
               <Typography
@@ -415,8 +427,12 @@ function AnalysisPanel({
           color="red"
         >
           <div className="space-y-1.5">
-            {contradictions.map((relation, index) => (
-              <RelationItem key={index} relation={relation} type="contradicts" />
+            {contradictions.map((relation) => (
+              <RelationItem
+                key={`${relation.source_chunk_id}:${relation.target_chunk_id}`}
+                relation={relation}
+                type="contradicts"
+              />
             ))}
           </div>
         </Section>

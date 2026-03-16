@@ -81,6 +81,7 @@ class OpenAITranscriber:
     ) -> str:
         if not content:
             raise ParserError("Empty audio content")
+        _ = mime_type
 
         file_obj = BytesIO(content)
         file_obj.name = filename or "audio"
@@ -112,6 +113,7 @@ class DisabledTranscriber:
         filename: str | None = None,
         mime_type: str | None = None,
     ) -> str:
+        _ = (content, filename, mime_type)
         raise ParserError("Transcription provider is not configured")
 
 

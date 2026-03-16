@@ -71,6 +71,12 @@ const result = spawnSync(
     ".oxlintrc.json",
     "--tsconfig",
     "tsconfig.json",
+    "-D",
+    "suspicious",
+    "-D",
+    "perf",
+    "-A",
+    "react-in-jsx-scope",
     ...targets,
   ],
   {

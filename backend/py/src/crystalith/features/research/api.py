@@ -1248,7 +1248,7 @@ async def export_research(
     research_id: int,
     payload: ExportResearchRequest,
     session: AsyncSession = Depends(get_db_session),
-    settings: Settings = Depends(get_settings),
+    _settings: Settings = Depends(get_settings),
     cache: CacheProvider = Depends(get_cache_provider),
     embedder: EmbeddingProvider = Depends(get_embedding_provider),
     vector_store: VectorStore = Depends(get_vector_store),
@@ -1277,12 +1277,12 @@ async def export_research(
             detail="Research has no final report to export",
         )
 
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d_%H%M%S")
 
     if payload.export_type == "source":
         # Create markdown content
         content_parts = [f"# 深度研究报告：{research.topic}\n"]
-        content_parts.append(f"> 生成时间：{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
+        content_parts.append(f"> 生成时间：{datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M')}\n")
         content_parts.append(f"> 研究轮次：{research.current_iteration}/{research.max_iterations}\n\n")
         content_parts.append("---\n\n")
         content_parts.append(research.final_report)

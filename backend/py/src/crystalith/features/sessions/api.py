@@ -107,14 +107,14 @@ async def _get_session_messages(
     return list(result.scalars().all())
 
 
-def _extract_messages_text(messages: list[Message], format: str = "markdown") -> str:
+def _extract_messages_text(messages: list[Message], text_format: str = "markdown") -> str:
     if not messages:
         return ""
 
     parts: list[str] = []
     for msg in messages:
         content = msg.content
-        if format == "raw":
+        if text_format == "raw":
             parts.append(content)
         else:
             role_label = "用户" if msg.role == "user" else "助手"
@@ -274,7 +274,7 @@ async def convert_session_to_source(
         message_count=len(messages),
     )
 
-    text_content = _extract_messages_text(messages, format="markdown")
+    text_content = _extract_messages_text(messages, text_format="markdown")
     if not text_content:
         raise HTTPException(status_code=400, detail="Messages have no content to convert")
 
@@ -435,7 +435,7 @@ async def convert_session_to_output(
         output_type=payload.output_type.value,
     )
 
-    text_content = _extract_messages_text(messages, format="raw")
+    text_content = _extract_messages_text(messages, text_format="raw")
     if not text_content:
         raise HTTPException(status_code=400, detail="Messages have no content to convert")
 

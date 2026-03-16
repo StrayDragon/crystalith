@@ -19,4 +19,5 @@ class MediaFetcher(Protocol):
 
 class DisabledMediaFetcher:
     def fetch(self, url: str) -> MediaSource:
+        _ = url
         raise ParserError("Media fetcher is not configured")

@@ -20,6 +20,8 @@ __all__ = [
 def datetime_to_timestamp(dt: datetime.datetime) -> int:
     """将 ``datetime`` 对象转换为毫秒级时间戳."""
 
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=TZ_SHANGHAI)
     return int(dt.timestamp() * 1000)
 
 
@@ -35,19 +37,68 @@ def str_to_datetime(d: datetime.datetime | datetime.date | str | None) -> dateti
     if not d:
         return None
     if isinstance(d, datetime.datetime):
+        if d.tzinfo is None:
+            return d.replace(tzinfo=TZ_SHANGHAI)
         return d
     if isinstance(d, datetime.date):
-        return datetime.datetime(d.year, d.month, d.day)
+        return datetime.datetime(d.year, d.month, d.day, tzinfo=TZ_SHANGHAI)
+
+    if "T" in d:
+        raise ValueError("ISO8601 'T' separator is not supported")
+
+    value = d.strip()
+    if not value:
+        return None
+
+    date_part: str
+    time_part: str | None
+    if " " in value:
+        date_part, time_part = value.split(" ", 1)
+        time_part = time_part.strip() or None
+    else:
+        date_part, time_part = value, None
+
     try:
-        return datetime.datetime.strptime(d, "%Y-%m-%d %H:%M:%S")
-    except ValueError:
-        try:
-            return datetime.datetime.strptime(d, "%Y-%m-%d %H:%M:%S.%f")
-        except ValueError:
-            try:
-                return datetime.datetime.strptime(d, "%Y-%m-%d")
-            except ValueError:
-                return datetime.datetime.strptime(d, "%Y-%m-%d %H:%M")
+        year_str, month_str, day_str = date_part.split("-", 2)
+        year = int(year_str)
+        month = int(month_str)
+        day = int(day_str)
+    except Exception as exc:  # pragma: no cover - defensive
+        raise ValueError(f"Invalid date: {date_part!r}") from exc
+
+    if time_part is None:
+        return datetime.datetime(year, month, day, tzinfo=TZ_SHANGHAI)
+
+    microsecond = 0
+    if "." in time_part:
+        time_part, frac = time_part.split(".", 1)
+        digits = "".join(ch for ch in frac if ch.isdigit())
+        if not digits:
+            raise ValueError(f"Invalid microseconds: {value!r}")
+        microsecond = int((digits + "000000")[:6])
+
+    parts = time_part.split(":")
+    if len(parts) == 2:
+        hour_str, minute_str = parts
+        second_str = "0"
+    elif len(parts) == 3:
+        hour_str, minute_str, second_str = parts
+    else:
+        raise ValueError(f"Invalid time: {value!r}")
+
+    hour = int(hour_str)
+    minute = int(minute_str)
+    second = int(second_str)
+    return datetime.datetime(
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+        microsecond,
+        tzinfo=TZ_SHANGHAI,
+    )
 
 
 TZ_SHANGHAI = ZoneInfo("Asia/Shanghai")

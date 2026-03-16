@@ -13,6 +13,7 @@ interface TimelineViewerProps {
 
 export default function TimelineViewer({ events, className }: TimelineViewerProps) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const eventKeyCounts = new Map<string, number>();
 
   useEffect(() => {
     setExpanded(new Set());
@@ -27,8 +28,16 @@ export default function TimelineViewer({ events, className }: TimelineViewerProp
       <div className="space-y-4">
         {events.map((item, index) => {
           const isOpen = expanded.has(index);
+          const eventKeyBase = JSON.stringify({
+            date: item.date ?? "",
+            event: item.event ?? "",
+            description: item.description ?? "",
+          });
+          const ordinal = eventKeyCounts.get(eventKeyBase) ?? 0;
+          eventKeyCounts.set(eventKeyBase, ordinal + 1);
+          const eventKey = `${eventKeyBase}:${ordinal}`;
           return (
-            <div key={`event-${index}`} className="relative pl-6">
+            <div key={eventKey} className="relative pl-6">
               <span className="absolute left-1 top-2 h-2 w-2 rounded-full bg-gray-900 dark:bg-sky-400" />
               <span className="absolute left-[5px] top-5 h-full w-px bg-gray-200 dark:bg-slate-600" />
               <button

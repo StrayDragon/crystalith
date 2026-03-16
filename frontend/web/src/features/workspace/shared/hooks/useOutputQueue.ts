@@ -97,8 +97,7 @@ function parseSseMessage(event: Event) {
 
 function isAbortSignalCompatibleWithRequest(signal: AbortSignal): boolean {
   try {
-    new Request("http://localhost", { signal });
-    return true;
+    return Boolean(new Request("http://localhost", { signal }));
   } catch {
     return false;
   }

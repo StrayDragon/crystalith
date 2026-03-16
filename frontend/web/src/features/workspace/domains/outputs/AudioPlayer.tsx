@@ -14,6 +14,7 @@ const WAVE_BARS = [
 ];
 
 export default function AudioPlayer({ isBlocked }: AudioPlayerProps) {
+  const waveToneCounts = new Map<string, number>();
   return (
     <section className={`MediaPlayerCard ${isBlocked ? "isBlocked" : ""}`} aria-label="音频概述">
       <div className="MediaPlayerHeader">
@@ -25,9 +26,12 @@ export default function AudioPlayer({ isBlocked }: AudioPlayerProps) {
       </div>
       <div className="MediaPlayerBody">
         <div className="MediaWaveform" aria-hidden="true">
-          {WAVE_BARS.map((tone, index) => (
-            <span key={`${tone}-${index}`} className={`MediaWaveformBar ${tone}`} />
-          ))}
+          {WAVE_BARS.map((tone) => {
+            const ordinal = waveToneCounts.get(tone) ?? 0;
+            waveToneCounts.set(tone, ordinal + 1);
+            const key = `${tone}:${ordinal}`;
+            return <span key={key} className={`MediaWaveformBar ${tone}`} />;
+          })}
         </div>
         <div className="MediaTimeline" aria-hidden="true">
           <div className="MediaTimeline__fill" />

@@ -71,8 +71,6 @@ if (typeof URL !== "undefined" && !("createObjectURL" in URL)) {
 
 if (typeof window !== "undefined" && !window.Worker) {
   window.Worker = class Worker {
-    constructor() {}
-
     postMessage() {}
 
     terminate() {}

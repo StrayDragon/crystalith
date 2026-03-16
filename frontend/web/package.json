@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "pretest": "bash ../../scripts/ensure_frontend_web_ready.sh",
     "lint": "node ./scripts/oxlint-changed.mjs",
-    "lint:all": "oxlint --deny-warnings --max-warnings=0 --config .oxlintrc.json --tsconfig tsconfig.json ./src",
+    "lint:all": "oxlint --deny-warnings --max-warnings=0 --config .oxlintrc.json --tsconfig tsconfig.json -D suspicious -D perf -A react-in-jsx-scope ./src",
     "test": "vitest",
     "pretypecheck": "bash ../../scripts/ensure_frontend_web_ready.sh",
     "typecheck": "tsc -p tsconfig.json --noEmit",

@@ -315,9 +315,9 @@ export function useChat({
           signal: abortController.signal,
           sseMaxRetryAttempts: 1,
           onSseEvent: (event) => {
-            const { event: eventType, data } = event;
-            if (eventType === "state_snapshot" && data && typeof data === "object") {
-              const payload = data as {
+            const { event: eventType, data: eventData } = event;
+            if (eventType === "state_snapshot" && eventData && typeof eventData === "object") {
+              const payload = eventData as {
                 message_id?: unknown;
                 shared_state?: unknown;
               };
@@ -339,15 +339,20 @@ export function useChat({
               }
               return;
             }
-            if (eventType === "state_delta" && data && typeof data === "object") {
-              const payload = data as { delta?: unknown };
+            if (eventType === "state_delta" && eventData && typeof eventData === "object") {
+              const payload = eventData as { delta?: unknown };
               if (Array.isArray(payload.delta)) {
                 runtime.dispatchDelta(payload.delta as Array<Record<string, unknown>>);
               }
               return;
             }
-            if (eventType === "chunk" && data && typeof data === "object" && "text" in data) {
-              const chunkText = String((data as { text?: unknown }).text ?? "");
+            if (
+              eventType === "chunk" &&
+              eventData &&
+              typeof eventData === "object" &&
+              "text" in eventData
+            ) {
+              const chunkText = String((eventData as { text?: unknown }).text ?? "");
               if (!chunkText) return;
               streamingBufferRef.current += chunkText;
               if (!streamingFlushTimerRef.current) {
@@ -358,9 +363,9 @@ export function useChat({
               }
               return;
             }
-            if (eventType === "done" && data && typeof data === "object") {
+            if (eventType === "done" && eventData && typeof eventData === "object") {
               receivedDone = true;
-              const doneData = data as {
+              const doneData = eventData as {
                 citations?: ApiCitation[];
                 message_id?: unknown;
               };
@@ -390,10 +395,10 @@ export function useChat({
             if (eventType === "error") {
               hadSseError = true;
               terminalErrorMessage =
-                data && typeof data === "object" && "message" in data
-                  ? String((data as { message?: unknown }).message ?? "请求失败")
-                  : typeof data === "string"
-                    ? data
+                eventData && typeof eventData === "object" && "message" in eventData
+                  ? String((eventData as { message?: unknown }).message ?? "请求失败")
+                  : typeof eventData === "string"
+                    ? eventData
                     : "请求失败";
               store.getState().setError("send", terminalErrorMessage);
             }
@@ -422,11 +427,11 @@ export function useChat({
           void mutate();
           setLastFailedDraft("");
         }
-      } catch (error) {
+      } catch (err) {
         const isAborted =
           abortController.signal.aborted ||
-          (error instanceof DOMException && error.name === "AbortError") ||
-          (error instanceof Error && error.name === "AbortError");
+          (err instanceof DOMException && err.name === "AbortError") ||
+          (err instanceof Error && err.name === "AbortError");
 
         if (!receivedDone) {
           rollbackLocalStreamingState();
@@ -444,16 +449,16 @@ export function useChat({
           }
         } else {
           let errorMessage = terminalErrorMessage || "请求失败，请检查后端服务或稍后重试。";
-          if (error instanceof Error) {
-            const statusError = error as Error & { status?: number };
+          if (err instanceof Error) {
+            const statusError = err as Error & { status?: number };
             if (statusError.status === 503) {
               errorMessage = "可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置或稍后重试。";
             } else if (statusError.status === 404) {
               errorMessage = "会话或笔记本不存在。";
             } else if (statusError.status === 500) {
               errorMessage = "服务器内部错误，请稍后重试。";
-            } else if (error.message && error.message.length < 100) {
-              errorMessage = error.message;
+            } else if (err.message && err.message.length < 100) {
+              errorMessage = err.message;
             }
           }
           store.getState().setError("send", errorMessage);
@@ -513,12 +518,12 @@ export function useChat({
         void refreshSessions();
       }
       setLastFailedDraft("");
-    } catch (error) {
+    } catch (err) {
       let errorMessage = "请求失败，请检查后端服务或稍后重试。";
       let userFacingError = "请求失败。";
 
-      if (error instanceof Error) {
-        const statusError = error as Error & { status?: number };
+      if (err instanceof Error) {
+        const statusError = err as Error & { status?: number };
 
         if (statusError.status === 503) {
           errorMessage = "可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置或稍后重试。";
@@ -529,8 +534,8 @@ export function useChat({
         } else if (statusError.status === 500) {
           errorMessage = "服务器内部错误，请稍后重试。";
           userFacingError = "服务器错误，请稍后重试。";
-        } else if (error.message) {
-          const msg = error.message;
+        } else if (err.message) {
+          const msg = err.message;
           if (msg.length < 100 && !msg.includes("fetch")) {
             errorMessage = msg;
             userFacingError = msg;
@@ -595,9 +600,8 @@ export function useChat({
           chunkCount: result.chunk_count,
         }),
       );
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : t("messages.convert.failure_default");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t("messages.convert.failure_default");
       toast.error(t("messages.convert.failure", { message }));
     } finally {
       setIsConverting(false);
@@ -624,9 +628,8 @@ export function useChat({
           await refreshOutputs();
         }
         toast.success(t("messages.convert.to_output.success", { title: result.title }));
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : t("messages.convert.failure_default");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : t("messages.convert.failure_default");
         toast.error(t("messages.convert.failure", { message }));
       } finally {
         setIsConverting(false);

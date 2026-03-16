@@ -70,7 +70,7 @@ class _OpenAIEmbeddingsResource(Protocol):
         self,
         *,
         model: str,
-        input: list[str],
+        input: list[str],  # noqa: A002
     ) -> object: ...
 
 

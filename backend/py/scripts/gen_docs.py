@@ -294,6 +294,7 @@ def _render_env_vars_reference(*, repo_root: Path, docs_root: Path) -> Generated
 
 
 def _render_plugins_reference(*, repo_root: Path, docs_root: Path) -> GeneratedTarget:
+    _ = repo_root
     from crystalith.shared.plugins.interfaces import PLUGIN_API_VERSION
     from crystalith.shared.plugins.official_catalog import OFFICIAL_PLUGIN_CATALOG
 

@@ -218,6 +218,7 @@ test("cancelOutputJob aborts running output job", async () => {
     const flushUntil = async (predicate: () => boolean) => {
       for (let i = 0; i < 10; i += 1) {
         if (predicate()) return;
+        // eslint-disable-next-line no-await-in-loop -- Intentional polling helper for hook state updates in tests.
         await act(async () => {});
       }
       throw new Error("condition not met");

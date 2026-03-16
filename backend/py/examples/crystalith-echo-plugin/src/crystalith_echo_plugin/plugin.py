@@ -38,6 +38,7 @@ class EchoEmbeddingProvider:
         *,
         batch_size: int = 100,
     ) -> list[list[float]]:
+        _ = batch_size
         if not texts:
             return []
         return [[float(len(text))] for text in texts]
@@ -47,9 +48,11 @@ class EchoPlugin:
     api_version = "v1"
 
     def create_chat_provider(self, settings: Any, model_config: Any) -> EchoChatProvider:
+        _ = settings
         return EchoChatProvider(model=str(getattr(model_config, "model", "")))
 
     def create_embedding_provider(self, settings: Any, model_config: Any) -> EchoEmbeddingProvider:
+        _ = settings
         return EchoEmbeddingProvider(model=str(getattr(model_config, "model", "")))
 
 

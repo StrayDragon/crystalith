@@ -38,7 +38,7 @@ def _serve_searx_json(payload: dict[str, object]) -> Iterator[str]:
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
 
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self, format: str, *args) -> None:
+        def log_message(self, fmt: str, *args) -> None:
             return
 
         def do_GET(self) -> None:
@@ -66,7 +66,7 @@ def _serve_html(html: str) -> Iterator[str]:
     body = html.encode("utf-8")
 
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self, format: str, *args) -> None:
+        def log_message(self, fmt: str, *args) -> None:
             return
 
         def do_GET(self) -> None:
@@ -94,7 +94,7 @@ def _serve_redirect(location: str) -> Iterator[tuple[str, dict[str, int]]]:
     hits: dict[str, int] = {"count": 0}
 
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self, format: str, *args) -> None:
+        def log_message(self, fmt: str, *args) -> None:
             return
 
         def do_GET(self) -> None:
@@ -122,7 +122,7 @@ def _serve_html_counting(html: str) -> Iterator[tuple[str, dict[str, int]]]:
     hits: dict[str, int] = {"count": 0}
 
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self, format: str, *args) -> None:
+        def log_message(self, fmt: str, *args) -> None:
             return
 
         def do_GET(self) -> None:

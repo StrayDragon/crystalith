@@ -319,9 +319,9 @@ function SourcesPanelView({
   );
 
   const handleAddToSources = useCallback(
-    (selected: SearchResultItem[], mode: SourceFromUrlMode, extractor?: ExtractorType) => {
+    (selected: SearchResultItem[], sourceMode: SourceFromUrlMode, extractor?: ExtractorType) => {
       setResultsToAdd(selected);
-      setAddMode(mode);
+      setAddMode(sourceMode);
       setSelectedExtractor(extractor);
       setAddDialogOpen(true);
     },
@@ -329,11 +329,11 @@ function SourcesPanelView({
   );
 
   const handleAddSource = useCallback(
-    async (result: SearchResultItem, mode: SourceFromUrlMode) => {
-      await onAddSourceFromUrl(result.url, mode, {
+    async (result: SearchResultItem, sourceMode: SourceFromUrlMode) => {
+      await onAddSourceFromUrl(result.url, sourceMode, {
         title: result.title,
         snippet: result.snippet ?? undefined,
-        extractor: mode === "fetch" ? selectedExtractor : undefined,
+        extractor: sourceMode === "fetch" ? selectedExtractor : undefined,
       });
     },
     [onAddSourceFromUrl, selectedExtractor],
@@ -354,8 +354,8 @@ function SourcesPanelView({
   }, []);
 
   const extractorModeLabel = useMemo(() => {
-    const mode = extractorsPolicy?.mode ?? "inherit_global";
-    return mode === "custom" ? "自定义" : "遵循全局";
+    const policyMode = extractorsPolicy?.mode ?? "inherit_global";
+    return policyMode === "custom" ? "自定义" : "遵循全局";
   }, [extractorsPolicy?.mode]);
 
   const usableExtractorCount = useMemo(

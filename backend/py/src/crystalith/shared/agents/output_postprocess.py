@@ -355,6 +355,7 @@ def postprocess_output(
     preference: GenerationPreference | None = None,
     apply_structural: bool = True,
 ) -> PostprocessResult:
+    _ = preference
     warnings: list[str] = []
 
     normalized: object = content

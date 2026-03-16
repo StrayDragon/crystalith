@@ -1,4 +1,5 @@
-import MindmapViewer, {
+import {
+  MindmapViewer,
   type MindmapNode,
 } from "../../../features/workspace/domains/outputs/MindmapViewer";
 import { decodeOutputContent } from "../../../features/workspace/shared/outputPayload";

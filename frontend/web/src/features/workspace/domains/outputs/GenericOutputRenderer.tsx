@@ -16,6 +16,25 @@ function stringify(value: unknown): string {
   }
 }
 
+function keyBase(value: unknown): string {
+  try {
+    const json = JSON.stringify(value);
+    return json ?? String(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function createKeyFactory(prefix: string) {
+  const counts = new Map<string, number>();
+  return (value: unknown): string => {
+    const base = `${prefix}:${keyBase(value)}`;
+    const ordinal = counts.get(base) ?? 0;
+    counts.set(base, ordinal + 1);
+    return `${base}:${ordinal}`;
+  };
+}
+
 function JsonFallback({ value }: { value: unknown }) {
   return (
     <pre className="StructuredOutputRaw rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700 whitespace-pre-wrap dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200">
@@ -62,6 +81,7 @@ function coerceText(value: unknown): string {
 function renderCitations(value: unknown): ReactNode {
   if (!Array.isArray(value) || value.length === 0) return null;
 
+  const keyForCitation = createKeyFactory("citation");
   return (
     <div className="mt-1 flex flex-wrap gap-1">
       {value.slice(0, 6).map((item, index) => {
@@ -74,7 +94,7 @@ function renderCitations(value: unknown): ReactNode {
             : `Citation ${index + 1}`;
         return (
           <span
-            key={index}
+            key={keyForCitation(item)}
             className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-700 dark:bg-slate-800 dark:text-slate-200"
           >
             {label}
@@ -121,11 +141,12 @@ function renderFields(
 
         if (hasChildren) {
           if (Array.isArray(fieldValue)) {
+            const keyForChildItem = createKeyFactory(`${field.key}:child`);
             body = (
               <div className="space-y-2">
-                {fieldValue.slice(0, 20).map((item, index) => (
+                {fieldValue.slice(0, 20).map((item) => (
                   <div
-                    key={index}
+                    key={keyForChildItem(item)}
                     className="rounded-lg border border-gray-200 p-2 dark:border-slate-700"
                   >
                     {renderFields(item, field.children, { depth: depth + 1 })}
@@ -174,9 +195,12 @@ function renderFields(
             case "list":
               body = Array.isArray(fieldValue) ? (
                 <ul className="list-disc pl-5 text-sm text-gray-800 dark:text-slate-200">
-                  {fieldValue.slice(0, 50).map((item, index) => (
-                    <li key={index}>{coerceText(item)}</li>
-                  ))}
+                  {(() => {
+                    const keyForListItem = createKeyFactory(`${field.key}:list`);
+                    return fieldValue
+                      .slice(0, 50)
+                      .map((item) => <li key={keyForListItem(item)}>{coerceText(item)}</li>);
+                  })()}
                 </ul>
               ) : (
                 <div className="text-sm text-gray-800 dark:text-slate-200">
@@ -225,11 +249,12 @@ function GenericList({
 
   const ListTag = ordered ? "ol" : "ul";
   const listClassName = ordered ? "list-decimal" : "list-disc";
+  const keyForItem = createKeyFactory("generic-list-item");
 
   return (
     <ListTag className={`${listClassName} space-y-2 pl-6`}>
-      {items.map((item, index) => (
-        <li key={index}>
+      {items.map((item) => (
+        <li key={keyForItem(item)}>
           {fields.length > 0 ? (
             renderFields(item, fields, { depth: 0 })
           ) : (
@@ -254,12 +279,13 @@ function GenericCards({
 }) {
   const items = resolveItems(content, itemsKey);
   if (!items) return <JsonFallback value={content} />;
+  const keyForItem = createKeyFactory("generic-card-item");
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      {items.map((item, index) => (
+      {items.map((item) => (
         <div
-          key={index}
+          key={keyForItem(item)}
           className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900"
         >
           {fields.length > 0 ? (
@@ -287,13 +313,14 @@ function GenericTimeline({
 
   const dateKey = fields.find((field) => field.type === "date")?.key ?? null;
   const remainingFields = dateKey ? fields.filter((field) => field.key !== dateKey) : fields;
+  const keyForItem = createKeyFactory("generic-timeline-item");
 
   return (
     <div className="space-y-3">
-      {items.map((item, index) => {
+      {items.map((item) => {
         const date = dateKey && isRecord(item) ? item[dateKey] : null;
         return (
-          <div key={index} className="flex gap-3">
+          <div key={keyForItem(item)} className="flex gap-3">
             <div className="w-20 flex-shrink-0 text-right">
               <div className="text-xs font-semibold text-gray-500 dark:text-slate-400">
                 {date ? coerceText(date) : ""}
@@ -329,14 +356,15 @@ function GenericSections({
   const remainingFields = headingField
     ? fields.filter((field) => field.key !== headingField.key)
     : fields;
+  const keyForItem = createKeyFactory("generic-section-item");
 
   return (
     <div className="space-y-4">
-      {items.map((item, index) => {
+      {items.map((item) => {
         const heading = headingField && isRecord(item) ? item[headingField.key] : null;
         return (
           <section
-            key={index}
+            key={keyForItem(item)}
             className="rounded-xl border border-gray-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900"
           >
             {heading ? (
@@ -368,6 +396,7 @@ function GenericTable({
   const items = resolveItems(content, itemsKey);
   if (!items) return <JsonFallback value={content} />;
   if (fields.length === 0) return <JsonFallback value={content} />;
+  const keyForItem = createKeyFactory("generic-table-row");
 
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-slate-700">
@@ -385,8 +414,8 @@ function GenericTable({
           </tr>
         </thead>
         <tbody className="bg-white dark:bg-slate-900">
-          {items.map((item, rowIndex) => (
-            <tr key={rowIndex} className="border-t border-gray-100 dark:border-slate-800">
+          {items.map((item) => (
+            <tr key={keyForItem(item)} className="border-t border-gray-100 dark:border-slate-800">
               {fields.map((field) => {
                 const cell = isRecord(item) ? item[field.key] : null;
                 return (
@@ -430,6 +459,7 @@ function GenericTree({
 
     const label = node[labelKey];
     const children = node[childrenKey];
+    const keyForChild = createKeyFactory(`generic-tree:${depth}`);
 
     return (
       <div className="space-y-2">
@@ -439,8 +469,8 @@ function GenericTree({
         {fields.length > 0 ? renderFields(node, fields, { depth }) : null}
         {Array.isArray(children) && children.length > 0 ? (
           <div className="pl-4 border-l border-gray-200 dark:border-slate-700 space-y-3">
-            {children.map((child, index) => (
-              <div key={index}>{renderNode(child, depth + 1)}</div>
+            {children.map((child) => (
+              <div key={keyForChild(child)}>{renderNode(child, depth + 1)}</div>
             ))}
           </div>
         ) : null}

@@ -185,7 +185,7 @@ def enhance_enum_schema(schema: dict[str, Any], context_hint: str = "") -> dict[
     return schema
 
 
-def _enhance_direct_enum_schema(schema: dict[str, Any], context_hint: str = "") -> dict[str, Any]:
+def _enhance_direct_enum_schema(schema: dict[str, Any], _context_hint: str = "") -> dict[str, Any]:
     enum_values = schema.get("enum", [])
     if not enum_values:
         return schema
@@ -248,6 +248,9 @@ def _enhance_anyof_enum_schema(schema: dict[str, Any], context_hint: str = "") -
 
 def generate_context_hint(param_name: str, path: str = "", method: str = "") -> str:
     hints = [param_name]
+
+    if method:
+        hints.append(method.lower())
 
     if path:
         path_parts = [p for p in path.split("/") if p and not p.startswith("{")]

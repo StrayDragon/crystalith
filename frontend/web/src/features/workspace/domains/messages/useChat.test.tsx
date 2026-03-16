@@ -326,6 +326,7 @@ test("stopStreaming rolls back provisional assistant message before done", async
       stream: (async function* streamEvents() {
         yield* [];
         while (!signal.aborted) {
+          // eslint-disable-next-line no-await-in-loop -- Intentional polling in mocked SSE stream until aborted.
           await new Promise((resolve) => setTimeout(resolve, 10));
         }
       })(),

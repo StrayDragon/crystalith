@@ -15,7 +15,8 @@ class _E(enum.Enum):
 
 
 def test_json_default_serializes_supported_types() -> None:
-    assert _json_default(datetime.datetime(2020, 1, 1)) == "2020-01-01T00:00:00"
+    naive_dt = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC).replace(tzinfo=None)
+    assert _json_default(naive_dt) == "2020-01-01T00:00:00"
     assert _json_default(_E.A) == "a"
     with pytest.raises(TypeError):
         _json_default(object())
