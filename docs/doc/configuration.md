@@ -22,9 +22,9 @@ Crystalith’s web search / deep research uses SearXNG. When `search.searxng.hos
 Ways to enable:
 - Config: set `search.searxng.host` **or** `search.searxng.endpoint_candidates` in `config/app.yaml`
 
-Compose options:
-- Prod-like: add `deployments/prod/docker-compose.searxng.yml`
-- Hybrid dev: keep SearXNG enabled in `DEV_DEPS_OPTIONALS` (default)
+Profile options:
+- Include `searxng` in `HYBRID_SERVICES` / `DOCKER_SERVICES` / `FULL_SERVICES` in `.env` (included by default)
+- Or add the compose overlay manually: `deployments/prod/docker-compose.searxng.yml`
 
 ## API authentication (self-host)
 
