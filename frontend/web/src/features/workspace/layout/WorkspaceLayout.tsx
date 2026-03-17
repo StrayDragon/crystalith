@@ -189,9 +189,12 @@ export default function WorkspaceLayout() {
     overlays.openDiagnostics();
   }, [overlays, slidesRecoveryHint]);
 
-  const handleSelectedSourceIdsChange = useCallback((selected: Record<number, boolean>) => {
-    store.getState().setSelectedSources(selected);
-  }, [store]);
+  const handleSelectedSourceIdsChange = useCallback(
+    (selected: Record<number, boolean>) => {
+      store.getState().setSelectedSources(selected);
+    },
+    [store],
+  );
 
   const hasSelectedSources = useMemo(
     () => Object.values(selectedSourceIds_raw).some(Boolean),

@@ -20,14 +20,10 @@ export default function MobilePanelShell({ title, headerExtras, children }: Mobi
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        <ErrorBoundary
-          title={`${title}模块异常`}
-          description={`${title}模块渲染失败，请重试。`}
-        >
+        <ErrorBoundary title={`${title}模块异常`} description={`${title}模块渲染失败，请重试。`}>
           {children}
         </ErrorBoundary>
       </div>
     </section>
   );
 }
-

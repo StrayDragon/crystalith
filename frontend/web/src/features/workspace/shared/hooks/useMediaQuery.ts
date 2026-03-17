@@ -35,4 +35,3 @@ export function useMediaQuery(query: string, options?: { defaultState?: boolean 
 
   return matches;
 }
-
