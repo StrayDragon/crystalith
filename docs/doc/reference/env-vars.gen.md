@@ -39,4 +39,5 @@ SSOT: `backend/py/src/crystalith/shared/env.py`
 These env vars are referenced via `${{ env.* }}` in the default config file.
 
 - `CRYSTALITH_DEFAULT_EMBEDDING_MODEL`
+- `OPENAI_API_KEY`
 - `OPENAI_BASE_URL`
