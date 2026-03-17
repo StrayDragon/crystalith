@@ -194,6 +194,11 @@ check:
 # Run all tests
 test: check test-backend test-frontend
 
+# Run core regression suites only (fast-fail, manual by default)
+test-core:
+    cd backend/py && just test-core
+    cd frontend/web && pnpm run test:core
+
 # Run backend tests only
 test-backend:
     cd backend/py && just test

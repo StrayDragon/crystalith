@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "description": "SSOT for Tier-0 core regression suite (backend just test-core / frontend pnpm run test:core). Edit this file to change the core path list without drifting backend/frontend.",
+  "corePaths": [
+    {
+      "id": "health",
+      "backend": { "pytestPaths": ["tests/web/test_api_smoke.py"] },
+      "frontend": {
+        "vitestFiles": ["src/features/workspace/layout/hooks/useDependencyHealth.test.tsx"]
+      }
+    },
+    {
+      "id": "notebooks",
+      "backend": { "pytestPaths": ["tests/web/test_api_smoke.py"] },
+      "frontend": { "vitestFiles": ["src/features/workspace/domains/notebooks/useNotebooks.test.tsx"] }
+    },
+    {
+      "id": "analysis",
+      "backend": { "pytestPaths": ["tests/web/test_api_smoke.py"] },
+      "frontend": { "vitestFiles": ["src/features/workspace/domains/analysis/useAnalysis.test.ts"] }
+    },
+    {
+      "id": "sources",
+      "backend": { "pytestPaths": ["tests/web/test_api_smoke.py"] },
+      "frontend": { "vitestFiles": ["src/features/workspace/domains/sources/useSources.test.tsx"] }
+    },
+    {
+      "id": "chat",
+      "backend": { "pytestPaths": ["tests/features/messages/test_messages_api.py"] },
+      "frontend": { "vitestFiles": ["src/features/workspace/domains/messages/useChat.test.tsx"] }
+    },
+    {
+      "id": "outputs",
+      "backend": { "pytestPaths": ["tests/web/test_api_smoke.py"] },
+      "frontend": { "vitestFiles": ["src/features/workspace/shared/hooks/useOutputQueue.test.tsx"] }
+    }
+  ],
+  "frontend": {
+    "extraVitestFiles": [
+      "src/app/App.test.tsx",
+      "src/features/workspace/layout/hooks/useWorkspaceReadiness.test.ts"
+    ]
+  }
+}

@@ -14,7 +14,7 @@ test: packages-test lint typecheck check-imports config-schema-check test-mock-r
     PYTHONHASHSEED=0 TZ=UTC uv run pytest tests/ -v -m "not experimental"
 
 test-core: test-mock-report-check
-    PYTHONHASHSEED=0 TZ=UTC uv run pytest tests/ -v --no-cov -m core
+    PYTHONHASHSEED=0 TZ=UTC uv run python scripts/core_suite.py run
 
 test-all: test-mock-report-check
     PYTHONHASHSEED=0 TZ=UTC uv run pytest tests/ -v --no-cov

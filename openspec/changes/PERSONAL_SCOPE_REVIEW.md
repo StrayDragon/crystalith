@@ -31,7 +31,6 @@ Crystalith 的主旨调整为:
 ### A. 多用户、门户与协作流程
 
 - `c07-identity-and-workspace-access`
-- `c08-multiplayer-review-workspace`
 - `c09-external-share-portals`
 - `c14-approval-flows-and-audit-trails`
 - `c56-chatops-notifications-and-interactive-approvals`
