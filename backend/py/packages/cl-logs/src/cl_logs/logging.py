@@ -247,7 +247,7 @@ def create_third_party_levels(package_levels: dict[str, str]) -> dict[str, int]:
     for package, level_str in package_levels.items():
         try:
             result[package] = getattr(logging, level_str.upper())
-        except AttributeError:  # noqa: PERF203
+        except AttributeError:
             result[package] = logging.INFO  # 默认级别
 
     return result

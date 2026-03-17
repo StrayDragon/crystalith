@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import re
 import asyncio
+import re
 from collections.abc import Mapping, Sequence
 
 from crystalith.shared.ai.interfaces import ChatProvider
@@ -23,9 +23,7 @@ def _is_contradiction(text: str) -> bool:
         return True
     if normalized.startswith("no") or normalized == "false":
         return False
-    if "contradict" in normalized and "not" not in normalized:
-        return True
-    return False
+    return "contradict" in normalized and "not" not in normalized
 
 
 def _truncate(text: str, limit: int = 800) -> str:

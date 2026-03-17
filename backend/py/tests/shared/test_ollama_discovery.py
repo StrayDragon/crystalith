@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from crystalith.shared.config import ModelConfig
-from tests._support.settings import make_settings
 from crystalith.shared.config.ollama_discovery import (
     _is_embedding_model,
     _model_display_name,
@@ -12,6 +11,7 @@ from crystalith.shared.config.ollama_discovery import (
     probe_ollama_host,
     resolve_reachable_ollama_host,
 )
+from tests._support.settings import make_settings
 
 
 def test_is_embedding_model_heuristics() -> None:
@@ -79,7 +79,7 @@ def test_auto_discover_ollama_uses_optional_service_candidates(monkeypatch) -> N
 
     seen_hosts: list[str] = []
 
-    def stub_discover(host: str, *, timeout: float = 5.0):  # noqa: ANN001
+    def stub_discover(host: str, *, timeout: float = 5.0):
         seen_hosts.append(host)
         return [{"name": "bge-m3:latest", "details": {"family": "bge"}}]
 
@@ -147,16 +147,16 @@ def test_probe_ollama_host_success(monkeypatch) -> None:
             return {"models": [{"name": "a"}, {"name": "b"}]}
 
     class _Client:
-        def __init__(self, timeout: float) -> None:  # noqa: ARG002
+        def __init__(self, timeout: float) -> None:
             pass
 
         def __enter__(self) -> _Client:
             return self
 
-        def __exit__(self, exc_type, exc, tb) -> bool:  # noqa: ANN001, ARG002
+        def __exit__(self, exc_type, exc, tb) -> bool:
             return False
 
-        def get(self, url: str) -> _Response:  # noqa: ARG002
+        def get(self, url: str) -> _Response:
             return _Response()
 
     # Mock reason: avoid network dependency while validating host probe behavior.
@@ -168,7 +168,7 @@ def test_probe_ollama_host_success(monkeypatch) -> None:
 
 
 def test_resolve_reachable_ollama_host_falls_back_to_localhost(monkeypatch) -> None:
-    def stub_probe(host: str, *, timeout: float = 3.0):  # noqa: ANN001, ARG001
+    def stub_probe(host: str, *, timeout: float = 3.0):
         if host == "http://localhost:11434":
             return True, None, 2
         return False, "unreachable", None

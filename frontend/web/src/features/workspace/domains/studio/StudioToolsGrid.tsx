@@ -165,7 +165,6 @@ export default function StudioToolsGrid({
     handleToolConfigClose,
     onGenerateOutput,
     quantityOptions,
-    tools,
   ]);
 
   if (toolsLoading) {
@@ -222,9 +221,7 @@ export default function StudioToolsGrid({
                 unmount: { opacity: 0, scale: 0.95 },
               }}
             >
-              <button
-                type="button"
-                disabled={isDisabled}
+              <div
                 className={`group flex items-center gap-2 px-2 py-1.5 min-h-[34px] w-full rounded-lg border text-left font-semibold text-[11px] transition-all hover:shadow-sm hover:-translate-y-[1px] ${
                   isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
                 }`}
@@ -233,47 +230,49 @@ export default function StudioToolsGrid({
                   borderColor: colors.border,
                   color: colors.text,
                 }}
-                onClick={() => {
-                  if (isDisabled) return;
-                  if (isSlidesTool) {
-                    onOpenSlides?.({ mode: "config" });
-                    return;
-                  }
-                  onGenerateOutput(tool.outputType);
-                }}
               >
-                <div
-                  className="flex items-center justify-center w-5 h-5 rounded border flex-shrink-0"
-                  style={{
-                    backgroundColor: colors.icon,
-                    borderColor: colors.border,
+                <button
+                  type="button"
+                  disabled={isDisabled}
+                  className="flex flex-1 min-w-0 items-center gap-2 text-left bg-transparent"
+                  onClick={() => {
+                    if (isDisabled) return;
+                    if (isSlidesTool) {
+                      onOpenSlides?.({ mode: "config" });
+                      return;
+                    }
+                    onGenerateOutput(tool.outputType);
                   }}
                 >
-                  {getToolIcon(tool.outputType)}
-                </div>
-                <span className="leading-tight flex-1 min-w-0">{tool.label}</span>
-                {tool.badge && (
-                  <span className="h-3 px-1 text-[8px] bg-gray-900 text-white rounded leading-none flex items-center flex-shrink-0">
-                    {tool.badge}
-                  </span>
-                )}
-                <span
-                  role="button"
-                  tabIndex={-1}
+                  <div
+                    className="flex items-center justify-center w-5 h-5 rounded border flex-shrink-0"
+                    style={{
+                      backgroundColor: colors.icon,
+                      borderColor: colors.border,
+                    }}
+                  >
+                    {getToolIcon(tool.outputType)}
+                  </div>
+                  <span className="leading-tight flex-1 min-w-0">{tool.label}</span>
+                  {tool.badge && (
+                    <span className="h-3 px-1 text-[8px] bg-gray-900 text-white rounded leading-none flex items-center flex-shrink-0">
+                      {tool.badge}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  disabled={isDisabled}
                   className="flex-shrink-0 h-4 w-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity"
                   onClick={(e) => {
-                    e.stopPropagation();
                     e.preventDefault();
-                    handleToolConfigOpen(
-                      e as unknown as React.MouseEvent<HTMLElement>,
-                      tool.outputType,
-                    );
+                    handleToolConfigOpen(e, tool.outputType);
                   }}
                   aria-label="自定义工具参数"
                 >
                   <EditIcon sx={{ fontSize: 10 }} />
-                </span>
-              </button>
+                </button>
+              </div>
             </Tooltip>
           );
         })}

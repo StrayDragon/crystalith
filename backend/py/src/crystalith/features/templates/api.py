@@ -13,7 +13,6 @@ from .schemas import (
     TemplateUpdate,
 )
 
-
 router = APIRouter(prefix="/v1", tags=["templates"])
 
 

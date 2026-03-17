@@ -16,15 +16,15 @@ class _SpyCache:
         self.delete_calls: list[str] = []
         self.invalidate_calls: list[str] = []
 
-    async def get(self, key: str):  # noqa: ANN001
+    async def get(self, key: str):
         self.get_calls.append(key)
         return self.data.get(key)
 
-    async def set(self, key: str, value, *, ttl=None):  # noqa: ANN001
+    async def set(self, key: str, value, *, ttl=None):
         self.set_calls.append(key)
         self.data[key] = value
 
-    async def incr(self, key: str, amount: int = 1, *, ttl=None) -> int:  # noqa: ANN001
+    async def incr(self, key: str, amount: int = 1, *, ttl=None) -> int:
         self.incr_calls.append(key)
         current = 0
         value = self.data.get(key, 0)

@@ -1,4 +1,3 @@
-import type { MouseEvent as ReactMouseEvent } from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -84,14 +83,6 @@ export default function ExtractorPolicyDialog({
     toast.success("已复制到剪贴板");
   }, []);
 
-  const handleBackdropClick = useCallback(
-    (event: ReactMouseEvent<HTMLDivElement>) => {
-      if (event.target !== event.currentTarget) return;
-      onClose();
-    },
-    [onClose],
-  );
-
   const canMutate = Boolean(isConnected && onPatchPolicy && !isLoading && !isSaving);
 
   const handleSetMode = useCallback(
@@ -150,14 +141,19 @@ export default function ExtractorPolicyDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 flex items-center justify-center"
+      className="fixed inset-0 relative flex items-center justify-center"
       style={modalStyle}
       role="dialog"
       aria-modal="true"
       aria-label="提取器设置"
-      onClick={handleBackdropClick}
     >
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+        aria-label="关闭提取器设置"
+        tabIndex={-1}
+      />
 
       <div
         ref={modalRef}

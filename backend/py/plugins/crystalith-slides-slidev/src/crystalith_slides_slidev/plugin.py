@@ -77,10 +77,10 @@ class SlidevSlidesWorkflowPlugin:
         ),
     )
 
-    async def generate_outline(self, *args, **kwargs):  # noqa: ANN002, ANN003
+    async def generate_outline(self, *args, **kwargs):
         return await generate_slides_outline(*args, **kwargs)
 
-    async def generate_markdown(self, *args, **kwargs):  # noqa: ANN002, ANN003
+    async def generate_markdown(self, *args, **kwargs):
         return await generate_slides_markdown(*args, **kwargs)
 
 

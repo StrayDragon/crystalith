@@ -3,8 +3,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from crystalith.shared.json_types import JsonDict
 from crystalith.shared.db import Message
+from crystalith.shared.json_types import JsonDict
 
 
 async def create_message(

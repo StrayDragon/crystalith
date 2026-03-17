@@ -140,7 +140,7 @@ export function useSources() {
 
   useEffect(() => {
     store.getState().setLoading("sources", isLoading);
-  }, [isLoading]);
+  }, [isLoading, store]);
 
   useEffect(() => {
     if (!activeNotebookId) {
@@ -160,11 +160,11 @@ export function useSources() {
       s.setError("sources", "");
       s.setSources(data.map(normalizeSource));
     }
-  }, [data, error, isConnected, activeNotebookId]);
+  }, [data, error, isConnected, activeNotebookId, store]);
 
   useEffect(() => {
     store.getState().setHoveredCitation(null);
-  }, [citations]);
+  }, [citations, store]);
 
   useEffect(() => {
     setSearchState("idle");
@@ -186,20 +186,29 @@ export function useSources() {
       store.getState().setJumpToCitation(null);
     }, 1800);
     return () => window.clearTimeout(timer);
-  }, [jumpToCitationChunkId]);
+  }, [jumpToCitationChunkId, store]);
 
-  const setHoveredCitationChunkId = useCallback((chunkId: number | null) => {
-    store.getState().setHoveredCitation(chunkId);
-  }, []);
+  const setHoveredCitationChunkId = useCallback(
+    (chunkId: number | null) => {
+      store.getState().setHoveredCitation(chunkId);
+    },
+    [store],
+  );
 
-  const setHoveredMessageChunkIds = useCallback((chunkIds: number[] | null) => {
-    const normalized = chunkIds?.filter((chunkId) => Number.isFinite(chunkId)) ?? [];
-    store.getState().setHoveredMessageChunks(normalized);
-  }, []);
+  const setHoveredMessageChunkIds = useCallback(
+    (chunkIds: number[] | null) => {
+      const normalized = chunkIds?.filter((chunkId) => Number.isFinite(chunkId)) ?? [];
+      store.getState().setHoveredMessageChunks(normalized);
+    },
+    [store],
+  );
 
-  const setJumpToCitationChunkId = useCallback((chunkId: number | null) => {
-    store.getState().setJumpToCitation(chunkId);
-  }, []);
+  const setJumpToCitationChunkId = useCallback(
+    (chunkId: number | null) => {
+      store.getState().setJumpToCitation(chunkId);
+    },
+    [store],
+  );
 
   const highlightedChunkIds = useMemo(() => {
     const highlighted = new Set<number>();
@@ -300,7 +309,7 @@ export function useSources() {
                   ),
                 );
                 continue;
-              } catch (retryError) {
+              } catch {
                 failedFiles.push(file);
                 setUploadQueue((prev) =>
                   prev.map((item) =>
@@ -339,7 +348,7 @@ export function useSources() {
         store.getState().setUploadState("idle");
       }
     },
-    [activeNotebookId, isConnected, mutate],
+    [activeNotebookId, isConnected, mutate, store],
   );
 
   const retryUpload = useCallback(async () => {
@@ -354,7 +363,7 @@ export function useSources() {
   const retrySources = useCallback(async () => {
     store.getState().setError("sources", "");
     await mutate();
-  }, [mutate]);
+  }, [mutate, store]);
 
   const handleSearch = useCallback(
     async ({ query, engine, mode }: { query: string; engine: string; mode: string }) => {
@@ -421,7 +430,7 @@ export function useSources() {
 
         setSearchResults(results);
         setSearchNotice(notice);
-      } catch (error) {
+      } catch {
         const errorNotice = "搜索失败，请稍后重试。";
         setSearchQueue((prev) =>
           prev.map((item) =>
@@ -477,7 +486,7 @@ export function useSources() {
         await mutate();
         toast.success("来源删除成功");
         return true;
-      } catch (error) {
+      } catch {
         toast.error("删除失败，请稍后重试。");
         return false;
       } finally {
@@ -507,7 +516,7 @@ export function useSources() {
         await mutate();
         toast.success("来源删除成功");
         return true;
-      } catch (error) {
+      } catch {
         toast.error("删除失败，请稍后重试。");
         return false;
       } finally {
@@ -544,7 +553,7 @@ export function useSources() {
           toast.success(`已重新嵌入 ${result.reembedded_count} 个来源`);
         }
         return result.failed_count === 0;
-      } catch (error) {
+      } catch {
         toast.error("批量重新嵌入失败，请稍后重试。");
         return false;
       } finally {
@@ -569,7 +578,7 @@ export function useSources() {
         await mutate();
         toast.success("标签创建成功");
         return tag;
-      } catch (error) {
+      } catch {
         toast.error("创建标签失败");
         return null;
       } finally {
@@ -594,7 +603,7 @@ export function useSources() {
         await mutate();
         toast.success("标签已更新");
         return tag;
-      } catch (error) {
+      } catch {
         toast.error("更新标签失败");
         return null;
       } finally {
@@ -621,7 +630,7 @@ export function useSources() {
         }
         toast.success("标签已删除");
         return true;
-      } catch (error) {
+      } catch {
         toast.error("删除标签失败");
         return false;
       } finally {
@@ -646,7 +655,7 @@ export function useSources() {
         await mutate();
         toast.success("标签已分配");
         return true;
-      } catch (error) {
+      } catch {
         toast.error("标签分配失败");
         return false;
       } finally {
@@ -671,7 +680,7 @@ export function useSources() {
         await mutate();
         toast.success("标签已移除");
         return true;
-      } catch (error) {
+      } catch {
         toast.error("移除标签失败");
         return false;
       } finally {

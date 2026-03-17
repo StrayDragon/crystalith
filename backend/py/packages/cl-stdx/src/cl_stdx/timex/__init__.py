@@ -39,15 +39,15 @@ def str_to_datetime(d: datetime.datetime | datetime.date | str | None) -> dateti
     if isinstance(d, datetime.date):
         return datetime.datetime(d.year, d.month, d.day)
     try:
-        return datetime.datetime.strptime(d, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
+        return datetime.datetime.strptime(d, "%Y-%m-%d %H:%M:%S")
     except ValueError:
         try:
-            return datetime.datetime.strptime(d, "%Y-%m-%d %H:%M:%S.%f")  # noqa: DTZ007
+            return datetime.datetime.strptime(d, "%Y-%m-%d %H:%M:%S.%f")
         except ValueError:
             try:
-                return datetime.datetime.strptime(d, "%Y-%m-%d")  # noqa: DTZ007
+                return datetime.datetime.strptime(d, "%Y-%m-%d")
             except ValueError:
-                return datetime.datetime.strptime(d, "%Y-%m-%d %H:%M")  # noqa: DTZ007
+                return datetime.datetime.strptime(d, "%Y-%m-%d %H:%M")
 
 
 TZ_SHANGHAI = ZoneInfo("Asia/Shanghai")

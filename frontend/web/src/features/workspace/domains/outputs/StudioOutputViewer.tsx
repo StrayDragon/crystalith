@@ -104,20 +104,25 @@ export default function StudioOutputViewer({
 
   return (
     <div
-      className={`fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm ${isFullscreen ? "p-0" : "p-4 sm:p-6"}`}
+      className={`fixed inset-0 relative flex items-center justify-center bg-black/40 backdrop-blur-sm ${isFullscreen ? "p-0" : "p-4 sm:p-6"}`}
       style={modalStyle}
       role="dialog"
       aria-modal="true"
       aria-label="Studio 输出详情"
-      onClick={onClose}
     >
+      <button
+        type="button"
+        className="absolute inset-0"
+        onClick={onClose}
+        aria-label="关闭"
+        tabIndex={-1}
+      />
       <div
         className={`flex flex-col overflow-hidden bg-white shadow-2xl transition-all dark:bg-slate-900 ${
           isFullscreen
             ? "h-full w-full rounded-none"
             : "h-[85vh] w-[90vw] max-w-6xl rounded-2xl border border-gray-300 dark:border-slate-700"
         }`}
-        onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 sm:px-6 dark:border-slate-700">
           <div className="flex flex-col min-w-0">

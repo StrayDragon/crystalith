@@ -178,7 +178,7 @@ async def test_import_scope_skips_unsupported_files_without_creating_sources(cli
     from crystalith.shared.parsers import UnsupportedDocumentError
     from crystalith.shared.parsers.factory import ParserFactory
 
-    def _unsupported_parser_factory(  # noqa: ANN001
+    def _unsupported_parser_factory(
         cls,
         *,
         filename,

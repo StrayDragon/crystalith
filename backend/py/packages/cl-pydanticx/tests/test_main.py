@@ -3,8 +3,6 @@ from __future__ import annotations
 import json
 
 import pytest
-from pydantic import BaseModel
-
 from cl_pydanticx import (
     BeforeValidators,
     DataJson,
@@ -12,6 +10,7 @@ from cl_pydanticx import (
     empty_str_in_json_to_none,
     json_to_bytes_serializer,
 )
+from pydantic import BaseModel
 
 
 class _DataJsonPayload(BaseModel):
@@ -29,7 +28,7 @@ class TestJsonToBytesSerializer:
     def test_raise_for_unsupported_type(self) -> None:
         """传入非 Pydantic 模型时应抛出 ``ValueError``."""
 
-        with pytest.raises(ValueError, match="not support type"):  # noqa: PT011
+        with pytest.raises(ValueError, match="not support type"):
             _ = json_to_bytes_serializer({"foo": "bar"})
 
 

@@ -4,9 +4,10 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..qa.presets import QAPreset, get_preset as get_builtin_preset, list_preset_ids
 from crystalith.shared.db import PromptPreset
 
+from ..qa.presets import QAPreset, list_preset_ids
+from ..qa.presets import get_preset as get_builtin_preset
 from . import repo
 
 

@@ -64,7 +64,15 @@ if (targets.length === 0) {
 
 const result = spawnSync(
   "oxlint",
-  ["--config", ".oxlintrc.json", "--tsconfig", "tsconfig.json", ...targets],
+  [
+    "--deny-warnings",
+    "--max-warnings=0",
+    "--config",
+    ".oxlintrc.json",
+    "--tsconfig",
+    "tsconfig.json",
+    ...targets,
+  ],
   {
     cwd: frontendDir,
     stdio: "inherit",

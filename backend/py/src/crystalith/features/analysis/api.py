@@ -6,14 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.interfaces import ChatProvider
 from crystalith.shared.db import Chunk, Notebook, Source
+from crystalith.shared.deps import get_ai_provider, get_db_session, get_vector_store
 from crystalith.shared.vector_storage import VectorStore
 
 from .clustering import cluster_topics
 from .contradiction import detect_contradictions
 from .correlation import detect_relations
 from .types import AnalysisResult
-from crystalith.shared.deps import get_ai_provider, get_db_session, get_vector_store
-
 
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/analysis", tags=["analysis"])
 

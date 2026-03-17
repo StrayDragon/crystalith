@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from fastapi import Depends
 from cl_fastapix import FastAPIX
+from fastapi import Depends
 
 from crystalith.features.analysis.api import router as analysis_router
+from crystalith.features.citations.api import router as citations_router
 from crystalith.features.commands.api import router as commands_router
 from crystalith.features.messages.api import router as messages_router
 from crystalith.features.models.api import router as models_router
@@ -14,15 +15,13 @@ from crystalith.features.qa.api import router as qa_router
 from crystalith.features.refine.api import router as refine_router
 from crystalith.features.research.api import router as research_router
 from crystalith.features.sessions.api import router as sessions_router
-from crystalith.features.sources.api import router as sources_router
 from crystalith.features.source_connectors.api import router as source_connectors_router
-from crystalith.features.citations.api import router as citations_router
+from crystalith.features.sources.api import router as sources_router
+from crystalith.features.studio.api import router as slides_router
 from crystalith.features.tasks.api import router as tasks_router
 from crystalith.features.templates.api import router as templates_router
 from crystalith.features.ui.api import router as ui_router
 from crystalith.features.workspace.api import router as workspace_router
-from crystalith.features.studio.api import router as slides_router
-
 from crystalith.web.auth import require_api_key
 
 

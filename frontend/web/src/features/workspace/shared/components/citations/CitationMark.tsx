@@ -96,8 +96,6 @@ export default function CitationMark({ index, citation, onHover, onJump }: Citat
       <button
         ref={buttonRef}
         type="button"
-        role="button"
-        tabIndex={0}
         className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full border border-gray-200 bg-white text-[10px] font-semibold text-gray-500 transition hover:text-gray-800 cursor-pointer"
         onMouseEnter={handleOpen}
         onMouseLeave={handleClose}

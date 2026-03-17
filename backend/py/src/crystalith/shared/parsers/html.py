@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 from bs4 import BeautifulSoup
 
 from .interfaces import ParserError
@@ -8,9 +10,9 @@ from .utils import chunk_paragraphs
 
 
 class HTMLParser:
-    parser_type = "html"
-    supported_mime_types = {"text/html"}
-    supported_extensions = {".html", ".htm"}
+    parser_type: ClassVar[str] = "html"
+    supported_mime_types: ClassVar[set[str]] = {"text/html"}
+    supported_extensions: ClassVar[set[str]] = {".html", ".htm"}
     page_count: int | None = None
 
     def parse(self, content: bytes) -> list[Chunk]:

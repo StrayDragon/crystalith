@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 from crystalith.shared.plugins.compliance import check_plugin
 from crystalith.shared.plugins.interfaces import PLUGIN_API_VERSION
 
@@ -23,7 +25,7 @@ def test_check_plugin_validates_ai_provider_callables() -> None:
         api_version = PLUGIN_API_VERSION
         create_chat_provider = 123
 
-        def create_embedding_provider(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+        def create_embedding_provider(self, *_args, **_kwargs):
             raise AssertionError("should not be called")
 
     issues = check_plugin("ai", Plugin())
@@ -35,7 +37,7 @@ def test_check_plugin_validates_ai_provider_embedding_callable() -> None:
         api_version = PLUGIN_API_VERSION
         create_embedding_provider = 123
 
-        def create_chat_provider(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+        def create_chat_provider(self, *_args, **_kwargs):
             raise AssertionError("should not be called")
 
     issues = check_plugin("ai", Plugin())
@@ -46,8 +48,8 @@ def test_check_plugin_validates_parser_plugin_fields() -> None:
     class Plugin:
         api_version = PLUGIN_API_VERSION
         parser_type = ""
-        supported_mime_types = []
-        supported_extensions = []
+        supported_mime_types: ClassVar[list[object]] = []
+        supported_extensions: ClassVar[list[object]] = []
         create_parser = 123
 
     issues = check_plugin("parser", Plugin())

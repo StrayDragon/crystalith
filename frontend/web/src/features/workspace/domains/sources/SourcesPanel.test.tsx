@@ -56,16 +56,13 @@ vi.mock("../research/ResearchCapsule", () => ({
 }));
 
 let toastWarningSpy: ReturnType<typeof vi.spyOn>;
-let toastErrorSpy: ReturnType<typeof vi.spyOn>;
-let toastSuccessSpy: ReturnType<typeof vi.spyOn>;
-let toastInfoSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   // Mock reason: suppress visual toast side effects while asserting notification calls.
   toastWarningSpy = vi.spyOn(toast, "warning").mockImplementation(() => {});
-  toastErrorSpy = vi.spyOn(toast, "error").mockImplementation(() => {});
-  toastSuccessSpy = vi.spyOn(toast, "success").mockImplementation(() => {});
-  toastInfoSpy = vi.spyOn(toast, "info").mockImplementation(() => {});
+  vi.spyOn(toast, "error").mockImplementation(() => {});
+  vi.spyOn(toast, "success").mockImplementation(() => {});
+  vi.spyOn(toast, "info").mockImplementation(() => {});
 
   vi.clearAllMocks();
   window.localStorage.removeItem("crystalith_search_mode");

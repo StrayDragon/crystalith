@@ -3,12 +3,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..qa.presets import get_preset as get_builtin_preset, list_preset_ids
 from crystalith.shared.deps import get_db_session
 
+from ..qa.presets import get_preset as get_builtin_preset
+from ..qa.presets import list_preset_ids
 from . import repo, service
 from .schemas import PromptPresetCreate, PromptPresetRead, PromptPresetUpdate
-
 
 router = APIRouter(prefix="/v1", tags=["prompt-presets"])
 

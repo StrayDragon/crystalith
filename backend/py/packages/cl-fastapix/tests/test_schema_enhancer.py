@@ -2,9 +2,6 @@
 Schema增强器纯函数测试
 """
 
-from cl_stdx.enumx import MetaInfoIntEnum, MetaInfoStrEnum, XMetaInfo
-from pydantic import BaseModel, Field
-
 from cl_fastapix import build_enum_schema, build_nullable_enum_schema
 from cl_fastapix.schema_enhancer import (
     enhance_component_schemas,
@@ -17,6 +14,8 @@ from cl_fastapix.schema_enhancer import (
     generate_enhanced_description,
     should_enhance_parameter_description,
 )
+from cl_stdx.enumx import MetaInfoIntEnum, MetaInfoStrEnum, XMetaInfo
+from pydantic import BaseModel, Field
 
 
 # 测试用枚举类

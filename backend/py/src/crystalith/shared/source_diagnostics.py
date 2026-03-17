@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import datetime
 from dataclasses import dataclass
+from typing import NoReturn
 
 from fastapi import HTTPException
-from typing import NoReturn
 
 from crystalith.shared.db import Source
 from crystalith.shared.types import SourceStatus
-
 
 SOURCE_ERROR_PARSER_FAILED = "PARSER_FAILED"
 SOURCE_ERROR_EMBEDDING_FAILED = "EMBEDDING_FAILED"

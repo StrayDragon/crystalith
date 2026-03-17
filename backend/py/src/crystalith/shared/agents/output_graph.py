@@ -6,11 +6,10 @@ from dataclasses import dataclass, field
 from time import perf_counter
 from typing import cast
 
+from cl_logs.logging import get_logger
 from pydantic_ai import Agent
 from pydantic_graph import BaseNode, End, Graph, GraphRunContext
 from sqlalchemy import select
-
-from cl_logs.logging import get_logger
 
 from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.generation_preference import GenerationPreference, tuning_for_request
@@ -19,8 +18,6 @@ from crystalith.shared.agents.models import (
     build_chat_model_from_model_id,
     extract_effective_model_settings_for_log,
 )
-from crystalith.shared.env import CRYSTALITH_OUTPUT_REPAIR, OUTPUT_REPAIR_DEFAULT, env_bool
-from crystalith.shared.observability import classify_error_kind
 from crystalith.shared.agents.output_postprocess import needs_repair, postprocess_output
 from crystalith.shared.agents.output_schemas import (
     BulletsOutput,
@@ -28,11 +25,12 @@ from crystalith.shared.agents.output_schemas import (
     StructuredOutput,
 )
 from crystalith.shared.db import Chunk, Output, Source
-from crystalith.shared.types import OutputType
+from crystalith.shared.env import CRYSTALITH_OUTPUT_REPAIR, OUTPUT_REPAIR_DEFAULT, env_bool
+from crystalith.shared.observability import classify_error_kind
 from crystalith.shared.retrieval import retrieve_context
 from crystalith.shared.schemas.citations import Citation
+from crystalith.shared.types import OutputType
 from crystalith.shared.utils import extract_page_number, extract_paragraph_index
-
 
 log = get_logger(__name__)
 
@@ -568,7 +566,7 @@ class GenerateOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
             )
         except asyncio.CancelledError:
             raise
-        except Exception as error:  # noqa: BLE001 - fallback for output generation
+        except Exception as error:
             generate_ms = int((perf_counter() - generation_started) * 1000)
             log.warning(
                 "output generation failed, using fallback",
@@ -662,7 +660,7 @@ class PostprocessOutput(BaseNode[OutputGraphState, StudioDeps, Output]):
                 repair_succeeded = True
             except asyncio.CancelledError:
                 raise
-            except Exception as error:  # noqa: BLE001 - best-effort repair pass
+            except Exception as error:
                 repair_ms = int((perf_counter() - repair_started) * 1000)
                 log.warning(
                     "output repair failed",

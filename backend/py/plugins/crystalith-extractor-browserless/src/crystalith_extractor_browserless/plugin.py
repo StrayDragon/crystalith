@@ -13,7 +13,7 @@ class BrowserlessWebExtractorPlugin:
     requires_api_key = False
     requires_service = True
 
-    def create_extractor(self, settings, *, url_fetch_security=None):  # noqa: ANN001, ARG002
+    def create_extractor(self, settings, *, url_fetch_security=None):
         bl_settings = settings.source_ingestion.web_extraction.browserless
         return BrowserlessExtractor(
             endpoint=bl_settings.endpoint,

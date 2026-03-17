@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import datetime
 import enum
-from fnmatch import fnmatch
 from collections.abc import AsyncIterator
+from fnmatch import fnmatch
 
 import pytest
 
@@ -34,7 +34,7 @@ class _StubRedis:
     async def mget(self, keys: list[str]) -> list[str | None]:
         return [self.store.get(key) for key in keys]
 
-    async def set(self, key: str, value: str, *, ex: int | None = None) -> None:  # noqa: ARG002
+    async def set(self, key: str, value: str, *, ex: int | None = None) -> None:
         self.store[key] = value
 
     async def incrby(self, key: str, amount: int) -> int:
@@ -54,14 +54,14 @@ class _StubRedis:
         self.expires.pop(key, None)
         return key in self.store
 
-    def pipeline(self, *, transaction: bool = False):  # noqa: ANN001, ARG002
+    def pipeline(self, *, transaction: bool = False):
         stub = self
 
         class _Pipe:
             def __init__(self) -> None:
                 self._ops: list[tuple[str, str]] = []
 
-            def set(self, key: str, value: str, *, ex: int | None = None):  # noqa: ANN001, ARG002
+            def set(self, key: str, value: str, *, ex: int | None = None):
                 self._ops.append((key, value))
                 return self
 
@@ -94,7 +94,7 @@ async def test_redis_cache_roundtrip_and_invalidate_pattern(monkeypatch) -> None
 
     class _RedisModule:
         @staticmethod
-        def from_url(_url: str, *, decode_responses: bool):  # noqa: ANN001, ARG004
+        def from_url(_url: str, *, decode_responses: bool):
             return stub
 
     # Mock reason: avoid external Redis dependency while verifying cache contract behavior.
@@ -127,7 +127,7 @@ async def test_redis_cache_incr_roundtrip(monkeypatch) -> None:
 
     class _RedisModule:
         @staticmethod
-        def from_url(_url: str, *, decode_responses: bool):  # noqa: ANN001, ARG004
+        def from_url(_url: str, *, decode_responses: bool):
             return stub
 
     # Mock reason: avoid external Redis dependency while verifying increment semantics.

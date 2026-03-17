@@ -37,7 +37,13 @@ async def monitor_thread_limiter() -> NoReturn:
     while True:
         if threads_in_use != limiter.borrowed_tokens and limiter.borrowed_tokens > 0:
             _LOGGER.warning(
-                f"[fastapix.x.debugging] 监测到有 {limiter.borrowed_tokens} 个线程在使用, 请检查是否有同步写法的Depends或Security, 请使用 cl_fastapix.vendor.fastapi_dependency.* 避免低效, 如果误判请忽略! 当前扫描间隔: {scan_duration} 秒, 注意少于该时间可能扫不到需要降低该值查看!"
+                "[fastapix.x.debugging] 监测到有 %s 个线程在使用, "
+                "请检查是否有同步写法的Depends或Security, "
+                "请使用 cl_fastapix.vendor.fastapi_dependency.* 避免低效, "
+                "如果误判请忽略! 当前扫描间隔: %s 秒, "
+                "注意少于该时间可能扫不到需要降低该值查看!",
+                limiter.borrowed_tokens,
+                scan_duration,
             )
             threads_in_use = limiter.borrowed_tokens
         await anyio.sleep(scan_duration)

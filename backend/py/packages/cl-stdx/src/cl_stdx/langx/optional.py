@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Generic, TypeVar
-
-from typing_extensions import override
+from typing import override
 
 __all__ = ["OptionT"]
 
-T = TypeVar("T")
 
-
-class OptionT(Generic[T]):
+class OptionT[T]:
     """高性能可选值包装器 (类似 Rust 的 ``Option[T]``)."""
 
     __slots__ = ("_value",)

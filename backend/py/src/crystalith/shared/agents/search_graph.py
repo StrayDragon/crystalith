@@ -3,16 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TypedDict, cast
 
+from cl_logs.logging import get_logger
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent
 from pydantic_graph import BaseNode, End, Graph, GraphRunContext
 
-from cl_logs.logging import get_logger
-
 from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.models import build_chat_model, extract_effective_model_settings_for_log
 from crystalith.shared.search import SearXNGSearcher
-
 
 log = get_logger(__name__)
 
@@ -82,7 +80,7 @@ class GenerateSummary(BaseNode[SearchGraphState, StudioDeps, SearchGraphOutput])
         try:
             result = await agent.run(user_prompt, deps=deps)
             state.message = f"{result.output.summary} {result.output.next_step}".strip()
-        except Exception as error:  # noqa: BLE001 - fallback to empty message
+        except Exception as error:
             log.warning("search summary failed", error=type(error).__name__, **model_settings_log)
             state.message = ""
 

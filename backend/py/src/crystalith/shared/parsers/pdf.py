@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+from typing import ClassVar
 
 from pypdf import PdfReader
 
@@ -10,9 +11,9 @@ from .utils import chunk_paragraphs
 
 
 class PDFParser:
-    parser_type = "pdf"
-    supported_mime_types = {"application/pdf"}
-    supported_extensions = {".pdf"}
+    parser_type: ClassVar[str] = "pdf"
+    supported_mime_types: ClassVar[set[str]] = {"application/pdf"}
+    supported_extensions: ClassVar[set[str]] = {".pdf"}
 
     def __init__(self) -> None:
         self.page_count: int | None = None

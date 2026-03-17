@@ -15,7 +15,6 @@ import {
   Warning as WarningIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
-  Circle as CircleIcon,
 } from "@mui/icons-material";
 
 import type { AnalysisResult, Topic, Relation } from "../../../../api/generated";

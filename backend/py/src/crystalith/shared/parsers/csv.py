@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import csv
 import io
+from typing import ClassVar
+
+from crystalith.shared.json_types import JsonDict
 
 from .interfaces import ParserError
 from .types import Chunk
-from crystalith.shared.json_types import JsonDict
 
 
 class CSVParser:
-    parser_type = "csv"
-    supported_mime_types = {"text/csv"}
-    supported_extensions = {".csv"}
+    parser_type: ClassVar[str] = "csv"
+    supported_mime_types: ClassVar[set[str]] = {"text/csv"}
+    supported_extensions: ClassVar[set[str]] = {".csv"}
     page_count: int | None = None
 
     max_rows_per_chunk = 50
@@ -80,6 +82,5 @@ def _to_markdown_table(header: list[str], rows: list[list[str]], *, max_cell_cha
         "| " + " | ".join(header_cells) + " |",
         "| " + " | ".join(["---"] * column_count) + " |",
     ]
-    for row in rows:
-        lines.append("| " + " | ".join(normalize_row(row)) + " |")
+    lines.extend(["| " + " | ".join(normalize_row(row)) + " |" for row in rows])
     return lines

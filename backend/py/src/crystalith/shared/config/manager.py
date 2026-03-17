@@ -468,10 +468,7 @@ class ConfigManager:
             secrets = self._load_secrets()
 
             # Load base config and merge overlays
-            if self.overlay_paths:
-                settings = self._load_with_overlays(secrets)
-            else:
-                settings = Settings.from_yaml(self.config_path, secrets=secrets)
+            settings = self._load_with_overlays(secrets) if self.overlay_paths else Settings.from_yaml(self.config_path, secrets=secrets)
             self._apply_endpoint_candidates(settings)
             self._apply_model_defaults(settings)
             self._normalize_storage_paths(settings)

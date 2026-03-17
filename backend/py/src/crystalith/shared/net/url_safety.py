@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import socket
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import Protocol
-from collections.abc import Awaitable, Callable, Sequence
 from urllib.parse import SplitResult, urlsplit
 
 
@@ -76,17 +76,11 @@ def _host_matches_allowlist(hostname: str, allowlist: _Allowlist) -> bool:
     host = _normalize_host(hostname)
     if host in allowlist.hosts:
         return True
-    for suffix in allowlist.domains:
-        if host == suffix or host.endswith(f".{suffix}"):
-            return True
-    return False
+    return any(host == suffix or host.endswith(f".{suffix}") for suffix in allowlist.domains)
 
 
 def _ip_matches_allowlist(ip: ipaddress._BaseAddress, allowlist: _Allowlist) -> bool:
-    for net in allowlist.cidrs:
-        if ip in net:
-            return True
-    return False
+    return any(ip in net for net in allowlist.cidrs)
 
 
 def _is_blocked_ip(ip: IPAddress) -> bool:

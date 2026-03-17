@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 from .interfaces import ParserError
 from .media import DisabledMediaFetcher, MediaFetcher, MediaSource
 from .transcription import TranscriptionProvider
@@ -8,9 +10,9 @@ from .utils import chunk_paragraphs
 
 
 class VideoParser:
-    parser_type = "video"
-    supported_mime_types = {"video/mp4"}
-    supported_extensions = {".mp4"}
+    parser_type: ClassVar[str] = "video"
+    supported_mime_types: ClassVar[set[str]] = {"video/mp4"}
+    supported_extensions: ClassVar[set[str]] = {".mp4"}
 
     def __init__(
         self,

@@ -1,7 +1,6 @@
 """OptionT 单元测试."""
 
 import pytest
-
 from cl_stdx import OptionT
 
 

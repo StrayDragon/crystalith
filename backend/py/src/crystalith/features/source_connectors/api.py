@@ -13,26 +13,9 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .schemas import (
-    ApplySyncCheckRequest,
-    ConnectorBindingRead,
-    CreateConnectorBindingRequest,
-    Diagnostic,
-    ImportResultItem,
-    ImportScope,
-    ImportScopeApplyResponse,
-    SourceConnectorCapabilities,
-    SourceConnectorDescriptor,
-    SourceConnectorsListResponse,
-    Snapshot,
-    SnapshotEntry,
-    SyncCandidate,
-    SyncCandidates,
-    SyncCheckResult,
-)
-from crystalith.shared.config import Settings
 from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
+from crystalith.shared.config import Settings
 from crystalith.shared.db import Chunk, Notebook, Source, SourceConnectorBinding
 from crystalith.shared.deps import (
     get_cache_provider,
@@ -70,7 +53,23 @@ from ..sources.api_common import (
     _invalidate_notebook_source_caches,
     _page_count_from_chunks,
 )
-
+from .schemas import (
+    ApplySyncCheckRequest,
+    ConnectorBindingRead,
+    CreateConnectorBindingRequest,
+    Diagnostic,
+    ImportResultItem,
+    ImportScope,
+    ImportScopeApplyResponse,
+    Snapshot,
+    SnapshotEntry,
+    SourceConnectorCapabilities,
+    SourceConnectorDescriptor,
+    SourceConnectorsListResponse,
+    SyncCandidate,
+    SyncCandidates,
+    SyncCheckResult,
+)
 
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}", tags=["source-connectors"])
 
@@ -78,7 +77,7 @@ router = APIRouter(prefix="/v1/notebooks/{notebook_id}", tags=["source-connector
 def _make_jsonschema_validator(schema: JsonDict) -> Draft7Validator:
     try:
         Draft7Validator.check_schema(schema)
-    except Exception as exc:  # noqa: BLE001 - plugin boundary
+    except Exception as exc:
         raise HTTPException(
             status_code=500,
             detail={
@@ -121,7 +120,7 @@ async def _get_connector_diagnostics(
 ) -> list[Diagnostic] | None:
     try:
         raw = await plugin.get_diagnostics(settings, connection_config=None)
-    except Exception as exc:  # noqa: BLE001 - plugin boundary
+    except Exception as exc:
         return [
             Diagnostic(
                 error_code="CONNECTOR_DIAGNOSTICS_FAILED",
@@ -331,7 +330,7 @@ async def _build_snapshot(
 ) -> Snapshot:
     try:
         raw_entries = await plugin.list_snapshot_entries(settings, connection_config=connection_config)
-    except Exception as exc:  # noqa: BLE001 - plugin boundary
+    except Exception as exc:
         raise HTTPException(
             status_code=500,
             detail={
@@ -659,7 +658,7 @@ async def _ingest_source_bytes(
         )
 
         return source, None
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         await session.rollback()
         if stage == "parse":
             failure = SourceFailure(
@@ -870,7 +869,7 @@ async def apply_sync_check(
                 connection_config=binding.connection_config,
                 relative_path=entry.relative_path,
             )
-        except Exception as exc:  # noqa: BLE001 - plugin boundary
+        except Exception as exc:
             had_failures = True
             results.append(
                 ImportResultItem(
@@ -1045,7 +1044,7 @@ async def apply_import_scope(
                 connection_config=binding.connection_config,
                 relative_path=entry.relative_path,
             )
-        except Exception as exc:  # noqa: BLE001 - plugin boundary
+        except Exception as exc:
             results.append(
                 ImportResultItem(
                     relative_path=entry.relative_path,

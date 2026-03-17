@@ -234,6 +234,5 @@ def test_register_filter_method() -> None:
 
 def test_async_without_enable_async_raises() -> None:
     j2sql = Jinja2SQL()
-    with pytest.raises(Exception):  # library should require enable_async for async API
-        # Intentionally not awaited to trigger path resolution, but execute in loop
-        _ = asyncio.get_event_loop().run_until_complete(j2sql.from_string_async("SELECT 1", context={}))
+    with pytest.raises(RuntimeError, match="async mode enabled"):
+        asyncio.run(j2sql.from_string_async("SELECT 1", context={}))

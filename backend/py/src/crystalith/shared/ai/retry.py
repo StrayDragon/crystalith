@@ -10,7 +10,6 @@ from typing import Protocol, runtime_checkable
 
 from cl_logs.logging import get_logger
 
-
 log = get_logger(__name__)
 
 _RETRYABLE_STATUS_CODES = {408, 409, 425, 429, 500, 502, 503, 504}
@@ -142,10 +141,7 @@ def is_retryable_error(error: Exception) -> bool:
         return True
     if "rate limit" in message or "too many requests" in message:
         return True
-    if "temporarily unavailable" in message:
-        return True
-
-    return False
+    return "temporarily unavailable" in message
 
 
 async def run_with_retry[T](
@@ -179,7 +175,7 @@ async def run_with_retry[T](
             if remaining_budget is not None:
                 attempt_timeout = min(attempt_timeout, max(0.0, remaining_budget))
             return await asyncio.wait_for(operation(), timeout=attempt_timeout)
-        except Exception as error:  # noqa: BLE001 - preserve provider exceptions
+        except Exception as error:
             if isinstance(error, asyncio.CancelledError):
                 raise
 
@@ -188,10 +184,7 @@ async def run_with_retry[T](
                 raise
 
             retry_after = extract_retry_after(error)
-            if retry_after is not None:
-                delay = retry_after
-            else:
-                delay = min(max_delay, initial_delay * (factor ** attempt))
+            delay = retry_after if retry_after is not None else min(max_delay, initial_delay * factor ** attempt)
 
             if total_timeout is not None:
                 remaining_budget = float(total_timeout) - (perf_counter() - started)

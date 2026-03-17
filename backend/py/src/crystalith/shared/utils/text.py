@@ -17,10 +17,7 @@ def is_valid_question(text: str) -> bool:
     """Check if text is a valid question."""
     if len(text) < 6:
         return False
-    lowered = text.lower()
-    if lowered.startswith("```"):
-        return False
-    return True
+    return not text.lower().startswith("```")
 
 
 def parse_bullets(text: str) -> list[str]:

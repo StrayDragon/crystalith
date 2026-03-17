@@ -6,7 +6,7 @@ from starlette.requests import Request
 from crystalith.shared.deps import get_ai_provider, get_embedding_provider, get_vector_store
 
 
-def _make_request(app) -> Request:  # noqa: ANN001
+def _make_request(app) -> Request:
     return Request(
         {
             "type": "http",
@@ -27,11 +27,11 @@ def _make_request(app) -> Request:  # noqa: ANN001
 
 
 @pytest.mark.asyncio
-async def test_get_ai_provider_caches_instance(app, monkeypatch):  # noqa: ANN001
+async def test_get_ai_provider_caches_instance(app, monkeypatch):
     sentinel = object()
     calls = {"count": 0}
 
-    def _factory(settings):  # noqa: ANN001
+    def _factory(settings):
         calls["count"] += 1
         return sentinel
 
@@ -51,13 +51,13 @@ async def test_get_ai_provider_caches_instance(app, monkeypatch):  # noqa: ANN00
 
 
 @pytest.mark.asyncio
-async def test_get_embedding_provider_caches_instance(app, monkeypatch):  # noqa: ANN001
+async def test_get_embedding_provider_caches_instance(app, monkeypatch):
     from crystalith.shared.ai.test_provider import TestEmbeddingProvider
 
     sentinel = TestEmbeddingProvider("sentinel")
     calls = {"count": 0}
 
-    def _factory(settings):  # noqa: ANN001
+    def _factory(settings):
         calls["count"] += 1
         return sentinel
 
@@ -78,13 +78,13 @@ async def test_get_embedding_provider_caches_instance(app, monkeypatch):  # noqa
 
 
 @pytest.mark.asyncio
-async def test_get_vector_store_reads_app_state(app):  # noqa: ANN001
+async def test_get_vector_store_reads_app_state(app):
     request = _make_request(app)
     assert get_vector_store(request) is app.state.vector_store
 
 
 @pytest.mark.asyncio
-async def test_get_embedding_provider_wraps_cached_provider_when_redis(app, monkeypatch):  # noqa: ANN001
+async def test_get_embedding_provider_wraps_cached_provider_when_redis(app, monkeypatch):
     calls = {"count": 0}
 
     class _CountingEmbedder:
@@ -93,14 +93,14 @@ async def test_get_embedding_provider_wraps_cached_provider_when_redis(app, monk
         def __init__(self) -> None:
             self.model = "counting"
 
-        async def embed(self, texts):  # noqa: ANN001
+        async def embed(self, texts):
             return await self.embed_batch(texts, batch_size=len(texts) or 1)
 
-        async def embed_batch(self, texts, *, batch_size: int = 100):  # noqa: ANN001
+        async def embed_batch(self, texts, *, batch_size: int = 100):
             calls["count"] += 1
             return [[1.0, 0.0, 0.0] for _ in texts]
 
-    def _factory(settings):  # noqa: ANN001
+    def _factory(settings):
         return _CountingEmbedder()
 
     import crystalith.shared.deps as deps_module

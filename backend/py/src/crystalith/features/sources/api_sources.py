@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from typing import Literal
 
 from cl_logs import get_logger
@@ -7,18 +8,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.cache.epochs import get_sources_epoch
 from crystalith.shared.db import Chunk, Notebook, Source, SourceTag, SourceTagMap
-from crystalith.shared.vector_storage import VectorStore
-
-from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.deps import (
     get_cache_provider,
     get_db_session,
     get_embedding_provider,
     get_vector_store,
 )
+from crystalith.shared.vector_storage import VectorStore
 
 from .api_common import (
     _invalidate_notebook_source_caches,
@@ -29,9 +29,9 @@ from .api_common import (
 )
 from .api_schemas import (
     ChunkRead,
-    SourceBatchItemResult,
     SourceBatchDeleteRequest,
     SourceBatchDeleteResponse,
+    SourceBatchItemResult,
     SourceBatchReembedRequest,
     SourceBatchReembedResponse,
     SourceRead,
@@ -72,11 +72,9 @@ async def list_sources(
         logger.info("cache_hit", key=cache_key)
         try:
             return [SourceRead.model_validate(item) for item in cached]
-        except Exception:  # noqa: BLE001 - fail-open cache
-            try:
+        except Exception:
+            with contextlib.suppress(Exception):
                 await cache.delete(cache_key)
-            except Exception:  # noqa: BLE001 - best-effort
-                pass
     logger.info("cache_miss", key=cache_key)
 
     chunk_count = func.count(Chunk.id)
@@ -287,7 +285,7 @@ async def batch_delete_sources(
         for source_id in deleted_ids:
             try:
                 await vector_store.remove_source(source_id)
-            except Exception:  # noqa: BLE001 - best-effort vector purge
+            except Exception:
                 logger.exception("failed to purge source vectors after deletion", source_id=source_id)
 
         await _invalidate_notebook_source_caches(cache, notebook_id=notebook_id, vectors_changed=True)
@@ -363,11 +361,9 @@ async def list_source_chunks(
         logger.info("cache_hit", key=cache_key)
         try:
             return [ChunkRead.model_validate(item) for item in cached]
-        except Exception:  # noqa: BLE001 - fail-open cache
-            try:
+        except Exception:
+            with contextlib.suppress(Exception):
                 await cache.delete(cache_key)
-            except Exception:  # noqa: BLE001 - best-effort
-                pass
     logger.info("cache_miss", key=cache_key)
 
     result = await session.execute(

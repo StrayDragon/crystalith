@@ -27,9 +27,10 @@ export function useTasks() {
 
   // Cleanup polling on unmount
   useEffect(() => {
+    const polling = pollingRef.current;
     return () => {
-      pollingRef.current.forEach((timer) => clearTimeout(timer));
-      pollingRef.current.clear();
+      polling.forEach((timer) => clearTimeout(timer));
+      polling.clear();
     };
   }, []);
 
@@ -51,7 +52,7 @@ export function useTasks() {
       );
       setTaskState({ tasks, isLoading: false, error: "" });
       return tasks;
-    } catch (error) {
+    } catch {
       setTaskState((prev) => ({
         ...prev,
         isLoading: false,
@@ -75,7 +76,7 @@ export function useTasks() {
           tasks: prev.tasks.map((t) => (t.id === task.id ? task : t)),
         }));
         return task;
-      } catch (error) {
+      } catch {
         return null;
       }
     },

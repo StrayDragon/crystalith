@@ -8,13 +8,13 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
+import crystalith.web.app as app_module
 from crystalith.shared.config import Settings
 from crystalith.shared.config.models import ModelConfig
 from crystalith.shared.db import Notebook, Source, create_db_manager
 from crystalith.shared.db.migrations import upgrade_head
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import InMemoryVectorStore
-import crystalith.web.app as app_module
 from crystalith.web.app import create_app
 
 
@@ -25,17 +25,17 @@ def test_probe_http_endpoint_treats_4xx_as_unhealthy(monkeypatch: pytest.MonkeyP
         def __enter__(self):
             return self
 
-        def __exit__(self, exc_type, exc, tb):  # noqa: ANN001, ARG002
+        def __exit__(self, exc_type, exc, tb):
             return False
 
     class _DummyClient:
         def __enter__(self):
             return self
 
-        def __exit__(self, exc_type, exc, tb):  # noqa: ANN001
+        def __exit__(self, exc_type, exc, tb):
             return False
 
-        def stream(self, method: str, url: str):  # noqa: ARG002
+        def stream(self, method: str, url: str):
             return _DummyResponse()
 
     monkeypatch.setattr(app_module.httpx, "Client", lambda **kwargs: _DummyClient())
@@ -51,17 +51,17 @@ def test_probe_http_endpoint_accepts_configured_status_codes(monkeypatch: pytest
         def __enter__(self):
             return self
 
-        def __exit__(self, exc_type, exc, tb):  # noqa: ANN001, ARG002
+        def __exit__(self, exc_type, exc, tb):
             return False
 
     class _DummyClient:
         def __enter__(self):
             return self
 
-        def __exit__(self, exc_type, exc, tb):  # noqa: ANN001
+        def __exit__(self, exc_type, exc, tb):
             return False
 
-        def stream(self, method: str, url: str):  # noqa: ARG002
+        def stream(self, method: str, url: str):
             return _DummyResponse()
 
     monkeypatch.setattr(app_module.httpx, "Client", lambda **kwargs: _DummyClient())
@@ -131,12 +131,11 @@ async def test_startup_cleanup_failed_sources_ignores_env_override(
 
         app = create_app(settings=settings, db_manager=manager, vector_store=InMemoryVectorStore())
 
-        async with app.router.lifespan_context(app):
-            async with manager.got_manual_session() as session:
-                rows = await session.execute(
-                    select(Source.filename, Source.status).order_by(Source.filename.asc())
-                )
-                remaining = list(rows.all())
+        async with app.router.lifespan_context(app), manager.got_manual_session() as session:
+            rows = await session.execute(
+                select(Source.filename, Source.status).order_by(Source.filename.asc())
+            )
+            remaining = list(rows.all())
 
         filenames = [filename for filename, _status in remaining]
 
@@ -194,14 +193,14 @@ async def test_lifespan_starts_ollama_monitor_when_enabled(
 
     calls = {"probe": 0, "discover": 0}
 
-    def _collect_hosts(_settings, *, include_fallback: bool):  # noqa: ANN001, ARG001
+    def _collect_hosts(_settings, *, include_fallback: bool):
         return {"http://localhost:11434"}
 
-    def _probe_host(host: str, *, timeout: float):  # noqa: ARG001
+    def _probe_host(host: str, *, timeout: float):
         calls["probe"] += 1
         return True, None, 1
 
-    def _auto_discover(_settings):  # noqa: ANN001
+    def _auto_discover(_settings):
         calls["discover"] += 1
         return 0
 

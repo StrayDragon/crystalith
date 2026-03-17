@@ -68,7 +68,7 @@ class AutoCache(CacheProvider):
                     continue
                 try:
                     redis_cache = RedisCache(redis_url=candidate, ttl=self._settings.cache.ttl)
-                except Exception as exc:  # noqa: BLE001 - optional dependency / runtime connectivity
+                except Exception as exc:
                     # If redis isn't installed, don't keep retrying forever.
                     logger.info("AutoCache redis upgrade skipped: %s", exc)
                     self._disable_redis = True
@@ -90,7 +90,7 @@ class AutoCache(CacheProvider):
         provider = self._provider
         try:
             return await call(provider)
-        except Exception as exc:  # noqa: BLE001 - fail-open cache
+        except Exception as exc:
             if not isinstance(provider, RedisCache):
                 raise
             logger.warning("Redis cache call failed; falling back to in-memory: %s", exc)
@@ -98,7 +98,7 @@ class AutoCache(CacheProvider):
                 if self._provider is provider:
                     try:
                         await provider.close()
-                    except Exception:  # noqa: BLE001
+                    except Exception:
                         logger.debug("Failed to close redis cache after error", exc_info=True)
                     self._provider = self._memory
                     self._settings.cache.provider = "memory"

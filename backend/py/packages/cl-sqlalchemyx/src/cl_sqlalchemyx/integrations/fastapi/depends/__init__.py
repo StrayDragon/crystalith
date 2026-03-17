@@ -1,16 +1,17 @@
 """FastAPI 依赖工厂:为数据库管理器与会话提供依赖注入工具."""
 
 from collections.abc import AsyncIterator, Awaitable, Callable
-from typing import ClassVar, Generic
+from enum import Enum
+from typing import ClassVar
 
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cl_sqlalchemyx.mgrs import AsyncDBManager, AsyncDBManagersMapper, DBEnumT
+from cl_sqlalchemyx.mgrs import AsyncDBManager, AsyncDBManagersMapper
 from cl_sqlalchemyx.same_impl_just_warn_wrapper import AsyncSession as WarnWrappedAsyncSession
 
 
-class DBManagerMapperFastAPIDepends(Generic[DBEnumT]):
+class DBManagerMapperFastAPIDepends[DBEnumT: Enum]:
     """为 FastAPI 提供数据库管理器相关依赖.
 
     该工具类将 `Request.state` 中预先注入的 `AsyncDBManagersMapper`
@@ -68,7 +69,8 @@ class DBManagerMapperFastAPIDepends(Generic[DBEnumT]):
         """
 
         async def _get_session(request: Request) -> AsyncIterator[AsyncSession]:
-            async with (await cls.get_async_db_manager_by_bind_depends_factory(bind)(request)).got_manual_session() as session:
+            manager = await cls.get_async_db_manager_by_bind_depends_factory(bind)(request)
+            async with manager.got_manual_session() as session:
                 yield session
 
         return _get_session
@@ -91,7 +93,8 @@ class DBManagerMapperFastAPIDepends(Generic[DBEnumT]):
         """
 
         async def _get_session(request: Request) -> AsyncIterator[WarnWrappedAsyncSession]:
-            async with (await cls.get_async_db_manager_by_bind_depends_factory(bind)(request)).got_soft_impl_auto_commit_session() as session:
+            manager = await cls.get_async_db_manager_by_bind_depends_factory(bind)(request)
+            async with manager.got_soft_impl_auto_commit_session() as session:
                 yield session
 
         return _get_session
@@ -114,7 +117,8 @@ class DBManagerMapperFastAPIDepends(Generic[DBEnumT]):
         """
 
         async def _get_session(request: Request) -> AsyncIterator[WarnWrappedAsyncSession]:
-            async with (await cls.get_async_db_manager_by_bind_depends_factory(bind)(request)).got_readonly_session() as session:
+            manager = await cls.get_async_db_manager_by_bind_depends_factory(bind)(request)
+            async with manager.got_readonly_session() as session:
                 yield session
 
         return _get_session

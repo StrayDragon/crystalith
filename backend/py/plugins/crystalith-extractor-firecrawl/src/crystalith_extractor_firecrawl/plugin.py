@@ -13,7 +13,7 @@ class FirecrawlWebExtractorPlugin:
     requires_api_key = True
     requires_service = False
 
-    def create_extractor(self, settings, *, url_fetch_security=None):  # noqa: ANN001, ARG002
+    def create_extractor(self, settings, *, url_fetch_security=None):
         fc_settings = settings.source_ingestion.web_extraction.firecrawl
         return FirecrawlExtractor(
             api_key=fc_settings.api_key,

@@ -243,7 +243,7 @@ export function useRefine() {
     if (activePanel === "refine") {
       store.getState().setHasNewOutput(false);
     }
-  }, [activePanel]);
+  }, [activePanel, store]);
 
   useEffect(() => {
     activeNotebookIdRef.current = activeNotebookId;
@@ -260,7 +260,7 @@ export function useRefine() {
     if (refinePromptCurrent.trim().length > 0) return;
     if (!refineTemplates[0]) return;
     store.getState().setRefinePrompt(refineTemplates[0].prompt);
-  }, [refineTemplates, refinePromptCurrent]);
+  }, [refineTemplates, refinePromptCurrent, store]);
 
   const selectedSourceIds = useMemo(
     () =>
@@ -273,11 +273,14 @@ export function useRefine() {
 
   const resolveSelectedSourceIds = useCallback(async () => selectedSourceIds, [selectedSourceIds]);
 
-  const updateRefineJobs = useCallback((updater: (jobs: RefineJob[]) => RefineJob[]) => {
-    const next = updater(refineQueueRef.current);
-    refineQueueRef.current = next;
-    store.getState().setRefineJobs(next);
-  }, []);
+  const updateRefineJobs = useCallback(
+    (updater: (jobs: RefineJob[]) => RefineJob[]) => {
+      const next = updater(refineQueueRef.current);
+      refineQueueRef.current = next;
+      store.getState().setRefineJobs(next);
+    },
+    [store],
+  );
 
   const resetQueueSummary = useCallback(() => {
     setQueueSummary({ total: 0, done: 0 });
@@ -291,15 +294,18 @@ export function useRefine() {
     setQueueSummary((prev) => ({ total: prev.total, done: prev.done + 1 }));
   }, []);
 
-  const markJobCompleted = useCallback((jobId: string) => {
-    if (activePanelRef.current !== "refine") {
-      store.getState().setHasNewOutput(true);
-    }
-    store.getState().setRecentCompletedJob(jobId);
-    window.setTimeout(() => {
-      store.getState().setRecentCompletedJob(null);
-    }, 2000);
-  }, []);
+  const markJobCompleted = useCallback(
+    (jobId: string) => {
+      if (activePanelRef.current !== "refine") {
+        store.getState().setHasNewOutput(true);
+      }
+      store.getState().setRecentCompletedJob(jobId);
+      window.setTimeout(() => {
+        store.getState().setRecentCompletedJob(null);
+      }, 2000);
+    },
+    [store],
+  );
 
   const hasPendingRefineJobs = useCallback(
     () => refineQueueRef.current.some((job) => job.status === "queued" || job.status === "running"),
@@ -443,7 +449,7 @@ export function useRefine() {
         runNextRefineJobRef.current();
       }
     },
-    [isConnected, incrementQueueDone, markJobCompleted, refineFormats, updateRefineJobs],
+    [isConnected, incrementQueueDone, markJobCompleted, refineFormats, store, updateRefineJobs],
   );
 
   const runNextRefineJob = useCallback(() => {
@@ -533,7 +539,7 @@ export function useRefine() {
       label: resolveTemplateLabel(trimmed, refineTemplates),
     });
     s.setActivePanel("refine");
-  }, [enqueueRefineJob, isConnected, refineTemplates, resolveSelectedSourceIds]);
+  }, [enqueueRefineJob, isConnected, refineTemplates, resolveSelectedSourceIds, store]);
 
   const handleCompareSelectedCitations = useCallback(async () => {
     const s = store.getState();
@@ -561,6 +567,7 @@ export function useRefine() {
     enqueueRefineJob,
     isConnected,
     resolveSelectedSourceIds,
+    store,
   ]);
 
   const handleReplayRefineJob = useCallback(
@@ -583,7 +590,7 @@ export function useRefine() {
       });
       s.setActivePanel("refine");
     },
-    [enqueueRefineJob, isConnected, refineTemplates],
+    [enqueueRefineJob, isConnected, refineTemplates, store],
   );
 
   const handleToggleRefinePin = useCallback(
@@ -608,24 +615,36 @@ export function useRefine() {
     const s = store.getState();
     s.setHasNewOutput(false);
     s.setRecentCompletedJob(null);
-  }, [updateRefineJobs]);
+  }, [store, updateRefineJobs]);
 
-  const handleToggleRefineSetting = useCallback((key: keyof typeof refineSettingsCurrent) => {
-    const s = store.getState();
-    s.setRefineSettings({ ...s.refineSettings, [key]: !s.refineSettings[key] });
-  }, []);
+  const handleToggleRefineSetting = useCallback(
+    (key: keyof typeof refineSettingsCurrent) => {
+      const s = store.getState();
+      s.setRefineSettings({ ...s.refineSettings, [key]: !s.refineSettings[key] });
+    },
+    [store],
+  );
 
-  const setOutputType = useCallback((value: OutputTypeId) => {
-    store.getState().setOutputType(value);
-  }, []);
+  const setOutputType = useCallback(
+    (value: OutputTypeId) => {
+      store.getState().setOutputType(value);
+    },
+    [store],
+  );
 
-  const setRefineMode = useCallback((mode: RefineMode) => {
-    store.getState().setRefineMode(mode);
-  }, []);
+  const setRefineMode = useCallback(
+    (mode: RefineMode) => {
+      store.getState().setRefineMode(mode);
+    },
+    [store],
+  );
 
-  const setRefinePrompt = useCallback((value: string) => {
-    store.getState().setRefinePrompt(value);
-  }, []);
+  const setRefinePrompt = useCallback(
+    (value: string) => {
+      store.getState().setRefinePrompt(value);
+    },
+    [store],
+  );
 
   const handleGenerateOutput = useCallback(
     async (overrideType?: OutputTypeId, modelId?: string | null) => {
@@ -676,6 +695,7 @@ export function useRefine() {
       outputTypeOptions,
       resolveOutputPrompt,
       resolveSelectedSourceIds,
+      store,
     ],
   );
 
@@ -720,7 +740,7 @@ export function useRefine() {
       });
       s.setActivePanel("refine");
     },
-    [enqueueOutputJob, isConnected, resolveOutputPrompt],
+    [enqueueOutputJob, isConnected, resolveOutputPrompt, store],
   );
 
   const saveContentAsNote = useCallback(
@@ -744,7 +764,7 @@ export function useRefine() {
       }
       s.setActivePanel("refine");
     },
-    [enqueueOutputJob, isConnected],
+    [enqueueOutputJob, isConnected, store],
   );
 
   return {

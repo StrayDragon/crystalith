@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import socket
 import threading
 import time
@@ -143,28 +144,28 @@ async def test_auto_cache_upgrades_to_redis_when_reachable(monkeypatch: pytest.M
     thread.start()
 
     class _DummyRedis:
-        def __init__(self, *, redis_url: str, ttl: float):  # noqa: ARG002
+        def __init__(self, *, redis_url: str, ttl: float):
             self.redis_url = redis_url
 
-        async def get(self, key: str):  # noqa: ARG002
+        async def get(self, key: str):
             return None
 
-        async def get_many(self, keys):  # noqa: ANN001
+        async def get_many(self, keys):
             return [None for _ in keys]
 
-        async def set(self, key: str, value, *, ttl=None):  # noqa: ANN001, ARG002
+        async def set(self, key: str, value, *, ttl=None):
             return None
 
-        async def incr(self, key: str, amount: int = 1, *, ttl=None) -> int:  # noqa: ANN001, ARG002
+        async def incr(self, key: str, amount: int = 1, *, ttl=None) -> int:
             return amount
 
-        async def set_many(self, items, *, ttl=None):  # noqa: ANN001, ARG002
+        async def set_many(self, items, *, ttl=None):
             return None
 
-        async def delete(self, key: str):  # noqa: ARG002
+        async def delete(self, key: str):
             return None
 
-        async def invalidate_pattern(self, pattern: str) -> int:  # noqa: ARG002
+        async def invalidate_pattern(self, pattern: str) -> int:
             return 0
 
         async def close(self) -> None:
@@ -186,10 +187,8 @@ async def test_auto_cache_upgrades_to_redis_when_reachable(monkeypatch: pytest.M
         assert settings.cache.redis_url == candidate
     finally:
         stop.set()
-        try:
+        with contextlib.suppress(OSError):
             sock.close()
-        except OSError:
-            pass
 
 
 @pytest.mark.asyncio
@@ -216,28 +215,28 @@ async def test_auto_cache_falls_back_to_memory_on_redis_errors(monkeypatch: pyte
     thread.start()
 
     class _FailingRedis:
-        def __init__(self, *, redis_url: str, ttl: float):  # noqa: ARG002
+        def __init__(self, *, redis_url: str, ttl: float):
             self.redis_url = redis_url
 
-        async def get(self, key: str):  # noqa: ARG002
+        async def get(self, key: str):
             raise RuntimeError("redis down")
 
-        async def get_many(self, keys):  # noqa: ANN001
+        async def get_many(self, keys):
             raise RuntimeError("redis down")
 
-        async def set(self, key: str, value, *, ttl=None):  # noqa: ANN001, ARG002
+        async def set(self, key: str, value, *, ttl=None):
             raise RuntimeError("redis down")
 
-        async def incr(self, key: str, amount: int = 1, *, ttl=None) -> int:  # noqa: ANN001, ARG002
+        async def incr(self, key: str, amount: int = 1, *, ttl=None) -> int:
             raise RuntimeError("redis down")
 
-        async def set_many(self, items, *, ttl=None):  # noqa: ANN001, ARG002
+        async def set_many(self, items, *, ttl=None):
             raise RuntimeError("redis down")
 
-        async def delete(self, key: str):  # noqa: ARG002
+        async def delete(self, key: str):
             raise RuntimeError("redis down")
 
-        async def invalidate_pattern(self, pattern: str) -> int:  # noqa: ARG002
+        async def invalidate_pattern(self, pattern: str) -> int:
             raise RuntimeError("redis down")
 
         async def close(self) -> None:
@@ -258,10 +257,8 @@ async def test_auto_cache_falls_back_to_memory_on_redis_errors(monkeypatch: pyte
         assert settings.cache.provider == "memory"
     finally:
         stop.set()
-        try:
+        with contextlib.suppress(OSError):
             sock.close()
-        except OSError:
-            pass
 
 
 @pytest.mark.asyncio
@@ -290,29 +287,29 @@ async def test_auto_cache_supports_all_cache_provider_methods_after_upgrade(
     thread.start()
 
     class _DummyRedis:
-        def __init__(self, *, redis_url: str, ttl: float):  # noqa: ARG002
+        def __init__(self, *, redis_url: str, ttl: float):
             self.redis_url = redis_url
             self.closed = False
 
-        async def get(self, key: str):  # noqa: ARG002
+        async def get(self, key: str):
             return None
 
-        async def get_many(self, keys):  # noqa: ANN001
+        async def get_many(self, keys):
             return [None for _ in keys]
 
-        async def set(self, key: str, value, *, ttl=None):  # noqa: ANN001, ARG002
+        async def set(self, key: str, value, *, ttl=None):
             return None
 
-        async def incr(self, key: str, amount: int = 1, *, ttl=None) -> int:  # noqa: ANN001, ARG002
+        async def incr(self, key: str, amount: int = 1, *, ttl=None) -> int:
             return amount
 
-        async def set_many(self, items, *, ttl=None):  # noqa: ANN001, ARG002
+        async def set_many(self, items, *, ttl=None):
             return None
 
-        async def delete(self, key: str):  # noqa: ARG002
+        async def delete(self, key: str):
             return None
 
-        async def invalidate_pattern(self, pattern: str) -> int:  # noqa: ARG002
+        async def invalidate_pattern(self, pattern: str) -> int:
             return 0
 
         async def close(self) -> None:
@@ -342,7 +339,5 @@ async def test_auto_cache_supports_all_cache_provider_methods_after_upgrade(
         assert settings.cache.provider == "redis"
     finally:
         stop.set()
-        try:
+        with contextlib.suppress(OSError):
             sock.close()
-        except OSError:
-            pass

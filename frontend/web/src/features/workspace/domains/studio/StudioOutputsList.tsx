@@ -97,7 +97,7 @@ export default function StudioOutputsList({
   onSelectOutput,
   onSelectOutputFullscreen,
   onConvertToSource,
-  onJumpToCitation,
+  onJumpToCitation: _onJumpToCitation,
   onOpenSlides,
   typeLabelMap,
 }: StudioOutputsListProps) {
@@ -425,11 +425,7 @@ export default function StudioOutputsList({
                   </div>
                 </button>
 
-                <div
-                  className="flex-shrink-0 pr-1"
-                  onClick={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                >
+                <div className="flex-shrink-0 pr-1">
                   <Menu placement="bottom-end">
                     <MenuHandler>
                       <IconButton

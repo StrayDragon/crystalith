@@ -33,7 +33,7 @@ async def test_analysis_entries_are_scoped_to_notebook(client, app):
         def __init__(self) -> None:
             self.called_with: tuple[int | None, list[int] | None] | None = None
 
-        async def entries(self, *, notebook_id: int | None = None, source_ids=None):  # noqa: ANN001
+        async def entries(self, *, notebook_id: int | None = None, source_ids=None):
             self.called_with = (notebook_id, list(source_ids) if source_ids else None)
             return []
 

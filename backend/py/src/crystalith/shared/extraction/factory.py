@@ -153,7 +153,7 @@ class ExtractorFactory:
                 self.settings,
                 url_fetch_security=self.url_fetch_security,
             )
-        except Exception as exc:  # noqa: BLE001 - plugin boundary
+        except Exception as exc:
             return _ExtractorState(
                 extractor=None,
                 error_code="init_error",
@@ -239,7 +239,7 @@ class ExtractorFactory:
             if enabled and state.extractor is not None:
                 try:
                     available = await state.extractor.is_available()
-                except Exception:  # noqa: BLE001 - extractor boundary
+                except Exception:
                     available = False
 
             error_code = state.error_code

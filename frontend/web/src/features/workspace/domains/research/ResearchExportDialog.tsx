@@ -1,5 +1,5 @@
 import { memo, useState, useMemo, useCallback } from "react";
-import { Button, Typography, IconButton, Checkbox, Chip, Spinner } from "@material-tailwind/react";
+import { Button, IconButton, Chip, Spinner } from "@material-tailwind/react";
 import {
   Close as CloseIcon,
   Description as DescriptionIcon,
@@ -280,11 +280,11 @@ function ResearchExportDialog({ session, onClose, onExportComplete }: ResearchEx
                       : "border-gray-200 hover:border-gray-300"
                   }`}
                 >
-                  <Checkbox
+                  <input
+                    type="checkbox"
                     checked={selectedItems.has(item.id)}
                     onChange={() => toggleItem(item.id)}
-                    crossOrigin={undefined}
-                    className="w-4 h-4"
+                    className="w-4 h-4 accent-green-600"
                   />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900 truncate">{item.title}</p>
@@ -317,11 +317,11 @@ function ResearchExportDialog({ session, onClose, onExportComplete }: ResearchEx
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
-                    <Checkbox
+                    <input
+                      type="checkbox"
                       checked={selectedItems.has(item.id)}
                       onChange={() => toggleItem(item.id)}
-                      crossOrigin={undefined}
-                      className="w-4 h-4 mt-0.5"
+                      className="w-4 h-4 mt-0.5 accent-blue-600"
                     />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900 text-sm truncate">{item.title}</p>

@@ -20,6 +20,7 @@ import {
 
 import type { Citation, OutputItem, OutputTypeId, WorkspaceTool } from "../../shared/types";
 import type { OutputQueueJob } from "../../shared/hooks/useOutputQueue";
+import { useLayer } from "../../../../shared/layer";
 import StudioOutputsList from "./StudioOutputsList";
 import StudioToolsGrid from "./StudioToolsGrid";
 
@@ -87,6 +88,8 @@ function ToolsPopover({
 }: ToolsPopoverProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
+  const { style: backdropLayerStyle } = useLayer("popover");
+  const { style: popoverLayerStyle } = useLayer("popover", 1);
 
   useEffect(() => {
     if (open && triggerRef.current) {
@@ -98,7 +101,6 @@ function ToolsPopover({
         minWidth: "280px",
         width: "max-content",
         maxWidth: "360px",
-        zIndex: 9999,
         animation: "slideUp 150ms ease-out",
       });
     }
@@ -124,11 +126,18 @@ function ToolsPopover({
         createPortal(
           <>
             {/* Click-outside backdrop */}
-            <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={onClose} />
+            <button
+              type="button"
+              className="fixed inset-0"
+              style={backdropLayerStyle}
+              onClick={onClose}
+              aria-label="关闭工具面板"
+              tabIndex={-1}
+            />
             {/* Popover panel — fixed positioning to escape overflow clipping */}
             <div
               className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-xl p-3"
-              style={popoverStyle}
+              style={{ ...popoverStyle, ...popoverLayerStyle }}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider">
@@ -187,6 +196,7 @@ function StudioPanel({
   const [noteEditorOpen, setNoteEditorOpen] = useState(false);
   const [noteEditorContent, setNoteEditorContent] = useState("");
   const [toolsPopoverOpen, setToolsPopoverOpen] = useState(false);
+  const noteEditorBodyRef = useRef<HTMLDivElement | null>(null);
 
   const handleToggleToolsPopover = useCallback(() => {
     setToolsPopoverOpen((prev) => !prev);
@@ -216,6 +226,16 @@ function StudioPanel({
     }
     handleCloseNoteEditor();
   }, [noteEditorContent, onSaveNote, handleCloseNoteEditor]);
+
+  useEffect(() => {
+    if (!noteEditorOpen) return;
+
+    const timer = setTimeout(() => {
+      noteEditorBodyRef.current?.querySelector<HTMLTextAreaElement>("textarea")?.focus();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [noteEditorOpen]);
 
   return (
     <div
@@ -309,17 +329,18 @@ function StudioPanel({
         </DialogHeader>
 
         <DialogBody className="p-4">
-          <Textarea
-            autoFocus
-            rows={8}
-            placeholder="在此输入笔记内容..."
-            value={noteEditorContent}
-            onChange={(e) => setNoteEditorContent(e.target.value)}
-            className="!border-t-blue-gray-200 focus:!border-t-gray-900"
-            labelProps={{
-              className: "before:content-none after:content-none",
-            }}
-          />
+          <div ref={noteEditorBodyRef}>
+            <Textarea
+              rows={8}
+              placeholder="在此输入笔记内容..."
+              value={noteEditorContent}
+              onChange={(e) => setNoteEditorContent(e.target.value)}
+              className="!border-t-blue-gray-200 focus:!border-t-gray-900"
+              labelProps={{
+                className: "before:content-none after:content-none",
+              }}
+            />
+          </div>
           <Typography variant="small" className="mt-2 text-xs text-gray-500 dark:text-slate-400">
             支持 Markdown 格式
           </Typography>

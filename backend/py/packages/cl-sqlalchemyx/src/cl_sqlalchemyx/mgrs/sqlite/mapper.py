@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from cl_sqlalchemyx.mgrs.base import AsyncDBManagersMapper
 from cl_sqlalchemyx.mgrs.sqlite.manager import AsyncSQLiteManager

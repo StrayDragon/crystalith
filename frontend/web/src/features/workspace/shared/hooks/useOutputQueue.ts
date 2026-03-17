@@ -233,7 +233,6 @@ export function useOutputQueue({
 }: UseOutputQueueOptions) {
   const store = useWorkspaceStore;
   const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
-  const outputs = useWorkspaceStore((s) => s.outputs);
   const loadingOutputs = useWorkspaceStore((s) => s.loading.outputs);
   const errOutputs = useWorkspaceStore((s) => s.errors.outputs);
 
@@ -262,7 +261,7 @@ export function useOutputQueue({
 
   useEffect(() => {
     store.getState().setLoading("outputs", outputsLoading);
-  }, [outputsLoading]);
+  }, [outputsLoading, store]);
 
   useEffect(() => {
     if (outputsError) {
@@ -273,7 +272,7 @@ export function useOutputQueue({
     const s = store.getState();
     s.setOutputs(outputsData.map(normalizeOutput));
     s.setError("outputs", "");
-  }, [outputsData, outputsError]);
+  }, [outputsData, outputsError, store]);
 
   const updateOutputQueueJobs = useCallback(
     (updater: (jobs: OutputQueueJob[]) => OutputQueueJob[]) => {
@@ -344,7 +343,7 @@ export function useOutputQueue({
       updateOutputQueueJobs((prev) => [job, ...prev]);
       return job;
     },
-    [hasPendingJobs, onQueueReset, onQueueTotal, activeNotebookId, updateOutputQueueJobs],
+    [hasPendingJobs, onQueueReset, onQueueTotal, activeNotebookId, store, updateOutputQueueJobs],
   );
 
   const enqueueSlidesJob = useCallback(
@@ -417,6 +416,7 @@ export function useOutputQueue({
       onQueueReset,
       onQueueTotal,
       activeNotebookId,
+      store,
       updateOutputQueueJobs,
     ],
   );
@@ -592,7 +592,7 @@ export function useOutputQueue({
         runNextOutputJobRef.current();
       }
     },
-    [isConnected, markJobCompleted, mutateOutputs, onQueueDone, updateOutputQueueJobs],
+    [isConnected, markJobCompleted, mutateOutputs, onQueueDone, store, updateOutputQueueJobs],
   );
 
   const runNextOutputJob = useCallback(() => {
@@ -635,7 +635,7 @@ export function useOutputQueue({
   const retryOutputs = useCallback(async () => {
     store.getState().setError("outputs", "");
     await mutateOutputs();
-  }, [mutateOutputs]);
+  }, [mutateOutputs, store]);
 
   const retryOutputJob = useCallback(
     (jobId: string) => {
@@ -649,7 +649,7 @@ export function useOutputQueue({
       store.getState().setError("outputs", "");
       runNextOutputJobRef.current();
     },
-    [onQueueTotal, updateOutputQueueJobs],
+    [onQueueTotal, store, updateOutputQueueJobs],
   );
 
   const deleteOutput = useCallback(
@@ -674,12 +674,12 @@ export function useOutputQueue({
         await mutateOutputs();
       }
     },
-    [isConnected, mutateOutputs],
+    [isConnected, mutateOutputs, store],
   );
 
   const clearOutputs = useCallback(() => {
     store.getState().setOutputs([]);
-  }, []);
+  }, [store]);
 
   const fetchOutput = useCallback(
     async (outputId: number) => {
@@ -695,12 +695,12 @@ export function useOutputQueue({
         const s2 = store.getState();
         s2.setOutputs(s2.outputs.map((item) => (item.id === outputId ? normalized : item)));
         return normalized;
-      } catch (error) {
+      } catch {
         store.getState().setError("outputs", "获取输出详情失败。");
         return null;
       }
     },
-    [isConnected],
+    [isConnected, store],
   );
 
   return {

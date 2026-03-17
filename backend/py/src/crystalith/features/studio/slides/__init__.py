@@ -8,8 +8,8 @@ from .storage import (
 )
 
 __all__ = [
-    "SlideMarkdown",
     "SlideGenerationConfig",
+    "SlideMarkdown",
     "SlideOutline",
     "SlideOutlineItem",
     "build_markdown_from_outline",

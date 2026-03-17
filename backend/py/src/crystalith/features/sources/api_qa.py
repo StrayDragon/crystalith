@@ -18,10 +18,6 @@ from crystalith.shared.deps import (
     get_embedding_provider,
     get_vector_store,
 )
-from crystalith.shared.types import SourceStatus
-from crystalith.shared.vector_storage import VectorStore, cached_vector_search
-
-from .api_common import _invalidate_notebook_source_caches
 from crystalith.shared.source_diagnostics import (
     SOURCE_ERROR_EMBEDDING_FAILED,
     SOURCE_ERROR_INGESTION_FAILED,
@@ -30,6 +26,10 @@ from crystalith.shared.source_diagnostics import (
     apply_source_failure,
     raise_source_failure,
 )
+from crystalith.shared.types import SourceStatus
+from crystalith.shared.vector_storage import VectorStore, cached_vector_search
+
+from .api_common import _invalidate_notebook_source_caches
 from .api_schemas import (
     ConvertSourceQAToSourceRequest,
     ConvertSourceQAToSourceResponse,

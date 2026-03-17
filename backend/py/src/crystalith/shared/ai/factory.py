@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import cast
 
 import ollama
-
 from cl_logs.logging import get_logger
 
 from crystalith.shared.config import CompletionOptions, ModelConfig, RequestOptions, Settings
@@ -20,11 +19,10 @@ from .effective_settings import (
     resolve_request_options,
 )
 from .interfaces import ChatProvider, EmbeddingProvider
-from .openai_client_manager import get_openai_client_manager
 from .ollama_provider import OllamaChatProvider, OllamaEmbeddingProvider
+from .openai_client_manager import get_openai_client_manager
 from .openai_provider import OpenAIChatProvider, OpenAIEmbeddingProvider
 from .test_provider import TestChatProvider, TestEmbeddingProvider
-
 
 log = get_logger(__name__)
 

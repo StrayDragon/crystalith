@@ -3,29 +3,24 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import datetime
 import json
 from collections.abc import AsyncGenerator
 from typing import cast
 
+from cl_logs.logging import get_logger
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cl_logs.logging import get_logger
-
-from crystalith.shared.json_types import JsonDict
 from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.cache.epochs import bump_sources_epoch
 from crystalith.shared.config import Settings
 from crystalith.shared.db import Notebook, ResearchSession, ResearchStep
-from crystalith.shared.types import ResearchStatus, ResearchStepStatus, ResearchStepType
-from crystalith.shared.search import SearXNGSearcher
-from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
-
 from crystalith.shared.deps import (
     get_cache_provider,
     get_db_session,
@@ -33,7 +28,10 @@ from crystalith.shared.deps import (
     get_settings,
     get_vector_store,
 )
-
+from crystalith.shared.json_types import JsonDict
+from crystalith.shared.search import SearXNGSearcher
+from crystalith.shared.types import ResearchStatus, ResearchStepStatus, ResearchStepType
+from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
 
 log = get_logger(__name__)
 
@@ -44,6 +42,15 @@ log = get_logger(__name__)
 
 # Lock timeout in seconds (10 minutes)
 LOCK_TIMEOUT_SECONDS = 600
+
+
+def _log_background_task_error(task: asyncio.Task[object]) -> None:
+    try:
+        task.result()
+    except asyncio.CancelledError:
+        return
+    except Exception:
+        log.exception("research background task failed")
 
 
 def _lock_now() -> datetime.datetime:
@@ -67,15 +74,14 @@ async def acquire_lock(
     now = _lock_now()
 
     # Check if there's an existing valid lock
-    if research.locked_at and research.lock_expires_at:
-        if _strip_tz(research.lock_expires_at) > now:
-            log.warning(
-                "research session already locked",
-                session_id=research.id,
-                locked_at=research.locked_at.isoformat(),
-                expires_at=research.lock_expires_at.isoformat(),
-            )
-            return False
+    if research.locked_at and research.lock_expires_at and _strip_tz(research.lock_expires_at) > now:
+        log.warning(
+            "research session already locked",
+            session_id=research.id,
+            locked_at=research.locked_at.isoformat(),
+            expires_at=research.lock_expires_at.isoformat(),
+        )
+        return False
 
     # Acquire lock
     research.locked_at = now
@@ -799,6 +805,7 @@ async def _run_research_background(
 ) -> None:
     """Run research graph in background with lock management."""
     from crystalith.shared.db import create_db_manager
+
     from . import ResearchDeps, run_research_graph
     from .graph import run_research_graph_from_session
 
@@ -852,10 +859,8 @@ async def _run_research_background(
                     )
                 finally:
                     lock_extension_task.cancel()
-                    try:
+                    with contextlib.suppress(asyncio.CancelledError):
                         await lock_extension_task
-                    except asyncio.CancelledError:
-                        pass
 
             finally:
                 # Release lock
@@ -965,7 +970,7 @@ async def stream_research_progress(
     """
     research = await _get_research_session(session, notebook_id, research_id)
     if _should_resume_research(research):
-        asyncio.create_task(
+        resume_task = asyncio.create_task(
             _run_research_background(
                 session_id=research.id,
                 notebook_id=notebook_id,
@@ -975,6 +980,7 @@ async def stream_research_progress(
                 resume=True,
             )
         )
+        resume_task.add_done_callback(_log_background_task_error)
 
     async def generate_stream() -> AsyncGenerator[str, None]:
         """Generate SSE events by polling research status."""
@@ -1082,16 +1088,16 @@ async def stream_research_progress(
                         reasoning_value = output_data.get("reasoning")
 
                         reasoning = reasoning_value if isinstance(reasoning_value, str) else ""
-                        queries: list[JsonDict] = []
-                        if isinstance(queries_value, list):
-                            for item in queries_value:
-                                if isinstance(item, dict):
-                                    queries.append(cast(JsonDict, item))
-                        query_strings: list[str] = []
-                        for item in queries:
-                            query_value = item.get("query")
-                            if isinstance(query_value, str) and query_value:
-                                query_strings.append(query_value)
+                        queries = (
+                            [cast(JsonDict, item) for item in queries_value if isinstance(item, dict)]
+                            if isinstance(queries_value, list)
+                            else []
+                        )
+                        query_strings = [
+                            query_value
+                            for item in queries
+                            if isinstance((query_value := item.get("query")), str) and query_value
+                        ]
 
                         # Emit reasoning as thinking
                         if reasoning:
@@ -1253,8 +1259,6 @@ async def export_research(
     - export_type='note': Creates a new note (output) with the report
     """
     from crystalith.shared.db import Chunk, Output, Source
-    from crystalith.shared.types import SourceStatus
-    from crystalith.shared.types import OutputType
     from crystalith.shared.source_diagnostics import (
         SOURCE_ERROR_EMBEDDING_FAILED,
         SOURCE_ERROR_INGESTION_FAILED,
@@ -1263,6 +1267,7 @@ async def export_research(
         apply_source_failure,
         raise_source_failure,
     )
+    from crystalith.shared.types import OutputType, SourceStatus
 
     research = await _get_research_session(session, notebook_id, research_id)
 

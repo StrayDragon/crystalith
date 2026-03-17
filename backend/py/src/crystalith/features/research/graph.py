@@ -5,15 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import cast
 
+from cl_logs.logging import get_logger
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent
 from pydantic_graph import BaseNode, End, Graph, GraphRunContext
 
-from cl_logs.logging import get_logger
-
-from crystalith.shared.json_types import JsonDict
 from crystalith.shared.agents.models import build_chat_model, extract_effective_model_settings_for_log
 from crystalith.shared.db import ResearchSession, ResearchStep
+from crystalith.shared.json_types import JsonDict
 from crystalith.shared.types import ResearchStatus, ResearchStepStatus, ResearchStepType
 
 from .types import (
@@ -24,7 +23,6 @@ from .types import (
     SearchQuery,
     SearchResult,
 )
-
 
 log = get_logger(__name__)
 
@@ -186,16 +184,15 @@ class PlanSearches(BaseNode[ResearchGraphState, ResearchDeps, JsonDict]):
             )
             result = await agent.run(user_prompt)
 
-            queries: list[SearchQuery] = []
-            for q in result.output.queries[:5]:  # Max 5 queries
-                queries.append(
-                    SearchQuery(
-                        query=q.query,
-                        engine=q.engine,
-                        priority=int(q.priority),
-                        reason=q.reason,
-                    )
+            queries = [
+                SearchQuery(
+                    query=q.query,
+                    engine=q.engine,
+                    priority=int(q.priority),
+                    reason=q.reason,
                 )
+                for q in result.output.queries[:5]  # Max 5 queries
+            ]
 
             state.search_plan = SearchPlan(
                 iteration=state.current_iteration,

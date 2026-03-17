@@ -4,7 +4,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 ToolTone = Literal["slate", "blue", "green", "rose", "amber", "teal", "indigo"]
 RenderLayout = Literal["list", "cards", "tree", "timeline", "sections", "table"]
 RenderFieldType = Literal[

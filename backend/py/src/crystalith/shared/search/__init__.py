@@ -15,12 +15,13 @@ from .types import SearchResult
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from crystalith.shared.config import Settings
     from langchain_community.utilities import SearxSearchWrapper
+
+    from crystalith.shared.config import Settings
 
 from crystalith.shared.config.endpoint_candidates import order_endpoint_candidates
 
-__all__ = ["SearchResult", "SearXNGSearcher"]
+__all__ = ["SearXNGSearcher", "SearchResult"]
 
 log = get_logger(__name__)
 
@@ -103,15 +104,14 @@ class SearXNGSearcher:
                     async with httpx.AsyncClient(
                         timeout=max(0.5, min(float(self.timeout), 5.0)),
                         follow_redirects=True,
-                    ) as client:
-                        async with client.stream("GET", probe_url) as resp:
-                            status_code = resp.status_code
+                    ) as client, client.stream("GET", probe_url) as resp:
+                        status_code = resp.status_code
                     if 200 <= status_code < 300 or status_code == 400:
                         self.host = target
                         # Host changed: rebuild wrapper with the resolved endpoint.
                         self._wrapper = None
                         return target
-                except Exception:  # noqa: BLE001 - best-effort probe
+                except Exception:
                     continue
 
         # None reachable: keep host empty and surface an actionable error.

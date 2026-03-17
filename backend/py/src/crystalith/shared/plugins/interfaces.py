@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from crystalith.shared.config import ModelConfig, Settings
 from crystalith.shared.json_types import JsonDict
+
 from .render_types import (
     FrontendBundleDescriptor,
     OutputTypePluginMeta,

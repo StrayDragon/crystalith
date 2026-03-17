@@ -188,11 +188,16 @@ class JinaReaderExtractor(BaseExtractor):
                 continue
 
             # Look for first non-empty paragraph as description
-            if title and line and not line.startswith("#") and description is None:
-                # Skip if it looks like metadata or a link
-                if not line.startswith("[") and not line.startswith("*"):
-                    description = line[:200]  # Truncate long descriptions
-                    break
+            if (
+                title
+                and line
+                and not line.startswith("#")
+                and description is None
+                and not line.startswith("[")
+                and not line.startswith("*")
+            ):
+                description = line[:200]  # Truncate long descriptions
+                break
 
         return title, description
 

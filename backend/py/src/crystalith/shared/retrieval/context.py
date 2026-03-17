@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
@@ -93,7 +94,7 @@ def _resolve_tokenizer_model_name(
         default_model = deps.settings.get_default_chat_model()
         if default_model is not None and default_model.model:
             return default_model.model
-    except Exception:  # noqa: BLE001 - best-effort token counting
+    except Exception:
         return None
     return None
 
@@ -129,7 +130,7 @@ def _normalize_chunk_ids(chunk_ids: Sequence[JsonValue] | None) -> list[int]:
     normalized: list[int] = []
     seen: set[int] = set()
     for raw in chunk_ids:
-        if raw is None or isinstance(raw, (dict, list)) or isinstance(raw, bool):
+        if raw is None or isinstance(raw, (dict, list, bool)):
             continue
         if not isinstance(raw, (int, float, str)):
             continue
@@ -170,7 +171,7 @@ def _build_query_seeds(seed_text: str, output_type: OutputType) -> list[str]:
     type_prompt = ""
     try:
         type_prompt = output_type.meta.prompt
-    except Exception:  # noqa: BLE001 - best-effort
+    except Exception:
         type_prompt = ""
 
     if type_prompt:
@@ -179,7 +180,7 @@ def _build_query_seeds(seed_text: str, output_type: OutputType) -> list[str]:
     hints: list[str] = []
     try:
         hints = OUTPUT_TYPE_SEED_HINTS.get(output_type, [])
-    except Exception:  # noqa: BLE001 - best-effort
+    except Exception:
         hints = []
 
     output_seed_parts: list[str] = [seed_text, f"Output type: {output_type.value}"]
@@ -777,10 +778,8 @@ async def retrieve_context(
                 reused.timings_ms.setdefault("embed_hit", 0)
                 reused.timings_ms.setdefault("search_hit", 0)
                 return reused
-            try:
+            with contextlib.suppress(Exception):
                 await deps.cache.delete(cache_key)
-            except Exception:  # noqa: BLE001 - best-effort
-                pass
 
     embed_wait_ms = 0
     embed_hit = 0
@@ -968,14 +967,12 @@ async def retrieve_context(
     )
 
     if cache_enabled and cache_key is not None and deps.cache is not None and final_chunk_ids:
-        try:
+        with contextlib.suppress(Exception):
             await deps.cache.set(
                 cache_key,
                 [int(cid) for cid in final_chunk_ids],
                 ttl=assembly_cache_ttl_s,
             )
-        except Exception:  # noqa: BLE001 - best-effort cache
-            pass
 
     return RetrievedContext(
         context_text=final_context,

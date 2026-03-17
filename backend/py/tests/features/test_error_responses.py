@@ -24,10 +24,10 @@ class _FailingChatProvider:
     provider = "test"
     model = "failing"
 
-    async def chat(self, messages):  # noqa: ANN001
+    async def chat(self, messages):
         raise _RateLimitError("5")
 
-    async def chat_stream(self, messages):  # noqa: ANN001
+    async def chat_stream(self, messages):
         if False:
             yield ""
 

@@ -3,17 +3,15 @@ from __future__ import annotations
 import asyncio
 import heapq
 import json
-from pathlib import Path
 from collections.abc import Iterable, Sequence
-
-from sqlalchemy import text
+from pathlib import Path
 
 from cl_sqlalchemyx.mgrs import AsyncDBManager
+from sqlalchemy import text
 
 from crystalith.shared.db import create_db_manager
 
 from .types import VectorEntry, VectorSearchResult
-
 
 _CONFIG_TABLE = "vector_config"
 _ENTRIES_TABLE = "vector_entries"

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import AsyncIterator, Mapping, Sequence
 from typing import Literal, Protocol, cast, overload
-from collections.abc import AsyncIterator, Sequence
 
 import ollama
 
-from .cache import EmbeddingCache
 from crystalith.shared.json_types import JsonValue
+
+from .cache import EmbeddingCache
 from .retry import default_retry_budget_s, run_with_retry
 from .types import ChatMessage
 

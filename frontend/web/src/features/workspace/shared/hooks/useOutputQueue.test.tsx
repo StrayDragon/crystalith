@@ -239,6 +239,7 @@ test("cancelOutputJob aborts running output job", async () => {
     });
 
     await flushUntil(() => result.current.outputQueueJobs[0]?.status === "cancelled");
+    expect(result.current.outputQueueJobs[0]?.status).toBe("cancelled");
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(200);

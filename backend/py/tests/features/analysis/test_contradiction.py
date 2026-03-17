@@ -16,14 +16,14 @@ class _ChatStub:
         self.current = 0
         self.max_seen = 0
 
-    async def chat(self, messages):  # noqa: ANN001
+    async def chat(self, messages):
         self.current += 1
         self.max_seen = max(self.max_seen, self.current)
         await asyncio.sleep(0.01)
         self.current -= 1
         return "yes"
 
-    def chat_stream(self, messages):  # noqa: ANN001
+    def chat_stream(self, messages):
         async def _gen():
             yield await self.chat(messages)
 

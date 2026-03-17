@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Literal, Protocol, cast, overload
+import contextlib
 from collections.abc import AsyncIterator, Sequence
+from typing import Literal, Protocol, cast, overload
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
@@ -120,15 +121,13 @@ class OpenAIChatClient(Protocol):
 
 
 def _to_openai_messages(messages: Sequence[ChatMessage]) -> list[ChatCompletionMessageParam]:
-    payload: list[ChatCompletionMessageParam] = []
-    for message in messages:
-        payload.append(
-            cast(
-                ChatCompletionMessageParam,
-                {"role": message.role, "content": message.content},
-            )
+    return [
+        cast(
+            ChatCompletionMessageParam,
+            {"role": message.role, "content": message.content},
         )
-    return payload
+        for message in messages
+    ]
 
 
 class OpenAIEmbeddingProvider:
@@ -223,10 +222,8 @@ class OpenAIEmbeddingProvider:
         )
 
         data = list(response.data)
-        try:
+        with contextlib.suppress(Exception):
             data.sort(key=lambda item: item.index)
-        except Exception:  # noqa: BLE001 - tolerate unexpected SDK object shapes
-            pass
         return [list(item.embedding) for item in data]
 
 

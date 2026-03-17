@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import socket
 import threading
@@ -394,10 +395,8 @@ database:
         assert settings.database.url == reachable
     finally:
         stop.set()
-        try:
+        with contextlib.suppress(OSError):
             sock.close()
-        except OSError:
-            pass
 
 
 def test_config_manager_skips_postgres_candidate_without_password(tmp_path, monkeypatch) -> None:
@@ -446,7 +445,5 @@ database:
         assert settings.database.url != candidate
     finally:
         stop.set()
-        try:
+        with contextlib.suppress(OSError):
             sock.close()
-        except OSError:
-            pass

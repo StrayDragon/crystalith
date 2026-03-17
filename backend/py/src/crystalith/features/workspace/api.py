@@ -18,7 +18,6 @@ from crystalith.shared.plugins.render_types import (
 )
 from crystalith.shared.types import OutputType
 
-
 router = APIRouter(prefix="/v1/workspace", tags=["workspace-tools"])
 
 

@@ -53,10 +53,7 @@ def _is_embedding_model(name: str, family: str | None = None) -> bool:
         return True
     name_lower = name.lower().split(":")[0]  # strip tag
     # Check known prefixes
-    for prefix in _EMBEDDING_NAME_PREFIXES:
-        if prefix in name_lower:
-            return True
-    return False
+    return any(prefix in name_lower for prefix in _EMBEDDING_NAME_PREFIXES)
 
 
 def _model_display_name(name: str) -> str:
@@ -113,11 +110,7 @@ def discover_ollama_models(
             models = data.get("models")
             if not isinstance(models, list):
                 return []
-            output: list[OllamaModelDict] = []
-            for model in models:
-                if isinstance(model, dict):
-                    output.append(cast(OllamaModelDict, model))
-            return output
+            return [cast(OllamaModelDict, model) for model in models if isinstance(model, dict)]
     except Exception as exc:
         logger.debug("Ollama discovery failed for %s: %s", host, exc)
         return []

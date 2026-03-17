@@ -3,11 +3,10 @@ FastAPIX应用测试
 """
 
 import pytest
-from fastapi import Body, Cookie, Header, Path, Query
-from cl_stdx.enumx import MetaInfoIntEnum, MetaInfoStrEnum, XMetaInfo
-from pydantic import BaseModel
-
 from cl_fastapix import FastAPIX
+from cl_stdx.enumx import MetaInfoIntEnum, MetaInfoStrEnum, XMetaInfo
+from fastapi import Body, Cookie, Header, Path, Query
+from pydantic import BaseModel
 
 
 # 测试用枚举类

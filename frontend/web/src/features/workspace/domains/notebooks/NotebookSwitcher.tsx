@@ -92,6 +92,7 @@ export default function NotebookSwitcher({
   const [saveTemplateNotebookId, setSaveTemplateNotebookId] = useState<number | null>(null);
   const [saveTemplateDefaultName, setSaveTemplateDefaultName] = useState("");
   const editInputRef = useRef<HTMLInputElement | null>(null);
+  const createInputHostRef = useRef<HTMLDivElement | null>(null);
   const lastRequestTokenRef = useRef<number | null>(null);
 
   const createLoading = createState === "loading";
@@ -123,6 +124,22 @@ export default function NotebookSwitcher({
     }
     return ok;
   }
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const timer = setTimeout(() => {
+      searchInputRef?.current?.focus();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [isOpen, searchInputRef]);
+
+  useEffect(() => {
+    if (!createOpen) return;
+    const timer = setTimeout(() => {
+      createInputHostRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [createOpen]);
 
   const activeNotebook = notebooks.find((item) => item.id === activeNotebookId) ?? null;
   const filteredNotebooks = useMemo(() => {
@@ -288,7 +305,6 @@ export default function NotebookSwitcher({
                 placeholder="搜索笔记本"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                autoFocus
                 id="notebook-search-input"
                 name="notebookSearch"
                 aria-label="搜索笔记本"
@@ -479,23 +495,24 @@ export default function NotebookSwitcher({
           <Typography variant="small" className="font-semibold text-gray-600 text-[11px] mb-2">
             新建笔记本
           </Typography>
-          <Input
-            variant="outlined"
-            labelProps={{ className: "hidden" }}
-            className="!border !border-gray-300 bg-white text-gray-900 shadow-lg shadow-gray-900/5 ring-4 ring-transparent placeholder:text-gray-500 focus:!border-gray-900 focus:!border-t-gray-900 focus:ring-gray-900/10"
-            containerProps={{ className: "min-w-0" }}
-            value={createName}
-            onChange={(e) => onCreateNameChange(e.target.value)}
-            placeholder={isConnected ? "输入名称" : "未连接到后端"}
-            disabled={!isConnected || createLoading}
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                void handleCreate();
-              }
-            }}
-          />
+          <div ref={createInputHostRef}>
+            <Input
+              variant="outlined"
+              labelProps={{ className: "hidden" }}
+              className="!border !border-gray-300 bg-white text-gray-900 shadow-lg shadow-gray-900/5 ring-4 ring-transparent placeholder:text-gray-500 focus:!border-gray-900 focus:!border-t-gray-900 focus:ring-gray-900/10"
+              containerProps={{ className: "min-w-0" }}
+              value={createName}
+              onChange={(e) => onCreateNameChange(e.target.value)}
+              placeholder={isConnected ? "输入名称" : "未连接到后端"}
+              disabled={!isConnected || createLoading}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void handleCreate();
+                }
+              }}
+            />
+          </div>
           {createError && (
             <Typography variant="small" color="red" className="mt-1 text-[10px]">
               {createError}

@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.db import Notebook, Source
 from crystalith.shared.types import SourceStatus
-
 from crystalith.shared.utils.chunker import chunk_text
 
 from . import repo

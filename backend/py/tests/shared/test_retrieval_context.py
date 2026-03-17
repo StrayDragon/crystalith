@@ -12,7 +12,7 @@ from crystalith.shared.vector_storage import InMemoryVectorStore
 
 
 class _SeedAwareEmbedder(TestEmbeddingProvider):
-    async def embed_batch(self, texts, *, batch_size: int = 100):  # noqa: ANN001
+    async def embed_batch(self, texts, *, batch_size: int = 100):
         vectors: list[list[float]] = []
         for text in texts:
             if "Output type:" in text:

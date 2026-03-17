@@ -49,7 +49,7 @@ class _FailingBulkCache(InMemoryCache):
     async def get(self, key: str) -> JsonValue | None:
         raise RuntimeError("cache get unavailable")
 
-    async def incr(self, key: str, amount: int = 1, *, ttl: float | None = None) -> int:  # noqa: ARG002
+    async def incr(self, key: str, amount: int = 1, *, ttl: float | None = None) -> int:
         raise RuntimeError("cache incr unavailable")
 
 

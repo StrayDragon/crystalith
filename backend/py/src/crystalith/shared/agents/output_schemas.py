@@ -10,7 +10,7 @@ def _normalize_citations(value: object) -> list[int]:
         return []
 
     def _push_int(items: list[int], item: object) -> None:
-        if item is None or isinstance(item, (dict, list)) or isinstance(item, bool):
+        if item is None or isinstance(item, (dict, list, bool)):
             return
         if not isinstance(item, (int, float, str)):
             return
@@ -86,4 +86,3 @@ class StructuredOutput(BaseModel):
     title: str
     bullets: list[CitedText]
     terms: list[str] = Field(default_factory=list)
-

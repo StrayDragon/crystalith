@@ -8,7 +8,6 @@ import sys
 import tomllib
 from pathlib import Path
 
-
 REQUIRED_REFERENCE_PAGES = [
     "reference/config-schema.gen.md",
     "reference/env-vars.gen.md",
@@ -116,7 +115,7 @@ def _collect_nav_paths(value: object) -> set[str]:
             found |= _collect_nav_paths(item)
         return found
     if isinstance(value, dict):
-        for _, item in value.items():
+        for item in value.values():
             found |= _collect_nav_paths(item)
         return found
     return found

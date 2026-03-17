@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-
 _TRACKING_QUERY_KEYS = frozenset(
     {
         "gclid",
@@ -34,9 +33,8 @@ def canonicalize_url_for_dedup(url: str) -> str:
     hostname = (parsed.hostname or "").lower().rstrip(".")
 
     port = parsed.port
-    if port is not None:
-        if (scheme == "http" and port == 80) or (scheme == "https" and port == 443):
-            port = None
+    if port is not None and ((scheme == "http" and port == 80) or (scheme == "https" and port == 443)):
+        port = None
 
     netloc = hostname
     if port is not None:

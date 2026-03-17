@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Literal, TypedDict
 
-
 ServiceKey = Literal["storage_chroma", "cache_redis", "ollama", "search_searxng"]
 ServiceStatus = Literal["unknown", "disabled", "healthy", "degraded"]
 DegradePolicy = Literal["core_available", "fail_closed"]

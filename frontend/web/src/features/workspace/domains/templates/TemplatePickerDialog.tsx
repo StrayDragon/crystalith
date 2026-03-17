@@ -88,7 +88,13 @@ export default function TemplatePickerDialog({
       role="dialog"
       aria-modal="true"
     >
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+        aria-label="关闭"
+        tabIndex={-1}
+      />
 
       <div
         ref={modalRef}

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 from .interfaces import ParserError
 from .transcription import TranscriptionProvider
 from .types import Chunk
@@ -7,9 +9,15 @@ from .utils import chunk_paragraphs
 
 
 class AudioParser:
-    parser_type = "audio"
-    supported_mime_types = {"audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav", "audio/wave"}
-    supported_extensions = {".mp3", ".wav"}
+    parser_type: ClassVar[str] = "audio"
+    supported_mime_types: ClassVar[set[str]] = {
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/wav",
+        "audio/x-wav",
+        "audio/wave",
+    }
+    supported_extensions: ClassVar[set[str]] = {".mp3", ".wav"}
 
     def __init__(
         self,

@@ -7,7 +7,7 @@ from crystalith.shared.cache import InMemoryCache
 
 
 class _FailingEpochCache(InMemoryCache):
-    async def incr(self, key: str, amount: int = 1, *, ttl: float | None = None) -> int:  # noqa: ARG002
+    async def incr(self, key: str, amount: int = 1, *, ttl: float | None = None) -> int:
         raise RuntimeError(f"cache epoch unavailable: {key}")
 
 

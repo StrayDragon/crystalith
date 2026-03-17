@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
 
-
 EndpointKind = Literal["docker_internal", "host_local", "external", "unknown"]
 
 

@@ -1,6 +1,5 @@
 import pytest
 import sqlalchemy as sa
-
 from cl_sqlalchemyx.mgrs import AsyncPostgresManager, AsyncSQLiteManager
 
 

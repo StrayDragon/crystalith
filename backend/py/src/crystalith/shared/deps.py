@@ -3,10 +3,9 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING
 
+from cl_sqlalchemyx.mgrs import AsyncDBManager
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from cl_sqlalchemyx.mgrs import AsyncDBManager
 
 from crystalith.shared.ai.factory import create_chat_provider, create_embedding_provider
 from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider

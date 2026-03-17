@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import ipaddress
 import os
 import re
-import ipaddress
-from pathlib import Path
 from collections.abc import Callable
+from pathlib import Path
 from typing import Literal, cast
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -12,7 +12,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import YamlConfigSettingsSource
 
 from crystalith.shared.json_types import JsonValue
-
 
 # =============================================================================
 # Secrets / Environment Variable Resolution
@@ -760,11 +759,7 @@ class HttpProxySettings(BaseModel):
             return False
 
         # 检查 no_proxy 列表
-        for no_proxy_host in self.no_proxy:
-            if host == no_proxy_host or host.endswith(f".{no_proxy_host}"):
-                return False
-
-        return True
+        return all(not (host == no_proxy_host or host.endswith(f".{no_proxy_host}")) for no_proxy_host in self.no_proxy)
 
 
 class UrlFetchSecuritySettings(BaseModel):

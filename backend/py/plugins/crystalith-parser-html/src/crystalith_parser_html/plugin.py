@@ -10,7 +10,7 @@ class HTMLParserPlugin:
     supported_mime_types = HTMLParser.supported_mime_types
     supported_extensions = HTMLParser.supported_extensions
 
-    def create_parser(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+    def create_parser(self, *_args, **_kwargs):
         return HTMLParser()
 
 

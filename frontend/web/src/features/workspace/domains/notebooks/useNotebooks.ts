@@ -39,7 +39,7 @@ export function useNotebooks() {
 
   useEffect(() => {
     store.getState().setLoading("notebooks", isLoading);
-  }, [isLoading]);
+  }, [isLoading, store]);
 
   useEffect(() => {
     if (notebookError) {
@@ -65,7 +65,7 @@ export function useNotebooks() {
     if (nextActive !== currentActive) {
       s.setActiveNotebook(nextActive);
     }
-  }, [notebookData, notebookError, activeNotebookId]);
+  }, [notebookData, notebookError, activeNotebookId, store]);
 
   // Auto-create a default notebook when there are no notebooks
   useEffect(() => {
@@ -101,19 +101,22 @@ export function useNotebooks() {
     };
 
     autoCreateNotebook();
-  }, [isLoading, mutate, notebookData, notebookError]);
+  }, [isLoading, mutate, notebookData, notebookError, store]);
 
   const setActiveNotebookId = useCallback(
     (value: number | null) => {
       if (value === activeNotebookId) return;
       store.getState().setActiveNotebook(value);
     },
-    [activeNotebookId],
+    [activeNotebookId, store],
   );
 
-  const setCreateName = useCallback((value: string) => {
-    store.getState().setCreateName(value);
-  }, []);
+  const setCreateName = useCallback(
+    (value: string) => {
+      store.getState().setCreateName(value);
+    },
+    [store],
+  );
 
   const handleCreateNotebook = useCallback(async () => {
     const name = createNameCurrent.trim();
@@ -135,13 +138,13 @@ export function useNotebooks() {
         revalidate: false,
       });
       return true;
-    } catch (error) {
+    } catch {
       store.getState().setError("create", "创建失败，请检查后端状态。");
       return false;
     } finally {
       store.getState().setCreateState("idle");
     }
-  }, [mutate, connectionState, createNameCurrent]);
+  }, [mutate, connectionState, createNameCurrent, store]);
 
   const handleCreateNotebookQuick = useCallback(
     async (name?: string) => {
@@ -172,7 +175,7 @@ export function useNotebooks() {
         store.getState().setCreateState("idle");
       }
     },
-    [mutate, connectionState],
+    [mutate, connectionState, store],
   );
 
   const handleCreateNotebookFromTemplate = useCallback(
@@ -205,7 +208,7 @@ export function useNotebooks() {
         store.getState().setCreateState("idle");
       }
     },
-    [mutate, connectionState],
+    [mutate, connectionState, store],
   );
 
   const retryNotebooks = useCallback(async () => {
@@ -213,7 +216,7 @@ export function useNotebooks() {
     s.setConnectionState("connecting");
     s.setError("notebooks", "");
     await mutate();
-  }, [mutate]);
+  }, [mutate, store]);
 
   const handleUpdateNotebook = useCallback(
     async (notebookId: number, name: string) => {
@@ -239,12 +242,12 @@ export function useNotebooks() {
             store.getState().notebooks.map((item) => (item.id === notebookId ? normalized : item)),
           );
         return true;
-      } catch (error) {
+      } catch {
         store.getState().setError("notebooks", "更新笔记本失败，请稍后重试。");
         return false;
       }
     },
-    [mutate, connectionState],
+    [mutate, connectionState, store],
   );
 
   const handleDeleteNotebook = useCallback(
@@ -269,12 +272,12 @@ export function useNotebooks() {
           s.setActiveNotebook(remaining[0]?.id ?? null);
         }
         return true;
-      } catch (error) {
+      } catch {
         store.getState().setError("notebooks", "删除笔记本失败，请稍后重试。");
         return false;
       }
     },
-    [mutate, connectionState],
+    [mutate, connectionState, store],
   );
 
   const statusLabel = useMemo<StatusLabel>(() => {

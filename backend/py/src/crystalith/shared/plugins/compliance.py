@@ -3,6 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 from .interfaces import (
+    SUPPORTED_PLUGIN_API_VERSIONS,
     AIProviderPlugin,
     BasePlugin,
     OutputTypeFrontendBundle,
@@ -10,7 +11,6 @@ from .interfaces import (
     ParserPlugin,
     SlidesWorkflowPlugin,
     SourceConnectorPlugin,
-    SUPPORTED_PLUGIN_API_VERSIONS,
     WebExtractorPlugin,
 )
 from .render_types import (

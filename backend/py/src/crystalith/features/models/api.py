@@ -6,18 +6,15 @@ available AI models configured in the application.
 
 from __future__ import annotations
 
+import logging
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from crystalith.shared.config import ModelConfig, Settings, auto_discover_ollama
-
-from crystalith.shared.deps import get_settings
-from crystalith.shared.deps import get_plugin_registry
+from crystalith.shared.deps import get_plugin_registry, get_settings
 from crystalith.shared.plugins import PluginRegistry
-
-import logging
 
 _logger = logging.getLogger(__name__)
 

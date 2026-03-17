@@ -9,12 +9,11 @@ from typing import Any
 import pytest
 import pytest_asyncio
 import sqlalchemy as sa
-from fastapi import Request
-from sqlalchemy.pool import NullPool
-
 from cl_sqlalchemyx.base.dal import READONLY_SESSION_FLAG
 from cl_sqlalchemyx.integrations.fastapi import DBManagerMapperFastAPIDepends
 from cl_sqlalchemyx.mgrs import AsyncSQLiteManager, AsyncSQLiteManagersMapper
+from fastapi import Request
+from sqlalchemy.pool import NullPool
 
 
 class SampleDB(Enum):

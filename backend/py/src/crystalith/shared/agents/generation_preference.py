@@ -5,7 +5,6 @@ from typing import Literal, Protocol, runtime_checkable
 
 from crystalith.shared.types import OutputType
 
-
 GenerationPreference = Literal["quality", "speed"]
 
 
@@ -205,10 +204,7 @@ def tuning_for_request(output_type: OutputType, preference: GenerationPreference
     if preference is None:
         return base
 
-    if preference == "quality":
-        tuned = QUALITY_TUNING_BY_OUTPUT_TYPE.get(output_type)
-    else:
-        tuned = SPEED_TUNING_BY_OUTPUT_TYPE.get(output_type)
+    tuned = QUALITY_TUNING_BY_OUTPUT_TYPE.get(output_type) if preference == "quality" else SPEED_TUNING_BY_OUTPUT_TYPE.get(output_type)
     if tuned is not None:
         return tuned
 

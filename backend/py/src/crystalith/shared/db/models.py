@@ -1,18 +1,14 @@
 from __future__ import annotations
 
 import datetime
-
 import enum
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from cl_sqlalchemyx.base.dal import AsyncSqlATableBase
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from crystalith.shared.json_types import JsonDict
 from crystalith.shared.types import (
-    TaskStatus,
-    TaskType,
     OutputType,
     ResearchStatus,
     ResearchStepStatus,
@@ -20,6 +16,8 @@ from crystalith.shared.types import (
     SlideStage,
     SlideStatus,
     SourceStatus,
+    TaskStatus,
+    TaskType,
 )
 
 

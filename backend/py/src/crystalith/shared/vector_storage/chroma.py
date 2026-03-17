@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import cast
@@ -105,10 +106,7 @@ class ChromaVectorStore:
             clauses.append({"source_id": {"$nin": list(exclude_source_ids)}})
 
         where_obj: dict[str, object]
-        if len(clauses) == 1:
-            where_obj = clauses[0]
-        else:
-            where_obj = {"$and": clauses}
+        where_obj = clauses[0] if len(clauses) == 1 else {"$and": clauses}
 
         results = self._collection.query(
             query_embeddings=cast(PyEmbeddings, [query]),
@@ -188,10 +186,7 @@ class ChromaVectorStore:
             clauses.append({"source_id": {"$nin": list(exclude_source_ids)}})
 
         where_obj: dict[str, object]
-        if len(clauses) == 1:
-            where_obj = clauses[0]
-        else:
-            where_obj = {"$and": clauses}
+        where_obj = clauses[0] if len(clauses) == 1 else {"$and": clauses}
 
         results = self._collection.query(
             query_embeddings=cast(PyEmbeddings, valid_queries),
@@ -290,10 +285,8 @@ class ChromaVectorStore:
     def _ensure_dimension(self, dimension: int) -> None:
         if self._dimension is None:
             self._dimension = dimension
-            try:
+            with contextlib.suppress(Exception):
                 self._collection.modify(metadata={"hnsw:space": "cosine", "dimension": dimension})
-            except Exception:
-                pass
             return
         if self._dimension != dimension:
             raise ValueError("vectors must have consistent dimensions")

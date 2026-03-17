@@ -11,6 +11,7 @@ from typing import Any
 
 from pydantic_ai import Agent
 
+from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.generation_preference import tuning_for_request
 from crystalith.shared.agents.models import build_chat_model
 from crystalith.shared.agents.output_graph import (
@@ -21,7 +22,6 @@ from crystalith.shared.agents.output_graph import (
     _build_output_prompt,
     _map_citations,
 )
-from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.ai.test_provider import TestEmbeddingProvider
 from crystalith.shared.cache import InMemoryCache
 from crystalith.shared.config import ConfigManager, Settings
@@ -34,12 +34,12 @@ from crystalith.shared.eval import (
     validate_mapped_citations,
 )
 from crystalith.shared.retrieval import retrieve_context
-from crystalith.shared.types import OutputType, SourceStatus
+from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import InMemoryVectorStore
 
 
 class _SeedAwareEmbedder(TestEmbeddingProvider):
-    async def embed_batch(self, texts, *, batch_size: int = 100):  # noqa: ANN001
+    async def embed_batch(self, texts, *, batch_size: int = 100):
         vectors: list[list[float]] = []
         for text in texts:
             if "Output type:" in text:
@@ -212,7 +212,7 @@ async def _run(args: argparse.Namespace) -> int:
                     try:
                         result = await agent.run(user_prompt, deps=deps)
                         content = result.output.model_dump()
-                    except Exception:  # noqa: BLE001 - evaluation should be best-effort
+                    except Exception:
                         fallback = True
                         content = {}
                     generate_ms = int((perf_counter() - generate_started) * 1000)
@@ -232,9 +232,7 @@ async def _run(args: argparse.Namespace) -> int:
                     citations = [
                         _build_citation(item.chunk, item.source, item.score) for item in retrieved.chunks
                     ]
-                    citation_map = {
-                        index: citation for index, citation in enumerate(citations, start=1)
-                    }
+                    citation_map = dict(enumerate(citations, start=1))
                     mapped = _map_citations(processed, citation_map, citations[:1])
 
                     citations_mappable, has_citations = validate_mapped_citations(

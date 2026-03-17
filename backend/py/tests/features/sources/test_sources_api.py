@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Iterator
 import contextlib
 import json
 import threading
 import time
+from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from types import SimpleNamespace
 
 import pytest
 
 from crystalith.shared.db import Chunk, Source
-from crystalith.shared.parsers.factory import ParserFactory
-from crystalith.shared.parsers.factory import ParserResolution
+from crystalith.shared.parsers.factory import ParserFactory, ParserResolution
 from crystalith.shared.types import SourceStatus
 
 
@@ -39,10 +38,10 @@ def _serve_searx_json(payload: dict[str, object]) -> Iterator[str]:
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
 
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self, format: str, *args) -> None:  # noqa: A003 - base signature
+        def log_message(self, format: str, *args) -> None:
             return
 
-        def do_GET(self) -> None:  # noqa: N802 - http.server naming
+        def do_GET(self) -> None:
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
@@ -67,10 +66,10 @@ def _serve_html(html: str) -> Iterator[str]:
     body = html.encode("utf-8")
 
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self, format: str, *args) -> None:  # noqa: A003 - base signature
+        def log_message(self, format: str, *args) -> None:
             return
 
-        def do_GET(self) -> None:  # noqa: N802 - http.server naming
+        def do_GET(self) -> None:
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
@@ -95,10 +94,10 @@ def _serve_redirect(location: str) -> Iterator[tuple[str, dict[str, int]]]:
     hits: dict[str, int] = {"count": 0}
 
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self, format: str, *args) -> None:  # noqa: A003 - base signature
+        def log_message(self, format: str, *args) -> None:
             return
 
-        def do_GET(self) -> None:  # noqa: N802 - http.server naming
+        def do_GET(self) -> None:
             hits["count"] += 1
             self.send_response(302)
             self.send_header("Location", location)
@@ -123,10 +122,10 @@ def _serve_html_counting(html: str) -> Iterator[tuple[str, dict[str, int]]]:
     hits: dict[str, int] = {"count": 0}
 
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self, format: str, *args) -> None:  # noqa: A003 - base signature
+        def log_message(self, format: str, *args) -> None:
             return
 
-        def do_GET(self) -> None:  # noqa: N802 - http.server naming
+        def do_GET(self) -> None:
             hits["count"] += 1
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -319,13 +318,13 @@ async def test_upload_source_parse_runs_in_executor_without_blocking_requests(cl
             ]
 
     def _from_file(
-        cls,  # noqa: ANN001
+        cls,
         *,
         filename: str | None,
         mime_type: str | None,
-        transcriber=None,  # noqa: ANN001
-        media_fetcher=None,  # noqa: ANN001
-        plugins=None,  # noqa: ANN001
+        transcriber=None,
+        media_fetcher=None,
+        plugins=None,
     ):
         return ParserResolution(parser=_GatedSlowParser())
 
@@ -384,13 +383,13 @@ async def test_upload_no_chunks_returns_400_and_does_not_create_source(client, m
             return []
 
     def _from_file(
-        cls,  # noqa: ANN001
+        cls,
         *,
         filename: str | None,
         mime_type: str | None,
-        transcriber=None,  # noqa: ANN001
-        media_fetcher=None,  # noqa: ANN001
-        plugins=None,  # noqa: ANN001
+        transcriber=None,
+        media_fetcher=None,
+        plugins=None,
     ):
         return ParserResolution(parser=_EmptyParser())
 
@@ -440,13 +439,13 @@ async def test_upload_three_sources_concurrently_keeps_response_times_stable(cli
             ]
 
     def _from_file(
-        cls,  # noqa: ANN001
+        cls,
         *,
         filename: str | None,
         mime_type: str | None,
-        transcriber=None,  # noqa: ANN001
-        media_fetcher=None,  # noqa: ANN001
-        plugins=None,  # noqa: ANN001
+        transcriber=None,
+        media_fetcher=None,
+        plugins=None,
     ):
         nonlocal parser_idx
         with parser_lock:
@@ -671,10 +670,10 @@ async def test_notebook_extractor_policy_custom_mode_controls_fetch_mode(client,
 
     class _StubExtractor:
         @property
-        def extractor_type(self):  # noqa: ANN001
+        def extractor_type(self):
             return ExtractorType.TRAFILATURA
 
-        async def extract(self, url: str, html: str | None = None) -> ExtractedContent:  # noqa: ARG002
+        async def extract(self, url: str, html: str | None = None) -> ExtractedContent:
             return ExtractedContent(text="Hello world", title="Example", url=url, extractor="trafilatura")
 
         async def is_available(self) -> bool:
@@ -691,7 +690,7 @@ async def test_notebook_extractor_policy_custom_mode_controls_fetch_mode(client,
         requires_api_key = False
         requires_service = False
 
-        def create_extractor(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+        def create_extractor(self, *_args, **_kwargs):
             return _StubExtractor()
 
     # Inject a stub extractor plugin into the app-level plugin registry.
@@ -700,8 +699,8 @@ async def test_notebook_extractor_policy_custom_mode_controls_fetch_mode(client,
     plugin = _StubExtractorPlugin()
     registry.web_extractors[plugin.extractor_type] = plugin
     registry.plugins[plugin_id] = plugin
-    registry._web_extractor_plugin_ids[plugin.extractor_type] = plugin_id  # noqa: SLF001
-    registry._load_report.loaded.append(plugin_id)  # noqa: SLF001
+    registry._web_extractor_plugin_ids[plugin.extractor_type] = plugin_id
+    registry._load_report.loaded.append(plugin_id)
     app.state.plugins = registry
 
     notebook_resp = await client.post("/v1/notebooks", json={"name": "Extractor Policy"})

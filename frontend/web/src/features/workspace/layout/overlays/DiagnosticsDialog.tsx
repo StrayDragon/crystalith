@@ -1,4 +1,3 @@
-import type { MouseEvent as ReactMouseEvent } from "react";
 import { useCallback, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -143,26 +142,23 @@ export default function DiagnosticsDialog({
     toast.success(t("common.copied_to_clipboard"));
   }, []);
 
-  const handleBackdropClick = useCallback(
-    (event: ReactMouseEvent<HTMLDivElement>) => {
-      if (event.target !== event.currentTarget) return;
-      onClose();
-    },
-    [onClose],
-  );
-
   if (!open) return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 flex items-center justify-center"
+      className="fixed inset-0 relative flex items-center justify-center"
       style={modalStyle}
       role="dialog"
       aria-modal="true"
       aria-label={t("workspace.diagnostics.title")}
-      onClick={handleBackdropClick}
     >
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+        aria-label={t("common.close")}
+        tabIndex={-1}
+      />
 
       <div
         ref={modalRef}

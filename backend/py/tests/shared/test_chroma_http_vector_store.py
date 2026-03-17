@@ -25,14 +25,14 @@ def _make_stub_chroma_app(*, include_collection_id: bool = True) -> FastAPI:
     app.state.entries = entries
 
     @app.post("/api/v1/collections")
-    async def create_collection(_request: Request):  # noqa: ANN001
+    async def create_collection(_request: Request):
         payload: dict[str, Any] = {}
         if include_collection_id:
             payload["id"] = app.state.collection_id
         return payload
 
     @app.post("/api/v1/collections/{collection_id}/add")
-    async def add(collection_id: str, request: Request):  # noqa: ANN001
+    async def add(collection_id: str, request: Request):
         assert collection_id == app.state.collection_id
         body = await request.json()
         ids = body.get("ids") or []
@@ -46,16 +46,13 @@ def _make_stub_chroma_app(*, include_collection_id: bool = True) -> FastAPI:
         return {"ok": True}
 
     @app.post("/api/v1/collections/{collection_id}/query")
-    async def query(collection_id: str, request: Request):  # noqa: ANN001
+    async def query(collection_id: str, request: Request):
         assert collection_id == app.state.collection_id
         body = await request.json()
         where = body.get("where") or {}
 
         def matches(entry: _Stored) -> bool:
-            if "$and" in where:
-                clauses = where["$and"]
-            else:
-                clauses = [where]
+            clauses = where.get("$and", [where])
             for clause in clauses:
                 if "notebook_id" in clause and entry.metadata.get("notebook_id") != clause["notebook_id"]:
                     return False
@@ -81,7 +78,7 @@ def _make_stub_chroma_app(*, include_collection_id: bool = True) -> FastAPI:
         }
 
     @app.post("/api/v1/collections/{collection_id}/delete")
-    async def delete(collection_id: str, request: Request):  # noqa: ANN001
+    async def delete(collection_id: str, request: Request):
         assert collection_id == app.state.collection_id
         body = await request.json()
         where = body.get("where") or {}
@@ -97,7 +94,7 @@ def _make_stub_chroma_app(*, include_collection_id: bool = True) -> FastAPI:
         return {"ok": True}
 
     @app.post("/api/v1/collections/{collection_id}/get")
-    async def get(collection_id: str, request: Request):  # noqa: ANN001
+    async def get(collection_id: str, request: Request):
         assert collection_id == app.state.collection_id
         body = await request.json()
         where = body.get("where") or {}
@@ -107,10 +104,7 @@ def _make_stub_chroma_app(*, include_collection_id: bool = True) -> FastAPI:
         def matches(entry: _Stored) -> bool:
             if not where:
                 return True
-            if "$and" in where:
-                clauses = where["$and"]
-            else:
-                clauses = [where]
+            clauses = where.get("$and", [where])
             for clause in clauses:
                 if "notebook_id" in clause and entry.metadata.get("notebook_id") != clause["notebook_id"]:
                     return False

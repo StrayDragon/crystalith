@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Protocol
 from collections.abc import AsyncIterator, Sequence
+from typing import Protocol
 
 from .types import ChatMessage, ProviderType
 

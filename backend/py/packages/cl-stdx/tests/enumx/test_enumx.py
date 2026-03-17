@@ -2,9 +2,8 @@ import enum
 import json
 
 import pytest
-from pydantic import BaseModel, Json, ValidationError
-
 from cl_stdx.enumx import EnumField, MetaInfoIntEnum, MetaInfoStrEnum, XMetaInfo
+from pydantic import BaseModel, Json, ValidationError
 
 
 class Status(MetaInfoIntEnum):
@@ -31,7 +30,7 @@ class StdStatus(enum.IntEnum):
     FAILED = 4
 
 
-class StdFlavor(str, enum.Enum):
+class StdFlavor(enum.StrEnum):
     """Standard library StrEnum counterpart used for comparisons."""
 
     VANILLA = "vanilla"
@@ -342,7 +341,7 @@ class TestEnumField:
         class NotAnEnum:
             pass
 
-        with pytest.raises(TypeError, match="enum_cls must be subclass of enum.Enum"):
+        with pytest.raises(TypeError, match=r"enum_cls must be subclass of enum\.Enum"):
             EnumField(NotAnEnum)
 
     def test_get_on_class(self):
@@ -398,7 +397,7 @@ class TestEnumField:
             instance.status = "unknown"
 
         # Invalid type for IntEnum
-        with pytest.raises(ValueError, match="'3.14' is not a valid member, value or name for Status"):
+        with pytest.raises(ValueError, match=r"'3\.14' is not a valid member, value or name for Status"):
             instance.status = 3.14
 
         # Invalid string for StrEnum

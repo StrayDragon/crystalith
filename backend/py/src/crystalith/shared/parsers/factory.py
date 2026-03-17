@@ -4,12 +4,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
+from crystalith.shared.plugins import ParserPlugin, PluginRegistry
+
 from .csv import CSVParser
 from .interfaces import Parser, UnsupportedDocumentError
 from .media import DisabledMediaFetcher, MediaFetcher
 from .text import TextParser
 from .transcription import DisabledTranscriber, TranscriptionProvider
-from crystalith.shared.plugins import ParserPlugin, PluginRegistry
 
 _YOUTUBE_HOSTS = {"youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"}
 
@@ -145,9 +146,7 @@ class ParserFactory:
         def matches(candidate: ParserPlugin) -> bool:
             if mime_type and mime_type in candidate.supported_mime_types:
                 return True
-            if extension and extension in candidate.supported_extensions:
-                return True
-            return False
+            return bool(extension and extension in candidate.supported_extensions)
 
         # Prefer the last-loaded matching plugin (load order is deterministic and honors plugins.load_order).
         loaded_order = list(plugins.get_load_report().loaded)

@@ -4,9 +4,8 @@ from pathlib import Path
 from typing import Protocol
 
 import sqlalchemy as sa
-from sqlalchemy import event
-
 from cl_sqlalchemyx.mgrs import AsyncDBManager
+from sqlalchemy import event
 
 
 class _DBAPICursor(Protocol):

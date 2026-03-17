@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
 import contextlib
 import threading
+from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
@@ -17,10 +17,10 @@ def _serve_html(html: str) -> Iterator[str]:
     body = html.encode("utf-8")
 
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self, format: str, *args) -> None:  # noqa: A003 - base signature
+        def log_message(self, format: str, *args) -> None:
             return
 
-        def do_GET(self) -> None:  # noqa: N802 - http.server naming
+        def do_GET(self) -> None:
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))

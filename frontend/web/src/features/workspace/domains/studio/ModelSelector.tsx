@@ -4,15 +4,10 @@
 
 import { useState, useEffect, useCallback, type ReactElement } from "react";
 import { Select, Option, Typography, Chip, Alert } from "@material-tailwind/react";
-import {
-  SmartToy as AIIcon,
-  CloudQueue as CloudIcon,
-  Computer as LocalIcon,
-} from "@mui/icons-material";
+import { CloudQueue as CloudIcon, Computer as LocalIcon } from "@mui/icons-material";
 
 import {
   listModelsV1ModelsGet as listModels,
-  type ModelRead,
   type ModelsListResponse,
 } from "../../../../api/generated";
 import { unwrapData } from "../../../../api/unwrap";
@@ -44,7 +39,7 @@ export function ModelSelector({
   label = "选择模型",
   disabled = false,
   size = "md",
-  fullWidth = true, // Ignored in MT Select as it is block by default or controlled by container
+  fullWidth: _fullWidth = true, // Ignored in MT Select as it is block by default or controlled by container
   className = "",
 }: ModelSelectorProps) {
   const [modelsData, setModelsData] = useState<ModelsListResponse | null>(null);
@@ -66,10 +61,6 @@ export function ModelSelector({
         );
         if (!cancelled) {
           setModelsData(data);
-          // Set default value if not already set
-          if (!value && data.default_chat) {
-            onChange(data.default_chat);
-          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -87,6 +78,15 @@ export function ModelSelector({
       cancelled = true;
     };
   }, [capability]);
+
+  useEffect(() => {
+    if (value) return;
+    if (!modelsData) return;
+
+    const defaultModel =
+      capability === "embedding" ? modelsData.default_embedding : modelsData.default_chat;
+    if (defaultModel) onChange(defaultModel);
+  }, [capability, modelsData, onChange, value]);
 
   const handleChange = useCallback(
     (newValue: string | undefined) => {

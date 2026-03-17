@@ -18,14 +18,14 @@ class _BatchChatSpy:
         self.current = 0
         self.max_seen = 0
 
-    async def chat(self, messages):  # noqa: ANN001
+    async def chat(self, messages):
         self.current += 1
         self.max_seen = max(self.max_seen, self.current)
         await asyncio.sleep(0.01)
         self.current -= 1
         return "Test answer"
 
-    async def chat_stream(self, messages):  # noqa: ANN001
+    async def chat_stream(self, messages):
         if False:
             yield ""
 
@@ -95,55 +95,54 @@ async def test_refine_batch_generates_all_formats_with_parallel_calls(client, db
 @pytest.mark.asyncio
 async def test_refine_task_queue_runs_and_formats_response(app) -> None:
     transport = ASGITransport(app=app)
-    async with app.router.lifespan_context(app):
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            notebook_resp = await client.post("/v1/notebooks", json={"name": "Refine Queue Notebook"})
-            assert notebook_resp.status_code == 201
-            notebook_id = notebook_resp.json()["id"]
+    async with app.router.lifespan_context(app), AsyncClient(transport=transport, base_url="http://test") as client:
+        notebook_resp = await client.post("/v1/notebooks", json={"name": "Refine Queue Notebook"})
+        assert notebook_resp.status_code == 201
+        notebook_id = notebook_resp.json()["id"]
 
-            async with app.state.db.got_manual_session() as session:
-                source = Source(
-                    notebook_id=notebook_id,
-                    filename="Refine Queue Doc.md",
-                    status=SourceStatus.READY,
-                )
-                session.add(source)
-                await session.flush()
-                chunk = Chunk(source_id=source.id, chunk_index=1, text="Refine queue chunk")
-                session.add(chunk)
-                await session.commit()
-
-            await app.state.vector_store.add(
+        async with app.state.db.got_manual_session() as session:
+            source = Source(
                 notebook_id=notebook_id,
-                source_id=source.id,
-                chunk_ids=[chunk.id],
-                vectors=[[1.0, 0.0, 0.0]],
+                filename="Refine Queue Doc.md",
+                status=SourceStatus.READY,
             )
+            session.add(source)
+            await session.flush()
+            chunk = Chunk(source_id=source.id, chunk_index=1, text="Refine queue chunk")
+            session.add(chunk)
+            await session.commit()
 
-            for format_name in ["paragraph", "bullets", "structured"]:
-                resp = await client.post(
-                    f"/v1/notebooks/{notebook_id}/refine",
-                    json={
-                        "prompt": "Summarize",
-                        "format": format_name,
-                        "source_ids": [source.id],
-                    },
-                )
-                assert resp.status_code == 200
-                payload = resp.json()
+        await app.state.vector_store.add(
+            notebook_id=notebook_id,
+            source_id=source.id,
+            chunk_ids=[chunk.id],
+            vectors=[[1.0, 0.0, 0.0]],
+        )
 
-                assert payload["format"] == format_name
-                assert payload["evidence"] is True
-                assert payload["citations"]
-                assert payload["created_at"]
+        for format_name in ["paragraph", "bullets", "structured"]:
+            resp = await client.post(
+                f"/v1/notebooks/{notebook_id}/refine",
+                json={
+                    "prompt": "Summarize",
+                    "format": format_name,
+                    "source_ids": [source.id],
+                },
+            )
+            assert resp.status_code == 200
+            payload = resp.json()
 
-                assert all(citation["source_id"] == source.id for citation in payload["citations"])
+            assert payload["format"] == format_name
+            assert payload["evidence"] is True
+            assert payload["citations"]
+            assert payload["created_at"]
 
-                if format_name == "paragraph":
-                    assert payload["paragraph"] == "Test answer"
-                elif format_name == "bullets":
-                    assert payload["bullets"] == ["Test bullet 1", "Test bullet 2", "Test bullet 3"]
-                else:
-                    assert payload["structured"]["title"] == "Test title"
-                    assert payload["structured"]["bullets"] == ["Test bullet 1", "Test bullet 2"]
-                    assert payload["structured"]["terms"] == ["Test term"]
+            assert all(citation["source_id"] == source.id for citation in payload["citations"])
+
+            if format_name == "paragraph":
+                assert payload["paragraph"] == "Test answer"
+            elif format_name == "bullets":
+                assert payload["bullets"] == ["Test bullet 1", "Test bullet 2", "Test bullet 3"]
+            else:
+                assert payload["structured"]["title"] == "Test title"
+                assert payload["structured"]["bullets"] == ["Test bullet 1", "Test bullet 2"]
+                assert payload["structured"]["terms"] == ["Test term"]

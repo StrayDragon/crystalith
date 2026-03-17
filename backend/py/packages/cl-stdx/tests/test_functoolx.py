@@ -1,6 +1,5 @@
-from freezegun import freeze_time
-
 from cl_stdx.functoolx import ONE_MINUTE, ttl_lru_cache
+from freezegun import freeze_time
 
 
 def test_ttl_cache_basic_hit_and_expire() -> None:

@@ -25,8 +25,8 @@ __all__ = [
     "ParserError",
     "ParserFactory",
     "ParserResolution",
-    "TranscriptionProvider",
     "TextParser",
+    "TranscriptionProvider",
     "UnsupportedDocumentError",
     "create_transcription_provider",
 ]

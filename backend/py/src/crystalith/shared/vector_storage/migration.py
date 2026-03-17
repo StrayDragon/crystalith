@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from .interfaces import VectorStore
 from .chroma import ChromaVectorStore
+from .interfaces import VectorStore
 from .memory import InMemoryVectorStore
 from .sqlite import SQLiteVectorStore
 from .types import VectorEntry

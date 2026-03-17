@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from pathlib import PurePosixPath
 
-
 _WINDOWS_DRIVE_RE = re.compile(r"^[a-zA-Z]:/")
 
 

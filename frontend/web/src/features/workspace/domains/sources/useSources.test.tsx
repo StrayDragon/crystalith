@@ -1,5 +1,5 @@
 import { act, waitFor } from "@testing-library/react";
-import { beforeEach, expect, test, vi } from "vitest";
+import { beforeEach, expect, test } from "vitest";
 import { SWRConfig } from "swr";
 import type { ReactNode } from "react";
 import { http, HttpResponse } from "msw";

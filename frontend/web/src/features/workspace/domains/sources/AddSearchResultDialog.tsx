@@ -218,9 +218,13 @@ export default function AddSearchResultDialog({
       aria-modal="true"
     >
       {/* Backdrop */}
-      <div
+      <button
+        type="button"
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={allDone ? handleClose : undefined}
+        disabled={!allDone}
+        aria-label="关闭"
+        tabIndex={-1}
       />
 
       {/* Dialog Content */}

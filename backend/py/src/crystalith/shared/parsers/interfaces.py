@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import ClassVar, Protocol, runtime_checkable
+
+from crystalith.shared.json_types import JsonDict, JsonValue
 
 from .types import Chunk
-from crystalith.shared.json_types import JsonDict, JsonValue
 
 
 class Parser(Protocol):
-    parser_type: str
-    supported_mime_types: set[str]
-    supported_extensions: set[str]
+    parser_type: ClassVar[str]
+    supported_mime_types: ClassVar[set[str]]
+    supported_extensions: ClassVar[set[str]]
     page_count: int | None
 
     def parse(self, content: bytes) -> list[Chunk]: ...

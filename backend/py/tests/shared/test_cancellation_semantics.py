@@ -9,7 +9,7 @@ from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.output_graph import run_output_graph
 from crystalith.shared.ai.test_provider import TestEmbeddingProvider
 from crystalith.shared.db import Notebook, Output, Source
-from crystalith.shared.retrieval import RetrievedContext, RetrievalStats
+from crystalith.shared.retrieval import RetrievalStats, RetrievedContext
 from crystalith.shared.types import OutputType, SourceStatus
 
 
@@ -29,7 +29,7 @@ async def test_output_graph_cancellation_does_not_persist(app, db_session, monke
     await db_session.commit()
     await db_session.refresh(source)
 
-    async def _fake_retrieve_context(*_args, **_kwargs) -> RetrievedContext:  # noqa: ANN001
+    async def _fake_retrieve_context(*_args, **_kwargs) -> RetrievedContext:
         return RetrievedContext(
             context_text="",
             resolved_chunk_ids=[],
@@ -57,7 +57,7 @@ async def test_output_graph_cancellation_does_not_persist(app, db_session, monke
     # Mock reason: force retrieval path to stay in-memory for deterministic cancellation behavior.
     monkeypatch.setattr(output_graph_module, "retrieve_context", _fake_retrieve_context, raising=True)
 
-    async def _cancelled_run(self, *_args, **_kwargs):  # noqa: ANN001
+    async def _cancelled_run(self, *_args, **_kwargs):
         raise asyncio.CancelledError()
 
     # Mock reason: directly inject CancelledError from model execution path.
@@ -87,10 +87,10 @@ async def test_output_graph_cancellation_does_not_persist(app, db_session, monke
 
 @pytest.mark.asyncio
 async def test_slides_generator_cancellation_does_not_fallback(app, db_session, monkeypatch) -> None:
-    from crystalith.features.studio.slides.generator import generate_slides_outline
     import crystalith.features.studio.slides.generator as slides_generator_module
+    from crystalith.features.studio.slides.generator import generate_slides_outline
 
-    async def _fake_retrieve_context(*_args, **_kwargs) -> RetrievedContext:  # noqa: ANN001
+    async def _fake_retrieve_context(*_args, **_kwargs) -> RetrievedContext:
         return RetrievedContext(
             context_text="ctx",
             resolved_chunk_ids=[],
@@ -116,7 +116,7 @@ async def test_slides_generator_cancellation_does_not_fallback(app, db_session, 
     # Mock reason: force retrieval path to stay in-memory for deterministic cancellation behavior.
     monkeypatch.setattr(slides_generator_module, "retrieve_context", _fake_retrieve_context, raising=True)
 
-    async def _cancelled_run(self, *_args, **_kwargs):  # noqa: ANN001
+    async def _cancelled_run(self, *_args, **_kwargs):
         raise asyncio.CancelledError()
 
     # Mock reason: directly inject CancelledError from model execution path.

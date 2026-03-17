@@ -13,7 +13,6 @@ from rivu_server_sdk.json_patch import apply_json_patch
 from crystalith.shared.json_types import JsonDict, JsonValue
 from crystalith.shared.ui_state import build_default_shared_state
 
-
 _PROMPT_DIRECTIVE_RE = re.compile(
     r"^/prompt:(?P<preset>[a-z0-9_-]{1,32})(?P<rest>.*)$",
     flags=re.IGNORECASE,
