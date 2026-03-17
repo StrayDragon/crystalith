@@ -18,7 +18,7 @@
 
 ## 4. Spec & Closeout
 
-- [ ] 4.1 在实现完成后将本变更的增量 spec 同步回 `openspec/specs/quality-and-regression/spec.md`
+- [x] 4.1 在实现完成后将本变更的增量 spec 同步回 `openspec/specs/quality-and-regression/spec.md`
 - [ ] 4.2 将变更归档到 `openspec/changes/archive/`（保留可追溯的提案/设计/任务与验证记录）
 
 ## Verification Results (2026-03-17)

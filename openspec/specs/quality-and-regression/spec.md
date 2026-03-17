@@ -57,7 +57,19 @@ CI 与本地默认检查入口 MUST 覆盖 lint、格式化检查与关键 API c
 #### Scenario: Full frontend lint remains runnable on repository baseline
 - **WHEN** 开发者运行 `pnpm -C frontend/web run lint:all`
 - **THEN** 系统 SHALL 对前端受管源码执行 `oxlint` 全量检查
-- **AND** 历史 warning SHALL 可见但不要求立即全部修复后才能运行该入口
+- **AND** 该入口 SHALL 在主分支基线保持零 error（并将 warnings 视为 gate），避免质量门槛漂移
+- **AND** 若引入新规则导致历史遗留噪音，系统 MUST 先以受控方式（一次性收敛或最小范围 ignore）清理基线后再开启 gate
+
+### Requirement: Backend Python lint catches low-noise footguns
+后端 Python lint MUST 覆盖“低噪音高收益”的问题类型，以在不引入风格争议的前提下降低回归风险。
+
+#### Scenario: Backend lint enforces low-noise rules
+- **WHEN** 非测试代码引入内置名遮蔽、naive datetime 或未使用参数等问题
+- **THEN** lint SHALL 失败并给出可定位的诊断信息
+
+#### Scenario: Test code allows unused arguments
+- **WHEN** 测试代码（`**/tests/**`）因 pytest fixture/参数化存在未使用参数
+- **THEN** lint SHALL 允许该类未使用参数存在
 
 ### Requirement: Frontend formatting uses Oxfmt with generated files excluded
 前端格式化工作流 MUST 使用 `oxfmt` 提供统一写入与检查入口，并排除生成产物与第三方内容。
@@ -78,11 +90,12 @@ lint 引入 MUST 采用增量策略，避免一次性全仓重写导致评审噪
 #### Scenario: Lint focuses on changed files first
 - **WHEN** lint 新规则引入到仓库
 - **THEN** 系统 SHALL 优先对新增/变更代码严格执行
-- **AND** 对历史遗留问题提供 baseline/ignore 的过渡机制
+- **AND** 对历史遗留问题 MUST 提供基线清零或显式 ignore 的过渡机制
 
 #### Scenario: Incremental lint and controlled formatter rollout coexist
-- **WHEN** 仓库引入新的前端 lint / format 工具链
+- **WHEN** 仓库引入新的前端 lint / format 工具链或升级规则集
 - **THEN** 系统 SHALL 优先对新增/变更代码严格执行日常 lint
+- **AND** 仅在主分支基线已清零后，相关入口才 MAY 升级为“warnings 也视为 gate”的严格模式
 - **AND** MAY 通过一次受控的全量格式化建立统一风格基线
 
 ### Requirement: Minimal API smoke regression suite exists
