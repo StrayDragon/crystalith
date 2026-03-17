@@ -21,6 +21,7 @@ Runs the deterministic frontend quality gate (mock-report + stable test suite).
 Notes:
 - Test files named `*.experimental.test.ts(x)` are excluded by default and only run via `pnpm run test:all`.
 - Stable tests default to `MSW onUnhandledRequest=error` to prevent accidental real network calls.
+- `pnpm run test:all` defaults to `MSW onUnhandledRequest=warn` to reduce surprise while keeping visibility.
 
 ### `pnpm run build`
 
