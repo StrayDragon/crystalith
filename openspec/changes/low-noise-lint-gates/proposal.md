@@ -22,7 +22,7 @@
 
 ## Impact
 
-- 预期影响范围（以当前仓库基线实测估算）：
-  - Backend：约 59 个文件会受到 `A/ARG/DTZ` 的新增约束；若对 `**/tests/**` 忽略 `ARG*`，则约 32 个文件需要修复。
-  - Frontend：启用 `suspicious+perf` 后约 31 个文件需要修复（放行 `react-in-jsx-scope` 后）；否则会因该过时规则产生大规模噪音。
-- 变更类型以静态检查与小幅代码调整为主，不预期影响运行时语义；风险主要来自少量规则带来的重构成本（例如 `no-await-in-loop`、`no-array-index-key`）。
+- 实际影响范围（按实现提交统计）：
+  - Backend：33 个文件（含 Ruff 配置与生产/测试代码修复）。
+  - Frontend：30 个文件（含 lint 入口与基线修复；启用 `suspicious+perf` 时，基线初始为 67 errors / 28 files）。
+- 变更类型以静态检查与小幅代码调整为主，不预期影响运行时语义；风险主要来自少量规则带来的重构成本（例如 `no-await-in-loop`、`no-array-index-key`），已通过局部重构或带理由的最小范围 disable 处理。
