@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import cast
 
+from rivu_server_sdk import UiV1CustomEvent, UiV1EventProcessor
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from rivu_server_sdk import UiV1CustomEvent, UiV1EventProcessor
 
 from crystalith.shared.db import Session, UiEventReceipt
 from crystalith.shared.json_types import JsonDict, JsonValue

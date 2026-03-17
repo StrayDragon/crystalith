@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-import type { Citation, SourceItem } from "../../shared/types";
+import type { SourceItem } from "../../shared/types";
 import { useGraphSessionDetail, type GraphSessionTarget } from "./useGraphSessionDetail";
 
 type SlideOpenMode = "config" | "preview";

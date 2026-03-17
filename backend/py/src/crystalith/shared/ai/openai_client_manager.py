@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
 from collections.abc import Mapping
+from dataclasses import dataclass
 
 import httpx
 from openai import AsyncOpenAI

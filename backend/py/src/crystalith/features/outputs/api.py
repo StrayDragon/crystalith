@@ -3,15 +3,15 @@ from __future__ import annotations
 import datetime
 import json
 import os
+from time import perf_counter
 from typing import Literal, cast
 
+from cl_logs.logging import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from cl_logs.logging import get_logger
 
 from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.generation_preference import (
@@ -26,11 +26,6 @@ from crystalith.shared.cache import CacheProvider
 from crystalith.shared.cache.epochs import bump_sources_epoch
 from crystalith.shared.config import Settings
 from crystalith.shared.db import Chunk, Notebook, Output, Source
-from crystalith.shared.observability import new_trace_id
-from crystalith.shared.schemas.citations import Citation
-from crystalith.shared.types import OutputType, SourceStatus
-from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
-
 from crystalith.shared.deps import (
     get_cache_provider,
     get_db_session,
@@ -40,11 +35,11 @@ from crystalith.shared.deps import (
     get_stage_limiters,
     get_vector_store,
 )
-from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.json_types import JsonDict, JsonValue
+from crystalith.shared.observability import new_trace_id
+from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.plugins.official_catalog import OFFICIAL_PLUGIN_CATALOG
-
-from time import perf_counter
+from crystalith.shared.schemas.citations import Citation
 from crystalith.shared.source_diagnostics import (
     SOURCE_ERROR_EMBEDDING_FAILED,
     SOURCE_ERROR_INGESTION_FAILED,
@@ -53,7 +48,8 @@ from crystalith.shared.source_diagnostics import (
     apply_source_failure,
     raise_source_failure,
 )
-
+from crystalith.shared.types import OutputType, SourceStatus
+from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
 
 log = get_logger(__name__)
 
@@ -165,26 +161,27 @@ def _build_output_sources_meta(
     sources: list[Source],
     fallback_names: dict[int, str],
 ) -> list[OutputExportSource]:
-    items: list[OutputExportSource] = []
-    for source in sources:
-        items.append(
-            OutputExportSource(
-                source_id=source.id,
-                source_name=source.filename or fallback_names.get(source.id) or "未知来源",
-                mime_type=source.mime_type,
-                parser_type=source.parser_type,
-            )
+    items = [
+        OutputExportSource(
+            source_id=source.id,
+            source_name=source.filename or fallback_names.get(source.id) or "未知来源",
+            mime_type=source.mime_type,
+            parser_type=source.parser_type,
         )
-    missing_ids = [source_id for source_id in fallback_names.keys() if source_id not in {s.id for s in sources}]
-    for source_id in sorted(missing_ids):
-        items.append(
+        for source in sources
+    ]
+    missing_ids = [source_id for source_id in fallback_names if source_id not in {s.id for s in sources}]
+    items.extend(
+        [
             OutputExportSource(
                 source_id=source_id,
                 source_name=fallback_names.get(source_id) or "未知来源",
                 mime_type=None,
                 parser_type=None,
             )
-        )
+            for source_id in sorted(missing_ids)
+        ]
+    )
     return items
 
 
@@ -555,9 +552,7 @@ def _extract_text_from_output(output: Output) -> str:
                 if text:
                     parts.append(f"- {text}")
         elif "bullets" in content and isinstance(content["bullets"], list):
-            for bullet in content["bullets"]:
-                if bullet:
-                    parts.append(f"- {bullet}")
+            parts.extend([f"- {bullet}" for bullet in content["bullets"] if bullet])
 
     elif output_type == OutputType.FAQ:
         if "items" in content and isinstance(content["items"], list):
@@ -596,8 +591,7 @@ def _extract_text_from_output(output: Output) -> str:
                 parts.append(f"{i}. {question}")
                 options = q_dict.get("options")
                 if isinstance(options, list):
-                    for opt in options:
-                        parts.append(f"   - {_json_to_text(opt)}")
+                    parts.extend([f"   - {_json_to_text(opt)}" for opt in options])
                 answer = _json_to_text(q_dict.get("answer"))
                 if answer:
                     parts.append(f"   答案: {answer}")
@@ -639,10 +633,7 @@ def _extract_text_from_output(output: Output) -> str:
                     parts.append("")
                     parts.append("### 要点")
                     for point in key_points:
-                        if isinstance(point, dict):
-                            text = _json_to_text(cast(JsonDict, point).get("text"))
-                        else:
-                            text = _json_to_text(point)
+                        text = _json_to_text(cast(JsonDict, point).get("text")) if isinstance(point, dict) else _json_to_text(point)
                         if text:
                             parts.append(f"- {text}")
                 parts.append("")
@@ -672,10 +663,7 @@ def _extract_text_from_output(output: Output) -> str:
                 points = section_dict.get("points")
                 if isinstance(points, list):
                     for point in points:
-                        if isinstance(point, dict):
-                            text = _json_to_text(cast(JsonDict, point).get("text"))
-                        else:
-                            text = _json_to_text(point)
+                        text = _json_to_text(cast(JsonDict, point).get("text")) if isinstance(point, dict) else _json_to_text(point)
                         if text:
                             parts.append(f"- {text}")
                 parts.append("")
@@ -685,12 +673,10 @@ def _extract_text_from_output(output: Output) -> str:
                 parts.append(_json_to_text(content["summary"]))
             if "key_points" in content and isinstance(content["key_points"], list):
                 parts.append("\n## 要点")
-                for point in content["key_points"]:
-                    parts.append(f"- {_json_to_text(point)}")
+                parts.extend([f"- {_json_to_text(point)}" for point in content["key_points"]])
             if "recommendations" in content and isinstance(content["recommendations"], list):
                 parts.append("\n## 建议")
-                for rec in content["recommendations"]:
-                    parts.append(f"- {_json_to_text(rec)}")
+                parts.extend([f"- {_json_to_text(rec)}" for rec in content["recommendations"]])
 
     elif output_type == OutputType.SLIDES:
         if "markdown" in content and isinstance(content["markdown"], str):
@@ -709,26 +695,20 @@ def _extract_text_from_output(output: Output) -> str:
                     parts.append(f"## {slide_title}")
                     bullets = slide_dict.get("bullets")
                     if isinstance(bullets, list):
-                        for bullet in bullets:
-                            parts.append(f"- {_json_to_text(bullet)}")
+                        parts.extend([f"- {_json_to_text(bullet)}" for bullet in bullets])
 
     elif output_type == OutputType.STRUCTURED:
         bullets = content.get("bullets")
         if isinstance(bullets, list):
             for bullet in bullets:
-                if isinstance(bullet, dict):
-                    text = _json_to_text(cast(JsonDict, bullet).get("text"))
-                else:
-                    text = _json_to_text(bullet)
+                text = _json_to_text(cast(JsonDict, bullet).get("text")) if isinstance(bullet, dict) else _json_to_text(bullet)
                 if text:
                     parts.append(f"- {text}")
         terms = content.get("terms")
         if isinstance(terms, list) and terms:
             parts.append("")
             parts.append("## 术语")
-            for term in terms:
-                if term:
-                    parts.append(f"- {_json_to_text(term)}")
+            parts.extend([f"- {_json_to_text(term)}" for term in terms if term])
         sections = content.get("sections")
         if not bullets and isinstance(sections, list):
             for section in sections:
@@ -790,8 +770,12 @@ def _split_text_to_chunks(text: str, chunk_size: int = 500, overlap: int = 50) -
                         chunks.append(sent)
                     else:
                         # Last resort: split by character
-                        for i in range(0, len(sent), chunk_size - overlap):
-                            chunks.append(sent[i:i + chunk_size])
+                        chunks.extend(
+                            [
+                                sent[i : i + chunk_size]
+                                for i in range(0, len(sent), chunk_size - overlap)
+                            ]
+                        )
             else:
                 current_chunk = [para]
                 current_length = para_len

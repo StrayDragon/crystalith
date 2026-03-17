@@ -5,9 +5,8 @@ from enum import Enum
 
 import pytest
 import pytest_asyncio
-from sqlalchemy.pool import NullPool
-
 from cl_sqlalchemyx.mgrs import AsyncSQLiteManager, AsyncSQLiteManagersMapper
+from sqlalchemy.pool import NullPool
 
 
 class DBKey(Enum):

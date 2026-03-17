@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Close as CloseIcon,
@@ -39,6 +39,7 @@ export default function AddSourceFromUrlDialog({
   const [isAdding, setIsAdding] = useState(false);
   const { style: modalStyle } = useLayer("modal");
   const modalRef = useRef<HTMLDivElement | null>(null);
+  const urlInputRef = useRef<HTMLInputElement | null>(null);
 
   const canSubmit = useMemo(() => {
     const normalized = normalizeUrl(url);
@@ -75,6 +76,11 @@ export default function AddSourceFromUrlDialog({
     onEscape: handleClose,
   });
 
+  useEffect(() => {
+    if (!open) return;
+    urlInputRef.current?.focus();
+  }, [open]);
+
   if (!open) return null;
 
   return createPortal(
@@ -85,7 +91,12 @@ export default function AddSourceFromUrlDialog({
       aria-modal="true"
       aria-label="从 URL 导入来源"
     >
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClose} />
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={handleClose}
+        aria-label="关闭对话框"
+      />
 
       <div
         ref={modalRef}
@@ -135,6 +146,7 @@ export default function AddSourceFromUrlDialog({
           <label className="block text-xs font-medium text-gray-700 dark:text-slate-300">
             URL
             <input
+              ref={urlInputRef}
               value={url}
               onChange={(event) => setUrl(event.target.value)}
               placeholder="https://example.com/article"
@@ -145,7 +157,6 @@ export default function AddSourceFromUrlDialog({
                   void handleSubmit();
                 }
               }}
-              autoFocus
               inputMode="url"
             />
           </label>

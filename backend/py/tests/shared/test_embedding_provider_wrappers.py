@@ -14,10 +14,10 @@ class _CountingEmbedder:
         self.calls: int = 0
         self.last_batch_size: int | None = None
 
-    async def embed(self, texts):  # noqa: ANN001
+    async def embed(self, texts):
         return await self.embed_batch(texts, batch_size=len(texts) or 1)
 
-    async def embed_batch(self, texts, *, batch_size: int = 100):  # noqa: ANN001
+    async def embed_batch(self, texts, *, batch_size: int = 100):
         self.calls += 1
         self.last_batch_size = batch_size
         vectors: list[list[float]] = []

@@ -19,7 +19,7 @@ from tests._support.settings import make_settings
 
 
 class _StubSearcher:
-    async def search(self, query: str, *, mode: str = "Web"):  # noqa: ARG002
+    async def search(self, query: str, *, mode: str = "Web"):
         return []
 
 

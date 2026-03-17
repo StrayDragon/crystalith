@@ -3,8 +3,7 @@ from __future__ import annotations
 import pytest
 
 from crystalith.shared.db import Chunk, Source
-from crystalith.shared.types import OutputType
-from crystalith.shared.types import SourceStatus
+from crystalith.shared.types import OutputType, SourceStatus
 
 
 @pytest.mark.asyncio

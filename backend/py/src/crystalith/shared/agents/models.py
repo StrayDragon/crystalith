@@ -1,14 +1,13 @@
 from __future__ import annotations
 
+from cl_logs.logging import get_logger
+from pydantic import BaseModel
 from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.profiles import ModelProfile
 from pydantic_ai.providers.ollama import OllamaProvider
 from pydantic_ai.providers.openai import OpenAIProvider
-
-from cl_logs.logging import get_logger
-from pydantic import BaseModel
 
 from crystalith.shared.ai.effective_settings import (
     completion_options_to_pydantic_model_settings,
@@ -18,7 +17,6 @@ from crystalith.shared.ai.effective_settings import (
 from crystalith.shared.ai.openai_client_manager import get_openai_client_manager
 from crystalith.shared.config import ModelConfig, OpenAIProviderSettings, Settings
 from crystalith.shared.config.ollama_discovery import resolve_reachable_ollama_host
-
 
 log = get_logger(__name__)
 
@@ -230,7 +228,7 @@ def extract_effective_model_settings_for_log(model: Model) -> dict[str, object]:
 
     header_keys: list[str] | None = None
     if isinstance(extra_headers, dict):
-        header_keys = sorted(str(k) for k in extra_headers.keys())
+        header_keys = sorted(str(k) for k in extra_headers)
 
     stop_count: int | None = None
     if isinstance(stop_sequences, (list, tuple)):

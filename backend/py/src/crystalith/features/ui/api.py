@@ -4,22 +4,20 @@ from typing import Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from rivu_server_sdk import (
+    UI_V1_EVENT_NAME,
     InvalidPayloadError,
     RevisionConflictError,
-    UI_V1_EVENT_NAME,
     UiV1CustomEvent,
     UnknownComponentError,
 )
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.deps import get_db_session
 from crystalith.shared.json_types import JsonDict
 from crystalith.shared.ui_state import ensure_session_shared_state
 
 from . import service
-
 
 router = APIRouter(
     prefix="/v1/notebooks/{notebook_id}/sessions/{session_id}/ui",

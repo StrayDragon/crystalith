@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from pydantic_graph import GraphRunContext
 
 from crystalith.shared.agents.deps import StudioDeps
-from crystalith.shared.agents.output_graph import DEFAULT_PROMPTS, GenerateOutput, OutputGraphState, OUTPUT_SCHEMAS
+from crystalith.shared.agents.output_graph import DEFAULT_PROMPTS, OUTPUT_SCHEMAS, GenerateOutput, OutputGraphState
 from crystalith.shared.types import OutputType
 
 
@@ -41,10 +41,10 @@ async def test_generate_output_prefers_plugin_schema_and_prompt(monkeypatch: pyt
     captured: dict[str, Any] = {}
 
     class _StubAgent:
-        def __init__(self, model, *, output_type, deps_type, system_prompt, retries):  # noqa: ANN001
+        def __init__(self, model, *, output_type, deps_type, system_prompt, retries):
             captured["schema"] = output_type
 
-        async def run(self, user_prompt: str, deps: Any):  # noqa: ANN001
+        async def run(self, user_prompt: str, deps: Any):
             captured["user_prompt"] = user_prompt
 
             class _Out:
@@ -87,10 +87,10 @@ async def test_generate_output_falls_back_to_core_schema_and_prompt(monkeypatch:
     captured: dict[str, Any] = {}
 
     class _StubAgent:
-        def __init__(self, model, *, output_type, deps_type, system_prompt, retries):  # noqa: ANN001
+        def __init__(self, model, *, output_type, deps_type, system_prompt, retries):
             captured["schema"] = output_type
 
-        async def run(self, user_prompt: str, deps: Any):  # noqa: ANN001
+        async def run(self, user_prompt: str, deps: Any):
             captured["user_prompt"] = user_prompt
 
             class _Out:

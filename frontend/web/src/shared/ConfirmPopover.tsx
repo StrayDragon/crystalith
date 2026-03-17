@@ -274,11 +274,17 @@ export default function ConfirmPopover({
       })}
       {open && anchor
         ? createPortal(
-            <div className="fixed inset-0" style={style} onClick={handleClose}>
+            <div className="fixed inset-0 relative" style={style}>
+              <button
+                type="button"
+                className="absolute inset-0"
+                onClick={handleClose}
+                aria-label="关闭确认"
+                tabIndex={-1}
+              />
               <div
                 className="absolute"
                 style={{ left: anchor.x, top: anchor.y, transform }}
-                onClick={(event) => event.stopPropagation()}
                 role="dialog"
                 aria-modal="true"
               >

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import datetime
 import json
-import asyncio
-
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,16 +15,6 @@ from crystalith.shared.ai.types import ChatMessage
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import RefineSettings, Settings
 from crystalith.shared.db import Chunk, Notebook, Source
-from crystalith.shared.schemas.citations import Citation
-from crystalith.shared.types import TaskStatus, TaskType
-from crystalith.shared.utils import (
-    extract_page_number,
-    extract_paragraph_index,
-    format_context,
-    parse_bullets,
-)
-from crystalith.shared.vector_storage import VectorStore, cached_vector_search
-
 from crystalith.shared.deps import (
     get_ai_provider,
     get_cache_provider,
@@ -36,6 +25,15 @@ from crystalith.shared.deps import (
     get_task_queue,
     get_vector_store,
 )
+from crystalith.shared.schemas.citations import Citation
+from crystalith.shared.types import TaskStatus, TaskType
+from crystalith.shared.utils import (
+    extract_page_number,
+    extract_paragraph_index,
+    format_context,
+    parse_bullets,
+)
+from crystalith.shared.vector_storage import VectorStore, cached_vector_search
 
 if TYPE_CHECKING:
     from crystalith.features.tasks.queue import TaskQueue
@@ -123,10 +121,7 @@ def _normalize_format(settings: RefineSettings, format_name: str) -> str:
 def _resolve_formats(settings: RefineSettings, formats: list[str] | None) -> list[str]:
     if not formats:
         return [item.strip().lower() for item in settings.formats]
-    resolved: list[str] = []
-    for item in formats:
-        resolved.append(_normalize_format(settings, item))
-    return resolved
+    return [_normalize_format(settings, item) for item in formats]
 
 
 def _normalize_source_ids(source_ids: list[int] | None) -> list[int]:
@@ -311,9 +306,8 @@ async def refine_batch(
 
     async def _generate_output(format_name: str) -> tuple[str, RefineBatchOutput]:
         messages = _build_messages(format_name, payload.prompt, context)
-        async with semaphore:
-            async with limiters.llm_generate.acquire():
-                answer = await chatter.chat(messages)
+        async with semaphore, limiters.llm_generate.acquire():
+            answer = await chatter.chat(messages)
         return format_name, _apply_format(format_name, answer, payload.prompt, citations)
 
     generated = await asyncio.gather(*[_generate_output(format_name) for format_name in formats])

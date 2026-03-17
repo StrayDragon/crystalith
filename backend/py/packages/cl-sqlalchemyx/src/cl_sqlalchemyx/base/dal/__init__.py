@@ -20,11 +20,11 @@ if TYPE_CHECKING:
     from sqlalchemy.engine.interfaces import _CoreAnyExecuteParams  # pragma: no cover # pyright: ignore[reportPrivateUsage]
 
 READONLY_SESSION_FLAG: Final[str] = "__cl_sqlalchemyx__readonly_session__"
+READONLY_WRITE_BYPASS_FLAG: Final[str] = "__cl_sqlalchemyx__allow_readonly_write__"
 
 _LOGGER = logging.getLogger(__name__)
 
 T = TypeVar("T")
-V = TypeVar("V")
 P = ParamSpec("P")
 BaseModelT = TypeVar("BaseModelT", bound=BaseModel)
 
@@ -32,21 +32,23 @@ OPTIMISTIC_LOCK_ERROR_MSG_TRAIT: Final[str] = "乐观锁更新失败"
 PESSIMISTIC_LOCK_ERROR_MSG_TRAIT: Final[str] = "悲观锁获取失败"
 
 
-def filtered_in_sql_values(
-    values: Iterable[V] | None,
-    target_type_as: Callable[[V], T] = lambda x: x,
-) -> list[T]:
+def filtered_in_sql_values[ValueT, TargetT](
+    values: Iterable[ValueT] | None,
+    target_type_as: Callable[[ValueT], TargetT] | None = None,
+) -> list[TargetT]:
     if not values:
         return []
 
-    items: list[T] = []
-    seen = set[T]()
+    converter = target_type_as or cast("Callable[[ValueT], TargetT]", lambda x: x)
+
+    items: list[TargetT] = []
+    seen: set[TargetT] = set()
 
     for item in values:
         if item is None or item == "":
             continue
         try:
-            converted_value = target_type_as(item)
+            converted_value = converter(item)
             if converted_value not in seen:
                 seen.add(converted_value)
                 items.append(converted_value)
@@ -116,10 +118,9 @@ async def async_temp_set_lock_wait_timeout(
     try:
         bind = session.get_bind()
         if bind is not None:
+            dialect_name = bind.dialect.name  # type: ignore[union-attr]
             if hasattr(bind, "sync_engine"):
                 dialect_name = bind.sync_engine.dialect.name
-            else:
-                dialect_name = bind.dialect.name  # type: ignore[union-attr]
     except Exception:
         dialect_name = None
 
@@ -172,7 +173,7 @@ class RetryConfig:
 
         if self.jitter and delay > 0:
             jitter_range = delay * 0.2
-            delay = delay + random.uniform(-jitter_range, jitter_range)  # noqa: S311
+            delay = delay + random.uniform(-jitter_range, jitter_range)
             delay = max(0, min(delay, self.max_delay))
 
         return delay
@@ -220,11 +221,16 @@ def async_with_retry(
             for attempt in range(1, retry_config.max_attempts + 1):
                 try:
                     return await func(*args, **kwargs)
-                except DBRetryableError as e:  # noqa: PERF203
+                except DBRetryableError as e:
                     last_exception = e
                     error_type = type(e).__name__
                     _LOGGER.warning(
-                        f"数据库操作冲突({error_type}),第{attempt}/{retry_config.max_attempts}次尝试失败: {func.__name__}, 原因: {e.message}"
+                        "数据库操作冲突(%s),第%s/%s次尝试失败: %s, 原因: %s",
+                        error_type,
+                        attempt,
+                        retry_config.max_attempts,
+                        func.__name__,
+                        e.message,
                     )
 
                     if on_conflict:
@@ -291,7 +297,7 @@ class SoftDeleteTableMixin:
 
 
 @sa_event.listens_for(SyncSession, "before_flush")
-def __receive_before_flush(session: SyncSession, fcl_context: Any, instances: Any) -> None:  # noqa: ARG001 # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
+def __receive_before_flush(session: SyncSession, fcl_context: Any, instances: Any) -> None:  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
     """在执行 flush 操作时,将已删除的记录标记为逻辑删除.
 
     这个事件监听器会在 SQLAlchemy 会话执行 flush 操作之前被调用,
@@ -338,11 +344,11 @@ def __add_filtering_criteria(execute_state: ORMExecuteState) -> None:  # pyright
         )
 
 
-class BaseCU(BaseModel, Generic[SQLATableT]):
+class BaseCU[SQLATableT](BaseModel):
     """创建/更新模型基类.
 
     CU ([C]reate/[U]pdate) 基类,支持将 CU 对象转换为 SQLAlchemy 创建对象所需的字典信息.
-    使用 Generic[T] 来获取对应的表类型,实现类型安全的自动转换.
+    使用类型参数来获取对应的表类型,实现类型安全的自动转换.
 
     子类需要设置 _Table 类变量来指定对应的 SQLAlchemy 表类型.
 
@@ -383,7 +389,7 @@ class BaseCU(BaseModel, Generic[SQLATableT]):
 CUModelT = TypeVar("CUModelT", bound=BaseCU[Any])
 
 
-class BaseDTO(BaseModel, Generic[CUModelT]):
+class BaseDTO[CUModelT](BaseModel):
     """数据传输对象基类.
 
     DTO (Data Transfer Object) 基类,用于从数据库实体转换为传输对象.
@@ -586,7 +592,7 @@ class AsyncRawReadDAL:
             last_id = getattr(batch[-1], id_attr.key)
 
 
-class AsyncReadDAL(AsyncRawReadDAL, Generic[SQLATableT, DTOModelT]):
+class AsyncReadDAL[SQLATableT, DTOModelT](AsyncRawReadDAL):
     """抽象只读数据访问层基类.
 
     定义所有读取相关的操作接口,包括:
@@ -1054,7 +1060,7 @@ class AsyncRawDAL:
         return await session.execute(stmt, params)
 
 
-class AsyncWriteDAL(AsyncRawDAL, AsyncRawReadDAL, Generic[SQLATableT, DTOModelT, CUModelT]):
+class AsyncWriteDAL[SQLATableT, DTOModelT, CUModelT](AsyncRawDAL, AsyncRawReadDAL):
     """写入数据访问层基类.
 
     提供所有写入相关操作的抽象基类,包括创建、更新、删除等操作.
@@ -1713,7 +1719,7 @@ class ReadOnlyMixin:
 
 
 @sa_event.listens_for(SyncSession, "before_flush")
-def __prevent_readonly_write(session: SyncSession, fcl_context: Any, instances: Any) -> None:  # noqa: ARG001 # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
+def __prevent_readonly_write(session: SyncSession, fcl_context: Any, instances: Any) -> None:  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
     """阻止对 ReadOnlyMixin 实例的写入操作.
 
     在 session flush 之前检查所有待操作的对象,
@@ -1725,6 +1731,8 @@ def __prevent_readonly_write(session: SyncSession, fcl_context: Any, instances: 
         fcl_context: flush 上下文信息.
         instances: 实例列表(未使用).
     """
+    if session.info.get(READONLY_WRITE_BYPASS_FLAG) is True:
+        return
     for obj in session.new.union(session.dirty).union(session.deleted):
         if isinstance(obj, ReadOnlyMixin):
             operation = "创建" if obj in session.new else "更新" if obj in session.dirty else "删除"
@@ -1973,10 +1981,7 @@ class FieldMixin:
             if not raw:
                 return self._DATA_JSON()  # type: ignore[call-arg]
 
-            if isinstance(raw, bytes):
-                text = raw.decode()
-            else:
-                text = str(raw)
+            text = raw.decode() if isinstance(raw, bytes) else str(raw)
 
             return self._DATA_JSON.model_validate_json(text)
 

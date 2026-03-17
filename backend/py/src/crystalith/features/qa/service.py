@@ -13,8 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.ai.types import ChatMessage, ChatRole
 from crystalith.shared.cache import CacheProvider
-from crystalith.shared.config import Settings
 from crystalith.shared.concurrency import StageLimiters
+from crystalith.shared.config import Settings
 from crystalith.shared.context import ContextStats, ContextWindow, TokenCounter
 from crystalith.shared.db import Chunk, Message, Session, Source
 from crystalith.shared.json_types import JsonDict
@@ -22,7 +22,6 @@ from crystalith.shared.schemas.citations import Citation
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.utils import extract_page_number, extract_paragraph_index, format_context
 from crystalith.shared.vector_storage import VectorSearchResult, VectorStore, cached_vector_search
-
 
 EVIDENCE_THRESHOLD_DEFAULT = 0.2
 NO_EVIDENCE_ANSWER = "来源中未找到相关证据"

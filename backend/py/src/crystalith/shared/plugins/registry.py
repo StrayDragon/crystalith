@@ -10,18 +10,17 @@ from crystalith.shared.config import Settings
 from crystalith.shared.json_types import JsonValue
 
 from .interfaces import (
+    PLUGIN_API_VERSION,
+    SUPPORTED_PLUGIN_API_VERSIONS,
     AIProviderPlugin,
-    OutputTypePlugin,
     OutputTypeFrontendBundle,
+    OutputTypePlugin,
     ParserPlugin,
     SlidesWorkflowPlugin,
     SourceConnectorPlugin,
     WebExtractorPlugin,
-    PLUGIN_API_VERSION,
-    SUPPORTED_PLUGIN_API_VERSIONS,
 )
 from .render_types import FrontendBundleDescriptor, OutputTypePluginMeta, PluginConfigSchema, RenderDescriptor
-
 
 log = get_logger(__name__)
 
@@ -221,7 +220,7 @@ class PluginRegistry:
 
             try:
                 loaded = entry_point.load()
-            except Exception as exc:  # noqa: BLE001 - plugin boundary
+            except Exception as exc:
                 log.warning(
                     "plugin load failed",
                     plugin_id=plugin_id,

@@ -10,6 +10,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
+from cl_fastapix import FastAPIX
+from cl_sqlalchemyx.mgrs import AsyncDBManager
 from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,9 +19,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from scalar_fastapi import get_scalar_api_reference
 from sqlalchemy import delete, select, text
 
-from cl_fastapix import FastAPIX
-from cl_sqlalchemyx.mgrs import AsyncDBManager
-
+from crystalith.features.tasks.queue import TaskQueue
 from crystalith.shared.ai.openai_client_manager import get_openai_client_manager
 from crystalith.shared.cache import CacheProvider, create_cache_provider
 from crystalith.shared.concurrency import StageLimiters
@@ -45,16 +45,14 @@ from crystalith.shared.env import (
     env_bool,
     env_float,
 )
+from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.schemas.errors import (
     build_error_response,
     build_error_response_from_exception,
     status_code_from_exception,
 )
-from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore, create_vector_store
-
-from crystalith.features.tasks.queue import TaskQueue
 
 from .optional_services_types import (
     OllamaHostStatus,
@@ -168,14 +166,13 @@ def _probe_http_endpoint(
         target = f"{target}{probe_path}"
 
     try:
-        with httpx.Client(timeout=max(0.1, timeout_s), follow_redirects=True) as client:
-            with client.stream("GET", target) as response:
-                status_code = response.status_code
+        with httpx.Client(timeout=max(0.1, timeout_s), follow_redirects=True) as client, client.stream("GET", target) as response:
+            status_code = response.status_code
         accepted_status_codes = set(healthy_status_codes or set())
         if 200 <= status_code < 300 or status_code in accepted_status_codes:
             return True, None
         return False, f"HTTP {status_code}"
-    except Exception as exc:  # noqa: BLE001 - endpoint-specific failures are expected
+    except Exception as exc:
         return False, str(exc)
 
 
@@ -616,7 +613,7 @@ async def _run_optional_services_monitor(
                 app,
                 timeout_s=timeout_s,
             )
-        except Exception:  # noqa: BLE001 - best-effort background probe
+        except Exception:
             logger.exception("Optional services monitor probe failed")
 
         try:
@@ -665,7 +662,7 @@ def create_app(
                 "Loaded plugins on startup",
                 extra={"loaded": report.loaded, "skipped": report.skipped},
             )
-        except Exception:  # noqa: BLE001 - plugin boundary
+        except Exception:
             logger.exception("Failed to load plugins")
 
         async with app.state.db.got_manual_session() as session:
@@ -679,7 +676,7 @@ def create_app(
                 from crystalith.features.templates.service import ensure_builtin_templates
 
                 await ensure_builtin_templates(session)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.exception("Failed to initialize built-in templates")
 
         if app.state.settings.app.startup.cleanup_failed_sources:
@@ -741,7 +738,7 @@ def create_app(
             await app.state.task_queue.stop_worker()
             try:
                 await get_openai_client_manager().aclose()
-            except Exception:  # noqa: BLE001 - best-effort shutdown
+            except Exception:
                 logger.exception("Failed to close OpenAI clients")
 
     app = FastAPIX(
@@ -784,7 +781,7 @@ def create_app(
                     app,
                     timeout_s=1.0,
                 )
-            except Exception:  # noqa: BLE001 - keep dependency health non-blocking
+            except Exception:
                 logger.exception("Dependency health probe refresh failed")
 
         optional_status = _optional_services_snapshot(app)

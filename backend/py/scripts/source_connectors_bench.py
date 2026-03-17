@@ -17,11 +17,11 @@ from crystalith.shared.plugins.interfaces import SourceConnectorPlugin
 
 def _pick_connector(kind: str) -> tuple[SourceConnectorPlugin, str]:
     if kind == "obsidian":
-        from crystalith_connector_obsidian.plugin import plugin as connector  # noqa: PLC0415
+        from crystalith_connector_obsidian.plugin import plugin as connector
 
         return connector, "vault_path"
     if kind == "local-directory":
-        from crystalith_connector_local_directory.plugin import plugin as connector  # noqa: PLC0415
+        from crystalith_connector_local_directory.plugin import plugin as connector
 
         return connector, "root_path"
     raise SystemExit(f"unsupported connector kind: {kind!r}")
@@ -31,7 +31,7 @@ def _percentile(values: list[float], p: float) -> float:
     if not values:
         return 0.0
     sorted_values = sorted(values)
-    idx = int(round((p / 100) * (len(sorted_values) - 1)))
+    idx = round((p / 100) * (len(sorted_values) - 1))
     return float(sorted_values[max(0, min(len(sorted_values) - 1, idx))])
 
 

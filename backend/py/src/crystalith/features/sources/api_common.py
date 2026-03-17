@@ -14,6 +14,7 @@ from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.cache.epochs import bump_sources_epoch
 from crystalith.shared.db import Chunk, Source, SourceTag, SourceTagMap
+from crystalith.shared.json_types import JsonDict, JsonValue
 from crystalith.shared.parsers import (
     ParserFactory,
     ParserResolution,
@@ -21,11 +22,6 @@ from crystalith.shared.parsers import (
     UnsupportedDocumentError,
 )
 from crystalith.shared.plugins import PluginRegistry
-from crystalith.shared.json_types import JsonDict, JsonValue
-from crystalith.shared.types import SourceStatus
-from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
-
-from .api_schemas import SourceRead
 from crystalith.shared.plugins.official_catalog import OFFICIAL_PLUGIN_CATALOG
 from crystalith.shared.source_diagnostics import (
     SOURCE_ERROR_EMBEDDING_FAILED,
@@ -35,6 +31,10 @@ from crystalith.shared.source_diagnostics import (
     apply_source_failure,
     raise_source_failure,
 )
+from crystalith.shared.types import SourceStatus
+from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
+
+from .api_schemas import SourceRead
 
 logger = get_logger(__name__)
 
@@ -67,7 +67,7 @@ async def _invalidate_notebook_source_caches(
 ) -> None:
     try:
         await bump_sources_epoch(cache=cache, notebook_id=notebook_id)
-    except Exception as exc:  # noqa: BLE001 - optional cache invalidation should not block writes
+    except Exception as exc:
         logger.warning(
             "sources_cache_epoch_bump_failed",
             notebook_id=notebook_id,
@@ -76,7 +76,7 @@ async def _invalidate_notebook_source_caches(
     if vectors_changed:
         try:
             await bump_vector_epoch(cache=cache, notebook_id=notebook_id)
-        except Exception as exc:  # noqa: BLE001 - optional cache invalidation should not block writes
+        except Exception as exc:
             logger.warning(
                 "vector_cache_epoch_bump_failed",
                 notebook_id=notebook_id,

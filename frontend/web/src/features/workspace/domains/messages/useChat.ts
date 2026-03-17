@@ -198,9 +198,9 @@ export function useChat({
     const s = store.getState();
     s.setMessages(merged);
     s.setError("messages", "");
-  }, [data, error]);
+  }, [data, error, store]);
 
-  const setDraft = useCallback((value: string) => store.getState().setDraft(value), []);
+  const setDraft = useCallback((value: string) => store.getState().setDraft(value), [store]);
 
   const sendMessage = useCallback(async () => {
     const s = store.getState();
@@ -550,19 +550,19 @@ export function useChat({
     } finally {
       store.getState().setLoading("send", false);
     }
-  }, [enableStreaming, ensureRuntime, ensureSession, mutate, refreshSessions]);
+  }, [enableStreaming, ensureRuntime, ensureSession, mutate, refreshSessions, store]);
 
   const retryMessages = useCallback(async () => {
     store.getState().setError("messages", "");
     await mutate();
-  }, [mutate]);
+  }, [mutate, store]);
 
   const retrySend = useCallback(async () => {
     const text = lastFailedDraft.trim();
     if (!text) return;
     store.getState().setDraft(text);
     await sendMessage();
-  }, [lastFailedDraft, sendMessage]);
+  }, [lastFailedDraft, sendMessage, store]);
 
   const stopStreaming = useCallback(() => {
     streamingAbortControllerRef.current?.abort();
@@ -602,7 +602,7 @@ export function useChat({
     } finally {
       setIsConverting(false);
     }
-  }, [refreshSources]);
+  }, [refreshSources, store]);
 
   const handleConvertSessionToOutput = useCallback(
     async (outputType: OutputTypeInput) => {
@@ -632,7 +632,7 @@ export function useChat({
         setIsConverting(false);
       }
     },
-    [refreshOutputs],
+    [refreshOutputs, store],
   );
 
   return {

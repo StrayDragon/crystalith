@@ -3,8 +3,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from crystalith.shared.db import Chunk, Source
-from crystalith.shared.db import Output
+from crystalith.shared.db import Chunk, Output, Source
 from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.types import OutputType, SourceStatus
 

@@ -7,6 +7,7 @@ from pydantic_ai.settings import ModelSettings
 
 from crystalith.shared.config import CompletionOptions, ModelConfig, RequestOptions, Settings
 
+
 class OpenAIChatCompletionKwargs(TypedDict, total=False):
     temperature: float
     max_completion_tokens: int

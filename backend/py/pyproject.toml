@@ -278,10 +278,13 @@ target-version = "py312"
 extend-exclude = ["alembic/versions"]
 
 [tool.ruff.lint]
-# Start small and keep it actionable. We'll expand the ruleset once the baseline
-# is clean and the team is ready to tighten the gate.
-select = ["F", "E", "W", "UP", "B", "C4", "PIE"]
+# Keep the baseline actionable, but strict enough to catch common footguns and
+# drift in imports/style.
+select = ["F", "E", "W", "I", "UP", "B", "C4", "PIE", "SIM", "RUF", "PERF"]
 ignore = [
   # FastAPI's `Depends(...)` is designed to be used in parameter defaults.
   "B008",
+  # The codebase contains user-facing Chinese copy; fullwidth punctuation is intentional.
+  "RUF001",
+  "RUF002",
 ]

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from crystalith.shared.schemas.errors import (
     build_error_response,
     build_error_response_from_exception,
@@ -14,13 +13,13 @@ from crystalith.shared.schemas.errors import (
 
 
 class _Resp:
-    def __init__(self, status_code: int, headers=None):  # noqa: ANN001
+    def __init__(self, status_code: int, headers=None):
         self.status_code = status_code
         self.headers = headers or {}
 
 
 class _Err(Exception):
-    def __init__(self, message: str, *, status_code=None, response=None, headers=None):  # noqa: ANN001
+    def __init__(self, message: str, *, status_code=None, response=None, headers=None):
         super().__init__(message)
         self.status_code = status_code
         self.response = response
@@ -49,7 +48,7 @@ def test_retry_after_from_headers_reads_mapping_and_getter() -> None:
     assert retry_after_from_headers({"Retry-After": "2"}) == 2
 
     class Obj:
-        def get(self, key: str):  # noqa: ANN001
+        def get(self, key: str):
             if key.lower() == "retry-after":
                 return "3"
             return None

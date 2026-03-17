@@ -51,7 +51,6 @@ from .service import (
     validate_source_ids,
 )
 
-
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/qa", tags=["qa"])
 
 
@@ -466,7 +465,7 @@ async def ask_question_stream(
             )
         except asyncio.CancelledError:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             yield _sse_event("error", {"message": f"Embedding 服务暂时不可用: {exc}"})
             return
 
@@ -530,7 +529,7 @@ async def ask_question_stream(
                         raw = await chatter.chat(messages_for_llm)
                 except asyncio.CancelledError:
                     raise
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     yield _sse_event("error", {"message": str(exc)})
                     return
 
@@ -602,7 +601,7 @@ async def ask_question_stream(
                         yield _sse_event("chunk", {"text": chunk})
             except asyncio.CancelledError:
                 raise
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 yield _sse_event("error", {"message": str(exc)})
                 return
 
@@ -666,26 +665,27 @@ def _build_sources_meta(
     sources: list[Source],
     fallback_names: dict[int, str],
 ) -> list[QAExportSource]:
-    items: list[QAExportSource] = []
-    for source in sources:
-        items.append(
-            QAExportSource(
-                source_id=source.id,
-                source_name=source.filename or fallback_names.get(source.id) or "未知来源",
-                mime_type=source.mime_type,
-                parser_type=source.parser_type,
-            )
+    items = [
+        QAExportSource(
+            source_id=source.id,
+            source_name=source.filename or fallback_names.get(source.id) or "未知来源",
+            mime_type=source.mime_type,
+            parser_type=source.parser_type,
         )
-    missing = [source_id for source_id in fallback_names.keys() if source_id not in {s.id for s in sources}]
-    for source_id in sorted(missing):
-        items.append(
+        for source in sources
+    ]
+    missing = [source_id for source_id in fallback_names if source_id not in {s.id for s in sources}]
+    items.extend(
+        [
             QAExportSource(
                 source_id=source_id,
                 source_name=fallback_names.get(source_id) or "未知来源",
                 mime_type=None,
                 parser_type=None,
             )
-        )
+            for source_id in sorted(missing)
+        ]
+    )
     return items
 
 

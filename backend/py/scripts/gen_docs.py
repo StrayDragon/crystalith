@@ -198,7 +198,7 @@ def _render_config_schema_reference(*, repo_root: Path, docs_root: Path) -> Gene
         if resolved.get("type") == "object" and isinstance(resolved.get("properties"), dict):
             child_props = resolved.get("properties") or {}
             assert isinstance(child_props, dict)
-            for child_key in sorted([k for k in child_props.keys() if isinstance(k, str)]):
+            for child_key in sorted([k for k in child_props if isinstance(k, str)]):
                 child_value = child_props.get(child_key)
                 if not isinstance(child_value, dict):
                     continue
@@ -207,7 +207,7 @@ def _render_config_schema_reference(*, repo_root: Path, docs_root: Path) -> Gene
         return nodes
 
     rows: list[tuple[str, str, str]] = []
-    for top_key in sorted([k for k in properties.keys() if isinstance(k, str)]):
+    for top_key in sorted([k for k in properties if isinstance(k, str)]):
         top_schema = properties.get(top_key)
         if not isinstance(top_schema, dict):
             continue
@@ -284,8 +284,7 @@ def _render_env_vars_reference(*, repo_root: Path, docs_root: Path) -> Generated
     lines.append("These env vars are referenced via `${{ env.* }}` in the default config file.")
     lines.append("")
     if config_env_vars:
-        for name in config_env_vars:
-            lines.append(f"- `{name}`")
+        lines.extend([f"- `{name}`" for name in config_env_vars])
     else:
         lines.append("- (none)")
     lines.append("")

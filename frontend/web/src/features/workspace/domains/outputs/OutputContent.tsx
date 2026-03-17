@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Menu, MenuHandler, MenuList, MenuItem, Spinner } from "@material-tailwind/react";
 import { Download as DownloadIcon } from "@mui/icons-material";
 
-import type { FrontendBundleDescriptor, OutputItem, OutputTypeId } from "../../shared/types";
+import type { OutputItem, OutputTypeId } from "../../shared/types";
 import { getOutputPayloadWarnings, isFallbackOutputPayload } from "../../shared/outputPayload";
 import { LAYER_LEVELS } from "../../../../shared/layer";
 import { t } from "../../../../shared/i18n";
@@ -19,24 +19,20 @@ interface OutputContentProps {
 
 type BundleRenderer = (content: unknown, isFallback?: boolean) => ReactNode;
 
-function isSupportedFrontendBundle(
-  bundle: FrontendBundleDescriptor | null,
-): bundle is FrontendBundleDescriptor {
-  if (!bundle) return false;
-  if (bundle.api_version !== "v1") return false;
-  if (bundle.kind !== "builtin") return false;
-  if (!bundle.id.trim() || !bundle.export.trim()) return false;
-  return true;
-}
+const EMPTY_OUTPUT_CONTENT: Record<string, never> = {};
 
 export default function OutputContent({ output }: OutputContentProps) {
-  const content = output.content ?? {};
+  const content = output.content ?? EMPTY_OUTPUT_CONTENT;
   const isFallback = isFallbackOutputPayload(content);
   const warnings = useMemo(() => getOutputPayloadWarnings(content), [content]);
   const typeId = output.type as OutputTypeId;
   const { isExporting, activeFormat, getSupportedFormats, exportOutput } = useExport();
   const renderDescriptor = useWorkspaceStore((s) => s.outputTypeRenderDescriptors[typeId] ?? null);
   const frontendBundle = useWorkspaceStore((s) => s.outputTypeFrontendBundles[typeId] ?? null);
+  const frontendBundleApiVersion = frontendBundle?.api_version ?? null;
+  const frontendBundleExport = frontendBundle?.export ?? null;
+  const frontendBundleId = frontendBundle?.id ?? null;
+  const frontendBundleKind = frontendBundle?.kind ?? null;
   const [bundleRenderer, setBundleRenderer] = useState<BundleRenderer | null>(null);
 
   const supportedFormats = useMemo(
@@ -48,23 +44,25 @@ export default function OutputContent({ output }: OutputContentProps) {
     let cancelled = false;
     setBundleRenderer(null);
 
-    if (!isSupportedFrontendBundle(frontendBundle)) return () => {};
+    if (frontendBundleApiVersion !== "v1") return () => {};
+    if (frontendBundleKind !== "builtin") return () => {};
+    if (!frontendBundleId || !frontendBundleExport) return () => {};
 
-    const loader = getBuiltinBundleLoader(frontendBundle.id);
+    const loader = getBuiltinBundleLoader(frontendBundleId);
     if (!loader) {
       if (import.meta.env.DEV) {
-        console.warn(`Missing builtin frontend bundle loader: ${frontendBundle.id}`);
+        console.warn(`Missing builtin frontend bundle loader: ${frontendBundleId}`);
       }
       return () => {};
     }
 
     void loader()
       .then((mod) => {
-        const exported = (mod as unknown as Record<string, unknown>)[frontendBundle.export];
+        const exported = (mod as unknown as Record<string, unknown>)[frontendBundleExport];
         if (typeof exported !== "function") {
           if (import.meta.env.DEV) {
             console.warn(
-              `Invalid frontend bundle export "${frontendBundle.export}" for "${frontendBundle.id}"`,
+              `Invalid frontend bundle export "${frontendBundleExport}" for "${frontendBundleId}"`,
             );
           }
           return;
@@ -74,19 +72,14 @@ export default function OutputContent({ output }: OutputContentProps) {
       })
       .catch((error: unknown) => {
         if (import.meta.env.DEV) {
-          console.warn(`Failed to load frontend bundle "${frontendBundle.id}"`, error);
+          console.warn(`Failed to load frontend bundle "${frontendBundleId}"`, error);
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [
-    frontendBundle?.api_version,
-    frontendBundle?.export,
-    frontendBundle?.id,
-    frontendBundle?.kind,
-  ]);
+  }, [frontendBundleApiVersion, frontendBundleExport, frontendBundleId, frontendBundleKind]);
 
   const body = bundleRenderer ? (
     bundleRenderer(content, isFallback)

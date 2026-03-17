@@ -4,8 +4,8 @@ import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from crystalith.shared.json_types import JsonDict
 from crystalith.shared.db import Message, Notebook, Session
+from crystalith.shared.json_types import JsonDict
 
 from . import repo
 

@@ -155,7 +155,7 @@ export default function CitationPopover({
     position.placement === "bottom" ? "translate(-50%, 8px)" : "translate(-50%, calc(-100% - 8px))";
 
   const popover = (
-    <div className="fixed inset-0" style={popoverStyle} onClick={onClose}>
+    <div className="fixed inset-0" style={popoverStyle}>
       <div
         ref={popoverRef}
         className="absolute w-[320px] max-w-[90vw] rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden"
@@ -165,7 +165,6 @@ export default function CitationPopover({
           transform,
           maxHeight: POPOVER_MAX_HEIGHT,
         }}
-        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="引用详情"
       >
@@ -201,40 +200,39 @@ export default function CitationPopover({
             return (
               <li
                 key={citation.id}
-                className="flex gap-3 p-2.5 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 group"
-                onClick={() => handleItemClick(citation)}
+                className="flex gap-3 p-2.5 rounded-lg transition-colors hover:bg-gray-50 group"
                 onMouseEnter={() => handleItemHover(chunkId)}
                 onMouseLeave={() => handleItemHover(null)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleItemClick(citation);
-                  }
-                }}
               >
-                {/* Index Badge */}
-                <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                  {index + 1}
-                </span>
+                <button
+                  type="button"
+                  className="flex flex-1 min-w-0 items-start gap-3 text-left bg-transparent"
+                  onClick={() => handleItemClick(citation)}
+                >
+                  {/* Index Badge */}
+                  <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                    {index + 1}
+                  </span>
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold text-gray-900 truncate">
-                    {citation.sourceTitle}
-                  </div>
-                  {pageLabel && (
-                    <div className="text-[10px] font-medium text-gray-500 mt-0.5">{pageLabel}</div>
-                  )}
-                  {citation.snippet && (
-                    <div className="text-[11px] text-gray-500 mt-1 line-clamp-2 leading-relaxed">
-                      {citation.snippet}
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-gray-900 truncate">
+                      {citation.sourceTitle}
                     </div>
-                  )}
-                </div>
+                    {pageLabel && (
+                      <div className="text-[10px] font-medium text-gray-500 mt-0.5">
+                        {pageLabel}
+                      </div>
+                    )}
+                    {citation.snippet && (
+                      <div className="text-[11px] text-gray-500 mt-1 line-clamp-2 leading-relaxed">
+                        {citation.snippet}
+                      </div>
+                    )}
+                  </div>
+                </button>
 
-                {/* Arrow Icon */}
+                {/* Actions */}
                 <div className="flex-shrink-0 flex flex-col items-center gap-2">
                   {onLocateSource && (
                     <button

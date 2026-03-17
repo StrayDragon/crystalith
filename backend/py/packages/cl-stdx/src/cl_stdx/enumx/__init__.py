@@ -81,7 +81,7 @@ class MetaInfoIntEnum(enum.IntEnum):
         return json_schema
 
 
-class MetaInfoStrEnum(str, enum.Enum):
+class MetaInfoStrEnum(enum.StrEnum):
     """
     StrEnum with XMetaInfo
 
@@ -180,7 +180,7 @@ class EnumField:
         except ValueError:
             try:
                 if not isinstance(value, str):
-                    raise KeyError  # noqa: TRY301
+                    raise KeyError
                 member = self.enum_cls[value.upper()]
             except KeyError:
                 raise ValueError(f"'{value}' is not a valid member, value or name for {self.enum_cls.__name__}") from None

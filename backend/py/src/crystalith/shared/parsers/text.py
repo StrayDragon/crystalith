@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 from crystalith.shared.json_types import JsonDict
 
 from .interfaces import ParserError
@@ -9,9 +11,9 @@ from .utils import chunk_paragraphs
 
 
 class TextParser:
-    parser_type = "text"
-    supported_mime_types = {"text/plain", "text/markdown", "text/csv"}
-    supported_extensions = {".txt", ".md", ".markdown", ".csv"}
+    parser_type: ClassVar[str] = "text"
+    supported_mime_types: ClassVar[set[str]] = {"text/plain", "text/markdown", "text/csv"}
+    supported_extensions: ClassVar[set[str]] = {".txt", ".md", ".markdown", ".csv"}
     page_count: int | None = None
 
     def __init__(self, *, preprocess_markdown: bool = False) -> None:

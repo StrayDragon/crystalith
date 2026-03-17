@@ -6,25 +6,18 @@ import json
 from collections.abc import AsyncGenerator
 from time import perf_counter
 
+from cl_logs.logging import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cl_logs.logging import get_logger
-
 from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.models import ModelConfigurationError
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import Settings
-from crystalith.shared.env import (
-    CRYSTALITH_OBSERVABILITY_SSE_TIMINGS,
-    OBSERVABILITY_SSE_TIMINGS_DEFAULT,
-    env_bool,
-)
-from crystalith.shared.json_types import JsonValue
-from crystalith.shared.observability import new_trace_id
+from crystalith.shared.db import Notebook, Output, Source, StudioSlide
 from crystalith.shared.deps import (
     get_cache_provider,
     get_db_session,
@@ -34,17 +27,22 @@ from crystalith.shared.deps import (
     get_stage_limiters,
     get_vector_store,
 )
-from crystalith.shared.db import Notebook, Output, Source, StudioSlide
+from crystalith.shared.env import (
+    CRYSTALITH_OBSERVABILITY_SSE_TIMINGS,
+    OBSERVABILITY_SSE_TIMINGS_DEFAULT,
+    env_bool,
+)
+from crystalith.shared.json_types import JsonValue
+from crystalith.shared.observability import new_trace_id
 from crystalith.shared.plugins import PluginRegistry, SlidesWorkflowPlugin
-from crystalith.shared.types import SlideStage, SlideStatus
-from crystalith.shared.types import OutputType
+from crystalith.shared.types import OutputType, SlideStage, SlideStatus
+
 from .slides import (
     SlideGenerationConfig,
     SlideOutline,
     write_preview_markdown,
     write_slide_markdown,
 )
-
 
 log = get_logger(__name__)
 
@@ -443,7 +441,7 @@ async def generate_outline_stream(
             slide.error_message = str(exc)[:500]
             await session.commit()
             yield _sse_event("error", {"trace_id": trace_id, "message": "AI 模型配置错误，请检查配置。"})
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             slide.status = SlideStatus.ERROR
             slide.error_message = str(exc)[:500]
             await session.commit()
@@ -553,7 +551,7 @@ async def generate_markdown_stream(
             slide.error_message = str(exc)[:500]
             await session.commit()
             yield _sse_event("error", {"trace_id": trace_id, "message": "AI 模型配置错误，请检查配置。"})
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             slide.status = SlideStatus.ERROR
             slide.error_message = str(exc)[:500]
             await session.commit()

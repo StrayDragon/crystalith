@@ -6,10 +6,10 @@ from crystalith.shared.ai.factory import (
     create_chat_provider_by_model_id,
     create_embedding_provider_by_model_id,
 )
+from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.shared.ai.ollama_provider import OllamaChatProvider, OllamaEmbeddingProvider
 from crystalith.shared.ai.openai_provider import OpenAIChatProvider, OpenAIEmbeddingProvider
 from crystalith.shared.ai.test_provider import TestChatProvider, TestEmbeddingProvider
-from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
 from crystalith.shared.config import ModelConfig, Settings
 from crystalith.shared.plugins import PluginRegistry
 from tests._support.settings import make_settings
@@ -206,8 +206,8 @@ def test_ai_factory_applies_request_options_timeout_per_model() -> None:
 
     assert isinstance(chat, OpenAIChatProvider)
     assert isinstance(embed, OpenAIEmbeddingProvider)
-    assert chat._timeout == 7.0  # noqa: SLF001
-    assert embed._timeout == 9.0  # noqa: SLF001
+    assert chat._timeout == 7.0
+    assert embed._timeout == 9.0
 
 
 def test_ai_factory_applies_completion_options_to_openai_chat_provider() -> None:
@@ -237,13 +237,13 @@ def test_ai_factory_applies_completion_options_to_openai_chat_provider() -> None
 
     chat = create_chat_provider_by_model_id(settings, "openai-chat")
     assert isinstance(chat, OpenAIChatProvider)
-    assert chat._completion_kwargs == {  # noqa: SLF001
+    assert chat._completion_kwargs == {
         "temperature": 0.1,
         "max_completion_tokens": 50,
         "top_p": 0.95,
         "stop": ["END"],
     }
-    assert getattr(chat._client, "max_retries", None) == 0  # noqa: SLF001
+    assert getattr(chat._client, "max_retries", None) == 0
 
 
 def test_ai_factory_resolves_fallback_host_for_ollama_client(monkeypatch) -> None:

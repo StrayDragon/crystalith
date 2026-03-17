@@ -7,12 +7,12 @@ import pytest
 
 from crystalith.shared.vector_storage.chroma import ChromaVectorStore
 from crystalith.shared.vector_storage.migrate import _parse_args as migrate_parse_args
-from crystalith.shared.vector_storage.migrate import main as migrate_main
 from crystalith.shared.vector_storage.migrate import _run as migrate_run
+from crystalith.shared.vector_storage.migrate import main as migrate_main
 from crystalith.shared.vector_storage.sqlite import SQLiteVectorStore
 from crystalith.shared.vector_storage.verify import _parse_args as verify_parse_args
-from crystalith.shared.vector_storage.verify import main as verify_main
 from crystalith.shared.vector_storage.verify import _run as verify_run
+from crystalith.shared.vector_storage.verify import main as verify_main
 
 
 @pytest.mark.asyncio

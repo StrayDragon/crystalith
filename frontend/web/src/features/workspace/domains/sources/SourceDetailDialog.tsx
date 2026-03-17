@@ -45,7 +45,6 @@ import { unwrapData } from "../../../../api/unwrap";
 import { useWorkspaceStore } from "../../shared/state/workspaceStore";
 import type { SourceItem } from "../../shared/types";
 import { toast } from "../../../../shared/toast";
-import { useLayer } from "../../../../shared/layer";
 import { useFocusTrap } from "../../shared/hooks/useFocusTrap";
 import { copyToClipboard } from "../../../../shared/clipboard";
 import { t } from "../../../../shared/i18n";
@@ -81,9 +80,8 @@ const chunksCache = new Map<number, ChunkRead[]>();
 type TabValue = "overview" | "raw";
 
 // Chunk item component with expand/collapse
-function ChunkItem({ chunk, index }: { chunk: ChunkRead; index: number }) {
+function ChunkItem({ chunk }: { chunk: ChunkRead }) {
   const [expanded, setExpanded] = useState(false);
-  const wordCount = chunk.text.split(/\s+/).length;
   const charCount = chunk.text.length;
   const previewLength = 150;
   const needsTruncate = chunk.text.length > previewLength;
@@ -586,21 +584,14 @@ export default function SourceDetailDialog({
                 ) : null}
                 {/* Summary Section - Collapsible */}
                 <div className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    aria-expanded={!summaryCollapsed}
-                    aria-controls="source-detail-auto-summary"
-                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-800/50 transition-colors cursor-pointer"
-                    onClick={() => setSummaryCollapsed((prev) => !prev)}
-                    onKeyDown={(e) => {
-                      if (e.currentTarget !== e.target) return;
-                      if (e.key !== "Enter" && e.key !== " ") return;
-                      e.preventDefault();
-                      setSummaryCollapsed((prev) => !prev);
-                    }}
-                  >
-                    <div className="flex items-center gap-2 text-blue-500">
+                  <div className="w-full px-4 py-3 flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-slate-700 dark:bg-slate-800/50 transition-colors">
+                    <button
+                      type="button"
+                      aria-expanded={!summaryCollapsed}
+                      aria-controls="source-detail-auto-summary"
+                      className="flex flex-1 items-center gap-2 text-blue-500 text-left"
+                      onClick={() => setSummaryCollapsed((prev) => !prev)}
+                    >
                       <AutoAwesomeIcon style={{ fontSize: 16 }} />
                       <Typography variant="small" className="font-semibold text-xs">
                         自动摘要
@@ -613,28 +604,24 @@ export default function SourceDetailDialog({
                           {brief.summary.slice(0, 50)}...
                         </Typography>
                       )}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {!summaryCollapsed && (
-                        <IconButton
-                          variant="text"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRefreshBrief();
-                          }}
-                          disabled={isBriefLoading}
-                          className={`rounded-full w-6 h-6 text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:text-slate-200 ${isBriefLoading ? "animate-spin" : ""}`}
-                        >
-                          <RefreshIcon style={{ fontSize: 16 }} />
-                        </IconButton>
-                      )}
                       {summaryCollapsed ? (
-                        <ExpandMoreIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
+                        <ExpandMoreIcon className="h-4 w-4 text-gray-400 dark:text-slate-500 ml-auto" />
                       ) : (
-                        <ExpandLessIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
+                        <ExpandLessIcon className="h-4 w-4 text-gray-400 dark:text-slate-500 ml-auto" />
                       )}
-                    </div>
+                    </button>
+                    {!summaryCollapsed && (
+                      <IconButton
+                        variant="text"
+                        size="sm"
+                        onClick={handleRefreshBrief}
+                        disabled={isBriefLoading}
+                        className={`rounded-full w-6 h-6 text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:text-slate-200 ${isBriefLoading ? "animate-spin" : ""}`}
+                        aria-label="刷新摘要"
+                      >
+                        <RefreshIcon style={{ fontSize: 16 }} />
+                      </IconButton>
+                    )}
                   </div>
 
                   {!summaryCollapsed && (
@@ -730,7 +717,7 @@ export default function SourceDetailDialog({
                         </Typography>
                       </div>
                     ) : (
-                      messages.map((message, index) => (
+                      messages.map((message, _index) => (
                         <div
                           key={message.id}
                           className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
@@ -901,8 +888,8 @@ export default function SourceDetailDialog({
                           共 {chunks.length} 个片段
                         </Typography>
                       </div>
-                      {chunks.map((chunk, index) => (
-                        <ChunkItem key={chunk.id} chunk={chunk} index={index} />
+                      {chunks.map((chunk) => (
+                        <ChunkItem key={chunk.id} chunk={chunk} />
                       ))}
                     </div>
                   )}

@@ -6,7 +6,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-
 _TRIGGER_RE = re.compile(r"^[a-z0-9_-]{1,32}$")
 
 

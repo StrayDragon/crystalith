@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.db import Notebook, Source, SourceTag, SourceTagMap
-
 from crystalith.shared.deps import (
     get_cache_provider,
     get_db_session,

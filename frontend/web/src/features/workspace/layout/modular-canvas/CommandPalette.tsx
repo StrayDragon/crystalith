@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
 
+import { useLayer } from "../../../../shared/layer";
+
 export interface CommandItem {
   id: string;
   label: string;
@@ -16,6 +18,7 @@ interface CommandPaletteProps {
 export default function CommandPalette({ open, onClose, commands }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const { style: modalStyle } = useLayer("modal");
 
   useEffect(() => {
     if (open) {
@@ -32,15 +35,19 @@ export default function CommandPalette({ open, onClose, commands }: CommandPalet
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[18vh] bg-black/10 backdrop-blur-sm"
-      onClick={onClose}
+      className="fixed inset-0 flex items-start justify-center pt-[18vh] bg-black/10 backdrop-blur-sm relative"
+      style={modalStyle}
+      role="dialog"
+      aria-modal="true"
+      aria-label="命令面板"
     >
-      <div
-        className="w-[460px] max-w-[90vw] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-label="命令面板"
-      >
+      <button
+        type="button"
+        className="absolute inset-0 z-0 cursor-default"
+        onClick={onClose}
+        aria-label="关闭命令面板"
+      />
+      <div className="w-[460px] max-w-[90vw] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden relative z-10">
         <input
           ref={inputRef}
           type="text"

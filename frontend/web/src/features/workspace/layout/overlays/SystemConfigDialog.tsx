@@ -1,4 +1,3 @@
-import type { MouseEvent as ReactMouseEvent } from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -83,15 +82,6 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
     [presets],
   );
 
-  const handleBackdropClick = useCallback(
-    (event: ReactMouseEvent<HTMLDivElement>) => {
-      if (event.target !== event.currentTarget) return;
-      setEditor(null);
-      onClose();
-    },
-    [onClose],
-  );
-
   const startCreate = useCallback(() => {
     setEditor({
       mode: "create",
@@ -103,34 +93,28 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
     });
   }, []);
 
-  const startEdit = useCallback(
-    (preset: (typeof customPresets)[number]) => {
-      setEditor({
-        mode: "edit",
-        presetId: preset.preset_id ?? null,
-        trigger: preset.trigger,
-        description: preset.description ?? "",
-        systemPrompt: preset.system_prompt,
-        enabled: preset.enabled,
-      });
-    },
-    [customPresets],
-  );
+  const startEdit = useCallback((preset: (typeof customPresets)[number]) => {
+    setEditor({
+      mode: "edit",
+      presetId: preset.preset_id ?? null,
+      trigger: preset.trigger,
+      description: preset.description ?? "",
+      systemPrompt: preset.system_prompt,
+      enabled: preset.enabled,
+    });
+  }, []);
 
-  const startCopyBuiltin = useCallback(
-    (preset: (typeof builtinPresets)[number]) => {
-      const base = preset.trigger ? `${preset.trigger}-copy` : "custom";
-      setEditor({
-        mode: "create",
-        presetId: null,
-        trigger: base.slice(0, 32),
-        description: preset.description ?? "",
-        systemPrompt: preset.system_prompt,
-        enabled: true,
-      });
-    },
-    [builtinPresets],
-  );
+  const startCopyBuiltin = useCallback((preset: (typeof builtinPresets)[number]) => {
+    const base = preset.trigger ? `${preset.trigger}-copy` : "custom";
+    setEditor({
+      mode: "create",
+      presetId: null,
+      trigger: base.slice(0, 32),
+      description: preset.description ?? "",
+      systemPrompt: preset.system_prompt,
+      enabled: true,
+    });
+  }, []);
 
   const handleCopySystemPrompt = useCallback(async (systemPrompt: string) => {
     await copyToClipboard(systemPrompt);
@@ -208,14 +192,22 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
 
   return createPortal(
     <div
-      className="fixed inset-0 flex items-center justify-center"
+      className="fixed inset-0 relative flex items-center justify-center"
       style={modalStyle}
       role="dialog"
       aria-modal="true"
       aria-label="系统配置"
-      onClick={handleBackdropClick}
     >
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={() => {
+          setEditor(null);
+          onClose();
+        }}
+        aria-label="关闭系统配置"
+        tabIndex={-1}
+      />
 
       <div
         ref={modalRef}
@@ -328,11 +320,14 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                 </label>
               </div>
 
-              <label className="block mt-3">
+              <div className="block mt-3">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-[11px] font-semibold text-gray-700 dark:text-slate-200">
+                  <label
+                    htmlFor={`system-config-system-prompt-${editor.presetId ?? "new"}`}
+                    className="text-[11px] font-semibold text-gray-700 dark:text-slate-200"
+                  >
                     system prompt
-                  </div>
+                  </label>
                   <button
                     type="button"
                     onClick={() => void handleCopySystemPrompt(editor.systemPrompt)}
@@ -344,6 +339,7 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                   </button>
                 </div>
                 <textarea
+                  id={`system-config-system-prompt-${editor.presetId ?? "new"}`}
                   value={editor.systemPrompt}
                   onChange={(e) =>
                     setEditor((prev) => (prev ? { ...prev, systemPrompt: e.target.value } : prev))
@@ -352,7 +348,7 @@ export default function SystemConfigDialog({ open, onClose }: SystemConfigDialog
                   placeholder="写入将覆盖 QA 的 system message 的内容…"
                   disabled={saving}
                 />
-              </label>
+              </div>
 
               <div className="mt-3 flex items-center justify-between gap-3">
                 <label className="flex items-center gap-2 text-xs text-gray-700 dark:text-slate-200">

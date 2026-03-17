@@ -19,10 +19,7 @@ class ChromaHttpVectorStore:
         database: str = "default_database",
         timeout: float = 30.0,
     ) -> None:
-        if host.startswith(("http://", "https://")):
-            base_url = host.rstrip("/")
-        else:
-            base_url = f"http://{host}:{port}"
+        base_url = host.rstrip("/") if host.startswith(("http://", "https://")) else f"http://{host}:{port}"
 
         self._client = httpx.AsyncClient(
             base_url=base_url,
@@ -144,10 +141,7 @@ class ChromaHttpVectorStore:
             clauses.append({"source_id": {"$nin": list(exclude_source_ids)}})
 
         where: dict[str, object]
-        if len(clauses) == 1:
-            where = clauses[0]
-        else:
-            where = {"$and": clauses}
+        where = clauses[0] if len(clauses) == 1 else {"$and": clauses}
 
         collection_id = await self._ensure_collection()
         response = await self._client.post(
@@ -232,10 +226,7 @@ class ChromaHttpVectorStore:
             clauses.append({"source_id": {"$nin": list(exclude_source_ids)}})
 
         where: dict[str, object]
-        if len(clauses) == 1:
-            where = clauses[0]
-        else:
-            where = {"$and": clauses}
+        where = clauses[0] if len(clauses) == 1 else {"$and": clauses}
 
         collection_id = await self._ensure_collection()
         response = await self._client.post(

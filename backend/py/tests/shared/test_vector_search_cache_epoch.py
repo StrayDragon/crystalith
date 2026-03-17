@@ -16,7 +16,7 @@ class _FailingCache(InMemoryCache):
     async def set(self, key: str, value: JsonValue, *, ttl: float | None = None) -> None:
         raise RuntimeError(f"cache set unavailable: {key}")
 
-    async def incr(self, key: str, amount: int = 1, *, ttl: float | None = None) -> int:  # noqa: ARG002
+    async def incr(self, key: str, amount: int = 1, *, ttl: float | None = None) -> int:
         raise RuntimeError(f"cache incr unavailable: {key}")
 
 

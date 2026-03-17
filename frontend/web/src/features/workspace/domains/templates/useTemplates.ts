@@ -10,7 +10,7 @@ import {
 } from "../../../../api/generated";
 import { unwrapData } from "../../../../api/unwrap";
 import type { OutputTypeId } from "../../shared/types";
-import { normalizeTemplate, type WorkspaceTemplate } from "./types";
+import { normalizeTemplate } from "./types";
 
 export function useTemplates() {
   const { data, error, isLoading, mutate } = useSWR(

@@ -3,9 +3,8 @@ from __future__ import annotations
 import json
 
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
-
 from cl_sqlalchemyx.base.dal import AsyncSqlATableBase
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from . import models as _models  # noqa: F401
 

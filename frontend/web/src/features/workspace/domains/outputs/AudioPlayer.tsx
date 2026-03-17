@@ -15,11 +15,7 @@ const WAVE_BARS = [
 
 export default function AudioPlayer({ isBlocked }: AudioPlayerProps) {
   return (
-    <section
-      className={`MediaPlayerCard ${isBlocked ? "isBlocked" : ""}`}
-      aria-label="音频概述"
-      aria-disabled="true"
-    >
+    <section className={`MediaPlayerCard ${isBlocked ? "isBlocked" : ""}`} aria-label="音频概述">
       <div className="MediaPlayerHeader">
         <div>
           <div className="MediaPlayerTitle">音频概述</div>

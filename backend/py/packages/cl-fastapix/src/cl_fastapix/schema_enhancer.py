@@ -143,11 +143,10 @@ def enhance_schema_recursive(schema: dict[str, Any], context_hint: str = "") -> 
                 enhanced[key] = [
                     enhance_schema_recursive(item, context_hint=context_hint) if isinstance(item, dict) else item for item in value
                 ]
-        elif key in ("allOf", "anyOf", "oneOf"):
-            if isinstance(value, list):
-                enhanced[key] = [
-                    enhance_schema_recursive(item, context_hint=context_hint) if isinstance(item, dict) else item for item in value
-                ]
+        elif key in ("allOf", "anyOf", "oneOf") and isinstance(value, list):
+            enhanced[key] = [
+                enhance_schema_recursive(item, context_hint=context_hint) if isinstance(item, dict) else item for item in value
+            ]
 
     return enhanced
 
@@ -186,7 +185,7 @@ def enhance_enum_schema(schema: dict[str, Any], context_hint: str = "") -> dict[
     return schema
 
 
-def _enhance_direct_enum_schema(schema: dict[str, Any], context_hint: str = "") -> dict[str, Any]:  # noqa: ARG001
+def _enhance_direct_enum_schema(schema: dict[str, Any], context_hint: str = "") -> dict[str, Any]:
     enum_values = schema.get("enum", [])
     if not enum_values:
         return schema
@@ -247,7 +246,7 @@ def _enhance_anyof_enum_schema(schema: dict[str, Any], context_hint: str = "") -
     return enhanced_schema
 
 
-def generate_context_hint(param_name: str, path: str = "", method: str = "") -> str:  # noqa: ARG001
+def generate_context_hint(param_name: str, path: str = "", method: str = "") -> str:
     hints = [param_name]
 
     if path:

@@ -14,7 +14,7 @@ class MediaParserPlugin:
     supported_mime_types = AudioParser.supported_mime_types | VideoParser.supported_mime_types
     supported_extensions = AudioParser.supported_extensions | VideoParser.supported_extensions
 
-    def create_parser(self, *_args, filename=None, mime_type=None, transcriber=None, media_fetcher=None, **_kwargs):  # noqa: ANN001, ANN002, ANN003
+    def create_parser(self, *_args, filename=None, mime_type=None, transcriber=None, media_fetcher=None, **_kwargs):
         resolved_mime = (mime_type or "").split(";")[0].strip().lower()
         extension = Path(filename or "").suffix.lower()
 

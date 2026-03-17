@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from pathlib import Path
 import re
 import sys
+from pathlib import Path
 
 TYPE_CHECKING_RE = re.compile(r"^\s*if\s+(?:typing\.)?TYPE_CHECKING\s*:")
 IMPORT_RE = re.compile(r"^\s*(from|import)\s+crystalith\.(web|features)(\b|\.)")

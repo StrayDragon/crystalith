@@ -51,7 +51,6 @@ beforeEach(() => {
 });
 
 test("setActiveNotebook resets notebook-scoped state and clears errors", () => {
-  const s = useWorkspaceStore.getState();
   // Set up initial state with some data
   useWorkspaceStore.setState({
     activeSessionId: 22,

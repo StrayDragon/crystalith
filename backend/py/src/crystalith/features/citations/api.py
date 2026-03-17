@@ -10,7 +10,6 @@ from crystalith.shared.deps import get_db_session
 from crystalith.shared.schemas.citations import Citation
 from crystalith.shared.utils import extract_page_number, extract_paragraph_index
 
-
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/citations", tags=["citations"])
 
 

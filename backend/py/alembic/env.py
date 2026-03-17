@@ -5,12 +5,10 @@ import os
 from logging.config import fileConfig
 
 import sqlalchemy as sa
-from alembic import context
-
 from cl_sqlalchemyx.base.dal import AsyncSqlATableBase
 
+from alembic import context
 from crystalith.shared.db import create_db_manager
-
 from crystalith.shared.db import models as _db_models  # noqa: F401
 
 config = context.config
@@ -31,7 +29,7 @@ def _resolve_database_url() -> str:
 def _render_as_batch(database_url: str) -> bool:
     try:
         url = sa.engine.make_url(database_url)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
     return url.get_backend_name() == "sqlite"
 

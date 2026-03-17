@@ -54,7 +54,7 @@ export function useAnalysis() {
       );
       setAnalysisState({ analysis, isLoading: false, error: "" });
       return analysis;
-    } catch (error) {
+    } catch {
       setAnalysisState((prev) => ({
         ...prev,
         isLoading: false,

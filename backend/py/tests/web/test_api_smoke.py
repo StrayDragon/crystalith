@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
+import crystalith.web.app as app_module
 from crystalith.shared.db import Chunk, Source
 from crystalith.shared.types import SourceStatus
-import crystalith.web.app as app_module
 
 
 def _assert_error_envelope(response, expected_error_code: str) -> dict:
@@ -156,7 +156,7 @@ async def test_api_smoke_dependency_health_optional_failure_is_recoverable(clien
 async def test_api_smoke_dependency_health_refreshes_when_monitor_disabled(client, app, monkeypatch) -> None:
     calls = {"refresh": 0}
 
-    async def _refresh(_app, *, timeout_s: float) -> None:  # noqa: ARG001
+    async def _refresh(_app, *, timeout_s: float) -> None:
         calls["refresh"] += 1
         _app.state.optional_services_last_probe = f"probe-{calls['refresh']}"
 
@@ -217,7 +217,7 @@ async def test_api_smoke_dependency_health_searxng_prefers_explicit_host(client,
 async def test_api_smoke_dependency_health_force_refreshes_when_monitor_enabled(client, app, monkeypatch) -> None:
     calls = {"refresh": 0}
 
-    async def _refresh(_app, *, timeout_s: float) -> None:  # noqa: ARG001
+    async def _refresh(_app, *, timeout_s: float) -> None:
         calls["refresh"] += 1
         _app.state.optional_services_last_probe = f"force-{calls['refresh']}"
 

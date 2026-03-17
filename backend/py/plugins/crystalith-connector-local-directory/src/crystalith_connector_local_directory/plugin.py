@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import os
 from pathlib import Path
-from typing import cast
+from typing import ClassVar, cast
 
 import yaml
 
@@ -173,7 +173,7 @@ class LocalDirectoryConnectorPlugin:
 
     display_name = "Local Directory"
     description = "从本地目录枚举文件并导入。"
-    connection_config_schema: JsonDict = {
+    connection_config_schema: ClassVar[JsonDict] = {
         "type": "object",
         "properties": {
             "root_path": {
@@ -271,4 +271,3 @@ class LocalDirectoryConnectorPlugin:
 
 
 plugin = LocalDirectoryConnectorPlugin()
-

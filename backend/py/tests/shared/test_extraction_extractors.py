@@ -35,10 +35,10 @@ def _serve_http(
     capture = _RequestCapture()
 
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self, format: str, *args) -> None:  # noqa: A003 - base signature
+        def log_message(self, format: str, *args) -> None:
             return
 
-        def do_HEAD(self) -> None:  # noqa: N802 - http.server naming
+        def do_HEAD(self) -> None:
             capture.method = "HEAD"
             capture.path = self.path
             capture.headers = dict(self.headers)
@@ -46,7 +46,7 @@ def _serve_http(
             self.send_response(status)
             self.end_headers()
 
-        def do_GET(self) -> None:  # noqa: N802 - http.server naming
+        def do_GET(self) -> None:
             capture.method = "GET"
             capture.path = self.path
             capture.headers = dict(self.headers)
@@ -150,7 +150,7 @@ async def test_browserless_extractor_extract_success(monkeypatch: pytest.MonkeyP
         sitename = "Site"
 
     class _FakeTrafilatura:
-        def extract(  # noqa: PLR0913 - test stub mirrors integration signature
+        def extract(
             self,
             html: str,
             *,
@@ -325,7 +325,7 @@ async def test_firecrawl_extractor_extract_success_and_error_mapping() -> None:
         def __init__(self, mode: str) -> None:
             self.mode = mode
 
-        def scrape(self, *_args, **_kwargs):  # noqa: ANN001 - test stub
+        def scrape(self, *_args, **_kwargs):
             if self.mode == "ok":
                 return {
                     "markdown": "# Hello",

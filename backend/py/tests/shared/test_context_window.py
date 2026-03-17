@@ -6,8 +6,8 @@ from crystalith.shared.context.compressor import summarize_messages
 from crystalith.shared.context.counter import TokenCounter
 from crystalith.shared.context.window import (
     ContextWindow,
-    _format_retrieval_segment,
     _format_query_segment,
+    _format_retrieval_segment,
     _normalize_priority,
     _truncate_retrieval_segment,
 )

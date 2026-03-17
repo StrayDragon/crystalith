@@ -132,11 +132,13 @@ function KnowledgeNode({ data }: NodeProps<Node<KnowledgeNodeData>>) {
   return (
     <>
       <Handle type="target" position={Position.Top} className="!bg-gray-400 !w-2 !h-2" />
-      <div
+      <button
+        type="button"
         className={`
           relative px-3 py-2 rounded-xl shadow-lg cursor-pointer transition-all duration-200
           hover:shadow-xl hover:scale-105
           ${isSelected ? "ring-2 ring-blue-500 ring-offset-2" : ""}
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
         `}
         style={{
           backgroundColor: color.bg,
@@ -195,7 +197,7 @@ function KnowledgeNode({ data }: NodeProps<Node<KnowledgeNodeData>>) {
             />
           </div>
         )}
-      </div>
+      </button>
       <Handle type="source" position={Position.Bottom} className="!bg-gray-400 !w-2 !h-2" />
     </>
   );
@@ -724,8 +726,6 @@ function KnowledgeGraphView({
   };
 
   // Stats
-  const topicCount = analysis?.topics?.length || 0;
-  const relationCount = analysis?.relations?.length || 0;
   const contradictionCount = analysis?.contradictions?.length || 0;
   const totalNodes = sources.length + outputs.length + sessions.length;
 

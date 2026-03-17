@@ -13,9 +13,6 @@ from crystalith.shared.cache import CacheProvider
 from crystalith.shared.cache.epochs import bump_sources_epoch
 from crystalith.shared.db import Chunk, Message, Output, Source
 from crystalith.shared.deps import get_cache_provider, get_db_session, get_embedding_provider, get_vector_store
-from crystalith.shared.types import OutputType, SourceStatus
-from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
-
 from crystalith.shared.source_diagnostics import (
     SOURCE_ERROR_EMBEDDING_FAILED,
     SOURCE_ERROR_INGESTION_FAILED,
@@ -24,10 +21,11 @@ from crystalith.shared.source_diagnostics import (
     apply_source_failure,
     raise_source_failure,
 )
+from crystalith.shared.types import OutputType, SourceStatus
+from crystalith.shared.vector_storage import VectorStore, bump_vector_epoch
 
 from . import service
 from .schemas import SessionCreate, SessionRead, SessionUpdate
-
 
 router = APIRouter(prefix="/v1/notebooks/{notebook_id}/sessions", tags=["sessions"])
 log = get_logger(__name__)
@@ -151,8 +149,12 @@ def _split_text_to_chunks(text: str, chunk_size: int = 500, overlap: int = 50) -
                     if len(sent) <= chunk_size:
                         chunks.append(sent)
                     else:
-                        for i in range(0, len(sent), chunk_size - overlap):
-                            chunks.append(sent[i : i + chunk_size])
+                        chunks.extend(
+                            [
+                                sent[i : i + chunk_size]
+                                for i in range(0, len(sent), chunk_size - overlap)
+                            ]
+                        )
             else:
                 current_chunk = [para]
                 current_length = para_len

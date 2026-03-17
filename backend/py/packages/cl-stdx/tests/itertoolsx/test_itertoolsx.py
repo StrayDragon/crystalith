@@ -3,7 +3,6 @@ from collections.abc import AsyncGenerator, Iterable, Sequence
 from typing import Any, cast
 
 import pytest
-
 from cl_stdx.itertoolsx import (
     async_chunks,
     chunks,
@@ -82,9 +81,7 @@ class TestIterPage:
             empty: list[str] = []
             return empty
 
-        pages: list[list[str]] = []
-        async for page in iter_page(mock_fetch_func, offset=0, limit=2):
-            pages.append(page)
+        pages = [page async for page in iter_page(mock_fetch_func, offset=0, limit=2)]
 
         assert pages == [["user1", "user2"], ["user3", "user4"], ["user5"]]
         assert call_count == 3  # 3页数据,最后一页不满limit,停止
@@ -99,9 +96,7 @@ class TestIterPage:
             # 始终返回数据,模拟无限数据源
             return [f"item{offset + i}" for i in range(limit)]
 
-        pages: list[list[str]] = []
-        async for page in iter_page(mock_fetch_func, offset=0, limit=2, n_max_iters_or_none_limit=3):
-            pages.append(page)
+        pages = [page async for page in iter_page(mock_fetch_func, offset=0, limit=2, n_max_iters_or_none_limit=3)]
 
         # 应该只获取3页数据
         assert len(pages) == 3
@@ -121,9 +116,7 @@ class TestIterPage:
             empty: list[str] = []
             return empty  # 第3次调用返回空
 
-        pages: list[list[str]] = []
-        async for page in iter_page(mock_fetch_func, offset=0, limit=2, n_max_iters_or_none_limit=None):
-            pages.append(page)
+        pages = [page async for page in iter_page(mock_fetch_func, offset=0, limit=2, n_max_iters_or_none_limit=None)]
 
         assert len(pages) == 2  # 只获取2页,因为第3页为空
         assert pages == [["item0", "item1"], ["item2", "item3"]]
@@ -140,9 +133,7 @@ class TestIterPage:
             empty: list[str] = []
             return empty  # 立即返回空
 
-        pages: list[list[str]] = []
-        async for page in iter_page(mock_fetch_func, offset=0, limit=10):
-            pages.append(page)
+        pages = [page async for page in iter_page(mock_fetch_func, offset=0, limit=10)]
 
         assert pages == []
         assert call_count == 1
@@ -163,9 +154,7 @@ class TestIterPage:
             empty: list[str] = []
             return empty
 
-        pages: list[list[str]] = []
-        async for page in iter_page(mock_fetch_func, offset=0, limit=2):
-            pages.append(page)
+        pages = [page async for page in iter_page(mock_fetch_func, offset=0, limit=2)]
 
         assert pages == [["a", "b"], ["c"]]
         assert call_count == 2  # 2页数据,最后一页不满limit,停止
@@ -186,9 +175,7 @@ class TestIterPage:
             empty: list[str] = []
             return empty
 
-        pages: list[list[str]] = []
-        async for page in iter_page(mock_fetch_func, offset=5, limit=2):
-            pages.append(page)
+        pages = [page async for page in iter_page(mock_fetch_func, offset=5, limit=2)]
 
         assert pages == [["item5", "item6"], ["item7"]]
         assert call_count == 2  # 2页数据,最后一页不满limit,停止

@@ -1,14 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
-  Button,
   IconButton,
-  Input,
   Popover,
   PopoverHandler,
   PopoverContent,
   Typography,
-  List,
-  ListItem,
   Spinner,
 } from "@material-tailwind/react";
 import {
@@ -100,7 +96,7 @@ export default function SessionSwitcher({
     }
   }
 
-  async function handleDeleteSession(sessionId: number, sessionTitle: string) {
+  async function handleDeleteSession(sessionId: number, _sessionTitle: string) {
     if (!onDelete || isDeleting) return;
     setIsDeleting(true);
     try {
@@ -122,10 +118,9 @@ export default function SessionSwitcher({
   }, [editingSessionId]);
 
   useEffect(() => {
-    if (isOpen) {
-      // Focus search input when opened
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
+    searchInputRef.current?.focus();
+  }, [isOpen, searchInputRef]);
 
   useEffect(() => {
     if (isOpen) return;
@@ -168,7 +163,6 @@ export default function SessionSwitcher({
                 placeholder="搜索会话"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                autoFocus
                 id="session-search-input"
                 name="sessionSearch"
                 aria-label="搜索会话"

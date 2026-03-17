@@ -1,8 +1,8 @@
-from .context import RetrievedChunk, RetrievedContext, RetrievalStats, retrieve_context
+from .context import RetrievalStats, RetrievedChunk, RetrievedContext, retrieve_context
 
 __all__ = [
+    "RetrievalStats",
     "RetrievedChunk",
     "RetrievedContext",
-    "RetrievalStats",
     "retrieve_context",
 ]

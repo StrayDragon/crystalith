@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import argparse
 import os
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from crystalith.shared.config import ConfigManager, Settings
 from crystalith.shared.db.migrations import upgrade_head

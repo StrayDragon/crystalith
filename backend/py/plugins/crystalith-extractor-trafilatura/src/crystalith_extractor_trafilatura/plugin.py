@@ -13,7 +13,7 @@ class TrafilaturaWebExtractorPlugin:
     requires_api_key = False
     requires_service = False
 
-    def create_extractor(self, settings, *, url_fetch_security=None):  # noqa: ANN001
+    def create_extractor(self, settings, *, url_fetch_security=None):
         traf_settings = settings.source_ingestion.web_extraction.trafilatura
         proxy_url = None
         if traf_settings.proxy and traf_settings.proxy.enabled:

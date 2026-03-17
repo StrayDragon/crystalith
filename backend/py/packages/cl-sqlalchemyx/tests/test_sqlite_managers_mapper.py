@@ -4,10 +4,9 @@ from enum import Enum
 
 import pytest
 import sqlalchemy as sa
+from cl_sqlalchemyx.mgrs import AsyncSQLiteManager, AsyncSQLiteManagersMapper
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.pool import NullPool
-
-from cl_sqlalchemyx.mgrs import AsyncSQLiteManager, AsyncSQLiteManagersMapper
 
 
 class DBBind(Enum):

@@ -1,4 +1,4 @@
-import { forwardRef, useState } from "react";
+import { forwardRef } from "react";
 import {
   Checkbox,
   Typography,
@@ -9,10 +9,8 @@ import {
   MenuItem,
 } from "@material-tailwind/react";
 import {
-  Language as WebIcon,
   MoreHoriz as MoreHorizIcon,
   OpenInNew as OpenInNewIcon,
-  Add as AddIcon,
   CloudDownload as FetchIcon,
   Link as LinkIcon,
 } from "@mui/icons-material";
@@ -56,7 +54,7 @@ const SearchResultCard = forwardRef<HTMLDivElement, SearchResultCardProps>(
           className="group relative flex items-center gap-1 py-1 px-1.5 rounded border border-transparent hover:border-gray-200 hover:bg-gray-50 transition-all"
         >
           {/* Checkbox */}
-          <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          <div className="flex-shrink-0">
             <Checkbox
               checked={isSelected}
               onChange={() => onToggle(result)}
@@ -82,10 +80,7 @@ const SearchResultCard = forwardRef<HTMLDivElement, SearchResultCardProps>(
           </button>
 
           {/* Menu - only visible on hover */}
-          <div
-            className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
             <Menu placement="bottom-end">
               <MenuHandler>
                 <IconButton
@@ -130,6 +125,15 @@ const SearchResultCard = forwardRef<HTMLDivElement, SearchResultCardProps>(
       <div
         ref={ref}
         onClick={() => onToggle(result)}
+        onKeyDown={(e) => {
+          if (e.key === " " || e.key === "Enter") {
+            e.preventDefault();
+            onToggle(result);
+          }
+        }}
+        role="group"
+        aria-label={`${isSelected ? "取消选择" : "选择"}：${result.title}`}
+        tabIndex={0}
         className={`
           flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition-all duration-200
           ${

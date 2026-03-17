@@ -8,7 +8,6 @@ from crystalith.shared.deps import get_db_session
 from . import service
 from .schemas import MessageCreate, MessageRead
 
-
 router = APIRouter(
     prefix="/v1/notebooks/{notebook_id}/sessions/{session_id}/messages",
     tags=["messages"],

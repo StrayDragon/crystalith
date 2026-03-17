@@ -85,9 +85,7 @@ class RedisCache:
         await self._client.delete(key)
 
     async def invalidate_pattern(self, pattern: str) -> int:
-        keys: list[str] = []
-        async for key in self._client.scan_iter(match=pattern):
-            keys.append(key)
+        keys = [key async for key in self._client.scan_iter(match=pattern)]
         if not keys:
             return 0
         await self._client.delete(*keys)

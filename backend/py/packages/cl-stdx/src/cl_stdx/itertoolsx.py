@@ -1,26 +1,25 @@
 import itertools
 from collections.abc import AsyncIterable, AsyncIterator, Callable, Iterable, Iterator, Sequence
-from typing import Protocol, TypeVar
-
-T = TypeVar("T")
-V = TypeVar("V")
+from typing import Protocol, cast
 
 
-def filtered_in_sql_values(
-    values: Iterable[V] | None,
-    target_type_as: Callable[[V], T] = lambda x: x,
-) -> list[T]:
+def filtered_in_sql_values[ValueT, TargetT](
+    values: Iterable[ValueT] | None,
+    target_type_as: Callable[[ValueT], TargetT] | None = None,
+) -> list[TargetT]:
     if not values:
         return []
 
-    items: list[T] = []
-    seen = set[T]()
+    converter = target_type_as or cast("Callable[[ValueT], TargetT]", lambda x: x)
+
+    items: list[TargetT] = []
+    seen = set[TargetT]()
 
     for item in values:
         if item is None or item == "":
             continue
         try:
-            converted_value = target_type_as(item)
+            converted_value = converter(item)
             if converted_value not in seen:
                 seen.add(converted_value)
                 items.append(converted_value)
@@ -30,11 +29,11 @@ def filtered_in_sql_values(
     return items
 
 
-class IterPageFetchFunc(Protocol[T]):
+class IterPageFetchFunc[T](Protocol):
     async def __call__(self, *, offset: int, limit: int) -> list[T]: ...
 
 
-async def iter_page(
+async def iter_page[T](
     fetch_func: IterPageFetchFunc[T],
     offset: int = 0,
     limit: int = 100,
@@ -86,7 +85,7 @@ async def iter_page(
         current_offset += limit
 
 
-def chunks(itr: Iterable[T], batch_size: int = 500) -> Iterator[list[T]]:
+def chunks[T](itr: Iterable[T], batch_size: int = 500) -> Iterator[list[T]]:
     """将一个可迭代对象分割成指定大小的多个块 (chunks).
 
     这个函数是一个生成器,它会懒加载地从输入的可迭代对象中
@@ -116,7 +115,7 @@ def chunks(itr: Iterable[T], batch_size: int = 500) -> Iterator[list[T]]:
         yield chunk
 
 
-async def async_chunks(
+async def async_chunks[T](
     aitr: AsyncIterable[T],
     batch_size: int = 500,
 ) -> AsyncIterator[list[T]]:
@@ -163,12 +162,10 @@ async def async_chunks(
         yield batch
 
 
-ItemT = TypeVar("ItemT")
-
-OffsetPaginationResult = tuple[Sequence[ItemT], int | None]
+type OffsetPaginationResult[ItemT] = tuple[Sequence[ItemT], int | None]
 
 
-def get_paged_items_and_cursor(
+def get_paged_items_and_cursor[ItemT](
     query_results: Sequence[ItemT],
     offset: int,
     size: int,

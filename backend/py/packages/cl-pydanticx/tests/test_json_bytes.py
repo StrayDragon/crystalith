@@ -6,10 +6,9 @@ import json
 from typing import Any
 
 import pytest
+from cl_pydanticx import json_to_bytes_serializer
 from pydantic import BaseModel, ValidationError, field_serializer
 from pydantic import Json as BaseModelJson
-
-from cl_pydanticx import json_to_bytes_serializer
 
 
 class TestJsonToBytesSerializer:

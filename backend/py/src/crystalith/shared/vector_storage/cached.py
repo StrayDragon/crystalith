@@ -107,7 +107,7 @@ async def cached_vector_search(
 ) -> list[VectorSearchResult]:
     try:
         epoch = await get_vector_epoch(cache=cache, notebook_id=notebook_id)
-    except Exception as exc:  # noqa: BLE001 - cache failures should not block retrieval
+    except Exception as exc:
         logger.warning(
             "vector_search_cache_epoch_failed",
             error=str(exc),
@@ -127,7 +127,7 @@ async def cached_vector_search(
 
     try:
         cached = await cache.get(key)
-    except Exception as exc:  # noqa: BLE001 - fail-open cache
+    except Exception as exc:
         logger.warning(
             "vector_search_cache_get_failed",
             error=str(exc),
@@ -198,7 +198,7 @@ async def cached_vector_search(
             ],
             ttl=VECTOR_SEARCH_CACHE_TTL_S,
         )
-    except Exception as exc:  # noqa: BLE001 - fail-open cache
+    except Exception as exc:
         logger.warning(
             "vector_search_cache_set_failed",
             error=str(exc),
@@ -226,7 +226,7 @@ async def cached_vector_search_many(
 
     try:
         epoch = await get_vector_epoch(cache=cache, notebook_id=notebook_id)
-    except Exception as exc:  # noqa: BLE001 - cache failures should not block retrieval
+    except Exception as exc:
         logger.warning(
             "vector_search_cache_epoch_failed",
             error=str(exc),
@@ -254,7 +254,7 @@ async def cached_vector_search_many(
 
     try:
         cached_values = await cache.get_many(keys)
-    except Exception as exc:  # noqa: BLE001 - fail-open cache
+    except Exception as exc:
         logger.warning(
             "vector_search_cache_get_many_failed",
             error=str(exc),
@@ -267,7 +267,7 @@ async def cached_vector_search_many(
         for key in keys:
             try:
                 fallback_values.append(await cache.get(key))
-            except Exception as exc:  # noqa: BLE001 - fail-open cache
+            except Exception as exc:
                 logger.warning(
                     "vector_search_cache_get_failed",
                     error=str(exc),
@@ -351,7 +351,7 @@ async def cached_vector_search_many(
         if set_items:
             try:
                 await cache.set_many(set_items, ttl=VECTOR_SEARCH_CACHE_TTL_S)
-            except Exception as exc:  # noqa: BLE001 - fail-open cache
+            except Exception as exc:
                 logger.warning(
                     "vector_search_cache_set_many_failed",
                     error=str(exc),

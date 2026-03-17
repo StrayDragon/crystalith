@@ -244,9 +244,7 @@ def needs_repair(output_type: OutputType, content: object) -> bool:
         if is_blank(root.get("label")):
             return True
         children = root.get("children")
-        if not isinstance(children, list) or not children:
-            return True
-        return False
+        return bool(not isinstance(children, list) or not children)
     if output_type == OutputType.QUIZ:
         questions = content.get("questions")
         if not isinstance(questions, list) or not questions:
@@ -280,10 +278,7 @@ def needs_repair(output_type: OutputType, content: object) -> bool:
         items = content.get("items")
         if not isinstance(items, list) or not items:
             return True
-        for item in items:
-            if not isinstance(item, dict) or is_blank(item.get("text")):
-                return True
-        return False
+        return any(not isinstance(item, dict) or is_blank(item.get("text")) for item in items)
     if output_type == OutputType.STRUCTURED:
         bullets = content.get("bullets")
         title = content.get("title")
@@ -291,10 +286,7 @@ def needs_repair(output_type: OutputType, content: object) -> bool:
             return True
         if not isinstance(bullets, list) or not bullets:
             return True
-        for bullet in bullets:
-            if not isinstance(bullet, dict) or is_blank(bullet.get("text")):
-                return True
-        return False
+        return any(not isinstance(bullet, dict) or is_blank(bullet.get("text")) for bullet in bullets)
     return False
 
 

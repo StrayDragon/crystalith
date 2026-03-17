@@ -12,16 +12,22 @@ class AsyncSession(_AsyncSession):
     ```python
     async_sessionmaker(
         bind=self.async_engine,
-        autoflush=False,  # 默认不自动刷新, 避免隐式触发了查询, NOTE: 可能需要显式调用 session.flush() 或者直接 session.commit()
-        expire_on_commit=False,  # 默认不会在 commit 后让对象实例过期, 避免commit后意外隐式触发了查询, NOTE: 可能需要显式调用 session.refresh(dao)
-        autocommit=False,  # 默认不自动提交事务.这是 SQLAlchemy 推荐的方式 NOTE: 需要显式调用 session.commit()
+        autoflush=False,  # 默认不自动刷新, 避免隐式触发查询
+        # NOTE: 可能需要显式调用 session.flush() 或 session.commit()
+        expire_on_commit=False,  # commit 后不让对象实例过期, 避免隐式触发查询
+        # NOTE: 可能需要显式调用 session.refresh(dao)
+        autocommit=False,  # 默认不自动提交事务(推荐方式); 需要显式 session.commit()
     )
     ```
-    推荐使用 `.begin_nested()`, 因为该参数配置下加上sqla2.x会隐式 `.begin()`, 在逻辑代码中再次调用 `.begin()` 很容易报错 `InvalidRequestError: A transaction is already begun on this Session`.
+    推荐使用 `.begin_nested()`, 因为该参数配置下加上 sqla2.x 会隐式 `.begin()`,
+    在逻辑代码中再次调用 `.begin()` 很容易报错:
+    `InvalidRequestError: A transaction is already begun on this Session`.
     """
 
     @typing_extensions.deprecated(
-        "不推荐使用.begin(), 而是使用.begin_nested(), 因为目前sqla2.x会隐式.begin, 会报错 InvalidRequestError: A transaction is already begun on this Session.",
+        "不推荐使用.begin(), 而是使用.begin_nested(), "
+        "因为目前 sqla2.x 会隐式 begin, 会报错 "
+        "InvalidRequestError: A transaction is already begun on this Session.",
     )
     @typing_extensions.override
     def begin(self) -> AsyncSessionTransaction:

@@ -9,7 +9,6 @@ from crystalith.shared.deps import get_cache_provider, get_db_session
 from . import service
 from .schemas import NotebookCreate, NotebookRead, NotebookUpdate
 
-
 router = APIRouter(prefix="/v1/notebooks", tags=["notebooks"])
 
 

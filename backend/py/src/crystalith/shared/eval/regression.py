@@ -130,9 +130,7 @@ def _collect_citation_objects(payload: object) -> list[dict[str, object]]:
         for key, value in payload.items():
             if key == "citations":
                 if isinstance(value, list):
-                    for item in value:
-                        if isinstance(item, dict):
-                            citations.append(item)
+                    citations.extend([item for item in value if isinstance(item, dict)])
                 continue
             citations.extend(_collect_citation_objects(value))
         return citations

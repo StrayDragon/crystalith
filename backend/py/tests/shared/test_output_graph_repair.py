@@ -29,10 +29,10 @@ async def test_postprocess_output_runs_repair_when_enabled_and_quality(
     called: dict[str, Any] = {"runs": 0}
 
     class _StubAgent:
-        def __init__(self, model, *, output_type, deps_type, system_prompt, retries):  # noqa: ANN001
+        def __init__(self, model, *, output_type, deps_type, system_prompt, retries):
             called["schema"] = output_type
 
-        async def run(self, user_prompt: str, deps: Any):  # noqa: ANN001
+        async def run(self, user_prompt: str, deps: Any):
             called["runs"] += 1
             assert "Repair the draft structured output" in user_prompt
 
@@ -87,10 +87,10 @@ async def test_postprocess_output_skips_repair_when_speed_preference(
     called: dict[str, Any] = {"runs": 0}
 
     class _StubAgent:
-        def __init__(self, model, *, output_type, deps_type, system_prompt, retries):  # noqa: ANN001
+        def __init__(self, model, *, output_type, deps_type, system_prompt, retries):
             pass
 
-        async def run(self, user_prompt: str, deps: Any):  # noqa: ANN001
+        async def run(self, user_prompt: str, deps: Any):
             called["runs"] += 1
             raise AssertionError("repair should not run for speed preference")
 
@@ -134,7 +134,7 @@ async def test_postprocess_output_skips_repair_for_plugin_schema(
     monkeypatch.setenv(CRYSTALITH_OUTPUT_REPAIR, "1")
 
     class _StubAgent:
-        def __init__(self, model, *, output_type, deps_type, system_prompt, retries):  # noqa: ANN001
+        def __init__(self, model, *, output_type, deps_type, system_prompt, retries):
             raise AssertionError("repair should not run when plugin schema is used")
 
     # Mock reason: assert plugin-schema bypass path without invoking real LLM calls.
@@ -176,10 +176,10 @@ async def test_postprocess_output_repair_failure_falls_back_to_deterministic(
     monkeypatch.setenv(CRYSTALITH_OUTPUT_REPAIR, "1")
 
     class _StubAgent:
-        def __init__(self, model, *, output_type, deps_type, system_prompt, retries):  # noqa: ANN001
+        def __init__(self, model, *, output_type, deps_type, system_prompt, retries):
             pass
 
-        async def run(self, user_prompt: str, deps: Any):  # noqa: ANN001
+        async def run(self, user_prompt: str, deps: Any):
             raise RuntimeError("boom")
 
     # Mock reason: force repair failure branch without invoking real LLM calls.

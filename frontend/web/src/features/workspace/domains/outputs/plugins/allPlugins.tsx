@@ -15,7 +15,7 @@ import {
   Slideshow as SlidesIcon,
 } from "@mui/icons-material";
 
-import type { OutputPlugin, OutputContent } from "./index";
+import type { OutputPlugin } from "./index";
 import { decodeOutputContent, isOutputContentForType } from "../../../shared/outputPayload";
 import FlashcardViewer from "../FlashcardViewer";
 import GuideChecklist from "../GuideChecklist";

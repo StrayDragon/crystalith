@@ -16,7 +16,8 @@ from crystalith.shared.agents.search_graph import run_search_graph
 from crystalith.shared.ai.interfaces import EmbeddingProvider
 from crystalith.shared.cache import CacheProvider
 from crystalith.shared.config import Settings
-from crystalith.shared.db import Chunk as ChunkModel, Notebook, NotebookExtractorPolicy, Source
+from crystalith.shared.db import Chunk as ChunkModel
+from crystalith.shared.db import Notebook, NotebookExtractorPolicy, Source
 from crystalith.shared.deps import (
     get_cache_provider,
     get_db_session,
@@ -26,36 +27,11 @@ from crystalith.shared.deps import (
     get_transcription_provider,
     get_vector_store,
 )
-from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.json_types import JsonDict, JsonValue
-from crystalith.shared.types import SourceStatus
-from crystalith.shared.vector_storage import VectorStore
+from crystalith.shared.net import UrlSafetyError, canonicalize_url_for_dedup, validate_url_for_fetch
 from crystalith.shared.parsers import TranscriptionProvider
 from crystalith.shared.parsers.interfaces import ParserWithDocumentMetadata
-from crystalith.shared.net import UrlSafetyError, canonicalize_url_for_dedup, validate_url_for_fetch
-
-from .api_common import (
-    _build_source_metadata,
-    _invalidate_notebook_source_caches,
-    _load_tag_names_for_sources,
-    _page_count_from_chunks,
-    _resolve_parser,
-    _source_to_read,
-)
-from .api_schemas import (
-    ExtractorInfoResponse,
-    ExtractorsListResponse,
-    ExtractorPolicyMode,
-    NotebookExtractorsPolicy,
-    PatchNotebookExtractorsPolicyRequest,
-    SourceFromUrlMode,
-    SourceFromUrlRequest,
-    SourceRead,
-    SourceSearchRequest,
-    SourceSearchResponse,
-    SourceSearchResult,
-    SourceSearchStatus,
-)
+from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.source_diagnostics import (
     SOURCE_ERROR_EMBEDDING_FAILED,
     SOURCE_ERROR_EXTRACTOR_FAILED,
@@ -68,6 +44,31 @@ from crystalith.shared.source_diagnostics import (
     SourceFailure,
     apply_source_failure,
     raise_source_failure,
+)
+from crystalith.shared.types import SourceStatus
+from crystalith.shared.vector_storage import VectorStore
+
+from .api_common import (
+    _build_source_metadata,
+    _invalidate_notebook_source_caches,
+    _load_tag_names_for_sources,
+    _page_count_from_chunks,
+    _resolve_parser,
+    _source_to_read,
+)
+from .api_schemas import (
+    ExtractorInfoResponse,
+    ExtractorPolicyMode,
+    ExtractorsListResponse,
+    NotebookExtractorsPolicy,
+    PatchNotebookExtractorsPolicyRequest,
+    SourceFromUrlMode,
+    SourceFromUrlRequest,
+    SourceRead,
+    SourceSearchRequest,
+    SourceSearchResponse,
+    SourceSearchResult,
+    SourceSearchStatus,
 )
 
 logger = get_logger(__name__)
@@ -480,7 +481,7 @@ async def create_source_from_url(
             if preferred_state.extractor is not None:
                 try:
                     preferred_available = await preferred_state.extractor.is_available()
-                except Exception:  # noqa: BLE001 - extractor boundary
+                except Exception:
                     preferred_available = False
 
             if preferred_state.extractor is None or not preferred_available:

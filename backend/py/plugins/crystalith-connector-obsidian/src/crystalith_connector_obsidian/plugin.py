@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import os
 from pathlib import Path
-from typing import cast
+from typing import ClassVar, cast
 
 import yaml
 
@@ -158,7 +158,7 @@ class ObsidianVaultConnectorPlugin:
 
     display_name = "Obsidian Vault"
     description = "从本地 Obsidian vault 枚举 Markdown 笔记并导入。"
-    connection_config_schema: JsonDict = {
+    connection_config_schema: ClassVar[JsonDict] = {
         "type": "object",
         "properties": {
             "vault_path": {
@@ -205,7 +205,7 @@ class ObsidianVaultConnectorPlugin:
                 if name.startswith("."):
                     continue
                 lower = name.lower()
-                if not (lower.endswith(".md") or lower.endswith(".markdown")):
+                if not lower.endswith((".md", ".markdown")):
                     continue
                 path = Path(dirpath) / name
                 try:

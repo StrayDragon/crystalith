@@ -77,7 +77,7 @@ class InMemoryCache:
             current = 0
             if entry is not None:
                 value = entry.value
-                if value is None or isinstance(value, (dict, list)) or isinstance(value, bool):
+                if value is None or isinstance(value, (dict, list, bool)):
                     current = 0
                 elif isinstance(value, (int, float, str)):
                     try:
@@ -124,7 +124,7 @@ class InMemoryCache:
 
     async def invalidate_pattern(self, pattern: str) -> int:
         async with self._lock:
-            keys = [key for key in self._data.keys() if fnmatch.fnmatch(key, pattern)]
+            keys = [key for key in self._data if fnmatch.fnmatch(key, pattern)]
             for key in keys:
                 self._data.pop(key, None)
             return len(keys)

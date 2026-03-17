@@ -5,9 +5,8 @@ import json
 from dataclasses import dataclass
 from time import perf_counter
 
-from pydantic_ai import Agent
-
 from cl_logs.logging import get_logger
+from pydantic_ai import Agent
 
 from crystalith.shared.agents.deps import StudioDeps
 from crystalith.shared.agents.generation_preference import GenerationPreference, tuning_for_request
@@ -20,7 +19,7 @@ from crystalith.shared.json_types import JsonDict
 from crystalith.shared.observability import classify_error_kind
 from crystalith.shared.retrieval import retrieve_context
 from crystalith.shared.types import OutputType
-from .schemas import SlideGenerationConfig, SlideMarkdown, SlideOutline, SlideOutlineItem
+
 from .config import (
     AUDIENCE_HINTS,
     DEFAULT_CONFIG,
@@ -31,7 +30,7 @@ from .config import (
     THEME_PRESET_TEMPLATES,
     TONE_HINTS,
 )
-
+from .schemas import SlideGenerationConfig, SlideMarkdown, SlideOutline, SlideOutlineItem
 
 log = get_logger(__name__)
 
@@ -174,8 +173,7 @@ def _outline_to_text(outline: SlideOutline) -> str:
     lines: list[str] = [f"# {outline.title}"]
     for slide in outline.slides:
         lines.append(f"- {slide.title}")
-        for bullet in slide.bullets:
-            lines.append(f"  - {bullet}")
+        lines.extend([f"  - {bullet}" for bullet in slide.bullets])
     return "\n".join(lines)
 
 
@@ -196,8 +194,7 @@ def _outline_to_markdown(outline: SlideOutline) -> str:
     for slide in outline.slides:
         lines.append("---")
         lines.append(f"## {slide.title}")
-        for bullet in slide.bullets:
-            lines.append(f"- {bullet}")
+        lines.extend([f"- {bullet}" for bullet in slide.bullets])
         lines.append("")
     return "\n".join(lines).strip() + "\n"
 
@@ -403,10 +400,7 @@ async def generate_slides_outline(
         model_id=model_id,
     )
 
-    if model_id:
-        model = build_chat_model_from_model_id(deps.settings, model_id)
-    else:
-        model = deps.model or build_chat_model(deps.settings)
+    model = build_chat_model_from_model_id(deps.settings, model_id) if model_id else deps.model or build_chat_model(deps.settings)
 
     model_settings_log = extract_effective_model_settings_for_log(model)
     agent = Agent(
@@ -457,7 +451,7 @@ async def generate_slides_outline(
         )
     except asyncio.CancelledError:
         raise
-    except Exception as error:  # noqa: BLE001
+    except Exception as error:
         generate_ms = int((perf_counter() - generation_started) * 1000)
         if timings_ms is not None:
             timings_ms["generate_ms"] = generate_ms
@@ -527,10 +521,7 @@ async def generate_slides_markdown(
         model_id=model_id,
     )
 
-    if model_id:
-        model = build_chat_model_from_model_id(deps.settings, model_id)
-    else:
-        model = deps.model or build_chat_model(deps.settings)
+    model = build_chat_model_from_model_id(deps.settings, model_id) if model_id else deps.model or build_chat_model(deps.settings)
 
     model_settings_log = extract_effective_model_settings_for_log(model)
     agent = Agent(
@@ -581,7 +572,7 @@ async def generate_slides_markdown(
         )
     except asyncio.CancelledError:
         raise
-    except Exception as error:  # noqa: BLE001
+    except Exception as error:
         generate_ms = int((perf_counter() - generation_started) * 1000)
         if timings_ms is not None:
             timings_ms["generate_ms"] = generate_ms

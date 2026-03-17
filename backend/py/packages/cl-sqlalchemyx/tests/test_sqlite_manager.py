@@ -7,10 +7,6 @@ from typing import Any
 import pytest
 import pytest_asyncio
 import sqlalchemy as sa
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-from sqlalchemy.pool import NullPool
-
 from cl_sqlalchemyx.mgrs import (
     AsyncSQLiteManager,
     aexecute_sql,
@@ -18,6 +14,9 @@ from cl_sqlalchemyx.mgrs import (
     async_must_rollback_if_in_transaction,
 )
 from cl_sqlalchemyx.same_impl_just_warn_wrapper import AsyncSession as WarnWrappedAsyncSession
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.pool import NullPool
 
 
 @pytest.fixture(scope="module")

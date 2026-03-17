@@ -24,7 +24,7 @@ class _StubExtractor:
     async def is_available(self) -> bool:
         return self.available
 
-    async def extract(self, url: str, html: str | None = None) -> ExtractedContent:  # noqa: ARG002
+    async def extract(self, url: str, html: str | None = None) -> ExtractedContent:
         return ExtractedContent(text=self.text, url=url, extractor=self.kind.value)
 
     async def close(self) -> None:
@@ -42,7 +42,7 @@ class _StubWebExtractorPlugin:
         self.requires_service = False
         self._extractor = extractor
 
-    def create_extractor(self, settings: Settings, *, url_fetch_security=None):  # noqa: ANN001, ARG002
+    def create_extractor(self, settings: Settings, *, url_fetch_security=None):
         return self._extractor
 
 
@@ -51,8 +51,8 @@ def _registry_with_plugins(*items: tuple[str, _StubWebExtractorPlugin]) -> Plugi
     for plugin_id, plugin in items:
         registry.web_extractors[plugin.extractor_type] = plugin
         registry.plugins[plugin_id] = plugin
-        registry._web_extractor_plugin_ids[plugin.extractor_type] = plugin_id  # noqa: SLF001
-        registry._load_report.loaded.append(plugin_id)  # noqa: SLF001
+        registry._web_extractor_plugin_ids[plugin.extractor_type] = plugin_id
+        registry._load_report.loaded.append(plugin_id)
     return registry
 
 

@@ -4,9 +4,9 @@ import asyncio
 from pathlib import Path
 
 import sqlalchemy as sa
-from alembic import command
 from alembic.config import Config as AlembicConfig
 
+from alembic import command
 from crystalith.shared.db.manager import create_db_manager
 
 

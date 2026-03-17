@@ -9,13 +9,13 @@ from crystalith.shared.ai.retry import extract_retry_after, is_retryable_error, 
 
 
 class _Resp:
-    def __init__(self, status_code: int, headers=None):  # noqa: ANN001
+    def __init__(self, status_code: int, headers=None):
         self.status_code = status_code
         self.headers = headers or {}
 
 
 class _Err(Exception):
-    def __init__(self, message: str, *, status_code=None, response=None, headers=None):  # noqa: ANN001
+    def __init__(self, message: str, *, status_code=None, response=None, headers=None):
         super().__init__(message)
         self.status_code = status_code
         self.response = response

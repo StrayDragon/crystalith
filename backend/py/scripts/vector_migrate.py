@@ -6,8 +6,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from crystalith.shared.env import CRYSTALITH_DATA_DIR
 from crystalith.shared.vector_storage import SQLiteVectorStore

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import importlib
 import time
 from collections.abc import Callable
@@ -352,15 +353,11 @@ class BrowserlessExtractor(BaseExtractor):
     async def close(self) -> None:
         """Close browser connection and cleanup resources."""
         if self._browser:
-            try:
+            with contextlib.suppress(Exception):
                 await self._browser.close()
-            except Exception:
-                pass
             self._browser = None
 
         if self._playwright:
-            try:
+            with contextlib.suppress(Exception):
                 await self._playwright.stop()
-            except Exception:
-                pass
             self._playwright = None

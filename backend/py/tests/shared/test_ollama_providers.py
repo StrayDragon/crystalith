@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
-from collections.abc import AsyncIterator
 
 import pytest
 
@@ -102,9 +102,7 @@ async def test_ollama_chat_provider_chat_and_stream() -> None:
     text = await provider.chat([ChatMessage(role="user", content="hi")])
     assert text == "OK"
 
-    chunks = []
-    async for chunk in provider.chat_stream([ChatMessage(role="user", content="hi")]):
-        chunks.append(chunk)
+    chunks = [chunk async for chunk in provider.chat_stream([ChatMessage(role="user", content="hi")])]
     assert "".join(chunks) == "Hello world"
 
     with pytest.raises(ValueError, match="messages must not be empty"):

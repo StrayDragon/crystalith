@@ -324,6 +324,7 @@ test("stopStreaming rolls back provisional assistant message before done", async
     onSseEvent({ event: "chunk", data: { text: "Partial answer" } });
     return {
       stream: (async function* streamEvents() {
+        yield* [];
         while (!signal.aborted) {
           await new Promise((resolve) => setTimeout(resolve, 10));
         }

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from io import BytesIO
+from typing import ClassVar
 
 import pytest
 from pypdf import PdfWriter
 
-from tests._support.settings import make_settings
 from crystalith.shared.parsers.audio import AudioParser
 from crystalith.shared.parsers.csv import CSVParser
 from crystalith.shared.parsers.factory import ParserFactory, _is_youtube_url
@@ -23,6 +23,7 @@ from crystalith.shared.parsers.types import Chunk
 from crystalith.shared.parsers.utils import chunk_paragraphs
 from crystalith.shared.parsers.video import VideoParser
 from crystalith.shared.plugins import PluginRegistry
+from tests._support.settings import make_settings
 
 
 def test_chunk_paragraphs_returns_empty_for_whitespace() -> None:
@@ -150,7 +151,7 @@ def test_openai_transcriber_transcribe_handles_response_shapes_and_errors() -> N
         def __init__(self, response: object) -> None:
             self._response = response
 
-        def create(self, *, model: str, file: object) -> object:  # noqa: ARG002
+        def create(self, *, model: str, file: object) -> object:
             return self._response
 
     class _Audio:
@@ -186,7 +187,7 @@ def test_openai_transcriber_transcribe_handles_response_shapes_and_errors() -> N
         transcriber4.transcribe(b"")
 
     class _BoomAudioTranscriptions:
-        def create(self, *, model: str, file: object) -> object:  # noqa: ARG002
+        def create(self, *, model: str, file: object) -> object:
             raise RuntimeError("boom")
 
     class _BoomAudio:
@@ -270,18 +271,18 @@ def test_parser_factory_selects_youtube_video_parser_and_plugins() -> None:
     class _CustomPlugin:
         api_version = "v1"
         parser_type = "custom"
-        supported_mime_types = {"application/x-custom"}
-        supported_extensions = {".cstm"}
+        supported_mime_types: ClassVar[set[str]] = {"application/x-custom"}
+        supported_extensions: ClassVar[set[str]] = {".cstm"}
 
-        def create_parser(self, *, filename, mime_type, transcriber=None, media_fetcher=None):  # noqa: ANN001
+        def create_parser(self, *, filename, mime_type, transcriber=None, media_fetcher=None):
             return TextParser()
 
     custom_plugin_id = "parser-custom"
     custom = _CustomPlugin()
     registry.parsers[custom.parser_type] = custom
     registry.plugins[custom_plugin_id] = custom
-    registry._parser_plugin_ids[custom.parser_type] = custom_plugin_id  # noqa: SLF001
-    registry._load_report.loaded.append(custom_plugin_id)  # noqa: SLF001
+    registry._parser_plugin_ids[custom.parser_type] = custom_plugin_id
+    registry._load_report.loaded.append(custom_plugin_id)
 
     parser = ParserFactory.from_file(filename="file.cstm", mime_type=None, plugins=registry)
     assert isinstance(parser, TextParser)
@@ -312,10 +313,10 @@ def test_parser_factory_selects_youtube_video_parser_and_plugins() -> None:
     class _MediaPlugin:
         api_version = "v1"
         parser_type = "media"
-        supported_mime_types = {"video/mp4"}
-        supported_extensions: set[str] = set()
+        supported_mime_types: ClassVar[set[str]] = {"video/mp4"}
+        supported_extensions: ClassVar[set[str]] = set()
 
-        def create_parser(self, *, filename, mime_type, transcriber=None, media_fetcher=None):  # noqa: ANN001
+        def create_parser(self, *, filename, mime_type, transcriber=None, media_fetcher=None):
             return VideoParser(
                 transcriber,
                 filename=filename,
@@ -328,8 +329,8 @@ def test_parser_factory_selects_youtube_video_parser_and_plugins() -> None:
     media = _MediaPlugin()
     registry.parsers[media.parser_type] = media
     registry.plugins[media_plugin_id] = media
-    registry._parser_plugin_ids[media.parser_type] = media_plugin_id  # noqa: SLF001
-    registry._load_report.loaded.append(media_plugin_id)  # noqa: SLF001
+    registry._parser_plugin_ids[media.parser_type] = media_plugin_id
+    registry._load_report.loaded.append(media_plugin_id)
 
     youtube_resolution = ParserFactory.resolve_from_file(
         filename="https://youtu.be/abc",
@@ -370,28 +371,28 @@ def test_parser_factory_selects_parsers_by_mime_and_extension() -> None:
     class _HTMLPlugin:
         api_version = "v1"
         parser_type = "html"
-        supported_mime_types = {"text/html"}
-        supported_extensions = {".html", ".htm"}
+        supported_mime_types: ClassVar[set[str]] = {"text/html"}
+        supported_extensions: ClassVar[set[str]] = {".html", ".htm"}
 
-        def create_parser(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+        def create_parser(self, *_args, **_kwargs):
             return HTMLParser()
 
     class _PDFPlugin:
         api_version = "v1"
         parser_type = "pdf"
-        supported_mime_types = {"application/pdf"}
-        supported_extensions = {".pdf"}
+        supported_mime_types: ClassVar[set[str]] = {"application/pdf"}
+        supported_extensions: ClassVar[set[str]] = {".pdf"}
 
-        def create_parser(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+        def create_parser(self, *_args, **_kwargs):
             return PDFParser()
 
     class _MediaPlugin:
         api_version = "v1"
         parser_type = "media"
-        supported_mime_types = {"audio/mpeg", "video/mp4"}
-        supported_extensions = {".mp3", ".mp4"}
+        supported_mime_types: ClassVar[set[str]] = {"audio/mpeg", "video/mp4"}
+        supported_extensions: ClassVar[set[str]] = {".mp3", ".mp4"}
 
-        def create_parser(self, *, filename, mime_type, transcriber=None, media_fetcher=None):  # noqa: ANN001
+        def create_parser(self, *, filename, mime_type, transcriber=None, media_fetcher=None):
             if (filename or "").lower().endswith(".mp3") or (mime_type or "").startswith("audio/"):
                 return AudioParser(transcriber, filename=filename, mime_type=mime_type)
             return VideoParser(
@@ -410,8 +411,8 @@ def test_parser_factory_selects_parsers_by_mime_and_extension() -> None:
     ]:
         registry.parsers[plugin.parser_type] = plugin
         registry.plugins[plugin_id] = plugin
-        registry._parser_plugin_ids[plugin.parser_type] = plugin_id  # noqa: SLF001
-        registry._load_report.loaded.append(plugin_id)  # noqa: SLF001
+        registry._parser_plugin_ids[plugin.parser_type] = plugin_id
+        registry._load_report.loaded.append(plugin_id)
 
     assert isinstance(
         ParserFactory.from_file(filename="a.html", mime_type="text/html", plugins=registry),

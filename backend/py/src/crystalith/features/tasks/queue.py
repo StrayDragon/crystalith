@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import itertools
 from collections.abc import Awaitable, Callable
 from typing import TypeVar, cast
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from cl_logs.logging import get_logger
 from cl_sqlalchemyx.mgrs import AsyncDBManager
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.factory import create_chat_provider, create_embedding_provider
 from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
@@ -158,10 +158,8 @@ class TaskQueue:
         if self._worker_task is None:
             return
         self._worker_task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await self._worker_task
-        except asyncio.CancelledError:
-            pass
         self._worker_task = None
 
         in_flight = set(self._in_flight)
@@ -217,7 +215,7 @@ class TaskQueue:
                     task.progress = 0
                     await session.commit()
                     raise
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     task.status = TaskStatus.FAILED
                     task.error = str(exc)
                     task.result = None

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import socket
 import threading
 
@@ -169,10 +170,8 @@ def test_probe_tcp_endpoint_succeeds_when_port_is_open() -> None:
         assert error is None
     finally:
         stop.set()
-        try:
+        with contextlib.suppress(OSError):
             sock.close()
-        except OSError:
-            pass
 
 
 def test_probe_tcp_endpoint_reports_oserror_when_port_is_closed() -> None:

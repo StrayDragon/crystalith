@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import type { RefObject } from "react";
 import { Virtuoso } from "react-virtuoso";
 import {
@@ -127,13 +127,6 @@ function ChatPanel({
 
   const notebookId = useWorkspaceStore((s) => s.activeNotebookId);
   const sessionId = useWorkspaceStore((s) => s.activeSessionId);
-  const latestAssistantMessageId = useMemo(() => {
-    for (let i = messages.length - 1; i >= 0; i -= 1) {
-      const msg = messages[i];
-      if (msg?.role === "assistant") return msg.id;
-    }
-    return null;
-  }, [messages]);
 
   const citationIndexMap = useMemo(() => {
     const map = new Map<number, { citation: Citation; index: number }>();
@@ -145,18 +138,6 @@ function ChatPanel({
   }, [citations]);
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [toolRuns, setToolRuns] = useState<
-    Record<
-      string,
-      {
-        status: "pending" | "running" | "success" | "error";
-        outputText?: string | null;
-        errorMessage?: string | null;
-      }
-    >
-  >({});
-  const autoExecSeenRef = useRef(new Set<string>());
-  const toolInFlightRef = useRef(new Set<string>());
 
   const { style: dropdownStyle } = useLayer("dropdown");
   const {
@@ -279,31 +260,6 @@ function ChatPanel({
       setTimeout(() => setCopiedId(null), 2000);
     }
   }, []);
-
-  const runQaExportPreview = useCallback(
-    async (params: { format: "markdown" | "json"; messageId: number }) => {
-      if (notebookId == null || sessionId == null) {
-        throw new Error("未选择会话，无法导出预览。");
-      }
-      const query = new URLSearchParams();
-      query.set("session_id", String(sessionId));
-      query.set("message_id", String(params.messageId));
-      query.set("format", params.format);
-      const url = `/v1/notebooks/${notebookId}/qa/export?${query.toString()}`;
-      const resp = await fetch(url);
-      if (!resp.ok) {
-        throw new Error(`请求失败: HTTP ${resp.status}`);
-      }
-      if (params.format === "json") {
-        const data = (await resp.json()) as unknown;
-        const text = JSON.stringify(data, null, 2);
-        return text.length > 4000 ? text.slice(0, 4000) + "\n…" : text;
-      }
-      const text = await resp.text();
-      return text.length > 4000 ? text.slice(0, 4000) + "\n…" : text;
-    },
-    [notebookId, sessionId],
-  );
 
   const renderMessage = (message: ChatMessage) => {
     const numericMessageId = Number(message.id);

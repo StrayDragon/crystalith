@@ -9,7 +9,6 @@ import {
 } from "../../../../api/generated";
 import { unwrapData } from "../../../../api/unwrap";
 import { useWorkspaceStore } from "../../shared/state/workspaceStore";
-import type { ApiSession } from "../../shared/types";
 import { normalizeSession } from "../../shared/utils";
 
 export function useSessions() {
@@ -31,7 +30,7 @@ export function useSessions() {
 
   useEffect(() => {
     store.getState().setLoading("sessions", isLoading);
-  }, [isLoading]);
+  }, [isLoading, store]);
 
   useEffect(() => {
     if (!activeNotebookId) {
@@ -60,14 +59,14 @@ export function useSessions() {
         s.setActiveSession(nextActive);
       }
     }
-  }, [data, error, isConnected, activeNotebookId, activeSessionId]);
+  }, [data, error, isConnected, activeNotebookId, activeSessionId, store]);
 
   const setActiveSessionId = useCallback(
     (sessionId: number | null) => {
       if (sessionId === activeSessionId) return;
       store.getState().setActiveSession(sessionId);
     },
-    [activeSessionId],
+    [activeSessionId, store],
   );
 
   const handleCreateSession = useCallback(
@@ -91,12 +90,12 @@ export function useSessions() {
           revalidate: false,
         });
         return normalized.id;
-      } catch (error) {
+      } catch {
         store.getState().setError("sessions", "创建会话失败，请检查后端状态。");
         return null;
       }
     },
-    [isConnected, mutate, activeNotebookId],
+    [isConnected, mutate, activeNotebookId, store],
   );
 
   const ensureSession = useCallback(
@@ -110,7 +109,7 @@ export function useSessions() {
   const retrySessions = useCallback(async () => {
     store.getState().setError("sessions", "");
     await mutate();
-  }, [mutate]);
+  }, [mutate, store]);
 
   const refreshSessions = useCallback(async () => {
     await mutate();
@@ -142,12 +141,12 @@ export function useSessions() {
           { revalidate: false },
         );
         return true;
-      } catch (error) {
+      } catch {
         store.getState().setError("sessions", "更新会话失败，请稍后重试。");
         return false;
       }
     },
-    [isConnected, mutate, activeNotebookId],
+    [isConnected, mutate, activeNotebookId, store],
   );
 
   const handleDeleteSession = useCallback(
@@ -174,12 +173,12 @@ export function useSessions() {
           revalidate: false,
         });
         return true;
-      } catch (error) {
+      } catch {
         store.getState().setError("sessions", "删除会话失败，请稍后重试。");
         return false;
       }
     },
-    [isConnected, mutate, activeNotebookId],
+    [isConnected, mutate, activeNotebookId, store],
   );
 
   return {

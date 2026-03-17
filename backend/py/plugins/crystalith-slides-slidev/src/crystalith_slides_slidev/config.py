@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .schemas import SlideGenerationConfig
 from crystalith.shared.json_types import JsonDict
+
+from .schemas import SlideGenerationConfig
 
 
 @dataclass(frozen=True, slots=True)

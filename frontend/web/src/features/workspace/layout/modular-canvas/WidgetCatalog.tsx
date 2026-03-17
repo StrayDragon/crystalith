@@ -1,5 +1,7 @@
 import type { WidgetMeta } from "./types";
 
+import { useLayer } from "../../../../shared/layer";
+
 interface WidgetCatalogProps {
   open: boolean;
   onClose: () => void;
@@ -17,14 +19,23 @@ export default function WidgetCatalog({
 }: WidgetCatalogProps) {
   if (!open) return null;
 
+  const { style: layerStyle } = useLayer("popover");
+
   return (
-    <div className="fixed inset-0 z-40" onClick={onClose}>
-      <div
-        className="absolute top-14 right-36 w-52 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700 p-2"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-label="模块目录"
-      >
+    <div
+      className="fixed inset-0 relative"
+      style={layerStyle}
+      role="dialog"
+      aria-modal="true"
+      aria-label="模块目录"
+    >
+      <button
+        type="button"
+        className="absolute inset-0 z-0 cursor-default"
+        onClick={onClose}
+        aria-label="关闭模块目录"
+      />
+      <div className="absolute top-14 right-36 z-10 w-52 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700 p-2">
         <div className="text-[10px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider px-2 py-1.5">
           模块目录
         </div>

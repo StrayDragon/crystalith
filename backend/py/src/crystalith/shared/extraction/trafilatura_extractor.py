@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 import time
+from urllib.parse import urljoin
 
 import httpx
 import trafilatura
 from trafilatura.settings import use_config
-from urllib.parse import urljoin
+
+from crystalith.shared.config.models import UrlFetchSecuritySettings
 
 from .interfaces import BaseExtractor, ExtractionError, NetworkError, ParseError
 from .types import ExtractedContent, ExtractorType
-
-from crystalith.shared.config.models import UrlFetchSecuritySettings
 
 
 class TrafilaturaExtractor(BaseExtractor):

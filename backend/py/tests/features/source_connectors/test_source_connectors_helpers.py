@@ -112,7 +112,7 @@ def test_get_connector_plugin_or_409_falls_back_to_catalog_hint_when_missing_hin
 @pytest.mark.asyncio
 async def test_get_connector_diagnostics_returns_failure_detail_on_exception():
     class BrokenPlugin:
-        async def get_diagnostics(self, settings, connection_config=None):  # noqa: ANN001
+        async def get_diagnostics(self, settings, connection_config=None):
             raise RuntimeError("boom")
 
     diagnostics = await source_connectors_api._get_connector_diagnostics(  # pyright: ignore[reportPrivateUsage]
@@ -126,7 +126,7 @@ async def test_get_connector_diagnostics_returns_failure_detail_on_exception():
 @pytest.mark.asyncio
 async def test_get_connector_diagnostics_filters_invalid_items():
     class PluginWithDiagnostics:
-        async def get_diagnostics(self, settings, connection_config=None):  # noqa: ANN001
+        async def get_diagnostics(self, settings, connection_config=None):
             return [
                 {"error_code": "D1", "message": "m1"},
                 "not-a-dict",
@@ -209,7 +209,7 @@ def test_normalize_snapshot_entry_coerces_modified_at_and_validates_fields():
 @pytest.mark.asyncio
 async def test_build_snapshot_surfaces_plugin_and_payload_errors():
     class BrokenPlugin:
-        async def list_snapshot_entries(self, settings, *, connection_config):  # noqa: ANN001
+        async def list_snapshot_entries(self, settings, *, connection_config):
             raise RuntimeError("boom")
 
     with pytest.raises(HTTPException) as excinfo:
@@ -224,7 +224,7 @@ async def test_build_snapshot_surfaces_plugin_and_payload_errors():
     assert exc.detail["error_code"] == "CONNECTOR_SNAPSHOT_FAILED"
 
     class InvalidPayloadPlugin:
-        async def list_snapshot_entries(self, settings, *, connection_config):  # noqa: ANN001
+        async def list_snapshot_entries(self, settings, *, connection_config):
             return {"not": "a list"}
 
     with pytest.raises(HTTPException) as excinfo:
@@ -239,7 +239,7 @@ async def test_build_snapshot_surfaces_plugin_and_payload_errors():
     assert exc.detail["error_code"] == "CONNECTOR_SNAPSHOT_INVALID"
 
     class DuplicatePayloadPlugin:
-        async def list_snapshot_entries(self, settings, *, connection_config):  # noqa: ANN001
+        async def list_snapshot_entries(self, settings, *, connection_config):
             return [
                 {"relative_path": "notes/a.md", "size_bytes": 1, "modified_at": "t1"},
                 {"relative_path": "notes/a.md", "size_bytes": 2, "modified_at": "t2"},
@@ -340,7 +340,7 @@ def test_resolve_parser_for_file_reports_unsupported_type_without_plugin():
 def test_resolve_parser_for_file_falls_back_for_legacy_parser_factory(monkeypatch):
     original_resolve = ParserFactory.resolve_from_file
 
-    def legacy_resolve_from_file(  # noqa: ANN001
+    def legacy_resolve_from_file(
         cls,
         *,
         filename,
@@ -373,7 +373,7 @@ def test_resolve_parser_for_file_falls_back_for_legacy_parser_factory(monkeypatc
 
 
 def test_resolve_parser_for_file_reraises_unexpected_type_error(monkeypatch):
-    def _raise_type_error(  # noqa: ANN001
+    def _raise_type_error(
         cls,
         *,
         filename,

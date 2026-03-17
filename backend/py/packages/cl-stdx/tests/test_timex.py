@@ -1,7 +1,6 @@
 import datetime
 
 import pytest
-
 from cl_stdx import timex
 
 

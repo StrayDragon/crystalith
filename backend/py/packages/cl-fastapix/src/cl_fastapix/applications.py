@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, override
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
-from typing_extensions import override
 
 from .schema_enhancer import enhance_openapi_schema
 

@@ -1,19 +1,15 @@
-import { memo, useCallback, useEffect, useMemo, useState, useRef, type CSSProperties } from "react";
-import { Button, Typography, IconButton, Chip, Checkbox, Spinner } from "@material-tailwind/react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Button, Checkbox, Spinner } from "@material-tailwind/react";
 import {
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
   PlayArrow as PlayIcon,
-  Check as CheckIcon,
   SkipNext as SkipIcon,
   Stop as StopIcon,
-  Add as AddIcon,
   Science as ScienceIcon,
   Search as SearchIcon,
   Analytics as AnalyticsIcon,
   Assignment as AssignmentIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
   OpenInFull as OpenInFullIcon,
   CloseFullscreen as CloseFullscreenIcon,
   Psychology as PsychologyIcon,
@@ -135,36 +131,52 @@ function ThinkingBlock({
     );
   }
 
+  const content = (
+    <div className="flex-1 min-w-0">
+      <p className="text-gray-700 leading-relaxed break-words whitespace-pre-wrap">
+        {isLatest ? (
+          <TypewriterText text={item.message} speed={20} onComplete={onTypewriterComplete} />
+        ) : (
+          item.message
+        )}
+      </p>
+      {/* Display search queries if present */}
+      {item.queries && item.queries.length > 0 && (
+        <div className="mt-2 space-y-1">
+          {item.queries.map((query, idx) => (
+            <div
+              key={idx}
+              className="flex items-start gap-2 text-xs bg-white/50 rounded px-2 py-1.5 border border-gray-200/50"
+            >
+              <SearchIcon className="w-3 h-3 mt-0.5 text-gray-400 flex-shrink-0" />
+              <span className="text-gray-600">{query}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {item.iteration && <p className="text-xs text-gray-400 mt-1">第 {item.iteration} 轮</p>}
+    </div>
+  );
+
+  if (!isLatest) {
+    return (
+      <button
+        type="button"
+        className={`w-full text-left text-sm p-3 rounded-lg border ${style.bg} ${style.border} transition-all cursor-pointer hover:brightness-95`}
+        style={THINKING_BLOCK_VISIBILITY_STYLE}
+        onClick={onToggle}
+      >
+        {content}
+      </button>
+    );
+  }
+
   return (
     <div
-      className={`text-sm p-3 rounded-lg border ${style.bg} ${style.border} transition-all ${!isLatest ? "cursor-pointer hover:brightness-95" : ""}`}
+      className={`text-sm p-3 rounded-lg border ${style.bg} ${style.border} transition-all`}
       style={THINKING_BLOCK_VISIBILITY_STYLE}
-      onClick={!isLatest ? onToggle : undefined}
     >
-      <div className="flex-1 min-w-0">
-        <p className="text-gray-700 leading-relaxed break-words whitespace-pre-wrap">
-          {isLatest ? (
-            <TypewriterText text={item.message} speed={20} onComplete={onTypewriterComplete} />
-          ) : (
-            item.message
-          )}
-        </p>
-        {/* Display search queries if present */}
-        {item.queries && item.queries.length > 0 && (
-          <div className="mt-2 space-y-1">
-            {item.queries.map((query, idx) => (
-              <div
-                key={idx}
-                className="flex items-start gap-2 text-xs bg-white/50 rounded px-2 py-1.5 border border-gray-200/50"
-              >
-                <SearchIcon className="w-3 h-3 mt-0.5 text-gray-400 flex-shrink-0" />
-                <span className="text-gray-600">{query}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {item.iteration && <p className="text-xs text-gray-400 mt-1">第 {item.iteration} 轮</p>}
-      </div>
+      {content}
     </div>
   );
 }
@@ -297,7 +309,7 @@ function ResearchDetailPanel({
     latestPlanEvent?.type === "plan_ready" ? latestPlanEvent.data.plan : latestPlanFromSteps;
 
   // Get queries from plan
-  const queries = latestPlan?.queries || [];
+  const queries = useMemo(() => latestPlan?.queries ?? [], [latestPlan]);
 
   // Extract thinking/reasoning timeline from events or reconstruct from steps
   const thinkingTimeline = useMemo(() => {
@@ -1160,32 +1172,37 @@ function ResearchDetailPanel({
                     </button>
                   </div>
                   <div className="divide-y divide-gray-100">
-                    {queries.map((query, index) => (
-                      <label
-                        key={index}
-                        className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${
-                          selectedQueries.has(index) ? "bg-blue-50/50" : ""
-                        }`}
-                      >
-                        <Checkbox
-                          checked={selectedQueries.has(index)}
-                          onChange={() => toggleQuery(index)}
-                          crossOrigin={undefined}
-                          className="w-4 h-4"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-900 truncate">{query.query}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {query.engine} ·{" "}
-                            {query.priority === 1
-                              ? "高优先级"
-                              : query.priority === 2
-                                ? "中优先级"
-                                : "低优先级"}
-                          </p>
-                        </div>
-                      </label>
-                    ))}
+                    {queries.map((query, index) => {
+                      const checkboxId = `research-query-${index}`;
+                      return (
+                        <label
+                          key={index}
+                          htmlFor={checkboxId}
+                          className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${
+                            selectedQueries.has(index) ? "bg-blue-50/50" : ""
+                          }`}
+                        >
+                          <Checkbox
+                            id={checkboxId}
+                            checked={selectedQueries.has(index)}
+                            onChange={() => toggleQuery(index)}
+                            crossOrigin={undefined}
+                            className="w-4 h-4"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-900 truncate">{query.query}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {query.engine} ·{" "}
+                              {query.priority === 1
+                                ? "高优先级"
+                                : query.priority === 2
+                                  ? "中优先级"
+                                  : "低优先级"}
+                            </p>
+                          </div>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1307,16 +1324,19 @@ function ResearchDetailPanel({
 
       {showAllConfirmOpen && (
         <div
-          className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4 relative"
           style={confirmModalStyle}
-          onClick={handleCancelShowAll}
           role="dialog"
           aria-modal="true"
+          aria-label="展开全部思考记录确认"
         >
-          <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-sm"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <button
+            type="button"
+            className="absolute inset-0 z-0 cursor-default"
+            onClick={handleCancelShowAll}
+            aria-label="关闭对话框"
+          />
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm relative z-10">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h3 className="font-semibold text-gray-900">展开全部思考记录？</h3>
               <button
@@ -1429,14 +1449,19 @@ function ResultsDialogContent({
 
   return (
     <div
-      className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4 relative"
       style={modalStyle}
-      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="搜索结果"
     >
-      <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <button
+        type="button"
+        className="absolute inset-0 z-0 cursor-default"
+        onClick={onClose}
+        aria-label="关闭对话框"
+      />
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col relative z-10">
         {/* Dialog Header */}
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
           <div>
@@ -1475,9 +1500,11 @@ function ResultsDialogContent({
             const snippet = typeof result.snippet === "string" ? result.snippet : null;
             const source = typeof result.source === "string" ? result.source : null;
             const iteration = typeof result.iteration === "number" ? result.iteration : null;
+            const checkboxId = `research-result-${index}`;
             return (
               <label
                 key={index}
+                htmlFor={checkboxId}
                 className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                   selectedResults.has(index)
                     ? "border-blue-300 bg-blue-50/50"
@@ -1485,6 +1512,7 @@ function ResultsDialogContent({
                 }`}
               >
                 <Checkbox
+                  id={checkboxId}
                   checked={selectedResults.has(index)}
                   onChange={() => {
                     setSelectedResults((prev) => {

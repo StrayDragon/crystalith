@@ -83,7 +83,6 @@ export default function CitationDrawer({
 
   const { style: modalStyle } = useLayer("modal", elevated ? 12 : 0);
 
-  const canFetch = Boolean(open && citation?.chunkId && notebookId && isConnected);
   const title = citation?.sourceTitle ?? "引用详情";
 
   const handleLocate = useCallback(() => {
@@ -161,17 +160,19 @@ export default function CitationDrawer({
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm relative"
       style={modalStyle}
       role="dialog"
       aria-modal="true"
       aria-label="引用上下文"
-      onClick={onClose}
     >
-      <div
-        className="absolute right-0 top-0 h-full w-full max-w-[520px] bg-white shadow-2xl dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <button
+        type="button"
+        className="absolute inset-0 z-0 cursor-default"
+        onClick={onClose}
+        aria-label="关闭引用上下文"
+      />
+      <div className="absolute right-0 top-0 z-10 h-full w-full max-w-[520px] bg-white shadow-2xl dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700">
         <div className="flex items-start justify-between gap-3 px-4 py-4 border-b border-gray-200 dark:border-slate-700">
           <div className="min-w-0">
             <div className="text-sm font-semibold text-gray-900 truncate dark:text-slate-100">

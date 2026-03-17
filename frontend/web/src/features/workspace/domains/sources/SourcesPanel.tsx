@@ -8,6 +8,8 @@ export default function SourcesPanel(props: SourcesPanelProps) {
   const { notebookId } = props;
   const research = useResearch(notebookId);
   const { fetchSessions, subscribeToSSE, unsubscribeFromSSE, activeSession } = research;
+  const activeSessionId = activeSession?.id;
+  const activeSessionStatus = activeSession?.status;
 
   useEffect(() => {
     if (notebookId) {
@@ -16,14 +18,13 @@ export default function SourcesPanel(props: SourcesPanelProps) {
   }, [notebookId, fetchSessions]);
 
   useEffect(() => {
-    const session = activeSession;
-    if (!session) return;
-    if (["planning", "searching", "analyzing", "waiting_user"].includes(session.status)) {
-      subscribeToSSE(session.id);
+    if (!activeSessionId || !activeSessionStatus) return;
+    if (["planning", "searching", "analyzing", "waiting_user"].includes(activeSessionStatus)) {
+      subscribeToSSE(activeSessionId);
       return () => unsubscribeFromSSE();
     }
     unsubscribeFromSSE();
-  }, [activeSession?.id, activeSession?.status, subscribeToSSE, unsubscribeFromSSE]);
+  }, [activeSessionId, activeSessionStatus, subscribeToSSE, unsubscribeFromSSE]);
 
   return <SourcesPanelView {...props} research={research} />;
 }

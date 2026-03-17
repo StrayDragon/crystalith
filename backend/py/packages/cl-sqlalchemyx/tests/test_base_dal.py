@@ -11,21 +11,14 @@
 """
 
 import asyncio
+import tempfile
 from collections.abc import AsyncGenerator
 from pathlib import Path
-import tempfile
 from typing import Any, ClassVar
 
 import pytest
 import sqlalchemy as sa
 from cl_pydanticx import DataJson, json_to_bytes_serializer
-from cl_stdx.enumx import MetaInfoIntEnum, XMetaInfo
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer
-from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import InstrumentedAttribute, Mapped, mapped_column
-from sqlalchemy.pool import NullPool
-
 from cl_sqlalchemyx.base.dal import (
     AsyncBaseDAL,
     AsyncReadDAL,
@@ -47,6 +40,12 @@ from cl_sqlalchemyx.base.dal import (
     escape_like,
 )
 from cl_sqlalchemyx.mgrs import AsyncSQLiteManager, async_must_rollback_if_in_transaction
+from cl_stdx.enumx import MetaInfoIntEnum, XMetaInfo
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer
+from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import InstrumentedAttribute, Mapped, mapped_column
+from sqlalchemy.pool import NullPool
 
 # ========== 测试用数据模型 ==========
 
@@ -749,36 +748,21 @@ class _ReadOnlyTestDAL(ReadOnlyAsyncBaseDAL[_ReadOnlyTestTable, _ReadOnlyTestDTO
 # 测试辅助函数
 async def _create_readonly_test_data(async_session: AsyncSession, name: str, value: int) -> int:
     """创建只读表测试数据的辅助函数"""
-    from sqlalchemy import event
-    from sqlalchemy.orm import Session as SyncSession
-
     import cl_sqlalchemyx.base.dal as base_dal_module
 
-    # 获取事件监听器函数
-    prevent_readonly_write = getattr(base_dal_module, "__prevent_readonly_write", None)
-
-    if prevent_readonly_write:
-        # 临时移除事件监听器
-        event.remove(SyncSession, "before_flush", prevent_readonly_write)
-
-        try:
-            entity = _ReadOnlyTestTable(name=name, value=value)
-            async_session.add(entity)
-            await async_session.flush()  # 获取ID
-            entity_id = entity.id
-            await async_session.commit()
-            return entity_id
-        finally:
-            # 重新注册监听器
-            event.listen(SyncSession, "before_flush", prevent_readonly_write)
-    else:
-        # 如果找不到监听器,直接尝试创建(这种情况下ReadOnlyMixin可能没有生效)
+    flag = getattr(base_dal_module, "READONLY_WRITE_BYPASS_FLAG", None)
+    if isinstance(flag, str):
+        async_session.sync_session.info[flag] = True
+    try:
         entity = _ReadOnlyTestTable(name=name, value=value)
         async_session.add(entity)
         await async_session.flush()  # 获取ID
         entity_id = entity.id
         await async_session.commit()
         return entity_id
+    finally:
+        if isinstance(flag, str):
+            async_session.sync_session.info.pop(flag, None)
 
 
 class TestReadOnlyDAL:
@@ -882,7 +866,7 @@ class TestReadOnlyTable:
         async_session.add(entity)
 
         # 尝试提交 - 应该被新的事件监听器阻止
-        with pytest.raises(TypeError, match="不允许对只读模型.*执行.*操作"):
+        with pytest.raises(TypeError, match=r"不允许对只读模型.*执行.*操作"):
             await async_session.commit()
 
         await async_session.rollback()
@@ -2039,6 +2023,7 @@ class TestBatchUpdateFeatures:
             update_data={_TestTable.name: "Should Update All"},
             updater_id=777,
         )
+        assert affected_rows >= 1
 
         # 由于空条件会更新所有记录,我们需要验证我们的特定记录是否被更新
         updated_item = await async_session.get(_TestTable, item.id)
@@ -2493,28 +2478,25 @@ class TestManualSessionMultiCommit:
 
     async def test_manual_session_partial_commit_then_error(self, db_manager: AsyncSQLiteManager):
         """测试手动模式下部分提交后出错 - 前面的提交不会回滚"""
-        item1_id = None
-        item2_id = None
-
         try:
             async with db_manager.got_manual_session() as session:
                 # 第一次操作 + commit
                 cu1 = _TestCU(name="Manual-Partial-1", status=_TestStatus.ACTIVE, create_operator_id=1)
                 item1 = await _TestDAL.create(session, cu1)
+                assert item1.id is not None
                 await session.commit()  # ✅ commit 1 成功
-                item1_id = item1.id
 
                 # 第二次操作 + commit
                 cu2 = _TestCU(name="Manual-Partial-2", status=_TestStatus.ACTIVE, create_operator_id=1)
                 item2 = await _TestDAL.create(session, cu2)
+                assert item2.id is not None
                 await session.commit()  # ✅ commit 2 成功
-                item2_id = item2.id
 
                 # 第三次操作,但不 commit,然后抛出异常
                 cu3 = _TestCU(name="Manual-Partial-3", status=_TestStatus.ACTIVE, create_operator_id=1)
                 await _TestDAL.create(session, cu3)
                 # 没有 commit
-                raise ValueError("模拟业务异常")  # noqa: TRY301
+                raise ValueError("模拟业务异常")
 
         except ValueError:
             pass  # 预期的异常
@@ -2553,7 +2535,7 @@ class TestAutoCommitSessionMultiCommit:
 
             # 第三次操作,不手动 commit
             cu3 = _TestCU(name="Auto-Multi-3", status=_TestStatus.ACTIVE, create_operator_id=1)
-            item3 = await _TestDAL.create(session, cu3)
+            await _TestDAL.create(session, cu3)
             # 退出时会自动 commit 事务3
 
         # 验证所有数据都已提交
@@ -2574,13 +2556,14 @@ class TestAutoCommitSessionMultiCommit:
                 # 第一次操作 + 手动 commit
                 cu1 = _TestCU(name="Auto-Partial-1", status=_TestStatus.ACTIVE, create_operator_id=1)
                 item1 = await _TestDAL.create(session, cu1)
+                assert item1.id is not None
                 await session.commit()  # ✅ 手动 commit 1 成功,数据已提交
 
                 # 第二次操作,不 commit,然后抛出异常
                 cu2 = _TestCU(name="Auto-Partial-2", status=_TestStatus.ACTIVE, create_operator_id=1)
                 await _TestDAL.create(session, cu2)
                 # 没有手动 commit
-                raise ValueError("模拟业务异常")  # noqa: TRY301
+                raise ValueError("模拟业务异常")
 
         except ValueError:
             pass  # 预期的异常
@@ -2649,9 +2632,11 @@ class TestTransactionBoundaryBestPractices:
             # 所有操作在同一个事务中
             cu1 = _TestCU(name="BP-Auto-1", status=_TestStatus.ACTIVE, create_operator_id=1)
             item1 = await _TestDAL.create(session, cu1)
+            assert item1.id is not None
 
             cu2 = _TestCU(name="BP-Auto-2", status=_TestStatus.ACTIVE, create_operator_id=1)
             item2 = await _TestDAL.create(session, cu2)
+            assert item2.id is not None
 
             # 不手动 commit,让管理器在退出时自动 commit
             # 如果中间出错,管理器会自动 rollback,保证原子性
@@ -2699,7 +2684,7 @@ class TestTransactionBoundaryBestPractices:
                 cu2 = _TestCU(name="AP-Auto-2", status=_TestStatus.ACTIVE, create_operator_id=1)
                 await _TestDAL.create(session, cu2)
                 # 这里出错
-                raise ValueError("模拟异常")  # noqa: TRY301
+                raise ValueError("模拟异常")
 
         except ValueError:
             pass
@@ -3235,9 +3220,8 @@ class TestPessimisticLock:
         error_msg: str,
         expect_retryable: bool,
     ) -> None:
-        from sqlalchemy.exc import OperationalError as SQLAlchemyOperationalError
-
         from cl_sqlalchemyx.base.dal import DBRetryableError
+        from sqlalchemy.exc import OperationalError as SQLAlchemyOperationalError
 
         class _FailingSession:
             def __init__(self, error: SQLAlchemyOperationalError) -> None:
@@ -3300,7 +3284,7 @@ class TestConcurrentOptimisticLock:
                     )
 
                     await session.commit()
-                    return worker_id, True  # noqa: TRY300
+                    return worker_id, True
                 except DBRetryableError:
                     # 版本冲突,回滚
                     await session.rollback()
@@ -3356,6 +3340,7 @@ class TestConcurrentOptimisticLock:
                 update_cu,
                 expected_version=entity.version,
             )
+            assert updated_entity.value == worker_id
 
             return worker_id
 
@@ -3411,7 +3396,7 @@ class TestConcurrentOptimisticLock:
                             session, entity_id, cu, expected_version=expected_version
                         )
                         success_count += 1
-                    except DBRetryableError:  # noqa: PERF203
+                    except DBRetryableError:
                         continue
 
                 if success_count > 0:
@@ -3527,7 +3512,7 @@ class TestRetryConfig:
         """测试max_delay小于initial_delay"""
         from cl_sqlalchemyx.base.dal import RetryConfig
 
-        with pytest.raises(ValueError, match="max_delay.*必须>=initial_delay"):
+        with pytest.raises(ValueError, match=r"max_delay.*必须>=initial_delay"):
             RetryConfig(initial_delay=1.0, max_delay=0.5)
 
     def test_invalid_exponential_base(self) -> None:
@@ -3893,7 +3878,7 @@ class TestIterRecordsEdgeCases:
             name: Mapped[str] = mapped_column(sa.String(50), nullable=False)
 
         # 验证检查逻辑
-        has_id = hasattr(NoIdTable, "id") and isinstance(getattr(NoIdTable, "id", None), InstrumentedAttribute)  # noqa: F821
+        has_id = hasattr(NoIdTable, "id") and isinstance(getattr(NoIdTable, "id", None), InstrumentedAttribute)
         assert has_id is False, "NoIdTable 不应该有 id 字段"
 
         # 模拟调用 _iter_records 时的检查

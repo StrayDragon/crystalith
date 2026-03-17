@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager, suppress
 from enum import Enum
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 import sqlalchemy as sa
 from sqlalchemy import CursorResult, TextClause, text
@@ -147,7 +147,7 @@ class AsyncDBManager:
             )
 
 
-class AsyncDBManagersMapper(Generic[DBEnumT, ManagerT]):
+class AsyncDBManagersMapper[DBEnumT: Enum, ManagerT: AsyncDBManager]:
     def __init__(
         self,
         *,
@@ -213,12 +213,12 @@ async def aexecute_sql(
 
 
 @asynccontextmanager
-async def async_configured_session_temporarily(
-    session: SessionT,
+async def async_configured_session_temporarily[ConfiguredSessionT: (AsyncSession, WarnWrappedAsyncSession)](
+    session: ConfiguredSessionT,
     *,
     autoflush: bool | None = None,
     autocommit: bool | None = None,
-) -> AsyncGenerator[SessionT, None]:
+) -> AsyncGenerator[ConfiguredSessionT, None]:
     original_autoflush = session.autoflush
     changed_autoflush = False
 

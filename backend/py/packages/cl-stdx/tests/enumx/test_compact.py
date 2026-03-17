@@ -1,9 +1,6 @@
-"""Tests for enumx.compact module - Python 3.10 StrEnum backport."""
-
-import sys
+"""Tests for enumx.compact module."""
 
 import pytest
-
 from cl_stdx.enumx.compact import ReprEnum, StrEnum
 
 
@@ -94,15 +91,9 @@ class TestStrEnumBackport:
 
     def test_repr_enum_basic(self):
         """Test ReprEnum base class behavior."""
-
-        if sys.version_info >= (3, 11):
-            class SimpleEnum(str, ReprEnum):
-                A = "a"
-                B = "b"
-        else:
-            class SimpleEnum(ReprEnum):
-                A = "a"
-                B = "b"
+        class SimpleEnum(str, ReprEnum):
+            A = "a"
+            B = "b"
 
         # ReprEnum should change repr
         assert "A" in repr(SimpleEnum.A)
@@ -135,30 +126,18 @@ class TestReprEnumBehavior:
 
     def test_repr_enum_value(self):
         """Test ReprEnum .value attribute."""
-
-        if sys.version_info >= (3, 11):
-            class MyEnum(str, ReprEnum):
-                A = "alpha"
-                B = "beta"
-        else:
-            class MyEnum(ReprEnum):
-                A = "alpha"
-                B = "beta"
+        class MyEnum(str, ReprEnum):
+            A = "alpha"
+            B = "beta"
 
         assert MyEnum.A.value == "alpha"
         assert MyEnum.B.value == "beta"
 
     def test_repr_enum_repr(self):
         """Test ReprEnum repr."""
-
-        if sys.version_info >= (3, 11):
-            class MyEnum(str, ReprEnum):
-                X = "x"
-                Y = "y"
-        else:
-            class MyEnum(ReprEnum):
-                X = "x"
-                Y = "y"
+        class MyEnum(str, ReprEnum):
+            X = "x"
+            Y = "y"
 
         repr_str = repr(MyEnum.X)
         assert "MyEnum" in repr_str
@@ -171,6 +150,7 @@ class TestStrEnumEdgeCases:
     def test_empty_enum(self):
         """Test that creating empty StrEnum works."""
         EmptyEnum = StrEnum("EmptyEnum", ("Empty",))
+        assert "Empty" in EmptyEnum.__members__
 
     def test_strenum_name_access(self):
         """Test accessing enum member by name."""

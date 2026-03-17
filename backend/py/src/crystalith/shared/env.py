@@ -4,7 +4,6 @@ import os
 from dataclasses import dataclass
 from typing import Literal
 
-
 EnvVarType = Literal["bool", "int", "float", "str", "path", "enum"]
 
 

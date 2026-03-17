@@ -13,7 +13,7 @@ class JinaWebExtractorPlugin:
     requires_api_key = False
     requires_service = True
 
-    def create_extractor(self, settings, *, url_fetch_security=None):  # noqa: ANN001, ARG002
+    def create_extractor(self, settings, *, url_fetch_security=None):
         jina_settings = settings.source_ingestion.web_extraction.jina
         proxy_url = None
         if jina_settings.proxy and jina_settings.proxy.enabled:

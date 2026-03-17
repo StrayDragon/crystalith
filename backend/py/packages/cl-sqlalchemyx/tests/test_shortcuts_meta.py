@@ -1,9 +1,8 @@
 """Tests for shortcuts.meta utilities."""
 
+from cl_sqlalchemyx.shortcuts.meta import get_table_ddl_info
 from sqlalchemy import Index, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
-from cl_sqlalchemyx.shortcuts.meta import get_table_ddl_info
 
 
 class _Base(DeclarativeBase):

@@ -51,14 +51,17 @@ export default function ShortcutHelpPanel({ open, shortcuts, onClose }: Shortcut
       role="dialog"
       aria-modal="true"
       aria-label="快捷键帮助"
-      className="fixed inset-0 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 relative flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm"
       style={modalStyle}
-      onClick={onClose}
     >
-      <section
-        className="flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
-        onClick={(event) => event.stopPropagation()}
-      >
+      <button
+        type="button"
+        className="absolute inset-0"
+        onClick={onClose}
+        aria-label="关闭快捷键帮助"
+        tabIndex={-1}
+      />
+      <section className="relative flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
         <header className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-slate-700">
           <div className="space-y-0.5">
             <Typography

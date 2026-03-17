@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from crystalith.shared.ai.openai_client_manager import get_openai_client_manager
+from crystalith.shared.config import Settings
 from crystalith.shared.db import create_db_manager
 from crystalith.shared.db.migrations import upgrade_head
-from crystalith.shared.config import Settings
-from crystalith.shared.ai.openai_client_manager import get_openai_client_manager
 from crystalith.shared.vector_storage import InMemoryVectorStore
 from crystalith.web.app import create_app
 from tests._support.settings import make_settings

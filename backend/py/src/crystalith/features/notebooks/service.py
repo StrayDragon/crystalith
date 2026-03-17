@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession
+import contextlib
 
 from cl_logs.logging import get_logger
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.cache.interfaces import CacheProvider
-from ..templates.schemas import TemplateConfig
 from crystalith.shared.db import Notebook, Session, SourceTag, Template
 
+from ..templates.schemas import TemplateConfig
 from . import repo
 from .schemas import NotebookRead
-
 
 _NOTEBOOKS_LIST_CACHE_KEY = "notebooks:list"
 logger = get_logger(__name__)
@@ -61,15 +61,13 @@ async def list_notebooks(
         if isinstance(cached, list):
             try:
                 payload = [NotebookRead.model_validate(item) for item in cached]
-            except Exception:  # noqa: BLE001 - tolerate corrupted/legacy cache shapes
+            except Exception:
                 payload = None
             if payload is not None:
                 logger.info("cache_hit", key=_NOTEBOOKS_LIST_CACHE_KEY)
                 return payload
-            try:
+            with contextlib.suppress(Exception):
                 await cache.delete(_NOTEBOOKS_LIST_CACHE_KEY)
-            except Exception:  # noqa: BLE001 - best-effort cache cleanup
-                pass
         logger.info("cache_miss", key=_NOTEBOOKS_LIST_CACHE_KEY)
 
     notebooks = await repo.list_notebooks(session)

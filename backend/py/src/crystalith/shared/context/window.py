@@ -7,7 +7,6 @@ from .compressor import summarize_messages
 from .counter import TokenCounter
 from .types import ContextPriority, ContextStats
 
-
 _DEFAULT_PRIORITY: list[ContextPriority] = ["history", "retrieval", "recent", "system"]
 
 

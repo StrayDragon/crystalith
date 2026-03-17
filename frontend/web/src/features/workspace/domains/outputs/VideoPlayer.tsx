@@ -4,11 +4,7 @@ interface VideoPlayerProps {
 
 export default function VideoPlayer({ isBlocked }: VideoPlayerProps) {
   return (
-    <section
-      className={`MediaPlayerCard ${isBlocked ? "isBlocked" : ""}`}
-      aria-label="视频概述"
-      aria-disabled="true"
-    >
+    <section className={`MediaPlayerCard ${isBlocked ? "isBlocked" : ""}`} aria-label="视频概述">
       <div className="MediaPlayerHeader">
         <div>
           <div className="MediaPlayerTitle">视频概述</div>

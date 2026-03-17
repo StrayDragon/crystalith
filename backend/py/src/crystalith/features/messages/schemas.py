@@ -7,7 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from crystalith.shared.schemas.citations import Citation
 
-
 MessageRole = Literal["user", "assistant", "system"]
 
 

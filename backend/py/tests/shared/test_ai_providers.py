@@ -11,7 +11,7 @@ from crystalith.shared.ai.types import ChatMessage
 
 
 class _EmbeddingResponse:
-    def __init__(self, vectors):  # noqa: ANN001
+    def __init__(self, vectors):
         self.data = [type("Row", (), {"index": idx, "embedding": vector}) for idx, vector in enumerate(vectors)]
 
 
@@ -19,7 +19,7 @@ class _EmbeddingsClient:
     def __init__(self) -> None:
         self.calls = []
 
-    async def create(self, *, model, input):  # noqa: ANN001
+    async def create(self, *, model, input):
         self.calls.append((model, tuple(input)))
         vectors = [[float(i), float(i + 1)] for i, _ in enumerate(input)]
         return _EmbeddingResponse(vectors)
@@ -150,7 +150,7 @@ class _ChatCompletionsClient:
     def __init__(self) -> None:
         self.calls = 0
 
-    async def create(self, *, model, messages, stream: bool | None = None, **_kwargs):  # noqa: ANN001
+    async def create(self, *, model, messages, stream: bool | None = None, **_kwargs):
         self.calls += 1
         assert stream in {None, False}
         if self.calls == 1:

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 from fastapi.testclient import TestClient
@@ -15,9 +15,9 @@ from crystalith.shared.db.migrations import upgrade_head
 from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.plugins.render_types import (
     ConfigOption,
-    ItemSchema,
     FieldDescriptor,
     FrontendBundleDescriptor,
+    ItemSchema,
     OutputTypePluginMeta,
     PluginConfigSchema,
     RenderDescriptor,
@@ -104,10 +104,10 @@ class MockSlidesWorkflowPlugin:
         self.preview_descriptor = None
         self.frontend_bundle = FrontendBundleDescriptor(id="output-slides", export="render")
 
-    async def generate_outline(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+    async def generate_outline(self, *_args, **_kwargs):
         raise AssertionError("should not be called")
 
-    async def generate_markdown(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+    async def generate_markdown(self, *_args, **_kwargs):
         raise AssertionError("should not be called")
 
 
@@ -116,7 +116,7 @@ class MockSourceConnectorPlugin:
 
     display_name = "Mock Connector"
     description = "Mock connector plugin"
-    connection_config_schema = {
+    connection_config_schema: ClassVar[dict[str, object]] = {
         "type": "object",
         "properties": {"path": {"type": "string", "minLength": 1}},
         "required": ["path"],
@@ -126,10 +126,10 @@ class MockSourceConnectorPlugin:
     supports_snapshot = True
     supports_sync_check = True
 
-    async def get_diagnostics(self, _settings: Any, *, connection_config: Any | None = None) -> Any:  # noqa: ANN401
+    async def get_diagnostics(self, _settings: Any, *, connection_config: Any | None = None) -> Any:
         return None
 
-    async def list_snapshot_entries(self, _settings: Any, *, connection_config: Any) -> Any:  # noqa: ANN401
+    async def list_snapshot_entries(self, _settings: Any, *, connection_config: Any) -> Any:
         return []
 
     async def read_file_bytes(
@@ -187,10 +187,10 @@ def test_plugin_registry_loads_parser_plugin(monkeypatch: pytest.MonkeyPatch) ->
     class MockParserPlugin:
         api_version = "v1"
         parser_type = "mock-parser"
-        supported_mime_types = {"text/plain"}
-        supported_extensions = {".txt"}
+        supported_mime_types: ClassVar[set[str]] = {"text/plain"}
+        supported_extensions: ClassVar[set[str]] = {".txt"}
 
-        def create_parser(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+        def create_parser(self, *_args, **_kwargs):
             raise AssertionError("should not be called")
 
     plugin = MockParserPlugin()
@@ -221,7 +221,7 @@ def test_plugin_registry_loads_web_extractor_plugin(monkeypatch: pytest.MonkeyPa
         requires_api_key = False
         requires_service = True
 
-        def create_extractor(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+        def create_extractor(self, *_args, **_kwargs):
             raise AssertionError("should not be called")
 
     plugin = MockWebExtractorPlugin()
@@ -654,10 +654,10 @@ def test_plugin_registry_reports_invalid_api_version_type(monkeypatch: pytest.Mo
     class BadVersionPlugin:
         api_version = 123
 
-        def create_chat_provider(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+        def create_chat_provider(self, *_args, **_kwargs):
             raise AssertionError("should not be called")
 
-        def create_embedding_provider(self, *_args, **_kwargs):  # noqa: ANN002, ANN003
+        def create_embedding_provider(self, *_args, **_kwargs):
             raise AssertionError("should not be called")
 
     plugin = BadVersionPlugin()
@@ -692,10 +692,10 @@ def test_iter_entry_points_falls_back_when_group_kwarg_not_supported(monkeypatch
     sentinel = object()
 
     class _EntryPoints:
-        def select(self, *, group: str):  # noqa: ARG002
+        def select(self, *, group: str):
             return [sentinel]
 
-    def fake_entry_points(*args: Any, **kwargs: Any):  # noqa: ANN401
+    def fake_entry_points(*args: Any, **kwargs: Any):
         if kwargs:
             raise TypeError("old importlib.metadata.entry_points")
         return _EntryPoints()
@@ -710,7 +710,7 @@ def test_iter_entry_points_uses_group_kwarg_when_supported(monkeypatch: pytest.M
 
     sentinel = object()
 
-    def fake_entry_points(*_args: Any, **kwargs: Any):  # noqa: ANN401
+    def fake_entry_points(*_args: Any, **kwargs: Any):
         assert kwargs == {"group": "crystalith.plugins"}
         return [sentinel]
 
