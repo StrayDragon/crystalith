@@ -10,6 +10,14 @@ function renderCell(value: string | number | null) {
 }
 
 export default function DataTableCard({ columns, rows }: DataTableCardProps) {
+  const rowKeyCounts = new Map<string, number>();
+  const getRowKey = (row: Array<string | number | null>) => {
+    const baseKey = JSON.stringify(row);
+    const count = rowKeyCounts.get(baseKey) ?? 0;
+    rowKeyCounts.set(baseKey, count + 1);
+    return `${baseKey}:${count}`;
+  };
+
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 shadow-sm">
       <div className="text-xs font-semibold text-gray-900 dark:text-slate-100">Table</div>
@@ -17,9 +25,9 @@ export default function DataTableCard({ columns, rows }: DataTableCardProps) {
         <table className="min-w-full border-collapse">
           <thead>
             <tr>
-              {columns.map((col, index) => (
+              {columns.map((col) => (
                 <th
-                  key={`${col}-${index}`}
+                  key={col}
                   className="text-left text-[11px] font-semibold text-gray-700 dark:text-slate-200 border-b border-gray-200 dark:border-slate-700 py-2 pr-4"
                 >
                   {col}
@@ -28,21 +36,24 @@ export default function DataTableCard({ columns, rows }: DataTableCardProps) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, rowIndex) => (
-              <tr
-                key={`row-${rowIndex}`}
-                className="border-b border-gray-100 dark:border-slate-800 last:border-b-0"
-              >
-                {columns.map((_col, colIndex) => (
-                  <td
-                    key={`cell-${rowIndex}-${colIndex}`}
-                    className="text-[11px] text-gray-700 dark:text-slate-200 py-2 pr-4 align-top"
-                  >
-                    {renderCell(row[colIndex] ?? null)}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {rows.map((row) => {
+              const rowKey = getRowKey(row);
+              return (
+                <tr
+                  key={rowKey}
+                  className="border-b border-gray-100 dark:border-slate-800 last:border-b-0"
+                >
+                  {columns.map((col, colIndex) => (
+                    <td
+                      key={`${rowKey}:${col}`}
+                      className="text-[11px] text-gray-700 dark:text-slate-200 py-2 pr-4 align-top"
+                    >
+                      {renderCell(row[colIndex] ?? null)}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
             {rows.length === 0 ? (
               <tr>
                 <td

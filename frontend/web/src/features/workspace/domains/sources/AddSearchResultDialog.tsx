@@ -100,6 +100,7 @@ export default function AddSearchResultDialog({
         );
 
         try {
+          // eslint-disable-next-line no-await-in-loop -- Keep serial semantics for cancellation + per-item progress updates.
           await onAddSource(result, mode);
           // 再次检查是否在请求过程中被取消
           if (cancelledRef.current) {

@@ -160,27 +160,19 @@ def _split_text_to_chunks(text: str, chunk_size: int = 500, overlap: int = 50) -
         else:
             if current_chunk:
                 chunks.append("\n\n".join(current_chunk))
-            # Start new chunk with overlap
+
+            # If paragraph is too long, split by sentences.
             if para_len > chunk_size:
-                # Split long paragraph
-                words = para.split()
-                temp_chunk: list[str] = []
-                temp_len = 0
-                for word in words:
-                    if temp_len + len(word) + 1 <= chunk_size:
-                        temp_chunk.append(word)
-                        temp_len += len(word) + 1
+                sentences = para.replace(". ", ".\n").replace("。", "。\n").split("\n")
+                step = max(1, chunk_size - overlap)
+                for sent in sentences:
+                    if len(sent) <= chunk_size:
+                        chunks.append(sent)
                     else:
-                        if temp_chunk:
-                            chunks.append(" ".join(temp_chunk))
-                        temp_chunk = [word]
-                        temp_len = len(word)
-                if temp_chunk:
-                    current_chunk = [" ".join(temp_chunk)]
-                    current_length = temp_len
-                else:
-                    current_chunk = []
-                    current_length = 0
+                        chunks.extend([sent[i : i + chunk_size] for i in range(0, len(sent), step)])
+
+                current_chunk = []
+                current_length = 0
             else:
                 current_chunk = [para]
                 current_length = para_len

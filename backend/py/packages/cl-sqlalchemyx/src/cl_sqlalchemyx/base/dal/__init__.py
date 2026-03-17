@@ -297,7 +297,7 @@ class SoftDeleteTableMixin:
 
 
 @sa_event.listens_for(SyncSession, "before_flush")
-def __receive_before_flush(session: SyncSession, fcl_context: Any, instances: Any) -> None:  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
+def __receive_before_flush(session: SyncSession, _flush_context: Any, _instances: Any) -> None:  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
     """在执行 flush 操作时,将已删除的记录标记为逻辑删除.
 
     这个事件监听器会在 SQLAlchemy 会话执行 flush 操作之前被调用,
@@ -306,8 +306,8 @@ def __receive_before_flush(session: SyncSession, fcl_context: Any, instances: An
 
     Args:
         session: SQLAlchemy 会话对象.
-        fcl_context: flush 上下文信息.
-        instances: 实例列表(未使用).
+        _flush_context: flush 上下文信息.
+        _instances: 实例列表(未使用).
     """
     for instance in session.deleted:
         if isinstance(instance, SoftDeleteTableMixin):
@@ -1719,7 +1719,7 @@ class ReadOnlyMixin:
 
 
 @sa_event.listens_for(SyncSession, "before_flush")
-def __prevent_readonly_write(session: SyncSession, fcl_context: Any, instances: Any) -> None:  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
+def __prevent_readonly_write(session: SyncSession, _flush_context: Any, _instances: Any) -> None:  # pyright: ignore[reportUnusedFunction, reportUnusedParameter]
     """阻止对 ReadOnlyMixin 实例的写入操作.
 
     在 session flush 之前检查所有待操作的对象,
@@ -1728,8 +1728,8 @@ def __prevent_readonly_write(session: SyncSession, fcl_context: Any, instances: 
 
     Args:
         session: SQLAlchemy 会话对象.
-        fcl_context: flush 上下文信息.
-        instances: 实例列表(未使用).
+        _flush_context: flush 上下文信息.
+        _instances: 实例列表(未使用).
     """
     if session.info.get(READONLY_WRITE_BYPASS_FLAG) is True:
         return

@@ -14,6 +14,7 @@ interface ReportViewerProps {
 
 export default function ReportViewer({ sections, className }: ReportViewerProps) {
   const sectionRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const sectionKeyCounts = new Map<string, number>();
 
   const toc = useMemo(
     () =>
@@ -52,9 +53,17 @@ export default function ReportViewer({ sections, className }: ReportViewerProps)
       <div className="space-y-3">
         {sections.map((section, index) => {
           const points = section.points ?? [];
+          const sectionKeyBase = JSON.stringify({
+            heading: section.heading ?? "",
+            points: points.map((point) => point.text ?? ""),
+          });
+          const sectionOrdinal = sectionKeyCounts.get(sectionKeyBase) ?? 0;
+          sectionKeyCounts.set(sectionKeyBase, sectionOrdinal + 1);
+          const sectionKey = `${sectionKeyBase}:${sectionOrdinal}`;
+          const pointKeyCounts = new Map<string, number>();
           return (
             <div
-              key={`section-${index}`}
+              key={sectionKey}
               ref={(el) => {
                 sectionRefs.current[index] = el;
               }}
@@ -66,9 +75,13 @@ export default function ReportViewer({ sections, className }: ReportViewerProps)
               >
                 {points.length > 0 ? (
                   <ul className="list-disc pl-5 text-sm text-gray-700 dark:text-slate-200">
-                    {points.map((point, pointIndex) => (
-                      <li key={`${index}-${pointIndex}`}>{point.text || "内容"}</li>
-                    ))}
+                    {points.map((point) => {
+                      const baseKey = point.text ?? "";
+                      const ordinal = pointKeyCounts.get(baseKey) ?? 0;
+                      pointKeyCounts.set(baseKey, ordinal + 1);
+                      const pointKey = `${baseKey || "point"}:${ordinal}`;
+                      return <li key={pointKey}>{point.text || "内容"}</li>;
+                    })}
                   </ul>
                 ) : (
                   <div className="text-sm text-gray-500 dark:text-slate-400">暂无内容。</div>

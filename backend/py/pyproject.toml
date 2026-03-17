@@ -280,11 +280,17 @@ extend-exclude = ["alembic/versions"]
 [tool.ruff.lint]
 # Keep the baseline actionable, but strict enough to catch common footguns and
 # drift in imports/style.
-select = ["F", "E", "W", "I", "UP", "B", "C4", "PIE", "SIM", "RUF", "PERF"]
+select = ["F", "E", "W", "I", "UP", "B", "C4", "PIE", "SIM", "RUF", "PERF", "A", "ARG", "DTZ"]
 ignore = [
   # FastAPI's `Depends(...)` is designed to be used in parameter defaults.
   "B008",
   # The codebase contains user-facing Chinese copy; fullwidth punctuation is intentional.
   "RUF001",
   "RUF002",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**/*.py" = [
+  # Pytest fixtures/parameterization frequently need unused arguments.
+  "ARG",
 ]

@@ -143,15 +143,23 @@ function ThinkingBlock({
       {/* Display search queries if present */}
       {item.queries && item.queries.length > 0 && (
         <div className="mt-2 space-y-1">
-          {item.queries.map((query, idx) => (
-            <div
-              key={idx}
-              className="flex items-start gap-2 text-xs bg-white/50 rounded px-2 py-1.5 border border-gray-200/50"
-            >
-              <SearchIcon className="w-3 h-3 mt-0.5 text-gray-400 flex-shrink-0" />
-              <span className="text-gray-600">{query}</span>
-            </div>
-          ))}
+          {(() => {
+            const queryCounts = new Map<string, number>();
+            return item.queries.map((query) => {
+              const ordinal = queryCounts.get(query) ?? 0;
+              queryCounts.set(query, ordinal + 1);
+              const queryKey = `${query}:${ordinal}`;
+              return (
+                <div
+                  key={queryKey}
+                  className="flex items-start gap-2 text-xs bg-white/50 rounded px-2 py-1.5 border border-gray-200/50"
+                >
+                  <SearchIcon className="w-3 h-3 mt-0.5 text-gray-400 flex-shrink-0" />
+                  <span className="text-gray-600">{query}</span>
+                </div>
+              );
+            });
+          })()}
         </div>
       )}
       {item.iteration && <p className="text-xs text-gray-400 mt-1">第 {item.iteration} 轮</p>}
@@ -369,14 +377,14 @@ function ResearchDetailPanel({
       });
 
       // Process each iteration
-      Object.entries(stepsByIteration).forEach(([iterStr, steps]) => {
+      Object.entries(stepsByIteration).forEach(([iterStr, iterationSteps]) => {
         const iteration = parseInt(iterStr, 10);
 
-        steps.forEach((step) => {
+        iterationSteps.forEach((step) => {
           if (step.type === "plan" && step.output_data) {
             // Plan step
             const reasoning = step.output_data.reasoning as string | undefined;
-            const queries = step.output_data.queries as Array<{ query: string }> | undefined;
+            const queryItems = step.output_data.queries as Array<{ query: string }> | undefined;
 
             if (reasoning) {
               timeline.push({
@@ -386,13 +394,13 @@ function ResearchDetailPanel({
                 iteration,
               });
             }
-            if (queries) {
+            if (queryItems) {
               timeline.push({
                 type: "plan_generated",
-                message: `📋 已生成 ${queries.length} 个搜索查询`,
+                message: `📋 已生成 ${queryItems.length} 个搜索查询`,
                 timestamp: timestampCounter++,
                 iteration,
-                queries: queries.map((q) => q.query),
+                queries: queryItems.map((q) => q.query),
               });
             }
           } else if (step.type === "search" && step.output_data) {
@@ -1172,37 +1180,44 @@ function ResearchDetailPanel({
                     </button>
                   </div>
                   <div className="divide-y divide-gray-100">
-                    {queries.map((query, index) => {
-                      const checkboxId = `research-query-${index}`;
-                      return (
-                        <label
-                          key={index}
-                          htmlFor={checkboxId}
-                          className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${
-                            selectedQueries.has(index) ? "bg-blue-50/50" : ""
-                          }`}
-                        >
-                          <Checkbox
-                            id={checkboxId}
-                            checked={selectedQueries.has(index)}
-                            onChange={() => toggleQuery(index)}
-                            crossOrigin={undefined}
-                            className="w-4 h-4"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-gray-900 truncate">{query.query}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              {query.engine} ·{" "}
-                              {query.priority === 1
-                                ? "高优先级"
-                                : query.priority === 2
-                                  ? "中优先级"
-                                  : "低优先级"}
-                            </p>
-                          </div>
-                        </label>
-                      );
-                    })}
+                    {(() => {
+                      const keyCounts = new Map<string, number>();
+                      return queries.map((query, index) => {
+                        const checkboxId = `research-query-${index}`;
+                        const baseKey = `${query.engine}:${query.priority}:${query.query}`;
+                        const ordinal = keyCounts.get(baseKey) ?? 0;
+                        keyCounts.set(baseKey, ordinal + 1);
+                        const queryKey = `${baseKey}:${ordinal}`;
+                        return (
+                          <label
+                            key={queryKey}
+                            htmlFor={checkboxId}
+                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${
+                              selectedQueries.has(index) ? "bg-blue-50/50" : ""
+                            }`}
+                          >
+                            <Checkbox
+                              id={checkboxId}
+                              checked={selectedQueries.has(index)}
+                              onChange={() => toggleQuery(index)}
+                              crossOrigin={undefined}
+                              className="w-4 h-4"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-gray-900 truncate">{query.query}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                {query.engine} ·{" "}
+                                {query.priority === 1
+                                  ? "高优先级"
+                                  : query.priority === 2
+                                    ? "中优先级"
+                                    : "低优先级"}
+                              </p>
+                            </div>
+                          </label>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
 
@@ -1426,15 +1441,13 @@ function ResultsDialogContent({
       const selectedUrls = Array.from(selectedResults)
         .map((i) => aggregatedResults[i]?.url)
         .filter((url): url is string => typeof url === "string" && url.length > 0);
-      let successCount = 0;
-      for (const url of selectedUrls) {
-        try {
-          await onAddSourceFromUrl(url);
-          successCount++;
-        } catch (err) {
-          console.error("Failed to add source:", url, err);
+      const results = await Promise.allSettled(selectedUrls.map((url) => onAddSourceFromUrl(url)));
+      const successCount = results.filter((result) => result.status === "fulfilled").length;
+      results.forEach((result, index) => {
+        if (result.status === "rejected") {
+          console.error("Failed to add source:", selectedUrls[index], result.reason);
         }
-      }
+      });
       if (successCount > 0) {
         toast.success(`已添加 ${successCount} 个来源`);
       }
@@ -1494,61 +1507,70 @@ function ResultsDialogContent({
 
         {/* Results List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {aggregatedResults.map((result, index) => {
-            const url = typeof result.url === "string" ? result.url : "";
-            const title = typeof result.title === "string" ? result.title : null;
-            const snippet = typeof result.snippet === "string" ? result.snippet : null;
-            const source = typeof result.source === "string" ? result.source : null;
-            const iteration = typeof result.iteration === "number" ? result.iteration : null;
-            const checkboxId = `research-result-${index}`;
-            return (
-              <label
-                key={index}
-                htmlFor={checkboxId}
-                className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                  selectedResults.has(index)
-                    ? "border-blue-300 bg-blue-50/50"
-                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                <Checkbox
-                  id={checkboxId}
-                  checked={selectedResults.has(index)}
-                  onChange={() => {
-                    setSelectedResults((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(index)) {
-                        next.delete(index);
-                      } else {
-                        next.add(index);
-                      }
-                      return next;
-                    });
-                  }}
-                  crossOrigin={undefined}
-                  className="mt-0.5"
-                />
-                <div className="flex-1 min-w-0">
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline line-clamp-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {title || "未知标题"}
-                  </a>
-                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{snippet || "无摘要"}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-gray-400">{source || "web"}</span>
-                    {iteration != null && (
-                      <span className="text-xs text-gray-400">· 第 {iteration} 轮</span>
-                    )}
+          {(() => {
+            const keyCounts = new Map<string, number>();
+            return aggregatedResults.map((result, index) => {
+              const url = typeof result.url === "string" ? result.url : "";
+              const title = typeof result.title === "string" ? result.title : null;
+              const snippet = typeof result.snippet === "string" ? result.snippet : null;
+              const source = typeof result.source === "string" ? result.source : null;
+              const iteration = typeof result.iteration === "number" ? result.iteration : null;
+              const baseKey = `${url}:${title ?? ""}:${source ?? ""}:${iteration ?? ""}`;
+              const ordinal = keyCounts.get(baseKey) ?? 0;
+              keyCounts.set(baseKey, ordinal + 1);
+              const resultKey = `${baseKey}:${ordinal}`;
+              const checkboxId = `research-result-${index}`;
+              return (
+                <label
+                  key={resultKey}
+                  htmlFor={checkboxId}
+                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    selectedResults.has(index)
+                      ? "border-blue-300 bg-blue-50/50"
+                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  <Checkbox
+                    id={checkboxId}
+                    checked={selectedResults.has(index)}
+                    onChange={() => {
+                      setSelectedResults((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(index)) {
+                          next.delete(index);
+                        } else {
+                          next.add(index);
+                        }
+                        return next;
+                      });
+                    }}
+                    crossOrigin={undefined}
+                    className="mt-0.5"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline line-clamp-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {title || "未知标题"}
+                    </a>
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                      {snippet || "无摘要"}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-gray-400">{source || "web"}</span>
+                      {iteration != null && (
+                        <span className="text-xs text-gray-400">· 第 {iteration} 轮</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </label>
-            );
-          })}
+                </label>
+              );
+            });
+          })()}
         </div>
 
         {/* Dialog Footer */}

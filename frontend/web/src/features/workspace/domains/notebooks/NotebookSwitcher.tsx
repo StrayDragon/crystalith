@@ -258,13 +258,13 @@ export default function NotebookSwitcher({
         defaultName={saveTemplateDefaultName}
         defaultOutputType={outputType}
         onClose={() => setSaveTemplateOpen(false)}
-        onSave={async ({ notebookId, name, description, outputType }) => {
+        onSave={async ({ notebookId, name, description, outputType: templateOutputType }) => {
           try {
             await saveCurrentNotebookAsTemplate({
               notebookId,
               name,
               description,
-              outputType,
+              outputType: templateOutputType,
             });
             return true;
           } catch {

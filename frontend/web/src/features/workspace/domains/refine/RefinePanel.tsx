@@ -850,9 +850,9 @@ export default function RefinePanel({
                         <span className="OutputHistoryItem__content">
                           <span className="OutputHistoryItem__title">{refineTitle}</span>
                           <span className="OutputHistoryItem__meta">
-                            {metaItems.map((meta, index) => (
+                            {metaItems.map((meta) => (
                               <span
-                                key={`${item.key}-${index}`}
+                                key={`${meta.label}:${meta.status ?? ""}`}
                                 className={`OutputHistoryMetaItem${
                                   meta.status ? ` is-${meta.status}` : ""
                                 }`}
@@ -950,8 +950,8 @@ export default function RefinePanel({
                       <span className="OutputHistoryItem__content">
                         <span className="OutputHistoryItem__title">{item.title}</span>
                         <span className="OutputHistoryItem__meta">
-                          {metaItems.map((meta, index) => (
-                            <span key={`${item.key}-${index}`} className="OutputHistoryMetaItem">
+                          {metaItems.map((meta) => (
+                            <span key={meta.label} className="OutputHistoryMetaItem">
                               {meta.label}
                             </span>
                           ))}

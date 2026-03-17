@@ -115,6 +115,7 @@ class FirecrawlExtractor(BaseExtractor):
         Returns:
             ExtractedContent with the extracted text and metadata.
         """
+        _ = html
         start_time = time.perf_counter()
 
         client = self._get_client()

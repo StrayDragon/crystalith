@@ -1088,12 +1088,21 @@ export default function SlidesStudioDialog({
                   大纲速览
                 </Typography>
                 <ul className="mt-2 space-y-1 text-xs text-gray-700 dark:text-slate-200">
-                  {outlinePreview.map((item, index) => (
-                    <li key={`preview-${index}`} className="flex items-center gap-2">
-                      <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
-                      <span className="truncate">{item.title || `幻灯片 ${index + 1}`}</span>
-                    </li>
-                  ))}
+                  {(() => {
+                    const keyCounts = new Map<string, number>();
+                    return outlinePreview.map((item, index) => {
+                      const baseKey = JSON.stringify(item);
+                      const ordinal = keyCounts.get(baseKey) ?? 0;
+                      keyCounts.set(baseKey, ordinal + 1);
+                      const outlinePreviewKey = `${baseKey}:${ordinal}`;
+                      return (
+                        <li key={outlinePreviewKey} className="flex items-center gap-2">
+                          <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                          <span className="truncate">{item.title || `幻灯片 ${index + 1}`}</span>
+                        </li>
+                      );
+                    });
+                  })()}
                 </ul>
                 {outlineItems.length > outlinePreview.length && (
                   <Typography
@@ -1371,35 +1380,44 @@ export default function SlidesStudioDialog({
                 暂无大纲内容，请先生成或添加幻灯片。
               </div>
             ) : (
-              outlineItems.map((item, index) => (
-                <div
-                  key={`outline-${index}`}
-                  className="rounded-lg border border-gray-200 dark:border-slate-700 p-3 space-y-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <Input
-                      label={`幻灯片 ${index + 1} 标题`}
-                      value={item.title}
-                      onChange={(event) => handleUpdateSlideTitle(index, event.target.value)}
-                      crossOrigin="anonymous"
-                    />
-                    <Button
-                      variant="text"
-                      color="red"
-                      size="sm"
-                      onClick={() => handleRemoveSlide(index)}
+              (() => {
+                const outlineKeyCounts = new Map<string, number>();
+                return outlineItems.map((item, index) => {
+                  const baseKey = JSON.stringify(item);
+                  const ordinal = outlineKeyCounts.get(baseKey) ?? 0;
+                  outlineKeyCounts.set(baseKey, ordinal + 1);
+                  const outlineItemKey = `${baseKey}:${ordinal}`;
+                  return (
+                    <div
+                      key={outlineItemKey}
+                      className="rounded-lg border border-gray-200 dark:border-slate-700 p-3 space-y-2"
                     >
-                      删除
-                    </Button>
-                  </div>
-                  <Textarea
-                    label="要点（每行一个）"
-                    value={item.bullets.join("\n")}
-                    onChange={(event) => handleUpdateSlideBullets(index, event.target.value)}
-                    rows={4}
-                  />
-                </div>
-              ))
+                      <div className="flex items-center justify-between gap-2">
+                        <Input
+                          label={`幻灯片 ${index + 1} 标题`}
+                          value={item.title}
+                          onChange={(event) => handleUpdateSlideTitle(index, event.target.value)}
+                          crossOrigin="anonymous"
+                        />
+                        <Button
+                          variant="text"
+                          color="red"
+                          size="sm"
+                          onClick={() => handleRemoveSlide(index)}
+                        >
+                          删除
+                        </Button>
+                      </div>
+                      <Textarea
+                        label="要点（每行一个）"
+                        value={item.bullets.join("\n")}
+                        onChange={(event) => handleUpdateSlideBullets(index, event.target.value)}
+                        rows={4}
+                      />
+                    </div>
+                  );
+                });
+              })()
             )}
           </div>
           <Button variant="outlined" color="blue" onClick={handleAddSlide}>
@@ -1698,19 +1716,28 @@ export default function SlidesStudioDialog({
                 )}
                 {events.length > 0 && !isConfigOnly && !isPreviewMode && (
                   <div className="space-y-2">
-                    {events.map((event, index) => (
-                      <div
-                        key={`${event.type}-${index}`}
-                        className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-3 py-2 text-xs text-gray-700 dark:text-slate-200 flex items-start gap-2"
-                      >
-                        <span
-                          className={`mt-1 h-1.5 w-1.5 rounded-full ${
-                            event.type === "toolcall" ? "bg-purple-500" : "bg-blue-500"
-                          }`}
-                        />
-                        <span className="flex-1">{event.message}</span>
-                      </div>
-                    ))}
+                    {(() => {
+                      const keyCounts = new Map<string, number>();
+                      return events.map((event) => {
+                        const baseKey = `${event.type}:${event.message}`;
+                        const ordinal = keyCounts.get(baseKey) ?? 0;
+                        keyCounts.set(baseKey, ordinal + 1);
+                        const eventKey = `${baseKey}:${ordinal}`;
+                        return (
+                          <div
+                            key={eventKey}
+                            className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-3 py-2 text-xs text-gray-700 dark:text-slate-200 flex items-start gap-2"
+                          >
+                            <span
+                              className={`mt-1 h-1.5 w-1.5 rounded-full ${
+                                event.type === "toolcall" ? "bg-purple-500" : "bg-blue-500"
+                              }`}
+                            />
+                            <span className="flex-1">{event.message}</span>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 )}
                 {import.meta.env.DEV && debugTimings && !isConfigOnly && !isPreviewMode && (
@@ -1835,6 +1862,7 @@ export default function SlidesStudioDialog({
                           key={previewKey}
                           title={`${previewProviderLabel} 预览`}
                           src={previewUrl}
+                          sandbox="allow-scripts"
                           className="h-full w-full border-0 bg-white dark:bg-slate-800 relative z-10"
                           loading="lazy"
                         />

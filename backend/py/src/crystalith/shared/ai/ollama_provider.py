@@ -41,7 +41,7 @@ class OllamaEmbedClient(Protocol):
         self,
         *,
         model: str,
-        input: str | Sequence[str],
+        input: str | Sequence[str],  # noqa: A002
         options: Mapping[str, JsonValue] | None = None,
     ) -> object: ...
 

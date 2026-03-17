@@ -25,6 +25,7 @@ export default function OutputContent({ output }: OutputContentProps) {
   const content = output.content ?? EMPTY_OUTPUT_CONTENT;
   const isFallback = isFallbackOutputPayload(content);
   const warnings = useMemo(() => getOutputPayloadWarnings(content), [content]);
+  const warningKeyCounts = new Map<string, number>();
   const typeId = output.type as OutputTypeId;
   const { isExporting, activeFormat, getSupportedFormats, exportOutput } = useExport();
   const renderDescriptor = useWorkspaceStore((s) => s.outputTypeRenderDescriptors[typeId] ?? null);
@@ -97,14 +98,19 @@ export default function OutputContent({ output }: OutputContentProps) {
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
           <div className="font-semibold">{t("common.debug_warnings")}</div>
           <div className="mt-1 flex flex-wrap gap-2">
-            {warnings.map((warning, index) => (
-              <span
-                key={`${warning}-${index}`}
-                className="rounded-full bg-amber-100 px-2 py-0.5 font-mono text-[11px] text-amber-900 dark:bg-amber-500/20 dark:text-amber-100"
-              >
-                {warning}
-              </span>
-            ))}
+            {warnings.map((warning) => {
+              const ordinal = warningKeyCounts.get(warning) ?? 0;
+              warningKeyCounts.set(warning, ordinal + 1);
+              const warningKey = `${warning}:${ordinal}`;
+              return (
+                <span
+                  key={warningKey}
+                  className="rounded-full bg-amber-100 px-2 py-0.5 font-mono text-[11px] text-amber-900 dark:bg-amber-500/20 dark:text-amber-100"
+                >
+                  {warning}
+                </span>
+              );
+            })}
           </div>
         </div>
       ) : null}

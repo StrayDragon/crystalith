@@ -19,7 +19,7 @@ class _EmbeddingsClient:
     def __init__(self) -> None:
         self.calls = []
 
-    async def create(self, *, model, input):
+    async def create(self, *, model, input):  # noqa: A002
         self.calls.append((model, tuple(input)))
         vectors = [[float(i), float(i + 1)] for i, _ in enumerate(input)]
         return _EmbeddingResponse(vectors)

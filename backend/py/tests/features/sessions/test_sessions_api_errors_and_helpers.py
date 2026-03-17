@@ -13,11 +13,11 @@ def test_session_text_helpers_cover_branches() -> None:
         Message(session_id=1, role="user", content="hi", citations=None),
         Message(session_id=1, role="assistant", content="ok", citations=None),
     ]
-    markdown = _extract_messages_text(messages, format="markdown")
+    markdown = _extract_messages_text(messages, text_format="markdown")
     assert "**用户**" in markdown
     assert "**助手**" in markdown
 
-    raw = _extract_messages_text(messages, format="raw")
+    raw = _extract_messages_text(messages, text_format="raw")
     assert raw.startswith("hi")
     assert "ok" in raw
 

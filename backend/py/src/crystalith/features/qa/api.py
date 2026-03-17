@@ -708,7 +708,7 @@ async def export_qa(
     notebook_id: int,
     session_id: int = Query(..., ge=1),
     message_id: int | None = Query(None, ge=1, description="Assistant message ID to export; defaults to latest"),
-    format: Literal["markdown", "json"] = Query("markdown"),
+    export_format: Literal["markdown", "json"] = Query("markdown", alias="format"),
     session: AsyncSession = Depends(get_db_session),
 ) -> object:
     notebook = await session.get(Notebook, notebook_id)
@@ -767,7 +767,7 @@ async def export_qa(
     sources_meta = _build_sources_meta(sources=sources, fallback_names=fallback_names)
 
     exported_at = datetime.datetime.now(datetime.UTC)
-    if format == "json":
+    if export_format == "json":
         return QAExportJson(
             notebook_id=notebook_id,
             session_id=session_id,

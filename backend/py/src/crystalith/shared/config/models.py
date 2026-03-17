@@ -1055,6 +1055,7 @@ class Settings(BaseSettings):
         dotenv_settings,
         file_secret_settings,
     ):
+        _ = (settings_cls, env_settings, dotenv_settings, file_secret_settings)
         return (init_settings,)
 
     @classmethod

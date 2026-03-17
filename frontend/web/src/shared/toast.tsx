@@ -76,16 +76,16 @@ const colorMap = {
   warning: "bg-amber-500",
 };
 
-function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
-  const Icon = iconMap[toast.type];
+function ToastItem({ toast: toastItem, onClose }: { toast: Toast; onClose: () => void }) {
+  const Icon = iconMap[toastItem.type];
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white ${colorMap[toast.type]} ux-slide-in`}
+      className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white ${colorMap[toastItem.type]} ux-slide-in`}
       role="alert"
     >
       <Icon className="h-5 w-5 flex-shrink-0" />
-      <span className="flex-1 text-sm font-medium">{toast.message}</span>
+      <span className="flex-1 text-sm font-medium">{toastItem.message}</span>
       <button
         onClick={onClose}
         className="p-1 rounded-full hover:bg-white/20 dark:hover:bg-slate-700/40 transition-colors"

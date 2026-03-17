@@ -653,19 +653,27 @@ export default function SourceDetailDialog({
                               关键要点
                             </Typography>
                             <div className="space-y-1">
-                              {brief.keyPoints.map((point, index) => (
-                                <div key={index} className="flex items-start gap-1.5">
-                                  <span className="text-gray-400 dark:text-slate-500 text-xs">
-                                    •
-                                  </span>
-                                  <Typography
-                                    variant="small"
-                                    className="text-[11px] text-gray-600 dark:text-slate-300 font-medium leading-tight"
-                                  >
-                                    {point}
-                                  </Typography>
-                                </div>
-                              ))}
+                              {(() => {
+                                const keyCounts = new Map<string, number>();
+                                return brief.keyPoints.map((point) => {
+                                  const ordinal = keyCounts.get(point) ?? 0;
+                                  keyCounts.set(point, ordinal + 1);
+                                  const pointKey = `${point}:${ordinal}`;
+                                  return (
+                                    <div key={pointKey} className="flex items-start gap-1.5">
+                                      <span className="text-gray-400 dark:text-slate-500 text-xs">
+                                        •
+                                      </span>
+                                      <Typography
+                                        variant="small"
+                                        className="text-[11px] text-gray-600 dark:text-slate-300 font-medium leading-tight"
+                                      >
+                                        {point}
+                                      </Typography>
+                                    </div>
+                                  );
+                                });
+                              })()}
                             </div>
                           </div>
                           <div className="flex items-center justify-between pt-1">
@@ -737,7 +745,9 @@ export default function SourceDetailDialog({
                               <Menu
                                 placement="bottom-start"
                                 open={exportMenuOpen === message.id}
-                                handler={(open) => setExportMenuOpen(open ? message.id : null)}
+                                handler={(isMenuOpen) =>
+                                  setExportMenuOpen(isMenuOpen ? message.id : null)
+                                }
                               >
                                 <MenuHandler>
                                   <IconButton

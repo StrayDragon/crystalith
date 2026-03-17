@@ -25,11 +25,11 @@ export default function BarChartCard({ title, unit = null, items }: BarChartCard
         {items.length === 0 ? (
           <div className="text-xs text-gray-500 dark:text-slate-300">No data</div>
         ) : (
-          items.map((item, index) => {
+          items.map((item) => {
             const ratio = Number.isFinite(item.value) ? item.value / maxValue : 0;
             const width = `${Math.max(0, Math.min(1, ratio)) * 100}%`;
             return (
-              <div key={`${item.label}-${index}`} className="flex items-center gap-2">
+              <div key={item.label} className="flex items-center gap-2">
                 <div className="w-28 text-[11px] text-gray-700 dark:text-slate-200 truncate">
                   {item.label}
                 </div>

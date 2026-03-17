@@ -15,6 +15,7 @@ interface GuideChecklistProps {
 
 export default function GuideChecklist({ modules, className }: GuideChecklistProps) {
   const [completed, setCompleted] = useState<Set<number>>(new Set());
+  const moduleKeyCounts = new Map<string, number>();
 
   useEffect(() => {
     setCompleted(new Set());
@@ -54,9 +55,18 @@ export default function GuideChecklist({ modules, className }: GuideChecklistPro
           const isDone = completed.has(index);
           const keyPoints = module.key_points ?? [];
           const summary = module.objective?.text || "";
+          const moduleKeyBase = JSON.stringify({
+            title: module.title ?? "",
+            objective: summary,
+            keyPoints: keyPoints.map((point) => point.text ?? ""),
+          });
+          const moduleKeyOrdinal = moduleKeyCounts.get(moduleKeyBase) ?? 0;
+          moduleKeyCounts.set(moduleKeyBase, moduleKeyOrdinal + 1);
+          const moduleKey = `${moduleKeyBase}:${moduleKeyOrdinal}`;
+          const pointKeyCounts = new Map<string, number>();
           return (
             <CollapsibleSection
-              key={`module-${index}`}
+              key={moduleKey}
               id={`guide-module-${index}`}
               title={module.title || `模块 ${index + 1}`}
               summary={summary}
@@ -91,9 +101,13 @@ export default function GuideChecklist({ modules, className }: GuideChecklistPro
               ) : null}
               {keyPoints.length > 0 ? (
                 <ul className="list-disc pl-5 text-sm text-gray-700 dark:text-slate-200">
-                  {keyPoints.map((point, pointIndex) => (
-                    <li key={`${index}-${pointIndex}`}>{point.text || "要点"}</li>
-                  ))}
+                  {keyPoints.map((point) => {
+                    const baseKey = point.text ?? "";
+                    const ordinal = pointKeyCounts.get(baseKey) ?? 0;
+                    pointKeyCounts.set(baseKey, ordinal + 1);
+                    const pointKey = `${baseKey || "point"}:${ordinal}`;
+                    return <li key={pointKey}>{point.text || "要点"}</li>;
+                  })}
                 </ul>
               ) : (
                 <div className="text-sm text-gray-500 dark:text-slate-400">暂无要点。</div>

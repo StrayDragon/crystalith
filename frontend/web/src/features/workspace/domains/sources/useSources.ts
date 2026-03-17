@@ -260,6 +260,7 @@ export function useSources() {
             ),
           );
           try {
+            // eslint-disable-next-line no-await-in-loop -- Upload queue + dedup confirmation requires serial execution.
             await unwrapData(
               uploadSource<true>({
                 path: { notebook_id: activeNotebookId },
@@ -270,8 +271,8 @@ export function useSources() {
             setUploadQueue((prev) =>
               prev.map((item) => (item.id === queueId ? { ...item, status: "success" } : item)),
             );
-          } catch (error) {
-            const err = error as {
+          } catch (caught) {
+            const err = caught as {
               errorCode?: string;
               details?: unknown;
               message?: string;
@@ -289,6 +290,7 @@ export function useSources() {
               );
               const dedup_action = reuse ? "reuse" : "create_new";
               try {
+                // eslint-disable-next-line no-await-in-loop -- Keep per-file UI updates and dedup flow serial.
                 await unwrapData(
                   uploadSource<true>({
                     path: { notebook_id: activeNotebookId },
@@ -705,8 +707,8 @@ export function useSources() {
         );
         await mutate();
         toast.success(`已转换为来源：${result.filename}（${result.chunk_count} 个分块）`);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "转换失败";
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "转换失败";
         toast.error(`转换失败：${message}`);
       }
     },
@@ -749,14 +751,14 @@ export function useSources() {
         const result = await call();
         await mutate();
         return result;
-      } catch (error) {
-        const err = error as {
+      } catch (caught) {
+        const err = caught as {
           errorCode?: string;
           details?: unknown;
           message?: string;
         };
         if (err?.errorCode !== "SOURCE_DEDUP_HIT") {
-          throw error;
+          throw caught;
         }
         const details = err.details as { existing_filename?: unknown } | null;
         const existingFilename =
@@ -870,8 +872,8 @@ export function useSources() {
         );
         toast.success("已重新嵌入来源");
         await mutate();
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "重新嵌入失败";
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "重新嵌入失败";
         toast.error(message);
       }
     },

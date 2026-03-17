@@ -17,7 +17,7 @@ def _serve_html(html: str) -> Iterator[str]:
     body = html.encode("utf-8")
 
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self, format: str, *args) -> None:
+        def log_message(self, fmt: str, *args) -> None:
             return
 
         def do_GET(self) -> None:

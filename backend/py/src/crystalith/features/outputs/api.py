@@ -408,7 +408,7 @@ async def get_output(
 async def export_output(
     notebook_id: int,
     output_id: int,
-    format: Literal["markdown", "json"] = Query("markdown"),
+    export_format: Literal["markdown", "json"] = Query("markdown", alias="format"),
     session: AsyncSession = Depends(get_db_session),
 ) -> object:
     """Export an output with citations as Markdown or JSON."""
@@ -426,7 +426,7 @@ async def export_output(
     sources_meta = _build_output_sources_meta(sources=sources, fallback_names=fallback_names)
 
     exported_at = datetime.datetime.now(datetime.UTC)
-    if format == "json":
+    if export_format == "json":
         return OutputExportJson(
             notebook_id=notebook_id,
             output_id=output.id,

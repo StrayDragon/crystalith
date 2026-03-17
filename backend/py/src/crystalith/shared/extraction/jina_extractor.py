@@ -73,6 +73,7 @@ class JinaReaderExtractor(BaseExtractor):
         Returns:
             ExtractedContent with the extracted text and metadata.
         """
+        _ = html
         start_time = time.perf_counter()
 
         # Build the Jina Reader URL

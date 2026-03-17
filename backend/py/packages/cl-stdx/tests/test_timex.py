@@ -5,7 +5,7 @@ from cl_stdx import timex
 
 
 def test_datetime_to_timestamp_ms() -> None:
-    dt = datetime.datetime(2024, 1, 15, 10, 30, 0)
+    dt = datetime.datetime(2024, 1, 15, 10, 30, 0, tzinfo=timex.TZ_SHANGHAI)
     ts_ms = timex.datetime_to_timestamp(dt)
 
     assert isinstance(ts_ms, int)
@@ -13,7 +13,7 @@ def test_datetime_to_timestamp_ms() -> None:
 
 
 def test_str_round_trip() -> None:
-    dt = datetime.datetime(2024, 1, 15, 10, 30, 0)
+    dt = datetime.datetime(2024, 1, 15, 10, 30, 0, tzinfo=timex.TZ_SHANGHAI)
     dt_str = timex.datetime_to_str(dt)
 
     roundtrip = timex.str_to_datetime(dt_str)
@@ -50,7 +50,7 @@ class TestStrToDatetimeBoundary:
 
     def test_datetime_input(self) -> None:
         """Test with datetime.datetime input (line 37-38)."""
-        dt = datetime.datetime(2024, 6, 15, 14, 30, 45)
+        dt = datetime.datetime(2024, 6, 15, 14, 30, 45, tzinfo=timex.TZ_SHANGHAI)
         result = timex.str_to_datetime(dt)
 
         assert result == dt
@@ -63,6 +63,7 @@ class TestStrToDatetimeBoundary:
 
         # Should convert date to datetime
         assert isinstance(result, datetime.datetime)
+        assert result.tzinfo == timex.TZ_SHANGHAI
         assert result.year == 2024
         assert result.month == 6
         assert result.day == 15
@@ -75,6 +76,7 @@ class TestStrToDatetimeBoundary:
         result = timex.str_to_datetime("2024-06-15")
 
         assert isinstance(result, datetime.datetime)
+        assert result.tzinfo == timex.TZ_SHANGHAI
         assert result.year == 2024
         assert result.month == 6
         assert result.day == 15
@@ -84,6 +86,7 @@ class TestStrToDatetimeBoundary:
         result = timex.str_to_datetime("2024-06-15 14:30")
 
         assert isinstance(result, datetime.datetime)
+        assert result.tzinfo == timex.TZ_SHANGHAI
         assert result.year == 2024
         assert result.month == 6
         assert result.day == 15
@@ -96,6 +99,7 @@ class TestStrToDatetimeBoundary:
         result = timex.str_to_datetime("2024-06-15 14:30:45")
 
         assert isinstance(result, datetime.datetime)
+        assert result.tzinfo == timex.TZ_SHANGHAI
         assert result.year == 2024
         assert result.month == 6
         assert result.day == 15
@@ -108,6 +112,7 @@ class TestStrToDatetimeBoundary:
         result = timex.str_to_datetime("2024-06-15 14:30:45.123456")
 
         assert isinstance(result, datetime.datetime)
+        assert result.tzinfo == timex.TZ_SHANGHAI
         assert result.year == 2024
         assert result.month == 6
         assert result.day == 15
@@ -128,14 +133,14 @@ class TestStrToDatetimeBoundary:
 
     def test_datetime_to_str_format(self) -> None:
         """Test datetime_to_str output format."""
-        dt = datetime.datetime(2024, 1, 15, 10, 30, 45)
+        dt = datetime.datetime(2024, 1, 15, 10, 30, 45, tzinfo=timex.TZ_SHANGHAI)
         result = timex.datetime_to_str(dt)
 
         assert result == "2024-01-15 10:30:45"
 
     def test_datetime_to_str_zero_padded(self) -> None:
         """Test that datetime_to_str zero-pads values."""
-        dt = datetime.datetime(2024, 1, 5, 3, 7, 9)
+        dt = datetime.datetime(2024, 1, 5, 3, 7, 9, tzinfo=timex.TZ_SHANGHAI)
         result = timex.datetime_to_str(dt)
 
         assert result == "2024-01-05 03:07:09"

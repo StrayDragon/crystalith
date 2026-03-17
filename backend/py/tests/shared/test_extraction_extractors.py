@@ -35,7 +35,7 @@ def _serve_http(
     capture = _RequestCapture()
 
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self, format: str, *args) -> None:
+        def log_message(self, fmt: str, *args) -> None:
             return
 
         def do_HEAD(self) -> None:

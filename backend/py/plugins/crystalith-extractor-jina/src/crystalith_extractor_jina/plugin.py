@@ -14,6 +14,7 @@ class JinaWebExtractorPlugin:
     requires_service = True
 
     def create_extractor(self, settings, *, url_fetch_security=None):
+        _ = url_fetch_security
         jina_settings = settings.source_ingestion.web_extraction.jina
         proxy_url = None
         if jina_settings.proxy and jina_settings.proxy.enabled:

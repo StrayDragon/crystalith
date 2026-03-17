@@ -14,6 +14,7 @@ class BrowserlessWebExtractorPlugin:
     requires_service = True
 
     def create_extractor(self, settings, *, url_fetch_security=None):
+        _ = url_fetch_security
         bl_settings = settings.source_ingestion.web_extraction.browserless
         return BrowserlessExtractor(
             endpoint=bl_settings.endpoint,

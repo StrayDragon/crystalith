@@ -24,14 +24,12 @@ export const SkeletonCard = memo(function SkeletonCard({
   className = "",
 }: SkeletonCardProps) {
   const safeLines = Math.max(1, lines);
+  const lineIds = Array.from({ length: safeLines }, (_unused, index) => `line-${index}`);
   return (
     <div className={`rounded-xl border border-gray-200 bg-white p-3 ${className}`.trim()}>
       <div className="flex flex-col gap-2">
-        {Array.from({ length: safeLines }).map((_, index) => (
-          <SkeletonLine
-            key={`skeleton-card-line-${index}`}
-            className={index === safeLines - 1 ? "w-2/3" : "w-full"}
-          />
+        {lineIds.map((lineId, index) => (
+          <SkeletonLine key={lineId} className={index === safeLines - 1 ? "w-2/3" : "w-full"} />
         ))}
       </div>
     </div>
@@ -45,11 +43,12 @@ export const SkeletonList = memo(function SkeletonList({
 }: SkeletonListProps) {
   const safeItems = Math.max(1, items);
   const safeShortEvery = Math.max(1, shortEvery);
+  const itemIds = Array.from({ length: safeItems }, (_unused, index) => `item-${index}`);
   return (
     <div className={`flex flex-col gap-2 ${className}`.trim()}>
-      {Array.from({ length: safeItems }).map((_, index) => (
+      {itemIds.map((itemId, index) => (
         <div
-          key={`skeleton-list-item-${index}`}
+          key={itemId}
           className={`h-10 rounded-lg bg-gray-100 animate-pulse ${
             (index + 1) % safeShortEvery === 0 ? "w-2/3" : "w-full"
           }`}
