@@ -56,7 +56,9 @@
 2. 修复主分支基线上的违规点（优先自动修复，其次小步手工修复）。
 3. 追加最小范围例外（仅在确有必要时），并记录在变更说明与代码注释中。
 
-## Open Questions
+## Resolved Questions
 
-- `ARG*` 在测试代码中是否只对 `backend/py/tests/**` 放宽，还是对所有 `**/tests/**` 一致放宽？
-- 对 `no-await-in-loop` 的处理策略：遇到必须串行语义的循环，是否统一用局部 disable（并注释理由）？
+- `ARG*` 放宽范围：覆盖所有 `**/tests/**`（包含 `backend/py/packages/**/tests/**`）。
+- `no-await-in-loop` 处理策略：
+  - 若语义允许并发：优先改为 `Promise.all` / `Promise.allSettled`；
+  - 若必须串行（例如逐项进度更新 + 取消、或 dedup/confirm 交互）：允许最小范围的局部 disable，并在代码中说明理由。
