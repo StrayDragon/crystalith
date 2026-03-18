@@ -23,6 +23,10 @@ Notes:
 - Stable tests default to `MSW onUnhandledRequest=error` to prevent accidental real network calls.
 - `pnpm run test:all` defaults to `MSW onUnhandledRequest=warn` to reduce surprise while keeping visibility.
 
+### `pnpm run test:core`
+
+Runs a minimal UI core regression suite aligned with backend core API smoke paths (notebooks/analysis/sources/chat/outputs/health).
+
 ### `pnpm run build`
 
 Builds the app for production to the `dist` folder.

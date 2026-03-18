@@ -176,6 +176,11 @@ lint 引入 MUST 采用增量策略，避免一次性全仓重写导致评审噪
 - **THEN** 系统 SHALL 运行稳定套件（默认排除 `*.experimental.test.*`）
 - **AND** `experimental` 用例 SHALL 仅在显式入口（例如 `pnpm run test:all`）或单独流水线中运行
 
+#### Scenario: Frontend core regression suite aligns with backend smoke paths
+- **WHEN** 开发者运行前端核心回归套件（例如 `cd frontend/web && pnpm run test:core`）
+- **THEN** 系统 SHALL 仅运行覆盖后端核心 API 冒烟链路的最小 UI 用例集合（notebooks/analysis/sources/chat/outputs/health）
+- **AND** 该套件 SHALL 使用与稳定套件一致的可复现约束（例如 `TZ=UTC`、MSW `onUnhandledRequest=error`）
+
 #### Scenario: Stable frontend tests reject unhandled network calls
 - **WHEN** 稳定套件中的测试触发未被 MSW handler 覆盖的网络请求
 - **THEN** 测试 SHALL 失败并提示补齐 handler 或将该用例标记为 `experimental`
