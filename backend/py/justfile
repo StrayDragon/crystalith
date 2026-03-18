@@ -77,4 +77,4 @@ test-mock-report:
     uv run python scripts/test_mock_report.py
 
 test-mock-report-check:
-    uv run python scripts/test_mock_report.py --check-private-patches
+    uv run python scripts/test_mock_report.py --check-private-patches --check-mock-reasons

@@ -132,6 +132,12 @@ lint 引入 MUST 采用增量策略，避免一次性全仓重写导致评审噪
 - **AND** 测试代码存在对私有符号（`_xxx`）的 patch
 - **THEN** 质量门槛 SHALL 失败并给出可定位的诊断信息（不允许 allowlist）
 
+#### Scenario: Backend quality gate requires Mock reason for monkeypatch usage
+- **WHEN** 开发者运行后端默认质量门槛（例如 `cd backend/py && just test`）
+- **AND** 某测试文件使用 `monkeypatch.*` 改变运行行为
+- **AND** 该文件未包含任何 `Mock reason:` 注释
+- **THEN** 质量门槛 SHALL 失败并给出可定位的诊断信息
+
 ### Requirement: Test-double usage is observable via a stable report
 仓库 MUST 提供稳定的 test doubles 使用报告入口，以便识别 brittle mocks、热点文件与迁移目标，并支持本地与 CI 环境复现。
 
