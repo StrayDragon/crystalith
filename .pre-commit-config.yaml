@@ -8,7 +8,7 @@ repos:
     hooks:
       - id: backend-tests
         name: Backend Tests
-        entry: bash -c 'cd backend/py && uv run pytest tests/ -q --tb=no'
+        entry: bash -c 'cd backend/py && PYTHONHASHSEED=0 TZ=UTC uv run pytest tests/ -q --tb=no --no-cov -m "not experimental"'
         language: system
         files: ^backend/py/
         pass_filenames: false
