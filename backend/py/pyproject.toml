@@ -153,6 +153,10 @@ asyncio_mode = "auto"
 # Use -n auto to run tests in parallel with pytest-xdist
 # Example: uv run pytest -n auto
 addopts = "--cov=crystalith --cov-report=term --cov-fail-under=85"
+markers = [
+    "core: Tier-0 core regression suite (must be deterministic and always pass)",
+    "experimental: Edge/experimental tests (may be excluded from default CI gates)",
+]
 
 [tool.coverage.report]
 fail_under = 85

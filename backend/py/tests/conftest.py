@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import random
+import socket
 import tempfile
 from pathlib import Path
 
@@ -14,6 +16,96 @@ from crystalith.shared.db.migrations import upgrade_head
 from crystalith.shared.vector_storage import InMemoryVectorStore
 from crystalith.web.app import create_app
 from tests._support.settings import make_settings
+
+_LOCALHOSTS: set[str] = {"localhost", "127.0.0.1", "::1"}
+
+
+def _host_from_socket_address(address: object) -> str | None:
+    if isinstance(address, str):
+        # Unix domain socket path.
+        return None
+    if not isinstance(address, tuple) or not address:
+        return None
+
+    host = address[0]
+    if isinstance(host, bytes):
+        try:
+            host = host.decode()
+        except UnicodeDecodeError:
+            return None
+    if isinstance(host, str):
+        return host
+    return None
+
+
+def _is_local_host(host: str) -> bool:
+    if host in _LOCALHOSTS:
+        return True
+    return host.startswith("127.")
+
+
+def _core_network_error(host: str) -> RuntimeError:
+    return RuntimeError(
+        f"External network access is blocked for core tests (host={host!r}). "
+        "Prefer httpx.ASGITransport / explicit seams for isolation; if this test must call a "
+        "real service, mark it as @pytest.mark.experimental."
+    )
+
+
+def pytest_collection_modifyitems(config: object, items: list[pytest.Item]) -> None:
+    for item in items:
+        path = str(item.fspath)
+        if (
+            "/tests/contract/" in path
+            or "/tests/features/" in path
+            or "/tests/web/" in path
+            or path.endswith("/tests/test_plugins.py")
+        ):
+            item.add_marker(pytest.mark.core)
+
+
+@pytest.fixture(autouse=True)
+def _core_reproducibility_guard(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+):
+    if request.node.get_closest_marker("core") is None:
+        yield
+        return
+
+    previous_random_state = random.getstate()
+    random.seed(0)
+
+    original_connect = socket.socket.connect
+    original_connect_ex = socket.socket.connect_ex
+    original_create_connection = socket.create_connection
+
+    def guarded_connect(self: socket.socket, address: object) -> None:
+        host = _host_from_socket_address(address)
+        if host is not None and not _is_local_host(host):
+            raise _core_network_error(host)
+        return original_connect(self, address)  # type: ignore[arg-type]
+
+    def guarded_connect_ex(self: socket.socket, address: object) -> int:
+        host = _host_from_socket_address(address)
+        if host is not None and not _is_local_host(host):
+            raise _core_network_error(host)
+        return original_connect_ex(self, address)  # type: ignore[arg-type]
+
+    def guarded_create_connection(
+        address: object, *args: object, **kwargs: object
+    ) -> socket.socket:
+        host = _host_from_socket_address(address)
+        if host is not None and not _is_local_host(host):
+            raise _core_network_error(host)
+        return original_create_connection(address, *args, **kwargs)  # type: ignore[call-arg]
+
+    monkeypatch.setattr(socket.socket, "connect", guarded_connect, raising=True)
+    monkeypatch.setattr(socket.socket, "connect_ex", guarded_connect_ex, raising=True)
+    monkeypatch.setattr(socket, "create_connection", guarded_create_connection, raising=True)
+
+    yield
+
+    random.setstate(previous_random_state)
 
 
 @pytest.fixture

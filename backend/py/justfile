@@ -7,11 +7,17 @@ dev:
 packages-test:
     #!/bin/bash
     for package in packages/*; do
-        uv run --project $package pytest --no-cov $package/tests
+        PYTHONHASHSEED=0 TZ=UTC uv run --project $package pytest --no-cov $package/tests
     done
 
 test: packages-test lint typecheck check-imports config-schema-check test-mock-report-check
-    uv run pytest tests/ -v
+    PYTHONHASHSEED=0 TZ=UTC uv run pytest tests/ -v -m "not experimental"
+
+test-core: test-mock-report-check
+    PYTHONHASHSEED=0 TZ=UTC uv run pytest tests/ -v --no-cov -m core
+
+test-all: test-mock-report-check
+    PYTHONHASHSEED=0 TZ=UTC uv run pytest tests/ -v --no-cov
 
 typecheck:
     uv run basedpyright --level error src
@@ -20,7 +26,7 @@ lint:
     uv run ruff check src tests
 
 contract:
-    uv run pytest tests/contract -v --no-cov
+    PYTHONHASHSEED=0 TZ=UTC uv run pytest tests/contract -v --no-cov
 
 check:
     @echo "==> Checking backend import layering"
@@ -35,10 +41,10 @@ check:
     just contract
 
 coverage: packages-test
-    uv run pytest tests/ -v -n 0 --cov=crystalith --cov-report=term --cov-fail-under=85
+    PYTHONHASHSEED=0 TZ=UTC uv run pytest tests/ -v -n 0 -m "not experimental" --cov=crystalith --cov-report=term --cov-fail-under=85
 
 coverage-html: packages-test
-    uv run pytest tests/ -v -n 0 --cov=crystalith --cov-report=html --cov-fail-under=85
+    PYTHONHASHSEED=0 TZ=UTC uv run pytest tests/ -v -n 0 -m "not experimental" --cov=crystalith --cov-report=html --cov-fail-under=85
 
 check-imports:
     rg --files -g '*.py' src/crystalith/features src/crystalith/shared | uv run python scripts/check_imports.py
