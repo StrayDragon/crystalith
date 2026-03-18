@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { afterAll, afterEach, beforeAll } from "vitest";
 
+import "./api/setup";
 import { client } from "./api/generated/client.gen";
 import { server } from "./test-utils/msw/server";
 

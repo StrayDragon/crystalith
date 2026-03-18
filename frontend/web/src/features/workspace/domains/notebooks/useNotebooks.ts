@@ -86,12 +86,13 @@ export function useNotebooks() {
             body: { name: DEFAULT_NOTEBOOK_NAME },
           }),
         );
-        const normalized = normalizeNotebook(created);
-        store.getState().setAutoCreatedNotebookId(normalized.id);
-        store.getState().setActiveNotebook(normalized.id);
         await mutate(async (current) => (current ? [...current, created] : [created]), {
           revalidate: false,
         });
+        const normalized = normalizeNotebook(created);
+        const s = store.getState();
+        s.setAutoCreatedNotebookId(normalized.id);
+        s.setActiveNotebook(normalized.id);
       } catch (error) {
         // Silent fail - user can manually create a notebook
         console.error("Failed to auto-create notebook:", error);
@@ -130,13 +131,13 @@ export function useNotebooks() {
           body: { name },
         }),
       );
+      await mutate(async (current) => (current ? [...current, created] : [created]), {
+        revalidate: false,
+      });
       const normalized = normalizeNotebook(created);
       const s2 = store.getState();
       s2.setCreateName("");
       s2.setActiveNotebook(normalized.id);
-      await mutate(async (current) => (current ? [...current, created] : [created]), {
-        revalidate: false,
-      });
       return true;
     } catch {
       store.getState().setError("create", "创建失败，请检查后端状态。");
@@ -161,12 +162,11 @@ export function useNotebooks() {
             body: { name: finalName },
           }),
         );
-        const normalized = normalizeNotebook(created);
-        const s2 = store.getState();
-        s2.setActiveNotebook(normalized.id);
         await mutate(async (current) => (current ? [...current, created] : [created]), {
           revalidate: false,
         });
+        const normalized = normalizeNotebook(created);
+        store.getState().setActiveNotebook(normalized.id);
         return true;
       } catch {
         store.getState().setError("create", "创建失败，请检查后端状态。");
@@ -194,12 +194,11 @@ export function useNotebooks() {
             query: { template_id: templateId },
           }),
         );
-        const normalized = normalizeNotebook(created);
-        const s2 = store.getState();
-        s2.setActiveNotebook(normalized.id);
         await mutate(async (current) => (current ? [...current, created] : [created]), {
           revalidate: false,
         });
+        const normalized = normalizeNotebook(created);
+        store.getState().setActiveNotebook(normalized.id);
         return true;
       } catch {
         store.getState().setError("create", "创建失败，请检查后端状态。");

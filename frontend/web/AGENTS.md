@@ -13,6 +13,7 @@ Frontend (from repo root):
 - `pnpm dev` — start the Vite dev server.
 - `pnpm test` — run Vitest and React Testing Library.
 - `pnpm run test:ci` — run deterministic frontend quality gate (stable suite + mock-report gate).
+- `pnpm run test:core` — run minimal UI core regression suite aligned with backend core API smoke paths.
 - `pnpm run test:all` — run all tests including `*.experimental.test.*` (MSW unhandled requests warn by default).
 - `pnpm run lint` — run incremental `oxlint` for changed frontend source files.
 - `pnpm run lint:all` — run full `oxlint` across `src/`.
