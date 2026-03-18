@@ -162,6 +162,7 @@ lint 引入 MUST 采用增量策略，避免一次性全仓重写导致评审噪
 - **THEN** 系统 SHALL 仅运行标记为 `core` 的测试用例（允许通过 marker 或路径约定自动打标）
 - **AND** SHALL 设置稳定的执行环境（例如 `PYTHONHASHSEED=0`、`TZ=UTC`）
 - **AND** core 套件 SHALL 默认禁止外部网络访问（仅允许 localhost），以保证可复现与可审计
+- **AND** core 套件清单 SHALL 由单一 SSOT manifest 定义（`openspec/specs/quality-and-regression/core_suite.json`），避免后端/前端 core 回归链路漂移
 
 #### Scenario: Tests opt into experimental explicitly
 - **WHEN** 新增/修改边缘或试验性的测试用例
@@ -180,6 +181,7 @@ lint 引入 MUST 采用增量策略，避免一次性全仓重写导致评审噪
 - **WHEN** 开发者运行前端核心回归套件（例如 `cd frontend/web && pnpm run test:core`）
 - **THEN** 系统 SHALL 仅运行覆盖后端核心 API 冒烟链路的最小 UI 用例集合（notebooks/analysis/sources/chat/outputs/health）
 - **AND** 该套件 SHALL 使用与稳定套件一致的可复现约束（例如 `TZ=UTC`、MSW `onUnhandledRequest=error`）
+- **AND** 该最小集合 SHALL 以同一 SSOT manifest 作为来源（`openspec/specs/quality-and-regression/core_suite.json`），避免后端/前端 core 回归链路漂移
 
 #### Scenario: Stable frontend tests reject unhandled network calls
 - **WHEN** 稳定套件中的测试触发未被 MSW handler 覆盖的网络请求

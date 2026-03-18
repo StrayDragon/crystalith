@@ -1,0 +1,1451 @@
+{
+  "generated_at": "2026-03-24",
+  "priority_order": [
+    "refactor",
+    "architecture",
+    "ux",
+    "feature"
+  ],
+  "labels": {
+    "refactor": "重构",
+    "architecture": "架构优化",
+    "ux": "用户体验（旧功能优化）",
+    "feature": "新功能"
+  },
+  "counts": {
+    "refactor": 14,
+    "architecture": 59,
+    "ux": 12,
+    "feature": 16
+  },
+  "needs_review": [
+    "c1010-capability-negotiation-fallback-order-and-route-audit",
+    "c1034-reader-side-glosses-and-progressive-annotations",
+    "c2027-unified-search-query-and-rerank",
+    "c2088-workspace-branching-and-safe-exploration-lanes",
+    "c2124-answer-shape-presets-and-output-landing-zones",
+    "c2137-source-family-grouping-and-origin-lineage",
+    "c3024-context-assembly-drop-reasons-and-recovery-actions",
+    "c4017-meeting-notes-ingestion-and-action-items",
+    "c4021-source-remediation-queues-and-bulk-fixes",
+    "c4041-run-postmortem-summaries-and-recommendation-loops",
+    "c4082-personal-knowledge-continuity-and-threaded-research-memory",
+    "c4087-workspace-discovery-metadata-and-sample-gallery"
+  ],
+  "changes": {
+    "c4000-recipe-driven-workflows": {
+      "category": "feature",
+      "id": 4000,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 2,
+        "architecture": 3,
+        "ux": 12,
+        "feature": 64
+      },
+      "margin": 52
+    },
+    "c2002-evidence-gap-and-claim-checking": {
+      "category": "architecture",
+      "id": 2002,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 2,
+        "architecture": 65,
+        "ux": 0,
+        "feature": 2
+      },
+      "margin": 63
+    },
+    "c2003-quality-scorecards-and-eval-center": {
+      "category": "architecture",
+      "id": 2003,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 1,
+        "architecture": 39,
+        "ux": 0,
+        "feature": 2
+      },
+      "margin": 37
+    },
+    "c2004-engineering-roadmap-slices-and-dependency-map": {
+      "category": "architecture",
+      "id": 2004,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 7,
+        "architecture": 37,
+        "ux": 0,
+        "feature": 6
+      },
+      "margin": 30
+    },
+    "c2007-agentic-research-runs": {
+      "category": "architecture",
+      "id": 2007,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 9,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 9
+    },
+    "c1033-question-merging-splitting-and-thread-refactors": {
+      "category": "refactor",
+      "id": 1033,
+      "bucket": "c1000–c1999",
+      "bucket_start": 1000,
+      "bucket_end": 1999,
+      "scores": {
+        "refactor": 21,
+        "architecture": 1,
+        "ux": 0,
+        "feature": 2
+      },
+      "margin": 19
+    },
+    "c3027-attention-budget-plans-and-deep-work-windows": {
+      "category": "ux",
+      "id": 3027,
+      "bucket": "c3000–c3999",
+      "bucket_start": 3000,
+      "bucket_end": 3999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 4,
+        "ux": 8,
+        "feature": 2
+      },
+      "margin": 4
+    },
+    "c1034-reader-side-glosses-and-progressive-annotations": {
+      "category": "refactor",
+      "id": 1034,
+      "bucket": "c1000–c1999",
+      "bucket_start": 1000,
+      "bucket_end": 1999,
+      "scores": {
+        "refactor": 3,
+        "architecture": 0,
+        "ux": 0,
+        "feature": 2
+      },
+      "margin": 1
+    },
+    "c2124-answer-shape-presets-and-output-landing-zones": {
+      "category": "architecture",
+      "id": 2124,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 6,
+        "ux": 3,
+        "feature": 5
+      },
+      "margin": 1
+    },
+    "c2038-source-coverage-and-evidence-map": {
+      "category": "architecture",
+      "id": 2038,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 2,
+        "architecture": 30,
+        "ux": 1,
+        "feature": 1
+      },
+      "margin": 28
+    },
+    "c2039-research-plan-editor-and-execution-checklists": {
+      "category": "architecture",
+      "id": 2039,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 8,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 8
+    },
+    "c2135-research-modes-explore-verify-synthesize": {
+      "category": "architecture",
+      "id": 2135,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 4,
+        "architecture": 12,
+        "ux": 5,
+        "feature": 2
+      },
+      "margin": 7
+    },
+    "c2137-source-family-grouping-and-origin-lineage": {
+      "category": "architecture",
+      "id": 2137,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 2,
+        "ux": 0,
+        "feature": 2
+      },
+      "margin": 0
+    },
+    "c2143-quiet-failure-detection-and-silent-degradation-alerts": {
+      "category": "architecture",
+      "id": 2143,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 12,
+        "ux": 0,
+        "feature": 4
+      },
+      "margin": 8
+    },
+    "c2144-observation-runs-and-non-writing-probes": {
+      "category": "architecture",
+      "id": 2144,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 8,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 8
+    },
+    "c4022-quick-capture-inbox-and-triage-flow": {
+      "category": "feature",
+      "id": 4022,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 0,
+        "architecture": 10,
+        "ux": 4,
+        "feature": 20
+      },
+      "margin": 10
+    },
+    "c3009-workspace-empty-state-seeding-and-safe-reset": {
+      "category": "ux",
+      "id": 3009,
+      "bucket": "c3000–c3999",
+      "bucket_start": 3000,
+      "bucket_end": 3999,
+      "scores": {
+        "refactor": 2,
+        "architecture": 0,
+        "ux": 16,
+        "feature": 5
+      },
+      "margin": 11
+    },
+    "c2011-cross-notebook-insight-graph": {
+      "category": "architecture",
+      "id": 2011,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 13,
+        "ux": 0,
+        "feature": 4
+      },
+      "margin": 9
+    },
+    "c3013-keyboard-first-panel-navigation-and-multi-select": {
+      "category": "ux",
+      "id": 3013,
+      "bucket": "c3000–c3999",
+      "bucket_start": 3000,
+      "bucket_end": 3999,
+      "scores": {
+        "refactor": 2,
+        "architecture": 6,
+        "ux": 44,
+        "feature": 4
+      },
+      "margin": 38
+    },
+    "c3014-workspace-notification-center-and-snooze-rules": {
+      "category": "ux",
+      "id": 3014,
+      "bucket": "c3000–c3999",
+      "bucket_start": 3000,
+      "bucket_end": 3999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 2,
+        "ux": 27,
+        "feature": 2
+      },
+      "margin": 25
+    },
+    "c3016-pinned-work-contexts-and-scratchpads": {
+      "category": "ux",
+      "id": 3016,
+      "bucket": "c3000–c3999",
+      "bucket_start": 3000,
+      "bucket_end": 3999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 0,
+        "ux": 8,
+        "feature": 0
+      },
+      "margin": 8
+    },
+    "c4003-multimodal-audio-video-briefings": {
+      "category": "feature",
+      "id": 4003,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 0,
+        "architecture": 10,
+        "ux": 0,
+        "feature": 14
+      },
+      "margin": 4
+    },
+    "c2164-ingestion-trace-and-replay-fixtures": {
+      "category": "architecture",
+      "id": 2164,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 5,
+        "architecture": 25,
+        "ux": 3,
+        "feature": 0
+      },
+      "margin": 20
+    },
+    "c2171-model-endpoint-health-scoring-and-failover-routing": {
+      "category": "architecture",
+      "id": 2171,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 2,
+        "architecture": 8,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 6
+    },
+    "c3018-saved-searches-smart-filters-and-follow-lists": {
+      "category": "ux",
+      "id": 3018,
+      "bucket": "c3000–c3999",
+      "bucket_start": 3000,
+      "bucket_end": 3999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 0,
+        "ux": 8,
+        "feature": 0
+      },
+      "margin": 8
+    },
+    "c2215-analysis-as-artifact-and-cache": {
+      "category": "architecture",
+      "id": 2215,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 1,
+        "architecture": 28,
+        "ux": 6,
+        "feature": 2
+      },
+      "margin": 22
+    },
+    "c2226-modular-canvas-widget-contract-and-persistence": {
+      "category": "architecture",
+      "id": 2226,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 11,
+        "architecture": 17,
+        "ux": 5,
+        "feature": 0
+      },
+      "margin": 6
+    },
+    "c2236-profile-aware-resource-tuning-and-adaptive-concurrency": {
+      "category": "architecture",
+      "id": 2236,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 1,
+        "architecture": 30,
+        "ux": 0,
+        "feature": 2
+      },
+      "margin": 28
+    },
+    "c2237-http-response-caching-etag-and-client-cache-keys": {
+      "category": "architecture",
+      "id": 2237,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 23,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 23
+    },
+    "c2014-review-memory-and-decision-ledger": {
+      "category": "architecture",
+      "id": 2014,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 4,
+        "architecture": 14,
+        "ux": 0,
+        "feature": 8
+      },
+      "margin": 6
+    },
+    "c4026-ocr-fallback-for-scanned-pdf-and-images": {
+      "category": "feature",
+      "id": 4026,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 6,
+        "architecture": 20,
+        "ux": 0,
+        "feature": 73
+      },
+      "margin": 53
+    },
+    "c4027-docs-troubleshooting-hub-and-debug-recipes": {
+      "category": "feature",
+      "id": 4027,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 5,
+        "architecture": 10,
+        "ux": 0,
+        "feature": 19
+      },
+      "margin": 9
+    },
+    "c1009-source-trust-signals-and-quality-hints": {
+      "category": "architecture",
+      "id": 1009,
+      "bucket": "c1000–c1999",
+      "bucket_start": 1000,
+      "bucket_end": 1999,
+      "scores": {
+        "refactor": 2,
+        "architecture": 7,
+        "ux": 3,
+        "feature": 2
+      },
+      "margin": 4
+    },
+    "c4032-ingestion-work-estimates-and-budget-preview": {
+      "category": "feature",
+      "id": 4032,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 0,
+        "architecture": 10,
+        "ux": 0,
+        "feature": 14
+      },
+      "margin": 4
+    },
+    "c2056-source-language-detection-and-translation-hints": {
+      "category": "architecture",
+      "id": 2056,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 19,
+        "ux": 0,
+        "feature": 4
+      },
+      "margin": 15
+    },
+    "c4034-run-template-profiles-and-resume-defaults": {
+      "category": "feature",
+      "id": 4034,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 0,
+        "architecture": 0,
+        "ux": 0,
+        "feature": 10
+      },
+      "margin": 10
+    },
+    "c2062-context-packing-and-token-budget-explainability": {
+      "category": "architecture",
+      "id": 2062,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 16,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 16
+    },
+    "c2063-task-feed-compaction-and-event-timeline": {
+      "category": "architecture",
+      "id": 2063,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 6,
+        "architecture": 26,
+        "ux": 0,
+        "feature": 6
+      },
+      "margin": 20
+    },
+    "c2023-large-workspace-performance-and-capacity-management": {
+      "category": "architecture",
+      "id": 2023,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 9,
+        "ux": 0,
+        "feature": 5
+      },
+      "margin": 4
+    },
+    "c2069-run-cost-time-estimates-and-interrupt-points": {
+      "category": "architecture",
+      "id": 2069,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 2,
+        "architecture": 18,
+        "ux": 0,
+        "feature": 1
+      },
+      "margin": 16
+    },
+    "c2025-concurrency-budgets-and-backpressure-visibility": {
+      "category": "architecture",
+      "id": 2025,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 56,
+        "ux": 3,
+        "feature": 2
+      },
+      "margin": 53
+    },
+    "c2027-unified-search-query-and-rerank": {
+      "category": "architecture",
+      "id": 2027,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 5,
+        "ux": 0,
+        "feature": 3
+      },
+      "margin": 2
+    },
+    "c1015-notebook-block-history-and-undo-checkpoints": {
+      "category": "refactor",
+      "id": 1015,
+      "bucket": "c1000–c1999",
+      "bucket_start": 1000,
+      "bucket_end": 1999,
+      "scores": {
+        "refactor": 9,
+        "architecture": 1,
+        "ux": 6,
+        "feature": 4
+      },
+      "margin": 3
+    },
+    "c4010-structured-data-connectors-and-sql-workflows": {
+      "category": "feature",
+      "id": 4010,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 15,
+        "architecture": 8,
+        "ux": 0,
+        "feature": 61
+      },
+      "margin": 46
+    },
+    "c4038-table-chart-linked-selections-and-drillthrough": {
+      "category": "feature",
+      "id": 4038,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 1,
+        "architecture": 16,
+        "ux": 7,
+        "feature": 50
+      },
+      "margin": 34
+    },
+    "c2078-timeline-evidence-bands-and-source-drillback": {
+      "category": "architecture",
+      "id": 2078,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 2,
+        "architecture": 44,
+        "ux": 0,
+        "feature": 12
+      },
+      "margin": 32
+    },
+    "c2029-data-pipelines-scheduling-and-backfills": {
+      "category": "architecture",
+      "id": 2029,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 8,
+        "ux": 0,
+        "feature": 5
+      },
+      "margin": 3
+    },
+    "c1017-workspace-scenario-fixtures-and-regression-harness": {
+      "category": "refactor",
+      "id": 1017,
+      "bucket": "c1000–c1999",
+      "bucket_start": 1000,
+      "bucket_end": 1999,
+      "scores": {
+        "refactor": 15,
+        "architecture": 11,
+        "ux": 2,
+        "feature": 2
+      },
+      "margin": 4
+    },
+    "c4015-dlp-redaction-and-sensitive-data-guards": {
+      "category": "feature",
+      "id": 4015,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 2,
+        "architecture": 1,
+        "ux": 2,
+        "feature": 13
+      },
+      "margin": 11
+    },
+    "c4017-meeting-notes-ingestion-and-action-items": {
+      "category": "feature",
+      "id": 4017,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 0,
+        "architecture": 1,
+        "ux": 0,
+        "feature": 3
+      },
+      "margin": 2
+    },
+    "c2086-schema-snapshot-catalog-and-regression-baselines": {
+      "category": "architecture",
+      "id": 2086,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 8,
+        "architecture": 15,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 7
+    },
+    "c3003-personal-agent-sidebar-and-global-hotkey": {
+      "category": "ux",
+      "id": 3003,
+      "bucket": "c3000–c3999",
+      "bucket_start": 3000,
+      "bucket_end": 3999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 0,
+        "ux": 16,
+        "feature": 0
+      },
+      "margin": 16
+    },
+    "c2088-workspace-branching-and-safe-exploration-lanes": {
+      "category": "architecture",
+      "id": 2088,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 2,
+        "architecture": 4,
+        "ux": 2,
+        "feature": 2
+      },
+      "margin": 2
+    },
+    "c2089-steering-preferences-and-durable-user-rules": {
+      "category": "architecture",
+      "id": 2089,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 10,
+        "ux": 4,
+        "feature": 1
+      },
+      "margin": 6
+    },
+    "c2091-reading-queue-prioritization-and-guided-order": {
+      "category": "architecture",
+      "id": 2091,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 12,
+        "ux": 0,
+        "feature": 2
+      },
+      "margin": 10
+    },
+    "c2032-canonical-entities-glossary-and-semantic-resolution": {
+      "category": "architecture",
+      "id": 2032,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 3,
+        "architecture": 12,
+        "ux": 1,
+        "feature": 3
+      },
+      "margin": 9
+    },
+    "c2093-quote-clipping-and-note-weaving": {
+      "category": "architecture",
+      "id": 2093,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 8,
+        "ux": 2,
+        "feature": 2
+      },
+      "margin": 6
+    },
+    "c1007-doc-governance-drift-checks-and-spec-code-coverage": {
+      "category": "refactor",
+      "id": 1007,
+      "bucket": "c1000–c1999",
+      "bucket_start": 1000,
+      "bucket_end": 1999,
+      "scores": {
+        "refactor": 33,
+        "architecture": 20,
+        "ux": 5,
+        "feature": 0
+      },
+      "margin": 13
+    },
+    "c4021-source-remediation-queues-and-bulk-fixes": {
+      "category": "feature",
+      "id": 4021,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 0,
+        "architecture": 8,
+        "ux": 0,
+        "feature": 9
+      },
+      "margin": 1
+    },
+    "c3024-context-assembly-drop-reasons-and-recovery-actions": {
+      "category": "ux",
+      "id": 3024,
+      "bucket": "c3000–c3999",
+      "bucket_start": 3000,
+      "bucket_end": 3999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 8,
+        "ux": 9,
+        "feature": 3
+      },
+      "margin": 1
+    },
+    "c2097-evidence-first-generation-modes-and-unsafe-claim-brakes": {
+      "category": "architecture",
+      "id": 2097,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 2,
+        "architecture": 31,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 29
+    },
+    "c4041-run-postmortem-summaries-and-recommendation-loops": {
+      "category": "architecture",
+      "id": 4041,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 3,
+        "architecture": 12,
+        "ux": 0,
+        "feature": 10
+      },
+      "margin": 2
+    },
+    "c2036-scenario-planning-and-decision-simulations": {
+      "category": "feature",
+      "id": 2036,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 0,
+        "architecture": 7,
+        "ux": 0,
+        "feature": 11
+      },
+      "margin": 4
+    },
+    "c2112-background-refresh-windows-and-idle-execution": {
+      "category": "architecture",
+      "id": 2112,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 4,
+        "architecture": 19,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 15
+    },
+    "c2115-longform-rewrite-passes-and-structural-refinement": {
+      "category": "architecture",
+      "id": 2115,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 3,
+        "architecture": 16,
+        "ux": 0,
+        "feature": 2
+      },
+      "margin": 13
+    },
+    "c4046-output-fact-sheets-and-one-page-abstracts": {
+      "category": "architecture",
+      "id": 4046,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 0,
+        "architecture": 9,
+        "ux": 6,
+        "feature": 3
+      },
+      "margin": 3
+    },
+    "c1002-db-migration-drift-gates-and-sqlite-baselines": {
+      "category": "refactor",
+      "id": 1002,
+      "bucket": "c1000–c1999",
+      "bucket_start": 1000,
+      "bucket_end": 1999,
+      "scores": {
+        "refactor": 67,
+        "architecture": 59,
+        "ux": 0,
+        "feature": 3
+      },
+      "margin": 8
+    },
+    "c1003-workspace-backup-migration-and-tiered-archive": {
+      "category": "refactor",
+      "id": 1003,
+      "bucket": "c1000–c1999",
+      "bucket_start": 1000,
+      "bucket_end": 1999,
+      "scores": {
+        "refactor": 44,
+        "architecture": 5,
+        "ux": 0,
+        "feature": 10
+      },
+      "margin": 34
+    },
+    "c1010-capability-negotiation-fallback-order-and-route-audit": {
+      "category": "refactor",
+      "id": 1010,
+      "bucket": "c1000–c1999",
+      "bucket_start": 1000,
+      "bucket_end": 1999,
+      "scores": {
+        "refactor": 16,
+        "architecture": 15,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 1
+    },
+    "c1042-backend-feature-module-conventions-and-migration-gates": {
+      "category": "refactor",
+      "id": 1042,
+      "bucket": "c1000–c1999",
+      "bucket_start": 1000,
+      "bucket_end": 1999,
+      "scores": {
+        "refactor": 74,
+        "architecture": 12,
+        "ux": 6,
+        "feature": 7
+      },
+      "margin": 62
+    },
+    "c2074-output-renderer-unification-and-template-versioning": {
+      "category": "architecture",
+      "id": 2074,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 14,
+        "architecture": 17,
+        "ux": 7,
+        "feature": 14
+      },
+      "margin": 3
+    },
+    "c2167-frontend-error-ux-and-recovery-actions": {
+      "category": "architecture",
+      "id": 2167,
+      "bucket": "c2000–c2999",
+      "bucket_start": 2000,
+      "bucket_end": 2999,
+      "scores": {
+        "refactor": 17,
+        "architecture": 31,
+        "ux": 17,
+        "feature": 5
+      },
+      "margin": 14
+    },
+    "c4062-source-operations-readiness-and-monitoring-lifecycle": {
+      "category": "feature",
+      "id": 4062,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 4,
+        "architecture": 15,
+        "ux": 6,
+        "feature": 20
+      },
+      "margin": 5
+    },
+    "c4063-observability-and-diagnostics-foundation": {
+      "category": "refactor",
+      "id": 4063,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 57,
+        "architecture": 29,
+        "ux": 3,
+        "feature": 8
+      },
+      "margin": 28
+    },
+    "c4064-config-profiles-capability-matrix-and-degraded-mode": {
+      "category": "architecture",
+      "id": 4064,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 25,
+        "architecture": 45,
+        "ux": 0,
+        "feature": 4
+      },
+      "margin": 20
+    },
+    "c4065-source-connectors-framework-and-official-plugins-pack": {
+      "category": "feature",
+      "id": 4065,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 0,
+        "architecture": 29,
+        "ux": 3,
+        "feature": 43
+      },
+      "margin": 14
+    },
+    "c4066-vector-index-migrations-atomicity-and-journaling": {
+      "category": "refactor",
+      "id": 4066,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 47,
+        "architecture": 12,
+        "ux": 0,
+        "feature": 10
+      },
+      "margin": 35
+    },
+    "c4067-run-lifecycle-durability-and-stage-gates": {
+      "category": "architecture",
+      "id": 4067,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 6,
+        "architecture": 14,
+        "ux": 3,
+        "feature": 1
+      },
+      "margin": 8
+    },
+    "c4069-workspace-continuity-home-and-review-loops": {
+      "category": "ux",
+      "id": 4069,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 3,
+        "architecture": 11,
+        "ux": 36,
+        "feature": 0
+      },
+      "margin": 25
+    },
+    "c4070-preset-style-draft-and-regression-loop": {
+      "category": "refactor",
+      "id": 4070,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 8,
+        "architecture": 5,
+        "ux": 1,
+        "feature": 2
+      },
+      "margin": 3
+    },
+    "c4071-citation-claim-review-and-traceback-loop": {
+      "category": "architecture",
+      "id": 4071,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 8,
+        "architecture": 63,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 55
+    },
+    "c4072-workspace-state-bootstrap-and-hydration": {
+      "category": "architecture",
+      "id": 4072,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 3,
+        "architecture": 29,
+        "ux": 4,
+        "feature": 0
+      },
+      "margin": 25
+    },
+    "c4074-api-contract-surface-fieldsets-and-client-governance": {
+      "category": "architecture",
+      "id": 4074,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 14,
+        "architecture": 64,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 50
+    },
+    "c4075-workspace-frontend-performance-and-load-shaping": {
+      "category": "architecture",
+      "id": 4075,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 6,
+        "architecture": 11,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 5
+    },
+    "c4076-backend-runtime-context-lifecycle-and-upstream-governance": {
+      "category": "architecture",
+      "id": 4076,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 6,
+        "architecture": 69,
+        "ux": 0,
+        "feature": 2
+      },
+      "margin": 63
+    },
+    "c4077-notebook-structure-navigation-and-argument-scaffolding": {
+      "category": "ux",
+      "id": 4077,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 3,
+        "architecture": 6,
+        "ux": 12,
+        "feature": 0
+      },
+      "margin": 6
+    },
+    "c4078-briefing-slide-composition-review-and-sync": {
+      "category": "architecture",
+      "id": 4078,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 19,
+        "architecture": 22,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 3
+    },
+    "c4079-retrieval-trace-lens-replay-and-ranking-governance": {
+      "category": "architecture",
+      "id": 4079,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 26,
+        "architecture": 167,
+        "ux": 6,
+        "feature": 2
+      },
+      "margin": 141
+    },
+    "c4081-source-ingestion-provenance-dedup-and-delta-indexing": {
+      "category": "architecture",
+      "id": 4081,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 3,
+        "architecture": 16,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 13
+    },
+    "c4082-personal-knowledge-continuity-and-threaded-research-memory": {
+      "category": "refactor",
+      "id": 4082,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 6,
+        "architecture": 6,
+        "ux": 4,
+        "feature": 0
+      },
+      "margin": 0
+    },
+    "c4083-ui-state-events-drift-and-repair-governance": {
+      "category": "architecture",
+      "id": 4083,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 57,
+        "architecture": 63,
+        "ux": 0,
+        "feature": 18
+      },
+      "margin": 6
+    },
+    "c4084-artifact-packaging-versioning-interoperability-and-review-bundles": {
+      "category": "feature",
+      "id": 4084,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 3,
+        "architecture": 10,
+        "ux": 0,
+        "feature": 26
+      },
+      "margin": 16
+    },
+    "c4085-workspace-guidance-goals-and-readiness-substrate": {
+      "category": "ux",
+      "id": 4085,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 3,
+        "architecture": 29,
+        "ux": 34,
+        "feature": 0
+      },
+      "margin": 5
+    },
+    "c4086-external-api-webhooks-and-sdk-release-governance": {
+      "category": "architecture",
+      "id": 4086,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 31,
+        "architecture": 47,
+        "ux": 0,
+        "feature": 8
+      },
+      "margin": 16
+    },
+    "c4087-workspace-discovery-metadata-and-sample-gallery": {
+      "category": "architecture",
+      "id": 4087,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 3,
+        "architecture": 4,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 1
+    },
+    "c4088-plugin-catalog-health-compat-and-fallback-experience": {
+      "category": "architecture",
+      "id": 4088,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 5,
+        "architecture": 8,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 3
+    },
+    "c4089-command-action-surface-routing-and-composition": {
+      "category": "ux",
+      "id": 4089,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 4,
+        "architecture": 3,
+        "ux": 10,
+        "feature": 0
+      },
+      "margin": 6
+    },
+    "c4090-provenance-replay-repro-and-regression-triage-foundation": {
+      "category": "architecture",
+      "id": 4090,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 6,
+        "architecture": 26,
+        "ux": 0,
+        "feature": 10
+      },
+      "margin": 16
+    },
+    "c4091-agent-sandbox-permissions-and-compute-runtime": {
+      "category": "architecture",
+      "id": 4091,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 10,
+        "architecture": 16,
+        "ux": 0,
+        "feature": 2
+      },
+      "margin": 6
+    },
+    "c4092-mobile-browser-capture-and-local-first-sync": {
+      "category": "architecture",
+      "id": 4092,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 5,
+        "architecture": 21,
+        "ux": 3,
+        "feature": 4
+      },
+      "margin": 16
+    },
+    "c4093-typed-generation-compatibility-fallback-and-repair-loop": {
+      "category": "refactor",
+      "id": 4093,
+      "bucket": "c4000+",
+      "bucket_start": 4000,
+      "bucket_end": null,
+      "scores": {
+        "refactor": 37,
+        "architecture": 23,
+        "ux": 0,
+        "feature": 0
+      },
+      "margin": 14
+    }
+  }
+}
