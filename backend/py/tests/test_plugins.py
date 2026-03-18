@@ -35,6 +35,13 @@ class StubEntryPoint:
         return self.plugin
 
 
+def _make_entry_points_provider(entry_points: list[Any]):
+    def _provider(_group: str):
+        return entry_points
+
+    return _provider
+
+
 class MockProviderPlugin:
     api_version = "v1"
 
@@ -142,48 +149,38 @@ class MockSourceConnectorPlugin:
         return relative_path.encode()
 
 
-def test_plugin_registry_loads_ai_provider_plugin(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
+def test_plugin_registry_loads_ai_provider_plugin() -> None:
     plugin = MockProviderPlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings()
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
+        ),
+    )
 
     assert report.loaded == ["mock"]
     assert registry.ai_providers["mock"] is plugin
 
 
 def test_plugin_registry_loads_ai_provider_plugin_from_class_entry_point(
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="mock", value="x:y", plugin=MockProviderPlugin)],
-    )
-
     settings = Settings()
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="mock", value="x:y", plugin=MockProviderPlugin)],
+        ),
+    )
 
     assert report.loaded == ["mock"]
     assert isinstance(registry.ai_providers["mock"], MockProviderPlugin)
 
 
-def test_plugin_registry_loads_parser_plugin(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
+def test_plugin_registry_loads_parser_plugin() -> None:
     class MockParserPlugin:
         api_version = "v1"
         parser_type = "mock-parser"
@@ -194,25 +191,22 @@ def test_plugin_registry_loads_parser_plugin(monkeypatch: pytest.MonkeyPatch) ->
             raise AssertionError("should not be called")
 
     plugin = MockParserPlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="mock-parser-plugin", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings()
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="mock-parser-plugin", value="x:y", plugin=plugin)],
+        ),
+    )
 
     assert report.loaded == ["mock-parser-plugin"]
     assert registry.parsers["mock-parser"] is plugin
     assert registry.list_parsers() == ["mock-parser"]
 
 
-def test_plugin_registry_loads_web_extractor_plugin(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
+def test_plugin_registry_loads_web_extractor_plugin() -> None:
     class MockWebExtractorPlugin:
         api_version = "v1"
         extractor_type = "jina"
@@ -225,16 +219,15 @@ def test_plugin_registry_loads_web_extractor_plugin(monkeypatch: pytest.MonkeyPa
             raise AssertionError("should not be called")
 
     plugin = MockWebExtractorPlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="extractor-jina", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings()
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="extractor-jina", value="x:y", plugin=plugin)],
+        ),
+    )
 
     assert report.loaded == ["extractor-jina"]
     assert registry.web_extractors["jina"] is plugin
@@ -242,22 +235,17 @@ def test_plugin_registry_loads_web_extractor_plugin(monkeypatch: pytest.MonkeyPa
     assert registry.list_web_extractors() == ["jina"]
 
 
-def test_plugin_registry_loads_output_type_plugin_and_extension_attributes(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
+def test_plugin_registry_loads_output_type_plugin_and_extension_attributes() -> None:
     plugin = MockOutputTypePlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="mock-output", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings()
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="mock-output", value="x:y", plugin=plugin)],
+        ),
+    )
 
     assert report.loaded == ["mock-output"]
     assert registry.output_types["QUIZ"] is plugin
@@ -269,20 +257,17 @@ def test_plugin_registry_loads_output_type_plugin_and_extension_attributes(
     assert registry.get_frontend_bundle("QUIZ") == plugin.frontend_bundle
 
 
-def test_plugin_registry_loads_source_connector_plugin(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
+def test_plugin_registry_loads_source_connector_plugin() -> None:
     plugin = MockSourceConnectorPlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="mock-connector", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings()
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="mock-connector", value="x:y", plugin=plugin)],
+        ),
+    )
 
     assert report.loaded == ["mock-connector"]
     assert registry.source_connectors["mock-connector"] is plugin
@@ -310,29 +295,23 @@ def test_plugin_registry_output_type_conflict_overwrites_and_logs_warning(
     plugin_b = MockOutputTypePlugin()
     plugin_b.schema = _SchemaB
 
-    # Mock reason: entry point ordering drives conflict behavior and must be deterministic in tests.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [
-            StubEntryPoint(name="plugin-a", value="x:a", plugin=plugin_a),
-            StubEntryPoint(name="plugin-b", value="x:b", plugin=plugin_b),
-        ],
-    )
-
     settings = Settings()
     registry = PluginRegistry()
-    registry.load_from_entry_points(settings)
+    registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [
+                StubEntryPoint(name="plugin-a", value="x:a", plugin=plugin_a),
+                StubEntryPoint(name="plugin-b", value="x:b", plugin=plugin_b),
+            ],
+        ),
+    )
 
     assert registry.output_types["QUIZ"] is plugin_b
     assert any(message == "output type plugin conflict; overwriting" for message, _ in warnings)
 
 
-def test_plugin_registry_output_type_plugin_without_extensions_is_ok(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
+def test_plugin_registry_output_type_plugin_without_extensions_is_ok() -> None:
     class MinimalOutputTypePlugin:
         api_version = "v1"
 
@@ -344,16 +323,15 @@ def test_plugin_registry_output_type_plugin_without_extensions_is_ok(
         config_schema = None
 
     plugin = MinimalOutputTypePlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="mock-output", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings()
     registry = PluginRegistry()
-    registry.load_from_entry_points(settings)
+    registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="mock-output", value="x:y", plugin=plugin)],
+        ),
+    )
 
     assert registry.output_types["QUIZ"] is plugin
     assert registry.get_output_type_metadata("QUIZ") is None
@@ -362,19 +340,10 @@ def test_plugin_registry_output_type_plugin_without_extensions_is_ok(
     assert registry.get_frontend_bundle("QUIZ") is None
 
 
-def test_workspace_tools_endpoint_includes_render_descriptor_when_plugin_available(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
+def test_workspace_tools_endpoint_includes_render_descriptor_when_plugin_available() -> None:
     from crystalith.web.app import create_app
 
     plugin = MockOutputTypePlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="mock-output", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings()
 
@@ -384,7 +353,14 @@ def test_workspace_tools_endpoint_includes_render_descriptor_when_plugin_availab
         upgrade_head(db_url)
         manager = create_db_manager(db_url)
         vector_store = InMemoryVectorStore()
-        app = create_app(settings=settings, db_manager=manager, vector_store=vector_store)
+        app = create_app(
+            settings=settings,
+            db_manager=manager,
+            vector_store=vector_store,
+            plugins_entry_points_provider=_make_entry_points_provider(
+                [StubEntryPoint(name="mock-output", value="x:y", plugin=plugin)],
+            ),
+        )
         with TestClient(app) as client:
             payload = client.get("/v1/workspace/tools").json()
             config_payload = client.get("/v1/workspace/tools/quiz/config").json()
@@ -407,19 +383,10 @@ def test_workspace_tools_endpoint_includes_render_descriptor_when_plugin_availab
     assert "official" in payload["diagnostics"]
 
 
-def test_workspace_tools_endpoint_omits_frontend_bundle_when_feature_disabled(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
+def test_workspace_tools_endpoint_omits_frontend_bundle_when_feature_disabled() -> None:
     from crystalith.web.app import create_app
 
     plugin = MockOutputTypePlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="mock-output", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings.model_validate(
         {"app": {"features": {"workspace_frontend_bundles_enabled": False}}},
@@ -431,7 +398,14 @@ def test_workspace_tools_endpoint_omits_frontend_bundle_when_feature_disabled(
         upgrade_head(db_url)
         manager = create_db_manager(db_url)
         vector_store = InMemoryVectorStore()
-        app = create_app(settings=settings, db_manager=manager, vector_store=vector_store)
+        app = create_app(
+            settings=settings,
+            db_manager=manager,
+            vector_store=vector_store,
+            plugins_entry_points_provider=_make_entry_points_provider(
+                [StubEntryPoint(name="mock-output", value="x:y", plugin=plugin)],
+            ),
+        )
         with TestClient(app) as client:
             payload = client.get("/v1/workspace/tools").json()
 
@@ -444,20 +418,17 @@ def test_workspace_tools_endpoint_omits_frontend_bundle_when_feature_disabled(
     assert payload["diagnostics"]["slides"]["error_code"] == "slides_plugin_required"
 
 
-def test_plugin_registry_respects_disabled_list(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
+def test_plugin_registry_respects_disabled_list() -> None:
     plugin = MockProviderPlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings(plugins=PluginsSettings(enabled=None, disabled=["mock"]))
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
+        ),
+    )
 
     assert report.loaded == []
     skipped = report.skipped["mock"]
@@ -467,23 +438,20 @@ def test_plugin_registry_respects_disabled_list(monkeypatch: pytest.MonkeyPatch)
     assert "mock" not in registry.ai_providers
 
 
-def test_plugin_registry_skips_incompatible_api_version(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
+def test_plugin_registry_skips_incompatible_api_version() -> None:
     class BadVersionPlugin(MockProviderPlugin):
         api_version = "v0"
 
     plugin = BadVersionPlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings()
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
+        ),
+    )
 
     assert report.loaded == []
     skipped = report.skipped["mock"]
@@ -494,20 +462,17 @@ def test_plugin_registry_skips_incompatible_api_version(monkeypatch: pytest.Monk
     assert "mock" not in registry.ai_providers
 
 
-def test_plugin_registry_disables_plugin_not_in_allowlist(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
+def test_plugin_registry_disables_plugin_not_in_allowlist() -> None:
     plugin = MockProviderPlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings(plugins=PluginsSettings(enabled=["some-other-plugin"], disabled=[]))
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
+        ),
+    )
 
     assert report.loaded == []
     skipped = report.skipped["mock"]
@@ -517,9 +482,7 @@ def test_plugin_registry_disables_plugin_not_in_allowlist(monkeypatch: pytest.Mo
     assert skipped.to_dict()["error_code"] == "disabled"
 
 
-def test_plugin_registry_reports_missing_dependency(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
+def test_plugin_registry_reports_missing_dependency() -> None:
     @dataclass(slots=True)
     class _FailingEntryPoint:
         name: str
@@ -528,16 +491,14 @@ def test_plugin_registry_reports_missing_dependency(monkeypatch: pytest.MonkeyPa
         def load(self) -> Any:
             raise ModuleNotFoundError("No module named 'missing_pkg'", name="missing_pkg")
 
-    # Mock reason: simulate import failures without relying on installed packages.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [_FailingEntryPoint(name="missing", value="missing:plugin")],
-    )
-
     settings = Settings()
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [_FailingEntryPoint(name="missing", value="missing:plugin")],
+        ),
+    )
 
     assert report.loaded == []
     skipped = report.skipped["missing"]
@@ -547,9 +508,7 @@ def test_plugin_registry_reports_missing_dependency(monkeypatch: pytest.MonkeyPa
     assert skipped.to_dict()["error_code"] == "missing_dependency"
 
 
-def test_plugin_registry_reports_generic_load_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
+def test_plugin_registry_reports_generic_load_error() -> None:
     @dataclass(slots=True)
     class _FailingEntryPoint:
         name: str
@@ -558,16 +517,14 @@ def test_plugin_registry_reports_generic_load_error(monkeypatch: pytest.MonkeyPa
         def load(self) -> Any:
             raise RuntimeError("boom")
 
-    # Mock reason: simulate plugin load errors deterministically.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [_FailingEntryPoint(name="broken", value="broken:plugin")],
-    )
-
     settings = Settings()
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [_FailingEntryPoint(name="broken", value="broken:plugin")],
+        ),
+    )
 
     assert report.loaded == []
     skipped = report.skipped["broken"]
@@ -577,26 +534,21 @@ def test_plugin_registry_reports_generic_load_error(monkeypatch: pytest.MonkeyPa
 
 
 def test_plugin_registry_reports_init_error_when_entry_point_returns_non_noarg_class(
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
     class PluginClass:
         api_version = "v1"
 
         def __init__(self, required: str) -> None:
             self.required = required
 
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="needs-args", value="x:y", plugin=PluginClass)],
-    )
-
     settings = Settings()
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="needs-args", value="x:y", plugin=PluginClass)],
+        ),
+    )
 
     assert report.loaded == []
     skipped = report.skipped["needs-args"]
@@ -604,19 +556,15 @@ def test_plugin_registry_reports_init_error_when_entry_point_returns_non_noarg_c
     assert skipped.details["entry_point"] == "x:y"
 
 
-def test_plugin_registry_reports_no_compatible_interfaces(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="noop", value="x:y", plugin=object())],
-    )
-
+def test_plugin_registry_reports_no_compatible_interfaces() -> None:
     settings = Settings()
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="noop", value="x:y", plugin=object())],
+        ),
+    )
 
     assert report.loaded == []
     skipped = report.skipped["noop"]
@@ -624,33 +572,27 @@ def test_plugin_registry_reports_no_compatible_interfaces(monkeypatch: pytest.Mo
     assert skipped.details["entry_point"] == "x:y"
 
 
-def test_plugin_registry_honors_plugins_load_order(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
+def test_plugin_registry_honors_plugins_load_order() -> None:
     plugin_a = MockProviderPlugin()
     plugin_b = MockProviderPlugin()
     plugin_c = MockProviderPlugin()
 
-    # Mock reason: entry point ordering drives conflict behavior and must be deterministic in tests.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [
-            StubEntryPoint(name="b", value="x:b", plugin=plugin_b),
-            StubEntryPoint(name="a", value="x:a", plugin=plugin_a),
-            StubEntryPoint(name="c", value="x:c", plugin=plugin_c),
-        ],
-    )
-
     settings = Settings(plugins=PluginsSettings(enabled=None, disabled=[], load_order=["a"]))
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [
+                StubEntryPoint(name="b", value="x:b", plugin=plugin_b),
+                StubEntryPoint(name="a", value="x:a", plugin=plugin_a),
+                StubEntryPoint(name="c", value="x:c", plugin=plugin_c),
+            ],
+        ),
+    )
 
     assert report.loaded == ["b", "c", "a"]
 
-def test_plugin_registry_reports_invalid_api_version_type(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
+def test_plugin_registry_reports_invalid_api_version_type() -> None:
     class BadVersionPlugin:
         api_version = 123
 
@@ -661,16 +603,15 @@ def test_plugin_registry_reports_invalid_api_version_type(monkeypatch: pytest.Mo
             raise AssertionError("should not be called")
 
     plugin = BadVersionPlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="bad-version", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings()
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="bad-version", value="x:y", plugin=plugin)],
+        ),
+    )
 
     assert report.loaded == []
     skipped = report.skipped["bad-version"]
@@ -745,16 +686,15 @@ def test_output_type_plugin_wrong_extension_attribute_types_are_ignored(
         config_schema = "bad"
 
     plugin = BadExtensionsOutputTypePlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="bad-output", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings()
     registry = PluginRegistry()
-    report = registry.load_from_entry_points(settings)
+    report = registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="bad-output", value="x:y", plugin=plugin)],
+        ),
+    )
 
     assert report.loaded == ["bad-output"]
     assert registry.get_output_type_metadata("FAQ") is None
@@ -771,20 +711,17 @@ def test_output_type_plugin_wrong_extension_attribute_types_are_ignored(
     )
 
 
-def test_plugin_registry_query_helpers_list_loaded_plugins(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
+def test_plugin_registry_query_helpers_list_loaded_plugins() -> None:
     plugin = MockProviderPlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings()
     registry = PluginRegistry()
-    registry.load_from_entry_points(settings)
+    registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
+        ),
+    )
 
     assert registry.is_provider_available("openai") is True
     assert registry.is_provider_available("mock") is True
@@ -793,17 +730,10 @@ def test_plugin_registry_query_helpers_list_loaded_plugins(monkeypatch: pytest.M
     assert registry.list_output_types() == []
 
 
-def test_models_endpoint_includes_plugin_provider(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
+def test_models_endpoint_includes_plugin_provider() -> None:
     from crystalith.web.app import create_app
 
     plugin = MockProviderPlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings(
         models=ModelsSettings(
@@ -826,7 +756,14 @@ def test_models_endpoint_includes_plugin_provider(monkeypatch: pytest.MonkeyPatc
         upgrade_head(db_url)
         manager = create_db_manager(db_url)
         vector_store = InMemoryVectorStore()
-        app = create_app(settings=settings, db_manager=manager, vector_store=vector_store)
+        app = create_app(
+            settings=settings,
+            db_manager=manager,
+            vector_store=vector_store,
+            plugins_entry_points_provider=_make_entry_points_provider(
+                [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
+            ),
+        )
         with TestClient(app) as client:
             payload = client.get("/v1/models").json()
 
@@ -834,17 +771,10 @@ def test_models_endpoint_includes_plugin_provider(monkeypatch: pytest.MonkeyPatc
     assert any(model["id"] == "mock-chat" for model in payload["models"])
 
 
-def test_models_endpoint_hides_disabled_plugin_provider(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
+def test_models_endpoint_hides_disabled_plugin_provider() -> None:
     from crystalith.web.app import create_app
 
     plugin = MockProviderPlugin()
-    # Mock reason: entry point discovery must be deterministic in tests and cannot depend on host environment.
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings(
         plugins=PluginsSettings(enabled=None, disabled=["mock"]),
@@ -868,7 +798,14 @@ def test_models_endpoint_hides_disabled_plugin_provider(monkeypatch: pytest.Monk
         upgrade_head(db_url)
         manager = create_db_manager(db_url)
         vector_store = InMemoryVectorStore()
-        app = create_app(settings=settings, db_manager=manager, vector_store=vector_store)
+        app = create_app(
+            settings=settings,
+            db_manager=manager,
+            vector_store=vector_store,
+            plugins_entry_points_provider=_make_entry_points_provider(
+                [StubEntryPoint(name="mock", value="x:y", plugin=plugin)],
+            ),
+        )
         with TestClient(app) as client:
             payload = client.get("/v1/models").json()
 
@@ -876,20 +813,17 @@ def test_models_endpoint_hides_disabled_plugin_provider(monkeypatch: pytest.Monk
     assert payload["models"] == []
 
 
-
-def test_plugin_registry_resolves_single_active_slides_workflow(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
+def test_plugin_registry_resolves_single_active_slides_workflow() -> None:
     plugin = MockSlidesWorkflowPlugin()
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [StubEntryPoint(name="slides-slidev", value="x:y", plugin=plugin)],
-    )
 
     settings = Settings()
     registry = PluginRegistry()
-    registry.load_from_entry_points(settings)
+    registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [StubEntryPoint(name="slides-slidev", value="x:y", plugin=plugin)],
+        ),
+    )
 
     selection = registry.resolve_active_slides_workflow(settings)
     assert selection.available is True
@@ -897,21 +831,26 @@ def test_plugin_registry_resolves_single_active_slides_workflow(monkeypatch: pyt
     assert selection.plugin is plugin
 
 
-def test_plugin_registry_reports_ambiguous_slides_workflow_selection(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [
-            StubEntryPoint(name="slides-slidev", value="x:y", plugin=MockSlidesWorkflowPlugin("slidev")),
-            StubEntryPoint(name="slides-marp", value="x:z", plugin=MockSlidesWorkflowPlugin("marp")),
-        ],
-    )
-
+def test_plugin_registry_reports_ambiguous_slides_workflow_selection() -> None:
     settings = Settings()
     registry = PluginRegistry()
-    registry.load_from_entry_points(settings)
+    registry.load_from_entry_points(
+        settings,
+        entry_points_provider=_make_entry_points_provider(
+            [
+                StubEntryPoint(
+                    name="slides-slidev",
+                    value="x:y",
+                    plugin=MockSlidesWorkflowPlugin("slidev"),
+                ),
+                StubEntryPoint(
+                    name="slides-marp",
+                    value="x:z",
+                    plugin=MockSlidesWorkflowPlugin("marp"),
+                ),
+            ],
+        ),
+    )
 
     selection = registry.resolve_active_slides_workflow(settings)
     assert selection.available is False
@@ -919,18 +858,10 @@ def test_plugin_registry_reports_ambiguous_slides_workflow_selection(monkeypatch
     assert selection.details["available_plugin_ids"] == ["slides-marp", "slides-slidev"]
 
 
-def test_plugin_registry_reports_configured_slides_plugin_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
-    monkeypatch.setattr(
-        registry_mod,
-        "_iter_entry_points",
-        lambda group: [],
-    )
-
+def test_plugin_registry_reports_configured_slides_plugin_unavailable() -> None:
     settings = Settings.model_validate({"slides": {"default_plugin": "slides-slidev"}})
     registry = PluginRegistry()
-    registry.load_from_entry_points(settings)
+    registry.load_from_entry_points(settings, entry_points_provider=_make_entry_points_provider([]))
 
     selection = registry.resolve_active_slides_workflow(settings)
     assert selection.available is False

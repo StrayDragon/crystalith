@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from importlib import metadata
-from typing import cast
+from typing import Protocol, cast
 
 from cl_logs.logging import get_logger
 
@@ -34,6 +35,16 @@ SupportedPlugin = (
 )
 
 
+class EntryPointLike(Protocol):
+    name: str
+    value: str
+
+    def load(self) -> object: ...
+
+
+EntryPointsProvider = Callable[[str], Iterable[EntryPointLike]]
+
+
 def _iter_entry_points(group: str) -> list[metadata.EntryPoint]:
     try:
         selected = metadata.entry_points(group=group)
@@ -43,10 +54,10 @@ def _iter_entry_points(group: str) -> list[metadata.EntryPoint]:
 
 
 def _order_entry_points(
-    entry_points: list[metadata.EntryPoint],
+    entry_points: list[EntryPointLike],
     *,
     settings: Settings,
-) -> list[metadata.EntryPoint]:
+) -> list[EntryPointLike]:
     """
     Deterministically order entry points.
 
@@ -60,7 +71,7 @@ def _order_entry_points(
         return ordered
 
     by_id = {item.name: item for item in ordered}
-    moved: list[metadata.EntryPoint] = []
+    moved: list[EntryPointLike] = []
     moved_ids: set[str] = set()
     for raw in load_order:
         plugin_id = str(raw or "").strip()
@@ -185,7 +196,12 @@ class PluginRegistry:
         self._loaded_entrypoints.clear()
         self._load_report = PluginLoadReport()
 
-    def load_from_entry_points(self, settings: Settings) -> PluginLoadReport:
+    def load_from_entry_points(
+        self,
+        settings: Settings,
+        *,
+        entry_points_provider: EntryPointsProvider | None = None,
+    ) -> PluginLoadReport:
         """
         Scan installed packages and register compatible plugins.
 
@@ -193,9 +209,12 @@ class PluginRegistry:
         """
         self.reset()
 
+        provider = entry_points_provider or _iter_entry_points
+        entry_points = list(provider(self.entrypoint_group))
+
         report = PluginLoadReport()
         for entry_point in _order_entry_points(
-            _iter_entry_points(self.entrypoint_group),
+            entry_points,
             settings=settings,
         ):
             plugin_id = entry_point.name

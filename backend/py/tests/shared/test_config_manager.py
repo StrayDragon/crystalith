@@ -106,7 +106,11 @@ def test_config_manager_load_secrets_from_file_and_directory(tmp_path) -> None:
     assert manager2._load_secrets()["TOKEN"] == "t"
 
 
-def test_config_manager_autodiscovers_secrets_file_next_to_config(tmp_path, monkeypatch) -> None:
+def test_config_manager_autodiscovers_secrets_file_next_to_config(
+    tmp_path,
+    monkeypatch,
+    disable_ollama_auto_discovery,
+) -> None:
     config_path = tmp_path / "app.yaml"
     secrets_path = tmp_path / "secrets.yaml"
     _write_yaml(secrets_path, "OPENAI_API_KEY: sk-test\n")
@@ -147,16 +151,17 @@ models:
 
     manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.gen.json")
 
-    # Mock reason: keep config load test deterministic and independent of local Ollama availability.
-    monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
-
     settings = manager.load(validate_schema=False)
     model = settings.models.get_model("test-chat")
     assert model is not None
     assert model.get_openai_config().api_key == "sk-test"
 
 
-def test_config_manager_ignores_legacy_env_overrides(tmp_path, monkeypatch) -> None:
+def test_config_manager_ignores_legacy_env_overrides(
+    tmp_path,
+    monkeypatch,
+    disable_ollama_auto_discovery,
+) -> None:
     config_path = tmp_path / "app.yaml"
     _write_yaml(config_path, _minimal_config_yaml())
 
@@ -168,15 +173,16 @@ def test_config_manager_ignores_legacy_env_overrides(tmp_path, monkeypatch) -> N
     monkeypatch.setenv("CACHE_PROVIDER", "redis")
     monkeypatch.setenv("REDIS_URL", "redis://example.invalid:6379/0")
 
-    # Mock reason: keep config load test deterministic and independent of local Ollama availability.
-    monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
-
     settings = manager.load(validate_schema=False)
     assert "override.db" not in settings.database.url
     assert settings.search.searxng.host == ""
 
 
-def test_config_manager_auto_selects_gateway_embedding_model(tmp_path, monkeypatch) -> None:
+def test_config_manager_auto_selects_gateway_embedding_model(
+    tmp_path,
+    monkeypatch,
+    disable_ollama_auto_discovery,
+) -> None:
     config_path = tmp_path / "app.yaml"
     _write_yaml(
         config_path,
@@ -220,14 +226,15 @@ models:
     )
     manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.gen.json")
 
-    # Mock reason: keep config load test deterministic and independent of local Ollama availability.
-    monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
-
     settings = manager.load(validate_schema=False)
     assert settings.models.defaults.embedding == "bge-m3-openai"
 
 
-def test_config_manager_does_not_override_official_openai_embedding_default(tmp_path, monkeypatch) -> None:
+def test_config_manager_does_not_override_official_openai_embedding_default(
+    tmp_path,
+    monkeypatch,
+    disable_ollama_auto_discovery,
+) -> None:
     config_path = tmp_path / "app.yaml"
     _write_yaml(
         config_path,
@@ -271,9 +278,6 @@ models:
     )
     manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.gen.json")
 
-    # Mock reason: keep config load test deterministic and independent of local Ollama availability.
-    monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
-
     settings = manager.load(validate_schema=False)
     assert settings.get_default_embedding_model() is not None
     assert settings.get_default_embedding_model().id == "text-embedding-3-small"
@@ -311,7 +315,11 @@ def test_config_manager_validate_config_returns_warnings() -> None:
     assert any("no host" in msg for msg in warnings)
 
 
-def test_config_manager_load_roundtrip_with_schema(tmp_path, monkeypatch) -> None:
+def test_config_manager_load_roundtrip_with_schema(
+    tmp_path,
+    monkeypatch,
+    disable_ollama_auto_discovery,
+) -> None:
     config_path = tmp_path / "app.yaml"
     schema_path = tmp_path / "app.schema.gen.json"
     _write_yaml(config_path, _minimal_config_yaml())
@@ -319,15 +327,16 @@ def test_config_manager_load_roundtrip_with_schema(tmp_path, monkeypatch) -> Non
     manager = ConfigManager(config_path=config_path, schema_path=schema_path)
     manager.write_schema()
 
-    # Mock reason: keep config load test deterministic and independent of local Ollama availability.
-    monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
-
     settings = manager.load(validate_schema=True)
     assert isinstance(settings, Settings)
     assert settings.models.get_default_for_role("chat") is not None
 
 
-def test_config_manager_normalizes_data_paths_from_config_root(tmp_path, monkeypatch) -> None:
+def test_config_manager_normalizes_data_paths_from_config_root(
+    tmp_path,
+    monkeypatch,
+    disable_ollama_auto_discovery,
+) -> None:
     root = tmp_path / "repo"
     config_dir = root / "config"
     config_dir.mkdir(parents=True)
@@ -336,9 +345,6 @@ def test_config_manager_normalizes_data_paths_from_config_root(tmp_path, monkeyp
     _write_yaml(config_path, _minimal_config_yaml())
 
     manager = ConfigManager(config_path=config_path)
-
-    # Mock reason: keep config load test deterministic and independent of local Ollama availability.
-    monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
 
     settings = manager.load(validate_schema=False)
 
@@ -349,7 +355,11 @@ def test_config_manager_normalizes_data_paths_from_config_root(tmp_path, monkeyp
     assert settings.vector_storage.chroma.path.startswith(root.as_posix())
 
 
-def test_config_manager_selects_first_reachable_database_candidate(tmp_path, monkeypatch) -> None:
+def test_config_manager_selects_first_reachable_database_candidate(
+    tmp_path,
+    monkeypatch,
+    disable_ollama_auto_discovery,
+) -> None:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(("127.0.0.1", 0))
     port = sock.getsockname()[1]
@@ -388,9 +398,6 @@ database:
         )
         manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.gen.json")
 
-        # Mock reason: keep config load test deterministic and independent of local Ollama availability.
-        monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
-
         settings = manager.load(validate_schema=False)
         assert settings.database.url == reachable
     finally:
@@ -399,7 +406,11 @@ database:
             sock.close()
 
 
-def test_config_manager_skips_postgres_candidate_without_password(tmp_path, monkeypatch) -> None:
+def test_config_manager_skips_postgres_candidate_without_password(
+    tmp_path,
+    monkeypatch,
+    disable_ollama_auto_discovery,
+) -> None:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(("127.0.0.1", 0))
     port = sock.getsockname()[1]
@@ -436,9 +447,6 @@ database:
 """,
         )
         manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.gen.json")
-
-        # Mock reason: keep config load test deterministic and independent of local Ollama availability.
-        monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
 
         settings = manager.load(validate_schema=False)
         assert "sqlite" in settings.database.url
