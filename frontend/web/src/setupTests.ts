@@ -12,7 +12,11 @@ beforeAll(() => {
   client.setConfig({
     baseUrl: "http://localhost",
   });
-  server.listen({ onUnhandledRequest: "bypass" });
+  const onUnhandledRequest = (process.env.VITEST_MSW_ON_UNHANDLED || "error") as
+    | "bypass"
+    | "warn"
+    | "error";
+  server.listen({ onUnhandledRequest });
 });
 
 afterEach(() => {

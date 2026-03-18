@@ -213,6 +213,7 @@ test("sendMessage passes selected source ids", async () => {
 });
 
 test("streaming path applies snapshot and delta with backend message id", async () => {
+  // Mock reason: the SSE client is the boundary seam here; we emulate server events deterministically.
   const ssePostMock = vi.spyOn(client.sse, "post");
   server.use(
     http.get("*/v1/notebooks/:notebook_id/sessions/:session_id/messages", () =>

@@ -14,6 +14,14 @@ Runs the app in development mode.
 
 Runs the Vitest test runner.
 
+### `pnpm run test:ci`
+
+Runs the deterministic frontend quality gate (mock-report + stable test suite).
+
+Notes:
+- Test files named `*.experimental.test.ts(x)` are excluded by default and only run via `pnpm run test:all`.
+- Stable tests default to `MSW onUnhandledRequest=error` to prevent accidental real network calls.
+
 ### `pnpm run build`
 
 Builds the app for production to the `dist` folder.

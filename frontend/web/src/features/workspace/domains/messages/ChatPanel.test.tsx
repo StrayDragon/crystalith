@@ -3,6 +3,8 @@ import { createRef } from "react";
 import type { ComponentProps } from "react";
 import { beforeEach, expect, test, vi } from "vitest";
 
+// Mock reason: rivu-kernel UI rendering depends on runtime/kernel behavior that is unstable in jsdom;
+// these tests only assert ChatPanel's wiring + rendering of component ids.
 const { componentRendererSpy } = vi.hoisted(() => ({
   componentRendererSpy: vi.fn(({ componentId }: { componentId: string }) => (
     <div>{componentId}</div>

@@ -12,6 +12,8 @@ Frontend (from repo root):
 - `cd frontend/web && pnpm install` — install dependencies.
 - `pnpm dev` — start the Vite dev server.
 - `pnpm test` — run Vitest and React Testing Library.
+- `pnpm run test:ci` — run deterministic frontend quality gate (stable suite + mock-report gate).
+- `pnpm run test:all` — run all tests including `*.experimental.test.*` (looser constraints allowed).
 - `pnpm run lint` — run incremental `oxlint` for changed frontend source files.
 - `pnpm run lint:all` — run full `oxlint` across `src/`.
 - `pnpm run format` — apply `oxfmt` to frontend source/config files.

@@ -193,6 +193,7 @@ test("enqueueOutputJob propagates generation preference", async () => {
 });
 
 test("cancelOutputJob aborts running output job", async () => {
+  // Mock reason: simulate in-flight request timing deterministically without wall-clock sleeps.
   vi.useFakeTimers();
   try {
     server.use(

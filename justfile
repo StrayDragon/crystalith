@@ -200,7 +200,7 @@ test-backend:
 
 # Run frontend tests only
 test-frontend:
-    cd frontend/web && pnpm test
+    cd frontend/web && pnpm run test:ci
 
 # --------------------------------------------------------------------------
 # Docs

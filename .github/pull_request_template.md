@@ -14,7 +14,7 @@ Describe what changed and why.
 ## Testing / 测试
 
 - [ ] `cd backend/py && just test`
-- [ ] `cd frontend/web && pnpm test`
+- [ ] `cd frontend/web && pnpm run test:ci`
 - [ ] `cd frontend/web && pnpm run typecheck`
 - [ ] `just docs-build` (if docs changed)
 

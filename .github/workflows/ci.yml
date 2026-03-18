@@ -123,7 +123,7 @@ jobs:
       - name: Run tests
         run: |
           cd frontend/web
-          pnpm test
+          pnpm run test:ci
 
       - name: Lint (incremental baseline)
         run: |
