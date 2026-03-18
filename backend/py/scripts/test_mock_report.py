@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import ast
+import io
 import json
 import re
+import tokenize
 from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -78,36 +81,216 @@ _DOUBLE_CLASS_KEYWORDS = (
 )
 
 
-def _iter_test_files(base: Path) -> list[Path]:
-    service = sorted(base.glob("tests/**/test_*.py"))
-    packages = sorted(base.glob("packages/*/tests/**/test_*.py"))
-    return [p for p in (service + packages) if p.is_file()]
+def _dotted_name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        base = _dotted_name(node.value)
+        if base is None:
+            return None
+        return f"{base}.{node.attr}"
+    return None
 
 
-def _group_key(path: Path, *, base: Path) -> str:
-    rel = path.relative_to(base)
-    parts = rel.parts
-    if not parts:
-        return "."
-    if parts[0] == "tests":
-        if len(parts) >= 2 and parts[1] == "features" and len(parts) >= 3:
-            if parts[2].endswith(".py"):
-                return "tests/features"
-            return f"tests/features/{parts[2]}"
-        if len(parts) >= 2:
-            return f"tests/{parts[1]}"
-        return "tests"
-    if parts[0] == "packages" and len(parts) >= 2:
-        return f"packages/{parts[1]}"
-    return parts[0]
+def _eval_str_expr(node: ast.AST) -> str | None:
+    """
+    Best-effort evaluation for string literals in AST.
+
+    Supports:
+    - string constants
+    - concatenation via `+` when both sides are string-literal-evaluable
+    - f-strings with only literal parts (no formatted values)
+    """
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = _eval_str_expr(node.left)
+        right = _eval_str_expr(node.right)
+        if left is None or right is None:
+            return None
+        return f"{left}{right}"
+
+    if isinstance(node, ast.JoinedStr):
+        parts: list[str] = []
+        for item in node.values:
+            if isinstance(item, ast.Constant) and isinstance(item.value, str):
+                parts.append(item.value)
+            else:
+                return None
+        return "".join(parts)
+
+    return None
 
 
-def _double_classes(content: str) -> list[str]:
-    names = [m.group(1) for m in _CLASS_DEF_RE.finditer(content)]
-    return [name for name in names if any(keyword in name for keyword in _DOUBLE_CLASS_KEYWORDS)]
+def _iter_call_keyword(call: ast.Call, name: str) -> ast.AST | None:
+    for kw in call.keywords:
+        if kw.arg == name:
+            return kw.value
+    return None
 
 
-def _private_patch_targets(content: str) -> list[str]:
+def _collect_monkeypatch_names(tree: ast.AST) -> set[str]:
+    names: set[str] = set()
+
+    def _is_monkeypatch_annotation(node: ast.AST | None) -> bool:
+        if node is None:
+            return False
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+            return _is_monkeypatch_annotation(node.left) or _is_monkeypatch_annotation(node.right)
+        dotted = _dotted_name(node)
+        return dotted in {"pytest.MonkeyPatch", "MonkeyPatch"}
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            args = [
+                *node.args.posonlyargs,
+                *node.args.args,
+                *node.args.kwonlyargs,
+            ]
+            for arg in args:
+                if arg.arg == "monkeypatch" or _is_monkeypatch_annotation(arg.annotation):
+                    names.add(arg.arg)
+    return names
+
+
+def _collect_unittest_patch_names(tree: ast.AST) -> set[str]:
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == "unittest.mock":
+            for alias in node.names:
+                if alias.name == "patch":
+                    names.add(alias.asname or alias.name)
+    return names
+
+
+def _collect_unittest_module_names(tree: ast.AST) -> set[str]:
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "unittest":
+                    names.add(alias.asname or alias.name)
+    return names
+
+
+def _collect_unittest_mock_module_names(tree: ast.AST) -> set[str]:
+    """
+    Collect local binding names that refer to `unittest.mock` (or `unittest`'s `mock` module).
+
+    Supported patterns:
+    - `from unittest import mock` (or `as <alias>`)
+    - `import unittest.mock as <alias>`
+    """
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == "unittest":
+            for alias in node.names:
+                if alias.name == "mock":
+                    names.add(alias.asname or alias.name)
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "unittest.mock" and alias.asname:
+                    names.add(alias.asname)
+    return names
+
+
+def _private_patch_targets_ast(tree: ast.AST) -> list[str]:
+    monkeypatch_names = _collect_monkeypatch_names(tree)
+    unittest_patch_names = _collect_unittest_patch_names(tree)
+    unittest_module_names = _collect_unittest_module_names(tree)
+    unittest_mock_module_names = _collect_unittest_mock_module_names(tree)
+
+    targets: set[str] = set()
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+
+        func = node.func
+
+        # monkeypatch.setattr(...)
+        if (
+            isinstance(func, ast.Attribute)
+            and func.attr == "setattr"
+            and isinstance(func.value, ast.Name)
+            and func.value.id in monkeypatch_names
+        ):
+            target_expr: ast.AST | None = node.args[0] if node.args else _iter_call_keyword(node, "target")
+            target_str = _eval_str_expr(target_expr) if target_expr is not None else None
+            if target_str:
+                attr = target_str.split(".")[-1]
+                if attr.startswith("_"):
+                    targets.add(target_str)
+
+            name_expr: ast.AST | None = None
+            if len(node.args) >= 2:
+                name_expr = node.args[1]
+            else:
+                name_expr = _iter_call_keyword(node, "name")
+            name_str = _eval_str_expr(name_expr) if name_expr is not None else None
+            if name_str and name_str.startswith("_"):
+                targets.add(name_str)
+            continue
+
+        dotted = _dotted_name(func)
+        if not dotted:
+            continue
+
+        # patch("pkg.mod.attr") / mocker.patch("...") / unittest.mock.patch("...") variants
+        is_patch = False
+        if isinstance(func, ast.Name) and func.id in unittest_patch_names:
+            is_patch = True
+        elif dotted == "unittest.mock.patch":
+            is_patch = True
+        elif any(dotted == f"{name}.mock.patch" for name in unittest_module_names):
+            is_patch = True
+        elif any(dotted == f"{name}.patch" for name in unittest_mock_module_names):
+            is_patch = True
+        elif dotted == "mocker.patch":
+            is_patch = True
+
+        if is_patch:
+            target_expr = node.args[0] if node.args else _iter_call_keyword(node, "target")
+            target_str = _eval_str_expr(target_expr) if target_expr is not None else None
+            if target_str:
+                attr = target_str.split(".")[-1]
+                if attr.startswith("_"):
+                    targets.add(target_str)
+            continue
+
+        # patch.object(obj, "attr") / mocker.patch.object(...) / unittest.mock.patch.object(...) variants
+        is_patch_object = False
+        if (
+            isinstance(func, ast.Attribute)
+            and func.attr == "object"
+            and isinstance(func.value, ast.Name)
+            and func.value.id in unittest_patch_names
+        ):
+            is_patch_object = True
+        elif dotted == "unittest.mock.patch.object":
+            is_patch_object = True
+        elif any(dotted == f"{name}.mock.patch.object" for name in unittest_module_names):
+            is_patch_object = True
+        elif any(dotted == f"{name}.patch.object" for name in unittest_mock_module_names):
+            is_patch_object = True
+        elif dotted == "mocker.patch.object":
+            is_patch_object = True
+
+        if is_patch_object:
+            attr_expr: ast.AST | None = None
+            if len(node.args) >= 2:
+                attr_expr = node.args[1]
+            else:
+                attr_expr = _iter_call_keyword(node, "attribute")
+            attr_str = _eval_str_expr(attr_expr) if attr_expr is not None else None
+            if attr_str and attr_str.startswith("_"):
+                targets.add(attr_str)
+
+    return sorted(targets)
+
+
+def _private_patch_targets_regex(content: str) -> list[str]:
     targets: list[str] = []
 
     uses_unittest_mock = bool(_UNITTEST_MOCK_RE.search(content))
@@ -163,19 +346,151 @@ def _private_patch_targets(content: str) -> list[str]:
     return sorted(set(targets))
 
 
+_MONKEYPATCH_OP_NAMES = {
+    "setattr",
+    "setenv",
+    "delenv",
+    "setitem",
+    "delitem",
+    "chdir",
+}
+
+
+def _count_mock_reason_hits(content: str) -> int:
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(content).readline)
+        return sum(
+            1
+            for token_type, token_string, _start, _end, _line in tokens
+            if token_type == tokenize.COMMENT and "Mock reason:" in token_string
+        )
+    except tokenize.TokenError:
+        # Fallback when content is not tokenizable (e.g., broken string literal).
+        return len(_MOCK_REASON_RE.findall(content))
+
+
+def _count_monkeypatch_ops(tree: ast.AST, *, monkeypatch_names: set[str]) -> int:
+    if not monkeypatch_names:
+        return 0
+
+    ops = 0
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+
+        func = node.func
+        if not isinstance(func, ast.Attribute) or func.attr not in _MONKEYPATCH_OP_NAMES:
+            continue
+        if isinstance(func.value, ast.Name) and func.value.id in monkeypatch_names:
+            ops += 1
+    return ops
+
+
+class _DoubleClassCollector(ast.NodeVisitor):
+    def __init__(self) -> None:
+        self.names: list[str] = []
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        if any(keyword in node.name for keyword in _DOUBLE_CLASS_KEYWORDS):
+            self.names.append(node.name)
+        self.generic_visit(node)
+
+
+def _double_classes_ast(tree: ast.AST) -> list[str]:
+    collector = _DoubleClassCollector()
+    collector.visit(tree)
+    return collector.names
+
+
+def _unittest_mock_hits(tree: ast.AST) -> int:
+    """
+    Count `unittest.mock` usage signals based on AST.
+
+    This intentionally ignores string literals/comments to avoid false positives.
+    """
+    hits = 0
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            if node.module == "unittest.mock":
+                hits += len(node.names)
+                continue
+            if node.module == "unittest" and any(alias.name == "mock" for alias in node.names):
+                hits += sum(1 for alias in node.names if alias.name == "mock")
+                continue
+        if isinstance(node, ast.Import):
+            hits += sum(1 for alias in node.names if alias.name == "unittest.mock")
+    return hits
+
+
+def _iter_test_files(base: Path) -> list[Path]:
+    service = sorted(base.glob("tests/**/test_*.py"))
+    packages = sorted(base.glob("packages/*/tests/**/test_*.py"))
+    return [p for p in (service + packages) if p.is_file()]
+
+
+def _group_key(path: Path, *, base: Path) -> str:
+    rel = path.relative_to(base)
+    parts = rel.parts
+    if not parts:
+        return "."
+    if parts[0] == "tests":
+        if len(parts) >= 2 and parts[1] == "features" and len(parts) >= 3:
+            if parts[2].endswith(".py"):
+                return "tests/features"
+            return f"tests/features/{parts[2]}"
+        if len(parts) >= 2:
+            return f"tests/{parts[1]}"
+        return "tests"
+    if parts[0] == "packages" and len(parts) >= 2:
+        return f"packages/{parts[1]}"
+    return parts[0]
+
+
+def _double_classes(content: str) -> list[str]:
+    names = [m.group(1) for m in _CLASS_DEF_RE.finditer(content)]
+    return [name for name in names if any(keyword in name for keyword in _DOUBLE_CLASS_KEYWORDS)]
+
+
+def _private_patch_targets(content: str) -> list[str]:
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return _private_patch_targets_regex(content)
+
+    return _private_patch_targets_ast(tree)
+
+
 def _analyze_file(path: Path, *, base: Path) -> FileStats:
     content = path.read_text(encoding="utf-8")
-    monkeypatch_ops = len(_MONKEYPATCH_OP_RE.findall(content))
-    unittest_mock_hits = len(_UNITTEST_MOCK_RE.findall(content))
-    mock_reason_hits = len(_MOCK_REASON_RE.findall(content))
-    doubles = _double_classes(content)
-    private_targets = _private_patch_targets(content)
+    mock_reason_hits = _count_mock_reason_hits(content)
+
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        tree = None
+
+    if tree is None:
+        monkeypatch_ops = len(_MONKEYPATCH_OP_RE.findall(content))
+        unittest_mock_hits = len(_UNITTEST_MOCK_RE.findall(content))
+        doubles = _double_classes(content)
+        private_targets = _private_patch_targets_regex(content)
+        uses_monkeypatch = bool(_MONKEYPATCH_WORD_RE.search(content))
+        uses_unittest_mock = bool(_UNITTEST_MOCK_RE.search(content))
+    else:
+        monkeypatch_names = _collect_monkeypatch_names(tree)
+        monkeypatch_ops = _count_monkeypatch_ops(tree, monkeypatch_names=monkeypatch_names)
+        unittest_mock_hits = _unittest_mock_hits(tree)
+        doubles = _double_classes_ast(tree)
+        private_targets = _private_patch_targets_ast(tree)
+        uses_monkeypatch = bool(monkeypatch_names)
+        uses_unittest_mock = unittest_mock_hits > 0
+
     return FileStats(
         path=path.relative_to(base).as_posix(),
         group=_group_key(path, base=base),
-        uses_monkeypatch=bool(_MONKEYPATCH_WORD_RE.search(content)),
+        uses_monkeypatch=uses_monkeypatch,
         monkeypatch_ops=monkeypatch_ops,
-        uses_unittest_mock=bool(_UNITTEST_MOCK_RE.search(content)),
+        uses_unittest_mock=uses_unittest_mock,
         unittest_mock_hits=unittest_mock_hits,
         double_classes=doubles,
         mock_reason_hits=mock_reason_hits,

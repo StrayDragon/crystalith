@@ -41,3 +41,11 @@
 #### Scenario: Running the report twice yields identical output
 - **WHEN** 在相同代码与环境下连续运行报告两次
 - **THEN** 报告 SHALL 输出相同内容（允许时间戳/运行耗时等非核心字段被省略）
+
+### Requirement: Report avoids false positives from strings and comments
+报告在检测 `monkeypatch`/`unittest.mock`/私有 patch 目标时 MUST 避免把**字符串字面量**与**注释**中的代码片段误计入统计。
+
+#### Scenario: Code examples in a triple-quoted string do not count
+- **GIVEN** 某测试文件仅在三引号字符串里包含 `monkeypatch.setattr("pkg.mod._x", ...)` 这类示例文本
+- **WHEN** 运行 `cd backend/py && just test-mock-report`
+- **THEN** 报告 SHALL NOT 将该示例文本计入 `monkeypatch ops` / `private patch targets` / `unittest.mock hits`
