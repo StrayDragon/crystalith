@@ -644,6 +644,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Exit non-zero if any private patch target is detected.",
     )
+    parser.add_argument(
+        "--check-mock-reasons",
+        action="store_true",
+        help="Exit non-zero if any file uses monkeypatch ops without a nearby \"Mock reason:\" comment.",
+    )
     args = parser.parse_args(argv)
 
     base: Path = args.base.resolve()
@@ -657,10 +662,24 @@ def main(argv: list[str] | None = None) -> int:
             "files": [asdict(fs) for fs in stats],
         }
         print(json.dumps(payload, ensure_ascii=False, indent=2))
-        return 1 if (args.check_private_patches and any(fs.private_patch_targets for fs in stats)) else 0
+        has_private_patches = any(fs.private_patch_targets for fs in stats)
+        has_missing_reasons = any(
+            fs.monkeypatch_ops and fs.mock_reason_hits == 0 for fs in stats
+        )
+        should_fail = (args.check_private_patches and has_private_patches) or (
+            args.check_mock_reasons and has_missing_reasons
+        )
+        return 1 if should_fail else 0
 
     _print_report(file_stats=stats, top=args.top)
-    return 1 if (args.check_private_patches and any(fs.private_patch_targets for fs in stats)) else 0
+    has_private_patches = any(fs.private_patch_targets for fs in stats)
+    has_missing_reasons = any(
+        fs.monkeypatch_ops and fs.mock_reason_hits == 0 for fs in stats
+    )
+    should_fail = (args.check_private_patches and has_private_patches) or (
+        args.check_mock_reasons and has_missing_reasons
+    )
+    return 1 if should_fail else 0
 
 
 if __name__ == "__main__":
