@@ -358,6 +358,7 @@ def test_resolve_parser_for_file_falls_back_for_legacy_parser_factory(monkeypatc
             **kwargs,
         )
 
+    # Mock reason: simulate older ParserFactory signature to ensure backward-compat fallback path.
     monkeypatch.setattr(ParserFactory, "resolve_from_file", classmethod(legacy_resolve_from_file))
 
     parser, parser_plugin_id, diagnostic = source_connectors_api._resolve_parser_for_file(  # pyright: ignore[reportPrivateUsage]
@@ -384,6 +385,7 @@ def test_resolve_parser_for_file_reraises_unexpected_type_error(monkeypatch):
     ):
         raise TypeError("unexpected failure")
 
+    # Mock reason: force ParserFactory to raise to validate error surfacing behavior.
     monkeypatch.setattr(ParserFactory, "resolve_from_file", classmethod(_raise_type_error))
 
     with pytest.raises(TypeError):

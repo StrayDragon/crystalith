@@ -10,7 +10,7 @@ packages-test:
         uv run --project $package pytest --no-cov $package/tests
     done
 
-test: packages-test lint typecheck check-imports config-schema-check
+test: packages-test lint typecheck check-imports config-schema-check test-mock-report-check
     uv run pytest tests/ -v
 
 typecheck:
@@ -72,3 +72,9 @@ llm-eval:
 
 embedding-cache-bench:
     uv run python scripts/embedding_cache_bench.py
+
+test-mock-report:
+    uv run python scripts/test_mock_report.py
+
+test-mock-report-check:
+    uv run python scripts/test_mock_report.py --check-private-patches

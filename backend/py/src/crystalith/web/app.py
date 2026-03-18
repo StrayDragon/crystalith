@@ -5,8 +5,10 @@ import datetime as dt
 import logging
 import os
 import socket
+from collections.abc import Awaitable
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
+from typing import Protocol
 from urllib.parse import urlparse
 
 import httpx
@@ -46,6 +48,7 @@ from crystalith.shared.env import (
     env_float,
 )
 from crystalith.shared.plugins import PluginRegistry
+from crystalith.shared.plugins.registry import EntryPointsProvider
 from crystalith.shared.schemas.errors import (
     build_error_response,
     build_error_response_from_exception,
@@ -63,6 +66,21 @@ from .optional_services_types import (
 from .routers import register_routers
 
 logger = logging.getLogger(__name__)
+
+
+class HttpEndpointProber(Protocol):
+    def __call__(
+        self,
+        endpoint: str | None,
+        *,
+        timeout_s: float,
+        path: str | None = None,
+        healthy_status_codes: set[int] | None = None,
+    ) -> tuple[bool, str | None]: ...
+
+
+class OptionalServicesRefresher(Protocol):
+    def __call__(self, app: FastAPIX, *, timeout_s: float) -> Awaitable[None]: ...
 
 
 def _find_config_path() -> Path | None:
@@ -398,6 +416,7 @@ async def _refresh_optional_services_status(
     app: FastAPIX,
     *,
     timeout_s: float,
+    http_endpoint_prober: HttpEndpointProber = _probe_http_endpoint,
 ) -> None:
     settings: Settings = app.state.settings
     statuses = _build_optional_status_template(settings)
@@ -410,7 +429,7 @@ async def _refresh_optional_services_status(
         service_path = chroma_probe["path"]
         chroma["last_probe"] = probe_time
         healthy, error = await asyncio.to_thread(
-            _probe_http_endpoint,
+            http_endpoint_prober,
             chroma["endpoint"],
             timeout_s=service_timeout,
             path=service_path or "/api/v1/heartbeat",
@@ -521,7 +540,7 @@ async def _refresh_optional_services_status(
             searxng_last_error: str | None = None
             for candidate in ordered:
                 healthy, error = await asyncio.to_thread(
-                    _probe_http_endpoint,
+                    http_endpoint_prober,
                     candidate,
                     timeout_s=service_timeout,
                     path=service_path,
@@ -606,10 +625,11 @@ async def _run_optional_services_monitor(
     *,
     interval_s: float,
     timeout_s: float,
+    optional_services_refresher: OptionalServicesRefresher,
 ) -> None:
     while not stop_event.is_set():
         try:
-            await _refresh_optional_services_status(
+            await optional_services_refresher(
                 app,
                 timeout_s=timeout_s,
             )
@@ -629,6 +649,9 @@ def create_app(
     vector_store: VectorStore | None = None,
     task_queue: TaskQueue | None = None,
     cache_provider: CacheProvider | None = None,
+    plugins_entry_points_provider: EntryPointsProvider | None = None,
+    optional_services_refresher: OptionalServicesRefresher | None = None,
+    http_endpoint_prober: HttpEndpointProber | None = None,
 ) -> FastAPIX:
     resolved = settings or _load_settings()
     db = db_manager or create_db_manager(resolved.database.url)
@@ -648,6 +671,17 @@ def create_app(
         limiters=limiters,
     )
 
+    resolved_http_endpoint_prober = http_endpoint_prober or _probe_http_endpoint
+
+    async def _default_optional_services_refresher(app: FastAPIX, *, timeout_s: float) -> None:
+        await _refresh_optional_services_status(
+            app,
+            timeout_s=timeout_s,
+            http_endpoint_prober=resolved_http_endpoint_prober,
+        )
+
+    resolved_optional_services_refresher = optional_services_refresher or _default_optional_services_refresher
+
     @asynccontextmanager
     async def lifespan(app: FastAPIX):
         optional_monitor_stop: asyncio.Event | None = None
@@ -657,7 +691,10 @@ def create_app(
             await asyncio.to_thread(upgrade_head, app.state.settings.database.url)
 
         try:
-            report = app.state.plugins.load_from_entry_points(app.state.settings)
+            report = app.state.plugins.load_from_entry_points(
+                app.state.settings,
+                entry_points_provider=plugins_entry_points_provider,
+            )
             logger.info(
                 "Loaded plugins on startup",
                 extra={"loaded": report.loaded, "skipped": report.skipped},
@@ -716,6 +753,7 @@ def create_app(
                     optional_monitor_stop,
                     interval_s=interval_s,
                     timeout_s=timeout_s,
+                    optional_services_refresher=resolved_optional_services_refresher,
                 )
             )
 
@@ -777,7 +815,7 @@ def create_app(
         )
         if needs_refresh:
             try:
-                await _refresh_optional_services_status(
+                await resolved_optional_services_refresher(
                     app,
                     timeout_s=1.0,
                 )

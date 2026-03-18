@@ -6,17 +6,7 @@ import pytest
 
 from crystalith.shared.config import Settings
 from crystalith.shared.search import SearXNGSearcher
-
-
-class _AsyncStreamResponse:
-    def __init__(self, status_code: int) -> None:
-        self.status_code = status_code
-
-    async def __aenter__(self) -> _AsyncStreamResponse:
-        return self
-
-    async def __aexit__(self, exc_type, exc, tb):
-        return False
+from tests._support.httpx_stubs import AsyncStreamResponseStub, install_httpx_asyncclient_stub
 
 
 @pytest.mark.asyncio
@@ -65,22 +55,10 @@ async def test_searxng_searcher_rejects_unconfigured_host() -> None:
 
 @pytest.mark.asyncio
 async def test_searxng_searcher_accepts_empty_query_healthcheck_response(monkeypatch: pytest.MonkeyPatch) -> None:
-    class _Client:
-        def __init__(self, *args, **kwargs):
-            pass
+    def _stream(_method: str, _url: str):
+        return AsyncStreamResponseStub(400)
 
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, exc_type, exc, tb):
-            return False
-
-        def stream(self, method: str, url: str):
-            return _AsyncStreamResponse(400)
-
-    import httpx
-
-    monkeypatch.setattr(httpx, "AsyncClient", _Client)
+    install_httpx_asyncclient_stub(monkeypatch, stream=_stream)
 
     searcher = SearXNGSearcher(host="", endpoint_candidates=["http://a/"], timeout=1)
     resolved = await searcher._resolve_host()
@@ -89,23 +67,10 @@ async def test_searxng_searcher_accepts_empty_query_healthcheck_response(monkeyp
 
 @pytest.mark.asyncio
 async def test_searxng_searcher_resolves_host_from_endpoint_candidates(monkeypatch: pytest.MonkeyPatch) -> None:
-    class _Client:
-        def __init__(self, *args, **kwargs):
-            pass
+    def _stream(_method: str, _url: str):
+        return AsyncStreamResponseStub(200)
 
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, exc_type, exc, tb):
-            return False
-
-        def stream(self, method: str, url: str):
-            return _AsyncStreamResponse(200)
-
-    # Mock reason: deterministic reachability probe without external SearXNG dependency.
-    import httpx
-
-    monkeypatch.setattr(httpx, "AsyncClient", _Client)
+    install_httpx_asyncclient_stub(monkeypatch, stream=_stream)
 
     searcher = SearXNGSearcher(host="", endpoint_candidates=["http://a/", "http://b/"], timeout=1)
     searcher._wrapper = object()  # type: ignore[assignment]
@@ -149,26 +114,13 @@ async def test_searxng_searcher_resolve_host_returns_existing_host_inside_lock()
 async def test_searxng_searcher_resolves_host_skipping_failures(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = {"stream": 0}
 
-    class _Client:
-        def __init__(self, *args, **kwargs):
-            pass
+    def _stream(_method: str, _url: str):
+        calls["stream"] += 1
+        if calls["stream"] == 1:
+            raise RuntimeError("boom")
+        return AsyncStreamResponseStub(204)
 
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, exc_type, exc, tb):
-            return False
-
-        def stream(self, method: str, url: str):
-            calls["stream"] += 1
-            if calls["stream"] == 1:
-                raise RuntimeError("boom")
-            return _AsyncStreamResponse(204)
-
-    # Mock reason: cover exception path in the probe loop without external SearXNG dependency.
-    import httpx
-
-    monkeypatch.setattr(httpx, "AsyncClient", _Client)
+    install_httpx_asyncclient_stub(monkeypatch, stream=_stream)
 
     searcher = SearXNGSearcher(host="", endpoint_candidates=["http://bad", "http://good"], timeout=1)
     resolved = await searcher._resolve_host()
@@ -178,23 +130,10 @@ async def test_searxng_searcher_resolves_host_skipping_failures(monkeypatch: pyt
 
 @pytest.mark.asyncio
 async def test_searxng_searcher_reports_unreachable_endpoint_candidates(monkeypatch: pytest.MonkeyPatch) -> None:
-    class _Client:
-        def __init__(self, *args, **kwargs):
-            pass
+    def _stream(_method: str, _url: str):
+        return AsyncStreamResponseStub(503)
 
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, exc_type, exc, tb):
-            return False
-
-        def stream(self, method: str, url: str):
-            return _AsyncStreamResponse(503)
-
-    # Mock reason: cover the "configured but unreachable" error branch deterministically.
-    import httpx
-
-    monkeypatch.setattr(httpx, "AsyncClient", _Client)
+    install_httpx_asyncclient_stub(monkeypatch, stream=_stream)
 
     searcher = SearXNGSearcher(host="", endpoint_candidates=["http://a", "http://b"], timeout=1)
     with pytest.raises(RuntimeError, match="unreachable"):

@@ -7,13 +7,12 @@ import json
 
 import pytest
 
-from crystalith.features.research import api as research_api
 from crystalith.shared.db import ResearchSession, ResearchStep
 from crystalith.shared.types import ResearchStatus, ResearchStepStatus, ResearchStepType
 
 
 @pytest.mark.asyncio
-async def test_research_stream_emits_plan_search_analysis_report_waiting_and_done(client, app, monkeypatch) -> None:
+async def test_research_stream_emits_plan_search_analysis_report_waiting_and_done(client, app) -> None:
     notebook_resp = await client.post("/v1/notebooks", json={"name": "Research Stream Progress"})
     assert notebook_resp.status_code == 201
     notebook_id = notebook_resp.json()["id"]
@@ -34,16 +33,7 @@ async def test_research_stream_emits_plan_search_analysis_report_waiting_and_don
         research.lock_expires_at = now + datetime.timedelta(minutes=20)
         await session.commit()
 
-    waiting_emitted = asyncio.Event()
-    original_sse_event = research_api._sse_event
-
-    def _tracked_sse_event(event: str, data: dict) -> str:
-        if event == "waiting":
-            waiting_emitted.set()
-        return original_sse_event(event, data)
-
-    # Mock reason: instrument emitted SSE events for ordering assertions without altering production code paths.
-    monkeypatch.setattr(research_api, "_sse_event", _tracked_sse_event)
+    waiting_seen = asyncio.Event()
 
     async def _updater() -> None:
         async with app.state.db.got_manual_session() as session:
@@ -69,7 +59,8 @@ async def test_research_stream_emits_plan_search_analysis_report_waiting_and_don
             )
             await session.commit()
 
-        await asyncio.wait_for(waiting_emitted.wait(), timeout=10)
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(waiting_seen.wait(), timeout=10)
 
         async with app.state.db.got_manual_session() as session:
             research = await session.get(ResearchSession, research_id)
@@ -128,6 +119,8 @@ async def test_research_stream_emits_plan_search_analysis_report_waiting_and_don
                 if current_event and line.startswith("data: "):
                     _ = json.loads(line.removeprefix("data: ").strip() or "{}")
                     events.append(current_event)
+                    if current_event == "waiting":
+                        waiting_seen.set()
                     if current_event == "done":
                         break
                     current_event = None

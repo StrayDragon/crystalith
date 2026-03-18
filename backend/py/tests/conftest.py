@@ -17,6 +17,12 @@ from tests._support.settings import make_settings
 
 
 @pytest.fixture
+def disable_ollama_auto_discovery(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Mock reason: keep config load tests deterministic and independent of local Ollama availability.
+    monkeypatch.setattr("crystalith.shared.config.manager.auto_discover_ollama", lambda _s: 0)
+
+
+@pytest.fixture
 def test_settings() -> Settings:
     return make_settings(
         {

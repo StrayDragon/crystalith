@@ -12,6 +12,7 @@ def test_env_docs_are_unique() -> None:
 
 
 def test_env_bool_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Mock reason: isolate process env for deterministic parsing behavior.
     monkeypatch.delenv(env_mod.CRYSTALITH_OUTPUT_REPAIR, raising=False)
     assert env_mod.env_bool(env_mod.CRYSTALITH_OUTPUT_REPAIR, default=False) is False
 
@@ -23,6 +24,7 @@ def test_env_bool_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_env_bool_optional(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Mock reason: isolate process env for deterministic parsing behavior.
     monkeypatch.delenv(env_mod.CRYSTALITH_RETRIEVAL_MULTI_QUERY, raising=False)
     assert env_mod.env_bool_optional(env_mod.CRYSTALITH_RETRIEVAL_MULTI_QUERY) is None
 
@@ -34,6 +36,7 @@ def test_env_bool_optional(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_env_int_and_float_invalid_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Mock reason: isolate process env for deterministic parsing behavior.
     monkeypatch.setenv(env_mod.CRYSTALITH_EMBEDDING_CACHE_MAX_TEXTS, "not-an-int")
     assert env_mod.env_int(env_mod.CRYSTALITH_EMBEDDING_CACHE_MAX_TEXTS, default=7) == 7
 

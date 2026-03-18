@@ -6,6 +6,7 @@ import contextlib
 import importlib
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Protocol, cast
 
 from .interfaces import (
@@ -34,6 +35,7 @@ class _PlaywrightManager(Protocol):
 
 
 type AsyncPlaywrightFactory = Callable[[], _PlaywrightManager]
+type AsyncPlaywrightLoader = Callable[[], AsyncPlaywrightFactory]
 
 
 def _load_async_playwright() -> AsyncPlaywrightFactory:
@@ -70,6 +72,9 @@ class _TrafilaturaModule(Protocol):
     def extract_metadata(self, html: str, *, default_url: str) -> _TrafilaturaMetadata | None: ...
 
 
+type TrafilaturaLoader = Callable[[], _TrafilaturaModule]
+
+
 def _load_trafilatura() -> _TrafilaturaModule:
     try:
         return cast(_TrafilaturaModule, importlib.import_module("trafilatura"))
@@ -78,6 +83,12 @@ def _load_trafilatura() -> _TrafilaturaModule:
             "trafilatura package is not installed. Install it with: pip install trafilatura",
             extractor="browserless",
         ) from exc
+
+
+@dataclass(slots=True)
+class BrowserlessExtractorDeps:
+    async_playwright_loader: AsyncPlaywrightLoader = _load_async_playwright
+    trafilatura_loader: TrafilaturaLoader = _load_trafilatura
 
 
 class _Page(Protocol):
@@ -126,6 +137,7 @@ class BrowserlessExtractor(BaseExtractor):
         wait_until: str = "networkidle",
         include_tables: bool = True,
         include_links: bool = True,
+        deps: BrowserlessExtractorDeps | None = None,
     ):
         """
         Initialize the Browserless extractor.
@@ -145,6 +157,7 @@ class BrowserlessExtractor(BaseExtractor):
         self.include_tables = include_tables
         self.include_links = include_links
 
+        self._deps = deps or BrowserlessExtractorDeps()
         self._playwright: _Playwright | None = None
         self._browser: _Browser | None = None
 
@@ -166,7 +179,7 @@ class BrowserlessExtractor(BaseExtractor):
             return self._browser
 
         try:
-            async_playwright = _load_async_playwright()
+            async_playwright = self._deps.async_playwright_loader()
         except ImportError as exc:
             raise self._create_error(
                 "playwright package is not installed. "
@@ -262,7 +275,13 @@ class BrowserlessExtractor(BaseExtractor):
         finally:
             await context.close()
 
-        trafilatura = _load_trafilatura()
+        try:
+            trafilatura = self._deps.trafilatura_loader()
+        except ImportError as exc:
+            raise ConfigurationError(
+                "trafilatura package is not installed. Install it with: pip install trafilatura",
+                extractor="browserless",
+            ) from exc
 
         # Extract content using trafilatura
         try:
@@ -334,7 +353,7 @@ class BrowserlessExtractor(BaseExtractor):
         """Check if Browserless service is available."""
         # Check if playwright is installed
         try:
-            _ = _load_async_playwright()
+            _ = self._deps.async_playwright_loader()
         except ImportError:  # pragma: no cover - depends on optional dependency
             return False
         except Exception:  # pragma: no cover - defensive

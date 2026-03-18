@@ -9,7 +9,7 @@ from typing import cast
 
 import pytest
 
-from crystalith.shared.extraction.browserless_extractor import BrowserlessExtractor
+from crystalith.shared.extraction.browserless_extractor import BrowserlessExtractor, BrowserlessExtractorDeps
 from crystalith.shared.extraction.firecrawl_extractor import FirecrawlExtractor
 from crystalith.shared.extraction.interfaces import (
     ConfigurationError,
@@ -85,9 +85,7 @@ async def test_browserless_extractor_builds_connection_url_and_requires_playwrig
 
 
 @pytest.mark.asyncio
-async def test_browserless_extractor_extract_success(monkeypatch: pytest.MonkeyPatch) -> None:
-    import crystalith.shared.extraction.browserless_extractor as browserless_module
-
+async def test_browserless_extractor_extract_success() -> None:
     class _FakePage:
         async def goto(self, url: str, *, wait_until: str, timeout: int) -> object:
             assert url == "https://example.com"
@@ -177,10 +175,16 @@ async def test_browserless_extractor_extract_success(monkeypatch: pytest.MonkeyP
             assert default_url == "https://example.com"
             return _FakeTrafilaturaMetadata()
 
-    monkeypatch.setattr(browserless_module, "_load_async_playwright", lambda: _fake_async_playwright)
-    monkeypatch.setattr(browserless_module, "_load_trafilatura", lambda: _FakeTrafilatura())
+    deps = BrowserlessExtractorDeps(
+        async_playwright_loader=lambda: _fake_async_playwright,
+        trafilatura_loader=lambda: _FakeTrafilatura(),
+    )
 
-    extractor = BrowserlessExtractor(endpoint="ws://browserless.test?launch=1", token="abc")
+    extractor = BrowserlessExtractor(
+        endpoint="ws://browserless.test?launch=1",
+        token="abc",
+        deps=deps,
+    )
     result = await extractor.extract("https://example.com")
 
     assert result.extractor == "browserless"
@@ -191,6 +195,76 @@ async def test_browserless_extractor_extract_success(monkeypatch: pytest.MonkeyP
     assert result.description == "Desc"
     assert result.extra.get("rendered") is True
     assert result.extra.get("title") == "Meta Title"
+
+
+@pytest.mark.asyncio
+async def test_browserless_extractor_extract_requires_trafilatura() -> None:
+    class _FakePage:
+        async def goto(self, *_args, **_kwargs) -> object:
+            return object()
+
+        async def content(self) -> str:
+            return "<html><body><main>Hello</main></body></html>"
+
+        async def title(self) -> str:
+            return "Rendered Title"
+
+        async def close(self) -> None:
+            return None
+
+    class _FakeContext:
+        async def new_page(self) -> _FakePage:
+            return _FakePage()
+
+        async def close(self) -> None:
+            return None
+
+    class _FakeBrowser:
+        def is_connected(self) -> bool:
+            return True
+
+        async def new_context(self, *, user_agent: str) -> _FakeContext:
+            assert user_agent
+            return _FakeContext()
+
+        async def close(self) -> None:
+            return None
+
+    class _FakeChromium:
+        async def connect_over_cdp(self, connection_url: str, *, timeout: int) -> _FakeBrowser:
+            assert connection_url
+            assert timeout
+            return _FakeBrowser()
+
+    class _FakePlaywright:
+        chromium = _FakeChromium()
+
+        async def stop(self) -> None:
+            return None
+
+    class _FakePlaywrightManager:
+        async def start(self) -> _FakePlaywright:
+            return _FakePlaywright()
+
+    def _fake_async_playwright() -> _FakePlaywrightManager:
+        return _FakePlaywrightManager()
+
+    def _missing_trafilatura():
+        raise ImportError("trafilatura")
+
+    deps = BrowserlessExtractorDeps(
+        async_playwright_loader=lambda: _fake_async_playwright,
+        trafilatura_loader=_missing_trafilatura,
+    )
+
+    extractor = BrowserlessExtractor(
+        endpoint="ws://browserless.test?launch=1",
+        token="abc",
+        deps=deps,
+    )
+
+    with pytest.raises(ConfigurationError, match="trafilatura"):
+        await extractor.extract("https://example.com")
 
 
 def test_firecrawl_extractor_requires_api_key() -> None:

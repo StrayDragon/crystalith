@@ -47,6 +47,8 @@
    - `doc-governance/spec.md`
    - `docs-site/spec.md`
    - `delivery-and-deployment/spec.md`
+   - `test-doubles-and-mocking/spec.md`
+   - `test-double-usage-reporting/spec.md`
    - `quality-and-regression/spec.md`
 
 ## Consolidation Map (Old -> New)
