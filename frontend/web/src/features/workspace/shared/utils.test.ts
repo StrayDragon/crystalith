@@ -64,6 +64,7 @@ test("collectChunkIds filters invalid and non-positive values", () => {
 });
 
 test("formatRelativeTime returns humanized values", () => {
+  // Mock reason: make time-dependent formatting deterministic (no wall-clock flakiness).
   vi.useFakeTimers();
   const now = new Date("2024-06-01T12:00:00.000Z");
   vi.setSystemTime(now);

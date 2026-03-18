@@ -17,7 +17,7 @@ build: ensure-deps
     pnpm run build
 
 test: ensure-deps
-    pnpm test
+    pnpm run test:ci
 
 typecheck: ensure-deps
     pnpm run typecheck

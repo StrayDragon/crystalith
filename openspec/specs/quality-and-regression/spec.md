@@ -145,6 +145,10 @@ lint 引入 MUST 采用增量策略，避免一次性全仓重写导致评审噪
 - **WHEN** 开发者运行后端测试替身使用报告入口（例如 `just test-mock-report`）
 - **THEN** 系统 SHALL 输出确定性的统计与迁移导航信息（私有 patch、缺少 `Mock reason:` 的位置、hotspots）
 
+#### Scenario: Developer can run a deterministic frontend report
+- **WHEN** 开发者运行前端测试替身使用报告入口（例如 `cd frontend/web && pnpm run test-mock-report`）
+- **THEN** 系统 SHALL 输出确定性的统计与迁移导航信息（缺少 `Mock reason:` 的位置、hotspots）
+
 ### Requirement: Backend test suites are tiered and reproducible
 后端测试 MUST 明确区分“核心回归链路”与“边缘/试验性用例”，以便在不追求机械 KPI 覆盖率的前提下，稳定守住关键路径并降低 flaky 风险。
 
@@ -163,3 +167,21 @@ lint 引入 MUST 采用增量策略，避免一次性全仓重写导致评审噪
 - **WHEN** 新增/修改边缘或试验性的测试用例
 - **THEN** 该测试 SHOULD 显式标注 `@pytest.mark.experimental`
 - **AND** 默认质量门槛 SHALL 不因该类用例的不稳定而阻塞核心回归链路
+
+### Requirement: Frontend test suites are tiered and reproducible
+前端测试 MUST 明确区分“核心回归链路（稳定套件）”与“边缘/试验性用例”，并默认禁止 accidental real network，以保证核心链路在本地与 CI 中稳定复现。
+
+#### Scenario: Default frontend test gate excludes experimental tests
+- **WHEN** 开发者运行前端默认质量门槛（例如 `cd frontend/web && pnpm run test:ci`）
+- **THEN** 系统 SHALL 运行稳定套件（默认排除 `*.experimental.test.*`）
+- **AND** `experimental` 用例 SHALL 仅在显式入口（例如 `pnpm run test:all`）或单独流水线中运行
+
+#### Scenario: Stable frontend tests reject unhandled network calls
+- **WHEN** 稳定套件中的测试触发未被 MSW handler 覆盖的网络请求
+- **THEN** 测试 SHALL 失败并提示补齐 handler 或将该用例标记为 `experimental`
+
+#### Scenario: Frontend quality gate requires Mock reason for vi patch ops
+- **WHEN** 开发者运行前端默认质量门槛（例如 `cd frontend/web && pnpm run test:ci`）
+- **AND** 某测试文件使用 `vi.mock` / `vi.spyOn` / `vi.stubGlobal` / `vi.useFakeTimers` 等改变运行行为
+- **AND** 该文件未包含任何 `Mock reason:` 注释
+- **THEN** 质量门槛 SHALL 失败并给出可定位的诊断信息
