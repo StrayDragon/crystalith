@@ -144,3 +144,22 @@ lint 引入 MUST 采用增量策略，避免一次性全仓重写导致评审噪
 #### Scenario: Developer can run a deterministic report
 - **WHEN** 开发者运行后端测试替身使用报告入口（例如 `just test-mock-report`）
 - **THEN** 系统 SHALL 输出确定性的统计与迁移导航信息（私有 patch、缺少 `Mock reason:` 的位置、hotspots）
+
+### Requirement: Backend test suites are tiered and reproducible
+后端测试 MUST 明确区分“核心回归链路”与“边缘/试验性用例”，以便在不追求机械 KPI 覆盖率的前提下，稳定守住关键路径并降低 flaky 风险。
+
+#### Scenario: Default backend quality gate excludes experimental tests
+- **WHEN** 开发者运行默认后端质量门槛（例如 `cd backend/py && just test`）
+- **THEN** 系统 SHALL 运行所有未标记为 `experimental` 的测试用例
+- **AND** `experimental` 用例 SHALL 仅在显式入口（例如 `just test-all`）或单独流水线中运行
+
+#### Scenario: Core regression suite is executable and deterministic
+- **WHEN** 开发者运行核心回归套件（例如 `cd backend/py && just test-core`）
+- **THEN** 系统 SHALL 仅运行标记为 `core` 的测试用例（允许通过 marker 或路径约定自动打标）
+- **AND** SHALL 设置稳定的执行环境（例如 `PYTHONHASHSEED=0`、`TZ=UTC`）
+- **AND** core 套件 SHALL 默认禁止外部网络访问（仅允许 localhost），以保证可复现与可审计
+
+#### Scenario: Tests opt into experimental explicitly
+- **WHEN** 新增/修改边缘或试验性的测试用例
+- **THEN** 该测试 SHOULD 显式标注 `@pytest.mark.experimental`
+- **AND** 默认质量门槛 SHALL 不因该类用例的不稳定而阻塞核心回归链路
