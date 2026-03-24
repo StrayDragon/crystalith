@@ -1,5 +1,6 @@
 {
   "generated_at": "2026-03-24",
+  "top10_updated_at": "2026-03-25",
   "priority_order": [
     "refactor",
     "architecture",
@@ -12,6 +13,78 @@
     "ux": "用户体验（旧功能优化）",
     "feature": "新功能"
   },
+  "top10": [
+    {
+      "priority": 10,
+      "change": "c10-backend-feature-module-conventions-and-migration-gates",
+      "prev_id": "c1042",
+      "tier": "foundation",
+      "rationale": "后端模块边界、约定、脚手架和lint门禁——几乎所有后端功能开发的前置依赖"
+    },
+    {
+      "priority": 20,
+      "change": "c20-backend-runtime-context-lifecycle-and-upstream-governance",
+      "prev_id": "c4076",
+      "tier": "foundation",
+      "rationale": "AppState/依赖契约、关联传播、结构化日志、上游HTTP治理——后端可靠性基石"
+    },
+    {
+      "priority": 30,
+      "change": "c30-observability-and-diagnostics-foundation",
+      "prev_id": "c4063",
+      "tier": "foundation",
+      "rationale": "关联ID、诊断工作台、健康评分、漂移审计——所有运维和调试的根基"
+    },
+    {
+      "priority": 40,
+      "change": "c40-db-migration-drift-gates-and-sqlite-baselines",
+      "prev_id": "c1002",
+      "tier": "foundation",
+      "rationale": "迁移/Schema漂移门禁、SQLite基线——数据层完整性保障，阻塞安全的Schema演进"
+    },
+    {
+      "priority": 50,
+      "change": "c50-retrieval-trace-lens-replay-and-ranking-governance",
+      "prev_id": "c4079",
+      "tier": "core-quality",
+      "rationale": "检索治理、trace/replay、向量存储契约——搜索是核心功能，此提案得分最高(arch=167)"
+    },
+    {
+      "priority": 60,
+      "change": "c60-api-contract-surface-fieldsets-and-client-governance",
+      "prev_id": "c4074",
+      "tier": "core-quality",
+      "rationale": "API层级、OpenAPI治理、响应体积预算/fieldsets——前后端耦合的关键治理层"
+    },
+    {
+      "priority": 70,
+      "change": "c70-source-ingestion-provenance-dedup-and-delta-indexing",
+      "prev_id": "c4081",
+      "tier": "core-quality",
+      "rationale": "完整摄入管道、来源追踪、去重、增量索引——数据进入系统的质量底线"
+    },
+    {
+      "priority": 80,
+      "change": "c80-evidence-gap-and-claim-checking",
+      "prev_id": "c2002",
+      "tier": "differentiator",
+      "rationale": "声明级证据缺口、矛盾高亮、共识/异常检测——定义产品核心差异化价值"
+    },
+    {
+      "priority": 90,
+      "change": "c90-citation-claim-review-and-traceback-loop",
+      "prev_id": "c4071",
+      "tier": "differentiator",
+      "rationale": "CitationV2/定位器、审核队列、声明图谱/论证回溯——产品信任和证据完整性"
+    },
+    {
+      "priority": 100,
+      "change": "c100-workspace-state-bootstrap-and-hydration",
+      "prev_id": "c4072",
+      "tier": "frontend-foundation",
+      "rationale": "工作区投影/启动端点、SWR注册表、类型化API客户端——前端数据层基础"
+    }
+  ],
   "counts": {
     "refactor": 14,
     "architecture": 59,
@@ -47,9 +120,10 @@
       },
       "margin": 52
     },
-    "c2002-evidence-gap-and-claim-checking": {
+    "c80-evidence-gap-and-claim-checking": {
       "category": "architecture",
-      "id": 2002,
+      "id": 80,
+      "prev_id": 2002,
       "bucket": "c2000–c2999",
       "bucket_start": 2000,
       "bucket_end": 2999,
@@ -957,9 +1031,10 @@
       },
       "margin": 3
     },
-    "c1002-db-migration-drift-gates-and-sqlite-baselines": {
+    "c40-db-migration-drift-gates-and-sqlite-baselines": {
       "category": "refactor",
-      "id": 1002,
+      "id": 40,
+      "prev_id": 1002,
       "bucket": "c1000–c1999",
       "bucket_start": 1000,
       "bucket_end": 1999,
@@ -999,9 +1074,10 @@
       },
       "margin": 1
     },
-    "c1042-backend-feature-module-conventions-and-migration-gates": {
+    "c10-backend-feature-module-conventions-and-migration-gates": {
       "category": "refactor",
-      "id": 1042,
+      "id": 10,
+      "prev_id": 1042,
       "bucket": "c1000–c1999",
       "bucket_start": 1000,
       "bucket_end": 1999,
@@ -1055,9 +1131,10 @@
       },
       "margin": 5
     },
-    "c4063-observability-and-diagnostics-foundation": {
+    "c30-observability-and-diagnostics-foundation": {
       "category": "refactor",
-      "id": 4063,
+      "id": 30,
+      "prev_id": 4063,
       "bucket": "c4000+",
       "bucket_start": 4000,
       "bucket_end": null,
@@ -1153,9 +1230,10 @@
       },
       "margin": 3
     },
-    "c4071-citation-claim-review-and-traceback-loop": {
+    "c90-citation-claim-review-and-traceback-loop": {
       "category": "architecture",
-      "id": 4071,
+      "id": 90,
+      "prev_id": 4071,
       "bucket": "c4000+",
       "bucket_start": 4000,
       "bucket_end": null,
@@ -1167,9 +1245,10 @@
       },
       "margin": 55
     },
-    "c4072-workspace-state-bootstrap-and-hydration": {
+    "c100-workspace-state-bootstrap-and-hydration": {
       "category": "architecture",
-      "id": 4072,
+      "id": 100,
+      "prev_id": 4072,
       "bucket": "c4000+",
       "bucket_start": 4000,
       "bucket_end": null,
@@ -1181,9 +1260,10 @@
       },
       "margin": 25
     },
-    "c4074-api-contract-surface-fieldsets-and-client-governance": {
+    "c60-api-contract-surface-fieldsets-and-client-governance": {
       "category": "architecture",
-      "id": 4074,
+      "id": 60,
+      "prev_id": 4074,
       "bucket": "c4000+",
       "bucket_start": 4000,
       "bucket_end": null,
@@ -1209,9 +1289,10 @@
       },
       "margin": 5
     },
-    "c4076-backend-runtime-context-lifecycle-and-upstream-governance": {
+    "c20-backend-runtime-context-lifecycle-and-upstream-governance": {
       "category": "architecture",
-      "id": 4076,
+      "id": 20,
+      "prev_id": 4076,
       "bucket": "c4000+",
       "bucket_start": 4000,
       "bucket_end": null,
@@ -1251,9 +1332,10 @@
       },
       "margin": 3
     },
-    "c4079-retrieval-trace-lens-replay-and-ranking-governance": {
+    "c50-retrieval-trace-lens-replay-and-ranking-governance": {
       "category": "architecture",
-      "id": 4079,
+      "id": 50,
+      "prev_id": 4079,
       "bucket": "c4000+",
       "bucket_start": 4000,
       "bucket_end": null,
@@ -1265,9 +1347,10 @@
       },
       "margin": 141
     },
-    "c4081-source-ingestion-provenance-dedup-and-delta-indexing": {
+    "c70-source-ingestion-provenance-dedup-and-delta-indexing": {
       "category": "architecture",
-      "id": 4081,
+      "id": 70,
+      "prev_id": 4081,
       "bucket": "c4000+",
       "bucket_start": 4000,
       "bucket_end": null,
