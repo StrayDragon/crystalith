@@ -10,7 +10,7 @@
 ## c1000–c1999 (10)
 
 ### 重构 (9)
-- `c1002-db-migration-drift-gates-and-sqlite-baselines`
+- `c40-db-migration-drift-gates-and-sqlite-baselines` _(was c1002)_
 - `c1003-workspace-backup-migration-and-tiered-archive`
 - `c1007-doc-governance-drift-checks-and-spec-code-coverage`
 - `c1010-capability-negotiation-fallback-order-and-route-audit`
@@ -18,7 +18,7 @@
 - `c1017-workspace-scenario-fixtures-and-regression-harness`
 - `c1033-question-merging-splitting-and-thread-refactors`
 - `c1034-reader-side-glosses-and-progressive-annotations`
-- `c1042-backend-feature-module-conventions-and-migration-gates`
+- `c10-backend-feature-module-conventions-and-migration-gates` _(was c1042)_
 
 ### 架构优化 (1)
 - `c1009-source-trust-signals-and-quality-hints`
@@ -26,7 +26,7 @@
 ## c2000–c2999 (40)
 
 ### 架构优化 (39)
-- `c2002-evidence-gap-and-claim-checking`
+- `c80-evidence-gap-and-claim-checking` _(was c2002)_
 - `c2003-quality-scorecards-and-eval-center`
 - `c2004-engineering-roadmap-slices-and-dependency-map`
 - `c2007-agentic-research-runs`
@@ -84,7 +84,7 @@
 ## c4000+ (43)
 
 ### 重构 (5)
-- `c4063-observability-and-diagnostics-foundation`
+- `c30-observability-and-diagnostics-foundation` _(was c4063)_
 - `c4066-vector-index-migrations-atomicity-and-journaling`
 - `c4070-preset-style-draft-and-regression-loop`
 - `c4082-personal-knowledge-continuity-and-threaded-research-memory`
@@ -95,14 +95,14 @@
 - `c4046-output-fact-sheets-and-one-page-abstracts`
 - `c4064-config-profiles-capability-matrix-and-degraded-mode`
 - `c4067-run-lifecycle-durability-and-stage-gates`
-- `c4071-citation-claim-review-and-traceback-loop`
-- `c4072-workspace-state-bootstrap-and-hydration`
-- `c4074-api-contract-surface-fieldsets-and-client-governance`
+- `c90-citation-claim-review-and-traceback-loop` _(was c4071)_
+- `c100-workspace-state-bootstrap-and-hydration` _(was c4072)_
+- `c60-api-contract-surface-fieldsets-and-client-governance` _(was c4074)_
 - `c4075-workspace-frontend-performance-and-load-shaping`
-- `c4076-backend-runtime-context-lifecycle-and-upstream-governance`
+- `c20-backend-runtime-context-lifecycle-and-upstream-governance` _(was c4076)_
 - `c4078-briefing-slide-composition-review-and-sync`
-- `c4079-retrieval-trace-lens-replay-and-ranking-governance`
-- `c4081-source-ingestion-provenance-dedup-and-delta-indexing`
+- `c50-retrieval-trace-lens-replay-and-ranking-governance` _(was c4079)_
+- `c70-source-ingestion-provenance-dedup-and-delta-indexing` _(was c4081)_
 - `c4083-ui-state-events-drift-and-repair-governance`
 - `c4086-external-api-webhooks-and-sdk-release-governance`
 - `c4087-workspace-discovery-metadata-and-sample-gallery`
