@@ -19,17 +19,20 @@
 - **THEN** 系统 SHALL 以明确错误拒绝启动或拒绝加载该配置
 
 ### Requirement: Runtime config source of truth is YAML
-系统 MUST 以 `config/app.yaml`（+ secrets 插值）作为运行时业务配置的权威来源；配置加载器 MUST NOT 再执行“读取环境变量覆盖配置字段”的二次覆盖步骤。
+系统 MUST 以 `config/app.yaml`（模板渲染 + overlays 合并 + schema 校验）作为运行时业务配置的权威来源；配置加载器 MUST NOT 再执行“读取环境变量覆盖配置字段”的二次覆盖步骤。
 
 配置加载器允许读取的环境变量仅限于“配置定位入口”：
 - `CRYSTALITH_CONFIG_PATH` / `CRYSTALITH_CONFIG_DIR`
-- `CRYSTALITH_SECRETS_PATH`
 
-**Migration**：将原本通过 env 覆盖的业务字段迁移到 `config/app.yaml`（敏感值放入 `config/secrets.yaml` 或 Docker secrets 目录并以 `${{ secrets.KEY }}` 引用）。
+配置加载器还 MUST 支持模板渲染输入：
+- `{{ env.* }}`：来自 `os.environ` + `.env`（`.env` 覆盖系统 env）
+- `{{ secret.* }}`：来自与 `app.yaml` 同目录的 `secret.env`
+
+**Migration**：将原本通过 env 覆盖的业务字段迁移到 `config/app.yaml`（敏感值放入 `config/secret.env` 并以 `{{ secret.KEY }}` 引用）。
 
 #### Scenario: Legacy env overrides are ignored
 - **WHEN** 用户设置了诸如 `DATABASE_URL`、`REDIS_URL`、`OLLAMA_HOST`、`CRYSTALITH_SEARCH__SEARXNG__HOST` 等环境变量
-- **AND** `config/app.yaml` 为对应字段提供了明确值且未通过 `${{ env.* }}` 引用这些变量
+- **AND** `config/app.yaml` 为对应字段提供了明确值且未通过 `{{ env.* }}` 引用这些变量
 - **THEN** 配置加载器 SHALL 不使用这些环境变量覆盖 YAML 字段
 - **AND** 系统 SHALL 仍以 YAML 解析出的配置启动并提供服务
 
@@ -38,11 +41,11 @@
 - **THEN** 系统 SHALL 加载该文件作为配置来源（并按 schema 校验）
 
 ### Requirement: Secrets are auto-discoverable without env
-在未设置 `CRYSTALITH_SECRETS_PATH` 的情况下，系统 MUST 自动尝试加载与 `config/app.yaml` 同目录的 `secrets.yaml`（若存在），并支持 `${{ secrets.KEY }}` 插值。
+在未设置任何 secrets 定位环境变量的情况下，系统 MUST 自动尝试加载与 `config/app.yaml` 同目录的 `secret.env`（若存在），并支持 `{{ secret.KEY }}` 插值。
 
-#### Scenario: Auto-load config/secrets.yaml
-- **WHEN** `config/secrets.yaml` 存在且未设置 `CRYSTALITH_SECRETS_PATH`
-- **THEN** 系统 SHALL 读取该文件并解析 `${{ secrets.* }}` 引用
+#### Scenario: Auto-load config/secret.env
+- **WHEN** `config/secret.env` 存在
+- **THEN** 系统 SHALL 读取该文件并解析 `{{ secret.* }}` 引用
 
 ### Requirement: Endpoint candidates are supported in YAML
 系统 MUST 支持在 YAML 中为可选依赖声明候选端点，并在启动或首次使用时按优先级探测与锁定可用端点，以实现“一份 YAML 跨环境复用”。
@@ -56,11 +59,11 @@
 - **THEN** 系统 SHALL 按降级策略回退到核心可用模式（例如禁用该增强能力或使用本地/内置实现）
 
 ### Requirement: Secrets are not committed in plaintext
-示例配置 MUST 不包含明文密钥；密钥应由 `config/secrets.yaml`（不提交到仓库）或其他安全注入方式提供。
+示例配置 MUST 不包含明文密钥；密钥应由 `config/secret.env`（不提交到仓库）或其他安全注入方式提供。
 
 #### Scenario: Sample config contains no plaintext secrets
 - **WHEN** 用户参考仓库内示例配置进行部署
-- **THEN** 示例配置 SHALL 不包含明文密钥，并引导用户使用 `config/secrets.yaml` 或其他安全注入提供密钥
+- **THEN** 示例配置 SHALL 不包含明文密钥，并引导用户使用 `config/secret.env` 或其他安全注入提供密钥
 
 ### Requirement: Model selection is centralized
 模型列表与默认选择 MUST 通过集中配置管理，并 MUST 支持“核心可运行默认模型”与“可选增强模型”并存；当可选模型依赖不可达时，系统 MUST 返回可恢复错误或回退策略，不得导致整体配置加载失败。

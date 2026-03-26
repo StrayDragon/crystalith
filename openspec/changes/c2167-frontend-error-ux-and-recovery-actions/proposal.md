@@ -17,7 +17,7 @@
 7. **`ToolConfig` 契约（workspace scope）**：`tool_id`；严格校验的 `config` JSON；**secrets** write-only（读取仅 `is_set`，永不回显明文）；`revision`、`updated_at`、`updated_by`、`correlation_id`。
 8. **最小读写接口**：`GET /v1/workspace/tool-config` 批量；`PUT .../{tool_id}` 乐观并发；`POST .../{tool_id}:reset`；secret  omitted 不变、empty 清空语义明确。
 9. **Secret 声明**：`PluginConfigSchema.secret_keys` 等；SourceConnector schema 对齐 `format: password` / `writeOnly` 与同一套 redaction。
-10. **落盘红线**：SSOT `config/secrets.yaml`（`CRYSTALITH_SECRETS_PATH`）；`tools.<tool_id>.<key>` 命名空间；日志/诊断包禁止明文 secret（`c2166`、`c2020`）；配置失败走 `ErrorResponse` 与可执行 hint。
+10. **落盘红线**：SSOT `config/secret.env`；`tools.<tool_id>.<key>` 命名空间；日志/诊断包禁止明文 secret（`c2166`、`c2020`）；配置失败走 `ErrorResponse` 与可执行 hint。
 11. **Tools Config UI**：左侧工具列表（`/v1/workspace/tools`），右侧编辑（tool-config API）；AutoForm 基于 `PluginConfigSchema`（克制）；**Presets**（同 tool 多套配置、diff-friendly、可回滚上一版本）。
 12. **范围**：先不做跨设备同步；同一 workspace 内可记住即可。
 
@@ -85,5 +85,5 @@ flowchart LR
   API[/v1/workspace/tools/] --> LIST[工具列表]
   CFG[/v1/workspace/tool-config/] --> FORM[AutoForm + Presets]
   LIST --> FORM
-  SEC[secrets.yaml + redaction] -.约束.-> CFG
+  SEC[secret.env + redaction] -.约束.-> CFG
 ```
