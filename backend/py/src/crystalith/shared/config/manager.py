@@ -5,10 +5,15 @@ import ipaddress
 import json
 import logging
 import os
+import re
 from pathlib import Path
 from urllib.parse import urlparse
 
 import yaml
+from jinja2 import StrictUndefined, nodes
+from jinja2.exceptions import SecurityError, TemplateNotFound, TemplateSyntaxError, UndefinedError
+from jinja2.loaders import DictLoader
+from jinja2.sandbox import SandboxedEnvironment
 from jsonschema import Draft7Validator
 from pydantic import ValidationError
 
@@ -24,6 +29,112 @@ from .models import OllamaProviderSettings, Settings
 from .ollama_discovery import auto_discover_ollama
 
 logger = logging.getLogger(__name__)
+
+_DOTENV_EXPORT_PREFIX = "export "
+
+
+def _parse_dotenv(text: str) -> dict[str, str]:
+    """
+    Parse dotenv-formatted text into a mapping.
+
+    Supports:
+    - Empty lines and comments (starting with '#')
+    - Optional 'export ' prefix
+    - KEY=VALUE (unquoted)
+    - KEY="VALUE" / KEY='VALUE' (quoted)
+    """
+    env: dict[str, str] = {}
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith(_DOTENV_EXPORT_PREFIX):
+            line = line[len(_DOTENV_EXPORT_PREFIX) :].lstrip()
+        if "=" not in line:
+            continue
+
+        key, raw_value = line.split("=", 1)
+        key = key.strip()
+        if not key:
+            continue
+
+        value = raw_value.strip()
+
+        if value and value[0] in {"'", '"'} and value.endswith(value[0]):
+            quote = value[0]
+            value = value[1:-1]
+            if quote == '"':
+                # Minimal escape handling for common sequences.
+                value = (
+                    value.replace("\\n", "\n")
+                    .replace("\\r", "\r")
+                    .replace("\\t", "\t")
+                    .replace('\\"', '"')
+                    .replace("\\\\", "\\")
+                )
+        else:
+            # Treat " #..." as an inline comment for unquoted values.
+            value = re.split(r"\s+#", value, maxsplit=1)[0].rstrip()
+
+        env[key] = value
+    return env
+
+
+def _read_dotenv(path: Path) -> dict[str, str]:
+    if not path.is_file():
+        return {}
+    try:
+        return _parse_dotenv(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.warning("Failed to read dotenv file %s: %s", path, exc)
+        return {}
+
+
+def _render_env_for_source(*, template_name: str, source: str) -> SandboxedEnvironment:
+    env = SandboxedEnvironment(
+        undefined=StrictUndefined,
+        autoescape=False,
+        loader=DictLoader({template_name: source}),
+    )
+    # Reduce available globals; keep templates deterministic and side-effect free.
+    env.globals.clear()
+    return env
+
+
+def _extract_namespace_keys(source: str) -> dict[str, set[str]]:
+    """
+    Best-effort extraction of referenced keys under `env.*` and `secret.*`.
+
+    Only static attribute access (env.FOO / secret.BAR) and static string item
+    access (env['FOO']) are collected.
+    """
+    template_name = "<extract>"
+    env = _render_env_for_source(template_name=template_name, source=source)
+    try:
+        ast = env.parse(source)
+    except TemplateSyntaxError:
+        return {"env": set(), "secret": set()}
+
+    found: dict[str, set[str]] = {"env": set(), "secret": set()}
+
+    def _visit(node: nodes.Node) -> None:
+        for child in node.iter_child_nodes():
+            _visit(child)
+
+        if isinstance(node, nodes.Getattr):
+            base = node.node
+            if isinstance(base, nodes.Name) and base.name in found:
+                found[base.name].add(node.attr)
+        elif isinstance(node, nodes.Getitem):
+            base = node.node
+            if not (isinstance(base, nodes.Name) and base.name in found):
+                return
+            arg = node.arg
+            if isinstance(arg, nodes.Const) and isinstance(arg.value, str):
+                found[base.name].add(arg.value)
+
+    _visit(ast)
+    return found
 
 
 def deep_merge(base: dict, overlay: dict) -> dict:
@@ -51,8 +162,9 @@ class ConfigManager:
     Configuration manager with support for:
 
     - YAML configuration files
-    - Environment variable interpolation (${{ env.VAR }})
-    - Secrets file support (${{ secrets.VAR }})
+    - Jinja2 template rendering before YAML parsing
+      - `{{ env.KEY }}` resolves from `os.environ` overlaid by `.env`
+      - `{{ secret.KEY }}` resolves from `secret.env` next to `app.yaml`
     - JSON Schema generation for editor validation
     - YAML anchors for reusable configurations
 
@@ -60,7 +172,6 @@ class ConfigManager:
 
         manager = ConfigManager(
             config_path=Path("config/app.yaml"),
-            secrets_path=Path("config/secrets.yaml"),  # Optional
         )
         settings = manager.load()
 
@@ -75,7 +186,6 @@ class ConfigManager:
         self,
         config_path: Path,
         schema_path: Path | None = None,
-        secrets_path: Path | None = None,
         overlay_paths: list[Path] | None = None,
     ) -> None:
         """
@@ -84,82 +194,108 @@ class ConfigManager:
         Args:
             config_path: Path to the main YAML config file
             schema_path: Path to write JSON schema (defaults to config/app.schema.gen.json)
-            secrets_path: Optional path to secrets YAML file
             overlay_paths: Optional list of overlay YAML files to deep-merge on top of base config
         """
         self.config_path = config_path
         self.schema_path = schema_path or Path("config/app.schema.gen.json")
-        self.secrets_path = secrets_path
         self.overlay_paths = overlay_paths or []
         self._settings: Settings | None = None
-        self._secrets: dict[str, str] | None = None
+        self._template_env: dict[str, str] | None = None
+        self._template_secret: dict[str, str] | None = None
 
-    def _load_secrets(self) -> dict[str, str]:
-        """
-        Load secrets from a secrets file.
+    def _config_root_dir(self) -> Path:
+        config_path = self.config_path.resolve(strict=False)
+        config_dir = config_path.parent
+        return config_dir.parent if config_dir.name == "config" else config_dir
 
-        The secrets file should be a simple YAML mapping:
+    def _dotenv_path(self) -> Path:
+        # When config is at <root>/config/app.yaml, prefer <root>/.env.
+        return self._config_root_dir() / ".env"
 
-            OPENAI_API_KEY: "sk-..."
-            DATABASE_PASSWORD: "secret"
-        """
-        if self._secrets is not None:
-            return self._secrets
+    def _secret_env_path(self) -> Path:
+        return self.config_path.resolve(strict=False).parent / "secret.env"
 
-        secrets_path = self.secrets_path
-        if secrets_path is None:
-            for candidate_name in ("secrets.yaml", "secrets.yml"):
-                candidate = self.config_path.parent / candidate_name
-                if candidate.is_file():
-                    secrets_path = candidate
-                    break
+    def _template_context(self) -> dict[str, dict[str, str]]:
+        if self._template_env is None:
+            env_mapping = dict(os.environ)
+            env_mapping.update(_read_dotenv(self._dotenv_path()))
+            self._template_env = env_mapping
 
-        if secrets_path is None or not secrets_path.is_file():
-            if secrets_path is not None and secrets_path.is_dir():
-                secrets: dict[str, str] = {}
-                for item in secrets_path.iterdir():
-                    if not item.is_file():
-                        continue
-                    try:
-                        secrets[item.name] = item.read_text(encoding="utf-8").strip()
-                    except Exception as exc:
-                        logger.warning("Failed to read secret %s: %s", item, exc)
-                self._secrets = secrets
-                logger.info("Loaded %d docker secrets from %s", len(secrets), secrets_path.resolve())
-                return self._secrets
+        if self._template_secret is None:
+            self._template_secret = _read_dotenv(self._secret_env_path())
 
-            self._secrets = {}
-            return self._secrets
+        return {"env": self._template_env, "secret": self._template_secret}
+
+    def _render_config_template(self, path: Path) -> str:
+        source = path.read_text(encoding="utf-8")
+        template_name = path.resolve().as_posix()
+        env = _render_env_for_source(template_name=template_name, source=source)
 
         try:
-            with open(secrets_path, encoding="utf-8") as f:
-                data = yaml.safe_load(f)
-                self._secrets = {str(k): str(v) for k, v in (data or {}).items()}
-                logger.info("Loaded secrets from %s", secrets_path.resolve())
-        except Exception as exc:
-            logger.warning("Failed to load secrets from %s: %s", secrets_path, exc)
-            self._secrets = {}
+            template = env.get_template(template_name)
+            return template.render(**self._template_context())
+        except TemplateSyntaxError as exc:
+            line = exc.lineno or 1
+            snippet = ""
+            try:
+                snippet_line = source.splitlines()[line - 1]
+                snippet = f"\n  {snippet_line}\n  {'^'}"
+            except Exception:
+                snippet = ""
+            raise ValueError(
+                f"Config template syntax error in {path} at {line}:1: {exc.message}{snippet}"
+            ) from exc
+        except TemplateNotFound as exc:
+            raise ValueError(
+                f"Config template attempted to include/extend '{exc.name}' in {path}, "
+                "but include/extends is disabled."
+            ) from exc
+        except UndefinedError as exc:
+            referenced = _extract_namespace_keys(source)
+            ctx = self._template_context()
+            missing_env = sorted(k for k in referenced["env"] if k not in ctx["env"])
+            missing_secret = sorted(k for k in referenced["secret"] if k not in ctx["secret"])
+            hints: list[str] = []
+            if missing_env:
+                hints.append(f"env missing: {missing_env} (add to {self._dotenv_path()})")
+            if missing_secret:
+                hints.append(
+                    f"secret missing: {missing_secret} (add to {self._secret_env_path()})"
+                )
+            hint_block = "\n  - " + "\n  - ".join(hints) if hints else ""
+            raise ValueError(
+                f"Config template missing variables in {path}: {exc}{hint_block}"
+            ) from exc
+        except SecurityError as exc:
+            raise ValueError(
+                f"Config template blocked by sandbox in {path}: {exc}"
+            ) from exc
 
-        return self._secrets
+    def _load_rendered_yaml_mapping(self, path: Path) -> dict[str, JsonValue]:
+        rendered = self._render_config_template(path)
+        try:
+            data = yaml.safe_load(rendered)
+        except yaml.YAMLError as exc:
+            raise ValueError(f"YAML parse error in {path} after template rendering: {exc}") from exc
 
-    def _load_with_overlays(self, secrets: dict[str, str] | None) -> Settings:
-        """Load base config, deep-merge overlay files, then validate."""
-        from .models import resolve_variables
+        if data is None:
+            return {}
+        if not isinstance(data, dict):
+            raise ValueError(f"Config YAML must be a mapping after rendering: {path}")
+        return data
 
-        with open(self.config_path, encoding="utf-8") as f:
-            base_data: dict = yaml.safe_load(f) or {}
+    def _load_merged_config(self) -> dict[str, JsonValue]:
+        base_data = self._load_rendered_yaml_mapping(self.config_path)
 
         for overlay_path in self.overlay_paths:
             if not overlay_path.is_file():
                 logger.warning("Config overlay not found, skipping: %s", overlay_path)
                 continue
-            with open(overlay_path, encoding="utf-8") as f:
-                overlay_data: dict = yaml.safe_load(f) or {}
+            overlay_data = self._load_rendered_yaml_mapping(overlay_path)
             base_data = deep_merge(base_data, overlay_data)
             logger.info("Merged config overlay: %s", overlay_path.resolve())
 
-        resolved = resolve_variables(base_data, secrets)
-        return Settings.model_validate(resolved)
+        return base_data
 
     def _normalize_storage_paths(self, settings: Settings) -> None:
         """
@@ -246,7 +382,7 @@ class ConfigManager:
                 if _is_postgres_url_missing_password(candidate):
                     logger.info(
                         "  [database] skip %s (no password). "
-                        "Hint: set secrets.POSTGRES_PASSWORD or explicitly set database.url.",
+                        "Hint: set secret.POSTGRES_PASSWORD (via config/secret.env) or explicitly set database.url.",
                         candidate,
                     )
                     continue
@@ -414,7 +550,7 @@ class ConfigManager:
 
     def validate_yaml_with_schema(self) -> tuple[bool, list[str]]:
         """
-        Validate the YAML config file against JSON Schema.
+        Validate the rendered + merged YAML config against JSON Schema.
 
         Returns:
             (is_valid, errors) tuple
@@ -423,21 +559,19 @@ class ConfigManager:
             return False, [f"Config file not found: {self.config_path}"]
 
         try:
-            with open(self.config_path, encoding="utf-8") as f:
-                data = yaml.safe_load(f)
-        except yaml.YAMLError as exc:
-            return False, [f"YAML syntax error: {exc}"]
+            data = self._load_merged_config()
+        except Exception as exc:
+            return False, [str(exc)]
 
-        errors = self._validate_with_jsonschema(data or {})
+        errors = self._validate_with_jsonschema(data)
         return len(errors) == 0, errors
 
     def load(self, validate_schema: bool = True) -> Settings:
         """
         Load and validate the configuration.
 
-        Resolves:
-        - Environment variables: ${{ env.VAR }}
-        - Secrets: ${{ secrets.VAR }}
+        Pipeline (fixed order):
+        render (Jinja2) → parse (YAML) → merge (overlays) → schema validate → settings validate
 
         Args:
             validate_schema: If True, validate against JSON Schema before loading
@@ -452,10 +586,10 @@ class ConfigManager:
         try:
             logger.info("Loading config from %s", self.config_path.resolve())
 
-            # Validate with JSON Schema first (if enabled)
+            merged = self._load_merged_config()
             if validate_schema:
-                is_valid, errors = self.validate_yaml_with_schema()
-                if not is_valid:
+                errors = self._validate_with_jsonschema(merged)
+                if errors:
                     error_msg = "\n".join(f"  - {e}" for e in errors[:10])  # Limit to 10 errors
                     if len(errors) > 10:
                         error_msg += f"\n  ... and {len(errors) - 10} more errors"
@@ -464,11 +598,7 @@ class ConfigManager:
                     )
                 logger.debug("JSON Schema validation passed")
 
-            # Load secrets if available
-            secrets = self._load_secrets()
-
-            # Load base config and merge overlays
-            settings = self._load_with_overlays(secrets) if self.overlay_paths else Settings.from_yaml(self.config_path, secrets=secrets)
+            settings = Settings.model_validate(merged)
             self._apply_endpoint_candidates(settings)
             self._apply_model_defaults(settings)
             self._normalize_storage_paths(settings)
@@ -524,7 +654,8 @@ class ConfigManager:
     def reload(self) -> Settings:
         """Force reload the configuration."""
         self._settings = None
-        self._secrets = None
+        self._template_env = None
+        self._template_secret = None
         return self.load()
 
     def get(self) -> Settings:
@@ -552,7 +683,7 @@ class ConfigManager:
         schema["description"] = (
             "Configuration schema for Crystalith. "
             "Supports YAML anchors for reusable configurations and "
-            "${{ env.VAR }} / ${{ secrets.VAR }} for variable interpolation."
+            "{{ env.KEY }} / {{ secret.KEY }} for template rendering."
         )
 
         self.schema_path.parent.mkdir(parents=True, exist_ok=True)
@@ -631,8 +762,9 @@ class ConfigManager:
 # ============================================================================
 # This file supports:
 # - YAML anchors for reusable configurations (recommended!)
-# - Environment variables: ${{ env.VAR_NAME }}
-# - Secrets: ${{ secrets.SECRET_NAME }} (requires secrets.yaml)
+# - Template rendering: {{ env.KEY }} and {{ secret.KEY }}
+#   - env: os.environ overlaid by .env
+#   - secret: secret.env next to app.yaml
 #
 # YAML Version header enables advanced features like anchors:
 %YAML 1.1
@@ -648,12 +780,12 @@ schema: v1
 providers:
   # OpenAI-compatible API (can be OpenRouter, Azure, etc.)
   openai_main: &openai_main
-    api_key: ${{ env.OPENAI_API_KEY }}
+    api_key: "{{ secret.OPENAI_API_KEY }}"
     base_url: "https://api.openai.com/v1"
 
   # Local proxy / OpenRouter
   openai_proxy: &openai_proxy
-    api_key: ${{ env.OPENROUTER_API_KEY }}
+    api_key: "{{ secret.OPENROUTER_API_KEY }}"
     base_url: "http://localhost:50256/v1"
 
   # Local Ollama

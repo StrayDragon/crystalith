@@ -112,8 +112,8 @@ FULL_SERVICES=storage redis searxng ollama slidev    # 默认
 | 服务列表 | `HYBRID_SERVICES`、`DOCKER_SERVICES`、`FULL_SERVICES` |
 | Web 端口 | `CL_WEB_PORT` |
 | 开发依赖端口 | `CL_DEPS_POSTGRES_PORT`、`CL_DEPS_CHROMA_PORT` 等 |
-| OpenAI 覆盖（Docker） | `OPENAI_BASE_URL_DOCKER` |
-| Embedding 模型（Docker） | `CRYSTALITH_DEFAULT_EMBEDDING_MODEL_DOCKER` |
+| OpenAI 覆盖 | `OPENAI_BASE_URL` |
+| Embedding 模型 | `CRYSTALITH_DEFAULT_EMBEDDING_MODEL` |
 
 ## 故障排查
 

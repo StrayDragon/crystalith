@@ -229,7 +229,7 @@ def _render_env_vars_reference(*, repo_root: Path, docs_root: Path) -> Generated
 
     config_path = repo_root / "config/app.yaml"
     config_text = config_path.read_text(encoding="utf-8")
-    env_pattern = re.compile(r"\$\{\{\s*env\.([A-Z0-9_]+)\s*\}\}")
+    env_pattern = re.compile(r"\{\{\s*env\.([A-Z0-9_]+)\b")
 
     config_env_vars: list[str] = []
     try:
@@ -281,7 +281,7 @@ def _render_env_vars_reference(*, repo_root: Path, docs_root: Path) -> Generated
 
     lines.append("## Config interpolation env vars (referenced by `config/app.yaml`)")
     lines.append("")
-    lines.append("These env vars are referenced via `${{ env.* }}` in the default config file.")
+    lines.append("These env vars are referenced via `{{ env.* }}` in the default config file.")
     lines.append("")
     if config_env_vars:
         lines.extend([f"- `{name}`" for name in config_env_vars])

@@ -14,7 +14,7 @@ Unified entry (from repo root):
 - `just up docker` starts Docker Compose deployment.
 - `just up full` starts full Docker Compose with all overlays.
 - `just down` / `just status` / `just logs` manage the running profile.
-- `just upsert-env-configs` initializes `.env` and `config/secrets.yaml` from shell env vars.
+- `just upsert-env-configs` initializes `.env` and `config/secret.env` from shell env vars.
 - `just cleanup` detects stale artifacts from old workflows (dry-run; `--apply` to execute).
 
 Backend (from repo root):

@@ -28,7 +28,6 @@ from .models import (
     VectorStorageChromaSettings,
     VectorStorageSettings,
     VectorStorageSQLiteSettings,
-    resolve_variables,
 )
 from .ollama_discovery import auto_discover_ollama, discover_ollama_models
 
@@ -64,5 +63,4 @@ __all__ = [
     "VectorStorageSettings",
     "auto_discover_ollama",
     "discover_ollama_models",
-    "resolve_variables",
 ]

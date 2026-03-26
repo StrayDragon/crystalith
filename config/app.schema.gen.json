@@ -42,7 +42,7 @@
             }
           ],
           "default": null,
-          "description": "Shared API key used for 'Authorization: Bearer <token>'. Prefer injecting via ${{ env.* }} / ${{ secrets.* }}.",
+          "description": "Shared API key used for 'Authorization: Bearer <token>'. Prefer injecting via {{ env.* }} / {{ secret.* }}.",
           "title": "Api Key"
         }
       },
@@ -1624,7 +1624,7 @@
       "type": "object"
     }
   },
-  "description": "Configuration schema for Crystalith. Supports YAML anchors for reusable configurations and ${{ env.VAR }} / ${{ secrets.VAR }} for variable interpolation.",
+  "description": "Configuration schema for Crystalith. Supports YAML anchors for reusable configurations and {{ env.KEY }} / {{ secret.KEY }} for template rendering.",
   "properties": {
     "name": {
       "default": "Crystalith",

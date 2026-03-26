@@ -1,8 +1,0 @@
-# Docker environment overlay — auto-loaded when CRYSTALITH_ENV=docker.
-# Adjusts settings that differ between host and containerized deployments.
----
-app:
-  cors:
-    allow_origins:
-      - "http://localhost:8080"
-      - "http://127.0.0.1:8080"
