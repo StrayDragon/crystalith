@@ -17,6 +17,7 @@
 #   DEV_DEPS_PROJECT      — compose project name (deps mode, default: crystalith-dev-deps)
 #   DEV_BUILD             — set to 0/false/no/off to skip --build on "up" (prod mode)
 #   APT_MIRROR / UV_INDEX_URL / NPM_REGISTRY — mirror overrides (prod mode)
+#   CRYSTALITH_KEEP_PROXY_ENV — set to 1/true/yes/on to preserve HTTP(S)_PROXY env vars for docker compose/build
 #   CL_DEPS_SEARXNG_PORT  — searxng port for conflict detection (deps mode)
 set -euo pipefail
 
@@ -27,7 +28,7 @@ MODE="${1:?Usage: dev_compose.sh <prod|deps> <action> [args...]}"
 ACTION="${2:?Usage: dev_compose.sh <prod|deps> <action> [args...]}"
 shift 2
 
-CHINA_APT_MIRROR="https://mirrors.tuna.tsinghua.edu.cn/debian"
+CHINA_APT_MIRROR="http://mirrors.tuna.tsinghua.edu.cn/debian"
 CHINA_UV_INDEX_URL="https://mirrors.aliyun.com/pypi/simple/"
 CHINA_NPM_REGISTRY="https://registry.npmmirror.com"
 
@@ -67,10 +68,17 @@ case "$MODE" in
     OPTIONALS="${DEV_OPTIONALS:-storage redis searxng}"
     build_file_list "$CORE_FILE" "$OPTIONALS" "deployments/prod/docker-compose."
 
-    proxy_env=(
-      -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u NO_PROXY
-      -u http_proxy -u https_proxy -u all_proxy -u no_proxy
-    )
+    proxy_env=()
+    case "${CRYSTALITH_KEEP_PROXY_ENV:-0}" in
+      1|true|yes|on)
+        ;;
+      *)
+        proxy_env=(
+          -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u NO_PROXY
+          -u http_proxy -u https_proxy -u all_proxy -u no_proxy
+        )
+        ;;
+    esac
     mirror_env=(
       APT_MIRROR="${APT_MIRROR:-$CHINA_APT_MIRROR}"
       UV_INDEX_URL="${UV_INDEX_URL:-$CHINA_UV_INDEX_URL}"

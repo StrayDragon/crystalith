@@ -10,7 +10,7 @@ from pathlib import Path
 
 from crystalith.shared.config import ConfigManager, Settings
 from crystalith.shared.db.migrations import upgrade_head
-from crystalith.shared.env import CRYSTALITH_CONFIG_DIR, CRYSTALITH_CONFIG_PATH, CRYSTALITH_SECRETS_PATH
+from crystalith.shared.env import CRYSTALITH_CONFIG_DIR, CRYSTALITH_CONFIG_PATH
 
 
 def _find_config_path(candidates: Iterable[Path]) -> Path | None:
@@ -53,11 +53,6 @@ def _parse_args() -> argparse.Namespace:
         help="Optional schema path (defaults to config/app.schema.gen.json).",
     )
     parser.add_argument(
-        "--secrets-path",
-        default=None,
-        help="Optional secrets YAML path (defaults to CRYSTALITH_SECRETS_PATH).",
-    )
-    parser.add_argument(
         "--no-schema-write",
         action="store_true",
         help="Do not generate schema.json if missing.",
@@ -79,13 +74,10 @@ def _load_settings(args: argparse.Namespace) -> Settings:
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
     schema_path = Path(args.schema_path) if args.schema_path else config_path.parent / "app.schema.gen.json"
-    secrets_path_value = args.secrets_path or os.environ.get(CRYSTALITH_SECRETS_PATH)
-    secrets_path = Path(secrets_path_value) if secrets_path_value else None
 
     manager = ConfigManager(
         config_path=config_path,
         schema_path=schema_path,
-        secrets_path=secrets_path,
     )
     if not args.no_schema_write and not schema_path.exists():
         manager.write_schema()

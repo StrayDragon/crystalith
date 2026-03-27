@@ -1,54 +1,17 @@
 from __future__ import annotations
 
 import ipaddress
-import os
-import re
 from collections.abc import Callable
-from pathlib import Path
 from typing import Literal, cast
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic_settings.sources import YamlConfigSettingsSource
 
 from crystalith.shared.json_types import JsonValue
-
-# =============================================================================
-# Secrets / Environment Variable Resolution
-# =============================================================================
-
-_VAR_PATTERN = re.compile(r"\$\{\{\s*(env|secrets)\.(\w+)\s*\}\}")
 
 
 def _default_factory[T](factory: type[T]) -> Callable[[], T]:
     return cast(Callable[[], T], factory)
-
-
-def resolve_variables(value: JsonValue, secrets: dict[str, str] | None = None) -> JsonValue:
-    """
-    Resolve ${{ env.VAR }} and ${{ secrets.VAR }} in string values.
-
-    - ${{ env.VAR }} resolves to os.environ.get("VAR")
-    - ${{ secrets.VAR }} resolves to secrets.get("VAR")
-
-    Supports nested dicts and lists.
-    """
-    if isinstance(value, str):
-        def replacer(match: re.Match[str]) -> str:
-            source = match.group(1)
-            var_name = match.group(2)
-            if source == "env":
-                return os.environ.get(var_name, "")
-            elif source == "secrets" and secrets:
-                return secrets.get(var_name, "")
-            return ""
-        return _VAR_PATTERN.sub(replacer, value)
-    if isinstance(value, dict):
-        return {k: resolve_variables(v, secrets) for k, v in value.items()}
-    if isinstance(value, list):
-        return [resolve_variables(item, secrets) for item in value]
-    return value
-
 
 # =============================================================================
 # Provider Settings (can be referenced via YAML anchors)
@@ -76,7 +39,7 @@ class ProvidersSettings(BaseModel):
     Example:
         providers:
           openai_main: &openai_main
-            api_key: ${{ secrets.OPENAI_API_KEY }}
+            api_key: "{{ secret.OPENAI_API_KEY }}"
             base_url: "https://api.openai.com/v1"
 
           ollama_local: &ollama_local
@@ -353,7 +316,7 @@ class AppAuthSettings(BaseModel):
         None,
         description=(
             "Shared API key used for 'Authorization: Bearer <token>'. "
-            "Prefer injecting via ${{ env.* }} / ${{ secrets.* }}."
+            "Prefer injecting via {{ env.* }} / {{ secret.* }}."
         ),
     )
 
@@ -965,8 +928,7 @@ class Settings(BaseSettings):
     Supports YAML configuration with:
     - Version control (name, version, schema)
     - YAML anchors for reusable configurations
-    - Environment variable interpolation: ${{ env.VAR }}
-    - Secrets interpolation: ${{ secrets.VAR }}
+    - Template rendering: {{ env.KEY }} / {{ secret.KEY }}
 
     Example config/app.yaml:
 
@@ -980,7 +942,7 @@ class Settings(BaseSettings):
         # Reusable provider configs (use YAML anchors)
         providers:
           openai_main: &openai_main
-            api_key: ${{ secrets.OPENAI_API_KEY }}
+            api_key: "{{ secret.OPENAI_API_KEY }}"
             base_url: "https://api.openai.com/v1"
 
           ollama_local: &ollama_local
@@ -1057,33 +1019,6 @@ class Settings(BaseSettings):
     ):
         _ = (settings_cls, env_settings, dotenv_settings, file_secret_settings)
         return (init_settings,)
-
-    @classmethod
-    def from_yaml(
-        cls,
-        path: Path,
-        secrets: dict[str, str] | None = None,
-    ) -> Settings:
-        """
-        Load settings from a YAML file with variable resolution.
-
-        Args:
-            path: Path to the YAML config file
-            secrets: Optional dict of secrets for ${{ secrets.VAR }} resolution
-
-        Returns:
-            Validated Settings instance
-        """
-        if not path.is_file():
-            raise FileNotFoundError(f"Config file not found: {path}")
-
-        source = YamlConfigSettingsSource(cls, yaml_file=path, yaml_file_encoding="utf-8")
-        data = source()
-
-        # Resolve environment variables and secrets
-        data = resolve_variables(data, secrets)
-
-        return cls.model_validate(data)
 
     def get_model_config(self, model_id: str) -> ModelConfig | None:
         """Get a model configuration by ID."""

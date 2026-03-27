@@ -32,12 +32,10 @@ SSOT: `backend/py/src/crystalith/shared/env.py`
 | `CRYSTALITH_RETRIEVAL_ASSEMBLY_CACHE_TTL_S` | `float` | `20.0` | Retrieval assembly cache TTL (seconds). |
 | `CRYSTALITH_RETRIEVAL_FUSION_STRATEGY` | `enum` | `rrf` | Retrieval fusion strategy: rrf\|max_score (invalid values fall back to rrf). |
 | `CRYSTALITH_RETRIEVAL_MULTI_QUERY` | `bool` | `` | Force multi-query retrieval on/off (unset uses per-request tuning/config). |
-| `CRYSTALITH_SECRETS_PATH` | `path` | `` | Path to secrets YAML or a Docker-secrets directory (auto-discovery is used when unset). |
 
 ## Config interpolation env vars (referenced by `config/app.yaml`)
 
-These env vars are referenced via `${{ env.* }}` in the default config file.
+These env vars are referenced via `{{ env.* }}` in the default config file.
 
 - `CRYSTALITH_DEFAULT_EMBEDDING_MODEL`
-- `OPENAI_API_KEY`
 - `OPENAI_BASE_URL`

@@ -15,13 +15,13 @@ cp .env.example .env
 just upsert-env-configs
 ```
 
-`just upsert-env-configs` 从你的 shell 环境变量中读取常用变量（如 `OPENAI_API_KEY`、`POSTGRES_PASSWORD`），写入 `.env` 和 `config/secrets.yaml`。已有值不会被覆盖。
+`just upsert-env-configs` 从你的 shell 环境变量中读取常用变量（如 `OPENAI_API_KEY`、`POSTGRES_PASSWORD`），写入 `.env` 和 `config/secret.env`。已有值不会被覆盖。
 
 如果你更喜欢手动配置：
 
 ```bash
-cp config/secrets.yaml.example config/secrets.yaml
-# 编辑 config/secrets.yaml —— 至少设置 OPENAI_API_KEY
+cp config/secret.env.example config/secret.env
+# 编辑 config/secret.env —— 至少设置 OPENAI_API_KEY
 ```
 
 ## 2. 选择 Profile
@@ -59,8 +59,8 @@ just logs
 Crystalith 采用 **YAML 优先** 的运行时配置方式：
 
 - `config/app.yaml` — 主配置（可提交，安全默认值）
-- `config/secrets.yaml` — 密钥，用于 `${{ secrets.VAR }}` 插值（gitignored）
-- `.env` — compose/构建参数 + profile 选择
+- `config/secret.env` — 密钥（dotenv，gitignored），供 `{{ secret.VAR }}` 使用
+- `.env` — compose/构建参数 + profile 选择 + 非 secret 的模板输入（供 `{{ env.VAR }}` 使用）
 
 配置 overlay 自动发现并 deep-merge：
 
@@ -69,7 +69,7 @@ config/app.yaml              ← 基础（已提交）
 config/app.local.yaml        ← 本地覆盖（gitignored）
 config/app.{env}.yaml        ← 按环境区分（CRYSTALITH_ENV）
 config/app.{env}.local.yaml  ← 环境 + 本地
-config/secrets.yaml          ← 密钥
+config/secret.env            ← 密钥（dotenv）
 ```
 
 `config/app.yaml` 中的 endpoint 候选列表会根据运行环境自动重排——Docker 内优先 docker-internal 名称，宿主机上优先 localhost。不同 profile 无需维护不同的配置文件。
@@ -78,7 +78,7 @@ config/secrets.yaml          ← 密钥
 
 ### OpenAI（直连）
 
-在 shell 中设置 `OPENAI_API_KEY`，然后 `just upsert-env-configs`。或手动编辑 `config/secrets.yaml`。
+在 shell 中设置 `OPENAI_API_KEY`，然后 `just upsert-env-configs`。或手动编辑 `config/secret.env`。
 
 ### OpenAI 兼容端点（代理 / 自建）
 
@@ -94,7 +94,7 @@ just upsert-env-configs
 export CRYSTALITH_DEFAULT_EMBEDDING_MODEL="bge-m3-openai"
 ```
 
-在 Docker 模式下使用 VPN/Tailscale 端点时，在 `.env` 中设置 `BRIDGE_FORWARDS` 和 `OPENAI_BASE_URL_DOCKER`，并将 `host-remap` 加入 `DOCKER_SERVICES`。
+在 Docker 模式下使用 VPN/Tailscale 端点时，在 `.env` 中设置 `BRIDGE_FORWARDS` 和 `OPENAI_BASE_URL`，并将 `host-remap` 加入 `DOCKER_SERVICES`。
 
 ### Ollama（完全本地）
 

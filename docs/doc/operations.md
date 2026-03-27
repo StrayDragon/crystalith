@@ -31,7 +31,7 @@ Crystalith 部署通常为 **核心 + 可选叠加层**。最小备份集取决�
 
 可选（建议备份）：
 - `data/output/`（生成产物/预览）
-- `config/secrets.yaml`（若存在；切勿提交）或 `CRYSTALITH_SECRETS_PATH` 引用的任意路径
+- `config/secret.env`（若存在；切勿提交）
 
 恢复步骤（仅核心）：
 1. 停止服务栈：`docker compose ... down`

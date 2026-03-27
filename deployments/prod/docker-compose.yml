@@ -31,13 +31,13 @@ x-api-env: &api-env
   HOST: 0.0.0.0
   PORT: 8032
   RELOAD: "0"
-  # Triggers config/app.docker.yaml overlay for docker-specific settings.
+  # Enables optional env-specific overlays (e.g. config/app.docker.local.yaml).
   CRYSTALITH_ENV: docker
   # Optional: pass through OpenAI-compatible base URL override for config interpolation.
-  # Keep OPENAI_API_KEY out of compose env; use config/secrets.yaml instead.
-  OPENAI_BASE_URL: ${OPENAI_BASE_URL_DOCKER:-}
+  # Keep OPENAI_API_KEY out of compose env; use config/secret.env instead.
+  OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
   # Optional: default model overrides (non-secret)
-  CRYSTALITH_DEFAULT_EMBEDDING_MODEL: ${CRYSTALITH_DEFAULT_EMBEDDING_MODEL_DOCKER:-}
+  CRYSTALITH_DEFAULT_EMBEDDING_MODEL: ${CRYSTALITH_DEFAULT_EMBEDDING_MODEL:-}
 
 services:
   # ---------------------------------------------------------------------------
@@ -55,6 +55,10 @@ services:
         NGINX_IMAGE: ${NGINX_IMAGE:-nginx:1.29.5-trixie}
         PNPM_VERSION: ${PNPM_VERSION:-10.29.2}
         NPM_REGISTRY: ${NPM_REGISTRY:-}
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        ALL_PROXY: ${ALL_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
     container_name: crystalith-web
     ports:
       - "${CL_WEB_PORT:-8080}:8080"
@@ -94,11 +98,15 @@ services:
       args:
         CI: ${CI:-}
         USE_CN_MIRROR: ${USE_CN_MIRROR:-1}
-        UV_IMAGE: ${UV_IMAGE:-ghcr.io/astral-sh/uv:0.10.2}
+        UV_IMAGE: ${UV_IMAGE:-ghcr.io/astral-sh/uv:0.11.1}
         PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12-slim-trixie}
         APT_MIRROR: ${APT_MIRROR:-}
         UV_INDEX_URL: ${UV_INDEX_URL:-}
         CRYSTALITH_BACKEND_EXTRAS: ${CRYSTALITH_BACKEND_EXTRAS:-}
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        ALL_PROXY: ${ALL_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
     container_name: crystalith-api
     environment: *api-env
     volumes:

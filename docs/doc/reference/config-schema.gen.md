@@ -20,7 +20,7 @@ Regeneration:
 | `ai.timeout` | `integer` | Provider request timeout in seconds |
 | `app` | `object` | Application settings. |
 | `app.auth` | `object` | Optional API authentication settings for self-host deployments. |
-| `app.auth.api_key` | `anyOf` | Shared API key used for 'Authorization: Bearer <token>'. Prefer injecting via ${{ env.* }} / ${{ secrets.* }}. |
+| `app.auth.api_key` | `anyOf` | Shared API key used for 'Authorization: Bearer <token>'. Prefer injecting via {{ env.* }} / {{ secret.* }}. |
 | `app.auth.enabled` | `boolean` | If true, require API key authentication for /v1 endpoints. |
 | `app.cors` | `object` | CORS middleware settings for the API server. |
 | `app.cors.allow_credentials` | `boolean` | Whether to allow cookies/credentials. |

@@ -4,10 +4,10 @@ Crystalith 运行时配置位于 `config/app.yaml`。
 
 ## 基础
 
-- 密钥不要提交到 git。优先使用 `config/secrets.yaml`（自动发现）或 `CRYSTALITH_SECRETS_PATH`（文件或 Docker secrets 目录）。
+- 密钥不要提交到 git。优先使用 `config/secret.env`（dotenv，自动发现）。
 - 配置支持：
-  - `${{ env.VAR }}` 环境变量插值
-  - `${{ secrets.VAR }}` 密钥插值
+  - `{{ env.VAR }}` 模板变量（来自 `os.environ` + `.env`，`.env` 覆盖系统 env）
+  - `{{ secret.VAR }}` 模板变量（来自 `config/secret.env`）
   - YAML 锚点复用
 - 影响运行时/部署行为的环境变量索引见：[环境变量参考（生成）](reference/env-vars.gen.md)
 
@@ -36,11 +36,11 @@ Crystalith 可选地要求所有 `/v1/**` 端点使用 API key。
 app:
   auth:
     enabled: true
-    api_key: "${{ secrets.CRYSTALITH_API_KEY }}"
+    api_key: "{{ secret.CRYSTALITH_API_KEY }}"
 ```
 
 注意：
-- 优先使用 `${{ env.* }}` / `${{ secrets.* }}` 避免提交密钥。
+- 优先使用 `{{ env.* }}` / `{{ secret.* }}` 避免提交密钥。
 - 客户端需发送 `Authorization: Bearer <token>`（或 `X-API-Key: <token>`）。
 - `/health` 和 `/health/dependencies` 保持匿名访问，用于健康探针。
 
@@ -133,11 +133,12 @@ Crystalith 可选地检测重复资料：
 
 ## 密钥
 
-`CRYSTALITH_SECRETS_PATH` 可指向：
+后端会自动发现并读取 `config/app.yaml` 同目录下的 `config/secret.env`（dotenv 格式）。
 
-- YAML 文件（`KEY: value` 映射），或
-- 目录（Docker secrets 风格：每个 key 一个文件）
+快速创建：
 
-如果 `CRYSTALITH_SECRETS_PATH` 未设置，后端会自动发现 `config/app.yaml` 旁边的 `config/secrets.yaml`（如果存在）。
+```bash
+cp config/secret.env.example config/secret.env
+```
 
 详见 `部署与开发`。

@@ -15,7 +15,7 @@ SCHEMA_PATH := "frontend/web/openapi.gen.json"
 # See scripts/orchestrate.sh or .env.example for details.
 # --------------------------------------------------------------------------
 
-# Upsert .env and config/secrets.yaml from shell environment variables (safe: never overwrites existing values)
+# Upsert .env and config/secret.env from shell environment variables (safe: never overwrites existing values)
 upsert-env-configs:
     bash ./scripts/init_config.sh
 

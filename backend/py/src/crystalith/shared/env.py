@@ -22,7 +22,6 @@ class EnvVarDoc:
 # Configuration location
 CRYSTALITH_CONFIG_PATH = "CRYSTALITH_CONFIG_PATH"
 CRYSTALITH_CONFIG_DIR = "CRYSTALITH_CONFIG_DIR"
-CRYSTALITH_SECRETS_PATH = "CRYSTALITH_SECRETS_PATH"
 
 # Local data directory (non-DB artifacts, vectors, slide previews, etc.)
 CRYSTALITH_DATA_DIR = "CRYSTALITH_DATA_DIR"
@@ -84,12 +83,6 @@ ENV_VAR_DOCS: list[EnvVarDoc] = [
         type="path",
         default=None,
         description="Directory containing app.yaml (used when CRYSTALITH_CONFIG_PATH is unset).",
-    ),
-    EnvVarDoc(
-        name=CRYSTALITH_SECRETS_PATH,
-        type="path",
-        default=None,
-        description="Path to secrets YAML or a Docker-secrets directory (auto-discovery is used when unset).",
     ),
     EnvVarDoc(
         name=CRYSTALITH_DATA_DIR,

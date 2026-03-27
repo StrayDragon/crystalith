@@ -14,7 +14,7 @@
 
 ```bash
 cp .env.example .env          # 选择 profile，默认 hybrid
-just upsert-env-configs       # 从 shell 环境变量填充 .env 和 config/secrets.yaml
+just upsert-env-configs       # 从 shell 环境变量填充 .env 和 config/secret.env
 just up                       # 一键启动
 ```
 
@@ -27,14 +27,14 @@ config/app.yaml                ← 基础配置（已提交，安全默认值）
 config/app.local.yaml          ← 本地覆盖（gitignored，自动合并）
 config/app.{env}.yaml          ← 按环境区分（通过 CRYSTALITH_ENV 指定）
 config/app.{env}.local.yaml    ← 环境 + 本地覆盖
-config/secrets.yaml            ← 密钥（gitignored，自动发现）
+config/secret.env              ← 密钥（dotenv，gitignored，自动发现）
 ```
 
 只需要写差异部分，不用复制整个 `app.yaml`。
 
-变量插值：
-- `${{ secrets.VAR }}` — 从 `config/secrets.yaml` 解析，用于 API key、密码
-- `${{ env.VAR }}` — 从环境变量解析，用于运行时动态值（如 `OPENAI_BASE_URL`）
+模板渲染：
+- `{{ secret.VAR }}` — 从 `config/secret.env` 读取（dotenv），用于 API key、密码等敏感值
+- `{{ env.VAR }}` — 从 `os.environ` + `.env` 读取（`.env` 覆盖系统 env），用于非 secret 的动态值
 
 智能 endpoint 解析：`config/app.yaml` 中的 `endpoint_candidates` 列表会根据运行环境自动重排——Docker 内优先 docker-internal 名称，宿主机上优先 localhost。同一份配置全场景通用。
 
@@ -248,8 +248,7 @@ endpoint 探测会自动找到可达的服务。
 | `CRYSTALITH_CONFIG_PATH` | 指定配置文件路径 | 自动发现 `config/app.yaml` |
 | `CRYSTALITH_CONFIG_DIR` | 指定配置目录 | — |
 | `CRYSTALITH_ENV` | 环境名，用于配置分层 | 由 profile 自动设置 |
-| `CRYSTALITH_SECRETS_PATH` | 指定密钥文件/目录路径 | 自动发现 `config/secrets.yaml` |
-| `OPENAI_BASE_URL` | 覆盖 OpenAI 兼容 API 端点 | `https://api.openai.com/v1` |
+| `OPENAI_BASE_URL` | OpenAI 兼容 API 端点（供 `{{ env.OPENAI_BASE_URL }}` 使用） | — |
 | `CRYSTALITH_DEFAULT_EMBEDDING_MODEL` | 覆盖默认 embedding 模型 ID | 第一个 `embed` 角色模型 |
 
 ## 验证
@@ -269,7 +268,7 @@ just composition-smoke
 
 ## 安全
 
-- 不要提交 `config/secrets.yaml` 和带真实凭据的 `.env`
+- 不要提交 `config/secret.env` 和带真实凭据的 `.env`
 - API 默认无认证。公网暴露前在配置里开启 `app.auth.enabled: true`
 - URL 抓取默认启用 SSRF 防护（`source_ingestion.url_fetch.security`）
 

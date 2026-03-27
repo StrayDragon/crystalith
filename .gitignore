@@ -25,9 +25,8 @@
 *.local
 *.local.*
 
-# Crystalith secrets/config overrides
-config/secrets.yaml
-config/secrets.yml
+# Crystalith secret env (runtime secrets)
+config/secret.env
 
 # Local runtime data (databases/uploads)
 data/

@@ -40,7 +40,6 @@ from crystalith.shared.env import (
     CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED,
     CRYSTALITH_OPTIONAL_SERVICES_MONITOR_INTERVAL_S,
     CRYSTALITH_OPTIONAL_SERVICES_MONITOR_TIMEOUT_S,
-    CRYSTALITH_SECRETS_PATH,
     OPTIONAL_SERVICES_MONITOR_ENABLED_DEFAULT,
     OPTIONAL_SERVICES_MONITOR_INTERVAL_S_DEFAULT,
     OPTIONAL_SERVICES_MONITOR_TIMEOUT_S_DEFAULT,
@@ -137,8 +136,6 @@ def _load_settings() -> Settings:
 
     if config_path is not None:
         schema_path = config_path.parent / "app.schema.gen.json"
-        secrets_path_value = os.environ.get(CRYSTALITH_SECRETS_PATH)
-        secrets_path = Path(secrets_path_value) if secrets_path_value else None
         overlay_paths = _discover_overlay_paths(config_path)
         if overlay_paths:
             logger.info(
@@ -147,7 +144,6 @@ def _load_settings() -> Settings:
             )
         manager = ConfigManager(
             config_path, schema_path,
-            secrets_path=secrets_path,
             overlay_paths=overlay_paths,
         )
         if not schema_path.exists():

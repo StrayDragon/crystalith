@@ -30,6 +30,7 @@ members = [
     "crystalith-parser-media",
     "crystalith-parser-pdf",
     "crystalith-slides-slidev",
+    "rivu-server-sdk",
 ]
 
 [[package]]
@@ -942,6 +943,7 @@ dependencies = [
     { name = "cl-stdx" },
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "jinja2" },
     { name = "jsonschema" },
     { name = "langchain-community" },
     { name = "ollama" },
@@ -1088,6 +1090,7 @@ requires-dist = [
     { name = "crystalith-slides-slidev", marker = "extra == 'official-slides'", editable = "plugins/crystalith-slides-slidev" },
     { name = "fastapi", specifier = ">=0.117.1" },
     { name = "httpx", specifier = ">=0.27.0" },
+    { name = "jinja2", specifier = ">=3.1.4" },
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "langchain-community", specifier = ">=0.3.0" },
     { name = "ollama", specifier = ">=0.3.3" },
@@ -1099,7 +1102,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "redis", marker = "extra == 'redis'", specifier = ">=5.0.0" },
-    { name = "rivu-server-sdk", git = "https://github.com/StrayDragon/rivu.git?subdirectory=python&rev=d9dcb31c29285208c7ffc0bef6ae203357a2b570" },
+    { name = "rivu-server-sdk", editable = "packages/rivu-server-sdk" },
     { name = "scalar-fastapi", specifier = ">=1.6.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.43" },
     { name = "tiktoken", specifier = ">=0.12.0" },
@@ -4481,10 +4484,22 @@ wheels = [
 [[package]]
 name = "rivu-server-sdk"
 version = "0.1.0"
-source = { git = "https://github.com/StrayDragon/rivu.git?subdirectory=python&rev=d9dcb31c29285208c7ffc0bef6ae203357a2b570#d9dcb31c29285208c7ffc0bef6ae203357a2b570" }
+source = { editable = "packages/rivu-server-sdk" }
 dependencies = [
     { name = "pydantic" },
 ]
+
+[package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.0.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "rpds-py"

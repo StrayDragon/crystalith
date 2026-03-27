@@ -88,32 +88,14 @@ def test_config_manager_validate_yaml_with_schema_reports_errors(tmp_path) -> No
     assert errors2
 
 
-def test_config_manager_load_secrets_from_file_and_directory(tmp_path) -> None:
-    config_path = tmp_path / "app.yaml"
-    schema_path = tmp_path / "app.schema.gen.json"
-
-    secrets_file = tmp_path / "secrets.yaml"
-    _write_yaml(secrets_file, "OPENAI_API_KEY: sk-test\n")
-
-    manager = ConfigManager(config_path=config_path, schema_path=schema_path, secrets_path=secrets_file)
-    assert manager._load_secrets()["OPENAI_API_KEY"] == "sk-test"
-
-    docker_secrets_dir = tmp_path / "secrets.d"
-    docker_secrets_dir.mkdir()
-    (docker_secrets_dir / "TOKEN").write_text("t", encoding="utf-8")
-
-    manager2 = ConfigManager(config_path=config_path, schema_path=schema_path, secrets_path=docker_secrets_dir)
-    assert manager2._load_secrets()["TOKEN"] == "t"
-
-
-def test_config_manager_autodiscovers_secrets_file_next_to_config(
+def test_config_manager_loads_secret_env_next_to_config(
     tmp_path,
-    monkeypatch,
     disable_ollama_auto_discovery,
 ) -> None:
     config_path = tmp_path / "app.yaml"
-    secrets_path = tmp_path / "secrets.yaml"
-    _write_yaml(secrets_path, "OPENAI_API_KEY: sk-test\n")
+
+    secret_env = tmp_path / "secret.env"
+    secret_env.write_text("OPENAI_API_KEY=sk-test\n", encoding="utf-8")
 
     _write_yaml(
         config_path,
@@ -125,7 +107,7 @@ version: "1.0.0"
 schema: v1
 providers:
   openai_main: &openai_main
-    api_key: "${{ secrets.OPENAI_API_KEY }}"
+    api_key: "{{ secret.OPENAI_API_KEY }}"
     base_url: "https://example.invalid/v1"
 models:
   defaults:
@@ -155,6 +137,70 @@ models:
     model = settings.models.get_model("test-chat")
     assert model is not None
     assert model.get_openai_config().api_key == "sk-test"
+
+
+def test_config_manager_dotenv_overrides_system_env(
+    tmp_path,
+    monkeypatch,
+    disable_ollama_auto_discovery,
+) -> None:
+    root = tmp_path / "repo"
+    config_dir = root / "config"
+    config_dir.mkdir(parents=True)
+    config_path = config_dir / "app.yaml"
+    (root / ".env").write_text("FOO=2\n", encoding="utf-8")
+
+    monkeypatch.setenv("FOO", "1")
+
+    _write_yaml(
+        config_path,
+        _minimal_config_yaml().replace('name: "Test"', 'name: "{{ env.FOO }}"'),
+    )
+
+    manager = ConfigManager(config_path=config_path, schema_path=config_dir / "app.schema.gen.json")
+    settings = manager.load(validate_schema=False)
+    assert settings.name == "2"
+
+
+def test_config_manager_missing_secret_fails_with_hint(
+    tmp_path,
+    disable_ollama_auto_discovery,
+) -> None:
+    config_path = tmp_path / "app.yaml"
+    _write_yaml(
+        config_path,
+        _minimal_config_yaml().replace('name: "Test"', 'name: "{{ secret.MISSING }}"'),
+    )
+
+    manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.gen.json")
+    try:
+        manager.load(validate_schema=False)
+        raise AssertionError("Expected config template render to fail due to missing secret")
+    except ValueError as exc:
+        message = str(exc)
+        assert "secret missing" in message
+        assert "secret.env" in message
+
+
+def test_config_manager_template_syntax_error_includes_location(
+    tmp_path,
+    disable_ollama_auto_discovery,
+) -> None:
+    config_path = tmp_path / "app.yaml"
+    _write_yaml(
+        config_path,
+        _minimal_config_yaml().replace('name: "Test"', 'name: "{{ env.FOO | default( }}"'),
+    )
+
+    manager = ConfigManager(config_path=config_path, schema_path=tmp_path / "app.schema.gen.json")
+    try:
+        manager.load(validate_schema=False)
+        raise AssertionError("Expected template syntax error to fail config load")
+    except ValueError as exc:
+        message = str(exc)
+        assert "Config template syntax error" in message
+        assert str(config_path) in message
+        assert ":1:" in message
 
 
 def test_config_manager_ignores_legacy_env_overrides(

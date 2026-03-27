@@ -3,9 +3,10 @@
 # Crystalith Configuration (safe defaults for public repo)
 # ============================================================================
 # Notes:
-# - Do NOT commit secrets. Prefer `config/secrets.yaml` (auto-discovered) or set `CRYSTALITH_SECRETS_PATH`.
-# - Supports YAML anchors, environment interpolation (${{ env.VAR }}),
-#   and secrets interpolation (${{ secrets.VAR }}).
+# - Do NOT commit secrets. Put them in `config/secret.env` (dotenv format, gitignored).
+# - This file is rendered as a template before YAML parsing:
+#   - `{% raw %}{{ env.KEY }}{% endraw %}` reads from `os.environ` overlaid by `.env`
+#   - `{% raw %}{{ secret.KEY }}{% endraw %}` reads from `config/secret.env`
 %YAML 1.1
 ---
 # ----------------------------------------------------------------------------
@@ -28,7 +29,7 @@ app:
     # Optional API key auth for self-host deployments.
     # When enabled, all /v1/** endpoints require `Authorization: Bearer <token>`.
     enabled: false
-    # api_key: "${{ secrets.CRYSTALITH_API_KEY }}"
+    # api_key: "{% raw %}{{ secret.CRYSTALITH_API_KEY }}{% endraw %}"
 
   cors:
     # Allowed origins for browser clients (CORS).
@@ -36,6 +37,8 @@ app:
     allow_origins:
       - "http://localhost:3000"
       - "http://127.0.0.1:3000"
+      - "http://localhost:8080"
+      - "http://127.0.0.1:8080"
 
   startup:
     # If true, automatically runs DB migrations on startup.
@@ -69,10 +72,10 @@ plugins:
 providers:
   # OpenAI-compatible API
   openai_default: &openai_default
-    api_key: "${{ env.OPENAI_API_KEY }}"
+    api_key: "{{ secret.OPENAI_API_KEY | default('') }}"
     # Optional override: set OPENAI_BASE_URL to use an OpenAI-compatible endpoint/proxy.
     # When empty/unset, the OpenAI SDK default (https://api.openai.com/v1) is used.
-    base_url: "${{ env.OPENAI_BASE_URL }}"
+    base_url: "{{ env.OPENAI_BASE_URL | default('') }}"
 
   # Local Ollama
   ollama_local: &ollama_local
@@ -101,7 +104,7 @@ models:
     # Override example:
     #   export CRYSTALITH_DEFAULT_EMBEDDING_MODEL="bge-m3-openai"
     # When empty/unset, the first `roles: [embed]` model in `models.available` is used.
-    embedding: "${{ env.CRYSTALITH_DEFAULT_EMBEDDING_MODEL }}"
+    embedding: "{{ env.CRYSTALITH_DEFAULT_EMBEDDING_MODEL | default('') }}"
 
   available:
     # -------------------- OpenAI (chat) --------------------
@@ -224,8 +227,8 @@ database:
   url: "sqlite+aiosqlite:///./data/app.db"
   # Optional: auto-select a reachable external DB when available.
   url_candidates:
-    - "postgresql+asyncpg://crystalith:${{ secrets.POSTGRES_PASSWORD }}@127.0.0.1:5434/crystalith"
-    - "postgresql+asyncpg://crystalith:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/crystalith"
+    - "postgresql+asyncpg://crystalith:{{ secret.POSTGRES_PASSWORD | default('') }}@127.0.0.1:5434/crystalith"
+    - "postgresql+asyncpg://crystalith:{{ secret.POSTGRES_PASSWORD | default('') }}@postgres:5432/crystalith"
 
 cache:
   # memory|redis|auto. auto selects a reachable redis if configured, else falls back to memory.
@@ -378,17 +381,17 @@ source_ingestion:
 
     jina:
       enabled: true
-      api_key: "${{ secrets.JINA_API_KEY }}"
+      api_key: "{{ secret.JINA_API_KEY | default('') }}"
       timeout: 30
       proxy:
         <<: *default_proxy
 
     firecrawl:
       enabled: false
-      api_key: "${{ secrets.FIRECRAWL_API_KEY }}"
+      api_key: "{{ secret.FIRECRAWL_API_KEY | default('') }}"
       timeout: 60
 
     browserless:
       enabled: false
       endpoint: "ws://localhost:3000"
-      token: "${{ secrets.BROWSERLESS_TOKEN }}"
+      token: "{{ secret.BROWSERLESS_TOKEN | default('') }}"

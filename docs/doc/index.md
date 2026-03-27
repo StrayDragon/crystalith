@@ -18,7 +18,7 @@ Crystalith 是一个以笔记本为中心的 AI 工作空间，支持对你的�
 
 ```bash
 cp .env.example .env          # 选择 profile（默认 hybrid）
-just upsert-env-configs       # 从 shell 环境变量填充 secrets
+just upsert-env-configs       # 从 shell 环境变量填充 .env 和 config/secret.env
 just up                       # 一键启动
 ```
 

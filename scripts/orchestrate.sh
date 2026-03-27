@@ -31,7 +31,8 @@ _source_env_file() {
     [[ -z "$line" || "$line" == \#* ]] && continue
     local key="${line%%=*}"
     local val="${line#*=}"
-    [[ -z "${!key:-}" ]] && export "$key=$val"
+    # Align with config template rendering: .env overrides existing process env.
+    export "$key=$val"
   done < "$ef"
 }
 
