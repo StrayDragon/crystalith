@@ -9,6 +9,7 @@
    - `architecture-plugin-and-agent/spec.md`
    - `official-plugins/spec.md`
    - `config-and-models/spec.md`
+   - `config-template-rendering/spec.md`
    - `data-and-storage/spec.md`
    - `retrieval-and-cache/spec.md`
    - `background-jobs-and-task-runtime/spec.md`

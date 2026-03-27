@@ -16,7 +16,7 @@
 ## What Changes
 
 - 把配置来源、overlay 顺序与 schema validate 写成稳定契约：
-  - `config/app.yaml`、overlay、`secrets.yaml` 与配置定位变量的边界固定
+  - `config/app.yaml`、overlay、`secret.env` 与配置定位变量的边界固定
   - 暴露 redacted effective config，并给出 drift guard / drift explainer
 - 把 profile 变成能力契约，而不是部署口头约定：
   - local / hybrid / docker / full 的能力边界、默认插件/功能集与成本约束明确化
