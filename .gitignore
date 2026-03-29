@@ -385,3 +385,6 @@ data/
 # Allow workspace refine template data to be tracked.
 !frontend/web/src/features/workspace/data/
 !frontend/web/src/features/workspace/data/refineTemplates.ts
+
+
+config/secrets.yaml
