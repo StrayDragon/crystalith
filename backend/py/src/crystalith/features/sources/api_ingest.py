@@ -7,7 +7,7 @@ from time import perf_counter
 from typing import Literal, cast
 
 from cl_logs import get_logger
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -732,6 +732,7 @@ async def create_source_from_url(
 @router.post("", response_model=SourceRead, status_code=status.HTTP_201_CREATED)
 async def upload_source(
     notebook_id: int,
+    request: Request,
     response: Response,
     file: UploadFile = File(...),
     dedup_action: Literal["prompt", "reuse", "create_new"] = "prompt",
@@ -752,7 +753,21 @@ async def upload_source(
     filename = file.filename or "upload.txt"
     mime_type = file.content_type
 
-    raw = await file.read()
+    http_guardrails_enabled = bool(getattr(request.app.state, "http_guardrails_enabled", False))
+    upload_max_bytes = int(getattr(settings.app.http_guardrails, "upload_max_bytes", 0) or 0)
+    if http_guardrails_enabled and upload_max_bytes > 0:
+        raw = await file.read(upload_max_bytes + 1)
+        if len(raw) > upload_max_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail={
+                    "error_code": "PAYLOAD_TOO_LARGE",
+                    "message": "上传内容过大",
+                    "details": {"max_bytes": upload_max_bytes},
+                },
+            )
+    else:
+        raw = await file.read()
     if not raw:
         raise HTTPException(status_code=400, detail="empty document")
 

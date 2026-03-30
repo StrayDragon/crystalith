@@ -18,6 +18,27 @@
 - **WHEN** 用户提供的 YAML 配置不满足 `config/app.schema.gen.json`
 - **THEN** 系统 SHALL 以明确错误拒绝启动或拒绝加载该配置
 
+### Requirement: HTTP guardrails config is schema-validated and YAML-first
+系统 MUST 在 `config/app.schema.gen.json` 中显式声明 HTTP guardrails 配置块，并以 YAML-first 方式加载与校验（不依赖额外的业务 env override）。
+
+#### Scenario: Default config validates without guardrails overrides
+- **WHEN** 用户使用仓库提供的默认 `config/app.yaml`
+- **THEN** 配置校验 SHALL 通过
+- **AND** 系统 SHALL 使用默认的 guardrails 策略（例如 `mode=auto`）
+
+### Requirement: Guardrails default mode only enables for non-loopback exposure
+当 `mode=auto` 时，系统 MUST 仅在“非 loopback 暴露”场景启用 guardrails，并支持显式覆盖。
+
+#### Scenario: Operator forces guardrails on for a local bind
+- **WHEN** 运维设置 `mode=enabled`
+- **AND** 后端 listen host 为 loopback
+- **THEN** 系统 SHALL 启用 guardrails
+
+#### Scenario: Operator disables guardrails for a non-local bind
+- **WHEN** 运维设置 `mode=disabled`
+- **AND** 后端 listen host 为非 loopback
+- **THEN** 系统 SHALL 禁用 guardrails
+
 ### Requirement: Runtime config source of truth is YAML
 系统 MUST 以 `config/app.yaml`（模板渲染 + overlays 合并 + schema 校验）作为运行时业务配置的权威来源；配置加载器 MUST NOT 再执行“读取环境变量覆盖配置字段”的二次覆盖步骤。
 

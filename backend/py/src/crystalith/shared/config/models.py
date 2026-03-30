@@ -305,6 +305,54 @@ class ModelsSettings(BaseModel):
 # Feature Settings
 # =============================================================================
 
+HttpGuardrailsMode = Literal["auto", "enabled", "disabled"]
+HttpRateLimitKey = Literal["ip"]
+
+
+class HttpRateLimitSettings(BaseModel):
+    """HTTP rate limiting settings (best-effort, single-process baseline)."""
+
+    enabled: bool = Field(
+        True,
+        description="If true, enable basic HTTP rate limiting for core /v1 endpoints.",
+    )
+    window_s: int = Field(
+        60,
+        ge=1,
+        description="Fixed window size in seconds.",
+    )
+    max_requests: int = Field(
+        600,
+        ge=0,
+        description="Maximum requests per window per key (0 disables).",
+    )
+    key: HttpRateLimitKey = Field(
+        "ip",
+        description="Rate limit identity strategy (default: direct client IP; do not trust proxy headers).",
+    )
+
+
+class HttpGuardrailsSettings(BaseModel):
+    """HTTP runtime guardrails for non-local exposure."""
+
+    mode: HttpGuardrailsMode = Field(
+        "auto",
+        description=(
+            "Guardrails mode: auto enables only when the server is bound to a non-loopback host; "
+            "enabled/disabled force override."
+        ),
+    )
+    upload_max_bytes: int = Field(
+        50 * 1024 * 1024,
+        ge=0,
+        description="Maximum upload size in bytes when guardrails are enabled (0 disables).",
+    )
+    rate_limit: HttpRateLimitSettings = Field(
+        default_factory=_default_factory(HttpRateLimitSettings),
+        description="HTTP rate limiting settings.",
+    )
+
+
 class AppAuthSettings(BaseModel):
     """Optional API authentication settings for self-host deployments."""
 
@@ -363,6 +411,10 @@ class AppSettings(BaseModel):
     startup: StartupSettings = Field(
         default_factory=lambda: StartupSettings.model_validate({}),
         description="Startup behaviors",
+    )
+    http_guardrails: HttpGuardrailsSettings = Field(
+        default_factory=_default_factory(HttpGuardrailsSettings),
+        description="HTTP runtime guardrails (auto for non-local exposure).",
     )
 
 

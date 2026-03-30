@@ -38,6 +38,23 @@
 - **WHEN** 非 SSE 请求发生错误
 - **THEN** 系统 SHALL 返回统一错误结构并包含 `error_code` 与 `message`
 
+### Requirement: Rate limited responses use unified envelope and retry_after
+系统 MUST 为 HTTP rate limiting 提供稳定的对外语义：返回 429，并在统一错误信封中暴露 `retry_after` 指引。
+
+#### Scenario: Client receives 429 with retry guidance
+- **WHEN** 客户端触发 rate limit
+- **THEN** 系统 SHALL 返回 429
+- **AND** 响应 MUST 使用统一错误信封（`error_code`, `message`, `details?`, `retry_after?`）
+- **AND** 响应 MUST 包含 `retry_after`（秒）
+- **AND** 响应头 SHOULD 包含 `Retry-After`（秒）
+
+### Requirement: Health endpoints remain exempt from HTTP guardrails
+系统的健康检查端点 MUST 保持可用于运维探活与诊断，不应因 guardrails 被拒绝。
+
+#### Scenario: Health stays accessible while guardrails are enabled
+- **WHEN** 运维启用 guardrails（非本地暴露或显式 enabled）
+- **THEN** `/health` 与 `/health/dependencies` SHALL 仍可匿名访问
+
 ### Requirement: Notebook/session/message endpoints are stable
 notebook、session、message 的范围归属与 404/400 语义 MUST 稳定。
 
