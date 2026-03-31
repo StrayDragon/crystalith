@@ -10,6 +10,14 @@
 - **THEN** SHALL 使用统一 catalog 计算 loaded、skipped 或 not_installed 状态
 - **AND** SHALL 提供对应 install/enable hints
 
+### Requirement: Plugin Installation MUST Be Manual and Out-of-Band
+系统 MUST 要求插件以手动方式安装（例如 pip/uv 安装包），不得在运行时从远程下载或自动安装插件。
+
+#### Scenario: 用户缺少某个官方插件能力
+- **WHEN** 系统判定某个官方插件为 `not_installed` 或 `skipped`
+- **THEN** 系统 SHALL 提供可执行的“手动安装/启用”提示（例如推荐 extras 或单独安装包名）
+- **AND** 宿主 MUST NOT 尝试自动下载、安装或执行远程插件代码
+
 ### Requirement: Packaging Tiers MUST Explain Capability Differences
 系统 MUST 让 core-only 与 official-full 等安装档位对能力差异保持可解释，而不是只靠文档备注。
 

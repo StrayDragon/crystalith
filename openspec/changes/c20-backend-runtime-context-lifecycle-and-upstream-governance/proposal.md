@@ -21,6 +21,9 @@
 - 定义 backend runtime contract：
   - `AppState` / deps 的最小存在性、类型边界、创建/关闭责任
   - optional services、worker、monitor、queue、http client registry 的统一装配语义
+- 将插件装配纳入 runtime/lifespan 治理（避免插件只能“启动时加载但无法参与资源管理”）：
+  - 宿主 SHOULD 提供可选的插件生命周期钩子或等价资源关闭注册机制（startup/shutdown）
+  - 插件装配失败/超时 MUST 可诊断（plugin_id、阶段、hint），并且不应让 shutdown 过程失控
 - 定义 request context propagation：
   - `correlation_id` 贯穿 HTTP、SSE、task、worker、upstream calls
   - response、events、logs 与 diagnostics 使用同一共同键

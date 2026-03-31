@@ -8,6 +8,7 @@
 
 - 收口输出类型与渲染器契约：
   - output type registry：每个输出类型必须声明 schema、renderer、可导出形态
+  - 明确可扩展边界：v1 允许插件覆盖既有 output type；新增 output type 需要宿主侧同步（例如迁移/registry 扩展），避免“插件能声明但系统无法持久化/路由”
   - renderer 输出必须能携带结构化错误（供 `c2167` 展示恢复动作）
 - 收口 output renderer 的宿主契约：
   - 让官方输出和插件输出共享同一套最小装配面（加载态/错误兜底/capability 检测）

@@ -30,7 +30,7 @@
 
 ### Modified Capabilities
 
-- `connectors-sync-marketplace`：支持数据库类连接器。
+- `connectors-sync-catalog`：支持数据库类连接器。
 - `sandboxed-compute-cells-and-kernel-runtime`：SQL 与计算结果映射到 dataframe/表格层。
 - `dlp-redaction-and-sensitive-data-guards`：字段级敏感识别与放行。
 - `private-deployment-and-regional-data-plane`：私有部署密钥托管边界。

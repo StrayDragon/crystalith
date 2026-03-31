@@ -15,9 +15,10 @@
 - [ ] 3.1 定义 startup / draining / shutdown 的阶段顺序
 - [ ] 3.2 定义 worker、SSE、monitor 和核心资源的关闭顺序
 - [ ] 3.3 定义 shutdown observability 与 restart reconciliation 接口边界
+- [ ] 3.4 定义插件装配如何参与 lifespan（可选 startup/shutdown hooks 或资源关闭注册）
 
 ## 4. Verification
 
 - [ ] 4.1 复核 merged proposal 已吸收 5 个旧 change 的核心约束
 - [ ] 4.2 复核 deps / context / upstream / logging 语义互相衔接无冲突
-- [ ] 4.3 运行 `openspec validate c4076-backend-runtime-context-lifecycle-and-upstream-governance`
+- [ ] 4.3 运行 `openspec validate c20-backend-runtime-context-lifecycle-and-upstream-governance`
