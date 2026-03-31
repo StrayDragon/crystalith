@@ -12,6 +12,9 @@
 - 提供 Debug Recipes（可复制粘贴的排障脚本组合）：
   - 例如“导入失败但 UI 没提示”“SSE 卡住不动”“PDF 导入后搜不到”“connector sync_check 一直转圈”。
   - 明确什么时候需要 correlation_id，怎么取，怎么贴。
+- 补齐插件可用性排障的“最短路径”（让插件问题不再像随机 bug）：
+  - 插件合规/加载：`cd backend/py && uv run python scripts/check_plugins.py --json`
+  - UI/后端诊断：对齐 `/v1/workspace/tools` 的 `diagnostics.plugins` / `diagnostics.official`，并解释 `plugins.enabled/disabled/load_order` 与 `slides.default_plugin` 的常见误配
 - 把 diagnostics export pack 变成“协作语言”：
   - 文档里写清导出包包含什么、怎么匿名化（对齐 `c2166` 的 redaction）、以及怎么在 issue 里上传。
 - 给每条排障路线一个“结束条件”：

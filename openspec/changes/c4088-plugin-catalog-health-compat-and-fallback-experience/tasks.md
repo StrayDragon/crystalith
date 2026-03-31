@@ -3,6 +3,7 @@
 - [ ] 1.1 定义 official plugin catalog、delivery tiers 与状态词汇
 - [ ] 1.2 定义 loaded/skipped/not_installed 与 install hint 的计算语义
 - [ ] 1.3 定义 API diagnostics 与 UI capability matrix 的共用字段
+- [ ] 1.4 定义 capability provenance 字段（每个 key 的最终生效 plugin id/entry point/覆盖关系）
 
 ## 2. Health and compatibility
 

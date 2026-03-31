@@ -34,7 +34,7 @@
 - `browser-clipper-and-web-capture`：采集直接落入 inbox。
 - `personal-agent-sidebar-and-global-hotkey`：轻入口安全送入 inbox。
 - `notebook-content-model-and-block-editor`：从建议骨架落地为 block。
-- `connectors-sync-marketplace`：会议与日历类连接器需要纳入统一宿主。
+- `connectors-sync-catalog`：会议与日历类连接器需要纳入统一宿主。
 - `multimodal-audio-video-briefings`：会议音频和纪要要能进入统一摘要链路。
 - `outcome-goals-and-impact-tracking`：行动项需要能挂接目标和负责人。
 

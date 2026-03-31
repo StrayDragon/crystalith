@@ -20,6 +20,9 @@
 - 定义 official plugin catalog substrate：
   - core-only / official-full 交付档位
   - official plugin catalog、loaded/skipped/not_installed 状态、install hints
+- 定义 capability provenance substrate（“谁提供了这项能力”）：
+  - 对每个可被插件覆盖的 key（provider id / output_type / parser_type / extractor_type / connector_id / slides plugin）统一暴露最终生效 plugin id + entry point
+  - 冲突覆盖遵循 last-wins，但必须可诊断：能解释为何是它生效、如何复现与如何固定（load_order/默认选择）
 - 定义 plugin health governance：
   - plugin metadata、readiness_check、host smoke tests、compat matrix
   - backend / frontend bundles 的 compat 与 smoke 输出统一收口
