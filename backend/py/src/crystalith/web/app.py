@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime as dt
+import ipaddress
 import logging
 import os
 import socket
@@ -65,6 +66,40 @@ from .optional_services_types import (
 from .routers import register_routers
 
 logger = logging.getLogger(__name__)
+
+_DEFAULT_LISTEN_HOST = "127.0.0.1"
+
+
+def _is_loopback_listen_host(host: str | None) -> bool:
+    if host is None:
+        return True
+
+    text = host.strip()
+    if not text:
+        return True
+
+    lowered = text.lower()
+    if lowered == "localhost":
+        return True
+
+    if lowered.startswith("[") and lowered.endswith("]"):
+        lowered = lowered[1:-1]
+
+    try:
+        ip = ipaddress.ip_address(lowered)
+    except ValueError:
+        return False
+
+    return ip.is_loopback
+
+
+def _resolve_http_guardrails_enabled(settings: Settings, *, listen_host: str | None) -> bool:
+    mode = settings.app.http_guardrails.mode
+    if mode == "enabled":
+        return True
+    if mode == "disabled":
+        return False
+    return not _is_loopback_listen_host(listen_host)
 
 
 class HttpEndpointProber(Protocol):
@@ -650,6 +685,9 @@ def create_app(
     http_endpoint_prober: HttpEndpointProber | None = None,
 ) -> FastAPIX:
     resolved = settings or _load_settings()
+    listen_host = os.getenv("HOST") or _DEFAULT_LISTEN_HOST
+    http_guardrails_enabled = _resolve_http_guardrails_enabled(resolved, listen_host=listen_host)
+
     db = db_manager or create_db_manager(resolved.database.url)
     store = vector_store if vector_store is not None else create_vector_store(resolved)
     cache = cache_provider or create_cache_provider(resolved)
@@ -796,6 +834,8 @@ def create_app(
     app.state.optional_services_last_probe = None
     app.state.ollama_hosts_status = {}
     app.state.ollama_monitor_last_probe = None
+    app.state.listen_host = listen_host
+    app.state.http_guardrails_enabled = http_guardrails_enabled
 
     @app.get("/health", include_in_schema=False)
     async def health() -> dict[str, str]:
@@ -844,6 +884,18 @@ def create_app(
             allow_methods=cors.allow_methods,
             allow_headers=cors.allow_headers,
         )
+
+    if http_guardrails_enabled:
+        rate_limit = resolved.app.http_guardrails.rate_limit
+        if rate_limit.enabled and rate_limit.max_requests > 0:
+            from crystalith.web.http_rate_limit import HttpRateLimitMiddleware
+
+            app.add_middleware(
+                HttpRateLimitMiddleware,
+                window_s=rate_limit.window_s,
+                max_requests=rate_limit.max_requests,
+                enabled=True,
+            )
 
     @app.exception_handler(HTTPException)
     async def handle_http_exception(_: Request, exc: HTTPException) -> JSONResponse:

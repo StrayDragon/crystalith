@@ -101,6 +101,10 @@
         "startup": {
           "$ref": "#/$defs/StartupSettings",
           "description": "Startup behaviors"
+        },
+        "http_guardrails": {
+          "$ref": "#/$defs/HttpGuardrailsSettings",
+          "description": "HTTP runtime guardrails (auto for non-local exposure)."
         }
       },
       "title": "AppSettings",
@@ -500,6 +504,35 @@
       "title": "FirecrawlSettings",
       "type": "object"
     },
+    "HttpGuardrailsSettings": {
+      "description": "HTTP runtime guardrails for non-local exposure.",
+      "properties": {
+        "mode": {
+          "default": "auto",
+          "description": "Guardrails mode: auto enables only when the server is bound to a non-loopback host; enabled/disabled force override.",
+          "enum": [
+            "auto",
+            "enabled",
+            "disabled"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "upload_max_bytes": {
+          "default": 52428800,
+          "description": "Maximum upload size in bytes when guardrails are enabled (0 disables).",
+          "minimum": 0,
+          "title": "Upload Max Bytes",
+          "type": "integer"
+        },
+        "rate_limit": {
+          "$ref": "#/$defs/HttpRateLimitSettings",
+          "description": "HTTP rate limiting settings."
+        }
+      },
+      "title": "HttpGuardrailsSettings",
+      "type": "object"
+    },
     "HttpProxySettings": {
       "description": "HTTP 代理配置。\n\n支持 HTTP/HTTPS/SOCKS5 代理协议，可作为 YAML anchor 被其他功能引用。\n\nExample:\n    proxy_settings: &default_proxy\n      enabled: false\n      http_url: \"http://127.0.0.1:7890\"\n      https_url: \"http://127.0.0.1:7890\"\n      socks5_url: null\n      no_proxy: [\"localhost\", \"127.0.0.1\"]\n\n    source_ingestion:\n      url_fetch:\n        proxy: *default_proxy",
       "properties": {
@@ -558,6 +591,40 @@
         }
       },
       "title": "HttpProxySettings",
+      "type": "object"
+    },
+    "HttpRateLimitSettings": {
+      "description": "HTTP rate limiting settings (best-effort, single-process baseline).",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "If true, enable basic HTTP rate limiting for core /v1 endpoints.",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "window_s": {
+          "default": 60,
+          "description": "Fixed window size in seconds.",
+          "minimum": 1,
+          "title": "Window S",
+          "type": "integer"
+        },
+        "max_requests": {
+          "default": 600,
+          "description": "Maximum requests per window per key (0 disables).",
+          "minimum": 0,
+          "title": "Max Requests",
+          "type": "integer"
+        },
+        "key": {
+          "const": "ip",
+          "default": "ip",
+          "description": "Rate limit identity strategy (default: direct client IP; do not trust proxy headers).",
+          "title": "Key",
+          "type": "string"
+        }
+      },
+      "title": "HttpRateLimitSettings",
       "type": "object"
     },
     "JinaSettings": {
