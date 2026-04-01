@@ -397,7 +397,6 @@ def test_config_manager_normalizes_data_paths_from_config_root(
     assert settings.database.url.startswith("sqlite")
     assert root.as_posix() in settings.database.url
     assert "/config/" not in settings.database.url
-    assert settings.vector_storage.sqlite.path.startswith(root.as_posix())
     assert settings.vector_storage.chroma.path.startswith(root.as_posix())
 
 

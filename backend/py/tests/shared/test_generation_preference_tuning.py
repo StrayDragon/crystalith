@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 from crystalith.shared.agents.generation_preference import tuning_for_preference, tuning_for_request
 from crystalith.shared.types import OutputType
 
@@ -51,19 +49,3 @@ def test_tuning_for_request_none_matches_default() -> None:
     base = tuning_for_preference(None)
     tuned = tuning_for_request(OutputType.GUIDE, None)
     assert tuned == base
-
-
-def test_tuning_for_request_falls_back_to_legacy_tool_heuristic_for_unknown_tool_types() -> None:
-    base = tuning_for_preference("quality")
-    class _DummyOutputType:
-        value = "DUMMY"
-        x_meta = SimpleNamespace(is_tool=True)
-
-    tuned = tuning_for_request(_DummyOutputType(), "quality")  # type: ignore[arg-type]
-    assert tuned.top_k == base.top_k + 2
-    assert tuned.min_score == base.min_score - 0.05
-    assert tuned.agent_retries == base.agent_retries
-    assert tuned.multi_query == base.multi_query
-    assert tuned.multi_query_seed_cap == base.multi_query_seed_cap
-    assert tuned.max_chunks_per_source == base.max_chunks_per_source
-    assert tuned.token_budget_ratio == base.token_budget_ratio

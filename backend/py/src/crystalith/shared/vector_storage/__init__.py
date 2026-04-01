@@ -8,12 +8,10 @@ from .cached import (
 from .factory import create_vector_store
 from .interfaces import VectorStore
 from .memory import InMemoryVectorStore
-from .sqlite import SQLiteVectorStore
 from .types import VectorEntry, VectorSearchResult
 
 __all__ = [
     "InMemoryVectorStore",
-    "SQLiteVectorStore",
     "VectorEntry",
     "VectorSearchResult",
     "VectorStore",

@@ -18,16 +18,14 @@
 
 Crystalith 部署通常为 **核心 + 可选叠加层**。最小备份集取决于你使用的存储模式。
 
-### 仅核心（本地 SQLite + 嵌入式向量存储）
+### 仅核心（本地 SQLite + 嵌入式 Chroma）
 
 在默认核心 compose 中，宿主机 `./data` 目录挂载到 API 容器的 `/app/data`。
 
 最小备份集：
 - `config/app.yaml`（配置）
 - `data/app.db`（SQLite 数据库）
-- 向量存储数据（取决于配置）：
-  - 嵌入式 Chroma：`data/chroma/`
-  - SQLite 向量：`data/vectors.db`
+- 向量存储数据：嵌入式 Chroma：`data/chroma/`
 
 可选（建议备份）：
 - `data/output/`（生成产物/预览）

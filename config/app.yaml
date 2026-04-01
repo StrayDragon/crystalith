@@ -220,8 +220,6 @@ vector_storage:
     endpoint_candidates:
       - "http://127.0.0.1:8001"
       - "http://chromadb:8000"
-  sqlite:
-    path: "./data/vectors.db"
 
 database:
   url: "sqlite+aiosqlite:///./data/app.db"

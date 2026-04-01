@@ -46,11 +46,7 @@ EntryPointsProvider = Callable[[str], Iterable[EntryPointLike]]
 
 
 def _iter_entry_points(group: str) -> list[metadata.EntryPoint]:
-    try:
-        selected = metadata.entry_points(group=group)
-    except TypeError:
-        selected = metadata.entry_points().select(group=group)
-    return list(selected)
+    return list(metadata.entry_points(group=group))
 
 
 def _order_entry_points(

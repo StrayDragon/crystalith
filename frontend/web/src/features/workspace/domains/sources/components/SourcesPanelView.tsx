@@ -40,7 +40,7 @@ import type {
   SourceFromUrlMode,
   SourceTagRead,
 } from "../../../../../api/generated";
-import type { ApiSourceSearchResult, SourceItem } from "../../../shared/types";
+import type { SourceItem } from "../../../shared/types";
 import type {
   SearchQueueItem,
   SourceSortBy,
@@ -117,10 +117,7 @@ export interface SourcesPanelProps {
   onRetryUpload?: () => void;
   onClearUploadQueue?: () => void;
   searchState: AsyncStatus;
-  searchNotice: string;
-  searchResults: ApiSourceSearchResult[];
   onSearch: (payload: { query: string; engine: string; mode: string }) => void;
-  onClearSearchResults: () => void;
   onAddSourceFromUrl: (
     url: string,
     mode: SourceFromUrlMode,
@@ -192,10 +189,7 @@ function SourcesPanelView({
   onRetryUpload,
   onClearUploadQueue,
   searchState,
-  searchNotice,
-  searchResults,
   onSearch,
-  onClearSearchResults,
   onAddSourceFromUrl,
   onRemoveSources,
   onRemoveSource,
@@ -346,7 +340,6 @@ function SourcesPanelView({
       onRemoveResultsFromQueue(addedUrls);
     }
     setResultsToAdd([]);
-    // 不再调用 onClearSearchResults，保持搜索队列可见
   }, [resultsToAdd, onRemoveResultsFromQueue]);
 
   const handleCloseAddDialog = useCallback(() => {
@@ -976,7 +969,6 @@ function SourcesPanelView({
       {/* Dynamic Content Area - research sessions & search results (scrollable with max-height) */}
       {(isSearching ||
         research.sessions.length > 0 ||
-        searchResults.length > 0 ||
         searchQueue.length > 0) && (
         <div className="flex-shrink-0 max-h-[200px] overflow-y-auto overscroll-contain px-3 sm:px-4 py-2 flex flex-col gap-2 border-b border-gray-100 dark:border-slate-700">
           {/* Search Status - only show loading state */}
@@ -1024,9 +1016,6 @@ function SourcesPanelView({
 
           {/* Search Results Queue */}
           <SearchResultsQueue
-            results={searchResults}
-            searchSummary={searchNotice}
-            onClear={onClearSearchResults}
             onAddToSources={handleAddToSources}
             isAdding={isAddingFromUrl}
             searchQueue={searchQueue}

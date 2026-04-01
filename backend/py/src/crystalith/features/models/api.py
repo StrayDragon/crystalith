@@ -86,7 +86,7 @@ async def list_models(
     if role:
         available = [m for m in available if m.has_role(role)]
 
-    # Filter by capability if specified (supports legacy 'chat'/'embedding')
+    # Filter by capability if specified
     if capability:
         available = [m for m in available if m.has_capability(capability)]
 

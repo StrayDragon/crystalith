@@ -29,7 +29,6 @@ from .models import (
     StartupSettings,
     VectorStorageChromaSettings,
     VectorStorageSettings,
-    VectorStorageSQLiteSettings,
 )
 from .ollama_discovery import auto_discover_ollama, discover_ollama_models
 
@@ -63,7 +62,6 @@ __all__ = [
     "SlidesSettings",
     "StartupSettings",
     "VectorStorageChromaSettings",
-    "VectorStorageSQLiteSettings",
     "VectorStorageSettings",
     "auto_discover_ollama",
     "discover_ollama_models",

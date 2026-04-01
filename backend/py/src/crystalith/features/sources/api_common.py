@@ -86,21 +86,12 @@ async def _invalidate_notebook_source_caches(
 
 def _resolve_parser(file: UploadFile, transcriber: TranscriptionProvider, plugins: PluginRegistry) -> ParserResolution:
     try:
-        try:
-            return ParserFactory.resolve_from_file(
-                filename=file.filename,
-                mime_type=file.content_type,
-                transcriber=transcriber,
-                plugins=plugins,
-            )
-        except TypeError as exc:
-            if "plugins" not in str(exc):
-                raise
-            return ParserFactory.resolve_from_file(
-                filename=file.filename,
-                mime_type=file.content_type,
-                transcriber=transcriber,
-            )
+        return ParserFactory.resolve_from_file(
+            filename=file.filename,
+            mime_type=file.content_type,
+            transcriber=transcriber,
+            plugins=plugins,
+        )
     except UnsupportedDocumentError as exc:
         required_plugin_id = exc.required_plugin_id
         skipped_detail = plugins.get_load_report().skipped.get(required_plugin_id) if required_plugin_id else None

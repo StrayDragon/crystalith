@@ -13,7 +13,7 @@ from crystalith.shared.types import OutputType
 
 
 def test_extract_text_from_output_handles_common_types() -> None:
-    base = Output(notebook_id=1, type=OutputType.PARAGRAPH, prompt="p", content={"content": "Hello"})
+    base = Output(notebook_id=1, type=OutputType.PARAGRAPH, prompt="p", content={"text": "Hello"})
     assert "Hello" in _extract_text_from_output(base)
 
     bullets = Output(
@@ -68,7 +68,7 @@ def test_extract_text_from_output_handles_common_types() -> None:
     assert "t1" in extracted_structured
 
 
-def test_extract_text_from_output_handles_additional_types_and_legacy_formats() -> None:
+def test_extract_text_from_output_handles_additional_types() -> None:
     paragraph_text = Output(
         notebook_id=1,
         type=OutputType.PARAGRAPH,
@@ -76,16 +76,6 @@ def test_extract_text_from_output_handles_additional_types_and_legacy_formats() 
         content={"text": "Hello text"},
     )
     assert "Hello text" in _extract_text_from_output(paragraph_text)
-
-    legacy_bullets = Output(
-        notebook_id=1,
-        type=OutputType.BULLETS,
-        prompt=None,
-        content={"bullets": ["a", "", "b"]},
-    )
-    extracted_legacy = _extract_text_from_output(legacy_bullets)
-    assert "- a" in extracted_legacy
-    assert "- b" in extracted_legacy
 
     mixed_bullets = Output(
         notebook_id=1,
@@ -131,16 +121,6 @@ def test_extract_text_from_output_handles_additional_types_and_legacy_formats() 
     assert "- P1" in extracted_guide_modules
     assert "- P2" in extracted_guide_modules
 
-    guide_sections = Output(
-        notebook_id=1,
-        type=OutputType.GUIDE,
-        prompt=None,
-        content={"sections": [{"title": "S1", "body": "B1"}]},
-    )
-    extracted_guide_sections = _extract_text_from_output(guide_sections)
-    assert "## S1" in extracted_guide_sections
-    assert "B1" in extracted_guide_sections
-
     briefing_sections = Output(
         notebook_id=1,
         type=OutputType.BRIEFING,
@@ -162,16 +142,6 @@ def test_extract_text_from_output_handles_additional_types_and_legacy_formats() 
     assert "幻灯片" not in extracted_slides
     assert "- b" in extracted_slides
 
-    structured_sections = Output(
-        notebook_id=1,
-        type=OutputType.STRUCTURED,
-        prompt=None,
-        content={"sections": [{"title": "T", "content": "C"}]},
-    )
-    extracted_sections = _extract_text_from_output(structured_sections)
-    assert "## T" in extracted_sections
-    assert "C" in extracted_sections
-
 
 def test_extract_text_from_output_falls_back_to_prompt_and_json() -> None:
     out = Output(notebook_id=1, type=OutputType.PARAGRAPH, prompt="Only prompt", content={})
@@ -182,7 +152,9 @@ def test_extract_text_from_output_falls_back_to_prompt_and_json() -> None:
     assert "unknown" in extracted
 
     out3 = Output(notebook_id=1, type=OutputType.PARAGRAPH, prompt=None, content={"body": "Body"})
-    assert "Body" in _extract_text_from_output(out3)
+    extracted3 = _extract_text_from_output(out3)
+    assert "body" in extracted3
+    assert "Body" in extracted3
 
 
 def test_split_text_to_chunks_splits_long_paragraphs_and_keeps_non_empty() -> None:
@@ -210,7 +182,7 @@ async def test_outputs_repo_and_service_roundtrip(db_session) -> None:
         content=None,
     )
     assert created.notebook_id == notebook.id
-    assert created.content["content"] == "Hello"
+    assert created.content["text"] == "Hello"
 
     items = await outputs_repo.list_outputs(db_session, notebook_id=notebook.id, offset=0, limit=10)
     assert [item.id for item in items] == [created.id]
@@ -236,10 +208,10 @@ def test_extract_text_from_output_uses_title_when_present() -> None:
         notebook_id=1,
         type=OutputType.BRIEFING,
         prompt=None,
-        content={"title": "T", "summary": "S"},
+        content={"title": "T", "sections": [{"heading": "H", "points": [{"text": "S"}]}]},
         created_at=datetime.datetime.now(datetime.UTC),
         updated_at=datetime.datetime.now(datetime.UTC),
     )
     extracted = _extract_text_from_output(out)
     assert "# T" in extracted
-    assert "S" in extracted
+    assert "- S" in extracted

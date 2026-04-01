@@ -337,42 +337,6 @@ def test_resolve_parser_for_file_reports_unsupported_type_without_plugin():
     assert "required_plugin_id" not in diagnostic.details
 
 
-def test_resolve_parser_for_file_falls_back_for_legacy_parser_factory(monkeypatch):
-    original_resolve = ParserFactory.resolve_from_file
-
-    def legacy_resolve_from_file(
-        cls,
-        *,
-        filename,
-        mime_type,
-        transcriber,
-        plugins=None,
-        **kwargs,
-    ):
-        if plugins is not None:
-            raise TypeError("resolve_from_file() got an unexpected keyword argument 'plugins'")
-        return original_resolve(
-            filename=filename,
-            mime_type=mime_type,
-            transcriber=transcriber,
-            **kwargs,
-        )
-
-    # Mock reason: simulate older ParserFactory signature to ensure backward-compat fallback path.
-    monkeypatch.setattr(ParserFactory, "resolve_from_file", classmethod(legacy_resolve_from_file))
-
-    parser, parser_plugin_id, diagnostic = source_connectors_api._resolve_parser_for_file(  # pyright: ignore[reportPrivateUsage]
-        filename="note.md",
-        mime_type="text/markdown",
-        transcriber=DisabledTranscriber(),
-        plugins=PluginRegistry(),
-    )
-
-    assert diagnostic is None
-    assert parser is not None
-    assert parser_plugin_id is None
-
-
 def test_resolve_parser_for_file_reraises_unexpected_type_error(monkeypatch):
     def _raise_type_error(
         cls,
