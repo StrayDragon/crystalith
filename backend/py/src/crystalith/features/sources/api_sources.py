@@ -296,24 +296,6 @@ async def batch_delete_sources(
         deleted_count=len(deleted_ids),
     )
 
-
-@router.delete("", response_model=SourceBatchDeleteResponse, include_in_schema=False)
-async def batch_delete_sources_legacy(
-    notebook_id: int,
-    payload: SourceBatchDeleteRequest,
-    session: AsyncSession = Depends(get_db_session),
-    vector_store: VectorStore = Depends(get_vector_store),
-    cache: CacheProvider = Depends(get_cache_provider),
-) -> SourceBatchDeleteResponse:
-    return await batch_delete_sources(
-        notebook_id=notebook_id,
-        payload=payload,
-        session=session,
-        vector_store=vector_store,
-        cache=cache,
-    )
-
-
 @router.delete("/{source_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_source(
     notebook_id: int,

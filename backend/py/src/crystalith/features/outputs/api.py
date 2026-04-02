@@ -528,18 +528,11 @@ def _extract_text_from_output(output: Output) -> str:
     output_type = output.type
 
     if output_type == OutputType.PARAGRAPH:
-        if "content" in content:
-            paragraph = _json_to_text(content["content"])
-            if paragraph:
-                parts.append(paragraph)
-        elif "text" in content:
-            paragraph = _json_to_text(content["text"])
-            if paragraph:
-                parts.append(paragraph)
+        text = _json_to_text(content.get("text")).strip()
+        if text:
+            parts.append(text)
 
     elif output_type == OutputType.BULLETS:
-        # Support both the legacy {"bullets": [...]} format and the current
-        # BulletsOutput schema {"items": [{"text": ...}, ...]}.
         if "items" in content and isinstance(content["items"], list):
             for item in content["items"]:
                 if isinstance(item, str):
@@ -551,8 +544,6 @@ def _extract_text_from_output(output: Output) -> str:
                     text = _json_to_text(item)
                 if text:
                     parts.append(f"- {text}")
-        elif "bullets" in content and isinstance(content["bullets"], list):
-            parts.extend([f"- {bullet}" for bullet in content["bullets"] if bullet])
 
     elif output_type == OutputType.FAQ:
         if "items" in content and isinstance(content["items"], list):
@@ -560,8 +551,8 @@ def _extract_text_from_output(output: Output) -> str:
                 if not isinstance(item, dict):
                     continue
                 item_dict = cast(JsonDict, item)
-                q = _json_to_text(item_dict.get("question") or item_dict.get("q"))
-                a = _json_to_text(item_dict.get("answer") or item_dict.get("a"))
+                q = _json_to_text(item_dict.get("question"))
+                a = _json_to_text(item_dict.get("answer"))
                 if q:
                     parts.append(f"**Q: {q}**")
                 if a:
@@ -575,7 +566,7 @@ def _extract_text_from_output(output: Output) -> str:
                     continue
                 event_dict = cast(JsonDict, event)
                 date = _json_to_text(event_dict.get("date"))
-                title = _json_to_text(event_dict.get("event") or event_dict.get("title"))
+                title = _json_to_text(event_dict.get("event"))
                 desc = _json_to_text(event_dict.get("description"))
                 parts.append(f"**{date}** - {title}")
                 if desc:
@@ -600,7 +591,7 @@ def _extract_text_from_output(output: Output) -> str:
     elif output_type == OutputType.MINDMAP:
         # Convert mindmap to text outline
         def traverse_node(node: JsonDict, indent: int = 0) -> None:
-            label = _json_to_text(node.get("label") or node.get("name"))
+            label = _json_to_text(node.get("label"))
             prefix = "  " * indent + ("- " if indent > 0 else "# ")
             parts.append(f"{prefix}{label}")
             children = node.get("children", [])
@@ -609,7 +600,7 @@ def _extract_text_from_output(output: Output) -> str:
                     if isinstance(child, dict):
                         traverse_node(cast(JsonDict, child), indent + 1)
 
-        root = content.get("root") or content
+        root = content.get("root")
         if isinstance(root, dict):
             traverse_node(cast(JsonDict, root))
 
@@ -637,18 +628,6 @@ def _extract_text_from_output(output: Output) -> str:
                         if text:
                             parts.append(f"- {text}")
                 parts.append("")
-        elif "sections" in content and isinstance(content["sections"], list):
-            for section in content["sections"]:
-                if not isinstance(section, dict):
-                    continue
-                section_dict = cast(JsonDict, section)
-                title = _json_to_text(section_dict.get("title"))
-                if title:
-                    parts.append(f"## {title}")
-                body = section_dict.get("content") or section_dict.get("body")
-                if body:
-                    parts.append(_json_to_text(body))
-                parts.append("")
 
     elif output_type == OutputType.BRIEFING:
         sections = content.get("sections")
@@ -667,35 +646,29 @@ def _extract_text_from_output(output: Output) -> str:
                         if text:
                             parts.append(f"- {text}")
                 parts.append("")
-        else:
-            if "summary" in content:
-                parts.append("## 摘要")
-                parts.append(_json_to_text(content["summary"]))
-            if "key_points" in content and isinstance(content["key_points"], list):
-                parts.append("\n## 要点")
-                parts.extend([f"- {_json_to_text(point)}" for point in content["key_points"]])
-            if "recommendations" in content and isinstance(content["recommendations"], list):
-                parts.append("\n## 建议")
-                parts.extend([f"- {_json_to_text(rec)}" for rec in content["recommendations"]])
 
     elif output_type == OutputType.SLIDES:
-        if "markdown" in content and isinstance(content["markdown"], str):
-            parts.append(content["markdown"])
-        elif "outline" in content and isinstance(content["outline"], dict):
-            outline = cast(JsonDict, content["outline"])
-            title = _json_to_text(outline.get("title")) or "演示"
-            parts.append(f"# {title}")
-            slides = outline.get("slides", [])
-            if isinstance(slides, list):
-                for slide in slides:
-                    if not isinstance(slide, dict):
-                        continue
-                    slide_dict = cast(JsonDict, slide)
-                    slide_title = _json_to_text(slide_dict.get("title")) or "幻灯片"
-                    parts.append(f"## {slide_title}")
-                    bullets = slide_dict.get("bullets")
-                    if isinstance(bullets, list):
-                        parts.extend([f"- {_json_to_text(bullet)}" for bullet in bullets])
+        markdown = content.get("markdown")
+        if isinstance(markdown, str) and markdown.strip():
+            parts.append(markdown)
+        else:
+            outline = content.get("outline")
+            if isinstance(outline, dict):
+                outline_dict = cast(JsonDict, outline)
+                if "title" not in content:
+                    title = _json_to_text(outline_dict.get("title")) or "演示"
+                    parts.append(f"# {title}")
+                slides = outline_dict.get("slides", [])
+                if isinstance(slides, list):
+                    for slide in slides:
+                        if not isinstance(slide, dict):
+                            continue
+                        slide_dict = cast(JsonDict, slide)
+                        slide_title = _json_to_text(slide_dict.get("title")) or "幻灯片"
+                        parts.append(f"## {slide_title}")
+                        bullets = slide_dict.get("bullets")
+                        if isinstance(bullets, list):
+                            parts.extend([f"- {_json_to_text(bullet)}" for bullet in bullets])
 
     elif output_type == OutputType.STRUCTURED:
         bullets = content.get("bullets")
@@ -709,29 +682,9 @@ def _extract_text_from_output(output: Output) -> str:
             parts.append("")
             parts.append("## 术语")
             parts.extend([f"- {_json_to_text(term)}" for term in terms if term])
-        sections = content.get("sections")
-        if not bullets and isinstance(sections, list):
-            for section in sections:
-                if not isinstance(section, dict):
-                    continue
-                section_dict = cast(JsonDict, section)
-                title = _json_to_text(section_dict.get("title"))
-                if title:
-                    parts.append(f"## {title}")
-                body = section_dict.get("content")
-                if body:
-                    parts.append(_json_to_text(body))
-        if not parts:
-            parts.append(json.dumps(content, ensure_ascii=False, indent=2))
 
-    # Fallback if no parts extracted
     if not parts and content:
-        # Try common fields
-        for key in ["content", "text", "body", "summary"]:
-            value = content.get(key)
-            if isinstance(value, str):
-                parts.append(value)
-                break
+        parts.append(json.dumps(content, ensure_ascii=False, indent=2))
 
     # Add prompt as context if present
     if output.prompt and output.prompt not in "\n".join(parts):

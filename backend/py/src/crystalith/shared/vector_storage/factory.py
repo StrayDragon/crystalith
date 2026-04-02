@@ -4,7 +4,6 @@ from crystalith.shared.config import Settings
 
 from .interfaces import VectorStore
 from .memory import InMemoryVectorStore
-from .sqlite import SQLiteVectorStore
 
 
 def _is_local_host(host: str) -> bool:
@@ -36,14 +35,12 @@ def create_vector_store(settings: Settings) -> VectorStore:
             except ModuleNotFoundError as exc:  # pragma: no cover
                 raise ValueError(
                     "Chroma vector store requires the 'chromadb' dependency. "
-                    "Install it or set vector_storage.provider=sqlite."
+                    "Install it to use vector_storage.provider=chroma."
                 ) from exc
 
             return ChromaVectorStore(
                 path=settings.vector_storage.chroma.path,
                 telemetry=settings.vector_storage.chroma.telemetry,
             )
-        case "sqlite":
-            return SQLiteVectorStore(path=settings.vector_storage.sqlite.path)
         case provider:
             raise ValueError(f"Unsupported vector storage provider: {provider}")

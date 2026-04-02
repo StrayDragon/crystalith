@@ -107,9 +107,8 @@ test("handleSearch updates queue status and notice on success", async () => {
   await waitFor(() => {
     expect(result.current.searchQueue).toHaveLength(1);
     expect(result.current.searchQueue[0].status).toBe("success");
+    expect(result.current.searchQueue[0].notice).toBe("已找到 1 条结果。");
   });
-
-  expect(result.current.searchNotice).toBe("已找到 1 条结果。");
 });
 
 test("removeSources calls batch delete endpoint and refreshes list", async () => {

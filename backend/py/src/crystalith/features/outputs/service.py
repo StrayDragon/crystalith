@@ -21,8 +21,8 @@ async def create_output(
     content: dict | None,
 ) -> Output:
     normalized = content or {}
-    if not normalized and prompt:
-        normalized = {"content": prompt}
+    if not normalized and prompt and output_type == OutputType.PARAGRAPH:
+        normalized = {"text": prompt}
     return await repo.create_output(
         session,
         notebook_id=notebook_id,

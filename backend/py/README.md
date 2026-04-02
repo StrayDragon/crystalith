@@ -27,7 +27,7 @@ directory above `config/app.yaml`). By default, data lives under `<repo>/data`
 regardless of where you run `just db-init` / `just dev` from.
 
 Migration note: if you previously created `backend/py/data/*`, move it to
-`<repo>/data/*` (e.g. `app.db`, `chroma/`, `vectors.db`).
+`<repo>/data/*` (e.g. `app.db`, `chroma/`).
 
 You can override config discovery when running `db-init`:
 
@@ -55,21 +55,4 @@ Rollback the last migration:
 ```bash
 cd backend/py
 just db-rollback
-```
-
-## Vector storage migration (SQLite -> Chroma)
-
-The legacy SQLite vector store can be migrated to embedded Chroma:
-
-```bash
-cd backend/py
-just vector-migrate
-```
-
-Override data path resolution in Docker or custom environments:
-
-```bash
-CRYSTALITH_DATA_DIR=/data just vector-migrate
-# or
-uv run scripts/vector_migrate.py --data-dir /data
 ```

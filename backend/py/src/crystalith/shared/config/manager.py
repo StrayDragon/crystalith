@@ -344,7 +344,6 @@ class ConfigManager:
             return normalized
 
         settings.database.url = _normalize_sqlite_url(settings.database.url)
-        settings.vector_storage.sqlite.path = _abs_path(settings.vector_storage.sqlite.path)
         settings.vector_storage.chroma.path = _abs_path(settings.vector_storage.chroma.path)
 
     def _apply_endpoint_candidates(self, settings: Settings) -> None:
@@ -871,8 +870,6 @@ vector_storage:
   chroma:
     path: "./data/chroma"
     telemetry: false
-  sqlite:
-    path: "./data/vectors.db"
 
 database:
   url: "sqlite+aiosqlite:///./data/app.db"

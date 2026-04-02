@@ -70,9 +70,6 @@ db-migrate MESSAGE:
 db-rollback:
     uv run alembic downgrade -1
 
-vector-migrate:
-    uv run scripts/vector_migrate.py
-
 llm-eval:
     uv run python scripts/llm_eval.py
 

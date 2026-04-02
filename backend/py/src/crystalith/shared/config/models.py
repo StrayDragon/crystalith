@@ -147,7 +147,7 @@ class ModelConfig(BaseModel):
     )
 
     # Capabilities (Continue-style) - special features
-    capabilities: list[ModelCapability | Literal["chat", "embedding"]] = Field(
+    capabilities: list[ModelCapability] = Field(
         default_factory=list,
         description="Special capabilities: tool_use, image_input, audio_input, streaming",
     )
@@ -178,8 +178,8 @@ class ModelConfig(BaseModel):
 
     @field_validator("capabilities", mode="before")
     @classmethod
-    def normalize_capabilities(cls, v: list[str] | None) -> list[str]:
-        """Normalize legacy 'chat'/'embedding' to roles-compatible format."""
+    def normalize_capabilities(cls, v: object) -> object:
+        """Normalize null to empty list."""
         if v is None:
             return []
         return v
@@ -190,11 +190,6 @@ class ModelConfig(BaseModel):
 
     def has_capability(self, cap: str) -> bool:
         """Check if model has a specific capability."""
-        # Also check legacy capabilities
-        if cap == "chat":
-            return "chat" in self.roles or "chat" in self.capabilities
-        if cap == "embedding":
-            return "embed" in self.roles or "embedding" in self.capabilities
         return cap in self.capabilities
 
     def get_openai_config(self) -> OpenAIProviderSettings:
@@ -462,11 +457,6 @@ class DatabaseSettings(BaseModel):
     )
 
 
-class VectorStorageSQLiteSettings(BaseModel):
-    """SQLite vector storage settings."""
-    path: str = "./data/vectors.db"
-
-
 class VectorStorageChromaSettings(BaseModel):
     """Chroma vector storage settings."""
     path: str = "./data/chroma"
@@ -485,8 +475,7 @@ class VectorStorageChromaSettings(BaseModel):
 
 class VectorStorageSettings(BaseModel):
     """Vector storage settings."""
-    provider: Literal["memory", "sqlite", "chroma"] = "chroma"
-    sqlite: VectorStorageSQLiteSettings = Field(default_factory=_default_factory(VectorStorageSQLiteSettings))
+    provider: Literal["memory", "chroma"] = "chroma"
     chroma: VectorStorageChromaSettings = Field(default_factory=_default_factory(VectorStorageChromaSettings))
 
 

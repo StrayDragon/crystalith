@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Protocol, runtime_checkable
+from typing import Literal
 
 from crystalith.shared.types import OutputType
 
@@ -173,24 +173,6 @@ SPEED_TUNING_BY_OUTPUT_TYPE: dict[OutputType, GenerationTuning] = {
 }
 
 
-@runtime_checkable
-class _HasXMeta(Protocol):
-    x_meta: object
-
-
-@runtime_checkable
-class _HasIsTool(Protocol):
-    is_tool: bool
-
-
-def _is_tool_output_type(value: object) -> bool:
-    if isinstance(value, OutputType):
-        return bool(value.meta.is_tool)
-    if isinstance(value, _HasXMeta) and isinstance(value.x_meta, _HasIsTool):
-        return bool(value.x_meta.is_tool)
-    return False
-
-
 def tuning_for_preference(preference: GenerationPreference | None) -> GenerationTuning:
     if preference == "quality":
         return QUALITY_TUNING
@@ -205,21 +187,4 @@ def tuning_for_request(output_type: OutputType, preference: GenerationPreference
         return base
 
     tuned = QUALITY_TUNING_BY_OUTPUT_TYPE.get(output_type) if preference == "quality" else SPEED_TUNING_BY_OUTPUT_TYPE.get(output_type)
-    if tuned is not None:
-        return tuned
-
-    is_tool = _is_tool_output_type(output_type)
-
-    # Backwards compatible fallback for newly-added tool-like output types.
-    if preference == "quality" and is_tool:
-        return GenerationTuning(
-            top_k=min(20, int(base.top_k) + 2),
-            min_score=max(0.0, float(base.min_score) - 0.05),
-            agent_retries=int(base.agent_retries),
-            multi_query=bool(base.multi_query),
-            multi_query_seed_cap=int(base.multi_query_seed_cap),
-            max_chunks_per_source=int(base.max_chunks_per_source),
-            token_budget_ratio=float(base.token_budget_ratio),
-        )
-
-    return base
+    return tuned if tuned is not None else base

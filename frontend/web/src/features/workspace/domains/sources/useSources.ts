@@ -93,8 +93,6 @@ export function useSources() {
   const [uploadError, setUploadError] = useState("");
   const [lastFailedUploadFiles, setLastFailedUploadFiles] = useState<File[]>([]);
   const [uploadQueue, setUploadQueue] = useState<SourceUploadItem[]>([]);
-  const [searchNotice, setSearchNotice] = useState("");
-  const [searchResults, setSearchResults] = useState<ApiSourceSearchResult[]>([]);
   const [searchQueue, setSearchQueue] = useState<SearchQueueItem[]>([]);
   const [sortBy, setSortBy] = useState<SourceSortBy>("date");
   const [sortOrder, setSortOrder] = useState<SourceSortOrder>("desc");
@@ -168,8 +166,6 @@ export function useSources() {
 
   useEffect(() => {
     setSearchState("idle");
-    setSearchNotice("");
-    setSearchResults([]);
     setRemoveState("idle");
     setBatchReembedState("idle");
     setTagMutationState("idle");
@@ -370,19 +366,16 @@ export function useSources() {
   const handleSearch = useCallback(
     async ({ query, engine, mode }: { query: string; engine: string; mode: string }) => {
       if (!isConnected) {
-        setSearchNotice("未连接到后端服务，暂无法搜索。");
-        setSearchResults([]);
+        toast.warning("未连接到后端服务，暂无法搜索。");
         return;
       }
       if (!activeNotebookId) {
-        setSearchNotice("请先创建笔记本后搜索。");
-        setSearchResults([]);
+        toast.warning("请先创建笔记本后搜索。");
         return;
       }
       const trimmed = query.trim();
       if (!trimmed) {
-        setSearchNotice("请输入搜索关键词。");
-        setSearchResults([]);
+        toast.warning("请输入搜索关键词。");
         return;
       }
 
@@ -405,7 +398,6 @@ export function useSources() {
       });
 
       setSearchState("loading");
-      setSearchNotice("");
 
       try {
         const response = await unwrapData(
@@ -429,9 +421,6 @@ export function useSources() {
             item.id === searchId ? { ...item, status: "success", results, notice } : item,
           ),
         );
-
-        setSearchResults(results);
-        setSearchNotice(notice);
       } catch {
         const errorNotice = "搜索失败，请稍后重试。";
         setSearchQueue((prev) =>
@@ -439,8 +428,6 @@ export function useSources() {
             item.id === searchId ? { ...item, status: "error", notice: errorNotice } : item,
           ),
         );
-        setSearchNotice(errorNotice);
-        setSearchResults([]);
       } finally {
         setSearchState("idle");
       }
@@ -715,11 +702,6 @@ export function useSources() {
     [activeNotebookId, isConnected, mutate],
   );
 
-  const clearSearchResults = useCallback(() => {
-    setSearchResults([]);
-    setSearchNotice("");
-  }, []);
-
   const handleAddSourceFromUrl = useCallback(
     async (
       url: string,
@@ -899,14 +881,11 @@ export function useSources() {
     clearUploadQueue,
     retrySources,
     searchState,
-    searchNotice,
-    searchResults,
     handleSearch,
     removeSources,
     removeSource,
     removeState,
     convertOutputToSource: handleConvertOutputToSource,
-    clearSearchResults,
     addSourceFromUrl: handleAddSourceFromUrl,
     isConnected,
     searchQueue,

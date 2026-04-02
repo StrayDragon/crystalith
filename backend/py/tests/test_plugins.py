@@ -627,25 +627,6 @@ def test_plugin_skip_detail_to_dict_omits_empty_fields() -> None:
     assert detail.to_dict() == {"error_code": "code", "message": "message"}
 
 
-def test_iter_entry_points_falls_back_when_group_kwarg_not_supported(monkeypatch: pytest.MonkeyPatch) -> None:
-    from crystalith.shared.plugins import registry as registry_mod
-
-    sentinel = object()
-
-    class _EntryPoints:
-        def select(self, *, group: str):
-            return [sentinel]
-
-    def fake_entry_points(*args: Any, **kwargs: Any):
-        if kwargs:
-            raise TypeError("old importlib.metadata.entry_points")
-        return _EntryPoints()
-
-    monkeypatch.setattr(registry_mod.metadata, "entry_points", fake_entry_points)
-
-    assert registry_mod._iter_entry_points("crystalith.plugins") == [sentinel]
-
-
 def test_iter_entry_points_uses_group_kwarg_when_supported(monkeypatch: pytest.MonkeyPatch) -> None:
     from crystalith.shared.plugins import registry as registry_mod
 

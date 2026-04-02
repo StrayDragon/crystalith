@@ -745,10 +745,7 @@ export default function WorkspaceLayout() {
               onRetryUpload={sources.retryUpload}
               onClearUploadQueue={sources.clearUploadQueue}
               searchState={sources.searchState}
-              searchNotice={sources.searchNotice}
-              searchResults={sources.searchResults}
               onSearch={sources.handleSearch}
-              onClearSearchResults={sources.clearSearchResults}
               onAddSourceFromUrl={sources.addSourceFromUrl}
               onRemoveSources={sources.removeSources}
               onRemoveSource={sources.removeSource}

@@ -7,7 +7,7 @@ from crystalith.shared.types import SourceStatus
 
 
 @pytest.mark.asyncio
-async def test_sources_reembed_single_and_legacy_batch_delete(client, app, db_session) -> None:
+async def test_sources_reembed_single_and_batch_delete(client, app, db_session) -> None:
     notebook_resp = await client.post("/v1/notebooks", json={"name": "Sources Reembed"})
     assert notebook_resp.status_code == 201
     notebook_id = notebook_resp.json()["id"]
@@ -52,12 +52,11 @@ async def test_sources_reembed_single_and_legacy_batch_delete(client, app, db_se
     assert len(after) > len(before)
     assert any(entry.source_id == failed.id for entry in after)
 
-    # Legacy batch delete endpoint delegates to /batch.
-    legacy = await client.request(
+    deleted = await client.request(
         "DELETE",
-        f"/v1/notebooks/{notebook_id}/sources",
+        f"/v1/notebooks/{notebook_id}/sources/batch",
         json={"source_ids": [failed.id]},
     )
-    assert legacy.status_code == 200
-    assert legacy.json()["deleted_count"] == 1
-    assert legacy.json()["deleted_ids"] == [failed.id]
+    assert deleted.status_code == 200
+    assert deleted.json()["deleted_count"] == 1
+    assert deleted.json()["deleted_ids"] == [failed.id]

@@ -759,24 +759,13 @@
         "capabilities": {
           "description": "Special capabilities: tool_use, image_input, audio_input, streaming",
           "items": {
-            "anyOf": [
-              {
-                "enum": [
-                  "tool_use",
-                  "image_input",
-                  "audio_input",
-                  "streaming"
-                ],
-                "type": "string"
-              },
-              {
-                "enum": [
-                  "chat",
-                  "embedding"
-                ],
-                "type": "string"
-              }
-            ]
+            "enum": [
+              "tool_use",
+              "image_input",
+              "audio_input",
+              "streaming"
+            ],
+            "type": "string"
           },
           "title": "Capabilities",
           "type": "array"
@@ -1618,18 +1607,6 @@
       "title": "VectorStorageChromaSettings",
       "type": "object"
     },
-    "VectorStorageSQLiteSettings": {
-      "description": "SQLite vector storage settings.",
-      "properties": {
-        "path": {
-          "default": "./data/vectors.db",
-          "title": "Path",
-          "type": "string"
-        }
-      },
-      "title": "VectorStorageSQLiteSettings",
-      "type": "object"
-    },
     "VectorStorageSettings": {
       "description": "Vector storage settings.",
       "properties": {
@@ -1637,14 +1614,10 @@
           "default": "chroma",
           "enum": [
             "memory",
-            "sqlite",
             "chroma"
           ],
           "title": "Provider",
           "type": "string"
-        },
-        "sqlite": {
-          "$ref": "#/$defs/VectorStorageSQLiteSettings"
         },
         "chroma": {
           "$ref": "#/$defs/VectorStorageChromaSettings"

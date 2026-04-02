@@ -487,21 +487,12 @@ def _resolve_parser_for_file(
     plugins: PluginRegistry,
 ) -> tuple[Parser | None, str | None, Diagnostic | None]:
     try:
-        try:
-            resolution = ParserFactory.resolve_from_file(
-                filename=filename,
-                mime_type=mime_type,
-                transcriber=transcriber,
-                plugins=plugins,
-            )
-        except TypeError as exc:
-            if "plugins" not in str(exc):
-                raise
-            resolution = ParserFactory.resolve_from_file(
-                filename=filename,
-                mime_type=mime_type,
-                transcriber=transcriber,
-            )
+        resolution = ParserFactory.resolve_from_file(
+            filename=filename,
+            mime_type=mime_type,
+            transcriber=transcriber,
+            plugins=plugins,
+        )
     except UnsupportedDocumentError as exc:
         required_plugin_id = exc.required_plugin_id
         skipped_detail = plugins.get_load_report().skipped.get(required_plugin_id) if required_plugin_id else None
