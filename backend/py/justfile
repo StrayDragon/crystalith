@@ -19,6 +19,9 @@ test-core: test-mock-report-check
 test-all: test-mock-report-check
     PYTHONHASHSEED=0 TZ=UTC uv run pytest tests/ -v --no-cov
 
+test-bdd:
+    PYTHONHASHSEED=0 TZ=UTC uv run pytest tests/bdd/ -v --no-cov -m bdd
+
 typecheck:
     uv run basedpyright --level error src
 

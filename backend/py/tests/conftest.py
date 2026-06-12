@@ -17,6 +17,9 @@ from crystalith.shared.vector_storage import InMemoryVectorStore
 from crystalith.web.app import create_app
 from tests._support.settings import make_settings
 
+# Register BDD shared steps at root level (required by pytest-bdd).
+pytest_plugins = ["tests.bdd.公共步骤"]
+
 _LOCALHOSTS: set[str] = {"localhost", "127.0.0.1", "::1"}
 
 
@@ -59,9 +62,12 @@ def pytest_collection_modifyitems(config: object, items: list[pytest.Item]) -> N
             "/tests/contract/" in path
             or "/tests/features/" in path
             or "/tests/web/" in path
+            or "/tests/bdd/" in path
             or path.endswith("/tests/test_plugins.py")
         ):
             item.add_marker(pytest.mark.core)
+        if "/tests/bdd/" in path:
+            item.add_marker(pytest.mark.bdd)
 
 
 @pytest.fixture(autouse=True)
