@@ -1,0 +1,18 @@
+kind: llman.sdd.spec
+name: "source-connectors"
+purpose: "把外部知识源接入统一为宿主框架能力：连接器发现、notebook-scoped binding、快照优先与选择性导入、显式 sync_check 与确认应用边界，为后续官方/第三方 connectors 提供稳定宿主语义。"
+valid_scope[2]: src/,tests/
+requirements[6]{req_id,title,statement}:
+  r1,连接器发现必须返回 notebook 作用域下的可用连接器,系统 MUST 以 notebook 为作用域暴露当前可用的 source connectors、配置 schema 与诊断信息。
+  r2,"连接器必须使用 notebook-scoped binding 持久化状态","系统 MUST 使用 notebook-scoped connector binding 保存连接参数、导入范围与同步基线，而不是依赖无状态临时请求。"
+  r3,Vault 连接器必须先返回快照，再允许导入,系统 MUST 以“快照优先”的方式接入外部资料仓（如 Obsidian vault），而不是默认全量即时导入。
+  r4,连接器导入必须基于显式范围,连接器导入 MUST 支持选择性导入，而不是强制整库导入。
+  r5,连接器同步检查必须显式且可复核,连接器同步 MUST 先执行 `sync_check`，再由用户确认增量变更，而不是静默地自动改写来源集合。
+  r6,v1 sync_check 使用轻量快照差异规则,系统 MUST 使用确定性的轻量规则识别快照差异，以支持中大型 vault 的同步检查。
+scenarios[6]{req_id,id,given,when,then}:
+  r1,"前端加载-notebook-的连接器列表","",客户端请求某个 notebook 的 source connectors,系统 SHALL 返回该 notebook 可用的连接器描述、配置 schema 与结构化诊断信息
+  r2,"创建-binding-后执行后续动作","",用户为某个 notebook 创建一个 connector binding,系统 SHALL 持久化 `connector_id`、`connection_config`、`import_scope` 与 `last_confirmed_snapshot`
+  r3,"用户先预览连接器快照-再确认导入","",用户为某个连接器 binding 请求快照,系统 SHALL 返回可预览的文件快照
+  r4,"用户只导入大-vault-的一部分内容","",一个 vault 含有大量笔记,系统 SHALL 只导入被选中的子集
+  r5,"sync-check-返回候选变更","",用户对已连接的 binding 发起 `sync_check`,系统 SHALL 返回 `新增`、`更新`、`缺失` 三类候选
+  r6,"sync-check-基于路径与文件属性判断变更","",系统比较当前快照与上次已确认快照,相同 `relative_path` 且 `size_bytes` 或 `modified_at` 变化的条目 SHALL 被标记为 `更新`

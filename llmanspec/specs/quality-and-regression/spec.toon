@@ -1,0 +1,50 @@
+kind: llman.sdd.spec
+name: "quality-and-regression"
+purpose: 定义工程质量门槛：CI 流水线、回归冒烟、评测基线与测试稳定性约束。该规范旨在让关键回归尽早暴露并可在本地与 CI 中一致复现。
+valid_scope[2]: src/,tests/
+requirements[16]{req_id,title,statement}:
+  r1,CI runs on push and pull_request,CI MUST 在 push/PR 触发并提供可见状态检查。
+  r2,Backend and frontend verification are mandatory,CI MUST 执行后端测试与前端测试+构建。
+  r3,API/codegen/schema drift checks are mandatory,CI MUST 检查 OpenAPI、生成客户端、配置 schema、docs 受控生成物/注入区块与导入分层一致性。
+  r4,Local default test entrypoints include guardrails,本地默认测试入口 MUST 覆盖关键 guardrail 检查，避免问题仅在 CI 暴露。
+  r5,Lint and contract checks are part of the quality gate,CI 与本地默认检查入口 MUST 覆盖 lint、格式化检查与关键 API contract checks，以降低回归风险。
+  r6,Frontend JS/TS lint uses Oxc entrypoints,前端 JS/TS lint 工作流 MUST 统一通过 `oxlint` 提供，并同时保留增量入口与全量入口，以兼顾日常反馈速度与全量可见性。
+  r7,"Backend Python lint catches low-noise footguns",后端 Python lint MUST 覆盖“低噪音高收益”的问题类型，以在不引入风格争议的前提下降低回归风险。
+  r8,Frontend formatting uses Oxfmt with generated files excluded,前端格式化工作流 MUST 使用 `oxfmt` 提供统一写入与检查入口，并排除生成产物与第三方内容。
+  r9,Lint adoption is incremental and actionable,lint 引入 MUST 采用增量策略，避免一次性全仓重写导致评审噪声与维护成本爆炸；formatter 引入 MAY 在初次迁移时执行一次受控的全量收敛，以建立稳定基线。
+  r10,Minimal API smoke regression suite exists,仓库 MUST 维护核心 API 冒烟回归清单并可执行。
+  r11,LLM evaluation harness has stable dataset and metrics,评测流程 MUST 定义数据格式与关键回归指标并输出可比报告。
+  r12,"Timing-sensitive tests are deterministic","计时相关测试 MUST 使用可控时间（fake timer/clock）而非真实 wall-clock 阈值。"
+  r13,Tests minimize brittle mocks and align with real implementations,后端测试 MUST 尽可能对齐真实实现与真实 wiring，并避免通过 patch 内部实现细节来达成可控性；当确需可控时，系统 MUST 提供显式 seam（依赖注入、可替换 provider/transport）供测试使用。
+  r14,"Test-double usage is observable via a stable report",仓库 MUST 提供稳定的 test doubles 使用报告入口，以便识别 brittle mocks、热点文件与迁移目标，并支持本地与 CI 环境复现。
+  r15,Backend test suites are tiered and reproducible,后端测试 MUST 明确区分“核心回归链路”与“边缘/试验性用例”，以便在不追求机械 KPI 覆盖率的前提下，稳定守住关键路径并降低 flaky 风险。
+  r16,Frontend test suites are tiered and reproducible,前端测试 MUST 明确区分“核心回归链路（稳定套件）”与“边缘/试验性用例”，并默认禁止 accidental real network，以保证核心链路在本地与 CI 中稳定复现。
+scenarios[28]{req_id,id,given,when,then}:
+  r1,"ci-status-is-visible-on-pr","",开发者提交 PR 或 push 新提交,CI SHALL 触发并在 PR/提交上提供可见状态检查
+  r2,"ci-runs-backend-and-frontend-checks","",CI 运行验证流程,系统 SHALL 执行后端测试与前端测试+构建（或等价验证）
+  r3,"drift-causes-ci-failure","",OpenAPI/生成客户端/配置 schema/docs 受控生成物/注入区块/导入分层与仓库内容不一致,CI SHALL 检测到漂移并失败提示
+  r4,"local-test-entrypoints-run-guardrails","",开发者在本地运行默认测试入口（如 `just test` 或等价）,系统 SHALL 同时运行关键 guardrail 检查并在失败时返回非 0
+  r5,"local-checks-match-ci-guardrails","",开发者在本地运行默认检查入口（例如 `just check` 或等价）,该入口 SHALL 覆盖 lint、format check 与关键 contract checks
+  r6,"incremental-frontend-lint-targets-changed-files","","开发者运行 `pnpm -C frontend/web run lint`",系统 SHALL 仅对前端已修改/新增的手写源码执行 `oxlint`
+  r6,"full-frontend-lint-remains-runnable-on-repository-baseline","","开发者运行 `pnpm -C frontend/web run lint:all`",系统 SHALL 对前端受管源码执行 `oxlint` 全量检查
+  r7,"backend-lint-enforces-low-noise-rules","",非测试代码引入内置名遮蔽、naive datetime 或未使用参数等问题,lint SHALL 失败并给出可定位的诊断信息
+  r7,"test-code-allows-unused-arguments","",测试代码（`**/tests/**`）因 pytest fixture/参数化存在未使用参数,lint SHALL 允许该类未使用参数存在
+  r8,"format-check-targets-hand-authored-frontend-files-only","","开发者运行 `pnpm -C frontend/web run format:check`",系统 SHALL 使用 `oxfmt` 校验前端手写源码与关键配置文件的格式
+  r8,"full-frontend-format-converges-repository-style","",仓库首次引入 `oxfmt`,迁移 SHALL 对受管前端文件执行一次全量格式化收敛
+  r9,"lint-focuses-on-changed-files-first","",lint 新规则引入到仓库,系统 SHALL 优先对新增/变更代码严格执行
+  r9,"incremental-lint-and-controlled-formatter-rollout-coexist","",仓库引入新的前端 lint / format 工具链或升级规则集,系统 SHALL 优先对新增/变更代码严格执行日常 lint
+  r10,"run-smoke-regression-suite","",执行核心 API 冒烟回归清单,系统 SHALL 能稳定运行并覆盖最小关键路径
+  r11,"llm-eval-produces-comparable-report","",运行 LLM 评测流程,系统 SHALL 产出可比报告并包含关键回归指标
+  r12,"timing-tests-do-not-flake","",运行计时敏感的单元/集成测试,"测试 SHALL 使用可控时间源以避免 wall-clock 引入不稳定"
+  r13,"test-controls-external-dependencies-via-explicit-seams","",测试需要隔离网络/第三方服务/宿主环境等外部边界,测试 SHALL 使用显式 seam（例如 transport/provider/clock）进行隔离
+  r13,"backend-quality-gate-rejects-private-patches","",开发者运行后端默认质量门槛（例如 `cd backend/py && just test`）,质量门槛 SHALL 失败并给出可定位的诊断信息（不允许 allowlist）
+  r13,"backend-quality-gate-requires-mock-reason-for-monkeypatch-us","",开发者运行后端默认质量门槛（例如 `cd backend/py && just test`）,质量门槛 SHALL 失败并给出可定位的诊断信息
+  r14,"developer-can-run-a-deterministic-report","","开发者运行后端测试替身使用报告入口（例如 `just test-mock-report`）","系统 SHALL 输出确定性的统计与迁移导航信息（私有 patch、缺少 `Mock reason:` 的位置、hotspots）"
+  r14,"developer-can-run-a-deterministic-frontend-report","","开发者运行前端测试替身使用报告入口（例如 `cd frontend/web && pnpm run test-mock-report`）","系统 SHALL 输出确定性的统计与迁移导航信息（缺少 `Mock reason:` 的位置、hotspots）"
+  r15,"default-backend-quality-gate-excludes-experimental-tests","",开发者运行默认后端质量门槛（例如 `cd backend/py && just test`）,系统 SHALL 运行所有未标记为 `experimental` 的测试用例
+  r15,"core-regression-suite-is-executable-and-deterministic","","开发者运行核心回归套件（例如 `cd backend/py && just test-core`）",系统 SHALL 仅运行标记为 `core` 的测试用例（允许通过 marker 或路径约定自动打标）
+  r15,"tests-opt-into-experimental-explicitly","",新增/修改边缘或试验性的测试用例,该测试 SHOULD 显式标注 `@pytest.mark.experimental`
+  r16,"default-frontend-test-gate-excludes-experimental-tests","","开发者运行前端默认质量门槛（例如 `cd frontend/web && pnpm run test:ci`）",系统 SHALL 运行稳定套件（默认排除 `*.experimental.test.*`）
+  r16,"frontend-core-regression-suite-aligns-with-backend-smoke-pat","","开发者运行前端核心回归套件（例如 `cd frontend/web && pnpm run test:core`）",系统 SHALL 仅运行覆盖后端核心 API 冒烟链路的最小 UI 用例集合（notebooks/analysis/sources/chat/outputs/health）
+  r16,"stable-frontend-tests-reject-unhandled-network-calls","",稳定套件中的测试触发未被 MSW handler 覆盖的网络请求,测试 SHALL 失败并提示补齐 handler 或将该用例标记为 `experimental`
+  r16,"frontend-quality-gate-requires-mock-reason-for-vi-patch-ops","","开发者运行前端默认质量门槛（例如 `cd frontend/web && pnpm run test:ci`）",质量门槛 SHALL 失败并给出可定位的诊断信息

@@ -59,7 +59,7 @@ cd frontend/web && pnpm run typecheck
 - `backend/py/packages/`: workspace Python libraries used by the service
 - `frontend/web/`: Vite + React UI
 - `config/`: runtime config (`app.yaml`) and generated schema (`app.schema.gen.json`)
-- `openspec/`: specs + change tracking
+- `llmanspec/`: specs + change tracking (migrated from `openspec/`)
 - `sdk/`: generated SDKs + generator configs
 
 ## OpenAPI / generated clients
@@ -74,9 +74,9 @@ just api-sync
 
 ## Specs / change workflow
 
-This repo uses OpenSpec for change tracking:
-- Canonical specs live under `openspec/specs/`
-- In-progress changes live under `openspec/changes/`
+This repo uses llman SDD for change tracking:
+- Canonical specs live under `llmanspec/specs/`
+- In-progress changes live under `llmanspec/changes/`
 
 ## Commit messages
 

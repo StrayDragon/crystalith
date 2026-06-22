@@ -1,0 +1,17 @@
+kind: llman.sdd.spec
+name: "output-rendering-and-typing"
+purpose: 定义输出在前端的类型建模与渲染契约：typed payload 判别联合、运行时 guard、通用渲染器与回退路径。该规范确保新输出类型不会破坏渲染链路，并为未知输出提供安全降级。
+valid_scope[2]: src/,tests/
+requirements[5]{req_id,title,statement}:
+  r1,Output payload is modeled as discriminated union,前端 MUST 以 `output.type` 作为判别字段建模 payload，保证类型 narrowing 可用；当输出类型来自插件且客户端未知时，类型系统 MUST 提供一个 “unknown/other” 分支以避免编译期与运行期崩溃。
+  r2,Runtime decode provides safe fallback,运行时 decoder/guard MUST 在 shape 不匹配时回退到 raw/unknown 渲染，不得崩溃。
+  r3,GenericOutputRenderer supports canonical layouts,通用渲染器 MUST 支持规范布局类型与字段描述符递归渲染。
+  r4,RenderDescriptor contract is stable,workspace tools 返回的 `render_descriptor`/`config_schema` 字段语义 MUST 稳定。
+  r5,Rendering priority is deterministic,"渲染优先级 MUST 为 `frontend_bundle renderer > GenericOutputRenderer > Raw JSON`： - `frontend_bundle renderer`：由后端在 `/v1/workspace/tools` 返回的 `frontend_bundle` 声明驱动加载与渲染 - `GenericOutputRenderer`：由后端返回的 `render_descriptor` 驱动的声明式渲染 - `Raw JSON`：最终安全回退"
+scenarios[6]{req_id,id,given,when,then}:
+  r1,"type-narrowing-supports-unknown-plugin-output-types","",前端收到一个带有未知 `output.type` 的输出 payload（未在客户端枚举/联合类型中声明）,系统 SHALL 将其归入 unknown 分支并进入安全降级渲染路径
+  r2,"unknown-output-shape-does-not-crash-ui","",输出 payload 的 shape 与预期类型不匹配,系统 SHALL 回退到 raw/unknown 渲染并保持 UI 不崩溃
+  r3,"render-canonical-layout","",输出使用规范布局与字段描述符,GenericOutputRenderer SHALL 能递归渲染该布局
+  r4,"tool-schemas-remain-compatible","",前端基于 `render_descriptor`/`config_schema` 渲染工具输出,字段语义 SHALL 保持稳定以避免客户端漂移
+  r5,"renderer-selection-follows-priority","",某输出类型同时存在 `frontend_bundle` 与 `render_descriptor`,系统 SHALL 优先选择 `frontend_bundle` 对应的专用渲染器
+  r5,"unsupported-or-broken-bundle-falls-back-safely","",`frontend_bundle` 的 `api_version` 不受支持，或 bundle 加载/导出解析失败,系统 SHALL 回退到 `render_descriptor` 驱动的通用渲染器（若存在）
