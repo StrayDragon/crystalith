@@ -1,0 +1,17 @@
+kind: llman.sdd.spec
+name: "workspace-shared-ui-state"
+purpose: "定义 Crystalith session 级别的 server-authoritative `shared_state` 合同，特别是 `shared_state.ui` 如何通过 Rivu snapshot/delta 驱动前端 mounts、交互事件与刷新恢复。"
+valid_scope[2]: src/,tests/
+requirements[5]{req_id,title,statement}:
+  r1,Session shared_state is persisted and revisioned,每个 session MUST 持久化 `shared_state` 与 `shared_state_revision`。`shared_state` MUST 至少包含 `ui` 根对象，且每次成功应用 UI delta 后 MUST 递增 revision。
+  r2,"QA responses expose shared_state out-of-band",QA 非流式响应 MUST 返回 `answer`、稳定的 `message_id`、`shared_state` 与 `shared_state_revision`；assistant `content` 本身 MUST 保持纯文本。
+  r3,QA stream publishes snapshot then deltas,QA 流式响应 MUST 在开始时发送一次 `state_snapshot`，并在需要时发送后续 `state_delta` 事件；这些事件 MUST 与同一条 assistant message 的稳定 `message_id` 对齐。
+  r4,"UI event handling is validated idempotent and revision-aware","系统 MUST 提供 session-scoped `ui.v1.event` 入口，并使用 `clientRequestId` 做幂等、使用 `baseRevision` 做并发控制。"
+  r5,Refresh restores mounts from server state,前端刷新后 MUST 能通过重新获取 session `shared_state.ui` 恢复已持久化的 mounts，而不依赖之前的 SSE 内存态。
+scenarios[6]{req_id,id,given,when,then}:
+  r1,"new-session-starts-with-empty-ui-state","",系统创建一个新的 session,`shared_state.ui` SHALL 初始化为合法的空 Rivu UI state
+  r2,"non-stream-stats-returns-mounts-in-shared-state-ui","",stats preset 生成了可校验的结构化结果,响应 SHALL 将 `fallback_markdown` 作为 `answer`
+  r3,"stream-starts-with-a-stable-assistant-message-id","",客户端发起 `/qa/stream`,服务端 SHALL 先发送包含 `message_id`、`shared_state`、`shared_state_revision` 的 `state_snapshot`
+  r4,"duplicate-client-request-is-idempotent","",客户端重复发送相同的 `clientRequestId`,服务端 SHALL 返回与首次处理一致的 delta 与 `shared_state_revision`
+  r4,"stale-base-revision-is-rejected","",客户端发送的 `baseRevision` 落后于当前 session revision,服务端 SHALL 返回并发冲突错误
+  r5,"page-reload-reconstructs-mounts","",用户刷新页面并重新打开同一个 session,前端 SHALL 请求 `/ui/state`

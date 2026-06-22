@@ -1,3 +1,13 @@
+<!-- LLMANSPEC:START -->
+# LLMAN Spec-Driven Development
+
+This project uses llman SDD. Read `llmanspec/config.yaml` for project context and rules.
+
+Use `/llman-sdd-onboard` to get started, then `/llman-sdd-*` skills for workflow.
+
+Keep this managed block so `llman sdd update` can refresh it.
+<!-- LLMANSPEC:END -->
+
 # Repository Guidelines
 
 ## Project Structure & Module Organization
@@ -5,7 +15,7 @@
 - `backend/py/packages/` contains workspace libraries (e.g., `cl-logs`, `cl-fastapix`), each with its own `pyproject.toml` and `tests/`.
 - `frontend/web/` is the Vite + React + TypeScript UI; source is in `frontend/web/src/`, assets in `frontend/web/public/`.
 - `config/` stores runtime config (`app.yaml`) and the generated schema (`app.schema.gen.json`).
-- `openspec/` contains specification/change-tracking docs; consult it for spec-driven work.
+- `llmanspec/` contains specification/change-tracking docs (migrated from `openspec/`); consult it for spec-driven work.
 
 ## Build, Test, and Development Commands
 Unified entry (from repo root):
@@ -65,4 +75,4 @@ Tip: `just -l` lists available tasks in each directory.
 ## Security, Configuration, and Spec Workflow
 - Local config lives in `config/app.yaml`; `config/app.schema.gen.json` is generated for YAML validation. Never commit API keys or tokens.
 - If config shape changes, describe required keys in the PR.
-- When work involves a proposal/plan, new features, breaking changes, or ambiguous requirements, read `openspec/AGENTS.md` for spec and change-tracking conventions.
+- When work involves a proposal/plan, new features, breaking changes, or ambiguous requirements, read `llmanspec/config.yaml` for spec and change-tracking conventions.
