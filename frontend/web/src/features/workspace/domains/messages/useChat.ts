@@ -62,6 +62,67 @@ async function fetchUiState(notebookId: number, sessionId: number): Promise<Sess
   return (await response.json()) as SessionUiStatePayload;
 }
 
+function parseApiErrorPayload(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as { message?: unknown; details?: unknown };
+  const details = typeof record.details === "string" ? record.details.trim() : "";
+  const message = typeof record.message === "string" ? record.message.trim() : "";
+  return details || message || null;
+}
+
+function createSseFetchCapturingErrorBody() {
+  let lastErrorBody: string | null = null;
+  const sseFetch: typeof fetch = async (input, init) => {
+    const response = await globalThis.fetch(input, init);
+    if (!response.ok) {
+      try {
+        const payload = await response.clone().json();
+        lastErrorBody = parseApiErrorPayload(payload);
+      } catch {
+        lastErrorBody = null;
+      }
+    }
+    return response;
+  };
+  return {
+    fetch: sseFetch,
+    consumeLastErrorBody: () => {
+      const body = lastErrorBody;
+      lastErrorBody = null;
+      return body;
+    },
+  };
+}
+
+function mapSseTransportError(message: string, detail?: string | null): string {
+  const combined = `${message} ${detail ?? ""}`.toLowerCase();
+  if (
+    combined.includes("missing api_key") ||
+    combined.includes("openai_api_key") ||
+    combined.includes("ai_config_missing")
+  ) {
+    return "Embedding 模型未配置 API Key，请在 config/secret.env 设置 OPENAI_API_KEY 后重启后端。";
+  }
+  if (detail && detail.length > 0 && detail.length <= 160) {
+    return detail;
+  }
+  const statusMatch = message.match(/SSE failed:\s*(\d{3})\b/i);
+  const status = statusMatch ? Number(statusMatch[1]) : null;
+  if (status === 503) {
+    return "可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置或稍后重试。";
+  }
+  if (status === 404) {
+    return "会话或笔记本不存在。";
+  }
+  if (status === 500) {
+    return "服务器内部错误，请检查模型/Embedding 配置或稍后重试。";
+  }
+  if (message.length > 0 && message.length < 120) {
+    return message;
+  }
+  return "请求失败，请检查后端服务或稍后重试。";
+}
+
 export function useChat({
   ensureSession,
   refreshSessions,
@@ -256,6 +317,7 @@ export function useChat({
 
       let hadSseError = false;
       let receivedDone = false;
+      let sseTransportError: string | null = null;
       let stableAssistantMessageId: string | null = null;
       let terminalErrorMessage = "";
 
@@ -300,6 +362,8 @@ export function useChat({
         });
       };
 
+      const { fetch: sseFetch, consumeLastErrorBody } = createSseFetchCapturingErrorBody();
+
       try {
         const { stream } = await client.sse.post({
           url: "/v1/notebooks/{notebook_id}/qa/stream",
@@ -314,6 +378,21 @@ export function useChat({
           },
           signal: abortController.signal,
           sseMaxRetryAttempts: 1,
+          fetch: sseFetch,
+          onSseError: (error) => {
+            const detail = consumeLastErrorBody();
+            if (detail) {
+              sseTransportError = detail;
+              return;
+            }
+            if (error instanceof Error) {
+              sseTransportError = error.message;
+            } else if (typeof error === "string") {
+              sseTransportError = error;
+            } else {
+              sseTransportError = "流式连接失败";
+            }
+          },
           onSseEvent: (event) => {
             const { event: eventType, data: eventData } = event;
             if (eventType === "state_snapshot" && eventData && typeof eventData === "object") {
@@ -413,7 +492,11 @@ export function useChat({
           rollbackLocalStreamingState();
           resyncServerState();
           if (!hadSseError) {
-            terminalErrorMessage = "请求已中断，请重试。";
+            const detail = consumeLastErrorBody();
+            terminalErrorMessage = mapSseTransportError(
+              sseTransportError ?? "",
+              detail ?? sseTransportError,
+            );
             store.getState().setError("send", terminalErrorMessage);
           }
         }
@@ -448,17 +531,22 @@ export function useChat({
             setLastFailedDraft("");
           }
         } else {
-          let errorMessage = terminalErrorMessage || "请求失败，请检查后端服务或稍后重试。";
+          const detail = consumeLastErrorBody();
+          let errorMessage = mapSseTransportError(
+            sseTransportError ?? (err instanceof Error ? err.message : ""),
+            detail ?? terminalErrorMessage,
+          );
           if (err instanceof Error) {
-            const statusError = err as Error & { status?: number };
-            if (statusError.status === 503) {
+            const statusMatch = err.message.match(/SSE failed:\s*(\d{3})\b/i);
+            const status = statusMatch
+              ? Number(statusMatch[1])
+              : (err as Error & { status?: number }).status;
+            if (status === 503 && !detail && !sseTransportError) {
               errorMessage = "可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置或稍后重试。";
-            } else if (statusError.status === 404) {
+            } else if (status === 404 && !detail && !sseTransportError) {
               errorMessage = "会话或笔记本不存在。";
-            } else if (statusError.status === 500) {
-              errorMessage = "服务器内部错误，请稍后重试。";
-            } else if (err.message && err.message.length < 100) {
-              errorMessage = err.message;
+            } else if (status === 500 && !detail && !sseTransportError) {
+              errorMessage = "服务器内部错误，请检查模型/Embedding 配置或稍后重试。";
             }
           }
           store.getState().setError("send", errorMessage);

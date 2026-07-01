@@ -23,7 +23,7 @@ export default function WidgetCatalog({
 
   return (
     <div
-      className="fixed inset-0 relative"
+      className="fixed inset-0"
       style={layerStyle}
       role="dialog"
       aria-modal="true"

@@ -51,7 +51,7 @@ export default function ShortcutHelpPanel({ open, shortcuts, onClose }: Shortcut
       role="dialog"
       aria-modal="true"
       aria-label="快捷键帮助"
-      className="fixed inset-0 relative flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm"
       style={modalStyle}
     >
       <button

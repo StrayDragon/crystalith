@@ -146,7 +146,7 @@ export default function DiagnosticsDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 relative flex items-center justify-center"
+      className="fixed inset-0 flex items-center justify-center"
       style={modalStyle}
       role="dialog"
       aria-modal="true"
