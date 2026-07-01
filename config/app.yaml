@@ -100,7 +100,7 @@ ollama_defaults:
 models:
   defaults:
     # One-click default path: OpenAI
-    chat: "gpt-5.2"
+    chat: "deepseek-chat"
     # Override example:
     #   export CRYSTALITH_DEFAULT_EMBEDDING_MODEL="bge-m3-openai"
     # When empty/unset, the first `roles: [embed]` model in `models.available` is used.
@@ -108,30 +108,18 @@ models:
 
   available:
     # -------------------- OpenAI (chat) --------------------
-    - id: "gpt-5.2"
+    - id: "deepseek-chat"
       provider: "openai"
-      model: "gpt-5.2"
-      display_name: "GPT-5.2"
-      description: "OpenAI chat model"
+      model: "deepseek-chat"
+      display_name: "DeepSeek Chat"
+      description: "DeepSeek chat model"
       roles: [chat, edit]
-      capabilities: [tool_use, image_input]
+      capabilities: [tool_use]
       provider_config:
         <<: *openai_default
       completion_options:
         temperature: 0.7
         max_tokens: 4096
-
-    - id: "gpt-5.2-codex"
-      provider: "openai"
-      model: "gpt-5.2-codex"
-      display_name: "GPT-5.2 Codex"
-      description: "Code-focused model"
-      roles: [chat, edit, autocomplete]
-      capabilities: [tool_use]
-      provider_config:
-        <<: *openai_default
-      completion_options:
-        temperature: 0.3
 
     # -------------------- OpenAI (embedding) --------------------
     - id: "text-embedding-3-small"
