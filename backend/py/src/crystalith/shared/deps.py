@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING
 
 from cl_sqlalchemyx.mgrs import AsyncDBManager
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.factory import create_chat_provider, create_embedding_provider
@@ -32,6 +32,23 @@ from crystalith.shared.vector_storage import VectorStore
 
 if TYPE_CHECKING:
     from crystalith.features.tasks.queue import TaskQueue
+
+
+def _raise_provider_config_error(exc: Exception, *, capability: str) -> None:
+    message = str(exc)
+    if "Missing api_key" not in message:
+        raise exc
+    raise HTTPException(
+        status_code=503,
+        detail={
+            "error_code": "AI_CONFIG_MISSING",
+            "message": f"{capability} 模型未配置 API Key",
+            "details": (
+                "请在 config/secret.env 设置 OPENAI_API_KEY"
+                "（或确保 shell 中 export 后运行 just upsert-env-configs），然后重启后端。"
+            ),
+        },
+    ) from exc
 
 
 def get_settings(request: Request) -> Settings:
@@ -63,6 +80,8 @@ def get_embedding_provider(request: Request) -> EmbeddingProvider:
             )
         except TypeError:
             provider = create_embedding_provider(settings)
+        except ValueError as exc:
+            _raise_provider_config_error(exc, capability="Embedding")
 
         if settings.cache.provider == "redis" and env_bool(CRYSTALITH_EMBEDDING_CACHE_ENABLED, EMBEDDING_CACHE_ENABLED_DEFAULT):
             cache = get_cache_provider(request)
@@ -94,6 +113,8 @@ def get_ai_provider(request: Request) -> ChatProvider:
             )
         except TypeError:
             provider = create_chat_provider(request.app.state.settings)
+        except ValueError as exc:
+            _raise_provider_config_error(exc, capability="Chat")
         request.app.state.ai_provider = provider
     return provider
 
