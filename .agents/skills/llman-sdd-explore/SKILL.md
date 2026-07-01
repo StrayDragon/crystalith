@@ -1,6 +1,8 @@
 ---
 name: "llman-sdd-explore"
 description: "Enter explore mode for llman SDD (thinking only; no implementation)."
+metadata:
+  version: "0.0.53"
 ---
 
 # LLMAN SDD Explore
@@ -19,11 +21,14 @@ Use this skill when the user wants to think through ideas, investigate problems,
 - Willing to hold multiple options and tradeoffs
 
 ## Suggested moves
-1. Clarify the goal and constraints (ask 1–3 questions).
-2. Check context: `llman sdd list --json`
+1. Use `llman sdd context --task "<task>" --paths "<files>"` to quickly locate relevant specs.
+   - Read the `direct` spec files (these are the contracts you must understand).
+   - If context is unavailable, rebuild with `llman sdd index rebuild` (default `pageindex`, no model needed) and retry.
+2. Clarify the goal and constraints (ask 1–3 questions).
 3. If a change id is relevant, read its artifacts under `llmanspec/changes/<id>/`.
 4. Explore options and tradeoffs (2–3 options).
-5. When something crystallizes, offer to capture it (don’t auto-write):
+5. Assess change scale (triage) to determine if full SDD is needed.
+6. When something crystallizes, offer to capture it (don't auto-write):
    - Scope changes → `proposal.md`
    - Requirements → `llmanspec/changes/<id>/specs/<capability>/spec.toon`
    - Design decisions → `design.md`
@@ -35,26 +40,29 @@ When the user is ready to implement, suggest:
 - `llman-sdd-new-change` (start a change)
 - `llman-sdd-ff` (create all artifacts quickly)
 - `llman-sdd-apply` (implement tasks)
+- `llman-sdd-quick` (quick path: direct implementation for small changes)
 If the user asks you to implement while in explore mode, STOP and remind them to exit explore mode first.
 
 Before acting, read `llmanspec/config.yaml` and follow its `context` and `rules` if present.
 
 Common commands:
+- `llman sdd context --task "<description>" --paths "<files>"` (find relevant specs). Uses the pageindex agentic tree backend (needs `LLMAN_SDD_INDEX_CHAT_MODEL`). Preset via `LLMAN_SDD_INDEX_BACKEND`.
 - `llman sdd list` (list changes)
-- `llman sdd list --specs` (list specs)
+- `llman sdd list --specs` (list specs with purpose/scope metadata)
 - `llman sdd show <id>` (show change/spec)
 - `llman sdd validate <id>` (validate a change or spec)
 - `llman sdd validate --all` (bulk validate)
-- `llman sdd migrate` (one-shot migration of legacy `.md`+fence specs to standalone `.toon`; idempotent)
+- `llman sdd index rebuild` (rebuild the pageindex tree index — no model needed)
+- `llman sdd index check` (check index freshness)
 - `llman sdd archive run <id>` (archive a change)
-- `llman sdd archive <id>` (legacy alias of `archive run`)
-- `llman sdd archive freeze [--before YYYY-MM-DD] [--keep-recent N] [--dry-run]` (freeze archived dirs into one cold-backup file)
-- `llman sdd archive thaw [--change <id> ...] [--dest <path>]` (restore from cold-backup file)
-- `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]` (generate change dependency graph to stdout)
+- `llman sdd archive freeze [--before YYYY-MM-DD] [--keep-recent N] [--dry-run]` (freeze archived dirs)
+- `llman sdd archive thaw [--change <id> ...] [--dest <path>]` (restore from cold-backup)
+- `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]` (generate change dependency graph)
 
 
 ## Context
 - Gather the current change/spec state before acting.
+- Prefer `llman sdd context --task --paths` to discover relevant specs instead of guessing or full scans.
 
 ## Goal
 - State the concrete outcome for this command/skill execution.
@@ -62,10 +70,14 @@ Common commands:
 ## Constraints
 - Keep changes minimal and scoped.
 - Avoid guessing when identifiers or intent are ambiguous.
+- Use `llman sdd context --task --paths` before reading full spec files.
+- Choose workflow path based on change scale: behavioral contract changes use full SDD, implementation changes use quick path.
 
 ## Workflow
 - Use `llman sdd` commands as the source of truth.
 - Validate outcomes when files or specs are updated.
+- Prefer `llman sdd context` over full reads or guessing.
+- When context is unavailable follow error guidance (rebuild index or fall back to `list --specs --json`).
 
 ## Decision Policy
 - Ask for clarification when a high-impact ambiguity remains.

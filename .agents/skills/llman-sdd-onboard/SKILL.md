@@ -1,6 +1,8 @@
 ---
 name: "llman-sdd-onboard"
 description: "Onboard to the llman SDD workflow in a repository."
+metadata:
+  version: "0.0.53"
 ---
 
 # LLMAN SDD Onboard
@@ -9,24 +11,29 @@ Use this skill to onboard to llman SDD in a repository.
 
 ## Steps
 1. Read `llmanspec/config.yaml` for project context, conventions, and rules.
-2. Check current changes and specs.
-3. Follow the proposal -> implement -> archive workflow.
-4. Use `llman sdd graph` to visualize change dependencies (depends_on/blocks).
+2. Use `llman sdd list --specs --json` to see all specs at a glance.
+   - Or use `llman sdd context --task "<task description>" --paths "<files>"` to find task-relevant specs.
+   - If context returns `quality: "unavailable"`, run `llman sdd index rebuild` first (default backend is `pageindex`; it needs `LLMAN_SDD_INDEX_CHAT_MODEL` for retrieval but not for rebuilding).
+3. Read only the `direct` spec files from context output.
+4. Assess change scale (see triage rules): behavioural contract change → full SDD; implementation change → quick path.
+5. Follow proposal -> implement -> archive (full path) or modify directly (quick path).
+6. Use `llman sdd graph` to visualize change dependencies.
 
 Before acting, read `llmanspec/config.yaml` and follow its `context` and `rules` if present.
 
 Common commands:
+- `llman sdd context --task "<description>" --paths "<files>"` (find relevant specs). Uses the pageindex agentic tree backend (needs `LLMAN_SDD_INDEX_CHAT_MODEL`). Preset via `LLMAN_SDD_INDEX_BACKEND`.
 - `llman sdd list` (list changes)
-- `llman sdd list --specs` (list specs)
+- `llman sdd list --specs` (list specs with purpose/scope metadata)
 - `llman sdd show <id>` (show change/spec)
 - `llman sdd validate <id>` (validate a change or spec)
 - `llman sdd validate --all` (bulk validate)
-- `llman sdd migrate` (one-shot migration of legacy `.md`+fence specs to standalone `.toon`; idempotent)
+- `llman sdd index rebuild` (rebuild the pageindex tree index — no model needed)
+- `llman sdd index check` (check index freshness)
 - `llman sdd archive run <id>` (archive a change)
-- `llman sdd archive <id>` (legacy alias of `archive run`)
-- `llman sdd archive freeze [--before YYYY-MM-DD] [--keep-recent N] [--dry-run]` (freeze archived dirs into one cold-backup file)
-- `llman sdd archive thaw [--change <id> ...] [--dest <path>]` (restore from cold-backup file)
-- `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]` (generate change dependency graph to stdout)
+- `llman sdd archive freeze [--before YYYY-MM-DD] [--keep-recent N] [--dry-run]` (freeze archived dirs)
+- `llman sdd archive thaw [--change <id> ...] [--dest <path>]` (restore from cold-backup)
+- `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]` (generate change dependency graph)
 
 
 ## Notes
@@ -81,6 +88,7 @@ Notes:
 
 ## Context
 - Gather the current change/spec state before acting.
+- Prefer `llman sdd context --task --paths` to discover relevant specs instead of guessing or full scans.
 
 ## Goal
 - State the concrete outcome for this command/skill execution.
@@ -88,10 +96,14 @@ Notes:
 ## Constraints
 - Keep changes minimal and scoped.
 - Avoid guessing when identifiers or intent are ambiguous.
+- Use `llman sdd context --task --paths` before reading full spec files.
+- Choose workflow path based on change scale: behavioral contract changes use full SDD, implementation changes use quick path.
 
 ## Workflow
 - Use `llman sdd` commands as the source of truth.
 - Validate outcomes when files or specs are updated.
+- Prefer `llman sdd context` over full reads or guessing.
+- When context is unavailable follow error guidance (rebuild index or fall back to `list --specs --json`).
 
 ## Decision Policy
 - Ask for clarification when a high-impact ambiguity remains.
