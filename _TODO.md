@@ -8,6 +8,4 @@
 - 需要提前注册并占位当前可能的pypi, npm 包等等 避免重名
   - [x] pypi: python client sdk
   - [x] npm: ts client sdk (需要调用fern生成)
-  - [ ] crates: client sdk (需要调用生成)
-  - [ ] go: client sdk
   - [x] docker images ghcr 分发
