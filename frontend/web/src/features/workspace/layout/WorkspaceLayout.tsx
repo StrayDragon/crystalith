@@ -966,17 +966,15 @@ export default function WorkspaceLayout() {
       </div>
 
       {isDesktopLayout ? (
-        <div className="flex flex-1 min-h-0 flex-col">
-          <ModularCanvas
-            ref={canvasRef}
-            defaultLayout={DEFAULT_LAYOUT}
-            locked={locked}
-            widgetMeta={WIDGET_REGISTRY}
-            renderWidget={renderWidget}
-            widgetHeaderExtras={widgetHeaderExtras}
-            onWidgetIdsChange={setActiveWidgetIds}
-          />
-        </div>
+        <ModularCanvas
+          ref={canvasRef}
+          defaultLayout={DEFAULT_LAYOUT}
+          locked={locked}
+          widgetMeta={WIDGET_REGISTRY}
+          renderWidget={renderWidget}
+          widgetHeaderExtras={widgetHeaderExtras}
+          onWidgetIdsChange={setActiveWidgetIds}
+        />
       ) : (
         <>
           <div className="flex-1 min-h-0 px-4 pb-3 overflow-hidden">
