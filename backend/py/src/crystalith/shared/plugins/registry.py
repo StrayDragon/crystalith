@@ -529,7 +529,7 @@ class PluginRegistry:
     # =============================================================================
 
     def is_provider_available(self, provider_id: str) -> bool:
-        return provider_id in {"openai", "ollama"} or provider_id in self.ai_providers
+        return provider_id in {"openai"} or provider_id in self.ai_providers
 
     def list_ai_providers(self) -> list[str]:
         return sorted(self.ai_providers.keys())

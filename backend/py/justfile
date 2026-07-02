@@ -64,6 +64,12 @@ config-schema-check:
         exit 1
     fi
 
+secret-env-example:
+    uv run python scripts/gen_secret_env_example.py
+
+secret-env-example-check:
+    uv run python scripts/gen_secret_env_example.py --check
+
 db-init:
     uv run scripts/db_init.py
 

@@ -332,31 +332,6 @@ export default function DiagnosticsDialog({
                       </div>
                     </div>
 
-                    {item.key === "ollama" && data?.optional?.ollama?.hosts ? (
-                      <div className="mt-3">
-                        <div className="text-[11px] font-semibold text-gray-700 dark:text-slate-200 mb-1">
-                          {t("workspace.diagnostics.section.hosts")}
-                        </div>
-                        <div className="space-y-1">
-                          {Object.entries(data.optional.ollama.hosts).map(([host, hostStatus]) => (
-                            <div
-                              key={host}
-                              className="flex items-center justify-between gap-2 text-[11px] text-gray-700 dark:text-slate-300"
-                            >
-                              <span className="font-mono truncate">{host}</span>
-                              <span className="text-gray-500 dark:text-slate-400">
-                                {labelForOptionalStatus(
-                                  hostStatus.healthy ? "healthy" : "degraded",
-                                )}
-                                {hostStatus.model_count != null
-                                  ? ` · ${t("workspace.diagnostics.label.models", { count: hostStatus.model_count })}`
-                                  : ""}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
                   </div>
                 );
               })}

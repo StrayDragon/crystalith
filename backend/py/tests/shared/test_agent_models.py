@@ -6,17 +6,10 @@ from pydantic_ai.models.test import TestModel
 
 from crystalith.shared.agents.models import (
     ModelConfigurationError,
-    _normalize_ollama_base_url,
     build_chat_model,
     build_chat_model_from_model_id,
 )
 from tests._support.settings import make_settings
-
-
-def test_normalize_ollama_base_url_appends_v1() -> None:
-    assert _normalize_ollama_base_url("http://localhost:11434") == "http://localhost:11434/v1"
-    assert _normalize_ollama_base_url("http://localhost:11434/") == "http://localhost:11434/v1"
-    assert _normalize_ollama_base_url("http://localhost:11434/v1") == "http://localhost:11434/v1"
 
 
 def test_build_chat_model_supports_test_provider() -> None:
@@ -40,7 +33,7 @@ def test_build_chat_model_supports_test_provider() -> None:
     assert isinstance(model, TestModel)
 
 
-def test_build_chat_model_builds_openai_and_ollama_models_without_network() -> None:
+def test_build_chat_model_builds_openai_model_without_network() -> None:
     settings = make_settings(
         {
             "models": {
@@ -54,14 +47,6 @@ def test_build_chat_model_builds_openai_and_ollama_models_without_network() -> N
                         "roles": ["chat"],
                         "provider_config": {"api_key": "sk-test", "base_url": "http://localhost:1234/v1"},
                     },
-                    {
-                        "id": "ollama-chat",
-                        "provider": "ollama",
-                        "model": "qwen:latest",
-                        "display_name": "Ollama",
-                        "roles": ["chat"],
-                        "provider_config": {"host": "http://localhost:11434"},
-                    },
                 ],
             }
         }
@@ -69,9 +54,6 @@ def test_build_chat_model_builds_openai_and_ollama_models_without_network() -> N
 
     openai_model = build_chat_model(settings)
     assert isinstance(openai_model, OpenAIChatModel)
-
-    ollama_model = build_chat_model_from_model_id(settings, "ollama-chat")
-    assert isinstance(ollama_model, OpenAIChatModel)
 
 
 def test_build_chat_model_applies_completion_and_request_options_to_model_settings() -> None:
@@ -120,57 +102,6 @@ def test_build_chat_model_applies_completion_and_request_options_to_model_settin
     assert model.client.default_headers.get("X-Test") == "1"
 
 
-def test_build_chat_model_disables_tool_output_for_ollama_without_tool_use_capability() -> None:
-    settings = make_settings(
-        {
-            "models": {
-                "defaults": {"chat": "ollama-chat"},
-                "available": [
-                    {
-                        "id": "ollama-chat",
-                        "provider": "ollama",
-                        "model": "qwen:latest",
-                        "display_name": "Ollama",
-                        "roles": ["chat"],
-                        "provider_config": {"host": "http://localhost:11434"},
-                    }
-                ],
-            }
-        }
-    )
-
-    model = build_chat_model(settings)
-    assert isinstance(model, OpenAIChatModel)
-    assert model.profile.supports_tools is False
-    assert model.profile.default_structured_output_mode == "prompted"
-
-
-def test_build_chat_model_keeps_tool_output_for_ollama_with_tool_use_capability() -> None:
-    settings = make_settings(
-        {
-            "models": {
-                "defaults": {"chat": "ollama-chat"},
-                "available": [
-                    {
-                        "id": "ollama-chat",
-                        "provider": "ollama",
-                        "model": "qwen:latest",
-                        "display_name": "Ollama",
-                        "roles": ["chat"],
-                        "capabilities": ["tool_use"],
-                        "provider_config": {"host": "http://localhost:11434"},
-                    }
-                ],
-            }
-        }
-    )
-
-    model = build_chat_model(settings)
-    assert isinstance(model, OpenAIChatModel)
-    assert model.profile.supports_tools is True
-    assert model.profile.default_structured_output_mode == "tool"
-
-
 def test_build_chat_model_validates_provider_config() -> None:
     settings = make_settings(
         {
@@ -184,14 +115,6 @@ def test_build_chat_model_validates_provider_config() -> None:
                         "roles": ["chat"],
                         "provider_config": {"api_key": "   "},
                     },
-                    {
-                        "id": "bad-ollama",
-                        "provider": "ollama",
-                        "model": "qwen:latest",
-                        "display_name": "Bad",
-                        "roles": ["chat"],
-                        "provider_config": {"host": "   "},
-                    },
                 ]
             }
         }
@@ -199,9 +122,6 @@ def test_build_chat_model_validates_provider_config() -> None:
 
     with pytest.raises(ModelConfigurationError, match="Missing api_key"):
         build_chat_model_from_model_id(settings, "bad-openai")
-
-    with pytest.raises(ModelConfigurationError, match="Missing host"):
-        build_chat_model_from_model_id(settings, "bad-ollama")
 
 
 def test_build_chat_model_rejects_unsupported_provider() -> None:
@@ -223,33 +143,3 @@ def test_build_chat_model_rejects_unsupported_provider() -> None:
 
     with pytest.raises(ModelConfigurationError, match="Unsupported chat provider"):
         build_chat_model_from_model_id(settings, "bad")
-
-
-def test_build_chat_model_resolves_fallback_host_for_ollama(monkeypatch) -> None:
-    settings = make_settings(
-        {
-            "models": {
-                "defaults": {"chat": "ollama-chat"},
-                "available": [
-                    {
-                        "id": "ollama-chat",
-                        "provider": "ollama",
-                        "model": "qwen:latest",
-                        "display_name": "Ollama",
-                        "roles": ["chat"],
-                        "provider_config": {"host": "http://host.docker.internal:11434"},
-                    }
-                ],
-            }
-        }
-    )
-
-    # Mock reason: enforce deterministic fallback selection without network dependency.
-    monkeypatch.setattr(
-        "crystalith.shared.agents.models.resolve_reachable_ollama_host",
-        lambda **_: "http://localhost:11434",
-    )
-
-    model = build_chat_model(settings)
-    assert isinstance(model, OpenAIChatModel)
-    assert str(model.client.base_url).rstrip("/") == "http://localhost:11434/v1"

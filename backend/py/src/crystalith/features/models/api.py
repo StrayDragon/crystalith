@@ -12,7 +12,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from crystalith.shared.config import ModelConfig, Settings, auto_discover_ollama
+from crystalith.shared.config import ModelConfig, Settings
 from crystalith.shared.deps import get_plugin_registry, get_settings
 from crystalith.shared.plugins import PluginRegistry
 
@@ -62,23 +62,12 @@ async def list_models(
     plugins: PluginRegistry = Depends(get_plugin_registry),
     role: Literal["chat", "embed", "edit", "autocomplete"] | None = None,
     capability: str | None = None,
-    refresh: bool = False,
 ) -> ModelsListResponse:
     """
     List all available AI models.
 
     Optionally filter by role (chat, embed, edit, autocomplete) or capability.
-    Set refresh=true to re-discover Ollama models.
     """
-    # Optionally refresh Ollama model discovery
-    if refresh:
-        try:
-            added = auto_discover_ollama(settings)
-            if added:
-                _logger.info("Refreshed: discovered %d new Ollama models", added)
-        except Exception:
-            _logger.debug("Ollama refresh failed", exc_info=True)
-
     models_settings = settings.models
     available = models_settings.available
 
@@ -103,7 +92,7 @@ async def list_models(
 
     return ModelsListResponse(
         models=[_model_config_to_read(m) for m in available],
-        providers=sorted({"openai", "ollama", *plugins.list_ai_providers()}),
+        providers=sorted({"openai", *plugins.list_ai_providers()}),
         default_chat=resolved_default_chat.id if resolved_default_chat else None,
         default_embedding=resolved_default_embedding.id if resolved_default_embedding else None,
     )

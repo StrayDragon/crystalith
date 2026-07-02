@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal, TypedDict
 
-ServiceKey = Literal["storage_chroma", "cache_redis", "ollama", "search_searxng"]
+ServiceKey = Literal["storage_chroma", "cache_redis", "search_searxng"]
 ServiceStatus = Literal["unknown", "disabled", "healthy", "degraded"]
 DegradePolicy = Literal["core_available", "fail_closed"]
 
@@ -44,27 +44,6 @@ class CacheRedisStatus(TypedDict):
     degrade_policy: DegradePolicy
 
 
-class OllamaHostStatus(TypedDict):
-    healthy: bool
-    error: str | None
-    model_count: int | None
-
-
-class OllamaStatus(TypedDict):
-    service: Literal["ollama"]
-    enabled: bool
-    endpoint: str | None
-    status: ServiceStatus
-    healthy: bool | None
-    hosts: dict[str, OllamaHostStatus]
-    error: str | None
-    error_code: str | None
-    recovery_hint: str | None
-    last_probe: str | None
-    probe: OptionalServiceProbeDict
-    degrade_policy: DegradePolicy
-
-
 class SearchSearxngStatus(TypedDict):
     service: Literal["searxng"]
     enabled: bool
@@ -83,8 +62,7 @@ class SearchSearxngStatus(TypedDict):
 class OptionalServicesStatus(TypedDict):
     storage_chroma: StorageChromaStatus
     cache_redis: CacheRedisStatus
-    ollama: OllamaStatus
     search_searxng: SearchSearxngStatus
 
 
-OptionalServiceStatus = StorageChromaStatus | CacheRedisStatus | OllamaStatus | SearchSearxngStatus
+OptionalServiceStatus = StorageChromaStatus | CacheRedisStatus | SearchSearxngStatus

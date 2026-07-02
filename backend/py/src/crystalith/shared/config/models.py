@@ -25,11 +25,6 @@ class OpenAIProviderSettings(BaseModel):
     project: str | None = None
 
 
-class OllamaProviderSettings(BaseModel):
-    """Ollama provider settings."""
-    host: str = "http://localhost:11434"
-
-
 class ProvidersSettings(BaseModel):
     """
     Reusable provider configurations.
@@ -42,9 +37,6 @@ class ProvidersSettings(BaseModel):
             api_key: "{{ secret.OPENAI_API_KEY }}"
             base_url: "https://api.openai.com/v1"
 
-          ollama_local: &ollama_local
-            host: "http://localhost:11434"
-
         models:
           available:
             - id: "gpt-4"
@@ -53,27 +45,6 @@ class ProvidersSettings(BaseModel):
     """
     # Dynamic dict to allow any named provider
     model_config = {"extra": "allow"}
-
-
-# =============================================================================
-# Ollama Runtime Options
-# =============================================================================
-
-class OllamaRuntimeOptions(BaseModel):
-    """Ollama model runtime options."""
-    num_ctx: int | None = None
-    num_thread: int | Literal["auto"] | None = None
-    temperature: float | None = None
-    num_batch: int | None = None
-    mlock: bool | None = None
-    numa: bool | None = None
-    low_vram: bool | None = None
-
-    def to_options(self) -> dict[str, JsonValue] | None:
-        data = cast(dict[str, JsonValue], self.model_dump(exclude_none=True))
-        if data.get("num_thread") == "auto":
-            data.pop("num_thread", None)
-        return data or None
 
 
 # =============================================================================
@@ -135,7 +106,7 @@ class ModelConfig(BaseModel):
             max_tokens: 4096
     """
     id: str = Field(..., description="Unique identifier for the model")
-    provider: str = Field(..., description="Provider id (built-in: openai/ollama, or a plugin provider id)")
+    provider: str = Field(..., description="Provider id (built-in: openai, or a plugin provider id)")
     model: str = Field(..., description="Model name/identifier used by the provider")
     display_name: str = Field(..., description="Human-readable display name")
     description: str = Field("", description="Optional description")
@@ -153,7 +124,7 @@ class ModelConfig(BaseModel):
     )
 
     # Provider-specific config (can use YAML anchors)
-    provider_config: OpenAIProviderSettings | OllamaProviderSettings | dict[str, JsonValue] | None = Field(
+    provider_config: OpenAIProviderSettings | dict[str, JsonValue] | None = Field(
         default=None,
         description="Provider-specific configuration (can reference providers via anchors)",
     )
@@ -162,12 +133,6 @@ class ModelConfig(BaseModel):
     completion_options: CompletionOptions | None = Field(
         default=None,
         description="Default completion options for this model",
-    )
-
-    # Ollama-specific options
-    ollama_options: OllamaRuntimeOptions | None = Field(
-        default=None,
-        description="Ollama-specific runtime options",
     )
 
     # Request options
@@ -199,14 +164,6 @@ class ModelConfig(BaseModel):
         elif isinstance(self.provider_config, dict):
             return OpenAIProviderSettings.model_validate(self.provider_config)
         return OpenAIProviderSettings()
-
-    def get_ollama_config(self) -> OllamaProviderSettings:
-        """Extract Ollama provider config."""
-        if isinstance(self.provider_config, OllamaProviderSettings):
-            return self.provider_config
-        elif isinstance(self.provider_config, dict):
-            return OllamaProviderSettings.model_validate(self.provider_config)
-        return OllamaProviderSettings()
 
 
 class ModelDefaults(BaseModel):
@@ -634,11 +591,6 @@ class OptionalServiceSettings(BaseModel):
 class OptionalServicesSettings(BaseModel):
     """Optional dependency service contracts."""
 
-    ollama: OptionalServiceSettings = Field(
-        default_factory=lambda: OptionalServiceSettings.model_validate(
-            {"endpoint": "http://localhost:11434", "enabled": False}
-        )
-    )
     chroma: OptionalServiceSettings = Field(
         default_factory=lambda: OptionalServiceSettings.model_validate(
             {"endpoint": "http://localhost:8000", "enabled": False}
@@ -986,13 +938,10 @@ class Settings(BaseSettings):
             api_key: "{{ secret.OPENAI_API_KEY }}"
             base_url: "https://api.openai.com/v1"
 
-          ollama_local: &ollama_local
-            host: "http://localhost:11434"
-
         models:
           defaults:
             chat: "gpt-5.2"
-            embedding: "bge-m3-local"
+            embedding: "text-embedding-3-small"
           available:
             - id: "gpt-5.2"
               provider: "openai"
@@ -1080,11 +1029,3 @@ class Settings(BaseSettings):
         Settings are taken from the model's provider_config.
         """
         return model_config.get_openai_config()
-
-    def get_ollama_settings_for_model(self, model_config: ModelConfig) -> OllamaProviderSettings:
-        """
-        Get Ollama settings for a model.
-
-        Settings are taken from the model's provider_config.
-        """
-        return model_config.get_ollama_config()

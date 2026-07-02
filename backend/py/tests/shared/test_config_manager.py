@@ -90,7 +90,6 @@ def test_config_manager_validate_yaml_with_schema_reports_errors(tmp_path) -> No
 
 def test_config_manager_loads_secret_env_next_to_config(
     tmp_path,
-    disable_ollama_auto_discovery,
 ) -> None:
     config_path = tmp_path / "app.yaml"
 
@@ -142,7 +141,6 @@ models:
 def test_config_manager_dotenv_overrides_system_env(
     tmp_path,
     monkeypatch,
-    disable_ollama_auto_discovery,
 ) -> None:
     root = tmp_path / "repo"
     config_dir = root / "config"
@@ -164,7 +162,6 @@ def test_config_manager_dotenv_overrides_system_env(
 
 def test_config_manager_missing_secret_fails_with_hint(
     tmp_path,
-    disable_ollama_auto_discovery,
 ) -> None:
     config_path = tmp_path / "app.yaml"
     _write_yaml(
@@ -184,7 +181,6 @@ def test_config_manager_missing_secret_fails_with_hint(
 
 def test_config_manager_template_syntax_error_includes_location(
     tmp_path,
-    disable_ollama_auto_discovery,
 ) -> None:
     config_path = tmp_path / "app.yaml"
     _write_yaml(
@@ -206,7 +202,6 @@ def test_config_manager_template_syntax_error_includes_location(
 def test_config_manager_ignores_legacy_env_overrides(
     tmp_path,
     monkeypatch,
-    disable_ollama_auto_discovery,
 ) -> None:
     config_path = tmp_path / "app.yaml"
     _write_yaml(config_path, _minimal_config_yaml())
@@ -227,7 +222,6 @@ def test_config_manager_ignores_legacy_env_overrides(
 def test_config_manager_auto_selects_gateway_embedding_model(
     tmp_path,
     monkeypatch,
-    disable_ollama_auto_discovery,
 ) -> None:
     config_path = tmp_path / "app.yaml"
     _write_yaml(
@@ -279,7 +273,6 @@ models:
 def test_config_manager_does_not_override_official_openai_embedding_default(
     tmp_path,
     monkeypatch,
-    disable_ollama_auto_discovery,
 ) -> None:
     config_path = tmp_path / "app.yaml"
     _write_yaml(
@@ -342,14 +335,6 @@ def test_config_manager_validate_config_returns_warnings() -> None:
                         "roles": ["chat"],
                         "provider_config": {"api_key": ""},
                     },
-                    {
-                        "id": "embed",
-                        "provider": "ollama",
-                        "model": "bge",
-                        "display_name": "Embed",
-                        "roles": ["embed"],
-                        "provider_config": {"host": ""},
-                    },
                 ]
             }
         }
@@ -358,13 +343,11 @@ def test_config_manager_validate_config_returns_warnings() -> None:
     manager._settings = settings
     warnings = manager.validate_config()
     assert any("no api_key" in msg for msg in warnings)
-    assert any("no host" in msg for msg in warnings)
 
 
 def test_config_manager_load_roundtrip_with_schema(
     tmp_path,
     monkeypatch,
-    disable_ollama_auto_discovery,
 ) -> None:
     config_path = tmp_path / "app.yaml"
     schema_path = tmp_path / "app.schema.gen.json"
@@ -381,7 +364,6 @@ def test_config_manager_load_roundtrip_with_schema(
 def test_config_manager_normalizes_data_paths_from_config_root(
     tmp_path,
     monkeypatch,
-    disable_ollama_auto_discovery,
 ) -> None:
     root = tmp_path / "repo"
     config_dir = root / "config"
@@ -403,7 +385,6 @@ def test_config_manager_normalizes_data_paths_from_config_root(
 def test_config_manager_selects_first_reachable_database_candidate(
     tmp_path,
     monkeypatch,
-    disable_ollama_auto_discovery,
 ) -> None:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(("127.0.0.1", 0))
@@ -454,7 +435,6 @@ database:
 def test_config_manager_skips_postgres_candidate_without_password(
     tmp_path,
     monkeypatch,
-    disable_ollama_auto_discovery,
 ) -> None:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(("127.0.0.1", 0))

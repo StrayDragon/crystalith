@@ -117,23 +117,6 @@ async def test_api_smoke_error_envelope_contracts(client) -> None:
 
 
 @pytest.mark.asyncio
-async def test_api_smoke_dependency_health_reports_ollama_runtime(client, app) -> None:
-    app.state.settings.optional_services.ollama.enabled = True
-    app.state.ollama_hosts_status = {
-        "http://localhost:11434": {"healthy": True, "error": None, "model_count": 2}
-    }
-    app.state.ollama_monitor_last_probe = "2026-02-26T00:00:00+00:00"
-
-    response = await client.get("/health/dependencies")
-    assert response.status_code == 200
-    payload = response.json()
-
-    assert payload["optional"]["ollama"]["enabled"] is True
-    assert payload["optional"]["ollama"]["healthy"] is True
-    assert payload["optional"]["ollama"]["hosts"]["http://localhost:11434"]["model_count"] == 2
-
-
-@pytest.mark.asyncio
 async def test_api_smoke_dependency_health_optional_failure_is_recoverable(client, app) -> None:
     app.state.settings.optional_services.redis.enabled = True
     app.state.settings.optional_services.redis.endpoint = "redis://127.0.0.1:1/0"

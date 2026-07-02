@@ -15,14 +15,6 @@ class OpenAIChatCompletionKwargs(TypedDict, total=False):
     stop: list[str]
 
 
-class OllamaCompletionOptions(TypedDict, total=False):
-    temperature: float
-    num_predict: int
-    top_p: float
-    top_k: int
-    stop: list[str]
-
-
 def _explicit_fields(model: BaseModel | None) -> dict[str, object]:
     if model is None:
         return {}
@@ -122,32 +114,3 @@ def completion_options_to_openai_chat_kwargs(
         unsupported.append("reasoning")
 
     return kwargs, tuple(unsupported)
-
-
-def completion_options_to_ollama_options(
-    completion_options: CompletionOptions | None,
-) -> tuple[OllamaCompletionOptions, tuple[str, ...]]:
-    if completion_options is None:
-        return {}, ()
-
-    options: OllamaCompletionOptions = {}
-    unsupported: list[str] = []
-
-    if completion_options.temperature is not None:
-        options["temperature"] = float(completion_options.temperature)
-    if completion_options.max_tokens is not None:
-        # Ollama uses num_predict for generation length.
-        options["num_predict"] = int(completion_options.max_tokens)
-    if completion_options.top_p is not None:
-        options["top_p"] = float(completion_options.top_p)
-    if completion_options.top_k is not None:
-        options["top_k"] = int(completion_options.top_k)
-    if completion_options.stop is not None:
-        options["stop"] = list(completion_options.stop)
-
-    if completion_options.context_length is not None:
-        unsupported.append("context_length")
-    if completion_options.reasoning is not None:
-        unsupported.append("reasoning")
-
-    return options, tuple(unsupported)

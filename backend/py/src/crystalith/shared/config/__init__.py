@@ -16,8 +16,6 @@ from .models import (
     ModelDefaults,
     ModelRole,
     ModelsSettings,
-    OllamaProviderSettings,
-    OllamaRuntimeOptions,
     OpenAIProviderSettings,
     PluginsSettings,
     RefineSettings,
@@ -30,7 +28,6 @@ from .models import (
     VectorStorageChromaSettings,
     VectorStorageSettings,
 )
-from .ollama_discovery import auto_discover_ollama, discover_ollama_models
 
 __all__ = [
     "AISettings",
@@ -50,8 +47,6 @@ __all__ = [
     "ModelDefaults",
     "ModelRole",
     "ModelsSettings",
-    "OllamaProviderSettings",
-    "OllamaRuntimeOptions",
     "OpenAIProviderSettings",
     "PluginsSettings",
     "RefineSettings",
@@ -63,6 +58,4 @@ __all__ = [
     "StartupSettings",
     "VectorStorageChromaSettings",
     "VectorStorageSettings",
-    "auto_discover_ollama",
-    "discover_ollama_models",
 ]

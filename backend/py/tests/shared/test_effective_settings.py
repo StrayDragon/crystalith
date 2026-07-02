@@ -3,7 +3,6 @@ from __future__ import annotations
 import pytest
 
 from crystalith.shared.ai.effective_settings import (
-    completion_options_to_ollama_options,
     completion_options_to_openai_chat_kwargs,
     completion_options_to_pydantic_model_settings,
     resolve_completion_options,
@@ -146,28 +145,6 @@ def test_completion_options_to_openai_chat_kwargs_maps_and_reports_unsupported()
         "stop": ["END"],
     }
     assert set(unsupported) == {"context_length", "top_k", "reasoning"}
-
-
-def test_completion_options_to_ollama_options_maps_and_reports_unsupported() -> None:
-    completion_options = CompletionOptions(
-        context_length=8000,
-        reasoning=True,
-        temperature=0.3,
-        max_tokens=120,
-        top_p=0.9,
-        top_k=40,
-        stop=["END"],
-    )
-
-    options, unsupported = completion_options_to_ollama_options(completion_options)
-    assert options == {
-        "temperature": 0.3,
-        "num_predict": 120,
-        "top_p": 0.9,
-        "top_k": 40,
-        "stop": ["END"],
-    }
-    assert set(unsupported) == {"context_length", "reasoning"}
 
 
 @pytest.mark.asyncio

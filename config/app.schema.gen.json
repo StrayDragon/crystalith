@@ -720,7 +720,7 @@
           "type": "string"
         },
         "provider": {
-          "description": "Provider id (built-in: openai/ollama, or a plugin provider id)",
+          "description": "Provider id (built-in: openai, or a plugin provider id)",
           "title": "Provider",
           "type": "string"
         },
@@ -776,9 +776,6 @@
               "$ref": "#/$defs/OpenAIProviderSettings"
             },
             {
-              "$ref": "#/$defs/OllamaProviderSettings"
-            },
-            {
               "additionalProperties": {
                 "$ref": "#/$defs/JsonValue"
               },
@@ -803,18 +800,6 @@
           ],
           "default": null,
           "description": "Default completion options for this model"
-        },
-        "ollama_options": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/OllamaRuntimeOptions"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Ollama-specific runtime options"
         },
         "request_options": {
           "anyOf": [
@@ -912,113 +897,6 @@
         }
       },
       "title": "ModelsSettings",
-      "type": "object"
-    },
-    "OllamaProviderSettings": {
-      "description": "Ollama provider settings.",
-      "properties": {
-        "host": {
-          "default": "http://localhost:11434",
-          "title": "Host",
-          "type": "string"
-        }
-      },
-      "title": "OllamaProviderSettings",
-      "type": "object"
-    },
-    "OllamaRuntimeOptions": {
-      "description": "Ollama model runtime options.",
-      "properties": {
-        "num_ctx": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Num Ctx"
-        },
-        "num_thread": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "const": "auto",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Num Thread"
-        },
-        "temperature": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Temperature"
-        },
-        "num_batch": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Num Batch"
-        },
-        "mlock": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Mlock"
-        },
-        "numa": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Numa"
-        },
-        "low_vram": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Low Vram"
-        }
-      },
-      "title": "OllamaRuntimeOptions",
       "type": "object"
     },
     "OpenAIProviderSettings": {
@@ -1177,9 +1055,6 @@
     "OptionalServicesSettings": {
       "description": "Optional dependency service contracts.",
       "properties": {
-        "ollama": {
-          "$ref": "#/$defs/OptionalServiceSettings"
-        },
         "chroma": {
           "$ref": "#/$defs/OptionalServiceSettings"
         },

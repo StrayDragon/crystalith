@@ -25,8 +25,7 @@ from .endpoint_candidates import (
     probe_tcp_endpoint,
     tcp_target_from_endpoint,
 )
-from .models import OllamaProviderSettings, Settings
-from .ollama_discovery import auto_discover_ollama
+from .models import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -418,33 +417,6 @@ class ConfigManager:
             if chroma_candidates and not chroma_selected:
                 logger.info("  [chroma] no candidate reachable, using embedded chroma")
 
-        # Ollama: align all ollama model hosts to the first reachable candidate (if any).
-        ollama_candidates = _order(settings.optional_services.ollama.endpoint_candidates)
-        if ollama_candidates:
-            logger.info("Probing ollama candidates: %s", ollama_candidates)
-            selected_ollama: str | None = None
-            for candidate in ollama_candidates:
-                ok, err = probe_tcp_endpoint(candidate, timeout_s=0.4)
-                if ok:
-                    selected_ollama = candidate
-                    break
-                logger.debug("  [ollama] unreachable: %s (%s)", candidate, err)
-
-            if selected_ollama:
-                logger.info("  [ollama] selected: %s", selected_ollama)
-                for model in settings.models.available:
-                    if model.provider != "ollama":
-                        continue
-                    if isinstance(model.provider_config, OllamaProviderSettings):
-                        model.provider_config.host = selected_ollama
-                    elif isinstance(model.provider_config, dict):
-                        model.provider_config["host"] = selected_ollama
-                    else:
-                        model.provider_config = {"host": selected_ollama}
-                settings.optional_services.ollama.endpoint = selected_ollama
-            else:
-                logger.info("  [ollama] no candidate reachable")
-
     def _apply_model_defaults(self, settings: Settings) -> None:
         """
         Apply runtime-friendly model defaults when config does not specify one.
@@ -602,25 +574,6 @@ class ConfigManager:
             self._apply_model_defaults(settings)
             self._normalize_storage_paths(settings)
 
-            def _should_discover_ollama() -> bool:
-                if settings.optional_services.ollama.enabled:
-                    return True
-                default_chat = settings.get_default_chat_model()
-                default_embed = settings.get_default_embedding_model()
-                return bool(
-                    (default_chat and default_chat.provider == "ollama")
-                    or (default_embed and default_embed.provider == "ollama")
-                )
-
-            if _should_discover_ollama():
-                # Auto-discover Ollama models (non-fatal)
-                try:
-                    added = auto_discover_ollama(settings)
-                    if added:
-                        logger.info("Auto-discovered %d Ollama models", added)
-                except Exception as exc:
-                    logger.debug("Ollama auto-discovery skipped: %s", exc)
-
         except FileNotFoundError as exc:
             raise FileNotFoundError(f"Config file not found: {self.config_path}") from exc
         except ValidationError as exc:
@@ -729,12 +682,6 @@ class ConfigManager:
                     warnings.append(
                         f"Model '{model.id}' (openai) has no api_key in provider_config"
                     )
-            elif model.provider == "ollama":
-                ollama_settings = model.get_ollama_config()
-                if not ollama_settings.host:
-                    warnings.append(
-                        f"Model '{model.id}' (ollama) has no host in provider_config"
-                    )
 
         # Check for roles in available models
         chat_models = settings.models.get_models_by_role("chat")
@@ -787,10 +734,6 @@ providers:
     api_key: "{{ secret.OPENROUTER_API_KEY }}"
     base_url: "http://localhost:50256/v1"
 
-  # Local Ollama
-  ollama_local: &ollama_local
-    host: "http://localhost:11434"
-
 # ============================================================================
 # Models (Required)
 # ============================================================================
@@ -798,7 +741,7 @@ models:
   # Default model selections
   defaults:
     chat: "gpt-4"
-    embedding: "bge-m3-local"
+    embedding: "text-embedding-3-small"
 
   # Available models - each model must have a unique id
   available:
@@ -831,29 +774,15 @@ models:
       provider_config:
         <<: *openai_proxy
 
-    # Local embedding model
-    - id: "bge-m3-local"
-      provider: "ollama"
-      model: "bge-m3:567m"
-      display_name: "BGE-M3 (Local)"
-      description: "Local embedding model"
+    # OpenAI embedding model
+    - id: "text-embedding-3-small"
+      provider: "openai"
+      model: "text-embedding-3-small"
+      display_name: "Text Embedding 3 Small"
+      description: "OpenAI embedding model"
       roles: [embed]
       provider_config:
-        <<: *ollama_local
-      ollama_options:
-        num_ctx: 32768
-        num_batch: 256
-        mlock: true
-
-    # Local chat model
-    - id: "qwen-local"
-      provider: "ollama"
-      model: "qwen2.5:7b"
-      display_name: "Qwen 2.5 (Local)"
-      description: "Local chat model, no network required"
-      roles: [chat]
-      provider_config:
-        <<: *ollama_local
+        <<: *openai_main
 
 # ============================================================================
 # Feature Settings

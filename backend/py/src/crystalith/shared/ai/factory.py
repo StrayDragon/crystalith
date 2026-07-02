@@ -1,25 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import cast
 
-import ollama
 from cl_logs.logging import get_logger
 
 from crystalith.shared.config import CompletionOptions, ModelConfig, RequestOptions, Settings
-from crystalith.shared.config.ollama_discovery import resolve_reachable_ollama_host
-from crystalith.shared.json_types import JsonValue
 from crystalith.shared.plugins import PluginRegistry
 
 from .cache import EmbeddingCache
 from .effective_settings import (
-    completion_options_to_ollama_options,
     completion_options_to_openai_chat_kwargs,
     resolve_completion_options,
     resolve_request_options,
 )
 from .interfaces import ChatProvider, EmbeddingProvider
-from .ollama_provider import OllamaChatProvider, OllamaEmbeddingProvider
 from .openai_client_manager import get_openai_client_manager
 from .openai_provider import OpenAIChatProvider, OpenAIEmbeddingProvider
 from .test_provider import TestChatProvider, TestEmbeddingProvider
@@ -152,25 +146,6 @@ def _create_openai_client(
     )
 
 
-def _create_ollama_client(model_config: ModelConfig) -> ollama.AsyncClient:
-    """
-    Create an Ollama client from model configuration.
-
-    Uses the model's provider_config for host settings.
-    """
-    ollama_settings = model_config.get_ollama_config()
-    resolved_host = resolve_reachable_ollama_host(preferred_host=ollama_settings.host)
-    if resolved_host != ollama_settings.host:
-        log.info(
-            "resolved ollama host fallback for model",
-            model_id=model_config.id,
-            model=model_config.model,
-            configured_host=ollama_settings.host,
-            resolved_host=resolved_host,
-        )
-    return ollama.AsyncClient(host=resolved_host)
-
-
 def create_embedding_provider(settings: Settings, *, plugins: PluginRegistry | None = None) -> EmbeddingProvider:
     """
     Create the default embedding provider from settings.
@@ -255,27 +230,6 @@ def create_chat_provider_by_model_id(
                 max_retries=_resolve_ai_retries(settings),
                 completion_kwargs=completion_kwargs or None,
             )
-        case "ollama":
-            _warn_ignored_request_options_once(
-                model_id,
-                "ollama",
-                proxy=request_options.proxy,
-                verify_ssl=request_options.verify_ssl,
-                headers=request_options.headers,
-            )
-            options: dict[str, JsonValue] = {}
-            if model_config.ollama_options:
-                options.update(model_config.ollama_options.to_options() or {})
-            ollama_options, unsupported = completion_options_to_ollama_options(completion_options)
-            _warn_unsupported_options_once(model_id, "ollama", unsupported)
-            options.update(cast(dict[str, JsonValue], ollama_options))
-            return OllamaChatProvider(
-                model=model_config.model,
-                client=_create_ollama_client(model_config),
-                options=options or None,
-                timeout=timeout_s,
-                max_retries=_resolve_ai_retries(settings),
-            )
         case "test":
             return TestChatProvider(model=model_config.model)
         case provider:
@@ -332,27 +286,6 @@ def create_embedding_provider_by_model_id(
                     timeout_s=timeout_s,
                     request_options=request_options,
                 ),
-                timeout=timeout_s,
-                max_retries=_resolve_ai_retries(settings),
-                cache=_EMBEDDING_CACHE,
-            )
-        case "ollama":
-            # Use model's ollama_options if specified
-            options = None
-            if model_config.ollama_options:
-                options = model_config.ollama_options.to_options()
-
-            _warn_ignored_request_options_once(
-                model_id,
-                "ollama",
-                proxy=request_options.proxy,
-                verify_ssl=request_options.verify_ssl,
-                headers=request_options.headers,
-            )
-            return OllamaEmbeddingProvider(
-                model=model_config.model,
-                client=_create_ollama_client(model_config),
-                options=options,
                 timeout=timeout_s,
                 max_retries=_resolve_ai_retries(settings),
                 cache=_EMBEDDING_CACHE,

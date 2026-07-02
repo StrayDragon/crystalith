@@ -7,7 +7,6 @@ from crystalith.shared.ai.factory import (
     create_embedding_provider_by_model_id,
 )
 from crystalith.shared.ai.interfaces import ChatProvider, EmbeddingProvider
-from crystalith.shared.ai.ollama_provider import OllamaChatProvider, OllamaEmbeddingProvider
 from crystalith.shared.ai.openai_provider import OpenAIChatProvider, OpenAIEmbeddingProvider
 from crystalith.shared.ai.test_provider import TestChatProvider, TestEmbeddingProvider
 from crystalith.shared.config import ModelConfig, Settings
@@ -45,7 +44,7 @@ def test_ai_factory_creates_test_providers() -> None:
     assert isinstance(embed, TestEmbeddingProvider)
 
 
-def test_ai_factory_creates_openai_and_ollama_providers_without_network() -> None:
+def test_ai_factory_creates_openai_providers_without_network() -> None:
     settings = make_settings(
         {
             "models": {
@@ -66,22 +65,6 @@ def test_ai_factory_creates_openai_and_ollama_providers_without_network() -> Non
                         "roles": ["embed"],
                         "provider_config": {"api_key": "sk-test"},
                     },
-                    {
-                        "id": "ollama-chat",
-                        "provider": "ollama",
-                        "model": "qwen:latest",
-                        "display_name": "Ollama Chat",
-                        "roles": ["chat"],
-                        "provider_config": {"host": "http://localhost:11434"},
-                    },
-                    {
-                        "id": "ollama-embed",
-                        "provider": "ollama",
-                        "model": "bge:latest",
-                        "display_name": "Ollama Embed",
-                        "roles": ["embed"],
-                        "provider_config": {"host": "http://localhost:11434"},
-                    },
                 ]
             }
         }
@@ -89,8 +72,6 @@ def test_ai_factory_creates_openai_and_ollama_providers_without_network() -> Non
 
     assert isinstance(create_chat_provider_by_model_id(settings, "openai-chat"), OpenAIChatProvider)
     assert isinstance(create_embedding_provider_by_model_id(settings, "openai-embed"), OpenAIEmbeddingProvider)
-    assert isinstance(create_chat_provider_by_model_id(settings, "ollama-chat"), OllamaChatProvider)
-    assert isinstance(create_embedding_provider_by_model_id(settings, "ollama-embed"), OllamaEmbeddingProvider)
 
 
 def test_ai_factory_validates_openai_api_key_presence() -> None:
@@ -244,40 +225,3 @@ def test_ai_factory_applies_completion_options_to_openai_chat_provider() -> None
         "stop": ["END"],
     }
     assert getattr(chat._client, "max_retries", None) == 0
-
-
-def test_ai_factory_resolves_fallback_host_for_ollama_client(monkeypatch) -> None:
-    observed_hosts: list[str] = []
-
-    class _StubAsyncClient:
-        def __init__(self, *, host: str | None = None) -> None:
-            observed_hosts.append(host or "")
-
-    settings = make_settings(
-        {
-            "models": {
-                "available": [
-                    {
-                        "id": "ollama-embed",
-                        "provider": "ollama",
-                        "model": "bge-m3:latest",
-                        "display_name": "Ollama Embed",
-                        "roles": ["embed"],
-                        "provider_config": {"host": "http://host.docker.internal:11434"},
-                    },
-                ]
-            }
-        }
-    )
-
-    # Mock reason: validate fallback host selection without network dependency.
-    monkeypatch.setattr(
-        "crystalith.shared.ai.factory.resolve_reachable_ollama_host",
-        lambda **_: "http://localhost:11434",
-    )
-    # Mock reason: verify the resolved host passed to client constructor.
-    monkeypatch.setattr("crystalith.shared.ai.factory.ollama.AsyncClient", _StubAsyncClient)
-
-    provider = create_embedding_provider_by_model_id(settings, "ollama-embed")
-    assert isinstance(provider, OllamaEmbeddingProvider)
-    assert observed_hosts == ["http://localhost:11434"]

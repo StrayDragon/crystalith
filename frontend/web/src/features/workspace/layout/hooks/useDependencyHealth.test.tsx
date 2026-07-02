@@ -30,7 +30,6 @@ test("toOptionalServiceDiagnostics orders and normalizes optional services", () 
       healthy: false,
       error: "boom",
     },
-    ollama: { service: "ollama", enabled: true, status: "unknown", healthy: null },
     search_searxng: {
       service: "searxng",
       enabled: true,
@@ -43,11 +42,10 @@ test("toOptionalServiceDiagnostics orders and normalizes optional services", () 
   expect(diagnostics.map((d) => d.key)).toEqual([
     "storage_chroma",
     "cache_redis",
-    "ollama",
     "search_searxng",
   ]);
   expect(diagnostics[1]?.error).toBe("boom");
-  expect(diagnostics[3]?.endpoint).toBe("http://searx");
+  expect(diagnostics[2]?.endpoint).toBe("http://searx");
 });
 
 test("useDependencyHealth fetches data and refresh updates from force endpoint", async () => {
@@ -73,7 +71,6 @@ test("useDependencyHealth fetches data and refresh updates from force endpoint",
             healthy: !forced,
             error: forced ? "timeout" : null,
           },
-          ollama: { service: "ollama", enabled: false, status: "disabled", healthy: null },
           search_searxng: { service: "searxng", enabled: false, status: "disabled", healthy: null },
         },
       });
