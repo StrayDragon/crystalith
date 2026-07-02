@@ -26,6 +26,6 @@ export const WIDGET_REGISTRY: Record<string, WidgetMeta> = {
 
 export const DEFAULT_LAYOUT: WidgetDef[] = [
   { id: "sources", x: 0, y: 0, w: 3, h: GRID_ROWS, minW: 2, minH: 2 },
-  { id: "chat", x: 3, y: 0, w: 6, h: GRID_ROWS, minW: 3, minH: 2 },
-  { id: "studio", x: 9, y: 0, w: 3, h: GRID_ROWS, minW: 2, minH: 2 },
+  { id: "studio", x: 3, y: 0, w: 3, h: GRID_ROWS, minW: 2, minH: 2 },
+  { id: "chat", x: 6, y: 0, w: 6, h: GRID_ROWS, minW: 3, minH: 2 },
 ];
