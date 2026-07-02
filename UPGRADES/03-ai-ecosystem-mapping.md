@@ -83,9 +83,7 @@ const { object } = await generateObject({
 
 **难度**：⚠️ 中。模式对等，主要是 schema 翻译和 factory 改写。
 
-**重要替代方案**：[pi-agent-core](./06-pi-runtime-integration.md) 提供更完整的 agent runtime（含 agent loop / tool 调度 / 状态管理），且自身即 Bun-built。**对话式 RAG 场景优先考虑 pi**，需要直接 `generateObject(schema)` 的纯结构化输出场景用 AI SDK。两者可混用（pi-ai 做 provider + AI SDK 做 generateObject）。详见 [06](./06-pi-runtime-integration.md)。
-
-**备选：LlamaIndex.TS**—— 更偏 RAG 框架，但本项目 RAG 逻辑已自建，用不上那么多抽象。
+**备选：LlamaIndex.TS**—— 更偏 RAG 框架，但本项目 RAG 逻辑已自建，且 AI SDK 已覆盖所有需要的能力（agent loop / 结构化输出 / provider 抽象），用不上那么多抽象。详见 [06-ai-sdk-integration.md](./06-ai-sdk-integration.md)。
 
 ---
 
@@ -360,9 +358,9 @@ db.run("CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(embedding float
 
 ---
 
-## 与 pi 生态的关系
+## Vercel AI SDK — 统一 AI Runtime
 
-除本表列出的通用 TS 包外，**pi 生态**（`pi-ai` / `pi-agent-core` / pi SDK）是一组自身即 Bun-built 的独立 npm 包，可同时覆盖「provider 抽象」（替代 `shared/ai/`）和「agent runtime」（替代 pydantic-ai 的 agent loop）两层，是比 AI SDK 更完整的 runtime 选项。**详见 [06-pi-runtime-integration.md](./06-pi-runtime-integration.md)。**
+AI SDK (`ai` + `@ai-sdk/*`) 是 crystalith v2 的唯一 AI 基础层——它已覆盖 provider 抽象、agent loop（`maxSteps`）、结构化输出（`generateObject`/`streamObject`）、tool calling、流式生成、多模态、middleware、telemetry 全部能力，无需额外 agent 框架。**详见 [06-ai-sdk-integration.md](./06-ai-sdk-integration.md)。**
 
 ---
 

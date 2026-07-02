@@ -10,7 +10,7 @@
 | **跨 runtime 可移植 + 生态最广 + 稳定成熟 + 更简单的心智模型** | **Hono** |
 | 想要两者长处 | Elysia 后端 + 必要时混用（两者 API 风格接近） |
 
-**crystalith 推荐：Elysia**。理由：① 已定 Bun runtime，Elysia 是 Bun-first，性能/体验最优；② `@elysiajs/eden` 类型安全 RPC 可**干掉整个 OpenAPI 生成链路**（当前 `@hey-api/openapi-ts` 那套）；③ 与 pi 生态同属"较新但活跃"的范畴，风格统一。
+**crystalith 推荐：Elysia**。理由：① 已定 Bun runtime，Elysia 是 Bun-first，性能/体验最优；② `@elysiajs/eden` 类型安全 RPC 可**干掉整个 OpenAPI 生成链路**（当前 `@hey-api/openapi-ts` 那套）。
 
 **退路**：若 P1 阶段踩到 Elysia 的坑（罕见，但它 API 变动较多），切 Hono 成本低——两者都是 `.get()/.post()` + 中间件模式，迁移机械。
 
@@ -126,11 +126,6 @@ const app = new Hono()
   )
 ```
 
-### 与 pi 生态的搭配
-
-- pi 自己用 **Hono**（pi 的 RPC mode 基于 Web 标准）。若选 Hono，与 pi 内部一致。
-- 但 pi 是独立进程/SDK 调用，不强制后端框架选型。两者都兼容。
-
 ## 四、决策矩阵
 
 | 因素 | 权重 | Elysia | Hono |
@@ -139,7 +134,6 @@ const app = new Hono()
 | 类型安全 + 干掉生成链路 | 高 | ★★★（eden） | ★★（client） |
 | 心智简单/稳 | 中 | ★★ | ★★★ |
 | 生态广度 | 低（桌面 app 不需要那么多） | ★★ | ★★★ |
-| 与 pi 一致 | 低 | ★★ | ★★★ |
 | 文档/示例丰富 | 中 | ★★ | ★★★ |
 | **加权** | | **推荐** | 备选 |
 
@@ -152,4 +146,4 @@ const app = new Hono()
 
 ## 相关文档
 - [02-target-stack-bun.md](./02-target-stack-bun.md) — Bun 技术栈（本文细化其中 Web 框架选型）
-- [06-pi-runtime-integration.md](./06-pi-runtime-integration.md) — pi 用 Hono，与本文决策参考
+- [06-ai-sdk-integration.md](./06-ai-sdk-integration.md) — AI SDK 与 Elysia SSE 集成（本文 Web 框架即 AI SDK 的传输层）

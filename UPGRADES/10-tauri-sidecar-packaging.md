@@ -14,7 +14,7 @@ Tauri app（Rust shell，~10MB）
 │        ├─ 监听 127.0.0.1:随机端口
 │        ├─ Elysia server（API）
 │        ├─ bun:sqlite + sqlite-vec（本地数据）
-│        └─ pi-agent-core（agent runtime）
+│        └─ AI SDK (agent runtime)
 └─ 分发产物：
     - macOS:  .dmg / .app
     - Windows: .exe / .msi
@@ -23,7 +23,7 @@ Tauri app（Rust shell，~10MB）
 
 **两个二进制的分工**：
 - **Tauri 主进程（Rust）**：~10MB，负责窗口/菜单/托盘/自动更新/系统 API/进程生命周期。几乎不写 Rust，只是壳。
-- **Bun sidecar**：~80MB（含 pi-ai + unpdf 等），负责全部业务（API + DB + agent）。Tauri 启动时拉起，退出时关闭。
+- **Bun sidecar**：~80MB（含 AI SDK + unpdf 等），负责全部业务（API + DB + agent）。Tauri 启动时拉起，退出时关闭。
 
 总包体 ~90MB（macOS 通用二进制会更大，~150MB，因含双架构）。
 
