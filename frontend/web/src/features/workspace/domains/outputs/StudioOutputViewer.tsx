@@ -104,7 +104,7 @@ export default function StudioOutputViewer({
 
   return (
     <div
-      className={`fixed inset-0 relative flex items-center justify-center bg-black/40 backdrop-blur-sm ${isFullscreen ? "p-0" : "p-4 sm:p-6"}`}
+      className={`fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm ${isFullscreen ? "p-0" : "p-4 sm:p-6"}`}
       style={modalStyle}
       role="dialog"
       aria-modal="true"

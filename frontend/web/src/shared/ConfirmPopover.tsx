@@ -274,7 +274,7 @@ export default function ConfirmPopover({
       })}
       {open && anchor
         ? createPortal(
-            <div className="fixed inset-0 relative" style={style}>
+            <div className="fixed inset-0" style={style}>
               <button
                 type="button"
                 className="absolute inset-0"

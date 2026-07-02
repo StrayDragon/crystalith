@@ -955,7 +955,7 @@ function SourcesPanelView({
                   type="button"
                   onClick={() => setExtractorPolicyOpen(true)}
                   disabled={!isConnected}
-                  className="text-[11px] text-blue-600 hover:text-blue-700 disabled:opacity-60 flex items-center gap-1"
+                  className="text-[11px] text-blue-600 hover:text-blue-700 disabled:opacity-60 flex items-center gap-1 flex-shrink-0 whitespace-nowrap"
                 >
                   <SettingsIcon style={{ fontSize: 14 }} />
                   提取器设置
@@ -1565,7 +1565,7 @@ function SourcesPanelView({
       {/* Research History Dialog */}
       {showResearchHistory && (
         <div
-          className="fixed inset-0 relative flex items-center justify-center p-4"
+          className="fixed inset-0 flex items-center justify-center p-4"
           style={{ zIndex: LAYER_LEVELS.modal }}
           role="dialog"
           aria-modal="true"
