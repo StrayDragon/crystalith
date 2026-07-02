@@ -72,7 +72,7 @@ plugins:
 providers:
   # OpenAI-compatible API
   openai_default: &openai_default
-    api_key: "{{ secret.OPENAI_API_KEY | default('') }}"
+    api_key: "{{ secret.OPENAI_API_KEY | default(env.OPENAI_API_KEY | default('')) }}"
     # Optional override: set OPENAI_BASE_URL to use an OpenAI-compatible endpoint/proxy.
     # When empty/unset, the OpenAI SDK default (https://api.openai.com/v1) is used.
     base_url: "{{ env.OPENAI_BASE_URL | default('') }}"
