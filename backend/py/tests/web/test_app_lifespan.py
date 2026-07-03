@@ -10,7 +10,6 @@ from sqlalchemy import select
 
 import crystalith.web.app as app_module
 from crystalith.shared.config import Settings
-from crystalith.shared.config.models import ModelConfig
 from crystalith.shared.db import Notebook, Source, create_db_manager
 from crystalith.shared.db.migrations import upgrade_head
 from crystalith.shared.types import SourceStatus
@@ -169,61 +168,3 @@ async def test_cors_allows_configured_origin(test_settings: Settings) -> None:
 
     await manager.close()
     tempdir.cleanup()
-
-
-@pytest.mark.asyncio
-async def test_lifespan_starts_ollama_monitor_when_enabled(
-    test_settings: Settings,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    settings = test_settings.model_copy(deep=True)
-    settings.models.available.append(
-        ModelConfig.model_validate(
-            {
-                "id": "local-embed",
-                "provider": "ollama",
-                "model": "bge-m3:567m",
-                "display_name": "Local Embed",
-                "roles": ["embed"],
-                "provider_config": {"host": "http://localhost:11434"},
-            }
-        )
-    )
-    settings.models.defaults.embedding = "local-embed"
-
-    calls = {"probe": 0, "discover": 0}
-
-    def _collect_hosts(_settings, *, include_fallback: bool):
-        return {"http://localhost:11434"}
-
-    def _probe_host(host: str, *, timeout: float):
-        calls["probe"] += 1
-        return True, None, 1
-
-    def _auto_discover(_settings):
-        calls["discover"] += 1
-        return 0
-
-    # Mock reason: validate lifespan scheduling and state updates without external Ollama dependency.
-    monkeypatch.setattr(app_module, "collect_ollama_hosts", _collect_hosts)
-    monkeypatch.setattr(app_module, "probe_ollama_host", _probe_host)
-    monkeypatch.setattr(app_module, "auto_discover_ollama", _auto_discover)
-    monkeypatch.setenv("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED", "1")
-    monkeypatch.setenv("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_INTERVAL_S", "0.02")
-    monkeypatch.setenv("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_TIMEOUT_S", "0.02")
-
-    tempdir, db_url = await _create_test_db()
-    manager = create_db_manager(db_url)
-    app = create_app(settings=settings, db_manager=manager, vector_store=InMemoryVectorStore())
-
-    try:
-        async with app.router.lifespan_context(app):
-            await asyncio.sleep(0.08)
-            assert calls["probe"] >= 1
-            assert calls["discover"] >= 1
-            assert app.state.ollama_hosts_status["http://localhost:11434"]["healthy"] is True
-            assert app.state.ollama_monitor_last_probe is not None
-            assert app.state.optional_services_status["ollama"]["status"] == "healthy"
-    finally:
-        await manager.close()
-        tempdir.cleanup()

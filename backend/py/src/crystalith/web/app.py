@@ -26,13 +26,8 @@ from crystalith.features.tasks.queue import TaskQueue
 from crystalith.shared.ai.openai_client_manager import get_openai_client_manager
 from crystalith.shared.cache import CacheProvider, create_cache_provider
 from crystalith.shared.concurrency import StageLimiters
-from crystalith.shared.config import ConfigManager, ModelConfig, Settings
+from crystalith.shared.config import ConfigManager, Settings
 from crystalith.shared.config.endpoint_candidates import order_endpoint_candidates
-from crystalith.shared.config.ollama_discovery import (
-    auto_discover_ollama,
-    collect_ollama_hosts,
-    probe_ollama_host,
-)
 from crystalith.shared.db import Source, create_db_manager
 from crystalith.shared.db.migrations import upgrade_head
 from crystalith.shared.env import (
@@ -58,7 +53,6 @@ from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore, create_vector_store
 
 from .optional_services_types import (
-    OllamaHostStatus,
     OptionalServicesStatus,
     OptionalServiceStatus,
     ServiceKey,
@@ -251,8 +245,6 @@ def _optional_recovery_hint(service_key: ServiceKey) -> str:
         return "启动 storage overlay，或在 config/app.yaml 配置 Chroma 端点（vector_storage.chroma.*）。"
     if service_key == "cache_redis":
         return "启动 redis overlay，或在 config/app.yaml 配置 cache.provider/redis_url_candidates。"
-    if service_key == "ollama":
-        return "启动 ollama overlay，或在 config/app.yaml 配置 optional_services.ollama.endpoint_candidates。"
     return "检查服务地址与网络连通性，或禁用该可选服务。"
 
 
@@ -261,25 +253,7 @@ def _optional_error_code(service_key: ServiceKey) -> str:
         return "CHROMA_UNAVAILABLE"
     if service_key == "cache_redis":
         return "REDIS_UNAVAILABLE"
-    if service_key == "ollama":
-        return "OLLAMA_UNAVAILABLE"
     return "OPTIONAL_SERVICE_UNAVAILABLE"
-
-
-def _model_provider(model: ModelConfig) -> str:
-    return model.provider
-
-
-def _is_ollama_enabled(settings: Settings) -> bool:
-    if settings.optional_services.ollama.enabled or bool(settings.optional_services.ollama.endpoint_candidates):
-        return True
-
-    default_chat = settings.get_default_chat_model()
-    default_embed = settings.get_default_embedding_model()
-    return bool(
-        (default_chat and _model_provider(default_chat) == "ollama")
-        or (default_embed and _model_provider(default_embed) == "ollama")
-    )
 
 
 def _build_optional_status_template(settings: Settings) -> OptionalServicesStatus:
@@ -304,7 +278,6 @@ def _build_optional_status_template(settings: Settings) -> OptionalServicesStatu
             redis_candidates.append(settings.optional_services.redis.endpoint)
         redis_endpoint = order_endpoint_candidates(redis_candidates)[0] if redis_candidates else None
 
-    ollama_endpoint = settings.optional_services.ollama.endpoint
     searxng_host = settings.search.searxng.host
     searxng_host_set = bool(searxng_host and searxng_host.strip())
     searxng_enabled = bool(
@@ -327,7 +300,6 @@ def _build_optional_status_template(settings: Settings) -> OptionalServicesStatu
 
     chroma_probe = settings.optional_services.chroma.probe
     redis_probe = settings.optional_services.redis.probe
-    ollama_probe = settings.optional_services.ollama.probe
     searxng_probe = settings.optional_services.searxng.probe
 
     return {
@@ -373,25 +345,6 @@ def _build_optional_status_template(settings: Settings) -> OptionalServicesStatu
                 "path": redis_probe.path,
             },
             "degrade_policy": settings.optional_services.redis.degrade_policy,
-        },
-        "ollama": {
-            "service": "ollama",
-            "enabled": _is_ollama_enabled(settings),
-            "endpoint": ollama_endpoint,
-            "status": "unknown",
-            "healthy": None,
-            "hosts": {},
-            "error": None,
-            "error_code": None,
-            "recovery_hint": None,
-            "last_probe": None,
-            "probe": {
-                "enabled": bool(ollama_probe.enabled),
-                "timeout_s": float(ollama_probe.timeout_s),
-                "interval_s": float(ollama_probe.interval_s),
-                "path": ollama_probe.path,
-            },
-            "degrade_policy": settings.optional_services.ollama.degrade_policy,
         },
         "search_searxng": {
             "service": "searxng",
@@ -505,49 +458,6 @@ async def _refresh_optional_services_status(
                 redis["error"] = redis_last_error or "probe failed"
     _finalize_optional_status("cache_redis", redis)
 
-    ollama = statuses["ollama"]
-    ollama_probe = ollama["probe"]
-    if ollama["enabled"] and ollama_probe["enabled"]:
-        service_timeout = max(0.1, float(ollama_probe["timeout_s"] or timeout_s))
-        ollama["last_probe"] = probe_time
-        hosts = collect_ollama_hosts(
-            settings,
-            include_fallback=True,
-        )
-        endpoint = ollama["endpoint"]
-        if endpoint is not None and endpoint.strip():
-            hosts.add(endpoint.strip())
-
-        host_status: dict[str, OllamaHostStatus] = {}
-        has_healthy_host = False
-        for host in sorted(hosts):
-            healthy, error_message, model_count = await asyncio.to_thread(
-                probe_ollama_host,
-                host,
-                timeout=service_timeout,
-            )
-            host_status[host] = {
-                "healthy": healthy,
-                "error": error_message,
-                "model_count": model_count,
-            }
-            has_healthy_host = has_healthy_host or healthy
-
-        ollama["hosts"] = host_status
-        ollama["healthy"] = has_healthy_host if host_status else None
-        if not has_healthy_host and host_status:
-            first_error = next((item["error"] for item in host_status.values() if item["error"]), None)
-            ollama["error"] = first_error or "all ollama probes failed"
-
-        app.state.ollama_hosts_status = host_status
-        app.state.ollama_monitor_last_probe = probe_time
-
-        if has_healthy_host:
-            added = await asyncio.to_thread(auto_discover_ollama, settings)
-            if added:
-                logger.info("Ollama monitor discovered %d new models", added)
-    _finalize_optional_status("ollama", ollama)
-
     searxng = statuses["search_searxng"]
     searxng_probe = searxng["probe"]
     if searxng["enabled"] and searxng_probe["enabled"]:
@@ -623,28 +533,8 @@ def _optional_services_snapshot(app: FastAPIX) -> OptionalServicesStatus:
     snapshot["search_searxng"]["recovery_hint"] = current["search_searxng"]["recovery_hint"]
     snapshot["search_searxng"]["last_probe"] = current["search_searxng"]["last_probe"]
 
-    snapshot["ollama"]["status"] = current["ollama"]["status"]
-    snapshot["ollama"]["healthy"] = current["ollama"]["healthy"]
-    snapshot["ollama"]["endpoint"] = current["ollama"]["endpoint"]
-    snapshot["ollama"]["hosts"] = dict(current["ollama"]["hosts"])
-    snapshot["ollama"]["error"] = current["ollama"]["error"]
-    snapshot["ollama"]["error_code"] = current["ollama"]["error_code"]
-    snapshot["ollama"]["recovery_hint"] = current["ollama"]["recovery_hint"]
-    snapshot["ollama"]["last_probe"] = current["ollama"]["last_probe"]
-
-    legacy_ollama_hosts = dict(app.state.ollama_hosts_status or {})
-    if legacy_ollama_hosts:
-        ollama = snapshot["ollama"]
-        if not ollama["hosts"]:
-            ollama["hosts"] = legacy_ollama_hosts
-        if ollama["healthy"] is None:
-            ollama["healthy"] = any(bool(item["healthy"]) for item in legacy_ollama_hosts.values())
-        if ollama["last_probe"] is None:
-            ollama["last_probe"] = app.state.ollama_monitor_last_probe
-
     _finalize_optional_status("storage_chroma", snapshot["storage_chroma"])
     _finalize_optional_status("cache_redis", snapshot["cache_redis"])
-    _finalize_optional_status("ollama", snapshot["ollama"])
     _finalize_optional_status("search_searxng", snapshot["search_searxng"])
 
     return snapshot
@@ -766,8 +656,6 @@ def create_app(
                         source_ids,
                     )
 
-        app.state.ollama_hosts_status = {}
-        app.state.ollama_monitor_last_probe = None
         app.state.optional_services_status = _build_optional_status_template(app.state.settings)
         app.state.optional_services_last_probe = None
 
@@ -832,8 +720,6 @@ def create_app(
     app.state.ai_provider = None
     app.state.optional_services_status = _build_optional_status_template(resolved)
     app.state.optional_services_last_probe = None
-    app.state.ollama_hosts_status = {}
-    app.state.ollama_monitor_last_probe = None
     app.state.listen_host = listen_host
     app.state.http_guardrails_enabled = http_guardrails_enabled
 
@@ -843,11 +729,10 @@ def create_app(
 
     @app.get("/health/dependencies", include_in_schema=False)
     async def dependency_health(force: bool = False) -> dict[str, object]:
-        has_legacy_ollama_state = bool(app.state.ollama_hosts_status)
         monitor_enabled = env_bool(CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED, OPTIONAL_SERVICES_MONITOR_ENABLED_DEFAULT)
         needs_refresh = force or (
             not monitor_enabled
-            or (app.state.optional_services_last_probe is None and not has_legacy_ollama_state)
+            or app.state.optional_services_last_probe is None
         )
         if needs_refresh:
             try:

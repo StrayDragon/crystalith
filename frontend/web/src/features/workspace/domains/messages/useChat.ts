@@ -101,7 +101,7 @@ function mapSseTransportError(message: string, detail?: string | null): string {
     combined.includes("openai_api_key") ||
     combined.includes("ai_config_missing")
   ) {
-    return "Embedding 模型未配置 API Key，请在 config/secret.env 设置 OPENAI_API_KEY 后重启后端。";
+    return "Embedding 模型未配置 API Key，请在 shell 中 export 对应环境变量（如 OMLX_OPENAI_API_KEY）后重启后端。";
   }
   if (detail && detail.length > 0 && detail.length <= 160) {
     return detail;

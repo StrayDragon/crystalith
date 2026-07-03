@@ -46,6 +46,14 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      - id: secret-env-example-consistency
+        name: Secret Env Example Consistency
+        entry: bash -c 'cd backend/py && just secret-env-example && just secret-env-example-check'
+        language: system
+        files: (^config/app\.yaml$)|(^backend/py/scripts/gen_secret_env_example\.py$)
+        pass_filenames: false
+        stages: [pre-commit]
+
       - id: api-schema-check
         name: API Schema Consistency
         entry: bash -c 'cd backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.gen.json'

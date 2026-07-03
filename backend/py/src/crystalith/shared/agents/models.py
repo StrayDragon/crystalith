@@ -5,8 +5,6 @@ from pydantic import BaseModel
 from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.models.test import TestModel
-from pydantic_ai.profiles import ModelProfile
-from pydantic_ai.providers.ollama import OllamaProvider
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from crystalith.shared.ai.effective_settings import (
@@ -16,7 +14,6 @@ from crystalith.shared.ai.effective_settings import (
 )
 from crystalith.shared.ai.openai_client_manager import get_openai_client_manager
 from crystalith.shared.config import ModelConfig, OpenAIProviderSettings, Settings
-from crystalith.shared.config.ollama_discovery import resolve_reachable_ollama_host
 
 log = get_logger(__name__)
 
@@ -25,27 +22,11 @@ class ModelConfigurationError(Exception):
     """Raised when model configuration is invalid or missing."""
 
 
-def _normalize_ollama_base_url(host: str) -> str:
-    """Normalize Ollama host URL to include /v1 suffix."""
-    trimmed = host.rstrip("/")
-    if trimmed.endswith("/v1"):
-        return trimmed
-    return f"{trimmed}/v1"
-
-
 def _validate_openai_settings(openai_settings: OpenAIProviderSettings, model_id: str) -> None:
     """Validate that required OpenAI settings are present."""
     if not openai_settings.api_key or not openai_settings.api_key.strip():
         raise ModelConfigurationError(
             f"Missing api_key in provider_config for model '{model_id}'"
-        )
-
-
-def _validate_ollama_host(host: str, model_id: str) -> None:
-    """Validate that Ollama host is configured."""
-    if not host or not host.strip():
-        raise ModelConfigurationError(
-            f"Missing host in provider_config for model '{model_id}'"
         )
 
 
@@ -168,43 +149,6 @@ def _build_chat_model_with_config(settings: Settings, model_config: ModelConfig)
         return OpenAIChatModel(
             model_name,
             provider=OpenAIProvider(openai_client=openai_client),
-            settings=model_settings,
-        )
-
-    if provider == "ollama":
-        ollama_settings = model_config.get_ollama_config()
-        _validate_ollama_host(ollama_settings.host, model_config.id)
-        resolved_host = resolve_reachable_ollama_host(preferred_host=ollama_settings.host)
-        if resolved_host != ollama_settings.host:
-            log.info(
-                "resolved ollama host fallback for agent model",
-                model_id=model_config.id,
-                model=model_name,
-                configured_host=ollama_settings.host,
-                resolved_host=resolved_host,
-            )
-        base_url = _normalize_ollama_base_url(resolved_host)
-        openai_client = get_openai_client_manager().get(
-            api_key="api-key-not-set",
-            base_url=base_url,
-            organization=None,
-            project=None,
-            timeout=timeout_s,
-            proxy=request_options.proxy,
-            verify_ssl=request_options.verify_ssl,
-            headers=request_options.headers,
-            # Disable SDK retries; rely on business retry policy.
-            max_retries=0,
-        )
-        provider = OllamaProvider(openai_client=openai_client)
-        profile = provider.model_profile(model_name)
-        if not model_config.has_capability("tool_use"):
-            override = ModelProfile(supports_tools=False, default_structured_output_mode="prompted")
-            profile = profile.update(override) if profile is not None else override
-        return OpenAIChatModel(
-            model_name,
-            provider=provider,
-            profile=profile,
             settings=model_settings,
         )
 

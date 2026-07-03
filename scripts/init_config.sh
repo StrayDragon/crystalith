@@ -13,11 +13,19 @@
 #   .env targets:
 #     CRYSTALITH_PROFILE             — runtime profile (local|hybrid|docker|full)
 #     OPENAI_BASE_URL                — OpenAI-compatible API base URL
-#     CRYSTALITH_DEFAULT_EMBEDDING_MODEL — default embedding model ID
+#     CRYSTALITH_DEFAULT_EMBEDDING_MODEL — default embedding model ID (e.g. omlx-embedding)
+#     CRYSTALITH_DEFAULT_CHAT_MODEL  — default chat model ID (e.g. tufa-chat | omlx-chat)
+#     OMLX_OPENAI_API_BASE           — OMLX gateway base URL
+#     OMLX_OPENAI_API_KEY            — OMLX gateway API key
+#     OMLX_OPENAI_DEFAULT_EMBEDDING_MODEL — OMLX embedding model name
+#     OMLX_OPENAI_DEFAULT_CHAT_MODEL — OMLX chat model name
+#     TUFA_OPENAI_API_HOST           — TUFA gateway base URL
+#     TUFA_OPENAI_API_KEY            — TUFA gateway API key
+#     TUFA_OPENAI_DEFAULT_CHATMODEL  — TUFA chat model name
 #     BRIDGE_FORWARDS                — host-remap bridge forwards
 #
-#   config/secret.env targets:
-#     OPENAI_API_KEY                 — OpenAI API key
+#   config/secret.env targets (optional Docker deployments only):
+#     OPENAI_API_KEY                 — legacy; prefer export in shell / .env
 #     POSTGRES_PASSWORD              — PostgreSQL password
 #     CRYSTALITH_API_KEY             — Crystalith auth API key
 #     JINA_API_KEY                   — Jina Reader API key
@@ -56,6 +64,14 @@ init_env_file() {
   _set_env_var "CRYSTALITH_PROFILE"  "CRYSTALITH_PROFILE"  "${CRYSTALITH_PROFILE:-}"
   _set_env_var "OPENAI_BASE_URL"     "OPENAI_BASE_URL" "${OPENAI_BASE_URL:-}"
   _set_env_var "CRYSTALITH_DEFAULT_EMBEDDING_MODEL" "CRYSTALITH_DEFAULT_EMBEDDING_MODEL" "${CRYSTALITH_DEFAULT_EMBEDDING_MODEL:-}"
+  _set_env_var "CRYSTALITH_DEFAULT_CHAT_MODEL" "CRYSTALITH_DEFAULT_CHAT_MODEL" "${CRYSTALITH_DEFAULT_CHAT_MODEL:-}"
+  _set_env_var "OMLX_OPENAI_API_BASE" "OMLX_OPENAI_API_BASE" "${OMLX_OPENAI_API_BASE:-}"
+  _set_env_var "OMLX_OPENAI_API_KEY" "OMLX_OPENAI_API_KEY" "${OMLX_OPENAI_API_KEY:-}"
+  _set_env_var "OMLX_OPENAI_DEFAULT_EMBEDDING_MODEL" "OMLX_OPENAI_DEFAULT_EMBEDDING_MODEL" "${OMLX_OPENAI_DEFAULT_EMBEDDING_MODEL:-}"
+  _set_env_var "OMLX_OPENAI_DEFAULT_CHAT_MODEL" "OMLX_OPENAI_DEFAULT_CHAT_MODEL" "${OMLX_OPENAI_DEFAULT_CHAT_MODEL:-}"
+  _set_env_var "TUFA_OPENAI_API_HOST" "TUFA_OPENAI_API_HOST" "${TUFA_OPENAI_API_HOST:-}"
+  _set_env_var "TUFA_OPENAI_API_KEY" "TUFA_OPENAI_API_KEY" "${TUFA_OPENAI_API_KEY:-}"
+  _set_env_var "TUFA_OPENAI_DEFAULT_CHATMODEL" "TUFA_OPENAI_DEFAULT_CHATMODEL" "${TUFA_OPENAI_DEFAULT_CHATMODEL:-}"
   _set_env_var "BRIDGE_FORWARDS"     "BRIDGE_FORWARDS"     "${BRIDGE_FORWARDS:-}"
 }
 
@@ -172,6 +188,9 @@ echo ""
 # Show what was detected
 detected=0
 for var in CRYSTALITH_PROFILE OPENAI_BASE_URL OPENAI_API_KEY CRYSTALITH_DEFAULT_EMBEDDING_MODEL \
+           CRYSTALITH_DEFAULT_CHAT_MODEL OMLX_OPENAI_API_BASE OMLX_OPENAI_API_KEY \
+           OMLX_OPENAI_DEFAULT_EMBEDDING_MODEL OMLX_OPENAI_DEFAULT_CHAT_MODEL \
+           TUFA_OPENAI_API_HOST TUFA_OPENAI_API_KEY TUFA_OPENAI_DEFAULT_CHATMODEL \
            POSTGRES_PASSWORD CRYSTALITH_API_KEY JINA_API_KEY FIRECRAWL_API_KEY BROWSERLESS_TOKEN \
            BRIDGE_FORWARDS; do
   if [[ -n "${!var:-}" ]]; then
