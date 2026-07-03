@@ -13,7 +13,7 @@ Frontend (from repo root):
 - `pnpm dev` — start the Vite dev server.
 - `pnpm test` — run Vitest and React Testing Library.
 - `pnpm run test:ci` — run deterministic frontend quality gate (stable suite + mock-report gate).
-- `pnpm run test:core` — run minimal UI core regression suite aligned with backend core API smoke paths (SSOT: `openspec/specs/quality-and-regression/core_suite.json`).
+- `pnpm run test:core` — run minimal UI core regression suite aligned with backend core API smoke paths (SSOT: `llmanspec/specs/quality-and-regression/core_suite.json`).
 - `pnpm run test:all` — run all tests including `*.experimental.test.*` (MSW unhandled requests warn by default).
 - `pnpm run lint` — run incremental `oxlint` for changed frontend source files.
 - `pnpm run lint:all` — run full `oxlint` across `src/`.
@@ -90,4 +90,4 @@ import { LAYER_LEVELS } from '../shared/layer';
 - If you change config shape, update documentation and include required keys in the PR.
 
 ## Agent-Specific Instructions
-- If a task involves proposals/plans, new features, or ambiguous requirements, consult `openspec/AGENTS.md` for spec workflow and conventions before coding.
+- If a task involves proposals/plans, new features, or ambiguous requirements, consult `llmanspec/config.yaml` for spec workflow and conventions before coding.
