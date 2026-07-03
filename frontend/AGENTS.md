@@ -56,7 +56,7 @@ frontend/packages/crystalith-slidev --reads--> data/output/preview/slides.md
 ### 术语表
 - Vite proxy：前端开发时把 `/v1`、`/health` 请求转发到后端（`frontend/web/vite.config.ts`）。
 - 生成 API client：`openapi.gen.json` → `src/api/generated`（`frontend/web/package.json:scripts.api:generate`）。
-- “core suite”：最小 UI 核心回归清单（SSOT：`openspec/specs/quality-and-regression/core_suite.json`；引用：`frontend/web/AGENTS.md`）。
+- "core suite"：最小 UI 核心回归清单（SSOT：`llmanspec/specs/quality-and-regression/core_suite.json`；引用：`frontend/web/AGENTS.md`）。
 
 ### 主流程（开发时）
 1. 启动 dev server：`pnpm dev`（`frontend/web/package.json:scripts.dev`，端口：`frontend/web/vite.config.ts:server.port = 3000`）。
@@ -112,7 +112,7 @@ pnpm -C frontend/packages/crystalith-slidev dev    # 依据：frontend/packages/
   - 明确并标注“生成物目录”边界（动机：避免手改生成代码；收益：更少漂移；风险：需要清点；方案：对 `frontend/web/openapi.gen.json`、`frontend/web/src/api/generated/` 在 docs/AGENTS 中强调并在 `just check` 里保持 drift gate（已存在相关步骤：`justfile:check`））。
   - 补齐关键错误态与恢复动作 UI（动机：提升 UX；收益：更少“报错不知道怎么办”；风险：需要后端错误码稳定；方案：基于 `frontend/web/src/api/setup.ts` 的 `errorCode/details/retryAfter` 映射逐步完善 UI 提示）。
 - 中期（1–2 月）
-  - 扩展 `test:core` 覆盖的核心路径与 fixtures（动机：前后端协同回归；收益：更稳；风险：维护成本；方案：以 `openspec/specs/quality-and-regression/core_suite.json` 为 SSOT，逐步补齐缺口）。
+  - 扩展 `test:core` 覆盖的核心路径与 fixtures（动机：前后端协同回归；收益：更稳；风险：维护成本；方案：以 `llmanspec/specs/quality-and-regression/core_suite.json` 为 SSOT，逐步补齐缺口）。
   - 性能与分包策略持续演进（动机：减小首屏；收益：更快加载；风险：chunk 过多；方案：基于 `frontend/web/vite.config.ts:manualChunks` 的现有策略做数据驱动调整）。
 - 长期（季度+）
   - 建立更强的“契约化集成”流程（动机：减少 API/客户端漂移；收益：发布更稳；风险：需要流程投入；方案：对齐后端 `just api-check`、前端 `api:sync`、以及 SDK 生成（`scripts/sdk_gen.sh`）形成一条可审计流水线）。

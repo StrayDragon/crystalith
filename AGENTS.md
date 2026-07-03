@@ -11,49 +11,39 @@ Keep this managed block so `llman sdd update` can refresh it.
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `backend/py/` hosts the FastAPI service; app code lives in `backend/py/src/crystalith/` and tests in `backend/py/tests/`.
-- `backend/py/packages/` contains workspace libraries (e.g., `cl-logs`, `cl-fastapix`), each with its own `pyproject.toml` and `tests/`.
-- `frontend/web/` is the Vite + React + TypeScript UI; source is in `frontend/web/src/`, assets in `frontend/web/public/`.
-- `config/` stores runtime config (`app.yaml`) and the generated schema (`app.schema.gen.json`).
-- `llmanspec/` contains specification/change-tracking docs (migrated from `openspec/`); consult it for spec-driven work.
+- `backend/py/` hosts the FastAPI service; see `backend/AGENTS.md` for detailed module layout, integration, and core logic.
+- `frontend/web/` is the Vite + React + TypeScript UI; see `frontend/AGENTS.md` and `frontend/web/AGENTS.md` for domain details and Layer system.
+- `config/` stores runtime config SSOT; see `config/AGENTS.md` for overlay conventions, template rendering, and schema governance.
+- `llmanspec/` contains specification/change-tracking docs (migrated from `openspec/`); consult `llmanspec/config.yaml` for spec-driven workflow.
 
 ## Build, Test, and Development Commands
 Unified entry (from repo root):
 - `just up` starts with default profile (hybrid: Docker deps + host hot reload).
 - `just up local` starts without Docker (SQLite + embedded Chroma).
-- `just up docker` starts Docker Compose deployment.
-- `just up full` starts full Docker Compose with all overlays.
+- `just up docker` / `just up full` for Docker Compose deployments.
 - `just down` / `just status` / `just logs` manage the running profile.
 - `just upsert-env-configs` initializes `.env` and `config/secret.env` from shell env vars.
-- `just cleanup` detects stale artifacts from old workflows (dry-run; `--apply` to execute).
+- `just cleanup` detects stale artifacts (dry-run; `--apply` to execute).
 
-Backend (from repo root):
-- `cd backend/py && uv sync` installs Python deps.
-- `cd backend/py && just dev` runs the API server (uvicorn wrapper).
-- `cd backend/py && just test` runs pytest.
-- `cd backend/py && just db-init` creates local SQLite tables.
-- `cd backend/py && just config-schema` regenerates `config/app.schema.gen.json`.
-- `cd backend/py && just packages-test` runs workspace package tests.
-- `cd backend/py && just llm-eval` runs the local eval harness.
-- `cd backend/py && just embedding-cache-bench` runs the Redis embedding cache benchmark.
+Backend: see `backend/AGENTS.md` for dev/run/test details. Quick commands:
+- `cd backend/py && uv sync` — install Python deps.
+- `cd backend/py && just dev` — run API server.
+- `cd backend/py && just test` — run pytest.
+- `cd backend/py && just db-init` — create local SQLite tables.
 
-Frontend:
-- `cd frontend/web && pnpm install` installs JS deps.
-- `cd frontend/web && pnpm dev` starts the Vite dev server.
-- `cd frontend/web && pnpm test` runs Vitest.
-- `cd frontend/web && pnpm run lint` runs incremental `oxlint` against changed frontend source files.
-- `cd frontend/web && pnpm run lint:all` runs full `oxlint` on the frontend source tree.
-- `cd frontend/web && pnpm run format` applies `oxfmt` to frontend source/config files.
-- `cd frontend/web && pnpm run format:check` verifies frontend formatting without writing changes.
-- `cd frontend/web && pnpm run build` creates a production build.
-- `cd frontend/web && pnpm typecheck` runs TypeScript typechecking.
+Frontend: see `frontend/AGENTS.md` and `frontend/web/AGENTS.md` for full command reference. Quick commands:
+- `cd frontend/web && pnpm install` — install JS deps.
+- `cd frontend/web && pnpm dev` — start Vite dev server.
+- `cd frontend/web && pnpm test` — run Vitest.
+- `cd frontend/web && pnpm typecheck` — TypeScript typechecking.
 
 Tip: `just -l` lists available tasks in each directory.
 
 ## Coding Style & Naming Conventions
 - Python: 4-space indentation; prefer high-coverage type hints; minimize `Any`; avoid dynamic attribute access (`getattr`, `hasattr`, `__getattr__`); `snake_case` for functions/vars, `PascalCase` for classes.
 - TypeScript/React: 2-space indentation; `PascalCase` components; hooks named `useX`.
-- CSS/Tailwind: keep global styles in `frontend/web/src/app/index.css`; feature styles live alongside components.
+- CSS/Tailwind: global styles in the frontend app entry; feature styles live alongside components.
+- **Layer System**: Never hardcode z-index values; use the unified Layer system (see `frontend/web/AGENTS.md` for levels and usage).
 - No repo-wide formatter is configured outside `frontend/web`; frontend uses `oxfmt`. Match existing style elsewhere and avoid unrelated reformatting.
 - If backend OpenAPI changed, run `cd frontend/web && pnpm run api:sync` and verify.
 
