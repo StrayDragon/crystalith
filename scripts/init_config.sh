@@ -13,8 +13,8 @@
 #   .env targets:
 #     CRYSTALITH_PROFILE             — runtime profile (local|hybrid|docker|full)
 #     OPENAI_BASE_URL                — OpenAI-compatible API base URL
-#     CRYSTALITH_DEFAULT_EMBEDDING_MODEL — default embedding model ID (e.g. omlx-embedding)
-#     CRYSTALITH_DEFAULT_CHAT_MODEL  — default chat model ID (e.g. tufa-chat | omlx-chat)
+#     CRYSTALITH_DEFAULT_EMBEDDING_MODEL — default embedding model ID (e.g. gateway-embedding)
+#     CRYSTALITH_DEFAULT_CHAT_MODEL  — default chat model ID (e.g. gateway-chat-primary | gateway-chat-light)
 #     OMLX_OPENAI_API_BASE           — OMLX gateway base URL
 #     OMLX_OPENAI_API_KEY            — OMLX gateway API key
 #     OMLX_OPENAI_DEFAULT_EMBEDDING_MODEL — OMLX embedding model name
