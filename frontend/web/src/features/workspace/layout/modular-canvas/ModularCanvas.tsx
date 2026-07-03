@@ -1,6 +1,7 @@
 import {
   useState,
   useEffect,
+  useLayoutEffect,
   useRef,
   useCallback,
   useImperativeHandle,
@@ -8,13 +9,46 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { GridStack } from "gridstack";
+import { GridStack, type GridHTMLElement } from "gridstack";
 import "gridstack/dist/gridstack.min.css";
 
 import type { WidgetDef, WidgetMeta } from "./types";
+import { readSavedLayout, writeSavedLayout } from "./layoutStorage";
 import { GRID_ROWS } from "./widgetRegistry";
 import { GRIDSTACK_STYLES } from "./modularCanvasStyles";
 import WidgetShell from "./WidgetShell";
+
+const GRID_MARGIN = 6;
+const MIN_CELL_HEIGHT = 80;
+
+function cellHeightForAvailable(available: number, rows: number): number {
+  // Widgets spanning multiple rows use h * cellHeight; row gaps are internal
+  // to the span, not subtracted separately from the container height.
+  return Math.max(Math.floor(available / rows), MIN_CELL_HEIGHT);
+}
+
+function attachPortalMount(contentEl: Element): HTMLElement {
+  const existing = contentEl.querySelector(".mc-portal-mount");
+  if (existing instanceof HTMLElement) return existing;
+
+  const mountEl = document.createElement("div");
+  mountEl.className = "mc-portal-mount";
+  mountEl.style.cssText = "display:flex;flex-direction:column;height:100%;overflow:hidden;";
+  contentEl.appendChild(mountEl);
+  return mountEl;
+}
+
+function toGridStackWidget(w: WidgetDef) {
+  return {
+    id: w.id,
+    x: w.x,
+    y: w.y,
+    w: w.w,
+    h: w.h,
+    minW: w.minW ?? 2,
+    minH: w.minH ?? 2,
+  };
+}
 
 /* ─── Public imperative handle ─── */
 export interface ModularCanvasHandle {
@@ -39,76 +73,87 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(functi
   { defaultLayout, locked, widgetMeta, renderWidget, widgetHeaderExtras, onWidgetIdsChange },
   ref,
 ) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const gridElRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<GridStack | null>(null);
+  const lockedRef = useRef(locked);
   const [portalTargets, setPortalTargets] = useState<Record<string, HTMLElement>>({});
   const [widgetIds, setWidgetIds] = useState<string[]>([]);
 
-  /* ── Build widgets from a layout array ── */
-  const buildWidgets = useCallback((layout: WidgetDef[], gs: GridStack) => {
-    gs.batchUpdate();
-    gs.removeAll(false);
+  lockedRef.current = locked;
 
+  /* ── Build widgets from a layout array ── */
+  const syncPortalTargets = useCallback((gs: GridStack) => {
     const targets: Record<string, HTMLElement> = {};
     const ids: string[] = [];
 
-    layout.forEach((w) => {
-      const el = gs.addWidget({
-        id: w.id,
-        x: w.x,
-        y: w.y,
-        w: w.w,
-        h: w.h,
-        minW: w.minW ?? 2,
-        minH: w.minH ?? 2,
-      });
+    for (const el of gs.getGridItems()) {
+      const id = el.gridstackNode?.id;
+      if (!id) continue;
 
       const contentEl = el.querySelector(".grid-stack-item-content");
-      if (contentEl) {
-        const mountEl = document.createElement("div");
-        mountEl.className = "mc-portal-mount";
-        mountEl.style.cssText = "display:flex;flex-direction:column;height:100%;overflow:hidden;";
-        contentEl.appendChild(mountEl);
-        targets[w.id] = mountEl;
-        ids.push(w.id);
-      }
-    });
+      if (!contentEl) continue;
 
-    gs.batchUpdate(false);
+      targets[id] = attachPortalMount(contentEl);
+      ids.push(id);
+    }
+
     setPortalTargets(targets);
     setWidgetIds(ids);
+  }, []);
+
+  const buildWidgets = useCallback(
+    (layout: WidgetDef[], gs: GridStack) => {
+      gs.batchUpdate();
+      gs.removeAll(true);
+      gs.load(layout.map(toGridStackWidget));
+      gs.batchUpdate(false);
+      syncPortalTargets(gs);
+    },
+    [syncPortalTargets],
+  );
+
+  const persistLayout = useCallback((gs: GridStack) => {
+    const saved = gs.save(false);
+    if (Array.isArray(saved)) {
+      writeSavedLayout(saved);
+    }
   }, []);
 
   /* ── Dynamic cell height — fills available vertical space ── */
   const computeCellHeight = useCallback(() => {
     const gs = gridRef.current;
-    const el = gridElRef.current;
-    if (!gs || !el) return;
-    const parent = el.parentElement;
-    if (!parent) return;
-    // Subtract parent padding to get actual content area height
-    const style = getComputedStyle(parent);
+    const container = containerRef.current;
+    if (!gs || !container) return;
+
+    const style = getComputedStyle(container);
     const paddingY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
-    const available = parent.clientHeight - paddingY;
+    const available = container.getBoundingClientRect().height - paddingY;
     if (available <= 0) return;
-    // margin is 6 on each side → total gap per row = 12
-    const ch = Math.floor((available - GRID_ROWS * 12) / GRID_ROWS);
-    gs.cellHeight(Math.max(ch, 80));
+
+    const rows = Math.max(gs.getRow(), GRID_ROWS);
+    gs.cellHeight(cellHeightForAvailable(available, rows));
   }, []);
 
   /* ── Initialize GridStack on mount ── */
   useEffect(() => {
-    if (!gridElRef.current || gridRef.current) return;
-
     const container = gridElRef.current;
+    if (!container) return;
+
+    const gridHost = container as GridHTMLElement;
+
+    gridHost.gridstack?.destroy(false);
+    gridHost.querySelectorAll(":scope > .grid-stack-item").forEach((el) => el.remove());
 
     const gs = GridStack.init(
       {
         column: 12,
-        cellHeight: 100,
-        margin: 6,
+        minRow: GRID_ROWS,
+        cellHeight: MIN_CELL_HEIGHT,
+        margin: GRID_MARGIN,
         float: false,
         animate: true,
+        staticGrid: lockedRef.current,
         draggable: { handle: ".mc-draghandle" },
         resizable: { handles: "e,se,s,sw,w" },
       },
@@ -117,32 +162,62 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(functi
 
     gridRef.current = gs;
 
-    // Build the initial layout
-    buildWidgets(defaultLayout, gs);
+    const initialLayout = readSavedLayout(widgetMeta) ?? defaultLayout;
+    buildWidgets(initialLayout, gs);
 
-    // Recalculate cell height after layout paint
-    requestAnimationFrame(() => {
+    const onChange = () => {
+      syncPortalTargets(gs);
+      if (!lockedRef.current) {
+        persistLayout(gs);
+      }
       computeCellHeight();
-    });
+    };
+    gs.on("change", onChange);
 
-    // Watch container resizes to keep cells filling height
-    const ro = new ResizeObserver(() => computeCellHeight());
-    if (container.parentElement) ro.observe(container.parentElement);
+    requestAnimationFrame(() => computeCellHeight());
 
     return () => {
-      ro.disconnect();
+      gs.off("change");
+      // Keep DOM nodes — React owns the .grid-stack element.
       gs.destroy(false);
       gridRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── Sync lock state ── */
+  /* ── Keep grid rows filling the canvas as the viewport/header changes ── */
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    computeCellHeight();
+
+    const ro = new ResizeObserver(() => computeCellHeight());
+    ro.observe(container);
+    const workspaceRoot = container.closest(".cl-h-dvh");
+    if (workspaceRoot) ro.observe(workspaceRoot);
+
+    const onWindowResize = () => computeCellHeight();
+    window.addEventListener("resize", onWindowResize);
+
+    const retryIds = [0, 50, 150, 400].map((delay) => window.setTimeout(computeCellHeight, delay));
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", onWindowResize);
+      retryIds.forEach((id) => window.clearTimeout(id));
+    };
+  }, [computeCellHeight]);
+
+  useEffect(() => {
+    computeCellHeight();
+  }, [locked, widgetIds, computeCellHeight]);
+
+  /* ── Sync lock state via GridStack staticGrid API ── */
   useEffect(() => {
     const gs = gridRef.current;
     if (!gs) return;
-    gs.enableMove(!locked);
-    gs.enableResize(!locked);
+    gs.setStatic(locked);
   }, [locked]);
 
   /* ── Notify parent when widget ids change ── */
@@ -156,7 +231,6 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(functi
       const gs = gridRef.current;
       if (!gs) return;
 
-      // Prevent duplicates
       if (widgetIds.includes(wid)) return;
 
       const meta = widgetMeta[wid];
@@ -170,34 +244,40 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(functi
 
       const contentEl = el.querySelector(".grid-stack-item-content");
       if (contentEl) {
-        const mountEl = document.createElement("div");
-        mountEl.className = "mc-portal-mount";
-        mountEl.style.cssText = "display:flex;flex-direction:column;height:100%;overflow:hidden;";
-        contentEl.appendChild(mountEl);
+        const mountEl = attachPortalMount(contentEl);
         setPortalTargets((prev) => ({ ...prev, [wid]: mountEl }));
         setWidgetIds((prev) => [...prev, wid]);
+        if (!lockedRef.current) {
+          persistLayout(gs);
+        }
       }
     },
-    [widgetIds, widgetMeta],
+    [widgetIds, widgetMeta, persistLayout],
   );
 
   /* ── Remove a widget ── */
-  const removeWidgetFn = useCallback((wid: string) => {
-    const gs = gridRef.current;
-    if (!gs) return;
+  const removeWidgetFn = useCallback(
+    (wid: string) => {
+      const gs = gridRef.current;
+      if (!gs) return;
 
-    const items = gs.getGridItems();
-    const item = items.find((el) => el.gridstackNode?.id === wid);
-    if (item) {
-      gs.removeWidget(item, false);
-      setPortalTargets((prev) => {
-        const next = { ...prev };
-        delete next[wid];
-        return next;
-      });
-      setWidgetIds((prev) => prev.filter((id) => id !== wid));
-    }
-  }, []);
+      const items = gs.getGridItems();
+      const item = items.find((el) => el.gridstackNode?.id === wid);
+      if (item) {
+        gs.removeWidget(item, true);
+        setPortalTargets((prev) => {
+          const next = { ...prev };
+          delete next[wid];
+          return next;
+        });
+        setWidgetIds((prev) => prev.filter((id) => id !== wid));
+        if (!lockedRef.current) {
+          persistLayout(gs);
+        }
+      }
+    },
+    [persistLayout],
+  );
 
   /* ── Expose imperative methods ── */
   useImperativeHandle(
@@ -211,14 +291,17 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(functi
   );
 
   return (
-    <>
+    <div className="flex flex-1 min-h-0 flex-col">
       {/* GridStack style overrides */}
       <style>{GRIDSTACK_STYLES}</style>
 
       <div
-        className={`flex-1 min-h-0 overflow-x-hidden overflow-y-auto relative p-1.5 ${!locked ? "mc-editing" : ""}`}
+        ref={containerRef}
+        className={`flex-1 min-h-0 overflow-x-hidden relative p-1.5 ${
+          locked ? "overflow-hidden" : "overflow-y-auto"
+        } ${!locked ? "mc-editing" : ""}`}
       >
-        <div ref={gridElRef} className="grid-stack" style={{ minHeight: "100%" }} />
+        <div ref={gridElRef} className="grid-stack h-full" />
       </div>
 
       {/* React Portals → each GridStack widget */}
@@ -241,7 +324,7 @@ const ModularCanvas = forwardRef<ModularCanvasHandle, ModularCanvasProps>(functi
           wid,
         );
       })}
-    </>
+    </div>
   );
 });
 
