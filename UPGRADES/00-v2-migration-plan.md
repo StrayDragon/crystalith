@@ -3,7 +3,7 @@
 > **最终决策**（2026-07-02 确认）：
 > 1. 全迁 Bun + TypeScript。Python 39k 行中无不可替代项
 > 2. **所有 20+ 个 feature 全部保留**——research/analysis/studio/refine 等都是核心业务，不砍
-> 3. AI runtime: `pi-ai`（provider）+ `pi-agent-core`（agent loop）+ AI SDK（结构化输出补充）
+> 3. AI runtime: **Vercel AI SDK** (`ai` + `@ai-sdk/*`) — 统揽 provider 抽象、agent loop、结构化输出、流式生成
 > 4. 产品定位: NotebookLM 启发的 Notebook RAG 平台——可集成、可验证、高效
 > 5. RAG 策略可插拔（embed / keyword / 混合 / page-index / GraphRAG ...）
 > 6. 内置 Eval Benchmark Harness，量化验收每个 RAG 策略
@@ -34,11 +34,13 @@
 │              Bun 单二进制 (crystalith-server)                 │
 │              Elysia HTTP Server (Port 8032)                   │
 │                                                              │
-│  ┌─ AI 层 (pi-ai + pi-agent-core + AI SDK) ──────────────┐  │
-│  │ Provider 抽象 → pi-ai (30+ provider + OAuth)           │  │
-│  │ Agent Loop   → pi-agent-core (defineTool + event)      │  │
-│  │ 结构化输出   → AI SDK generateObject(schema: Zod)      │  │
-│  │ 流式生成     → AI SDK streamText / SSE relay          │  │
+│  ┌─ AI 层 (Vercel AI SDK `ai` + `@ai-sdk/*`) ───────────┐  │
+│  │ Provider 抽象 → @ai-sdk/openai / ollama / anthropic…  │  │
+│  │ Agent Loop   → streamText + maxSteps（多步 tool 驱动） │  │
+│  │ 结构化输出   → generateObject(schema: Zod)             │  │
+│  │ 流式生成     → streamText / SSE relay                  │  │
+│  │ Tool Calling → tool() + defineTool                     │  │
+│  │ 多模态       → text + image + file 统一                │  │
 │  └────────────────────────────────────────────────────────┘  │
 │                                                              │
 │  ┌─ RAG 引擎 (可插拔策略) ────────────────────────────────┐  │
@@ -93,10 +95,10 @@
 | Runtime + 打包 | **Bun** | 单二进制、bun:sqlite 内置、原生 TS |
 | Web Framework | **Elysia** | eden RPC 干掉 OpenAPI 生成、端到端类型推断 |
 | ORM | **Drizzle ORM** | bun-sqlite 原生驱动、类型安全 |
-| Provider 抽象 | **`@earendil-works/pi-ai`** | 30+ provider + OAuth 订阅 + models.json 静态配置 |
-| Agent Loop | **`@earendil-works/pi-agent-core`** | defineTool + event stream + 通用 agent runtime |
-| 结构化输出 | **`ai` (Vercel AI SDK)** | generateObject(schema: Zod)、pi-ai 做 provider 层 |
-| 流式生成 | **AI SDK streamText** | ReadableStream 原生 SSE relay |
+| Provider 抽象 | **`@ai-sdk/*` (Vercel AI SDK)** | OpenAI / Anthropic / Ollama / Google / Mistral / DeepSeek / Groq / xAI / … 官方 provider |
+| Agent Loop | **`ai` streamText + maxSteps** | 多步 tool calling agent loop、中间件、telemetry |
+| 结构化输出 | **`ai` generateObject / streamObject** | Zod schema 驱动，对等 pydantic-ai output_type |
+| 流式生成 | **`ai` streamText** | ReadableStream 原生 SSE relay、frontend `useChat` hook |
 | Token 计数 | **`gpt-tokenizer`** | 纯 JS、无 wasm |
 | 向量存储 | **sqlite-vec** | 同库零依赖、已 benchmark（10k chunk 8ms） |
 | Schema 校验 | **Zod**（前后端共享） | 前端已在用 |
@@ -165,7 +167,7 @@ class RAGRegistry {
 融合排序（RRF / 加权重排 / Cross-encoder Rerank）
    │
    ▼
-上下文组装 → prompt + 引用标记 → pi-agent-core agent → 流式输出
+上下文组装 → prompt + 引用标记 → AI SDK agent (streamText + maxSteps) → 流式输出
 ```
 
 ---
@@ -189,7 +191,7 @@ Eval Runner
 └─ 结果持久化（eval_runs 表）
 
 Metrics Calculator
-├─ LLM-as-Judge（pi-ai 调模型打分）
+├─ LLM-as-Judge（AI SDK generateObject / generateText 打分）
 └─ 字符串匹配 + ROUGE/BLEU（可选）
 
 前端质量面板
@@ -231,7 +233,7 @@ interface AIMessage {
 ))}
 ```
 
-pi-agent-core 的 tool calling 可以定义 `mount_ui_component` tool，AI 自主决定何时推送图表/表格/交互组件到消息中。
+AI SDK 的 tool calling 可以定义 `mount_ui_component` tool，AI 自主决定何时推送图表/表格/交互组件到消息中。
 
 ---
 
@@ -268,7 +270,7 @@ eval_run_items         // 单条评测结果
 eval_metrics           // 汇总指标
 
 // 配置表
-model_configs          // 模型配置（pi-ai models.json DB 镜像）
+model_configs          // 模型配置（provider + modelId + apiKey）
 system_config          // 系统配置 KV
 
 // 删除的表（vs Python）
@@ -282,30 +284,30 @@ system_config          // 系统配置 KV
 ### Phase 0 — 脚手架（Week 1-2）
 
 ```
-□ Bun + Elysia 项目初始化（server/ 目录）
-□ Drizzle ORM schema 定义（所有表）
-□ DB migration 工具链（Drizzle Kit）
-□ pi-ai 集成（models.json → ModelRegistry）
-□ pi-agent-core agent 骨架（defineTool + event stream）
-□ Zod schema 层（前后端共享）
-□ 前端 Elysia eden 客户端接入（src/api/v2/）
-□ 开发环境热重载（Bun --watch + Vite HMR）
-□ Vitest 测试骨架
+- [ ] Bun + Elysia 项目初始化（server/ 目录）
+- [ ] Drizzle ORM schema 定义（所有表）
+- [ ] DB migration 工具链（Drizzle Kit）
+- [ ] AI SDK 集成（@ai-sdk/openai + @ai-sdk/ollama provider）
+- [ ] AI SDK agent 骨架（streamText + maxSteps + tool 定义）
+- [ ] Zod schema 层（前后端共享）
+- [ ] 前端 Elysia eden 客户端接入（src/api/v2/）
+- [ ] 开发环境热重载（Bun --watch + Vite HMR）
+- [ ] Vitest 测试骨架
 ```
 
-**Gate**：Elysia + Drizzle + pi-ai 三件套跑通，前端 eden 调通。
+**Gate**：Elysia + Drizzle + AI SDK 三件套跑通，前端 eden 调通。
 
 ### Phase 1 — 核心闭环 MVP（Week 3-6）
 
 ```
-□ notebooks / sessions / messages CRUD
-□ sources 管理（上传、解析、列表、详情、搜索）
-□ Embed RAG 策略（sqlite-vec）
-□ QA 问答（pi-agent-core + RAG tools + 流式输出）
-□ Citations 引用溯源（chunk → source 跳转）
-□ 7 种 Outputs 生成（AI SDK generateObject）
-□ models 模型管理（pi-ai 配置界面）
-□ 前端 API 层切换（eden treaty 替换 openapi-ts）
+- [ ] notebooks / sessions / messages CRUD
+- [ ] sources 管理（上传、解析、列表、详情、搜索）
+- [ ] Embed RAG 策略（sqlite-vec）
+- [ ] QA 问答（AI SDK streamText + RAG tools + 流式输出）
+- [ ] Citations 引用溯源（chunk → source 跳转）
+- [ ] 7 种 Outputs 生成（AI SDK generateObject）
+- [ ] models 模型管理（AI SDK provider 切换界面）
+- [ ] 前端 API 层切换（eden treaty 替换 openapi-ts）
 ```
 
 **Gate**：全链路跑通 — 上传 PDF → 解析 → 问答 → 引用溯源。
@@ -313,16 +315,16 @@ system_config          // 系统配置 KV
 ### Phase 2 — 完整业务迁移（Week 7-12）
 
 ```
-□ research — 自主研究 Agent（pi-agent-core + SearXNG tool）
-□ analysis — 资料分析（聚类 + 矛盾 + 相关性）
-□ studio — 幻灯片工作室
-□ refine — 结果精炼
-□ workspace / commands — 工具注册表 + 命令面板
-□ source_connectors — Obsidian + 本地目录同步
-□ prompt_presets / templates — 提示词 + 模板
-□ tasks — 后台任务队列
-□ Keyword RAG + 混合检索策略
-□ RAG Registry 注册表模式
+- [ ] research — 自主研究 Agent（AI SDK streamText + maxSteps + SearXNG tool）
+- [ ] analysis — 资料分析（聚类 + 矛盾 + 相关性）
+- [ ] studio — 幻灯片工作室
+- [ ] refine — 结果精炼
+- [ ] workspace / commands — 工具注册表 + 命令面板
+- [ ] source_connectors — Obsidian + 本地目录同步
+- [ ] prompt_presets / templates — 提示词 + 模板
+- [ ] tasks — 后台任务队列
+- [ ] Keyword RAG + 混合检索策略
+- [ ] RAG Registry 注册表模式
 ```
 
 **Gate**：Python 94 个端点有对应 v2 实现，行为对比通过。
@@ -330,12 +332,12 @@ system_config          // 系统配置 KV
 ### Phase 3 — Eval + 质量体系（Week 13-16）
 
 ```
-□ K1–K3 Eval Dataset + Runner + Metrics
-□ K6 CLI harness
-□ 策略 A/B 对比报告
-□ K4 前端质量面板
-□ K5 回归检测
-□ Rivu 降级实现（消息内嵌组件渲染）
+- [ ] K1–K3 Eval Dataset + Runner + Metrics
+- [ ] K6 CLI harness
+- [ ] 策略 A/B 对比报告
+- [ ] K4 前端质量面板
+- [ ] K5 回归检测
+- [ ] Rivu 降级实现（消息内嵌组件渲染）
 ```
 
 **Gate**：至少 2 个策略完成 benchmark 对比，质量面板可用。
@@ -343,14 +345,14 @@ system_config          // 系统配置 KV
 ### Phase 4 — 体验 + 分发（Week 17-20）
 
 ```
-□ 前端体验优化（加载/错误/空态）
-□ 导出功能（Markdown + 引用）
-□ 性能优化（chunk 批量、并发控制）
-□ 错误处理标准化 + 日志
-□ bun build --compile 单二进制
-□ Server Mode 可选层（JWT + Postgres + 限流）
-□ Page Index 策略
-□ 行为对比全量通过
+- [ ] 前端体验优化（加载/错误/空态）
+- [ ] 导出功能（Markdown + 引用）
+- [ ] 性能优化（chunk 批量、并发控制）
+- [ ] 错误处理标准化 + 日志
+- [ ] bun build --compile 单二进制
+- [ ] Server Mode 可选层（JWT + Postgres + 限流）
+- [ ] Page Index 策略
+- [ ] 行为对比全量通过
 ```
 
 **Gate**：单二进制构建成功，Eval 回归检测通过。
@@ -358,14 +360,14 @@ system_config          // 系统配置 KV
 ### Phase 5 — 清理交付（Week 21+）
 
 ```
-□ 行为对比全量通过（所有端点）
-□ 前端完全切换到 v2 API
-□ 删除 backend/py/
-□ 删除 frontend/web/src/api/generated/
-□ GraphRAG / HyDE / Self-RAG 策略（P2）
-□ Tauri 桌面包装（可选）
-□ CI/CD + 自动更新
-□ Git tag v2.0.0
+- [ ] 行为对比全量通过（所有端点）
+- [ ] 前端完全切换到 v2 API
+- [ ] 删除 backend/py/
+- [ ] 删除 frontend/web/src/api/generated/
+- [ ] GraphRAG / HyDE / Self-RAG 策略（P2）
+- [ ] Tauri 桌面包装（可选）
+- [ ] CI/CD + 自动更新
+- [ ] Git tag v2.0.0
 ```
 
 ---
@@ -389,8 +391,7 @@ system_config          // 系统配置 KV
 
 | 风险 | 严重度 | 应对 |
 |------|--------|------|
-| pi-ai/pi-agent-core 版本迭代 | 🟡 中 | 锁定版本、薄封装隔离 |
-| research agent 迁移（pydantic-graph → pi-agent-core） | 🟡 中 | pydantic-graph 图结构可映射为 pi tool 链 |
+| research agent 迁移（pydantic-graph → AI SDK agent） | 🟡 中 | pydantic-graph 图结构可映射为 AI SDK tool 链 |
 | studio Slidev 集成 | 🟡 中 | Slidev 本身是 Node 工具，Bun 环境可运行 |
 | 前端大量适配 | 🟡 中 | 只换 API 客户端层，组件逻辑不动 |
 | sqlite-vec 规模上限 | 🟢 低 | 个人/小团队 < 10万 chunk，超了平迁 LanceDB |
@@ -407,7 +408,7 @@ system_config          // 系统配置 KV
 | `UPGRADES/01-current-state-audit.md` | 现状盘点 |
 | `UPGRADES/02-target-stack-bun.md` | Bun 技术栈 |
 | `UPGRADES/03-ai-ecosystem-mapping.md` | AI 生态对照表 |
-| `UPGRADES/06-pi-runtime-integration.md` | pi-ai + pi-agent-core 集成方案 |
+| `UPGRADES/06-ai-sdk-integration.md` | Vercel AI SDK 作为 Agent 运行时（全套方案） |
 | `UPGRADES/07-sqlite-vec-benchmark.md` | sqlite-vec benchmark 数据 |
 | `UPGRADES/08-web-framework-elysia-vs-hono.md` | Elysia vs Hono 选型 |
 | `UPGRADES/09-pdf-benchmark.md` | PDF 解析 benchmark |

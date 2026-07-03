@@ -21,13 +21,13 @@
 | ORM | **Drizzle ORM** | 原生 `drizzle-orm/bun-sqlite` 驱动，迁移工具 Drizzle Kit 成熟。备选：Kysely。 |
 | 向量库 | **sqlite-vec**（bun:sqlite 扩展） | 业务库 + 向量库**同库**，零外部依赖。备选：LanceDB（native TS）、Qdrant。 |
 | Schema 校验 | **Zod**（前端已在用） | 前后端共享类型；Elysia 也内建校验可选用 |
-| AI / Agent | **Vercel AI SDK** | 前端已依赖相关生态（`@ag-ui/core` / tambo）。详见 [03-ai-ecosystem-mapping.md](./03-ai-ecosystem-mapping.md) |
+| AI / Agent | **Vercel AI SDK** (`ai` + `@ai-sdk/*`) | Provider 抽象 + Agent Loop + 结构化输出 + 流式，统一 AI 层。详见 [03-ai-ecosystem-mapping.md](./03-ai-ecosystem-mapping.md) + [06-ai-sdk-integration.md](./06-ai-sdk-integration.md) |
 | Token 计数 | **gpt-tokenizer** | 纯 JS，无 wasm。备选：`tiktoken`（wasm）。 |
 | PDF 解析 | **unpdf**（基于 pdf.js）/ pdfjs-dist | ⚠️ **头号技术风险**，须 spike |
 | HTML 解析 | **linkedom** / cheerio | |
 | Web 抓取 | Jina Reader（HTTP）+ Firecrawl（JS SDK）+ Playwright（原生 Node） | 砍 trafilatura/browserless |
 | 模板渲染 | **Nunjucks**（前端已在用） | output/config 渲染 |
-| LLM 调用 | **openai** 官方 JS SDK + AI SDK 的 ollama provider | |
+| LLM 调用 | **AI SDK `@ai-sdk/*`** provider 包 | 统一通过 AI SDK 调用所有模型（OpenAI / Anthropic / Ollama / Google / …），不直接依赖底层 SDK | |
 | 桌面 shell | 见下「分发架构」 | |
 
 ## 分发架构选择

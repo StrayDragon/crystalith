@@ -21,8 +21,8 @@
 |---|------|------|
 | 4 | [01-current-state-audit.md](./01-current-state-audit.md) | 现状盘点：代码规模、技术依赖、痛点定位 |
 | 5 | [02-target-stack-bun.md](./02-target-stack-bun.md) | Bun 技术栈选型、分发架构、砍掉的复杂度 |
-| 6 | [03-ai-ecosystem-mapping.md](./03-ai-ecosystem-mapping.md) | **AI 生态对照表** — pydantic-ai → pi-agent-core + AI SDK、pypdf → unpdf 等 |
-| 7 | [06-pi-runtime-integration.md](./06-pi-runtime-integration.md) | **pi 包集成方案** — pi-ai provider + pi-agent-core agent loop |
+| 6 | [03-ai-ecosystem-mapping.md](./03-ai-ecosystem-mapping.md) | **AI 生态对照表** — pydantic-ai → Vercel AI SDK、pypdf → unpdf 等 |
+| 7 | [06-ai-sdk-integration.md](./06-ai-sdk-integration.md) | **Vercel AI SDK Agent 运行时方案** — provider 抽象 + agent loop + 流式 + 结构化输出 |
 | 8 | [07-sqlite-vec-benchmark.md](./07-sqlite-vec-benchmark.md) | sqlite-vec 实测 — 10k chunk 8ms，100k 80ms |
 | 9 | [08-web-framework-elysia-vs-hono.md](./08-web-framework-elysia-vs-hono.md) | Elysia vs Hono 选型对比 |
 | 10 | [09-pdf-benchmark.md](./09-pdf-benchmark.md) | PDF 解析实测 — unpdf 中文/文本提取与 pypdf 一致 ✅ |
@@ -50,7 +50,7 @@
 |------|------|
 | 全迁还是混合？ | **全迁 TS** — Python 无不可替代项 |
 | 哪些 feature 保留？ | **全部保留** — research/analysis/studio/refine 等都是核心业务 |
-| AI runtime？ | **pi-ai + pi-agent-core** 为主，AI SDK 补充结构化输出 |
+| AI runtime？ | **Vercel AI SDK (`ai` + `@ai-sdk/*`)** — 全套 Provider 抽象 + Agent Loop + 结构化输出 + 流式 |
 | RAG 策略？ | **可插拔注册表** — Embed → BM25 → 混合 → Page Index → GraphRAG |
 | 质量验收？ | **内置 Eval Benchmark Harness** — Golden Dataset + LLM-as-Judge + 前端可视化 |
 | 外部服务？ | 都可以自部署 — SearXNG / Chroma / Redis / Ollama |
@@ -62,7 +62,7 @@
 
 ```
 ┌─ 讨论确定 ────────────────────────────────────────────┐
-│  ✅ 全迁 TS / All features 保留 / pi-ai / RAG 策略     │
+│  ✅ 全迁 TS / All features 保留 / AI SDK / RAG 策略     │
 │  ✅ Eval Benchmark / 外部服务可自部署 / Rivu 降级      │
 │  ✅ 前置清理方案 / 分支策略 (v1 + main + v2)           │
 ├─ 执行中 ──────────────────────────────────────────────┤
