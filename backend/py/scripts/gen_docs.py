@@ -233,9 +233,10 @@ def _render_env_vars_reference(*, repo_root: Path, docs_root: Path) -> Generated
 
     config_env_vars: list[str] = []
     try:
-        import yaml
+        from ruamel.yaml import YAML
 
-        payload = yaml.safe_load(config_text) or {}
+        _yaml = YAML(typ='safe')
+        payload = _yaml.load(config_text) or {}
         found: set[str] = set()
 
         def _collect(value: object) -> None:

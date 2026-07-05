@@ -1,3 +1,5 @@
 # Local pnpm workspace config for the frontend app.
+packages:
+  - "vendor/rivu/packages/*"
 onlyBuiltDependencies:
   - esbuild

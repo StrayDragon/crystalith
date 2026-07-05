@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -21,29 +22,50 @@ def test_searxng_searcher_from_settings_uses_defaults() -> None:
     assert searcher.host == ""
 
 
-def test_searxng_searcher_builds_wrapper_with_auth_header(monkeypatch: pytest.MonkeyPatch) -> None:
-    created: dict[str, object] = {}
+@pytest.mark.asyncio
+async def test_searxng_searcher_performs_search_via_http(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify that search() calls _search_raw() and maps results correctly."""
+    mock_response = AsyncMock()
+    mock_response.status_code = 200
+    mock_response.json = AsyncMock(
+        return_value={
+            "results": [
+                {
+                    "title": "A",
+                    "link": "https://example.com/a",
+                    "snippet": "Snippet A",
+                    "engines": ["google"],
+                },
+                {
+                    "title": "B",
+                    "url": "https://example.com/b",
+                    "content": "Snippet B",
+                    "engine": "bing",
+                    "engines": [],
+                },
+            ]
+        }
+    )
 
-    class StubWrapper:
-        def __init__(self, *, searx_host: str, k: int, headers=None):
-            created["searx_host"] = searx_host
-            created["k"] = k
-            created["headers"] = headers
+    mock_client = AsyncMock()
+    mock_client.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
 
-        def results(self, *_args, **_kwargs):
-            return []
+    async def _search_raw_stub(query: str, engines: list[str]) -> list[dict[str, object]]:
+        async with mock_client as client:
+            resp = await client.get("http://localhost:8888/search")
+            data = await resp.json()
+            return data["results"]
 
-    # Mock reason: avoid importing/instantiating the real LangChain wrapper while validating config wiring.
-    import langchain_community.utilities as util
+    searcher = SearXNGSearcher(host="http://localhost:8888")
+    monkeypatch.setattr(searcher, "_search_raw", _search_raw_stub)
 
-    monkeypatch.setattr(util, "SearxSearchWrapper", StubWrapper)
-
-    searcher = SearXNGSearcher(host="http://searx.example", api_key="k", max_results=7)
-    wrapper = searcher._get_wrapper()
-    assert wrapper is not None
-    assert created["searx_host"] == "http://searx.example"
-    assert created["k"] == 7
-    assert created["headers"] == {"Authorization": "Bearer k"}
+    results = await searcher.search("query")
+    assert len(results) == 2
+    assert results[0].engine == "google"
+    assert results[0].url == "https://example.com/a"
+    assert results[0].snippet == "Snippet A"
+    assert results[1].engine == "bing"
+    assert results[1].url == "https://example.com/b"
 
 
 @pytest.mark.asyncio
@@ -73,12 +95,10 @@ async def test_searxng_searcher_resolves_host_from_endpoint_candidates(monkeypat
     install_httpx_asyncclient_stub(monkeypatch, stream=_stream)
 
     searcher = SearXNGSearcher(host="", endpoint_candidates=["http://a/", "http://b/"], timeout=1)
-    searcher._wrapper = object()  # type: ignore[assignment]
 
     resolved = await searcher._resolve_host()
     assert resolved == "http://a"
     assert searcher.host == "http://a"
-    assert searcher._wrapper is None
 
 
 def test_searxng_searcher_from_settings_includes_optional_service_candidates_when_enabled() -> None:
@@ -141,46 +161,15 @@ async def test_searxng_searcher_reports_unreachable_endpoint_candidates(monkeypa
 
 
 @pytest.mark.asyncio
-async def test_searxng_searcher_maps_wrapper_results_without_network() -> None:
-    class StubWrapper:
-        def results(self, _query, *, num_results, engines):
-            assert num_results == 10
-            assert engines
-            return [
-                {
-                    "title": "A",
-                    "link": "https://example.com/a",
-                    "snippet": "Snippet A",
-                    "engines": ["google"],
-                },
-                {
-                    "title": "B",
-                    "url": "https://example.com/b",
-                    "content": "Snippet B",
-                    "engine": "bing",
-                    "engines": [],
-                },
-            ]
-
-    searcher = SearXNGSearcher(host="http://localhost:8888")
-    searcher._wrapper = StubWrapper()  # type: ignore[attr-defined]
-
-    results = await searcher.search("query")
-    assert len(results) == 2
-    assert results[0].engine == "google"
-    assert results[0].url == "https://example.com/a"
-    assert results[0].snippet == "Snippet A"
-    assert results[1].engine == "bing"
-
-
-@pytest.mark.asyncio
 async def test_searxng_searcher_wraps_errors_as_runtime_error() -> None:
-    class BadWrapper:
-        def results(self, *_args, **_kwargs):
-            raise RuntimeError("boom")
+    async def _broken_raw(query: str, engines: list[str]) -> list[dict[str, object]]:
+        raise RuntimeError("boom")
 
     searcher = SearXNGSearcher(host="http://localhost:8888")
-    searcher._wrapper = BadWrapper()  # type: ignore[attr-defined]
+    # Ensure resolve_host doesn't fail
+    monkeypatch_attr = pytest.MonkeyPatch()
+    monkeypatch_attr.setattr(searcher, "_search_raw", _broken_raw)
 
     with pytest.raises(RuntimeError, match="Search failed: boom"):
         await searcher.search("query")
+    monkeypatch_attr.undo()

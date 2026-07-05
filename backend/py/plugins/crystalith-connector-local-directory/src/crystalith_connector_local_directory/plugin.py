@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import ClassVar, cast
 
-import yaml
+from ruamel.yaml import YAML
 
 from crystalith.shared.config import Settings
 from crystalith.shared.json_types import JsonDict
@@ -93,7 +93,7 @@ def _extract_frontmatter_summary(path: Path, *, max_bytes: int = 64 * 1024) -> J
         return {}
 
     try:
-        parsed = yaml.safe_load(yaml_text)
+        parsed = YAML(typ='safe').load(yaml_text)
     except Exception:
         return {}
 
