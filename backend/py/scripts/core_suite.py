@@ -18,7 +18,7 @@ def _backend_root() -> Path:
 def _manifest_path() -> Path:
     return (
         _repo_root()
-        / "openspec"
+        / "llmanspec"
         / "specs"
         / "quality-and-regression"
         / "core_suite.json"

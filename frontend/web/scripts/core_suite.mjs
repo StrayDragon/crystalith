@@ -9,7 +9,7 @@ const frontendDir = path.resolve(scriptDir, "..");
 const repoRoot = path.resolve(frontendDir, "..", "..");
 const manifestPath = path.resolve(
   repoRoot,
-  "openspec",
+  "llmanspec",
   "specs",
   "quality-and-regression",
   "core_suite.json",

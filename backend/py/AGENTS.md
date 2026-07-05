@@ -3,7 +3,7 @@
 ## Project Structure & Module Organization
 - `src/crystalith/` contains the FastAPI service code and core modules.
 - `tests/` holds service-level tests; keep additions close to the code they cover.
-- `packages/` stores workspace libraries (e.g., `cl-sqlalchemyx` — others migrated to PyPI as `lush-*`), each with its own `pyproject.toml` and `tests/`.
+- `packages/` stores workspace libraries (e.g., `rivu-server-sdk`); shared infra libraries use PyPI `lush-*` packages.
 - `scripts/` includes maintenance helpers; `data/` is for local dev artifacts.
 
 ## Build, Test, and Development Commands
@@ -41,4 +41,4 @@ Run from `backend/py`:
 - Never commit secrets or API keys. If config shape changes, document required keys.
 
 ## Agent-Specific Instructions
-- For spec-driven or ambiguous changes, consult `openspec/AGENTS.md` before coding and follow its proposal format.
+- For spec-driven or ambiguous changes, consult `llmanspec/config.yaml` for workflow and conventions before coding.

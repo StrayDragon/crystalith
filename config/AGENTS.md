@@ -109,7 +109,7 @@ just upsert-env-configs                             # 依据：justfile:upsert-e
   - 补充“按 profile 推荐配置”章节（动机：部署更稳；收益：减少 docker/local 差异；风险：文档维护；方案：以 `.env.example` 的 profiles/ports 与 `config/app.yaml:*_candidates` 设计为依据写出建议）。
 - 长期（季度+）
   - 配置 schema 做更强的跨字段约束（动机：提前失败；收益：少运行时坑；风险：更严格可能影响兼容；方案：在 `backend/py/src/crystalith/shared/config/models.py` 增加 model validators，保持默认配置可用）。
-  - 建立“配置变更兼容策略”（动机：减少 breaking；收益：升级更平滑；风险：成本；方案：结合 `deployments/_NOTE.md` 的迁移风格，把 breaking 标注与迁移步骤写进 openspec change 流程）。
+  - 建立“配置变更兼容策略”（动机：减少 breaking；收益：升级更平滑；风险：成本；方案：结合 `deployments/_NOTE.md` 的迁移风格，把 breaking 标注与迁移步骤写进 llmanspec change 流程）。
 
 ## Assumptions / TODO to Verify（已知未知）
 - 当前 repo 是否已实际使用 `config/app.local.yaml` / `config/app.{env}.yaml`：从 `.gitignore` 与实际文件存在性确认（发现规则在 `backend/py/src/crystalith/web/app.py:_discover_overlay_paths`）。

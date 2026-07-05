@@ -309,7 +309,7 @@ db.run("CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(embedding float
 
 ### 12. structlog → consola / pino
 
-**当前**：`cl-logs`（封装 structlog），结构化日志 + 结构化 error kind 分类（`observability.py`）。
+**当前**：`lush-logx`（封装 structlog，PyPI），结构化日志 + 结构化 error kind 分类（`observability.py`）。
 
 **TS 对应**：
 - **consola**（unjs 生态）：API 友好，与 Bun 搭配自然
@@ -339,7 +339,7 @@ db.run("CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(embedding float
 
 ### 14. FastAPI → Elysia / Hono
 
-**当前**：FastAPI + cl-fastapix（封装），18 个 feature router，94 端点，OpenAPI 自动生成。
+**当前**：FastAPI + lush-fastapix（PyPI），18 个 feature router，94 端点，OpenAPI 自动生成。
 
 **TS 对应**：
 

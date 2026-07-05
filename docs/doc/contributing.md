@@ -5,7 +5,7 @@
 - `backend/py/`: FastAPI 服务（应用代码在 `backend/py/src/crystalith/`）
 - `frontend/web/`: Vite + React 前端
 - `config/`: 运行时配置（`app.yaml`）及 schema（`app.schema.gen.json`）
-- `openspec/`: 规范与变更追踪
+- `llmanspec/`: 规范与变更追踪（llman SDD）
 - `sdk/`: 生成的 SDK 及生成器配置
 
 ## 仓库入口

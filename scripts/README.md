@@ -20,7 +20,6 @@
   - `scripts/wait_ready.sh`：等待 TCP/HTTP/SearXNG ready（被 `scripts/orchestrate.sh` 使用）。
   - `scripts/cleanup.sh`：清理旧工作流残留（入口：`justfile:cleanup`）。
   - `scripts/composition_smoke.sh`：compose 冒烟检查（入口：`justfile:composition-smoke`）。
-  - `scripts/openspec/*.py`：openspec 维护脚本（会重命名/重写文件；见 `scripts/openspec/renumber_changes.py` 等）。
 
 ### 不做什么
 - 不包含业务逻辑实现（业务逻辑在 `backend/` / `frontend/`）。
