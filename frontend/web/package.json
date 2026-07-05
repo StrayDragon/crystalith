@@ -33,6 +33,9 @@
   },
   "dependencies": {
     "@material-tailwind/react": "^2.1.10",
+    "rivu-kernel": "workspace:*",
+    "rivu-react": "workspace:*",
+    "rivu-ui-spec": "workspace:*",
     "@mui/icons-material": "^7.3.7",
     "@tambo-ai/react": "^1.1.0",
     "@testing-library/dom": "^10.4.1",
@@ -54,9 +57,6 @@
     "zustand": "^5.0.10"
   },
   "devDependencies": {
-    "@types/d3-array": "^3.2.2",
-    "@types/d3-scale": "^4.0.9",
-    "@types/d3-shape": "^3.1.8",
     "@hey-api/openapi-ts": "^0.90.8",
 
     "@types/node": "^22.18.6",
