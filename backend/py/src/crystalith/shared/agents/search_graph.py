@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TypedDict, cast
 
-from cl_logs.logging import get_logger
+from lush_logx.logging import get_logger
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent
 from pydantic_graph import BaseNode, End, Graph, GraphRunContext

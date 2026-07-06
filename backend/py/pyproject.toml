@@ -10,16 +10,13 @@ requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.13.0",
     "aiosqlite>=0.20.0",
-
-    "cl-fastapix",
-    "cl-logs",
-    "cl-pydanticx",
-    "cl-sqlalchemyx",
-    "cl-stdx",
+    "lush-fastapix>=0.1.1",
+    "lush-logx>=0.1.1",
+    "lush-pydanticx>=0.1.2",
+    "lush-stdx>=0.1.2",
     "fastapi>=0.117.1",
     "httpx>=0.27.0",
     "jinja2>=3.1.4",
-
     "pydantic-graph>=0.1.0",
     "openai>=1.40.0",
     "pydantic-ai>=0.0.49",
@@ -33,6 +30,7 @@ dependencies = [
     "jsonschema>=4.26.0",
     "chromadb>=0.5.15",
     "rivu-server-sdk",
+    "lush-sqlalchemyx>=0.6.0",
 ]
 
 [project.optional-dependencies]
@@ -100,11 +98,6 @@ members = ["packages/*", "plugins/*"]
 
 [tool.uv.sources]
 crystalith = { workspace = true }
-cl-fastapix = { workspace = true }
-cl-logs = { workspace = true }
-cl-pydanticx = { workspace = true }
-cl-sqlalchemyx = { workspace = true }
-cl-stdx = { workspace = true }
 crystalith-connector-obsidian = { workspace = true }
 crystalith-connector-local-directory = { workspace = true }
 crystalith-output-faq = { workspace = true }

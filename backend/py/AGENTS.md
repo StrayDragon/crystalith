@@ -3,7 +3,7 @@
 ## Project Structure & Module Organization
 - `src/crystalith/` contains the FastAPI service code and core modules.
 - `tests/` holds service-level tests; keep additions close to the code they cover.
-- `packages/` stores workspace libraries (e.g., `cl-logs`, `cl-fastapix`), each with its own `pyproject.toml` and `tests/`.
+- `packages/` stores workspace libraries (e.g., `cl-sqlalchemyx` — others migrated to PyPI as `lush-*`), each with its own `pyproject.toml` and `tests/`.
 - `scripts/` includes maintenance helpers; `data/` is for local dev artifacts.
 
 ## Build, Test, and Development Commands

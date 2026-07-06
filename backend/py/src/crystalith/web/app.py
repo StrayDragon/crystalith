@@ -13,12 +13,12 @@ from typing import Protocol
 from urllib.parse import urlparse
 
 import httpx
-from cl_fastapix import FastAPIX
-from cl_sqlalchemyx.mgrs import AsyncDBManager
 from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response
+from lush_fastapix import FastAPIX
+from lush_sqlalchemyx.mgrs import AsyncMySQLManager
 from scalar_fastapi import get_scalar_api_reference
 from sqlalchemy import delete, select, text
 
@@ -566,7 +566,7 @@ async def _run_optional_services_monitor(
 def create_app(
     settings: Settings | None = None,
     *,
-    db_manager: AsyncDBManager | None = None,
+    db_manager: AsyncMySQLManager | None = None,
     vector_store: VectorStore | None = None,
     task_queue: TaskQueue | None = None,
     cache_provider: CacheProvider | None = None,

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from time import perf_counter
 from typing import cast
 
-from cl_logs.logging import get_logger
+from lush_logx.logging import get_logger
 from pydantic_ai import Agent
 from pydantic_graph import BaseNode, End, Graph, GraphRunContext
 from sqlalchemy import select

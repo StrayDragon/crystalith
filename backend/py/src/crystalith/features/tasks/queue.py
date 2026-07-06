@@ -6,8 +6,8 @@ import itertools
 from collections.abc import Awaitable, Callable
 from typing import TypeVar, cast
 
-from cl_logs.logging import get_logger
-from cl_sqlalchemyx.mgrs import AsyncDBManager
+from lush_logx.logging import get_logger
+from lush_sqlalchemyx.mgrs import AsyncMySQLManager
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.factory import create_chat_provider, create_embedding_provider
@@ -42,7 +42,7 @@ class TaskQueue:
     def __init__(
         self,
         *,
-        db_manager: AsyncDBManager,
+        db_manager: AsyncMySQLManager,
         settings: Settings,
         vector_store: VectorStore,
         plugins: PluginRegistry | None = None,

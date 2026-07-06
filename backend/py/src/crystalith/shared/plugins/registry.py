@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from importlib import metadata
 from typing import Protocol, cast
 
-from cl_logs.logging import get_logger
+from lush_logx.logging import get_logger
 
 from crystalith.shared.config import Settings
 from crystalith.shared.json_types import JsonValue

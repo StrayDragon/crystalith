@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import datetime
 
-from cl_logs import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from lush_logx import get_logger
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

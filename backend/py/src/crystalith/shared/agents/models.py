@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from cl_logs.logging import get_logger
+from lush_logx.logging import get_logger
 from pydantic import BaseModel
 from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIChatModel

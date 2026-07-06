@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass
 from time import perf_counter
 
-from cl_logs.logging import get_logger
+from lush_logx.logging import get_logger
 from pydantic_ai import Agent
 
 from crystalith.shared.agents.deps import StudioDeps
