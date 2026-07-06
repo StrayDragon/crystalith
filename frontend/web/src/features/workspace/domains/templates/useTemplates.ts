@@ -1,115 +1,57 @@
-import { useCallback, useMemo } from "react";
-import useSWR from "swr";
+import { useMemo } from "react";
 
-import {
-  createTemplateV1TemplatesPost as createTemplate,
-  deleteTemplateV1TemplatesTemplateIdDelete as deleteTemplate,
-  listTemplatesV1TemplatesGet as listTemplates,
-  saveNotebookAsTemplateV1NotebooksNotebookIdTemplatesPost as saveNotebookAsTemplate,
-  updateTemplateV1TemplatesTemplateIdPatch as updateTemplate,
-} from "../../../../api/generated";
-import { unwrapData } from "../../../../api/unwrap";
 import type { OutputTypeId } from "../../shared/types";
 import { normalizeTemplate } from "./types";
 
+/**
+ * NOTE: Templates CRUD API was intentionally removed from the backend.
+ *
+ * Commit `7a935ff7` deleted `features/templates/api.py` and unregistered
+ * the router from `web/routers.py`. The service/repo layer was kept.
+ *
+ * This hook now returns safe defaults (empty list, no-op functions) so
+ * the frontend builds. The templates feature is effectively disabled.
+ *
+ * To restore:
+ *   1. Re-implement `api.py` (see git show 7a935ff7:features/templates/api.py)
+ *   2. Register router in `web/routers.py`
+ *   3. Regenerate OpenAPI (`just api-export`) and TS SDK (`pnpm run api:sync`)
+ *   4. Restore this hook's real implementation
+ */
 export function useTemplates() {
-  const { data, error, isLoading, mutate } = useSWR(
-    "workspace/templates",
-    () => unwrapData(listTemplates<true>()),
-    {
-      revalidateOnFocus: false,
-    },
-  );
+  const templates = useMemo<ReturnType<typeof normalizeTemplate>[]>(() => [], []);
 
-  const templates = useMemo(() => (data ? data.map(normalizeTemplate) : []), [data]);
+  const createCustomTemplate = async (_payload: {
+    name: string;
+    description?: string;
+    sessionTitles?: string[];
+    outputType?: OutputTypeId | null;
+    sourceTags?: string[];
+  }) => {
+    throw new Error("Templates API is not available");
+  };
 
-  const createCustomTemplate = useCallback(
-    async (payload: {
-      name: string;
-      description?: string;
-      sessionTitles?: string[];
-      outputType?: OutputTypeId | null;
-      sourceTags?: string[];
-    }) => {
-      const created = await unwrapData(
-        createTemplate<true>({
-          body: {
-            name: payload.name,
-            description: payload.description ?? null,
-            config_json: {
-              session_titles: payload.sessionTitles ?? [],
-              output_type: payload.outputType ?? null,
-              source_tags: payload.sourceTags ?? [],
-            },
-          },
-        }),
-      );
+  const updateTemplateDescription = async (_templateId: number, _description: string) => {
+    throw new Error("Templates API is not available");
+  };
 
-      await mutate(async (current) => (current ? [...current, created] : [created]), {
-        revalidate: false,
-      });
-      return normalizeTemplate(created);
-    },
-    [mutate],
-  );
+  const removeTemplate = async (_templateId: number) => {
+    throw new Error("Templates API is not available");
+  };
 
-  const updateTemplateDescription = useCallback(
-    async (templateId: number, description: string) => {
-      const updated = await unwrapData(
-        updateTemplate<true>({
-          path: { template_id: templateId },
-          body: { description },
-        }),
-      );
-      await mutate(
-        async (current) =>
-          current?.map((item) => (item.id === templateId ? updated : item)) ?? [updated],
-        { revalidate: false },
-      );
-      return normalizeTemplate(updated);
-    },
-    [mutate],
-  );
-
-  const removeTemplate = useCallback(
-    async (templateId: number) => {
-      await unwrapData(deleteTemplate<true>({ path: { template_id: templateId } }));
-      await mutate(async (current) => current?.filter((item) => item.id !== templateId) ?? [], {
-        revalidate: false,
-      });
-    },
-    [mutate],
-  );
-
-  const saveCurrentNotebookAsTemplate = useCallback(
-    async (payload: {
-      notebookId: number;
-      name: string;
-      description?: string;
-      outputType?: OutputTypeId | null;
-    }) => {
-      const created = await unwrapData(
-        saveNotebookAsTemplate<true>({
-          path: { notebook_id: payload.notebookId },
-          body: {
-            name: payload.name,
-            description: payload.description ?? null,
-            output_type: payload.outputType ?? null,
-          },
-        }),
-      );
-      await mutate(async (current) => (current ? [...current, created] : [created]), {
-        revalidate: false,
-      });
-      return normalizeTemplate(created);
-    },
-    [mutate],
-  );
+  const saveCurrentNotebookAsTemplate = async (_payload: {
+    notebookId: number;
+    name: string;
+    description?: string;
+    outputType?: OutputTypeId | null;
+  }) => {
+    throw new Error("Templates API is not available");
+  };
 
   return {
     templates,
-    isLoading,
-    error: error ? String(error) : "",
+    isLoading: false,
+    error: "",
     createCustomTemplate,
     updateTemplateDescription,
     removeTemplate,
