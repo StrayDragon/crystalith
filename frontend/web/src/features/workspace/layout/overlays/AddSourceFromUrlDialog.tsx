@@ -167,6 +167,12 @@ export default function AddSourceFromUrlDialog({
             </div>
           ) : null}
 
+          {mode === "fetch" ? (
+            <div className="mt-2 text-[11px] text-gray-500 dark:text-slate-400">
+              获取内容会拉取并解析网页，通常需要数秒至约 2 分钟；网络不稳定时会自动超时并提示重试。
+            </div>
+          ) : null}
+
           {error ? (
             <div className="mt-2 text-[11px] text-red-700 dark:text-red-300">{error}</div>
           ) : null}

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { createPortal } from "react-dom";
 import { IconButton, Typography } from "@material-tailwind/react";
 import { Close as CloseIcon } from "@mui/icons-material";
 
@@ -46,7 +47,7 @@ export default function ShortcutHelpPanel({ open, shortcuts, onClose }: Shortcut
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -126,6 +127,7 @@ export default function ShortcutHelpPanel({ open, shortcuts, onClose }: Shortcut
           </div>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }
