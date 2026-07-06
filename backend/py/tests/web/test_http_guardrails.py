@@ -9,7 +9,7 @@ from httpx import ASGITransport, AsyncClient
 from crystalith.shared.config import Settings
 from crystalith.shared.db import create_db_manager
 from crystalith.shared.db.migrations import upgrade_head
-from crystalith.shared.vector_storage import InMemoryVectorStore
+from tests.helpers.vector_store import InMemoryVectorStore
 from crystalith.web.app import create_app
 
 

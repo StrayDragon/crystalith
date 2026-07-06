@@ -8,7 +8,7 @@ from crystalith.shared.cache import InMemoryCache
 from crystalith.shared.db import Chunk, Notebook, Source
 from crystalith.shared.retrieval import retrieve_context
 from crystalith.shared.types import OutputType, SourceStatus
-from crystalith.shared.vector_storage import InMemoryVectorStore
+from tests.helpers.vector_store import InMemoryVectorStore
 
 
 class _SeedAwareEmbedder(TestEmbeddingProvider):
