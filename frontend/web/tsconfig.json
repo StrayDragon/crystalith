@@ -26,6 +26,5 @@
       "rivu-react/tokens.css": ["vendor/rivu/packages/rivu-react/src/tokens.css"]
     }
   },
-  "exclude": ["vendor", "node_modules", "dist"],
   "include": ["src", "../packages/crystalith-slidev/src"]
 }
