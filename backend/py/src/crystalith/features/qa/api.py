@@ -26,19 +26,12 @@ from crystalith.shared.deps import (
     get_stage_limiters,
     get_vector_store,
 )
-from crystalith.shared.json_types import JsonDict
 from crystalith.shared.schemas.citations import Citation
-from crystalith.shared.ui_state import (
-    apply_state_delta,
-    build_default_shared_state,
-    ensure_session_shared_state,
-    remove_message_components,
-)
 from crystalith.shared.vector_storage import VectorStore
 
 from ..prompt_presets.service import list_all_presets as list_all_prompt_presets
 from ..prompt_presets.service import resolve_preset as resolve_prompt_preset
-from .presets import parse_prompt_directive, parse_stats_preset_output, stats_output_to_ui_delta
+from .presets import parse_prompt_directive, parse_stats_preset_output
 from .service import (
     QAPipelineResult,
     create_provisional_assistant_message,
@@ -82,20 +75,6 @@ class QAResponse(BaseModel):
     created_at: datetime.datetime
     context: ContextStatsResponse
     message_id: int | None
-    shared_state: JsonDict
-    shared_state_revision: int
-
-
-class QAStateSnapshotData(BaseModel):
-    message_id: int | None
-    shared_state: JsonDict
-    shared_state_revision: int
-
-
-class QAStateDeltaData(BaseModel):
-    message_id: int | None
-    delta: list[JsonDict]
-    shared_state_revision: int
 
 
 class QAStreamDoneData(BaseModel):
@@ -105,7 +84,6 @@ class QAStreamDoneData(BaseModel):
     created_at: datetime.datetime
     context: ContextStatsResponse
     message_id: int | None
-    shared_state_revision: int
 
 
 class QAExportSource(BaseModel):
@@ -158,13 +136,6 @@ def _context_stats_from_result(result: QAPipelineResult) -> ContextStatsResponse
     return ContextStatsResponse.model_validate(result.context_stats)
 
 
-def _resolve_shared_state(db_session: Session | None) -> tuple[JsonDict, int]:
-    if db_session is None:
-        return build_default_shared_state(), 0
-    shared_state = ensure_session_shared_state(db_session)
-    return shared_state, int(db_session.shared_state_revision)
-
-
 async def _build_qa_response(
     *,
     session: AsyncSession,
@@ -185,7 +156,6 @@ async def _build_qa_response(
         citations=citations,
         created_at=created_at,
     )
-    shared_state, shared_state_revision = _resolve_shared_state(result.db_session)
     return QAResponse(
         answer=answer,
         citations=citations,
@@ -194,39 +164,11 @@ async def _build_qa_response(
         created_at=created_at,
         context=_context_stats_from_result(result),
         message_id=assistant_message.id if assistant_message is not None else None,
-        shared_state=shared_state,
-        shared_state_revision=shared_state_revision,
     )
 
 
 def _sse_event(event: str, data: dict[str, object]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
-
-
-def _build_snapshot_data(
-    *,
-    db_session: Session | None,
-    message_id: int | None,
-) -> QAStateSnapshotData:
-    shared_state, shared_state_revision = _resolve_shared_state(db_session)
-    return QAStateSnapshotData(
-        message_id=message_id,
-        shared_state=shared_state,
-        shared_state_revision=shared_state_revision,
-    )
-
-
-def _build_delta_data(
-    *,
-    message_id: int | None,
-    delta: list[JsonDict],
-    shared_state_revision: int,
-) -> QAStateDeltaData:
-    return QAStateDeltaData(
-        message_id=message_id,
-        delta=delta,
-        shared_state_revision=shared_state_revision,
-    )
 
 
 def _build_done_data(
@@ -237,7 +179,6 @@ def _build_done_data(
     confidence: float,
     created_at: datetime.datetime,
     message_id: int | None,
-    shared_state_revision: int,
 ) -> QAStreamDoneData:
     return QAStreamDoneData(
         citations=citations,
@@ -246,7 +187,6 @@ def _build_done_data(
         created_at=created_at,
         context=_context_stats_from_result(result),
         message_id=message_id,
-        shared_state_revision=shared_state_revision,
     )
 
 
@@ -352,7 +292,7 @@ async def ask_question(
         parsed = parse_stats_preset_output(raw)
         if parsed is not None:
             answer = _ensure_inline_citations(parsed.fallback_markdown, result.citations)
-            response = await _build_qa_response(
+            return await _build_qa_response(
                 session=session,
                 result=result,
                 question=payload.question,
@@ -361,13 +301,6 @@ async def ask_question(
                 evidence=True,
                 confidence=result.confidence,
             )
-            if response.message_id is not None and result.db_session is not None:
-                ui_delta = stats_output_to_ui_delta(parsed, message_id=response.message_id)
-                _shared_state, shared_state_revision = apply_state_delta(result.db_session, delta=ui_delta)
-                await session.commit()
-                response.shared_state, _ = _resolve_shared_state(result.db_session)
-                response.shared_state_revision = shared_state_revision
-            return response
         messages_for_llm = result.messages
 
     async with limiters.llm_generate.acquire():
@@ -479,11 +412,9 @@ async def ask_question_stream(
                     question=payload.question,
                     created_at=datetime.datetime.now(datetime.UTC),
                 )
-            snapshot_data = _build_snapshot_data(
-                db_session=result.db_session,
-                message_id=assistant_message.id if assistant_message is not None else None,
-            )
-            yield _sse_event("state_snapshot", cast(dict[str, object], snapshot_data.model_dump(mode="json")))
+            yield _sse_event("state_snapshot", {
+                "message_id": assistant_message.id if assistant_message is not None else None,
+            })
 
             if not result.evidence:
                 if await request.is_disconnected():
@@ -500,7 +431,6 @@ async def ask_question_stream(
                         citations=[],
                         created_at=created_at,
                     )
-                _shared_state, shared_state_revision = _resolve_shared_state(result.db_session)
                 yield _sse_event(
                     "done",
                     cast(
@@ -512,7 +442,6 @@ async def ask_question_stream(
                             confidence=0.0,
                             created_at=created_at,
                             message_id=assistant_message.id if assistant_message is not None else None,
-                            shared_state_revision=shared_state_revision,
                         ).model_dump(mode="json"),
                     ),
                 )
@@ -547,7 +476,6 @@ async def ask_question_stream(
                         yield _sse_event("chunk", {"text": answer[idx : idx + chunk_size]})
 
                     created_at = datetime.datetime.now(datetime.UTC)
-                    shared_state_revision = 0
                     if result.db_session is not None and assistant_message is not None:
                         await finalize_provisional_assistant_message(
                             session,
@@ -557,22 +485,6 @@ async def ask_question_stream(
                             citations=result.citations,
                             created_at=created_at,
                         )
-                        ui_delta = stats_output_to_ui_delta(parsed, message_id=assistant_message.id)
-                        _shared_state, shared_state_revision = apply_state_delta(result.db_session, delta=ui_delta)
-                        await session.commit()
-                        yield _sse_event(
-                            "state_delta",
-                            cast(
-                                dict[str, object],
-                                _build_delta_data(
-                                    message_id=assistant_message.id,
-                                    delta=ui_delta,
-                                    shared_state_revision=shared_state_revision,
-                                ).model_dump(mode="json"),
-                            ),
-                        )
-                    else:
-                        _shared_state, shared_state_revision = _resolve_shared_state(result.db_session)
 
                     yield _sse_event(
                         "done",
@@ -585,7 +497,6 @@ async def ask_question_stream(
                                 confidence=result.confidence,
                                 created_at=created_at,
                                 message_id=assistant_message.id if assistant_message is not None else None,
-                                shared_state_revision=shared_state_revision,
                             ).model_dump(mode="json"),
                         ),
                     )
@@ -621,7 +532,6 @@ async def ask_question_stream(
                     citations=result.citations,
                     created_at=created_at,
                 )
-            _shared_state, shared_state_revision = _resolve_shared_state(result.db_session)
             yield _sse_event(
                 "done",
                 cast(
@@ -633,17 +543,12 @@ async def ask_question_stream(
                         confidence=result.confidence,
                         created_at=created_at,
                         message_id=assistant_message.id if assistant_message is not None else None,
-                        shared_state_revision=shared_state_revision,
                     ).model_dump(mode="json"),
                 ),
             )
             completed = True
         finally:
             if not completed and result is not None and result.db_session is not None and assistant_message is not None:
-                _shared_state, _revision, _delta = remove_message_components(
-                    result.db_session,
-                    message_id=assistant_message.id,
-                )
                 await delete_provisional_assistant_message(
                     session,
                     db_session=result.db_session,

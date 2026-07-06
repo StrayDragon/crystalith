@@ -129,22 +129,6 @@ async def test_stats_preset_returns_shared_state_ui_when_session_persisted(db_se
     assert '[[crystalith-ui:v1]]' not in payload['answer']
     assert payload['citations']
     assert payload['message_id'] > 0
-    assert payload['shared_state_revision'] == 1
-
-    components = payload['shared_state']['ui']['components']
-    assert set(components.keys()) == {
-        f"qa:{payload['message_id']}:summary",
-        f"qa:{payload['message_id']}:chart",
-        f"qa:{payload['message_id']}:table",
-    }
-    summary_mounts = components[f"qa:{payload['message_id']}:summary"]['mounts']
-    chart_mounts = components[f"qa:{payload['message_id']}:chart"]['mounts']
-    table_mounts = components[f"qa:{payload['message_id']}:table"]['mounts']
-    assert len(summary_mounts) == 1
-    assert len(chart_mounts) == 1
-    assert len(table_mounts) == 1
-    assert summary_mounts[0]['messageId'] == str(payload['message_id'])
-    assert summary_mounts[0]['slot'] == 'inline'
 
 
 @pytest.mark.asyncio
@@ -171,7 +155,6 @@ async def test_stats_preset_invalid_output_falls_back_to_text_qa(db_session, cli
     payload = qa_resp.json()
     assert payload['answer'] == 'Test answer [1]'
     assert '[[crystalith-ui:v1]]' not in payload['answer']
-    assert payload['shared_state']['ui']['components'] == {}
 
 
 @pytest.mark.asyncio
@@ -230,24 +213,14 @@ async def test_stats_preset_stream_persists_plain_answer_and_emits_state_events(
 
     event_names = [event for event, _data in events]
     assert 'state_snapshot' in event_names
-    assert 'state_delta' in event_names
     assert 'chunk' in event_names
     assert 'done' in event_names
 
     snapshot_payload = next(data for event, data in events if event == 'state_snapshot')
-    assert snapshot_payload['shared_state']['ui']['components'] == {}
     assert snapshot_payload['message_id'] > 0
-
-    state_delta_payload = next(data for event, data in events if event == 'state_delta')
-    summary_add_op = next(
-        op for op in state_delta_payload['delta']
-        if op['path'] == f"/ui/components/qa:{snapshot_payload['message_id']}:summary"
-    )
-    assert summary_add_op['value']['mounts'] == []
 
     done_payload = next(data for event, data in events if event == 'done')
     assert done_payload['message_id'] == snapshot_payload['message_id']
-    assert done_payload['shared_state_revision'] == 1
 
     messages_resp = await client.get(f'/v1/notebooks/{notebook_id}/sessions/{session_id}/messages')
     assert messages_resp.status_code == 200
@@ -262,16 +235,9 @@ async def test_stats_preset_stream_persists_plain_answer_and_emits_state_events(
 async def test_custom_prompt_preset_overrides_system_prompt(db_session, client, app):
     app.state.settings.app.features.chat_prompt_presets_enabled = True
 
-    preset_resp = await client.post(
-        '/v1/prompt-presets',
-        json={
-            'trigger': 'demo',
-            'description': 'Demo preset',
-            'system_prompt': 'Answer using bullet points.',
-            'enabled': True,
-        },
-    )
-    assert preset_resp.status_code == 201
+    from crystalith.shared.db import PromptPreset
+    db_session.add(PromptPreset(trigger='demo', description='Demo preset', system_prompt='Answer using bullet points.', enabled=True))
+    await db_session.commit()
 
     create_resp = await client.post('/v1/notebooks', json={'name': 'Custom Preset QA'})
     assert create_resp.status_code == 201
@@ -295,19 +261,12 @@ async def test_custom_prompt_preset_overrides_system_prompt(db_session, client, 
 
 
 @pytest.mark.asyncio
-async def test_custom_prompt_preset_disabled_returns_400(client, app):
+async def test_custom_prompt_preset_disabled_returns_400(db_session, client, app):
     app.state.settings.app.features.chat_prompt_presets_enabled = True
 
-    preset_resp = await client.post(
-        '/v1/prompt-presets',
-        json={
-            'trigger': 'demo',
-            'description': 'Disabled demo',
-            'system_prompt': 'Answer using bullet points.',
-            'enabled': False,
-        },
-    )
-    assert preset_resp.status_code == 201
+    from crystalith.shared.db import PromptPreset
+    db_session.add(PromptPreset(trigger='demo', description='Disabled demo', system_prompt='Answer using bullet points.', enabled=False))
+    await db_session.commit()
 
     create_resp = await client.post('/v1/notebooks', json={'name': 'Custom Preset Disabled'})
     assert create_resp.status_code == 201
@@ -322,19 +281,12 @@ async def test_custom_prompt_preset_disabled_returns_400(client, app):
 
 
 @pytest.mark.asyncio
-async def test_prompt_usage_includes_custom_presets(client, app):
+async def test_prompt_usage_includes_custom_presets(db_session, client, app):
     app.state.settings.app.features.chat_prompt_presets_enabled = True
 
-    preset_resp = await client.post(
-        '/v1/prompt-presets',
-        json={
-            'trigger': 'demo',
-            'description': 'Demo preset',
-            'system_prompt': 'Answer using bullet points.',
-            'enabled': True,
-        },
-    )
-    assert preset_resp.status_code == 201
+    from crystalith.shared.db import PromptPreset
+    db_session.add(PromptPreset(trigger='demo', description='Demo preset', system_prompt='Answer using bullet points.', enabled=True))
+    await db_session.commit()
 
     create_resp = await client.post('/v1/notebooks', json={'name': 'Custom Preset Usage'})
     assert create_resp.status_code == 201

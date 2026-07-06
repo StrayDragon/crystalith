@@ -2,16 +2,9 @@ from __future__ import annotations
 
 import json
 import re
-from copy import deepcopy
 from dataclasses import dataclass
-from typing import cast
 
 from pydantic import BaseModel, Field, ValidationError
-from rivu_server_sdk import mount_component_v1, set_component_v1
-from rivu_server_sdk.json_patch import apply_json_patch
-
-from crystalith.shared.json_types import JsonDict, JsonValue
-from crystalith.shared.ui_state import build_default_shared_state
 
 _PROMPT_DIRECTIVE_RE = re.compile(
     r"^/prompt:(?P<preset>[a-z0-9_-]{1,32})(?P<rest>.*)$",
@@ -112,104 +105,3 @@ def list_preset_ids() -> list[str]:
 
 def get_preset(preset_id: str) -> QAPreset | None:
     return _PRESETS.get(preset_id)
-
-
-def _build_data_table_rows(table: StatsTable) -> list[JsonDict]:
-    rows: list[JsonDict] = []
-    for raw_row in table.rows:
-        row: JsonDict = {}
-        for index, column in enumerate(table.columns):
-            value = raw_row[index] if index < len(raw_row) else None
-            row[column] = cast(JsonValue, value)
-        rows.append(row)
-    return rows
-
-
-def stats_output_to_ui_delta(
-    output: StatsPresetOutput,
-    *,
-    message_id: int,
-) -> list[JsonDict]:
-    target_message_id = str(message_id)
-    state = build_default_shared_state()
-    delta: list[JsonDict] = []
-
-    def apply(ops: list[JsonDict]) -> None:
-        nonlocal state, delta
-        state = cast(
-            JsonDict,
-            apply_json_patch(state, cast(list[dict[str, object]], deepcopy(ops))),
-        )
-        delta.extend(cast(list[JsonDict], deepcopy(ops)))
-
-    summary_component_id = f"qa:{message_id}:summary"
-    summary_component: JsonDict = {
-        "type": "ReportSection",
-        "schemaVersion": 1,
-        "props": {
-            "title": "统计摘要",
-            "description": output.fallback_markdown,
-        },
-        "revision": 0,
-        "mounts": [],
-        "status": "ready",
-    }
-    apply(cast(list[JsonDict], set_component_v1(component_id=summary_component_id, component=summary_component)))
-    apply(cast(list[JsonDict], mount_component_v1(component_id=summary_component_id, message_id=target_message_id, slot="inline", order=0)))
-
-    chart_component_id = f"qa:{message_id}:chart"
-    chart_component: JsonDict = {
-        "type": "BarChart",
-        "schemaVersion": 1,
-        "props": {
-            "title": output.chart.title,
-            "unit": output.chart.unit,
-            "items": [item.model_dump(mode="json") for item in output.chart.items],
-        },
-        "revision": 0,
-        "mounts": [],
-        "status": "ready",
-    }
-    apply(cast(list[JsonDict], set_component_v1(component_id=chart_component_id, component=chart_component)))
-    apply(cast(list[JsonDict], mount_component_v1(component_id=chart_component_id, message_id=target_message_id, slot="inline", order=1)))
-
-    if output.table is not None:
-        table_component_id = f"qa:{message_id}:table"
-        table_columns: list[JsonDict] = [
-            {"key": column, "label": column}
-            for column in output.table.columns
-        ]
-        table_component: JsonDict = {
-            "type": "DataTable",
-            "schemaVersion": 1,
-            "props": {
-                "caption": output.chart.title,
-                "columns": cast(JsonValue, table_columns),
-                "rows": cast(JsonValue, _build_data_table_rows(output.table)),
-            },
-            "revision": 0,
-            "mounts": [],
-            "status": "ready",
-        }
-        apply(
-            cast(
-                list[JsonDict],
-                set_component_v1(
-                    component_id=table_component_id,
-                    component=table_component,
-                ),
-            )
-        )
-        apply(
-            cast(
-                list[JsonDict],
-                mount_component_v1(
-                    component_id=table_component_id,
-                    message_id=target_message_id,
-                    slot="inline",
-                    order=2,
-                ),
-            )
-        )
-
-    return delta
