@@ -188,6 +188,7 @@ export interface Notebook {
   id: number;
   title: string;
   updatedAt: string;
+  updatedAtRaw?: string;
 }
 
 export interface SourceItem {
