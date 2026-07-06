@@ -512,7 +512,10 @@ function ChatPanel({
             data={messages}
             computeItemKey={(index, message) => message?.id ?? `chat-message-${index}`}
             initialItemCount={20}
-            followOutput={(isAtBottom) => (isAtBottom ? "smooth" : false)}
+            initialTopMostItemIndex={Math.max(0, messages.length - 1)}
+            followOutput={(isAtBottom) =>
+              isAtBottom || isSending || isStreaming ? "smooth" : false
+            }
             itemContent={(_index, message) =>
               message ? renderMessage(message) : <div className="pb-4" />
             }

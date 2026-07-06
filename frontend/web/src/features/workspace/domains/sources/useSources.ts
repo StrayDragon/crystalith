@@ -72,6 +72,18 @@ function normalizeUploadInput(input: File | File[] | FileList | null): File[] {
   return [];
 }
 
+/** Align with backend url_fetch + extractor retries (config/app.yaml source_ingestion.*). */
+const SOURCE_FROM_URL_FETCH_TIMEOUT_MS = 120_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
+}
+
 export function useSources() {
   const activeNotebookId = useWorkspaceStore((s) => s.activeNotebookId);
   const sources = useWorkspaceStore((s) => s.sources);
@@ -714,8 +726,8 @@ export function useSources() {
       if (!activeNotebookId) {
         throw new Error("请先创建笔记本");
       }
-      const call = async (dedup_action?: "reuse" | "create_new") =>
-        unwrapData(
+      const call = async (dedup_action?: "reuse" | "create_new") => {
+        const request = unwrapData(
           addSourceFromUrl<true>({
             path: { notebook_id: activeNotebookId },
             query: dedup_action ? { dedup_action } : undefined,
@@ -728,6 +740,15 @@ export function useSources() {
             },
           }),
         );
+        if (mode === "fetch") {
+          return withTimeout(
+            request,
+            SOURCE_FROM_URL_FETCH_TIMEOUT_MS,
+            "获取网页内容超时（约 2 分钟）。请检查网络或稍后重试，也可先使用「保存链接」。",
+          );
+        }
+        return request;
+      };
 
       try {
         const result = await call();

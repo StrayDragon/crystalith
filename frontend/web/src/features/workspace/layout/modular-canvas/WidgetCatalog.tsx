@@ -1,3 +1,5 @@
+import { createPortal } from "react-dom";
+
 import type { WidgetMeta } from "./types";
 
 import { useLayer } from "../../../../shared/layer";
@@ -21,7 +23,7 @@ export default function WidgetCatalog({
 
   const { style: layerStyle } = useLayer("popover");
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0"
       style={layerStyle}
@@ -69,6 +71,7 @@ export default function WidgetCatalog({
           );
         })}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

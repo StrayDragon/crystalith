@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { useLayer } from "../../../../shared/layer";
 
@@ -33,9 +34,9 @@ export default function CommandPalette({ open, onClose, commands }: CommandPalet
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 flex items-start justify-center pt-[18vh] bg-black/10 backdrop-blur-sm relative"
+      className="fixed inset-0 flex items-start justify-center pt-[18vh] bg-black/40 backdrop-blur-sm"
       style={modalStyle}
       role="dialog"
       aria-modal="true"
@@ -91,6 +92,7 @@ export default function CommandPalette({ open, onClose, commands }: CommandPalet
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
