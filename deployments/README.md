@@ -119,7 +119,7 @@ bash scripts/dev_compose.sh deps up
   - 增强 compose 日志/资源限制可配置化（动机：不同机器差异；收益：更稳；风险：参数膨胀；方案：沿用 `deployments/prod/docker-compose.yml` 的 `x-deploy-*` 与 `.env.example` 增加说明与可选覆盖）。
   - 为 `test/` compose 增加更多依赖的可选支持（动机：CI/本地回归更贴近 prod；收益：更稳；风险：维护成本；方案：以 `deployments/test/docker-compose.yml` 为基线增量扩展）。
 - 长期（季度+）
-  - 把 profile 的“能力矩阵/降级模式”纳入 openspec 并形成回归门（动机：一致性；收益：更少行为漂移；风险：需要测试/文档投入；方案：在 `openspec/specs/` 增加 capability matrix，并在 `just check` 中引入对应验证）。
+  - 把 profile 的“能力矩阵/降级模式”纳入 llmanspec 并形成回归门（动机：一致性；收益：更少行为漂移；风险：需要测试/文档投入；方案：在 `llmanspec/specs/` 增加 capability matrix，并在 `just check` 中引入对应验证）。
 
 ## Assumptions / TODO to Verify（已知未知）
 - 是否存在额外的 overlay 名称（除 `.env.example` 列出的）：从 `deployments/prod/docker-compose.*.yml` 与 `deployments/dev/docker-compose.deps.*.yml` 的文件集合核对。

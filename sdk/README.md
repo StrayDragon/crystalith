@@ -89,7 +89,7 @@ just sdk-release X.Y.Z                # 依据：justfile:sdk-release + scripts/
   - 增加 SDK 生成的 drift gate（动机：防止忘记更新生成物；收益：更稳；风险：CI 时间；方案：利用根目录 `justfile:sdk-check` / `justfile:sdk-check-typescript` 的现有检查机制扩展覆盖范围）。
   - 让 SDK 生成对 schema 漂移更敏感（动机：保证契约；收益：更早失败；风险：更严格；方案：强化 `just api-check` + `scripts/sdk_version.py check-schema` 的组合（见 `scripts/sdk_gen.sh` 已调用））。
 - 长期（季度+）
-  - 建立“SDK 行为变更”与“OpenAPI 变更”的追溯链（动机：发布治理；收益：更可审计；风险：流程成本；方案：将 release 流程（`scripts/sdk_release.sh`）与 openspec 变更工作区关联（例如在 change tasks 中记录 SDK 变更验证项）。
+  - 建立“SDK 行为变更”与“OpenAPI 变更”的追溯链（动机：发布治理；收益：更可审计；风险：流程成本；方案：将 release 流程（`scripts/sdk_release.sh`）与 llmanspec 变更工作区关联（例如在 change tasks 中记录 SDK 变更验证项）。
 
 ## Assumptions / TODO to Verify（已知未知）
 - `fern` CLI 的安装/获取方式是否在仓库内有明确约定：目前生成脚本直接调用 `fern generate`（`scripts/sdk_gen.sh`），需在开发文档或环境准备中确认。

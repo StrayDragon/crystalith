@@ -26,7 +26,7 @@ Notes:
 ### `pnpm run test:core`
 
 Runs a minimal UI core regression suite aligned with backend core API smoke paths (notebooks/analysis/sources/chat/outputs/health).
-SSOT manifest: `openspec/specs/quality-and-regression/core_suite.json`.
+SSOT manifest: `llmanspec/specs/quality-and-regression/core_suite.json`.
 
 ### `pnpm run build`
 

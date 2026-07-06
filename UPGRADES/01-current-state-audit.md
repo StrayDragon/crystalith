@@ -6,7 +6,7 @@
 
 | 维度 | 数量 | 备注 |
 |------|------|------|
-| 后端 Python 代码 | ~48k 行（含 6 个 workspace 包 + 17 个插件） | 18 个 feature 模块 |
+| 后端 Python 代码 | ~48k 行（含 1 个 workspace 包 + 17 个插件） | 18 个 feature 模块；共享库已迁至 PyPI `lush-*` |
 | 后端 API 端点 | 94 个 | 分布在 25 个 `api*.py` |
 | 前端 TS/React 代码 | ~39k 行 | React 19 + Vite，已是 app 本体 |
 | 数据模型 | 17 张表 + 11 个 alembic 迁移 | SQLAlchemy 异步，Postgres/SQLite 双支持 |
@@ -14,13 +14,13 @@
 | 缓存 | Redis / 内存两后端 | |
 | 测试 | 后端 151 + 前端 30 个测试文件 | 覆盖率门槛 85% |
 | 插件 | 17 个官方插件（connectors / extractors / parsers / outputs / slides） | Python entry-points 机制 |
-| OpenSpec 变更记录 | 70+ changes | spec-driven 工作流 |
+| llmanspec 规范 | 49 specs | llman SDD 工作流（自 openspec 迁移） |
 
 ## 当前技术栈（后端）
 
 | 类别 | 依赖 | 用途 |
 |------|------|------|
-| Web 框架 | FastAPI + uvicorn + cl-fastapix | 路由、依赖注入、OpenAPI |
+| Web 框架 | FastAPI + uvicorn + lush-fastapix | 路由、依赖注入、OpenAPI |
 | 数据层 | SQLAlchemy[asyncio] + aiosqlite + asyncpg + alembic | ORM + 双数据库后端 + 迁移 |
 | 校验/模型 | Pydantic + Pydantic Settings | schema、配置 |
 | **AI Agent** | **pydantic-ai** | 结构化生成、工具调用、`Agent.run()` |
@@ -33,7 +33,7 @@
 | Web 抓取 | trafilatura / jina / firecrawl / browserless(playwright) | 多 extractor 降级链 |
 | 缓存 | redis / 内存 | 双后端 |
 | 配置 | pyyaml + jinja2 + pydantic-settings | YAML 分层 + 模板渲染 |
-| 日志 | structlog（via cl-logs） | 结构化日志 |
+| 日志 | structlog（via lush-logx） | 结构化日志 |
 | 模板 | jinja2 | output / config 渲染 |
 | 进程管理 | overmind + Procfile | local/hybrid profile |
 | 部署 | docker-compose × 4 profile × 6 overlay | 复杂度重灾区 |
