@@ -40,11 +40,11 @@ from ..prompt_presets.service import list_all_presets as list_all_prompt_presets
 from ..prompt_presets.service import resolve_preset as resolve_prompt_preset
 from .presets import parse_prompt_directive, parse_stats_preset_output, stats_output_to_ui_delta
 from .service import (
-    NO_EVIDENCE_ANSWER,
     QAPipelineResult,
     create_provisional_assistant_message,
     delete_provisional_assistant_message,
     finalize_provisional_assistant_message,
+    no_evidence_answer_for_reason,
     normalize_source_ids,
     persist_qa_messages,
     run_qa_pipeline,
@@ -329,11 +329,12 @@ async def ask_question(
     )
 
     if not result.evidence:
+        no_evidence_answer = no_evidence_answer_for_reason(result.no_evidence_reason)
         return await _build_qa_response(
             session=session,
             result=result,
             question=payload.question,
-            answer=NO_EVIDENCE_ANSWER,
+            answer=no_evidence_answer,
             citations=[],
             evidence=False,
             confidence=0.0,
@@ -487,14 +488,15 @@ async def ask_question_stream(
             if not result.evidence:
                 if await request.is_disconnected():
                     return
-                yield _sse_event("chunk", {"text": NO_EVIDENCE_ANSWER})
+                no_evidence_answer = no_evidence_answer_for_reason(result.no_evidence_reason)
+                yield _sse_event("chunk", {"text": no_evidence_answer})
                 created_at = datetime.datetime.now(datetime.UTC)
                 if result.db_session is not None and assistant_message is not None:
                     await finalize_provisional_assistant_message(
                         session,
                         db_session=result.db_session,
                         assistant_message_id=assistant_message.id,
-                        answer=NO_EVIDENCE_ANSWER,
+                        answer=no_evidence_answer,
                         citations=[],
                         created_at=created_at,
                     )

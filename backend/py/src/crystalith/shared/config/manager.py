@@ -30,6 +30,11 @@ from .models import Settings
 
 logger = logging.getLogger(__name__)
 
+
+def _embedded_chroma_has_data(chroma_path: str) -> bool:
+    sqlite_file = Path(chroma_path) / "chroma.sqlite3"
+    return sqlite_file.is_file() and sqlite_file.stat().st_size > 0
+
 _DOTENV_EXPORT_PREFIX = "export "
 
 
@@ -396,28 +401,36 @@ class ConfigManager:
             if not db_selected:
                 logger.info("  [database] no candidate reachable, keeping default: %s", settings.database.url)
 
-        # Vector store: prefer remote Chroma when reachable; otherwise keep YAML host/port as-is.
+        # Vector store: prefer remote Chroma when reachable unless a local embedded index exists.
         if settings.vector_storage.provider == "chroma":
-            chroma_candidates = _order(settings.vector_storage.chroma.endpoint_candidates)
-            if chroma_candidates:
-                logger.info("Probing chroma candidates: %s", chroma_candidates)
-            chroma_selected = False
-            for candidate in chroma_candidates:
-                ok, err = probe_tcp_endpoint(candidate, timeout_s=0.4)
-                if not ok:
-                    logger.debug("  [chroma] unreachable: %s (%s)", candidate, err)
-                    continue
-                target = tcp_target_from_endpoint(candidate)
-                if target is None:
-                    continue
-                logger.info("  [chroma] selected: %s", candidate)
-                settings.vector_storage.chroma.host = target.host
-                settings.vector_storage.chroma.port = target.port
-                settings.optional_services.chroma.endpoint = candidate
-                chroma_selected = True
-                break
-            if chroma_candidates and not chroma_selected:
-                logger.info("  [chroma] no candidate reachable, using embedded chroma")
+            embedded_path = settings.vector_storage.chroma.path
+            if _embedded_chroma_has_data(embedded_path):
+                settings.vector_storage.chroma.host = ""
+                logger.info(
+                    "  [chroma] keeping embedded store at %s (existing local index detected)",
+                    embedded_path,
+                )
+            else:
+                chroma_candidates = _order(settings.vector_storage.chroma.endpoint_candidates)
+                if chroma_candidates:
+                    logger.info("Probing chroma candidates: %s", chroma_candidates)
+                chroma_selected = False
+                for candidate in chroma_candidates:
+                    ok, err = probe_tcp_endpoint(candidate, timeout_s=0.4)
+                    if not ok:
+                        logger.debug("  [chroma] unreachable: %s (%s)", candidate, err)
+                        continue
+                    target = tcp_target_from_endpoint(candidate)
+                    if target is None:
+                        continue
+                    logger.info("  [chroma] selected: %s", candidate)
+                    settings.vector_storage.chroma.host = target.host
+                    settings.vector_storage.chroma.port = target.port
+                    settings.optional_services.chroma.endpoint = candidate
+                    chroma_selected = True
+                    break
+                if chroma_candidates and not chroma_selected:
+                    logger.info("  [chroma] no candidate reachable, using embedded chroma")
 
     def _apply_model_defaults(self, settings: Settings) -> None:
         """

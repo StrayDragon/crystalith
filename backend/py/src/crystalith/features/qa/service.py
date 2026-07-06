@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 from dataclasses import dataclass
-from typing import cast
+from typing import Literal, cast
 
 import sqlalchemy as sa
 from fastapi import HTTPException
@@ -25,12 +25,26 @@ from crystalith.shared.vector_storage import VectorSearchResult, VectorStore, ca
 
 EVIDENCE_THRESHOLD_DEFAULT = 0.2
 NO_EVIDENCE_ANSWER = "来源中未找到相关证据"
+NO_SOURCES_ANSWER = "请先选择至少一个来源后再提问"
+NO_VECTOR_INDEX_ANSWER = (
+    "未在向量库中检索到相关内容。若刚切换运行环境，请对已导入来源重新索引。"
+)
+SOURCES_NOT_READY_ANSWER = "所选来源尚未完成索引或内容为空，请等待来源状态变为就绪"
 SYSTEM_PROMPT = (
     "You are a research assistant. Answer ONLY using the provided sources. "
     f"If the sources are insufficient, reply with: {NO_EVIDENCE_ANSWER}. "
     "Use inline citations like [1], [2] for every sourced statement. "
     "Do NOT use any external knowledge."
 )
+
+
+NoEvidenceReason = Literal[
+    "no_sources",
+    "embedding_empty",
+    "no_vector_hits",
+    "no_valid_chunks",
+    "low_similarity",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +56,17 @@ class QAPipelineResult:
     evidence: bool
     confidence: float
     context_stats: ContextStats
+    no_evidence_reason: NoEvidenceReason | None = None
+
+
+def no_evidence_answer_for_reason(reason: NoEvidenceReason | None) -> str:
+    if reason == "no_sources":
+        return NO_SOURCES_ANSWER
+    if reason == "no_vector_hits":
+        return NO_VECTOR_INDEX_ANSWER
+    if reason == "no_valid_chunks":
+        return SOURCES_NOT_READY_ANSWER
+    return NO_EVIDENCE_ANSWER
 
 
 def generate_session_title(question: str) -> str:
@@ -287,6 +312,7 @@ async def run_qa_pipeline(
             evidence=False,
             confidence=0.0,
             context_stats=stats,
+            no_evidence_reason="no_sources",
         )
 
     if session_id is None:
@@ -321,6 +347,7 @@ async def run_qa_pipeline(
             evidence=False,
             confidence=0.0,
             context_stats=stats,
+            no_evidence_reason="embedding_empty",
         )
 
     query_vector = embeddings[0]
@@ -350,6 +377,7 @@ async def run_qa_pipeline(
             evidence=False,
             confidence=0.0,
             context_stats=stats,
+            no_evidence_reason="no_vector_hits",
         )
 
     chunk_ids = [result.entry.chunk_id for result in results]
@@ -393,6 +421,7 @@ async def run_qa_pipeline(
             evidence=False,
             confidence=0.0,
             context_stats=stats,
+            no_evidence_reason="no_valid_chunks",
         )
 
     citations: list[Citation] = []
@@ -431,6 +460,7 @@ async def run_qa_pipeline(
             evidence=False,
             confidence=0.0,
             context_stats=stats,
+            no_evidence_reason="low_similarity",
         )
 
     total_sources = await session.scalar(

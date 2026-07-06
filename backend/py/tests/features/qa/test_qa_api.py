@@ -5,6 +5,12 @@ import json
 import pytest
 from starlette.requests import Request
 
+from crystalith.features.qa.service import (
+    NO_EVIDENCE_ANSWER,
+    NO_SOURCES_ANSWER,
+    NO_VECTOR_INDEX_ANSWER,
+    SOURCES_NOT_READY_ANSWER,
+)
 from crystalith.shared.db import Chunk, Source
 from crystalith.shared.types import SourceStatus
 
@@ -39,7 +45,7 @@ async def test_qa_no_sources(client):
     )
     assert resp.status_code == 200
     payload = resp.json()
-    assert payload["answer"] == "来源中未找到相关证据"
+    assert payload["answer"] == NO_SOURCES_ANSWER
     assert payload["evidence"] is False
 
 
@@ -145,7 +151,7 @@ async def test_qa_with_sources_but_no_vectors_returns_no_evidence(client, db_ses
     )
     assert resp.status_code == 200
     payload = resp.json()
-    assert payload["answer"] == "来源中未找到相关证据"
+    assert payload["answer"] == NO_VECTOR_INDEX_ANSWER
     assert payload["evidence"] is False
 
 
@@ -179,7 +185,7 @@ async def test_qa_filters_out_blank_chunks_returns_no_evidence(client, db_sessio
     )
     assert resp.status_code == 200
     payload = resp.json()
-    assert payload["answer"] == "来源中未找到相关证据"
+    assert payload["answer"] == SOURCES_NOT_READY_ANSWER
     assert payload["evidence"] is False
 
 
@@ -266,7 +272,7 @@ async def test_qa_similarity_below_threshold_returns_no_evidence(client, db_sess
     )
     assert resp.status_code == 200
     payload = resp.json()
-    assert payload["answer"] == "来源中未找到相关证据"
+    assert payload["answer"] == NO_EVIDENCE_ANSWER
     assert payload["evidence"] is False
     assert payload["citations"] == []
 

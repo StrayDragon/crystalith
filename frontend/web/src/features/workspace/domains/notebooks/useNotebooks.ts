@@ -10,7 +10,7 @@ import {
 import { unwrapData } from "../../../../api/unwrap";
 import { useWorkspaceStore } from "../../shared/state/workspaceStore";
 import type { StatusLabel } from "../../shared/types";
-import { normalizeNotebook } from "../../shared/utils";
+import { normalizeNotebook, pickDefaultNotebookId } from "../../shared/utils";
 
 const DEFAULT_NOTEBOOK_NAME = "未命名笔记本";
 
@@ -56,8 +56,7 @@ export function useNotebooks() {
     if (!notebookData) return;
     const normalized = notebookData.map(normalizeNotebook);
     const currentActive = activeNotebookId;
-    const nextActive =
-      normalized.find((item) => item.id === currentActive)?.id ?? normalized[0]?.id ?? null;
+    const nextActive = pickDefaultNotebookId(normalized, currentActive);
     const s = store.getState();
     s.setNotebooks(normalized);
     s.setConnectionState("live");
@@ -268,7 +267,7 @@ export function useNotebooks() {
         const remaining = s.notebooks.filter((item) => item.id !== notebookId);
         s.setNotebooks(remaining);
         if (s.activeNotebookId === notebookId) {
-          s.setActiveNotebook(remaining[0]?.id ?? null);
+          s.setActiveNotebook(pickDefaultNotebookId(remaining, null));
         }
         return true;
       } catch {

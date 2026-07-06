@@ -258,7 +258,25 @@ export function normalizeNotebook(row: ApiNotebook): Notebook {
     id: Number(row.id),
     title: row.name ?? "未命名笔记本",
     updatedAt: formatTimestamp(row.updated_at ?? undefined),
+    updatedAtRaw: row.updated_at ?? undefined,
   };
+}
+
+export function pickDefaultNotebookId(
+  notebooks: Array<Pick<Notebook, "id" | "updatedAtRaw">>,
+  currentActiveId: number | null,
+): number | null {
+  if (notebooks.length === 0) return null;
+  if (currentActiveId !== null && notebooks.some((item) => item.id === currentActiveId)) {
+    return currentActiveId;
+  }
+  const sorted = [...notebooks].sort((left, right) => {
+    const leftTime = left.updatedAtRaw ? Date.parse(left.updatedAtRaw) : 0;
+    const rightTime = right.updatedAtRaw ? Date.parse(right.updatedAtRaw) : 0;
+    if (rightTime !== leftTime) return rightTime - leftTime;
+    return right.id - left.id;
+  });
+  return sorted[0]?.id ?? null;
 }
 
 export function normalizeSession(row: ApiSession): SessionSummary {

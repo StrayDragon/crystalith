@@ -67,12 +67,12 @@ beforeEach(() => {
   });
 });
 
-test("loads notebooks and sets active notebook", async () => {
+test("loads notebooks and sets active notebook to the most recently updated", async () => {
   server.use(
     http.get("*/v1/notebooks", () =>
       HttpResponse.json([
         { id: 11, name: "Core Notebook A", updated_at: "2026-01-01T00:00:00Z" },
-        { id: 12, name: "Core Notebook B", updated_at: "2026-01-01T00:00:00Z" },
+        { id: 12, name: "Core Notebook B", updated_at: "2026-02-01T00:00:00Z" },
       ]),
     ),
   );
@@ -85,8 +85,7 @@ test("loads notebooks and sets active notebook", async () => {
 
   const state = useWorkspaceStore.getState();
   expect(state.notebooks.map((n) => n.id)).toEqual([11, 12]);
-  expect(state.notebooks[0]?.title).toBe("Core Notebook A");
-  expect(state.activeNotebookId).toBe(11);
+  expect(state.activeNotebookId).toBe(12);
   expect(state.errors.notebooks).toBe("");
 });
 
