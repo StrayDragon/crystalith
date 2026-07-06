@@ -123,6 +123,8 @@ ENV
   fi
 
   _set_secret_env "OPENAI_API_KEY"      "${OPENAI_API_KEY:-}"
+  _set_secret_env "OMLX_OPENAI_API_KEY" "${OMLX_OPENAI_API_KEY:-}"
+  _set_secret_env "TUFA_OPENAI_API_KEY" "${TUFA_OPENAI_API_KEY:-}"
   _set_secret_env "POSTGRES_PASSWORD"   "${POSTGRES_PASSWORD:-}"
   _set_secret_env "CRYSTALITH_API_KEY"  "${CRYSTALITH_API_KEY:-}"
   _set_secret_env "JINA_API_KEY"        "${JINA_API_KEY:-}"

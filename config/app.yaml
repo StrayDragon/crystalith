@@ -72,22 +72,22 @@ plugins:
 providers:
   # OpenAI-compatible API
   openai_default: &openai_default
-    api_key: "{{ env.OPENAI_API_KEY | default('') }}"
+    api_key: "{{ secret.OPENAI_API_KEY | default(env.OPENAI_API_KEY | default('')) }}"
     # Optional override: set OPENAI_BASE_URL to use an OpenAI-compatible endpoint/proxy.
     # When empty/unset, the OpenAI SDK default (https://api.openai.com/v1) is used.
     base_url: "{{ env.OPENAI_BASE_URL | default('') }}"
 
-  # OpenAI-compatible embedding gateway
-  # Env: OMLX_OPENAI_API_BASE, OMLX_OPENAI_API_KEY
+  # OpenAI-compatible embedding gateway (OMLX / local bridge default :50256)
+  # Keys: secret/env OMLX_OPENAI_API_KEY; base: env OMLX_OPENAI_API_BASE
   embed_gateway: &embed_gateway
-    api_key: "{{ env.OMLX_OPENAI_API_KEY | default('') }}"
-    base_url: "{{ env.OMLX_OPENAI_API_BASE | default('') }}"
+    api_key: "{{ secret.OMLX_OPENAI_API_KEY | default(env.OMLX_OPENAI_API_KEY | default('sk-local')) }}"
+    base_url: "{{ env.OMLX_OPENAI_API_BASE | default('http://127.0.0.1:50256/v1') }}"
 
-  # OpenAI-compatible primary chat gateway
-  # Env: TUFA_OPENAI_API_HOST, TUFA_OPENAI_API_KEY
+  # OpenAI-compatible primary chat gateway (TUFA / local bridge default :50256)
+  # Keys: secret/env TUFA_OPENAI_API_KEY; base: env TUFA_OPENAI_API_HOST
   chat_gateway: &chat_gateway
-    api_key: "{{ env.TUFA_OPENAI_API_KEY | default('') }}"
-    base_url: "{{ env.TUFA_OPENAI_API_HOST | default('') }}"
+    api_key: "{{ secret.TUFA_OPENAI_API_KEY | default(env.TUFA_OPENAI_API_KEY | default('sk-local')) }}"
+    base_url: "{{ env.TUFA_OPENAI_API_HOST | default('http://127.0.0.1:50256/v1') }}"
 
 # ----------------------------------------------------------------------------
 # Models (required)

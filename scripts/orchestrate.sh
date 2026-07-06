@@ -51,6 +51,10 @@ HYBRID_SERVICES="${HYBRID_SERVICES:-storage redis searxng}"
 DOCKER_SERVICES="${DOCKER_SERVICES:-storage redis searxng}"
 FULL_SERVICES="${FULL_SERVICES:-storage redis searxng ollama slidev}"
 
+if [[ -n "${BRIDGE_FORWARDS:-}" ]] && [[ " ${HYBRID_SERVICES} " != *" host-remap "* ]]; then
+  HYBRID_SERVICES="${HYBRID_SERVICES} host-remap"
+fi
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
