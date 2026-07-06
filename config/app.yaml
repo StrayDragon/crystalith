@@ -222,11 +222,11 @@ database:
     - "postgresql+asyncpg://crystalith:{{ env.POSTGRES_PASSWORD | default('') }}@postgres:5432/crystalith"
 
 cache:
-  # memory|redis|auto. auto selects a reachable redis if configured, else falls back to memory.
-  provider: "auto"
+  # memory|auto. auto selects a reachable redis if configured, else falls back to memory.
+  # (redis_url_candidates removed — set explicitly if Redis is needed)
+  provider: "memory"
   ttl: 60
   max_size: 2048
-  # redis_url_candidates removed — Redis discovery is handled by auto_cache
 
 # ----------------------------------------------------------------------------
 # Context window

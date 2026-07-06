@@ -50,15 +50,6 @@ importers:
       react-virtuoso:
         specifier: ^4.18.1
         version: 4.18.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      rivu-kernel:
-        specifier: workspace:*
-        version: link:vendor/rivu/packages/rivu-kernel
-      rivu-react:
-        specifier: workspace:*
-        version: link:vendor/rivu/packages/rivu-react
-      rivu-ui-spec:
-        specifier: workspace:*
-        version: link:vendor/rivu/packages/rivu-ui-spec
       swr:
         specifier: ^2.3.6
         version: 2.3.8(react@19.2.3)
