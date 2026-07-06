@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from cl_logs.logging import get_logger
+from lush_logx.logging import get_logger
 
 from crystalith.shared.config import CompletionOptions, ModelConfig, RequestOptions, Settings
 from crystalith.shared.plugins import PluginRegistry

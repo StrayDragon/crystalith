@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from cl_fastapix import FastAPIX
 from fastapi import Depends
+from lush_fastapix import FastAPIX
 
 from crystalith.features.analysis.api import router as analysis_router
 from crystalith.features.citations.api import router as citations_router

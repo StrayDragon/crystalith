@@ -9,9 +9,9 @@ import json
 from collections.abc import AsyncGenerator
 from typing import cast
 
-from cl_logs.logging import get_logger
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
+from lush_logx.logging import get_logger
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession

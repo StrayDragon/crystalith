@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-from cl_logs.logging import get_logger
+from lush_logx.logging import get_logger
 
 from .types import SearchResult
 

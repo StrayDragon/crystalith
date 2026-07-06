@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 from typing import Literal
 
-from cl_stdx.enumx import MetaInfoStrEnum, XMetaInfo
+from lush_stdx.enumx import MetaInfoStrEnum, XMetaInfo
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from crystalith.shared.json_types import JsonDict

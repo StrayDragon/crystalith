@@ -8,7 +8,7 @@ from functools import wraps
 from time import perf_counter
 from typing import Protocol, runtime_checkable
 
-from cl_logs.logging import get_logger
+from lush_logx.logging import get_logger
 
 log = get_logger(__name__)
 

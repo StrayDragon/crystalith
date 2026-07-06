@@ -5,8 +5,8 @@ import json
 from collections.abc import Iterable, Mapping
 from typing import Protocol
 
-from cl_logs import get_logger
 from fastapi import HTTPException, UploadFile
+from lush_logx import get_logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 

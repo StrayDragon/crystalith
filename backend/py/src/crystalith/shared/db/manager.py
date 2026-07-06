@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import Protocol
 
 import sqlalchemy as sa
-from cl_sqlalchemyx.mgrs import AsyncDBManager
+from lush_sqlalchemyx.mgrs import AsyncMySQLManager
 from sqlalchemy import event
+from sqlalchemy.pool import NullPool
 
 
 class _DBAPICursor(Protocol):
@@ -20,26 +21,26 @@ class _DBAPIConnection(Protocol):
 
 def create_db_manager(
     database_url: str,
-    *,
-    readonly_sql: str | None = "SET TRANSACTION READ ONLY",
-    **engine_kwargs: object,
-) -> AsyncDBManager:
+) -> AsyncMySQLManager:
     url = sa.engine.make_url(database_url)
-    if url.drivername.startswith("sqlite") and url.database and url.database != ":memory:":
-        db_path = Path(url.database)
-        if not db_path.is_absolute():
-            db_path = Path.cwd() / db_path
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-        connect_args_value = engine_kwargs.get("connect_args")
-        connect_args: dict[str, object] = {}
-        if isinstance(connect_args_value, dict):
-            connect_args = dict(connect_args_value)
-        connect_args.setdefault("timeout", 30)
-        engine_kwargs["connect_args"] = connect_args
+    is_sqlite = url.drivername.startswith("sqlite")
 
-    manager = AsyncDBManager(database_url, readonly_sql=readonly_sql, **engine_kwargs)
+    if is_sqlite:
+        if url.database and url.database != ":memory:":
+            db_path = Path(url.database)
+            if not db_path.is_absolute():
+                db_path = Path.cwd() / db_path
+            db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if manager.dialect_name == "sqlite":
+        manager = AsyncMySQLManager(
+            database_url,
+            connect_args={"timeout": 30},
+            poolclass=NullPool,
+        )
+    else:
+        manager = AsyncMySQLManager(database_url)
+
+    if is_sqlite:
 
         @event.listens_for(manager.async_engine.sync_engine, "connect")
         def _set_sqlite_pragma(dbapi_connection: _DBAPIConnection, _connection_record: object) -> None:

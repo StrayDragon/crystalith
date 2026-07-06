@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from typing import cast
 
-from cl_stdx.enumx import MetaInfoStrEnum, XMetaInfo
+from lush_stdx.enumx import MetaInfoStrEnum, XMetaInfo
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

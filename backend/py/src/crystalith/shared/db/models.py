@@ -4,7 +4,7 @@ import datetime
 import enum
 
 import sqlalchemy as sa
-from cl_sqlalchemyx.base.dal import AsyncSqlATableBase
+from lush_sqlalchemyx.base.dal import AsyncSqlATableBase
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from crystalith.shared.json_types import JsonDict

@@ -6,9 +6,9 @@ import json
 from collections.abc import AsyncGenerator
 from time import perf_counter
 
-from cl_logs.logging import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from lush_logx.logging import get_logger
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

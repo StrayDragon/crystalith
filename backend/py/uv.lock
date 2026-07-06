@@ -8,11 +8,6 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "cl-fastapix",
-    "cl-logs",
-    "cl-pydanticx",
-    "cl-sqlalchemyx",
-    "cl-stdx",
     "crystalith",
     "crystalith-connector-local-directory",
     "crystalith-connector-obsidian",
@@ -590,99 +585,6 @@ wheels = [
 ]
 
 [[package]]
-name = "cl-fastapix"
-version = "0.1.0"
-source = { editable = "packages/cl-fastapix" }
-dependencies = [
-    { name = "cl-stdx" },
-    { name = "fastapi" },
-    { name = "typing-extensions" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "cl-stdx", editable = "packages/cl-stdx" },
-    { name = "fastapi", specifier = ">=0.117.1" },
-    { name = "typing-extensions", specifier = ">=4.12.2" },
-]
-
-[[package]]
-name = "cl-logs"
-version = "0.1.0"
-source = { editable = "packages/cl-logs" }
-dependencies = [
-    { name = "cl-stdx" },
-    { name = "rich" },
-    { name = "structlog" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "pytest-cov" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "cl-stdx", editable = "packages/cl-stdx" },
-    { name = "rich", specifier = ">=14.1.0" },
-    { name = "structlog", specifier = ">=25.5.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=8.4.1" },
-    { name = "pytest-cov", specifier = ">=5.0.0" },
-]
-
-[[package]]
-name = "cl-pydanticx"
-version = "0.1.0"
-source = { editable = "packages/cl-pydanticx" }
-dependencies = [
-    { name = "pydantic" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "pydantic", specifier = ">=2.11.0,<3.0.0" }]
-
-[[package]]
-name = "cl-sqlalchemyx"
-version = "0.1.0"
-source = { editable = "packages/cl-sqlalchemyx" }
-dependencies = [
-    { name = "cl-pydanticx" },
-    { name = "cl-stdx" },
-    { name = "pydantic" },
-    { name = "sqlalchemy", extra = ["asyncio"] },
-    { name = "typing-extensions" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "cl-pydanticx", editable = "packages/cl-pydanticx" },
-    { name = "cl-stdx", editable = "packages/cl-stdx" },
-    { name = "pydantic", specifier = ">=2.11.0,<3.0.0" },
-    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.43" },
-    { name = "typing-extensions", specifier = ">=4.12.2" },
-]
-
-[[package]]
-name = "cl-stdx"
-version = "0.1.0"
-source = { editable = "packages/cl-stdx" }
-dependencies = [
-    { name = "pydantic" },
-    { name = "typing-extensions" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "pydantic", specifier = ">=2.11.0,<3.0.0" },
-    { name = "typing-extensions", specifier = ">=4.12.2" },
-]
-
-[[package]]
 name = "click"
 version = "8.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -895,15 +797,15 @@ dependencies = [
     { name = "aiosqlite" },
     { name = "alembic" },
     { name = "chromadb" },
-    { name = "cl-fastapix" },
-    { name = "cl-logs" },
-    { name = "cl-pydanticx" },
-    { name = "cl-sqlalchemyx" },
-    { name = "cl-stdx" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "jinja2" },
     { name = "jsonschema" },
+    { name = "lush-fastapix" },
+    { name = "lush-logx" },
+    { name = "lush-pydanticx" },
+    { name = "lush-sqlalchemyx" },
+    { name = "lush-stdx" },
     { name = "openai" },
     { name = "pydantic-ai" },
     { name = "pydantic-graph" },
@@ -1004,11 +906,6 @@ requires-dist = [
     { name = "aiosqlite", specifier = ">=0.20.0" },
     { name = "alembic", specifier = ">=1.13.0" },
     { name = "chromadb", specifier = ">=0.5.15" },
-    { name = "cl-fastapix", editable = "packages/cl-fastapix" },
-    { name = "cl-logs", editable = "packages/cl-logs" },
-    { name = "cl-pydanticx", editable = "packages/cl-pydanticx" },
-    { name = "cl-sqlalchemyx", editable = "packages/cl-sqlalchemyx" },
-    { name = "cl-stdx", editable = "packages/cl-stdx" },
     { name = "crystalith-connector-local-directory", marker = "extra == 'official-connectors'", editable = "plugins/crystalith-connector-local-directory" },
     { name = "crystalith-connector-local-directory", marker = "extra == 'official-full'", editable = "plugins/crystalith-connector-local-directory" },
     { name = "crystalith-connector-obsidian", marker = "extra == 'official-connectors'", editable = "plugins/crystalith-connector-obsidian" },
@@ -1049,6 +946,11 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "jinja2", specifier = ">=3.1.4" },
     { name = "jsonschema", specifier = ">=4.26.0" },
+    { name = "lush-fastapix", specifier = ">=0.1.1" },
+    { name = "lush-logx", specifier = ">=0.1.1" },
+    { name = "lush-pydanticx", specifier = ">=0.1.2" },
+    { name = "lush-sqlalchemyx", specifier = ">=0.6.0" },
+    { name = "lush-stdx", specifier = ">=0.1.2" },
     { name = "openai", specifier = ">=1.40.0" },
     { name = "playwright", marker = "extra == 'browserless'", specifier = ">=1.40.0" },
     { name = "pydantic-ai", specifier = ">=0.0.49" },
@@ -2317,6 +2219,18 @@ wheels = [
 ]
 
 [[package]]
+name = "linkify-it-py"
+version = "2.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "uc-micro-py" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2e/c9/06ea13676ef354f0af6169587ae292d3e2406e212876a413bf9eece4eb23/linkify_it_py-2.1.0.tar.gz", hash = "sha256:43360231720999c10e9328dc3691160e27a718e280673d444c38d7d3aaa3b98b", size = 29158, upload-time = "2026-03-01T07:48:47.683Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b4/de/88b3be5c31b22333b3ca2f6ff1de4e863d8fe45aaea7485f591970ec1d3e/linkify_it_py-2.1.0-py3-none-any.whl", hash = "sha256:0d252c1594ecba2ecedc444053db5d3a9b7ec1b0dd929c8f1d74dce89f86c05e", size = 19878, upload-time = "2026-03-01T07:48:46.098Z" },
+]
+
+[[package]]
 name = "logfire"
 version = "4.19.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2398,6 +2312,90 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/b4/a0/89e6a024c3b4485b89ef86881c9d55e097e7cb0bdb74efb746f2fa6a9a76/lupa-2.6-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:9abb98d5a8fd27c8285302e82199f0e56e463066f88f619d6594a450bf269d80", size = 2153693, upload-time = "2025-10-24T07:19:31.379Z" },
     { url = "https://files.pythonhosted.org/packages/b6/36/a0f007dc58fc1bbf51fb85dcc82fcb1f21b8c4261361de7dab0e3d8521ef/lupa-2.6-cp314-cp314t-win32.whl", hash = "sha256:1849efeba7a8f6fb8aa2c13790bee988fd242ae404bd459509640eeea3d1e291", size = 1590104, upload-time = "2025-10-24T07:19:33.514Z" },
     { url = "https://files.pythonhosted.org/packages/7d/5e/db903ce9cf82c48d6b91bf6d63ae4c8d0d17958939a4e04ba6b9f38b8643/lupa-2.6-cp314-cp314t-win_amd64.whl", hash = "sha256:fc1498d1a4fc028bc521c26d0fad4ca00ed63b952e32fb95949bda76a04bad52", size = 1913818, upload-time = "2025-10-24T07:19:36.039Z" },
+]
+
+[[package]]
+name = "lush-dal-protocol"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8b/a8/a844353861317c7e9d13cd00b79e27d89241e924b1154e5427c482009f86/lush_dal_protocol-0.4.0.tar.gz", hash = "sha256:d40151bee28fbe21ce79e6c79f38fc675283d953b963de7d426d9e123c055f7b", size = 20882, upload-time = "2026-06-21T03:34:45.044Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2c/e6/b110a8a310db98283d37063fe394dc181646a8a40a89b63d166e8f542f0d/lush_dal_protocol-0.4.0-py3-none-any.whl", hash = "sha256:2cd0d15c6e6854ca07b0e0a4c7f1d84402c12033adb2fde348b142646cb5ecf3", size = 31292, upload-time = "2026-06-21T03:34:44.066Z" },
+]
+
+[[package]]
+name = "lush-fastapix"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "lush-stdx" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/07/10/e0358e772971db07bfe823d2c86196cd4e24635abf40b530993f763011b0/lush_fastapix-0.1.1.tar.gz", hash = "sha256:a2585ef926fd62d9f401abd62762769d40d1f1d11db91a431bd3cc5e3a9ff61b", size = 8605, upload-time = "2026-04-02T06:48:55.844Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e1/94/2d047204cf608996eda9f72807f0aeff0a6e29346830bad3e1896037ea9a/lush_fastapix-0.1.1-py3-none-any.whl", hash = "sha256:04fb3f72b90b982bbddc32607c8debc0ed21d88804ad4197d9480645f28bad03", size = 9518, upload-time = "2026-04-02T06:48:54.921Z" },
+]
+
+[[package]]
+name = "lush-logx"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "lush-stdx" },
+    { name = "rich" },
+    { name = "structlog" },
+    { name = "textual" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8b/8f/cb060797679f4776d2aa6fd73028158c79c9ffe00dfc564c183128cc5d79/lush_logx-0.1.1.tar.gz", hash = "sha256:576a5d8f604e798255e1ba1f83f69155304cdd53b9219d46d9d03d4a1f68ace2", size = 22875, upload-time = "2026-04-02T06:48:55.019Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/57/01/f0fa49d0f11666b41629685cf200adea7ee6828e094e9602e50c61b17d82/lush_logx-0.1.1-py3-none-any.whl", hash = "sha256:553da14e231d915cf7195504e567ed84270b824a52e0233807b6b4ac4d1be8e1", size = 22872, upload-time = "2026-04-02T06:48:55.663Z" },
+]
+
+[[package]]
+name = "lush-pydanticx"
+version = "0.1.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/36/b8/e4604ab751c1fcf01e53c193d1c6a514b9465dda77708c4e25e2737ed79f/lush_pydanticx-0.1.2.tar.gz", hash = "sha256:f48c0b714285b768f1c8e696d41de4db749414e80749d936a0127853cbcc0e68", size = 4287, upload-time = "2026-05-11T07:20:38.411Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/77/60/078d3dd860c1bda8c4a82b5508011ad1d9fa5fa6eb1ed0c6556233fb69d5/lush_pydanticx-0.1.2-py3-none-any.whl", hash = "sha256:4cb5d0fb41b6e0f4c662dcf2fd7783987b00fc0ad914274b930159b3652571a7", size = 2897, upload-time = "2026-05-11T07:20:37.305Z" },
+]
+
+[[package]]
+name = "lush-sqlalchemyx"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "lush-dal-protocol" },
+    { name = "lush-pydanticx" },
+    { name = "lush-stdx" },
+    { name = "pydantic" },
+    { name = "sqlalchemy" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/21/ec/83d942803858d64375876eeedd145b40fcfec90e6e8d7397cbd30269b682/lush_sqlalchemyx-0.6.0.tar.gz", hash = "sha256:90b529be90923028de8f1c6068950fd3584b80a2160a2406ea2ccfe3961cfeca", size = 37407, upload-time = "2026-06-21T03:35:39.028Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1e/d4/688d506ec1677018af3068f94f4a6a2fe731e34ca4bf394e0775a511f5cf/lush_sqlalchemyx-0.6.0-py3-none-any.whl", hash = "sha256:47fc12d083dfdff747cd17d0234f2377f90bf41b52c17a3ac9d7ba9f89b2aa79", size = 48805, upload-time = "2026-06-21T03:35:37.935Z" },
+]
+
+[[package]]
+name = "lush-stdx"
+version = "0.1.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2b/dc/e2709ee0460a896fa20184de8f934b0e53e7bd673e664629bd3069962b5a/lush_stdx-0.1.2.tar.gz", hash = "sha256:b6a689cd73019173a0dde0615e1af8104a2fafea9422656e45f791bce91788d9", size = 11312, upload-time = "2026-06-12T09:36:56.337Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/01/c07c5d762b7e3d377667507ad90d05c4dbe79a71097b9e3daddd28d6acb3/lush_stdx-0.1.2-py3-none-any.whl", hash = "sha256:4df716236b87ec02262e204beb6c7dad8f0ac45487d408ba14d58277b63c9038", size = 12533, upload-time = "2026-06-12T09:36:55.574Z" },
 ]
 
 [[package]]
@@ -2521,6 +2519,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/94/54/e7d793b573f298e1c9013b8c4dade17d481164aa517d1d7148619c2cedbf/markdown_it_py-4.0.0-py3-none-any.whl", hash = "sha256:87327c59b172c5011896038353a81343b6754500a08cd7a4973bb48c6d578147", size = 87321, upload-time = "2025-08-11T12:57:51.923Z" },
 ]
 
+[package.optional-dependencies]
+linkify = [
+    { name = "linkify-it-py" },
+]
+
 [[package]]
 name = "markupsafe"
 version = "3.0.3"
@@ -2607,6 +2610,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d5/2d/649d80a0ecf6a1f82632ca44bec21c0461a9d9fc8934d38cb5b319f2db5e/mcp-1.25.0.tar.gz", hash = "sha256:56310361ebf0364e2d438e5b45f7668cbb124e158bb358333cd06e49e83a6802", size = 605387, upload-time = "2025-12-19T10:19:56.985Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e2/fc/6dc7659c2ae5ddf280477011f4213a74f806862856b796ef08f028e664bf/mcp-1.25.0-py3-none-any.whl", hash = "sha256:b37c38144a666add0862614cc79ec276e97d72aa8ca26d622818d4e278b9721a", size = 233076, upload-time = "2025-12-19T10:19:55.416Z" },
+]
+
+[[package]]
+name = "mdit-py-plugins"
+version = "0.6.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markdown-it-py" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/59/fc/f8d0863f8862f25602c0404d75568e89fb6b4109804645e5cdfb1be5cf56/mdit_py_plugins-0.6.1.tar.gz", hash = "sha256:a2bca0f039f39dbd35fb74ae1b5f998608c437463371f0ff7f49a19a17a114d0", size = 56114, upload-time = "2026-05-13T09:03:38.91Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a5/69/6da5581c6a7fede7dc261bf4e67d6adca4196f176b43288b55b3db395b6e/mdit_py_plugins-0.6.1-py3-none-any.whl", hash = "sha256:214c82fb2ac524472ab6a5bcab1de80f73b50443e187f401bfd77efbc7c6481d", size = 66663, upload-time = "2026-05-13T09:03:37.76Z" },
 ]
 
 [[package]]
@@ -4657,6 +4672,23 @@ wheels = [
 ]
 
 [[package]]
+name = "textual"
+version = "8.2.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markdown-it-py", extra = ["linkify"] },
+    { name = "mdit-py-plugins" },
+    { name = "platformdirs" },
+    { name = "pygments" },
+    { name = "rich" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/00/21/39a76b01bd5eea82a04baaca7580e105d8c59450df03998345bb2cfb307b/textual-8.2.8.tar.gz", hash = "sha256:3f106a9fbc73e39dd266c9712432087de78a6d644084c7c241d6a25c3169115b", size = 1860502, upload-time = "2026-06-30T06:51:24.495Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fb/be/35261223d9416a0751cdff1c7b4a6f881387218a12d439fe22fefebc8c04/textual-8.2.8-py3-none-any.whl", hash = "sha256:267375fd402dc8d981457212efa71f0e3365fd17bba144ba9bb3ed7563cb374a", size = 731418, upload-time = "2026-06-30T06:51:26.364Z" },
+]
+
+[[package]]
 name = "tiktoken"
 version = "0.12.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4844,6 +4876,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8b/2e/c14812d3d4d9cd1773c6be938f89e5735a1f11a9f184ac3639b93cef35d5/tzlocal-5.3.1.tar.gz", hash = "sha256:cceffc7edecefea1f595541dbd6e990cb1ea3d19bf01b2809f362a03dd7921fd", size = 30761, upload-time = "2025-03-05T21:17:41.549Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c2/14/e2a54fabd4f08cd7af1c07030603c3356b74da07f7cc056e600436edfa17/tzlocal-5.3.1-py3-none-any.whl", hash = "sha256:eb1a66c3ef5847adf7a834f1be0800581b683b5608e74f86ecbcef8ab91bb85d", size = 18026, upload-time = "2025-03-05T21:17:39.857Z" },
+]
+
+[[package]]
+name = "uc-micro-py"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/78/67/9a363818028526e2d4579334460df777115bdec1bb77c08f9db88f6389f2/uc_micro_py-2.0.0.tar.gz", hash = "sha256:c53691e495c8db60e16ffc4861a35469b0ba0821fe409a8a7a0a71864d33a811", size = 6611, upload-time = "2026-03-01T06:31:27.526Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/61/73/d21edf5b204d1467e06500080a50f79d49ef2b997c79123a536d4a17d97c/uc_micro_py-2.0.0-py3-none-any.whl", hash = "sha256:3603a3859af53e5a39bc7677713c78ea6589ff188d70f4fee165db88e22b242c", size = 6383, upload-time = "2026-03-01T06:31:26.257Z" },
 ]
 
 [[package]]

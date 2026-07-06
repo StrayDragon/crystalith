@@ -131,7 +131,7 @@ just api-check                      # 依据：justfile:api-check
   - `database.*`、`vector_storage.*`、`cache.*`（同上）
 - 日志（开发默认）：
   - Procfile 默认注入 `LOG_LEVEL=DEBUG LOGX_FORMAT=console`（`Procfile`）
-  - 依赖 `cl-logs`（声明：`backend/py/pyproject.toml:dependencies`）。
+  - 依赖 `lush-logx`（通过 PyPI 安装，声明：`backend/py/pyproject.toml:dependencies`）。
 
 ## Roadmap（未来方向与优化建议）
 - 近期（1–2 周）

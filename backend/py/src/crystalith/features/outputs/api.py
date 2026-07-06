@@ -6,8 +6,8 @@ import os
 from time import perf_counter
 from typing import Literal, cast
 
-from cl_logs.logging import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from lush_logx.logging import get_logger
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 from sqlalchemy import select

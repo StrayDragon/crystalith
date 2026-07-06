@@ -3,8 +3,8 @@ from __future__ import annotations
 import contextlib
 from typing import Literal
 
-from cl_logs import get_logger
 from fastapi import APIRouter, Depends, HTTPException, status
+from lush_logx import get_logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 

@@ -6,8 +6,8 @@ import hashlib
 from time import perf_counter
 from typing import Literal, cast
 
-from cl_logs import get_logger
 from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
+from lush_logx import get_logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 

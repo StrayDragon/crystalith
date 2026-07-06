@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 
-from cl_logs.logging import get_logger
+from lush_logx.logging import get_logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.cache.interfaces import CacheProvider

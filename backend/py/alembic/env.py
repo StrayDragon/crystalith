@@ -5,7 +5,7 @@ import os
 from logging.config import fileConfig
 
 import sqlalchemy as sa
-from cl_sqlalchemyx.base.dal import AsyncSqlATableBase
+from lush_sqlalchemyx.base.dal import AsyncSqlATableBase
 
 from alembic import context
 from crystalith.shared.db import create_db_manager

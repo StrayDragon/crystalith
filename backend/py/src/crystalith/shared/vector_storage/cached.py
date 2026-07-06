@@ -5,7 +5,7 @@ import json
 from collections.abc import Sequence
 from typing import cast
 
-from cl_logs.logging import get_logger
+from lush_logx.logging import get_logger
 
 from crystalith.shared.cache.interfaces import CacheProvider
 from crystalith.shared.json_types import JsonDict, JsonValue

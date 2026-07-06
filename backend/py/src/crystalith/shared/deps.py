@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING
 
-from cl_sqlalchemyx.mgrs import AsyncDBManager
 from fastapi import Depends, HTTPException, Request
+from lush_sqlalchemyx.mgrs import AsyncMySQLManager
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from crystalith.shared.ai.factory import create_chat_provider, create_embedding_provider
@@ -64,7 +64,7 @@ def get_cache_provider(request: Request) -> CacheProvider:
 
 
 async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    manager: AsyncDBManager = request.app.state.db
+    manager: AsyncMySQLManager = request.app.state.db
     async with manager.got_manual_session() as session:
         yield session
 

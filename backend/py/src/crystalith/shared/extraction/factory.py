@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from cl_logs import get_logger
+from lush_logx import get_logger
 
 from crystalith.shared.config import Settings
 from crystalith.shared.plugins import PluginRegistry
