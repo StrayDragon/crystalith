@@ -9,13 +9,14 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
-import yaml
 from jinja2 import StrictUndefined, nodes
 from jinja2.exceptions import SecurityError, TemplateNotFound, TemplateSyntaxError, UndefinedError
 from jinja2.loaders import DictLoader
 from jinja2.sandbox import SandboxedEnvironment
 from jsonschema import Draft7Validator
 from pydantic import ValidationError
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
 from crystalith.shared.json_types import JsonValue
 
@@ -273,8 +274,9 @@ class ConfigManager:
     def _load_rendered_yaml_mapping(self, path: Path) -> dict[str, JsonValue]:
         rendered = self._render_config_template(path)
         try:
-            data = yaml.safe_load(rendered)
-        except yaml.YAMLError as exc:
+            _yaml = YAML(typ='safe')
+            data = _yaml.load(rendered)
+        except YAMLError as exc:
             raise ValueError(f"YAML parse error in {path} after template rendering: {exc}") from exc
 
         if data is None:

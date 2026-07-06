@@ -4,7 +4,8 @@ import datetime as dt
 import re
 from pathlib import PurePosixPath
 
-import yaml
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
 from crystalith.shared.json_types import JsonDict, JsonValue
 
@@ -46,8 +47,9 @@ def _extract_frontmatter(text: str) -> tuple[JsonDict | None, str]:
 
     body = text[match.end():].lstrip("\n")
     try:
-        loaded = yaml.safe_load(match.group("body"))
-    except yaml.YAMLError:
+        _yaml = YAML(typ='safe')
+        loaded = _yaml.load(match.group("body"))
+    except YAMLError:
         return None, text
 
     if not isinstance(loaded, dict):

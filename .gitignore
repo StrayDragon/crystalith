@@ -168,6 +168,8 @@ profile_default/
 .spyproject
 
 site/
+docs/.cache/
+frontend/web/coverage/
 
 ### Pnpm ###
 # pnpm package manager specific files
