@@ -811,8 +811,6 @@ export default function WorkspaceLayout() {
               onConvertToSource={chat.convertSessionToSource}
               onConvertToOutput={chat.convertSessionToOutput}
               isConverting={chat.isConverting}
-              rivuKernel={chat.rivuKernel}
-              rivuHost={chat.rivuHost}
             />
           );
 

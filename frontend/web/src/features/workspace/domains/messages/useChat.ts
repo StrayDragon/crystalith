@@ -22,11 +22,6 @@ import {
   normalizeCitation,
   normalizeMessage,
 } from "../../shared/utils";
-import {
-  createRivuSessionRuntime,
-  type RivuSessionRuntime,
-  type SessionUiStatePayload,
-} from "./rivuRuntime";
 
 interface UseChatOptions {
   ensureSession: (title?: string | null) => Promise<number | null>;
@@ -52,14 +47,6 @@ function ensureAssistantMessage(
     content: "",
     citationScope: scope,
   });
-}
-
-async function fetchUiState(notebookId: number, sessionId: number): Promise<SessionUiStatePayload> {
-  const response = await fetch(`/v1/notebooks/${notebookId}/sessions/${sessionId}/ui/state`);
-  if (!response.ok) {
-    throw new Error(`UI state request failed: HTTP ${response.status}`);
-  }
-  return (await response.json()) as SessionUiStatePayload;
 }
 
 function parseApiErrorPayload(payload: unknown): string | null {
@@ -146,36 +133,11 @@ export function useChat({
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [lastFailedDraft, setLastFailedDraft] = useState("");
-  const [_runtimeVersion, setRuntimeVersion] = useState(0);
   const messagesRef = useRef(messages);
   const streamingBufferRef = useRef("");
   const streamingMarkdownRef = useRef("");
   const streamingFlushTimerRef = useRef<NodeJS.Timeout | null>(null);
   const streamingAbortControllerRef = useRef<AbortController | null>(null);
-  const runtimeRef = useRef<{
-    notebookId: number;
-    sessionId: number;
-    runtime: RivuSessionRuntime;
-  } | null>(null);
-
-  const ensureRuntime = useCallback((notebookId: number, sessionId: number) => {
-    const current = runtimeRef.current;
-    if (current && current.notebookId === notebookId && current.sessionId === sessionId) {
-      return current.runtime;
-    }
-    const runtime = createRivuSessionRuntime({ notebookId, sessionId });
-    runtimeRef.current = { notebookId, sessionId, runtime };
-    setRuntimeVersion((value) => value + 1);
-    return runtime;
-  }, []);
-
-  const rivuRuntime =
-    activeNotebookId != null &&
-    activeSessionId != null &&
-    runtimeRef.current?.notebookId === activeNotebookId &&
-    runtimeRef.current?.sessionId === activeSessionId
-      ? runtimeRef.current.runtime
-      : null;
 
   const { data, error, isLoading, mutate } = useSWR(
     activeNotebookId && activeSessionId && isConnected
@@ -196,34 +158,6 @@ export function useChat({
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
-
-  useEffect(() => {
-    if (activeNotebookId != null && activeSessionId != null) {
-      ensureRuntime(activeNotebookId, activeSessionId);
-      return;
-    }
-    runtimeRef.current = null;
-    setRuntimeVersion((value) => value + 1);
-  }, [activeNotebookId, activeSessionId, ensureRuntime]);
-
-  useEffect(() => {
-    if (!isConnected || activeNotebookId == null || activeSessionId == null) {
-      return;
-    }
-    const runtime = ensureRuntime(activeNotebookId, activeSessionId);
-    let cancelled = false;
-    void fetchUiState(activeNotebookId, activeSessionId)
-      .then((payload) => {
-        if (cancelled) return;
-        runtime.dispatchSnapshot(payload.shared_state ?? {});
-      })
-      .catch(() => {
-        if (cancelled) return;
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeNotebookId, activeSessionId, ensureRuntime, isConnected]);
 
   useEffect(() => {
     return () => {
@@ -305,8 +239,6 @@ export function useChat({
       return;
     }
 
-    const runtime = ensureRuntime(notebookId, sessionId);
-
     if (enableStreaming) {
       const abortController = new AbortController();
       streamingAbortControllerRef.current = abortController;
@@ -337,13 +269,6 @@ export function useChat({
 
       const resyncServerState = () => {
         void mutate();
-        void fetchUiState(notebookId, sessionId)
-          .then((payload) => {
-            runtime.dispatchSnapshot(payload.shared_state ?? {});
-          })
-          .catch(() => {
-            // best-effort resync only
-          });
       };
 
       const flushBufferedContent = () => {
@@ -395,36 +320,6 @@ export function useChat({
           },
           onSseEvent: (event) => {
             const { event: eventType, data: eventData } = event;
-            if (eventType === "state_snapshot" && eventData && typeof eventData === "object") {
-              const payload = eventData as {
-                message_id?: unknown;
-                shared_state?: unknown;
-              };
-              if (payload.shared_state && typeof payload.shared_state === "object") {
-                runtime.dispatchSnapshot(payload.shared_state as Record<string, unknown>);
-              }
-              const nextMessageId = payload.message_id;
-              if (
-                typeof nextMessageId === "number" &&
-                Number.isFinite(nextMessageId) &&
-                nextMessageId > 0
-              ) {
-                stableAssistantMessageId = String(nextMessageId);
-                setStreamingMessageId(stableAssistantMessageId);
-                ensureAssistantMessage(stableAssistantMessageId, selectedScope ?? undefined);
-                if (streamingMarkdownRef.current || streamingBufferRef.current) {
-                  flushBufferedContent();
-                }
-              }
-              return;
-            }
-            if (eventType === "state_delta" && eventData && typeof eventData === "object") {
-              const payload = eventData as { delta?: unknown };
-              if (Array.isArray(payload.delta)) {
-                runtime.dispatchDelta(payload.delta as Array<Record<string, unknown>>);
-              }
-              return;
-            }
             if (
               eventType === "chunk" &&
               eventData &&
@@ -439,6 +334,26 @@ export function useChat({
                   streamingFlushTimerRef.current = null;
                   flushBufferedContent();
                 }, 50);
+              }
+              return;
+            }
+            if (eventType === "state_snapshot" && eventData && typeof eventData === "object") {
+              const payload = eventData as {
+                message_id?: unknown;
+                shared_state?: unknown;
+              };
+              const nextMessageId = payload.message_id;
+              if (
+                typeof nextMessageId === "number" &&
+                Number.isFinite(nextMessageId) &&
+                nextMessageId > 0
+              ) {
+                stableAssistantMessageId = String(nextMessageId);
+                setStreamingMessageId(stableAssistantMessageId);
+                ensureAssistantMessage(stableAssistantMessageId, selectedScope ?? undefined);
+                if (streamingMarkdownRef.current || streamingBufferRef.current) {
+                  flushBufferedContent();
+                }
               }
               return;
             }
@@ -593,11 +508,6 @@ export function useChat({
         citations: normalizedCitations,
         citationScope: selectedScope ?? undefined,
       };
-      const sharedState =
-        qaResult.shared_state && typeof qaResult.shared_state === "object"
-          ? (qaResult.shared_state as Record<string, unknown>)
-          : {};
-      runtime.dispatchSnapshot(sharedState);
       const s2 = store.getState();
       s2.setMessages([...pendingMessages, assistantMessage]);
       s2.setCitations(normalizedCitations);
@@ -643,7 +553,7 @@ export function useChat({
     } finally {
       store.getState().setLoading("send", false);
     }
-  }, [enableStreaming, ensureRuntime, ensureSession, mutate, refreshSessions, store]);
+  }, [enableStreaming, ensureSession, mutate, refreshSessions, store]);
 
   const retryMessages = useCallback(async () => {
     store.getState().setError("messages", "");
@@ -744,7 +654,5 @@ export function useChat({
     isConverting,
     convertSessionToSource: handleConvertSessionToSource,
     convertSessionToOutput: handleConvertSessionToOutput,
-    rivuKernel: rivuRuntime?.kernel ?? null,
-    rivuHost: rivuRuntime?.host ?? null,
   };
 }
