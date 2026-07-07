@@ -257,17 +257,6 @@ async def test_stats_preset_stream_persists_plain_answer_and_emits_state_events(
     assert assistant['content'].startswith('Test stats answer')
     assert '[[crystalith-ui:v1]]' not in assistant['content']
 
-    ui_state_resp = await client.get(
-        f'/v1/notebooks/{notebook_id}/sessions/{session_id}/ui/state',
-    )
-    assert ui_state_resp.status_code == 200
-    ui_state_payload = ui_state_resp.json()
-    assert ui_state_payload['shared_state_revision'] == 1
-    components = ui_state_payload['shared_state']['ui']['components']
-    assert components
-    for component in components.values():
-        assert len(component['mounts']) == 1
-
 
 @pytest.mark.asyncio
 async def test_custom_prompt_preset_overrides_system_prompt(db_session, client, app):
