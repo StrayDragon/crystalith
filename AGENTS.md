@@ -7,17 +7,20 @@
 
 ```
 crystalith/
-├── server/               # Bun + Elysia + AI SDK (to be created in Phase 0)
+├── server/               # ✅ Bun + Elysia (Phase 0 scaffold done)
 │   └── src/
 │       ├── server.ts           # Entry: Elysia HTTP server
 │       ├── features/           # Business domains (notebooks, qa, sources, ...)
 │       ├── shared/             # Cross-cutting (db, ai, config, vector, utils)
 │       └── db/                 # Drizzle schema + migrations
+├── packages/shared/      # ✅ Shared Zod schemas + types (server ↔ frontend)
+│   └── src/
 ├── frontend/web/         # Vite + React + TypeScript SPA (reused, API layer updated)
 │   └── src/
 │       ├── features/workspace/ # Main workspace UI
 │       ├── api/                # API client layer (eden RPC replacing generated client)
 │       └── shared/             # Shared UI utilities, Layer system
+├── package.json          # ✅ Bun workspace root
 ├── config/               # Runtime config (app.yaml + secret.env)
 ├── llmanspec/            # Spec-driven development specs + changes
 ├── UPGRADES/             # v2 migration research docs (read before working)
@@ -27,10 +30,12 @@ crystalith/
 
 ## Current State
 
-The repo is in **v2 baseline cleanup** phase on branch `v2-dev`:
+The repo is in **v2 scaffold** phase on branch `v2-dev`:
+- ✅ Phase 0 scaffold done: Bun workspace + Elysia server skeleton
+- ✅ pnpm → bun migration complete
+- ✅ Shared packages workspace set up (`packages/shared/`)
 - Python v1 code is preserved intact in `backend/py/` as reference
-- CI/pre-commit are minimal (frontend-only) until server scaffold is ready
-- `llmanspec/specs/` contains ~33 business-level specs (Python-implementation-tied ones removed)
+- `llmanspec/specs/` contains ~33 business-level specs
 - `UPGRADES/` contains all v2 migration research and decisions
 
 ## Reference: v1 Python Implementation
@@ -62,17 +67,15 @@ Key entry points in v1:
 
 ## Build, Test, and Development Commands
 
-From repo root:
-- `just install` — install frontend dependencies (`bun install`)
-- `just dev` — start frontend dev server (Vite HMR on :3000)
-- `just test` / `just test-frontend` — run frontend tests
-- `just typecheck` / `just lint` / `just format-check` — code quality
-- `just build-web` — production frontend build
-- `just upsert-env-configs` — initialize .env + config/secret.env from shell
+From repo root (Bun workspace):
+- `bun install` — install all dependencies (server + frontend + shared)
+- `bun dev` — start full dev environment (parallel: server --watch + Vite HMR)
+- `bun test` — run all tests
+- `bun typecheck` — typecheck everything
 
-Frontend (direct):
-- `cd frontend/web && bun install` — install JS deps
-- `cd frontend/web && bun dev` — Vite dev server
+Fast path (individual packages):
+- `cd server && bun dev` — Elysia server with hot reload (port 8032)
+- `cd frontend/web && bun dev` — Vite dev server (port 3000)
 - `cd frontend/web && bun test` — Vitest
 - `cd frontend/web && bun run typecheck` — TypeScript typechecking
 
