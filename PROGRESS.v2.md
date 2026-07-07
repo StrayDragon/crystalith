@@ -18,9 +18,9 @@
 | c07 | qa-pipeline            | ✅ DONE |
 | c08 | research-agent         | ✅ DONE |
 | c09 | outputs-generation     | ✅ DONE |
-| c10 | models-management      | ⬜ TODO |
-| c11 | eval-harness           | ⬜ TODO |
-| c12 | analysis-studio-refine | ⬜ TODO |
+| c10 | models-management      | ✅ DONE |
+| c11 | eval-harness           | ✅ DONE |
+| c12 | analysis-studio-refine | ✅ DONE |
 | c13 | distribution           | ⬜ TODO |
 | c14 | cleanup-delivery       | ⬜ TODO |
 
@@ -32,11 +32,11 @@
 
 <!-- CURRENT -->
 
-**Phase 4**: c10 + c11 + c12
+**Phase 5**: c13 + c14
 
-**前置**: c07 ✅ c08 ✅ c09 ✅
+**前置**: c10 ✅ c11 ✅ c12 ✅
 
-**目标**: models-management (model CRUD + provider management) + eval-harness (Golden Dataset + LLM-as-Judge) + analysis-studio-refine (聚类/矛盾/相关性分析 + Slidev studio + 文本精炼)
+**目标**: distribution (bun build --compile → single binary) + cleanup-delivery (delete v1 Python, OpenAPI chain, final verification)
 
 ---
 
@@ -44,13 +44,14 @@
 
 <!-- HANDOFF -->
 
-| 字段       | 值                                                                                                                                                                                                                                                                                                                                                                          |
-| :--------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 上次 Agent | pi                                                                                                                                                                                                                                                                                                                                                                          |
-| 上次操作   | **(1) c07 qa-pipeline**: QA router + stream SSE, handler (streamText + retrieveSources tool), 4 presets, citations API。(2) c08 research-agent: Research tools (webSearch SearXNG, analyzeResults, writeReport), router CRUD + background agent loop。(3) c09 outputs-generation: Generator (generateObject per type), pipeline (chunks→context→generate→persist), router。 |
-| 开放决策   | AI SDK v7 `tool()` 用 `inputSchema`; `streamText()` v7 无 maxSteps; research agent fire-and-forget 后台执行。                                                                                                                                                                                                                                                               |
-| 已知问题   | AI runtime 需真实 API key 验证; 前端 eden migration 渐进推进; citation/tool-call UI 待集成。                                                                                                                                                                                                                                                                                |
-| 质量门禁   | `bun lint --quiet` ✅, server typecheck ✅, 10+1 feature routers mounted。                                                                                                                                                                                                                                                                                                  |
+| 字段       | 值                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| :--------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 上次 Agent | pi                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| 上次操作   | **(1) c10 models-management**: modelsRouter (/v2/models + /v2/models/providers), removed temp scaffold from server.ts。(2) c11 eval-harness: dataset CRUD + import/export, runner (multi-strategy eval with LLM-as-Judge), metrics (faithfulness/relevance/recall/precision/latency), evalRouter。(3) c12 analysis-studio-refine: analysisRouter (LLM-powered topic clustering/contradiction/relation), studioRouter (Slidev markdown generation via streamText), refineRouter (4 modes: expand/summarize/rewrite/translate), templatesRouter + promptPresetsRouter (CRUD)。**(4) 16+1 feature routers** now mounted in server.ts。 |
+| 开放决策   | (1) Eval uses LLM-as-Judge via generateObject with structured JudgeSchema。(2) Refine uses per-mode system prompts。(3) Studio creates Slidev markdown via streamText。(4) All frontend APIs ready for eden migration when needed。                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 开放决策   | AI SDK v7 `tool()` 用 `inputSchema`; `streamText()` v7 无 maxSteps; research agent fire-and-forget 后台执行。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 已知问题   | AI runtime 需真实 API key 验证; 前端 eden migration 渐进推进; citation/tool-call UI 待集成。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 质量门禁   | `bun lint --quiet` ✅, server typecheck ✅, 10+1 feature routers mounted。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 ---
 

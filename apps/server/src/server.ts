@@ -1,22 +1,27 @@
-import { ModelListSchema } from '@crystalith/shared';
 import { Elysia } from 'elysia';
 
 import { generateAsyncApiDocument } from './asyncapi.ts';
-import { citationsRouter } from './features/citations/router.ts';
-import { messagesRouter } from './features/messages/router.ts';
 // Feature routers — each exports an Elysia instance + registers OpenAPI docs
+import { analysisRouter } from './features/analysis/router.ts';
+import { citationsRouter } from './features/citations/router.ts';
+import { evalRouter } from './features/eval/router.ts';
+import { messagesRouter } from './features/messages/router.ts';
+import { modelsRouter } from './features/models/router.ts';
 import { notebooksRouter } from './features/notebooks/router.ts';
 import { outputsRouter } from './features/outputs/router.ts';
+import { promptPresetsRouter } from './features/prompt-presets/router.ts';
 import { qaRouter } from './features/qa/router.ts';
+import { refineRouter } from './features/refine/router.ts';
 import { researchRouter } from './features/research/router.ts';
 import { sessionsRouter } from './features/sessions/router.ts';
 import { sourcesRouter } from './features/sources/router.ts';
+import { studioRouter } from './features/studio/router.ts';
+import { templatesRouter } from './features/templates/router.ts';
 import { generateOpenApiDocument, registerApiDoc, type OpenApiRoute } from './openapi.ts';
 import { strategiesRouter } from './rag/router.ts';
-import { getModels, getModelDefaults } from './shared/config.ts';
 
 // ---------------------------------------------------------------------------
-// Scaffold OpenAPI docs (health, models — temp until c10)
+// Scaffold OpenAPI docs (health — models is now in modelsRouter)
 // ---------------------------------------------------------------------------
 
 const apiDocs: OpenApiRoute[] = [];
@@ -30,22 +35,12 @@ apiDocs.push({
   responses: { 200: { description: 'Server health status' } },
 });
 
-apiDocs.push({
-  path: '/v2/models',
-  method: 'get',
-  summary: 'List available models',
-  tags: ['models'],
-  responses: {
-    200: { description: 'Available model configurations', body: ModelListSchema },
-  },
-});
-
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
 
 const app = new Elysia()
-  // Health check (uncategorized)
+  // Health check
   .get('/health', () => ({ status: 'ok', version: '2.0.0-dev' }))
 
   // OpenAPI + AsyncAPI document endpoints
@@ -54,31 +49,7 @@ const app = new Elysia()
 
   // API v2 prefix group
   .group('/v2', (app) =>
-    app
-      .get('/', () => ({ message: 'Crystalith v2 API' }))
-
-      // Health (under v2)
-      .get('/health', () => ({ status: 'ok' }))
-
-      // Models (read-only from config — temp, c10 will own this)
-      .get('/models', () => {
-        const models = getModels();
-        const defaults = getModelDefaults();
-        return {
-          defaults,
-          models: models.available.map((m) => ({
-            id: m.id,
-            provider: m.provider,
-            model: m.model,
-            display_name: m.display_name,
-            description: m.description,
-            roles: m.roles,
-            capabilities: m.capabilities,
-            is_default_chat: defaults.chat === m.id,
-            is_default_embedding: defaults.embedding === m.id,
-          })),
-        };
-      }),
+    app.get('/', () => ({ message: 'Crystalith v2 API' })).get('/health', () => ({ status: 'ok' })),
   )
 
   // Mount feature routers
@@ -90,6 +61,13 @@ const app = new Elysia()
   .use(citationsRouter)
   .use(researchRouter)
   .use(outputsRouter)
+  .use(modelsRouter)
+  .use(analysisRouter)
+  .use(studioRouter)
+  .use(refineRouter)
+  .use(templatesRouter)
+  .use(promptPresetsRouter)
+  .use(evalRouter)
   .use(strategiesRouter)
 
   .listen({
