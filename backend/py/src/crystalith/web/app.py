@@ -1,18 +1,11 @@
 from __future__ import annotations
 
-import asyncio
 import datetime as dt
 import ipaddress
 import logging
 import os
-import socket
-from collections.abc import Awaitable
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Protocol
-from urllib.parse import urlparse
-
-import httpx
 from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,20 +20,11 @@ from crystalith.shared.ai.openai_client_manager import get_openai_client_manager
 from crystalith.shared.cache import CacheProvider, create_cache_provider
 from crystalith.shared.concurrency import StageLimiters
 from crystalith.shared.config import ConfigManager, Settings
-from crystalith.shared.config.endpoint_candidates import order_endpoint_candidates
 from crystalith.shared.db import Source, create_db_manager
 from crystalith.shared.db.migrations import upgrade_head
 from crystalith.shared.env import (
     CRYSTALITH_CONFIG_DIR,
     CRYSTALITH_CONFIG_PATH,
-    CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED,
-    CRYSTALITH_OPTIONAL_SERVICES_MONITOR_INTERVAL_S,
-    CRYSTALITH_OPTIONAL_SERVICES_MONITOR_TIMEOUT_S,
-    OPTIONAL_SERVICES_MONITOR_ENABLED_DEFAULT,
-    OPTIONAL_SERVICES_MONITOR_INTERVAL_S_DEFAULT,
-    OPTIONAL_SERVICES_MONITOR_TIMEOUT_S_DEFAULT,
-    env_bool,
-    env_float,
 )
 from crystalith.shared.plugins import PluginRegistry
 from crystalith.shared.plugins.registry import EntryPointsProvider
@@ -52,11 +36,6 @@ from crystalith.shared.schemas.errors import (
 from crystalith.shared.types import SourceStatus
 from crystalith.shared.vector_storage import VectorStore, create_vector_store
 
-from .optional_services_types import (
-    OptionalServicesStatus,
-    OptionalServiceStatus,
-    ServiceKey,
-)
 from .routers import register_routers
 
 logger = logging.getLogger(__name__)
@@ -94,21 +73,6 @@ def _resolve_http_guardrails_enabled(settings: Settings, *, listen_host: str | N
     if mode == "disabled":
         return False
     return not _is_loopback_listen_host(listen_host)
-
-
-class HttpEndpointProber(Protocol):
-    def __call__(
-        self,
-        endpoint: str | None,
-        *,
-        timeout_s: float,
-        path: str | None = None,
-        healthy_status_codes: set[int] | None = None,
-    ) -> tuple[bool, str | None]: ...
-
-
-class OptionalServicesRefresher(Protocol):
-    def __call__(self, app: FastAPIX, *, timeout_s: float) -> Awaitable[None]: ...
 
 
 def _find_config_path() -> Path | None:
@@ -191,378 +155,6 @@ def _iso_now() -> str:
     return dt.datetime.now(dt.UTC).isoformat()
 
 
-def _probe_http_endpoint(
-    endpoint: str | None,
-    *,
-    timeout_s: float,
-    path: str | None = None,
-    healthy_status_codes: set[int] | None = None,
-) -> tuple[bool, str | None]:
-    if not endpoint:
-        return False, "endpoint is empty"
-
-    target = endpoint.rstrip("/")
-    probe_path = (path or "").strip()
-    if probe_path:
-        if not probe_path.startswith("/"):
-            probe_path = f"/{probe_path}"
-        target = f"{target}{probe_path}"
-
-    try:
-        with httpx.Client(timeout=max(0.1, timeout_s), follow_redirects=True) as client, client.stream("GET", target) as response:
-            status_code = response.status_code
-        accepted_status_codes = set(healthy_status_codes or set())
-        if 200 <= status_code < 300 or status_code in accepted_status_codes:
-            return True, None
-        return False, f"HTTP {status_code}"
-    except Exception as exc:
-        return False, str(exc)
-
-
-def _probe_redis_endpoint(
-    endpoint: str | None,
-    *,
-    timeout_s: float,
-) -> tuple[bool, str | None]:
-    if not endpoint:
-        return False, "endpoint is empty"
-
-    parsed = urlparse(endpoint)
-    host = parsed.hostname
-    port = parsed.port or 6379
-    if not host:
-        return False, f"invalid endpoint: {endpoint}"
-
-    try:
-        with socket.create_connection((host, port), timeout=max(0.1, timeout_s)):
-            return True, None
-    except OSError as exc:
-        return False, str(exc)
-
-
-def _optional_recovery_hint(service_key: ServiceKey) -> str:
-    if service_key == "storage_chroma":
-        return "启动 storage overlay，或在 config/app.yaml 配置 Chroma 端点（vector_storage.chroma.*）。"
-    if service_key == "cache_redis":
-        return "启动 redis overlay，或在 config/app.yaml 配置 cache.provider/redis_url_candidates。"
-    return "检查服务地址与网络连通性，或禁用该可选服务。"
-
-
-def _optional_error_code(service_key: ServiceKey) -> str:
-    if service_key == "storage_chroma":
-        return "CHROMA_UNAVAILABLE"
-    if service_key == "cache_redis":
-        return "REDIS_UNAVAILABLE"
-    return "OPTIONAL_SERVICE_UNAVAILABLE"
-
-
-def _build_optional_status_template(settings: Settings) -> OptionalServicesStatus:
-    vector_provider = settings.vector_storage.provider
-    cache_provider = settings.cache.provider
-    chroma_host = settings.vector_storage.chroma.host
-    chroma_host_set = bool(chroma_host and chroma_host.strip())
-    chroma_enabled = settings.optional_services.chroma.enabled or (vector_provider == "chroma" and chroma_host_set)
-    chroma_endpoint = None
-    if chroma_enabled:
-        chroma_endpoint = (
-            f"http://{chroma_host}:{settings.vector_storage.chroma.port}"
-            if chroma_host_set
-            else settings.optional_services.chroma.endpoint
-        )
-    redis_endpoint = settings.cache.redis_url
-    if not (redis_endpoint and redis_endpoint.strip()):
-        redis_candidates = []
-        redis_candidates.extend(settings.cache.redis_url_candidates)
-        redis_candidates.extend(settings.optional_services.redis.endpoint_candidates)
-        if settings.optional_services.redis.endpoint:
-            redis_candidates.append(settings.optional_services.redis.endpoint)
-        redis_endpoint = order_endpoint_candidates(redis_candidates)[0] if redis_candidates else None
-
-    searxng_host = settings.search.searxng.host
-    searxng_host_set = bool(searxng_host and searxng_host.strip())
-    searxng_enabled = bool(
-        settings.optional_services.searxng.enabled
-        or searxng_host_set
-        or settings.search.searxng.endpoint_candidates
-        or settings.optional_services.searxng.endpoint_candidates
-    )
-    searxng_endpoint = None
-    if searxng_enabled:
-        if searxng_host_set:
-            searxng_endpoint = searxng_host.strip()
-        else:
-            searxng_candidates = []
-            searxng_candidates.extend(settings.search.searxng.endpoint_candidates)
-            searxng_candidates.extend(settings.optional_services.searxng.endpoint_candidates)
-            if settings.optional_services.searxng.endpoint:
-                searxng_candidates.append(settings.optional_services.searxng.endpoint)
-            searxng_endpoint = order_endpoint_candidates(searxng_candidates)[0] if searxng_candidates else None
-
-    chroma_probe = settings.optional_services.chroma.probe
-    redis_probe = settings.optional_services.redis.probe
-    searxng_probe = settings.optional_services.searxng.probe
-
-    return {
-        "storage_chroma": {
-            "service": "chroma",
-            "enabled": chroma_enabled,
-            "provider": vector_provider,
-            "endpoint": chroma_endpoint,
-            "status": "unknown",
-            "healthy": None,
-            "error": None,
-            "error_code": None,
-            "recovery_hint": None,
-            "last_probe": None,
-            "probe": {
-                "enabled": bool(chroma_probe.enabled),
-                "timeout_s": float(chroma_probe.timeout_s),
-                "interval_s": float(chroma_probe.interval_s),
-                "path": chroma_probe.path,
-            },
-            "degrade_policy": settings.optional_services.chroma.degrade_policy,
-        },
-        "cache_redis": {
-            "service": "redis",
-            "enabled": bool(
-                settings.optional_services.redis.enabled
-                or cache_provider in {"redis", "auto"}
-                or settings.cache.redis_url_candidates
-                or settings.optional_services.redis.endpoint_candidates
-            ),
-            "provider": cache_provider,
-            "endpoint": redis_endpoint,
-            "status": "unknown",
-            "healthy": None,
-            "error": None,
-            "error_code": None,
-            "recovery_hint": None,
-            "last_probe": None,
-            "probe": {
-                "enabled": bool(redis_probe.enabled),
-                "timeout_s": float(redis_probe.timeout_s),
-                "interval_s": float(redis_probe.interval_s),
-                "path": redis_probe.path,
-            },
-            "degrade_policy": settings.optional_services.redis.degrade_policy,
-        },
-        "search_searxng": {
-            "service": "searxng",
-            "enabled": searxng_enabled,
-            "endpoint": searxng_endpoint,
-            "timeout_s": settings.search.searxng.timeout,
-            "status": "unknown",
-            "healthy": None,
-            "error": None,
-            "error_code": None,
-            "recovery_hint": None,
-            "last_probe": None,
-            "probe": {
-                "enabled": bool(searxng_probe.enabled),
-                "timeout_s": float(searxng_probe.timeout_s),
-                "interval_s": float(searxng_probe.interval_s),
-                "path": searxng_probe.path,
-            },
-            "degrade_policy": settings.optional_services.searxng.degrade_policy,
-        },
-    }
-
-
-def _finalize_optional_status(service_key: ServiceKey, status: OptionalServiceStatus) -> None:
-    if not status["enabled"]:
-        status["status"] = "disabled"
-        status["healthy"] = None
-        status["error"] = None
-        status["error_code"] = None
-        status["recovery_hint"] = None
-        return
-
-    healthy = status["healthy"]
-    if healthy is True:
-        status["status"] = "healthy"
-        status["error"] = None
-        status["error_code"] = None
-        status["recovery_hint"] = None
-        return
-
-    if healthy is False:
-        status["status"] = "degraded"
-        status["error_code"] = status["error_code"] or _optional_error_code(service_key)
-        status["recovery_hint"] = status["recovery_hint"] or _optional_recovery_hint(service_key)
-        return
-
-    status["status"] = "unknown"
-    status["error_code"] = None
-    status["recovery_hint"] = None
-
-
-async def _refresh_optional_services_status(
-    app: FastAPIX,
-    *,
-    timeout_s: float,
-    http_endpoint_prober: HttpEndpointProber = _probe_http_endpoint,
-) -> None:
-    settings: Settings = app.state.settings
-    statuses = _build_optional_status_template(settings)
-    probe_time = _iso_now()
-
-    chroma = statuses["storage_chroma"]
-    chroma_probe = chroma["probe"]
-    if chroma["enabled"] and chroma_probe["enabled"]:
-        service_timeout = max(0.1, float(chroma_probe["timeout_s"] or timeout_s))
-        service_path = chroma_probe["path"]
-        chroma["last_probe"] = probe_time
-        healthy, error = await asyncio.to_thread(
-            http_endpoint_prober,
-            chroma["endpoint"],
-            timeout_s=service_timeout,
-            path=service_path or "/api/v1/heartbeat",
-        )
-        chroma["healthy"] = healthy
-        chroma["error"] = error
-    _finalize_optional_status("storage_chroma", chroma)
-
-    redis = statuses["cache_redis"]
-    redis_probe = redis["probe"]
-    if redis["enabled"] and redis_probe["enabled"]:
-        service_timeout = max(0.1, float(redis_probe["timeout_s"] or timeout_s))
-        redis["last_probe"] = probe_time
-        redis_candidates = []
-        if settings.cache.redis_url:
-            redis_candidates.append(settings.cache.redis_url)
-        redis_candidates.extend(settings.cache.redis_url_candidates)
-        redis_candidates.extend(settings.optional_services.redis.endpoint_candidates)
-        if settings.optional_services.redis.endpoint:
-            redis_candidates.append(settings.optional_services.redis.endpoint)
-        ordered = order_endpoint_candidates(redis_candidates)
-        if not ordered:
-            redis["healthy"] = False
-            redis["error"] = "endpoint is empty"
-        else:
-            redis_last_error: str | None = None
-            for candidate in ordered:
-                healthy, error = await asyncio.to_thread(
-                    _probe_redis_endpoint,
-                    candidate,
-                    timeout_s=service_timeout,
-                )
-                if healthy:
-                    redis["endpoint"] = candidate
-                    redis["healthy"] = True
-                    redis["error"] = None
-                    break
-                redis_last_error = error
-            else:
-                redis["endpoint"] = ordered[0]
-                redis["healthy"] = False
-                redis["error"] = redis_last_error or "probe failed"
-    _finalize_optional_status("cache_redis", redis)
-
-    searxng = statuses["search_searxng"]
-    searxng_probe = searxng["probe"]
-    if searxng["enabled"] and searxng_probe["enabled"]:
-        service_timeout = max(0.1, float(searxng["timeout_s"] or timeout_s))
-        service_path = searxng_probe["path"]
-        searxng["last_probe"] = probe_time
-        searxng_host = (settings.search.searxng.host or "").strip()
-        if searxng_host:
-            ordered = [searxng_host]
-        else:
-            searxng_candidates = []
-            searxng_candidates.extend(settings.search.searxng.endpoint_candidates)
-            searxng_candidates.extend(settings.optional_services.searxng.endpoint_candidates)
-            if settings.optional_services.searxng.endpoint:
-                searxng_candidates.append(settings.optional_services.searxng.endpoint)
-            ordered = order_endpoint_candidates(searxng_candidates)
-        if not ordered:
-            searxng["healthy"] = False
-            searxng["error"] = "endpoint is empty"
-        else:
-            searxng_last_error: str | None = None
-            for candidate in ordered:
-                healthy, error = await asyncio.to_thread(
-                    http_endpoint_prober,
-                    candidate,
-                    timeout_s=service_timeout,
-                    path=service_path,
-                    healthy_status_codes={400},
-                )
-                if healthy:
-                    searxng["endpoint"] = candidate
-                    searxng["healthy"] = True
-                    searxng["error"] = None
-                    break
-                searxng_last_error = error
-            else:
-                searxng["endpoint"] = ordered[0]
-                searxng["healthy"] = False
-                searxng["error"] = searxng_last_error or "probe failed"
-    _finalize_optional_status("search_searxng", searxng)
-
-    app.state.optional_services_status = statuses
-    app.state.optional_services_last_probe = probe_time
-
-
-def _optional_services_snapshot(app: FastAPIX) -> OptionalServicesStatus:
-    settings: Settings = app.state.settings
-    snapshot = _build_optional_status_template(settings)
-
-    current: OptionalServicesStatus = app.state.optional_services_status
-
-    snapshot["storage_chroma"]["status"] = current["storage_chroma"]["status"]
-    snapshot["storage_chroma"]["healthy"] = current["storage_chroma"]["healthy"]
-    snapshot["storage_chroma"]["endpoint"] = current["storage_chroma"]["endpoint"]
-    snapshot["storage_chroma"]["error"] = current["storage_chroma"]["error"]
-    snapshot["storage_chroma"]["error_code"] = current["storage_chroma"]["error_code"]
-    snapshot["storage_chroma"]["recovery_hint"] = current["storage_chroma"]["recovery_hint"]
-    snapshot["storage_chroma"]["last_probe"] = current["storage_chroma"]["last_probe"]
-
-    snapshot["cache_redis"]["status"] = current["cache_redis"]["status"]
-    snapshot["cache_redis"]["healthy"] = current["cache_redis"]["healthy"]
-    snapshot["cache_redis"]["endpoint"] = current["cache_redis"]["endpoint"]
-    snapshot["cache_redis"]["error"] = current["cache_redis"]["error"]
-    snapshot["cache_redis"]["error_code"] = current["cache_redis"]["error_code"]
-    snapshot["cache_redis"]["recovery_hint"] = current["cache_redis"]["recovery_hint"]
-    snapshot["cache_redis"]["last_probe"] = current["cache_redis"]["last_probe"]
-
-    snapshot["search_searxng"]["status"] = current["search_searxng"]["status"]
-    snapshot["search_searxng"]["healthy"] = current["search_searxng"]["healthy"]
-    snapshot["search_searxng"]["endpoint"] = current["search_searxng"]["endpoint"]
-    snapshot["search_searxng"]["error"] = current["search_searxng"]["error"]
-    snapshot["search_searxng"]["error_code"] = current["search_searxng"]["error_code"]
-    snapshot["search_searxng"]["recovery_hint"] = current["search_searxng"]["recovery_hint"]
-    snapshot["search_searxng"]["last_probe"] = current["search_searxng"]["last_probe"]
-
-    _finalize_optional_status("storage_chroma", snapshot["storage_chroma"])
-    _finalize_optional_status("cache_redis", snapshot["cache_redis"])
-    _finalize_optional_status("search_searxng", snapshot["search_searxng"])
-
-    return snapshot
-
-
-async def _run_optional_services_monitor(
-    app: FastAPIX,
-    stop_event: asyncio.Event,
-    *,
-    interval_s: float,
-    timeout_s: float,
-    optional_services_refresher: OptionalServicesRefresher,
-) -> None:
-    while not stop_event.is_set():
-        try:
-            await optional_services_refresher(
-                app,
-                timeout_s=timeout_s,
-            )
-        except Exception:
-            logger.exception("Optional services monitor probe failed")
-
-        try:
-            await asyncio.wait_for(stop_event.wait(), timeout=interval_s)
-        except TimeoutError:
-            continue
-
-
 def create_app(
     settings: Settings | None = None,
     *,
@@ -571,8 +163,6 @@ def create_app(
     task_queue: TaskQueue | None = None,
     cache_provider: CacheProvider | None = None,
     plugins_entry_points_provider: EntryPointsProvider | None = None,
-    optional_services_refresher: OptionalServicesRefresher | None = None,
-    http_endpoint_prober: HttpEndpointProber | None = None,
 ) -> FastAPIX:
     resolved = settings or _load_settings()
     listen_host = os.getenv("HOST") or _DEFAULT_LISTEN_HOST
@@ -595,22 +185,8 @@ def create_app(
         limiters=limiters,
     )
 
-    resolved_http_endpoint_prober = http_endpoint_prober or _probe_http_endpoint
-
-    async def _default_optional_services_refresher(app: FastAPIX, *, timeout_s: float) -> None:
-        await _refresh_optional_services_status(
-            app,
-            timeout_s=timeout_s,
-            http_endpoint_prober=resolved_http_endpoint_prober,
-        )
-
-    resolved_optional_services_refresher = optional_services_refresher or _default_optional_services_refresher
-
     @asynccontextmanager
     async def lifespan(app: FastAPIX):
-        optional_monitor_stop: asyncio.Event | None = None
-        optional_monitor_task: asyncio.Task[None] | None = None
-
         if app.state.settings.app.startup.auto_db_init:
             await asyncio.to_thread(upgrade_head, app.state.settings.database.url)
 
@@ -656,42 +232,10 @@ def create_app(
                         source_ids,
                     )
 
-        app.state.optional_services_status = _build_optional_status_template(app.state.settings)
-        app.state.optional_services_last_probe = None
-
-        if env_bool(CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED, OPTIONAL_SERVICES_MONITOR_ENABLED_DEFAULT):
-            interval_s = max(
-                0.1,
-                env_float(CRYSTALITH_OPTIONAL_SERVICES_MONITOR_INTERVAL_S, OPTIONAL_SERVICES_MONITOR_INTERVAL_S_DEFAULT),
-            )
-            timeout_s = max(
-                0.1,
-                env_float(CRYSTALITH_OPTIONAL_SERVICES_MONITOR_TIMEOUT_S, OPTIONAL_SERVICES_MONITOR_TIMEOUT_S_DEFAULT),
-            )
-            optional_monitor_stop = asyncio.Event()
-            optional_monitor_task = asyncio.create_task(
-                _run_optional_services_monitor(
-                    app,
-                    optional_monitor_stop,
-                    interval_s=interval_s,
-                    timeout_s=timeout_s,
-                    optional_services_refresher=resolved_optional_services_refresher,
-                )
-            )
-
         await app.state.task_queue.start_worker()
         try:
             yield
         finally:
-            if optional_monitor_stop is not None:
-                optional_monitor_stop.set()
-            if optional_monitor_task is not None:
-                try:
-                    await asyncio.wait_for(optional_monitor_task, timeout=2.0)
-                except TimeoutError:
-                    optional_monitor_task.cancel()
-                    with suppress(asyncio.CancelledError):
-                        await optional_monitor_task
             await app.state.db.close()
             await app.state.vector_store.close()
             await app.state.cache.close()
@@ -718,8 +262,6 @@ def create_app(
     app.state.plugins = plugins
     app.state.embedding_provider = None
     app.state.ai_provider = None
-    app.state.optional_services_status = _build_optional_status_template(resolved)
-    app.state.optional_services_last_probe = None
     app.state.listen_host = listen_host
     app.state.http_guardrails_enabled = http_guardrails_enabled
 
@@ -728,27 +270,10 @@ def create_app(
         return {"status": "ok"}
 
     @app.get("/health/dependencies", include_in_schema=False)
-    async def dependency_health(force: bool = False) -> dict[str, object]:
-        monitor_enabled = env_bool(CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED, OPTIONAL_SERVICES_MONITOR_ENABLED_DEFAULT)
-        needs_refresh = force or (
-            not monitor_enabled
-            or app.state.optional_services_last_probe is None
-        )
-        if needs_refresh:
-            try:
-                await resolved_optional_services_refresher(
-                    app,
-                    timeout_s=1.0,
-                )
-            except Exception:
-                logger.exception("Dependency health probe refresh failed")
-
-        optional_status = _optional_services_snapshot(app)
-
+    async def dependency_health() -> dict[str, object]:
         return {
             "status": "ok",
             "generated_at": _iso_now(),
-            "last_probe": app.state.optional_services_last_probe,
             "core": {
                 "frontend": {
                     "service": "web",
@@ -757,7 +282,6 @@ def create_app(
                 },
                 "backend": {"service": "api", "healthy": True},
             },
-            "optional": optional_status,
         }
 
     cors = resolved.app.cors
