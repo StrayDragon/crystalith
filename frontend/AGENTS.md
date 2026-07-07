@@ -27,8 +27,6 @@
 - OpenAPI schema：
   - 导出脚本：`backend/py/scripts/api_schema.py`（根目录任务：`justfile:api-export`）
   - 落盘文件：`frontend/web/openapi.gen.json`（命名含 `.gen.`，按规则为生成物：`AGENTS.md`）
-- Git submodule：
-  - `frontend/web/vendor/rivu`（定义：`.gitmodules`；初始化脚本：`scripts/ensure_rivu_submodule.sh`；自动触发：`scripts/ensure_frontend_web_ready.sh`）
 
 ### 下游使用者（已知）
 - Nginx 前门（docker 部署）：前端容器 serve SPA 并反向代理后端（`dockers/nginx/default.conf`）。
@@ -105,7 +103,7 @@ pnpm -C frontend/packages/crystalith-slidev dev    # 依据：frontend/packages/
   - `VITEST_INCLUDE_EXPERIMENTAL`（`frontend/web/vite.config.ts`）
   - `VITEST_MSW_ON_UNHANDLED`（说明见 `frontend/web/README.md` 与 `frontend/web/package.json:scripts.test:*`）
 - 依赖准备脚本：
-  - `scripts/ensure_frontend_web_ready.sh` 会确保 rivu submodule 与 pnpm install（被 `frontend/web/package.json` 的 `predev/prebuild/pretest/...` 调用）。
+  - `scripts/ensure_frontend_web_ready.sh` 会确保 pnpm install（被 `frontend/web/package.json` 的 `predev/prebuild/pretest/...` 调用）。
 
 ## Roadmap（未来方向与优化建议）
 - 近期（1–2 周）
@@ -119,5 +117,4 @@ pnpm -C frontend/packages/crystalith-slidev dev    # 依据：frontend/packages/
 
 ## Assumptions / TODO to Verify（已知未知）
 - 哪些业务域 UI 对应哪些后端路由：从 `frontend/web/src/features/workspace/domains/*` 与 `backend/py/src/crystalith/web/routers.py` 交叉确认（目录存在性：`frontend/web/src/features/workspace/`）。
-- rivu 子模块的升级策略与兼容边界：从 `.gitmodules`、`scripts/ensure_rivu_submodule.sh` 与 `frontend/web/vendor/rivu` 内部文档确认。
 - docker 部署下 Slidev 是否对所有用户开启：从 `deployments/prod/docker-compose.slidev.yml` 的 overlay 组合与 `dockers/nginx/default.conf` 的代理规则确认。

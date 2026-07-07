@@ -58,9 +58,6 @@ sdk-gen-web:
 # Sync frontend: export schema + regenerate frontend SDK
 api-sync: api-export sdk-gen-web
 
-rivu-submodule-update:
-    bash ./scripts/ensure_rivu_submodule.sh
-
 # Ensure the SDK monorepo submodule is checked out
 sdk-submodule-update:
     #!/usr/bin/env bash
