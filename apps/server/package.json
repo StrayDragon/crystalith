@@ -30,16 +30,21 @@
     "@crystalith/shared": "workspace:*",
     "@elysiajs/eden": "^1.4.9",
     "@elysiajs/static": "^1.4.10",
+    "@mozilla/readability": "^0.6.0",
     "ai": "^7.0.17",
+    "cheerio": "^1.2.0",
     "drizzle-orm": "^0.45.2",
     "elysia": "^1.4.29",
     "gpt-tokenizer": "^3.4.0",
+    "jsdom": "^29.1.1",
     "sqlite-vec": "^0.1.9",
+    "unpdf": "^1.6.2",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/jsdom": "^28.0.3",
     "drizzle-kit": "^0.31.10",
     "typescript": "^5"
   }

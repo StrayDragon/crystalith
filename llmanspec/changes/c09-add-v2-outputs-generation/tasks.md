@@ -15,7 +15,11 @@
 - [ ] `apps/server/src/features/outputs/pipeline.ts` — 获取 chunks → 拼接 context → generateObject → mapCitations → persist
 - [ ] `apps/server/src/features/outputs/router.ts` — POST /v2/outputs, GET /v2/outputs/:id
 
-## 4. Frontend Output Viewer
+## 4. Frontend Eden Migration
+
+- [ ] `apps/web/src/api/` — outputs domain: generated import → eden treaty
+
+## 5. Frontend Output Viewer
 
 - [ ] 前端 output viewer 根据 type 渲染 (FAQ→accordion, TIMELINE→timeline, MINDMAP→d3 tree, etc.)
 - [ ] 前端 import 同 schema 做 render 时类型校验
