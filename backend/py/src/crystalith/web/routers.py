@@ -18,7 +18,6 @@ from crystalith.features.source_connectors.api import router as source_connector
 from crystalith.features.sources.api import router as sources_router
 from crystalith.features.studio.api import router as slides_router
 from crystalith.features.tasks.api import router as tasks_router
-from crystalith.features.ui.api import router as ui_router
 from crystalith.features.workspace.api import router as workspace_router
 from crystalith.web.auth import require_api_key
 
@@ -41,5 +40,4 @@ def register_routers(app: FastAPIX) -> None:
     app.include_router(slides_router, dependencies=auth_dependencies)
     app.include_router(research_router, dependencies=auth_dependencies)
     app.include_router(tasks_router, dependencies=auth_dependencies)
-    app.include_router(ui_router, dependencies=auth_dependencies)
     app.include_router(workspace_router, dependencies=auth_dependencies)

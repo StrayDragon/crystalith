@@ -16,7 +16,6 @@ from .models import (
     StudioSlide,
     Task,
     Template,
-    UiEventReceipt,
 )
 from .schema import create_all
 
@@ -37,7 +36,6 @@ __all__ = [
     "StudioSlide",
     "Task",
     "Template",
-    "UiEventReceipt",
     "create_all",
     "create_db_manager",
 ]
