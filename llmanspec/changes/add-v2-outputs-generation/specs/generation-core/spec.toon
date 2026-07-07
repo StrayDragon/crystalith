@@ -1,0 +1,11 @@
+kind: llman.sdd.delta
+ops[4]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r1,"Outputs use generateObject + Zod schemas","每种 Output 类型 MUST 使用 AI SDK generateObject(schema: Zod) 生成结构化 JSON。schema MUST 定义于 packages/shared/src/schemas/outputs.ts，前后端共享。",null,null,null
+  add_requirement,r2,"Output pipeline is async function chain","Output 生成管线 MUST 用普通 async 函数链 (非 graph/agent loop)：获取 chunks → 拼接 context → generateObject → 映射引用 → 持久化。",null,null,null
+  add_requirement,r3,"7 output types are all implemented","系统 MUST 支持至少 7 种输出类型：FAQ、BRIEFING、TIMELINE、MINDMAP、QUIZ、GUIDE、SLIDES。每种类型 MUST 有独立的 Zod schema 和 generateObject 调用。",null,null,null
+  add_requirement,r4,"Output is persisted and retrievable","生成的 Output MUST 持久化到 outputs 表，支持按 notebook 列出和按 id 获取。MUST 关联生成时使用的 chunk_ids 以便溯源。",null,null,null
+op_scenarios[4]{req_id,id,given,when,then}:
+  r1,happy,"","用户请求 FAQ 输出","generateObject 返回符合 FAQ Zod schema 的 JSON"
+  r2,happy,"","3 个 chunk 作为 context","async pipeline: chunks → context → generateObject → mapCitations → persist"
+  r3,happy,"","用户切换输出类型为 TIMELINE","generateObject 使用 Timeline Zod schema，输出时间线格式 JSON"
+  r4,happy,"","生成完成","outputs 表新增记录，包含 content JSON + chunk_ids"

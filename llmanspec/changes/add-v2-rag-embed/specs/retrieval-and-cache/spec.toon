@@ -1,0 +1,13 @@
+kind: llman.sdd.delta
+ops[5]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r1,"Embed RAG strategy uses sqlite-vec","系统 MUST 实现 Embed RAG 策略：chunk embedding → sqlite-vec KNN 检索 → top-K 上下文。检索 MUST 按 notebook_id partition 过滤。",null,null,null
+  add_requirement,r2,"Text chunking is paragraph-based","文本分块 MUST 以段落为粒度（~500 字符/块），保留重叠（~50 字符）。分块结果 MUST 写入 chunks 表并派生向量。",null,null,null
+  add_requirement,r3,"Embedding generation uses AI SDK provider","chunk embedding 生成 MUST 通过 AI SDK provider 调用 embedding 模型。MUST 支持 config 切换模型（如 text-embedding-3-small、bge-m3）。",null,null,null
+  add_requirement,r4,"Source ingestion triggers embedding pipeline","来源状态变为 ready 后 MUST 自动触发 embedding pipeline：分块 → embed → 写入 vec_chunks。失败 MUST 标记 source 为 failed。",null,null,null
+  add_requirement,r5,"Cache layers reuse v1 epoch-based invalidation","检索缓存 MUST 复用 epoch-based 失效模式（sources_epoch/vector_epoch）避免重复计算。缓存层 MUST 用内存 LRU（desktop app 无需 Redis）。",null,null,null
+op_scenarios[5]{req_id,id,given,when,then}:
+  r1,happy,"","用户提问 embedding 向量","sqlite-vec KNN 返回 notebook 内 top-10 chunk，含 distance 和 text"
+  r2,happy,"","PDF 解析得到 5000 字文本","分块产生 ~10 个 chunk，每个约 500 字符"
+  r3,happy,"","配置使用 OpenAI embedding","AI SDK @ai-sdk/openai embedding() 生成 1536-dim 向量"
+  r4,happy,"","PDF 上传完成","自动 embedding pipeline 完成，source status: ready"
+  r5,happy,"","chunk 已存在缓存","epoch 未变，直接返回缓存结果，不重新 embed"

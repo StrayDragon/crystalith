@@ -1,0 +1,13 @@
+kind: llman.sdd.delta
+ops[5]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r1,Bun workspace monorepo,仓库 MUST 以 Bun workspace 管理 server、frontend/web 与 packages/* 三组包的依赖，提供单一 bun.lock 锁文件。根 package.json MUST 包含 workspaces 字段与 dev/build/test/typecheck/lint 脚本。,null,null,null
+  add_requirement,r2,"Server uses Elysia with feature-sliced layout",server/ 包 MUST 使用 Elysia 作为 HTTP 框架，按 features/<feature>/router.ts 组织业务域路由，在 server/src/server.ts 统一注册。路由层 → 业务层 → 数据层的依赖方向 MUST 为单向（features → shared，shared MUST NOT 依赖 features）。,null,null,null
+  add_requirement,r3,Shared package for Zod schemas and types,"packages/shared/ MUST 承载 server ↔ frontend 共享的 Zod schema、Drizzle 导出的 TS 类型、以及 Elysia eden 推断的 RPC 类型。前端 MUST 通过 workspace reference 或 alias 引用该包，server MUST 通过 workspace:* 引用。",null,null,null
+  add_requirement,r4,Frontend uses bun for scripts and deps,"frontend/web/ MUST 使用 bun 作为包管理器和脚本运行器。packageManager 字段 MUST 设为 bun@<version>。所有 pnpm 引用（pnpm-lock.yaml、pnpm-workspace.yaml、scripts 中的 pnpm run）MUST 已移除。",null,null,null
+  add_requirement,r5,"CI and pre-commit use bun","CI workflow 和 pre-commit hooks MUST 使用 oven-sh/setup-bun@v2 和 bun 命令，不再依赖 pnpm/action-setup。Server CI job SHOULD 被注释保留，待 server 测试骨架就绪后启用。",null,null,null
+op_scenarios[5]{req_id,id,given,when,then}:
+  r1,happy,"",开发者运行 bun install,所有 workspace 包依赖安装成功，bun.lock 文件生成
+  r2,happy,"",开发者新增一个 feature 路由并注册到 server.ts,路由 SHALL 通过 Elysia 依赖注入访问业务层
+  r3,happy,"",开发者在 packages/shared/ 定义 Zod schema,server 和 frontend 均能 import 该 schema，类型推断正确
+  r4,happy,"",开发者在 frontend/web 运行 bun dev,Vite dev server 启动，HMR 正常工作
+  r5,happy,"","CI 推送到 v2-dev",bun 安装依赖、lint/typecheck/test 任务成功执行

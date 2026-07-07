@@ -1,0 +1,13 @@
+kind: llman.sdd.delta
+ops[5]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r1,"QA uses streamText + retrieveSources tool","QA 端点 MUST 使用 AI SDK streamText + tool(retrieveSources) 实现。Agent MUST 自主决定检索时机和 query。MUST 支持 maxSteps=5。",null,null,null
+  add_requirement,r2,"QA reply includes citations","每次 QA 回答 MUST 附带 citations 数组 (chunk_id → source_id → page)。前端 MUST 可高亮引用并跳转到来源位置。",null,null,null
+  add_requirement,r3,"Streaming uses SSE with structured events","QA 流式端点 (POST /v2/qa/stream) MUST 通过 SSE 推送 text-delta、chunk-delta (引用标记)、tool-call、tool-result 事件。",null,null,null
+  add_requirement,r4,"Non-streaming path returns complete answer","非流式 QA (POST /v2/qa) MUST 返回完整 answer + citations + message_id。",null,null,null
+  add_requirement,r5,"Preset system prompts configurable","QA system prompt MUST 可通过 preset 配置。MUST 支持默认 preset 和用户自定义 preset。",null,null,null
+op_scenarios[5]{req_id,id,given,when,then}:
+  r1,happy,"","用户提问需要检索 notebook 内容","agent 调用 retrieveSources 工具获取 chunk，然后生成带引用回答"
+  r2,happy,"","LLM 回答引用了 3 个 chunk","citations 数组包含 3 个 {chunk_id, source_id, page, text} 对象"
+  r3,happy,"","前端接收 SSE 流","text-delta 事件实时更新 UI，chunk-delta 事件标记引用 region"
+  r4,happy,"","非流式 QA 请求","同步返回 {answer, citations, message_id}，前端渲染完成"
+  r5,happy,"","用户选择 analysis preset","QA 使用 analysis system prompt，更侧重深度分析"

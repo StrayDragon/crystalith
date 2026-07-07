@@ -1,0 +1,11 @@
+kind: llman.sdd.delta
+ops[4]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r1,"bun build --compile produces single binary","系统 MUST 通过 bun build --compile --target 产出单二进制文件。MUST 支持 linux-x64/darwin-arm64/windows-x64 三平台。二进制大小 MUST < 90MB。",null,null,null
+  add_requirement,r2,"Server serves frontend static files","server MUST 内嵌前端 dist/ 目录，二进制运行时 MUST 通过 Elysia static plugin 服务前端 SPA。dist/ MUST 与 binary 同目录。",null,null,null
+  add_requirement,r3,"Tauri v2 desktop wrapper","Tauri desktop app MUST 将 Bun sidecar 作为 externalBin 启动。启动时 MUST 找空闲端口 → spawn server → 轮询 /health → 加载 webview。退出时 MUST SIGTERM graceful shutdown。",null,null,null
+  add_requirement,r4,"CI/CD release matrix","GitHub Actions MUST 在 tag v* 时触发构建矩阵：ubuntu-24.04/ubuntu-24.04-arm/macos-15/macos-13/windows-2025 → 产出 tar.gz/.dmg/.exe/.AppImage 到 Release。",null,null,null
+op_scenarios[4]{req_id,id,given,when,then}:
+  r1,happy,"","运行 bun build --compile --target=bun-linux-x64","产出 crystalith-server 75MB 可执行文件"
+  r2,happy,"","启动二进制，浏览器访问 localhost:8032","返回前端 SPA (index.html + JS/CSS)"
+  r3,happy,"","双击 Tauri app","自动启动 sidecar → webview 显示前端"
+  r4,happy,"","git tag v2.0.0 推送","GitHub Actions 构建 5 个平台产物并 attach 到 Release"
