@@ -10,6 +10,26 @@
 
 ---
 
+> **📌 部分步骤已由其他清理提交提前完成**（2026-07-06）：
+> - ✅ **ollama_discovery.py** — 已删除（文件不存在，由 `agentdev: clean` 等提交移除）
+> - ✅ **web/app.py 探针监控** — `_optional_*` 函数已移除（仅剩 `_default_optional_services_refresher` 壳）
+> - ✅ **@ag-ui/core** — 已从 `package.json` 移除
+> - ✅ **后端 Rivu 引用清理（部分）** — `UiEventReceipt` 模型已从 `db/models.py` 移除；`sessions/repo.py` 和 `qa/api.py` 中 `ui_state` 引用已删除
+>
+> ⚡ **以下步骤仍待执行**（文档命令可直接使用）：
+> - 删除 `chroma_http.py`、`memory.py`、`browserless_extractor.py`、`compliance.py`
+> - 简化 `factory.py`（砍多后端选择分支）
+> - 简化 cache factory（砍 Redis 分支）
+> - `endpoint_candidates.py` 降级
+> - `features/ui/` + `ui_state.py` 删除
+> - `routers.py` 移除 `ui_router` 注册
+> - 前端 `rivuRuntime.ts`、`useChat.ts` rivu 逻辑、`TamboProvider.tsx` 删除
+> - `@tambo-ai/react` 从 package.json 移除
+> - 清理 `config/app.yaml` 死配置（`optional_services`、`redis_url_candidates`、`endpoint_candidates`）
+> - 建 v1/v2 分支 + v1.0.0 tag
+
+---
+
 ## 0. 分支操作
 
 ```bash
@@ -257,24 +277,25 @@ git commit -m "refactor: remove dead config sections from app.yaml"
 | **后端行数** | ~19,000 | **~16,500** | -2,500 |
 | **前端行数** | ~26,000 | **~25,800** | -200 |
 
-| 删除清单 | 行数 |
-|----------|------|
-| `chroma_http.py` | 353 |
-| `memory.py` | 161 |
-| `browserless_extractor.py` | 383 |
-| `compliance.py` | 139 |
-| `features/ui/` 整个目录 | ~180 |
-| `shared/ui_state.py` | 115 |
-| `web/app.py` 探针监控 | ~350 |
-| `ollama_discovery.py` 降级 | ~330 |
-| `endpoint_candidates.py` 降级 | ~160 |
-| `prompt_presets/api.py` CRUD | ~150 |
-| `templates/api.py` CRUD | ~200 |
-| cache factory Redis | ~50 |
-| config dead sections | ~40 |
-| 前端 Tambo + rivuRuntime + MessageMounts | ~210 |
-| npm 依赖 | @tambo-ai/react + @ag-ui/core |
-| **合计移除** | **~2,800 行（~7%）** |
+| 删除清单 | 行数 | 状态 |
+|----------|------|:----:|
+| `chroma_http.py` | 353 | ❌ 待执行 |
+| `memory.py` | 161 | ❌ 待执行 |
+| `browserless_extractor.py` | 383 | ❌ 待执行 |
+| `compliance.py` | 139 | ❌ 待执行 |
+| `features/ui/` 整个目录 | ~180 | ❌ 待执行 |
+| `shared/ui_state.py` | 115 | ❌ 待执行 |
+| `web/app.py` 探针监控 | ~350 | ✅ 已由其他提交完成 |
+| `ollama_discovery.py` 降级 | ~330 | ✅ 已由其他提交完成 |
+| `endpoint_candidates.py` 降级 | ~160 | ❌ 待执行 |
+| `prompt_presets/api.py` CRUD | ~150 | ❌ 待执行 |
+| `templates/api.py` CRUD | ~200 | ❌ 待执行 |
+| cache factory Redis | ~50 | ❌ 待执行 |
+| config dead sections | ~40 | ❌ 待执行 |
+| 前端 Tambo + rivuRuntime + MessageMounts | ~210 | ❌ 待执行 |
+| npm 依赖 @tambo-ai/react | — | ❌ 待执行 |
+| npm 依赖 @ag-ui/core | — | ✅ 已由其他提交完成 |
+| **合计剩余待移除** | **~2,200 行（~5.5%）** | |
 
 **所有业务逻辑完好无损。94 个端点中 ~92 个保留。research 13 端点、studio 8 端点、analysis 1 端点、refine 2 端点——全部保留。**
 

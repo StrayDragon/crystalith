@@ -6,13 +6,13 @@
 
 | 维度 | 数量 | 备注 |
 |------|------|------|
-| 后端 Python 代码 | ~48k 行（含 1 个 workspace 包 + 17 个插件） | 18 个 feature 模块；共享库已迁至 PyPI `lush-*` |
-| 后端 API 端点 | 94 个 | 分布在 25 个 `api*.py` |
-| 前端 TS/React 代码 | ~39k 行 | React 19 + Vite，已是 app 本体 |
-| 数据模型 | 17 张表 + 11 个 alembic 迁移 | SQLAlchemy 异步，Postgres/SQLite 双支持 |
+| 后端 Python 代码 | ~37k 行（src 核心 ~32k + plugins ~2.1k + rivu-server-sdk ~2.7k） | 21 个 feature 模块；共享库已迁至 PyPI `lush-*` |
+| 后端 API 端点 | ~77 个 | 分布在 18 个 `api*.py` |
+| 前端 TS/React 代码 | ~49k 行 | React 19 + Vite，已是 app 本体 |
+| 数据模型 | 17 张表 + 4 个活跃 alembic 迁移（另有 7 个历史迁移） | SQLAlchemy 异步，Postgres/SQLite 双支持 |
 | 向量存储 | ChromaDB（embedded / http / memory 三后端） | RAG 核心 |
 | 缓存 | Redis / 内存两后端 | |
-| 测试 | 后端 151 + 前端 30 个测试文件 | 覆盖率门槛 85% |
+| 测试 | 后端 ~129 个测试文件 + 前端 30 个测试文件 | 覆盖率门槛 85% |
 | 插件 | 17 个官方插件（connectors / extractors / parsers / outputs / slides） | Python entry-points 机制 |
 | llmanspec 规范 | 49 specs | llman SDD 工作流（自 openspec 迁移） |
 
@@ -49,7 +49,7 @@
 | 校验 | Zod + zod-to-json-schema | **后端重写后可前后端共享** |
 | 模板 | nunucks | **TS 生态已有对等** |
 | API 客户端 | @hey-api/openapi-ts 生成 | 依赖后端 OpenAPI |
-| agentic UI | @ag-ui/core + @tambo-ai/react + @modelcontextprotocol/sdk | **已是 TS agentic 生态** |
+| agentic UI | @tambo-ai/react + @modelcontextprotocol/sdk（@ag-ui/core 已移除） | **已是 TS agentic 生态** |
 | 导出 | jspdf + pptxgenjs | |
 | 测试 | Vitest + Testing Library + MSW | |
 
@@ -58,7 +58,7 @@
 部署复杂度的根因（按贡献排序）：
 
 1. **4 个部署 profile × 6 个 overlay** — 面向"多机/多环境/外部服务混合"的 server 化部署，与"桌面 app"定位冲突。
-2. **多后端抽象层** — 数据库(Postgres+SQLite)、向量库(Chroma 三模式)、缓存(Redis+内存)、LLM(OpenAI+Ollama) 每个都做了 provider 抽象 + endpoint 自动探测（`endpoint_candidates.py` ~170 行 + `ollama_discovery.py` ~340 行 + 各 factory）。**这是 server 化的代价，桌面 app 不需要。**
+2. **多后端抽象层** — 数据库(Postgres+SQLite)、向量库(Chroma 三模式)、缓存(Redis+内存)、LLM(OpenAI+Ollama) 每个都做了 provider 抽象 + endpoint 自动探测（`endpoint_candidates.py` ~170 行 + `ollama_discovery.py` ~340 行（已删除）+ 各 factory）。**这是 server 化的代价，桌面 app 不需要。**
 3. **Python 服务化打包** — Dockerfile 含 apt 源切换、build-essential、proxy、CN 镜像加速等大量样板。
 4. **SDK 多语言生成链路** — Fern + submodule + 版本同步（Py/TS/Go/Rust），维护负担大。
 5. **插件系统** — Python entry-points 动态发现，17 个插件各自的 pyproject.toml。
