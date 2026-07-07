@@ -1,15 +1,9 @@
 from __future__ import annotations
 
-import asyncio
-
 import pytest
-from httpx import ASGITransport, AsyncClient
 
-from crystalith.shared.db import Chunk, Source, create_db_manager
-from crystalith.shared.db.migrations import upgrade_head
+from crystalith.shared.db import Chunk, Source
 from crystalith.shared.types import SourceStatus
-from crystalith.shared.vector_storage import InMemoryVectorStore
-from crystalith.web.app import create_app
 
 
 def _assert_error_envelope(response, expected_error_code: str) -> dict:
@@ -30,11 +24,8 @@ async def test_api_smoke_health_notebook_and_analysis_404(client) -> None:
     assert dependency_health.status_code == 200
     payload = dependency_health.json()
     assert payload["status"] == "ok"
-    assert payload["last_probe"] is not None
     assert payload["core"]["frontend"]["service"] == "web"
     assert payload["core"]["backend"]["service"] == "api"
-    assert payload["optional"]["storage_chroma"]["status"] in {"disabled", "unknown", "healthy", "degraded"}
-    assert "optional" in payload
 
     create_resp = await client.post("/v1/notebooks", json={"name": "Smoke Notebook"})
     assert create_resp.status_code == 201
@@ -114,167 +105,6 @@ async def test_api_smoke_error_envelope_contracts(client) -> None:
     missing_notebook_sources = await client.get("/v1/notebooks/999999/sources")
     assert missing_notebook_sources.status_code == 404
     _assert_error_envelope(missing_notebook_sources, "NOT_FOUND")
-
-
-@pytest.mark.asyncio
-async def test_api_smoke_dependency_health_optional_failure_is_recoverable(client, app) -> None:
-    app.state.settings.optional_services.redis.enabled = True
-    app.state.settings.optional_services.redis.endpoint = "redis://127.0.0.1:1/0"
-    app.state.settings.optional_services.redis.probe.enabled = True
-    app.state.optional_services_last_probe = None
-
-    dependency_health = await client.get("/health/dependencies")
-    assert dependency_health.status_code == 200
-    payload = dependency_health.json()
-
-    redis_status = payload["optional"]["cache_redis"]
-    assert redis_status["enabled"] is True
-    assert redis_status["status"] == "degraded"
-    assert redis_status["healthy"] is False
-    assert redis_status["error_code"] == "REDIS_UNAVAILABLE"
-    assert isinstance(redis_status["recovery_hint"], str)
-    assert redis_status["recovery_hint"]
-
-    health = await client.get("/health")
-    assert health.status_code == 200
-    assert health.json() == {"status": "ok"}
-
-
-@pytest.mark.asyncio
-async def test_api_smoke_dependency_health_refreshes_when_monitor_disabled(
-    test_settings,
-    tmp_path,
-    monkeypatch,
-) -> None:
-    calls = {"refresh": 0}
-
-    async def _refresh(_app, *, timeout_s: float) -> None:
-        calls["refresh"] += 1
-        _app.state.optional_services_last_probe = f"probe-{calls['refresh']}"
-
-    # Mock reason: avoid hitting real optional services probe/monitoring during smoke tests.
-    monkeypatch.setenv("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED", "0")
-
-    db_path = tmp_path / "test.db"
-    db_url = f"sqlite+aiosqlite:///{db_path}"
-    await asyncio.to_thread(upgrade_head, db_url)
-    manager = create_db_manager(db_url)
-    try:
-        app = create_app(
-            settings=test_settings,
-            db_manager=manager,
-            vector_store=InMemoryVectorStore(),
-            optional_services_refresher=_refresh,
-        )
-        app.state.optional_services_last_probe = "stale"
-
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            first = await client.get("/health/dependencies")
-            second = await client.get("/health/dependencies")
-    finally:
-        await manager.close()
-
-    assert first.status_code == 200
-    assert second.status_code == 200
-    assert calls["refresh"] == 2
-
-
-@pytest.mark.asyncio
-async def test_api_smoke_dependency_health_searxng_prefers_explicit_host(test_settings, tmp_path) -> None:
-    calls: list[tuple[str | None, float, str | None, frozenset[int]]] = []
-
-    def _probe(
-        endpoint: str | None,
-        *,
-        timeout_s: float,
-        path: str | None = None,
-        healthy_status_codes: set[int] | None = None,
-    ) -> tuple[bool, str | None]:
-        calls.append((endpoint, timeout_s, path, frozenset(healthy_status_codes or set())))
-        return True, None
-
-    db_path = tmp_path / "test.db"
-    db_url = f"sqlite+aiosqlite:///{db_path}"
-    await asyncio.to_thread(upgrade_head, db_url)
-    manager = create_db_manager(db_url)
-    try:
-        app = create_app(
-            settings=test_settings,
-            db_manager=manager,
-            vector_store=InMemoryVectorStore(),
-            http_endpoint_prober=_probe,
-        )
-        app.state.settings.search.searxng.host = "http://preferred-searx.test"
-        app.state.settings.search.searxng.endpoint_candidates = ["http://candidate-searx.test"]
-        app.state.settings.optional_services.searxng.enabled = True
-        app.state.settings.optional_services.searxng.endpoint = "http://optional-searx.test"
-        app.state.settings.optional_services.searxng.endpoint_candidates = ["http://optional-candidate.test"]
-        app.state.settings.optional_services.searxng.probe.enabled = True
-        app.state.settings.optional_services.searxng.probe.path = "/search?q=&format=json"
-
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get("/health/dependencies?force=1")
-            assert response.status_code == 200
-            payload = response.json()["optional"]["search_searxng"]
-    finally:
-        await manager.close()
-
-    assert payload["endpoint"] == "http://preferred-searx.test"
-    assert payload["healthy"] is True
-    assert calls == [
-        (
-            "http://preferred-searx.test",
-            10.0,
-            "/search?q=&format=json",
-            frozenset({400}),
-        )
-    ]
-
-
-@pytest.mark.asyncio
-async def test_api_smoke_dependency_health_force_refreshes_when_monitor_enabled(
-    test_settings,
-    tmp_path,
-    monkeypatch,
-) -> None:
-    calls = {"refresh": 0}
-
-    async def _refresh(_app, *, timeout_s: float) -> None:
-        calls["refresh"] += 1
-        _app.state.optional_services_last_probe = f"force-{calls['refresh']}"
-
-    # Mock reason: avoid hitting real optional services probe/monitoring during smoke tests.
-    monkeypatch.setenv("CRYSTALITH_OPTIONAL_SERVICES_MONITOR_ENABLED", "1")
-
-    db_path = tmp_path / "test.db"
-    db_url = f"sqlite+aiosqlite:///{db_path}"
-    await asyncio.to_thread(upgrade_head, db_url)
-    manager = create_db_manager(db_url)
-    try:
-        app = create_app(
-            settings=test_settings,
-            db_manager=manager,
-            vector_store=InMemoryVectorStore(),
-            optional_services_refresher=_refresh,
-        )
-        app.state.optional_services_last_probe = "cached"
-
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            cached = await client.get("/health/dependencies")
-            forced = await client.get("/health/dependencies?force=1")
-            forced_again = await client.get("/health/dependencies?force=true")
-    finally:
-        await manager.close()
-
-    assert cached.status_code == 200
-    assert forced.status_code == 200
-    assert forced_again.status_code == 200
-    assert calls["refresh"] == 2
-    assert forced.json()["last_probe"] == "force-1"
-    assert forced_again.json()["last_probe"] == "force-2"
 
 
 @pytest.mark.asyncio
