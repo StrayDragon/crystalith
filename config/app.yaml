@@ -212,10 +212,7 @@ vector_storage:
     # Empty host => embedded Chroma (no separate Chroma server required).
     host: ""
     port: 8000
-    # Optional: auto-select a reachable remote Chroma endpoint (host dev port first, then compose service name).
-    endpoint_candidates:
-      - "http://127.0.0.1:8001"
-      - "http://chromadb:8000"
+    # (endpoint_candidates removed — always uses embedded Chroma)
 
 database:
   url: "sqlite+aiosqlite:///./data/app.db"
@@ -229,9 +226,7 @@ cache:
   provider: "auto"
   ttl: 60
   max_size: 2048
-  redis_url_candidates:
-    - "redis://127.0.0.1:6380/0"
-    - "redis://redis:6379/0"
+  # redis_url_candidates removed — Redis discovery is handled by auto_cache
 
 # ----------------------------------------------------------------------------
 # Context window
@@ -252,11 +247,8 @@ context_window:
 search:
   searxng:
     # Empty host disables web search by default.
-    # Prefer enabling via YAML endpoint candidates (dev deps / compose overlay).
+    # Set host to enable SearXNG (endpoint_candidates removed — set host directly).
     host: ""
-    endpoint_candidates:
-      - "http://127.0.0.1:50201"
-      - "http://searxng:8080"
     timeout: 10
     max_results: 10
 
@@ -268,17 +260,11 @@ optional_services:
   chroma:
     enabled: false
     endpoint: "http://localhost:8000"
-    endpoint_candidates:
-      - "http://127.0.0.1:8001"
-      - "http://chromadb:8000"
     timeout_s: 3
 
   searxng:
     enabled: false
     endpoint: "http://127.0.0.1:50201"
-    endpoint_candidates:
-      - "http://127.0.0.1:50201"
-      - "http://searxng:8080"
     timeout_s: 10
 
 # ----------------------------------------------------------------------------
