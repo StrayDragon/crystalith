@@ -38,8 +38,10 @@ body:
     attributes:
       label: How are you running Crystalith? / 运行方式
       options:
-        - Local dev (backend/py + frontend/web)
-        - Docker Compose (deployments/prod)
+        - Desktop app (Tauri)
+        - CLI binary (crystalith-server)
+        - Browser (web deployment)
+        - Local dev (bun dev)
         - Other (please describe below)
     validations:
       required: true
@@ -55,12 +57,11 @@ body:
     id: env-details
     attributes:
       label: Environment details / 环境信息
-      description: OS, browser (if UI), Python/Node versions, relevant config overrides.
+      description: OS, browser (if UI), Bun/Node versions, relevant config.
       placeholder: |
         OS:
         Browser:
-        Python:
-        Node:
+        Bun:
         Notes:
 
   - type: textarea

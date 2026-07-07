@@ -5,7 +5,7 @@ Describe what changed and why.
 ## Linked issues / specs / 关联 Issue / Spec
 
 - Issue:
-- OpenSpec change (if any):
+- llman spec change (if any):
 
 ## Changes / 变更内容
 
@@ -13,10 +13,12 @@ Describe what changed and why.
 
 ## Testing / 测试
 
-- [ ] `cd backend/py && just test`
-- [ ] `cd frontend/web && pnpm run test:ci`
-- [ ] `cd frontend/web && pnpm run typecheck`
-- [ ] `just docs-build` (if docs changed)
+- [ ] `cd frontend/web && bun run test:ci`
+- [ ] `cd frontend/web && bun run typecheck`
+- [ ] `cd frontend/web && bun run lint`
+<!-- TODO: add server tests when v2 scaffolded:
+- [ ] `cd server && bun test`
+-->
 
 Results:
 
@@ -26,5 +28,5 @@ Results:
 
 - [ ] No secrets or tokens committed
 - [ ] Docs updated (if needed)
-- [ ] OpenAPI client regenerated if API changed (`pnpm -C frontend/web run api:sync`)
+<!-- TODO: add eden RPC types check when v2 scaffolded -->
 - [ ] Critical-path UI copy is centralized via `t()` (avoid new hardcoded strings) / 关键路径文案集中管理（避免新增硬编码）
