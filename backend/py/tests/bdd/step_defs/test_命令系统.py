@@ -17,10 +17,6 @@ def test_列出所有命令():
 def test_包含内置预设命令():
     ...
 
-@scenario("../features/commands/命令系统.feature", "包含自定义预设命令")
-def test_包含自定义预设命令():
-    ...
-
 @scenario("../features/commands/命令系统.feature", "命令按触发词排序")
 def test_命令按触发词排序():
     ...
