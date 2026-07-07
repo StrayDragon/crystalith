@@ -35,10 +35,9 @@ cd backend/py
 just db-init
 cd ../..
 
-# === 4. 确保 Ollama 在本地运行（如果使用本地模型） ===
-ollama serve &          # 后台启动 ollama
-ollama pull qwen3:8b    # 拉一个你常用的模型（示例）
-ollama pull bge-m3      # embedding 模型（示例）
+# === 4. 确保本地 OpenAI-compatible 服务可达（如果使用本地模型） ===
+# 本地模型需通过 OpenAI-compatible API 暴露（如 llama.cpp server、vLLM、MLX 等）
+# 设置 OPENAI_BASE_URL 指向你的本地端点
 ```
 
 ---
@@ -163,7 +162,7 @@ export OPENAI_API_KEY="sk-xxx"
 echo 'OPENAI_API_KEY=sk-xxx' > config/secret.env
 ```
 
-Ollama 本地模型不需要 API key——在 app 界面里把模型切换到 Ollama provider 即可。
+本地模型通过 OpenAI-compatible API 暴露时，配置 `OPENAI_BASE_URL` 指向本地端点即可。
 
 ---
 
@@ -204,7 +203,7 @@ ls backend/py/data/chroma/
 |------|------|
 | 后端启动报 module not found | 运行过 `uv sync` 了吗？ |
 | 前端 404 / API 不通 | 后端在 8032 端口跑着吗？ |
-| Ollama 调用失败 | `ollama serve` 在运行？模型 pull 了吗？ |
+| 本地模型调用失败 | 检查 `OPENAI_BASE_URL` 配置和模型服务是否运行 |
 | `just` 命令不识别 | `cargo install just` 或 `brew install just` |
 | 数据库表不存在 | 运行 `just db-init` |
 | pnpm 找不到 Python | `uv run` 需要先 `uv sync` |

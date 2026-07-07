@@ -16,7 +16,7 @@
 #   CRYSTALITH_PROFILE    — default profile when CLI arg is omitted (default: hybrid)
 #   HYBRID_SERVICES       — space-separated dep overlays for hybrid mode (default: storage redis searxng)
 #   DOCKER_SERVICES       — space-separated compose overlays for docker mode (default: storage redis searxng)
-#   FULL_SERVICES         — space-separated compose overlays for full mode (default: storage redis searxng ollama slidev)
+#   FULL_SERVICES         — space-separated compose overlays for full mode (default: storage redis searxng slidev)
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -49,7 +49,7 @@ EXTRA_ARGS=("$@")
 
 HYBRID_SERVICES="${HYBRID_SERVICES:-storage redis searxng}"
 DOCKER_SERVICES="${DOCKER_SERVICES:-storage redis searxng}"
-FULL_SERVICES="${FULL_SERVICES:-storage redis searxng ollama slidev}"
+FULL_SERVICES="${FULL_SERVICES:-storage redis searxng slidev}"
 
 if [[ -n "${BRIDGE_FORWARDS:-}" ]] && [[ " ${HYBRID_SERVICES} " != *" host-remap "* ]]; then
   HYBRID_SERVICES="${HYBRID_SERVICES} host-remap"

@@ -13,7 +13,6 @@ SMOKE_PRUNE_VOLUMES="${SMOKE_PRUNE_VOLUMES:-0}"
 CORE_FILE="deployments/prod/docker-compose.yml"
 REDIS_FILE="deployments/prod/docker-compose.redis.yml"
 STORAGE_FILE="deployments/prod/docker-compose.storage.yml"
-OLLAMA_FILE="deployments/prod/docker-compose.ollama.yml"
 SLIDEV_FILE="deployments/prod/docker-compose.slidev.yml"
 HOST_REMAP_FILE="deployments/prod/docker-compose.host-remap.yml"
 
@@ -66,11 +65,11 @@ compose_core_redis() {
 }
 
 compose_core_key_optionals() {
-  compose -f "$CORE_FILE" -f "$STORAGE_FILE" -f "$REDIS_FILE" -f "$OLLAMA_FILE" "$@"
+  compose -f "$CORE_FILE" -f "$STORAGE_FILE" -f "$REDIS_FILE" "$@"
 }
 
 compose_core_all_optionals() {
-  compose -f "$CORE_FILE" -f "$STORAGE_FILE" -f "$REDIS_FILE" -f "$OLLAMA_FILE" -f "$SLIDEV_FILE" "$@"
+  compose -f "$CORE_FILE" -f "$STORAGE_FILE" -f "$REDIS_FILE" -f "$SLIDEV_FILE" "$@"
 }
 
 compose_reset() {
@@ -83,7 +82,6 @@ compose_reset() {
     -f "$CORE_FILE" \
     -f "$STORAGE_FILE" \
     -f "$REDIS_FILE" \
-    -f "$OLLAMA_FILE" \
     -f "$SLIDEV_FILE" \
     -f "$HOST_REMAP_FILE" \
     "${down_args[@]}" >/dev/null 2>&1 || true
@@ -229,26 +227,23 @@ raise SystemExit(0 if status == "healthy" else 1)
 }
 
 run_key_optionals() {
-  echo "==> Scenario: key-optionals(storage+redis+ollama)"
+  echo "==> Scenario: key-optionals(storage+redis)"
   compose_reset
   compose_core_key_optionals up "${up_flags[@]}"
   wait_http "${BASE_URL}/health"
   wait_dependency_expr "data['optional']['storage_chroma']['enabled'] is True"
   wait_dependency_expr "data['optional']['cache_redis']['enabled'] is True"
-  wait_dependency_expr "data['optional']['ollama']['enabled'] is True"
   wait_dependency_expr "data['optional']['storage_chroma']['status'] != 'unknown'"
   wait_dependency_expr "data['optional']['cache_redis']['status'] != 'unknown'"
-  wait_dependency_expr "data['optional']['ollama']['status'] != 'unknown'"
 }
 
 run_all_optionals() {
-  echo "==> Scenario: all-optionals(storage+redis+ollama+slidev)"
+  echo "==> Scenario: all-optionals(storage+redis+slidev)"
   compose_reset
   compose_core_all_optionals up "${up_flags[@]}"
   wait_http "${BASE_URL}/health"
   wait_dependency_expr "data['optional']['storage_chroma']['enabled'] is True"
   wait_dependency_expr "data['optional']['cache_redis']['enabled'] is True"
-  wait_dependency_expr "data['optional']['ollama']['enabled'] is True"
   wait_http "${BASE_URL}/slidev/"
   wait_json_expr "${BASE_URL}/v1/workspace/tools" "any(tool.get('output_type') == 'SLIDES' for tool in data['tools'])"
   wait_json_expr "${BASE_URL}/v1/workspace/tools" "data['diagnostics']['slides']['active_plugin_id'] == 'slides-slidev'"

@@ -12,7 +12,7 @@
 | # | 文档 | 内容 | 状态 |
 |---|------|------|:--:|
 | 1 | [00-v2-migration-plan.md](./00-v2-migration-plan.md) | **★★★ 最终迁移方案** — 目标架构、技术栈、RAG 策略注册表、Eval Benchmark、Rivu 降级、5 阶段路线图 | ✅ 完成 |
-| 2 | [00-cleanup-python.md](./00-cleanup-python.md) | **⚡ 前置清理** — 删胶水代码、降级 Rivu、删未使用依赖。可复制命令 | ⏳ 部分完成（ollama_discovery + 后端部分 Rivu 引用已由其他提交完成，其余待执行） |
+| 2 | [00-cleanup-python.md](./00-cleanup-python.md) | **⚡ 前置清理** — 删胶水代码、降级 Rivu、删未使用依赖。可复制命令 | ✅ 完成 |
 | 3 | [00-dev-guide.md](./00-dev-guide.md) | **本地热重载开发环境** — 两个终端起全栈，无需 Docker | ✅ 完成 |
 
 ### 🟡 技术调研 — v2 实现参考
@@ -53,7 +53,7 @@
 | AI runtime？ | **Vercel AI SDK (`ai` + `@ai-sdk/*`)** — 全套 Provider 抽象 + Agent Loop + 结构化输出 + 流式 |
 | RAG 策略？ | **可插拔注册表** — Embed → BM25 → 混合 → Page Index → GraphRAG |
 | 质量验收？ | **内置 Eval Benchmark Harness** — Golden Dataset + LLM-as-Judge + 前端可视化 |
-| 外部服务？ | 都可以自部署 — SearXNG / Chroma / Redis / Ollama |
+| 外部服务？ | 都可以自部署 — SearXNG / Chroma / Redis |
 | Rivu？ | **降级** — 删服务端状态机，v2 用消息内嵌 JSON 渲染组件 |
 
 ---
@@ -67,7 +67,7 @@
 │  ✅ 前置清理方案 / 分支策略 (v1 + main + v2)           │
 ├─ 执行中 ──────────────────────────────────────────────┤
 │  ⏳ 执行前置清理 (UPGRADES/00-cleanup-python.md)       │
-│     · ollama_discovery + 后端部分 Rivu 引用已由其他提交完成   │
+│     · ollama_discovery 已清理完成   │
 │     · 4 个死代码文件、factory 简化、前端 Rivu/Tambo 等待执行  │
 │  ⏳ 保存 v1 分支 + 创建 v2 分支                        │
 └────────────────────────────────────────────────────────┘

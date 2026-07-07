@@ -7,7 +7,7 @@
 > 4. 产品定位: NotebookLM 启发的 Notebook RAG 平台——可集成、可验证、高效
 > 5. RAG 策略可插拔（embed / keyword / 混合 / page-index / GraphRAG ...）
 > 6. 内置 Eval Benchmark Harness，量化验收每个 RAG 策略
-> 7. 外部服务（SearXNG/Chroma/Redis/Ollama）都可以自部署
+> 7. 外部服务（SearXNG/Chroma/Redis）都可以自部署
 > 8. Rivu 降级——删服务端状态机，v2 改为消息内嵌 JSON 渲染组件
 
 ---
@@ -35,7 +35,7 @@
 │              Elysia HTTP Server (Port 8032)                   │
 │                                                              │
 │  ┌─ AI 层 (Vercel AI SDK `ai` + `@ai-sdk/*`) ───────────┐  │
-│  │ Provider 抽象 → @ai-sdk/openai / ollama / anthropic…  │  │
+│  │ Provider 抽象 → @ai-sdk/openai / anthropic…  │  │
 │  │ Agent Loop   → streamText + maxSteps（多步 tool 驱动） │  │
 │  │ 结构化输出   → generateObject(schema: Zod)             │  │
 │  │ 流式生成     → streamText / SSE relay                  │  │
@@ -95,7 +95,7 @@
 | Runtime + 打包 | **Bun** | 单二进制、bun:sqlite 内置、原生 TS |
 | Web Framework | **Elysia** | eden RPC 干掉 OpenAPI 生成、端到端类型推断 |
 | ORM | **Drizzle ORM** | bun-sqlite 原生驱动、类型安全 |
-| Provider 抽象 | **`@ai-sdk/*` (Vercel AI SDK)** | OpenAI / Anthropic / Ollama / Google / Mistral / DeepSeek / Groq / xAI / … 官方 provider |
+| Provider 抽象 | **`@ai-sdk/*` (Vercel AI SDK)** | OpenAI / Anthropic / Google / Mistral / DeepSeek / Groq / xAI / … 官方 provider |
 | Agent Loop | **`ai` streamText + maxSteps** | 多步 tool calling agent loop、中间件、telemetry |
 | 结构化输出 | **`ai` generateObject / streamObject** | Zod schema 驱动，对等 pydantic-ai output_type |
 | 流式生成 | **`ai` streamText** | ReadableStream 原生 SSE relay、frontend `useChat` hook |
@@ -287,7 +287,7 @@ system_config          // 系统配置 KV
 - [ ] Bun + Elysia 项目初始化（server/ 目录）
 - [ ] Drizzle ORM schema 定义（所有表）
 - [ ] DB migration 工具链（Drizzle Kit）
-- [ ] AI SDK 集成（@ai-sdk/openai + @ai-sdk/ollama provider）
+- [ ] AI SDK 集成（@ai-sdk/openai provider）
 - [ ] AI SDK agent 骨架（streamText + maxSteps + tool 定义）
 - [ ] Zod schema 层（前后端共享）
 - [ ] 前端 Elysia eden 客户端接入（src/api/v2/）

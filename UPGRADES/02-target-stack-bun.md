@@ -27,7 +27,7 @@
 | HTML 解析 | **linkedom** / cheerio | |
 | Web 抓取 | Jina Reader（HTTP）+ Firecrawl（JS SDK）+ Playwright（原生 Node） | 砍 trafilatura/browserless |
 | 模板渲染 | **Nunjucks**（前端已在用） | output/config 渲染 |
-| LLM 调用 | **AI SDK `@ai-sdk/*`** provider 包 | 统一通过 AI SDK 调用所有模型（OpenAI / Anthropic / Ollama / Google / …），不直接依赖底层 SDK | |
+| LLM 调用 | **AI SDK `@ai-sdk/*`** provider 包 | 统一通过 AI SDK 调用所有模型（OpenAI / Anthropic / Google / …），不直接依赖底层 SDK | |
 | 桌面 shell | 见下「分发架构」 | |
 
 ## 分发架构选择
@@ -54,7 +54,7 @@
 这些是支撑"多后端/多部署/server 化"的，桌面 app 全部不需要：
 
 - ✂️ 4 个部署 profile + Procfile + overmind
-- ✂️ 6 个 docker-compose overlay（storage/redis/searxng/ollama/slidev/host-remap）
+- ✂️ 6 个 docker-compose overlay（storage/redis/searxng/slidev/host-remap）
 - ✂️ 多数据库后端（Postgres）→ 只留 SQLite
 - ✂️ 多向量库后端（chroma http/embedded/memory）→ 只留 sqlite-vec
 - ✂️ 多缓存后端（redis）→ 内存/本地文件
