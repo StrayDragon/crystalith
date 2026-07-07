@@ -15,19 +15,15 @@
     "lint:all": "oxlint --deny-warnings --max-warnings=0 --config .oxlintrc.json --tsconfig tsconfig.json -D suspicious -D perf -A react-in-jsx-scope ./src",
     "test": "vitest",
     "pretest:ci": "bash ../../scripts/ensure_frontend_web_ready.sh",
-    "test:ci": "pnpm run test-mock-report-check && TZ=UTC VITEST_MSW_ON_UNHANDLED=error vitest run",
+    "test:ci": "bun run test-mock-report-check && TZ=UTC VITEST_MSW_ON_UNHANDLED=error vitest run",
     "pretest:core": "bash ../../scripts/ensure_frontend_web_ready.sh",
-    "test:core": "pnpm run test-mock-report-check && TZ=UTC VITEST_MSW_ON_UNHANDLED=error node ./scripts/core_suite.mjs run",
+    "test:core": "bun run test-mock-report-check && TZ=UTC VITEST_MSW_ON_UNHANDLED=error node ./scripts/core_suite.mjs run",
     "pretest:all": "bash ../../scripts/ensure_frontend_web_ready.sh",
     "test:all": "VITEST_INCLUDE_EXPERIMENTAL=1 VITEST_MSW_ON_UNHANDLED=warn vitest run",
     "test-mock-report": "node ./scripts/test_mock_report.mjs",
     "test-mock-report-check": "node ./scripts/test_mock_report.mjs --check-mock-reasons",
     "pretypecheck": "bash ../../scripts/ensure_frontend_web_ready.sh",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "api:generate": "openapi-ts -i ./openapi.gen.json -o ./src/api/generated -c @hey-api/client-fetch",
-    "api:fetch": "cd ../../backend/py && uv run scripts/api_schema.py export -o ../../frontend/web/openapi.gen.json",
-    "api:sync": "pnpm run api:fetch && pnpm run api:generate",
-    "api:check": "cd ../../backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.gen.json",
     "format": "oxfmt --write \"src/**/*.{ts,tsx,js,jsx,css}\" \"scripts/**/*.{js,mjs,cjs}\" \"!src/api/generated/**\" package.json tsconfig.json tsconfig.node.json vite.config.ts .oxlintrc.json .oxfmtrc.json",
     "format:check": "oxfmt --check \"src/**/*.{ts,tsx,js,jsx,css}\" \"scripts/**/*.{js,mjs,cjs}\" \"!src/api/generated/**\" package.json tsconfig.json tsconfig.node.json vite.config.ts .oxlintrc.json .oxfmtrc.json"
   },
@@ -85,5 +81,5 @@
       "last 1 safari version"
     ]
   },
-  "packageManager": "pnpm@10.29.2"
+  "packageManager": "bun@1.3.14"
 }

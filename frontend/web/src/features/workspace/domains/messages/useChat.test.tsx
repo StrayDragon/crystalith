@@ -168,6 +168,7 @@ test("sendMessage non-streaming path stores assistant message and shared_state m
     question: "Hello",
     session_id: 123,
   });
+});
 
 test("sendMessage passes selected source ids", async () => {
   let capturedBody: Record<string, unknown> | null = null;
