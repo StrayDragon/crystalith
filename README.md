@@ -5,6 +5,8 @@
 
 Notebook-centric AI workspace with RAG over your sources.
 
+TODO(@l8ng,agent): 等确定发布第一个 1.0.0 版本 之后在考虑写, 需要用户明确指示, 否则先不写, 避免维护成本
+
 ## Docs
 
 - GitHub Pages: https://straydragon.github.io/crystalith/

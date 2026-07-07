@@ -12,7 +12,7 @@
 | # | 文档 | 内容 | 状态 |
 |---|------|------|:--:|
 | 1 | [00-v2-migration-plan.md](./00-v2-migration-plan.md) | **★★★ 最终迁移方案** — 目标架构、技术栈、RAG 策略注册表、Eval Benchmark、Rivu 降级、5 阶段路线图 | ✅ 完成 |
-| 2 | [00-cleanup-python.md](./00-cleanup-python.md) | **⚡ 前置清理** — 删胶水代码、降级 Rivu、删未使用依赖。可复制命令 | ✅ 待执行 |
+| 2 | [00-cleanup-python.md](./00-cleanup-python.md) | **⚡ 前置清理** — 删胶水代码、降级 Rivu、删未使用依赖。可复制命令 | ⏳ 部分完成（ollama_discovery + 后端部分 Rivu 引用已由其他提交完成，其余待执行） |
 | 3 | [00-dev-guide.md](./00-dev-guide.md) | **本地热重载开发环境** — 两个终端起全栈，无需 Docker | ✅ 完成 |
 
 ### 🟡 技术调研 — v2 实现参考
@@ -29,9 +29,9 @@
 | 11 | [10-tauri-sidecar-packaging.md](./10-tauri-sidecar-packaging.md) | Tauri + Bun sidecar 桌面分发架构 |
 | 12 | [11-drizzle-schema-design.md](./11-drizzle-schema-design.md) | Drizzle ORM schema 设计（17 表映射 + 向量表集成） |
 
-### 🗄️ 已归档
+### 🗄️ 已归档（文档已移走）
 
-移入 `_archive/` 的文档因与最终决策不一致（建议砍 feature 的旧版方案）已不再有效：
+以下文档因与最终决策不一致（建议砍 feature 的旧版方案）已不再有效，已从 `UPGRADES/` 移除：
 
 - `_archive/04-feature-trimming.md` — 旧版裁剪建议（与最终决策冲突：建议砍 research/analysis/studio）
 - `_archive/00-user-feature-review.md` — 旧版用户视角 review（含待打标的裁剪表，已被 00-v2 替代）
@@ -67,6 +67,8 @@
 │  ✅ 前置清理方案 / 分支策略 (v1 + main + v2)           │
 ├─ 执行中 ──────────────────────────────────────────────┤
 │  ⏳ 执行前置清理 (UPGRADES/00-cleanup-python.md)       │
+│     · ollama_discovery + 后端部分 Rivu 引用已由其他提交完成   │
+│     · 4 个死代码文件、factory 简化、前端 Rivu/Tambo 等待执行  │
 │  ⏳ 保存 v1 分支 + 创建 v2 分支                        │
 └────────────────────────────────────────────────────────┘
 ```
