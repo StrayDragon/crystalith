@@ -264,7 +264,7 @@ search:
 # Optional service contracts (core remains available when these are unavailable)
 # ----------------------------------------------------------------------------
 optional_services:
-  # frontend/backend core naming maps to compose services web/api.
+  # Legacy optional service contracts (simplified — probes removed).
   chroma:
     enabled: false
     endpoint: "http://localhost:8000"
@@ -272,26 +272,6 @@ optional_services:
       - "http://127.0.0.1:8001"
       - "http://chromadb:8000"
     timeout_s: 3
-    probe:
-      enabled: true
-      timeout_s: 3
-      interval_s: 15
-      path: "/api/v1/heartbeat"
-    degrade_policy: "core_available"
-
-  redis:
-    enabled: false
-    endpoint: "redis://localhost:6379/0"
-    endpoint_candidates:
-      - "redis://127.0.0.1:6380/0"
-      - "redis://redis:6379/0"
-    timeout_s: 3
-    probe:
-      enabled: true
-      timeout_s: 3
-      interval_s: 15
-      path: null
-    degrade_policy: "core_available"
 
   searxng:
     enabled: false
@@ -300,12 +280,6 @@ optional_services:
       - "http://127.0.0.1:50201"
       - "http://searxng:8080"
     timeout_s: 10
-    probe:
-      enabled: true
-      timeout_s: 10
-      interval_s: 30
-      path: "/search?q=&format=json"
-    degrade_policy: "core_available"
 
 # ----------------------------------------------------------------------------
 # Proxy settings (YAML anchor for optional reuse)
