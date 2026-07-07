@@ -22,7 +22,7 @@ from crystalith.shared.plugins.render_types import (
     PluginConfigSchema,
     RenderDescriptor,
 )
-from crystalith.shared.vector_storage import InMemoryVectorStore
+from tests.helpers.vector_store import InMemoryVectorStore
 
 
 @dataclass(slots=True)

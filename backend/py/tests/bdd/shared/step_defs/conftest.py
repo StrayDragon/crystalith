@@ -7,7 +7,7 @@ import pytest
 @pytest.fixture
 def 向量存储():
     """创建内存向量存储实例。"""
-    from crystalith.shared.vector_storage import InMemoryVectorStore
+    from tests.helpers.vector_store import InMemoryVectorStore
 
     return InMemoryVectorStore()
 

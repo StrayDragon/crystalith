@@ -12,7 +12,7 @@ from crystalith.shared.config import Settings
 from crystalith.shared.db import Notebook, Source, create_db_manager
 from crystalith.shared.db.migrations import upgrade_head
 from crystalith.shared.types import SourceStatus
-from crystalith.shared.vector_storage import InMemoryVectorStore
+from tests.helpers.vector_store import InMemoryVectorStore
 from crystalith.web.app import create_app
 
 

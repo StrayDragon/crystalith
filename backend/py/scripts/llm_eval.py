@@ -35,7 +35,7 @@ from crystalith.shared.eval import (
 )
 from crystalith.shared.retrieval import retrieve_context
 from crystalith.shared.types import SourceStatus
-from crystalith.shared.vector_storage import InMemoryVectorStore
+from tests.helpers.vector_store import InMemoryVectorStore
 
 
 class _SeedAwareEmbedder(TestEmbeddingProvider):

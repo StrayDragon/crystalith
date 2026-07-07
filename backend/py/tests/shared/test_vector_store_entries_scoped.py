@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from crystalith.shared.vector_storage import InMemoryVectorStore
+from tests.helpers.vector_store import InMemoryVectorStore
 
 
 @pytest.mark.asyncio

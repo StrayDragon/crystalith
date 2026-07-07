@@ -5,7 +5,8 @@ from math import sqrt
 import pytest
 
 from crystalith.features.analysis.correlation import detect_relations
-from crystalith.shared.vector_storage import InMemoryVectorStore, VectorEntry
+from tests.helpers.vector_store import InMemoryVectorStore
+from crystalith.shared.vector_storage import VectorEntry
 
 
 def _cosine(left: list[float], right: list[float]) -> float:

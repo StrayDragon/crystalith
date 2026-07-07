@@ -1,10 +1,16 @@
+"""In-memory vector store for testing.
+
+This is a test-only implementation — not for production use.
+It mirrors the VectorStore interface for fast unit tests without chromadb.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from math import sqrt
 
-from .types import VectorEntry, VectorSearchResult
+from crystalith.shared.vector_storage.types import VectorEntry, VectorSearchResult
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +28,11 @@ def _norm(vector: Sequence[float]) -> float:
 
 
 class InMemoryVectorStore:
+    """Lightweight in-memory vector store using brute-force cosine similarity.
+
+    Intended for unit tests only. Does not persist data.
+    """
+
     def __init__(self) -> None:
         self._entries: list[_StoredEntry] = []
 

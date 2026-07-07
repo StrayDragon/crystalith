@@ -7,11 +7,9 @@ from .cached import (
 )
 from .factory import create_vector_store
 from .interfaces import VectorStore
-from .memory import InMemoryVectorStore
 from .types import VectorEntry, VectorSearchResult
 
 __all__ = [
-    "InMemoryVectorStore",
     "VectorEntry",
     "VectorSearchResult",
     "VectorStore",
