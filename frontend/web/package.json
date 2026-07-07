@@ -49,8 +49,11 @@
     "zustand": "^5.0.10"
   },
   "devDependencies": {
+    "@elysiajs/eden": "^1.4.9",
     "@hey-api/openapi-ts": "^0.90.8",
+    "@crystalith/shared": "workspace:*",
 
+    "@crystalith/server": "workspace:*",
     "@types/node": "^22.18.6",
     "@types/nunjucks": "^3.2.6",
     "@types/react": "^19.1.12",

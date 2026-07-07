@@ -127,6 +127,18 @@ export default defineConfig({
         target: apiProxyTarget,
         changeOrigin: true,
       },
+      "/v2": {
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
+      "/openapi.json": {
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
+      "/asyncapi.json": {
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
       "/health": {
         target: apiProxyTarget,
         changeOrigin: true,
