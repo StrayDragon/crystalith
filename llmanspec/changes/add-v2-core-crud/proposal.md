@@ -13,6 +13,7 @@ v1 的 94 个 API 端点分布 18 个 feature router 中，核心闭环涵盖 no
 - **NEW** `server/src/features/sessions/` — 会话 CRUD
 - **NEW** `server/src/features/messages/` — 消息列表 + 历史
 - **NEW** `server/src/features/sources/` — 上传 + 解析 + 列表 + 搜索 + 删除
+- **NEW** `server/src/features/sources/connector-registry.ts` — Obsidian + 本地目录 connector 注册
 - **NEW** `server/src/features/sources/parsers/` — PDF (unpdf)、HTML (cheerio/readability)、Plain text parser
 - **NEW** `unpdf` 依赖替换 pypdf
 
@@ -21,6 +22,7 @@ v1 的 94 个 API 端点分布 18 个 feature router 中，核心闭环涵盖 no
 - workspace-api-contract (spec delta: API 层从 FastAPI 迁移到 Elysia)
 - source-ingestion-core (spec delta: parser 实现从 Python 迁移到 TS)
 - source-ingestion-upload-and-url (spec delta: 上传/URL 端点)
+- source-connectors (spec delta: Obsidian + 本地目录同步)
 
 ## Impact
 

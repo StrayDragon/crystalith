@@ -15,6 +15,8 @@ v1 提供 analysis (资料聚类/矛盾/相关性)、studio (幻灯片工作室)
 - **NEW** `server/src/features/tasks/` — 后台任务队列
 - **NEW** `server/src/features/templates/` — 模板管理
 - **NEW** `server/src/features/prompt-presets/` — 提示词预设
+- **NEW** `server/src/features/workspace/` — workspace 工具注册表 + 命令面板
+- **NEW** `server/src/features/source-connectors/` — Obsidian + 本地目录同步
 
 ## Capabilities
 
