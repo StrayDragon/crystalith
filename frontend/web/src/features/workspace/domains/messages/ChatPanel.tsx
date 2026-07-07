@@ -27,11 +27,6 @@ import { toast } from "../../../../shared/toast";
 import { useWorkspaceStore } from "../../shared/state/workspaceStore";
 import { useCommands } from "../../shared/hooks/useCommands";
 import { exportQaJsonDownload, exportQaMarkdownDownload } from "../../shared/evidenceExport";
-import { selectMountedUiComponentsV1, type RivuKernel } from "rivu-kernel";
-import { ComponentRenderer } from "rivu-react/component-renderer";
-import type { RivuHost } from "rivu-react/registry";
-import { useKernelState } from "rivu-react/use-kernel-state";
-
 interface ChatPanelProps {
   messages: ChatMessage[];
   draft: string;
@@ -59,8 +54,6 @@ interface ChatPanelProps {
   onConvertToSource?: () => Promise<void>;
   onConvertToOutput?: (outputType: OutputTypeId) => Promise<void>;
   isConverting?: boolean;
-  rivuKernel?: RivuKernel | null;
-  rivuHost?: RivuHost | null;
 }
 
 function ChatPanel({
@@ -89,42 +82,7 @@ function ChatPanel({
   onConvertToSource,
   onConvertToOutput,
   isConverting = false,
-  rivuKernel = null,
-  rivuHost = null,
 }: ChatPanelProps) {
-  function MessageMounts({
-    kernel,
-    host,
-    messageId,
-  }: {
-    kernel: RivuKernel;
-    host: RivuHost;
-    messageId: string;
-  }) {
-    const mountedComponentIds = useKernelState(kernel, (state) =>
-      selectMountedUiComponentsV1({ state, messageId, slot: "inline" }).map(
-        (mount) => mount.componentId,
-      ),
-    );
-
-    if (mountedComponentIds.length === 0) {
-      return null;
-    }
-
-    return (
-      <div className="w-full max-w-full flex flex-col gap-3">
-        {mountedComponentIds.map((componentId) => (
-          <ComponentRenderer
-            key={componentId}
-            kernel={kernel}
-            host={host}
-            componentId={componentId}
-          />
-        ))}
-      </div>
-    );
-  }
-
   const notebookId = useWorkspaceStore((s) => s.activeNotebookId);
   const sessionId = useWorkspaceStore((s) => s.activeSessionId);
 
@@ -307,9 +265,6 @@ function ChatPanel({
             {typingCursor}
           </div>
         </div>
-        {message.role === "assistant" && rivuKernel && rivuHost ? (
-          <MessageMounts kernel={rivuKernel} host={rivuHost} messageId={message.id} />
-        ) : null}
         {message.role === "assistant" && message.content ? (
           <div className="flex items-center gap-1 mt-1 flex-wrap">
             {messageCitationEntries.length > 0 && (
@@ -448,7 +403,7 @@ function ChatPanel({
     );
   };
 
-  const messageListKey = `${sessionId ?? "none"}:${rivuKernel && rivuHost ? "rivu" : "plain"}`;
+  const messageListKey = sessionId ?? "none";
 
   const renderNotice = useMemo(() => {
     if (!notice) return null;

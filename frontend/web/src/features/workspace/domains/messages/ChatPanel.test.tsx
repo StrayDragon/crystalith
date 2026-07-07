@@ -2,18 +2,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createRef } from "react";
 import type { ComponentProps } from "react";
 import { beforeEach, expect, test, vi } from "vitest";
-
-// Mock reason: rivu-kernel UI rendering depends on runtime/kernel behavior that is unstable in jsdom;
-// these tests only assert ChatPanel's wiring + rendering of component ids.
-const { componentRendererSpy } = vi.hoisted(() => ({
-  componentRendererSpy: vi.fn(({ componentId }: { componentId: string }) => (
-    <div>{componentId}</div>
-  )),
-}));
-
-vi.mock("rivu-react/component-renderer", () => ({
-  ComponentRenderer: componentRendererSpy,
-}));
 import { SWRConfig } from "swr";
 import { http, HttpResponse } from "msw";
 
@@ -21,10 +9,6 @@ import ChatPanel from "./ChatPanel";
 import type { ChatMessage, Citation, OutputTypeId } from "../../shared/types";
 import { LayerProvider } from "../../../../shared/layer";
 import { server } from "../../../../test-utils/msw/server";
-
-vi.mock("rivu-react/use-kernel-state", () => ({
-  useKernelState: () => ["qa:assistant-1:summary"],
-}));
 
 beforeEach(() => {
   server.use(http.get("*/v1/commands", () => HttpResponse.json([])));
@@ -88,66 +72,6 @@ test("chat messages render assistant content as plain text", async () => {
   renderChatPanel({ messages });
 
   expect(await screen.findByText("Answer **markdown**")).toBeInTheDocument();
-});
-
-test("chat panel renders mounts after runtime becomes available", async () => {
-  const messages: ChatMessage[] = [
-    {
-      id: "assistant-2",
-      role: "assistant",
-      content: "Answer later",
-      citationScope: {
-        mode: "selected",
-        kind: "citations",
-        count: 0,
-        sources: [],
-      },
-    },
-  ];
-
-  const view = renderChatPanel({ messages });
-  expect(componentRendererSpy).not.toHaveBeenCalled();
-
-  view.rerender(
-    buildChatPanelElement({
-      messages,
-      rivuKernel: {} as any,
-      rivuHost: {} as any,
-    }),
-  );
-
-  await waitFor(() => {
-    expect(componentRendererSpy).toHaveBeenCalled();
-  });
-});
-
-test("chat panel renders rivu mounts under assistant messages", async () => {
-  const messages: ChatMessage[] = [
-    {
-      id: "assistant-1",
-      role: "assistant",
-      content: "Answer",
-      citationScope: {
-        mode: "selected",
-        kind: "citations",
-        count: 0,
-        sources: [],
-      },
-    },
-  ];
-
-  renderChatPanel({
-    messages,
-    rivuKernel: {} as any,
-    rivuHost: {} as any,
-  });
-
-  await waitFor(() => {
-    expect(componentRendererSpy).toHaveBeenCalled();
-  });
-  expect(componentRendererSpy.mock.calls.at(-1)?.[0]).toMatchObject({
-    componentId: "qa:assistant-1:summary",
-  });
 });
 
 test("chat panel virtualizes large message list", async () => {

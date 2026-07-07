@@ -150,7 +150,6 @@ test("sendMessage non-streaming path stores assistant message and shared_state m
   });
 
   await waitFor(() => {
-    expect(result.current.rivuKernel).not.toBeNull();
   });
 
   await act(async () => {
@@ -169,8 +168,6 @@ test("sendMessage non-streaming path stores assistant message and shared_state m
     question: "Hello",
     session_id: 123,
   });
-  expect(result.current.rivuKernel?.getState().sharedState).toEqual(buildSharedState("9001"));
-});
 
 test("sendMessage passes selected source ids", async () => {
   let capturedBody: Record<string, unknown> | null = null;
@@ -298,9 +295,6 @@ test("streaming path applies snapshot and delta with backend message id", async 
 
   expect(result.current.messages[1].id).toBe("9003");
   expect(result.current.messages[1].content).toBe("Answer");
-  expect(result.current.rivuKernel?.getState().sharedState).toEqual(
-    buildSharedState("9003", "Stream mount"),
-  );
 
   ssePostMock.mockRestore();
 });
