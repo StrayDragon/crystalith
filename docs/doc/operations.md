@@ -55,10 +55,6 @@ Crystalith 部署通常为 **核心 + 可选叠加层**。最小备份集取决�
 
 若启用，Redis 数据存储在 `redisdata` volume 中。仅在需要缓存持久化时备份（多数场景可跳过）。
 
-### ollama overlay
-
-若启用，下载的模型存放在 `ollamadata` volume 中。若希望迁移后避免重新下载模型，请备份该 volume。
-
 ## 快速处理手册（常见故障）
 
 ### UI 无法访问
@@ -96,7 +92,6 @@ Crystalith 部署通常为 **核心 + 可选叠加层**。最小备份集取决�
   - Postgres：`database.url` / `database.url_candidates`（+ 密码相关 secrets）
   - Chroma：`vector_storage.chroma.host/port` 或 `vector_storage.chroma.endpoint_candidates`
   - Redis：`cache.provider` + `cache.redis_url` / `cache.redis_url_candidates`
-  - Ollama：`optional_services.ollama.endpoint_candidates`（以及 ollama 模型提供方 host）
   - SearXNG：`search.searxng.host` / `search.searxng.endpoint_candidates`
 
 ### 「Source from URL」失败（SSRF 防护）

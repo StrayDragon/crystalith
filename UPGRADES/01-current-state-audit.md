@@ -26,7 +26,7 @@
 | **AI Agent** | **pydantic-ai** | 结构化生成、工具调用、`Agent.run()` |
 | **工作流编排** | **pydantic-graph** | 3 个 Graph（Output / Search / Research），`BaseNode` + `run(ctx)` |
 | **LLM 框架** | **langchain-community**（仅 SearxSearchWrapper 一处） | SearXNG 搜索包装 |
-| LLM 调用 | openai SDK + ollama | OpenAI 兼容 / Ollama provider |
+| LLM 调用 | openai SDK | OpenAI 兼容 |
 | Token 计数 | tiktoken | context window 管理 |
 | 向量库 | chromadb | 持久化 / HTTP / 内存三种 |
 | 文档解析 | pypdf / beautifulsoup4 + lxml / (音视频转写调 OpenAI Whisper) | PDF / HTML / media |
@@ -58,7 +58,7 @@
 部署复杂度的根因（按贡献排序）：
 
 1. **4 个部署 profile × 6 个 overlay** — 面向"多机/多环境/外部服务混合"的 server 化部署，与"桌面 app"定位冲突。
-2. **多后端抽象层** — 数据库(Postgres+SQLite)、向量库(Chroma 三模式)、缓存(Redis+内存)、LLM(OpenAI+Ollama) 每个都做了 provider 抽象 + endpoint 自动探测（`endpoint_candidates.py` ~170 行 + `ollama_discovery.py` ~340 行（已删除）+ 各 factory）。**这是 server 化的代价，桌面 app 不需要。**
+2. **多后端抽象层** — 数据库(Postgres+SQLite)、向量库(Chroma 三模式)、缓存(Redis+内存)、LLM(OpenAI) 每个都做了 provider 抽象 + endpoint 自动探测（`endpoint_candidates.py` ~170 行 + 各 factory）。**这是 server 化的代价，桌面 app 不需要。**
 3. **Python 服务化打包** — Dockerfile 含 apt 源切换、build-essential、proxy、CN 镜像加速等大量样板。
 4. **SDK 多语言生成链路** — Fern + submodule + 版本同步（Py/TS/Go/Rust），维护负担大。
 5. **插件系统** — Python entry-points 动态发现，17 个插件各自的 pyproject.toml。

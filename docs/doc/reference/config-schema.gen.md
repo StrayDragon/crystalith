@@ -30,6 +30,14 @@ Regeneration:
 | `app.features` | `object` | Application feature flags. |
 | `app.features.chat_prompt_presets_enabled` | `boolean` | Enable /prompt:* directives in QA. |
 | `app.features.workspace_frontend_bundles_enabled` | `boolean` | If true, expose frontend bundle descriptors for workspace tools/outputs (enables interactive renderers in the web UI). Set false to force fallback rendering. |
+| `app.http_guardrails` | `object` | HTTP runtime guardrails for non-local exposure. |
+| `app.http_guardrails.mode` | `string` | Guardrails mode: auto enables only when the server is bound to a non-loopback host; enabled/disabled force override. |
+| `app.http_guardrails.rate_limit` | `object` | HTTP rate limiting settings (best-effort, single-process baseline). |
+| `app.http_guardrails.rate_limit.enabled` | `boolean` | If true, enable basic HTTP rate limiting for core /v1 endpoints. |
+| `app.http_guardrails.rate_limit.key` | `string` | Rate limit identity strategy (default: direct client IP; do not trust proxy headers). |
+| `app.http_guardrails.rate_limit.max_requests` | `integer` | Maximum requests per window per key (0 disables). |
+| `app.http_guardrails.rate_limit.window_s` | `integer` | Fixed window size in seconds. |
+| `app.http_guardrails.upload_max_bytes` | `integer` | Maximum upload size in bytes when guardrails are enabled (0 disables). |
 | `app.name` | `string` |  |
 | `app.openapi_path` | `string` |  |
 | `app.openapi_ui_path` | `string` |  |
@@ -78,17 +86,6 @@ Regeneration:
 | `optional_services.chroma.probe.path` | `anyOf` | Optional HTTP probe path |
 | `optional_services.chroma.probe.timeout_s` | `number` | Probe timeout in seconds |
 | `optional_services.chroma.timeout_s` | `number` | Connection timeout in seconds |
-| `optional_services.ollama` | `object` | Runtime contract for one optional dependency service. |
-| `optional_services.ollama.degrade_policy` | `string` | Degrade policy when dependency is unavailable |
-| `optional_services.ollama.enabled` | `boolean` | Whether this optional service is enabled |
-| `optional_services.ollama.endpoint` | `anyOf` | Service endpoint/base URL |
-| `optional_services.ollama.endpoint_candidates` | `array` | Optional candidate endpoints for this service. Used for probing/selection across environments. |
-| `optional_services.ollama.probe` | `object` | Probe settings for an optional dependency service. |
-| `optional_services.ollama.probe.enabled` | `boolean` | Whether periodic probing is enabled |
-| `optional_services.ollama.probe.interval_s` | `number` | Probe interval in seconds |
-| `optional_services.ollama.probe.path` | `anyOf` | Optional HTTP probe path |
-| `optional_services.ollama.probe.timeout_s` | `number` | Probe timeout in seconds |
-| `optional_services.ollama.timeout_s` | `number` | Connection timeout in seconds |
 | `optional_services.redis` | `object` | Runtime contract for one optional dependency service. |
 | `optional_services.redis.degrade_policy` | `string` | Degrade policy when dependency is unavailable |
 | `optional_services.redis.enabled` | `boolean` | Whether this optional service is enabled |
@@ -180,6 +177,4 @@ Regeneration:
 | `vector_storage.chroma.port` | `integer` |  |
 | `vector_storage.chroma.telemetry` | `boolean` |  |
 | `vector_storage.provider` | `string` |  |
-| `vector_storage.sqlite` | `object` | SQLite vector storage settings. |
-| `vector_storage.sqlite.path` | `string` |  |
 | `version` | `string` | Configuration version |

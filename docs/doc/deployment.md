@@ -73,7 +73,6 @@ just up hybrid         # 显式指定
 
 ```bash
 HYBRID_SERVICES=storage redis searxng          # 默认
-HYBRID_SERVICES=storage redis searxng ollama   # 加本地 LLM
 HYBRID_SERVICES=storage redis                  # 不要搜索
 ```
 
@@ -157,7 +156,6 @@ docker compose --env-file .env \
   -f deployments/prod/docker-compose.storage.yml \
   -f deployments/prod/docker-compose.redis.yml \
   -f deployments/prod/docker-compose.searxng.yml \
-  -f deployments/prod/docker-compose.ollama.yml \
   up -d --build
 ```
 
@@ -203,7 +201,6 @@ Dockerfile 默认可能使用国内镜像加速。CI 中自动关闭。本地关
 | storage | `docker-compose.storage.yml` | PostgreSQL + ChromaDB |
 | redis | `docker-compose.redis.yml` | Redis 缓存 |
 | searxng | `docker-compose.searxng.yml` | SearXNG 网页搜索 |
-| ollama | `docker-compose.ollama.yml` | 本地 Ollama LLM |
 | slidev | `docker-compose.slidev.yml` | Slidev 幻灯片预览 |
 | host-remap | `docker-compose.host-remap.yml` | VPN/Tailscale 端口转发 |
 
@@ -215,7 +212,6 @@ Dockerfile 默认可能使用国内镜像加速。CI 中自动关闭。本地关
 
 - storage → `database.url_candidates`，`vector_storage.chroma.endpoint_candidates`
 - redis → `cache.redis_url_candidates`
-- ollama → `optional_services.ollama.endpoint_candidates`
 - searxng → `search.searxng.endpoint_candidates`
 
 endpoint 探测会自动找到可达的服务。
@@ -237,7 +233,6 @@ endpoint 探测会自动找到可达的服务。
 | ChromaDB | 8001 | 8000（内部） | |
 | Redis | 6380 | 6379（内部） | |
 | SearXNG | 50201 | 8080（内部） | |
-| Ollama | 11434 | 11434（内部） | |
 | Slidev | 3030 | 3030 | 可选 |
 
 ## 环境变量

@@ -1,6 +1,6 @@
 # deployments（Docker Compose 部署清单）
 
-> TL;DR：Docker Compose 文件目录，按“prod（应用部署）/ dev（开发依赖）/ test（测试）”分层，并用 overlay 文件启用可选服务（storage/redis/searxng/ollama/slidev/host-remap）。统一入口由 `scripts/orchestrate.sh` 与 `scripts/dev_compose.sh` 驱动（根目录命令：`justfile:up/down/status/logs`）。
+> TL;DR：Docker Compose 文件目录，按"prod（应用部署）/ dev（开发依赖）/ test（测试）"分层，并用 overlay 文件启用可选服务（storage/redis/searxng/slidev/host-remap）。统一入口由 `scripts/orchestrate.sh` 与 `scripts/dev_compose.sh` 驱动（根目录命令：`justfile:up/down/status/logs`）。
 
 ## Scope（责任边界）
 
@@ -45,7 +45,7 @@ just up (root justfile) --> scripts/orchestrate.sh --> scripts/dev_compose.sh
 ~~~
 
 ## Overlay 与文件映射（证据来自 `.env.example` 与 compose 文件）
-`.env.example` 声明 overlays：`storage redis searxng ollama slidev host-remap`（`.env.example`）。
+`.env.example` 声明 overlays：`storage redis searxng slidev host-remap`（`.env.example`）。
 
 | Overlay | prod 文件 | 主要服务/效果（已知） |
 | --- | --- | --- |
@@ -53,7 +53,6 @@ just up (root justfile) --> scripts/orchestrate.sh --> scripts/dev_compose.sh
 | storage | `deployments/prod/docker-compose.storage.yml` | `postgres` + `chromadb`，并让 `api` depends_on 它们（`deployments/prod/docker-compose.storage.yml`） |
 | redis | `deployments/prod/docker-compose.redis.yml` | `redis`，并让 `api` depends_on（`deployments/prod/docker-compose.redis.yml`） |
 | searxng | `deployments/prod/docker-compose.searxng.yml` | `searxng`（无默认端口暴露），挂载 `deployments/searxng/settings.yml`（`deployments/prod/docker-compose.searxng.yml`） |
-| ollama | `deployments/prod/docker-compose.ollama.yml` | `ollama`（`deployments/prod/docker-compose.ollama.yml`） |
 | slidev | `deployments/prod/docker-compose.slidev.yml` | `slidev`（端口 `CL_SLIDEV_PORT`），并为 `api` build args 设置 `CRYSTALITH_BACKEND_EXTRAS=official-slides`（`deployments/prod/docker-compose.slidev.yml`） |
 | host-remap | `deployments/prod/docker-compose.host-remap.yml` | `host-remap`（socat 转发，使用 `BRIDGE_FORWARDS`；`network_mode: host`）（`deployments/prod/docker-compose.host-remap.yml`） |
 
@@ -62,7 +61,6 @@ dev deps overlays（hybrid 模式依赖）：
 - storage：`deployments/dev/docker-compose.deps.storage.yml`（Postgres+Chroma，端口由 `CL_DEPS_*` 控制）
 - redis：`deployments/dev/docker-compose.deps.redis.yml`
 - searxng：`deployments/dev/docker-compose.deps.searxng.yml`
-- ollama：`deployments/dev/docker-compose.deps.ollama.yml`
 
 ## Core Logic（核心概念与核心数据流）
 
@@ -104,7 +102,7 @@ bash scripts/dev_compose.sh deps up
 ## Config / Observability（配置与可观测性）
 - `.env` 关键变量（模板与说明：`.env.example`）：
   - `CRYSTALITH_PROFILE`、`HYBRID_SERVICES`、`DOCKER_SERVICES`、`FULL_SERVICES`
-  - 端口：`CL_WEB_PORT`、`CL_DEPS_POSTGRES_PORT`、`CL_DEPS_CHROMA_PORT`、`CL_DEPS_REDIS_PORT`、`CL_DEPS_SEARXNG_PORT`、`CL_DEPS_OLLAMA_PORT`
+  - 端口：`CL_WEB_PORT`、`CL_DEPS_POSTGRES_PORT`、`CL_DEPS_CHROMA_PORT`、`CL_DEPS_REDIS_PORT`、`CL_DEPS_SEARXNG_PORT`
 - `api` 容器环境变量（示例：`deployments/prod/docker-compose.yml:x-api-env`）：
   - `HOST/PORT/RELOAD`、`CRYSTALITH_ENV=docker`、`OPENAI_BASE_URL`、`CRYSTALITH_DEFAULT_EMBEDDING_MODEL`
 - 健康检查入口：

@@ -96,19 +96,6 @@ export CRYSTALITH_DEFAULT_EMBEDDING_MODEL="bge-m3-openai"
 
 在 Docker 模式下使用 VPN/Tailscale 端点时，在 `.env` 中设置 `BRIDGE_FORWARDS` 和 `OPENAI_BASE_URL`，并将 `host-remap` 加入 `DOCKER_SERVICES`。
 
-### Ollama（完全本地）
-
-1. 安装 Ollama，确保 `http://localhost:11434` 可达
-2. 在 `.env` 中将 `ollama` 加入 `HYBRID_SERVICES`
-3. 在 `config/app.yaml` 中切换默认模型：
-
-```yaml
-models:
-  defaults:
-    chat: "qwen-local"
-    embedding: "bge-m3-local"
-```
-
 ## 自定义各 Profile 的服务
 
 在 `.env` 中控制每个 profile 包含的服务：
@@ -117,10 +104,10 @@ models:
 CRYSTALITH_PROFILE=hybrid
 HYBRID_SERVICES=storage redis searxng        # hybrid 模式的依赖
 DOCKER_SERVICES=storage redis searxng        # docker 模式的 overlay
-FULL_SERVICES=storage redis searxng ollama slidev
+FULL_SERVICES=storage redis searxng slidev
 ```
 
-可选 overlay：`storage`、`redis`、`searxng`、`ollama`、`slidev`、`host-remap`。
+可选 overlay：`storage`、`redis`、`searxng`、`slidev`、`host-remap`。
 
 模式 C（Docker + 外部服务）的灵活用法——只保留需要 Docker 运行的服务，其余通过 endpoint 探测自动连接外部：
 

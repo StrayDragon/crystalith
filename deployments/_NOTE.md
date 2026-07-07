@@ -4,7 +4,7 @@ This repo now treats **`config/app.yaml` (+ `config/secret.env`) as the single s
 configuration.
 
 **BREAKING:** Legacy runtime env overrides are no longer supported (examples: `DATABASE_URL`, `REDIS_URL`,
-`CACHE_PROVIDER`, `OLLAMA_HOST`, `CRYSTALITH_SEARCH__SEARXNG__HOST`, `AUTO_DB_INIT`, …).
+`CACHE_PROVIDER`, `CRYSTALITH_SEARCH__SEARXNG__HOST`, `AUTO_DB_INIT`, …).
 
 The only supported env vars for configuration are **location/selection**:
 - `CRYSTALITH_CONFIG_PATH` / `CRYSTALITH_CONFIG_DIR`
@@ -41,5 +41,4 @@ recommended for compose.
 - `CACHE_PROVIDER` / `REDIS_URL` → `config/app.yaml: cache.provider` + `cache.redis_url` / `cache.redis_url_candidates`
 - `CRYSTALITH_SEARCH__SEARXNG__HOST` → `config/app.yaml: search.searxng.host`
   - Prefer: `search.searxng.endpoint_candidates` for auto-adapt across profiles
-- `OLLAMA_HOST` → `config/app.yaml: optional_services.ollama.endpoint` (or `optional_services.ollama.endpoint_candidates`)
 - `AUTO_DB_INIT` → `config/app.yaml: app.startup.auto_db_init`

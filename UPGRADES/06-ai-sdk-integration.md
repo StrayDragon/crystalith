@@ -10,7 +10,7 @@ Vercel AI SDK 的核心模块完全满足本项目需求：
 
 | 能力 | AI SDK 对应 | 覆盖场景 |
 |------|------------|---------|
-| **Provider 抽象** | `@ai-sdk/openai` / `@ai-sdk/anthropic` / `@ai-sdk/google` / `@ai-sdk/ollama` / `@ai-sdk/mistral` / `@ai-sdk/deepseek` / `@ai-sdk/groq` / `@ai-sdk/xai` / `@ai-sdk/amazon-bedrock` / `@ai-sdk/azure` / `@ai-sdk/cohere` / … | 替换 crystalith 的 `shared/ai/factory.py`（376 行） |
+| **Provider 抽象** | `@ai-sdk/openai` / `@ai-sdk/anthropic` / `@ai-sdk/google` / `@ai-sdk/mistral` / `@ai-sdk/deepseek` / `@ai-sdk/groq` / `@ai-sdk/xai` / `@ai-sdk/amazon-bedrock` / `@ai-sdk/azure` / `@ai-sdk/cohere` / … | 替换 crystalith 的 `shared/ai/factory.py`（376 行） |
 | **Agent Loop** | `streamText` + `maxSteps` → 多步 tool calling agent（思考→工具→结果→继续） | 替换 pydantic-ai `Agent.run()`，覆盖 QA/Research |
 | **结构化输出** | `generateObject(schema: Zod)` / `streamObject(schema: Zod)` | 替换 pydantic-ai `output_type`，覆盖 7 种 Output 生成 |
 | **Tool Calling** | `tool({ description, parameters: z.object(...), execute })` | 替换 pydantic-ai `@agent.tool`，覆盖 retrieval / web_search / mount_ui |
@@ -26,9 +26,9 @@ AI SDK 的 `@ai-sdk/*` 系列 provider 包**官方维护**，且全部开源（A
 | crystalith 现状（Python） | AI SDK 对应 |
 |------|------|
 | `shared/ai/factory.py`（376 行 provider 工厂） | `import { createOpenAI } from "@ai-sdk/openai"` + 按需选 provider |
-| `shared/ai/openai_provider.py` + `ollama_provider.py` | `@ai-sdk/openai` + `@ai-sdk/ollama`（原生 Ollama provider） |
+| `shared/ai/openai_provider.py` | `@ai-sdk/openai` |
 | `shared/config/models.py`（1090 行模型配置） | `createOpenAI({ apiKey, baseURL, ... })(modelId)` 直传，极简 |
-| `shared/config/ollama_discovery.py`（340 行端点探测） | ✂️ **直接砍掉**，桌面 app 配 `localhost:11434` 即可 |
+| `shared/config/ollama_discovery.py`（340 行端点探测） | ✂️ **已删除**，统一使用 OpenAI-compatible API |
 | `shared/config/endpoint_candidates.py`（170 行） | ✂️ 同上 |
 | `shared/ai/openai_client_manager.py` | `apiKey` 参数（支持 env / 直接传入） |
 | `shared/ai/retry.py`（233 行重试策略） | AI SDK middleware 实现 retry，或自建薄 wrapper ~30 行 |
@@ -38,22 +38,17 @@ AI SDK 的 `@ai-sdk/*` 系列 provider 包**官方维护**，且全部开源（A
 
 ```typescript
 import { createOpenAI } from "@ai-sdk/openai";
-import { createOllama } from "@ai-sdk/ollama";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 // OpenAI（云 API）
 const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Ollama（本地，桌面 app 默认）
-const ollama = createOllama({ baseURL: "http://localhost:11434/api" });
-
 // Anthropic（云 API）
 const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // 模型实例：provider(modelId)
 const model = openai("gpt-4o");
-const localModel = ollama("qwen2.5:7b");
 ```
 
 **收益**：砍掉 crystalith `shared/ai/` + `shared/config/` 的端点探测/多 provider 胶水约 **2000+ 行**，换成 AI SDK 官方 provider 包的声明式配置。
@@ -311,7 +306,7 @@ streamText({
 
 1. **统一 AI 栈、零额外依赖**：Provider 抽象 + Agent Loop + 结构化输出 + 流式 + 多模态全部在一个官方生态中，不需要组合多个来源的包。
 2. **官方维护、Apache-2.0 许可证**：无需担心私有 scope 许可证兼容性；长期稳定性有保障。
-3. **Provider 覆盖广**：OpenAI / Anthropic / Google / Mistral / DeepSeek / Groq / Ollama / xAI / Bedrock / Azure / Cohere / … 全部官方 provider 包。
+3. **Provider 覆盖广**：OpenAI / Anthropic / Google / Mistral / DeepSeek / Groq / xAI / Bedrock / Azure / Cohere / … 全部官方 provider 包。
 4. **前端 hooks 开箱即用**：`useChat` / `useCompletion` / `useObject` 减少前端状态管理代码。
 5. **Tool system 天然契合 RAG**：retrieval/citation/webSearch 做成工具，agent 自主决策何时检索，比固定流水线更智能。
 6. **TypeScript 一等公民**：API 设计深度拥抱 TS 类型系统，Zod schema 前后端共享。
@@ -323,11 +318,11 @@ streamText({
 2. **多步 agent loop** — `maxSteps` 已是 AI SDK 稳定特性。应对：Phase 0 spike 即验证。
 3. **pydantic-graph 线性流水线迁移** — 流水线不进 agent loop，保留为普通 async 函数 + `generateObject`，语义更清晰且无范式差异。
 4. **模型配置管理** — AI SDK 无内置"模型注册表"UI。应对：建一个薄的模型配置 CRUD 表（`model_configs`）+ 前端配置页即可。
-5. **Ollama 原生** — `@ai-sdk/ollama` 已经是独立包，可用性良好。
+
 
 ## 八、建议落地
 
-1. **Provider 层**：用 `@ai-sdk/openai` + `@ai-sdk/ollama` + `@ai-sdk/anthropic` 等按需引入，砍掉所有 Python provider 工厂代码。
+1. **Provider 层**：用 `@ai-sdk/openai` + `@ai-sdk/anthropic` 等按需引入，砍掉所有 Python provider 工厂代码。
 2. **Agent 层**：`streamText` + `maxSteps` + `tools` 统一跑 QA/对话/Research。
 3. **结构化输出**：`generateObject` / `streamObject` 覆盖 Output 生成、Eval LLM-as-Judge。
 4. **生成流水线**（Output 图）：保留为普通 async 代码 + `generateObject`，不进 agent loop。

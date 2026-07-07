@@ -46,7 +46,6 @@ just up              # 或：just up hybrid
 
 ```bash
 HYBRID_SERVICES=storage redis searxng          # 默认
-HYBRID_SERVICES=storage redis searxng ollama   # 加本地 LLM
 HYBRID_SERVICES=storage redis                  # 不要搜索
 ```
 
@@ -70,7 +69,7 @@ DOCKER_SERVICES=                         # 无依赖；全部连接外部
 
 ### full — 全 Docker 部署
 
-所有服务在 Docker 中运行，包括 Ollama 和 Slidev。
+所有服务在 Docker 中运行，包括 Slidev。
 
 ```bash
 just up full
@@ -79,7 +78,7 @@ just up full
 在 `.env` 中自定义：
 
 ```bash
-FULL_SERVICES=storage redis searxng ollama slidev    # 默认
+FULL_SERVICES=storage redis searxng slidev    # 默认
 ```
 
 ## 智能 endpoint 解析
@@ -101,7 +100,6 @@ FULL_SERVICES=storage redis searxng ollama slidev    # 默认
 | 向量存储 | `vector_storage.chroma.endpoint_candidates` |
 | 缓存 | `cache.redis_url_candidates` |
 | 搜索 | `search.searxng.endpoint_candidates` |
-| Ollama | `optional_services.ollama.endpoint_candidates` |
 | 自动建表 | `app.startup.auto_db_init` |
 
 `.env` 中：

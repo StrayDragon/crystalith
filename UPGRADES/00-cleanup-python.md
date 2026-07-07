@@ -26,7 +26,7 @@
 | `features/ui/` 整个目录 | ✅ 删除（2 个 Rivu API 端点） | ~180 |
 | **`shared/ui_state.py`** | ✅ **删除**（原规划保留，实际全部移除） | 115 |
 | `web/app.py` 探针监控 | ✅ 删除 8 个函数 + 类型定义 + 简化 `/health/dependencies` | ~700 |
-| `ollama_discovery.py` 降级 | ✅ 已由之前提交完成 | ~330 |
+| `ollama_discovery.py` 降级 | ✅ 已完成（相关 Ollama compose 文件、文档均已清理） | ~330 |
 | `prompt_presets/api.py` CRUD | ✅ 删除（保留 service 函数） | ~150 |
 | `templates/api.py` CRUD | ✅ 删除（保留 service 函数） | ~200 |
 | cache factory Redis | ✅ 简化（移除直接 redis provider 路径） | ~50 |
@@ -99,7 +99,7 @@ git rm backend/py/src/crystalith/shared/plugins/compliance.py
 
 | 文件 | 规划 | 实际 |
 |------|------|------|
-| `ollama_discovery.py` | 降级 | ✅ 已由之前提交完成 |
+| `ollama_discovery.py` | 降级 | ✅ 已完成 |
 | `endpoint_candidates.py` | 降级 `return candidates[:1]` | 🔶 **保留** — 仍被 `config/manager.py`、`search/__init__.py`、`auto_cache.py` 使用。排序逻辑是 Docker-aware 部署功能，非胶水 |
 
 ### 第 4 轮：web/app.py 探针监控 ✅ 已执行
@@ -230,7 +230,7 @@ pnpm dev           # 预期：前端正常启动
 | `features/ui/` 整个目录 | ~180 | ✅ 已执行 |
 | `shared/ui_state.py` | 115 | ✅ 已执行 |
 | `web/app.py` 探针监控 | ~700 | ✅ 已执行 |
-| `ollama_discovery.py` 降级 | ~330 | ✅ 已由之前提交完成 |
+| `ollama_discovery.py` 降级 | ~330 | ✅ 已完成 |
 | `prompt_presets/api.py` CRUD | ~150 | ✅ 已执行 |
 | `templates/api.py` CRUD | ~200 | ✅ 已执行 |
 | cache factory Redis 分支 | ~50 | ✅ 已执行 |

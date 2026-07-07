@@ -10,7 +10,7 @@
 | **pydantic-graph**（`Graph` / `BaseNode` 工作流） | **自建轻量 runner**（首选） / XState / `@langchain/langgraph` | Inngest | ⚠️ 中 |
 | **langchain-community**（仅 SearxSearchWrapper 一处） | **直接 fetch**（SearXNG 即 HTTP JSON API） | — | ✅ 易 |
 | **openai** SDK | **openai** 官方 JS SDK | — | ✅ 易 |
-| **ollama** SDK | **ollai-js** / AI SDK 的 `@ai-sdk/ollama` provider | — | ✅ 易 |
+
 | **tiktoken**（token 计数） | **gpt-tokenizer** | `tiktoken` (wasm) | ✅ 易 |
 | **pydantic**（schema 校验/模型） | **Zod**（前端已在用） | Elysia 内建 / Valibot | ✅ 易 |
 | **chromadb**（向量库） | **sqlite-vec**（bun:sqlite 扩展） | LanceDB / Qdrant JS client | ⚠️ 中 |
@@ -70,7 +70,7 @@ const { object } = await generateObject({
 | 流式 | `agent.iter()` / `stream` | `streamObject` / `streamText` | ✅ AI SDK 流式 API 更成熟 |
 | 工具调用 | `@agent.tool` / `tools=[...]` | `tool({ ... execute })` | ✅ 对等 |
 | 依赖注入 | `deps_type` + `RunContext[Deps]` | 闭包 / React context（前端） | ⚠️ 需自管，但 TS 里闭包更自然 |
-| 多 provider | `Model` 接口 + factory | `@ai-sdk/*` 系列 | ✅ AI SDK 生态更广（含 ollama/anthropic/google/mistral/...） |
+| 多 provider | `Model` 接口 + factory | `@ai-sdk/*` 系列 | ✅ AI SDK 生态更广（含 anthropic/google/mistral/...） |
 | 模型设置 | `ModelSettings` (temp/max_tokens) | `{ temperature, maxTokens }` 直传 | ✅ 对等 |
 | 重试 | pydantic-ai retry policy | 自管 / `experimental_telemetry` | ⚠️ 需补 |
 | 可观测 | `instrument` | `experimental_telemetry` + OpenTelemetry | ✅ 对等 |
@@ -156,12 +156,11 @@ const results = data.results.map((r: any) => ({
 
 ---
 
-### 4. openai / ollama SDK
+### 4. openai SDK
 
 | Python | TS | 备注 |
 |--------|----|----|
 | `openai` SDK（含 Whisper 转写） | `openai` 官方 JS SDK（`import OpenAI from "openai"`） | API 几乎一一对应，含 `audio.transcriptions.create` |
-| `ollama` SDK | **优先**：AI SDK 的 `@ai-sdk/ollama` provider（直接进 AI SDK 调用链）<br>**备选**：`ollama` JS SDK | 若用 AI SDK 统一调，ollama 作为 provider 最省事 |
 
 **难度**：✅ 易。
 
