@@ -1,0 +1,5 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r_integration_tests,"Cross-module integration test suite","系统 MUST 提供 AI SDK mock 驱动的集成测试套件 覆盖 QA 与 sources 与 refine 与 outputs 与 research 与 studio 全流程 作为 v2 发布质量门禁",null,null,null
+op_scenarios[1]{req_id,id,given,when,then}:
+  r_integration_tests,qa_full_flow,"mock AI 与向量库就绪","运行 qa 集成测试","系统 SHALL 完成检索与生成与置信度与 citations 全流程断言通过"
