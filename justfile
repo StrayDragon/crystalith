@@ -9,14 +9,13 @@ _default:
 # --------------------------------------------------------------------------
 
 # Install all dependencies (frontend)
-# TODO: switch to `bun install` after pnpm→bun migration
 install:
-    cd frontend/web && pnpm install --frozen-lockfile
+    cd frontend/web && bun install --frozen-lockfile
 
 # Start development environment (server + frontend hot reload)
-# TODO: add server when scaffolded; switch to `bun dev` after migration
+# TODO: add server when scaffolded
 dev:
-    cd frontend/web && pnpm dev
+    cd frontend/web && bun dev
 
 # --------------------------------------------------------------------------
 # Build
@@ -24,7 +23,7 @@ dev:
 
 # Build frontend for production
 build-web:
-    cd frontend/web && pnpm run build
+    cd frontend/web && bun run build
 
 # Build server binary (bun build --compile)
 # TODO: Enable when v2 server scaffold is ready
@@ -40,11 +39,11 @@ build-web:
 
 # Run all tests (frontend only for now)
 test:
-    cd frontend/web && pnpm run test:ci
+    cd frontend/web && bun run test:ci
 
 # Run frontend CI tests
 test-frontend:
-    cd frontend/web && pnpm run test:ci
+    cd frontend/web && bun run test:ci
 
 # --------------------------------------------------------------------------
 # Code Quality
@@ -52,19 +51,19 @@ test-frontend:
 
 # Type check frontend
 typecheck:
-    cd frontend/web && pnpm run typecheck
+    cd frontend/web && bun run typecheck
 
 # Lint frontend (incremental)
 lint:
-    cd frontend/web && pnpm run lint
+    cd frontend/web && bun run lint
 
 # Format check frontend
 format-check:
-    cd frontend/web && pnpm run format:check
+    cd frontend/web && bun run format:check
 
 # Format frontend
 format:
-    cd frontend/web && pnpm run format
+    cd frontend/web && bun run format
 
 # Run all quality checks
 check: typecheck lint format-check
