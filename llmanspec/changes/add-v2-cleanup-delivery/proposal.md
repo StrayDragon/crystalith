@@ -1,3 +1,6 @@
+---
+depends_on: [add-v2-distribution, add-v2-eval-harness, add-v2-frontend-eden]
+---
 # add-v2-cleanup-delivery — v2 清理交付
 
 ## Why

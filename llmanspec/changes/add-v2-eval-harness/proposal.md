@@ -1,3 +1,6 @@
+---
+depends_on: [add-v2-core-crud, add-v2-rag-registry]
+---
 # add-v2-eval-harness — Eval / Benchmark 质量体系
 
 ## Why

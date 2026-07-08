@@ -1,3 +1,6 @@
+---
+depends_on: [add-v2-core-crud, add-v2-rag-embed]
+---
 # add-v2-rag-registry — 可插拔 RAG 策略注册表
 
 ## Why

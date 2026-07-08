@@ -1,3 +1,6 @@
+---
+depends_on: [add-v2-core-crud, add-v2-ai-runtime]
+---
 # add-v2-outputs-generation — 7 种结构化输出类型
 
 ## Why

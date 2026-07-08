@@ -1,3 +1,6 @@
+---
+depends_on: [add-v2-core-crud, add-v2-rag-embed, add-v2-ai-runtime]
+---
 # add-v2-qa-pipeline — QA 管线 (AI SDK streamText + RAG)
 
 ## Why

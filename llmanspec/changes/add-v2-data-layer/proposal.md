@@ -1,3 +1,6 @@
+---
+depends_on: [add-v2-server-foundation]
+---
 # add-v2-data-layer — Drizzle ORM + sqlite-vec
 
 ## Why

@@ -1,3 +1,6 @@
+---
+depends_on: [add-v2-data-layer]
+---
 # add-v2-rag-embed — Embed RAG 策略 (sqlite-vec)
 
 ## Why

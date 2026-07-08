@@ -1,3 +1,6 @@
+---
+depends_on: [add-v2-server-foundation]
+---
 # add-v2-frontend-eden — 前端 API 层：Elysia eden RPC 替换 OpenAPI 生成链路
 
 ## Why

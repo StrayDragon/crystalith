@@ -1,3 +1,6 @@
+---
+depends_on: [add-v2-core-crud, add-v2-ai-runtime]
+---
 # add-v2-research-agent — 自主研究 Agent (深度调研)
 
 ## Why
