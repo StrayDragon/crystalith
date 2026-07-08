@@ -15,9 +15,9 @@
 | c04 | core-crud              | ✅ DONE |
 | c05 | rag-embed              | ✅ DONE |
 | c06 | rag-registry           | ✅ DONE |
-| c07 | qa-pipeline            | ⬜ TODO |
-| c08 | research-agent         | ⬜ TODO |
-| c09 | outputs-generation     | ⬜ TODO |
+| c07 | qa-pipeline            | ✅ DONE |
+| c08 | research-agent         | ✅ DONE |
+| c09 | outputs-generation     | ✅ DONE |
 | c10 | models-management      | ⬜ TODO |
 | c11 | eval-harness           | ⬜ TODO |
 | c12 | analysis-studio-refine | ⬜ TODO |
@@ -32,11 +32,11 @@
 
 <!-- CURRENT -->
 
-**Phase 3**: c07 + c08 + c09
+**Phase 4**: c10 + c11 + c12
 
-**前置**: c04 ✅ c05 ✅ c06 ✅
+**前置**: c07 ✅ c08 ✅ c09 ✅
 
-**目标**: qa-pipeline (multi-turn QA + streaming + citations) + research-agent (multi-step deep research) + outputs-generation (FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING/SLIDES)
+**目标**: models-management (model CRUD + provider management) + eval-harness (Golden Dataset + LLM-as-Judge) + analysis-studio-refine (聚类/矛盾/相关性分析 + Slidev studio + 文本精炼)
 
 ---
 
@@ -44,14 +44,13 @@
 
 <!-- HANDOFF -->
 
-| 字段                 | 值                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| :------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 上次 Agent           | pi                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| 上次操作             | **(1) c04 core-crud**: 实现 notebooks/sessions/messages/sources 4 个 Elysia feature router (fully typed, OpenAPI registered)。Source ingestion pipeline (parser-registry + PDF/HTML/text parsers + chunk → embed pipeline)。Frontend eden migration: notebooks + sessions hooks 从 generated client 迁移到 eden treaty。(2) c05 rag-embed: chunker (paragraph-based, 500 chars + 50 overlap), embedder (AI SDK embed/embedMany), epoch-based cache, Embed strategy (indexSource/retrieve via sqlite-vec KNN), pipeline integration (auto-trigger embedding on source upload)。(3) c06 rag-registry: RAGStrategy interface, RAGRegistry (singleton, per-notebook DB config), BM25 keyword strategy (sqlite-fts5), Hybrid (RRF fusion), Page Index, strategies API router。(4) c03 deferred tasks 补丁: c03 的 eden migration defer tasks 在 c04/c09/c12 tasks.md 中缺失 — 已补充 eden migration tasks 到对应 change。**(5) 新增依赖**: unpdf, cheerio, @mozilla/readability, jsdom。 |
-| 开放决策             | **(1) Layout**: 采用 `apps/{server,web}` + `packages/*` 布局（与 kimi-code 一致），`backend/py/` 独立作为冻结 SSOT。**(2) zod-to-openapi v8** 的 extendZodWithOpenApi 必须在 schema 创建前调用 (zod v4 原型时机问题) — 当前用 inline schema 规避，后续如需 named components 需在 shared 包 bootstrap 中调用。**(3) config/app.yaml** 仍是 v1 YAML 格式 — 新增 `config/app.v2.yaml` 作为 v2 SSOT，两个文件独立演进对拍。**(4) AI SDK v7 embed API**: `embed()` 用 `value` (单条), `embedMany()` 用 `values` (批量)。`resolveModel()` 返回 `LanguageModelV4`, embedding 需独立 `resolveEmbeddingModel()` 调用 provider.embedding()。                                                                                                                                                                                                                                                                                                                                                  |
-| 已知问题             | (1) v1→v2 数据迁移脚本 deferred to c14; (2) 前端 messages + sources hooks 仍用 generated client (eden migration 待 v2 server API 完全落地); (3) AI runtime live API 调用验证 deferred (需真实 API key); (4) 前端 typecheck 有预存错误 (`@emotion/styled`, `preconnect`, `@crystalith-slidev`, `SystemConfigDialog`); (5) 前端 App.test.tsx 崩溃 (缺少 @emotion/styled); (6) 验证任务 (curl 端到端测试) 未执行 — 需要运行时环境 + config。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| 质量门禁             | `bun lint --quiet` ✅ (0 errors), `cd apps/server && bun typecheck` ✅ (0 errors), `bun test` 62 pass / 63 fail (frontend 预存失败)。pre-commit hook 自动执行。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| llman sdd defer 格式 | 已废弃 (llman sdd 不再支持 defer tasks)。c03 的 4 个 defer 块已抽成对应 change 的独立 tasks (c04 §3, c09 §4, c12 §5, c14 §2)。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 字段       | 值                                                                                                                                                                                                                                                                                                                                                                          |
+| :--------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 上次 Agent | pi                                                                                                                                                                                                                                                                                                                                                                          |
+| 上次操作   | **(1) c07 qa-pipeline**: QA router + stream SSE, handler (streamText + retrieveSources tool), 4 presets, citations API。(2) c08 research-agent: Research tools (webSearch SearXNG, analyzeResults, writeReport), router CRUD + background agent loop。(3) c09 outputs-generation: Generator (generateObject per type), pipeline (chunks→context→generate→persist), router。 |
+| 开放决策   | AI SDK v7 `tool()` 用 `inputSchema`; `streamText()` v7 无 maxSteps; research agent fire-and-forget 后台执行。                                                                                                                                                                                                                                                               |
+| 已知问题   | AI runtime 需真实 API key 验证; 前端 eden migration 渐进推进; citation/tool-call UI 待集成。                                                                                                                                                                                                                                                                                |
+| 质量门禁   | `bun lint --quiet` ✅, server typecheck ✅, 10+1 feature routers mounted。                                                                                                                                                                                                                                                                                                  |
 
 ---
 
@@ -163,7 +162,7 @@ packages/shared/src/
 └── types/index.ts             # z.infer<>
 ```
 
-## Server 结构
+## Server 结构 (v2 current)
 
 ```
 apps/server/src/
@@ -174,8 +173,8 @@ apps/server/src/
 ├── rag/                       # chunker, embedder, search, cache, fusion, registry
 │   └── strategies/{embed,keyword,hybrid,page-index}.ts
 ├── features/                  # notebooks, sessions, messages, sources,
-│                              # qa, outputs, research, analysis, studio, refine,
-│                              # models, tasks, citations, templates, eval
+│                              # qa, citations, research, outputs,
+│                              # models, tasks, templates, eval
 └── shared/                    # epoch, context, concurrency, observability
 ```
 
