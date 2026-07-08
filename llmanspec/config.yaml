@@ -4,14 +4,21 @@ locale: en
 context: |-
   Project-wide tech stack, commands, conventions, testing, git rules, and doc governance: see ../AGENTS.md.
 
+  **v2 Implementation Progress**: see ../PROGRESS.v2.md — always read this file first.
+  It contains the status board, current batch, handoff notes, architecture decisions, and dependency map.
+  Update it after each implementation session.
+
   Spec workflow paths:
   - Canonical specs: llmanspec/specs
   - Active change workspaces: llmanspec/changes (archive: llmanspec/changes/archive)
   - Deferred proposals / parked changes: llmanspec/notplan-changes
+  - v2 changes use c<NN>- prefix: c00 (foundation, done) → c14 (cleanup). Lower number = higher priority.
+  - All c<NN> changes are batch:all — must read all design.md before implementing any.
 
   Spec-workflow-specific notes:
-  - If backend OpenAPI changes, run frontend `pnpm run api:sync` and verify.
-  - Stable entrypoints: `just gen-docs`, `just docs-drift-check`, `just doc-governance-check` (expected to be part of `just check`).
+  - For v2, do NOT run `pnpm run api:sync` (v1 OpenAPI chain removed in v2).
+  - OpenAPI: use `@asteasolutions/zod-to-openapi` from shared Zod schemas. NOT `@elysiajs/swagger`.
+  - Stable entrypoints: `bun test`, `bun typecheck`.
 rules:
   design:
   - For generated artifacts or injected blocks, include naming/marker rules and deterministic output expectations.
