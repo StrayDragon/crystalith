@@ -1,54 +1,61 @@
-# add-v2-research-agent — Tasks
+# add-v2-research-agent — Tasks (AI SDK v7 方案)
 
-## 1. 状态机核心
+## 1. Agent 主循环（替代"状态机核心"）
 
-- [ ] 新建 `features/research/state-machine.ts`: runGraph 5 节点 async chain + AbortSignal
-- [ ] PlanSearches: AI 生成 2-4 查询，写 researchStep(PLAN)
-- [ ] AnalyzeResults: AI 返回 coverage+need_more，循环条件 need_more AND iter<max
-- [ ] GenerateReport: AI markdown 报告（CANCELLED 不写）
-- [ ] 验证: `bun test test/research/state-machine.test.ts`（多轮迭代、终止条件）
+- [ ] 新建 `features/research/agent.ts`: runResearch() for 循环 + ToolLoopAgent + generateObject
+- [ ] PlanSearches: `generateObject({ schema: planSearchSchema })` 生成 2-4 查询
+- [ ] AnalyzeResults: `generateObject({ schema: analysisSchema })` 返回 coverage+need_more
+- [ ] GenerateReport: `streamText` 流式生成 markdown 报告（CANCELLED 不写）
+- [ ] while 循环条件: `need_more AND iter < maxIterations AND !signal.aborted`
+- [ ] 验证: `bun test test/research/agent.test.ts`（多轮迭代、终止条件、AbortSignal）
 
-## 2. WaitForApproval + HITL
+## 2. WaitForApproval + HITL（用 toolApproval，不用 DB 轮询）
 
-- [ ] WaitForApproval: DB 轮询 0.5s/10min，超时 auto-approve
-- [ ] approve/modify/skip/finish/cancel/resume: 写 researchStep(USER_INPUT)
+- [ ] 新建 `features/research/hitl.ts`: toolApproval 审批流程
+- [ ] `toolApproval: 'user-approval'` 等用户审批搜索计划
+- [ ] approve/modify/skip/finish/cancel: 通过 toolApproval 回调 + AbortController
+- [ ] 超时自动 approve: 前端超时逻辑
+- [ ] **移除 DB 轮询**，改用事件驱动
+- [ ] **移除 DB 锁**（不需要，单用户桌面应用）
 - [ ] 验证: `bun test test/research/hitl.test.ts`（各 action 状态转移）
 
 ## 3. ExecuteSearches
 
 - [ ] webSearch 并发 cap 3（c19 Semaphore）
-- [ ] 结果去重：URL 规范化（c18 canonicalizeUrlForDedup）+ 标题 Jaccard
+- [ ] 结果去重：URL 规范化（c18 canonicalizeUrlForDedup）+ 标题 Jaccard ≥0.85
 - [ ] 写 researchSession.aggregatedResults
 - [ ] 验证: `bun test test/research/execute.test.ts`（去重、并发）
 
-## 4. DB-polling SSE
+## 4. SSE 流（rely AI SDK fullStream，不用 DB 轮询）
 
-- [ ] 新建 `features/research/sse.ts`: GET /research/:id/stream，1s 轮询/30s heartbeat/3600 次
-- [ ] 事件派生：plan_ready/thinking/search_progress/analysis/report/done
-- [ ] 验证: `bun test test/research/sse.test.ts`（事件派生、heartbeat、terminal）
+- [ ] 新建 `features/research/sse.ts`: GET /research/:id/stream
+- [ ] relay AI SDK `fullStream` 事件 → SSE 事件
+- [ ] 事件映射：text-delta→report_delta, tool-call→search_progress, tool-approval-request→approval_request
+- [ ] 验证: `bun test test/research/sse.test.ts`（事件派发、恢复）
 
-## 5. 锁管理 + cancel 真中断
+## 5. Cancel 真中断（移除 DB 锁）
 
-- [ ] locked_at/lock_expires_at，LOCK_TIMEOUT=600s，_extend_lock 周期续期
-- [ ] check_and_cleanup_expired_locks
-- [ ] cancel: AbortController.abort()，runGraph 捕获设 CANCELLED
-- [ ] 验证: `bun test test/research/lock.test.ts`（并发、过期清理、cancel 中断）
+- [ ] activeResearch 管理 Map<number, AbortController>
+- [ ] cancel 路由: AbortController.abort() → runResearch 自然终止
+- [ ] 不需要 locked_at/lock_expires_at（单用户）
+- [ ] 不需要 _extend_lock_periodically
+- [ ] 验证: `bun test test/research/cancel.test.ts`（AbortSignal 中断）
 
 ## 6. 路由/文档修复
 
-- [ ] /stop vs /cancel 统一（注册 /cancel，更新 OpenAPI doc）
-- [ ] 验证: 路由与文档一致
+- [ ] /cancel 路由改为 AbortController（已有 /cancel，不改 URL）
+- [ ] 验证: 路由一致性
 
 ## 7. 整体验证
 
-- [ ] `cd apps/server && bun test tests/bdd/`（research 域 BDD，需 LLM mock）
+- [ ] `cd apps/server && bun test tests/bdd/`（research 域 BDD，AI SDK mock）
 - [ ] `bun oxlint apps/server/src/features/research/`（0 error）
 
 ## Verification
 
 ```bash
 cd apps/server
-bun test tests/bdd/    # research 域（LLM mock）
-bun test test/research/  # 状态机/HITL/SSE/锁
+bun test test/research/   # agent/hitl/execute/sse/cancel
+bun test tests/bdd/       # research BDD
 bun oxlint apps/server/src/features/research/
 ```
