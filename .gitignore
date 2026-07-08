@@ -6,6 +6,7 @@
 ### Universal ###
 # Common files that should be ignored in all projects
 
+# Vibe coding images
 .vibe-images
 
 # Logs
@@ -29,7 +30,6 @@
 config/secret.env
 
 # Local runtime data (databases/uploads)
-data/
 backend/py/data/
 
 ### Python ###
@@ -290,26 +290,6 @@ out/
 
 .svelte-kit
 
-### Go ###
-# go specific files
-
-*.exe
-*.test
-vendor/
-*.out
-go.work
-
-go.sum
-
-### Rust ###
-# rust specific files
-
-/target/
-**/*.rs.bk
-debug/
-target/debug/
-target/release/
-
 ### Javascript ###
 # javascript specific files
 
@@ -328,15 +308,6 @@ coverage/
 *.tsbuildinfo
 node_modules/
 dist/
-
-### Next_js ###
-# next_js specific files
-
-.next/
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
 ### React ###
 # React build directory and environment files
@@ -361,32 +332,10 @@ sketch
 
 coverage/
 
-### Vue ###
-# Vue.js build files and development artifacts
-
-.DS_Store
-node_modules
-dist
-dist-ssr
-coverage
-
-*.local
-.output
-storybook-static/
-.vuepress/dist
-/cypress/videos/
-
-/cypress/screenshots/
-.env.local
-.env.*.local
-*.log
-
-# Local app data
-data/
+# Local app data (ignore all contents, keep README)
+data/*
+!data/README.md
 
 # Allow workspace refine template data to be tracked.
 !frontend/web/src/features/workspace/data/
 !frontend/web/src/features/workspace/data/refineTemplates.ts
-
-
-config/secrets.yaml
