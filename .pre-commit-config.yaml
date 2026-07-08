@@ -14,9 +14,9 @@ repos:
         always_run: true
         stages: [pre-commit]
 
-      - id: format-check
-        name: oxfmt --check
-        entry: bun oxfmt --check
+      - id: format
+        name: oxfmt (auto-fix)
+        entry: bun oxfmt --write
         language: system
         pass_filenames: false
         always_run: true
