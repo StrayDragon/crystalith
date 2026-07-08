@@ -1,22 +1,44 @@
-# Crystalith
+# Crystalith v2
 
-[![PyPI](https://img.shields.io/pypi/v/crystalith-sdk?label=PyPI)](https://pypi.org/project/crystalith-sdk/)
-[![npm](https://img.shields.io/npm/v/%40crystalith%2Fsdk?label=npm)](https://www.npmjs.com/package/@crystalith/sdk)
+Notebook-centric AI workspace with pluggable RAG. Local-first, single-binary distribution.
 
-Notebook-centric AI workspace with RAG over your sources.
+**v2 is being rewritten in Bun + TypeScript** (Elysia + React + Vercel AI SDK + sqlite-vec).
 
-TODO(@l8ng,agent): 等确定发布第一个 1.0.0 版本 之后在考虑写, 需要用户明确指示, 否则先不写, 避免维护成本
+## Quick Start (v2 — coming soon)
 
-## Docs
+```bash
+# Phase 0 scaffold (WIP)
+bun install
+just dev
+# → Server on :8032, Frontend on :3000
+```
 
-- GitHub Pages: https://straydragon.github.io/crystalith/
-- Source: `docs/`
-- Local preview:
-  - `uv sync --project docs`
-  - `just docs-serve`
-  - `just docs-build`
+## Tech Stack (v2)
 
-## TODO
+| Layer | Technology |
+|-------|-----------|
+| Runtime | Bun (single binary, `--compile`) |
+| Server | Elysia + Vercel AI SDK |
+| Frontend | React 19 + Vite + TypeScript |
+| Database | bun:sqlite + Drizzle ORM |
+| Vector Store | sqlite-vec (in-process) |
+| AI | @ai-sdk/openai + @ai-sdk/anthropic + ... |
+| Desktop | Tauri v2 (post-Phase-4) |
 
-- [ ] 整理文档
-  - [ ] 使用一个 cursorful 录制一个简约演示视频
+## Development
+
+See `AGENTS.md` for full guidelines. Key commands:
+
+```bash
+just dev           # Start development
+just test          # Run tests
+just check         # Quality gates
+```
+
+## v1 Python (Reference)
+
+The v1 Python backend (`backend/py/`) is preserved as a reference SSOT during v2 rewrite.
+
+## Migration Plan
+
+See `UPGRADES/00-v2-migration-plan.md` for the full v2 migration strategy.

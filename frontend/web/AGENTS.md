@@ -1,93 +1,78 @@
-# Repository Guidelines
+# frontend/web — Vite + React + TypeScript SPA
 
 ## Project Structure & Module Organization
-- `frontend/web/` is the Vite + React + TypeScript UI; source code lives in `frontend/web/src/`, static assets in `frontend/web/public/`.
-- `frontend/web/src/features/workspace/` groups the workspace feature into `app/`, `layout/`, `shared/`, and `domains/` (notebooks/sessions/messages/analysis/sources/outputs/refine/studio/research).
-- `backend/py/` contains the FastAPI service with app code in `backend/py/src/crystalith/` and tests in `backend/py/tests/`.
-- `backend/py/packages/` hosts workspace Python libraries, each with its own `pyproject.toml` and `tests/`.
-- `config/` stores runtime config (`config/app.yaml`) and the generated schema (`config/app.schema.gen.json`).
+- Source code: `src/`
+- Static assets: `public/`
+- `src/features/workspace/` — main workspace feature
+  - `domains/` — business domains (notebooks, sessions, messages, analysis, sources, outputs, refine, studio, research)
+  - `layout/`, `shared/`, `app/` — workspace scaffolding
+- `src/api/` — API client layer (transitioning from generated to eden RPC)
+- `src/shared/` — shared utilities, Layer system, types
 
 ## Build, Test, and Development Commands
-Frontend (from repo root):
-- `cd frontend/web && pnpm install` — install dependencies.
-- `pnpm dev` — start the Vite dev server.
-- `pnpm test` — run Vitest and React Testing Library.
-- `pnpm run test:ci` — run deterministic frontend quality gate (stable suite + mock-report gate).
-- `pnpm run test:core` — run minimal UI core regression suite aligned with backend core API smoke paths (SSOT: `llmanspec/specs/quality-and-regression/core_suite.json`).
-- `pnpm run test:all` — run all tests including `*.experimental.test.*` (MSW unhandled requests warn by default).
-- `pnpm run lint` — run incremental `oxlint` for changed frontend source files.
-- `pnpm run lint:all` — run full `oxlint` across `src/`.
-- `pnpm run format` — apply `oxfmt` to frontend source/config files.
-- `pnpm run format:check` — verify frontend formatting without writing changes.
-- `pnpm typecheck` — run TypeScript typechecking.
-- `pnpm run build` — create a production build.
-- `pnpm preview` — serve the production build locally.
-  - Vite proxy uses `VITE_API_PROXY_TARGET` when set; defaults to `http://127.0.0.1:8032`.
-- `pnpm run api:sync` — fetch backend OpenAPI and regenerate `src/api/generated`.
 
-Backend (from repo root):
-- `cd backend/py && uv sync` — install Python deps.
-- `just dev` — run the API server (uvicorn wrapper).
-- `just test` — run pytest.
-
-Tip: `just -l` lists available tasks in each directory.
-
-## Coding Style & Naming Conventions
-- TypeScript/React: 2-space indentation; components use `PascalCase`; hooks are `useX`; tests named `*.test.tsx`.
-- Python (backend): 4-space indentation; prefer high-coverage type hints; minimize `Any`; avoid dynamic attribute access (`getattr`, `hasattr`, `__getattr__`); `snake_case` for functions/vars, `PascalCase` classes.
-- CSS/Tailwind: global styles in `frontend/web/src/app/index.css`; feature styles live alongside components.
-- Frontend formatting uses `oxfmt`; keep reformatting scoped to intended style-only changes. Outside `frontend/web`, match existing style and avoid unrelated reformatting.
-- If backend OpenAPI changed, run `pnpm run api:sync` and verify.
-
-## Layer System (z-index Management)
-The project uses a unified Layer system to manage z-index values. **Never use hardcoded z-index values** like `z-[99999]` or `z-50`.
-
-### Layer Levels (from low to high)
-- `base` (0): Normal content
-- `dropdown` (100): Dropdown menus (MenuList)
-- `popover` (200): Popovers (PopoverContent, Select menus)
-- `modal` (300): Modal dialogs
-- `toast` (400): Toast notifications
-- `tooltip` (500): Tooltips (always on top)
-
-### Usage
-```tsx
-// In React components - use the hook
-import { useLayer } from '../shared/layer';
-
-function MyModal() {
-  const { style } = useLayer('modal');
-  return <div style={style}>...</div>;
-}
-
-// For Material Tailwind components - use LAYER_LEVELS directly
-import { LAYER_LEVELS } from '../shared/layer';
-
-<MenuList style={{ zIndex: LAYER_LEVELS.dropdown }}>...</MenuList>
-<PopoverContent style={{ zIndex: LAYER_LEVELS.popover }}>...</PopoverContent>
-<Tooltip style={{ zIndex: LAYER_LEVELS.tooltip }}>...</Tooltip>
+```bash
+bun install              # Install dependencies
+bun dev                  # Vite dev server (HMR on :3000)
+bun test                 # Vitest (watch mode)
+bun run test:ci          # CI quality gate (stable suite)
+bun run test:core        # Minimal UI core regression suite
+bun run lint             # Incremental oxlint
+bun run lint:all         # Full oxlint
+bun run format           # oxfmt
+bun run format:check     # Format check (no write)
+bun typecheck            # TypeScript typecheck
+bun run build            # Production build → dist/
+bun preview              # Preview production build
 ```
 
-### Important Notes
-- The `LayerProvider` is already wrapped in `App.tsx`
-- Use `useLayer` hook for custom overlays/dialogs
-- Use `LAYER_LEVELS` constants for Material Tailwind component props
+## API Client
+
+During v2 transition:
+- `src/api/generated/` — legacy generated client (OpenAPI-based, kept as reference)
+- New v2 endpoints use Elysia eden RPC (type-safe, no codegen)
+- Gradually replace generated client calls with eden as v2 server endpoints are implemented
+
+## Coding Style & Naming Conventions
+- TypeScript/React: 2-space indentation
+- Components: `PascalCase`
+- Hooks: `useX`
+- Tests: `*.test.tsx` (colocated with source)
+- CSS/Tailwind: global styles in `src/app/index.css`; feature styles alongside components
+- Formatter: `oxfmt` — keep reformatting scoped
+
+## Layer System (z-index Management)
+
+**Never use hardcoded z-index values.** Use the unified Layer system:
+
+| Level | Value | Usage |
+|-------|-------|-------|
+| `base` | 0 | Normal content |
+| `dropdown` | 100 | Dropdown menus (MenuList) |
+| `popover` | 200 | Popovers (PopoverContent, Select menus) |
+| `modal` | 300 | Modal dialogs |
+| `toast` | 400 | Toast notifications |
+| `tooltip` | 500 | Tooltips (always on top) |
+
+```tsx
+// React components — use the hook
+import { useLayer } from '../shared/layer';
+const { style } = useLayer('modal');
+
+// Material Tailwind components — use LAYER_LEVELS
+import { LAYER_LEVELS } from '../shared/layer';
+<MenuList style={{ zIndex: LAYER_LEVELS.dropdown }}>...</MenuList>
+```
+
+- `LayerProvider` is already wrapped in `App.tsx`
 - Each level has 100 slots for future expansion
 
 ## Testing Guidelines
+- Vitest + React Testing Library
+- Colocate tests with `*.test.tsx` naming
+- Run targeted tests for changed areas
+- `test:ci` runs deterministic quality gate; `test:core` covers critical paths
 
-### Unit Tests
-- Frontend uses Vitest + React Testing Library; colocate tests under `frontend/web/src/` with `*.test.tsx` naming.
-- Backend uses `pytest` + `pytest-asyncio`; tests live in `backend/py/tests/` and `backend/py/packages/*/tests/`.
-- Run targeted tests for changed areas and note any manual checks in the PR.
-
-## Commit & Pull Request Guidelines
-- Commit messages use short type prefixes like `feat:`, `fix:`, `refactor:`, `doc:`, `dev:`, `misc:` with optional scopes (e.g., `feat(frontend): add login form`).
-- PRs should describe the change, link relevant issue/spec, include test results, and attach screenshots/GIFs for UI updates.
-
-## Configuration & Security Notes
-- Local config lives in `config/app.yaml`; never commit API keys or tokens.
-- If you change config shape, update documentation and include required keys in the PR.
-
-## Agent-Specific Instructions
-- If a task involves proposals/plans, new features, or ambiguous requirements, consult `llmanspec/config.yaml` for spec workflow and conventions before coding.
+## Configuration & Security
+- Settings via `config/app.yaml`
+- Never commit API keys or tokens

@@ -2,95 +2,15 @@ name: CI
 
 on:
   push:
-    branches: [main]
-    paths-ignore:
-      - "docs/**"
-      - "docs/zensical.toml"
-      - "**/*.md"
+    branches: [v2-dev, main]
+  pull_request:
+    branches: [v2-dev, main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  backend:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Cache uv
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('backend/py/uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-
-
-      - name: Install uv
-        run: python -m pip install -U uv
-
-      - name: Sync dependencies
-        run: |
-          cd backend/py
-          uv sync --frozen
-
-      - name: Check backend import layering
-        run: |
-          cd backend/py
-          just check-imports
-
-      - name: Check config schema consistency
-        run: |
-          cd backend/py
-          just config-schema
-          cd ../..
-          git diff --exit-code -- config/app.schema.gen.json
-
-      - name: Lint (incremental baseline)
-        run: |
-          cd backend/py
-          just lint
-
-      - name: Run backend tests
-        run: |
-          cd backend/py
-          uv run pytest tests/ -v
-
-      - name: Run offline LLM eval regression (non-blocking)
-        run: |
-          cd backend/py
-          uv run python scripts/llm_eval.py --output-dir llm_eval_reports
-
-      - name: Upload LLM eval report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: llm-eval-report
-          path: backend/py/llm_eval_reports
-
-      - name: Run workspace package tests
-        run: |
-          cd backend/py
-          for package in packages/*; do
-            # Run each package from its own root so package config (and coverage config)
-            # is isolated from backend/py defaults.
-            (
-              cd "$package"
-              uv run --project . pytest -c pyproject.toml -o asyncio_mode=auto
-            )
-          done
-
-      - name: Check OpenAPI schema is up to date
-        run: |
-          cd backend/py
-          uv run scripts/api_schema.py check -s ../../frontend/web/openapi.gen.json
-
   frontend:
     runs-on: ubuntu-latest
     steps:
@@ -100,70 +20,50 @@ jobs:
           fetch-depth: 0
 
       - name: Fetch default branch (for incremental lint)
-        run: git fetch origin main --depth=1
+        run: git fetch origin v2-dev --depth=1
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          version: "10.29.2"
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: frontend/web/pnpm-lock.yaml
+          bun-version: latest
 
       - name: Install dependencies
         run: |
           cd frontend/web
-          pnpm install --frozen-lockfile
+          bun install --frozen-lockfile
 
-      - name: Run tests
+      - name: Lint (incremental)
         run: |
           cd frontend/web
-          pnpm run test:ci
-
-      - name: Lint (incremental baseline)
-        run: |
-          cd frontend/web
-          pnpm run lint
+          bun run lint
 
       - name: Format check
         run: |
           cd frontend/web
-          pnpm run format:check
+          bun run format:check
 
       - name: Typecheck
         run: |
           cd frontend/web
-          pnpm run typecheck
+          bun run typecheck
+
+      - name: Test
+        run: |
+          cd frontend/web
+          bun run test:ci
 
       - name: Build
         run: |
           cd frontend/web
-          pnpm run build
+          bun run build
 
-      - name: Check generated API client is up to date
-        run: |
-          cd frontend/web
-          pnpm run api:generate
-          git diff --exit-code -- src/api/generated
-
-  composition-smoke:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        scenario: [core-only, single-optional]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Prepare env
-        run: cp .env.example .env
-
-      - name: Run composition smoke
-        run: |
-          SMOKE_SCENARIOS="${{ matrix.scenario }}" ./scripts/composition_smoke.sh
+  # TODO: Enable when v2 server scaffold is ready
+  # server:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: oven-sh/setup-bun@v2
+  #     - run: cd server && bun install --frozen-lockfile
+  #     - run: cd server && bun test
+  #     - run: cd server && bun run typecheck
+  #     - run: cd server && bun build --compile --outfile=crystalith-server ./src/server.ts

@@ -1,96 +1,60 @@
-# Pre-commit configuration
+# Pre-commit configuration for v2 (Bun + TypeScript)
 # Install: pip install pre-commit && pre-commit install
-# Or: uv tool install pre-commit && pre-commit install
+# (pre-commit itself is still Python; hooks are Bun/TS)
 
 repos:
-  # Backend Python checks
-  - repo: local
-    hooks:
-      - id: backend-tests
-        name: Backend Tests
-        entry: bash -c 'cd backend/py && PYTHONHASHSEED=0 TZ=UTC uv run pytest tests/ -q --tb=no --no-cov -m "not experimental"'
-        language: system
-        files: ^backend/py/
-        pass_filenames: false
-        stages: [pre-commit]
-
-      - id: check-imports
-        name: Backend Import Layering
-        entry: bash -c 'cd backend/py && just check-imports'
-        language: system
-        files: ^backend/py/src/crystalith/.*\.py$
-        pass_filenames: false
-        stages: [pre-commit]
-
-      - id: backend-lint
-        name: Backend Ruff Lint
-        entry: bash -c 'cd backend/py && uv run ruff check src tests'
-        language: system
-        files: ^backend/py/(src/|tests/|pyproject\.toml)
-        pass_filenames: false
-        stages: [pre-commit]
-
-      - id: backend-typecheck
-        name: Backend Typecheck (basedpyright)
-        entry: bash -c 'cd backend/py && uv run basedpyright --level error src'
-        language: system
-        files: ^backend/py/(src/|pyproject\.toml)
-        pass_filenames: false
-        stages: [pre-commit]
-
-      - id: config-schema-consistency
-        name: Config Schema Consistency
-        entry: bash -c 'cd backend/py && just config-schema-check'
-        language: system
-        files: (^backend/py/src/crystalith/shared/config/)|(^config/app\.yaml$)
-        pass_filenames: false
-        stages: [pre-commit]
-
-      - id: secret-env-example-consistency
-        name: Secret Env Example Consistency
-        entry: bash -c 'cd backend/py && just secret-env-example && just secret-env-example-check'
-        language: system
-        files: (^config/app\.yaml$)|(^backend/py/scripts/gen_secret_env_example\.py$)
-        pass_filenames: false
-        stages: [pre-commit]
-
-      - id: api-schema-check
-        name: API Schema Consistency
-        entry: bash -c 'cd backend/py && uv run scripts/api_schema.py check -s ../../frontend/web/openapi.gen.json'
-        language: system
-        files: ^backend/py/src/crystalith/(api|schemas|db/models)
-        pass_filenames: false
-        stages: [pre-commit]
-
   # Frontend checks
   - repo: local
     hooks:
-      - id: frontend-build
-        name: Frontend Build Check
-        entry: bash -c 'cd frontend/web && pnpm run build > /dev/null 2>&1'
+      - id: frontend-lint
+        name: Frontend Lint (incremental)
+        entry: bash -c 'cd frontend/web && bun run lint'
         language: system
         files: ^frontend/web/src/
         pass_filenames: false
         stages: [pre-commit]
 
-  # Standard pre-commit hooks
+      - id: frontend-format-check
+        name: Frontend Format Check
+        entry: bash -c 'cd frontend/web && bun run format:check'
+        language: system
+        files: ^frontend/web/src/
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: frontend-typecheck
+        name: Frontend Typecheck
+        entry: bash -c 'cd frontend/web && bun run typecheck'
+        language: system
+        files: ^frontend/web/src/
+        pass_filenames: false
+        stages: [pre-commit]
+
+  # TODO: Enable when v2 server scaffold is ready
+  # - repo: local
+  #   hooks:
+  #     - id: server-lint
+  #       name: Server Lint
+  #       entry: bash -c 'cd server && bun run lint'
+  #       language: system
+  #       files: ^server/src/
+  #       pass_filenames: false
+  #       stages: [pre-commit]
+  #     - id: server-typecheck
+  #       name: Server Typecheck
+  #       entry: bash -c 'cd server && bun run typecheck'
+  #       language: system
+  #       files: ^server/src/
+  #       pass_filenames: false
+  #       stages: [pre-commit]
+
+  # Standard hygiene hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
-        exclude: ^(frontend/web/openapi\.gen\.json|frontend/web/src/api/generated/)
       - id: end-of-file-fixer
-        exclude: ^(frontend/web/openapi\.gen\.json|frontend/web/src/api/generated/)
       - id: check-yaml
       - id: check-json
-        exclude: ^frontend/web/openapi\.gen\.json$
       - id: check-added-large-files
         args: ['--maxkb=1000']
-
-  # Python formatting (optional, uncomment if needed)
-  # - repo: https://github.com/astral-sh/ruff-pre-commit
-  #   rev: v0.8.6
-  #   hooks:
-  #     - id: ruff
-  #       args: [--fix]
-  #     - id: ruff-format
