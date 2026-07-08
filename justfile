@@ -8,14 +8,24 @@ _default:
 # Development
 # --------------------------------------------------------------------------
 
-# Install all dependencies (frontend)
+# Install all dependencies (workspace)
 install:
-    cd frontend/web && bun install --frozen-lockfile
+    bun install --frozen-lockfile
 
-# Start development environment (server + frontend hot reload)
-# TODO: add server when scaffolded
+# Start development environment (server + frontend hot reload in parallel)
 dev:
+    bun dev
+
+# Start only the Elysia server
+dev-server:
+    cd server && bun dev
+
+# Start only the frontend
+dev-web:
     cd frontend/web && bun dev
+
+# Start both (two terminals: `just dev-server` + `just dev-web`)
+# Or use: bun run dev:server & bun run dev:web
 
 # --------------------------------------------------------------------------
 # Build

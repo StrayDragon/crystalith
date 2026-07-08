@@ -8,7 +8,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun --filter '*' dev",
+    "dev:server": "bun --filter @crystalith/server dev",
+    "dev:web": "bun --filter crystalith-web dev",
     "build": "bun --filter '*' build",
     "test": "bun --filter '*' test",
     "typecheck": "bun --filter '*' typecheck",
