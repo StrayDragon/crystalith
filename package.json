@@ -1,0 +1,19 @@
+{
+  "name": "crystalith",
+  "version": "2.0.0-dev",
+  "private": true,
+  "workspaces": [
+    "server",
+    "frontend/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun --filter '*' dev",
+    "build": "bun --filter '*' build",
+    "test": "bun --filter '*' test",
+    "typecheck": "bun --filter '*' typecheck",
+    "lint": "bun --filter '*' lint",
+    "format": "bun --filter '*' format",
+    "format:check": "bun --filter '*' format:check"
+  }
+}
