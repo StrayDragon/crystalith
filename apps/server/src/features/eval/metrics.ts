@@ -56,7 +56,7 @@ export async function judgeAnswer(
   expectedAnswer: string,
   context?: string,
 ): Promise<EvalMetrics> {
-  const contextSection = context ? `\n\nRetrieved context:\n${context.substring(0, 2000)}` : '';
+  const contextSection = context ? `\n\nRetrieved context:\n${context.slice(0, 2000)}` : '';
 
   const prompt = `Question: ${question}
 Expected answer: ${expectedAnswer}

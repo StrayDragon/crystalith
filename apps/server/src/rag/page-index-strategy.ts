@@ -86,7 +86,7 @@ export class PageIndexStrategy implements RAGStrategy {
       if (score >= minScore) {
         results.push({
           chunk_id: group.chunkIds[0],
-          text: group.text.substring(0, 500),
+          text: group.text.slice(0, 500),
           score, // substring-match density (0-1, higher = better)
           source_id: group.source_id,
           chunk_index: group.page,
@@ -94,7 +94,7 @@ export class PageIndexStrategy implements RAGStrategy {
       }
     }
 
-    return results.sort((a, b) => b.score - a.score).slice(0, topK);
+    return results.toSorted((a, b) => b.score - a.score).slice(0, topK);
   }
 
   async isIndexed(notebookId: number): Promise<boolean> {

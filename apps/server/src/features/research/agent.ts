@@ -8,7 +8,7 @@
 // - Execute: webSearch tool via ToolLoopAgent
 // - Report: streamText (relayed to SSE)
 // - Cancel: AbortSignal on the while loop
-import { generateObject, streamText, ToolLoopAgent } from 'ai';
+import { generateObject, streamText } from 'ai';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -18,7 +18,6 @@ import { db } from '../../db/index.ts';
 import { researchSessions, researchSteps } from '../../db/schema.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { Semaphore } from '../../shared/semaphore.ts';
-import { webSearchTool } from './tools.ts';
 
 // ---------------------------------------------------------------------------
 // Types

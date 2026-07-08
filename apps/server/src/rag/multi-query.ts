@@ -56,7 +56,7 @@ export function rrfFuseSeeds(resultLists: ChunkResult[][], topK: number): ChunkR
   }
 
   const sorted = Array.from(acc.values())
-    .sort((a, b) => b.rrf - a.rrf)
+    .toSorted((a, b) => b.rrf - a.rrf)
     .slice(0, topK);
   const maxRrf = sorted[0]?.rrf ?? 1;
   return sorted.map(({ chunk, rrf }) => ({

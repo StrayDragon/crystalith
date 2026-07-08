@@ -396,7 +396,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       results: results.map((r) => ({
         chunk_id: r.chunk_id,
         source_id: r.source_id,
-        text: r.text.substring(0, 200),
+        text: r.text.slice(0, 200),
         score: r.score,
       })),
     };
