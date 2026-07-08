@@ -1,13 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import useSWR from 'swr';
 
-import {
-  createSessionV1NotebooksNotebookIdSessionsPost as createSession,
-  deleteSessionV1NotebooksNotebookIdSessionsSessionIdDelete as deleteSession,
-  listSessionsV1NotebooksNotebookIdSessionsGet as listSessions,
-  updateSessionV1NotebooksNotebookIdSessionsSessionIdPatch as updateSession,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
+import { api } from '../../../../api/eden';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import { normalizeSession } from '../../shared/utils';
 
@@ -24,7 +18,13 @@ export function useSessions() {
 
   const { data, error, isLoading, mutate } = useSWR(
     activeNotebookId && isConnected ? ['workspace/sessions', activeNotebookId] : null,
-    () => unwrapData(listSessions<true>({ path: { notebook_id: activeNotebookId ?? 0 } })),
+    async () => {
+      const { data, error: fetchErr } = await api.v2
+        .notebooks({ nid: activeNotebookId! })
+        .sessions.get();
+      if (fetchErr) throw fetchErr;
+      return data ?? [];
+    },
     { revalidateOnFocus: false },
   );
 
@@ -78,15 +78,16 @@ export function useSessions() {
       }
       store.getState().setError('sessions', '');
       try {
-        const created = await unwrapData(
-          createSession<true>({
-            path: { notebook_id: activeNotebookId },
-            body: { title: title ?? null },
-          }),
-        );
-        const normalized = normalizeSession(created);
+        const { data: created, error: createErr } = await api.v2
+          .notebooks({ nid: activeNotebookId })
+          .sessions.post({
+            title: title ?? null,
+          });
+        if (createErr) throw createErr;
+        const newSession = created!;
+        const normalized = normalizeSession(newSession);
         store.getState().setActiveSession(normalized.id);
-        await mutate(async (current) => (current ? [created, ...current] : [created]), {
+        await mutate(async (current) => (current ? [newSession, ...current] : [newSession]), {
           revalidate: false,
         });
         return normalized.id;
@@ -124,20 +125,22 @@ export function useSessions() {
       }
       store.getState().setError('sessions', '');
       try {
-        const updated = await unwrapData(
-          updateSession<true>({
-            path: { notebook_id: activeNotebookId, session_id: sessionId },
-            body: { title: title.trim() || undefined },
-          }),
-        );
-        const normalized = normalizeSession(updated);
+        const { data: updated, error: updateErr } = await api.v2
+          .notebooks({ nid: activeNotebookId })
+          .sessions({ sid: sessionId })
+          .patch({
+            title: title.trim() || undefined,
+          });
+        if (updateErr) throw updateErr;
+        const result = updated!;
+        const normalized = normalizeSession(result);
         store
           .getState()
           .setSessions(
             store.getState().sessions.map((item) => (item.id === sessionId ? normalized : item)),
           );
         await mutate(
-          async (current) => current?.map((item) => (item.id === sessionId ? updated : item)) ?? [],
+          async (current) => current?.map((item) => (item.id === sessionId ? result : item)) ?? [],
           { revalidate: false },
         );
         return true;
@@ -158,11 +161,11 @@ export function useSessions() {
       }
       store.getState().setError('sessions', '');
       try {
-        await unwrapData(
-          deleteSession<true>({
-            path: { notebook_id: activeNotebookId, session_id: sessionId },
-          }),
-        );
+        const { error: deleteErr } = await api.v2
+          .notebooks({ nid: activeNotebookId })
+          .sessions({ sid: sessionId })
+          .delete();
+        if (deleteErr) throw deleteErr;
         const s = store.getState();
         const remaining = s.sessions.filter((item) => item.id !== sessionId);
         s.setSessions(remaining);

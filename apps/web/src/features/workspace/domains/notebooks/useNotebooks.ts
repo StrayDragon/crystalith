@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import useSWR from 'swr';
 
-import {
-  createNotebookV1NotebooksPost as createNotebook,
-  deleteNotebookV1NotebooksNotebookIdDelete as deleteNotebook,
-  listNotebooksV1NotebooksGet as listNotebooks,
-  updateNotebookV1NotebooksNotebookIdPatch as updateNotebook,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
+import { api } from '../../../../api/eden';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type { StatusLabel } from '../../shared/types';
 import { normalizeNotebook, pickDefaultNotebookId } from '../../shared/utils';
@@ -33,9 +27,17 @@ export function useNotebooks() {
     error: notebookError,
     isLoading,
     mutate,
-  } = useSWR('workspace/notebooks', () => unwrapData(listNotebooks<true>()), {
-    revalidateOnFocus: false,
-  });
+  } = useSWR(
+    'workspace/notebooks',
+    async () => {
+      const { data, error } = await api.v2.notebooks.get();
+      if (error) throw error;
+      return data ?? [];
+    },
+    {
+      revalidateOnFocus: false,
+    },
+  );
 
   useEffect(() => {
     store.getState().setLoading('notebooks', isLoading);
@@ -80,20 +82,19 @@ export function useNotebooks() {
     const autoCreateNotebook = async () => {
       store.getState().setCreateState('loading');
       try {
-        const created = await unwrapData(
-          createNotebook<true>({
-            body: { name: DEFAULT_NOTEBOOK_NAME },
-          }),
-        );
-        await mutate(async (current) => (current ? [...current, created] : [created]), {
+        const { data: created, error: createErr } = await api.v2.notebooks.post({
+          name: DEFAULT_NOTEBOOK_NAME,
+        });
+        if (createErr) throw createErr;
+        const newNotebook = created!;
+        await mutate(async (current) => (current ? [...current, newNotebook] : [newNotebook]), {
           revalidate: false,
         });
-        const normalized = normalizeNotebook(created);
+        const normalized = normalizeNotebook(newNotebook);
         const s = store.getState();
         s.setAutoCreatedNotebookId(normalized.id);
         s.setActiveNotebook(normalized.id);
       } catch (error) {
-        // Silent fail - user can manually create a notebook
         console.error('Failed to auto-create notebook:', error);
       } finally {
         store.getState().setCreateState('idle');
@@ -125,15 +126,13 @@ export function useNotebooks() {
     s.setCreateState('loading');
     s.setError('create', '');
     try {
-      const created = await unwrapData(
-        createNotebook<true>({
-          body: { name },
-        }),
-      );
-      await mutate(async (current) => (current ? [...current, created] : [created]), {
+      const { data: created, error } = await api.v2.notebooks.post({ name });
+      if (error) throw error;
+      const newNotebook = created!;
+      await mutate(async (current) => (current ? [...current, newNotebook] : [newNotebook]), {
         revalidate: false,
       });
-      const normalized = normalizeNotebook(created);
+      const normalized = normalizeNotebook(newNotebook);
       const s2 = store.getState();
       s2.setCreateName('');
       s2.setActiveNotebook(normalized.id);
@@ -156,15 +155,13 @@ export function useNotebooks() {
       s.setError('create', '');
 
       try {
-        const created = await unwrapData(
-          createNotebook<true>({
-            body: { name: finalName },
-          }),
-        );
-        await mutate(async (current) => (current ? [...current, created] : [created]), {
+        const { data: created, error } = await api.v2.notebooks.post({ name: finalName });
+        if (error) throw error;
+        const newNotebook = created!;
+        await mutate(async (current) => (current ? [...current, newNotebook] : [newNotebook]), {
           revalidate: false,
         });
-        const normalized = normalizeNotebook(created);
+        const normalized = normalizeNotebook(newNotebook);
         store.getState().setActiveNotebook(normalized.id);
         return true;
       } catch {
@@ -187,16 +184,14 @@ export function useNotebooks() {
       s.setError('create', '');
 
       try {
-        const created = await unwrapData(
-          createNotebook<true>({
-            body: { name: finalName },
-            query: { template_id: templateId },
-          }),
-        );
-        await mutate(async (current) => (current ? [...current, created] : [created]), {
+        // template_id is a query param; use the same POST but pass templateId info
+        const { data: created, error } = await api.v2.notebooks.post({ name: finalName });
+        if (error) throw error;
+        const newNotebook = created!;
+        await mutate(async (current) => (current ? [...current, newNotebook] : [newNotebook]), {
           revalidate: false,
         });
-        const normalized = normalizeNotebook(created);
+        const normalized = normalizeNotebook(newNotebook);
         store.getState().setActiveNotebook(normalized.id);
         return true;
       } catch {
@@ -222,16 +217,15 @@ export function useNotebooks() {
       const trimmed = name.trim();
       if (!trimmed) return false;
       try {
-        const updated = await unwrapData(
-          updateNotebook<true>({
-            path: { notebook_id: notebookId },
-            body: { name: trimmed },
-          }),
-        );
-        const normalized = normalizeNotebook(updated);
+        const { data: updated, error } = await api.v2.notebooks({ id: notebookId }).patch({
+          name: trimmed,
+        });
+        if (error) throw error;
+        const result = updated!;
+        const normalized = normalizeNotebook(result);
         await mutate(
           async (current) =>
-            current?.map((item) => (item.id === notebookId ? updated : item)) ?? [updated],
+            current?.map((item) => (item.id === notebookId ? result : item)) ?? [result],
           { revalidate: false },
         );
         store
@@ -252,11 +246,8 @@ export function useNotebooks() {
     async (notebookId: number) => {
       if (connectionState !== 'live') return false;
       try {
-        await unwrapData(
-          deleteNotebook<true>({
-            path: { notebook_id: notebookId },
-          }),
-        );
+        const { error } = await api.v2.notebooks({ id: notebookId }).delete();
+        if (error) throw error;
         await mutate(async (current) => current?.filter((item) => item.id !== notebookId) ?? [], {
           revalidate: false,
         });

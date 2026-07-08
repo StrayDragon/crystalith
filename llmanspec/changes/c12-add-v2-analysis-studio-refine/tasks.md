@@ -20,6 +20,13 @@
 - [ ] `apps/server/src/features/templates/router.ts` — CRUD + Nunjucks 渲染
 - [ ] `apps/server/src/features/prompt-presets/router.ts` — CRUD
 
+## 5. Frontend Eden Migration
+
+- [ ] `apps/web/src/api/` — analysis domain: generated import → eden treaty
+- [ ] `apps/web/src/api/` — studio domain: generated import → eden treaty
+- [ ] `apps/web/src/api/` — refine domain: generated import → eden treaty
+- [ ] `apps/web/src/api/` — research domain: generated import → eden treaty
+
 ## Verification
 
 ```bash
