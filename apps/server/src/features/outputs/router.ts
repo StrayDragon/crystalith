@@ -10,7 +10,7 @@ import { Elysia, NotFoundError } from 'elysia';
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
-import { outputs, notebooks } from '../../db/schema.ts';
+import { outputs, notebooks, sources, chunks } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { listOutputTypes, type ToolOutputType } from './generator.ts';
@@ -121,6 +121,72 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
     if (!row) throw new NotFoundError(`Output ${id} not found`);
     return serializeOutput(row);
+  })
+
+  // Delete output
+  .delete('/outputs/:id', ({ params, set }) => {
+    const id = Number(params.id);
+    const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
+    if (!row) throw new NotFoundError(`Output ${id} not found`);
+    db().delete(outputs).where(eq(outputs.id, id)).run();
+    set.status = 204;
+    return '';
+  })
+
+  // Export output as JSON
+  .get('/outputs/:id/export', ({ params }) => {
+    const id = Number(params.id);
+    const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
+    if (!row) throw new NotFoundError(`Output ${id} not found`);
+    return {
+      id: row.id,
+      notebook_id: row.notebookId,
+      type: row.type,
+      content: row.content,
+      prompt: row.prompt,
+      chunk_ids: row.chunkIds,
+      created_at: row.createdAt.toISOString(),
+    };
+  })
+
+  // Convert output to source
+  .post('/outputs/:id/convert-to-source', ({ params }) => {
+    const id = Number(params.id);
+    const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
+    if (!row) throw new NotFoundError(`Output ${id} not found`);
+
+    // Create a plain-text source from the output content
+    const contentStr = JSON.stringify(row.content ?? {});
+    const sourceRow = db()
+      .insert(sources)
+      .values({
+        notebookId: row.notebookId,
+        filename: `output-${id}-${row.type}.json`,
+        mimeType: 'application/json',
+        parserType: 'text',
+        status: 'ready',
+        metadata: { type: row.type, source: 'output_conversion' },
+      })
+      .returning()
+      .get();
+
+    // Create a single chunk from the output
+    db()
+      .insert(chunks)
+      .values({
+        sourceId: sourceRow.id,
+        chunkIndex: 0,
+        text: contentStr,
+        startOffset: 0,
+        endOffset: contentStr.length,
+      })
+      .run();
+
+    return {
+      source_id: sourceRow.id,
+      filename: sourceRow.filename,
+      chunk_count: 1,
+    };
   });
 
 registerApiDoc(apiDocs);

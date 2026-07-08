@@ -6,7 +6,7 @@ import { desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
-import { sessions } from '../../db/schema.ts';
+import { sessions, messages, chunks, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 
 // ---------------------------------------------------------------------------
@@ -150,6 +150,51 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
     db().delete(sessions).where(eq(sessions.id, sid)).run();
     set.status = 204;
     return '';
+  })
+
+  // Convert session to source (all messages merged as text chunks)
+  .post('/notebooks/:nid/sessions/:sid/convert-to-source', ({ params }) => {
+    const sid = Number(params.sid);
+    const session = db().select().from(sessions).where(eq(sessions.id, sid)).get();
+    if (!session) notFound(sid);
+
+    const msgRows = db()
+      .select()
+      .from(messages)
+      .where(eq(messages.sessionId, sid))
+      .orderBy(messages.createdAt)
+      .all();
+
+    const text = msgRows.map((m) => `[${m.role}] ${m.content}`).join('\n\n');
+    const sourceRow = db()
+      .insert(sources)
+      .values({
+        notebookId: session.notebookId,
+        filename: `session-${sid}-conversation.txt`,
+        mimeType: 'text/plain',
+        parserType: 'text',
+        status: 'ready',
+        metadata: { source: 'session_conversion', session_id: sid },
+      })
+      .returning()
+      .get();
+
+    db()
+      .insert(chunks)
+      .values({
+        sourceId: sourceRow.id,
+        chunkIndex: 0,
+        text,
+        startOffset: 0,
+        endOffset: text.length,
+      })
+      .run();
+
+    return {
+      source_id: sourceRow.id,
+      filename: sourceRow.filename,
+      chunk_count: 1,
+    };
   });
 
 registerApiDoc(apiDocs);
