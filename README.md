@@ -41,4 +41,4 @@ The v1 Python backend (`backend/py/`) is preserved as a reference SSOT during v2
 
 ## Migration Plan
 
-See `UPGRADES/00-v2-migration-plan.md` for the full v2 migration strategy.
+See `llmanspec/changes/` for the full v2 migration plan and dependency graph.

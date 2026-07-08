@@ -1,9 +1,0 @@
-{
-  "name": "bench-pdf",
-  "private": true,
-  "dependencies": {
-    "unpdf": "1.6.2",
-    "mupdf": "1.27.0",
-    "pdfjs-dist": "6.0.227"
-  }
-}

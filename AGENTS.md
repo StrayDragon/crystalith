@@ -23,7 +23,6 @@ crystalith/
 ├── package.json          # ✅ Bun workspace root
 ├── config/               # Runtime config (app.yaml + secret.env)
 ├── llmanspec/            # Spec-driven development specs + changes
-├── UPGRADES/             # v2 migration research docs (read before working)
 ├── backend/py/           # 🔒 v1 Python reference SSOT — do NOT modify
 └── scripts/              # Maintenance scripts
 ```
@@ -35,8 +34,8 @@ The repo is in **v2 scaffold** phase on branch `v2-dev`:
 - ✅ pnpm → bun migration complete
 - ✅ Shared packages workspace set up (`packages/shared/`)
 - Python v1 code is preserved intact in `backend/py/` as reference
-- `llmanspec/specs/` contains ~33 business-level specs
-- `UPGRADES/` contains all v2 migration research and decisions
+- `llmanspec/specs/` contains ~34 business-level specs
+- `llmanspec/changes/` contains 15 v2 migration changes (with dependency graph)
 
 ## Reference: v1 Python Implementation
 
@@ -87,7 +86,7 @@ Fast path (individual packages):
 
 ## v2 Migration Workflow
 
-1. Read `UPGRADES/00-v2-migration-plan.md` for the full plan
+1. Run `llman sdd list` to see all active changes and their status
 2. Read relevant v1 code in `backend/py/` to understand a feature
 3. Design v2 implementation, then implement in `server/` with Elysia + Drizzle + AI SDK
 4. Frontend API calls gradually switch from generated client to eden RPC
@@ -99,7 +98,7 @@ Fast path (individual packages):
 - Optional scope: `feat(server):`, `fix(frontend):`
 - Keep subjects short, imperative, focused on one change
 
-## Key Decisions (from UPGRADES/)
+## Key Decisions
 
 - **All 20+ features preserved** — research, analysis, studio, refine, etc. are core business
 - **RAG strategies are pluggable** — registry pattern (Embed, BM25, Hybrid, Page Index, GraphRAG)
@@ -110,7 +109,7 @@ Fast path (individual packages):
 
 ## Agent-Specific Instructions
 
-- For v2 design decisions, read `UPGRADES/` docs first
+- For v2 design decisions, check `llmanspec/changes/` for the relevant change spec
 - When implementing a feature, trace through the v1 Python code to understand behavior
 - Use llman SDD workflow for spec changes: `/llman-sdd-*` skills
 - For spec-driven development conventions, see `llmanspec/config.yaml`
