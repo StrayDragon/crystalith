@@ -9,9 +9,9 @@
 | # | Change | 状态 |
 |:--|:---|:---|
 | c00 | server-foundation | ✅ DONE |
-| c01 | data-layer | ⬜ TODO |
-| c02 | ai-runtime | ⬜ TODO |
-| c03 | frontend-eden | ⬜ TODO |
+| c01 | data-layer | ✅ DONE |
+| c02 | ai-runtime | ✅ DONE |
+| c03 | frontend-eden | ✅ DONE |
 | c04 | core-crud | ⬜ TODO |
 | c05 | rag-embed | ⬜ TODO |
 | c06 | rag-registry | ⬜ TODO |
@@ -31,11 +31,11 @@
 ## 当前批次
 
 <!-- CURRENT -->
-**Phase 1**: c01 + c02 + c03
+**Phase 2**: c04 + c05 + c06
 
-**前置**: c00 ✅
+**前置**: c01 ✅ c02 ✅ c03 ✅
 
-**目标**: shared Zod schemas + Drizzle 17 表 + sqlite-vec + AI runtime + eden client + OpenAPI/AsyncAPI
+**目标**: core-crud (notebooks/sessions/messages/sources/outputs) + rag-embed (chunker/embedder/embed-strategy) + rag-registry (pluggable strategy registry)
 
 ---
 
@@ -44,10 +44,10 @@
 <!-- HANDOFF -->
 | 字段 | 值 |
 |:---|:---|
-| 上次 Agent | — |
-| 上次操作 | 初始化 PROGRESS.v2.md，所有 changes 以 c<NN> 前缀重命名 |
-| 开放决策 | 无 |
-| 已知问题 | 无 |
+| 上次 Agent | pi (Phase 1 batch) |
+| 上次操作 | 实现 c01 + c02 + c03: shared Zod schemas (15 files) + Drizzle 20表 + sqlite-vec vectors + AI runtime (providers/tools/stream/middleware/generate-output/tokenizer/config) + OpenAPI 3.1 + AsyncAPI 3.0 + eden treaty client |
+| 开放决策 | zod-to-openapi v8 的 extendZodWithOpenApi 必须在 schema 创建前调用 (zod v4 原型时机问题) — 当前用 inline schema 规避，后续如需 named components 需在 shared 包 bootstrap 中调用 |
+| 已知问题 | (1) v1→v2 数据迁移脚本 deferred to c14; (2) 前端 generated client 迁移 deferred to core-crud batch; (3) AI runtime live API 调用验证 deferred (需真实 API key) |
 
 ---
 
