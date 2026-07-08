@@ -81,7 +81,7 @@ export class KeywordStrategy implements RAGStrategy {
     opts?: { topK?: number; minScore?: number },
   ): Promise<ChunkResult[]> {
     this.init();
-    const topK = opts?.topK ?? 10;
+    const topK = opts?.topK ?? 8;
     const minScore = opts?.minScore ?? 0;
 
     // scope to notebook via JOIN
@@ -111,11 +111,11 @@ export class KeywordStrategy implements RAGStrategy {
       .map((r) => ({
         chunk_id: r.chunk_id,
         text: r.text,
-        distance: bm25Score(r, total),
+        score: bm25Score(r, total), // normalized BM25 rank (0-1, higher = better)
         source_id: r.source_id,
         chunk_index: r.chunk_index,
       }))
-      .filter((r) => r.distance >= minScore);
+      .filter((r) => r.score >= minScore);
   }
 
   async isIndexed(notebookId: number): Promise<boolean> {

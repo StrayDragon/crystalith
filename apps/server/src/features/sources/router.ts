@@ -9,6 +9,7 @@ import { db } from '../../db/index.ts';
 import { chunks, sources, sourceTags, sourceTagMap } from '../../db/schema.ts';
 import { deleteSourceVectors } from '../../db/vectors.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { listParsers } from './parser-registry.ts';
 import { ingestSource } from './pipeline.ts';
 
@@ -218,6 +219,9 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     // Delete source (cascades to chunks via FK)
     db().delete(sources).where(eq(sources.id, id)).run();
 
+    // Invalidate cached retrievals for the source's notebook.
+    if (row.notebookId) bumpSourcesEpoch(row.notebookId);
+
     set.status = 204;
     return '';
   })
@@ -353,7 +357,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
         chunk_id: r.chunk_id,
         source_id: r.source_id,
         text: r.text.substring(0, 200),
-        score: r.distance,
+        score: r.score,
       })),
     };
   })

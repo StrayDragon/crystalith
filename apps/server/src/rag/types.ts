@@ -5,7 +5,16 @@
 export interface ChunkResult {
   chunk_id: number;
   text: string;
-  distance: number;
+  /**
+   * Similarity score in [0,1] (higher = more relevant). This is the canonical
+   * relevance signal across all strategies:
+   *  - embed:   `1 - cosine_distance` (sqlite-vec returns distance; convert)
+   *  - keyword: normalized BM25 rank (0-1)
+   *  - hybrid:  RRF fused score
+   *  - page:    substring-match density
+   * Filtering MUST use `score >= minScore` (higher is better).
+   */
+  score: number;
   source_id: number;
   chunk_index: number;
 }
@@ -20,13 +29,23 @@ export interface RAGStrategy {
   /** Index a source (chunk + embed + store vectors). */
   indexSource(sourceId: number, notebookId: number): Promise<void>;
   /** Retrieve top-K chunks for a query in a notebook. */
-  retrieve(
-    query: string,
-    notebookId: number,
-    opts?: { topK?: number; minScore?: number },
-  ): Promise<ChunkResult[]>;
+  retrieve(query: string, notebookId: number, opts?: RetrieveOptions): Promise<ChunkResult[]>;
   /** Check if a notebook has been indexed. */
   isIndexed(notebookId: number): Promise<boolean>;
   /** Clean up vectors when a source is deleted. */
   deleteSource(sourceId: number): Promise<void>;
+}
+
+/** Options shared by all strategies' retrieve(). */
+export interface RetrieveOptions {
+  topK?: number;
+  minScore?: number;
+  /** When true, expand the query into multiple seeds and RRF-fuse (embed only). */
+  multiQuery?: boolean;
+  /** Output type hint for seed generation (e.g. 'FAQ', 'GUIDE'). */
+  outputType?: string;
+  /** Cap results per source to enforce diversity. Default 3. */
+  maxPerSource?: number;
+  /** When set, skip search and return these chunks directly (reuse path). */
+  chunkIds?: number[];
 }
