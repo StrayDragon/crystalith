@@ -110,6 +110,63 @@ const agent = new ToolLoopAgent({
 v1 `locked_at`/`lock_expires_at` 字段已存在于 schema 但全为 NULL。
 t24 确认不移除表结构（迁移成本 > 收益），但逻辑上彻底不用。
 
+> **演进说明**：GAP-REPORT 发现 c22 缺会话锁（并发隐患），Track A 已加临时
+> `acquireLock`/`releaseLock`（router.ts）作为过渡。c24-B 切 toolApproval
+> 事件驱动后，agent 单实例由 SSE 连接生命周期保证，DB 锁即可移除。
+
+### research parity 补全（c22 残留，来自 GAP-REPORT 发现 1）
+
+c22 实现了循环骨架，但相对 v1 `graph.py`+`api.py` 残留三个行为缺口，
+本 Workstream 一并补全（不另开 change）：
+
+**resume-with-state**（对照 v1 `_build_state_from_session`）
+
+当前 `POST /research/:id/resume` 从 iteration 1 + 空 results 重跑，丢失累积。
+
+```ts
+// router.ts /resume
+const row = db().select().from(researchSessions).where(eq(id)).get();
+const state: ResearchState = {
+  sessionId: id,
+  notebookId: row.notebookId,
+  topic: row.topic,
+  iteration: row.currentIteration ?? 1, // 续接而非重置
+  maxIterations: row.maxIterations,
+  results: (row.aggregatedResults ?? []) as ResearchResult[], // 读累积
+};
+runResearchFromState(state, ac.signal);
+```
+
+**export-to-source**（对照 v1 `api.py:1245-1469`）
+
+当前 `/export` 返回原始 `{report, aggregated_results}`，无 chunk/embed/source。
+
+```ts
+// router.ts /export
+const { report } = row;
+const source = db()
+  .insert(sources)
+  .values({ notebookId, title: `研究:${topic}`, mime: 'text/markdown' })
+  .returning()
+  .get();
+const chunks = chunkText(report); // 复用 rag/chunker.ts
+for (const c of chunks) {
+  /* insert chunk + embed + vector */
+}
+bumpSourcesEpoch(notebookId);
+```
+
+**HITL modify 动作**（对照 v1 `api.py:537-588`）
+
+当前仅 approve/skip/finish，缺 modify（改 plan 后 resume）。
+
+```ts
+// router.ts /research/:id/modify
+.post('/research/:id/modify', ({ params, body }) => {
+  // 接受修改后的 SearchPlan，记录 step，设 status='searching' 解除 agent 等待
+});
+```
+
 ## Workstream C: 集成测试
 
 ### AI SDK Mock 策略

@@ -23,16 +23,19 @@ c17-c23 完成了核心功能从 v1 到 v2 的行为对齐，但遗留了三条"
 ### 三条工作线
 
 1. **Content Storage 层**（来自 c19 document_parse stub）
-   - v1：FastAPI 用文件系统存储原始上传内容，parse 时从磁盘读取
-   - v2 当前：pipeline.ts 取 `buffer: Uint8Array` 透传，无持久化
+   - v2 当前：pipeline.ts 取 `buffer: Uint8Array` 透传，parse 后即丢弃，无原始字节持久化
    - **v2 改进**：用 Bun 原生 API 实现轻量存储抽象（local fs），让 document_parse 任务可以从持久化存储读取原始文件
-   - 这不是 v1 对齐，是 v2 单二进制架构下的存储设计
+   - 这是 **v2 独有设计**（v1 也无原始字节持久化——见 design.md 勘误），非 v1 对齐，是 v2 单二进制架构下的存储设计
 
-2. **toolApproval 事件驱动 HITL**（来自 c22）
-   - v1：DB 轮询 + DB 锁实现人工审批
-   - v2 当前：DB polling 兼容前端（临时方案）
-   - **v2 改进**：AI SDK v7 `toolApproval: 'user-approval'` 事件驱动审批
-   - 完全消除 DB 轮询/DB 锁，这是 v2 AI SDK v7 原生优势
+2. **toolApproval 事件驱动 HITL + research parity 补全**（来自 c22 残留）
+   - v1：DB 轮询 + DB 锁实现人工审批；v1 graph.py 完整 5 状态机
+   - v2 当前：DB polling（临时方案），且 c22 残留多个 v1 行为缺口
+   - **v2 改进**：AI SDK v7 `toolApproval: 'user-approval'` 事件驱动审批，完全消除 DB 轮询
+   - **同时补全 c22 残留的 v1 parity 缺口**（详见 GAP-REPORT 发现 1）：
+     - resume-with-state：`/resume` 读 `aggregatedResults` 重建 ResearchState（当前从 iteration 1 + 空结果重跑，丢失累积）
+     - export-to-source：report → chunk + embed + vector + source 创建（当前是只读 stub）
+     - HITL 动作词汇：补 modify（改 plan 后 resume，当前仅 approve/skip/finish）
+   - 注意：Track A 已加临时 DB 锁（acquireLock/releaseLock）防并发，c24-B 切事件驱动后移除
 
 3. **集成测试套件**（跨所有 changes）
    - v1：无等效的 LLM mock 集成测试
@@ -59,12 +62,15 @@ c17-c23 完成了核心功能从 v1 到 v2 的行为对齐，但遗留了三条"
 - **MODIFIED** `features/tasks/worker.ts`: document_parse handler 使用 fetchContent + 完整 parse-embed 流程
 - **REMOVED** 当前 document_parse stub（替换为完整实现）
 
-### Workstream B — toolApproval HITL
+### Workstream B — toolApproval HITL + research parity 补全
 
 - **MODIFIED** `features/research/agent.ts`: waitForApproval 替换为 ToolLoopAgent + toolApproval
 - **MODIFIED** `features/research/router.ts`: SSE 端点升级为 AI SDK fullStream 事件转发
+- **NEW** `POST /research/:id/modify`: 接受修改后的 SearchPlan，记录 step 后 resume（补 HITL modify 动作）
+- **MODIFIED** `POST /research/:id/resume`: 读 `aggregatedResults` + `currentIteration` 重建 ResearchState（当前从空结果重跑）
+- **MODIFIED** `POST /research/:id/export`: report → chunk + embed + vector store + source 创建（当前返回原始 JSON）
 - **FRONTEND** 前端 research UI 改为监听 tool-approval-request 事件
-- **REMOVED** DB polling + DB 锁残留
+- **REMOVED** DB polling + 临时 DB 锁（Track A 加的 acquireLock/releaseLock）
 
 ### Workstream C — 集成测试套件
 
