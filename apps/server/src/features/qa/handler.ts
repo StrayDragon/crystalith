@@ -56,6 +56,8 @@ export interface QaHandlerOptions {
   strategyId?: string;
   /** Retrieval top-K (default 5). */
   topK?: number;
+  /** Lifecycle hook for the provisional assistant message (see stream.ts). */
+  onMessageSettled?: (accumulatedText: string, failed: boolean) => void;
 }
 
 // Internal shape returned by the retrieveSources tool.
@@ -200,5 +202,6 @@ export function streamQa(opts: QaHandlerOptions): Response {
     },
     // Detect no-evidence before streaming starts (pre-flight source check).
     noEvidenceReason: countNotebookSources(opts.notebookId) === 0 ? 'no_sources' : undefined,
+    onMessageSettled: opts.onMessageSettled,
   });
 }

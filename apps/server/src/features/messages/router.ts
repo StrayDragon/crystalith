@@ -116,6 +116,10 @@ export const messagesRouter = new Elysia({ prefix: '/v2' })
         .returning()
         .get();
 
+      // Touch the parent session's updated_at so recency ordering stays correct
+      // (mirrors v1 features/messages/service.py:29-31).
+      db().update(sessions).set({ updatedAt: new Date() }).where(eq(sessions.id, sid)).run();
+
       return serializeMessage(row);
     },
     { body: MessageCreateSchema },

@@ -92,6 +92,46 @@ function serializeSession(row: typeof researchSessions.$inferSelect) {
 }
 
 // ---------------------------------------------------------------------------
+// Session lock — prevent concurrent agent runs on the same session.
+//
+// Transitional: the current DB-polling HITL architecture needs an explicit
+// lock so two concurrent POST /research/:id/resume calls don't both spawn
+// runResearch. c24 Workstream B replaces DB polling with event-driven
+// toolApproval, after which this lock is removed (see c24 design.md).
+// ---------------------------------------------------------------------------
+
+const LOCK_TTL_MS = 10 * 60 * 1000; // 600s, matches v1 research lock window.
+
+/** True if the session row holds an unexpired lock at `now`. Pure, testable. */
+export function isLockHeld(row: { lockExpiresAt: Date | null }, now: Date = new Date()): boolean {
+  return row.lockExpiresAt !== null && row.lockExpiresAt > now;
+}
+
+/** Acquire the session lock. Throws if already held (409-style conflict). */
+export function acquireLock(id: number): void {
+  const now = new Date();
+  const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
+  if (!row) throw new NotFoundError(`Research session ${id} not found`);
+  if (isLockHeld(row, now)) {
+    throw new Error(`Research session ${id} is locked by another run`);
+  }
+  db()
+    .update(researchSessions)
+    .set({ lockedAt: now, lockExpiresAt: new Date(now.getTime() + LOCK_TTL_MS) })
+    .where(eq(researchSessions.id, id))
+    .run();
+}
+
+/** Release the session lock (clears both columns). */
+function releaseLock(id: number): void {
+  db()
+    .update(researchSessions)
+    .set({ lockedAt: null, lockExpiresAt: null })
+    .where(eq(researchSessions.id, id))
+    .run();
+}
+
+// ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 
@@ -115,21 +155,27 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       .returning()
       .get();
 
-    // Create AbortController + run in background
+    // Acquire lock on the freshly-created session and run the agent in
+    // background; release on settle so resume can't double-spawn.
+    acquireLock(session.id);
     const ac = new AbortController();
     activeResearch.set(session.id, ac);
 
-    runResearch(session.id, ac.signal).catch((error) => {
-      console.error(`[research] agent failed for session ${session.id}:`, error);
-      if (!ac.signal.aborted) {
-        db()
-          .update(researchSessions)
-          .set({ status: 'cancelled' })
-          .where(eq(researchSessions.id, session.id))
-          .run();
-      }
-      activeResearch.delete(session.id);
-    });
+    runResearch(session.id, ac.signal)
+      .catch((error) => {
+        console.error(`[research] agent failed for session ${session.id}:`, error);
+        if (!ac.signal.aborted) {
+          db()
+            .update(researchSessions)
+            .set({ status: 'cancelled' })
+            .where(eq(researchSessions.id, session.id))
+            .run();
+        }
+      })
+      .finally(() => {
+        releaseLock(session.id);
+        activeResearch.delete(session.id);
+      });
 
     return serializeSession(session);
   })
@@ -217,8 +263,8 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
   // Resume a cancelled/paused session
   .post('/research/:id/resume', async ({ params }) => {
     const id = Number(params.id);
-    const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
-    if (!row) throw new NotFoundError(`Research session ${id} not found`);
+    // acquireLock throws if the session is locked by another run.
+    acquireLock(id);
 
     db()
       .update(researchSessions)
@@ -229,10 +275,14 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     const ac = new AbortController();
     activeResearch.set(id, ac);
 
-    runResearch(id, ac.signal).catch((error) => {
-      console.error(`[research] resume failed for ${id}:`, error);
-      activeResearch.delete(id);
-    });
+    runResearch(id, ac.signal)
+      .catch((error) => {
+        console.error(`[research] resume failed for ${id}:`, error);
+      })
+      .finally(() => {
+        releaseLock(id);
+        activeResearch.delete(id);
+      });
 
     return { id, status: 'planning', resumed: true };
   })
