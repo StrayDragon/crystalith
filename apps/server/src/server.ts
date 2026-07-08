@@ -94,7 +94,7 @@ export function createApp() {
     .use(modelsRouter)
     .use(analysisRouter)
     .use(studioRouter)
-    .use(refineRouter)
+    .use(refineRouter(taskQueue))
     .use(templatesRouter)
     .use(promptPresetsRouter)
     .use(sourceConnectorsRouter)
