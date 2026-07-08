@@ -230,6 +230,189 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       mime_types: p.mimeTypes,
       extensions: p.extensions,
     }));
+  })
+
+  // Tag CRUD
+  .get('/notebooks/:nid/sources/tags', ({ params }) => {
+    const nid = Number(params.nid);
+    return db()
+      .select()
+      .from(sourceTags)
+      .where(eq(sourceTags.notebookId, nid))
+      .all()
+      .map((t) => ({
+        id: t.id,
+        notebook_id: t.notebookId,
+        name: t.name,
+        created_at: t.createdAt.toISOString(),
+        updated_at: t.updatedAt.toISOString(),
+      }));
+  })
+
+  .post('/notebooks/:nid/sources/tags', ({ params, body }) => {
+    const nid = Number(params.nid);
+    const { name } = body as { name: string };
+    const row = db().insert(sourceTags).values({ notebookId: nid, name }).returning().get();
+    return {
+      id: row.id,
+      notebook_id: row.notebookId,
+      name: row.name,
+      created_at: row.createdAt.toISOString(),
+      updated_at: row.updatedAt.toISOString(),
+    };
+  })
+
+  .patch('/notebooks/:nid/sources/tags/:tid', ({ params, body }) => {
+    const tid = Number(params.tid);
+    const { name } = body as { name: string };
+    const existing = db().select().from(sourceTags).where(eq(sourceTags.id, tid)).get();
+    if (!existing) throw new NotFoundError(`Tag ${tid} not found`);
+    db().update(sourceTags).set({ name }).where(eq(sourceTags.id, tid)).run();
+    const updated = db().select().from(sourceTags).where(eq(sourceTags.id, tid)).get();
+    return {
+      id: updated!.id,
+      notebook_id: updated!.notebookId,
+      name: updated!.name,
+      created_at: updated!.createdAt.toISOString(),
+      updated_at: updated!.updatedAt.toISOString(),
+    };
+  })
+
+  .delete('/notebooks/:nid/sources/tags/:tid', ({ params, set }) => {
+    const tid = Number(params.tid);
+    db().delete(sourceTags).where(eq(sourceTags.id, tid)).run();
+    set.status = 204;
+    return '';
+  })
+
+  .post('/notebooks/:nid/sources/tags/:tid/sources', ({ params, body }) => {
+    const tid = Number(params.tid);
+    const { source_ids } = body as { source_ids: number[] };
+    for (const sid of source_ids) {
+      db().insert(sourceTagMap).values({ sourceId: sid, tagId: tid }).run();
+    }
+    return { tag_id: tid, source_ids, applied: source_ids.length };
+  })
+
+  .delete('/notebooks/:nid/sources/tags/:tid/sources', ({ params, body }) => {
+    const tid = Number(params.tid);
+    const { source_ids } = body as { source_ids: number[] };
+    for (const sid of source_ids) {
+      db()
+        .delete(sourceTagMap)
+        .where(eq(sourceTagMap.sourceId, sid) && eq(sourceTagMap.tagId, tid))
+        .run();
+    }
+    return { tag_id: tid, source_ids, removed: source_ids.length };
+  })
+
+  // Get source chunks
+  .get('/sources/:id/chunks', ({ params }) => {
+    const id = Number(params.id);
+    const rows = db()
+      .select()
+      .from(chunks)
+      .where(eq(chunks.sourceId, id))
+      .orderBy(chunks.chunkIndex)
+      .all();
+    return rows.map((c) => ({
+      id: c.id,
+      chunk_index: c.chunkIndex,
+      text: c.text,
+      start_offset: c.startOffset,
+      end_offset: c.endOffset,
+      metadata: c.metadata,
+    }));
+  })
+
+  // Re-embed a source
+  .post('/sources/:id/re-embed', async ({ params }) => {
+    const id = Number(params.id);
+    const row = db().select().from(sources).where(eq(sources.id, id)).get();
+    if (!row) sourceNotFound(id);
+    // Trigger re-embed via embed strategy (fire-and-forget)
+    const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
+    const strategy = new EmbedStrategy();
+    deleteSourceVectors(db(), id);
+    await strategy.indexSource(id, row.notebookId);
+    return { source_id: id, re_embedded: true };
+  })
+
+  // Search sources (placeholder — delegates to embed strategy)
+  .post('/notebooks/:nid/sources/search', async ({ params, body }) => {
+    const nid = Number(params.nid);
+    const { query, engine } = body as { query: string; engine?: string };
+    const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
+    const strategy = new EmbedStrategy();
+    const results = await strategy.retrieve(query, nid, { topK: 10 });
+    return {
+      status: 'ok',
+      query,
+      engine: engine ?? 'Web',
+      results: results.map((r) => ({
+        chunk_id: r.chunk_id,
+        source_id: r.source_id,
+        text: r.text.substring(0, 200),
+        score: r.distance,
+      })),
+    };
+  })
+
+  // Batch delete sources
+  .post('/notebooks/:nid/sources/batch/delete', ({ body }) => {
+    const { source_ids } = body as { source_ids: number[] };
+    const deletedIds: number[] = [];
+    for (const sid of source_ids) {
+      const row = db().select().from(sources).where(eq(sources.id, sid)).get();
+      if (row) {
+        deleteSourceVectors(db(), sid);
+        db().delete(sources).where(eq(sources.id, sid)).run();
+        deletedIds.push(sid);
+      }
+    }
+    return { deleted_ids: deletedIds, deleted_count: deletedIds.length };
+  })
+
+  // Batch re-embed sources
+  .post('/notebooks/:nid/sources/batch/re-embed', async ({ params, body }) => {
+    const nid = Number(params.nid);
+    const { source_ids } = body as { source_ids: number[] };
+    const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
+    const strategy = new EmbedStrategy();
+    const reembedded: number[] = [];
+    const failed: number[] = [];
+    for (const sid of source_ids) {
+      try {
+        deleteSourceVectors(db(), sid);
+        await strategy.indexSource(sid, nid);
+        reembedded.push(sid);
+      } catch {
+        failed.push(sid);
+      }
+    }
+    return {
+      reembedded_ids: reembedded,
+      failed_ids: failed,
+      reembedded_count: reembedded.length,
+      failed_count: failed.length,
+    };
+  })
+
+  // Ingest from URL
+  .post('/notebooks/:nid/sources/from-url', async ({ params, body }) => {
+    const nid = Number(params.nid);
+    const { url } = body as { url: string; mode?: string; title?: string };
+    // Fetch URL content and ingest as text source
+    const response = await fetch(url);
+    const html = await response.text();
+    const buffer = new TextEncoder().encode(html);
+    const result = await ingestSource({
+      buffer,
+      filename: url.split('/').pop() || 'webpage.html',
+      notebookId: nid,
+      mimeType: 'text/html',
+    });
+    return result;
   });
 
 registerApiDoc(apiDocs);

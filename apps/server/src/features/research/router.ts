@@ -168,19 +168,66 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     return { id, status: 'searching', approved: true };
   })
 
-  // Stop a research session
-  .post('/research/:id/stop', ({ params }) => {
+  // Stop/cancel a research session
+  .post('/research/:id/cancel', ({ params }) => {
     const id = Number(params.id);
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
-
     db()
       .update(researchSessions)
       .set({ status: 'cancelled' })
       .where(eq(researchSessions.id, id))
       .run();
-
     return { id, status: 'cancelled' };
+  })
+
+  .post('/research/:id/skip', ({ params }) => {
+    const id = Number(params.id);
+    db()
+      .update(researchSessions)
+      .set({ status: 'searching' })
+      .where(eq(researchSessions.id, id))
+      .run();
+    return { id, skipped: true };
+  })
+
+  .post('/research/:id/finish', ({ params }) => {
+    const id = Number(params.id);
+    db()
+      .update(researchSessions)
+      .set({ status: 'completed' })
+      .where(eq(researchSessions.id, id))
+      .run();
+    return { id, status: 'completed' };
+  })
+
+  .post('/research/:id/resume', async ({ params }) => {
+    const id = Number(params.id);
+    const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
+    if (!row) throw new NotFoundError(`Research session ${id} not found`);
+    db()
+      .update(researchSessions)
+      .set({ status: 'searching' })
+      .where(eq(researchSessions.id, id))
+      .run();
+    // Fire-and-forget: resume agent in background
+    runResearchAgent(id).catch((error) =>
+      console.error(`[research] resume failed for ${id}:`, error),
+    );
+    return { id, status: 'searching', resumed: true };
+  })
+
+  .post('/research/:id/export', ({ params }) => {
+    const id = Number(params.id);
+    const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
+    if (!row) throw new NotFoundError(`Research session ${id} not found`);
+    return {
+      id: row.id,
+      topic: row.topic,
+      status: row.status,
+      report: row.finalReport,
+      aggregated_results: row.aggregatedResults,
+    };
   });
 
 registerApiDoc(apiDocs);
