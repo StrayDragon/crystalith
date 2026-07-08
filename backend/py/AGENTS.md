@@ -1,44 +1,33 @@
-# Repository Guidelines
+# backend/py — v1 Python Reference Implementation
 
-## Project Structure & Module Organization
-- `src/crystalith/` contains the FastAPI service code and core modules.
-- `tests/` holds service-level tests; keep additions close to the code they cover.
-- `packages/` stores workspace libraries; shared infra libraries use PyPI `lush-*` packages.
-- `scripts/` includes maintenance helpers; `data/` is for local dev artifacts.
+> ⚠️ **This is the v1 Python backend, preserved as a reference SSOT for the v2 TypeScript rewrite.**
+> See root `AGENTS.md` and `UPGRADES/00-v2-migration-plan.md` for the v2 plan.
+>
+> **Do NOT modify this codebase** during v2 development unless it's a critical bugfix that applies
+> to both v1 and the v2 design. The v2 server lives in `server/` (to be scaffolded in Phase 0).
 
-## Build, Test, and Development Commands
-Run from `backend/py`:
-- `uv sync` installs dependencies from `pyproject.toml` using uv.
-- `just dev` starts the API server (uvicorn wrapper).
-- `just test` runs the pytest suite.
-- `just db-init` creates local SQLite tables for development.
-- `just config-schema` regenerates `config/app.schema.gen.json`.
-- `just packages-test` runs workspace package tests.
-- `just llm-eval` runs the local eval harness.
-- `just embedding-cache-bench` runs the Redis embedding cache benchmark.
-- `just -l` lists available `just` tasks.
+## Historically (v1)
 
-## Coding Style & Naming Conventions
-- Python uses 4-space indentation; keep imports tidy and readable.
-- Use `snake_case` for functions/variables and `PascalCase` for classes.
-- Prefer high-coverage type hints (especially at module boundaries).
-- Minimize `Any`; prefer `Protocol`/`TypedDict`/`Literal` and JSON-safe value types (`JsonValue`/`JsonDict`) for payloads.
-- Avoid dynamic attribute access (`getattr`, `hasattr`, `__getattr__`); make interfaces explicit instead.
-- No repo-wide formatter is enforced; match existing style and avoid large reformatting.
-- If backend OpenAPI changed, run `cd frontend/web && pnpm run api:sync` and verify.
+This directory contained the Python backend for Crystalith:
+- FastAPI + uvicorn HTTP server
+- pydantic-ai + pydantic-graph for AI agent runtime
+- SQLAlchemy[asyncio] + alembic for data layer
+- ChromaDB for vector storage
+- 21 feature modules, ~94 API endpoints, ~39k lines
 
-## Testing Guidelines
-- Frameworks: `pytest` + `pytest-asyncio`.
-- Test files follow `test_*.py`; package tests live under `packages/<name>/tests/`.
-- Prefer targeted runs, e.g. `pytest tests/test_users.py`.
+The previous cleanup (see `UPGRADES/00-cleanup-python.md`) removed ~5,200 lines of
+glue code (Rivu, Ollama, probe monitoring, etc.) while preserving all business features.
 
-## Commit & Pull Request Guidelines
-- Commit messages use type prefixes like `feat:`, `fix:`, `refactor:`, `doc:`, `dev:`, `misc:`; optional scope: `feat(backend): ...`.
-- PRs should include a focused description, linked issue/spec (if any), and test results. Add screenshots/GIFs for UI changes.
+## Build, Test, and Development (v1)
 
-## Security & Configuration Tips
-- Local config lives in `config/app.yaml`; schema in `config/app.schema.gen.json`.
-- Never commit secrets or API keys. If config shape changes, document required keys.
+These commands still work if you need to run the v1 server for reference:
 
-## Agent-Specific Instructions
-- For spec-driven or ambiguous changes, consult `llmanspec/config.yaml` for workflow and conventions before coding.
+```bash
+cd backend/py
+uv sync                 # Install Python deps
+just dev                # Run API server (uvicorn)
+just test               # Run pytest suite
+just db-init            # Initialize local SQLite
+```
+
+See `backend/py/README.md` for more details.
