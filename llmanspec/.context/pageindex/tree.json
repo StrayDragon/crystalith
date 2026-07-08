@@ -1,0 +1,1576 @@
+{
+  "version": 1,
+  "spec_hash": "83ceb03e5328e8ca48a8a4127895d4b4ee053f526a0476c2d9b8f4dc21257d2d",
+  "build_timestamp": "2026-07-09T10:08:25.982108055+00:00",
+  "chat_model": "Qwen3.6-35B-A3B/UD-Q5_K_XL-think-coding",
+  "docs": [
+    {
+      "spec_id": "architecture-core",
+      "purpose": "定义 Crystalith 的前后端基础结构约束：模块切分、依赖方向、入口聚合、共享边界与状态组织。该规范只覆盖结构与边界，不覆盖业务语义。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Backend follows feature-sliced layout",
+          "statement": "后端 MUST 使用 `web -> features -> shared` 分层，并在 `features/<feature>/api.py` 作为该 feature 的单一路由入口。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Dependency direction is one-way",
+          "statement": "`features` MUST NOT 依赖 `web`；`shared` MUST NOT 依赖 `features` 或 `web`。仅类型标注可在 `TYPE_CHECKING` 中例外。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Router aggregation is centralized",
+          "statement": "所有后端路由 MUST 在 `crystalith/web` 统一注册，避免多入口隐式依赖链。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Frontend workspace is domain-sliced",
+          "statement": "前端工作区 MUST 按 `domains/<domain>/` 组织，每个 domain MUST 有可独立装配的入口组件。"
+        },
+        {
+          "req_id": "r5",
+          "title": "Frontend app/shared boundaries stay thin",
+          "statement": "`src/app` 仅负责入口装配，跨 feature 复用 MUST 放到 `src/shared` 或 `features/workspace/shared`。"
+        },
+        {
+          "req_id": "r6",
+          "title": "Workspace state uses sliced Zustand stores",
+          "statement": "复杂工作区状态 MUST 按 slice 组织并通过 selector 访问，避免全局重渲染与循环依赖。"
+        }
+      ]
+    },
+    {
+      "spec_id": "architecture-plugin-and-agent",
+      "purpose": "TBD - created by archiving change c02-add-v2-ai-runtime. Update purpose after archive.",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "AI runtime is Vercel AI SDK",
+          "statement": "系统 MUST 使用 Vercel AI SDK (`ai` + `@ai-sdk/*`) 作为唯一 AI 基础层，替换 pydantic-ai + pydantic-graph。AI SDK 覆盖 Provider 抽象、Agent Loop (streamText + maxSteps)、结构化输出 (generateObject/streamObject)、Tool Calling、流式生成、Middleware 全部能力。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Provider layer uses @ai-sdk/* official packages",
+          "statement": "系统 MUST 通过 @ai-sdk/openai、@ai-sdk/anthropic、@ai-sdk/google、@ai-sdk/deepseek 等官方 provider 包承接 LLM 调用，砍掉 v1 shared/ai/factory.py ~2000 行胶水代码。API key/baseURL MUST 通过 config 或 env 注入。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Agent loop uses streamText + maxSteps",
+          "statement": "智能体多步 tool calling 循环 MUST 使用 AI SDK streamText + maxSteps。Retrieval、Web Search、mountUI 等能力 MUST 实现为 tool() 函数挂载到 agent。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Structured output uses generateObject + Zod",
+          "statement": "结构化 JSON 输出 MUST 使用 AI SDK generateObject(schema: Zod) 替换 pydantic-ai output_type。Output 生成管线 MUST 使用 generateObject + 普通 async 函数链 (非 agent loop)。"
+        },
+        {
+          "req_id": "r5",
+          "title": "Streaming uses streamText ReadableStream + SSE relay",
+          "statement": "流式生成 MUST 通过 AI SDK streamText 的 fullStream async iterable → Elysia SSE Response 中继到前端。Elysia SSE MUST 支持 text/event-stream。"
+        },
+        {
+          "req_id": "r6",
+          "title": "Token counting uses gpt-tokenizer",
+          "statement": "Token 计数 MUST 使用 gpt-tokenizer (纯 JS，零 wasm 依赖) 替换 tiktoken。"
+        },
+        {
+          "req_id": "r7",
+          "title": "Middleware handles retry and logging",
+          "statement": "AI SDK middleware 系统 MUST 覆盖重试（替换 v1 shared/ai/retry.py ~233 行）和结构化日志。OpenTelemetry tracer MUST 备选接入。"
+        }
+      ]
+    },
+    {
+      "spec_id": "background-jobs-and-task-runtime",
+      "purpose": "提供统一的后台任务运行时模型：生命周期、进度、事件与历史、取消与重试语义，以及创建/查询/操作的最小接口契约，供生成、导入、同步检查等长任务复用。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "后台任务必须使用统一生命周期",
+          "statement": "系统 MUST 以统一的后台任务生命周期表达长时操作，而不是让每个业务流程各自定义状态集合。"
+        },
+        {
+          "req_id": "r2",
+          "title": "后台任务必须暴露进度、事件与历史",
+          "statement": "系统 MUST 为后台任务提供可查询的进度、关键事件与历史记录语义。"
+        },
+        {
+          "req_id": "r3",
+          "title": "后台任务必须支持显式取消与重试",
+          "statement": "系统 MUST 把取消与重试定义为后台任务的稳定动作，而不是依赖客户端自行重建流程。"
+        },
+        {
+          "req_id": "r4",
+          "title": "系统必须提供任务的创建、查询、取消、重试与历史查看接口语义",
+          "statement": "系统 MUST 提供稳定的任务运行时接口，使不同业务流程都能以同一方式使用后台任务底座。"
+        },
+        {
+          "req_id": "r5",
+          "title": "任务结果必须提供结构化摘要与恢复提示",
+          "statement": "系统 MUST 为任务提供结构化结果摘要与错误摘要，并在失败时提供明确的恢复提示以支持统一 UI 展示。"
+        },
+        {
+          "req_id": "r6",
+          "title": "工作区必须提供统一入口查看任务状态与历史",
+          "statement": "系统 MUST 在工作区提供统一入口查看后台任务列表、状态、进度与历史记录，避免每条长链路各自实现一套任务 UI。"
+        }
+      ]
+    },
+    {
+      "spec_id": "bdd-test-harness",
+      "purpose": "定义 Crystalith v2 的中文 BDD 端到端测试体系：基于 @cucumber/gherkin 的轻量 runner + bun test 桥接，移植 v1 的中文 .feature 场景，覆盖 API 端点行为回归。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "中文 BDD 测试解析器",
+          "statement": "MUST 提供基于 @cucumber/gherkin 的 BDD 测试 runner，MUST 支持 # language: zh-CN 的 .feature 文件解析，MUST 与 bun test 集成。"
+        },
+        {
+          "req_id": "r2",
+          "title": "v1 Feature 文件移植",
+          "statement": "MUST 移植 17 个 .feature 文件从 backend/py/tests/bdd/features/，MUST 仅修改路径前缀 /v1 到 /v2，MUST 保持中文场景描述不变。"
+        },
+        {
+          "req_id": "r3",
+          "title": "端到端回归门禁",
+          "statement": "MUST 将 BDD 测试加入 pre-commit 门禁，MUST 覆盖全部 16 个功能域的 API 端点行为。"
+        }
+      ]
+    },
+    {
+      "spec_id": "chat-prompt-presets",
+      "purpose": "定义 Chat 输入中的 `/prompt:*` 指令与后端 preset registry（built-in + custom）的稳定行为：如何解析指令、如何选择生成策略，以及各 preset 的最小输出契约（包含纯文本回答与可选的 session `shared_state.ui` 更新）。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Prompt directives are parsed from QA question when enabled",
+          "statement": "当 `app.features.chat_prompt_presets_enabled=true` 时，系统 MUST 支持在 `question` 内解析 prompt 指令： `/prompt:<preset> <query>` 其中： - `<preset>` MUST 匹配正则：`[a-z0-9_-]{1,32}`（大小写不敏感，解析后统一为小写） - `<query>` MAY 为空（空时视为输入错误）"
+        },
+        {
+          "req_id": "r2",
+          "title": "Unknown preset names are rejected with a stable list",
+          "statement": "系统 MUST 将 preset 集合视为白名单（built-in + custom）。未知 preset MUST 被拒绝并返回可用 preset 列表。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Custom prompt presets can override the QA system prompt",
+          "statement": "系统 MUST 支持用户定义的 custom preset。对于 `/prompt:<preset> <query>`： - 若 `<preset>` 命中 custom preset 且 `enabled=true`，系统 MUST 使用该 preset 的 `system_prompt` 覆盖 QA pipeline 的 system message。 - 系统 MUST 将 `<query>` 作为实际 QA question 执行（不包含 `/prompt:` 前缀）。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Disabled presets are rejected deterministically",
+          "statement": "当 preset 存在但 `enabled=false` 时，系统 MUST 拒绝该请求并返回确定性错误。"
+        },
+        {
+          "req_id": "r5",
+          "title": "Stats preset returns structured JSON and fallback markdown",
+          "statement": "当选择 `stats` preset 时，系统 MUST 使用受控的模型输出格式：模型最终输出 MUST 为单个 JSON object（无额外文本），且 MUST 满足： - `fallback_markdown: string`（MUST 非空，且 SHOULD 含 inline citations，如 `[1]`） - `chart: { title: string, unit?: string, items: [{ label: string, value: number }] }` - `table?: { columns: string[], rows: (string|number|null)[][] }`"
+        },
+        {
+          "req_id": "r6",
+          "title": "Stats structured output is validated and falls back safely",
+          "statement": "系统 MUST 对 stats JSON 做结构校验；若解析或校验失败，系统 MUST 回退到默认 QA 文本生成（并保持对话可用）。"
+        },
+        {
+          "req_id": "r7",
+          "title": "Stats persists plain answer text and shared UI state",
+          "statement": "当 `stats` preset 生成合法的结构化结果时，系统 MUST： - 将 `fallback_markdown` 持久化为 assistant `content` - 通过 session `shared_state.ui` 提供图表/表格 mounts - 不再依赖 `chat_ui_envelope_enabled` 或在 `content` 中嵌入 envelope"
+        }
+      ]
+    },
+    {
+      "spec_id": "chat-ui-envelope",
+      "purpose": "记录 legacy `[[crystalith-ui:v1]]` transport 已被移除。Crystalith 现在使用 server-authoritative 的 session `shared_state.ui` + Rivu mounts 表达对话内 UI，而不再把 UI 元数据嵌入 assistant `content`。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Legacy envelope is never emitted at runtime",
+          "statement": "系统 MUST NOT 在 QA 响应、SSE 事件、消息持久化结果或导出正文中生成 `[[crystalith-ui:v1]]` delimiter 或随后的 envelope JSON。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Frontend does not parse legacy envelope markers",
+          "statement": "Chat 前端 MUST NOT 继续解析 assistant `content` 中的 legacy envelope marker；UI mounts MUST 仅由 Rivu kernel 根据 `shared_state.ui` 渲染。"
+        }
+      ]
+    },
+    {
+      "spec_id": "cross-type-result-transformations",
+      "purpose": "支持有限、明确、可解释的跨类型结果演化路径：从已有结果触发转换，保留 lineage 与映射边界（保留/重建），并在不支持的路径上回退为重新生成，避免“万物互转”的脆弱承诺。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "系统必须显式声明受支持的跨类型转换路径",
+          "statement": "系统 MUST 以显式能力清单声明受支持的跨类型转换路径，而不是暗示任意类型都可互转。"
+        },
+        {
+          "req_id": "r2",
+          "title": "跨类型转换必须保留 lineage 与映射边界",
+          "statement": "系统 MUST 记录跨类型转换的 lineage，并明确保留与丢弃边界。"
+        },
+        {
+          "req_id": "r3",
+          "title": "不受支持的路径必须回退为重新生成",
+          "statement": "系统 MUST 在不支持直接转换的情况下回退为重新生成，而不是提供不可靠的伪转换。"
+        },
+        {
+          "req_id": "r4",
+          "title": "系统必须提供显式的转换动作并返回新结果",
+          "statement": "系统 MUST 提供显式的跨类型转换动作，并在成功时返回一个新的结果对象与可追溯的转换记录。"
+        },
+        {
+          "req_id": "r5",
+          "title": "转换请求与结果元数据必须显式表达目标类型与映射摘要",
+          "statement": "系统 MUST 在转换请求与结果元数据中显式表达目标类型，并提供可理解的映射摘要（保留/重建边界）用于 UI 展示。"
+        }
+      ]
+    },
+    {
+      "spec_id": "data-and-storage",
+      "purpose": "TBD - created by archiving change c01-add-v2-data-layer. Update purpose after archive.",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Database is single SQLite file via bun:sqlite",
+          "statement": "系统 MUST 使用 bun:sqlite (C 绑定同步 SQLite) 作为唯一关系数据库。MUST 启用 WAL 模式与 foreign_keys ON。MUST NOT 支持 PostgreSQL。"
+        },
+        {
+          "req_id": "r2",
+          "title": "ORM is Drizzle ORM with bun-sqlite driver",
+          "statement": "Schema 定义 MUST 使用 Drizzle ORM schema-first 风格 (`sqliteTable()`)。类型推断 MUST 通过 `$inferSelect`/`$inferInsert` 自动导出供前后端共享。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Migrations use Drizzle Kit",
+          "statement": "数据库变更 MUST 通过 drizzle-kit generate/migrate 管理。初始迁移从空库生成 (不迁移 alembic 历史)。MUST 生产可读 SQL 文件。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Vector store is sqlite-vec in-process",
+          "statement": "向量检索 MUST 使用 sqlite-vec 扩展（同库零依赖）。MUST 以 `partition by notebook_id` 做多 notebook 隔离。MUST NOT 引入 ChromaDB/lancedb/Qdrant。"
+        },
+        {
+          "req_id": "r5",
+          "title": "Schema types exported for frontend",
+          "statement": "Drizzle schema 导出的 TS 类型 ($inferSelect/$inferInsert) MUST 通过 packages/shared 暴露给前端 eden RPC 消费。"
+        },
+        {
+          "req_id": "r6",
+          "title": "Data migration is one-time at v2 launch",
+          "statement": "历史 v1 数据 (SQLite/ChromaDB) MUST 通过一次性迁移脚本导入 v2 数据库。迁移脚本 MUST 可重复执行且记录完成标记。v2 启动后 MUST NOT 尝试读取旧格式数据。"
+        }
+      ]
+    },
+    {
+      "spec_id": "evidence-review-workflow",
+      "purpose": "把 citation/evidence 的核查做成正式工作流：结果级审阅状态机、citation/evidence 级核查项与 review notes 的可追溯记录，以及稳定入口与摘要字段，支撑“待审/已审/需修订”的可信闭环。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "结果必须具备独立的 evidence review 状态",
+          "statement": "系统 MUST 为结果提供独立于生成成功状态的 evidence review 状态。"
+        },
+        {
+          "req_id": "r2",
+          "title": "审阅流程必须记录 review note 与证据关系",
+          "statement": "系统 MUST 在审阅流程中记录 review note 以及与 citation / evidence 的关系。"
+        },
+        {
+          "req_id": "r3",
+          "title": "审阅状态转移必须由显式动作触发",
+          "statement": "系统 MUST 以显式动作驱动审阅状态转移，而不是隐式自动批准。"
+        },
+        {
+          "req_id": "r4",
+          "title": "审阅记录必须关联到结果与 citation/evidence 对象",
+          "statement": "系统 MUST 让 evidence review 记录能够关联到被审阅的结果对象以及其 citation/evidence 上下文，以支持逐条核查与可追溯性。"
+        },
+        {
+          "req_id": "r5",
+          "title": "结果对象必须暴露 evidence review 摘要以支持列表与详情展示",
+          "statement": "系统 MUST 在结果对象中暴露 evidence review 的摘要字段（状态与计数），以支持工作区列表与结果页一致展示。"
+        },
+        {
+          "req_id": "r6",
+          "title": "工作区必须提供进入 evidence review 的稳定入口",
+          "statement": "系统 MUST 在工作区为结果提供稳定的 evidence review 入口，避免审阅能力变成零散不可发现的隐藏功能。"
+        }
+      ]
+    },
+    {
+      "spec_id": "generation-core",
+      "purpose": "定义统一生成主链路：上下文解析、结构化生成、后处理、引用映射、持久化，以及 QA/refine 与 preference 的一致语义。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Output generation follows deterministic node pipeline",
+          "statement": "结构化输出 MUST 遵循 `ResolveContext -> Generate -> Postprocess -> MapCitations -> Persist` 逻辑顺序。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Source scope is explicit and validated",
+          "statement": "生成/问答请求中的 `source_ids` 语义 MUST 明确且可校验；非法范围 MUST 返回错误。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Preference tuning is table-driven",
+          "statement": "`preference` MUST 通过集中 tuning 表映射到检索与重试默认值。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Explicit request knobs override defaults",
+          "statement": "请求显式给定 `top_k/min_score` 等参数时 MUST 覆盖 preference 默认值。"
+        },
+        {
+          "req_id": "r5",
+          "title": "QA stream and non-stream completion logic is shared",
+          "statement": "流式与非流式 QA MUST 复用同一完成阶段逻辑，保证 citations/evidence/confidence 一致。"
+        },
+        {
+          "req_id": "r6",
+          "title": "Refine keeps stable request/response contracts",
+          "statement": "refine 单格式与批量路径 MUST 保持稳定字段语义与引用返回结构。"
+        },
+        {
+          "req_id": "r7",
+          "title": "Postprocessing is deterministic and citation-safe",
+          "statement": "后处理 MUST 先于引用映射，且对非法 citation 索引做清洗并保持非阻塞。"
+        },
+        {
+          "req_id": "r8",
+          "title": "Tool output types require a corresponding OutputTypePlugin",
+          "statement": "对于 FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING 等“工具输出类型”，系统 MUST 要求存在可用的 `OutputTypePlugin` 才能生成结构化输出；当插件缺失/禁用/加载失败时，生成请求 MUST 失败并返回可执行的恢复提示。 错误响应 MUST 使用统一错误信封（`error_code`, `message`, `details?`, `retry_after?`），且： - HTTP status SHOULD 为 409（或等价“能力不可用”语义） - `details` MUST 包含 `output_type` 与推荐的 `required_plugin_id`（例如 `output-faq`） - `message` MUST 可直接面向用户显示"
+        }
+      ]
+    },
+    {
+      "spec_id": "generation-observability-and-guardrails",
+      "purpose": "定义生成链路的可观测性与运行护栏：trace 关联、阶段耗时、错误分类、并发限制、重试边界与任务队列行为。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Each generation request has a trace_id",
+          "statement": "每次生成请求 MUST 有可关联 `trace_id`，并贯穿关键日志。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Stage timing fields are standardized",
+          "statement": "关键阶段日志 MUST 记录标准化耗时字段（如 embed/search/db/format）。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Error classification is normalized",
+          "statement": "失败日志 MUST 记录标准错误分类字段（如 `error_kind`）与重试/fallback 信息。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Cache hit/miss is observable",
+          "statement": "使用检索缓存时 MUST 记录 hit/miss，并尽可能携带 trace_id。"
+        },
+        {
+          "req_id": "r5",
+          "title": "Retry boundaries are not stacked",
+          "statement": "同一失败链路 MUST 避免多层叠加重试导致放大延迟。"
+        },
+        {
+          "req_id": "r6",
+          "title": "Concurrency and cancellation guardrails are enforced",
+          "statement": "生成与后台任务 MUST 有阶段级并发上限与取消语义。"
+        },
+        {
+          "req_id": "r7",
+          "title": "Background workers shutdown gracefully",
+          "statement": "后台任务队列 worker MUST 支持优雅停机与终态等待行为。"
+        }
+      ]
+    },
+    {
+      "spec_id": "generation-presets-and-constraints",
+      "purpose": "为不同生成类型提供可理解、可复用的预设（presets）与显式约束覆盖（constraints/knobs），使“能生成”升级为“能按意图生成”，并与类型契约保持一致。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "生成类型必须支持显式预设选择",
+          "statement": "系统 MUST 允许每种生成类型声明并选择显式预设，以帮助用户稳定启动高价值生成路径。"
+        },
+        {
+          "req_id": "r2",
+          "title": "生成请求必须支持显式约束覆盖",
+          "statement": "系统 MUST 允许用户在允许范围内覆盖生成约束，而不是只能依赖隐式默认值。"
+        },
+        {
+          "req_id": "r3",
+          "title": "预设与约束不得反向定义生成类型",
+          "statement": "系统 MUST 保持预设与约束处于“可控生成”层，而不是重写生成类型本身。"
+        },
+        {
+          "req_id": "r4",
+          "title": "预设必须绑定到生成类型（generation_type_id）",
+          "statement": "系统 MUST 使用 `typed-generation-framework` 的公共词汇把预设绑定到某个生成类型，避免出现跨类型的隐式耦合。"
+        },
+        {
+          "req_id": "r5",
+          "title": "结果必须回传本次生效的控制配置（effective controls）",
+          "statement": "系统 MUST 在生成结果中回传本次生效的预设与控制项配置，以支持复用与“保存为预设”。"
+        }
+      ]
+    },
+    {
+      "spec_id": "generation-variants-and-comparison",
+      "purpose": "为同一生成意图提供可选的多候选（variants）生成与比较/选定语义：共享意图与控制配置、提供结构化比较信息、显式选定主结果并保留可追溯选择历史。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "系统必须支持在同一生成意图下生成多个 variant",
+          "statement": "系统 MUST 支持在同一生成类型与共享上下文下生成多个可比较候选结果。"
+        },
+        {
+          "req_id": "r2",
+          "title": "系统必须提供结构化比较信息",
+          "statement": "系统 MUST 为多个 variant 提供结构化比较信息，以帮助用户完成选择。"
+        },
+        {
+          "req_id": "r3",
+          "title": "用户必须能够选定工作结果",
+          "statement": "系统 MUST 允许用户从 variant 集合中显式选定一个工作结果，而不是让所有候选长期并列悬空。"
+        },
+        {
+          "req_id": "r4",
+          "title": "variant 流程必须是可选且受限的观察项",
+          "statement": "系统 MUST 将 variant 作为可选流程提供，并保持默认单结果路径不变；同时系统 MUST 对 variant 数量与成本进行显式约束与提示。"
+        },
+        {
+          "req_id": "r5",
+          "title": "同一 VariantSet 内的候选必须共享生成意图与控制配置",
+          "statement": "系统 MUST 确保同一 VariantSet 内的所有候选共享同一 `generation_type_id`、同一输入上下文边界与同一控制配置（effective controls），避免候选之间因控制面漂移而不可比。"
+        },
+        {
+          "req_id": "r6",
+          "title": "多 variant 生成必须共享检索/上下文快照以控制成本",
+          "statement": "系统 MUST 支持在同一 VariantSet 内复用共享检索结果或上下文快照，使多候选流程主要增加生成成本而非重复检索成本。"
+        },
+        {
+          "req_id": "r7",
+          "title": "选定关系必须唯一且可追溯",
+          "statement": "系统 MUST 在一个 VariantSet 中保持唯一选定结果，并记录选定历史以支持回看与改选。"
+        }
+      ]
+    },
+    {
+      "spec_id": "knowledge-curation-and-freshness",
+      "purpose": "为长期知识库提供治理信号与维护建议：freshness（新鲜度/过时风险）、duplicate candidates（重复候选）、maintenance suggestions（维护建议）与显式动作（ignore/re_ingest/re_embed/review），避免知识库随时间劣化。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "来源对象必须暴露 freshness 信号",
+          "statement": "系统 MUST 为接入后的来源对象提供 freshness 信号，以支持长期维护。"
+        },
+        {
+          "req_id": "r2",
+          "title": "系统必须提供重复候选而不是自动合并",
+          "statement": "系统 MUST 以候选形式呈现重复内容判断，而不是直接自动合并对象。"
+        },
+        {
+          "req_id": "r3",
+          "title": "维护建议必须显式触发后续动作",
+          "statement": "系统 MUST 将维护建议与后续动作解耦，避免治理信号直接隐式改写来源状态。"
+        },
+        {
+          "req_id": "r4",
+          "title": "治理信号必须绑定到稳定的来源对象（source-scoped）",
+          "statement": "系统 MUST 将 freshness 与 duplicate 等治理信号绑定到稳定的来源对象标识，而不是绑定到一次性的导入请求或临时 UI 状态。"
+        },
+        {
+          "req_id": "r5",
+          "title": "系统必须提供显式动作以处理治理建议",
+          "statement": "系统 MUST 提供显式动作来处理 freshness/duplicate 建议（例如 ignore、re_ingest、re_embed、review），并在触发后产生可追踪的处理结果。"
+        },
+        {
+          "req_id": "r6",
+          "title": "工作区必须提供可聚合查看的治理入口",
+          "statement": "系统 MUST 在工作区/来源管理界面提供治理入口，聚合展示 stale sources、duplicate candidates 与维护建议，避免治理能力藏在单个来源详情里。"
+        }
+      ]
+    },
+    {
+      "spec_id": "multi-notebook-collections",
+      "purpose": "在 notebook 之上提供聚合层 collection：通过绑定多个 notebooks 形成更大的工作上下文，并提供 collection-scoped 的检索与导航语义，同时保留 notebook 的身份与来源归属边界。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "collection 必须通过绑定 notebook 构成工作现场",
+          "statement": "系统 MUST 以 notebook 绑定关系来定义 collection，而不是让 collection 脱离 notebook 独立吞并内容。"
+        },
+        {
+          "req_id": "r2",
+          "title": "collection 必须提供 collection-scoped 检索与导航",
+          "statement": "系统 MUST 为 collection 提供独立的检索与导航语义，以支持跨 notebook 工作。"
+        },
+        {
+          "req_id": "r3",
+          "title": "collection 不得吞掉 notebook 原生语义",
+          "statement": "系统 MUST 保证 collection 是空间放大层，而不是 notebook 的替代品。"
+        },
+        {
+          "req_id": "r4",
+          "title": "系统必须提供 collection 的管理与 notebook 绑定接口",
+          "statement": "系统 MUST 提供 collection 的列表/详情/更新能力，并允许用户将多个 notebook 绑定到同一个 collection 作为工作上下文。"
+        }
+      ]
+    },
+    {
+      "spec_id": "openapi-and-client-generation",
+      "purpose": "TBD - created by archiving change c03-add-v2-frontend-eden. Update purpose after archive.",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Eden RPC replaces OpenAPI generation",
+          "statement": "前端 MUST 使用 Elysia eden treaty 调用 server API。import type { App } from @crystalith/server 后 treaty<App>(url) 提供端到端类型安全 RPC。MUST NOT 使用 @hey-api/openapi-ts 生成新代码。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Gradual migration from generated client",
+          "statement": "已有 generated client 调用 MUST 逐步迁移到 eden RPC。每个 domain 迁移时 MUST 删除对应 generated import 并验证类型正确。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Shared Zod schemas for request/response",
+          "statement": "前后端共享的 Zod schema MUST 放在 packages/shared/。Elysia 端点 MUST 使用相同 schema 校验入参，前端 MUST 复用同 schema 做客户端校验。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Generated artifacts marked for removal",
+          "statement": "openapi.gen.json 和 src/api/generated/ MUST 在 Phase 5 删除。迁移期间 MAY 保留作为对照和 fallback。CI drift check 不再需要。"
+        }
+      ]
+    },
+    {
+      "spec_id": "output-rendering-and-typing",
+      "purpose": "定义输出在前端的类型建模与渲染契约：typed payload 判别联合、运行时 guard、通用渲染器与回退路径。该规范确保新输出类型不会破坏渲染链路，并为未知输出提供安全降级。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Output payload is modeled as discriminated union",
+          "statement": "前端 MUST 以 `output.type` 作为判别字段建模 payload，保证类型 narrowing 可用；当输出类型来自插件且客户端未知时，类型系统 MUST 提供一个 “unknown/other” 分支以避免编译期与运行期崩溃。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Runtime decode provides safe fallback",
+          "statement": "运行时 decoder/guard MUST 在 shape 不匹配时回退到 raw/unknown 渲染，不得崩溃。"
+        },
+        {
+          "req_id": "r3",
+          "title": "GenericOutputRenderer supports canonical layouts",
+          "statement": "通用渲染器 MUST 支持规范布局类型与字段描述符递归渲染。"
+        },
+        {
+          "req_id": "r4",
+          "title": "RenderDescriptor contract is stable",
+          "statement": "workspace tools 返回的 `render_descriptor`/`config_schema` 字段语义 MUST 稳定。"
+        },
+        {
+          "req_id": "r5",
+          "title": "Rendering priority is deterministic",
+          "statement": "渲染优先级 MUST 为 `frontend_bundle renderer > GenericOutputRenderer > Raw JSON`： - `frontend_bundle renderer`：由后端在 `/v1/workspace/tools` 返回的 `frontend_bundle` 声明驱动加载与渲染 - `GenericOutputRenderer`：由后端返回的 `render_descriptor` 驱动的声明式渲染 - `Raw JSON`：最终安全回退"
+        }
+      ]
+    },
+    {
+      "spec_id": "public-repo-hygiene",
+      "purpose": "定义 Crystalith 在公开仓库场景下的最小“工程化 + 用户友好”基线：文档可发现性、贡献路径、安全披露、Issue/PR 模板与项目元数据一致性。该规范用于降低新用户上手成本、减少维护者来回沟通成本，并为后续发布/生态建设提供稳定地基。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Repo provides a clear contribution entrypoint",
+          "statement": "仓库 MUST 提供可发现的贡献入口（`CONTRIBUTING.md` 或等价路径），并包含最小开发/测试/提交指导。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Repo provides a security disclosure policy",
+          "statement": "仓库 MUST 提供 `SECURITY.md`（或等价安全策略）并说明漏洞报告渠道与响应边界。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Issue and PR templates capture actionable information",
+          "statement": "仓库 MUST 提供最小的 Issue/PR 模板，以引导提交者提供复现步骤、期望/实际与环境信息，从而减少维护者追问。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Project metadata is not placeholder and is consistent",
+          "statement": "项目元数据（README、包描述、文档首页等）MUST 避免占位文本，并对“项目是什么/如何运行/如何获取帮助”给出一致表述。"
+        }
+      ]
+    },
+    {
+      "spec_id": "publishable-artifacts",
+      "purpose": "让结果从一次性 output 升级为站内可沉淀的正式产物（artifact）：支持显式 promotion、独立生命周期、lineage 可追溯、可引用标识、继续编辑与归档语义，强调站内持续工作而非外部导出。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "结果必须能够被提升为正式产物",
+          "statement": "系统 MUST 允许符合条件的结果被提升为正式产物对象，而不是只能停留在一次性结果层。"
+        },
+        {
+          "req_id": "r2",
+          "title": "artifact 必须具备独立生命周期",
+          "statement": "系统 MUST 为 artifact 提供独立生命周期与状态流转语义。"
+        },
+        {
+          "req_id": "r3",
+          "title": "artifact 必须保留与来源结果的 lineage",
+          "statement": "系统 MUST 保留 artifact 与来源结果之间的关系，以支持追踪与继续演化。"
+        },
+        {
+          "req_id": "r4",
+          "title": "artifact 必须支持归档并保持可引用",
+          "statement": "系统 MUST 支持将 artifact 归档，同时保留其可查看与可引用语义，避免归档等同于删除。"
+        },
+        {
+          "req_id": "r5",
+          "title": "artifact 必须提供稳定的站内引用标识",
+          "statement": "系统 MUST 为 artifact 提供稳定的站内引用标识（至少 artifact_id），以支持其它对象在站内引用正式产物。"
+        },
+        {
+          "req_id": "r6",
+          "title": "v1 的 artifact 能力必须以站内沉淀为核心而非外部导出",
+          "statement": "系统 MUST 将 artifact 的 v1 核心能力聚焦于站内生命周期、继续编辑、引用与归档，而不是把外部导出/发布写成必需主线。"
+        }
+      ]
+    },
+    {
+      "spec_id": "quality-and-regression",
+      "purpose": "定义工程质量门槛：CI 流水线、回归冒烟、评测基线与测试稳定性约束。该规范旨在让关键回归尽早暴露并可在本地与 CI 中一致复现。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "CI runs on push and pull_request",
+          "statement": "CI MUST 在 push/PR 触发并提供可见状态检查。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Backend and frontend verification are mandatory",
+          "statement": "CI MUST 执行后端测试与前端测试+构建。"
+        },
+        {
+          "req_id": "r3",
+          "title": "API/codegen/schema drift checks are mandatory",
+          "statement": "CI MUST 检查 OpenAPI、生成客户端、配置 schema、docs 受控生成物/注入区块与导入分层一致性。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Local default test entrypoints include guardrails",
+          "statement": "本地默认测试入口 MUST 覆盖关键 guardrail 检查，避免问题仅在 CI 暴露。"
+        },
+        {
+          "req_id": "r5",
+          "title": "Lint and contract checks are part of the quality gate",
+          "statement": "CI 与本地默认检查入口 MUST 覆盖 lint、格式化检查与关键 API contract checks，以降低回归风险。"
+        },
+        {
+          "req_id": "r6",
+          "title": "Frontend JS/TS lint uses Oxc entrypoints",
+          "statement": "前端 JS/TS lint 工作流 MUST 统一通过 `oxlint` 提供，并同时保留增量入口与全量入口，以兼顾日常反馈速度与全量可见性。"
+        },
+        {
+          "req_id": "r7",
+          "title": "Backend Python lint catches low-noise footguns",
+          "statement": "后端 Python lint MUST 覆盖“低噪音高收益”的问题类型，以在不引入风格争议的前提下降低回归风险。"
+        },
+        {
+          "req_id": "r8",
+          "title": "Frontend formatting uses Oxfmt with generated files excluded",
+          "statement": "前端格式化工作流 MUST 使用 `oxfmt` 提供统一写入与检查入口，并排除生成产物与第三方内容。"
+        },
+        {
+          "req_id": "r9",
+          "title": "Lint adoption is incremental and actionable",
+          "statement": "lint 引入 MUST 采用增量策略，避免一次性全仓重写导致评审噪声与维护成本爆炸；formatter 引入 MAY 在初次迁移时执行一次受控的全量收敛，以建立稳定基线。"
+        },
+        {
+          "req_id": "r10",
+          "title": "Minimal API smoke regression suite exists",
+          "statement": "仓库 MUST 维护核心 API 冒烟回归清单并可执行。"
+        },
+        {
+          "req_id": "r11",
+          "title": "LLM evaluation harness has stable dataset and metrics",
+          "statement": "评测流程 MUST 定义数据格式与关键回归指标并输出可比报告。"
+        },
+        {
+          "req_id": "r12",
+          "title": "Timing-sensitive tests are deterministic",
+          "statement": "计时相关测试 MUST 使用可控时间（fake timer/clock）而非真实 wall-clock 阈值。"
+        },
+        {
+          "req_id": "r13",
+          "title": "Tests minimize brittle mocks and align with real implementations",
+          "statement": "后端测试 MUST 尽可能对齐真实实现与真实 wiring，并避免通过 patch 内部实现细节来达成可控性；当确需可控时，系统 MUST 提供显式 seam（依赖注入、可替换 provider/transport）供测试使用。"
+        },
+        {
+          "req_id": "r14",
+          "title": "Test-double usage is observable via a stable report",
+          "statement": "仓库 MUST 提供稳定的 test doubles 使用报告入口，以便识别 brittle mocks、热点文件与迁移目标，并支持本地与 CI 环境复现。"
+        },
+        {
+          "req_id": "r15",
+          "title": "Backend test suites are tiered and reproducible",
+          "statement": "后端测试 MUST 明确区分“核心回归链路”与“边缘/试验性用例”，以便在不追求机械 KPI 覆盖率的前提下，稳定守住关键路径并降低 flaky 风险。"
+        },
+        {
+          "req_id": "r16",
+          "title": "Frontend test suites are tiered and reproducible",
+          "statement": "前端测试 MUST 明确区分“核心回归链路（稳定套件）”与“边缘/试验性用例”，并默认禁止 accidental real network，以保证核心链路在本地与 CI 中稳定复现。"
+        }
+      ]
+    },
+    {
+      "spec_id": "quality-gates-for-generation",
+      "purpose": "为生成结果提供统一、可解释、可观测的质量门信号：通过/警告/阻断的最小状态、结构化原因与建议动作，并支持跨生成类型复用。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "生成结果必须具备质量门状态",
+          "statement": "系统 MUST 为生成结果提供可消费的质量门状态，而不是只暴露“是否生成成功”。"
+        },
+        {
+          "req_id": "r2",
+          "title": "质量门必须返回结构化原因",
+          "statement": "系统 MUST 为质量门结果返回结构化原因，以支持解释、展示和后续治理。"
+        },
+        {
+          "req_id": "r3",
+          "title": "质量门必须可跨生成类型复用",
+          "statement": "系统 MUST 将质量门定义为可复用能力，而不是某个结果类型的私有规则。"
+        },
+        {
+          "req_id": "r4",
+          "title": "质量门必须在生成完成后接入并写入结果元数据",
+          "statement": "系统 MUST 在生成完成并完成最小后处理后运行质量门，并将结果写入生成结果元数据后返回给客户端。"
+        },
+        {
+          "req_id": "r5",
+          "title": "前端必须可统一展示质量告警、阻断原因与建议动作",
+          "statement": "系统 MUST 让前端可以基于结构化字段统一展示质量告警/阻断原因，并提供建议动作提示，而不是依赖不可解释的文本拼接。"
+        },
+        {
+          "req_id": "r6",
+          "title": "系统必须记录质量门结果用于观测与治理",
+          "statement": "系统 MUST 记录每次质量门的结果，以支持按类型与 gate 维度的观测与后续治理策略。"
+        }
+      ]
+    },
+    {
+      "spec_id": "retrieval-and-cache",
+      "purpose": "定义共享检索策略与缓存失效模型，覆盖 outputs/slides/qa/refine 等路径的统一检索行为。该规范强调检索上下文一致性与可预测缓存失效，避免跨路径出现“同输入不同上下文”的漂移。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Retrieval strategy is shared across generation paths",
+          "statement": "outputs 与 slides MUST 复用同一检索策略族（预算、去重、多样性、融合）。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Retrieval context obeys token budget",
+          "statement": "检索上下文 MUST 受 token budget 约束，超预算时 MUST 截断或压缩。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Multi-query retrieval is bounded",
+          "statement": "启用 multi-query 时 MUST 受 seed 上限、融合策略与去重规则约束。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Epoch-based cache invalidation is canonical",
+          "statement": "sources/vector 相关缓存 MUST 基于 `sources_epoch` 与 `vector_epoch` 失效。"
+        },
+        {
+          "req_id": "r5",
+          "title": "Epoch bumps are atomic and monotonic",
+          "statement": "并发下 epoch 递增 MUST 原子且单调递增。"
+        },
+        {
+          "req_id": "r6",
+          "title": "Optional retrieval assembly cache is versioned",
+          "statement": "若启用检索组装缓存，key MUST 包含 epoch 版本信息以避免脏命中。"
+        },
+        {
+          "req_id": "r7",
+          "title": "Embed strategy converts distance to similarity",
+          "statement": "EmbedStrategy MUST 将 sqlite-vec 返回的 distance 转换为 similarity score (score = 1 - distance)。过滤 MUST 使用 score >= minScore，minScore 默认 0.2。topK 默认 8。MUST NOT 直接用 distance 做 >= 比较（方向相反）。"
+        },
+        {
+          "req_id": "r8",
+          "title": "Chunking uses 800/100 sliding window",
+          "statement": "文本分块 MUST 使用 800 字符块大小 + 100 字符重叠的滑动窗口（对齐 v1）。MUST NOT 使用无重叠的段落切分。分块参数 MUST 可配置。"
+        },
+        {
+          "req_id": "r9",
+          "title": "Context window enforces token budget",
+          "statement": "检索上下文组装 MUST 受 token budget 约束，超预算时按优先级截断（history→retrieval→recent→system→query）。token 计数 MUST 使用 gpt-tokenizer（cl100k_base）。MUST NOT 用字符数截断替代 token 截断。"
+        },
+        {
+          "req_id": "r10",
+          "title": "Multi-query expansion with RRF fusion",
+          "statement": "检索 MUST 支持 multi-query 扩展：按 output_type 生成 query seeds，多查询结果 RRF (k=60) 融合。MUST 受 seed_cap 限制避免无界扩展。"
+        },
+        {
+          "req_id": "r11",
+          "title": "EpochCache wired to strategies and source mutations",
+          "statement": "EpochCache MUST 接线到各策略 retrieve()。源增删改 MUST bump sources_epoch，向量重嵌 MUST bump vector_epoch。缓存 key MUST 包含 epoch 版本。MUST NOT 零调用（死代码）。"
+        }
+      ]
+    },
+    {
+      "spec_id": "slides-workflow-plugins",
+      "purpose": "定义 slides workflow plugin 的宿主/插件契约：生成阶段边界、active plugin 选择、预览与前端声明模型，以及官方参考插件的稳定样板。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Slides workflow plugin is a first-class contract",
+          "statement": "宿主 MUST 提供一类独立的 slides workflow plugin 契约，用于承载 slides 的默认配置、outline 生成、markdown 生成、preview 声明与前端 bundle 元数据，而不是将这些能力隐式塞入其他插件接口。 该契约至少 SHOULD 支持： - metadata（显示文案、tone 等） - `config_schema`（defaults + rich options） - `generate_outline(...)` - `generate_markdown(...)` - `preview_descriptor`（若插件支持预览） - `frontend_bundle`（若插件提供专用前端渲染）"
+        },
+        {
+          "req_id": "r2",
+          "title": "Slides workflow activation is single-active and deterministic",
+          "statement": "对 `SLIDES` 业务能力，宿主 MUST 在任一时刻仅选择一个 active slides workflow plugin 对外生效，并保证选择结果可预测、可诊断。 选择规则 MUST 满足： - 若配置了 `slides.default_plugin`，则优先按该 plugin id 选择 - 若未配置且仅发现一个兼容候选，则可自动选择 - 若未配置且候选为 0 或大于 1，则 MUST 返回结构化诊断而不是静默选取"
+        },
+        {
+          "req_id": "r3",
+          "title": "Repository provides an official reference slides plugin",
+          "statement": "仓库 MUST 提供一个官方 reference plugin，作为“复杂工作流插件”的样板，实现 slides workflow contract 的完整子集并附带安装/启用说明。 该 reference plugin MUST： - 使用稳定命名（如 `slides-slidev`） - 暴露 rich `config_schema`、preview contract 与 frontend bundle metadata - 作为官方文档中的自托管安装示例与二次开发参考"
+        }
+      ]
+    },
+    {
+      "spec_id": "source-aware-generation-modes",
+      "purpose": "为不同生成类型定义清晰、可解释的来源使用模式（source_mode），让检索、citation 预期、来源展示与结果元数据形成一致语义，并避免把内部策略术语直接暴露为产品标签。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "生成类型必须能够声明来源使用模式",
+          "statement": "系统 MUST 允许生成类型声明其来源使用模式，以表达不同的来源依赖预期。"
+        },
+        {
+          "req_id": "r2",
+          "title": "来源模式必须影响 citation 与来源展示预期",
+          "statement": "系统 MUST 让来源模式影响 citation 行为和来源展示边界，而不是只作为内部策略标签存在。"
+        },
+        {
+          "req_id": "r3",
+          "title": "来源模式不得反向重写上游对象模型",
+          "statement": "系统 MUST 将来源模式建立在稳定的生成类型和来源对象语义之上，而不是借此重写上游定义。"
+        },
+        {
+          "req_id": "r4",
+          "title": "生成请求与结果必须显式表达生效的来源模式",
+          "statement": "系统 MUST 在生成请求与结果元数据中显式表达本次生效的来源模式，以支持可解释行为与一致的 UI 呈现。"
+        },
+        {
+          "req_id": "r5",
+          "title": "来源模式必须影响检索与上下文构造行为",
+          "statement": "系统 MUST 让来源模式影响检索、上下文构造与证据约束行为，而不是只改变展示文案。"
+        },
+        {
+          "req_id": "r6",
+          "title": "用户可见的来源模式标签不得直接暴露内部策略术语",
+          "statement": "系统 MUST 使用可理解的产品概念向用户表达来源模式，而不是把内部策略术语直接当作产品标签。"
+        }
+      ]
+    },
+    {
+      "spec_id": "source-connectors",
+      "purpose": "把外部知识源接入统一为宿主框架能力：连接器发现、notebook-scoped binding、快照优先与选择性导入、显式 sync_check 与确认应用边界，为后续官方/第三方 connectors 提供稳定宿主语义。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "连接器发现必须返回 notebook 作用域下的可用连接器",
+          "statement": "系统 MUST 以 notebook 为作用域暴露当前可用的 source connectors、配置 schema 与诊断信息。"
+        },
+        {
+          "req_id": "r2",
+          "title": "连接器必须使用 notebook-scoped binding 持久化状态",
+          "statement": "系统 MUST 使用 notebook-scoped connector binding 保存连接参数、导入范围与同步基线，而不是依赖无状态临时请求。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Vault 连接器必须先返回快照，再允许导入",
+          "statement": "系统 MUST 以“快照优先”的方式接入外部资料仓（如 Obsidian vault），而不是默认全量即时导入。"
+        },
+        {
+          "req_id": "r4",
+          "title": "连接器导入必须基于显式范围",
+          "statement": "连接器导入 MUST 支持选择性导入，而不是强制整库导入。"
+        },
+        {
+          "req_id": "r5",
+          "title": "连接器同步检查必须显式且可复核",
+          "statement": "连接器同步 MUST 先执行 `sync_check`，再由用户确认增量变更，而不是静默地自动改写来源集合。"
+        },
+        {
+          "req_id": "r6",
+          "title": "v1 sync_check 使用轻量快照差异规则",
+          "statement": "系统 MUST 使用确定性的轻量规则识别快照差异，以支持中大型 vault 的同步检查。"
+        }
+      ]
+    },
+    {
+      "spec_id": "source-ingestion-core",
+      "purpose": "定义 Source 摄取生命周期不变量：状态机、ready 语义、删除语义与 epoch 失效规则。该规范用于保证摄取与检索之间的因果一致性，避免出现“状态 ready 但不可检索”的漂移。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Source status machine is fixed",
+          "statement": "Source 状态 MUST 仅使用 `processing|ready|failed`，并保持对外稳定。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Ready source guarantees retrievability",
+          "statement": "`ready` 来源 MUST 已持久化 chunks 且对应向量可被检索命中。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Source and vector mutations bump epochs",
+          "statement": "影响来源集合或向量集合的操作 MUST bump `sources_epoch` 与/或 `vector_epoch`。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Epoch updates are atomic under concurrency",
+          "statement": "并发情况下 epoch bump MUST 原子且单调递增。"
+        },
+        {
+          "req_id": "r5",
+          "title": "Source deletion removes vector entries",
+          "statement": "删除来源后 MUST 同步移除向量存储对应记录，防止幽灵检索结果。"
+        },
+        {
+          "req_id": "r6",
+          "title": "Parser selection is deterministic and observable",
+          "statement": "系统 MUST 以确定性规则选择用于解析来源内容的 parser（优先已启用插件，其次 core 最小解析器）。 当多个插件 parser 同时命中同一输入时，系统 MUST 使用确定性 tie-break： - 优先按 `plugins.load_order`（若配置）确定优先级 - 否则按 `plugin_id` 字典序确定优先级 系统 MUST 在来源元数据中记录所用 `parser_type`，并 SHOULD 记录 `parser_plugin_id`（若该 parser 来自插件）以便诊断与回归。"
+        },
+        {
+          "req_id": "r7",
+          "title": "Core-only ingestion profile is minimal and explicit",
+          "statement": "在 core-only 安装形态下，系统 MUST 至少支持 txt/md/markdown/csv 的 ingestion；其他格式 MUST 被视为不可用增强能力（需通过插件安装/启用提供）。"
+        }
+      ]
+    },
+    {
+      "spec_id": "source-ingestion-management-and-tags",
+      "purpose": "定义来源管理与标签体系：列表、排序、过滤、chunks、删除、re-embed、tag CRUD 与绑定关系。该规范强调查询语义与失效规则可预测，避免因缓存或排序漂移导致 UI/服务不一致。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Source list query semantics are stable",
+          "statement": "来源列表 MUST 支持 tag 精确过滤与稳定排序（date/name/size/type + asc/desc）。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Source list can be epoch-cached",
+          "statement": "列表结果 MUST 基于 `sources_epoch` 缓存并在来源变更后 O(1) 失效。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Chunks endpoint returns deterministic order",
+          "statement": "来源 chunks 接口 MUST 按 `chunk_index` 升序返回。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Delete and re-embed keep storage and epochs consistent",
+          "statement": "删除 MUST 同时删 DB 与向量；re-embed MUST 使用既有 chunks 重算向量并维护 epoch。"
+        },
+        {
+          "req_id": "r5",
+          "title": "Tag uniqueness is notebook-scoped and case-insensitive",
+          "statement": "同一 notebook 下 tag 名称 MUST 大小写不敏感唯一。"
+        },
+        {
+          "req_id": "r6",
+          "title": "Tag mutations invalidate source list caches",
+          "statement": "tag 创建/更新/删除/绑定/解绑成功后 MUST bump `sources_epoch`。"
+        },
+        {
+          "req_id": "r7",
+          "title": "Source failures include diagnostic fields",
+          "statement": "来源在失败或不可恢复状态下 MUST 提供结构化诊断信息，以支持 UI 给出可操作的修复建议。"
+        },
+        {
+          "req_id": "r8",
+          "title": "Batch operations return per-item results and keep epoch consistent",
+          "statement": "批量删除、批量 re-embed 与 tag 绑定/解绑 MUST 返回逐项结果并保持 `sources_epoch` 失效语义可预测。"
+        },
+        {
+          "req_id": "r9",
+          "title": "Optional source dedup does not silently drop data",
+          "statement": "系统 MAY 支持来源去重，但在命中去重时 MUST 不得静默丢弃用户导入请求。"
+        }
+      ]
+    },
+    {
+      "spec_id": "source-ingestion-summary-and-conversion",
+      "purpose": "定义单来源派生能力与内容转换能力：来源摘要、来源范围 QA、来源问答转来源，以及对话/输出转来源或笔记。该规范强调转换结果可追踪且遵循来源生命周期，避免产生不可检索或不可归因的数据。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Source summary is ready-only and on-demand",
+          "statement": "来源摘要接口 MUST 仅允许 `ready` 来源，并按需生成返回摘要结构。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Source-scoped QA is hard-bounded by source_id",
+          "statement": "来源 QA MUST 仅在该 `source_id` 范围内检索与回答。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Source QA conversion creates reusable source",
+          "statement": "来源问答转换 MUST 创建新来源并可立即用于后续检索。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Conversation/output conversion keeps traceable metadata",
+          "statement": "对话或输出转换为来源/笔记时 MUST 记录来源元数据与追踪信息。"
+        },
+        {
+          "req_id": "r5",
+          "title": "Conversion follows source lifecycle and epoch rules",
+          "statement": "任何创建新来源的转换路径 MUST 遵循 source 状态机与 epoch 失效规则。"
+        }
+      ]
+    },
+    {
+      "spec_id": "source-ingestion-upload-and-url",
+      "purpose": "定义通过上传文件与 URL 创建来源的契约：格式支持、校验、异常语义、网页抓取安全与提取器策略。该规范强调输入错误可预测且安全默认值优先，避免在抓取路径引入 SSRF 风险。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Upload endpoint returns created source on success",
+          "statement": "上传成功 MUST 返回 201 与来源对象；失败语义区分 400/415/500。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Supported formats are parser-driven",
+          "statement": "支持类型 MUST 由 parser 能力决定；无匹配 parser 的文件 MUST 返回 415 且不创建来源。"
+        },
+        {
+          "req_id": "r3",
+          "title": "上传端点必须保留受支持写作工具的 Markdown 语义",
+          "statement": "对于标准 Markdown 上传，系统 MUST 在进入 `chunk / embed / store` 之前执行语义预处理，以兼容常见写作工具的 Markdown 扩展语法，并将可提取的文档元数据写入 source metadata。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Core upload supports CSV sources",
+          "statement": "系统的核心发行版 MUST 支持通过上传方式创建 CSV 来源：`.csv` 扩展名与 `text/csv` MIME MUST 被识别并由匹配 parser 处理。"
+        },
+        {
+          "req_id": "r5",
+          "title": "CSV sources are chunked by rows to avoid oversized single chunks",
+          "statement": "系统 MUST 将 CSV 内容按行块切分为多个可索引 chunks，以避免单个超大 chunk 导致检索与引用不稳定。"
+        },
+        {
+          "req_id": "r6",
+          "title": "Deterministic input errors do not create source rows",
+          "statement": "空文件或无可索引内容等确定性输入错误 MUST 返回 400 且不创建来源。"
+        },
+        {
+          "req_id": "r7",
+          "title": "Oversized uploads are rejected deterministically with 413",
+          "statement": "当 HTTP guardrails 启用且配置了上传上限时，上传接口 MUST 对单次上传施加 `upload_max_bytes` 限制；超过上限 MUST 返回 413，且 MUST 不创建来源记录。"
+        },
+        {
+          "req_id": "r8",
+          "title": "URL from-source supports link and fetch modes",
+          "statement": "`from-url` MUST 支持 `link|fetch`，`link` 不抓网页正文，`fetch` 抓取并分块。"
+        },
+        {
+          "req_id": "r9",
+          "title": "Fetch applies SSRF validation before network calls",
+          "statement": "`fetch` MUST 在请求前做 SSRF 校验并拒绝高风险目标（含逐跳重定向重验）。"
+        },
+        {
+          "req_id": "r10",
+          "title": "Extractor preference, fallback, retry, and proxy are scoped",
+          "statement": "系统 MUST 支持提取器指定、可控 fallback、可重试错误重试、按提取器粒度代理配置。"
+        },
+        {
+          "req_id": "r11",
+          "title": "Unsupported formats are rejected with actionable diagnostics",
+          "statement": "当上传/URL 抓取的内容无匹配 parser（例如缺失对应插件）时，系统 MUST 返回 415 且 MUST 提供可机器读取的诊断信息（error_code/message/details），其中 details MUST 包含恢复提示（例如需要安装/启用的 `parser-*` 插件 id）。"
+        },
+        {
+          "req_id": "r12",
+          "title": "Extractor selection errors are diagnosable",
+          "statement": "当用户在 fetch 模式显式指定某 extractor 但其不可用（未安装/禁用/依赖缺失/服务不可达）时，系统 MUST 返回稳定错误语义或按策略回退；无论哪种路径，系统 MUST 输出可诊断信息说明发生了什么与如何恢复。"
+        }
+      ]
+    },
+    {
+      "spec_id": "structural-refinement-for-generated-results",
+      "purpose": "让生成结果成为可持续打磨的结构对象：暴露结构单元、支持局部 refinement、显式表达变更范围与操作类型，并记录改良历史以支持追溯。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "结果必须暴露可被改良的结构单元",
+          "statement": "系统 MUST 为生成结果暴露可识别的结构单元，以支持后续 refinement。"
+        },
+        {
+          "req_id": "r2",
+          "title": "系统必须支持局部 refinement 动作",
+          "statement": "系统 MUST 允许基于已有结果上下文执行局部改良动作，而不是只能整篇重生成。"
+        },
+        {
+          "req_id": "r3",
+          "title": "局部 refinement 与整篇重生成必须有清楚边界",
+          "statement": "系统 MUST 明确哪些改良请求适合局部完成，哪些必须回到整篇重生成路径。"
+        },
+        {
+          "req_id": "r4",
+          "title": "局部改良请求必须显式表达变更范围与操作类型",
+          "statement": "系统 MUST 在局部改良请求中显式表达“作用范围（scope）”与“操作类型（local refinement vs full regeneration）”，避免 API/UI 混淆。"
+        },
+        {
+          "req_id": "r5",
+          "title": "局部改良必须保留未改动部分并记录改良历史",
+          "statement": "系统 MUST 在局部改良写回时保留未改动部分的内容稳定，并记录改良动作、范围与时间线，以支持持续打磨与可追溯性。"
+        }
+      ]
+    },
+    {
+      "spec_id": "studio-output-types",
+      "purpose": "定义非 slides 的 Studio 输出类型交互基线（briefing/guide/flashcard/mindmap/quiz/timeline）。该规范以“最小可用交互”约束各类型的前端呈现，保证输出可浏览、可操作与可导出。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Briefing supports section structure and fold",
+          "statement": "briefing 输出 MUST 支持章节目录与章节折叠。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Guide supports checklist and progress cues",
+          "statement": "guide 输出 MUST 支持可勾选学习路径与进度提示。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Flashcard supports flip and navigation",
+          "statement": "flashcard 输出 MUST 支持翻面交互与学习进度导航。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Mindmap supports read-only exploration",
+          "statement": "mindmap 输出 MUST 支持只读浏览与节点折叠控制。"
+        },
+        {
+          "req_id": "r5",
+          "title": "Quiz supports answering and immediate feedback",
+          "statement": "quiz 输出 MUST 支持作答、即时反馈与结果汇总。"
+        },
+        {
+          "req_id": "r6",
+          "title": "Timeline supports visual events and detail expansion",
+          "statement": "timeline 输出 MUST 支持时间轴事件可视化与事件详情展开。"
+        },
+        {
+          "req_id": "r7",
+          "title": "Studio output types are plugin-driven and discoverable",
+          "statement": "Studio 的工具输出类型集合 MUST 由 `/v1/workspace/tools` 返回的动态列表驱动；客户端 MUST NOT 依赖硬编码枚举来假设某输出类型必然存在。 说明： - tools 列表的来源可以是 core 内置能力或插件能力 - 在本变更范围内，除 `SLIDES`（暂保留 core 内置）外，其余工具输出类型（FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING）MUST 由官方插件提供"
+        },
+        {
+          "req_id": "r8",
+          "title": "Missing capabilities are explained to the user",
+          "statement": "当某输出类型不可用（插件缺失/禁用/加载失败）时，客户端 MUST 能呈现可执行的恢复提示（例如安装/启用对应官方插件），以避免“功能消失但原因不明”。"
+        }
+      ]
+    },
+    {
+      "spec_id": "studio-slides-workflow",
+      "purpose": "定义 SLIDES 的端到端工作流：draft 单一事实源、outline/markdown SSE、保存同步与预览链路。该规范用于保证断线重连、重试与预览刷新时的状态一致性。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Slides are draft-centric across three stages",
+          "statement": "slides MUST 围绕 draft 运行 input/outline/markdown 三阶段并可恢复。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Draft API contract is stable",
+          "statement": "draft CRUD、outline 保存、markdown 保存端点 MUST 保持稳定；当 slides workflow capability 不可用时，这些端点 MUST 返回稳定且可执行的 unavailable 诊断，而不是假设 slides 默认可用。"
+        },
+        {
+          "req_id": "r3",
+          "title": "SSE endpoints and events are stable",
+          "statement": "outline/markdown stream MUST 使用稳定事件集合 `progress/toolcall/done/busy/error`。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Busy and stale-running handling is explicit",
+          "statement": "draft `running` 时 MUST 防并发重复；stale running MUST 先清理再继续。"
+        },
+        {
+          "req_id": "r5",
+          "title": "Markdown generation requires existing outline",
+          "statement": "未有 outline 时 markdown stream MUST 返回可读错误并结束连接。"
+        },
+        {
+          "req_id": "r6",
+          "title": "Successful generation persists draft before done",
+          "statement": "生成成功 MUST 先持久化 draft（含 chunk_ids/stage/status），再发 `done`。"
+        },
+        {
+          "req_id": "r7",
+          "title": "Preview always uses latest saved markdown",
+          "statement": "预览前端流程 MUST 先保存 markdown，再刷新当前 active slides workflow plugin 声明的预览目标；宿主与客户端 MUST NOT 硬编码 Slidev 作为唯一预览实现。"
+        },
+        {
+          "req_id": "r8",
+          "title": "Slides UI availability follows tools contract",
+          "statement": "Studio slides 相关 UI（工具卡片、dialog、入口动作）MUST 以 `/v1/workspace/tools` 返回的 `SLIDES` tool 作为可用性唯一来源，不得依赖硬编码假设 slides 默认存在。"
+        }
+      ]
+    },
+    {
+      "spec_id": "typed-generation-framework",
+      "purpose": "把“生成类型”提升为一等对象：定义最小公共词汇、注册与发现语义、请求/结果的类型绑定，以及对下游扩展的边界与扩展位。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "系统必须提供生成类型的注册与发现",
+          "statement": "系统 MUST 以统一方式注册并向调用方发现可用的生成类型集合。"
+        },
+        {
+          "req_id": "r2",
+          "title": "生成请求必须显式绑定生成类型",
+          "statement": "系统 MUST 将生成类型作为显式的一等对象，而不是隐含在 prompt 或入口按钮中。"
+        },
+        {
+          "req_id": "r3",
+          "title": "系统必须按生成类型契约装配请求并做最小校验",
+          "statement": "系统 MUST 使用生成类型契约装配默认值并做最小输入要求校验，避免类型语义被隐式分叉。"
+        },
+        {
+          "req_id": "r4",
+          "title": "生成类型必须声明最小类型契约",
+          "statement": "系统 MUST 为每种生成类型声明最小契约，以支撑后续控制项、结果结构和完成语义。"
+        },
+        {
+          "req_id": "r5",
+          "title": "生成结果必须回传生成类型、输出类型与完成语义元数据",
+          "statement": "系统 MUST 在结果对象中同时回传生成类型与输出类型，并回传完成语义相关元数据以支撑治理与后续工作流。"
+        },
+        {
+          "req_id": "r6",
+          "title": "生成类型与输出类型必须保持边界分离",
+          "statement": "系统 MUST 保持生成类型与输出类型的边界清晰，避免一个概念吞掉另一个概念。"
+        },
+        {
+          "req_id": "r7",
+          "title": "下游扩展只能使用扩展位，禁止反向改写公共词汇",
+          "statement": "系统 MUST 为下游能力提供明确扩展位，同时禁止下游能力反向改写公共词汇定义。"
+        }
+      ]
+    },
+    {
+      "spec_id": "web-extractor-plugins",
+      "purpose": "定义网页提取器插件化契约：实现来源、可用性清单、选择与降级、全局/Notebook 级启用策略，以及结构化错误模型，使 URL fetch 能在 core-only 与官方插件套件形态下保持可预测与可诊断。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Web extractors are provided by plugins",
+          "statement": "网页提取器实现 MUST 由插件提供，core MUST 仅保留提取编排框架（fallback/retry/代理/SSRF 校验）与稳定的数据模型；当某提取器插件未安装或被禁用时，core MUST NOT 视为“内置可用”。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Extractor selection supports preference and controlled fallback",
+          "statement": "系统 MUST 支持对单次 fetch 指定 `preferred_extractor`，并 MUST 支持按配置定义的 fallback order；fallback MUST 仅在显式开启时发生，且每次尝试都必须可观测（日志/诊断信息）。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Extractor availability is checkable and listable",
+          "statement": "系统 MUST 提供对外可查询的“提取器可用性清单”，包含：提取器类型、是否启用、是否可用、不可用原因与恢复提示（如适用）。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Extractor enablement supports global policy and per-notebook policy",
+          "statement": "系统 MUST 同时支持： - **全局策略（Global Policy）**：由 `config/app.yaml` 给出每个 extractor 的默认启用状态。 - **笔记本策略（Notebook Policy）**：由 UI 通过 API 持久化到数据库（按 notebook），并允许该 notebook 选择“是否遵循全局策略”。 笔记本策略 MUST 支持一个模式字段： - `mode=\"inherit_global\"`：该 notebook 遵循全局策略（默认） - `mode=\"custom\"`：该 notebook 使用自定义启用集合（可与全局不同） effective enabled 的计算 MUST 为： `plugin_enabled (allowlist/denylist) ∧ (mode == inherit_global ? global_enabled : notebook_enabled)` 说明： - 插件启用（install/allowlist/denylist）是运维边界，UI MUST NOT 直接修改。 - `mode=\"custom\"` "
+        },
+        {
+          "req_id": "r5",
+          "title": "Extractor plugins provide structured errors",
+          "statement": "提取器插件在失败时 MUST 抛出结构化错误（至少包含 error_code/message，且可选包含 extractor/url），以便 core 能区分“可重试失败/不可用/配置缺失”并做出一致的降级与提示。"
+        }
+      ]
+    },
+    {
+      "spec_id": "workspace-api-contract",
+      "purpose": "定义前后端协作所依赖的稳定 API 契约：版本前缀、错误信封、核心端点稳定字段与 SSE 事件最小形状。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "API major version prefix is stable",
+          "statement": "对外 API MUST 使用 `/v1` 前缀；同一 major 内保持兼容。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Optional API key authentication is supported for self-host",
+          "statement": "自托管部署 MUST 支持可选的 API key 鉴权基线：当配置了鉴权密钥时，所有 `/v1/**` 端点 MUST 要求 `Authorization: Bearer <token>`（或等价 API key 头）；未配置密钥时系统 MAY 允许匿名访问以保持本地开发低摩擦。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Non-SSE errors use unified envelope",
+          "statement": "非 SSE 错误响应 MUST 使用统一结构：`error_code`, `message`, `details?`, `retry_after?`。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Rate limited responses use unified envelope and retry_after",
+          "statement": "系统 MUST 为 HTTP rate limiting 提供稳定的对外语义：返回 429，并在统一错误信封中暴露 `retry_after` 指引。"
+        },
+        {
+          "req_id": "r5",
+          "title": "Health endpoints remain exempt from HTTP guardrails",
+          "statement": "系统的健康检查端点 MUST 保持可用于运维探活与诊断，不应因 guardrails 被拒绝。"
+        },
+        {
+          "req_id": "r6",
+          "title": "Notebook/session/message endpoints are stable",
+          "statement": "notebook、session、message 的范围归属与 404/400 语义 MUST 稳定。"
+        },
+        {
+          "req_id": "r7",
+          "title": "Assistant message content remains plain text while UI is transported out-of-band",
+          "statement": "系统 MUST 将 assistant 消息 `content: string` 保持为纯文本/markdown 回答；结构化 UI MUST 通过 session-scoped `shared_state.ui` 提供，而不是嵌入 `content`。"
+        },
+        {
+          "req_id": "r8",
+          "title": "Session UI state endpoints are stable and server-authoritative",
+          "statement": "系统 MUST 提供 session-scoped UI 状态端点： - `GET /v1/notebooks/{notebook_id}/sessions/{session_id}/ui/state` - `POST /v1/notebooks/{notebook_id}/sessions/{session_id}/ui/event` `GET` MUST 返回 `session_id`、`shared_state`、`shared_state_revision`；`POST` MUST 接收 `CUSTOM(name=\"ui.v1.event\")`，并返回 `delta` 与最新 `shared_state_revision`。"
+        },
+        {
+          "req_id": "r9",
+          "title": "Commands endpoint is available for autocomplete",
+          "statement": "系统 MUST 提供 `GET /v1/commands` 端点，供前端获取结构化命令列表以驱动自动补全。"
+        },
+        {
+          "req_id": "r10",
+          "title": "Prompt presets CRUD endpoints are stable",
+          "statement": "系统 MUST 提供 prompt presets 的 CRUD 端点集合： - `GET /v1/prompt-presets`：返回 built-in + custom 的 preset 列表 - `POST /v1/prompt-presets`：创建 custom preset 并返回 201 - `PATCH /v1/prompt-presets/{preset_id}`：更新 custom preset 并返回更新后的对象 - `DELETE /v1/prompt-presets/{preset_id}`：删除 custom preset 并返回 204"
+        },
+        {
+          "req_id": "r11",
+          "title": "QA endpoints accept in-band prompt directives in question",
+          "statement": "QA 端点 MUST 支持在 `question: string` 中内嵌 `/prompt:<preset> <query>` 指令，并在启用 presets 功能时以该指令选择受控的预设生成策略。"
+        },
+        {
+          "req_id": "r12",
+          "title": "QA endpoints provide stable stream and non-stream contracts",
+          "statement": "`/qa` 与 `/qa/stream` MUST 保持稳定字段语义，stream 至少包含 `chunk|done|error` 事件。"
+        },
+        {
+          "req_id": "r13",
+          "title": "Citation model is unified across APIs",
+          "statement": "citation 对象 MUST 在 QA/messages/outputs 等对外 API 中保持字段语义一致，并包含最小可定位字段集。"
+        },
+        {
+          "req_id": "r14",
+          "title": "Citation context lookup is supported",
+          "statement": "系统 MUST 提供可按 citation 定位并获取上下文的稳定端点，以支持用户复查证据链。"
+        },
+        {
+          "req_id": "r15",
+          "title": "Exports can include citations",
+          "statement": "系统 MUST 支持将 QA/Outputs 导出为包含 citations 的格式（Markdown/JSON 或等价），以便分享与复盘。"
+        },
+        {
+          "req_id": "r16",
+          "title": "Workspace tools and outputs endpoints are stable",
+          "statement": "`/v1/workspace/tools` 与 outputs/slides 相关端点 MUST 保持可用与向后兼容；其中 `/v1/workspace/tools` 的“可用工具集合”允许随已安装/已启用插件变化而变化，但响应形状与字段语义 MUST 稳定。"
+        },
+        {
+          "req_id": "r17",
+          "title": "Workspace tools list returns available tools only",
+          "statement": "`/v1/workspace/tools` 返回的 tools 列表 MUST 仅包含“当前可用”的工具项（可用 = core 内置能力 + 已安装且已启用、并通过兼容性门禁的插件能力）。对于 `SLIDES`，其可用性 MUST 由当前 active `SlidesWorkflowPlugin` 决定，而不是由 core 默认内置。"
+        },
+        {
+          "req_id": "r18",
+          "title": "Tools endpoint exposes diagnostics in a machine-readable form",
+          "statement": "`/v1/workspace/tools` 响应 MUST 暴露 `diagnostics` 字段，用于解释插件能力为什么可用/不可用，并为 UI 与自托管排障提供可执行提示。 `diagnostics` MUST 至少包含： - `diagnostics.plugins.loaded: string[]`：本次启动加载成功的插件 id 列表 - `diagnostics.plugins.skipped: { [plugin_id: string]: { error_code: string, message: string, hint?: string, details?: object } }`：加载被跳过的插件与稳定 skip detail 为覆盖“官方插件未安装（无 entry point，因此不会出现在 skipped）”的场景，`diagnostics` MUST 额外包含一个轻量的 official catalog（仅字符串/提示，不引入重依赖），用于给出明确的安装/启用指引。 official catalog MUST 覆盖当前版本所定义的**全部官方插件**，包括官方"
+        },
+        {
+          "req_id": "r19",
+          "title": "Workspace tools can expose frontend_bundle descriptor",
+          "statement": "`/v1/workspace/tools` 返回的 tool 对象 MUST 支持可选字段 `frontend_bundle`，用于声明该输出类型的前端渲染 bundle。"
+        },
+        {
+          "req_id": "r20",
+          "title": "Workspace tools expose a complete config_schema",
+          "statement": "`/v1/workspace/tools` 返回的工具对象 MUST 包含可直接驱动 UI 的 `config_schema`（如支持主题、数量/难度选项与默认值）。对于 `SLIDES`，该 `config_schema` MUST 覆盖 defaults、quantity / audience / structure / tone / language / density / theme / frontmatter，以及 active plugin 声明的 engine / preview 相关元数据；客户端 MUST NOT 依赖独立 slides config 端点。"
+        },
+        {
+          "req_id": "r21",
+          "title": "Tool config endpoint stays consistent (if present)",
+          "statement": "若 `/v1/workspace/tools/{tool_id}/config` 端点存在，其返回值 MUST 与 tools 列表中的 `config_schema` 语义一致。"
+        }
+      ]
+    },
+    {
+      "spec_id": "workspace-command-registry",
+      "purpose": "定义前端可发现的“命令/指令” registry：客户端如何获取结构化命令定义，以驱动输入自动补全与 UI 展示，并为未来扩展更多 `/*` 命令族提供稳定接口。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Commands can be listed via /v1/commands",
+          "statement": "系统 MUST 提供 `GET /v1/commands` 端点以返回命令列表，供客户端用于自动补全与提示。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Command schema supports future extensibility",
+          "statement": "`/v1/commands` 返回的命令对象 MUST 支持未来扩展更多命令族而不破坏旧客户端： - `kind` MUST 为字符串枚举；客户端 MAY 忽略未知 `kind` - `meta` 字段 MAY 存在且 MUST 为 JSON object"
+        },
+        {
+          "req_id": "r3",
+          "title": "Prompt preset commands are represented as triggers",
+          "statement": "当命令属于 prompt preset 时，系统 MUST 以 `trigger=\"/prompt:<preset>\"` 表达可插入的触发串，并提供描述与启用状态。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Commands are ordered deterministically",
+          "statement": "`GET /v1/commands` 的返回顺序 MUST 稳定（例如按 `trigger` 升序）。"
+        }
+      ]
+    },
+    {
+      "spec_id": "workspace-ui-core",
+      "purpose": "定义 Workspace 顶层体验的不变量：模块化布局、头部入口、响应式策略、全局 UX 基线。该规范只覆盖“顶层框架与跨面板约束”，避免与各业务面板的交互细节耦合。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Workspace uses modular canvas layout",
+          "statement": "工作区 MUST 基于模块化画布布局，默认包含 Sources/Chat/Studio 核心模块。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Header remains compact and functional",
+          "statement": "顶部栏 MUST 提供 notebook 切换、布局锁定、全局入口，窄屏下仍可访问。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Mobile viewport uses single-panel navigation",
+          "statement": "当视口宽度处于移动端窄屏范围时（以 `md` 断点为界），Workspace MUST 以单面板模式呈现 Sources / Chat / Studio，并通过底部 TabBar 提供面板切换入口，以避免多列挤压造成不可用。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Mobile tab bar respects safe-area and accessibility",
+          "statement": "移动端 TabBar MUST 兼容 iOS safe-area（home indicator）并满足最小可访问性基线（可聚焦、可读、可识别当前选中项）。"
+        },
+        {
+          "req_id": "r5",
+          "title": "Overlay/layer policy is centralized",
+          "statement": "弹层、对话框、popover 的层级与关闭策略 MUST 统一管理。"
+        },
+        {
+          "req_id": "r6",
+          "title": "Keyboard and accessibility baselines exist",
+          "statement": "快捷键帮助、基础可访问性与 modal 交互规范 MUST 提供。"
+        },
+        {
+          "req_id": "r7",
+          "title": "Workspace localization is centralized and locale-ready (zh-CN only)",
+          "statement": "Workspace MUST 将关键路径的用户可见文案集中管理（稳定 message key + `t()` 等价接口），并默认使用 `zh-CN` 文案。核心发行版不要求提供语言切换入口与多语言内置翻译，但结构 SHOULD 保持可扩展以支持社区后续新增 locale。"
+        },
+        {
+          "req_id": "r8",
+          "title": "Core panel contracts are delegated",
+          "statement": "Sources/Chat/Studio/Analysis 等面板交互细节 MUST 在 `workspace-ui-panels` 规范维护，避免总览规范膨胀。"
+        },
+        {
+          "req_id": "r9",
+          "title": "Workspace provides guided empty states",
+          "statement": "Workspace MUST 在首次进入与关键空态下提供分层引导，明确下一步动作与成功路径。"
+        },
+        {
+          "req_id": "r10",
+          "title": "Workspace health status is visible and actionable",
+          "statement": "Workspace MUST 提供可见的健康入口，能展示核心依赖与可选服务的降级信息，并包含可执行的恢复建议。"
+        },
+        {
+          "req_id": "r11",
+          "title": "Command palette is discoverable and includes core actions",
+          "statement": "Workspace MUST 提供可发现的命令面板（例如 Ctrl+K）并包含覆盖核心流程的最小动作集；其中与可选能力相关的动作 MUST 随运行时 capability 动态变化。"
+        },
+        {
+          "req_id": "r12",
+          "title": "Slides entry points follow runtime capability",
+          "statement": "Workspace 中的 slides 入口（如 onboarding、快捷按钮、Studio tool cards）MUST 跟随运行时 capability，而不是默认显示为可用。"
+        }
+      ]
+    },
+    {
+      "spec_id": "workspace-ui-panels",
+      "purpose": "定义 Workspace 业务面板（Sources/Chat/Studio/Analysis/Research 与引用交互）的最小 UI 契约：面板装配、流式反馈、状态与取消语义、错误可恢复路径。该规范聚焦“用户可观察行为与稳定边界”，不绑定具体组件实现。",
+      "reqs": [
+        {
+          "req_id": "r1",
+          "title": "Panel composition is stable",
+          "statement": "Workspace MUST 以稳定的面板集合装配 Sources/Chat/Studio/Analysis/Research 等能力，并保持各面板的基本区域划分与入口可发现。"
+        },
+        {
+          "req_id": "r2",
+          "title": "Streaming UX supports send/chunk/done/error and cancel",
+          "statement": "涉及流式输出的面板（如 Chat/Research）MUST 显式呈现 send/chunk/done/error 状态，并 MUST 支持用户取消以停止继续追加内容。"
+        },
+        {
+          "req_id": "r3",
+          "title": "Chat input supports /prompt directives as user-facing commands",
+          "statement": "Workspace 的 Chat 面板 MUST 允许用户在输入框中使用 `/prompt:<preset> <query>` 指令来请求受控的预设生成模式。"
+        },
+        {
+          "req_id": "r4",
+          "title": "Chat input provides command autocomplete for /prompt presets",
+          "statement": "Workspace 的 Chat 输入框 MUST 使用 `GET /v1/commands` 获取命令列表，并在用户输入 `/` 或 `/prompt:` 前缀时提供自动补全 UI。"
+        },
+        {
+          "req_id": "r5",
+          "title": "System config UI allows users to manage prompt presets",
+          "statement": "Workspace UI MUST 提供“系统配置”入口，并允许用户对 custom `/prompt:*` presets 执行 CRUD（触发词、描述、system prompt、启用状态）。"
+        },
+        {
+          "req_id": "r6",
+          "title": "Chat panel renders plain assistant text plus Rivu mounts",
+          "statement": "Chat 面板 MUST 将 assistant `message.content` 作为纯文本/markdown 渲染，并 MUST 基于 session `shared_state.ui` 的 mounts 在消息气泡下方渲染结构化 UI。前端 MUST 不再解析 `message.content` 中的 legacy envelope。"
+        },
+        {
+          "req_id": "r7",
+          "title": "Streaming UX applies server-authoritative snapshots and deltas",
+          "statement": "当一次对话响应以流式方式生成时，Chat 面板 MUST 使用服务端发送的 `state_snapshot`/`state_delta` 驱动 UI，并以服务端稳定 `message_id` 关联消息与 mounts。"
+        },
+        {
+          "req_id": "r8",
+          "title": "Tool/action cards enforce confirmation and auto-exec whitelist",
+          "statement": "当消息包含 `tool_use` parts 时，Chat 面板 MUST： - 仅对宿主白名单内且标记为 `auto_execute=true` 的动作执行自动执行 - 对需要确认或非白名单动作提供显式确认入口 - 对每次执行展示对应 `tool_result` 的结果与错误恢复路径（如允许重试）"
+        },
+        {
+          "req_id": "r9",
+          "title": "Sources workflows are gated and explicit",
+          "statement": "Sources 相关操作 MUST 对“未选择来源/来源未就绪/来源失败”等情况进行显式 gating，并 MUST 提供可理解的提示与可恢复路径。"
+        },
+        {
+          "req_id": "r10",
+          "title": "Ingestion feedback is queue-based and deterministic",
+          "statement": "上传/抓取/搜索等 ingest 操作 MUST 以队列项呈现并可并发显示状态，且每个队列项 MUST 有确定的终态（done/error/cancelled）与重试入口。"
+        },
+        {
+          "req_id": "r11",
+          "title": "Sources upload file type support is consistent and includes PDF",
+          "statement": "Workspace 的 Sources 上传入口 MUST 支持后端核心发行版的常见内置解析格式，且前端 `accept`、预过滤与提示文案 MUST 保持一致。 该支持集 SHALL 至少包含：`.txt/.md/.markdown` 与 `.pdf`（`application/pdf`），以及 `.csv`（`text/csv`）。"
+        },
+        {
+          "req_id": "r12",
+          "title": "Analysis view is bounded and refreshable",
+          "statement": "Analysis 面板 MUST 提供可刷新与全屏查看的交互，并 MUST 对渲染规模做有界处理以避免 UI 失控或崩溃。"
+        },
+        {
+          "req_id": "r13",
+          "title": "Studio queue, rendering fallback, and export gating are explicit",
+          "statement": "Studio MUST 明确展示生成队列状态并支持取消；渲染 MUST 定义确定的回退顺序；导出选项 MUST 仅显示当前输出类型支持项。"
+        }
+      ]
+    }
+  ]
+}
