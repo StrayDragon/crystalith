@@ -11,9 +11,9 @@ v1 支持 10 种 Output 类型（FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING/SLIDES
 
 ## What Changes
 
-- **NEW** `server/src/features/outputs/` — 每种 Output 类型一个 generateObject 调用 + 前后处理
+- **NEW** `apps/server/src/features/outputs/` — 每种 Output 类型一个 generateObject 调用 + 前后处理
 - **NEW** `packages/shared/src/schemas/outputs.ts` — Zod 输出 schema（前后端共享）
-- **MODIFIED** `server/src/ai/` — generateObject wrapper 统一重试/校验
+- **MODIFIED** `apps/server/src/ai/` — generateObject wrapper 统一重试/校验
 
 ## Capabilities
 

@@ -3,7 +3,7 @@
 ### 1. Single Binary (`bun build --compile`)
 
 ```bash
-bun build --compile --outfile=crystalith-server ./server/src/server.ts
+bun build --compile --outfile=crystalith-server ./apps/server/src/server.ts
 ```
 
 Targets: `bun-linux-x64`, `bun-darwin-arm64`, `bun-windows-x64`
@@ -15,7 +15,7 @@ Server serves frontend SPA via `@elysiajs/static`:
 
 ```ts
 import { staticPlugin } from '@elysiajs/static';
-app.use(staticPlugin({ assets: '../frontend/web/dist', prefix: '/' }));
+app.use(staticPlugin({ assets: '../apps/web/dist', prefix: '/' }));
 ```
 
 Access `http://localhost:8032/` → full Crystalith SPA.

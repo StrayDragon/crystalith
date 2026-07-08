@@ -8,14 +8,14 @@ v1 Python backend (FastAPI + pydantic-ai + SQLAlchemy + ChromaDB) must be rewrit
 
 ## What Changes
 
-- **NEW** `package.json` at repo root — Bun workspace spanning `server/`, `frontend/web/`, `packages/*`
-- **NEW** `server/` package — Elysia HTTP server skeleton with `/health` and `/v2/` endpoints, `bun --watch` hot reload
+- **NEW** `package.json` at repo root — Bun workspace spanning `apps/server/`, `apps/web/`, `packages/*`
+- **NEW** `apps/server/` package — Elysia HTTP server skeleton with `/health` and `/v2/` endpoints, `bun --watch` hot reload
 - **NEW** `packages/shared/` package — shared Zod schemas and types for server ↔ frontend
 - **NEW** `bun.lock` — single workspace lockfile replacing `pnpm-lock.yaml`
 - **MODIFIED** `AGENTS.md` — updated build/dev commands and project structure for v2
 - **MODIFIED** `justfile` — simplified to v2 bun commands
 - **MODIFIED** `.github/workflows/ci.yml` — bun setup, server CI job commented out (to enable later)
-- **MODIFIED** `frontend/web/` — migrate from pnpm to bun, clean stale vite aliases (rivu, slidev)
+- **MODIFIED** `apps/web/` — migrate from pnpm to bun, clean stale vite aliases (rivu, slidev)
 - **REMOVED** `pnpm-lock.yaml`, `pnpm-workspace.yaml` — replaced by root `bun.lock`
 
 ## Capabilities

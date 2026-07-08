@@ -6,7 +6,7 @@ The v2 server follows Elysia's recommended architecture:
 ### Architecture
 
 ```
-server/src/
+apps/server/src/
 ├── server.ts              # Entry: Elysia app instance + route registration
 ├── openapi.ts             # OpenAPI doc builder (@asteasolutions/zod-to-openapi)
 ├── asyncapi.ts            # AsyncAPI doc for streaming endpoints
@@ -69,7 +69,7 @@ server/src/
 3. **OpenAPI 生成**: 通过 `@asteasolutions/zod-to-openapi` 从 Zod schema 独立生成 `/openapi.json`：
 
    ```ts
-   // server/src/openapi.ts
+   // apps/server/src/openapi.ts
    import { OpenAPIRegistry, OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi';
    import { NotebookSchema, CreateNotebookSchema } from '@crystalith/shared';
 

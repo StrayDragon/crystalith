@@ -24,7 +24,7 @@ interface EvalItem {
 ### Metrics: LLM-as-Judge
 
 ```ts
-// server/src/features/eval/metrics.ts
+// apps/server/src/features/eval/metrics.ts
 interface EvalMetrics {
   faithfulness: number; // 0-1: is the answer faithful to retrieved context?
   relevance: number; // 0-1: does the answer address the question?
@@ -43,7 +43,7 @@ const JudgeSchema = z.object({
 ### Runner
 
 ```ts
-// server/src/features/eval/runner.ts
+// apps/server/src/features/eval/runner.ts
 async function runEval(datasetId: number, strategyIds: string[]): Promise<EvalRun> {
   const run = createRun(datasetId, strategyIds);
   for (const item of dataset.items) {

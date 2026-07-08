@@ -11,10 +11,10 @@ v2 需要量化验收每种 RAG 策略的效果。内置 Eval Benchmark Harness 
 
 ## What Changes
 
-- **NEW** `server/src/eval/` — Eval dataset CRUD + runner + metrics calculator
-- **NEW** `server/src/db/schema.ts` — eval_datasets/items/runs/run_items/metrics 表
-- **NEW** `server/src/eval/metrics.ts` — Faithfulness/Relevance/Recall/Precision/Latency
-- **NEW** `server/src/eval/judge.ts` — LLM-as-Judge (generateObject 打分)
+- **NEW** `apps/server/src/eval/` — Eval dataset CRUD + runner + metrics calculator
+- **NEW** `apps/server/src/db/schema.ts` — eval_datasets/items/runs/run_items/metrics 表
+- **NEW** `apps/server/src/eval/metrics.ts` — Faithfulness/Relevance/Recall/Precision/Latency
+- **NEW** `apps/server/src/eval/judge.ts` — LLM-as-Judge (generateObject 打分)
 - **NEW** 前端 — 质量面板 (对比雷达图、逐 QA 对详情、历史趋势)
 
 ## Capabilities

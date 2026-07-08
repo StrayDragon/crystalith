@@ -32,7 +32,7 @@
 
 - [x] `AGENTS.md`: 更新项目结构、build/dev 命令
 - [x] `backend/AGENTS.md`, `backend/py/AGENTS.md`: v1 reference notice
-- [x] `config/AGENTS.md`, `frontend/AGENTS.md`, `frontend/web/AGENTS.md`: v2 更新
+- [x] `config/AGENTS.md`, `frontend/AGENTS.md`, `apps/web/AGENTS.md`: v2 更新
 
 ## Verification
 

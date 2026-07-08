@@ -11,9 +11,9 @@ v1 的 research feature (13 端点 + pydantic-graph 图：PlanSearches → Execu
 
 ## What Changes
 
-- **NEW** `server/src/features/research/` — 研究 session CRUD + agent 执行
-- **NEW** `server/src/features/research/tools.ts` — webSearch (SearXNG fetch)、analyzeResults、writeReport tool
-- **MODIFIED** `server/src/ai/` — agent 工具注册扩展
+- **NEW** `apps/server/src/features/research/` — 研究 session CRUD + agent 执行
+- **NEW** `apps/server/src/features/research/tools.ts` — webSearch (SearXNG fetch)、analyzeResults、writeReport tool
+- **MODIFIED** `apps/server/src/ai/` — agent 工具注册扩展
 
 ## Capabilities
 

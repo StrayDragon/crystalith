@@ -3,7 +3,7 @@
 ### RAGStrategy Interface
 
 ```ts
-// server/src/rag/types.ts
+// apps/server/src/rag/types.ts
 export interface RAGStrategy {
   id: string;
   name: string;
@@ -22,7 +22,7 @@ export interface RAGStrategy {
 ### Registry
 
 ```ts
-// server/src/rag/registry.ts
+// apps/server/src/rag/registry.ts
 class RAGRegistry {
   private strategies = new Map<string, RAGStrategy>();
 

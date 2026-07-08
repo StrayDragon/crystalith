@@ -11,11 +11,11 @@ v2 的差异化竞争力在于多策略 RAG。Embed RAG 只是起点，后续需
 
 ## What Changes
 
-- **NEW** `server/src/rag/registry.ts` — RAGStrategy 接口 + RAGRegistry 注册表
-- **NEW** `server/src/rag/keyword-strategy.ts` — sqlite-fts5 BM25 策略
-- **NEW** `server/src/rag/hybrid-strategy.ts` — Embed + BM25 + RRF 混合
-- **NEW** `server/src/rag/page-index-strategy.ts` — 页面级索引策略
-- **NEW** `server/src/db/schema.ts` — rag_strategies/strategy_configs/strategy_indexes 表
+- **NEW** `apps/server/src/rag/registry.ts` — RAGStrategy 接口 + RAGRegistry 注册表
+- **NEW** `apps/server/src/rag/keyword-strategy.ts` — sqlite-fts5 BM25 策略
+- **NEW** `apps/server/src/rag/hybrid-strategy.ts` — Embed + BM25 + RRF 混合
+- **NEW** `apps/server/src/rag/page-index-strategy.ts` — 页面级索引策略
+- **NEW** `apps/server/src/db/schema.ts` — rag_strategies/strategy_configs/strategy_indexes 表
 
 ## Capabilities
 

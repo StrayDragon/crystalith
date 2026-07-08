@@ -7,8 +7,8 @@
 
 ## 2. Delete OpenAPI Chain
 
-- [ ] `git rm frontend/web/openapi.gen.json`
-- [ ] `git rm -rf frontend/web/src/api/generated/`
+- [ ] `git rm apps/web/openapi.gen.json`
+- [ ] `git rm -rf apps/web/src/api/generated/`
 - [ ] 从 package.json 移除 `@hey-api/openapi-ts`
 - [ ] 验证: 前端编译无 generated client 引用
 

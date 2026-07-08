@@ -7,13 +7,13 @@
 
 ## 2. Output Generator
 
-- [ ] `server/src/features/outputs/generator.ts` — generateObject(schema) + chunks context 拼接
+- [ ] `apps/server/src/features/outputs/generator.ts` — generateObject(schema) + chunks context 拼接
 - [ ] 每种 output type 一个独立的 generateObject 调用
 
 ## 3. Output Pipeline
 
-- [ ] `server/src/features/outputs/pipeline.ts` — 获取 chunks → 拼接 context → generateObject → mapCitations → persist
-- [ ] `server/src/features/outputs/router.ts` — POST /v2/outputs, GET /v2/outputs/:id
+- [ ] `apps/server/src/features/outputs/pipeline.ts` — 获取 chunks → 拼接 context → generateObject → mapCitations → persist
+- [ ] `apps/server/src/features/outputs/router.ts` — POST /v2/outputs, GET /v2/outputs/:id
 
 ## 4. Frontend Output Viewer
 

@@ -11,14 +11,14 @@ v1 提供 analysis (资料聚类/矛盾/相关性)、studio (幻灯片工作室)
 
 ## What Changes
 
-- **NEW** `server/src/features/analysis/` — 资料分析端点 (聚类、矛盾检测、相关性)
-- **NEW** `server/src/features/studio/` — 幻灯片工作室 (AI SDK 生成 slides)
-- **NEW** `server/src/features/refine/` — 结果精炼 (提升/缩写/重写/翻译)
-- **NEW** `server/src/features/tasks/` — 后台任务队列
-- **NEW** `server/src/features/templates/` — 模板管理
-- **NEW** `server/src/features/prompt-presets/` — 提示词预设
-- **NEW** `server/src/features/workspace/` — workspace 工具注册表 + 命令面板
-- **NEW** `server/src/features/source-connectors/` — Obsidian + 本地目录同步
+- **NEW** `apps/server/src/features/analysis/` — 资料分析端点 (聚类、矛盾检测、相关性)
+- **NEW** `apps/server/src/features/studio/` — 幻灯片工作室 (AI SDK 生成 slides)
+- **NEW** `apps/server/src/features/refine/` — 结果精炼 (提升/缩写/重写/翻译)
+- **NEW** `apps/server/src/features/tasks/` — 后台任务队列
+- **NEW** `apps/server/src/features/templates/` — 模板管理
+- **NEW** `apps/server/src/features/prompt-presets/` — 提示词预设
+- **NEW** `apps/server/src/features/workspace/` — workspace 工具注册表 + 命令面板
+- **NEW** `apps/server/src/features/source-connectors/` — Obsidian + 本地目录同步
 
 ## Capabilities
 
