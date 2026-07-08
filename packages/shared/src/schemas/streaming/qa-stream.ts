@@ -4,9 +4,10 @@
 // (`useChat.ts`): `chunk` | `state_snapshot` | `done` | `error`.
 // The v2 server relays Vercel AI SDK `fullStream` parts into these events so
 // the existing frontend renderer works with minimal adaptation.
-import { z } from "zod";
-import { CitationSchema, IdSchema, JsonMetadataSchema } from "../common.js";
-import { ChatTurnSchema } from "../message.js";
+import { z } from 'zod';
+
+import { CitationSchema, IdSchema, JsonMetadataSchema } from '../common.js';
+import { ChatTurnSchema } from '../message.js';
 
 export const QaStreamChunkEventSchema = z.object({
   text: z.string(),
@@ -60,5 +61,5 @@ export const QaAnswerSchema = z.object({
 });
 export type QaAnswer = z.infer<typeof QaAnswerSchema>;
 
-export const QaStreamEventNames = ["chunk", "state_snapshot", "done", "error"] as const;
+export const QaStreamEventNames = ['chunk', 'state_snapshot', 'done', 'error'] as const;
 export type QaStreamEventName = (typeof QaStreamEventNames)[number];

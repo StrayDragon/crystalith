@@ -1,0 +1,46 @@
+{
+  "name": "@crystalith/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/server.ts",
+    "./app": "./src/server.ts"
+  },
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "build": "bun build --compile --outfile=crystalith-server ./src/server.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo '@crystalith/server lint is managed by root; run bun lint from repo root'",
+    "format": "echo '@crystalith/server format is managed by root; run bun format from repo root'",
+    "format:check": "echo '@crystalith/server format:check is managed by root; run bun format:check from repo root'",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.9",
+    "@ai-sdk/deepseek": "^3.0.5",
+    "@ai-sdk/google": "^4.0.9",
+    "@ai-sdk/openai": "^4.0.8",
+    "@ai-sdk/openai-compatible": "^3.0.5",
+    "@ai-sdk/provider": "^4.0.2",
+    "@asteasolutions/zod-to-openapi": "^8.5.0",
+    "@crystalith/shared": "workspace:*",
+    "@elysiajs/eden": "^1.4.9",
+    "@elysiajs/static": "^1.4.10",
+    "ai": "^7.0.17",
+    "drizzle-orm": "^0.45.2",
+    "elysia": "^1.4.29",
+    "gpt-tokenizer": "^3.4.0",
+    "sqlite-vec": "^0.1.9",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "drizzle-kit": "^0.31.10",
+    "typescript": "^5"
+  }
+}

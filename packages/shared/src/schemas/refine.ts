@@ -1,19 +1,20 @@
 // Refine schemas — content refinement task queue.
 // Mirrors v1 `features.refine` (paragraph/bullets/structured modes).
-import { z } from "zod";
-import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from "./common.js";
+import { z } from 'zod';
 
-export const RefineModeSchema = z.enum(["paragraph", "bullets", "structured"]);
+import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from './common.js';
+
+export const RefineModeSchema = z.enum(['paragraph', 'bullets', 'structured']);
 export type RefineMode = z.infer<typeof RefineModeSchema>;
 
-export const RefineStatusSchema = z.enum(["queued", "running", "done", "error"]);
+export const RefineStatusSchema = z.enum(['queued', 'running', 'done', 'error']);
 export type RefineStatus = z.infer<typeof RefineStatusSchema>;
 
 export const RefineRequestSchema = z.object({
   notebook_id: IdSchema,
   source_ids: z.array(IdSchema).optional(),
   chunk_ids: z.array(IdSchema).optional(),
-  mode: RefineModeSchema.default("paragraph"),
+  mode: RefineModeSchema.default('paragraph'),
   prompt: z.string().optional(),
   options: JsonMetadataSchema.optional(),
 });

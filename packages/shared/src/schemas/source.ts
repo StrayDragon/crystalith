@@ -1,21 +1,22 @@
 // Source schemas — sources, chunks, tags, connector bindings, extractor policy,
 // URL fetch, source search/QA/summary. Mirrors v1 `features.sources.api_schemas`.
-import { z } from "zod";
+import { z } from 'zod';
+
 import {
   IdSchema,
   IsoTimestampSchema,
   JsonMetadataSchema,
   OptionalTimestampSchema,
-} from "./common.js";
+} from './common.js';
 
 // ---------------------------------------------------------------------------
 // Enums
 // ---------------------------------------------------------------------------
 
-export const SourceStatusSchema = z.enum(["processing", "ready", "failed"]);
+export const SourceStatusSchema = z.enum(['processing', 'ready', 'failed']);
 export type SourceStatus = z.infer<typeof SourceStatusSchema>;
 
-export const ExtractorPolicyModeSchema = z.enum(["inherit_global", "custom"]);
+export const ExtractorPolicyModeSchema = z.enum(['inherit_global', 'custom']);
 
 // ---------------------------------------------------------------------------
 // Chunk
@@ -59,7 +60,7 @@ export const SourceCreateSchema = z.object({
   filename: z.string().min(1).max(512),
   content: z.string().nullable().optional(),
   mime_type: z.string().nullable().optional(),
-  parser_type: z.string().min(1).max(64).default("text"),
+  parser_type: z.string().min(1).max(64).default('text'),
   metadata: JsonMetadataSchema.nullable().optional(),
 });
 export type SourceCreate = z.infer<typeof SourceCreateSchema>;
@@ -142,7 +143,7 @@ export type SourceConnectorBinding = z.infer<typeof SourceConnectorBindingSchema
 
 export const NotebookExtractorPolicySchema = z.object({
   notebook_id: IdSchema,
-  mode: ExtractorPolicyModeSchema.default("inherit_global"),
+  mode: ExtractorPolicyModeSchema.default('inherit_global'),
   enabled_extractors: z.array(z.string()).nullable().optional(),
   created_at: IsoTimestampSchema,
   updated_at: IsoTimestampSchema,
@@ -158,23 +159,29 @@ export const PatchNotebookExtractorPolicySchema = z.object({
 // URL ingestion + web extraction
 // ---------------------------------------------------------------------------
 
-export const SourceFromUrlModeSchema = z.enum(["fetch", "link"]);
+export const SourceFromUrlModeSchema = z.enum(['fetch', 'link']);
 
 export const SourceFromUrlRequestSchema = z
   .object({
-    url: z.string().url().refine((v) => v.startsWith("http://") || v.startsWith("https://"), {
-      message: "url must start with http:// or https://",
-    }),
+    url: z
+      .string()
+      .url()
+      .refine((v) => v.startsWith('http://') || v.startsWith('https://'), {
+        message: 'url must start with http:// or https://',
+      }),
     title: z.string().nullable().optional(),
     snippet: z.string().nullable().optional(),
-    mode: SourceFromUrlModeSchema.default("link"),
+    mode: SourceFromUrlModeSchema.default('link'),
     extractor: z
       .string()
       .nullable()
       .optional()
       .refine(
-        (v) => v === null || v === undefined || ["trafilatura", "jina", "firecrawl", "browserless"].includes(v.toLowerCase()),
-        { message: "extractor must be one of: trafilatura, jina, firecrawl, browserless" },
+        (v) =>
+          v === null ||
+          v === undefined ||
+          ['trafilatura', 'jina', 'firecrawl', 'browserless'].includes(v.toLowerCase()),
+        { message: 'extractor must be one of: trafilatura, jina, firecrawl, browserless' },
       ),
   })
   .transform((v) => ({
@@ -212,8 +219,8 @@ export const ExtractorsListSchema = z.object({
 
 export const SourceSearchRequestSchema = z.object({
   query: z.string().min(1),
-  engine: z.string().default("Web"),
-  mode: z.string().default("Fast Research"),
+  engine: z.string().default('Web'),
+  mode: z.string().default('Fast Research'),
 });
 
 export const SourceSearchResultSchema = z.object({
@@ -223,7 +230,7 @@ export const SourceSearchResultSchema = z.object({
   source: z.string().nullable().optional(),
 });
 
-export const SourceSearchStatusSchema = z.enum(["ok", "not_implemented"]);
+export const SourceSearchStatusSchema = z.enum(['ok', 'not_implemented']);
 
 export const SourceSearchResponseSchema = z.object({
   status: SourceSearchStatusSchema,
@@ -259,7 +266,7 @@ export const SourceQAResponseSchema = z.object({
 });
 
 export const QAMessageSchema = z.object({
-  role: z.enum(["user", "assistant"]),
+  role: z.enum(['user', 'assistant']),
   content: z.string(),
 });
 

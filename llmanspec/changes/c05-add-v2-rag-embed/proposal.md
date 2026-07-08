@@ -2,6 +2,7 @@
 depends_on: [c01-add-v2-data-layer]
 batch: all
 ---
+
 # c05-add-v2-rag-embed — Embed RAG 策略 (sqlite-vec)
 
 ## Why

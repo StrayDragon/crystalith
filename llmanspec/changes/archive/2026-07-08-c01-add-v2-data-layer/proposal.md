@@ -2,6 +2,7 @@
 depends_on: [c00-add-v2-server-foundation]
 batch: all
 ---
+
 # c01-add-v2-data-layer — Drizzle ORM + sqlite-vec
 
 ## Why

@@ -1,22 +1,34 @@
 // Research agent schemas — research sessions, steps, search plan/results,
 // streaming progress events. Mirrors v1 `features.research.{schemas,types}`.
-import { z } from "zod";
-import { IdSchema, IsoTimestampSchema, JsonMetadataSchema, OptionalTimestampSchema } from "./common.js";
+import { z } from 'zod';
+
+import {
+  IdSchema,
+  IsoTimestampSchema,
+  JsonMetadataSchema,
+  OptionalTimestampSchema,
+} from './common.js';
 
 export const ResearchStatusSchema = z.enum([
-  "planning",
-  "searching",
-  "analyzing",
-  "waiting_user",
-  "completed",
-  "cancelled",
+  'planning',
+  'searching',
+  'analyzing',
+  'waiting_user',
+  'completed',
+  'cancelled',
 ]);
 export type ResearchStatus = z.infer<typeof ResearchStatusSchema>;
 
-export const ResearchStepTypeSchema = z.enum(["plan", "search", "analyze", "user_input", "summary"]);
+export const ResearchStepTypeSchema = z.enum([
+  'plan',
+  'search',
+  'analyze',
+  'user_input',
+  'summary',
+]);
 export type ResearchStepType = z.infer<typeof ResearchStepTypeSchema>;
 
-export const ResearchStepStatusSchema = z.enum(["pending", "running", "completed", "skipped"]);
+export const ResearchStepStatusSchema = z.enum(['pending', 'running', 'completed', 'skipped']);
 export type ResearchStepStatus = z.infer<typeof ResearchStepStatusSchema>;
 
 // ---------------------------------------------------------------------------
@@ -67,16 +79,16 @@ export const ResearchSessionListSchema = z.object({
 
 export const SearchQuerySchema = z.object({
   query: z.string(),
-  engine: z.string().default("Web"),
+  engine: z.string().default('Web'),
   priority: z.number().int().default(1),
-  reason: z.string().default(""),
+  reason: z.string().default(''),
 });
 export type SearchQuery = z.infer<typeof SearchQuerySchema>;
 
 export const SearchPlanSchema = z.object({
   iteration: z.number().int().positive(),
   queries: z.array(SearchQuerySchema).default([]),
-  reasoning: z.string().default(""),
+  reasoning: z.string().default(''),
   estimated_results: z.number().int().default(10),
 });
 export type SearchPlan = z.infer<typeof SearchPlanSchema>;
@@ -84,8 +96,8 @@ export type SearchPlan = z.infer<typeof SearchPlanSchema>;
 export const ResearchSearchResultSchema = z.object({
   title: z.string(),
   url: z.string(),
-  snippet: z.string().default(""),
-  source: z.string().default(""),
+  snippet: z.string().default(''),
+  source: z.string().default(''),
   iteration: z.number().int().default(1),
   relevance_score: z.number().default(0),
 });
@@ -102,11 +114,11 @@ export const IterationAnalysisSchema = z.object({
 export type IterationAnalysis = z.infer<typeof IterationAnalysisSchema>;
 
 export const ResearchOutputTypeSchema = z.enum([
-  "report",
-  "sub_report",
-  "reference",
-  "link",
-  "raw_result",
+  'report',
+  'sub_report',
+  'reference',
+  'link',
+  'raw_result',
 ]);
 
 export const ResearchOutputSchema = z.object({
@@ -116,7 +128,7 @@ export const ResearchOutputSchema = z.object({
   url: z.string().nullable().optional(),
   source_iteration: z.number().int().default(1),
   relevance_score: z.number().default(0),
-  snippet: z.string().default(""),
+  snippet: z.string().default(''),
   citation_index: z.number().int().nullable().optional(),
   can_export_as_source: z.boolean().default(true),
   can_export_as_note: z.boolean().default(true),
@@ -128,7 +140,7 @@ export type ResearchOutput = z.infer<typeof ResearchOutputSchema>;
 // User action on a waiting_user session
 // ---------------------------------------------------------------------------
 
-export const ResearchUserActionSchema = z.enum(["approve", "modify", "skip", "finish"]);
+export const ResearchUserActionSchema = z.enum(['approve', 'modify', 'skip', 'finish']);
 export type ResearchUserAction = z.infer<typeof ResearchUserActionSchema>;
 
 export const ResearchUserInputSchema = z.object({

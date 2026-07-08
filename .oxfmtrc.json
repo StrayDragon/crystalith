@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "bracketSpacing": true,
+  "arrowParens": "always",
+  "endOfLine": "lf",
+  "sortImports": {
+    "groups": ["builtin", "external", "internal", ["parent", "sibling", "index"], "unknown"],
+    "newlinesBetween": true,
+    "order": "asc"
+  },
+  "sortPackageJson": true,
+  "ignorePatterns": [
+    "dist/",
+    "coverage/",
+    "node_modules/",
+    "vendor/",
+    "backend/",
+    "config/",
+    "bun.lock",
+    "*.generated.ts",
+    "*.gen.ts",
+    "openapi.gen.json"
+  ]
+}

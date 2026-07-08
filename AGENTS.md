@@ -7,19 +7,18 @@
 
 ```
 crystalith/
-├── server/               # ✅ Bun + Elysia (Phase 0 scaffold done)
-│   └── src/
-│       ├── server.ts           # Entry: Elysia HTTP server
-│       ├── features/           # Business domains (notebooks, qa, sources, ...)
-│       ├── shared/             # Cross-cutting (db, ai, config, vector, utils)
-│       └── db/                 # Drizzle schema + migrations
-├── packages/shared/      # ✅ Shared Zod schemas + types (server ↔ frontend)
-│   └── src/
-├── frontend/web/         # Vite + React + TypeScript SPA (reused, API layer updated)
-│   └── src/
-│       ├── features/workspace/ # Main workspace UI
-│       ├── api/                # API client layer (eden RPC replacing generated client)
-│       └── shared/             # Shared UI utilities, Layer system
+├── apps/
+│   ├── server/           # ✅ Bun + Elysia (Phase 0 scaffold done)
+│   │   └── src/
+│   │       ├── server.ts           # Entry: Elysia HTTP server
+│   │       ├── features/           # Business domains (notebooks, qa, sources, ...)
+│   │       ├── shared/             # Cross-cutting (db, ai, config, vector, utils)
+│   │       └── db/                 # Drizzle schema + migrations
+│   └── web/               # Vite + React + TypeScript SPA (reused, API layer updated)
+│       └── src/
+│           ├── features/workspace/ # Main workspace UI
+│           ├── api/                # API client layer (eden RPC replacing generated client)
+│           └── shared/             # Shared UI utilities, Layer system
 ├── package.json          # ✅ Bun workspace root
 ├── config/               # Runtime config (app.yaml + secret.env)
 ├── llmanspec/            # Spec-driven development specs + changes
@@ -30,6 +29,7 @@ crystalith/
 ## Current State
 
 The repo is in **v2 scaffold** phase on branch `v2-dev`:
+
 - ✅ Phase 0 scaffold done: Bun workspace + Elysia server skeleton
 - ✅ pnpm → bun migration complete
 - ✅ Shared packages workspace set up (`packages/shared/`)
@@ -45,6 +45,7 @@ Read it to understand **what** the feature does, then design a better **how** in
 Do NOT blindly copy/paste — understand the intent and optimize for the Bun/Elysia/ai-sdk stack.
 
 Key entry points in v1:
+
 - `backend/py/src/crystalith/features/*/` — business domains
 - `backend/py/src/crystalith/web/routers.py` — route registration (18 routers)
 - `backend/py/src/crystalith/shared/ai/` — AI agent runtime (pydantic-ai + pydantic-graph)
@@ -52,43 +53,45 @@ Key entry points in v1:
 
 ## v2 Target Stack
 
-| Role | Technology |
-|------|-----------|
-| Runtime | **Bun** (single binary, bun:sqlite built-in) |
-| Web Framework | **Elysia** (eden RPC — zero-codegen type-safe client) |
-| ORM | **Drizzle ORM** (bun-sqlite driver) |
-| AI Runtime | **Vercel AI SDK** (`ai` + `@ai-sdk/openai` + `@ai-sdk/anthropic` + ...) |
-| Schema Validation | **Zod** (shared frontend/backend) |
-| Vector Store | **sqlite-vec** (in-process, same DB file) |
-| PDF Parsing | **unpdf** (pdf.js based, MIT) |
-| Template Engine | **Nunjucks** (already used in frontend) |
-| Desktop Distribution | **Tauri v2** + Bun sidecar (post-Phase-4) |
+| Role                 | Technology                                                              |
+| -------------------- | ----------------------------------------------------------------------- |
+| Runtime              | **Bun** (single binary, bun:sqlite built-in)                            |
+| Web Framework        | **Elysia** (eden RPC — zero-codegen type-safe client)                   |
+| ORM                  | **Drizzle ORM** (bun-sqlite driver)                                     |
+| AI Runtime           | **Vercel AI SDK** (`ai` + `@ai-sdk/openai` + `@ai-sdk/anthropic` + ...) |
+| Schema Validation    | **Zod** (shared frontend/backend)                                       |
+| Vector Store         | **sqlite-vec** (in-process, same DB file)                               |
+| PDF Parsing          | **unpdf** (pdf.js based, MIT)                                           |
+| Template Engine      | **Nunjucks** (already used in frontend)                                 |
+| Desktop Distribution | **Tauri v2** + Bun sidecar (post-Phase-4)                               |
 
 ## Build, Test, and Development Commands
 
 From repo root (Bun workspace):
+
 - `bun install` — install all dependencies (server + frontend + shared)
 - `bun dev` — start full dev environment (parallel: server --watch + Vite HMR)
 - `bun test` — run all tests
 - `bun typecheck` — typecheck everything
 
 Fast path (individual packages):
-- `cd server && bun dev` — Elysia server with hot reload (port 8032)
-- `cd frontend/web && bun dev` — Vite dev server (port 3000)
-- `cd frontend/web && bun test` — Vitest
-- `cd frontend/web && bun run typecheck` — TypeScript typechecking
+
+- `cd apps/server && bun dev` — Elysia server with hot reload (port 8032)
+- `cd apps/web && bun dev` — Vite dev server (port 3000)
+- `cd apps/web && bun test` — Vitest
+- `cd apps/web && bun run typecheck` — TypeScript typechecking
 
 ## Coding Style
 
 - **TypeScript/React**: 2-space indentation; `PascalCase` components; `useX` hooks; `camelCase` elsewhere
-- **Layer System** (z-index): Use the unified Layer system in `frontend/web/src/shared/layer/` — never hardcode z-index values
+- **Layer System** (z-index): Use the unified Layer system in `apps/web/src/shared/layer/` — never hardcode z-index values
 - Frontend uses `oxfmt` for formatting; match existing style
 
 ## v2 Migration Workflow
 
 1. Run `llman sdd list` to see all active changes and their status
 2. Read relevant v1 code in `backend/py/` to understand a feature
-3. Design v2 implementation, then implement in `server/` with Elysia + Drizzle + AI SDK
+3. Design v2 implementation, then implement in `apps/server/` with Elysia + Drizzle + AI SDK
 4. Frontend API calls gradually switch from generated client to eden RPC
 5. Do NOT modify v1 Python code; Python is the reference SSOT
 

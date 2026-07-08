@@ -18,11 +18,11 @@ dev:
 
 # Start only the Elysia server
 dev-server:
-    cd server && bun dev
+    cd apps/server && bun dev
 
 # Start only the frontend
 dev-web:
-    cd frontend/web && bun dev
+    cd apps/web && bun dev
 
 # Start both (two terminals: `just dev-server` + `just dev-web`)
 # Or use: bun run dev:server & bun run dev:web
@@ -31,53 +31,37 @@ dev-web:
 # Build
 # --------------------------------------------------------------------------
 
-# Build frontend for production
-build-web:
-    cd frontend/web && bun run build
-
-# Build server binary (bun build --compile)
-# TODO: Enable when v2 server scaffold is ready
+# TODO: Enable when v2 server core is wired up
 # build-server:
-#     cd server && bun build --compile --outfile=crystalith-server ./src/server.ts
-
-# Full production build
-# build: build-web build-server
+#     cd apps/server && bun build --compile --outfile=crystalith-server ./src/server.ts
 
 # --------------------------------------------------------------------------
-# Testing
+# Code Quality (delegated to root bun scripts)
 # --------------------------------------------------------------------------
 
-# Run all tests (frontend only for now)
-test:
-    cd frontend/web && bun run test:ci
-
-# Run frontend CI tests
-test-frontend:
-    cd frontend/web && bun run test:ci
-
-# --------------------------------------------------------------------------
-# Code Quality
-# --------------------------------------------------------------------------
-
-# Type check frontend
-typecheck:
-    cd frontend/web && bun run typecheck
-
-# Lint frontend (incremental)
-lint:
-    cd frontend/web && bun run lint
-
-# Format check frontend
+# Format check (oxfmt)
 format-check:
-    cd frontend/web && bun run format:check
+    bun format:check
 
-# Format frontend
+# Format fix (oxfmt --write)
 format:
-    cd frontend/web && bun run format
+    bun format:write
+
+# Lint (oxlint)
+lint:
+    bun lint
+
+# Typecheck (all workspaces)
+typecheck:
+    bun typecheck
 
 # Run all quality checks
 check: typecheck lint format-check
     @echo "All checks passed."
+
+# Run backend tests
+test:
+    bun test apps/server/test/ packages/shared/test/
 
 # --------------------------------------------------------------------------
 # Config
@@ -93,6 +77,6 @@ upsert-env-configs:
 
 # Clean build artifacts
 clean:
-    rm -rf frontend/web/dist
-    rm -rf frontend/web/node_modules
-    # TODO: add server/node_modules, server/dist when scaffolded
+    rm -rf apps/web/dist
+    rm -rf apps/web/node_modules
+    rm -rf apps/server/node_modules

@@ -1,36 +1,37 @@
 // Output schemas — typed generation framework.
 // Content shapes mirror the frontend `OutputContentByType` contract exactly so
 // the v2 server can feed the existing renderers without translation.
-import { z } from "zod";
-import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from "./common.js";
+import { z } from 'zod';
+
+import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from './common.js';
 
 // ---------------------------------------------------------------------------
 // Output type enum (10 types — 7 tools + 3 summary styles)
 // ---------------------------------------------------------------------------
 
 export const OutputTypeSchema = z.enum([
-  "FAQ",
-  "GUIDE",
-  "TIMELINE",
-  "MINDMAP",
-  "QUIZ",
-  "BRIEFING",
-  "SLIDES",
-  "PARAGRAPH",
-  "BULLETS",
-  "STRUCTURED",
+  'FAQ',
+  'GUIDE',
+  'TIMELINE',
+  'MINDMAP',
+  'QUIZ',
+  'BRIEFING',
+  'SLIDES',
+  'PARAGRAPH',
+  'BULLETS',
+  'STRUCTURED',
 ]);
 export type OutputType = z.infer<typeof OutputTypeSchema>;
 
 /** The 7 "tool" output types that have dedicated generators + renderers. */
 export const ToolOutputTypeSchema = z.enum([
-  "FAQ",
-  "GUIDE",
-  "TIMELINE",
-  "MINDMAP",
-  "QUIZ",
-  "BRIEFING",
-  "SLIDES",
+  'FAQ',
+  'GUIDE',
+  'TIMELINE',
+  'MINDMAP',
+  'QUIZ',
+  'BRIEFING',
+  'SLIDES',
 ]);
 export type ToolOutputType = z.infer<typeof ToolOutputTypeSchema>;
 
@@ -104,7 +105,10 @@ export const QuizContentSchema = OutputContentBaseSchema.extend({
     z.object({
       question: nullableText,
       options: z.array(z.string()).nullable().optional(),
-      answer: z.union([z.string(), z.array(z.string())]).nullable().optional(),
+      answer: z
+        .union([z.string(), z.array(z.string())])
+        .nullable()
+        .optional(),
       explanation: nullableText,
     }),
   ),
@@ -153,7 +157,10 @@ export const BulletsContentSchema = OutputContentBaseSchema.extend({
 export type BulletsContent = z.infer<typeof BulletsContentSchema>;
 
 export const StructuredContentSchema = OutputContentBaseSchema.extend({
-  bullets: z.array(z.union([z.string(), textItem])).nullable().optional(),
+  bullets: z
+    .array(z.union([z.string(), textItem]))
+    .nullable()
+    .optional(),
   terms: z.array(z.string()).nullable().optional(),
 });
 export type StructuredContent = z.infer<typeof StructuredContentSchema>;
@@ -162,17 +169,17 @@ export type StructuredContent = z.infer<typeof StructuredContentSchema>;
 // Discriminated-by-type content union (for typed generation requests)
 // ---------------------------------------------------------------------------
 
-export const TypedOutputContentSchema = z.discriminatedUnion("type", [
-  FaqContentSchema.extend({ type: z.literal("FAQ") }),
-  GuideContentSchema.extend({ type: z.literal("GUIDE") }),
-  TimelineContentSchema.extend({ type: z.literal("TIMELINE") }),
-  MindmapContentSchema.extend({ type: z.literal("MINDMAP") }),
-  QuizContentSchema.extend({ type: z.literal("QUIZ") }),
-  BriefingContentSchema.extend({ type: z.literal("BRIEFING") }),
-  SlidesContentSchema.extend({ type: z.literal("SLIDES") }),
-  ParagraphContentSchema.extend({ type: z.literal("PARAGRAPH") }),
-  BulletsContentSchema.extend({ type: z.literal("BULLETS") }),
-  StructuredContentSchema.extend({ type: z.literal("STRUCTURED") }),
+export const TypedOutputContentSchema = z.discriminatedUnion('type', [
+  FaqContentSchema.extend({ type: z.literal('FAQ') }),
+  GuideContentSchema.extend({ type: z.literal('GUIDE') }),
+  TimelineContentSchema.extend({ type: z.literal('TIMELINE') }),
+  MindmapContentSchema.extend({ type: z.literal('MINDMAP') }),
+  QuizContentSchema.extend({ type: z.literal('QUIZ') }),
+  BriefingContentSchema.extend({ type: z.literal('BRIEFING') }),
+  SlidesContentSchema.extend({ type: z.literal('SLIDES') }),
+  ParagraphContentSchema.extend({ type: z.literal('PARAGRAPH') }),
+  BulletsContentSchema.extend({ type: z.literal('BULLETS') }),
+  StructuredContentSchema.extend({ type: z.literal('STRUCTURED') }),
 ]);
 
 /** Lookup map: type → content schema (used by generateObject dispatch). */

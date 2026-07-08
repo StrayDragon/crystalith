@@ -18,7 +18,7 @@ app.post('/v2/qa/stream', async ({ body }) => {
         parameters: z.object({ query: z.string(), topK: z.number().default(5) }),
         execute: async ({ query, topK }) => {
           const chunks = await ragService.retrieve(notebook_id, query, topK);
-          return chunks.map(c => ({ id: c.id, text: c.text, source: c.source, page: c.page }));
+          return chunks.map((c) => ({ id: c.id, text: c.text, source: c.source, page: c.page }));
         },
       }),
     },
@@ -33,7 +33,7 @@ app.post('/v2/qa/stream', async ({ body }) => {
         controller.close();
       },
     }),
-    { headers: { 'Content-Type': 'text/event-stream' } }
+    { headers: { 'Content-Type': 'text/event-stream' } },
   );
 });
 ```
@@ -53,10 +53,13 @@ GET /v2/notebooks/:nid/sessions/:sid/messages/:mid/citations
 ### Presets
 
 QA system prompt 通过 preset 管理:
+
 ```ts
 // config/presets.ts
-export const defaultPreset = 'You are a helpful RAG assistant. Answer based on provided context with citations.';
-export const analysisPreset = 'You are a deep analysis assistant. Identify patterns, contradictions, and implications.';
+export const defaultPreset =
+  'You are a helpful RAG assistant. Answer based on provided context with citations.';
+export const analysisPreset =
+  'You are a deep analysis assistant. Identify patterns, contradictions, and implications.';
 ```
 
 ### Migration note

@@ -2,6 +2,7 @@
 depends_on: [c04-add-v2-core-crud, c02-add-v2-ai-runtime]
 batch: all
 ---
+
 # c09-add-v2-outputs-generation — 10 种结构化输出类型
 
 ## Why

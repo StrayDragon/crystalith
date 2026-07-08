@@ -1,6 +1,7 @@
 // Notebook schemas — `crystalith.features.notebooks.schemas`
-import { z } from "zod";
-import { IdSchema, IsoTimestampSchema, TimestampsSchema } from "./common.js";
+import { z } from 'zod';
+
+import { IdSchema, IsoTimestampSchema, TimestampsSchema } from './common.js';
 
 export const NotebookSchema = z.object({
   id: IdSchema,

@@ -37,6 +37,7 @@ SSOT 路径: `packages/shared/src/schemas/` → Zod → `@asteasolutions/zod-to-
 ### Migration Plan
 
 每个 domain 一个 PR，逐步替换 generated client 调用：
+
 1. notebooks domain
 2. sessions domain
 3. messages domain

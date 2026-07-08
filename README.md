@@ -15,15 +15,15 @@ just dev
 
 ## Tech Stack (v2)
 
-| Layer | Technology |
-|-------|-----------|
-| Runtime | Bun (single binary, `--compile`) |
-| Server | Elysia + Vercel AI SDK |
-| Frontend | React 19 + Vite + TypeScript |
-| Database | bun:sqlite + Drizzle ORM |
-| Vector Store | sqlite-vec (in-process) |
-| AI | @ai-sdk/openai + @ai-sdk/anthropic + ... |
-| Desktop | Tauri v2 (post-Phase-4) |
+| Layer        | Technology                               |
+| ------------ | ---------------------------------------- |
+| Runtime      | Bun (single binary, `--compile`)         |
+| Server       | Elysia + Vercel AI SDK                   |
+| Frontend     | React 19 + Vite + TypeScript             |
+| Database     | bun:sqlite + Drizzle ORM                 |
+| Vector Store | sqlite-vec (in-process)                  |
+| AI           | @ai-sdk/openai + @ai-sdk/anthropic + ... |
+| Desktop      | Tauri v2 (post-Phase-4)                  |
 
 ## Development
 

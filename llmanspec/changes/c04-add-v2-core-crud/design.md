@@ -60,6 +60,7 @@ file upload → detect mime → select parser → parse → chunk → embed → 
 ### Error Envelope
 
 所有 v2 端点统一错误格式:
+
 ```json
 { "error_code": "NOT_FOUND", "message": "...", "details": {} }
 ```

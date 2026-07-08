@@ -1,6 +1,7 @@
 # c00-add-v2-server-foundation
 
 batch: all
+
 ## Why
 
 v1 Python backend (FastAPI + pydantic-ai + SQLAlchemy + ChromaDB) must be rewritten in Bun + TypeScript for single-binary distribution, shared types, and unified AI runtime. Phase 0 establishes the workspace structure, build tooling, and minimal Elysia server skeleton.

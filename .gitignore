@@ -31,7 +31,7 @@ config/secret.env
 
 # Local runtime data (databases/uploads)
 backend/py/data/
-server/data/
+apps/server/data/
 
 ### Python ###
 # Python compiled files, virtual environments, and cache
@@ -171,6 +171,7 @@ profile_default/
 site/
 docs/.cache/
 frontend/web/coverage/
+apps/web/coverage/
 
 ### Pnpm ###
 # pnpm package manager specific files
@@ -338,5 +339,5 @@ data/*
 !data/README.md
 
 # Allow workspace refine template data to be tracked.
-!frontend/web/src/features/workspace/data/
-!frontend/web/src/features/workspace/data/refineTemplates.ts
+!apps/web/src/features/workspace/data/
+!apps/web/src/features/workspace/data/refineTemplates.ts

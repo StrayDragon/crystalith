@@ -1,9 +1,10 @@
 // Analysis schemas — topic modeling + relation/contradiction graph.
 // Mirrors v1 `features.analysis.types`.
-import { z } from "zod";
-import { IdSchema, JsonMetadataSchema } from "./common.js";
+import { z } from 'zod';
 
-export const RelationTypeSchema = z.enum(["similar", "references", "contradicts"]);
+import { IdSchema, JsonMetadataSchema } from './common.js';
+
+export const RelationTypeSchema = z.enum(['similar', 'references', 'contradicts']);
 export type RelationType = z.infer<typeof RelationTypeSchema>;
 
 export const TopicSchema = z.object({

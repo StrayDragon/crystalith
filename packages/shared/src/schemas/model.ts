@@ -3,8 +3,9 @@
 // Mirrors v1 `shared.config.models` (Continue-inspired) but simplified for the
 // Vercel AI SDK provider registry: provider is a registry key resolved via
 // dynamic import, not a hardcoded switch.
-import { z } from "zod";
-import { JsonMetadataSchema } from "./common.js";
+import { z } from 'zod';
+
+import { JsonMetadataSchema } from './common.js';
 
 // ---------------------------------------------------------------------------
 // Provider config (OpenAI-compatible baseline; extra keys allowed for other SDKs)
@@ -47,10 +48,22 @@ export type RequestOptions = z.infer<typeof RequestOptionsSchema>;
 // Model roles + capabilities
 // ---------------------------------------------------------------------------
 
-export const ModelRoleSchema = z.enum(["chat", "embed", "edit", "apply", "autocomplete", "summarize"]);
+export const ModelRoleSchema = z.enum([
+  'chat',
+  'embed',
+  'edit',
+  'apply',
+  'autocomplete',
+  'summarize',
+]);
 export type ModelRole = z.infer<typeof ModelRoleSchema>;
 
-export const ModelCapabilitySchema = z.enum(["tool_use", "image_input", "audio_input", "streaming"]);
+export const ModelCapabilitySchema = z.enum([
+  'tool_use',
+  'image_input',
+  'audio_input',
+  'streaming',
+]);
 export type ModelCapability = z.infer<typeof ModelCapabilitySchema>;
 
 // ---------------------------------------------------------------------------
@@ -63,8 +76,8 @@ export const ModelConfigSchema = z.object({
   provider: z.string().min(1),
   model: z.string().min(1),
   display_name: z.string().min(1),
-  description: z.string().default(""),
-  roles: z.array(ModelRoleSchema).default(["chat"]),
+  description: z.string().default(''),
+  roles: z.array(ModelRoleSchema).default(['chat']),
   capabilities: z.array(ModelCapabilitySchema).default([]),
   provider_config: ProviderConfigSchema.nullable().optional(),
   completion_options: CompletionOptionsSchema.nullable().optional(),
@@ -96,13 +109,13 @@ export const ModelsSettingsSchema = z
   })
   .superRefine((val, ctx) => {
     const ids = new Set(val.available.map((m) => m.id));
-    for (const role of ["chat", "embedding", "edit", "autocomplete"] as const) {
+    for (const role of ['chat', 'embedding', 'edit', 'autocomplete'] as const) {
       const defId = val.defaults[role];
       if (defId && !ids.has(defId)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `Default ${role} model '${defId}' not found in models.available`,
-          path: ["defaults", role],
+          path: ['defaults', role],
         });
       }
     }
@@ -136,13 +149,13 @@ export const ModelListSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const KnownProviderSchema = z.enum([
-  "openai",
-  "anthropic",
-  "google",
-  "deepseek",
-  "openai-compatible",
-  "groq",
-  "together",
-  "bedrock",
+  'openai',
+  'anthropic',
+  'google',
+  'deepseek',
+  'openai-compatible',
+  'groq',
+  'together',
+  'bedrock',
 ]);
 export type KnownProvider = z.infer<typeof KnownProviderSchema>;
