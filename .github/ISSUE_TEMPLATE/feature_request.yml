@@ -46,4 +46,4 @@ body:
       options:
         - label: This may be a breaking change / 可能是破坏性变更
         - label: This affects the UI / 影响前端 UI
-        - label: This affects the backend API / 影响后端 API
+        - label: This affects the server API / 影响服务端 API

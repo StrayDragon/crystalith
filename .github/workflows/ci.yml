@@ -22,15 +22,23 @@ jobs:
       - name: Fetch default branch (for incremental lint)
         run: git fetch origin v2-dev --depth=1
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      # TODO: switch to bun after frontend pnpm→bun migration
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          bun-version: latest
+          version: "10.29.2"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: frontend/web/pnpm-lock.yaml
 
       - name: Install dependencies
         run: |
           cd frontend/web
-          bun install --frozen-lockfile
+          pnpm install --frozen-lockfile
 
       - name: Lint (incremental)
         run: |
