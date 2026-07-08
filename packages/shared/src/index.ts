@@ -8,5 +8,5 @@
 //   @crystalith/shared            → this barrel (schemas + inferred types)
 //   @crystalith/shared/schemas    → Zod schemas only
 //   @crystalith/shared/types      → z.infer<> type aliases
-export * from "./schemas/index.js";
-export * from "./types/index.js";
+export * from './schemas/index.js';
+export * from './types/index.js';

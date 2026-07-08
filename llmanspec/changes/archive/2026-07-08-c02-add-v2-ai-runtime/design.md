@@ -11,27 +11,28 @@ Vercel AI SDK v7 是统一 AI 运行时，覆盖 provider 抽象、agent loop、
 import type { LanguageModelV1 } from 'ai';
 
 interface ProviderEntry {
-  sdk: string;       // npm 包名
-  factory: string;   // 工厂函数名
+  sdk: string; // npm 包名
+  factory: string; // 工厂函数名
 }
 
 const KNOWN_PROVIDERS: Record<string, ProviderEntry> = {
-  openai:              { sdk: '@ai-sdk/openai',              factory: 'createOpenAI' },
-  anthropic:           { sdk: '@ai-sdk/anthropic',           factory: 'createAnthropic' },
-  google:              { sdk: '@ai-sdk/google',              factory: 'createGoogleGenerativeAI' },
-  deepseek:            { sdk: '@ai-sdk/openai',              factory: 'createOpenAI' }, // OpenAI-compatible
-  'openai-compatible': { sdk: '@ai-sdk/openai-compatible',   factory: 'createOpenAICompatible' },
-  groq:                { sdk: '@ai-sdk/openai-compatible',   factory: 'createOpenAICompatible' },
-  together:            { sdk: '@ai-sdk/openai-compatible',   factory: 'createOpenAICompatible' },
-  bedrock:             { sdk: '@ai-sdk/amazon-bedrock',      factory: 'createAmazonBedrock' },
+  openai: { sdk: '@ai-sdk/openai', factory: 'createOpenAI' },
+  anthropic: { sdk: '@ai-sdk/anthropic', factory: 'createAnthropic' },
+  google: { sdk: '@ai-sdk/google', factory: 'createGoogleGenerativeAI' },
+  deepseek: { sdk: '@ai-sdk/openai', factory: 'createOpenAI' }, // OpenAI-compatible
+  'openai-compatible': { sdk: '@ai-sdk/openai-compatible', factory: 'createOpenAICompatible' },
+  groq: { sdk: '@ai-sdk/openai-compatible', factory: 'createOpenAICompatible' },
+  together: { sdk: '@ai-sdk/openai-compatible', factory: 'createOpenAICompatible' },
+  bedrock: { sdk: '@ai-sdk/amazon-bedrock', factory: 'createAmazonBedrock' },
 };
 
 export async function resolveModel(config: ModelConfig): Promise<LanguageModelV1> {
   const entry = KNOWN_PROVIDERS[config.provider];
   if (entry) {
     const mod = await import(entry.sdk);
-    const factoryFn = mod[entry.factory] as
-      ((opts: Record<string, unknown>) => (modelId: string) => LanguageModelV1);
+    const factoryFn = mod[entry.factory] as (
+      opts: Record<string, unknown>,
+    ) => (modelId: string) => LanguageModelV1;
     return factoryFn({
       apiKey: config.apiKey,
       baseURL: config.baseUrl,
@@ -41,8 +42,9 @@ export async function resolveModel(config: ModelConfig): Promise<LanguageModelV1
   // Advanced fallback: allow config to specify sdk + factory directly
   if (config.sdk && config.factory) {
     const mod = await import(config.sdk);
-    const factoryFn = mod[config.factory] as
-      ((opts: Record<string, unknown>) => (modelId: string) => LanguageModelV1);
+    const factoryFn = mod[config.factory] as (
+      opts: Record<string, unknown>,
+    ) => (modelId: string) => LanguageModelV1;
     return factoryFn({
       apiKey: config.apiKey,
       baseURL: config.baseUrl,
@@ -56,17 +58,18 @@ export async function resolveModel(config: ModelConfig): Promise<LanguageModelV1
 **安全说明**: `import('@ai-sdk/openai')` 不是 eval —— 只能加载已安装的 npm 包。能修改配置文件的攻击者已经拥有文件系统权限，`import()` 不增加攻击面。90% 的 provider 走 `openai-compatible` 路径，一行配置即可。
 
 **配置示例** (`config/app.yaml`):
+
 ```yaml
 models:
   defaults: { chat: 'gpt-4o', embedding: 'text-embedding-3-small' }
   available:
     - id: 'gpt-4o'
-      provider: 'openai'           # → KNOWN_PROVIDERS['openai'] → @ai-sdk/openai
+      provider: 'openai' # → KNOWN_PROVIDERS['openai'] → @ai-sdk/openai
       model: 'gpt-4o'
       apiKey: '{{ secret.OPENAI_API_KEY }}'
       options: { temperature: 0.7, maxTokens: 4096 }
     - id: 'gateway-chat'
-      provider: 'openai-compatible'  # → KNOWN_PROVIDERS['openai-compatible']
+      provider: 'openai-compatible' # → KNOWN_PROVIDERS['openai-compatible']
       model: '{{ env.MODEL_NAME }}'
       apiKey: '{{ secret.LOCAL_KEY }}'
       baseUrl: 'http://127.0.0.1:50256/v1'
@@ -101,6 +104,7 @@ for await (const chunk of result.fullStream) {
 ```
 
 关键点：
+
 - `maxSteps` 控制 agent loop 最大轮次
 - tools 可以是 `tool()` from ai 或 `dynamicTool()` from provider-utils
 - fullStream 可用于自定义 SSE 中继（Elysia ReadableStream）
@@ -123,6 +127,7 @@ const { object } = await generateObject({
 ```
 
 Or use the newer `Output.object()` pattern (AI SDK v7):
+
 ```ts
 import { generateText, Output } from 'ai';
 const { output } = await generateText({
@@ -163,10 +168,11 @@ function withRetry(model: LanguageModelV4, maxRetries = 3) {
     middleware: {
       async wrapGenerate({ doGenerate }) {
         for (let i = 0; i < maxRetries; i++) {
-          try { return await doGenerate(); }
-          catch (e) {
+          try {
+            return await doGenerate();
+          } catch (e) {
             if (i === maxRetries - 1) throw e;
-            await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+            await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
           }
         }
         throw new Error('unreachable');
@@ -200,6 +206,7 @@ gpt-tokenizer v3 纯 JS，零 wasm，支持 cl100k_base (GPT-4/GPT-3.5) 和 o200
 
 BREAKING: pydantic-ai + pydantic-graph + langchain-community 全部替换。
 Pattern 映射：
+
 - pydantic-ai Agent.run() → AI SDK streamText + maxSteps + tools
 - pydantic-ai output_type → generateObject(schema: Zod) or Output.object()
 - pydantic-graph BaseNode → async function chain + generateObject

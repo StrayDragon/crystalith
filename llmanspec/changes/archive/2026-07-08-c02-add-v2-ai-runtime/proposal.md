@@ -2,6 +2,7 @@
 depends_on: [c00-add-v2-server-foundation]
 batch: all
 ---
+
 # c02-add-v2-ai-runtime — AI 运行时：Vercel AI SDK 替换 pydantic-ai/pydantic-graph
 
 ## Why

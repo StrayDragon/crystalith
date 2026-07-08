@@ -1,7 +1,7 @@
 name: Bug report / 缺陷报告
 description: Report a reproducible bug / 报告可复现的问题
-title: "[Bug]: "
-labels: ["bug"]
+title: '[Bug]: '
+labels: ['bug']
 body:
   - type: markdown
     attributes:

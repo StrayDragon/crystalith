@@ -2,6 +2,7 @@
 depends_on: [c04-add-v2-core-crud, c02-add-v2-ai-runtime]
 batch: all
 ---
+
 # c08-add-v2-research-agent — 自主研究 Agent (深度调研)
 
 ## Why

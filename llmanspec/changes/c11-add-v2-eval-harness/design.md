@@ -7,7 +7,7 @@
 interface EvalDataset {
   id: number;
   name: string;
-  items: EvalItem[];         // relations
+  items: EvalItem[]; // relations
 }
 
 // DB: eval_items
@@ -15,9 +15,9 @@ interface EvalItem {
   id: number;
   datasetId: number;
   question: string;
-  expectedAnswer: string;     // Golden answer
+  expectedAnswer: string; // Golden answer
   expectedSources?: number[]; // Ground truth source IDs
-  notebookId: number;         // Which notebook to run against
+  notebookId: number; // Which notebook to run against
 }
 ```
 
@@ -26,10 +26,10 @@ interface EvalItem {
 ```ts
 // server/src/features/eval/metrics.ts
 interface EvalMetrics {
-  faithfulness: number;    // 0-1: is the answer faithful to retrieved context?
-  relevance: number;       // 0-1: does the answer address the question?
-  recall: number;          // 0-1: were expected sources retrieved? (if expectedSources provided)
-  latencyMs: number;       // total pipeline time
+  faithfulness: number; // 0-1: is the answer faithful to retrieved context?
+  relevance: number; // 0-1: does the answer address the question?
+  recall: number; // 0-1: were expected sources retrieved? (if expectedSources provided)
+  latencyMs: number; // total pipeline time
 }
 
 // LLM-as-Judge via generateObject

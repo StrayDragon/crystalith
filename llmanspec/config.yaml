@@ -21,14 +21,14 @@ context: |-
   - Stable entrypoints: `bun test`, `bun typecheck`.
 rules:
   design:
-  - For generated artifacts or injected blocks, include naming/marker rules and deterministic output expectations.
-  - For repo-wide refactors, include an explicit migration + rollback boundary.
+    - For generated artifacts or injected blocks, include naming/marker rules and deterministic output expectations.
+    - For repo-wide refactors, include an explicit migration + rollback boundary.
   proposal:
-  - If the change renames paths/contracts, mark them as **BREAKING** and list old -> new explicitly.
-  - If the change introduces/updates generated artifacts, specify the SSOT, generator entrypoint, and drift gate command.
+    - If the change renames paths/contracts, mark them as **BREAKING** and list old -> new explicitly.
+    - If the change introduces/updates generated artifacts, specify the SSOT, generator entrypoint, and drift gate command.
   specs:
-  - Use ADDED/MODIFIED/REMOVED/RENAMED sections as appropriate.
-  - For MODIFIED requirements, copy the full updated requirement block (do not do partial diffs).
+    - Use ADDED/MODIFIED/REMOVED/RENAMED sections as appropriate.
+    - For MODIFIED requirements, copy the full updated requirement block (do not do partial diffs).
   tasks:
-  - Group tasks by dependency order and include explicit verification commands.
-  - Include drift-check commands whenever generated artifacts are involved.
+    - Group tasks by dependency order and include explicit verification commands.
+    - Include drift-check commands whenever generated artifacts are involved.

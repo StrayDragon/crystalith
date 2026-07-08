@@ -2,6 +2,7 @@
 depends_on: [c04-add-v2-core-crud, c05-add-v2-rag-embed]
 batch: all
 ---
+
 # c06-add-v2-rag-registry — 可插拔 RAG 策略注册表
 
 ## Why

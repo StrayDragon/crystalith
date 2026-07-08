@@ -12,7 +12,9 @@
     {
       "id": "notebooks",
       "backend": { "pytestPaths": ["tests/web/test_api_smoke.py"] },
-      "frontend": { "vitestFiles": ["src/features/workspace/domains/notebooks/useNotebooks.test.tsx"] }
+      "frontend": {
+        "vitestFiles": ["src/features/workspace/domains/notebooks/useNotebooks.test.tsx"]
+      }
     },
     {
       "id": "analysis",

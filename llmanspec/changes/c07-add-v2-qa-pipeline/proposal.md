@@ -2,6 +2,7 @@
 depends_on: [c04-add-v2-core-crud, c05-add-v2-rag-embed, c02-add-v2-ai-runtime]
 batch: all
 ---
+
 # c07-add-v2-qa-pipeline — QA 管线 (AI SDK streamText + RAG)
 
 ## Why

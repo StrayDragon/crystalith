@@ -1,6 +1,7 @@
 // Session schemas — `crystalith.features.sessions.schemas`
-import { z } from "zod";
-import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from "./common.js";
+import { z } from 'zod';
+
+import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from './common.js';
 
 export const SessionSchema = z.object({
   id: IdSchema,

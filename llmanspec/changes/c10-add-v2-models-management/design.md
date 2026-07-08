@@ -21,20 +21,20 @@ interface ModelInfo {
 
 ```yaml
 models:
-  defaults: { chat: "gpt-4o", embedding: "text-embedding-3-small" }
+  defaults: { chat: 'gpt-4o', embedding: 'text-embedding-3-small' }
   available:
-    - id: "gpt-4o"
-      provider: "openai"
-      model: "gpt-4o"
-      displayName: "GPT-4o"
+    - id: 'gpt-4o'
+      provider: 'openai'
+      model: 'gpt-4o'
+      displayName: 'GPT-4o'
       roles: [chat, edit]
       capabilities: [tool_use]
       options: { temperature: 0.7, maxTokens: 4096 }
       # apiKey is resolved from config/secret.env or env vars
-    - id: "gateway-embedding"
-      provider: "openai-compatible"
-      model: "bge-m3"
-      displayName: "BGE-M3 (Local)"
+    - id: 'gateway-embedding'
+      provider: 'openai-compatible'
+      model: 'bge-m3'
+      displayName: 'BGE-M3 (Local)'
       roles: [embed]
 ```
 

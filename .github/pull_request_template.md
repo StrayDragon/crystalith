@@ -16,6 +16,7 @@ Describe what changed and why.
 - [ ] `cd frontend/web && bun run test:ci`
 - [ ] `cd frontend/web && bun run typecheck`
 - [ ] `cd frontend/web && bun run lint`
+
 <!-- TODO: add server tests when v2 scaffolded:
 - [ ] `cd server && bun test`
 -->
@@ -28,5 +29,7 @@ Results:
 
 - [ ] No secrets or tokens committed
 - [ ] Docs updated (if needed)
+
 <!-- TODO: add eden RPC types check when v2 scaffolded -->
+
 - [ ] Critical-path UI copy is centralized via `t()` (avoid new hardcoded strings) / 关键路径文案集中管理（避免新增硬编码）

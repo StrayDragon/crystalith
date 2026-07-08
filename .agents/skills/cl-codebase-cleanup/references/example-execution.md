@@ -4,29 +4,29 @@ This is a worked example of the methodology applied to one specific project. Use
 
 ## Project Baseline (at time of writing)
 
-| Dimension | Value |
-|-----------|-------|
-| Backend stack | Python 3.12+ / FastAPI / async SQLAlchemy |
-| Frontend stack | Vite + React + TypeScript |
-| Total backend lines | ~32,000 |
-| Total frontend lines | ~49,000 |
-| API endpoints | ~94 |
-| Feature modules | ~21 |
-| Workspace packages | ~8 |
-| Quality gate | `just check` (root), `just test` (backend), `pnpm test:ci` (frontend) |
-| Dep mgmt | `uv sync` (Python), `pnpm install` (frontend) |
+| Dimension            | Value                                                                 |
+| -------------------- | --------------------------------------------------------------------- |
+| Backend stack        | Python 3.12+ / FastAPI / async SQLAlchemy                             |
+| Frontend stack       | Vite + React + TypeScript                                             |
+| Total backend lines  | ~32,000                                                               |
+| Total frontend lines | ~49,000                                                               |
+| API endpoints        | ~94                                                                   |
+| Feature modules      | ~21                                                                   |
+| Workspace packages   | ~8                                                                    |
+| Quality gate         | `just check` (root), `just test` (backend), `pnpm test:ci` (frontend) |
+| Dep mgmt             | `uv sync` (Python), `pnpm install` (frontend)                         |
 
 ## Category Mapping
 
-| Cat | What was found | How many |
-|-----|---------------|----------|
-| A | Modules behind always-off config paths, replaced implementations, unused provider | ~9 files / ~1,200 lines |
-| B | Multi-backend factories with a single live path, auto-discovery with HTTP probes | ~4 modules / ~540 lines |
-| C | Background polling of optional services in app factory | ~350 lines |
-| D | Full CRUD on read-mostly resources (prompt presets, templates) | ~350 lines |
-| E | npm packages imported by nothing (`@tambo-ai/react`, `@ag-ui/core`) | 2 packages |
-| F | Config keys for removed backends (chroma host, redis candidates) | ~5 sections |
-| G | `__pycache__` dirs, `dist/`, ruff cache, stale docs cache | ~114 dirs + misc |
+| Cat | What was found                                                                    | How many                |
+| --- | --------------------------------------------------------------------------------- | ----------------------- |
+| A   | Modules behind always-off config paths, replaced implementations, unused provider | ~9 files / ~1,200 lines |
+| B   | Multi-backend factories with a single live path, auto-discovery with HTTP probes  | ~4 modules / ~540 lines |
+| C   | Background polling of optional services in app factory                            | ~350 lines              |
+| D   | Full CRUD on read-mostly resources (prompt presets, templates)                    | ~350 lines              |
+| E   | npm packages imported by nothing (`@tambo-ai/react`, `@ag-ui/core`)               | 2 packages              |
+| F   | Config keys for removed backends (chroma host, redis candidates)                  | ~5 sections             |
+| G   | `__pycache__` dirs, `dist/`, ruff cache, stale docs cache                         | ~114 dirs + misc        |
 
 ## Quality Gates Used
 

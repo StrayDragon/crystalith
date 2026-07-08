@@ -1,0 +1,150 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "pedantic": "warn",
+    "perf": "warn"
+  },
+  "plugins": ["typescript", "import", "unicorn", "promise", "node"],
+  "rules": {
+    // –– correctness (error) ––
+    "eslint/eqeqeq": "error",
+    "eslint/no-dupe-keys": "error",
+    "eslint/use-isnan": "error",
+    "eslint/valid-typeof": "error",
+
+    // –– suspicious/explicit errors ––
+    "typescript/no-misused-promises": "error",
+    "typescript/return-await": "error",
+    "typescript/only-throw-error": "error",
+    "eslint/no-throw-literal": "error",
+
+    // –– imports ––
+    "import/no-cycle": "error",
+    "import/no-self-import": "error",
+    "import/no-duplicates": "error",
+    "import/first": "error",
+    "import/extensions": "off",
+
+    // –– node / unicorn ––
+    "unicorn/error-message": "error",
+    "unicorn/throw-new-error": "error",
+    "unicorn/catch-error-name": "error",
+    "node/no-new-require": "error",
+    "node/no-path-concat": "error",
+
+    // –– code style (warn) ––
+    "eslint/no-console": "warn",
+    "eslint/no-eval": "error",
+    "eslint/no-implied-eval": "error",
+    "promise/no-callback-in-promise": "warn",
+    "promise/valid-params": "warn",
+    "promise/no-return-in-finally": "warn",
+
+    // –– intentionally relaxed ––
+    "eslint/no-shadow": "off",
+    "eslint/no-useless-return": "off",
+    "eslint/max-lines-per-function": "off",
+    "eslint/max-lines": "off",
+    "eslint/max-depth": "off",
+    "eslint/no-negated-condition": "off",
+    "typescript/no-explicit-any": "off",
+    "typescript/no-non-null-assertion": "off",
+    "typescript/consistent-type-imports": "off",
+    "typescript/ban-types": "off",
+    "unicorn/explicit-length-check": "off",
+    "unicorn/no-negated-condition": "off",
+    "unicorn/no-useless-undefined": "off",
+    "unicorn/no-lonely-if": "off",
+    "unicorn/no-array-callback-reference": "off",
+    "unicorn/prefer-query-selector": "off",
+    "unicorn/no-immediate-mutation": "off",
+    "unicorn/prefer-single-call": "off",
+    "import/no-unassigned-import": "off",
+    "promise/always-return": "off",
+
+    // –– off (noisy / not applicable) ––
+    "eslint/max-lines": "off",
+    "eslint/max-depth": "off",
+    "eslint/require-await": "off",
+    "eslint/no-await-in-loop": "off",
+    "eslint/sort-vars": "off",
+    "eslint/radix": "off",
+    "eslint/symbol-description": "off",
+    "typescript/require-await": "off",
+    "typescript/consistent-return": "off",
+    "typescript/strict-boolean-expressions": "off",
+    "typescript/no-unsafe-function-type": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "import/max-dependencies": "off"
+  },
+  "overrides": [
+    {
+      "files": ["apps/web/src/api/**/*.ts"],
+      "rules": { "eslint/eqeqeq": "warn" }
+    },
+    {
+      "files": [
+        "apps/web/src/features/workspace/**/*.ts",
+        "apps/web/src/features/workspace/**/*.tsx"
+      ],
+      "rules": {
+        "eslint/eqeqeq": "warn",
+        "import/no-duplicates": "warn",
+        "eslint/no-unreachable": "warn"
+      }
+    },
+    {
+      "files": ["apps/web/scripts/**/*.mjs", "apps/web/scripts/**/*.js"],
+      "rules": {
+        "eslint/no-unused-vars": "warn",
+        "eslint/eqeqeq": "warn",
+        "eslint/no-console": "off"
+      }
+    },
+    {
+      "files": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.spec.ts",
+        "**/*.spec.tsx",
+        "**/test/**/*.ts",
+        "**/test/**/*.tsx"
+      ],
+      "plugins": ["vitest"],
+      "rules": {
+        "eslint/no-console": "off",
+        "eslint/no-shadow": "off",
+        "typescript/no-explicit-any": "off",
+        "typescript/no-non-null-assertion": "off",
+        "typescript/unbound-method": "off",
+        "import/no-cycle": "off",
+        "vitest/expect-expect": "error",
+        "vitest/no-conditional-tests": "error",
+        "vitest/no-focused-tests": "error",
+        "vitest/no-identical-title": "error",
+        "vitest/valid-describe-callback": "error",
+        "vitest/no-standalone-expect": "error",
+        "vitest/valid-expect": "off",
+        "vitest/require-mock-type-parameters": "off",
+        "vitest/no-disabled-tests": "off",
+        "vitest/warn-todo": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "dist/",
+    "coverage/",
+    "node_modules/",
+    "vendor/",
+    "backend/py/",
+    ".git/",
+    "bun.lock",
+    "data/",
+    "*.generated.ts",
+    "*.gen.ts",
+    "openapi.gen.json",
+    "apps/web/src/api/generated/"
+  ]
+}

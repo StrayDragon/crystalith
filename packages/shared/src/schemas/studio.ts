@@ -1,18 +1,19 @@
 // Studio (slides) schemas — slide drafts, stages, generation config.
 // Mirrors v1 `features.studio.schemas` + `studio.slides.config`.
-import { z } from "zod";
+import { z } from 'zod';
+
 import {
   IdSchema,
   IsoTimestampSchema,
   JsonMetadataSchema,
   OptionalTimestampSchema,
-} from "./common.js";
-import { SlidesOutlineSchema } from "./output.js";
+} from './common.js';
+import { SlidesOutlineSchema } from './output.js';
 
-export const SlideStageSchema = z.enum(["input", "outline", "markdown"]);
+export const SlideStageSchema = z.enum(['input', 'outline', 'markdown']);
 export type SlideStage = z.infer<typeof SlideStageSchema>;
 
-export const SlideStatusSchema = z.enum(["idle", "running", "error"]);
+export const SlideStatusSchema = z.enum(['idle', 'running', 'error']);
 export type SlideStatus = z.infer<typeof SlideStatusSchema>;
 
 export const StudioSlideSchema = z.object({
@@ -21,7 +22,7 @@ export const StudioSlideSchema = z.object({
   output_id: IdSchema.nullable().optional(),
   title: z.string().nullable().optional(),
   prompt: z.string().nullable().optional(),
-  engine: z.string().default("slidev"),
+  engine: z.string().default('slidev'),
   chunk_ids: z.array(IdSchema).nullable().optional(),
   source_ids: z.array(IdSchema).nullable().optional(),
   outline: SlidesOutlineSchema.nullable().optional(),
@@ -38,7 +39,7 @@ export type StudioSlide = z.infer<typeof StudioSlideSchema>;
 export const SlideDraftCreateSchema = z.object({
   title: z.string().nullable().optional(),
   prompt: z.string().nullable().optional(),
-  engine: z.string().default("slidev"),
+  engine: z.string().default('slidev'),
   source_ids: z.array(IdSchema).nullable().optional(),
   generation_config: JsonMetadataSchema.nullable().optional(),
 });

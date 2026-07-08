@@ -1,8 +1,9 @@
 // Message schemas — `crystalith.features.messages.schemas`
-import { z } from "zod";
-import { CitationSchema, IdSchema, IsoTimestampSchema } from "./common.js";
+import { z } from 'zod';
 
-export const MessageRoleSchema = z.enum(["user", "assistant", "system"]);
+import { CitationSchema, IdSchema, IsoTimestampSchema } from './common.js';
+
+export const MessageRoleSchema = z.enum(['user', 'assistant', 'system']);
 export type MessageRole = z.infer<typeof MessageRoleSchema>;
 
 export const MessageSchema = z.object({

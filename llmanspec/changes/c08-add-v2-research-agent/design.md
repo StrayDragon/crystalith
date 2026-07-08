@@ -21,7 +21,10 @@ async function* researchLoop(state: ResearchState, deps: ResearchDeps) {
     const action = await waitForApproval(state, 600_000); // 10 min timeout
     if (action === 'cancel') break;
     if (action === 'finish') break;
-    if (action === 'skip') { iteration++; continue; }
+    if (action === 'skip') {
+      iteration++;
+      continue;
+    }
 
     // 3. Execute
     yield { type: 'searching' };
@@ -50,14 +53,20 @@ async function* researchLoop(state: ResearchState, deps: ResearchDeps) {
 async function searxngSearch(query: string): Promise<SearchResult[]> {
   const url = `${searxngHost}/search?q=${encodeURIComponent(query)}&format=json`;
   const res = await fetch(url);
-  const data = await res.json() as SearXNGResponse;
-  return data.results.map(r => ({ title: r.title, url: r.url, snippet: r.content, engine: r.engine }));
+  const data = (await res.json()) as SearXNGResponse;
+  return data.results.map((r) => ({
+    title: r.title,
+    url: r.url,
+    snippet: r.content,
+    engine: r.engine,
+  }));
 }
 ```
 
 ### HITL (Human-in-the-Loop)
 
 WaitForApproval polls DB every 500ms:
+
 ```ts
 async function waitForApproval(state: ResearchState, timeoutMs: number): Promise<UserAction> {
   const deadline = Date.now() + timeoutMs;

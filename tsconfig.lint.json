@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "verbatimModuleSyntax": false,
+    "types": ["bun"],
+    "paths": {
+      "@crystalith/shared": ["./packages/shared/src/index.ts"],
+      "@crystalith/shared/*": ["./packages/shared/src/*"],
+      "@crystalith/server": ["./apps/server/src/server.ts"]
+    }
+  },
+  "include": [
+    "apps/server/src/**/*.ts",
+    "apps/server/test/**/*.ts",
+    "packages/shared/src/**/*.ts",
+    "packages/shared/test/**/*.ts",
+    "apps/web/src/**/*.ts",
+    "apps/web/src/**/*.tsx"
+  ],
+  "exclude": ["node_modules", "dist", "coverage", "vendor", "backend", "data"]
+}

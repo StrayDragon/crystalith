@@ -3,50 +3,24 @@
 # (pre-commit itself is still Python; hooks are Bun/TS)
 
 repos:
-  # Frontend checks
+  # Root-level oxlint + oxfmt (covers apps/server/ + packages/shared/ + apps/web/)
   - repo: local
     hooks:
-      - id: frontend-lint
-        name: Frontend Lint (incremental)
-        entry: bash -c 'cd frontend/web && bun run lint'
+      - id: lint
+        name: oxlint
+        entry: bun oxlint
         language: system
-        files: ^frontend/web/src/
         pass_filenames: false
+        always_run: true
         stages: [pre-commit]
 
-      - id: frontend-format-check
-        name: Frontend Format Check
-        entry: bash -c 'cd frontend/web && bun run format:check'
+      - id: format-check
+        name: oxfmt --check
+        entry: bun oxfmt --check
         language: system
-        files: ^frontend/web/src/
         pass_filenames: false
+        always_run: true
         stages: [pre-commit]
-
-      - id: frontend-typecheck
-        name: Frontend Typecheck
-        entry: bash -c 'cd frontend/web && bun run typecheck'
-        language: system
-        files: ^frontend/web/src/
-        pass_filenames: false
-        stages: [pre-commit]
-
-  # TODO: Enable when v2 server scaffold is ready
-  # - repo: local
-  #   hooks:
-  #     - id: server-lint
-  #       name: Server Lint
-  #       entry: bash -c 'cd server && bun run lint'
-  #       language: system
-  #       files: ^server/src/
-  #       pass_filenames: false
-  #       stages: [pre-commit]
-  #     - id: server-typecheck
-  #       name: Server Typecheck
-  #       entry: bash -c 'cd server && bun run typecheck'
-  #       language: system
-  #       files: ^server/src/
-  #       pass_filenames: false
-  #       stages: [pre-commit]
 
   # Standard hygiene hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -55,6 +29,5 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-      - id: check-json
       - id: check-added-large-files
         args: ['--maxkb=1000']

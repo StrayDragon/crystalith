@@ -11,14 +11,17 @@
     "./types": "./src/types/index.ts"
   },
   "scripts": {
+    "lint": "echo '@crystalith/shared lint is managed by root; run bun lint from repo root'",
+    "format": "echo '@crystalith/shared format is managed by root; run bun format from repo root'",
+    "format:check": "echo '@crystalith/shared format:check is managed by root; run bun format:check from repo root'",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
-  },
-  "peerDependencies": {
-    "zod": "^4"
   },
   "devDependencies": {
     "typescript": "^5",
     "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "zod": "^4"
   }
 }

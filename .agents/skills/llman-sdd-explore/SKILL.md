@@ -1,8 +1,8 @@
 ---
-name: "llman-sdd-explore"
-description: "Enter explore mode for llman SDD (thinking only; no implementation)."
+name: 'llman-sdd-explore'
+description: 'Enter explore mode for llman SDD (thinking only; no implementation).'
 metadata:
-  version: "0.0.53"
+  version: '0.0.53'
 ---
 
 # LLMAN SDD Explore
@@ -10,17 +10,20 @@ metadata:
 Use this skill when the user wants to think through ideas, investigate problems, or clarify requirements **before** starting implementation.
 
 **IMPORTANT: Explore mode is for thinking, not implementing.**
+
 - You MAY read files, search code, and investigate the codebase.
 - You MAY create or update llman SDD artifacts (proposal/specs/design/tasks) if the user asks.
 - You MUST NOT write application code or implement features in explore mode.
 
 ## Stance
+
 - Curious, not prescriptive
 - Grounded in the actual codebase
 - Visual when helpful (ASCII diagrams)
 - Willing to hold multiple options and tradeoffs
 
 ## Suggested moves
+
 1. Use `llman sdd context --task "<task>" --paths "<files>"` to quickly locate relevant specs.
    - Read the `direct` spec files (these are the contracts you must understand).
    - If context is unavailable, rebuild with `llman sdd index rebuild` (default `pageindex`, no model needed) and retry.
@@ -35,17 +38,20 @@ Use this skill when the user wants to think through ideas, investigate problems,
    - Work items → `tasks.md`
 
 ## Exiting explore mode
+
 When the user is ready to implement, suggest:
+
 - `llman-sdd-propose` (propose + generate artifacts)
 - `llman-sdd-new-change` (start a change)
 - `llman-sdd-ff` (create all artifacts quickly)
 - `llman-sdd-apply` (implement tasks)
 - `llman-sdd-quick` (quick path: direct implementation for small changes)
-If the user asks you to implement while in explore mode, STOP and remind them to exit explore mode first.
+  If the user asks you to implement while in explore mode, STOP and remind them to exit explore mode first.
 
 Before acting, read `llmanspec/config.yaml` and follow its `context` and `rules` if present.
 
 Common commands:
+
 - `llman sdd context --task "<description>" --paths "<files>"` (find relevant specs). Uses the pageindex agentic tree backend (needs `LLMAN_SDD_INDEX_CHAT_MODEL`). Preset via `LLMAN_SDD_INDEX_BACKEND`.
 - `llman sdd list` (list changes)
 - `llman sdd list --specs` (list specs with purpose/scope metadata)
@@ -59,35 +65,41 @@ Common commands:
 - `llman sdd archive thaw [--change <id> ...] [--dest <path>]` (restore from cold-backup)
 - `llman sdd graph [CHANGE] [--format mermaid] [--scope active|archived|all] [--depth N]` (generate change dependency graph)
 
-
 ## Context
+
 - Gather the current change/spec state before acting.
 - Prefer `llman sdd context --task --paths` to discover relevant specs instead of guessing or full scans.
 
 ## Goal
+
 - State the concrete outcome for this command/skill execution.
 
 ## Constraints
+
 - Keep changes minimal and scoped.
 - Avoid guessing when identifiers or intent are ambiguous.
 - Use `llman sdd context --task --paths` before reading full spec files.
 - Choose workflow path based on change scale: behavioral contract changes use full SDD, implementation changes use quick path.
 
 ## Workflow
+
 - Use `llman sdd` commands as the source of truth.
 - Validate outcomes when files or specs are updated.
 - Prefer `llman sdd context` over full reads or guessing.
 - When context is unavailable follow error guidance (rebuild index or fall back to `list --specs --json`).
 
 ## Decision Policy
+
 - Ask for clarification when a high-impact ambiguity remains.
 - Stop instead of forcing through known validation errors.
 
 ## Output Contract
+
 - Summarize actions taken.
 - Provide resulting paths and validation status.
 
 ## Ethics Governance
+
 - `ethics.risk_level`: classify risk as `low|medium|high|critical`.
 - `ethics.prohibited_actions`: list actions that MUST NOT be performed.
 - `ethics.required_evidence`: list required evidence before high-impact output.
@@ -95,6 +107,7 @@ Common commands:
 - `ethics.escalation_policy`: define when to escalate to user confirmation/review.
 
 ## Future-to-Execution Planning
+
 - Treat `llmanspec/changes/<id>/future.md` as a candidate backlog, not passive notes.
 - Review `Deferred Items`, `Branch Options`, and `Triggers to Reopen`; classify each item as:
   - `now` (must be converted into executable work now)

@@ -3,8 +3,8 @@
   "version": "2.0.0-dev",
   "private": true,
   "workspaces": [
-    "server",
-    "frontend/web",
+    "apps/server",
+    "apps/web",
     "packages/*"
   ],
   "scripts": {
@@ -14,8 +14,17 @@
     "build": "bun --filter '*' build",
     "test": "bun --filter '*' test",
     "typecheck": "bun --filter '*' typecheck",
-    "lint": "bun --filter '*' lint",
-    "format": "bun --filter '*' format",
-    "format:check": "bun --filter '*' format:check"
+    "lint": "oxlint",
+    "lint:type-aware": "oxlint --type-aware --tsconfig tsconfig.lint.json",
+    "lint:fix": "oxlint --fix",
+    "format": "bun format:check",
+    "format:write": "oxfmt --write",
+    "format:check": "oxfmt --check",
+    "check": "bun typecheck && bun lint && bun format:check",
+    "fix": "bun lint:fix && bun format:write"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.58.0",
+    "oxlint": "^1.73.0"
   }
 }

@@ -1,8 +1,9 @@
 // Eval harness schemas — Golden Dataset + LLM-as-Judge + A/B run comparison.
 // Schema for the eval tables is defined here so the data layer can provision
 // them in the Drizzle schema upfront (SSOT).
-import { z } from "zod";
-import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from "./common.js";
+import { z } from 'zod';
+
+import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from './common.js';
 
 // ---------------------------------------------------------------------------
 // Datasets + items (Golden Dataset)
@@ -48,7 +49,7 @@ export type EvalItemCreate = z.infer<typeof EvalItemCreateSchema>;
 // Runs + run items
 // ---------------------------------------------------------------------------
 
-export const EvalRunStatusSchema = z.enum(["running", "completed", "failed", "cancelled"]);
+export const EvalRunStatusSchema = z.enum(['running', 'completed', 'failed', 'cancelled']);
 export type EvalRunStatus = z.infer<typeof EvalRunStatusSchema>;
 
 export const EvalRunSchema = z.object({

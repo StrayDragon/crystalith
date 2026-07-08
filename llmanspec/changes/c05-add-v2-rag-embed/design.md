@@ -52,12 +52,16 @@ const embedStrategy: RAGStrategy = {
   id: 'embed',
   name: 'Embed RAG',
   version: '1.0.0',
-  async index(sources: Source[]) { /* chunk → embed → insert vec_chunks */ },
+  async index(sources: Source[]) {
+    /* chunk → embed → insert vec_chunks */
+  },
   async retrieve(query: string, notebookId: number, k = 10) {
     const qVec = await embedSingle(query);
     return searchVectors(orm, qVec, notebookId, k);
   },
-  async isIndexed(notebookId: number) { /* check vec_chunks count */ },
+  async isIndexed(notebookId: number) {
+    /* check vec_chunks count */
+  },
 };
 ```
 
@@ -80,6 +84,7 @@ class EpochCache<T> {
 ```
 
 ### Migration note
+
 - Embedding model 通过 config 选择（默认 bge-m3 1024-dim）
 - 向量与 chunk 同库 JOIN
 - 缓存用内存 LRU，不进 agent loop

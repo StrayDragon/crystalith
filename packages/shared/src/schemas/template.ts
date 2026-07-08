@@ -1,7 +1,8 @@
 // Template schemas — generation templates (config_json) + prompt presets.
 // Mirrors v1 `features.templates` + `features.prompt_presets`.
-import { z } from "zod";
-import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from "./common.js";
+import { z } from 'zod';
+
+import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from './common.js';
 
 export const TemplateSchema = z.object({
   id: IdSchema,

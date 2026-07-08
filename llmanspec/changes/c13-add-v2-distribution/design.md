@@ -12,15 +12,18 @@ Expected size: ~75MB (Bun runtime + Elysia + AI SDK + Drizzle + sqlite-vec + unp
 ### 2. Frontend Embedding
 
 Server serves frontend SPA via `@elysiajs/static`:
+
 ```ts
 import { staticPlugin } from '@elysiajs/static';
 app.use(staticPlugin({ assets: '../frontend/web/dist', prefix: '/' }));
 ```
+
 Access `http://localhost:8032/` → full Crystalith SPA.
 
 ### 3. Server Mode (Optional)
 
 For non-desktop deployments:
+
 - `@elysiajs/jwt` for API authentication
 - `elysia-rate-limit` for rate limiting
 - Postgres adapter via `drizzle-orm/pg-core` (config toggle)
@@ -33,9 +36,10 @@ For non-desktop deployments:
   "bundle": {
     "externalBin": ["crystalith-server"],
     // .dmg / .exe / .AppImage
-  }
+  },
 }
 ```
+
 Expected size: ~90MB (Tauri shell + Bun sidecar)
 
 ### 5. CI/CD Release
