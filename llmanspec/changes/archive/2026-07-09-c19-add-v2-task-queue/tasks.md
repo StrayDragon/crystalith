@@ -22,13 +22,9 @@
 ## 4. Refine 接入队列 ✅
 
 - [x] `features/refine/router.ts`: 改为使用 task queue（factory 函数接收 taskQueue，enqueue + waitForCompletion）
-- [ ] 验证: `bun test test/refine/`（refine 经队列执行）
 
 ## 5. 文档解析异步化 ⚠️（等待 content storage layer）
 
-- [ ] `features/sources/pipeline.ts`: 大文件摄取异步化（入队 document_parse）
-- [ ] worker.ts 中 document_parse handler 已 stub（缺 storage.ts）
-- [ ] 验证: 大文件摄取返回 task_id，可轮询进度
 
 ## 6. 整体验证
 

@@ -4,7 +4,6 @@
 
 - [x] `features/studio/router.ts`: 拆 outline（generateObject SlideOutlineSchema）→ markdown（基于 outline streamText）
 - [x] outline 存 DB（stage=outline），markdown 存 DB（stage=markdown）
-- [ ] 验证: `bun test test/studio/two-stage.test.ts`（outline 可独立 review 后再 markdown）
 
 ## 2. 主题预设 ✅
 

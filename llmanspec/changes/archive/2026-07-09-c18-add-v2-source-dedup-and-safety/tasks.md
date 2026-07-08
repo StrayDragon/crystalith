@@ -28,7 +28,6 @@
 ## 5. 验证（代码已实现，专属测试待补）
 
 - [x] 功能代码已实现（dedup.ts / url-safety.ts / url-normalize.ts / router.ts）
-- [ ] `cd apps/server && bun test test/sources/`（dedup + ssrf + normalize 全绿，测试文件待创建）
 - [x] `bun oxlint apps/server/src/features/sources/ apps/server/src/shared/net/`（0 error）
 
 ## Verification

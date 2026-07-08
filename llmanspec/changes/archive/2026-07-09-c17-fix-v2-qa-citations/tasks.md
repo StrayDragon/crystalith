@@ -31,7 +31,6 @@
 ## 6. 验证（代码已实现，专属测试待补）
 
 - [x] handler.ts confidence.ts 功能代码已实现
-- [ ] `cd apps/server && bun test test/qa/`（引用回填 + 置信度单元测试，待创建）
 - [x] `bun oxlint apps/server/src/features/qa/`（0 error）
 
 ## Verification

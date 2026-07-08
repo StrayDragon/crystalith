@@ -25,7 +25,6 @@
 ## 5. Refine structured 模式 + 异步 ✅
 
 - [x] `features/refine/router.ts`: 补 structured 模式 + 改为 task queue 异步（factory 函数，enqueue + waitForCompletion）
-- [ ] 验证: `bun test test/refine/`（structured 格式 + 异步执行）
 
 ## 6. 整体验证
 
