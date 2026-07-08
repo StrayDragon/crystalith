@@ -1,6 +1,8 @@
 // Tests for the template-rendering config loader.
 import { afterEach, describe, expect, it } from 'bun:test';
 import { writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import {
   loadConfig,
@@ -9,7 +11,7 @@ import {
   getDefaultChatModel,
 } from '../src/shared/config.ts';
 
-const TMP = 'data/test-config.yaml';
+const TMP = join(tmpdir(), `crystalith-test-config-${process.pid}.yaml`);
 
 afterEach(() => {
   resetConfig();

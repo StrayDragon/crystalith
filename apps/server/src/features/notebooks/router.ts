@@ -96,8 +96,8 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
   )
 
   // Get a single notebook
-  .get('/notebooks/:id', ({ params }) => {
-    const id = Number(params.id);
+  .get('/notebooks/:nid', ({ params }) => {
+    const id = Number(params.nid);
     const row = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
     if (!row) notFound(id);
     return serializeNotebook(row);
@@ -105,9 +105,9 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
 
   // Update a notebook
   .patch(
-    '/notebooks/:id',
+    '/notebooks/:nid',
     ({ params, body }) => {
-      const id = Number(params.id);
+      const id = Number(params.nid);
       const existing = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
       if (!existing) notFound(id);
       const updated = db()
@@ -122,8 +122,8 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
   )
 
   // Delete a notebook
-  .delete('/notebooks/:id', ({ params, set }) => {
-    const id = Number(params.id);
+  .delete('/notebooks/:nid', ({ params, set }) => {
+    const id = Number(params.nid);
     const existing = db().select().from(notebooks).where(eq(notebooks.id, id)).get();
     if (!existing) notFound(id);
     db().delete(notebooks).where(eq(notebooks.id, id)).run();

@@ -53,8 +53,8 @@ export const strategiesRouter = new Elysia({ prefix: '/v2' })
   .get('/strategies', () => ragRegistry.listAll())
 
   // Get strategies for a notebook
-  .get('/notebooks/:id/strategies', ({ params }) => {
-    const notebookId = Number(params.id);
+  .get('/notebooks/:nid/strategies', ({ params }) => {
+    const notebookId = Number(params.nid);
     return {
       notebook_id: notebookId,
       strategies: ragRegistry.getForNotebook(notebookId),
@@ -62,8 +62,8 @@ export const strategiesRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Set strategies for a notebook
-  .post('/notebooks/:id/strategies', ({ params, body }) => {
-    const notebookId = Number(params.id);
+  .post('/notebooks/:nid/strategies', ({ params, body }) => {
+    const notebookId = Number(params.nid);
     const strategyIds = (body as { strategies: string[] }).strategies;
     ragRegistry.setForNotebook(notebookId, strategyIds);
     return {
