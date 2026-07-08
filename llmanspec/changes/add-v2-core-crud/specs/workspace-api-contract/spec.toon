@@ -1,0 +1,17 @@
+kind: llman.sdd.delta
+ops[7]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r1,API major version prefix is v2,"对外 API MUST 使用 `/v2` 前缀。响应格式 MUST 使用 Zod 校验，错误信封 MUST 包含 `error_code`/`message`/`details?`。",null,null,null
+  add_requirement,r2,"Notebooks CRUD via Elysia router","`/v2/notebooks` MUST 提供 GET (list), POST (create), GET /:id, PATCH /:id, DELETE /:id。",null,null,null
+  add_requirement,r3,"Sessions CRUD scoped to notebook","`/v2/notebooks/:nid/sessions` MUST 提供 GET (list), POST (create), PATCH /:id, DELETE /:id。",null,null,null
+  add_requirement,r4,"Messages list with pagination","`/v2/notebooks/:nid/sessions/:sid/messages` MUST 返回会话消息列表，支持分页和排序。",null,null,null
+  add_requirement,r5,"Sources ingestion pipeline","来源上传后 MUST 走 ingestion pipeline：接收文件 → 判定 parser → 解析为文本 → 分块 → 生成 embedding → 持久化。状态 MUST 为 `processing|ready|failed`。",null,null,null
+  add_requirement,r6,"PDF parser uses unpdf","PDF 解析 MUST 使用 unpdf (基于 pdf.js) 替换 pypdf。MUST 按页提取文本。MUST 通过 UPGRADES/09 的 5 样本 benchmark 验证。",null,null,null
+  add_requirement,r7,"HTML parser uses cheerio + @mozilla/readability","HTML 解析 MUST 使用 cheerio + @mozilla/readability 替换 beautifulsoup4 + lxml。MUST 提取正文并清洗。",null,null,null
+op_scenarios[7]{req_id,id,given,when,then}:
+  r1,happy,"","客户端请求 /v2/notebooks","返回 Zod-validated Notebook[]，无 Pydantic 字段"
+  r2,happy,"","用户创建笔记本","POST /v2/notebooks 返回 {id, name, created_at}"
+  r3,happy,"","用户在 Notebook A 下列出会话","GET /v2/notebooks/1/sessions 只返回 notebook 1 的会话"
+  r4,happy,"","会话有 50 条消息","分页返回 limit=20，可通过 offset 翻页"
+  r5,happy,"","用户上传 PDF","source status: processing → 解析分块 → embedding → ready"
+  r6,happy,"","解析中文 PDF","unpdf extractText 返回正确中文文本，与 pypdf 一致"
+  r7,happy,"","解析 HTML 页面","cheerio + readability 提取正文，去除导航和广告"

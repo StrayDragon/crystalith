@@ -1,0 +1,13 @@
+kind: llman.sdd.delta
+ops[5]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r1,"Golden Dataset management","系统 MUST 支持创建、导入 (JSON/CSV)、编辑 Golden Dataset。每个 item MUST 包含 question/expected_answer/source_docs/criteria。",null,null,null
+  add_requirement,r2,"Eval Runner supports multi-strategy parallel evaluation","Eval Runner MUST 支持并行评测多个 RAG 策略。每个 run 记录到 eval_runs 表，包含开始时间/策略/状态/结果摘要。",null,null,null
+  add_requirement,r3,"Metrics: Faithfulness/Relevance/Recall/Latency","系统 MUST 计算至少 4 个指标：Faithfulness (LLM-as-Judge)、Answer Relevance、Context Recall、Latency。MUST 支持 LLM-as-Judge 打分 (AI SDK generateObject)。",null,null,null
+  add_requirement,r4,"CLI harness for headless eval","系统 MUST 提供 CLI 入口 `bun run eval` 跑全部 strategy + dataset 组合。输出 MUST 为 JSON/CSV report。",null,null,null
+  add_requirement,r5,"Frontend quality panel","前端 MUST 提供策略对比雷达图、逐 QA 对详情、历史趋势图。回归检测 SHALL 标记退化指标。",null,null,null
+op_scenarios[5]{req_id,id,given,when,then}:
+  r1,happy,"","用户导入 50 条 QA Golden Dataset","dataset 和 50 个 items 持久化成功"
+  r2,happy,"","触发 Embed 和 BM25 策略对比评测","两个 run 并行执行，结果写入 eval_runs 表"
+  r3,happy,"","LLM-as-Judge 评估 faithfulness","返回 1-5 分 + rationale"
+  r4,happy,"","CLI: bun run eval --strategies embed,bm25 --dataset v1","产出 eval_report.json 含所有指标"
+  r5,happy,"","前端质量面板查看 Embed vs Hybrid","雷达图显示 Hybrid 在 Recall 上 +15%，Latency 上 -5ms"
