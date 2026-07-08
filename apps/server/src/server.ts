@@ -2,9 +2,13 @@ import { ModelListSchema } from '@crystalith/shared';
 import { Elysia } from 'elysia';
 
 import { generateAsyncApiDocument } from './asyncapi.ts';
+import { citationsRouter } from './features/citations/router.ts';
 import { messagesRouter } from './features/messages/router.ts';
 // Feature routers — each exports an Elysia instance + registers OpenAPI docs
 import { notebooksRouter } from './features/notebooks/router.ts';
+import { outputsRouter } from './features/outputs/router.ts';
+import { qaRouter } from './features/qa/router.ts';
+import { researchRouter } from './features/research/router.ts';
 import { sessionsRouter } from './features/sessions/router.ts';
 import { sourcesRouter } from './features/sources/router.ts';
 import { generateOpenApiDocument, registerApiDoc, type OpenApiRoute } from './openapi.ts';
@@ -82,6 +86,10 @@ const app = new Elysia()
   .use(sessionsRouter)
   .use(messagesRouter)
   .use(sourcesRouter)
+  .use(qaRouter)
+  .use(citationsRouter)
+  .use(researchRouter)
+  .use(outputsRouter)
   .use(strategiesRouter)
 
   .listen({
