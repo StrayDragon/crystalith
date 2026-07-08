@@ -2,22 +2,22 @@
 
 ## 1. Dataset Management
 
-- [ ] `server/src/eval/dataset.ts` — CRUD dataset + import JSON/CSV
-- [ ] `server/src/db/schema.ts` — eval_datasets/items 表
+- [ ] `apps/server/src/eval/dataset.ts` — CRUD dataset + import JSON/CSV
+- [ ] `apps/server/src/db/schema.ts` — eval_datasets/items 表
 
 ## 2. Eval Runner
 
-- [ ] `server/src/eval/runner.ts` — multi-strategy parallel evaluation
-- [ ] `server/src/db/schema.ts` — eval_runs/run_items 表
+- [ ] `apps/server/src/eval/runner.ts` — multi-strategy parallel evaluation
+- [ ] `apps/server/src/db/schema.ts` — eval_runs/run_items 表
 
 ## 3. Metrics Calculator
 
-- [ ] `server/src/eval/metrics.ts` — Faithfulness/Relevance/Recall/Latency
-- [ ] `server/src/eval/judge.ts` — LLM-as-Judge via generateObject
+- [ ] `apps/server/src/eval/metrics.ts` — Faithfulness/Relevance/Recall/Latency
+- [ ] `apps/server/src/eval/judge.ts` — LLM-as-Judge via generateObject
 
 ## 4. CLI Harness
 
-- [ ] `server/src/eval/cli.ts` — `bun run eval` 入口 → 跑全部 strategy × dataset
+- [ ] `apps/server/src/eval/cli.ts` — `bun run eval` 入口 → 跑全部 strategy × dataset
 - [ ] 输出 JSON report
 
 ## 5. Frontend Quality Panel
@@ -29,6 +29,6 @@
 ## Verification
 
 ```bash
-cd server && bun run eval --strategies embed,bm25 --dataset golden-v1
+cd apps/server && bun run eval --strategies embed,bm25 --dataset golden-v1
 # 输出 eval_report.json
 ```

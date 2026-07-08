@@ -11,8 +11,8 @@ v1 通过 config/app.yaml + shared/config/models.py (~1090 行) 管理模型配�
 
 ## What Changes
 
-- **NEW** `server/src/features/models/` — 模型 CRUD + provider 列表
-- **NEW** `server/src/ai/provider-registry.ts` — provider 注册表 (openai/anthropic/google/deepseek)
+- **NEW** `apps/server/src/features/models/` — 模型 CRUD + provider 列表
+- **NEW** `apps/server/src/ai/provider-registry.ts` — provider 注册表 (openai/anthropic/google/deepseek)
 - **MODIFIED** `config/app.yaml` — 模型 + provider 配置段
 
 ## Capabilities

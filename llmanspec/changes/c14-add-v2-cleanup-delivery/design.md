@@ -6,9 +6,9 @@ Final cleanup phase — remove all v1 artifacts and verify v2 completeness.
 
 1. `git rm -rf backend/py/` — full v1 Python code
 2. `git rm -rf UPGRADES/` — research docs now solidified in llmanspec
-3. `git rm frontend/web/src/api/generated/` — OpenAPI generated client
-4. `git rm frontend/web/openapi.gen.json` — OpenAPI spec cache
-5. Remove `@hey-api/openapi-ts` from frontend/web/package.json
+3. `git rm apps/web/src/api/generated/` — OpenAPI generated client
+4. `git rm apps/web/openapi.gen.json` — OpenAPI spec cache
+5. Remove `@hey-api/openapi-ts` from apps/web/package.json
 
 ### Verification Gates
 
@@ -26,10 +26,10 @@ bun test                    # All packages
 bun typecheck               # All packages
 
 # Eval regression
-cd server && bun run eval --all-strategies --dataset golden-v1  # All pass
+cd apps/server && bun run eval --all-strategies --dataset golden-v1  # All pass
 
 # Build
-bun build --compile ./server/src/server.ts  # Success, 3 platforms
+bun build --compile ./apps/server/src/server.ts  # Success, 3 platforms
 ```
 
 ### P2 RAG Strategies (post-cleanup)

@@ -11,9 +11,9 @@ QA 是 Crystalith 的核心交互模式：用户在聊天面板提问 → RAG �
 
 ## What Changes
 
-- **NEW** `server/src/features/qa/` — QA 端点 + agent 工具注册
-- **NEW** `server/src/features/citations/` — 引用管理 (chunk → source/page 映射)
-- **MODIFIED** `server/src/rag/` — retrieval 工具集成
+- **NEW** `apps/server/src/features/qa/` — QA 端点 + agent 工具注册
+- **NEW** `apps/server/src/features/citations/` — 引用管理 (chunk → source/page 映射)
+- **MODIFIED** `apps/server/src/rag/` — retrieval 工具集成
 
 ## Capabilities
 

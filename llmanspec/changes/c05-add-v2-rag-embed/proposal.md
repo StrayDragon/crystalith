@@ -11,10 +11,10 @@ RAG 是 Crystalith 的核心差异化能力。v2 的首个策略是 Embed RAG：
 
 ## What Changes
 
-- **NEW** `server/src/rag/embed-strategy.ts` — Embed RAG 策略实现 (index + retrieve)
-- **NEW** `server/src/rag/chunker.ts` — 文本分块 (paragraph-based, ~500 chars)
-- **NEW** `server/src/rag/embedder.ts` — 文本 embedding 生成 (调用 AI SDK provider)
-- **MODIFIED** `server/src/db/vectors.ts` — vec_chunks 虚拟表的 INSERT/KNN 查询
+- **NEW** `apps/server/src/rag/embed-strategy.ts` — Embed RAG 策略实现 (index + retrieve)
+- **NEW** `apps/server/src/rag/chunker.ts` — 文本分块 (paragraph-based, ~500 chars)
+- **NEW** `apps/server/src/rag/embedder.ts` — 文本 embedding 生成 (调用 AI SDK provider)
+- **MODIFIED** `apps/server/src/db/vectors.ts` — vec_chunks 虚拟表的 INSERT/KNN 查询
 
 ## Capabilities
 

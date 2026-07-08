@@ -2,13 +2,13 @@
 
 ## 1. QA Endpoint
 
-- [ ] `server/src/features/qa/router.ts` — POST /v2/qa (non-streaming), POST /v2/qa/stream (SSE streaming)
-- [ ] `server/src/features/qa/handler.ts` — streamText + retrieveSources tool 集成
-- [ ] `server/src/features/qa/presets.ts` — system prompt preset 管理
+- [ ] `apps/server/src/features/qa/router.ts` — POST /v2/qa (non-streaming), POST /v2/qa/stream (SSE streaming)
+- [ ] `apps/server/src/features/qa/handler.ts` — streamText + retrieveSources tool 集成
+- [ ] `apps/server/src/features/qa/presets.ts` — system prompt preset 管理
 
 ## 2. Citations
 
-- [ ] `server/src/features/citations/router.ts` — GET /v2/citations/:messageId 返回引用列表
+- [ ] `apps/server/src/features/citations/router.ts` — GET /v2/citations/:messageId 返回引用列表
 - [ ] 前端 citation 渲染: chunk → source/page 映射
 
 ## 3. SSE Events
