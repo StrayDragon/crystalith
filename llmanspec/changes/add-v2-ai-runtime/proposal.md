@@ -1,3 +1,6 @@
+---
+depends_on: [add-v2-server-foundation]
+---
 # add-v2-ai-runtime — AI 运行时：Vercel AI SDK 替换 pydantic-ai/pydantic-graph
 
 ## Why

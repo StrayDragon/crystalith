@@ -1,3 +1,6 @@
+---
+depends_on: [add-v2-core-crud, add-v2-ai-runtime]
+---
 # add-v2-models-management — 模型管理 (Provider + ModelId)
 
 ## Why

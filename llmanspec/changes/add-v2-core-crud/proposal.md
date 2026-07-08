@@ -1,3 +1,6 @@
+---
+depends_on: [add-v2-data-layer, add-v2-ai-runtime]
+---
 # add-v2-core-crud — Notebooks/Sessions/Messages/Sources 核心 CRUD
 
 ## Why

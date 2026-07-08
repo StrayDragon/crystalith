@@ -1,3 +1,6 @@
+---
+depends_on: [add-v2-core-crud, add-v2-eval-harness]
+---
 # add-v2-distribution — 分发、性能优化、体验打磨
 
 ## Why
