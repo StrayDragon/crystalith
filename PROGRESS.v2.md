@@ -6,23 +6,24 @@
 
 ## 状态看板
 
-| #   | Change                 | 状态    |
-| :-- | :--------------------- | :------ |
-| c00 | server-foundation      | ✅ DONE |
-| c01 | data-layer             | ✅ DONE |
-| c02 | ai-runtime             | ✅ DONE |
-| c03 | frontend-eden          | ✅ DONE |
-| c04 | core-crud              | ✅ DONE |
-| c05 | rag-embed              | ✅ DONE |
-| c06 | rag-registry           | ✅ DONE |
-| c07 | qa-pipeline            | ✅ DONE |
-| c08 | research-agent         | ✅ DONE |
-| c09 | outputs-generation     | ✅ DONE |
-| c10 | models-management      | ✅ DONE |
-| c11 | eval-harness           | ✅ DONE |
-| c12 | analysis-studio-refine | ✅ DONE |
-| c13 | distribution           | ⬜ TODO |
-| c14 | cleanup-delivery       | ⬜ TODO |
+| #   | Change                 | 状态                        |
+| :-- | :--------------------- | :-------------------------- |
+| c00 | server-foundation      | ✅ DONE                     |
+| c01 | data-layer             | ✅ DONE                     |
+| c02 | ai-runtime             | ✅ DONE                     |
+| c03 | frontend-eden          | ✅ DONE                     |
+| c04 | core-crud              | ✅ DONE                     |
+| c05 | rag-embed              | ✅ DONE                     |
+| c06 | rag-registry           | ✅ DONE                     |
+| c07 | qa-pipeline            | ✅ DONE                     |
+| c08 | research-agent         | ✅ DONE                     |
+| c09 | outputs-generation     | ✅ DONE                     |
+| c10 | models-management      | ✅ DONE                     |
+| c11 | eval-harness           | ✅ DONE                     |
+| c12 | analysis-studio-refine | ✅ DONE                     |
+| c15 | bdd-tests              | ⏸️ BLOCKED (待实现)         |
+| c13 | distribution           | ⏸️ BLOCKED (blocked by c15) |
+| c14 | cleanup-delivery       | ⏸️ BLOCKED (blocked by c15) |
 
 <!-- LEGEND: ✅ DONE | 🔄 WIP | ⬜ TODO | ⏸️ BLOCKED -->
 
@@ -32,11 +33,13 @@
 
 <!-- CURRENT -->
 
-**Phase 5**: c13 + c14
+**Phase 5**: c15 bdd-tests
 
-**前置**: c10 ✅ c11 ✅ c12 ✅
+**前置**: c12 ✅ (全功能域 API 就绪)
 
-**目标**: distribution (bun build --compile → single binary) + cleanup-delivery (delete v1 Python, OpenAPI chain, final verification)
+**目标**: BDD 行为驱动测试体系 — Gherkin runner + 17 个 .feature 文件移植 + 16 域步骤实现
+
+**阻塞**: c13, c14 需 c15 通过后方可开始（BDD 回归门禁）
 
 ---
 
