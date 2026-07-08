@@ -69,7 +69,7 @@ beforeEach(() => {
 
 test('loads notebooks and sets active notebook to the most recently updated', async () => {
   server.use(
-    http.get('*/v1/notebooks', () =>
+    http.get('*/v2/notebooks', () =>
       HttpResponse.json([
         { id: 11, name: 'Core Notebook A', updated_at: '2026-01-01T00:00:00Z' },
         { id: 12, name: 'Core Notebook B', updated_at: '2026-02-01T00:00:00Z' },
@@ -90,7 +90,7 @@ test('loads notebooks and sets active notebook to the most recently updated', as
 });
 
 test('sets error state when notebook listing fails', async () => {
-  server.use(http.get('*/v1/notebooks', () => new HttpResponse(null, { status: 500 })));
+  server.use(http.get('*/v2/notebooks', () => new HttpResponse(null, { status: 500 })));
 
   renderHook(() => useNotebooks(), { wrapper: wrapSWR });
 
@@ -107,8 +107,8 @@ test('sets error state when notebook listing fails', async () => {
 test('auto-creates a default notebook when list is empty', async () => {
   let createCalls = 0;
   server.use(
-    http.get('*/v1/notebooks', () => HttpResponse.json([])),
-    http.post('*/v1/notebooks', async ({ request }) => {
+    http.get('*/v2/notebooks', () => HttpResponse.json([])),
+    http.post('*/v2/notebooks', async ({ request }) => {
       createCalls += 1;
       const body = (await request.json()) as Record<string, unknown>;
       expect(body).toEqual({ name: '未命名笔记本' });
@@ -135,10 +135,10 @@ test('handleCreateNotebook creates notebook and makes it active', async () => {
   let createCalls = 0;
   let capturedBody: Record<string, unknown> | null = null;
   server.use(
-    http.get('*/v1/notebooks', () =>
+    http.get('*/v2/notebooks', () =>
       HttpResponse.json([{ id: 11, name: 'Existing', updated_at: '2026-01-01T00:00:00Z' }]),
     ),
-    http.post('*/v1/notebooks', async ({ request }) => {
+    http.post('*/v2/notebooks', async ({ request }) => {
       createCalls += 1;
       capturedBody = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({ id: 99, name: 'New One', updated_at: '2026-01-01T00:00:00Z' });

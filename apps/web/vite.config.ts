@@ -110,6 +110,7 @@ export default defineConfig({
     alias: {
       '@crystalith/shared': path.resolve(__dirname, '../../packages/shared/src'),
     },
+    dedupe: ['react', 'react-dom'],
   },
   build: {
     rollupOptions: {

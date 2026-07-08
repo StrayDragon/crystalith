@@ -1,52 +1,138 @@
-import { useMemo } from 'react';
+import { useCallback } from 'react';
+import useSWR from 'swr';
 
-/**
- * NOTE: Prompt presets CRUD API was intentionally removed from the backend.
- *
- * Commit `7a935ff7` deleted `features/prompt_presets/api.py` and unregistered
- * the router from `web/routers.py`. The service/repo layer was kept.
- *
- * This hook now returns safe defaults (empty list, no-op functions) so
- * the frontend builds. The prompt presets feature is effectively disabled.
- *
- * To restore:
- *   1. Re-implement `api.py` (see git show 7a935ff7:features/prompt_presets/api.py)
- *   2. Register router in `web/routers.py`
- *   3. Regenerate OpenAPI (`just api-export`) and TS SDK (`pnpm run api:sync`)
- *   4. Restore this hook's real implementation
- */
+import { api } from '../../../../api/eden';
+
+// Prompt presets hook — CRUD over /v2/prompt-presets via eden treaty.
+//
+// The v2 backend (c12) restored full prompt-presets CRUD. The v2 schema has no
+// `is_builtin` / `source` columns (all presets are user-created equals), so we
+// derive `source: 'custom'` on the client to preserve the downstream consumer
+// (SystemConfigDialog) contract. `preset_id` mirrors `id` for the same reason.
+// Builtin presets are not surfaced in v2; `builtinPresets` stays empty.
+const SWR_KEY = 'workspace/prompt-presets';
+
+export interface PromptPresetItem {
+  preset_id: number | null;
+  trigger: string;
+  description: string | null;
+  system_prompt: string;
+  enabled: boolean;
+  source: 'builtin' | 'custom';
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+function normalizePreset(raw: {
+  id: number;
+  trigger: string;
+  description: string | null;
+  system_prompt: string;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}): PromptPresetItem {
+  return {
+    preset_id: raw.id,
+    trigger: raw.trigger,
+    description: raw.description ?? null,
+    system_prompt: raw.system_prompt,
+    enabled: raw.enabled,
+    source: 'custom',
+    created_at: raw.created_at ?? null,
+    updated_at: raw.updated_at ?? null,
+  };
+}
+
 export function usePromptPresets(_options?: { enabled?: boolean }) {
-  const presets = useMemo<never[]>(() => [], []);
-
-  const refreshPresets = async () => {};
-  const refreshCommands = async () => {};
-  const createCustomPreset = async (_payload: {
-    trigger: string;
-    description?: string | null;
-    systemPrompt: string;
-    enabled?: boolean;
-  }) => {
-    throw new Error('Prompt presets API is not available');
-  };
-  const updateCustomPreset = async (
-    _presetId: number,
-    _payload: {
-      trigger?: string | null;
-      description?: string | null;
-      systemPrompt?: string | null;
-      enabled?: boolean | null;
+  const {
+    data: presets = [],
+    error: swrError,
+    isLoading,
+    mutate,
+  } = useSWR<PromptPresetItem[]>(
+    SWR_KEY,
+    async () => {
+      const { data, error } = await api.v2['prompt-presets'].get();
+      if (error) throw error;
+      return (data ?? []).map(normalizePreset);
     },
-  ) => {
-    throw new Error('Prompt presets API is not available');
-  };
-  const deleteCustomPreset = async (_presetId: number) => {
-    throw new Error('Prompt presets API is not available');
-  };
+    { revalidateOnFocus: false },
+  );
+
+  const refreshPresets = useCallback(async () => {
+    await mutate();
+  }, [mutate]);
+
+  // Commands refresh is driven by the same data; kept for caller compatibility.
+  const refreshCommands = refreshPresets;
+
+  const createCustomPreset = useCallback(
+    async (payload: {
+      trigger: string;
+      description?: string | null;
+      systemPrompt: string;
+      enabled?: boolean;
+    }) => {
+      const { data, error } = await api.v2['prompt-presets'].post({
+        trigger: payload.trigger,
+        description: payload.description ?? null,
+        system_prompt: payload.systemPrompt,
+        enabled: payload.enabled ?? true,
+      });
+      if (error) throw error;
+      const created = normalizePreset(data!);
+      await mutate(async (current) => [...(current ?? []), created], {
+        revalidate: false,
+      });
+      return created;
+    },
+    [mutate],
+  );
+
+  const updateCustomPreset = useCallback(
+    async (
+      presetId: number,
+      payload: {
+        trigger?: string | null;
+        description?: string | null;
+        systemPrompt?: string | null;
+        enabled?: boolean | null;
+      },
+    ) => {
+      const body: Record<string, unknown> = {};
+      if (payload.trigger !== undefined) body.trigger = payload.trigger;
+      if (payload.description !== undefined) body.description = payload.description;
+      if (payload.systemPrompt !== undefined) body.system_prompt = payload.systemPrompt;
+      if (payload.enabled !== undefined) body.enabled = payload.enabled;
+
+      const { data, error } = await api.v2['prompt-presets']({ id: presetId }).patch(body);
+      if (error) throw error;
+      const updated = normalizePreset(data!);
+      await mutate(
+        async (current) => current?.map((p) => (p.preset_id === presetId ? updated : p)) ?? [],
+        { revalidate: false },
+      );
+      return updated;
+    },
+    [mutate],
+  );
+
+  const deleteCustomPreset = useCallback(
+    async (presetId: number) => {
+      const { error } = await api.v2['prompt-presets']({ id: presetId }).delete();
+      if (error) throw error;
+      await mutate(async (current) => current?.filter((p) => p.preset_id !== presetId) ?? [], {
+        revalidate: false,
+      });
+    },
+    [mutate],
+  );
 
   return {
     presets,
-    isLoading: false,
-    error: '',
+    isLoading,
+    error: swrError ? String(swrError) : '',
     refreshPresets,
     refreshCommands,
     createCustomPreset,
