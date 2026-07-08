@@ -1,7 +1,7 @@
 # backend/py — v1 Python Reference Implementation
 
 > ⚠️ **This is the v1 Python backend, preserved as a reference SSOT for the v2 TypeScript rewrite.**
-> See root `AGENTS.md` and `UPGRADES/00-v2-migration-plan.md` for the v2 plan.
+> See root `AGENTS.md` and `llmanspec/changes/` for the v2 plan.
 >
 > **Do NOT modify this codebase** during v2 development unless it's a critical bugfix that applies
 > to both v1 and the v2 design. The v2 server lives in `server/` (to be scaffolded in Phase 0).
@@ -15,7 +15,7 @@ This directory contained the Python backend for Crystalith:
 - ChromaDB for vector storage
 - 21 feature modules, ~94 API endpoints, ~39k lines
 
-The previous cleanup (see `UPGRADES/00-cleanup-python.md`) removed ~5,200 lines of
+The previous python cleanup removed ~5,200 lines of
 glue code (Rivu, Ollama, probe monitoring, etc.) while preserving all business features.
 
 ## Build, Test, and Development (v1)

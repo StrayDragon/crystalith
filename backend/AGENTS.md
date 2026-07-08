@@ -10,7 +10,7 @@ The Python backend is being rewritten in Bun + TypeScript:
 - `server/` — Bun + Elysia + Drizzle ORM + Vercel AI SDK + sqlite-vec
 - Same business features, different implementation
 
-See root `AGENTS.md` and `UPGRADES/00-v2-migration-plan.md` for the full plan.
+See root `AGENTS.md` and `llmanspec/changes/` for the full plan.
 
 ## v1 Reference
 

@@ -5,7 +5,7 @@ depends_on: [add-v2-data-layer]
 
 ## Why
 
-RAG 是 Crystalith 的核心差异化能力。v2 的首个策略是 Embed RAG：用户提问 → embedding → sqlite-vec 向量检索 → 返回相关 chunk → 拼入 prompt 作为上下文。sqlite-vec benchmark (UPGRADES/07) 已验证：10k chunk 8ms、100k chunk 80ms（过滤后 30ms）。
+RAG 是 Crystalith 的核心差异化能力。v2 的首个策略是 Embed RAG：用户提问 → embedding → sqlite-vec 向量检索 → 返回相关 chunk → 拼入 prompt 作为上下文。sqlite-vec benchmark 实测：10k chunk 8ms、50k 40ms、100k 80ms（按 notebook_id partition 过滤后 30ms）。暴力扫描在个人规模 (< 10 万 chunk) 完全可用。。
 
 ## What Changes
 

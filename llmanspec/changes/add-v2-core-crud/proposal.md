@@ -26,4 +26,4 @@ v1 的 94 个 API 端点分布 18 个 feature router 中，核心闭环涵盖 no
 
 - **BREAKING**: API 前缀从 `/v1/` 变为 `/v2/`，响应格式从 Pydantic 变为 Zod 校验
 - 前端 API 客户端需从 @hey-api/openapi-ts 生成迁移到 Elysia eden RPC
-- PDF 解析质量已通过 UPGRADES/09-pdf-benchmark.md 验证，unpdf 与 pypdf 一致
+- PDF 解析质量已通过 benchmark 验证（5 样本：中文/英文/混合排版），unpdf 与 pypdf 文本提取一致

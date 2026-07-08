@@ -1,13 +1,13 @@
 ## Approach
 
-Design decisions sourced from UPGRADES/ technical research and benchmark data.
+Key tradeoffs and migration approach.
 
 ## Tradeoffs
 
 | Decision | Rationale | Alternative Rejected |
 |----------|-----------|---------------------|
-| See UPGRADES/00-v2-migration-plan.md | Full TypeScript rewrite, all features preserved | Partial rewrite, Python/TS hybrid |
-| See UPGRADES/02-target-stack-bun.md | Bun --compile single binary (~75MB) | Electron (150-300MB), Python+PyInstaller (80-120MB) |
+| v2 full TS rewrite plan | Full TypeScript rewrite, all features preserved | Partial rewrite, Python/TS hybrid |
+| Bun --compile benchmark (~75MB) | Bun --compile single binary (~75MB) | Electron (150-300MB), Python+PyInstaller (80-120MB) |
 
 ## Migration Notes
 
