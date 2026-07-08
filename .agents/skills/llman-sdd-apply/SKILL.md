@@ -2,7 +2,7 @@
 name: 'llman-sdd-apply'
 description: 'Implement tasks from an llman SDD change and update tasks.md checkboxes.'
 metadata:
-  version: '0.0.53'
+  version: '0.0.55'
 ---
 
 # LLMAN SDD Apply
