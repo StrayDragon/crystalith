@@ -1,11 +1,11 @@
 ---
 depends_on: [add-v2-core-crud, add-v2-ai-runtime]
 ---
-# add-v2-outputs-generation — 7 种结构化输出类型
+# add-v2-outputs-generation — 10 种结构化输出类型
 
 ## Why
 
-v1 支持 7 种 Output 类型（FAQ/BRIEFING/TIMELINE/MINDMAP/QUIZ/GUIDE/SLIDES 等），通过 pydantic-ai output_type 生成。v2 用 AI SDK generateObject(schema: Zod) 实现，替换 pydantic-graph 的 Output 工作流。
+v1 支持 10 种 Output 类型（FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING/SLIDES/PARAGRAPH/BULLETS/STRUCTURED），每种有独立 meta（description/display_text/tone/prompt/is_tool），通过 pydantic-ai output_type 生成。v2 用 AI SDK generateObject(schema: Zod) 实现，替换 pydantic-graph 的 Output 工作流。
 
 ## What Changes
 
