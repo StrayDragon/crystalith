@@ -23,6 +23,14 @@ export interface StreamQaOptions {
   messageId?: number;
   /** Citations computed after retrieval (attached to the done event). */
   citationsResolver?: () => Citation[] | Promise<Citation[]>;
+  /** Confidence score in [0,1] computed from evidence (attached to done). */
+  confidenceResolver?: () => number | Promise<number> | undefined;
+  /**
+   * Optional sink for tool-result events emitted during the fullStream loop.
+   * Each tool call's result is forwarded here so the caller can accumulate
+   * retrieved chunks (or other tool outputs) for citation resolution.
+   */
+  onToolResult?: (toolName: string, result: unknown) => void;
 }
 
 /** SSE-encode a single event. */
@@ -60,13 +68,15 @@ export function streamQaResponse(opts: StreamQaOptions): Response {
         });
 
         for await (const part of result.fullStream) {
-          // Only relay text deltas and errors to the SSE stream. Tool calls,
-          // reasoning, source citations, and finish markers are consumed
-          // internally — the frontend renders tool-call cards from the
-          // `done` event payload, and citations from the resolver.
+          // Relay text deltas and errors to the SSE stream; forward tool
+          // results to the caller's sink (so it can accumulate retrieved
+          // chunks for citation resolution). Other part types (reasoning,
+          // finish markers) are consumed internally.
           if (part.type === 'text-delta') {
             const text = part.text;
             if (text) emit('chunk', { text });
+          } else if (part.type === 'tool-result') {
+            opts.onToolResult?.(part.toolName, part.output);
           } else if (part.type === 'error') {
             const message =
               part.error instanceof Error
@@ -83,6 +93,7 @@ export function streamQaResponse(opts: StreamQaOptions): Response {
         emit('done', {
           message_id: opts.messageId ?? null,
           citations,
+          confidence: opts.confidenceResolver ? await opts.confidenceResolver() : undefined,
           tool_calls: [],
         });
       } catch (error) {
