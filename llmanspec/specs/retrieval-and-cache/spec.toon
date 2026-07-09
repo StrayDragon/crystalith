@@ -2,17 +2,27 @@ kind: llman.sdd.spec
 name: "retrieval-and-cache"
 purpose: 定义共享检索策略与缓存失效模型，覆盖 outputs/slides/qa/refine 等路径的统一检索行为。该规范强调检索上下文一致性与可预测缓存失效，避免跨路径出现“同输入不同上下文”的漂移。
 valid_scope[2]: src/,tests/
-requirements[6]{req_id,title,statement}:
+requirements[11]{req_id,title,statement}:
   r1,Retrieval strategy is shared across generation paths,outputs 与 slides MUST 复用同一检索策略族（预算、去重、多样性、融合）。
   r2,Retrieval context obeys token budget,检索上下文 MUST 受 token budget 约束，超预算时 MUST 截断或压缩。
   r3,"Multi-query retrieval is bounded","启用 multi-query 时 MUST 受 seed 上限、融合策略与去重规则约束。"
   r4,"Epoch-based cache invalidation is canonical",sources/vector 相关缓存 MUST 基于 `sources_epoch` 与 `vector_epoch` 失效。
   r5,Epoch bumps are atomic and monotonic,并发下 epoch 递增 MUST 原子且单调递增。
   r6,Optional retrieval assembly cache is versioned,若启用检索组装缓存，key MUST 包含 epoch 版本信息以避免脏命中。
-scenarios[6]{req_id,id,given,when,then}:
+  r7,Embed strategy converts distance to similarity,"EmbedStrategy MUST 将 sqlite-vec 返回的 distance 转换为 similarity score (score = 1 - distance)。过滤 MUST 使用 score >= minScore，minScore 默认 0.2。topK 默认 8。MUST NOT 直接用 distance 做 >= 比较（方向相反）。"
+  r8,Chunking uses 800/100 sliding window,文本分块 MUST 使用 800 字符块大小 + 100 字符重叠的滑动窗口（对齐 v1）。MUST NOT 使用无重叠的段落切分。分块参数 MUST 可配置。
+  r9,Context window enforces token budget,"检索上下文组装 MUST 受 token budget 约束，超预算时按优先级截断（history→retrieval→recent→system→query）。token 计数 MUST 使用 gpt-tokenizer（cl100k_base）。MUST NOT 用字符数截断替代 token 截断。"
+  r10,"Multi-query expansion with RRF fusion","检索 MUST 支持 multi-query 扩展：按 output_type 生成 query seeds，多查询结果 RRF (k=60) 融合。MUST 受 seed_cap 限制避免无界扩展。"
+  r11,EpochCache wired to strategies and source mutations,EpochCache MUST 接线到各策略 retrieve()。源增删改 MUST bump sources_epoch，向量重嵌 MUST bump vector_epoch。缓存 key MUST 包含 epoch 版本。MUST NOT 零调用（死代码）。
+scenarios[11]{req_id,id,given,when,then}:
   r1,"shared-retrieval-across-paths","",outputs 与 slides 路径执行检索,系统 SHALL 复用同一检索策略族（预算/去重/多样性/融合）
   r2,"context-truncates-when-over-budget","",组装的检索上下文超过 token budget,系统 SHALL 截断或压缩上下文以满足预算约束
   r3,"multi-query-remains-bounded","","启用 multi-query 检索",系统 SHALL 遵守 seed 上限、融合策略与去重规则以保持有界
   r4,"epoch-invalidates-stale-cache","",sources 或 vector 发生变更并 bump epoch,系统 SHALL 基于 `sources_epoch`/`vector_epoch` 使相关缓存失效以避免脏命中
   r5,"concurrent-epoch-bumps-are-safe","",多个并发请求同时触发 epoch 递增,系统 SHALL 保证递增操作原子且单调递增
   r6,"retrieval-assembly-cache-key-is-versioned","",系统启用检索组装缓存并存取 cache,cache key SHALL 包含 epoch 版本信息以避免命中旧上下文
+  r7,happy,"sqlite-vec 返回 distance=0.3 的 chunk",EmbedStrategy 检索,score=0.7，>= 0.2 通过过滤，按 score desc 排序
+  r8,happy,5000 字文档入库,分块,产生约 8 个 chunk，每块约 800 字符，相邻块共享 100 字符重叠
+  r9,happy,检索上下文 5000 token 但预算 4000,组装上下文,按优先级截断至 4000 token 内，system+query 保留
+  r10,happy,FAQ 类型输出 + 用户查询,"multi-query 扩展","生成 2-3 个 seed query，各检索后 RRF 融合 top 结果"
+  r11,happy,notebook 新增源后检索,EpochCache 查询,sources_epoch 变更，缓存失效，重新检索
