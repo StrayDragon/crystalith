@@ -2,7 +2,8 @@
 //
 // Splits text on paragraph boundaries (double newline). Long paragraphs are
 // further split on sentence boundaries with n-char overlap to preserve context
-// across chunk boundaries.
+// across chunk boundaries. Defaults (800/100) align with v1's sliding-window
+// chunker (chunker.py) for retrieval parity.
 export interface ChunkResult {
   text: string;
   index: number;
@@ -14,8 +15,8 @@ export interface ChunkerConfig {
 }
 
 export const DEFAULT_CHUNKER_CONFIG: ChunkerConfig = {
-  maxLen: 500,
-  overlap: 50,
+  maxLen: 800,
+  overlap: 100,
 };
 
 /**

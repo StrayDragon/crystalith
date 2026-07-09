@@ -54,7 +54,7 @@ const retrieveSourcesTool = (notebookId: number) =>
           source_id: r.source_id,
           page: r.chunk_index,
           text: r.text.substring(0, 800),
-          score: r.distance,
+          score: r.score,
         }));
       } catch {
         return [];

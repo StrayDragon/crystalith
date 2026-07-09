@@ -9,6 +9,8 @@ import { eq } from 'drizzle-orm';
 
 import { db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
+import { bumpSourcesEpoch } from '../../rag/cache.ts';
+import { chunkText } from '../../rag/chunker.ts';
 import { guessMimeType, registerParser, selectParser } from './parser-registry.ts';
 import { htmlParser } from './parsers/html.ts';
 import { pdfParser } from './parsers/pdf.ts';
@@ -90,30 +92,31 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
     .returning()
     .get();
 
+  // New source invalidates cached retrievals for this notebook.
+  bumpSourcesEpoch(input.notebookId);
+
   try {
     // 2. Parse
     const result = await parser!.parse(input.buffer, input.filename);
 
-    // 3. Chunk the text (simple paragraph-based for now; c05 introduces
-    //    the proper chunker with overlap config)
-    const chunkTexts = chunkSimple(result.text);
+    // 3. Chunk the text using the v1-aligned chunker (800 chars / 100 overlap).
+    const chunked = chunkText(result.text);
 
     // 4. Insert chunk rows
     let offset = 0;
-    for (let i = 0; i < chunkTexts.length; i++) {
-      const text = chunkTexts[i];
+    for (const c of chunked) {
       db()
         .insert(chunks)
         .values({
           sourceId: sourceRow.id,
-          chunkIndex: i,
-          text,
+          chunkIndex: c.index,
+          text: c.text,
           startOffset: offset,
-          endOffset: offset + text.length,
+          endOffset: offset + c.text.length,
           metadata: result.metadata ?? null,
         })
         .run();
-      offset += text.length + 1; // +1 for the separator
+      offset += c.text.length + 1; // +1 for the separator
     }
 
     // 5. Mark ready
@@ -134,7 +137,7 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
 
     return {
       sourceId: sourceRow.id,
-      chunkCount: chunkTexts.length,
+      chunkCount: chunked.length,
       text: result.text,
       parserType: parser?.id ?? 'text',
       status: 'ready',
@@ -165,35 +168,5 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
 }
 
 // ---------------------------------------------------------------------------
-// Simple chunker (paragraph-based, no overlap)
-// Will be replaced by c05's configurable chunker.
+// Chunking is handled by rag/chunker.ts (v1-aligned 800/100 sliding window).
 // ---------------------------------------------------------------------------
-
-function chunkSimple(text: string, maxLen = 500): string[] {
-  const paragraphs = text
-    .split(/\n\n+/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-  const result: string[] = [];
-
-  for (const para of paragraphs) {
-    if (para.length <= maxLen) {
-      result.push(para);
-    } else {
-      // Split long paragraph by sentences
-      const sentences = para.match(/[^.!?]+[.!?]+/g) ?? [para];
-      let current = '';
-      for (const s of sentences) {
-        if ((current + s).length > maxLen && current.length > 0) {
-          result.push(current.trim());
-          current = s;
-        } else {
-          current += s;
-        }
-      }
-      if (current.trim()) result.push(current.trim());
-    }
-  }
-
-  return result;
-}

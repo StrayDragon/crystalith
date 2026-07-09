@@ -3,7 +3,7 @@
 // Supports cl100k_base (GPT-4/GPT-3.5) and o200k_base (GPT-4o). For non-OpenAI
 // models the count is approximate (tokenizers are model-specific) but good
 // enough for context-window budgeting.
-import { encode } from 'gpt-tokenizer';
+import { encode, decode } from 'gpt-tokenizer';
 
 /** Count tokens in a string using the default (cl100k_base) encoding. */
 export function countTokens(text: string): number {
@@ -33,7 +33,6 @@ export function truncateToTokens(text: string, maxTokens: number): string {
     const tokens = encode(text);
     if (tokens.length <= maxTokens) return text;
     // Decode the truncated token list back to text.
-    const { decode } = require('gpt-tokenizer');
     return decode(tokens.slice(0, maxTokens));
   } catch {
     // Fallback: char-based truncation.

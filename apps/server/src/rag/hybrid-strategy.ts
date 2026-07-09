@@ -13,8 +13,8 @@ interface RankedHit {
   text: string;
   source_id: number;
   chunk_index: number;
-  embedDistance: number;
-  bm25Distance: number;
+  embedScore: number;
+  bm25Score: number;
 }
 
 function rrfFuse(
@@ -22,7 +22,7 @@ function rrfFuse(
   bm25Results: ChunkResult[],
   topK: number,
 ): ChunkResult[] {
-  const scoreMap = new Map<number, { hit: RankedHit; score: number }>();
+  const scoreMap = new Map<number, { hit: RankedHit; rrf: number }>();
 
   // Compute RRF scores for embed results
   for (let i = 0; i < embedResults.length; i++) {
@@ -30,18 +30,18 @@ function rrfFuse(
     const rrfScore = 1 / (RRF_K + (i + 1));
     const existing = scoreMap.get(r.chunk_id);
     if (existing) {
-      existing.score += rrfScore;
-      existing.hit.embedDistance = r.distance;
+      existing.rrf += rrfScore;
+      existing.hit.embedScore = r.score;
     } else {
       scoreMap.set(r.chunk_id, {
-        score: rrfScore,
+        rrf: rrfScore,
         hit: {
           chunk_id: r.chunk_id,
           text: r.text,
           source_id: r.source_id,
           chunk_index: r.chunk_index,
-          embedDistance: r.distance,
-          bm25Distance: 0,
+          embedScore: r.score,
+          bm25Score: 0,
         },
       });
     }
@@ -53,34 +53,35 @@ function rrfFuse(
     const rrfScore = 1 / (RRF_K + (i + 1));
     const existing = scoreMap.get(r.chunk_id);
     if (existing) {
-      existing.score += rrfScore;
-      existing.hit.bm25Distance = r.distance;
+      existing.rrf += rrfScore;
+      existing.hit.bm25Score = r.score;
     } else {
       scoreMap.set(r.chunk_id, {
-        score: rrfScore,
+        rrf: rrfScore,
         hit: {
           chunk_id: r.chunk_id,
           text: r.text,
           source_id: r.source_id,
           chunk_index: r.chunk_index,
-          embedDistance: 0,
-          bm25Distance: r.distance,
+          embedScore: 0,
+          bm25Score: r.score,
         },
       });
     }
   }
 
-  // Sort by RRF score descending and take topK
-  return Array.from(scoreMap.values())
-    .sort((a, b) => b.score - a.score)
-    .slice(0, topK)
-    .map((entry) => ({
-      chunk_id: entry.hit.chunk_id,
-      text: entry.hit.text,
-      distance: entry.score, // RRF score as distance for consistency
-      source_id: entry.hit.source_id,
-      chunk_index: entry.hit.chunk_index,
-    }));
+  // Sort by RRF score descending and take topK. Normalize RRF to 0-1 similarity.
+  const entries = Array.from(scoreMap.values())
+    .sort((a, b) => b.rrf - a.rrf)
+    .slice(0, topK);
+  const maxRrf = entries[0]?.rrf ?? 1;
+  return entries.map((entry) => ({
+    chunk_id: entry.hit.chunk_id,
+    text: entry.hit.text,
+    score: maxRrf > 0 ? entry.rrf / maxRrf : 0, // normalized RRF as similarity
+    source_id: entry.hit.source_id,
+    chunk_index: entry.hit.chunk_index,
+  }));
 }
 
 export class HybridStrategy implements RAGStrategy {
@@ -103,7 +104,7 @@ export class HybridStrategy implements RAGStrategy {
     notebookId: number,
     opts?: { topK?: number; minScore?: number },
   ): Promise<ChunkResult[]> {
-    const topK = opts?.topK ?? 10;
+    const topK = opts?.topK ?? 8;
     const minScore = opts?.minScore ?? 0;
 
     // Retrieve from both strategies in parallel, then fuse
@@ -113,7 +114,7 @@ export class HybridStrategy implements RAGStrategy {
     ]);
 
     const fused = rrfFuse(embedResults, bm25Results, topK);
-    return fused.filter((r) => r.distance >= minScore);
+    return fused.filter((r) => r.score >= minScore);
   }
 
   async isIndexed(notebookId: number): Promise<boolean> {

@@ -31,7 +31,7 @@ export class PageIndexStrategy implements RAGStrategy {
     notebookId: number,
     opts?: { topK?: number; minScore?: number },
   ): Promise<ChunkResult[]> {
-    const topK = opts?.topK ?? 10;
+    const topK = opts?.topK ?? 8;
     const minScore = opts?.minScore ?? 0;
 
     // Get all chunks for this notebook, grouped by source + page
@@ -87,14 +87,14 @@ export class PageIndexStrategy implements RAGStrategy {
         results.push({
           chunk_id: group.chunkIds[0],
           text: group.text.substring(0, 500),
-          distance: score,
+          score, // substring-match density (0-1, higher = better)
           source_id: group.source_id,
           chunk_index: group.page,
         });
       }
     }
 
-    return results.sort((a, b) => b.distance - a.distance).slice(0, topK);
+    return results.sort((a, b) => b.score - a.score).slice(0, topK);
   }
 
   async isIndexed(notebookId: number): Promise<boolean> {
