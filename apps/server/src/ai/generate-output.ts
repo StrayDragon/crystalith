@@ -14,7 +14,7 @@ import {
 import { generateObject, isStepCount } from 'ai';
 import { z } from 'zod';
 
-import { getModelById, getDefaultChatModel } from '../shared/config.ts';
+import { getModelById, getDefaultChatModel, getCompletionOptions } from '../shared/config.ts';
 import { withRetry } from './middleware.ts';
 import { resolveModel } from './providers.ts';
 
@@ -49,9 +49,10 @@ export async function generateOutput<T extends ToolOutputType>(
   const schema = OutputContentSchemaByType[opts.type] as z.ZodTypeAny;
 
   const model = opts.model ?? (await resolveModelFromConfig(opts.modelId));
-  const wrapped = withRetry(model, { maxRetries: 2 });
+  const wrapped = withRetry(model);
 
   const systemPrompt = opts.systemPrompt ?? defaultSystemPrompt(opts.type, opts.context);
+  const co = getCompletionOptions();
 
   const result = await generateObject({
     model: wrapped,
@@ -59,7 +60,10 @@ export async function generateOutput<T extends ToolOutputType>(
     system: systemPrompt,
     prompt: opts.prompt,
     ...(opts.maxTokens !== undefined ? { maxOutputTokens: opts.maxTokens } : {}),
-    ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
+    temperature: opts.temperature ?? co.temperature,
+    ...(co.top_p !== undefined ? { topP: co.top_p } : {}),
+    ...(co.top_k !== undefined ? { topK: co.top_k } : {}),
+    ...(co.stop !== undefined ? { stopSequences: co.stop } : {}),
   });
 
   return {

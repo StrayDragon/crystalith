@@ -11,6 +11,13 @@ import {
   getDefaultChatModel,
   getSecurityPolicy,
   getUploadMaxBytes,
+  getAiSettings,
+  getConcurrencySettings,
+  getEmbeddingSettings,
+  getContextWindowSettings,
+  getSearchSettings,
+  getSearxngHost,
+  getCompletionOptions,
 } from '../src/shared/config.ts';
 
 const TMP = join(tmpdir(), `crystalith-test-config-${process.pid}.yaml`);
@@ -201,5 +208,129 @@ app:
     );
     resetConfig(loadConfig(TMP));
     expect(getUploadMaxBytes()).toBe(1048576);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// c40: AI / concurrency / embedding / search / completion_options config
+// ---------------------------------------------------------------------------
+
+describe('config: c40 typed sections', () => {
+  it('returns defaults when sections are absent', () => {
+    writeFileSync(TMP, `models:\n  defaults: {}\n  available: []\n`);
+    resetConfig(loadConfig(TMP));
+    expect(getAiSettings()).toEqual({ timeout: 60, max_retries: 3 });
+    expect(getConcurrencySettings()).toEqual({ embedding: 8, vector_search: 8, llm_generate: 4 });
+    expect(getEmbeddingSettings()).toEqual({ chunk_size: 512, batch_size: 32 });
+    expect(getContextWindowSettings().max_tokens).toBe(8000);
+    expect(getCompletionOptions()).toEqual({});
+  });
+
+  it('parses ai section', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+ai:
+  timeout: 120
+  max_retries: 5
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    expect(getAiSettings()).toEqual({ timeout: 120, max_retries: 5 });
+  });
+
+  it('parses concurrency section', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+concurrency:
+  embedding: 4
+  vector_search: 6
+  llm_generate: 2
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    expect(getConcurrencySettings()).toEqual({ embedding: 4, vector_search: 6, llm_generate: 2 });
+  });
+
+  it('parses embedding section', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+embedding:
+  chunk_size: 800
+  batch_size: 64
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    expect(getEmbeddingSettings()).toEqual({ chunk_size: 800, batch_size: 64 });
+  });
+
+  it('parses search.searxng section (v1 key path, not search_engine)', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+search:
+  searxng:
+    host: http://my-searxng:8080
+    max_results: 5
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    const search = getSearchSettings();
+    expect(search.searxng.host).toBe('http://my-searxng:8080');
+    expect(search.searxng.max_results).toBe(5);
+    expect(getSearxngHost()).toBe('http://my-searxng:8080');
+  });
+
+  it('getSearxngHost falls back to env when config host is empty', () => {
+    writeFileSync(TMP, `models:\n  defaults: {}\n  available: []\n`);
+    resetConfig(loadConfig(TMP));
+    process.env.SEARXNG_HOST = 'http://env-host:9090';
+    expect(getSearxngHost()).toBe('http://env-host:9090');
+    delete process.env.SEARXNG_HOST;
+  });
+
+  it('parses completion_options section', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+completion_options:
+  temperature: 0.7
+  top_p: 0.9
+  stop: ["\\n\\n"]
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    const co = getCompletionOptions();
+    expect(co.temperature).toBe(0.7);
+    expect(co.top_p).toBe(0.9);
+    expect(co.stop).toEqual(['\n\n']);
+  });
+
+  it('returns defaults on invalid values (safeParse fallback)', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+ai:
+  timeout: -5
+  max_retries: "not-a-number"
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    // Invalid values fall back to defaults
+    expect(getAiSettings()).toEqual({ timeout: 60, max_retries: 3 });
   });
 });

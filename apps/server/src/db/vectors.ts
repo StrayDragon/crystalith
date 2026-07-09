@@ -69,14 +69,22 @@ export function deleteSourceVectors(orm: Orm, sourceId: number): void {
  * KNN search scoped to a notebook. Returns the top-K chunk rowids + distance,
  * joined with the `chunks` table for text. The query vector and integer
  * filters are bound as parameters (no injection surface).
+ *
+ * When `sourceIds` is provided (c40 — v1 source-scoping), the search
+ * over-fetches (3× topK) then post-filters to the given sources, because
+ * sqlite-vec vec0 partitions only support equality predicates on partition
+ * columns, not `source_id IN (...)`. The over-fetch factor ensures enough
+ * candidates survive the post-filter to fill the requested topK.
  */
 export function searchVectors(
   orm: Orm,
   queryVec: Float32Array | number[],
   notebookId: number,
   topK = 10,
+  sourceIds?: number[],
 ): VectorHit[] {
-  return orm.all<VectorHit>(sql`
+  const searchK = sourceIds?.length ? topK * 3 : topK;
+  const hits = orm.all<VectorHit>(sql`
     SELECT v.rowid AS rowid,
            v.source_id AS source_id,
            v.notebook_id AS notebook_id,
@@ -86,10 +94,13 @@ export function searchVectors(
       FROM vec_chunks v
       JOIN chunks c ON c.id = v.rowid
      WHERE v.embedding MATCH ${toBytes(queryVec)}
-       AND v.k = ${topK}
+       AND v.k = ${searchK}
        AND v.notebook_id = ${notebookId}
      ORDER BY v.distance;
   `);
+  if (!sourceIds?.length) return hits.slice(0, topK);
+  const allowed = new Set(sourceIds);
+  return hits.filter((h) => allowed.has(h.source_id)).slice(0, topK);
 }
 
 /** Count indexed vectors for a notebook (used to check `isIndexed`). */

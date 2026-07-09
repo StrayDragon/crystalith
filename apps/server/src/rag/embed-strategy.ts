@@ -13,6 +13,7 @@ import {
   searchVectors,
   countVectors,
 } from '../db/vectors.ts';
+import { getEmbeddingSettings } from '../shared/config.ts';
 import { getCached, setCached, bumpVectorEpoch } from './cache.ts';
 import { applyDiversity } from './diversity.ts';
 import { embedSingle, embedBatch } from './embedder.ts';
@@ -23,9 +24,7 @@ export interface EmbedStrategyConfig {
   batchSize?: number;
 }
 
-const DEFAULT_CONFIG: EmbedStrategyConfig = {
-  batchSize: 32,
-};
+const DEFAULT_CONFIG: EmbedStrategyConfig = {};
 
 export class EmbedStrategy implements RAGStrategy {
   readonly id = 'embed';
@@ -35,6 +34,11 @@ export class EmbedStrategy implements RAGStrategy {
 
   constructor(config?: EmbedStrategyConfig) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+  }
+
+  /** Resolve batch size: explicit config override → embedding.batch_size config. */
+  private get batchSize(): number {
+    return this.config.batchSize ?? getEmbeddingSettings().batch_size;
   }
 
   /**
@@ -50,7 +54,7 @@ export class EmbedStrategy implements RAGStrategy {
       .all();
 
     const texts = chunkRows.map((c) => c.text);
-    const batchSize = this.config.batchSize ?? 32;
+    const batchSize = this.batchSize;
 
     for (let i = 0; i < texts.length; i += batchSize) {
       const batch = texts.slice(i, i + batchSize);
@@ -100,11 +104,11 @@ export class EmbedStrategy implements RAGStrategy {
     if (opts?.multiQuery) {
       const seeds = buildQuerySeeds(query, opts.outputType);
       const lists = await Promise.all(
-        seeds.map((s) => this.searchOne(s, notebookId, topK, minScore)),
+        seeds.map((s) => this.searchOne(s, notebookId, topK, minScore, opts?.sourceIds)),
       );
       results = rrfFuseSeeds(lists, topK);
     } else {
-      results = await this.searchOne(query, notebookId, topK, minScore);
+      results = await this.searchOne(query, notebookId, topK, minScore, opts?.sourceIds);
     }
     setCached(notebookId, query, paramsKey, results);
     return applyDiversity(results, opts?.maxPerSource);
@@ -116,9 +120,10 @@ export class EmbedStrategy implements RAGStrategy {
     notebookId: number,
     topK: number,
     minScore: number,
+    sourceIds?: number[],
   ): Promise<ChunkResult[]> {
     const queryVec = await embedSingle(query);
-    const hits = searchVectors(db(), queryVec, notebookId, topK);
+    const hits = searchVectors(db(), queryVec, notebookId, topK, sourceIds);
     return hits
       .map((h) => ({
         chunk_id: h.rowid,

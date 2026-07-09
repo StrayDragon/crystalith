@@ -19,6 +19,7 @@ import {
   type ModelDefaults,
 } from '@crystalith/shared';
 import { parse as parseYaml } from 'yaml';
+import { z } from 'zod';
 
 import type { SsrfPolicy } from './net/url-safety.ts';
 
@@ -268,4 +269,104 @@ export function getUploadMaxBytes(): number {
     | undefined;
   const n = guardrails?.upload_max_bytes;
   return typeof n === 'number' && n > 0 ? n : 50 * 1024 * 1024;
+}
+
+// ---------------------------------------------------------------------------
+// c40: AI / concurrency / embedding / search config (typed parsing)
+//
+// v1 parses ~20 config dimensions (config/models.py). v2 previously only
+// parsed `models` + ad-hoc SSRF/upload reads. These schemas bring the most
+// operationally important sections into typed access, aligned with v1
+// defaults. Auth/rate-limit/CORS remain c13 (Server Mode) scope.
+// ---------------------------------------------------------------------------
+
+export const AiSettingsSchema = z.object({
+  timeout: z.number().int().positive().max(600).default(60),
+  max_retries: z.number().int().min(0).max(10).default(3),
+});
+export type AiSettings = z.infer<typeof AiSettingsSchema>;
+
+export const ConcurrencySettingsSchema = z.object({
+  embedding: z.number().int().min(0).default(8),
+  vector_search: z.number().int().min(0).default(8),
+  llm_generate: z.number().int().min(0).default(4),
+});
+export type ConcurrencySettings = z.infer<typeof ConcurrencySettingsSchema>;
+
+export const EmbeddingSettingsSchema = z.object({
+  chunk_size: z.number().int().min(64).default(512),
+  batch_size: z.number().int().min(1).default(32),
+});
+export type EmbeddingSettings = z.infer<typeof EmbeddingSettingsSchema>;
+
+export const ContextWindowSettingsSchema = z.object({
+  max_tokens: z.number().int().positive().default(8000),
+  compression_strategy: z.enum(['truncate', 'summarize']).default('truncate'),
+  window_size: z.number().int().min(0).default(10),
+});
+export type ContextWindowSettings = z.infer<typeof ContextWindowSettingsSchema>;
+
+export const SearXNGSettingsSchema = z.object({
+  host: z.string().default(''),
+  api_key: z.string().nullable().default(null),
+  max_results: z.number().int().min(1).max(50).default(10),
+});
+export type SearXNGSettings = z.infer<typeof SearXNGSettingsSchema>;
+
+export const SearchSettingsSchema = z.object({
+  searxng: SearXNGSettingsSchema.default(SearXNGSettingsSchema.parse({})),
+});
+export type SearchSettings = z.infer<typeof SearchSettingsSchema>;
+
+export const CompletionOptionsSchema = z.object({
+  temperature: z.number().min(0).max(2).optional(),
+  top_p: z.number().min(0).max(1).optional(),
+  top_k: z.number().int().min(0).optional(),
+  stop: z.array(z.string()).optional(),
+  reasoning: z.number().int().min(0).optional(),
+});
+export type CompletionOptions = z.infer<typeof CompletionOptionsSchema>;
+
+/** Parse a config section safely — returns defaults on absence/invalid. */
+function parseSection<T>(schema: z.ZodType<T>, section: unknown): T {
+  const result = schema.safeParse(section);
+  return result.success ? result.data : schema.parse({});
+}
+
+export function getAiSettings(): AiSettings {
+  return parseSection(AiSettingsSchema, config().raw.ai);
+}
+
+export function getConcurrencySettings(): ConcurrencySettings {
+  return parseSection(ConcurrencySettingsSchema, config().raw.concurrency);
+}
+
+export function getEmbeddingSettings(): EmbeddingSettings {
+  return parseSection(EmbeddingSettingsSchema, config().raw.embedding);
+}
+
+export function getContextWindowSettings(): ContextWindowSettings {
+  return parseSection(ContextWindowSettingsSchema, config().raw.context_window);
+}
+
+/**
+ * Search settings from `search.searxng.*`.
+ *
+ * NOTE: v1 uses `search.searxng.host`; an earlier v2 revision read from the
+ * wrong key (`search_engine.searxng_host`). This accessor reads the correct
+ * v1 path. Falls back to SEARXNG_HOST env var when config host is empty.
+ */
+export function getSearchSettings(): SearchSettings {
+  return parseSection(SearchSettingsSchema, config().raw.search);
+}
+
+/** SearXNG host resolved from config → env fallback. Empty disables web search. */
+export function getSearxngHost(): string {
+  const host = getSearchSettings().searxng.host;
+  return host || process.env.SEARXNG_HOST || '';
+}
+
+/** Completion options from `completion_options` config section (optional fields). */
+export function getCompletionOptions(): CompletionOptions {
+  return parseSection(CompletionOptionsSchema, config().raw.completion_options);
 }

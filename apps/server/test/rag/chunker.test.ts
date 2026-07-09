@@ -1,12 +1,15 @@
-// Tests for the v1-aligned chunker (800 chars / 100 overlap).
-import { describe, expect, it } from 'bun:test';
+// Tests for the chunker (config-driven chunk_size, default 512 per v1 embedding.chunk_size).
+import { afterEach, describe, expect, it } from 'bun:test';
 
 import { chunkText, DEFAULT_CHUNKER_CONFIG } from '../../src/rag/chunker.ts';
+import { resetConfig } from '../../src/shared/config.ts';
+
+afterEach(() => resetConfig());
 
 describe('chunker', () => {
-  it('uses v1-aligned defaults (800/100)', () => {
-    expect(DEFAULT_CHUNKER_CONFIG.maxLen).toBe(800);
-    expect(DEFAULT_CHUNKER_CONFIG.overlap).toBe(100);
+  it('DEFAULT_CHUNKER_CONFIG is the v1 fallback (512/102)', () => {
+    expect(DEFAULT_CHUNKER_CONFIG.maxLen).toBe(512);
+    expect(DEFAULT_CHUNKER_CONFIG.overlap).toBe(102);
   });
 
   it('chunks short text into a single chunk', () => {
@@ -23,7 +26,7 @@ describe('chunker', () => {
     const result = chunkText(sentences);
     expect(result.length).toBeGreaterThan(1);
     for (const c of result) {
-      expect(c.text.length).toBeLessThanOrEqual(800);
+      expect(c.text.length).toBeLessThanOrEqual(512);
     }
   });
 
@@ -45,5 +48,14 @@ describe('chunker', () => {
     const text = 'A.\n\n\n\nB.';
     const result = chunkText(text);
     expect(result).toHaveLength(2);
+  });
+
+  it('honors explicit config override', () => {
+    const long = 'Sentence one. '.repeat(100);
+    const result = chunkText(long, { maxLen: 200, overlap: 20 });
+    expect(result.length).toBeGreaterThan(1);
+    for (const c of result) {
+      expect(c.text.length).toBeLessThanOrEqual(200);
+    }
   });
 });

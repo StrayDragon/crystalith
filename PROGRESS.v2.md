@@ -44,7 +44,7 @@
 | c37 | align-research-agent   | ⬜ TODO (v1↔v2 对拍：resume/skip/approve/finish/delete)                          |
 | c38 | align-outputs-pipeline | ⬜ TODO (v1↔v2 对拍：source_ids RAG/postprocess/export)                          |
 | c39 | align-sources-sessions | ⬜ TODO (v1↔v2 对拍：竞态复发/dedup/tags/校验)                                   |
-| c40 | align-shared-infra     | ⬜ TODO (v1↔v2 对拍：config/retry/searchVectors)                                 |
+| c40 | align-shared-infra     | ✅ DONE (config typed/retry Retry-After/searchVectors source_ids) |
 | c13 | distribution           | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                          |
 | c14 | cleanup-delivery       | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                          |
 
