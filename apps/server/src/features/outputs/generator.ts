@@ -148,3 +148,21 @@ export async function generateOutputByType(
 export function listOutputTypes(): OutputMeta[] {
   return Object.values(OUTPUT_META);
 }
+
+/**
+ * Build a retrieval query from output type + optional prompt (c27).
+ *
+ * Constructs a natural-language search query tuned for the output type
+ * so vector search retrieves the most relevant chunks. Falls back to the
+ * meta description when no prompt is provided.
+ */
+export function buildOutputQuery(type: OutputType, prompt?: string): string {
+  const meta = OUTPUT_META[type];
+  const typeLabel = meta?.display_text ?? type;
+  const typeDesc = meta?.description ?? '';
+
+  if (prompt?.trim()) {
+    return `Find context for generating a ${typeLabel} (${typeDesc}): ${prompt.trim()}`;
+  }
+  return `Find context for generating a ${typeLabel} (${typeDesc})`;
+}
