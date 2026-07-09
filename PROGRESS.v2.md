@@ -29,7 +29,7 @@
 | c22     | research-agent         | 🔄 WIP (cyclic 骨架✅; resume失效/export stub/hitl缺modify → GAP-BOARD G4/G5/G6) |
 | c23     | studio-analysis        | 🔄 WIP (contradiction✅; clustering/correlation降级→c28; studio落盘缺→G10/G11)   |
 | c24     | pipeline-integration   | 🔄 WIP (WS-A✅ / WS-B✅ 3缺口 / WS-C✅ 28 tests)                                 |
-| c25     | ssrf-config            | ⬜ TODO (GAP-BOARD G15)                                                          |
+| c25     | ssrf-config            | ✅ DONE                                                                          |
 | c26     | citation-context       | ✅ DONE                                                                          |
 | c27     | outputs-rag            | ✅ DONE                                                                          |
 | c28     | analysis-vector        | ⬜ TODO (GAP-BOARD G2)                                                           |
