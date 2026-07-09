@@ -6,6 +6,9 @@
 ### Universal ###
 # Common files that should be ignored in all projects
 
+# Editor local artifacts
+.zcode/
+
 # Vibe coding images
 .vibe-images
 
