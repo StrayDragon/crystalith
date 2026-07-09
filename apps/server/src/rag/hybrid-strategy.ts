@@ -72,7 +72,7 @@ function rrfFuse(
 
   // Sort by RRF score descending and take topK. Normalize RRF to 0-1 similarity.
   const entries = Array.from(scoreMap.values())
-    .sort((a, b) => b.rrf - a.rrf)
+    .toSorted((a, b) => b.rrf - a.rrf)
     .slice(0, topK);
   const maxRrf = entries[0]?.rrf ?? 1;
   return entries.map((entry) => ({

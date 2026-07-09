@@ -35,7 +35,9 @@
     "node/no-path-concat": "error",
 
     // –– code style (warn) ––
-    "eslint/no-console": "warn",
+    // no-console: off — this is a single-binary local app with no logging
+    // framework; all console.* are intentional server logs or error handlers.
+    "eslint/no-console": "off",
     "eslint/no-eval": "error",
     "eslint/no-implied-eval": "error",
     "promise/no-callback-in-promise": "warn",
@@ -49,6 +51,9 @@
     "eslint/max-lines": "off",
     "eslint/max-depth": "off",
     "eslint/no-negated-condition": "off",
+    // no-underscore-dangle: off — API JSON payload fields use snake_case
+    // (notebook_id, source_id, created_at, ...) matching DB columns & v1 format.
+    "eslint/no-underscore-dangle": "off",
     "typescript/no-explicit-any": "off",
     "typescript/no-non-null-assertion": "off",
     "typescript/consistent-type-imports": "off",
@@ -90,6 +95,9 @@
         "apps/web/src/features/workspace/**/*.tsx"
       ],
       "rules": {
+        // eqeqeq: warn (not error) — frontend uses intentional `== null` idiom
+        // to check null-or-undefined; forcing `=== null` would drop the
+        // undefined case and introduce bugs.
         "eslint/eqeqeq": "warn",
         "import/no-duplicates": "warn",
         "eslint/no-unreachable": "warn"
@@ -110,7 +118,9 @@
         "**/*.spec.ts",
         "**/*.spec.tsx",
         "**/test/**/*.ts",
-        "**/test/**/*.tsx"
+        "**/test/**/*.tsx",
+        "**/tests/**/*.ts",
+        "**/tests/**/*.tsx"
       ],
       "plugins": ["vitest"],
       "rules": {
@@ -120,6 +130,24 @@
         "typescript/no-non-null-assertion": "off",
         "typescript/unbound-method": "off",
         "import/no-cycle": "off",
+        // Test-only relaxations: mocks and fixtures legitimately use inline
+        // comments, unicode-flagless regex, conditional stub values (?? / ?:),
+        // and mock.module() before imports (bun:test idiom).
+        "eslint/no-inline-comments": "off",
+        "eslint/require-unicode-regexp": "off",
+        "eslint/no-unreachable": "off",
+        "eslint/no-promise-executor-return": "off",
+        "import/first": "off",
+        "import/no-duplicates": "off",
+        "unicorn/catch-error-name": "off",
+        "unicorn/no-array-sort": "off",
+        "unicorn/prefer-string-slice": "off",
+        "unicorn/prefer-string-replace-all": "off",
+        "unicorn/prefer-number-coercion": "off",
+        "unicorn/escape-case": "off",
+        "unicorn/no-object-as-default-parameter": "off",
+        "typescript/no-extraneous-class": "off",
+        "vitest/no-conditional-in-test": "off",
         "vitest/expect-expect": "error",
         "vitest/no-conditional-tests": "error",
         "vitest/no-focused-tests": "error",
@@ -145,6 +173,7 @@
     "*.generated.ts",
     "*.gen.ts",
     "openapi.gen.json",
-    "apps/web/src/api/generated/"
+    "apps/web/src/api/generated/",
+    ".agents/skills/"
   ]
 }

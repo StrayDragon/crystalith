@@ -30,7 +30,7 @@ const PRIORITY: Record<ContextPartRole, number> = {
  */
 export function buildContext(parts: ContextPart[], maxTokens: number): string {
   // Sort a copy by priority asc so we trim the cheapest first.
-  const ordered = [...parts].sort((a, b) => PRIORITY[a.role] - PRIORITY[b.role]);
+  const ordered = [...parts].toSorted((a, b) => PRIORITY[a.role] - PRIORITY[b.role]);
 
   // Compute current total.
   let total = parts.reduce((sum, p) => sum + countTokens(p.text), 0);

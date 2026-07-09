@@ -25,7 +25,7 @@ export const htmlParser: Parser = {
     } else {
       // Fallback to cheerio body text
       const $ = cheerio.load(html);
-      text = $('body').text().replace(/\s+/g, ' ').trim();
+      text = $('body').text().replaceAll(/\s+/g, ' ').trim();
     }
 
     return {

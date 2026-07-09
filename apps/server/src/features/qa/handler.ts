@@ -106,7 +106,7 @@ const retrieveSourcesTool = (notebookId: number, strategyId?: string, topK = 5) 
           chunk_id: r.chunk_id,
           source_id: r.source_id,
           chunk_index: r.chunk_index,
-          text: r.text.substring(0, 800),
+          text: r.text.slice(0, 800),
           score: r.score,
         }));
       } catch {
@@ -153,7 +153,7 @@ export async function resolveCitations(retrievedChunks: RetrievedChunk[]): Promi
     source_name: sourceMap.get(c.source_id) ?? 'unknown',
     chunk_id: c.chunk_id,
     chunk_index: c.chunk_index,
-    snippet: c.text.substring(0, 200),
+    snippet: c.text.slice(0, 200),
     score: c.score,
   }));
 }

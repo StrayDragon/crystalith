@@ -1,11 +1,7 @@
 // Tests for source deduplication helpers.
 import { describe, expect, it } from 'bun:test';
 
-import {
-  uploadDedupKey,
-  urlDedupKey,
-  resolveDedupAction,
-} from '../../src/features/sources/dedup.ts';
+import { uploadDedupKey, urlDedupKey } from '../../src/features/sources/dedup.ts';
 import { canonicalizeUrlForDedup } from '../../src/shared/net/url-normalize.ts';
 
 // ---------------------------------------------------------------------------

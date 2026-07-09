@@ -127,7 +127,7 @@ function extractKeywords(texts: string[], maxKeywords = 6): string[] {
     }
   }
   return Object.entries(freq)
-    .sort((a, b) => b[1] - a[1])
+    .toSorted((a, b) => b[1] - a[1])
     .slice(0, maxKeywords)
     .map(([k]) => k);
 }
@@ -157,7 +157,7 @@ export function clusterTopics(
     vectors.set(e.chunkId, tfVector(e.text));
   }
 
-  const sorted = [...entries].sort((a, b) => a.chunkId - b.chunkId);
+  const sorted = [...entries].toSorted((a, b) => a.chunkId - b.chunkId);
   const clusters: ClusterState[] = [];
 
   for (const entry of sorted) {
@@ -204,7 +204,7 @@ export function clusterTopics(
   }
 
   return clusters.map((cluster, i) => {
-    const ids = cluster.chunkIds.sort((a, b) => a - b);
+    const ids = cluster.chunkIds.toSorted((a, b) => a - b);
     const texts = ids.map((id) => chunkTextMap.get(id) ?? '');
     const keywords = extractKeywords(texts, maxKeywords);
     return {

@@ -106,7 +106,7 @@ function getContext(slide: typeof studioSlides.$inferSelect): string {
   return chunkRows
     .map((c) => c.text)
     .join('\n\n')
-    .substring(0, 6000);
+    .slice(0, 6000);
 }
 
 // ---------------------------------------------------------------------------

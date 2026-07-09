@@ -85,7 +85,7 @@ export function detectRelations(
     }
   }
 
-  const relations = [...relationMap.values()].sort((a, b) => b.score - a.score);
+  const relations = [...relationMap.values()].toSorted((a, b) => b.score - a.score);
   return relations.slice(0, maxRelations);
 }
 
