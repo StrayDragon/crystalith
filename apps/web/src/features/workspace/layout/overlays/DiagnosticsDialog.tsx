@@ -6,7 +6,7 @@ import {
 import { useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
-import type { WorkspaceToolsDiagnostics } from '../../../../api/shared-types';
+import type { WorkspaceToolsDiagnostics } from '../../../../api/generated';
 import { copyToClipboard } from '../../../../shared/clipboard';
 import { t } from '../../../../shared/i18n';
 import { useLayer } from '../../../../shared/layer';

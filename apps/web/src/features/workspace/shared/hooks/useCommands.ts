@@ -11,6 +11,8 @@ interface CommandItem {
   description: string | null;
   system_prompt: string;
   enabled: boolean;
+  kind?: string;
+  source?: 'builtin' | 'custom';
 }
 
 function normalizeCommand(

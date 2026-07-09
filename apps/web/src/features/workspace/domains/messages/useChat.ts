@@ -96,7 +96,7 @@ export function useChat({
       const { data: result, error: fetchErr } = await api.v2
         .notebooks({ nid: activeNotebookId! })
         .sessions({ sid: activeSessionId! })
-        .messages.get();
+        .messages.get({ query: { offset: 0, limit: 200 } });
       if (fetchErr) throw fetchErr;
       return result ?? [];
     },
@@ -124,7 +124,7 @@ export function useChat({
       return;
     }
     if (!data) return;
-    const normalized = data.filter((item) => item.role !== 'system').map(normalizeMessage);
+    const normalized = data.filter((item: Record<string, unknown>) => item.role !== 'system').map((item: Record<string, unknown>) => normalizeMessage(item as unknown as Parameters<typeof normalizeMessage>[0]));
     const scopeMap = new Map<string, (typeof messagesRef.current)[number]['citationScope']>();
     for (const message of messagesRef.current) {
       if (message.role !== 'assistant') continue;
@@ -240,7 +240,7 @@ export function useChat({
           session_id: sessionId,
         };
         if (explicitSourceIds.length) {
-          body.source_ids = explicitSourceIds;
+          (body as Record<string, unknown>).source_ids = explicitSourceIds;
         }
 
         const stream = streamRequest('/v2/qa/stream', {
@@ -401,7 +401,7 @@ export function useChat({
       if (qaErr) throw qaErr;
       const result = qaResult!;
 
-      const normalizedCitations = result.citations?.map(normalizeCitation) ?? [];
+      const normalizedCitations = ((result as Record<string, unknown>).citations as unknown[] ?? []).map((c: unknown) => normalizeCitation(c as Parameters<typeof normalizeCitation>[0]));
       const messageId =
         typeof result.message_id === 'number' &&
         Number.isFinite(result.message_id) &&
@@ -511,7 +511,7 @@ export function useChat({
         if (refreshOutputs) {
           await refreshOutputs();
         }
-        toast.success(t('messages.convert.to_output.success', { title: result!.title }));
+        toast.success(t('messages.convert.to_output.success', { title: (result as any).title }));
       } catch (error) {
         const message =
           error instanceof Error ? error.message : t('messages.convert.failure_default');
