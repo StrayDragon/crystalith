@@ -7,10 +7,14 @@
 - [ ] `features/tasks/worker.ts`: document_parse handler 完整实现（fetch → parse → chunk → embed）
 - [ ] 验证: document_parse 任务可完成 parse→embed 全流程
 
-## Workstream B: toolApproval HITL
+## Workstream B: toolApproval HITL + research parity 补全
 
 - [ ] `features/research/agent.ts`: waitForApproval 替换为 ToolLoopAgent + toolApproval
 - [ ] `features/research/router.ts`: SSE 升级为 fullStream 事件转发
+- [ ] `features/research/router.ts`: 新增 `POST /research/:id/modify`（补 HITL modify 动作）
+- [ ] `POST /research/:id/resume`: 读 `aggregatedResults`+`currentIteration` 重建 ResearchState（当前从空结果重跑，对照 v1 `_build_state_from_session`）
+- [ ] `POST /research/:id/export`: report → chunk + embed + vector + source 创建（当前只读 stub，对照 v1 `api.py:1245-1469`）
+- [ ] 移除 Track A 临时锁（acquireLock/releaseLock）——切事件驱动后不再需要
 - [ ] 前端: research UI 适配 tool-approval-request 事件
 - [ ] 验证: 研究全流程（plan→approve→search→report）无需 DB polling
 
