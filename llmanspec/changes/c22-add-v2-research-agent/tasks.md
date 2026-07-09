@@ -1,6 +1,8 @@
 # add-v2-research-agent — Tasks (AI SDK v7 方案)
 
-## 1. Agent 主循环（替代"状态机核心"）
+## ⚠️ Design only — not yet implemented. All tasks pending.
+
+## 1. Agent 主循环
 
 - [ ] 新建 `features/research/agent.ts`: runResearch() for 循环 + ToolLoopAgent + generateObject
 - [ ] PlanSearches: `generateObject({ schema: planSearchSchema })` 生成 2-4 查询
