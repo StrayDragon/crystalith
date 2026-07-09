@@ -1,0 +1,11 @@
+kind: llman.sdd.delta
+ops[4]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r7,"Task queue is in-process priority queue","任务队列 MUST 是进程内优先队列（min-heap + Semaphore 并发控制，并发 3），MUST NOT 引入 Redis/BullMQ 等外部进程依赖（桌面单二进制约束）。MUST 提供 enqueue/wait_for_completion/cancel/start_worker API。",null,null,null
+  add_requirement,r8,"Task lifecycle persisted in tasks table","任务生命周期 MUST 持久化到 tasks 表：enqueue 写 pending，执行中 running(progress)，完成 completed(result)，失败 failed(error)，取消 cancelled。MUST NOT 让 tasks 表零写入（死表）。",null,null,null
+  add_requirement,r9,"Cancel MUST interrupt running task via AbortController","cancel MUST 通过 AbortController 真中断运行中任务，MUST NOT 仅改 DB status（任务实际继续跑）。仅 pending 状态可直接取消。",null,null,null
+  add_requirement,r10,"Crash recovery on startup","server 启动时 MUST 扫描 status='running' 的任务（上次崩溃残留），标记为 failed('interrupted by restart') 或重排队。MUST NOT 留 running 僵尸任务。",null,null,null
+op_scenarios[4]{req_id,id,given,when,then}:
+  r7,happy,"3 个 refine 任务同时入队","start_worker 消费","Semaphore(3) 允许 3 个并发，第 4 个等待"
+  r8,happy,"refine 请求","enqueue → worker 执行","tasks 表出现 pending→running→completed 记录，含 result"
+  r9,happy,"任务 running 中","调用 cancel","AbortController.abort() 中断执行，状态变 cancelled，HTTP 返回 409"
+  r10,happy,"server 崩溃时有 running 任务","重启","启动时扫描 running 标记 failed，无僵尸任务残留"

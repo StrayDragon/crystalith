@@ -1,0 +1,9 @@
+kind: llman.sdd.delta
+ops[3]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r7,"QA citations MUST be populated from retrieval results","QA 流水线 MUST 从 retrieveSources 工具结果填充 citations 数组。MUST 捕获 streamText 的 tool-result 事件回填检索到的 chunk。citations MUST 包含 source_id/source_name/chunk_id/chunk_index/snippet/score。MUST NOT 返回空 citations（除非确实无证据）。",null,null,null
+  add_requirement,r8,"QA MUST honor per-notebook RAG strategy","QA MUST 通过 ragRegistry 读取 notebook 配置的检索策略（embed/hybrid/keyword/page-index），MUST NOT 硬编码 EmbedStrategy。MUST honors 请求的 strategy_id 参数。",null,null,null
+  add_requirement,r9,"QA confidence score computed from evidence","QA MUST 计算置信度 = (similarity_avg + coverage_ratio + citation_ratio) / 3，clamp [0,1]。done 事件 MUST 携带 confidence 字段。",null,null,null
+op_scenarios[3]{req_id,id,given,when,then}:
+  r7,happy,"用户提问且 notebook 有已索引源","QA 流水线执行","citations 数组非空，每项含 source_name（真实文件名）"
+  r8,happy,"notebook 配置 hybrid 策略","QA 请求","使用 hybrid 检索而非硬编码 embed"
+  r9,happy,"检索到 5 条证据（avg score 0.7）","计算置信度","confidence = (0.7 + coverage + citation_ratio)/3，> 0"

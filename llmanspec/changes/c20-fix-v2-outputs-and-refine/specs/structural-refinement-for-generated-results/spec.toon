@@ -1,0 +1,11 @@
+kind: llman.sdd.delta
+ops[4]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r6,"All 10 output types MUST have generators","系统 MUST 为全部 10 种 output 类型（FAQ/GUIDE/TIMELINE/MINDMAP/QUIZ/BRIEFING/SLIDES/PARAGRAPH/BULLETS/STRUCTURED）提供 generator。MUST NOT 对任何类型 throw 'Unknown output type'。",null,null,null
+  add_requirement,r7,"Output postprocessing ensures minimum content + citation sanitization","Output 生成后 MUST 经后处理：ensure_minimum_content（缺字段填 fallback）+ sanitize_citations_indices（clamp 到 [1,citations_count]，去重）。quality preference 时可选 LLM repair。",null,null,null
+  add_requirement,r8,"convert-to-source MUST embed the new chunk","output convert-to-source 转换后 MUST embed 新 chunk 并写入 vec_chunks，使其可被语义检索命中。MUST NOT 只插关系行不向量化。",null,null,null
+  add_requirement,r9,"Refine MUST filter by source_ids","refine 查询 MUST 按 source_ids 过滤 chunks（inArray），MUST NOT 只按 notebookId（忽略用户指定的源）。MUST 支持 structured 格式（{title, bullets[], terms[]}）。",null,null,null
+op_scenarios[4]{req_id,id,given,when,then}:
+  r6,happy,"请求 PARAGRAPH 类型输出","generateOutputByType","返回符合 ParagraphSchema 的对象，不 throw"
+  r7,happy,"generateObject 返回缺字段的 content","postprocess","补 fallback 字段，citation index clamp 到有效范围"
+  r8,happy,"output 转换为 source","convert-to-source + 检索","新源可被语义检索命中（向量已写入）"
+  r9,happy,"指定 source_ids=[1,2] refine","refine 查询","只返回 source 1,2 的 chunks，不含其他源"

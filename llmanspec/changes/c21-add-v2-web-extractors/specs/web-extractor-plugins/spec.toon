@@ -1,0 +1,9 @@
+kind: llman.sdd.delta
+ops[3]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r6,"URL extraction uses multi-extractor fallback chain","URL 导入 MUST 经 ExtractorFactory fallback 链（readability→jina→firecrawl），首个非空结果返回。MUST NOT 只用单一本地抽取器。各抽取器 MUST 在不可用时（无 API key/服务 down）跳过。",null,null,null
+  add_requirement,r7,"readability extractor substitutes trafilatura","因 trafilatura 无 JS 等价，readability+cheerio MUST 作为本地抽取器（正文提取 + meta 标签元数据 author/date/language）。这是 v1 trafilatura 的 v2 替代。",null,null,null
+  add_requirement,r8,"notebook_extractor_policies table MUST be wired","notebook_extractor_policies 表 MUST 经 GET/PATCH /notebooks/:id/extractors 读写。MUST 支持 inherit_global/custom 模式 + enabled 抽取器列表 + fallback 顺序。MUST NOT 死表。",null,null,null
+op_scenarios[3]{req_id,id,given,when,then}:
+  r6,happy,"jina API key 未配置 + readability 提取成功","/from-url","factory 跳过 jina，用 readability 返回内容"
+  r7,happy,"HTML 含 meta author/date","readability 抽取","ExtractedContent 含 author/publishedDate/language"
+  r8,happy,"PATCH /notebooks/1/extractors mode=custom extractors=[jina,firecrawl]","然后 GET","返回 custom 模式 + [jina,firecrawl]，/from-url 按此顺序尝试"
