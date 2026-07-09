@@ -1,0 +1,13 @@
+kind: llman.sdd.delta
+ops[5]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r7,"Embed strategy converts distance to similarity","EmbedStrategy MUST 将 sqlite-vec 返回的 distance 转换为 similarity score (score = 1 - distance)。过滤 MUST 使用 score >= minScore，minScore 默认 0.2。topK 默认 8。MUST NOT 直接用 distance 做 >= 比较（方向相反）。",null,null,null
+  add_requirement,r8,"Chunking uses 800/100 sliding window","文本分块 MUST 使用 800 字符块大小 + 100 字符重叠的滑动窗口（对齐 v1）。MUST NOT 使用无重叠的段落切分。分块参数 MUST 可配置。",null,null,null
+  add_requirement,r9,"Context window enforces token budget","检索上下文组装 MUST 受 token budget 约束，超预算时按优先级截断（history→retrieval→recent→system→query）。token 计数 MUST 使用 gpt-tokenizer（cl100k_base）。MUST NOT 用字符数截断替代 token 截断。",null,null,null
+  add_requirement,r10,"Multi-query expansion with RRF fusion","检索 MUST 支持 multi-query 扩展：按 output_type 生成 query seeds，多查询结果 RRF (k=60) 融合。MUST 受 seed_cap 限制避免无界扩展。",null,null,null
+  add_requirement,r11,"EpochCache wired to strategies and source mutations","EpochCache MUST 接线到各策略 retrieve()。源增删改 MUST bump sources_epoch，向量重嵌 MUST bump vector_epoch。缓存 key MUST 包含 epoch 版本。MUST NOT 零调用（死代码）。",null,null,null
+op_scenarios[5]{req_id,id,given,when,then}:
+  r7,happy,"sqlite-vec 返回 distance=0.3 的 chunk","EmbedStrategy 检索","score=0.7，>= 0.2 通过过滤，按 score desc 排序"
+  r8,happy,"5000 字文档入库","分块","产生约 8 个 chunk，每块约 800 字符，相邻块共享 100 字符重叠"
+  r9,happy,"检索上下文 5000 token 但预算 4000","组装上下文","按优先级截断至 4000 token 内，system+query 保留"
+  r10,happy,"FAQ 类型输出 + 用户查询","multi-query 扩展","生成 2-3 个 seed query，各检索后 RRF 融合 top 结果"
+  r11,happy,"notebook 新增源后检索","EpochCache 查询","sources_epoch 变更，缓存失效，重新检索"
