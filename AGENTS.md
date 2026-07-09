@@ -64,17 +64,17 @@ Key entry points in v1:
 
 ## v2 Target Stack
 
-| Role                 | Technology                                                              |
-| -------------------- | ----------------------------------------------------------------------- |
-| Runtime              | **Bun** (single binary, bun:sqlite built-in)                            |
-| Web Framework        | **Elysia** (eden RPC — zero-codegen type-safe client)                   |
-| ORM                  | **Drizzle ORM** (bun-sqlite driver)                                     |
-| AI Runtime           | **Vercel AI SDK** (`ai` + `@ai-sdk/openai` + `@ai-sdk/anthropic` + ...) |
-| Schema Validation    | **Zod** (shared frontend/backend)                                       |
-| Vector Store         | **sqlite-vec** (in-process, same DB file)                               |
-| PDF Parsing          | **unpdf** (pdf.js based, MIT)                                           |
-| Template Engine      | **Nunjucks** (already used in frontend)                                 |
-| Desktop Distribution | **Tauri v2** + Bun sidecar (post-Phase-4)                               |
+| Role                 | Technology                                                                                                |
+| -------------------- | --------------------------------------------------------------------------------------------------------- |
+| Runtime              | **Bun** (single binary, bun:sqlite built-in)                                                              |
+| Web Framework        | **Elysia** (eden RPC — zero-codegen type-safe client)                                                     |
+| ORM                  | **Drizzle ORM** (bun-sqlite driver)                                                                       |
+| AI Runtime           | **Vercel AI SDK v7** (`ai` + `@ai-sdk/*` — ToolLoopAgent + WorkflowAgent + generateObject + toolApproval) |
+| Schema Validation    | **Zod** (shared frontend/backend)                                                                         |
+| Vector Store         | **sqlite-vec** (in-process, same DB file)                                                                 |
+| PDF Parsing          | **unpdf** (pdf.js based, MIT)                                                                             |
+| Template Engine      | **Nunjucks** (already used in frontend)                                                                   |
+| Desktop Distribution | **Tauri v2** + Bun sidecar (post-Phase-4)                                                                 |
 
 ## Build, Test, and Development Commands
 
@@ -120,6 +120,7 @@ Fast path (individual packages):
 - **Rivu dropped** — v2 replaces server-side state machine with message-embedded JSON components
 - **Single binary distribution** — `bun build --compile` → ~75MB self-contained executable
 - **Tauri desktop app** — post-Phase-4, Bun sidecar + Rust shell
+- **AI SDK v7 是唯一 AI 层** — ToolLoopAgent(agent runtime) + WorkflowAgent(工作流) + generateObject(结构化输出) + toolApproval(HITL) + streamText(流式)。不引入 Pi agent-core、Mastra、LangGraph.js、XState 等任何第三方 agent/工作流框架。
 
 ## Agent-Specific Instructions
 

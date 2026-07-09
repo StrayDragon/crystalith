@@ -183,10 +183,19 @@ const KNOWN: Record<string, { sdk: string; factory: string }> = {
 
 90% provider 走 `openai-compatible`。`config/app.yaml` 写 `provider: "openai"` 即可。
 
-### 3. 禁用 Graph Library
+### 3. AI SDK v7 是唯一 AI 层（2026-07-09 更新）
 
-pydantic-graph → async function chain + async generator。
-不引入 LangChain、LangGraph 等。
+AI SDK v7 已原生覆盖所有 AI 需求，**不引入任何第三方 agent/工作流框架**：
+
+| AI SDK v7 能力                      | 替代                              |
+| :---------------------------------- | :-------------------------------- |
+| `ToolLoopAgent`                     | Pi agent-core、自建 Agent runtime |
+| `WorkflowAgent` + Workflow Patterns | Mastra workflows、LangGraph.js    |
+| `toolApproval: 'user-approval'`     | 手写 HITL、DB 轮询                |
+| `generateObject({ schema: Zod })`   | pydantic-ai `output_type`         |
+| `streamText` / `fullStream`         | 手写 SSE 轮询                     |
+
+**禁用列表：** ❌ 不引入 Pi agent-core、Mastra、LangGraph.js、XState、Inngest、Temporal 等任何第三方 agent/工作流/图库。
 
 ### 4. 单二进制目标
 
@@ -274,10 +283,11 @@ apps/server/src/
 
 - ❌ 在 `packages/shared` 之外重新定义类型
 - ❌ 安装 `@elysiajs/swagger`
-- ❌ 安装 LangChain 或任何 graph library
+- ❌ 安装 LangChain、LangGraph.js、Pi agent-core、Mastra、XState 或任何第三方 agent/工作流/图库（AI SDK v7 ToolLoopAgent + WorkflowAgent 已覆盖）
 - ❌ 修改 `backend/py/`
 - ❌ switch-case 硬编码 provider
 - ❌ 未读完所有 design.md 就开始实现
+- ❌ 重新调研已有结论的领域（先查 PROGRESS.v2.md 和 UPGRADES/ 存档）
 
 ## Agent 执行流程
 
