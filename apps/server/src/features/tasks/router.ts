@@ -7,8 +7,9 @@ import { desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
-import { tasks } from '../../db/schema.ts';
+import { tasks as tasksTable } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import type { TaskQueue } from '../../shared/queue.ts';
 
 const apiDocs: OpenApiRoute[] = [
   {
@@ -34,7 +35,7 @@ const apiDocs: OpenApiRoute[] = [
   },
 ];
 
-function serializeTask(row: typeof tasks.$inferSelect) {
+function serializeTask(row: typeof tasksTable.$inferSelect) {
   return {
     id: row.id,
     notebook_id: row.notebookId,
@@ -49,36 +50,39 @@ function serializeTask(row: typeof tasks.$inferSelect) {
   };
 }
 
-export const tasksRouter = new Elysia({ prefix: '/v2' })
-  .get('/tasks/:id', ({ params }) => {
-    const id = Number(params.id);
-    const task = db().select().from(tasks).where(eq(tasks.id, id)).get();
-    if (!task) throw new NotFoundError(`Task ${id} not found`);
-    return serializeTask(task);
-  })
-  .get('/notebooks/:nid/tasks', ({ params }) => {
-    const nid = Number(params.nid);
-    const rows = db()
-      .select()
-      .from(tasks)
-      .where(eq(tasks.notebookId, nid))
-      .orderBy(desc(tasks.createdAt))
-      .all();
-    return rows.map(serializeTask);
-  })
-  .post('/tasks/:id/cancel', ({ params }) => {
-    const id = Number(params.id);
-    const task = db().select().from(tasks).where(eq(tasks.id, id)).get();
-    if (!task) throw new NotFoundError(`Task ${id} not found`);
+export function tasksRouter(taskQueue: TaskQueue) {
+  registerApiDoc(apiDocs);
 
-    if (task.status !== 'pending' && task.status !== 'running') {
-      throw new NotFoundError(`Task ${id} cannot be cancelled from status '${task.status}'`);
-    }
+  return new Elysia({ prefix: '/v2' })
+    .get('/tasks/:id', ({ params }) => {
+      const id = Number(params.id);
+      const task = db().select().from(tasksTable).where(eq(tasksTable.id, id)).get();
+      if (!task) throw new NotFoundError(`Task ${id} not found`);
+      return serializeTask(task);
+    })
+    .get('/notebooks/:nid/tasks', ({ params }) => {
+      const nid = Number(params.nid);
+      const rows = db()
+        .select()
+        .from(tasksTable)
+        .where(eq(tasksTable.notebookId, nid))
+        .orderBy(desc(tasksTable.createdAt))
+        .all();
+      return rows.map(serializeTask);
+    })
+    .post('/tasks/:id/cancel', ({ params }) => {
+      const id = Number(params.id);
+      const task = db().select().from(tasksTable).where(eq(tasksTable.id, id)).get();
+      if (!task) throw new NotFoundError(`Task ${id} not found`);
 
-    db().update(tasks).set({ status: 'cancelled' }).where(eq(tasks.id, id)).run();
+      if (task.status !== 'pending' && task.status !== 'running') {
+        throw new NotFoundError(`Task ${id} cannot be cancelled from status '${task.status}'`);
+      }
 
-    const updated = db().select().from(tasks).where(eq(tasks.id, id)).get();
-    return serializeTask(updated!);
-  });
+      // Use TaskQueue.cancel for proper AbortSignal interruption
+      taskQueue.cancel(id);
 
-registerApiDoc(apiDocs);
+      const updated = db().select().from(tasksTable).where(eq(tasksTable.id, id)).get();
+      return serializeTask(updated!);
+    });
+}

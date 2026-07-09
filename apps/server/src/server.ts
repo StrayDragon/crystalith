@@ -20,6 +20,7 @@ import { sourceConnectorsRouter } from './features/source-connectors/router.ts';
 import { sourcesRouter } from './features/sources/router.ts';
 import { studioRouter } from './features/studio/router.ts';
 import { tasksRouter } from './features/tasks/router.ts';
+import { createStageLimiters, runTask } from './features/tasks/worker.ts';
 import { templatesRouter } from './features/templates/router.ts';
 import { workspaceRouter } from './features/workspace/router.ts';
 import { generateOpenApiDocument, registerApiDoc, type OpenApiRoute } from './openapi.ts';
@@ -31,9 +32,21 @@ import { TaskQueue } from './shared/queue.ts';
 // ---------------------------------------------------------------------------
 
 const taskQueue = new TaskQueue();
+const stageLimiters = createStageLimiters();
 
 // Crash recovery: mark stalled running tasks as failed on startup.
 taskQueue.recoverStaleTasks();
+
+// Start worker dispatch loop.
+taskQueue.startWorker(async (taskId, signal) => {
+  const { db } = await import('./db/index.ts');
+  const { tasks: row } = await import('./db/schema.ts');
+  const { eq } = await import('drizzle-orm');
+  const task = db().select().from(row).where(eq(row.id, taskId)).get();
+  if (!task) throw new Error(`Task ${taskId} not found for dispatch`);
+  const payload = task.payload as unknown as import('./features/tasks/worker.ts').TaskPayload;
+  return runTask(taskId, payload, signal, stageLimiters);
+});
 
 // ---------------------------------------------------------------------------
 // Scaffold OpenAPI docs
@@ -85,7 +98,7 @@ export function createApp() {
     .use(templatesRouter)
     .use(promptPresetsRouter)
     .use(sourceConnectorsRouter)
-    .use(tasksRouter)
+    .use(tasksRouter(taskQueue))
     .use(commandsRouter)
     .use(workspaceRouter)
     .use(evalRouter)
@@ -94,9 +107,11 @@ export function createApp() {
 
 // Only listen when run as the entry point (not when imported by tests).
 if (import.meta.main) {
-  const app = createApp().listen({
-    port: process.env.CL_SERVER_PORT ? parseInt(process.env.CL_SERVER_PORT) : 8032,
-  });
+  const app = createApp()
+    .decorate('taskQueue', taskQueue)
+    .listen({
+      port: process.env.CL_SERVER_PORT ? parseInt(process.env.CL_SERVER_PORT) : 8032,
+    });
   console.log(
     `🦊 Crystalith v2 server running at http://${app.server?.hostname}:${app.server?.port}`,
   );
