@@ -1,17 +1,21 @@
 import { useMemo } from 'react';
 import useSWR from 'swr';
 
-import {
-  listCommandsV1CommandsGet as listCommands,
-  type CommandRead,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
+import { api } from '../../../../api/eden';
 
 export const COMMANDS_CACHE_KEY = 'workspace/commands';
 
+interface CommandItem {
+  id: string;
+  trigger: string;
+  description: string | null;
+  system_prompt: string;
+  enabled: boolean;
+}
+
 function normalizeCommand(
-  command: CommandRead,
-): Required<Pick<CommandRead, 'description' | 'enabled'>> & CommandRead {
+  command: CommandItem,
+): CommandItem & { description: string; enabled: boolean } {
   return {
     ...command,
     description: command.description ?? '',
@@ -23,7 +27,11 @@ export function useCommands(options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? true;
   const { data, error, isLoading, mutate } = useSWR(
     enabled ? COMMANDS_CACHE_KEY : null,
-    () => unwrapData(listCommands<true>()),
+    async () => {
+      const { data: result, error: fetchErr } = await api.v2.commands.get();
+      if (fetchErr) throw fetchErr;
+      return (result ?? []) as CommandItem[];
+    },
     {
       revalidateOnFocus: false,
     },

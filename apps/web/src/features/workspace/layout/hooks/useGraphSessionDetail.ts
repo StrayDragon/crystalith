@@ -1,86 +1,42 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback } from 'react';
 
-import { listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet as listMessages } from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
-import type { ChatMessage, SessionSummary } from '../../shared/types';
-import { normalizeMessage } from '../../shared/utils';
+import { api } from '../../../../api/eden';
 
-export interface GraphSessionTarget {
+interface GraphMessage {
   id: number;
-  title?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  session_id: number;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface GraphSessionDetail {
+  messages: GraphMessage[];
+  session_id: number;
+  title: string | null;
 }
 
 export function useGraphSessionDetail() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<SessionSummary | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const requestIdRef = useRef(0);
-
-  const closeSessionDetail = useCallback(() => {
-    requestIdRef.current += 1;
-    setIsOpen(false);
-    setIsFullscreen(false);
-    setMessages([]);
-    setIsLoading(false);
-  }, []);
-
-  const toggleFullscreen = useCallback(() => {
-    setIsFullscreen((prev) => !prev);
-  }, []);
-
-  const openSessionDetail = useCallback(
-    async (session: GraphSessionTarget, notebookId: number | null) => {
-      const requestId = requestIdRef.current + 1;
-      requestIdRef.current = requestId;
-
-      setSelectedSession({
-        id: session.id,
-        title: session.title || `对话 ${session.id}`,
-        createdAt: session.createdAt || '',
-        updatedAt: session.updatedAt || '',
-      });
-      setIsOpen(true);
-      setIsFullscreen(false);
-      setMessages([]);
-
-      if (!notebookId) {
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
+  const fetchMessages = useCallback(
+    async (notebookId: number, sessionId: number): Promise<GraphSessionDetail | null> => {
       try {
-        const response = await unwrapData(
-          listMessages<true>({
-            path: { notebook_id: notebookId, session_id: session.id },
-          }),
-        );
-        if (requestIdRef.current !== requestId) return;
-        setMessages(response.map(normalizeMessage));
+        const { data, error } = await api.v2
+          .notebooks({ nid: notebookId })
+          .sessions({ sid: sessionId })
+          .messages.get();
+        if (error) throw error;
+        return {
+          messages: (data ?? []) as GraphMessage[],
+          session_id: sessionId,
+          title: null,
+        };
       } catch {
-        if (requestIdRef.current !== requestId) return;
-        setMessages([]);
-      } finally {
-        if (requestIdRef.current === requestId) {
-          setIsLoading(false);
-        }
+        return null;
       }
     },
     [],
   );
 
-  return {
-    isOpen,
-    selectedSession,
-    isFullscreen,
-    messages,
-    isLoading,
-    openSessionDetail,
-    closeSessionDetail,
-    toggleFullscreen,
-  };
+  return { fetchMessages };
 }

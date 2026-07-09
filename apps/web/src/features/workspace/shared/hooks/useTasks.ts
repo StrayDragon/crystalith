@@ -1,15 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import {
-  getTaskV1TasksTaskIdGet as getTask,
-  listTasksV1NotebooksNotebookIdTasksGet as listNotebookTasks,
-  type TaskRead,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
+import { api } from '../../../../api/eden';
 import { useWorkspaceStore } from '../state/workspaceStore';
 
+interface TaskItem {
+  id: number;
+  type: string;
+  status: string;
+  title: string;
+  notebook_id: number;
+  created_at: string;
+  updated_at: string;
+  error?: string;
+}
+
 interface TaskState {
-  tasks: TaskRead[];
+  tasks: TaskItem[];
   isLoading: boolean;
   error: string;
 }
@@ -45,13 +51,12 @@ export function useTasks() {
     if (!activeNotebookId || !isConnected) return [];
     setTaskState((prev) => ({ ...prev, isLoading: true, error: '' }));
     try {
-      const tasks = await unwrapData(
-        listNotebookTasks<true>({
-          path: { notebook_id: activeNotebookId },
-        }),
-      );
-      setTaskState({ tasks, isLoading: false, error: '' });
-      return tasks;
+      const { data, error: fetchErr } = await api.v2
+        .notebooks({ nid: activeNotebookId })
+        .tasks.get();
+      if (fetchErr) throw fetchErr;
+      setTaskState({ tasks: (data ?? []) as TaskItem[], isLoading: false, error: '' });
+      return (data ?? []) as TaskItem[];
     } catch {
       setTaskState((prev) => ({
         ...prev,
@@ -66,11 +71,9 @@ export function useTasks() {
     async (taskId: number) => {
       if (!isConnected) return null;
       try {
-        const task = await unwrapData(
-          getTask<true>({
-            path: { task_id: taskId },
-          }),
-        );
+        const { data, error: fetchErr } = await api.v2.tasks({ id: taskId }).get();
+        if (fetchErr) throw fetchErr;
+        const task = data as TaskItem;
         setTaskState((prev) => ({
           ...prev,
           tasks: prev.tasks.map((t) => (t.id === task.id ? task : t)),
@@ -86,7 +89,7 @@ export function useTasks() {
   const pollTask = useCallback(
     (
       taskId: number,
-      onComplete?: (task: TaskRead) => void,
+      onComplete?: (task: TaskItem) => void,
       onError?: (error: string) => void,
       intervalMs = 2000,
       maxAttempts = 60,
@@ -129,15 +132,12 @@ export function useTasks() {
           return;
         }
 
-        // Continue polling
         const timer = setTimeout(poll, intervalMs);
         pollingRef.current.set(taskId, timer);
       };
 
-      // Start polling
       void poll();
 
-      // Return cleanup function
       return () => {
         const timer = pollingRef.current.get(taskId);
         if (timer) {

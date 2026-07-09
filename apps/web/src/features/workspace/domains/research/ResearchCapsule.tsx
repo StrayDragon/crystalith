@@ -15,7 +15,7 @@ import {
 } from '@mui/icons-material';
 import { memo, useCallback, useState } from 'react';
 
-import type { ResearchSessionListItem, ResearchStatus } from '../../../../api/generated';
+import type { ResearchSessionListItem, ResearchStatus } from '../../../../api/shared-types';
 import ConfirmPopover from '../../../../shared/ConfirmPopover';
 
 interface ResearchCapsuleProps {

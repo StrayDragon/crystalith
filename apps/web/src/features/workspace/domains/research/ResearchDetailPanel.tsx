@@ -19,7 +19,7 @@ import {
 } from '@mui/icons-material';
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
-import type { ResearchSessionResponse, ResearchStepResponse } from '../../../../api/generated';
+import type { ResearchSessionResponse, ResearchStepResponse } from '../../../../api/shared-types';
 import { copyToClipboard } from '../../../../shared/clipboard';
 import { useLayer } from '../../../../shared/layer';
 import { toast } from '../../../../shared/toast';

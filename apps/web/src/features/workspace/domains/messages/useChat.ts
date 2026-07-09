@@ -1,16 +1,9 @@
+import type { Citation } from '@crystalith/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 
-import {
-  askQuestionV1NotebooksNotebookIdQaPost as askQuestion,
-  convertSessionToOutputV1NotebooksNotebookIdSessionsSessionIdConvertToOutputPost as convertSessionToOutput,
-  convertSessionToSourceV1NotebooksNotebookIdSessionsSessionIdConvertToSourcePost as convertSessionToSource,
-  listMessagesV1NotebooksNotebookIdSessionsSessionIdMessagesGet as listMessages,
-  type Citation as ApiCitation,
-  type OutputTypeInput,
-} from '../../../../api/generated';
-import { client } from '../../../../api/generated/client.gen';
-import { unwrapData } from '../../../../api/unwrap';
+import { api } from '../../../../api/eden';
+import { streamRequest } from '../../../../api/stream';
 import { t } from '../../../../shared/i18n';
 import { toast } from '../../../../shared/toast';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
@@ -49,52 +42,7 @@ function ensureAssistantMessage(
   });
 }
 
-function parseApiErrorPayload(payload: unknown): string | null {
-  if (!payload || typeof payload !== 'object') return null;
-  const record = payload as { message?: unknown; details?: unknown };
-  const details = typeof record.details === 'string' ? record.details.trim() : '';
-  const message = typeof record.message === 'string' ? record.message.trim() : '';
-  return details || message || null;
-}
-
-function createSseFetchCapturingErrorBody() {
-  let lastErrorBody: string | null = null;
-  const sseFetch: typeof fetch = async (input, init) => {
-    const response = await globalThis.fetch(input, init);
-    if (!response.ok) {
-      try {
-        const payload = await response.clone().json();
-        lastErrorBody = parseApiErrorPayload(payload);
-      } catch {
-        lastErrorBody = null;
-      }
-    }
-    return response;
-  };
-  return {
-    fetch: sseFetch,
-    consumeLastErrorBody: () => {
-      const body = lastErrorBody;
-      lastErrorBody = null;
-      return body;
-    },
-  };
-}
-
-function mapSseTransportError(message: string, detail?: string | null): string {
-  const combined = `${message} ${detail ?? ''}`.toLowerCase();
-  if (
-    combined.includes('missing api_key') ||
-    combined.includes('openai_api_key') ||
-    combined.includes('ai_config_missing')
-  ) {
-    return 'Embedding 模型未配置 API Key，请在 shell 中 export 对应环境变量（如 OMLX_OPENAI_API_KEY）后重启后端。';
-  }
-  if (detail && detail.length > 0 && detail.length <= 160) {
-    return detail;
-  }
-  const statusMatch = message.match(/SSE failed:\s*(\d{3})\b/i);
-  const status = statusMatch ? Number(statusMatch[1]) : null;
+function mapTransportError(error: Error | null, status?: number): string {
   if (status === 503) {
     return '可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置或稍后重试。';
   }
@@ -104,6 +52,7 @@ function mapSseTransportError(message: string, detail?: string | null): string {
   if (status === 500) {
     return '服务器内部错误，请检查模型/Embedding 配置或稍后重试。';
   }
+  const message = error?.message ?? '';
   if (message.length > 0 && message.length < 120) {
     return message;
   }
@@ -143,15 +92,14 @@ export function useChat({
     activeNotebookId && activeSessionId && isConnected
       ? ['workspace/messages', activeNotebookId, activeSessionId]
       : null,
-    () =>
-      unwrapData(
-        listMessages<true>({
-          path: {
-            notebook_id: activeNotebookId ?? 0,
-            session_id: activeSessionId ?? 0,
-          },
-        }),
-      ),
+    async () => {
+      const { data: result, error: fetchErr } = await api.v2
+        .notebooks({ nid: activeNotebookId! })
+        .sessions({ sid: activeSessionId! })
+        .messages.get();
+      if (fetchErr) throw fetchErr;
+      return result ?? [];
+    },
     { revalidateOnFocus: false },
   );
 
@@ -247,9 +195,7 @@ export function useChat({
       streamingMarkdownRef.current = '';
       streamingBufferRef.current = '';
 
-      let hadSseError = false;
       let receivedDone = false;
-      let sseTransportError: string | null = null;
       let stableAssistantMessageId: string | null = null;
       let terminalErrorMessage = '';
 
@@ -287,131 +233,110 @@ export function useChat({
         });
       };
 
-      const { fetch: sseFetch, consumeLastErrorBody } = createSseFetchCapturingErrorBody();
-
       try {
-        const { stream } = await client.sse.post({
-          url: '/v1/notebooks/{notebook_id}/qa/stream',
-          path: { notebook_id: notebookId },
-          body: {
-            question: text,
-            session_id: sessionId,
-            source_ids: explicitSourceIds.length ? explicitSourceIds : undefined,
-          },
-          headers: {
-            Accept: 'text/event-stream',
-          },
+        const body: Record<string, unknown> = {
+          question: text,
+          notebook_id: notebookId,
+          session_id: sessionId,
+        };
+        if (explicitSourceIds.length) {
+          body.source_ids = explicitSourceIds;
+        }
+
+        const stream = streamRequest('/v2/qa/stream', {
+          method: 'POST',
+          body,
           signal: abortController.signal,
-          sseMaxRetryAttempts: 1,
-          fetch: sseFetch,
-          onSseError: (error) => {
-            const detail = consumeLastErrorBody();
-            if (detail) {
-              sseTransportError = detail;
-              return;
-            }
-            if (error instanceof Error) {
-              sseTransportError = error.message;
-            } else if (typeof error === 'string') {
-              sseTransportError = error;
-            } else {
-              sseTransportError = '流式连接失败';
-            }
-          },
-          onSseEvent: (event) => {
-            const { event: eventType, data: eventData } = event;
-            if (
-              eventType === 'chunk' &&
-              eventData &&
-              typeof eventData === 'object' &&
-              'text' in eventData
-            ) {
-              const chunkText = String((eventData as { text?: unknown }).text ?? '');
-              if (!chunkText) return;
-              streamingBufferRef.current += chunkText;
-              if (!streamingFlushTimerRef.current) {
-                streamingFlushTimerRef.current = setTimeout(() => {
-                  streamingFlushTimerRef.current = null;
-                  flushBufferedContent();
-                }, 50);
-              }
-              return;
-            }
-            if (eventType === 'state_snapshot' && eventData && typeof eventData === 'object') {
-              const payload = eventData as {
-                message_id?: unknown;
-                shared_state?: unknown;
-              };
-              const nextMessageId = payload.message_id;
-              if (
-                typeof nextMessageId === 'number' &&
-                Number.isFinite(nextMessageId) &&
-                nextMessageId > 0
-              ) {
-                stableAssistantMessageId = String(nextMessageId);
-                setStreamingMessageId(stableAssistantMessageId);
-                ensureAssistantMessage(stableAssistantMessageId, selectedScope ?? undefined);
-                if (streamingMarkdownRef.current || streamingBufferRef.current) {
-                  flushBufferedContent();
-                }
-              }
-              return;
-            }
-            if (eventType === 'done' && eventData && typeof eventData === 'object') {
-              receivedDone = true;
-              const doneData = eventData as {
-                citations?: ApiCitation[];
-                message_id?: unknown;
-              };
-              const doneMessageId =
-                typeof doneData.message_id === 'number' &&
-                Number.isFinite(doneData.message_id) &&
-                doneData.message_id > 0
-                  ? String(doneData.message_id)
-                  : stableAssistantMessageId;
-              if (doneMessageId) {
-                stableAssistantMessageId = doneMessageId;
-                setStreamingMessageId(doneMessageId);
-                ensureAssistantMessage(doneMessageId, selectedScope ?? undefined);
-              }
-              flushBufferedContent();
-              const normalizedCitations = doneData.citations?.map(normalizeCitation) ?? [];
-              if (stableAssistantMessageId) {
-                store.getState().updateMessage(stableAssistantMessageId, {
-                  citationChunkIds: collectChunkIds(normalizedCitations),
-                  citations: normalizedCitations,
-                  citationScope: selectedScope ?? undefined,
-                });
-              }
-              store.getState().setCitations(normalizedCitations);
-              return;
-            }
-            if (eventType === 'error') {
-              hadSseError = true;
-              terminalErrorMessage =
-                eventData && typeof eventData === 'object' && 'message' in eventData
-                  ? String((eventData as { message?: unknown }).message ?? '请求失败')
-                  : typeof eventData === 'string'
-                    ? eventData
-                    : '请求失败';
-              store.getState().setError('send', terminalErrorMessage);
-            }
-          },
         });
 
-        for await (const _event of stream) {
-          // handled via onSseEvent
+        for await (const sseEvent of stream) {
+          const { event: eventType, data: eventData } = sseEvent;
+
+          if (
+            eventType === 'chunk' &&
+            eventData &&
+            typeof eventData === 'object' &&
+            'text' in eventData
+          ) {
+            const chunkText = String((eventData as { text?: unknown }).text ?? '');
+            if (!chunkText) continue;
+            streamingBufferRef.current += chunkText;
+            if (!streamingFlushTimerRef.current) {
+              streamingFlushTimerRef.current = setTimeout(() => {
+                streamingFlushTimerRef.current = null;
+                flushBufferedContent();
+              }, 50);
+            }
+            continue;
+          }
+
+          if (eventType === 'state_snapshot' && eventData && typeof eventData === 'object') {
+            const payload = eventData as {
+              message_id?: unknown;
+              shared_state?: unknown;
+            };
+            const nextMessageId = payload.message_id;
+            if (
+              typeof nextMessageId === 'number' &&
+              Number.isFinite(nextMessageId) &&
+              nextMessageId > 0
+            ) {
+              stableAssistantMessageId = String(nextMessageId);
+              setStreamingMessageId(stableAssistantMessageId);
+              ensureAssistantMessage(stableAssistantMessageId, selectedScope ?? undefined);
+              if (streamingMarkdownRef.current || streamingBufferRef.current) {
+                flushBufferedContent();
+              }
+            }
+            continue;
+          }
+
+          if (eventType === 'done' && eventData && typeof eventData === 'object') {
+            receivedDone = true;
+            const doneData = eventData as {
+              citations?: Citation[];
+              message_id?: unknown;
+            };
+            const doneMessageId =
+              typeof doneData.message_id === 'number' &&
+              Number.isFinite(doneData.message_id) &&
+              doneData.message_id > 0
+                ? String(doneData.message_id)
+                : stableAssistantMessageId;
+            if (doneMessageId) {
+              stableAssistantMessageId = doneMessageId;
+              setStreamingMessageId(doneMessageId);
+              ensureAssistantMessage(doneMessageId, selectedScope ?? undefined);
+            }
+            flushBufferedContent();
+            const normalizedCitations = doneData.citations?.map(normalizeCitation) ?? [];
+            if (stableAssistantMessageId) {
+              store.getState().updateMessage(stableAssistantMessageId, {
+                citationChunkIds: collectChunkIds(normalizedCitations),
+                citations: normalizedCitations,
+                citationScope: selectedScope ?? undefined,
+              });
+            }
+            store.getState().setCitations(normalizedCitations);
+            continue;
+          }
+
+          if (eventType === 'error') {
+            terminalErrorMessage =
+              eventData && typeof eventData === 'object' && 'message' in eventData
+                ? String((eventData as { message?: unknown }).message ?? '请求失败')
+                : typeof eventData === 'string'
+                  ? eventData
+                  : '请求失败';
+            store.getState().setError('send', terminalErrorMessage);
+          }
         }
 
         if (!receivedDone) {
           rollbackLocalStreamingState();
           resyncServerState();
-          if (!hadSseError) {
-            const detail = consumeLastErrorBody();
-            terminalErrorMessage = mapSseTransportError(
-              sseTransportError ?? '',
-              detail ?? sseTransportError,
-            );
+          if (!terminalErrorMessage) {
+            terminalErrorMessage = '流式连接已断开，请重试。';
             store.getState().setError('send', terminalErrorMessage);
           }
         }
@@ -419,7 +344,7 @@ export function useChat({
         if (refreshSessions) {
           void refreshSessions();
         }
-        if (hadSseError || !receivedDone) {
+        if (!receivedDone) {
           setLastFailedDraft(text);
         } else {
           void mutate();
@@ -446,24 +371,8 @@ export function useChat({
             setLastFailedDraft('');
           }
         } else {
-          const detail = consumeLastErrorBody();
-          let errorMessage = mapSseTransportError(
-            sseTransportError ?? (error instanceof Error ? error.message : ''),
-            detail ?? terminalErrorMessage,
-          );
-          if (error instanceof Error) {
-            const statusMatch = error.message.match(/SSE failed:\s*(\d{3})\b/i);
-            const status = statusMatch
-              ? Number(statusMatch[1])
-              : (error as Error & { status?: number }).status;
-            if (status === 503 && !detail && !sseTransportError) {
-              errorMessage = '可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置或稍后重试。';
-            } else if (status === 404 && !detail && !sseTransportError) {
-              errorMessage = '会话或笔记本不存在。';
-            } else if (status === 500 && !detail && !sseTransportError) {
-              errorMessage = '服务器内部错误，请检查模型/Embedding 配置或稍后重试。';
-            }
-          }
+          const errStatus = (error as Error & { status?: number }).status;
+          const errorMessage = mapTransportError(error instanceof Error ? error : null, errStatus);
           store.getState().setError('send', errorMessage);
           setLastFailedDraft(text);
         }
@@ -482,28 +391,27 @@ export function useChat({
       return;
     }
 
+    // Non-streaming path
     try {
-      const qaResult = await unwrapData(
-        askQuestion<true>({
-          path: { notebook_id: notebookId },
-          body: {
-            question: text,
-            session_id: sessionId,
-            source_ids: explicitSourceIds.length ? explicitSourceIds : undefined,
-          },
-        }),
-      );
-      const normalizedCitations = qaResult.citations?.map(normalizeCitation) ?? [];
+      const { data: qaResult, error: qaErr } = await api.v2.qa.post({
+        question: text,
+        notebook_id: notebookId,
+        session_id: sessionId,
+      });
+      if (qaErr) throw qaErr;
+      const result = qaResult!;
+
+      const normalizedCitations = result.citations?.map(normalizeCitation) ?? [];
       const messageId =
-        typeof qaResult.message_id === 'number' &&
-        Number.isFinite(qaResult.message_id) &&
-        qaResult.message_id > 0
-          ? String(qaResult.message_id)
+        typeof result.message_id === 'number' &&
+        Number.isFinite(result.message_id) &&
+        result.message_id > 0
+          ? String(result.message_id)
           : createId();
       const assistantMessage: WorkspaceChatMessage = {
         id: messageId,
         role: 'assistant',
-        content: qaResult.answer,
+        content: result.answer,
         citationChunkIds: collectChunkIds(normalizedCitations),
         citations: normalizedCitations,
         citationScope: selectedScope ?? undefined,
@@ -517,34 +425,13 @@ export function useChat({
       }
       setLastFailedDraft('');
     } catch (error) {
-      let errorMessage = '请求失败，请检查后端服务或稍后重试。';
-      let userFacingError = '请求失败。';
-
-      if (error instanceof Error) {
-        const statusError = error as Error & { status?: number };
-
-        if (statusError.status === 503) {
-          errorMessage = '可选 AI 服务暂时不可用（核心功能仍可用），请检查模型配置或稍后重试。';
-          userFacingError = '可选 AI 服务暂时不可用，请稍后重试或切换模型。';
-        } else if (statusError.status === 404) {
-          errorMessage = '会话或笔记本不存在。';
-          userFacingError = '会话已失效，请刷新页面。';
-        } else if (statusError.status === 500) {
-          errorMessage = '服务器内部错误，请稍后重试。';
-          userFacingError = '服务器错误，请稍后重试。';
-        } else if (error.message) {
-          const msg = error.message;
-          if (msg.length < 100 && !msg.includes('fetch')) {
-            errorMessage = msg;
-            userFacingError = msg;
-          }
-        }
-      }
+      const errStatus = (error as Error & { status?: number }).status;
+      const userFacingError = mapTransportError(error instanceof Error ? error : null, errStatus);
 
       const assistantMessage: WorkspaceChatMessage = {
         id: createId(),
         role: 'assistant',
-        content: errorMessage,
+        content: userFacingError,
       };
       const s2 = store.getState();
       s2.setMessages([...pendingMessages, assistantMessage]);
@@ -583,19 +470,18 @@ export function useChat({
     }
     setIsConverting(true);
     try {
-      const result = await unwrapData(
-        convertSessionToSource<true>({
-          path: { notebook_id: s.activeNotebookId, session_id: s.activeSessionId },
-          body: { message_ids: null },
-        }),
-      );
+      const { data: result, error: convErr } = await api.v2
+        .notebooks({ nid: s.activeNotebookId })
+        .sessions({ sid: s.activeSessionId })
+        ['convert-to-source'].post();
+      if (convErr) throw convErr;
       if (refreshSources) {
         await refreshSources();
       }
       toast.success(
         t('messages.convert.to_source.success', {
-          filename: result.filename,
-          chunkCount: result.chunk_count,
+          filename: result!.filename,
+          chunkCount: result!.chunk_count,
         }),
       );
     } catch (error) {
@@ -608,7 +494,7 @@ export function useChat({
   }, [refreshSources, store]);
 
   const handleConvertSessionToOutput = useCallback(
-    async (outputType: OutputTypeInput) => {
+    async (outputType: string) => {
       const s = store.getState();
       if (!s.activeNotebookId || !s.activeSessionId) return;
       if (s.connectionState !== 'live') {
@@ -617,16 +503,15 @@ export function useChat({
       }
       setIsConverting(true);
       try {
-        const result = await unwrapData(
-          convertSessionToOutput<true>({
-            path: { notebook_id: s.activeNotebookId, session_id: s.activeSessionId },
-            body: { message_ids: null, output_type: outputType },
-          }),
-        );
+        const { data: result, error: convErr } = await api.v2
+          .notebooks({ nid: s.activeNotebookId })
+          .sessions({ sid: s.activeSessionId })
+          ['convert-to-output'].post({ output_type: outputType });
+        if (convErr) throw convErr;
         if (refreshOutputs) {
           await refreshOutputs();
         }
-        toast.success(t('messages.convert.to_output.success', { title: result.title }));
+        toast.success(t('messages.convert.to_output.success', { title: result!.title }));
       } catch (error) {
         const message =
           error instanceof Error ? error.message : t('messages.convert.failure_default');
