@@ -24,6 +24,16 @@ import { templatesRouter } from './features/templates/router.ts';
 import { workspaceRouter } from './features/workspace/router.ts';
 import { generateOpenApiDocument, registerApiDoc, type OpenApiRoute } from './openapi.ts';
 import { strategiesRouter } from './rag/router.ts';
+import { TaskQueue } from './shared/queue.ts';
+
+// ---------------------------------------------------------------------------
+// Task queue (c19)
+// ---------------------------------------------------------------------------
+
+const taskQueue = new TaskQueue();
+
+// Crash recovery: mark stalled running tasks as failed on startup.
+taskQueue.recoverStaleTasks();
 
 // ---------------------------------------------------------------------------
 // Scaffold OpenAPI docs

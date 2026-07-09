@@ -10,6 +10,8 @@ import { chunks, sources, sourceTags, sourceTagMap } from '../../db/schema.ts';
 import { deleteSourceVectors } from '../../db/vectors.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
+import { validateUrlForFetch } from '../../shared/net/url-safety.ts';
+import { uploadDedupKey, urlDedupKey } from './dedup.ts';
 import { listParsers } from './parser-registry.ts';
 import { ingestSource } from './pipeline.ts';
 
@@ -164,20 +166,51 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Upload + ingest a file
-  .post('/sources/upload', async ({ body, query }) => {
+  .post('/sources/upload', async ({ body, query, set }) => {
     const notebookId = Number(query?.notebook_id);
+    const dedupAction = ((query as Record<string, string> | undefined)?.dedup_action ??
+      'create_new') as 'prompt' | 'reuse' | 'create_new';
     if (!notebookId) throw new NotFoundError('notebook_id query param is required');
 
     // body is FormData; Elysia parses multipart into { filename, file }
     const file = (body as { file?: File }).file;
     if (!file) throw new NotFoundError('No file provided');
 
+    // Upload size limit (default 50 MB).
+    const UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
+    if (file.size > UPLOAD_MAX_BYTES) {
+      set.status = 413;
+      return { error: 'Payload Too Large', max_bytes: UPLOAD_MAX_BYTES, uploaded_bytes: file.size };
+    }
+
     const buffer = new Uint8Array(await file.arrayBuffer());
+
+    // Dedup check.
+    const dedupKey = uploadDedupKey(buffer);
+    if (dedupAction !== 'create_new') {
+      const hit = db()
+        .select({ id: sources.id })
+        .from(sources)
+        .where(eq(sources.notebookId, notebookId) && eq(sources.dedupKey, dedupKey))
+        .get();
+      if (hit) {
+        if (dedupAction === 'prompt') {
+          set.status = 409;
+          return { error_code: 'SOURCE_DEDUP_HIT', existing_source_id: hit.id };
+        }
+        if (dedupAction === 'reuse') {
+          const existing = db().select().from(sources).where(eq(sources.id, hit.id)).get();
+          return { reused: true, source: existing };
+        }
+      }
+    }
+
     const result = await ingestSource({
       buffer,
       filename: file.name,
       notebookId,
       mimeType: file.type,
+      dedupKey,
     });
 
     return result;
@@ -403,9 +436,40 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Ingest from URL
-  .post('/notebooks/:nid/sources/from-url', async ({ params, body }) => {
+  .post('/notebooks/:nid/sources/from-url', async ({ params, body, query, set }) => {
     const nid = Number(params.nid);
     const { url } = body as { url: string; mode?: string; title?: string };
+    const dedupAction = ((query as Record<string, string> | undefined)?.dedup_action ??
+      'create_new') as 'prompt' | 'reuse' | 'create_new';
+
+    // SSRF guard: validate URL before fetch.
+    try {
+      await validateUrlForFetch(url);
+    } catch (error) {
+      set.status = 422;
+      return { error: 'SSRF blocked', reason: (error as Error).message };
+    }
+
+    // Dedup check.
+    const dedupKey = urlDedupKey(url);
+    if (dedupAction !== 'create_new') {
+      const hit = db()
+        .select({ id: sources.id })
+        .from(sources)
+        .where(eq(sources.notebookId, nid) && eq(sources.dedupKey, dedupKey))
+        .get();
+      if (hit) {
+        if (dedupAction === 'prompt') {
+          set.status = 409;
+          return { error_code: 'SOURCE_DEDUP_HIT', existing_source_id: hit.id };
+        }
+        if (dedupAction === 'reuse') {
+          const existing = db().select().from(sources).where(eq(sources.id, hit.id)).get();
+          return { reused: true, source: existing };
+        }
+      }
+    }
+
     // Fetch URL content and ingest as text source
     const response = await fetch(url);
     const html = await response.text();
@@ -415,6 +479,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       filename: url.split('/').pop() || 'webpage.html',
       notebookId: nid,
       mimeType: 'text/html',
+      dedupKey,
     });
     return result;
   });

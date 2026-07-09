@@ -33,6 +33,10 @@ export const QaStreamDoneEventSchema = z.object({
     .default([]),
   /** Confidence score in [0,1] derived from evidence (similarity + coverage). */
   confidence: z.number().min(0).max(1).optional(),
+  /** Reason for no evidence (mirrors v1 no_evidence_reason). */
+  no_evidence_reason: z
+    .enum(['no_sources', 'embedding_empty', 'no_vector_hits', 'no_valid_chunks', 'low_similarity'])
+    .optional(),
 });
 
 export const QaStreamErrorEventSchema = z.object({
