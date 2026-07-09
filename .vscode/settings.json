@@ -1,5 +1,6 @@
 {
   "files.exclude": {
+    ".zcode": true,
     "**/__pycache__": true,
     "**/.cache": true,
     "site": true,
@@ -16,6 +17,7 @@
     "**/*.pyo": true
   },
   "files.watcherExclude": {
+    ".zcode": true,
     "**/__pycache__": true,
     "**/.cache": true,
     "site": true,
