@@ -1,9 +1,11 @@
-import { generateObject } from 'ai';
 // Analysis router — POST /v2/analysis
 //
-// Runs LLM-powered analysis of a notebook: topic clustering, contradiction
-// detection, and relation/correlation mapping. Uses generateObject with
-// structured schema output.
+// Runs multi-phase analysis:
+//  1. Topic clustering (keyword TF-based)
+//  2. Relation detection (similar pairs)
+//  3. Contradiction detection (LLM pairwise on top similar pairs)
+//  4. LLM summary via generateObject
+import { generateObject } from 'ai';
 import { eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 import { z } from 'zod';
@@ -11,12 +13,29 @@ import { z } from 'zod';
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
-import { chunks, sources, notebooks } from '../../db/schema.ts';
+import { chunks, notebooks, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
+import { clusterTopics } from './clustering.ts';
+import { detectContradictions } from './contradiction.ts';
+import { detectRelations } from './correlation.ts';
 
 // ---------------------------------------------------------------------------
-// Analysis output schema (for generateObject)
+// OpenAPI
+// ---------------------------------------------------------------------------
+
+const apiDocs: OpenApiRoute[] = [
+  {
+    path: '/v2/analysis',
+    method: 'post',
+    summary: 'Analyze a notebook (topics, contradictions, relations)',
+    tags: ['analysis'],
+    responses: { 200: { description: 'Analysis result' } },
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Analysis output schema (overall summary by LLM)
 // ---------------------------------------------------------------------------
 
 const AnalysisOutputSchema = z.object({
@@ -54,20 +73,6 @@ const AnalysisOutputSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
-// OpenAPI
-// ---------------------------------------------------------------------------
-
-const apiDocs: OpenApiRoute[] = [
-  {
-    path: '/v2/analysis',
-    method: 'post',
-    summary: 'Analyze a notebook (topics, contradictions, relations)',
-    tags: ['analysis'],
-    responses: { 200: { description: 'Analysis result' } },
-  },
-];
-
-// ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 
@@ -81,8 +86,10 @@ export const analysisRouter = new Elysia({ prefix: '/v2' }).post('/analysis', as
   // Gather all chunks for this notebook
   const chunkRows = db()
     .select({
+      id: chunks.id,
       text: chunks.text,
       chunkIndex: chunks.chunkIndex,
+      sourceId: chunks.sourceId,
       filename: sources.filename,
     })
     .from(chunks)
@@ -94,10 +101,36 @@ export const analysisRouter = new Elysia({ prefix: '/v2' }).post('/analysis', as
     return { topics: [], contradictions: [], relations: [], summary: 'No content to analyze.' };
   }
 
-  const context = chunkRows
-    .map((c) => `[${c.filename}:${c.chunkIndex}] ${c.text}`)
-    .join('\n\n')
-    .substring(0, 8000);
+  // Build entry maps for the analysis modules
+  const chunkTextMap = new Map<number, string>();
+  for (const c of chunkRows) {
+    chunkTextMap.set(c.id, c.text);
+  }
+
+  // Phase 1: Topic clustering
+  const topics = clusterTopics(
+    chunkRows.map((c) => ({
+      chunkId: c.id,
+      sourceId: c.sourceId,
+      text: c.text,
+    })),
+  );
+
+  // Phase 2: Relation detection (similar pairs)
+  const relations = detectRelations(
+    chunkRows.map((c) => ({
+      chunkId: c.id,
+      sourceId: c.sourceId,
+      text: c.text,
+    })),
+    notebookId,
+  );
+
+  // Phase 3: Contradiction detection (LLM pairwise on top similar pairs)
+  const contradictions = await detectContradictions(relations, chunkTextMap);
+
+  // Phase 4: LLM summary via generateObject using topic/relation/contradiction context
+  const context = buildAnalysisContext(topics, relations, contradictions, chunkRows);
 
   const modelConfig = getDefaultChatModel();
   if (!modelConfig) throw new Error('No chat model configured');
@@ -106,15 +139,66 @@ export const analysisRouter = new Elysia({ prefix: '/v2' }).post('/analysis', as
   const { object } = await generateObject({
     model,
     schema: AnalysisOutputSchema,
-    system: `You are a knowledge analysis expert. Analyze the provided notebook content and identify:
-1. Main topics with keywords
-2. Contradictions or inconsistencies between sources
-3. Relationships between topics (similar, references, contradicts, complements)
-Be thorough and precise.`,
-    prompt: `Analyze this notebook content:\n\n${context}`,
+    system: `You are a knowledge analysis expert. Based on the pre-computed topics, relations, and contradictions, produce a structured analysis.`,
+    prompt: context,
   });
 
   return object;
 });
 
 registerApiDoc(apiDocs);
+
+// ---------------------------------------------------------------------------
+// Build a structured context from the analysis phases
+// ---------------------------------------------------------------------------
+
+function buildAnalysisContext(
+  topics: Array<{ id: string; name: string; keywords: string[]; chunkIds: number[] }>,
+  relations: Array<{
+    sourceChunkId: number;
+    targetChunkId: number;
+    relationType: string;
+    score: number;
+  }>,
+  contradictions: Array<{
+    sourceChunkId: number;
+    targetChunkId: number;
+    relationType: string;
+    score: number;
+  }>,
+  chunkRows: Array<{ id: number; text: string; filename: string; chunkIndex: number }>,
+): string {
+  const chunkById = new Map(chunkRows.map((c) => [c.id, c]));
+
+  let output = '## Topics\n';
+  for (const topic of topics) {
+    output += `- ${topic.name} (keywords: ${topic.keywords.join(', ')})\n`;
+  }
+
+  if (relations.length > 0) {
+    output += '\n## Relations\n';
+    for (const rel of relations.slice(0, 30)) {
+      const left = chunkById.get(rel.sourceChunkId);
+      const right = chunkById.get(rel.targetChunkId);
+      output += `- [${rel.relationType}] ${left?.filename ?? '?'}:${rel.sourceChunkId} ↔ ${right?.filename ?? '?'}:${rel.targetChunkId} (score: ${rel.score.toFixed(2)})\n`;
+    }
+  }
+
+  if (contradictions.length > 0) {
+    output += '\n## Contradictions\n';
+    for (const con of contradictions.slice(0, 10)) {
+      const left = chunkById.get(con.sourceChunkId);
+      const right = chunkById.get(con.targetChunkId);
+      output += `- ${left?.filename ?? '?'} vs ${right?.filename ?? '?'}\n`;
+      output += `  A: ${truncate(chunkById.get(con.sourceChunkId)?.text ?? '', 200)}\n`;
+      output += `  B: ${truncate(chunkById.get(con.targetChunkId)?.text ?? '', 200)}\n`;
+    }
+  }
+
+  return output;
+}
+
+function truncate(text: string, limit: number): string {
+  const cleaned = text.replace(/\s+/g, ' ').trim();
+  return cleaned.length <= limit ? cleaned : cleaned.slice(0, limit) + '...';
+}

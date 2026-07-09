@@ -99,3 +99,19 @@ export function countVectors(orm: Orm, notebookId: number): number {
   );
   return rows[0]?.c ?? 0;
 }
+
+/** Fetch all vectors for a notebook (used by analysis clustering). */
+export function getAllVectors(orm: Orm, notebookId: number): VectorHit[] {
+  return orm.all<VectorHit>(sql`
+    SELECT v.rowid AS rowid,
+           v.source_id AS source_id,
+           v.notebook_id AS notebook_id,
+           v.distance AS distance,
+           c.text AS text,
+           c.chunk_index AS chunk_index
+      FROM vec_chunks v
+      JOIN chunks c ON c.id = v.rowid
+     WHERE v.notebook_id = ${notebookId}
+     ORDER BY c.chunk_index;
+  `);
+}
