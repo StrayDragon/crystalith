@@ -4,33 +4,33 @@
 
 ## 状态看板
 
-| #   | Change                 | 状态                                                                    |
-| :-- | :--------------------- | :---------------------------------------------------------------------- |
-| c00 | server-foundation      | ✅ DONE                                                                 |
-| c01 | data-layer             | ✅ DONE                                                                 |
-| c02 | ai-runtime             | ✅ DONE                                                                 |
-| c03 | frontend-eden          | ✅ DONE                                                                 |
-| c04 | core-crud              | ✅ DONE                                                                 |
-| c05 | rag-embed              | ✅ DONE                                                                 |
-| c06 | rag-registry           | ✅ DONE                                                                 |
-| c07 | qa-pipeline            | ✅ DONE                                                                 |
-| c08 | research-agent         | ✅ DONE                                                                 |
-| c09 | outputs-generation     | ✅ DONE                                                                 |
-| c10 | models-management      | ✅ DONE                                                                 |
-| c11 | eval-harness           | ✅ DONE                                                                 |
-| c12 | analysis-studio-refine | ✅ DONE                                                                 |
-| c15 | bdd-tests              | ✅ DONE                                                                 |
-| c16 | rag-foundations        | ✅ DONE                                                                 |
-| c17 | qa-citations           | ✅ DONE                                                                 |
-| c18 | source-dedup-safety    | ✅ DONE                                                                 |
-| c19 | task-queue             | ✅ DONE (Semaphore + TaskQueue + crash-recovery)                        |
-| c20 | outputs-refine         | ✅ DONE                                                                 |
-| c21 | web-extractors         | ✅ DONE                                                                 |
-| c22 | research-agent         | ✅ DONE (cyclic Plan→HITL→Search→Analyze→Report; `f5688e70`)            |
-| c23 | studio-analysis        | ✅ DONE (clustering+correlation+contradiction `56150d86`; theme+slidev) |
-| c24 | pipeline-integration   | 🔄 WIP (Storage / toolApproval HITL / 集成测试; 21 tasks)               |
-| c13 | distribution           | ⏸️ BLOCKED (blocked by c24)                                             |
-| c14 | cleanup-delivery       | ⏸️ BLOCKED (blocked by c24)                                             |
+| #   | Change                 | 状态                                                                         |
+| :-- | :--------------------- | :--------------------------------------------------------------------------- |
+| c00 | server-foundation      | ✅ DONE                                                                      |
+| c01 | data-layer             | ✅ DONE                                                                      |
+| c02 | ai-runtime             | ✅ DONE                                                                      |
+| c03 | frontend-eden          | ✅ DONE                                                                      |
+| c04 | core-crud              | ✅ DONE                                                                      |
+| c05 | rag-embed              | ✅ DONE                                                                      |
+| c06 | rag-registry           | ✅ DONE                                                                      |
+| c07 | qa-pipeline            | ✅ DONE                                                                      |
+| c08 | research-agent         | ✅ DONE                                                                      |
+| c09 | outputs-generation     | ✅ DONE                                                                      |
+| c10 | models-management      | ✅ DONE                                                                      |
+| c11 | eval-harness           | ✅ DONE                                                                      |
+| c12 | analysis-studio-refine | ✅ DONE                                                                      |
+| c15 | bdd-tests              | ✅ DONE                                                                      |
+| c16 | rag-foundations        | ✅ DONE                                                                      |
+| c17 | qa-citations           | ✅ DONE                                                                      |
+| c18 | source-dedup-safety    | ✅ DONE                                                                      |
+| c19 | task-queue             | ✅ DONE (Semaphore + TaskQueue + crash-recovery)                             |
+| c20 | outputs-refine         | ✅ DONE                                                                      |
+| c21 | web-extractors         | ✅ DONE                                                                      |
+| c22 | research-agent         | 🔄 WIP (cyclic 骨架✅; DB 轮询非 toolApproval/缺锁/resume/export → c24-B)    |
+| c23 | studio-analysis        | 🔄 WIP (clustering/correlation/contradiction/theme ✅; studio 落盘+RAG 待补) |
+| c24 | pipeline-integration   | 🔄 WIP (Storage / toolApproval HITL / 集成测试; 21 tasks)                    |
+| c13 | distribution           | ⏸️ BLOCKED (blocked by c24)                                                  |
+| c14 | cleanup-delivery       | ⏸️ BLOCKED (blocked by c24)                                                  |
 
 <!-- LEGEND: ✅ DONE | 🔄 WIP | ⬜ TODO | ⏸️ BLOCKED -->
 
@@ -49,40 +49,40 @@
 
 ### 按功能域对比
 
-| #   | 功能域                | v1行数 | v2行数 | 完成度 | 备注                                                       |
-| :-- | :-------------------- | -----: | -----: | :----: | :--------------------------------------------------------- |
-| 1   | notebooks             |    257 |    135 |   ✅   |                                                            |
-| 2   | sessions              |    675 |    200 |   ✅   |                                                            |
-| 3   | messages              |    216 |    124 |   ✅   |                                                            |
-| 4   | citations             |    136 |     37 |   ✅   |                                                            |
-| 5   | **QA pipeline**       |  1,311 |    552 |   ✅   | 含no_evidence_reason+confidence+strategy                   |
-| 6   | **research agent**    |  2,834 |    925 |   ✅   | cyclic Plan→HITL→Search→Analyze→Report (`f5688e70`)        |
-| 7   | outputs               |  1,023 |    437 |   ✅   | v2 10 types                                                |
-| 8   | refine                |    321 |    138 |   ✅   | source_ids bug已修                                         |
-| 9   | **studio**            |  1,686 |    344 | 🟡70%  | theme presets ✅; two-stage outline→markdown 待实现(c24外) |
-| 10  | **analysis**          |    427 |    698 |   ✅   | clustering+correlation+contradiction ✅ (`56150d86`)       |
-| 11  | commands              |     75 |     64 |   ✅   |                                                            |
-| 12  | models mgmt           |    112 |     55 |   ✅   |                                                            |
-| 13  | templates             |    332 |    120 |   ✅   |                                                            |
-| 14  | prompt presets        |    268 |    111 |   ✅   |                                                            |
-| 15  | sources CRUD+ingest   |  2,867 |    979 |   ✅   | v2: dedup+SSRF+upload size                                 |
-| 16  | **source connectors** |  1,272 |    195 | 🟡30%  | v1: Obsidian sync。v2: shell                               |
-| 17  | tasks/queue           |    595 |     84 | 🟡60%  | v2: Semaphore+TaskQueue ✅; worker dispatch 待做           |
-| 18  | workspace             |    274 |     63 |   ✅   |                                                            |
-| 19  | **eval harness**      |      0 |    598 |   ✅   | **v2独占**: Golden Dataset + LLM-as-Judge                  |
+| #   | 功能域                | v1行数 | v2行数 | 完成度 | 备注                                                                           |
+| :-- | :-------------------- | -----: | -----: | :----: | :----------------------------------------------------------------------------- |
+| 1   | notebooks             |    257 |    135 |   ✅   |                                                                                |
+| 2   | sessions              |    675 |    200 |   ✅   |                                                                                |
+| 3   | messages              |    216 |    124 |   ✅   |                                                                                |
+| 4   | citations             |    136 |     37 |   🔴   | v2 是 echo 端点；v1 邻域证据审查(/context)缺失 → c26                           |
+| 5   | **QA pipeline**       |  1,311 |    552 |   🟡   | confidence✅; 5 个 no-evidence reason 仅产出 1; 缺 context_stats/export/断连   |
+| 6   | **research agent**    |  2,834 |    925 |   🟡   | cyclic 骨架✅; DB 轮询非 toolApproval; 缺锁/resume/export → c24-B              |
+| 7   | outputs               |  1,023 |    437 |   🟡   | 10 types✅; 无 RAG 检索(爆上下文)/无 citations → c27                           |
+| 8   | refine                |    321 |    138 |   🟡   | source_ids✅; 语义发散(5 种文本变换 vs v1 带 citation 摘要)                    |
+| 9   | **studio**            |  1,686 |    344 |   🟡   | two-stage✅+theme✅; 缺 slidev 落盘+富配置+RAG 上下文                          |
+| 10  | **analysis**          |    427 |    698 |   🟡   | 三模块✅; clustering/correlation 向量 KNN→关键词 TF 降级 → c28                 |
+| 11  | commands              |     75 |     64 |   ✅   |                                                                                |
+| 12  | models mgmt           |    112 |     55 |   ✅   |                                                                                |
+| 13  | templates             |    332 |    120 |   ✅   |                                                                                |
+| 14  | prompt presets        |    268 |    111 |   ✅   |                                                                                |
+| 15  | sources CRUD+ingest   |  2,867 |    979 |   ✅   | v2: dedup+SSRF+upload size                                                     |
+| 16  | **source connectors** |  1,272 |    195 | 🟡15%  | v1: Obsidian sync。v2: 仅描述符+sync stub(待 c13)                              |
+| 17  | tasks/queue           |    595 |    531 |   ✅   | Semaphore+TaskQueue+crash-recovery✅; refine 已分发✅; document_parse 待 c24-A |
+| 18  | workspace             |    274 |     63 |   ✅   |                                                                                |
+| 19  | **eval harness**      |      0 |    598 |   ✅   | **v2独占**: Golden Dataset + LLM-as-Judge                                      |
 
 ### shared 基础设施对比
 
 | 模块                     | v1行数 | v2行数 |                         覆盖度                         |
 | :----------------------- | -----: | -----: | :----------------------------------------------------: |
 | AI (provider/retry)      | ~1,800 |   ~430 |                           ✅                           |
-| DB (models/ORM)          | ~1,200 |   ~780 |                           ✅                           |
+| DB (models/ORM)          | ~1,200 |   ~796 |     ✅ (v2 21表非20: strategy_configs 在 registry)     |
 | RAG (embed/search/cache) | ~1,300 | ~1,200 | ✅ (v2更丰富: multi-query/diversity/hybrid/page-index) |
-| Config                   | ~2,500 |    226 |              🟡 v1完整env/model/endpoint               |
+| Config                   | ~2,500 |    226 |      🔴 只解析 models 段; ~15 维配置被忽略 → c25       |
 | Web-extractors           | ~1,100 |   ~350 |             ✅ jina/firecrawl/readability              |
-| Vector store             |   ~900 |    101 |                 ✅ ChromaDB→sqlite-vec                 |
-| Parsers                  | ~1,200 |    150 |                ✅ PDF+HTML+text (核心)                 |
-| Net (SSRF/URL)           |   ~220 |   ~180 |                           ✅                           |
+| Vector store             |   ~900 |    117 |                 ✅ ChromaDB→sqlite-vec                 |
+| Parsers                  | ~1,200 |    150 |      🟡 PDF+HTML+text 核心✅; 缺 csv/audio/video       |
+| Net (SSRF/URL)           |   ~220 |   ~180 |         🟡 白名单字段死代码(config 无效) → c25         |
 | Plugins                  |   ~900 |      0 |                       ⬜ 留待c13                       |
 
 ### 关键结论
@@ -194,13 +194,13 @@ const KNOWN: Record<string, { sdk: string; factory: string }> = {
 
 AI SDK v7 已原生覆盖所有 AI 需求，**不引入任何第三方 agent/工作流框架**：
 
-| AI SDK v7 能力                      | 替代                              |
-| :---------------------------------- | :-------------------------------- |
-| `ToolLoopAgent`                     | Pi agent-core、自建 Agent runtime |
-| `WorkflowAgent` + Workflow Patterns | Mastra workflows、LangGraph.js    |
-| `toolApproval: 'user-approval'`     | 手写 HITL、DB 轮询                |
-| `generateObject({ schema: Zod })`   | pydantic-ai `output_type`         |
-| `streamText` / `fullStream`         | 手写 SSE 轮询                     |
+| AI SDK v7 能力                      | 替代                              | 现状                                        |
+| :---------------------------------- | :-------------------------------- | :------------------------------------------ |
+| `ToolLoopAgent`                     | Pi agent-core、自建 Agent runtime | 🟡 research 尚未接线（c24-B 目标）          |
+| `WorkflowAgent` + Workflow Patterns | Mastra workflows、LangGraph.js    | ⬜ 未使用                                   |
+| `toolApproval: 'user-approval'`     | 手写 HITL、DB 轮询                | 🟡 **当前 research 用 DB 轮询**，c24-B 切换 |
+| `generateObject({ schema: Zod })`   | pydantic-ai `output_type`         | ✅ 已用                                     |
+| `streamText` / `fullStream`         | 手写 SSE 轮询                     | ✅ 已用                                     |
 
 **禁用列表：** ❌ 不引入 Pi agent-core、Mastra、LangGraph.js、XState、Inngest、Temporal 等任何第三方 agent/工作流/图库。
 
