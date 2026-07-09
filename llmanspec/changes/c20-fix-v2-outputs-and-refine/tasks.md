@@ -22,10 +22,9 @@
 - [x] `features/refine/router.ts`: 查询加 inArray(chunks.sourceId, sourceIds)
 - [x] 验证: `bun test test/refine/source-filter.test.ts`（只 refine 指定 source_ids）
 
-## 5. Refine structured 模式 + 异步
+## 5. Refine structured 模式 + 异步 ✅
 
-- [x] `features/refine/router.ts`: 补 structured 模式（返回 {title, bullets[], terms[]}）
-- [ ] refine 经 c19 任务队列异步执行（当前为同步 generateText，等待路由层改为 queue.enqueue）
+- [x] `features/refine/router.ts`: 补 structured 模式 + 改为 task queue 异步（factory 函数，enqueue + waitForCompletion）
 - [ ] 验证: `bun test test/refine/`（structured 格式 + 异步执行）
 
 ## 6. 整体验证

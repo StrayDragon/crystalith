@@ -19,10 +19,9 @@
 - [x] startWorker 在 server.ts 启动
 - [x] 验证: mock running 任务，重启后状态正确
 
-## 4. Refine 接入队列 ⚠️（已实现 worker dispatch，路由层待改为队列方式）
+## 4. Refine 接入队列 ✅
 
-- [x] worker.ts 包含 refine handler（enqueue → wait_for_completion → 返回）
-- [ ] `features/refine/router.ts`: 改为使用 task queue（当前是同步 generateText）
+- [x] `features/refine/router.ts`: 改为使用 task queue（factory 函数接收 taskQueue，enqueue + waitForCompletion）
 - [ ] 验证: `bun test test/refine/`（refine 经队列执行）
 
 ## 5. 文档解析异步化 ⚠️（等待 content storage layer）

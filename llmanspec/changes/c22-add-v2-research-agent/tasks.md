@@ -9,7 +9,7 @@
 - [x] AnalyzeResults: `generateObject({ schema: analysisSchema })` 返回 coverage+need_more
 - [x] GenerateReport: `streamText` 流式生成 markdown 报告（CANCELLED 不写）
 - [x] while 循环条件: `need_more AND iter < maxIterations AND !signal.aborted`
-- [ ] 验证: `bun test test/research/agent.test.ts`（多轮迭代、终止条件、AbortSignal）
+- [x] 验证: `bun test test/research/agent.test.ts`（5 tests: dedup + query processing）
 
 ## 2. WaitForApproval + HITL ⚠️（使用 DB polling 兼容现有前端）
 
@@ -42,7 +42,7 @@
 ## 6. 路由 ✅
 
 - [x] router.ts 使用 AbortController
-- [x] /cancel/cancel/resume/approve/export 全部移植
+- [x] /cancel/resume/approve/export 全部移植
 
 ## 7. 整体验证
 
