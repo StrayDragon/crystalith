@@ -1,0 +1,7 @@
+kind: llman.sdd.delta
+ops[2]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r_correlation_vector,"Correlation vector KNN","analysis 相关性检测 MUST 使用向量 KNN 检索 而非关键词 TF 余弦 以保证语义级相关性质量 检索 MUST 排除同 source 且设最小相似度阈值",null,null,null
+  add_requirement,r_clustering_vector,"Clustering embedding vectors","analysis 聚类 MUST 基于 embedding 向量 而非关键词 TF 向量 做质心聚类以保证语义级聚类质量",null,null,null
+op_scenarios[2]{req_id,id,given,when,then}:
+  r_correlation_vector,semantic_near,"两个 chunk 语义相近用词不同","运行相关性检测","系统 SHALL 通过向量 KNN 识别为相关"
+  r_clustering_vector,semantic_cluster,"多 chunk 同主题用词不同","运行聚类","系统 SHALL 归入同一主题簇"

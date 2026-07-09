@@ -1,0 +1,7 @@
+kind: llman.sdd.delta
+ops[2]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r_outputs_rag,"Outputs RAG retrieval","结构化输出生成 MUST 通过 RAG 检索获取相关上下文 而非 dump 全部 chunk 以避免上下文窗口溢出 检索 MUST 支持 topK 参数并由生成偏好调节",null,null,null
+  add_requirement,r_outputs_citations,"Outputs citations attached","结构化输出生成 MUST 把检索到的 chunk 作为 citations 附到生成结果以支持证据追溯",null,null,null
+op_scenarios[2]{req_id,id,given,when,then}:
+  r_outputs_rag,large_notebook,"notebook 含大量 chunk","用户生成输出","系统 SHALL 仅检索 topK 相关 chunk 进入 prompt"
+  r_outputs_citations,citations_attached,"检索到相关 chunk","生成完成","系统 SHALL 在输出结果附 citations"
