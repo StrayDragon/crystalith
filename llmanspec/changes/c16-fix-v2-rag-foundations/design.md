@@ -61,3 +61,11 @@ export function buildContext(parts: ContextPart[], maxTokens: number): string
 
 - 现有 BDD `tests/bdd` 全绿（核心 CRUD 域不依赖检索，不受影响）
 - 新增 `apps/server/test/rag/` 单元测试：score 转换、chunker 边界、multi-query 融合、token 截断、epoch 失效
+
+## DRIFT 低优先项处置（显式记录）
+
+以下 DRIFT 报告中的低优先项归入本 change 范围，但明确为"次要增强"而非阻塞项，实现时按精力决定是否纳入：
+
+- **chunk_id 复用路径**（v1 有显式 chunk_ids 直查短路）：本 change 接线 multi-query 时一并支持 retrieve(chunkIds?) 短路参数。
+- **检索 stats/timings**（v1 完整 timings_ms 可观测）：各策略 retrieve() 返回值附带 `{ ms: number }` 计时，logger.debug 记录。不暴露 HTTP（仅日志）。
+- **chunk_id 复用**：retrieve() 支持 opts.chunkIds 直查（跳过 embed/搜索），用于 output/qa 复用已选 chunk。

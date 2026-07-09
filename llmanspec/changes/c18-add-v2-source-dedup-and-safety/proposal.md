@@ -28,3 +28,12 @@ batch: all
 - 重复上传返回 409（prompt 模式）或复用（reuse 模式），存储不膨胀
 - `/from-url` 拦截内网/元数据/私网 URL，防 SSRF
 - 上传超限返回 413
+
+## DRIFT 显式 out-of-scope（已接受，不实现）
+
+以下 DRIFT 报告项明确**不在 v2 范围**，原因记录于此（避免遗留疑问）：
+
+- **音频/视频/YouTube/转录**：调研确认 v1 的 `MediaFetcher` 是 stub（`DisabledMediaFetcher`，always raises），YouTube 下载/视频音轨提取**v1 本身也未实现**。v2 同样不实现，文档标注 unsupported。
+- **CSV/markdown 预处理**：v2 textParser 走 UTF-8 直传，不做 markdown 预处理。低频场景，接受现状。
+- **错误码粒度**（v1 8 种 typed error_code vs v2 1 种 PARSE_ERROR）：c18 保持简化错误码，c19 任务失败时补充 task.error 文本。不追求 8 种枚举对齐。
+- **AI 可观测性**（usage/cost/latency 采集）：v2 仅 retry 中间件。完整可观测性（trace/usage 持久化）留待 c13 (分发) 的 observability 层或独立 change，不在行为对齐范围。

@@ -100,3 +100,7 @@ const result = await queue.wait_for_completion(taskId); // 阻塞 HTTP 直到完
 
 - tasks BDD：任务创建/查询/cancel
 - 单元测试：队列并发（3 个任务同时跑）、cancel 真中断、崩溃恢复（mock running 任务）
+
+## DRIFT 低优先项处置
+
+- **源摄取 readiness 语义**（DRIFT P1-6）：v1 是"解析+嵌入+向量化全完成才 READY"，v2 当前是"先标 READY，嵌入 fire-and-forget"。本 change 把 document_parse 接入队列后，摄取改为：解析完成→status=processing（task running）→嵌入完成→status=ready。前端轮询 task 进度，避免"ready 但检索空"。task 完成时才将 source 标 ready。
