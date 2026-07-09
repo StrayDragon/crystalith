@@ -150,15 +150,82 @@ async function handleRefine(
 // ---------------------------------------------------------------------------
 // Document parse handler — async ingestion for large files
 // ---------------------------------------------------------------------------
-// NOTE: Requires content storage layer (storage.ts) for fetching raw bytes
-// from a persisted blob. Currently stubbed — will be wired when storage
-// abstraction is available (post-c23).
+// Reads persisted raw bytes (storage layer), re-parses + chunks + embeds.
+// Used when upload-time parsing was deferred (e.g. very large files) or to
+// re-index after a chunker/embedding model change.
 
 async function handleDocumentParse(
-  _payload: TaskPayload,
+  payload: TaskPayload,
   signal: AbortSignal,
-  _limiters: StageLimiters,
+  limiters: StageLimiters,
 ): Promise<unknown> {
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-  throw new Error('document_parse not yet wired — content storage layer pending');
+  const sourceId = payload.sourceId;
+  if (!sourceId) throw new Error('document_parse task missing sourceId');
+
+  // 1. Fetch persisted raw bytes.
+  const { contentStorage } = await import('../../shared/storage.ts');
+  const buffer = await contentStorage.fetch(sourceId);
+
+  // 2. Load source row for mime/filename/parser selection.
+  const sourceRow = db().select().from(sources).where(eq(sources.id, sourceId)).get();
+  if (!sourceRow) throw new Error(`document_parse: source ${sourceId} not found`);
+
+  const { guessMimeType, selectParser } = await import('../sources/parser-registry.ts');
+  const parser = sourceRow.parserType
+    ? selectParser(sourceRow.parserType)
+    : selectParser(sourceRow.mimeType ?? guessMimeType(sourceRow.filename));
+
+  if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+
+  // 3. Parse + chunk (reusing pipeline internals).
+  const { chunkText } = await import('../../rag/chunker.ts');
+  const result = await parser!.parse(buffer, sourceRow.filename);
+  const chunked = chunkText(result.text);
+
+  // 4. Clear any existing chunks for this source (idempotent re-index).
+  db().delete(chunks).where(eq(chunks.sourceId, sourceId)).run();
+
+  // 5. Insert fresh chunk rows.
+  let offset = 0;
+  for (const c of chunked) {
+    db()
+      .insert(chunks)
+      .values({
+        sourceId,
+        chunkIndex: c.index,
+        text: c.text,
+        startOffset: offset,
+        endOffset: offset + c.text.length,
+        metadata: result.metadata ?? null,
+      })
+      .run();
+    offset += c.text.length + 1;
+  }
+
+  // 6. Mark source ready.
+  db()
+    .update(sources)
+    .set({ status: 'ready', metadata: result.metadata ?? null })
+    .where(eq(sources.id, sourceId))
+    .run();
+
+  // 7. Re-embed under the embedding stage limiter.
+  const releaseEmbed = await limiters.embedding.acquire();
+  try {
+    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
+    // Clear stale vectors before re-indexing.
+    const { deleteSourceVectors } = await import('../../db/vectors.ts');
+    deleteSourceVectors(db(), sourceId);
+    const strategy = new EmbedStrategy();
+    await strategy.indexSource(sourceId, sourceRow.notebookId);
+  } finally {
+    releaseEmbed();
+  }
+
+  const { bumpSourcesEpoch } = await import('../../rag/cache.ts');
+  bumpSourcesEpoch(sourceRow.notebookId);
+
+  return { source_id: sourceId, chunk_count: chunked.length, status: 'ready' };
 }

@@ -2,10 +2,10 @@
 
 ## Workstream A: Content Storage Layer
 
-- [ ] 新建 `shared/storage.ts`: Storage 接口 + LocalStorage 实现（~100 行）
-- [ ] `features/sources/pipeline.ts`: ingestSource parse 后 saveContent
-- [ ] `features/tasks/worker.ts`: document_parse handler 完整实现（fetch → parse → chunk → embed）
-- [ ] 验证: document_parse 任务可完成 parse→embed 全流程
+- [x] 新建 `shared/storage.ts`: Storage 接口 + LocalStorage 实现（~100 行）
+- [x] `features/sources/pipeline.ts`: ingestSource parse 后 saveContent
+- [x] `features/tasks/worker.ts`: document_parse handler 完整实现（fetch → parse → chunk → embed）
+- [ ] 验证: document_parse 任务可完成 parse→embed 全流程（集成测试见 WS-C）
 
 ## Workstream B: toolApproval HITL + research parity 补全
 
