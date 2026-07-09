@@ -18,6 +18,7 @@ import { researchRouter } from './features/research/router.ts';
 import { sessionsRouter } from './features/sessions/router.ts';
 import { sourceConnectorsRouter } from './features/source-connectors/router.ts';
 import { sourcesRouter } from './features/sources/router.ts';
+import { sourceExtrasRouter } from './features/sources/source-extras.router.ts';
 import { studioRouter } from './features/studio/router.ts';
 import { tasksRouter } from './features/tasks/router.ts';
 import { createStageLimiters, runTask } from './features/tasks/worker.ts';
@@ -93,6 +94,7 @@ export function createApp() {
     .use(sessionsRouter)
     .use(messagesRouter)
     .use(sourcesRouter)
+    .use(sourceExtrasRouter)
     .use(qaRouter)
     .use(citationsRouter)
     .use(researchRouter)
