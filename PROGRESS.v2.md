@@ -2,40 +2,97 @@
 
 > Agent-only. 引用此文件即自动接管当前批次。
 
----
-
 ## 状态看板
 
-| #   | Change                 | 状态                                                                                   |
-| :-- | :--------------------- | :------------------------------------------------------------------------------------- |
-| c00 | server-foundation      | ✅ DONE                                                                                |
-| c01 | data-layer             | ✅ DONE                                                                                |
-| c02 | ai-runtime             | ✅ DONE                                                                                |
-| c03 | frontend-eden          | ✅ DONE                                                                                |
-| c04 | core-crud              | ✅ DONE                                                                                |
-| c05 | rag-embed              | ✅ DONE                                                                                |
-| c06 | rag-registry           | ✅ DONE                                                                                |
-| c07 | qa-pipeline            | ✅ DONE                                                                                |
-| c08 | research-agent         | ✅ DONE                                                                                |
-| c09 | outputs-generation     | ✅ DONE                                                                                |
-| c10 | models-management      | ✅ DONE                                                                                |
-| c11 | eval-harness           | ✅ DONE                                                                                |
-| c12 | analysis-studio-refine | ✅ DONE                                                                                |
-| c15 | bdd-tests              | ✅ DONE                                                                                |
-| c16 | rag-foundations        | ✅ DONE                                                                                |
-| c17 | qa-citations           | ⬜ TODO                                                                                |
-| c18 | source-dedup-safety    | ⬜ TODO                                                                                |
-| c19 | task-queue             | ⬜ TODO (semaphore+queue 未落盘)                                                       |
-| c20 | outputs-refine         | ⬜ TODO                                                                                |
-| c21 | web-extractors         | ✅ DONE                                                                                |
-| c22 | research-agent         | ⬜ TODO                                                                                |
-| c23 | studio-analysis        | 🔄 WIP (theme presets + slidev ✅; clustering + two-stage studio + correlation 待实现) |
-| c13 | distribution           | ⏸️ BLOCKED (blocked by c17-c23)                                                        |
-| c14 | cleanup-delivery       | ⏸️ BLOCKED (blocked by c17-c23)                                                        |
+| #   | Change                 | 状态                                                                        |
+| :-- | :--------------------- | :-------------------------------------------------------------------------- |
+| c00 | server-foundation      | ✅ DONE                                                                     |
+| c01 | data-layer             | ✅ DONE                                                                     |
+| c02 | ai-runtime             | ✅ DONE                                                                     |
+| c03 | frontend-eden          | ✅ DONE                                                                     |
+| c04 | core-crud              | ✅ DONE                                                                     |
+| c05 | rag-embed              | ✅ DONE                                                                     |
+| c06 | rag-registry           | ✅ DONE                                                                     |
+| c07 | qa-pipeline            | ✅ DONE                                                                     |
+| c08 | research-agent         | ✅ DONE                                                                     |
+| c09 | outputs-generation     | ✅ DONE                                                                     |
+| c10 | models-management      | ✅ DONE                                                                     |
+| c11 | eval-harness           | ✅ DONE                                                                     |
+| c12 | analysis-studio-refine | ✅ DONE                                                                     |
+| c15 | bdd-tests              | ✅ DONE                                                                     |
+| c16 | rag-foundations        | ✅ DONE                                                                     |
+| c17 | qa-citations           | ✅ DONE                                                                     |
+| c18 | source-dedup-safety    | ✅ DONE                                                                     |
+| c19 | task-queue             | ✅ DONE (Semaphore + TaskQueue + crash-recovery)                            |
+| c20 | outputs-refine         | ✅ DONE                                                                     |
+| c21 | web-extractors         | ✅ DONE                                                                     |
+| c22 | research-agent         | ⬜ TODO (v1: 2834行完整状态机; v2: 仅409行router shell)                     |
+| c23 | studio-analysis        | 🔄 WIP (theme presets + slidev ✅; two-stage+clustering+correlation 待实现) |
+| c13 | distribution           | ⏸️ BLOCKED (blocked by c22-c23)                                             |
+| c14 | cleanup-delivery       | ⏸️ BLOCKED (blocked by c22-c23)                                             |
 
 <!-- LEGEND: ✅ DONE | 🔄 WIP | ⬜ TODO | ⏸️ BLOCKED -->
 
----
+## v1 (Python) vs v2 (TypeScript) — 代码量与功能对比
+
+### 总览
+
+| 指标                 | v1 Python (FastAPI) | v2 TS (Elysia+AI SDK) |      比例 |
+| :------------------- | ------------------: | --------------------: | --------: |
+| **总行数**           |              29,743 |                 8,640 | **3.4:1** |
+| **总文件数**         |                 189 |                    72 |     2.6:1 |
+| **features/**        |           ~14,600行 |              ~4,830行 |     3.0:1 |
+| **shared/ai/db/rag** |           ~14,457行 |              ~3,527行 |     4.1:1 |
+
+> v2 Elysia单handler=OpenAPI doc合一，v1拆repo+schema+api多文件；v1 shared有pydantic-ai+ChromaDB厚重包装。
+
+### 按功能域对比
+
+| #   | 功能域                | v1行数 | v2行数 | 完成度 | 备注                                                           |
+| :-- | :-------------------- | -----: | -----: | :----: | :------------------------------------------------------------- |
+| 1   | notebooks             |    257 |    135 |   ✅   |                                                                |
+| 2   | sessions              |    675 |    200 |   ✅   |                                                                |
+| 3   | messages              |    216 |    124 |   ✅   |                                                                |
+| 4   | citations             |    136 |     37 |   ✅   |                                                                |
+| 5   | **QA pipeline**       |  1,311 |    552 |   ✅   | 含no_evidence_reason+confidence+strategy                       |
+| 6   | **research agent**    |  2,834 |    409 | 🔴15%  | v1: pydantic-graph 5-node state machine + HITL + SSE           |
+| 7   | outputs               |  1,023 |    437 |   ✅   | v2 10 types                                                    |
+| 8   | refine                |    321 |    138 |   ✅   | source_ids bug已修                                             |
+| 9   | **studio**            |  1,686 |    308 | 🟡50%  | v1: outline→markdown两阶段。v2: theme presets ✅; 两阶段待实现 |
+| 10  | **analysis**          |    427 |    120 | 🟡40%  | v1: clustering+correlation+contradiction。v2: router only      |
+| 11  | commands              |     75 |     64 |   ✅   |                                                                |
+| 12  | models mgmt           |    112 |     55 |   ✅   |                                                                |
+| 13  | templates             |    332 |    120 |   ✅   |                                                                |
+| 14  | prompt presets        |    268 |    111 |   ✅   |                                                                |
+| 15  | sources CRUD+ingest   |  2,867 |    979 |   ✅   | v2: dedup+SSRF+upload size                                     |
+| 16  | **source connectors** |  1,272 |    195 | 🟡30%  | v1: Obsidian sync。v2: shell                                   |
+| 17  | tasks/queue           |    595 |     84 | 🟡60%  | v2: Semaphore+TaskQueue ✅; worker dispatch 待做               |
+| 18  | workspace             |    274 |     63 |   ✅   |                                                                |
+| 19  | **eval harness**      |      0 |    598 |   ✅   | **v2独占**: Golden Dataset + LLM-as-Judge                      |
+
+### shared 基础设施对比
+
+| 模块                     | v1行数 | v2行数 |                         覆盖度                         |
+| :----------------------- | -----: | -----: | :----------------------------------------------------: |
+| AI (provider/retry)      | ~1,800 |   ~430 |                           ✅                           |
+| DB (models/ORM)          | ~1,200 |   ~780 |                           ✅                           |
+| RAG (embed/search/cache) | ~1,300 | ~1,200 | ✅ (v2更丰富: multi-query/diversity/hybrid/page-index) |
+| Config                   | ~2,500 |    226 |              🟡 v1完整env/model/endpoint               |
+| Web-extractors           | ~1,100 |   ~350 |             ✅ jina/firecrawl/readability              |
+| Vector store             |   ~900 |    101 |                 ✅ ChromaDB→sqlite-vec                 |
+| Parsers                  | ~1,200 |    150 |                ✅ PDF+HTML+text (核心)                 |
+| Net (SSRF/URL)           |   ~220 |   ~180 |                           ✅                           |
+| Plugins                  |   ~900 |      0 |                       ⬜ 留待c13                       |
+
+### 关键结论
+
+1. **代码量3.4:1** — TypeScript+Bun表达力更高，Elysia单handler≈v1 api+repo+schema三文件
+2. **核心全功能域就绪** — 20 router全部挂载，CRUD/QA/outputs/eval/sources完整
+3. **研究智能体是最大缺口** — v1 2834行(pydantic-graph+SSE) vs v2 409行(router shell)
+4. **studio两阶段+analysis聚类待实现** — v1有完整pipeline，v2简化版
+5. **source connectors待充实** — v1有Obsidian sync，v2仅shell
+6. **任务队列基础设施就位** — Semaphore+TaskQueue+crash-recovery ✅，worker dispatch未接线
+7. **v2独占eval harness** — v1无evaluation framework
 
 ## 当前批次
 
@@ -43,27 +100,25 @@
 
 **Phase 5**: c22-c23（剩余）
 
-**前置**: c16-c21 ✅ (all dependencies in place)
+**前置**: c16-c21 ✅
 
-**目标**: c22 research-agent (7 tasks, 23 subtasks) + c23 remaining (clustering + two-stage studio + correlation/contradiction)
+**目标**: c22 research-agent (7 tasks, 23 subtasks) + c23 remaining (clustering + two-stage studio + correlation)
 
 **阻塞**: c13, c14 需 c22-c23 全部完毕后方可开始
 
----
+**重点**: c22 research 是当前最大块缺口 — v1 5-node state machine (PlanSearches→WaitForApproval→ExecuteSearches→AnalyzeResults→GenerateReport) + SSE + HITL + lock。v2 c19 task queue 已就位，可直接接线。
 
 ## 交接记录
 
 <!-- HANDOFF -->
 
-| 字段       | 值                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| :--------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 上次 Agent | zcode-agent (c17-c20 batch)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| 上次操作   | **c17 QA citations**: no_evidence_reason field + noEvidenceHint() localized Chinese hints + pre-flight source count check. **c18 source dedup+SSRF**: dedup_key computation, dedup_action (prompt→409/reuse→200/create_new), SSRF guard (validateUrlForFetch), URL normalization, upload size 413. **c19 task queue**: Semaphore (0-dep), TaskQueue with min-heap + semaphore(3) + cancel(AbortSignal) + crash recovery in server.ts. **c20 outputs+refine**: PARAGRAPH/BULLETS/STRUCTURED generators, convert-to-source embed fix, refine source_ids filtering bug fix. **Quality**: typecheck ✅, 58 tests ✅, lint 0 errors. **Commit**: `686634ed` (16 files, +719/-9). |
-| 开放决策   | (1) **Auth**: 本地免鉴权 + 回环绑定（c13 阶段）。(2) **React**: 暂锁 18.2.0，待迁移 MUI 后升 19。(3) AI SDK v7 tool() 用 inputSchema。(4) c21-c23 并行推进（c21 依赖 c18 SSRF，c22 依赖 c19 task-queue，c23 可独立）。                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| 已知问题   | **🟡 P1 - 既存**: web typecheck ~180 errors（.ts 后缀导入）。**🟡 P1**: v2 无 auth。**🟢 暂缓**: @material-tailwind→MUI 迁移。**🟡 P2**: c19 worker dispatch 函数尚未实现（仅基础设施就位），c22 research-agent 和 c20 refine 接入队列时需实现具体 worker。                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| 质量门禁   | `bun lint --quiet` → 0 errors。`bun typecheck` (server) ✅。`bun test` (server) → 58 pass / 0 fail ✅。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-
----
+| 字段       | 值                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| :--------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 上次 Agent | zcode-agent (c17-c21 + c23-theme-presets batch)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 上次操作   | **c17**: no_evidence_reason + Chinese hints + pre-flight check。**c18**: dedup_key + dedup_action + SSRF guard + URL normalize + 413。**c19**: Semaphore + TaskQueue(min-heap) + crash recovery。**c20**: PARAGRAPH/BULLETS/STRUCTURED + convert-to-source embed + refine source_ids fix。**c21**: jina/firecrawl/readability + ExtractorFactory + policy routes。**c23**: theme-presets + crystalith-slidev package。**Quality**: typecheck ✅, 58 tests ✅, lint 0 errors。**Commits**: `686634ed` (c17-c20) + `e696cfe8` (c21-c23) |
+| 开放决策   | (1) **Auth**: 本地免鉴权 + 回环绑定（c13阶段）。(2) **React**: 暂锁18.2.0，待迁移MUI后升19。(3) AI SDK v7 tool() 用inputSchema。(4) c22 research agent 依赖c19 task queue基础设施已就位。(5) 统计: v1 29,743行189文件 vs v2 8,640行72文件 = 3.4:1代码缩减                                                                                                                                                                                                                                                                             |
+| 已知问题   | **🟡 P1**: web typecheck ~180 errors（.ts后缀导入）。**🟡 P1**: v2无auth。**🟢 暂缓**: @material-tailwind→MUI迁移。**🟡 P2**: c19 worker dispatch未实现，c22接线需要。**🟡 P2**: studio两阶段+analysis clustering未实现。**🟡 P2**: source connectors仅shell                                                                                                                                                                                                                                                                          |
+| 质量门禁   | `bun lint` → 0 errors。`bun typecheck` (server) ✅。`bun test` → 58 pass / 0 fail ✅                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 ---
 
@@ -94,8 +149,6 @@ crystalith/
 ├── llmanspec/               # Spec-driven development specs + changes
 └── scripts/                 # Maintenance scripts
 ```
-
----
 
 ## 架构决策
 
@@ -139,8 +192,6 @@ pydantic-graph → async function chain + async generator。
 
 `bun build --compile` → ~75MB。所有依赖可 bundle（sqlite-vec native addon、unpdf、cheerio）。
 
----
-
 ## 依赖图
 
 ```
@@ -156,8 +207,6 @@ c00 ✅
                              │
                              └── c13 (distribution) ── c14 (cleanup)
 ```
-
----
 
 ## Shared Package 结构
 
@@ -188,7 +237,7 @@ apps/server/src/
 ├── features/                  # notebooks, sessions, messages, sources,
 │                              # qa, citations, research, outputs,
 │                              # models, tasks, templates, eval
-└── shared/                    # epoch, context, concurrency, observability
+└── shared/                    # semaphore, queue, config, net, extraction
 ```
 
 ## 关键依赖
@@ -204,23 +253,22 @@ apps/server/src/
 | `gpt-tokenizer`                                                                                           | c02         | MIT              |
 | `unpdf`                                                                                                   | c04         | MIT              |
 | `cheerio` `@mozilla/readability`                                                                          | c04         | MIT / Apache-2.0 |
+| `ipaddr.js` `private-ip`                                                                                  | c18         | MIT              |
 | `oxlint` `oxfmt`                                                                                          | c00         | MIT              |
 
 ## v1 参考速查
 
 | v1 文件                          | 行数 | → v2 Change |
-| :------------------------------- | :--- | :---------- |
+| :------------------------------- | ---: | :---------- |
 | `shared/db/models.py`            | ~350 | c01         |
 | `shared/types.py`                | ~120 | c01         |
 | `shared/ai/factory.py`           | ~280 | c02         |
-| `shared/retrieval/context.py`    | 990  | c05         |
-| `shared/agents/output_graph.py`  | 832  | c09         |
-| `shared/agents/search_graph.py`  | 149  | c08         |
-| `features/research/graph.py`     | 567  | c08         |
-| `features/qa/api.py`             | 370  | c07         |
+| `shared/retrieval/context.py`    |  990 | c05         |
+| `shared/agents/output_graph.py`  |  832 | c09         |
+| `shared/agents/search_graph.py`  |  149 | c08         |
+| `features/research/graph.py`     |  567 | c08/c22     |
+| `features/qa/api.py`             |  370 | c07         |
 | `features/sources/api_ingest.py` | ~400 | c04         |
-
----
 
 ## 禁止规则
 
@@ -230,8 +278,6 @@ apps/server/src/
 - ❌ 修改 `backend/py/`
 - ❌ switch-case 硬编码 provider
 - ❌ 未读完所有 design.md 就开始实现
-
----
 
 ## Agent 执行流程
 
