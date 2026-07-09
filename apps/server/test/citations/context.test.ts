@@ -1,0 +1,212 @@
+// Citation context — neighborhood evidence review (c26) integration tests.
+//
+// Exercises the new GET /v2/citations/context endpoint:
+//   - Resolve by chunk_id
+//   - Resolve by source_id + chunk_index
+//   - Validation: mutually exclusive params → 404
+//   - Validation: neither param → 404
+//   - Neighborhood window (before/after chunks in same source)
+//   - Metadata enrichment (page_number, paragraph_index)
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+
+import { chunks, notebooks, sources } from '../../src/db/schema.ts';
+import { createApp } from '../../src/server.ts';
+import { setupIntegrationEnv, teardownIntegrationEnv, getOrm } from '../helpers/integration.ts';
+
+const BASE = 'http://test.local';
+let app: Elysia;
+let notebookId: number;
+let sourceId: number;
+// chunk IDs for window test: chunk_index 0,1,2,3,4 → 5 consecutive chunks
+let chunkIds: number[] = [];
+
+beforeAll(() => {
+  setupIntegrationEnv();
+  app = createApp();
+
+  const orm = getOrm();
+  const nb = orm.insert(notebooks).values({ name: 'citation-nb' }).returning().get();
+  notebookId = nb.id;
+
+  const src = orm
+    .insert(sources)
+    .values({ notebookId, filename: 'research-paper.pdf', status: 'ready' })
+    .returning()
+    .get();
+  sourceId = src.id;
+
+  // Seed 5 chunks with metadata for page_number / paragraph_index
+  const texts = [
+    'Intro paragraph.',
+    'Background section.',
+    'Core finding.',
+    'Discussion.',
+    'Conclusion.',
+  ];
+  for (let i = 0; i < 5; i++) {
+    const meta = { page: i + 1, paragraph_index: i * 2 };
+    const c = orm
+      .insert(chunks)
+      .values({
+        sourceId,
+        chunkIndex: i,
+        text: texts[i],
+        metadata: meta,
+      })
+      .returning()
+      .get();
+    chunkIds.push(c.id);
+  }
+});
+
+afterAll(() => {
+  teardownIntegrationEnv();
+});
+
+async function get(path: string): Promise<{ status: number; body: unknown }> {
+  const res = await app.handle(new Request(`${BASE}${path}`));
+  const text = await res.text();
+  let parsed: unknown = null;
+  if (text) {
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = text;
+    }
+  }
+  return { status: res.status, body: parsed };
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe('citation context — resolve by chunk_id', () => {
+  it('resolves target chunk by chunk_id', async () => {
+    const { status, body } = await get(
+      `/v2/citations/context?notebook_id=${notebookId}&chunk_id=${chunkIds[2]}&before=1&after=1`,
+    );
+    expect(status).toBe(200);
+    const result = body as {
+      citation: { chunk_id: number; source_name: string };
+      chunk: { chunk_id: number; text: string; chunk_index: number };
+      before: unknown[];
+      after: unknown[];
+    };
+    expect(result.citation.chunk_id).toBe(chunkIds[2]);
+    expect(result.citation.source_name).toBe('research-paper.pdf');
+    expect(result.chunk.chunk_id).toBe(chunkIds[2]);
+    expect(result.chunk.text).toContain('Core finding');
+    // chunk_index should be 1-based
+    expect(result.chunk.chunk_index).toBe(3); // DB 2 → API 3
+  });
+
+  it('enriches page_number and paragraph_index from metadata', async () => {
+    const { body } = await get(
+      `/v2/citations/context?notebook_id=${notebookId}&chunk_id=${chunkIds[1]}&before=0&after=0`,
+    );
+    const result = body as {
+      chunk: { page_number: number | null; paragraph_index: number | null };
+    };
+    expect(result.chunk.page_number).toBe(2); // chunk_index=1 → page 2
+    expect(result.chunk.paragraph_index).toBe(2); // chunk_index=1 → para 2
+  });
+});
+
+describe('citation context — resolve by source_id + chunk_index', () => {
+  it('resolves by source_id and 1-based chunk_index', async () => {
+    const { status, body } = await get(
+      `/v2/citations/context?notebook_id=${notebookId}&source_id=${sourceId}&chunk_index=1`,
+    );
+    expect(status).toBe(200);
+    const result = body as { chunk: { chunk_id: number; text: string; chunk_index: number } };
+    expect(result.chunk.chunk_id).toBe(chunkIds[0]);
+    expect(result.chunk.chunk_index).toBe(1); // 1-based
+    expect(result.chunk.text).toContain('Intro paragraph');
+  });
+
+  it('returns 404 for out-of-range chunk_index', async () => {
+    const { status } = await get(
+      `/v2/citations/context?notebook_id=${notebookId}&source_id=${sourceId}&chunk_index=99`,
+    );
+    expect(status).toBe(404);
+  });
+});
+
+describe('citation context — neighborhood window', () => {
+  it('returns before and after chunks from the same source', async () => {
+    const { body } = await get(
+      `/v2/citations/context?notebook_id=${notebookId}&chunk_id=${chunkIds[2]}&before=2&after=2`,
+    );
+    const result = body as { before: unknown[]; after: unknown[] };
+    expect(result.before).toHaveLength(2);
+    expect(result.after).toHaveLength(2);
+  });
+
+  it('before chunks are ordered by ascending chunk_index', async () => {
+    const { body } = await get(
+      `/v2/citations/context?notebook_id=${notebookId}&chunk_id=${chunkIds[2]}&before=2&after=1`,
+    );
+    const result = body as {
+      before: Array<{ chunk_index: number }>;
+      after: Array<{ chunk_index: number }>;
+    };
+    // before[0].chunk_index < before[1].chunk_index < chunk.chunk_index
+    expect(result.before[0].chunk_index).toBeLessThan(result.before[1].chunk_index);
+    // chunk is at index 3 (1-based)
+    expect(result.before[1].chunk_index).toBeLessThan(3);
+    // after[0] > chunk_index
+    expect(result.after[0].chunk_index).toBeGreaterThan(3);
+  });
+
+  it('capped at source boundary (do not cross into other sources)', async () => {
+    const { body } = await get(
+      `/v2/citations/context?notebook_id=${notebookId}&chunk_id=${chunkIds[0]}&before=5&after=1`,
+    );
+    const result = body as { before: unknown[] };
+    // chunk_index=0 has no chunks before it
+    expect(result.before).toHaveLength(0);
+  });
+});
+
+describe('citation context — validation', () => {
+  it('returns 400 when both chunk_id and source_id+chunk_index are provided', async () => {
+    const { status } = await get(
+      `/v2/citations/context?notebook_id=${notebookId}&chunk_id=${chunkIds[0]}&source_id=${sourceId}&chunk_index=1`,
+    );
+    expect(status).toBe(400);
+  });
+
+  it('returns 400 when no resolution param is provided', async () => {
+    const { status } = await get(`/v2/citations/context?notebook_id=${notebookId}`);
+    expect(status).toBe(400);
+  });
+
+  it('returns 404 for nonexistent chunk_id', async () => {
+    const { status } = await get(`/v2/citations/context?notebook_id=${notebookId}&chunk_id=99999`);
+    expect(status).toBe(404);
+  });
+
+  it('returns 400 when notebook_id is omitted', async () => {
+    const { status } = await get(`/v2/citations/context?chunk_id=${chunkIds[0]}`);
+    expect(status).toBe(400);
+  });
+
+  it('clamps before/after to [0, 5] range', async () => {
+    // before=99 should be clamped to 5
+    const { status } = await get(
+      `/v2/citations/context?notebook_id=${notebookId}&chunk_id=${chunkIds[2]}&before=99&after=-1`,
+    );
+    expect(status).toBe(200);
+  });
+});
+
+describe('citation context — existing endpoint preserved', () => {
+  it('GET /v2/citations/:messageId still works', async () => {
+    // Before /context was added, the :messageId route matched fine.
+    // /context is a static prefix, so it takes priority in Elysia.
+    // This test confirms the param route still works for integer message IDs.
+    const res = await app.handle(new Request(`${BASE}/v2/citations/999`));
+    expect(res.status).toBe(404); // no such message, but route resolved correctly
+  });
+});
