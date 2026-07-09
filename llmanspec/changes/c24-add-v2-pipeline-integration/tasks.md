@@ -24,15 +24,15 @@
 - [x] `test/sources/ingest.test.ts`: 源摄取 + dedup(prompt/reuse/create_new/跨notebook) + SSRF（7 tests）
 - [x] `test/refine/queue.test.ts`: refine 经 task queue 异步执行（4 tests）
 - [x] `test/outputs/core-types.test.ts`: PARAGRAPH/BULLETS/STRUCTURED generator ✅(pre-existing)
-- [ ] `test/research/hitl.test.ts`: Approve/skip/finish/cancel 状态转移
-- [ ] `test/research/execute.test.ts`: Search 并发 + 去重 + 聚合
-- [ ] `test/research/sse.test.ts`: SSE 事件派发 + terminal 检测
-- [ ] `test/research/cancel.test.ts`: AbortSignal 真中断
+- [x] `test/research/hitl.test.ts`: Approve/skip/finish/cancel 状态转移
+- [x] `test/research/execute.test.ts`: Search 并发 + 去重 + 聚合
+- [x] `test/research/sse.test.ts`: SSE 事件派发 + terminal 检测
+- [x] `test/research/cancel.test.ts`: AbortSignal 真中断
 - [x] `test/studio/two-stage.test.ts`: Outline→markdown 两阶段（5 tests）
 
 ## 整体验证
 
-- [x] `cd apps/server && bun test`（144 pass: 旧 119 + 新 25 集成测试全绿）
+- [x] `cd apps/server && bun test`（183 pass: 旧 164 + 新 19 research 集成测试全绿）
 - [x] `cd apps/server && bun test tests/bdd/`（21 pass）
 - [x] `bun typecheck`（clean）
 - [ ] `bun run build`（编译成功）

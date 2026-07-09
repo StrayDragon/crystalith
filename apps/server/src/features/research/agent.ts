@@ -360,34 +360,37 @@ export async function runResearch(
     return null;
   }
 
-  // 5. Generate report
+  // 5. Generate report — eagerly drain so we can persist completed status
+  // immediately, then return a replayable async iterable for the SSE relay.
   db()
     .update(researchSessions)
     .set({ status: 'analyzing' })
     .where(eq(researchSessions.id, sessionId))
     .run();
 
-  const reportStream = await generateReport(state, signal);
+  const rawStream = await generateReport(state, signal);
+  const chunks: string[] = [];
+  for await (const chunk of rawStream) {
+    chunks.push(chunk);
+  }
 
-  // Collect full report text and persist (also return stream for SSE)
-  let fullReport = '';
-  const teeStream = async function* () {
-    for await (const chunk of reportStream) {
-      fullReport += chunk;
-      yield chunk;
-    }
-    // Persist after streaming completes
-    db()
-      .update(researchSessions)
-      .set({
-        status: 'completed',
-        finalReport: fullReport || '(no report generated)',
-      })
-      .where(eq(researchSessions.id, sessionId))
-      .run();
+  const fullReport = chunks.join('');
+  db()
+    .update(researchSessions)
+    .set({
+      status: 'completed',
+      finalReport: fullReport || '(no report generated)',
+    })
+    .where(eq(researchSessions.id, sessionId))
+    .run();
+
+  // Replayable async iterable — SSE endpoint reads this without re-running
+  // the LLM, and the report is already persisted regardless.
+  return {
+    reportStream: (async function* () {
+      for (const c of chunks) yield c;
+    })(),
   };
-
-  return { reportStream: teeStream() };
 }
 
 // ---------------------------------------------------------------------------
