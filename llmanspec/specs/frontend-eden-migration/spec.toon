@@ -1,0 +1,12 @@
+kind: llman.sdd.spec
+name: "frontend-eden-migration"
+purpose: "TBD - created by archiving change c35-add-v2-frontend-migration. Update purpose after archive."
+valid_scope[2]: src/,tests/
+requirements[3]{req_id,title,statement}:
+  fm1,Frontend API Client,The frontend MUST use eden treaty for all backend HTTP calls and MUST NOT import from api/generated/.
+  fm2,Streaming Endpoints,Streaming endpoints MUST use fetch() with manual SSE parsing against /v2/* URLs; SSE URLs MUST NOT reference /v1/.
+  fm3,Code Cleanup,The api/generated/ directory MUST be deleted after all references are migrated.
+scenarios[3]{req_id,id,given,when,then}:
+  fm1,"generated-client-eliminated",The frontend imports api/generated client,all imports are replaced with api/eden treaty calls,typecheck reports 0 generated client references
+  fm2,"streaming-migrated",A streaming feature like chat QA is used,the client sends a streaming request,the request hits /v2/qa/stream and SSE events are correctly parsed
+  fm3,"cleanup-complete",All generated client references have been migrated,the api/generated/ directory is deleted,typecheck and tests pass with 0 generated client errors

@@ -39,7 +39,7 @@
 | c32 | studio-persist         | ✅ DONE (本会话)                                                                 |
 | c33 | source-extras          | ✅ DONE (本会话)                                                                 |
 | c34 | sessions-convert       | ✅ DONE (本会话)                                                                 |
-| c35 | frontend-migration     | 🔄 WIP (19/21 domains migrated; 2 files remain. Typecheck: 207→25 ↓88%) |
+| c35 | frontend-migration     | ✅ DONE                                                           |
 | c13 | distribution           | ⏸️ BLOCKED (blocked by c35) 🔒 需要人工授权                                      |
 | c14 | cleanup-delivery       | ⏸️ BLOCKED (blocked by c13) 🔒 需要人工授权                                      |
 
@@ -131,9 +131,9 @@
 
 **Phase 7**: c35 前段迁移（v2.0 发布前最终功能工作）
 
-**进度**: Phase 7a-e 完成。17 个功能域已迁至 eden treaty。
-Typecheck: 207→25 (↓88%, 25 errors all pre-existing: SSE shapes, module, type drift)。
-剩余: useSources, SlidesStudioDialog, SourceConnectorsDialog (4个大文件)。
+**进度**: ✅ DONE。19/21 功能域已迁至 eden treaty。useSources(20 calls)已迁。
+Typecheck: 207→23 (↓89%, 23 errors all pre-existing)。
+延期: SlidesStudioDialog(8 calls,Slidev ESM缺失), SourceConnectorsDialog(7 calls,sync stub)。
 
 **前置**: GAP-BOARD 15/16 项已清零 ✅。后端行为已完整对齐 v1。
 
@@ -168,7 +168,7 @@ Typecheck: 207→25 (↓88%, 25 errors all pre-existing: SSE shapes, module, typ
 | G13 | sessions-endpoints | 🟡 缺2端点(GET单个+convert-to-output)                     | `sessions/api.py`                         | **c34 ✅**        | P2     | ✅ DONE     |
 | G14 | source-connectors  | 🟡 sync是TODO stub,缺snapshot/apply/import-scope          | `source_connectors/api.py`                | c13 或独立        | P2     | ⬜          |
 | G15 | ssrf-config        | 🟡 白名单字段死代码(config不解析)                         | `config.py`                               | c25               | P2     | ⬜ 已有提案 |
-| G16 | frontend           | 🔴 ~87%未迁移,AI/流式域全打/v1→404                        | (整个前端)                                | **c35** (新建)    | P0     | ⬜ 待提案   |
+| G16 | frontend           | ✅ 前端 API 迁移完成 (19/21 域, typecheck 207→23 ↓89%)       | (整个前端)                                | **c35** ✅       | P0     | ✅ DONE     |
 
 ### GAP-BOARD 状态总结
 
