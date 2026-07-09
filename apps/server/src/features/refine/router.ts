@@ -59,78 +59,74 @@ const apiDocs: OpenApiRoute[] = [
 export function refineRouter(taskQueue: TaskQueue) {
   registerApiDoc(apiDocs);
 
-  return new Elysia({ prefix: '/v2' })
-    // List modes
-    .get('/refine/modes', () =>
-      Object.entries(MODE_PROMPTS).map(([id]) => ({
-        id,
-        name:
-          id === 'expand'
-            ? '扩展'
-            : id === 'summarize'
-              ? '摘要'
-              : id === 'rewrite'
-                ? '重写'
-                : id === 'translate'
-                  ? '翻译'
-                  : '结构化提取',
-      })),
-    )
+  return (
+    new Elysia({ prefix: '/v2' })
+      // List modes
+      .get('/refine/modes', () =>
+        Object.entries(MODE_PROMPTS).map(([id]) => ({
+          id,
+          name:
+            id === 'expand'
+              ? '扩展'
+              : id === 'summarize'
+                ? '摘要'
+                : id === 'rewrite'
+                  ? '重写'
+                  : id === 'translate'
+                    ? '翻译'
+                    : '结构化提取',
+        })),
+      )
 
-    // Refine text (via task queue)
-    .post('/refine', async ({ body }) => {
-      const {
-        text,
-        mode,
-        notebook_id,
-        source_ids,
-        target_language,
-        custom_prompt,
-      } = body as Record<string, unknown>;
+      // Refine text (via task queue)
+      .post('/refine', async ({ body }) => {
+        const { text, mode, notebook_id, source_ids, target_language, custom_prompt } =
+          body as Record<string, unknown>;
 
-      const refineMode = (mode as RefineMode) ?? 'rewrite';
+        const refineMode = (mode as RefineMode) ?? 'rewrite';
 
-      // Resolve input text from source_ids if not provided directly
-      let inputText = (text as string) ?? '';
-      if (!inputText && notebook_id && source_ids && (source_ids as number[]).length > 0) {
-        const nid = Number(notebook_id);
-        const sids = source_ids as number[];
-        const chunkRows = db()
-          .select({ text: chunks.text })
-          .from(chunks)
-          .innerJoin(sources, eq(chunks.sourceId, sources.id))
-          .where(and(eq(sources.notebookId, nid), inArray(chunks.sourceId, sids)))
-          .all();
-        inputText = chunkRows.map((c) => c.text).join('\n\n');
-      }
-
-      if (!inputText) throw new NotFoundError('No text provided');
-
-      // Enqueue refine task
-      const taskId = taskQueue.enqueue({
-        type: 'refine',
-        notebookId: notebook_id ? Number(notebook_id) : undefined,
-        payload: {
-          refineInput: {
-            text: inputText,
-            mode: refineMode,
-            notebook_id: notebook_id ? Number(notebook_id) : undefined,
-            source_ids: source_ids as number[] | undefined,
-            target_language: target_language as string | undefined,
-            custom_prompt: custom_prompt as string | undefined,
-          },
-        },
-        priority: 1,
-      });
-
-      try {
-        const result = await taskQueue.waitForCompletion(taskId);
-        return result;
-      } catch (error) {
-        if (error instanceof Error && error.message === 'Task cancelled') {
-          throw new NotFoundError('Refine task was cancelled');
+        // Resolve input text from source_ids if not provided directly
+        let inputText = (text as string) ?? '';
+        if (!inputText && notebook_id && source_ids && (source_ids as number[]).length > 0) {
+          const nid = Number(notebook_id);
+          const sids = source_ids as number[];
+          const chunkRows = db()
+            .select({ text: chunks.text })
+            .from(chunks)
+            .innerJoin(sources, eq(chunks.sourceId, sources.id))
+            .where(and(eq(sources.notebookId, nid), inArray(chunks.sourceId, sids)))
+            .all();
+          inputText = chunkRows.map((c) => c.text).join('\n\n');
         }
-        throw error;
-      }
-    });
+
+        if (!inputText) throw new NotFoundError('No text provided');
+
+        // Enqueue refine task
+        const taskId = taskQueue.enqueue({
+          type: 'refine',
+          notebookId: notebook_id ? Number(notebook_id) : undefined,
+          payload: {
+            refineInput: {
+              text: inputText,
+              mode: refineMode,
+              notebook_id: notebook_id ? Number(notebook_id) : undefined,
+              source_ids: source_ids as number[] | undefined,
+              target_language: target_language as string | undefined,
+              custom_prompt: custom_prompt as string | undefined,
+            },
+          },
+          priority: 1,
+        });
+
+        try {
+          const result = await taskQueue.waitForCompletion(taskId);
+          return result;
+        } catch (error) {
+          if (error instanceof Error && error.message === 'Task cancelled') {
+            throw new NotFoundError('Refine task was cancelled');
+          }
+          throw error;
+        }
+      })
+  );
 }

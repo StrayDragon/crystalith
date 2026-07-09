@@ -16,8 +16,8 @@ import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
 import { researchSessions, researchSteps } from '../../db/schema.ts';
-import { Semaphore } from '../../shared/semaphore.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
+import { Semaphore } from '../../shared/semaphore.ts';
 import { webSearchTool } from './tools.ts';
 
 // ---------------------------------------------------------------------------
@@ -83,10 +83,7 @@ const AnalysisSchema = z.object({
 // Sub-function: Plan
 // ---------------------------------------------------------------------------
 
-async function planSearches(
-  state: ResearchState,
-  signal: AbortSignal,
-): Promise<SearchPlan> {
+async function planSearches(state: ResearchState, signal: AbortSignal): Promise<SearchPlan> {
   const modelConfig = getDefaultChatModel();
   const model = withRetry(await resolveModel(modelConfig!));
 
@@ -117,10 +114,7 @@ async function planSearches(
 // Sub-function: Analyze
 // ---------------------------------------------------------------------------
 
-async function analyzeResults(
-  state: ResearchState,
-  signal: AbortSignal,
-): Promise<AnalysisResult> {
+async function analyzeResults(state: ResearchState, signal: AbortSignal): Promise<AnalysisResult> {
   const modelConfig = getDefaultChatModel();
   const model = withRetry(await resolveModel(modelConfig!));
 
@@ -155,10 +149,7 @@ async function analyzeResults(
 // Sub-function: Execute searches (concurrent with semaphore)
 // ---------------------------------------------------------------------------
 
-async function executeSearches(
-  plan: SearchPlan,
-  signal: AbortSignal,
-): Promise<ResearchResult[]> {
+async function executeSearches(plan: SearchPlan, signal: AbortSignal): Promise<ResearchResult[]> {
   const semaphore = new Semaphore(3); // max 3 concurrent
   const allResults: ResearchResult[] = [];
 
@@ -187,9 +178,7 @@ async function searxngFetch(
   const { config } = await import('../../shared/config.ts');
   const raw = config().raw;
   const search = raw.search_engine as Record<string, unknown> | undefined;
-  const host = String(
-    search?.searxng_host ?? process.env.SEARXNG_HOST ?? 'http://localhost:8080',
-  );
+  const host = String(search?.searxng_host ?? process.env.SEARXNG_HOST ?? 'http://localhost:8080');
   const timeout = Number(search?.timeout ?? 10_000);
 
   const controller = new AbortController();

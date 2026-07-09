@@ -46,7 +46,8 @@ afterAll(() => {
 // HTTP client — app.handle(Request) runs the full Elysia pipeline in-process.
 // ---------------------------------------------------------------------------
 
-const BASE = 'http://bdd.local'; // any host; app.handle ignores networking
+// any host; app.handle ignores networking
+const BASE = 'http://bdd.local';
 
 async function request(method: string, path: string, body?: unknown): Promise<BddResponse> {
   const init: RequestInit = { method, headers: { 'content-type': 'application/json' } };

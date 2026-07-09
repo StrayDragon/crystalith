@@ -542,7 +542,7 @@ bdd.thenStep('响应中存在触发词为"{触发词}"的命令', (ctx, 触发�
 bdd.thenStep('响应列表按"{字段}"升序排列', (ctx, 字段) => {
   const data = bodyOf(ctx);
   const values = data.map((item: any) => item[字段]);
-  expect(values).toEqual([...values].sort());
+  expect(values).toEqual([...values].toSorted());
 });
 
 bdd.thenStep('响应中存在内置模板', (ctx) => {

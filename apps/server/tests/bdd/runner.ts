@@ -192,9 +192,9 @@ async function runStep(def: StepDef, text: string, docString: string | null, ctx
 function keywordToKind(keyword: string, prevKind: StepKind): StepKind {
   const kw = keyword.trim();
   // Chinese (zh-CN) + English keyword coverage.
-  if (/^(假如|Given)/i.test(kw)) return 'given';
-  if (/^(当|When)/i.test(kw)) return 'when';
-  if (/^(那么|Then)/i.test(kw)) return 'then';
+  if (/^(假如|Given)/u.test(kw)) return 'given';
+  if (/^(当|When)/u.test(kw)) return 'when';
+  if (/^(那么|Then)/u.test(kw)) return 'then';
   // 而且/并且/But/* inherit previous kind.
   return prevKind;
 }

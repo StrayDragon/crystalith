@@ -2,7 +2,7 @@
 name: 'llman-sdd-specs-compact'
 description: 'Compact and refactor llman SDD specs while preserving normative behavior.'
 metadata:
-  version: '0.0.55'
+  version: '0.0.56'
 ---
 
 # LLMAN SDD Specs Compact

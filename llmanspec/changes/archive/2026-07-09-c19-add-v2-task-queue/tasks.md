@@ -25,7 +25,6 @@
 
 ## 5. 文档解析异步化 ⚠️（等待 content storage layer）
 
-
 ## 6. 整体验证
 
 - [x] `cd apps/server && bun test tests/bdd/`（tasks BDD：创建/查询/cancel 全绿）

@@ -18,7 +18,13 @@ describe('deduplicateResults', () => {
   it('removes exact duplicate URLs', () => {
     const results = [
       { title: 'A', url: 'https://example.com/a', snippet: '...', engine: 'google', query: 'q1' },
-      { title: 'A dup', url: 'https://example.com/a', snippet: 'same', engine: 'google', query: 'q2' },
+      {
+        title: 'A dup',
+        url: 'https://example.com/a',
+        snippet: 'same',
+        engine: 'google',
+        query: 'q2',
+      },
     ];
     expect(deduplicateResults(results)).toHaveLength(1);
   });
@@ -33,8 +39,20 @@ describe('deduplicateResults', () => {
 
   it('ignores query params and fragments for dedup key', () => {
     const results = [
-      { title: 'A', url: 'https://example.com/page?ref=1', snippet: '...', engine: 'google', query: 'q' },
-      { title: 'A', url: 'https://example.com/page#section', snippet: '...', engine: 'google', query: 'q' },
+      {
+        title: 'A',
+        url: 'https://example.com/page?ref=1',
+        snippet: '...',
+        engine: 'google',
+        query: 'q',
+      },
+      {
+        title: 'A',
+        url: 'https://example.com/page#section',
+        snippet: '...',
+        engine: 'google',
+        query: 'q',
+      },
     ];
     expect(deduplicateResults(results)).toHaveLength(1);
   });

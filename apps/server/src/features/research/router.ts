@@ -286,9 +286,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
             for (const step of steps) {
               const event = deriveEvent(step);
-              controller.enqueue(
-                new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`),
-              );
+              controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`));
               lastStepId = step.id;
             }
 

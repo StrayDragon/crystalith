@@ -1,7 +1,11 @@
 // Tests for source deduplication helpers.
 import { describe, expect, it } from 'bun:test';
 
-import { uploadDedupKey, urlDedupKey, resolveDedupAction } from '../../src/features/sources/dedup.ts';
+import {
+  uploadDedupKey,
+  urlDedupKey,
+  resolveDedupAction,
+} from '../../src/features/sources/dedup.ts';
 import { canonicalizeUrlForDedup } from '../../src/shared/net/url-normalize.ts';
 
 // ---------------------------------------------------------------------------
@@ -91,9 +95,8 @@ describe('canonicalizeUrlForDedup', () => {
 // See url-safety.ts for the full implementation.
 
 describe('validateUrlForFetch', async () => {
-  const { validateUrlForFetch, SsrfBlockedError } = await import(
-    '../../src/shared/net/url-safety.ts'
-  );
+  const { validateUrlForFetch, SsrfBlockedError } =
+    await import('../../src/shared/net/url-safety.ts');
 
   it('allows public HTTPS URLs', async () => {
     await expect(validateUrlForFetch('https://example.com/page')).resolves.toBeUndefined();

@@ -43,6 +43,7 @@ c17-c23 完成了核心功能从 v1 到 v2 的行为对齐，但遗留了三条"
 ### 为什么是 c13 前置条件
 
 三条工作线都影响 distribution：
+
 - Storage 层决定二进制需要包含哪些文件系统操作
 - toolApproval 决定前端打包策略（是否需要 WebSocket/SSE 升级）
 - 集成测试是 v2.0.0 发布的质量门禁
@@ -69,17 +70,17 @@ c17-c23 完成了核心功能从 v1 到 v2 的行为对齐，但遗留了三条"
 
 新建集成测试文件（AI SDK mock）：
 
-| 文件 | 内容 | 覆盖 change |
-|:---|:---|:---:|
-| `test/qa/handler.test.ts` | QA 完整流程（检索 + 置信度 + citations） | c17 |
-| `test/sources/ingest.test.ts` | 源摄取 + dedup + SSRF 全流程 | c18 |
-| `test/refine/queue.test.ts` | refine 经 task queue 异步执行 | c19/c20 |
-| `test/outputs/core-types.test.ts` | 3 种 output type generator | c20 |
-| `test/research/hitl.test.ts` | Approve/skip/finish/cancel 状态转移 | c22 |
-| `test/research/execute.test.ts` | Search 并发 + 去重 + 结果聚合 | c22 |
-| `test/research/sse.test.ts` | SSE 事件派发 + heartbeat + terminal | c22 |
-| `test/research/cancel.test.ts` | AbortSignal 真中断 | c22 |
-| `test/studio/two-stage.test.ts` | Outline→markdown 两阶段 | c23 |
+| 文件                              | 内容                                     | 覆盖 change |
+| :-------------------------------- | :--------------------------------------- | :---------: |
+| `test/qa/handler.test.ts`         | QA 完整流程（检索 + 置信度 + citations） |     c17     |
+| `test/sources/ingest.test.ts`     | 源摄取 + dedup + SSRF 全流程             |     c18     |
+| `test/refine/queue.test.ts`       | refine 经 task queue 异步执行            |   c19/c20   |
+| `test/outputs/core-types.test.ts` | 3 种 output type generator               |     c20     |
+| `test/research/hitl.test.ts`      | Approve/skip/finish/cancel 状态转移      |     c22     |
+| `test/research/execute.test.ts`   | Search 并发 + 去重 + 结果聚合            |     c22     |
+| `test/research/sse.test.ts`       | SSE 事件派发 + heartbeat + terminal      |     c22     |
+| `test/research/cancel.test.ts`    | AbortSignal 真中断                       |     c22     |
+| `test/studio/two-stage.test.ts`   | Outline→markdown 两阶段                  |     c23     |
 
 ### 保持不变
 

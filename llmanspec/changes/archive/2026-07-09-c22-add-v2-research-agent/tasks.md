@@ -41,7 +41,6 @@
 
 ## 7. 整体验证
 
-
 ## Verification
 
 ```bash
