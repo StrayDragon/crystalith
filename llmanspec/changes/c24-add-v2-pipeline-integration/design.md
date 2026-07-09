@@ -16,7 +16,7 @@ Option 1: SQLite BLOB (storage table)     Option 2: Filesystem (local dir)     �
 
 最终选 **Option 2：本地文件系统**。原因：
 
-1. v1 也是文件系统（`backend/py/storage/`）
+1. ~~v1 也是文件系统（`backend/py/storage/`）~~ **【已勘误】** v1 实际无原始字节持久化（无 `backend/py/storage/` 目录、`Source` 模型无 raw-bytes 列，解析后丢弃）。本层是 **v2 独有设计**（单二进制架构需要可重解析的存储抽象），非 v1 对齐。
 2. Bun 的读写 API 极其快（底层 io_uring）
 3. 桌面 app `~/.crystalith/storage/` 路径合理
 4. 大文件不会阻塞 SQLite
