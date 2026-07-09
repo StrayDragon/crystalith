@@ -6,24 +6,32 @@
 
 ## 状态看板
 
-| #   | Change                 | 状态                        |
-| :-- | :--------------------- | :-------------------------- |
-| c00 | server-foundation      | ✅ DONE                     |
-| c01 | data-layer             | ✅ DONE                     |
-| c02 | ai-runtime             | ✅ DONE                     |
-| c03 | frontend-eden          | ✅ DONE                     |
-| c04 | core-crud              | ✅ DONE                     |
-| c05 | rag-embed              | ✅ DONE                     |
-| c06 | rag-registry           | ✅ DONE                     |
-| c07 | qa-pipeline            | ✅ DONE                     |
-| c08 | research-agent         | ✅ DONE                     |
-| c09 | outputs-generation     | ✅ DONE                     |
-| c10 | models-management      | ✅ DONE                     |
-| c11 | eval-harness           | ✅ DONE                     |
-| c12 | analysis-studio-refine | ✅ DONE                     |
-| c15 | bdd-tests              | ⏸️ BLOCKED (待实现)         |
-| c13 | distribution           | ⏸️ BLOCKED (blocked by c15) |
-| c14 | cleanup-delivery       | ⏸️ BLOCKED (blocked by c15) |
+| #   | Change                 | 状态                             |
+| :-- | :--------------------- | :------------------------------- |
+| c00 | server-foundation      | ✅ DONE                          |
+| c01 | data-layer             | ✅ DONE                          |
+| c02 | ai-runtime             | ✅ DONE                          |
+| c03 | frontend-eden          | ✅ DONE                          |
+| c04 | core-crud              | ✅ DONE                          |
+| c05 | rag-embed              | ✅ DONE                          |
+| c06 | rag-registry           | ✅ DONE                          |
+| c07 | qa-pipeline            | ✅ DONE                          |
+| c08 | research-agent         | ✅ DONE                          |
+| c09 | outputs-generation     | ✅ DONE                          |
+| c10 | models-management      | ✅ DONE                          |
+| c11 | eval-harness           | ✅ DONE                          |
+| c12 | analysis-studio-refine | ✅ DONE                          |
+| c15 | bdd-tests              | ✅ DONE                          |
+| c16 | rag-foundations        | ✅ DONE                          |
+| c17 | qa-citations           | ⬜ TODO                          |
+| c18 | source-dedup-safety    | ⬜ TODO                          |
+| c19 | task-queue             | ⬜ TODO (semaphore+queue 未落盘) |
+| c20 | outputs-refine         | ⬜ TODO                          |
+| c21 | web-extractors         | ⬜ TODO                          |
+| c22 | research-agent         | ⬜ TODO                          |
+| c23 | studio-analysis        | ⬜ TODO                          |
+| c13 | distribution           | ⏸️ BLOCKED (blocked by c17-c23)  |
+| c14 | cleanup-delivery       | ⏸️ BLOCKED (blocked by c17-c23)  |
 
 <!-- LEGEND: ✅ DONE | 🔄 WIP | ⬜ TODO | ⏸️ BLOCKED -->
 
@@ -33,13 +41,13 @@
 
 <!-- CURRENT -->
 
-**Phase 5**: c15 bdd-tests
+**Phase 5**: c17-c23 v1→v2 行为对齐迁移线
 
-**前置**: c12 ✅ (全功能域 API 就绪)
+**前置**: c16 ✅ (rag-foundations 已提交)
 
-**目标**: BDD 行为驱动测试体系 — Gherkin runner + 17 个 .feature 文件移植 + 16 域步骤实现
+**目标**: 8 个 spec/proposal 对 c16 依赖的 v2 补齐。c17-c23 并行可做（c16 是唯一共同前置）。
 
-**阻塞**: c13, c14 需 c15 通过后方可开始（BDD 回归门禁）
+**阻塞**: c13, c14 需 c17-c23 全部完毕后方可开始
 
 ---
 
@@ -47,13 +55,15 @@
 
 <!-- HANDOFF -->
 
-| 字段       | 值                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| :--------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 上次 Agent | review-batch (深度 review + 前端测试修复)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| 上次操作   | **深度 review**（实证验证 lint/typecheck/test 真实状态）+ **前端测试修复**：(1) 补 `@emotion/react`/`@emotion/styled`/`@mui/material` 依赖（修 10 个测试 suite 加载失败 ERR_MODULE_NOT_FOUND）。(2) `useNotebooks.test.tsx` MSW handler 4 处 `/v1/notebooks`→`/v2/notebooks`（eden 迁移后路径漂移）。(3) 恢复 `useTemplates.ts` + `usePromptPresets.ts` 真实 eden 实现（v1 refactor 7a935ff7 留下的 stub，v2 c12 后端已重建 CRUD；用 `api.v2.templates` / `api.v2['prompt-presets']`）。(4) 对应测试 MSW 改 `/v2` 路径 + v2 后端响应形状。(5) **React 19→18.2.0 降级**：`@material-tailwind/react@2.1.10` 子树（framer-motion@6 + @floating-ui@0.19）冻结在 react@18.2.0，与项目 react@19 多副本冲突。对齐到 18.2.0 后全绿（无需迁移 UI 库）。 |
-| 开放决策   | (1) **Auth**: v2 缺失 auth 层（v1 全量 require_api_key）。已定方向 = 本地免鉴权 + 回环绑定（c13 阶段 listen 127.0.0.1），不补 token 机制。(2) **React 版本**: 暂锁 react@18.2.0 对齐 @material-tailwind 子树（保持确定性）。**待业务完整后**，迁移 @material-tailwind→MUI 并升回 React 19（拆独立 change，29 引用/16 组件）。(3) Eval/Refine/Studio 决策同前。(4) AI SDK v7 `tool()` 用 `inputSchema`; research agent fire-and-forget。                                                                                                                                                                                                                                                                                                        |
-| 已知问题   | **🟡 P1 - 既存债务**: web typecheck ~181 个错误（94 router.ts + 22 server.ts + 14 useSessions.ts 等，多为 eden 迁移半途 + OpenAPI 类型，本次文件 0 错误）。server test 需 `apps/server/data/` 目录存在（测试隔离缺陷）。**🟡 P1**: v2 无 auth（见开放决策）。**🟢 暂缓**: @material-tailwind→MUI 迁移 + React 升回 19（业务完整后做）。                                                                                                                                                                                                                                                                                                                                                                                                        |
-| 质量门禁   | `bun lint --quiet` → 0 errors / 206 warnings。server typecheck ✅。**server `bun test` 11 pass / 0 fail**（需先 mkdir data）。**web vitest: 31 文件 124 测试全绿 / 0 fail** ✅。web typecheck ~181 既存错误（非本次引入）。20 feature routers mounted。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 字段       | 值                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| :--------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 上次 Agent | zcode-agent (接管修复)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 上次操作   | **接手分析 + 修复提交**: (1) 分析 3 个 JSONL session 完整脉络 — c16 已完成并提交，c19 semaphore+queue 创建但未落盘，本次 unstaged QA 增强未提交。(2) P0 修复: `handler.ts:101` — `ne(sources.status, 'deleted')` 类型错误（enum 只有 processing\|ready\|failed，无 deleted），移除条件并清理未使用 `and`/`ne` 导入。(3) 质量门禁: server typecheck ✅ 0 err, `bun lint` ✅ 0 err/206 warn, `bun test` ✅ 58 pass/0 fail。(4) 提交: `d97d452a feat(qa): add confidence scores, strategy passthrough, and hydrated citations` — 5 files, +162/-40。(5) PROGRESS.v2.md 更新: 反映 c15/c16 实际完成状态 + c17-c23 迁移线作为当前批次。 |
+| 开放决策   | (1) **Auth**: v2 缺失 auth 层，方向 = 本地免鉴权 + 回环绑定（c13 阶段）。(2) **React 版本**: 暂锁 react@18.2.0 对齐 @material-tailwind 子树，待迁移 MUI 后升回 19。(3) AI SDK v7 `tool()` 用 `inputSchema`。(4) c17-c23 流水线: QA confidence/strategy 增强已合入，后续并行推进 7 个 migration changes。                                                                                                                                                                                                                                                                                                                           |
+| 已知问题   | **🟡 P1 - 既存债务**: web typecheck ~180 错误（`.ts` 后缀导入），server 侧 0 错误。**🟡 P1**: v2 无 auth。**🟢 暂缓**: @material-tailwind→MUI 迁移 + React 升回 19。**🟡 P2**: c19 task-queue `semaphore.ts`/`queue.ts` 需要从零实现（上次 Agent 写入未落盘）。                                                                                                                                                                                                                                                                                                                                                                    |
+| 质量门禁   | `bun lint --quiet` → 0 errors / 206 warnings。`bun typecheck` (server) ✅。**server `bun test` 58 pass / 0 fail** ✅（9 files: 2 db + 4 tokenizer + 5 config + 21 BDD + 26 rag）。web typecheck ~180 既存错误（非本次引入）。                                                                                                                                                                                                                                                                                                                                                                                                      |
+
+---
 
 ---
 
