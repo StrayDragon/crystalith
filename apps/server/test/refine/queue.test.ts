@@ -1,21 +1,16 @@
-// Refine-via-task-queue integration test.
+// Refine single-format via task queue — v1-aligned shape (c29).
 //
-// Drives the full path: POST /v2/refine → TaskQueue.enqueue → module-level
-// worker dispatch → runTask → handleRefine → generateText (mocked) → result
-// persisted to tasks row → waitForCompletion unblocks → HTTP response.
-//
-// The worker loop is started once when server.ts is imported (module scope)
-// and re-reads the task row via db() on each dispatch, so it picks up the
-// reset temp DB correctly.
+// POST /v2/refine now takes { notebook_id, prompt, format, source_ids } and
+// returns { format, paragraph?, citations, evidence, created_at }. This test
+// verifies the task-queue path produces the v1 response shape with AI mocked.
 import { afterAll, beforeAll, describe, expect, it, mock } from 'bun:test';
 
-const REFINE_RESULT = 'refined: a concise summary';
+const REFINE_PARAGRAPH = 'This is a summarized paragraph.';
 
-// Mock the 'ai' module so handleRefine's generateText returns deterministic
-// text. Must run before importing the server.
+// Mock 'ai' so handleRefine's generateText returns deterministic text.
 mock.module('ai', () => ({
   generateObject: async () => ({ object: {} }),
-  generateText: async () => ({ text: REFINE_RESULT }),
+  generateText: async () => ({ text: REFINE_PARAGRAPH }),
   streamText: () => ({
     fullStream: (async function* () {})(),
     textStream: (async function* () {})(),
@@ -25,7 +20,7 @@ mock.module('ai', () => ({
 
 import type { Elysia } from 'elysia';
 
-import { tasks } from '../../src/db/schema.ts';
+import { notebooks, tasks } from '../../src/db/schema.ts';
 import { createApp } from '../../src/server.ts';
 import {
   setupIntegrationEnv,
@@ -67,46 +62,59 @@ async function postRefine(body: unknown): Promise<{ status: number; body: unknow
   return { status: res.status, body: parsed };
 }
 
-describe('refine via task queue', () => {
-  it('returns the refined text from the (mocked) LLM', async () => {
-    const { status, body } = await postRefine({ text: 'some long input text', mode: 'summarize' });
+function makeNotebook(name: string): number {
+  return getOrm().insert(notebooks).values({ name }).returning().get().id;
+}
+
+describe('refine single-format via task queue (c29 v1-aligned)', () => {
+  it('returns v1 response shape (evidence=false, no source_ids)', async () => {
+    const nb = makeNotebook('refine-single');
+    const { status, body } = await postRefine({
+      notebook_id: nb,
+      prompt: 'Summarize the topic',
+      format: 'paragraph',
+    });
+
     expect(status).toBe(200);
     const result = body as {
-      mode: string;
-      text: string;
-      original_length: number;
-      refined_length: number;
+      format: string;
+      paragraph: string;
+      citations: unknown[];
+      evidence: boolean;
     };
-    expect(result.mode).toBe('summarize');
-    expect(result.text).toBe(REFINE_RESULT);
-    expect(result.original_length).toBeGreaterThan(0);
-    expect(result.refined_length).toBe(REFINE_RESULT.length);
+    expect(result.format).toBe('paragraph');
+    expect(result.paragraph).toBe(REFINE_PARAGRAPH);
+    expect(result.citations).toEqual([]);
+    expect(result.evidence).toBe(false);
   });
 
-  it('persists a completed task row with progress=100', async () => {
-    await postRefine({ text: 'input for task-row check', mode: 'rewrite' });
+  it('persists a completed task row', async () => {
+    const nb = makeNotebook('refine-taskrow');
+    await postRefine({ notebook_id: nb, prompt: 'test', format: 'bullets' });
 
     const rows = getOrm().select().from(tasks).all();
-    expect(rows.length).toBeGreaterThan(0);
-    // The most recent task should be completed.
     const last = rows.at(-1)!;
     expect(last.type).toBe('refine');
     expect(last.status).toBe('completed');
-    expect(last.progress).toBe(100);
-
-    const result = last.result as { text: string; mode: string } | null;
-    expect(result?.text).toBe(REFINE_RESULT);
-    expect(result?.mode).toBe('rewrite');
   });
 
-  it('defaults to rewrite mode when mode is omitted', async () => {
-    const { body } = await postRefine({ text: 'no mode specified' });
-    expect((body as { mode: string }).mode).toBe('rewrite');
+  it('returns 400 for unsupported format', async () => {
+    const nb = makeNotebook('refine-badformat');
+    const { status, body } = await postRefine({
+      notebook_id: nb,
+      prompt: 'test',
+      format: 'expand',
+    });
+    expect(status).toBe(400);
+    expect((body as { detail: string }).detail).toContain('Unsupported refine format');
   });
 
-  it('returns 404 when no text is provided', async () => {
-    const { status } = await postRefine({ mode: 'expand' });
-    // NotFoundError → Elysia maps to 404.
+  it('returns 404 when notebook does not exist', async () => {
+    const { status } = await postRefine({
+      notebook_id: 99999,
+      prompt: 'test',
+      format: 'paragraph',
+    });
     expect(status).toBe(404);
   });
 });

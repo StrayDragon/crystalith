@@ -48,6 +48,7 @@ taskQueue.startWorker(async (taskId, signal) => {
   // dispatch switch in runTask can read payload.type (TaskPayload expects it).
   const payload = {
     type: task.type,
+    notebookId: task.notebookId ?? undefined,
     ...(task.payload as Record<string, unknown>),
   } as unknown as import('./features/tasks/worker.ts').TaskPayload;
   return runTask(taskId, payload, signal, stageLimiters);
