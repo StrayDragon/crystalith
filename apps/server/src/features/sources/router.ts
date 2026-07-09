@@ -6,10 +6,17 @@ import { desc, eq, sql } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
-import { chunks, sources, sourceTags, sourceTagMap } from '../../db/schema.ts';
+import {
+  chunks,
+  notebookExtractorPolicies,
+  sources,
+  sourceTags,
+  sourceTagMap,
+} from '../../db/schema.ts';
 import { deleteSourceVectors } from '../../db/vectors.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
+import { extractUrl } from '../../shared/extraction/factory.ts';
 import { validateUrlForFetch } from '../../shared/net/url-safety.ts';
 import { uploadDedupKey, urlDedupKey } from './dedup.ts';
 import { listParsers } from './parser-registry.ts';
@@ -470,18 +477,80 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       }
     }
 
-    // Fetch URL content and ingest as text source
-    const response = await fetch(url);
-    const html = await response.text();
-    const buffer = new TextEncoder().encode(html);
-    const result = await ingestSource({
-      buffer,
-      filename: url.split('/').pop() || 'webpage.html',
-      notebookId: nid,
-      mimeType: 'text/html',
-      dedupKey,
-    });
-    return result;
+    // Fetch URL content via extractor factory (with SSRF guard already passed).
+    try {
+      const extracted = await extractUrl(url, {});
+      const buffer = new TextEncoder().encode(extracted.content);
+      const result = await ingestSource({
+        buffer,
+        filename: extracted.title || url.split('/').pop() || 'webpage.html',
+        notebookId: nid,
+        mimeType: 'text/html',
+        dedupKey,
+      });
+      return { ...result, extracted_by: extracted.extractorUsed, title: extracted.title };
+    } catch {
+      // Fallback to raw fetch if extractors all fail.
+      const response = await fetch(url);
+      const html = await response.text();
+      const buffer = new TextEncoder().encode(html);
+      const result = await ingestSource({
+        buffer,
+        filename: url.split('/').pop() || 'webpage.html',
+        notebookId: nid,
+        mimeType: 'text/html',
+        dedupKey,
+      });
+      return result;
+    }
+  })
+
+  // Extractor policy routes
+  .get('/notebooks/:nid/extractors', ({ params }) => {
+    const nid = Number(params.nid);
+    const policy = db()
+      .select()
+      .from(notebookExtractorPolicies)
+      .where(eq(notebookExtractorPolicies.notebookId, nid))
+      .get();
+    return policy ?? { notebookId: nid, mode: 'inherit_global', enabledExtractors: null };
+  })
+  .patch('/notebooks/:nid/extractors', ({ params, body }) => {
+    const nid = Number(params.nid);
+    const { mode, enabled_extractors } = body as {
+      mode?: string;
+      enabled_extractors?: string[];
+    };
+    const existing = db()
+      .select()
+      .from(notebookExtractorPolicies)
+      .where(eq(notebookExtractorPolicies.notebookId, nid))
+      .get();
+    if (existing) {
+      db()
+        .update(notebookExtractorPolicies)
+        .set({
+          mode: mode ?? existing.mode,
+          enabledExtractors: enabled_extractors ?? existing.enabledExtractors,
+        })
+        .where(eq(notebookExtractorPolicies.notebookId, nid))
+        .run();
+    } else {
+      db()
+        .insert(notebookExtractorPolicies)
+        .values({
+          notebookId: nid,
+          mode: mode ?? 'inherit_global',
+          enabledExtractors: enabled_extractors ?? null,
+        })
+        .run();
+    }
+    const updated = db()
+      .select()
+      .from(notebookExtractorPolicies)
+      .where(eq(notebookExtractorPolicies.notebookId, nid))
+      .get();
+    return updated;
   });
 
 registerApiDoc(apiDocs);
