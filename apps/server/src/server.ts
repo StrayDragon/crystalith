@@ -42,44 +42,54 @@ apiDocs.push({
 
 // ---------------------------------------------------------------------------
 // App — 20 feature routers + 1 rag router
+//
+// `createApp()` builds the Elysia instance without listening; the production
+// entry calls `.listen()` below, while tests import `createApp` to run
+// requests in-process via `app.handle()` without binding a port.
 // ---------------------------------------------------------------------------
 
-const app = new Elysia()
-  .get('/health', () => ({ status: 'ok', version: '2.0.0-dev' }))
-  .get('/openapi.json', () => generateOpenApiDocument())
-  .get('/asyncapi.json', () => generateAsyncApiDocument())
+export function createApp() {
+  return new Elysia()
+    .get('/health', () => ({ status: 'ok', version: '2.0.0-dev' }))
+    .get('/openapi.json', () => generateOpenApiDocument())
+    .get('/asyncapi.json', () => generateAsyncApiDocument())
 
-  .group('/v2', (app) =>
-    app.get('/', () => ({ message: 'Crystalith v2 API' })).get('/health', () => ({ status: 'ok' })),
-  )
+    .group('/v2', (app) =>
+      app
+        .get('/', () => ({ message: 'Crystalith v2 API' }))
+        .get('/health', () => ({ status: 'ok' })),
+    )
 
-  .use(notebooksRouter)
-  .use(sessionsRouter)
-  .use(messagesRouter)
-  .use(sourcesRouter)
-  .use(qaRouter)
-  .use(citationsRouter)
-  .use(researchRouter)
-  .use(outputsRouter)
-  .use(modelsRouter)
-  .use(analysisRouter)
-  .use(studioRouter)
-  .use(refineRouter)
-  .use(templatesRouter)
-  .use(promptPresetsRouter)
-  .use(sourceConnectorsRouter)
-  .use(tasksRouter)
-  .use(commandsRouter)
-  .use(workspaceRouter)
-  .use(evalRouter)
-  .use(strategiesRouter)
+    .use(notebooksRouter)
+    .use(sessionsRouter)
+    .use(messagesRouter)
+    .use(sourcesRouter)
+    .use(qaRouter)
+    .use(citationsRouter)
+    .use(researchRouter)
+    .use(outputsRouter)
+    .use(modelsRouter)
+    .use(analysisRouter)
+    .use(studioRouter)
+    .use(refineRouter)
+    .use(templatesRouter)
+    .use(promptPresetsRouter)
+    .use(sourceConnectorsRouter)
+    .use(tasksRouter)
+    .use(commandsRouter)
+    .use(workspaceRouter)
+    .use(evalRouter)
+    .use(strategiesRouter);
+}
 
-  .listen({
+// Only listen when run as the entry point (not when imported by tests).
+if (import.meta.main) {
+  const app = createApp().listen({
     port: process.env.CL_SERVER_PORT ? parseInt(process.env.CL_SERVER_PORT) : 8032,
   });
+  console.log(
+    `🦊 Crystalith v2 server running at http://${app.server?.hostname}:${app.server?.port}`,
+  );
+}
 
-console.log(
-  `🦊 Crystalith v2 server running at http://${app.server?.hostname}:${app.server?.port}`,
-);
-
-export type App = typeof app;
+export type App = ReturnType<typeof createApp>;

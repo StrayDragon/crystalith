@@ -28,6 +28,7 @@
     "@ai-sdk/provider": "^4.0.2",
     "@asteasolutions/zod-to-openapi": "^8.5.0",
     "@crystalith/shared": "workspace:*",
+    "@cucumber/gherkin": "^41.0.0",
     "@elysiajs/eden": "^1.4.9",
     "@elysiajs/static": "^1.4.10",
     "@mozilla/readability": "^0.6.0",
