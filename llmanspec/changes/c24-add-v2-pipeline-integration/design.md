@@ -15,6 +15,7 @@ Option 1: SQLite BLOB (storage table)     Option 2: Filesystem (local dir)     �
 ```
 
 最终选 **Option 2：本地文件系统**。原因：
+
 1. v1 也是文件系统（`backend/py/storage/`）
 2. Bun 的读写 API 极其快（底层 io_uring）
 3. 桌面 app `~/.crystalith/storage/` 路径合理
@@ -25,9 +26,9 @@ Option 1: SQLite BLOB (storage table)     Option 2: Filesystem (local dir)     �
 ```ts
 // shared/storage.ts
 export interface Storage {
-  save(sourceId: number, buffer: Uint8Array): Promise<string>;  // 返回路径
-  fetch(sourceId: number): Promise<Uint8Array>;                  // 读取
-  delete(sourceId: number): Promise<void>;                       // 删除
+  save(sourceId: number, buffer: Uint8Array): Promise<string>; // 返回路径
+  fetch(sourceId: number): Promise<Uint8Array>; // 读取
+  delete(sourceId: number): Promise<void>; // 删除
   exists(sourceId: number): Promise<boolean>;
 }
 
@@ -38,7 +39,7 @@ export class LocalStorage implements Storage {
 
 // 全局单例
 export const contentStorage = new LocalStorage(
-  process.env.CL_STORAGE_PATH || join(homedir(), '.crystalith', 'storage')
+  process.env.CL_STORAGE_PATH || join(homedir(), '.crystalith', 'storage'),
 );
 ```
 
@@ -47,6 +48,7 @@ export const contentStorage = new LocalStorage(
 当前：pipeline.ts 的 `ingestSource` 接收 `buffer: Uint8Array`，parse 后不保存。
 
 改为：
+
 1. Parse 完成后 → `contentStorage.save(sourceId, buffer)`（持久化原始文件）
 2. 后续需要重新 parse（如 document_parse 任务）→ `contentStorage.fetch(sourceId)` → parse → chunk → embed
 
@@ -55,6 +57,7 @@ export const contentStorage = new LocalStorage(
 当前：stub，直接 throw。
 
 改为：
+
 ```ts
 case 'document_parse':
   const buffer = await contentStorage.fetch(sourceId);
@@ -80,6 +83,7 @@ Agent → 调用 approvePlan tool
 当前：前端 `/research/:id/stream` 的 SSE 事件是自定义的 `plan_ready`/`approval_request`。
 
 改为：前端 `/research/:id/stream` 直接 relay AI SDK `fullStream` 事件：
+
 - `tool-call` → 搜索进度
 - `tool-approval-request` → 审批弹窗
 - `text-delta` → 报告内容流
@@ -117,20 +121,24 @@ mock.module('ai', () => ({
     object: schema.parse(MOCK_DATA[context.prompt]),
   }),
   streamText: () => MOCK_STREAM,
-  ToolLoopAgent: class { async generate() { return MOCK_RESULT; } },
+  ToolLoopAgent: class {
+    async generate() {
+      return MOCK_RESULT;
+    }
+  },
 }));
 ```
 
 每个集成测试文件覆盖一个完整用户场景：
 
-| 测试 | 场景 |
-|:---|:---|
-| qa/handler.test.ts | 选择来源 → 提问 → 检索 → 生成回答 → 置信度 ≥ 0.3 |
-| sources/ingest.test.ts | 上传文件 → parse → chunk → dedup (409 on repeat) |
-| refine/queue.test.ts | 请求 refine → 队列异步执行 → 轮询完成 → 返回结果 |
-| research/hitl.test.ts | 创建研究 → plan 生成 → approve → 搜索 → analyze → report |
-| research/cancel.test.ts | 创建研究 → cancel → status=cancelled |
-| studio/two-stage.test.ts | outline 生成 → review → markdown 生成 → 完整 slide |
+| 测试                     | 场景                                                     |
+| :----------------------- | :------------------------------------------------------- |
+| qa/handler.test.ts       | 选择来源 → 提问 → 检索 → 生成回答 → 置信度 ≥ 0.3         |
+| sources/ingest.test.ts   | 上传文件 → parse → chunk → dedup (409 on repeat)         |
+| refine/queue.test.ts     | 请求 refine → 队列异步执行 → 轮询完成 → 返回结果         |
+| research/hitl.test.ts    | 创建研究 → plan 生成 → approve → 搜索 → analyze → report |
+| research/cancel.test.ts  | 创建研究 → cancel → status=cancelled                     |
+| studio/two-stage.test.ts | outline 生成 → review → markdown 生成 → 完整 slide       |
 
 ## 验证
 

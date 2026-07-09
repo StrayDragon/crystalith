@@ -2,7 +2,7 @@
 name: 'llman-sdd-propose'
 description: 'Propose a new change and generate planning artifacts in one pass.'
 metadata:
-  version: '0.0.55'
+  version: '0.0.56'
 ---
 
 # LLMAN SDD Propose

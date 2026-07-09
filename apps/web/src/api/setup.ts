@@ -36,7 +36,7 @@ function readHeaderValue(headers: unknown, name: string): unknown {
 }
 
 function parseRetryAfter(value: unknown): number | undefined {
-  if (value == null) {
+  if (value === null) {
     return undefined;
   }
 

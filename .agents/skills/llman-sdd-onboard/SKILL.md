@@ -2,7 +2,7 @@
 name: 'llman-sdd-onboard'
 description: 'Onboard to the llman SDD workflow in a repository.'
 metadata:
-  version: '0.0.55'
+  version: '0.0.56'
 ---
 
 # LLMAN SDD Onboard

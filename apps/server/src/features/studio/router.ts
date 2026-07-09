@@ -8,6 +8,7 @@
 import { generateObject, streamText } from 'ai';
 import { eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
+import { z } from 'zod';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
@@ -15,8 +16,6 @@ import { db } from '../../db/index.ts';
 import { chunks, sources, notebooks, studioSlides } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
-import { z } from 'zod';
-
 import { buildFrontmatter } from './theme-presets.ts';
 
 const SlideOutlineSchema = z.object({
@@ -104,7 +103,10 @@ function getContext(slide: typeof studioSlides.$inferSelect): string {
     .innerJoin(sources, eq(chunks.sourceId, sources.id))
     .where(eq(sources.notebookId, slide.notebookId))
     .all();
-  return chunkRows.map((c) => c.text).join('\n\n').substring(0, 6000);
+  return chunkRows
+    .map((c) => c.text)
+    .join('\n\n')
+    .substring(0, 6000);
 }
 
 // ---------------------------------------------------------------------------

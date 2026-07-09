@@ -2,7 +2,7 @@
 name: 'llman-sdd-archive'
 description: 'Archive one or multiple changes and merge deltas into specs.'
 metadata:
-  version: '0.0.55'
+  version: '0.0.56'
 ---
 
 # LLMAN SDD Archive
