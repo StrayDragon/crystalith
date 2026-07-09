@@ -11,6 +11,7 @@ import { db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { chunkText } from '../../rag/chunker.ts';
+import { contentStorage } from '../../shared/storage.ts';
 import { guessMimeType, registerParser, selectParser } from './parser-registry.ts';
 import { htmlParser } from './parsers/html.ts';
 import { pdfParser } from './parsers/pdf.ts';
@@ -97,6 +98,12 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
 
   // New source invalidates cached retrievals for this notebook.
   bumpSourcesEpoch(input.notebookId);
+
+  // Persist raw bytes so document_parse can re-parse later (fire-and-forget
+  // best-effort: a failed save is logged, not fatal — parsing still works).
+  contentStorage.save(sourceRow.id, input.buffer).catch((error) => {
+    console.error(`[pipeline] contentStorage.save failed for source ${sourceRow.id}:`, error);
+  });
 
   try {
     // 2. Parse
