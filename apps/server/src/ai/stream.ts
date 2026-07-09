@@ -33,6 +33,14 @@ export interface StreamQaOptions {
    * retrieved chunks (or other tool outputs) for citation resolution.
    */
   onToolResult?: (toolName: string, result: unknown) => void;
+  /**
+   * Optional lifecycle hook for the provisional assistant message.
+   * Called once when the stream settles: `accumulatedText` is the full
+   * concatenated answer, `failed` is true if the stream errored/aborted.
+   * Callers use this to persist the final content on success, or delete the
+   * empty placeholder on failure (mirrors v1 api.py:550-557).
+   */
+  onMessageSettled?: (accumulatedText: string, failed: boolean) => void;
 }
 
 /** SSE-encode a single event. */
@@ -69,6 +77,7 @@ export function streamQaResponse(opts: StreamQaOptions): Response {
           stopWhen: isStepCount(opts.maxSteps ?? 5),
         });
 
+        let accumulated = '';
         for await (const part of result.fullStream) {
           // Relay text deltas and errors to the SSE stream; forward tool
           // results to the caller's sink (so it can accumulate retrieved
@@ -76,7 +85,10 @@ export function streamQaResponse(opts: StreamQaOptions): Response {
           // finish markers) are consumed internally.
           if (part.type === 'text-delta') {
             const text = part.text;
-            if (text) emit('chunk', { text });
+            if (text) {
+              accumulated += text;
+              emit('chunk', { text });
+            }
           } else if (part.type === 'tool-result') {
             opts.onToolResult?.(part.toolName, part.output);
           } else if (part.type === 'error') {
@@ -102,9 +114,12 @@ export function streamQaResponse(opts: StreamQaOptions): Response {
           no_evidence_reason: noEvidence,
           tool_calls: [],
         });
+
+        opts.onMessageSettled?.(accumulated, false);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Stream failed';
         emit('error', { message });
+        opts.onMessageSettled?.('', true);
       } finally {
         controller.close();
       }

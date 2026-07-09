@@ -215,6 +215,17 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       messageId,
       strategyId: strategy_id,
       topK: top_k,
+      // Persist the final answer on success; delete the empty placeholder on
+      // failure/abort so no orphaned empty assistant messages remain
+      // (mirrors v1 api.py:550-557 delete-on-incomplete).
+      onMessageSettled: (text, failed) => {
+        if (!messageId) return;
+        if (failed || text.trim() === '') {
+          db().delete(messages).where(eq(messages.id, messageId)).run();
+        } else {
+          db().update(messages).set({ content: text }).where(eq(messages.id, messageId)).run();
+        }
+      },
     });
   });
 
