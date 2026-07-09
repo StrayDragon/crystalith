@@ -150,7 +150,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Convert output to source
-  .post('/outputs/:id/convert-to-source', ({ params }) => {
+  .post('/outputs/:id/convert-to-source', async ({ params }) => {
     const id = Number(params.id);
     const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
     if (!row) throw new NotFoundError(`Output ${id} not found`);
@@ -181,6 +181,11 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
         endOffset: contentStr.length,
       })
       .run();
+
+    // Embed the chunk so it's discoverable via semantic search.
+    const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
+    const strategy = new EmbedStrategy();
+    await strategy.indexSource(sourceRow.id, sourceRow.notebookId);
 
     return {
       source_id: sourceRow.id,

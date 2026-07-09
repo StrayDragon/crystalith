@@ -9,7 +9,7 @@ import { generateText } from 'ai';
 //
 // Each mode uses a distinct system prompt. The LLM processes the input text
 // and returns the refined version via streamText (or non-streaming).
-import { eq } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { withRetry } from '../../ai/middleware.ts';
@@ -87,7 +87,9 @@ export const refineRouter = new Elysia({ prefix: '/v2' })
         .select({ text: chunks.text })
         .from(chunks)
         .innerJoin(sources, eq(chunks.sourceId, sources.id))
-        .where(eq(sources.notebookId, Number(notebook_id)))
+        .where(
+          and(eq(sources.notebookId, Number(notebook_id)), inArray(chunks.sourceId, source_ids)),
+        )
         .all();
 
       inputText = chunkRows.map((c) => c.text).join('\n\n');

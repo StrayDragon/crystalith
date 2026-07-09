@@ -47,6 +47,8 @@ export interface IngestInput {
   mimeType?: string;
   /** Optional explicit parser override. */
   parserType?: string;
+  /** Dedup key (pre-computed by caller). */
+  dedupKey?: string;
 }
 
 export interface IngestResult {
@@ -88,6 +90,7 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
       mimeType,
       parserType: parser?.id ?? 'text',
       status: 'processing',
+      dedupKey: input.dedupKey ?? null,
     })
     .returning()
     .get();

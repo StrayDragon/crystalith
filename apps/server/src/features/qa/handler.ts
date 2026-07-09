@@ -17,6 +17,30 @@ import { ragRegistry } from '../../rag/registry.ts';
 import { computeConfidence } from './confidence.ts';
 
 // ---------------------------------------------------------------------------
+// Localized no-evidence hints (mirrors v1 service.py:28-34)
+// ---------------------------------------------------------------------------
+
+export const NO_EVIDENCE_ANSWER = '来源中未找到相关证据';
+export const NO_SOURCES_ANSWER = '请先选择至少一个来源后再提问';
+export const NO_VECTOR_INDEX_ANSWER =
+  '未在向量库中检索到相关内容。若刚切换运行环境，请对已导入来源重新索引。';
+export const SOURCES_NOT_READY_ANSWER = '所选来源尚未完成索引或内容为空，请等待来源状态变为就绪';
+
+/** Map NoEvidenceReason enum to a user-visible Chinese hint. */
+export function noEvidenceHint(reason?: string): string {
+  switch (reason) {
+    case 'no_sources':
+      return NO_SOURCES_ANSWER;
+    case 'no_vector_hits':
+      return NO_VECTOR_INDEX_ANSWER;
+    case 'no_valid_chunks':
+      return SOURCES_NOT_READY_ANSWER;
+    default:
+      return NO_EVIDENCE_ANSWER;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -174,5 +198,7 @@ export function streamQa(opts: QaHandlerOptions): Response {
       const citations = await resolveCitations(retrievedChunks);
       return computeConfidence(citations, countNotebookSources(opts.notebookId), topK);
     },
+    // Detect no-evidence before streaming starts (pre-flight source check).
+    noEvidenceReason: countNotebookSources(opts.notebookId) === 0 ? 'no_sources' : undefined,
   });
 }

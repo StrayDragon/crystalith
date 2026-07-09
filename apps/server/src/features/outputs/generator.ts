@@ -3,7 +3,7 @@
 // Each output type has its own Zod schema (from shared). generateObject
 // is called with the schema, system prompt, and chunk context.
 import type { LanguageModelV4 } from '@ai-sdk/provider';
-import { OutputContentSchemaByType, type ToolOutputType } from '@crystalith/shared';
+import { OutputContentSchemaByType, type OutputType } from '@crystalith/shared';
 import { generateObject } from 'ai';
 import type { z } from 'zod';
 
@@ -11,7 +11,7 @@ import type { z } from 'zod';
  * Metadata for each output type — maps to v1 OutputTypeMeta.
  */
 export interface OutputMeta {
-  type: ToolOutputType;
+  type: OutputType;
   display_text: string;
   description: string;
   tone: string;
@@ -83,9 +83,39 @@ export const OUTPUT_META: Record<string, OutputMeta> = {
       'Generate a slide deck outline based on the provided context. Include a title and slides with bullet points.',
     is_tool: false,
   },
+  PARAGRAPH: {
+    type: 'PARAGRAPH',
+    display_text: '段落',
+    description: '连贯段落',
+    tone: 'blue',
+    prompt:
+      'Generate a coherent paragraph summarizing the provided context. Write in clear, flowing prose.',
+    is_tool: false,
+  },
+  BULLETS: {
+    type: 'BULLETS',
+    display_text: '要点',
+    description: '要点列表',
+    tone: 'green',
+    prompt:
+      'Generate a bullet-point summary of the provided context. Each bullet should be a concise key point.',
+    is_tool: false,
+  },
+  STRUCTURED: {
+    type: 'STRUCTURED',
+    display_text: '结构化',
+    description: '结构化 JSON',
+    tone: 'orange',
+    prompt:
+      'Generate structured JSON output based on the provided context. Include a title, bullet points, and term definitions.',
+    is_tool: false,
+  },
 };
 
-export type { ToolOutputType };
+export type { OutputType };
+
+// Alias for backward compatibility — consumers import ToolOutputType.
+export type ToolOutputType = OutputType;
 
 /**
  * Generate a structured output object of a specific type.
@@ -93,7 +123,7 @@ export type { ToolOutputType };
  */
 export async function generateOutputByType(
   model: LanguageModelV4,
-  type: ToolOutputType,
+  type: OutputType,
   context: string,
   customPrompt?: string,
 ): Promise<unknown> {
