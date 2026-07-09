@@ -51,6 +51,10 @@ interface QaRequest {
   session_id?: number;
   preset?: string;
   directive?: 'Sources_only' | 'Knowledge_only' | 'Mixed';
+  /** RAG strategy override (defaults to the notebook's configured strategy). */
+  strategy_id?: string;
+  /** Retrieval top-K (default 5). */
+  top_k?: number;
 }
 
 function loadHistory(
@@ -82,7 +86,8 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
 
   // Non-streaming QA
   .post('/qa', async ({ body }) => {
-    const { question, notebook_id, session_id, preset, directive } = body as unknown as QaRequest;
+    const { question, notebook_id, session_id, preset, directive, strategy_id, top_k } =
+      body as unknown as QaRequest;
 
     // Load session history
     const history = session_id ? loadHistory(session_id) : [];
@@ -119,6 +124,8 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       history,
       systemPrompt,
       messageId,
+      strategyId: strategy_id,
+      topK: top_k,
     });
 
     // Read full SSE stream and extract final answer
@@ -170,7 +177,8 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
 
   // Streaming QA
   .post('/qa/stream', async ({ body }) => {
-    const { question, notebook_id, session_id, preset, directive } = body as unknown as QaRequest;
+    const { question, notebook_id, session_id, preset, directive, strategy_id, top_k } =
+      body as unknown as QaRequest;
 
     const history = session_id ? loadHistory(session_id) : [];
 
@@ -205,6 +213,8 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       history,
       systemPrompt,
       messageId,
+      strategyId: strategy_id,
+      topK: top_k,
     });
   });
 

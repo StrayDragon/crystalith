@@ -31,6 +31,8 @@ export const QaStreamDoneEventSchema = z.object({
       }),
     )
     .default([]),
+  /** Confidence score in [0,1] derived from evidence (similarity + coverage). */
+  confidence: z.number().min(0).max(1).optional(),
 });
 
 export const QaStreamErrorEventSchema = z.object({
