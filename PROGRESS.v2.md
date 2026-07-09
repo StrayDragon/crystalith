@@ -6,32 +6,32 @@
 
 ## 状态看板
 
-| #   | Change                 | 状态                             |
-| :-- | :--------------------- | :------------------------------- |
-| c00 | server-foundation      | ✅ DONE                          |
-| c01 | data-layer             | ✅ DONE                          |
-| c02 | ai-runtime             | ✅ DONE                          |
-| c03 | frontend-eden          | ✅ DONE                          |
-| c04 | core-crud              | ✅ DONE                          |
-| c05 | rag-embed              | ✅ DONE                          |
-| c06 | rag-registry           | ✅ DONE                          |
-| c07 | qa-pipeline            | ✅ DONE                          |
-| c08 | research-agent         | ✅ DONE                          |
-| c09 | outputs-generation     | ✅ DONE                          |
-| c10 | models-management      | ✅ DONE                          |
-| c11 | eval-harness           | ✅ DONE                          |
-| c12 | analysis-studio-refine | ✅ DONE                          |
-| c15 | bdd-tests              | ✅ DONE                          |
-| c16 | rag-foundations        | ✅ DONE                          |
-| c17 | qa-citations           | ⬜ TODO                          |
-| c18 | source-dedup-safety    | ⬜ TODO                          |
-| c19 | task-queue             | ⬜ TODO (semaphore+queue 未落盘) |
-| c20 | outputs-refine         | ⬜ TODO                          |
-| c21 | web-extractors         | ⬜ TODO                          |
-| c22 | research-agent         | ⬜ TODO                          |
-| c23 | studio-analysis        | ⬜ TODO                          |
-| c13 | distribution           | ⏸️ BLOCKED (blocked by c17-c23)  |
-| c14 | cleanup-delivery       | ⏸️ BLOCKED (blocked by c17-c23)  |
+| #   | Change                 | 状态                                                                                   |
+| :-- | :--------------------- | :------------------------------------------------------------------------------------- |
+| c00 | server-foundation      | ✅ DONE                                                                                |
+| c01 | data-layer             | ✅ DONE                                                                                |
+| c02 | ai-runtime             | ✅ DONE                                                                                |
+| c03 | frontend-eden          | ✅ DONE                                                                                |
+| c04 | core-crud              | ✅ DONE                                                                                |
+| c05 | rag-embed              | ✅ DONE                                                                                |
+| c06 | rag-registry           | ✅ DONE                                                                                |
+| c07 | qa-pipeline            | ✅ DONE                                                                                |
+| c08 | research-agent         | ✅ DONE                                                                                |
+| c09 | outputs-generation     | ✅ DONE                                                                                |
+| c10 | models-management      | ✅ DONE                                                                                |
+| c11 | eval-harness           | ✅ DONE                                                                                |
+| c12 | analysis-studio-refine | ✅ DONE                                                                                |
+| c15 | bdd-tests              | ✅ DONE                                                                                |
+| c16 | rag-foundations        | ✅ DONE                                                                                |
+| c17 | qa-citations           | ⬜ TODO                                                                                |
+| c18 | source-dedup-safety    | ⬜ TODO                                                                                |
+| c19 | task-queue             | ⬜ TODO (semaphore+queue 未落盘)                                                       |
+| c20 | outputs-refine         | ⬜ TODO                                                                                |
+| c21 | web-extractors         | ✅ DONE                                                                                |
+| c22 | research-agent         | ⬜ TODO                                                                                |
+| c23 | studio-analysis        | 🔄 WIP (theme presets + slidev ✅; clustering + two-stage studio + correlation 待实现) |
+| c13 | distribution           | ⏸️ BLOCKED (blocked by c17-c23)                                                        |
+| c14 | cleanup-delivery       | ⏸️ BLOCKED (blocked by c17-c23)                                                        |
 
 <!-- LEGEND: ✅ DONE | 🔄 WIP | ⬜ TODO | ⏸️ BLOCKED -->
 
@@ -41,13 +41,13 @@
 
 <!-- CURRENT -->
 
-**Phase 5**: c21-c23 v1→v2 行为对齐迁移线（继续）
+**Phase 5**: c22-c23（剩余）
 
-**前置**: c16-c20 ✅ (rag-foundations + qa-citations + source-dedup + task-queue + outputs-refine 已提交)
+**前置**: c16-c21 ✅ (all dependencies in place)
 
-**目标**: 3 个 remaining changes — web-extractors + research-agent + studio-analysis
+**目标**: c22 research-agent (7 tasks, 23 subtasks) + c23 remaining (clustering + two-stage studio + correlation/contradiction)
 
-**阻塞**: c13, c14 需 c21-c23 全部完毕后方可开始
+**阻塞**: c13, c14 需 c22-c23 全部完毕后方可开始
 
 ---
 
