@@ -2,7 +2,7 @@ import { SourceSchema } from '@crystalith/shared';
 // Sources CRUD + upload router — /v2/sources, /v2/notebooks/:nid/sources
 //
 // Mirrors v1 `features/sources/api.py` + `features/sources/api_ingest.py`.
-import { desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
@@ -198,7 +198,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       const hit = db()
         .select({ id: sources.id })
         .from(sources)
-        .where(eq(sources.notebookId, notebookId) && eq(sources.dedupKey, dedupKey))
+        .where(and(eq(sources.notebookId, notebookId), eq(sources.dedupKey, dedupKey)))
         .get();
       if (hit) {
         if (dedupAction === 'prompt') {
@@ -344,7 +344,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     for (const sid of source_ids) {
       db()
         .delete(sourceTagMap)
-        .where(eq(sourceTagMap.sourceId, sid) && eq(sourceTagMap.tagId, tid))
+        .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
         .run();
     }
     return { tag_id: tid, source_ids, removed: source_ids.length };
@@ -463,7 +463,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       const hit = db()
         .select({ id: sources.id })
         .from(sources)
-        .where(eq(sources.notebookId, nid) && eq(sources.dedupKey, dedupKey))
+        .where(and(eq(sources.notebookId, nid), eq(sources.dedupKey, dedupKey)))
         .get();
       if (hit) {
         if (dedupAction === 'prompt') {

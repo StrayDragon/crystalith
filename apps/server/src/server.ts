@@ -44,7 +44,12 @@ taskQueue.startWorker(async (taskId, signal) => {
   const { eq } = await import('drizzle-orm');
   const task = db().select().from(row).where(eq(row.id, taskId)).get();
   if (!task) throw new Error(`Task ${taskId} not found for dispatch`);
-  const payload = task.payload as unknown as import('./features/tasks/worker.ts').TaskPayload;
+  // The `type` lives on the tasks column; merge it into the payload so the
+  // dispatch switch in runTask can read payload.type (TaskPayload expects it).
+  const payload = {
+    type: task.type,
+    ...(task.payload as Record<string, unknown>),
+  } as unknown as import('./features/tasks/worker.ts').TaskPayload;
   return runTask(taskId, payload, signal, stageLimiters);
 });
 

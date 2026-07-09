@@ -20,21 +20,21 @@
 
 ## Workstream C: 集成测试
 
-- [ ] `test/qa/handler.test.ts`: QA 全流程（检索 + 置信度 + citations）
-- [ ] `test/sources/ingest.test.ts`: 源摄取 + dedup + SSRF
-- [ ] `test/refine/queue.test.ts`: refine 经 task queue 异步执行
-- [ ] `test/outputs/core-types.test.ts`: PARAGRAPH/BULLETS/STRUCTURED generator
+- [x] `test/qa/handler.test.ts`: QA 置信度 + citations 解析（真实函数, 9 tests）
+- [x] `test/sources/ingest.test.ts`: 源摄取 + dedup(prompt/reuse/create_new/跨notebook) + SSRF（7 tests）
+- [x] `test/refine/queue.test.ts`: refine 经 task queue 异步执行（4 tests）
+- [x] `test/outputs/core-types.test.ts`: PARAGRAPH/BULLETS/STRUCTURED generator ✅(pre-existing)
 - [ ] `test/research/hitl.test.ts`: Approve/skip/finish/cancel 状态转移
 - [ ] `test/research/execute.test.ts`: Search 并发 + 去重 + 聚合
 - [ ] `test/research/sse.test.ts`: SSE 事件派发 + terminal 检测
 - [ ] `test/research/cancel.test.ts`: AbortSignal 真中断
-- [ ] `test/studio/two-stage.test.ts`: Outline→markdown 两阶段
+- [x] `test/studio/two-stage.test.ts`: Outline→markdown 两阶段（5 tests）
 
 ## 整体验证
 
-- [ ] `cd apps/server && bun test`（旧 103 + 新集成测试全绿）
-- [ ] `cd apps/server && bun test tests/bdd/`（21 pass）
-- [ ] `bun typecheck`（clean）
+- [x] `cd apps/server && bun test`（144 pass: 旧 119 + 新 25 集成测试全绿）
+- [x] `cd apps/server && bun test tests/bdd/`（21 pass）
+- [x] `bun typecheck`（clean）
 - [ ] `bun run build`（编译成功）
 
 ## 前置条件
