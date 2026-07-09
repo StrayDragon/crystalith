@@ -42,7 +42,7 @@
 | c35 | frontend-migration     | ✅ DONE                                                                          |
 | c36 | align-qa-pipeline      | ✅ DONE (确定性检索/no-evidence 5reason/export/confidence/source_ids) |
 | c37 | align-research-agent   | ⬜ TODO (v1↔v2 对拍：resume/skip/approve/finish/delete)                          |
-| c38 | align-outputs-pipeline | ⬜ TODO (v1↔v2 对拍：source_ids RAG/postprocess/export)                          |
+| c38 | align-outputs-pipeline | ✅ DONE (source_ids RAG接通/citation mapping/postprocess/export markdown) |
 | c39 | align-sources-sessions | ⬜ TODO (v1↔v2 对拍：竞态复发/dedup/tags/校验)                                   |
 | c40 | align-shared-infra     | ✅ DONE (config typed/retry Retry-After/searchVectors source_ids) |
 | c13 | distribution           | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                          |
