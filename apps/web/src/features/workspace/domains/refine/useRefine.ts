@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
-import {
-  listWorkspaceToolsV1WorkspaceToolsGet as listWorkspaceTools,
-  refineBatchV1NotebooksNotebookIdRefineBatchPost as refineBatch,
-  type FieldDescriptor as ApiFieldDescriptor,
-  type FrontendBundleDescriptor as ApiFrontendBundleDescriptor,
-  type PluginConfigSchema as ApiPluginConfigSchema,
-  type PreviewDescriptor as ApiPreviewDescriptor,
-  type RenderDescriptor as ApiRenderDescriptor,
-  type WorkspaceTool as ApiWorkspaceTool,
+import { api } from '../../../../api/eden';
+import type {
+  FieldDescriptor as ApiFieldDescriptor,
+  FrontendBundleDescriptor as ApiFrontendBundleDescriptor,
+  PluginConfigSchema as ApiPluginConfigSchema,
+  PreviewDescriptor as ApiPreviewDescriptor,
+  RenderDescriptor as ApiRenderDescriptor,
+  WorkspaceTool as ApiWorkspaceTool,
 } from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
 import { useOutputQueue } from '../../shared/hooks/useOutputQueue';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 import type {
@@ -176,7 +174,11 @@ export function useRefine() {
     error: toolsError,
     isLoading: toolsLoading,
     mutate: refreshTools,
-  } = useSWR(isConnected ? 'workspace/tools' : null, () => unwrapData(listWorkspaceTools<true>()), {
+  } = useSWR(isConnected ? 'workspace/tools' : null, async () => {
+    const { data, error } = await api.v2.workspace.tools.get();
+    if (error) throw error;
+    return data as any;
+  }, {
     revalidateOnFocus: false,
   });
 
@@ -340,16 +342,13 @@ export function useRefine() {
         const normalizedOutputs: Partial<Record<RefineMode, RefineOutput>> = {};
         let resolvedCitations = null as ReturnType<typeof normalizeCitation>[] | null;
         if (jobNotebookId && isConnected) {
-          const response = await unwrapData(
-            refineBatch<true>({
-              path: { notebook_id: jobNotebookId },
-              body: {
-                prompt,
-                formats: [...refineFormats],
-                source_ids: sourceIds,
-              },
-            }),
-          );
+          const { data: response, error: refineErr } = await api.v2.refine.batch.post({
+            notebook_id: jobNotebookId,
+            prompt,
+            formats: [...refineFormats],
+            source_ids: sourceIds,
+          } as any);
+          if (refineErr) throw refineErr;
           resolvedCitations = response.citations.map(normalizeCitation);
           for (const [format, output] of Object.entries(response.outputs ?? {})) {
             if (!output) continue;

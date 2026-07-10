@@ -11,11 +11,8 @@ import {
 } from '@mui/icons-material';
 import { memo, useState, useMemo, useCallback } from 'react';
 
-import {
-  exportResearchV1NotebooksNotebookIdResearchResearchIdExportPost as exportResearch,
-  type ResearchSessionResponse,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
+import { api } from '../../../../api/eden';
+import type { ResearchSessionResponse } from '../../../../api/generated';
 import { useLayer } from '../../../../shared/layer';
 import { toast } from '../../../../shared/toast';
 
@@ -133,16 +130,13 @@ function ResearchExportDialog({ session, onClose, onExportComplete }: ResearchEx
         .map((item) => item.url)
         .filter((url): url is string => typeof url === 'string' && url.length > 0);
 
-      const data = await unwrapData(
-        exportResearch<true>({
-          path: { notebook_id: session.notebook_id, research_id: session.id },
-          body: {
-            export_type: exportTarget,
-            include_report: includeReport,
-            include_results: selectedRefs.length > 0,
-          },
-        }),
-      );
+      const { data: result, error: exportErr } = await api.v2.research({ id: session.id }).export.post({
+        export_type: exportTarget,
+        include_report: includeReport,
+        include_results: selectedRefs.length > 0,
+      } as any);
+      if (exportErr) throw exportErr;
+      const data = result as any;
 
       if (data?.success) {
         toast.success(data.message);
