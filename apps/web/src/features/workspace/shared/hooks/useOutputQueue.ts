@@ -262,7 +262,7 @@ export function useOutputQueue({
     }
     if (!outputsData) return;
     const s = store.getState();
-    s.setOutputs(outputsData.map(normalizeOutput));
+    s.setOutputs(outputsData.map((o: any) => normalizeOutput(o)));
     s.setError('outputs', '');
   }, [outputsData, outputsError, store]);
 
@@ -497,7 +497,7 @@ export function useOutputQueue({
             abortError.name = 'AbortError';
             throw abortError;
           }
-          normalized = [normalizeOutput(response)];
+          normalized = [normalizeOutput(response as any)];
           const s = store.getState();
           s.setOutputs([...normalized, ...s.outputs]);
           await mutateOutputs();
@@ -672,7 +672,7 @@ export function useOutputQueue({
       try {
         const { data: output, error: getErr } = await api.v2.outputs({ id: outputId }).get();
         if (getErr) throw getErr;
-        const normalized = normalizeOutput(output);
+        const normalized = normalizeOutput(output as any);
         const s2 = store.getState();
         s2.setOutputs(s2.outputs.map((item) => (item.id === outputId ? normalized : item)));
         return normalized;

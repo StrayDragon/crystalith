@@ -6,7 +6,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { api } from '../../../../../api/eden';
-import type { CitationContextResponse } from '../../../../../api/shared-types';
+import type { CitationContextResponse } from '../../../../../api/generated';
 import { useLayer } from '../../../../../shared/layer';
 import { useWorkspaceStore } from '../../state/workspaceStore';
 import type { Citation } from '../../types';
@@ -131,7 +131,7 @@ export default function CitationDrawer({
           query: { chunk_id: String(citation.chunkId), before: '1', after: '1' },
         });
         if (fetchErr) throw fetchErr;
-        setContext(data as CitationContextResponse);
+        setContext(data as unknown as CitationContextResponse);
       } catch (err) {
         setError((err as Error)?.message || '加载引用上下文失败');
       } finally {

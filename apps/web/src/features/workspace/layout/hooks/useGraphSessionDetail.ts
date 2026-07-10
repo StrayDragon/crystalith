@@ -1,42 +1,76 @@
-import { useCallback } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { api } from '../../../../api/eden';
+import type { ChatMessage, SessionSummary } from '../../shared/types';
+import { normalizeMessage } from '../../shared/utils';
 
-interface GraphMessage {
+export interface GraphSessionTarget {
   id: number;
-  session_id: number;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface GraphSessionDetail {
-  messages: GraphMessage[];
-  session_id: number;
-  title: string | null;
+  title?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export function useGraphSessionDetail() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<SessionSummary | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const loadedSessionIds = useRef<Set<number>>(new Set());
+
   const fetchMessages = useCallback(
-    async (notebookId: number, sessionId: number): Promise<GraphSessionDetail | null> => {
+    async (notebookId: number, sessionId: number) => {
+      isLoading;
+      setMessages;
+      const key = `${notebookId}:${sessionId}`;
+      if (loadedSessionIds.current.has(sessionId)) return;
+      loadedSessionIds.current.add(sessionId);
+
+      setIsLoading(true);
       try {
         const { data, error } = await api.v2
           .notebooks({ nid: notebookId })
           .sessions({ sid: sessionId })
-          .messages.get();
+        .messages.get({ query: { offset: 0, limit: 200 } });
         if (error) throw error;
-        return {
-          messages: (data ?? []) as GraphMessage[],
-          session_id: sessionId,
-          title: null,
-        };
+        const msgs = (data ?? []).map((item: Record<string, unknown>) => normalizeMessage(item as Parameters<typeof normalizeMessage>[0]));
+        setMessages(msgs);
       } catch {
-        return null;
+        // Ignore errors on graph session detail fetch
+      } finally {
+        setIsLoading(false);
       }
     },
     [],
   );
 
-  return { fetchMessages };
+  const openSessionDetail = useCallback((target: GraphSessionTarget) => {
+    // eslint-disable-next-line
+    const summary: SessionSummary = { id: target.id, title: target.title ?? '', createdAt: target.createdAt ?? '', updatedAt: target.updatedAt ?? '' };
+    setSelectedSession(summary);
+    setIsOpen(true);
+  }, []);
+
+  const closeSessionDetail = useCallback(() => {
+    setIsOpen(false);
+    setSelectedSession(null);
+    setMessages([]);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen((prev) => !prev);
+  }, []);
+
+  return {
+    isOpen,
+    selectedSession,
+    isFullscreen,
+    messages,
+    isLoading,
+    fetchMessages,
+    openSessionDetail,
+    closeSessionDetail,
+    toggleFullscreen,
+  };
 }

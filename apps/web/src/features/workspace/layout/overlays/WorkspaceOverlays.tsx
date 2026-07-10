@@ -1,6 +1,6 @@
 import { Suspense, lazy } from 'react';
 
-import type { AnalysisResult, WorkspaceToolsDiagnostics } from '../../../../api/shared-types';
+import type { AnalysisResult, WorkspaceToolsDiagnostics } from '../../../../api/generated';
 import SessionDetailDialog from '../../domains/sessions/SessionDetailDialog';
 import type { ChatMessage as SourceDialogMessage } from '../../domains/sources/SourceDetailDialog';
 import { SkeletonCard } from '../../shared/components/Skeleton';

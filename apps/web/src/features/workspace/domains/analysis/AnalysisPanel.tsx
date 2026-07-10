@@ -17,7 +17,7 @@ import {
 } from '@mui/icons-material';
 import { memo, useCallback, useState } from 'react';
 
-import type { AnalysisResult, Topic, Relation } from '../../../../api/shared-types';
+import type { AnalysisResult, Topic, Relation } from '../../../../api/generated';
 
 interface AnalysisPanelProps {
   analysis: AnalysisResult | null;

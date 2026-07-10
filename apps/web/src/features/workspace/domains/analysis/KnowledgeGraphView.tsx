@@ -29,7 +29,7 @@ import {
 } from '@xyflow/react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { AnalysisResult } from '../../../../api/shared-types';
+import type { AnalysisResult } from '../../../../api/generated';
 import { useLayer } from '../../../../shared/layer';
 import { useTheme } from '../../shared/hooks/useTheme';
 import type { SourceItem, OutputItem, SessionSummary, ChatMessage } from '../../shared/types';

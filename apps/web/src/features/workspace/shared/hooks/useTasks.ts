@@ -55,8 +55,8 @@ export function useTasks() {
         .notebooks({ nid: activeNotebookId })
         .tasks.get();
       if (fetchErr) throw fetchErr;
-      setTaskState({ tasks: (data ?? []) as TaskItem[], isLoading: false, error: '' });
-      return (data ?? []) as TaskItem[];
+      setTaskState({ tasks: (data ?? []) as unknown as unknown as TaskItem[], isLoading: false, error: '' });
+      return (data ?? []) as unknown as unknown as TaskItem[];
     } catch {
       setTaskState((prev) => ({
         ...prev,
@@ -73,7 +73,7 @@ export function useTasks() {
       try {
         const { data, error: fetchErr } = await api.v2.tasks({ id: taskId }).get();
         if (fetchErr) throw fetchErr;
-        const task = data as TaskItem;
+        const task = data as unknown as TaskItem;
         setTaskState((prev) => ({
           ...prev,
           tasks: prev.tasks.map((t) => (t.id === task.id ? task : t)),
