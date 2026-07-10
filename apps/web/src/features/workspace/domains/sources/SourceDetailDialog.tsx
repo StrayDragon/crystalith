@@ -35,13 +35,8 @@ import {
 } from '@mui/icons-material';
 import { useState, useCallback, useRef, useEffect } from 'react';
 
-import {
-  getSourceSummaryV1NotebooksNotebookIdSourcesSourceIdSummaryGet as getSourceSummary,
-  sourceQaV1NotebooksNotebookIdSourcesSourceIdQaPost as askSourceQuestion,
-  listSourceChunksV1NotebooksNotebookIdSourcesSourceIdChunksGet as listSourceChunks,
-  type ChunkRead,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
+import { api } from '../../../../api/eden';
+import type { ChunkRead } from '../../../../api/generated';
 import { copyToClipboard } from '../../../../shared/clipboard';
 import { t } from '../../../../shared/i18n';
 import { toast } from '../../../../shared/toast';
@@ -135,6 +130,18 @@ function ChunkItem({ chunk }: { chunk: ChunkRead }) {
   );
 }
 
+async function fetchSourceSummary(notebookId: number, sourceId: number) {
+  const { data, error } = await api.v2.notebooks({ nid: notebookId }).sources({ sid: sourceId }).summary.get();
+  if (error) throw error;
+  return data as any;
+}
+
+async function fetchSourceChunks(sourceId: number) {
+  const { data, error } = await api.v2.sources({ id: sourceId }).chunks.get();
+  if (error) throw error;
+  return data as any;
+}
+
 export default function SourceDetailDialog({
   open,
   source,
@@ -194,7 +201,7 @@ export default function SourceDetailDialog({
     // Call real API
     setIsBriefLoading(true);
     setBriefError('');
-    unwrapData(getSourceSummary<true>({ path: { notebook_id: notebookId, source_id: source.id } }))
+    fetchSourceSummary(notebookId, source.id)
       .then((response) => {
         const newBrief: SourceBrief = {
           summary: response.summary,
@@ -236,7 +243,7 @@ export default function SourceDetailDialog({
     // Call real API
     setIsChunksLoading(true);
     setChunksError('');
-    unwrapData(listSourceChunks<true>({ path: { notebook_id: notebookId, source_id: source.id } }))
+    fetchSourceChunks(source.id)
       .then((response) => {
         chunksCache.set(source.id, response);
         setChunks(response);
@@ -290,12 +297,8 @@ export default function SourceDetailDialog({
 
     // Call real API
     try {
-      const response = await unwrapData(
-        askSourceQuestion<true>({
-          path: { notebook_id: notebookId, source_id: source.id },
-          body: { question: userMessage.content },
-        }),
-      );
+      const { data: response, error: qaErr } = await api.v2.notebooks({ nid: notebookId }).sources({ sid: source.id }).qa.post({ question: userMessage.content } as any);
+      if (qaErr) throw qaErr;
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
@@ -330,7 +333,7 @@ export default function SourceDetailDialog({
     }
 
     // Call real API
-    unwrapData(getSourceSummary<true>({ path: { notebook_id: notebookId, source_id: source.id } }))
+    fetchSourceSummary(notebookId, source.id)
       .then((response) => {
         const newBrief: SourceBrief = {
           summary: response.summary,
