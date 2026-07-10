@@ -40,7 +40,7 @@
 | c33 | source-extras          | ✅ DONE (本会话)                                                                 |
 | c34 | sessions-convert       | ✅ DONE (本会话)                                                                 |
 | c35 | frontend-migration     | ✅ DONE                                                                          |
-| c36 | align-qa-pipeline      | ⬜ TODO (v1↔v2 对拍：no-evidence/export/confidence/source_ids)                   |
+| c36 | align-qa-pipeline      | ✅ DONE (确定性检索/no-evidence 5reason/export/confidence/source_ids) |
 | c37 | align-research-agent   | ⬜ TODO (v1↔v2 对拍：resume/skip/approve/finish/delete)                          |
 | c38 | align-outputs-pipeline | ⬜ TODO (v1↔v2 对拍：source_ids RAG/postprocess/export)                          |
 | c39 | align-sources-sessions | ⬜ TODO (v1↔v2 对拍：竞态复发/dedup/tags/校验)                                   |
