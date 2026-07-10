@@ -3,7 +3,7 @@
 // The TaskQueue in shared/queue.ts handles prioritization + concurrency.
 // This module provides the dispatch function and StageLimiters for domain
 // resource control (embedding / vector_search / llm_generate).
-import { and, eq, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
@@ -36,12 +36,12 @@ export function createStageLimiters(): StageLimiters {
 export interface TaskPayload {
   type: 'refine' | 'document_parse';
   refineInput?: {
-    text?: string;
-    mode: string;
-    notebook_id?: number;
+    prompt: string;
+    format: 'paragraph' | 'bullets' | 'structured';
     source_ids?: number[];
-    target_language?: string;
-    custom_prompt?: string;
+    top_k?: number;
+    min_score?: number;
+    notebook_id?: number;
   };
   sourceId?: number;
   notebookId?: number;
@@ -64,7 +64,7 @@ export async function runTask(
 }
 
 // ---------------------------------------------------------------------------
-// Refine handler
+// Refine handler — citation-aware RAG summarizer (v1-aligned, c29)
 // ---------------------------------------------------------------------------
 
 async function handleRefine(
@@ -74,77 +74,62 @@ async function handleRefine(
 ): Promise<unknown> {
   const input = payload.refineInput;
   if (!input) throw new Error('refine task missing refineInput payload');
+  if (!payload.notebookId) throw new Error('refine task requires notebookId');
 
+  const trimmedPrompt = input.prompt.trim(); // v1 worker.py:165
+  if (!trimmedPrompt) throw new Error('Refine task requires a prompt');
+
+  const format = input.format ?? 'paragraph';
+  const topK = input.top_k ?? 5;
+  const minScore = input.min_score ?? 0.2;
+
+  // ① Retrieve + citations + context (shared with batch via refine/retrieve.ts)
+  const { retrieveForRefine } = await import('../refine/retrieve.ts');
+  const { citations, context, evidence } = await retrieveForRefine(
+    payload.notebookId,
+    trimmedPrompt,
+    input.source_ids,
+    topK,
+    minScore,
+    signal,
+    limiters,
+  );
+
+  // ② LLM generate (llm_generate stage limiter)
   const releaseLlm = await limiters.llmGenerate.acquire();
+  let answer: string;
   try {
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-
-    let inputText = input.text ?? '';
-    if (!inputText && input.notebook_id && input.source_ids && input.source_ids.length > 0) {
-      const chunkRows = db()
-        .select({ text: chunks.text })
-        .from(chunks)
-        .innerJoin(sources, eq(chunks.sourceId, sources.id))
-        .where(
-          and(
-            eq(sources.notebookId, Number(input.notebook_id)),
-            inArray(chunks.sourceId, input.source_ids),
-          ),
-        )
-        .all();
-      inputText = chunkRows.map((c) => c.text).join('\n\n');
-    }
-    if (!inputText) throw new Error('No text provided for refine');
-
-    const mode = input.mode ?? 'rewrite';
-    const MODE_PROMPTS: Record<string, string> = {
-      expand: `You are an expert writer expanding content. Add detail, examples, and elaboration while preserving the original meaning and tone. Make the text more comprehensive.`,
-      summarize: `You are an expert summarizer. Condense the text to its essential points. Be concise but complete.`,
-      rewrite: `You are an expert editor. Rewrite the text to improve clarity, flow, and readability while preserving the original meaning.`,
-      translate: `You are a professional translator. Translate the text to the target language specified by the user. Preserve formatting, tone, and nuance.`,
-    };
-
-    let systemPrompt = MODE_PROMPTS[mode] ?? MODE_PROMPTS.rewrite;
-    if (input.custom_prompt) systemPrompt = input.custom_prompt;
-
-    let userPrompt: string;
-    switch (mode) {
-      case 'expand':
-        userPrompt = `Expand the following text with more detail and examples:\n\n${inputText}`;
-        break;
-      case 'summarize':
-        userPrompt = `Summarize the following text to its essential points:\n\n${inputText}`;
-        break;
-      case 'translate':
-        userPrompt = `Translate the following text to ${input.target_language || 'English'}:\n\n${inputText}`;
-        break;
-      default:
-        userPrompt = `Rewrite the following text to improve clarity and readability:\n\n${inputText}`;
-        break;
-    }
-
     const { getDefaultChatModel } = await import('../../shared/config.ts');
     const modelConfig = getDefaultChatModel();
     if (!modelConfig) throw new Error('No chat model configured');
     const model = withRetry(await resolveModel(modelConfig));
 
+    const { buildRefineMessages } = await import('../refine/format.ts');
+    const messages = buildRefineMessages(format, trimmedPrompt, context);
+
     const { generateText } = await import('ai');
     const result = await generateText({
       model,
-      system: systemPrompt,
-      prompt: userPrompt,
+      system: messages.system,
+      prompt: messages.user,
       abortSignal: signal,
     });
-
-    return {
-      mode,
-      original_length: inputText.length,
-      refined_length: result.text.length,
-      text: result.text,
-    };
+    answer = result.text;
   } finally {
     releaseLlm();
   }
+
+  // ③ applyFormat
+  const { applyFormat } = await import('../refine/format.ts');
+
+  return {
+    format,
+    ...applyFormat(format, answer, trimmedPrompt, citations),
+    citations,
+    evidence,
+    created_at: new Date().toISOString(),
+  };
 }
 
 // ---------------------------------------------------------------------------

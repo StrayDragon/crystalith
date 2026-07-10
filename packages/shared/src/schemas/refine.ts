@@ -1,32 +1,72 @@
-// Refine schemas — content refinement task queue.
-// Mirrors v1 `features.refine` (paragraph/bullets/structured modes).
+// Refine schemas — citation-aware RAG summarizer (v1-aligned).
+//
+// Mirrors v1 `features/refine/api.py` request/response models:
+//   - three formats: paragraph / bullets / structured
+//   - retrieval via source_ids → citations + evidence
+//   - batch endpoint sharing one retrieval across formats
 import { z } from 'zod';
 
-import { IdSchema, IsoTimestampSchema, JsonMetadataSchema } from './common.js';
+import { CitationSchema, IdSchema, IsoTimestampSchema } from './common.js';
 
-export const RefineModeSchema = z.enum(['paragraph', 'bullets', 'structured']);
-export type RefineMode = z.infer<typeof RefineModeSchema>;
+// ---------------------------------------------------------------------------
+// Format enum + request
+// ---------------------------------------------------------------------------
 
-export const RefineStatusSchema = z.enum(['queued', 'running', 'done', 'error']);
-export type RefineStatus = z.infer<typeof RefineStatusSchema>;
+export const RefineFormatSchema = z.enum(['paragraph', 'bullets', 'structured']);
+export type RefineFormat = z.infer<typeof RefineFormatSchema>;
 
 export const RefineRequestSchema = z.object({
-  notebook_id: IdSchema,
+  prompt: z.string().min(1),
+  format: RefineFormatSchema.default('paragraph'),
   source_ids: z.array(IdSchema).optional(),
-  chunk_ids: z.array(IdSchema).optional(),
-  mode: RefineModeSchema.default('paragraph'),
-  prompt: z.string().optional(),
-  options: JsonMetadataSchema.optional(),
+  top_k: z.number().int().min(1).max(20).default(5),
+  min_score: z.number().min(0).max(1).default(0.2),
 });
 export type RefineRequest = z.infer<typeof RefineRequestSchema>;
 
-export const RefineResultSchema = z.object({
-  task_id: IdSchema,
-  status: RefineStatusSchema,
-  mode: RefineModeSchema,
-  result: z.string().nullable().optional(),
-  error: z.string().nullable().optional(),
-  created_at: IsoTimestampSchema,
-  updated_at: IsoTimestampSchema,
+export const RefineBatchRequestSchema = z.object({
+  prompt: z.string().min(1),
+  formats: z.array(RefineFormatSchema).optional(),
+  source_ids: z.array(IdSchema).optional(),
+  top_k: z.number().int().min(1).max(20).default(5),
+  min_score: z.number().min(0).max(1).default(0.2),
 });
-export type RefineResult = z.infer<typeof RefineResultSchema>;
+export type RefineBatchRequest = z.infer<typeof RefineBatchRequestSchema>;
+
+// ---------------------------------------------------------------------------
+// Response shapes (v1 RefineResponse / StructuredRefine / RefineBatchResponse)
+// ---------------------------------------------------------------------------
+
+export const StructuredRefineSchema = z.object({
+  title: z.string(),
+  bullets: z.array(z.string()),
+  terms: z.array(z.string()),
+  citations: z.array(CitationSchema),
+});
+export type StructuredRefine = z.infer<typeof StructuredRefineSchema>;
+
+export const RefineResponseSchema = z.object({
+  format: RefineFormatSchema,
+  paragraph: z.string().nullable().optional(),
+  bullets: z.array(z.string()).nullable().optional(),
+  structured: StructuredRefineSchema.nullable().optional(),
+  citations: z.array(CitationSchema),
+  evidence: z.boolean(),
+  created_at: IsoTimestampSchema,
+});
+export type RefineResponse = z.infer<typeof RefineResponseSchema>;
+
+export const RefineBatchOutputSchema = z.object({
+  paragraph: z.string().nullable().optional(),
+  bullets: z.array(z.string()).nullable().optional(),
+  structured: StructuredRefineSchema.nullable().optional(),
+});
+export type RefineBatchOutput = z.infer<typeof RefineBatchOutputSchema>;
+
+export const RefineBatchResponseSchema = z.object({
+  outputs: z.record(z.string(), RefineBatchOutputSchema),
+  citations: z.array(CitationSchema),
+  evidence: z.boolean(),
+  created_at: IsoTimestampSchema,
+});
+export type RefineBatchResponse = z.infer<typeof RefineBatchResponseSchema>;
