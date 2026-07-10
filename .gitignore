@@ -344,3 +344,6 @@ data/*
 # Allow workspace refine template data to be tracked.
 !apps/web/src/features/workspace/data/
 !apps/web/src/features/workspace/data/refineTemplates.ts
+
+# Slidev runtime output (generated at repo root)
+slides/
