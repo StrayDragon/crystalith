@@ -283,8 +283,24 @@ export async function retrieveForRefine(
 
   if (!results.length) return { citations: [], context: '', evidence: false };
 
-  // ③ 构建 RetrievedChunk（带完整 text 供 context 用）
-  const retrieved = await hydrateChunks(results); // DB 查 chunk.text + source.filename
+  // ③ ChunkResult 已含 text/source_id/chunk_index（sqlite-vec JOIN chunks）。
+  //    仅需补查 source.filename（citation source_name）+ chunk.metadata（page/paragraph）。
+  const sourceRows = db()
+    .select({ id: sources.id, filename: sources.filename })
+    .from(sources)
+    .where(inArray(sources.id, [...new Set(results.map((r) => r.source_id))]))
+    .all();
+  const chunkRows = db()
+    .select({ id: chunks.id, metadata: chunks.metadata })
+    .from(chunks)
+    .where(
+      inArray(
+        chunks.id,
+        results.map((r) => r.chunk_id),
+      ),
+    )
+    .all();
+  // 合并：results + sourceMap[filename] + chunkMap[metadata] → retrieved
 
   // ④ citations（先 strip 再 slice 200 + page/paragraph 提取）
   const citations = retrieved.map((c) => ({
