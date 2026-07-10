@@ -25,8 +25,12 @@ export interface StreamQaOptions {
   citationsResolver?: () => Citation[] | Promise<Citation[]>;
   /** Confidence score in [0,1] computed from evidence (attached to done). */
   confidenceResolver?: () => number | Promise<number> | undefined;
-  /** Reason for no evidence (attached to done when no retrieval results). */
-  noEvidenceReason?: string;
+  /**
+   * Async callback that receives resolved citations and returns a no-evidence
+   * reason string (or undefined). Called after citationsResolver for dynamic
+   * detection (v1 5-reason parity).
+   */
+  noEvidenceResolver?: (citations: Citation[]) => Promise<string | undefined> | string | undefined;
   /**
    * Optional sink for tool-result events emitted during the fullStream loop.
    * Each tool call's result is forwarded here so the caller can accumulate
@@ -104,8 +108,9 @@ export function streamQaResponse(opts: StreamQaOptions): Response {
 
         const citations = opts.citationsResolver ? await opts.citationsResolver() : [];
 
-        const noEvidence =
-          opts.noEvidenceReason && citations.length === 0 ? opts.noEvidenceReason : undefined;
+        const noEvidence = opts.noEvidenceResolver
+          ? await opts.noEvidenceResolver(citations)
+          : undefined;
 
         emit('done', {
           message_id: opts.messageId ?? null,

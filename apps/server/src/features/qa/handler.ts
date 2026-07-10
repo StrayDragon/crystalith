@@ -26,6 +26,21 @@ export const NO_VECTOR_INDEX_ANSWER =
   '未在向量库中检索到相关内容。若刚切换运行环境，请对已导入来源重新索引。';
 export const SOURCES_NOT_READY_ANSWER = '所选来源尚未完成索引或内容为空，请等待来源状态变为就绪';
 
+export type NoEvidenceReason =
+  | 'no_sources'
+  | 'embedding_empty'
+  | 'no_vector_hits'
+  | 'no_valid_chunks'
+  | 'low_similarity';
+
+/** Localized answers for each no-evidence reason (mirrors v1 service.py:62-69). */
+export function noEvidenceAnswerForReason(reason: NoEvidenceReason | null): string {
+  if (reason === 'no_sources') return NO_SOURCES_ANSWER;
+  if (reason === 'no_vector_hits') return NO_VECTOR_INDEX_ANSWER;
+  if (reason === 'no_valid_chunks') return SOURCES_NOT_READY_ANSWER;
+  return NO_EVIDENCE_ANSWER;
+}
+
 /** Map NoEvidenceReason enum to a user-visible Chinese hint. */
 export function noEvidenceHint(reason?: string): string {
   switch (reason) {
@@ -172,11 +187,15 @@ export function streamQa(opts: QaHandlerOptions): Response {
   // Accumulator populated by the fullStream tool-result sink. The model
   // may call retrieveSources multiple times (multi-step); we union results.
   const retrievedChunks: RetrievedChunk[] = [];
+  let retrievalCalled = false;
   const topK = opts.topK ?? 5;
 
   const tools = {
     retrieveSources: retrieveSourcesTool(opts.notebookId, opts.strategyId, topK),
   };
+
+  // Pre-flight: count sources for no-evidence detection in noEvidenceResolver.
+  const sourceCount = countNotebookSources(opts.notebookId);
 
   return streamQaResponse({
     model: opts.model,
@@ -188,6 +207,7 @@ export function streamQa(opts: QaHandlerOptions): Response {
     // Capture each tool call's result so citations reflect real retrieval.
     onToolResult: (toolName, result) => {
       if (toolName === 'retrieveSources' && Array.isArray(result)) {
+        retrievalCalled = true;
         for (const r of result) {
           if (r && typeof r === 'object' && typeof (r as RetrievedChunk).chunk_id === 'number') {
             retrievedChunks.push(r as RetrievedChunk);
@@ -200,8 +220,18 @@ export function streamQa(opts: QaHandlerOptions): Response {
       const citations = await resolveCitations(retrievedChunks);
       return computeConfidence(citations, countNotebookSources(opts.notebookId), topK);
     },
-    // Detect no-evidence before streaming starts (pre-flight source check).
-    noEvidenceReason: countNotebookSources(opts.notebookId) === 0 ? 'no_sources' : undefined,
+    noEvidenceResolver: async (citations) => {
+      // Pre-flight: no sources at all
+      if (sourceCount === 0) return 'no_sources';
+      // Model didn't call retrieveSources (no evidence attempted)
+      if (citations.length === 0 && !retrievalCalled) return 'no_vector_hits';
+      // retrieveSources returned nothing
+      if (citations.length === 0 && retrievalCalled) return 'no_vector_hits';
+      // All results have very low similarity
+      const maxScore = Math.max(...citations.map((c) => c.score ?? 0));
+      if (maxScore < 0.3) return 'low_similarity';
+      return undefined;
+    },
     onMessageSettled: opts.onMessageSettled,
   });
 }
