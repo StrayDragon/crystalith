@@ -1,0 +1,9 @@
+kind: llman.sdd.delta
+ops[3]{op,req_id,title,statement,from,to,name}:
+  add_requirement,qa-retrieve-before-generate,"QA MUST determine evidence deterministically before generation","QA 管线 MUST 在进入 LLM 生成之前先通过确定性检索阶段判断是否有足够证据，而非让 LLM 自主决定是否检索",null,null,null
+  add_requirement,qa-no-evidence-reasons,"QA MUST produce 5 distinct no-evidence reasons","当 evidence 为 false 时系统 MUST 从 5 种 reason 中确定一个并返回对应本地化回答：no_sources / embedding_empty / no_vector_hits / no_valid_chunks / low_similarity",null,null,null
+  add_requirement,qa-confidence-score,"QA MUST compute and return confidence score","当 evidence 为 true 时系统 MUST 计算并返回 confidence 置信度分数",null,null,null
+op_scenarios[3]{req_id,id,given,when,then}:
+  qa-retrieve-before-generate,no-sources-case,"notebook 中无任何 source","用户提问","系统 SHALL 返回 evidence=false 且 reason=no_sources 的标准化回答，不进入 LLM 生成"
+  qa-no-evidence-reasons,low-similarity-case,"检索结果 similarity_avg 低于阈值","用户提问","系统 SHALL 返回 evidence=false 且 reason=low_similarity 的标准化回答"
+  qa-confidence-score,high-evidence-case,"检索返回多个高相似度 chunk 跨越多 source","用户提问","系统 SHALL 返回 evidence=true 且 confidence 为 0-1 分数"

@@ -1,0 +1,7 @@
+kind: llman.sdd.delta
+ops[2]{op,req_id,title,statement,from,to,name}:
+  add_requirement,outputs-citation-mapping,"Outputs MUST map LLM citation indices to full citation objects","outputs 生成管线 MUST 将 LLM 输出的数字 citation 索引映射回完整的 Citation 对象，而非附加全部检索 chunk",null,null,null
+  add_requirement,outputs-postprocess,"Outputs MUST run postprocess and fallback","outputs 生成管线 MUST 在生成后运行 postprocess（空内容 fallback + citation 索引清理），并在生成失败时产出类型化 fallback 内容",null,null,null
+op_scenarios[2]{req_id,id,given,when,then}:
+  outputs-citation-mapping,llm-selects-subset,"LLM 输出 citations 为 [1,3]","管线映射 citation","系统 SHALL 只附加第 1 和第 3 个检索 chunk 的 citation 而非全部"
+  outputs-postprocess,generation-fails,"LLM 生成抛出异常","postprocess 阶段处理","系统 SHALL 产出类型化 fallback 内容而非空结果"

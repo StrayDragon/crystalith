@@ -94,6 +94,10 @@
         "vitest": "^3.2.4",
       },
     },
+    "packages/crystalith-slidev": {
+      "name": "@crystalith/slidev",
+      "version": "0.1.0",
+    },
     "packages/shared": {
       "name": "@crystalith/shared",
       "version": "0.1.0",
@@ -194,6 +198,8 @@
     "@crystalith/server": ["@crystalith/server@workspace:apps/server"],
 
     "@crystalith/shared": ["@crystalith/shared@workspace:packages/shared"],
+
+    "@crystalith/slidev": ["@crystalith/slidev@workspace:packages/crystalith-slidev"],
 
     "@csstools/color-helpers": ["@csstools/color-helpers@6.1.0", "", {}, "sha512-064IFJdjTfUqnjpCVpMOdbr8FLQBhinbZj6yRv2An2E41O/pLEXqfFRWqGq/SxlE5PEUYTlvWsG2r8MswAVvkg=="],
 
