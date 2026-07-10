@@ -9,13 +9,14 @@
 
 ## Workstream B: toolApproval HITL + research parity 补全
 
-- [ ] `features/research/agent.ts`: waitForApproval 替换为 ToolLoopAgent + toolApproval
-- [ ] `features/research/router.ts`: SSE 升级为 fullStream 事件转发
-- [ ] `features/research/router.ts`: 新增 `POST /research/:id/modify`（补 HITL modify 动作）
-- [ ] `POST /research/:id/resume`: 读 `aggregatedResults`+`currentIteration` 重建 ResearchState（当前从空结果重跑，对照 v1 `_build_state_from_session`）
-- [ ] `POST /research/:id/export`: report → chunk + embed + vector + source 创建（当前只读 stub，对照 v1 `api.py:1245-1469`）
-- [ ] 移除 Track A 临时锁（acquireLock/releaseLock）——切事件驱动后不再需要
-- [ ] 前端: research UI 适配 tool-approval-request 事件
+- [x] `features/research/agent.ts`: runResearchCore shared core + runResearchFromState (resume reads currentIteration + aggregatedResults from DB, c24-B)
+- [x] `features/research/router.ts`: `POST /research/:id/modify` (accept modified plan, record step, resume — HITL modify action, c24-B)
+- [x] `POST /research/:id/resume`: uses runResearchFromState, reads aggregatedResults+currentIteration to rebuild ResearchState (c24-B)
+- [x] `POST /research/:id/export`: report → chunkText → insert chunks → embedBatch → insertChunkVector → mark source ready → bump epochs (c24-B, v1 api.py:1245-1469)
+- [ ] `features/research/agent.ts`: waitForApproval 替换为 ToolLoopAgent + toolApproval（→ 延迟到 c13 之后，v2 改进项非 v1 对齐）
+- [ ] `features/research/router.ts`: SSE 升级为 fullStream 事件转发（→ 延迟，同上）
+- [ ] 移除 Track A 临时锁（acquireLock/releaseLock）→ 切事件驱动后移除（→ 延迟，同上）
+- [ ] 前端: research UI 适配 tool-approval-request 事件（→ 延迟到 c35 前端迁移）
 - [ ] 验证: 研究全流程（plan→approve→search→report）无需 DB polling
 
 ## Workstream C: 集成测试
