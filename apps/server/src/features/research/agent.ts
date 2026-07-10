@@ -177,11 +177,10 @@ async function searxngFetch(
   query: string,
   signal: AbortSignal,
 ): Promise<Omit<ResearchResult, 'query'>[]> {
-  const { config } = await import('../../shared/config.ts');
-  const raw = config().raw;
-  const search = raw.search_engine as Record<string, unknown> | undefined;
-  const host = String(search?.searxng_host ?? process.env.SEARXNG_HOST ?? 'http://localhost:8080');
-  const timeout = Number(search?.timeout ?? 10_000);
+  const { getSearxngHost, getSearchSettings } = await import('../../shared/config.ts');
+  const host = getSearxngHost() || 'http://localhost:8080';
+  const { max_results } = getSearchSettings().searxng;
+  const timeout = 10_000;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
@@ -194,7 +193,7 @@ async function searxngFetch(
     const data = (await res.json()) as {
       results?: Array<{ title: string; url: string; content: string; engine: string }>;
     };
-    return (data.results ?? []).map((r) => ({
+    return (data.results ?? []).slice(0, max_results).map((r) => ({
       title: r.title,
       url: r.url,
       snippet: r.content,

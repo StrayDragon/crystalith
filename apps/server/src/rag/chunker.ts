@@ -2,8 +2,11 @@
 //
 // Splits text on paragraph boundaries (double newline). Long paragraphs are
 // further split on sentence boundaries with n-char overlap to preserve context
-// across chunk boundaries. Defaults (800/100) align with v1's sliding-window
-// chunker (chunker.py) for retrieval parity.
+// across chunk boundaries. The chunk_size default is read from the
+// `embedding.chunk_size` config section (v1 default 512); overlap is 20% of
+// chunk size. Callers can override per-call.
+import { getEmbeddingSettings } from '../shared/config.ts';
+
 export interface ChunkResult {
   text: string;
   index: number;
@@ -14,9 +17,15 @@ export interface ChunkerConfig {
   overlap: number;
 }
 
+/** Build chunker config from `embedding.chunk_size` config (c40). */
+function resolveChunkerConfig(): ChunkerConfig {
+  const { chunk_size } = getEmbeddingSettings();
+  return { maxLen: chunk_size, overlap: Math.floor(chunk_size * 0.2) };
+}
+
 export const DEFAULT_CHUNKER_CONFIG: ChunkerConfig = {
-  maxLen: 800,
-  overlap: 100,
+  maxLen: 512,
+  overlap: 102,
 };
 
 /**
@@ -24,9 +33,9 @@ export const DEFAULT_CHUNKER_CONFIG: ChunkerConfig = {
  */
 export function chunkText(
   text: string,
-  config: ChunkerConfig = DEFAULT_CHUNKER_CONFIG,
+  config?: ChunkerConfig,
 ): ChunkResult[] {
-  const { maxLen, overlap } = config;
+  const { maxLen, overlap } = config ?? resolveChunkerConfig();
   const paragraphs = text
     .split(/\n\n+/)
     .map((p) => p.trim())

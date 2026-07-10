@@ -48,4 +48,10 @@ export interface RetrieveOptions {
   maxPerSource?: number;
   /** When set, skip search and return these chunks directly (reuse path). */
   chunkIds?: number[];
+  /**
+   * Restrict retrieval to these source ids (c40 — v1 source-scoping).
+   * When set, the vector search is over-fetched then post-filtered to these
+   * sources, since sqlite-vec vec0 cannot express source_id IN (...) in KNN.
+   */
+  sourceIds?: number[];
 }

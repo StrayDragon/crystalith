@@ -9,6 +9,7 @@ import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
+import { getConcurrencySettings } from '../../shared/config.ts';
 import { Semaphore } from '../../shared/semaphore.ts';
 
 // ---------------------------------------------------------------------------
@@ -22,10 +23,11 @@ export interface StageLimiters {
 }
 
 export function createStageLimiters(): StageLimiters {
+  const { embedding, vector_search, llm_generate } = getConcurrencySettings();
   return {
-    embedding: new Semaphore(2),
-    vectorSearch: new Semaphore(4),
-    llmGenerate: new Semaphore(3),
+    embedding: new Semaphore(embedding),
+    vectorSearch: new Semaphore(vector_search),
+    llmGenerate: new Semaphore(llm_generate),
   };
 }
 
