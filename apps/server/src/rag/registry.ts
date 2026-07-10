@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 
 import { db } from '../db/index.ts';
-import type { RAGStrategy } from './types.ts';
+import type { RAGStrategy, RetrieveOptions } from './types.ts';
 
 // ---------------------------------------------------------------------------
 // DB schema for strategy configuration (added during Drizzle migration)
@@ -113,7 +113,7 @@ class RAGRegistry {
     strategyId: string,
     notebookId: number,
     query: string,
-    opts?: { topK?: number; minScore?: number },
+    opts?: RetrieveOptions,
   ) {
     const strategy = this.get(strategyId);
     return strategy.retrieve(query, notebookId, opts);
