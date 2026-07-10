@@ -39,7 +39,7 @@
 | c32 | studio-persist         | ✅ DONE (本会话)                                                                 |
 | c33 | source-extras          | ✅ DONE (本会话)                                                                 |
 | c34 | sessions-convert       | ✅ DONE (本会话)                                                                 |
-| c35 | frontend-migration     | 🔄 WIP (Phase 7a-d: chat, research, analysis, tasks, commands, citations done; typecheck 207→84 ↓59%) |
+| c35 | frontend-migration     | 🔄 WIP (Phase 7a-e: 17 domains migrated; 4 large files remain: useSources, SlidesStudio, SourceConnectors, type-only imports. Typecheck: 207→25 ↓88%) |
 | c13 | distribution           | ⏸️ BLOCKED (blocked by c35) 🔒 需要人工授权                                      |
 | c14 | cleanup-delivery       | ⏸️ BLOCKED (blocked by c13) 🔒 需要人工授权                                      |
 
@@ -131,8 +131,9 @@
 
 **Phase 7**: c35 前段迁移（v2.0 发布前最终功能工作）
 
-**进度**: Phase 7a-d 完成。chat/QA, research, analysis, tasks, commands, citations 已迁至 eden treaty。
-Typecheck: 207→84 (↓59%)。剩余: useSources, useRefine, SlidesStudio 仍需迁移。
+**进度**: Phase 7a-e 完成。17 个功能域已迁至 eden treaty。
+Typecheck: 207→25 (↓88%, 25 errors all pre-existing: SSE shapes, module, type drift)。
+剩余: useSources, SlidesStudioDialog, SourceConnectorsDialog (4个大文件)。
 
 **前置**: GAP-BOARD 15/16 项已清零 ✅。后端行为已完整对齐 v1。
 
@@ -176,7 +177,7 @@ Typecheck: 207→84 (↓59%)。剩余: useSources, useRefine, SlidesStudio 仍�
 仅剩 2 项：
 
 - **G14** (P2): source-connectors sync → c13 阶段完成（Tauri native 文件系统集成时）
-- **G16** (P0): 前端 ~87% 迁移 → Phase 7 c35 🔄 WIP (chat/research/analysis/citations 已迁)
+- **G16** (P0): 前端 API 迁移 17/21 域完成, typecheck 207→25 (↓88%), 剩余 4 大文件
 
 | 上次 Agent | pi-agent (P0/P1/P2 全部清零: 10 changes 本会话 + 3 from prior agent) |
 | 上次操作 | **GAP-BOARD 终结**: 本会话完成 c24-B(WS-B) / c25(SSRF) / c26(citation-context) / c27(outputs-RAG) / c31(QA-noevidence) / c32(studio) / c33(sources-extras) / c34(sessions) / c35++ 进度更新。加上前 agent 已完成的 c28/c29/c30，**GAP-BOARD 16 项中 15 项已清零**。仅剩 G14(connectors P2) + G16(前端 P0)。202 pass / 0 fail。 |
