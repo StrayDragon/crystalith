@@ -1,28 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
-import {
-  assignTagToSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesPost as assignTagToSources,
-  batchDeleteSourcesV1NotebooksNotebookIdSourcesBatchDelete as deleteSources,
-  batchReembedSourcesV1NotebooksNotebookIdSourcesBatchReEmbedPost as batchReembedSources,
-  convertOutputToSourceV1NotebooksNotebookIdOutputsOutputIdConvertToSourcePost as convertOutputToSource,
-  convertSourceQaToSourceV1NotebooksNotebookIdSourcesSourceIdQaConvertToSourcePost as convertSourceQAToSource,
-  createSourceFromUrlV1NotebooksNotebookIdSourcesFromUrlPost as addSourceFromUrl,
-  createSourceTagV1NotebooksNotebookIdSourcesTagsPost as createSourceTag,
-  deleteSourceV1NotebooksNotebookIdSourcesSourceIdDelete as deleteSource,
-  deleteSourceTagV1NotebooksNotebookIdSourcesTagsTagIdDelete as deleteSourceTag,
-  listExtractorsV1NotebooksNotebookIdSourcesExtractorsGet as listExtractors,
-  patchExtractorsPolicyV1NotebooksNotebookIdSourcesExtractorsPatch as patchExtractorsPolicy,
-  listSourceTagsV1NotebooksNotebookIdSourcesTagsGet as listSourceTags,
-  listSourcesV1NotebooksNotebookIdSourcesGet as listSources,
-  reembedSourceV1NotebooksNotebookIdSourcesSourceIdReEmbedPost as reembedSource,
-  removeTagFromSourcesV1NotebooksNotebookIdSourcesTagsTagIdSourcesDelete as removeTagFromSources,
-  searchSourcesV1NotebooksNotebookIdSourcesSearchPost as searchSources,
-  updateSourceTagV1NotebooksNotebookIdSourcesTagsTagIdPatch as updateSourceTag,
-  uploadSourceV1NotebooksNotebookIdSourcesPost as uploadSource,
-  type QaMessage,
-  type SourceTagRead,
-} from '../../../../api/generated';
+import { api } from '../../../../api/eden';
+import type { QaMessage, SourceTagRead } from '../../../../api/generated';
 import type {
   ExtractorInfoResponse as ExtractorInfo,
   ExtractorsListResponse,
@@ -30,7 +10,6 @@ import type {
   PatchNotebookExtractorsPolicyRequest,
   SourceFromUrlMode,
 } from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
 import { toast } from '../../../../shared/toast';
 import type { AsyncStatus } from '../../../../shared/types';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
@@ -132,19 +111,13 @@ export function useSources() {
           sourceListQuery.tag ?? '',
         ]
       : null,
-    () =>
-      unwrapData(
-        listSources<true>({
-          path: { notebook_id: activeNotebookId ?? 0 },
-          query: sourceListQuery,
-        }),
-      ),
+    () => api.v2.notebooks({ nid: activeNotebookId! }).sources.get({ query: sourceListQuery as any } as any).then(r => { if (r.error) throw r.error; return r.data ?? []; }),
     { revalidateOnFocus: false },
   );
 
   const { data: tagsData, mutate: mutateTags } = useSWR<SourceTagRead[]>(
     activeNotebookId && isConnected ? ['workspace/source-tags', activeNotebookId] : null,
-    () => unwrapData(listSourceTags<true>({ path: { notebook_id: activeNotebookId ?? 0 } })),
+    () => api.v2.notebooks({ nid: activeNotebookId! }).sources.tags.get().then(r => { if (r.error) throw r.error; return (r.data ?? []) as any; }),
     { revalidateOnFocus: false },
   );
 
@@ -269,12 +242,7 @@ export function useSources() {
           );
           try {
             // eslint-disable-next-line no-await-in-loop -- Upload queue + dedup confirmation requires serial execution.
-            await unwrapData(
-              uploadSource<true>({
-                path: { notebook_id: activeNotebookId },
-                body: { file },
-              }),
-            );
+            await api.v2.sources.upload.post({ file } as any).then(r => { if (r.error) throw r.error; return r.data as any; });
             successCount += 1;
             setUploadQueue((prev) =>
               prev.map((item) => (item.id === queueId ? { ...item, status: 'success' } : item)),
@@ -299,13 +267,7 @@ export function useSources() {
               const dedup_action = reuse ? 'reuse' : 'create_new';
               try {
                 // eslint-disable-next-line no-await-in-loop -- Keep per-file UI updates and dedup flow serial.
-                await unwrapData(
-                  uploadSource<true>({
-                    path: { notebook_id: activeNotebookId },
-                    query: { dedup_action },
-                    body: { file },
-                  }),
-                );
+                await api.v2.sources.upload.post({ file } as any, { query: { dedup_action } } as any).then(r => { if (r.error) throw r.error; return r.data as any; });
                 successCount += 1;
                 setUploadQueue((prev) =>
                   prev.map((item) =>
@@ -412,12 +374,8 @@ export function useSources() {
       setSearchState('loading');
 
       try {
-        const response = await unwrapData(
-          searchSources<true>({
-            path: { notebook_id: activeNotebookId },
-            body: { query: trimmed, engine, mode },
-          }),
-        );
+        const { data: response, error: srErr } = await api.v2.notebooks({ nid: activeNotebookId }).sources.search.post({ query: trimmed, engine, mode } as any) as any;
+        if (srErr) throw srErr;
         const results = response.results ?? [];
         let notice = '';
         if (response.message) {
@@ -478,12 +436,8 @@ export function useSources() {
       }
       setRemoveState('loading');
       try {
-        await unwrapData(
-          deleteSources<true>({
-            path: { notebook_id: activeNotebookId },
-            body: { source_ids: sourceIds },
-          }),
-        );
+        const { error: delBatchErr } = await api.v2.notebooks({ nid: activeNotebookId }).sources.batch.delete.post({ source_ids: sourceIds } as any) as any;
+        if (delBatchErr) throw delBatchErr;
         await mutate();
         toast.success('来源删除成功');
         return true;
@@ -509,11 +463,7 @@ export function useSources() {
       }
       setRemoveState('loading');
       try {
-        await unwrapData(
-          deleteSource<true>({
-            path: { notebook_id: activeNotebookId, source_id: sourceId },
-          }),
-        );
+        await (api.v2.sources({ id: sourceId }).delete() as any).then((r: any) => { if (r.error) throw r.error; return r.data as any; });
         await mutate();
         toast.success('来源删除成功');
         return true;
@@ -541,12 +491,8 @@ export function useSources() {
 
       setBatchReembedState('loading');
       try {
-        const result = await unwrapData(
-          batchReembedSources<true>({
-            path: { notebook_id: activeNotebookId },
-            body: { source_ids: sourceIds },
-          }),
-        );
+        const { data: result, error: breErr } = await (api.v2.notebooks({ nid: activeNotebookId }) as any).sources.batch['re-embed'].post({ source_ids: sourceIds } as any);
+        if (breErr) throw breErr;
         await mutate();
         if (result.failed_count > 0) {
           toast.warning(`部分来源重新嵌入失败（${result.failed_count} 个）。`);
@@ -569,12 +515,8 @@ export function useSources() {
       if (!isConnected || !activeNotebookId) return null;
       setTagMutationState('loading');
       try {
-        const tag = await unwrapData(
-          createSourceTag<true>({
-            path: { notebook_id: activeNotebookId },
-            body: { name },
-          }),
-        );
+        const { data: tag, error: ctErr } = await api.v2.notebooks({ nid: activeNotebookId }).sources.tags.post({ name } as any) as any;
+        if (ctErr) throw ctErr;
         await mutateTags();
         await mutate();
         toast.success('标签创建成功');
@@ -594,12 +536,8 @@ export function useSources() {
       if (!isConnected || !activeNotebookId) return null;
       setTagMutationState('loading');
       try {
-        const tag = await unwrapData(
-          updateSourceTag<true>({
-            path: { notebook_id: activeNotebookId, tag_id: tagId },
-            body: { name },
-          }),
-        );
+        const { data: tag, error: utErr } = await api.v2.notebooks({ nid: activeNotebookId }).sources.tags({ tid: tagId }).patch({ name } as any) as any;
+        if (utErr) throw utErr;
         await mutateTags();
         await mutate();
         toast.success('标签已更新');
@@ -619,11 +557,8 @@ export function useSources() {
       if (!isConnected || !activeNotebookId) return false;
       setTagMutationState('loading');
       try {
-        await unwrapData(
-          deleteSourceTag<true>({
-            path: { notebook_id: activeNotebookId, tag_id: tagId },
-          }),
-        );
+        const { error: dtErr } = await api.v2.notebooks({ nid: activeNotebookId }).sources.tags({ tid: tagId }).delete() as any;
+        if (dtErr) throw dtErr;
         await mutateTags();
         await mutate();
         if (tagFilter && tagsData?.some((item) => item.id === tagId && item.name === tagFilter)) {
@@ -646,12 +581,8 @@ export function useSources() {
       if (!isConnected || !activeNotebookId || !sourceIds.length) return false;
       setTagMutationState('loading');
       try {
-        await unwrapData(
-          assignTagToSources<true>({
-            path: { notebook_id: activeNotebookId, tag_id: tagId },
-            body: { source_ids: sourceIds },
-          }),
-        );
+        const { error: atErr } = await (api.v2.notebooks({ nid: activeNotebookId }).sources.tags({ tid: tagId }) as any).sources.post({ source_ids: sourceIds } as any);
+        if (atErr) throw atErr;
         await mutateTags();
         await mutate();
         toast.success('标签已分配');
@@ -671,12 +602,8 @@ export function useSources() {
       if (!isConnected || !activeNotebookId || !sourceIds.length) return false;
       setTagMutationState('loading');
       try {
-        await unwrapData(
-          removeTagFromSources<true>({
-            path: { notebook_id: activeNotebookId, tag_id: tagId },
-            body: { source_ids: sourceIds },
-          }),
-        );
+        const { error: rtErr } = await (api.v2.notebooks({ nid: activeNotebookId }) as any).sources.tags({ tid: tagId }).sources.delete({ source_ids: sourceIds } as any);
+        if (rtErr) throw rtErr;
         await mutateTags();
         await mutate();
         toast.success('标签已移除');
@@ -699,11 +626,8 @@ export function useSources() {
         return;
       }
       try {
-        const result = await unwrapData(
-          convertOutputToSource<true>({
-            path: { notebook_id: activeNotebookId, output_id: outputId },
-          }),
-        );
+        const { data: result, error: coErr } = await api.v2.outputs({ id: outputId })['convert-to-source'].post() as any;
+        if (coErr) throw coErr;
         await mutate();
         toast.success(`已转换为来源：${result.filename}（${result.chunk_count} 个分块）`);
       } catch (error) {
@@ -727,19 +651,9 @@ export function useSources() {
         throw new Error('请先创建笔记本');
       }
       const call = async (dedup_action?: 'reuse' | 'create_new') => {
-        const request = unwrapData(
-          addSourceFromUrl<true>({
-            path: { notebook_id: activeNotebookId },
-            query: dedup_action ? { dedup_action } : undefined,
-            body: {
-              url,
-              mode,
-              title: options?.title,
-              snippet: options?.snippet,
-              extractor: options?.extractor,
-            },
-          }),
-        );
+        const q = dedup_action ? { dedup_action } : undefined;
+        const body = { url, mode, title: options?.title, snippet: options?.snippet, extractor: options?.extractor };
+        const request = (async () => { const r = await (api.v2.notebooks({ nid: activeNotebookId }) as any).sources['from-url'].post(body as any, q ? { query: q } as any : undefined) as any; if (r.error) throw r.error; return r.data as any; })();
         if (mode === 'fetch') {
           return withTimeout(
             request,
@@ -786,7 +700,7 @@ export function useSources() {
     mutate: mutateExtractors,
   } = useSWR<ExtractorsListResponse>(
     activeNotebookId && isConnected ? ['workspace/extractors', activeNotebookId] : null,
-    () => unwrapData(listExtractors<true>({ path: { notebook_id: activeNotebookId ?? 0 } })),
+    () => api.v2.notebooks({ nid: activeNotebookId! }).extractors.get().then(r => { if (r.error) throw r.error; return r.data as any; }),
     { revalidateOnFocus: false },
   );
 
@@ -820,12 +734,8 @@ export function useSources() {
       if (!activeNotebookId) {
         throw new Error('请先创建笔记本');
       }
-      await unwrapData(
-        patchExtractorsPolicy<true>({
-          path: { notebook_id: activeNotebookId },
-          body: patch,
-        }),
-      );
+      const { error: peErr } = await api.v2.notebooks({ nid: activeNotebookId }).extractors.patch(patch as any) as any;
+      if (peErr) throw peErr;
       await mutateExtractors();
     },
     [activeNotebookId, isConnected, mutateExtractors],
@@ -845,12 +755,8 @@ export function useSources() {
       if (!activeNotebookId) {
         throw new Error('请先创建笔记本');
       }
-      const result = await unwrapData(
-        convertSourceQAToSource<true>({
-          path: { notebook_id: activeNotebookId, source_id: sourceId },
-          body: { messages },
-        }),
-      );
+      const { data: result, error: csErr } = await api.v2.notebooks({ nid: activeNotebookId }).sources({ sid: sourceId })["qa-to-source"].post({ messages } as any) as any;
+        if (csErr) throw csErr;
       await mutate();
       return result;
     },
@@ -868,11 +774,8 @@ export function useSources() {
         return;
       }
       try {
-        await unwrapData(
-          reembedSource<true>({
-            path: { notebook_id: activeNotebookId, source_id: sourceId },
-          }),
-        );
+        const { error: reErr } = await api.v2.sources({ id: sourceId })['re-embed'].post() as any;
+        if (reErr) throw reErr;
         toast.success('已重新嵌入来源');
         await mutate();
       } catch (error) {

@@ -303,7 +303,7 @@ export default function SourceDetailDialog({
         id: `assistant-${Date.now()}`,
         role: 'assistant',
         content: response.answer,
-        timestamp: new Date(response.created_at),
+        timestamp: new Date((response as any).created_at || Date.now()),
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
