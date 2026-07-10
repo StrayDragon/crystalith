@@ -1,9 +1,9 @@
 import type { LanguageModelV4 } from '@ai-sdk/provider';
-// Output pipeline — fetch chunks → build context → generateObject → persist.
+// Output pipeline — RAG retrieval → build context → generateObject → persist.
 //
 // Single entry point for all output generation. Orchestrates:
-//  1. Fetch chunk texts by IDs (or all notebook chunks if none specified)
-//  2. Build context string
+//  1. Retrieve chunks: explicit chunk_ids OR RAG semantic search (c27)
+//  2. Build context string from retrieved chunks
 //  3. Call generateObject with schema
 //  4. Map citations (chunk_id → source)
 //  5. Persist to outputs table
@@ -11,16 +11,27 @@ import { eq, inArray } from 'drizzle-orm';
 
 import { db } from '../../db/index.ts';
 import { chunks, outputs, sources } from '../../db/schema.ts';
-import { generateOutputByType, type ToolOutputType } from './generator.ts';
+import type { ChunkResult } from '../../rag/types.ts';
+import { generateOutputByType, buildOutputQuery, type ToolOutputType } from './generator.ts';
+
+export type GenerationPreference = 'quality' | 'speed';
+
+/** Maps preference to topK for RAG retrieval. */
+const PREF_TOPK: Record<GenerationPreference, number> = {
+  quality: 10,
+  speed: 3,
+};
 
 export interface PipelineInput {
   model: LanguageModelV4;
   notebookId: number;
   type: ToolOutputType;
-  /** Optional specific chunk IDs to use. If empty, uses all notebook chunks. */
+  /** Optional specific chunk IDs. When set, skips RAG retrieval. */
   chunkIds?: number[];
   /** Custom prompt override. */
   prompt?: string;
+  /** Retrieval preference: quality (topK=10) or speed (topK=3). Default: quality. */
+  preference?: GenerationPreference;
 }
 
 export interface PipelineResult {
@@ -28,16 +39,33 @@ export interface PipelineResult {
   type: string;
   content: unknown;
   chunkCount: number;
+  citations: Array<{
+    source_id: number;
+    chunk_id: number;
+    snippet: string;
+    score: number;
+  }>;
 }
 
 /**
  * Run the full output generation pipeline.
+ *
+ * Two retrieval paths:
+ *  - Explicit chunkIds → direct fetch (unchanged, for manual selection)
+ *  - No chunkIds → RAG semantic search via embed strategy (c27, v1 parity)
  */
 export async function runOutputPipeline(input: PipelineInput): Promise<PipelineResult> {
-  // 1. Fetch chunks
-  let chunkRows: { id: number; text: string; sourceId: number; chunkIndex: number }[];
+  let chunkRows: Array<{
+    id: number;
+    text: string;
+    sourceId: number;
+    chunkIndex: number;
+    score: number;
+  }>;
+
   if (input.chunkIds && input.chunkIds.length > 0) {
-    chunkRows = db()
+    // Explicit selection — direct fetch (unchanged)
+    const rows = db()
       .select({
         id: chunks.id,
         text: chunks.text,
@@ -47,35 +75,93 @@ export async function runOutputPipeline(input: PipelineInput): Promise<PipelineR
       .from(chunks)
       .where(inArray(chunks.id, input.chunkIds))
       .all();
+    chunkRows = rows.map((r) => ({ ...r, score: 1 }));
   } else {
-    // All chunks for this notebook
-    chunkRows = db()
-      .select({
-        id: chunks.id,
-        text: chunks.text,
-        sourceId: chunks.sourceId,
-        chunkIndex: chunks.chunkIndex,
-      })
-      .from(chunks)
-      .innerJoin(sources, eq(chunks.sourceId, sources.id))
-      .where(eq(sources.notebookId, input.notebookId))
-      .all();
+    // Semantic search via RAG registry (c27)
+    const topK = PREF_TOPK[input.preference ?? 'quality'];
+    const query = buildOutputQuery(input.type, input.prompt);
+    const { ragRegistry } = await import('../../rag/registry.ts');
+
+    let searchResults: ChunkResult[];
+    try {
+      searchResults = await ragRegistry.retrieveWith('embed', input.notebookId, query, { topK });
+    } catch {
+      // Fallback: if RAG is unavailable (no vectors), get all chunks
+      const rows = db()
+        .select({
+          id: chunks.id,
+          text: chunks.text,
+          sourceId: chunks.sourceId,
+          chunkIndex: chunks.chunkIndex,
+        })
+        .from(chunks)
+        .innerJoin(sources, eq(chunks.sourceId, sources.id))
+        .where(eq(sources.notebookId, input.notebookId))
+        .all();
+      chunkRows = rows.map((r) => ({ ...r, score: 0 }));
+      return finishPipeline(input, chunkRows);
+    }
+
+    if (searchResults.length === 0) {
+      // No results from RAG — produce empty output
+      chunkRows = [];
+    } else {
+      chunkRows = searchResults.map((r) => ({
+        id: r.chunk_id,
+        text: r.text,
+        sourceId: r.source_id,
+        chunkIndex: r.chunk_index,
+        score: r.score,
+      }));
+    }
   }
 
-  // 2. Build context
-  const context = chunkRows.map((c) => `[${c.chunkIndex}] ${c.text}`).join('\n\n');
+  return finishPipeline(input, chunkRows);
+}
 
-  // 3. Generate
+async function finishPipeline(
+  input: PipelineInput,
+  chunkRows: Array<{
+    id: number;
+    text: string;
+    sourceId: number;
+    chunkIndex: number;
+    score: number;
+  }>,
+): Promise<PipelineResult> {
+  // Build context
+  const context =
+    chunkRows.length > 0
+      ? chunkRows
+          .map((c, i) => `[Source ${i + 1}] (score: ${c.score.toFixed(2)})\n${c.text}`)
+          .join('\n\n')
+      : 'No relevant context found.';
+
+  // Generate
   const object = await generateOutputByType(input.model, input.type, context, input.prompt);
 
-  // 4. Persist
+  // Build citations (hydrated with source filename)
+  const citations: Array<{ source_id: number; chunk_id: number; snippet: string; score: number }> =
+    [];
+  if (chunkRows.length > 0) {
+    for (const c of chunkRows) {
+      citations.push({
+        source_id: c.sourceId,
+        chunk_id: c.id,
+        snippet: c.text.slice(0, 200),
+        score: c.score,
+      });
+    }
+  }
+
+  // Persist
   const row = db()
     .insert(outputs)
     .values({
       notebookId: input.notebookId,
       type: input.type,
       prompt: input.prompt ?? null,
-      chunkIds: input.chunkIds ?? chunkRows.map((c) => c.id),
+      chunkIds: chunkRows.map((c) => c.id),
       content: object as Record<string, unknown>,
     })
     .returning()
@@ -86,5 +172,6 @@ export async function runOutputPipeline(input: PipelineInput): Promise<PipelineR
     type: input.type,
     content: object,
     chunkCount: chunkRows.length,
+    citations,
   };
 }

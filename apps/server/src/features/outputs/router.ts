@@ -78,7 +78,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
 
   // Generate an output
   .post('/outputs', async ({ body }) => {
-    const { notebook_id, type, chunk_ids, prompt } = body as Record<string, unknown>;
+    const { notebook_id, type, chunk_ids, prompt, preference } = body as Record<string, unknown>;
     const notebookId = Number(notebook_id);
 
     // Verify notebook
@@ -95,6 +95,7 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       type: String(type) as ToolOutputType,
       chunkIds: chunk_ids ? (chunk_ids as number[]).map(Number) : undefined,
       prompt: prompt ? String(prompt) : undefined,
+      preference: preference === 'speed' ? 'speed' : 'quality',
     });
 
     return result;
