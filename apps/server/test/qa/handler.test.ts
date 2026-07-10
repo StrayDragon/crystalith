@@ -10,7 +10,7 @@ import type { Citation } from '@crystalith/shared';
 
 import { chunks, notebooks, sources } from '../../src/db/schema.ts';
 import { computeConfidence } from '../../src/features/qa/confidence.ts';
-import { resolveCitations } from '../../src/features/qa/handler.ts';
+import { resolveCitations } from '../../src/features/qa/retrieve-and-judge.ts';
 import { setupIntegrationEnv, teardownIntegrationEnv, getOrm } from '../helpers/integration.ts';
 
 beforeAll(setupIntegrationEnv);

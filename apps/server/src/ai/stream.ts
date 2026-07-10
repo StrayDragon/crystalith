@@ -32,6 +32,11 @@ export interface StreamQaOptions {
    */
   noEvidenceResolver?: (citations: Citation[]) => Promise<string | undefined> | string | undefined;
   /**
+   * Context stats (v1 ContextStats) attached to the done event when pre-computed
+   * by the deterministic retrieval stage (c36).
+   */
+  contextStats?: { total: number; system: number; history: number; retrieval: number; query: number; max_tokens: number };
+  /**
    * Optional sink for tool-result events emitted during the fullStream loop.
    * Each tool call's result is forwarded here so the caller can accumulate
    * retrieved chunks (or other tool outputs) for citation resolution.
@@ -116,7 +121,10 @@ export function streamQaResponse(opts: StreamQaOptions): Response {
           message_id: opts.messageId ?? null,
           citations,
           confidence: opts.confidenceResolver ? await opts.confidenceResolver() : undefined,
+          evidence: !noEvidence,
           no_evidence_reason: noEvidence,
+          context: opts.contextStats,
+          created_at: new Date().toISOString(),
           tool_calls: [],
         });
 
