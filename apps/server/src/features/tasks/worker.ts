@@ -188,14 +188,7 @@ async function handleDocumentParse(
     offset += c.text.length + 1;
   }
 
-  // 6. Mark source ready.
-  db()
-    .update(sources)
-    .set({ status: 'ready', metadata: result.metadata ?? null })
-    .where(eq(sources.id, sourceId))
-    .run();
-
-  // 7. Re-embed under the embedding stage limiter.
+  // 6. Re-embed under the embedding stage limiter — MUST complete before ready (c30).
   const releaseEmbed = await limiters.embedding.acquire();
   try {
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -205,9 +198,29 @@ async function handleDocumentParse(
     deleteSourceVectors(db(), sourceId);
     const strategy = new EmbedStrategy();
     await strategy.indexSource(sourceId, sourceRow.notebookId);
+  } catch (error) {
+    // Embedding failure → mark source failed (c30, mirrors v1 vector_store stage).
+    db()
+      .update(sources)
+      .set({
+        status: 'failed',
+        errorCode: 'EMBEDDING_FAILED',
+        errorMessage: error instanceof Error ? error.message : String(error),
+        lastErrorAt: new Date(),
+      })
+      .where(eq(sources.id, sourceId))
+      .run();
+    throw error;
   } finally {
     releaseEmbed();
   }
+
+  // 7. Mark source ready (only after vectors are written).
+  db()
+    .update(sources)
+    .set({ status: 'ready', metadata: result.metadata ?? null })
+    .where(eq(sources.id, sourceId))
+    .run();
 
   const { bumpSourcesEpoch } = await import('../../rag/cache.ts');
   bumpSourcesEpoch(sourceRow.notebookId);
