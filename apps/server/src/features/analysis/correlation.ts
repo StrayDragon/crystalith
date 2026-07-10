@@ -1,13 +1,13 @@
-// Correlation detection — keyword-TF-cosine-based relation mapping.
+// Correlation detection — embedding-vector cosine similarity (c28 — restored from v1).
 //
-// For each chunk entry in a notebook, compute pairwise keyword TF cosine
-// similarity (excluding same-source pairs) and collect high-similarity
-// pairs as "similar" relations. De-duplicated and capped at maxRelations.
+// For each chunk entry, compute pairwise cosine similarity against all other
+// entries (excluding same-source pairs). Collect high-similarity pairs as
+// "similar" relations, de-duplicated and capped at maxRelations.
 //
-// NOTE: Full vector-based correlation (using sqlite-vec KNN) would be more
-// accurate but requires embedding storage accessible via SELECT, which
-// sqlite-vec's virtual table does not support. Keyword TF cosine is a
-// reasonable approximation for the desktop MVP.
+// v1 reference: features/analysis/correlation.py (detect_relations).
+// v1 uses per-entry KNN search (vector_store.search top_k=20); since v2 now
+// has all vectors in memory via getStoredVectors, pairwise cosine is simpler
+// and equivalent for desktop-scale datasets.
 
 export interface Relation {
   sourceChunkId: number;
@@ -16,24 +16,40 @@ export interface Relation {
   score: number;
 }
 
-export interface ChunkMeta {
+/** A chunk entry with its embedding vector for similarity computation. */
+export interface VectorChunkMeta {
   chunkId: number;
   sourceId: number;
-  text: string;
+  vector: Float32Array;
+}
+
+function cosineSimilarity(left: Float32Array, right: Float32Array): number {
+  if (left.length !== right.length) return 0;
+  let dot = 0;
+  let leftNorm = 0;
+  let rightNorm = 0;
+  for (let i = 0; i < left.length; i++) {
+    dot += left[i]! * right[i]!;
+    leftNorm += left[i]! * left[i]!;
+    rightNorm += right[i]! * right[i]!;
+  }
+  if (leftNorm === 0 || rightNorm === 0) return 0;
+  return dot / (Math.sqrt(leftNorm) * Math.sqrt(rightNorm));
 }
 
 /**
- * Detect similar chunk pairs via vector KNN search.
+ * Detect similar chunk pairs via embedding-vector cosine similarity.
  *
- * For each entry, search top_k nearest neighbors (excluding chunks from the
- * same source). Collect unique pairs with score >= minScore.
+ * For each entry, compare against all others (excluding same-source pairs).
+ * Collect unique pairs with score >= minScore, sorted by score descending.
  *
- * NOTE: This function requires that the embed strategy has indexed the
- * notebook's chunks already. Returns empty array if no vectors found.
+ * Mirrors v1 detect_relations (min_score=0.7, top_k=20, exclude_source_ids,
+ * max_relations=200). The pairwise approach replaces v1's per-entry KNN but
+ * produces the same "similar" relation set.
  */
 export function detectRelations(
-  entries: ChunkMeta[],
-  notebookId: number,
+  entries: VectorChunkMeta[],
+  _notebookId: number,
   options: {
     minScore?: number;
     maxRelations?: number;
@@ -43,127 +59,41 @@ export function detectRelations(
   const { minScore = 0.7, maxRelations = 200, topK = 20 } = options;
   if (maxRelations <= 0 || topK <= 0 || entries.length < 2) return [];
 
-  const entryByChunk = new Map<number, ChunkMeta>();
-  for (const e of entries) {
-    entryByChunk.set(e.chunkId, e);
-  }
-
   const relationMap = new Map<string, Relation>();
 
   for (const entry of entries) {
-    // KNN search needs an embedding. We use a workaround: search by each
-    // chunk's text → AI SDK embed → searchVectors.
-    // For now, we compute the relation via chunk-id-based approach:
-    // Use the first entry's text as query — but this is inefficient.
-    //
-    // SIMPLIFICATION: Since we can't embed inline here (would need AI SDK
-    // embed call per iteration), we use a text-based similarity fallback
-    // via keyword TF cosine using the same approach as clustering.ts.
-    //
-    // FULL vector-based approach requires the caller to provide pre-computed
-    // embeddings. For now, use keyword-based similarity.
+    let neighbors = 0; // cap per-entry matches at topK (v1 behavior)
 
+    // Sort others by similarity to this entry (descending), take top_k.
+    const scored: Array<{ other: VectorChunkMeta; score: number }> = [];
     for (const other of entries) {
       if (other.chunkId === entry.chunkId) continue;
       if (other.sourceId === entry.sourceId) continue;
+      scored.push({ other, score: cosineSimilarity(entry.vector, other.vector) });
+    }
+    scored.sort((a, b) => b.score - a.score);
 
-      const leftKey = Math.min(entry.chunkId, other.chunkId);
-      const rightKey = Math.max(entry.chunkId, other.chunkId);
-      const key = `${leftKey}-${rightKey}`;
+    for (const { other, score } of scored) {
+      if (neighbors >= topK) break;
+      if (score < minScore) break;
 
-      if (relationMap.has(key)) continue;
+      const leftChunkId = Math.min(entry.chunkId, other.chunkId);
+      const rightChunkId = Math.max(entry.chunkId, other.chunkId);
+      const key = `${leftChunkId}-${rightChunkId}`;
 
-      const score = keywordCosineSimilarity(entry.text, other.text);
-      if (score >= minScore) {
-        relationMap.set(key, {
-          sourceChunkId: leftKey,
-          targetChunkId: rightKey,
-          relationType: 'similar',
-          score,
-        });
-      }
+      const existing = relationMap.get(key);
+      if (existing && existing.score >= score) continue;
+
+      relationMap.set(key, {
+        sourceChunkId: leftChunkId,
+        targetChunkId: rightChunkId,
+        relationType: 'similar',
+        score,
+      });
+      neighbors++;
     }
   }
 
   const relations = [...relationMap.values()].toSorted((a, b) => b.score - a.score);
   return relations.slice(0, maxRelations);
-}
-
-// ---------------------------------------------------------------------------
-// Keyword TF cosine similarity (shared with clustering.ts logic)
-// ---------------------------------------------------------------------------
-
-const STOPWORDS = new Set([
-  'a',
-  'an',
-  'and',
-  'are',
-  'as',
-  'at',
-  'be',
-  'but',
-  'by',
-  'for',
-  'from',
-  'has',
-  'have',
-  'he',
-  'her',
-  'his',
-  'if',
-  'in',
-  'into',
-  'is',
-  'it',
-  'its',
-  'may',
-  'not',
-  'of',
-  'on',
-  'or',
-  'our',
-  'she',
-  'that',
-  'the',
-  'their',
-  'them',
-  'there',
-  'this',
-  'to',
-  'was',
-  'were',
-  'will',
-  'with',
-  'you',
-  'your',
-]);
-
-function tokenize(text: string): string[] {
-  const tokens: string[] = [];
-  for (const raw of text.toLowerCase().split(/[^a-z0-9]+/)) {
-    if (raw.length < 3) continue;
-    if (STOPWORDS.has(raw)) continue;
-    tokens.push(raw);
-  }
-  return tokens;
-}
-
-function buildTfVector(text: string): Record<string, number> {
-  const tokens = tokenize(text);
-  const freq: Record<string, number> = {};
-  for (const t of tokens) freq[t] = (freq[t] ?? 0) + 1;
-  const maxFreq = Math.max(1, ...Object.values(freq));
-  for (const k of Object.keys(freq)) freq[k] /= maxFreq;
-  return freq;
-}
-
-function keywordCosineSimilarity(a: string, b: string): number {
-  const va = buildTfVector(a);
-  const vb = buildTfVector(b);
-  let dot = 0;
-  for (const k of Object.keys(va)) if (vb[k]) dot += va[k] * vb[k];
-  const na = Math.sqrt(Object.values(va).reduce((s, v) => s + v * v, 0));
-  const nb = Math.sqrt(Object.values(vb).reduce((s, v) => s + v * v, 0));
-  if (na === 0 || nb === 0) return 0;
-  return dot / (na * nb);
 }

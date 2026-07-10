@@ -2,17 +2,21 @@ kind: llman.sdd.spec
 name: "data-and-storage"
 purpose: "TBD - created by archiving change c01-add-v2-data-layer. Update purpose after archive."
 valid_scope[2]: src/,tests/
-requirements[6]{req_id,title,statement}:
+requirements[8]{req_id,title,statement}:
   r1,"Database is single SQLite file via bun:sqlite","系统 MUST 使用 bun:sqlite (C 绑定同步 SQLite) 作为唯一关系数据库。MUST 启用 WAL 模式与 foreign_keys ON。MUST NOT 支持 PostgreSQL。"
   r2,"ORM is Drizzle ORM with bun-sqlite driver","Schema 定义 MUST 使用 Drizzle ORM schema-first 风格 (`sqliteTable()`)。类型推断 MUST 通过 `$inferSelect`/`$inferInsert` 自动导出供前后端共享。"
   r3,Migrations use Drizzle Kit,"数据库变更 MUST 通过 drizzle-kit generate/migrate 管理。初始迁移从空库生成 (不迁移 alembic 历史)。MUST 生产可读 SQL 文件。"
   r4,"Vector store is sqlite-vec in-process","向量检索 MUST 使用 sqlite-vec 扩展（同库零依赖）。MUST 以 `partition by notebook_id` 做多 notebook 隔离。MUST NOT 引入 ChromaDB/lancedb/Qdrant。"
   r5,Schema types exported for frontend,Drizzle schema 导出的 TS 类型 ($inferSelect/$inferInsert) MUST 通过 packages/shared 暴露给前端 eden RPC 消费。
   r6,"Data migration is one-time at v2 launch",历史 v1 数据 (SQLite/ChromaDB) MUST 通过一次性迁移脚本导入 v2 数据库。迁移脚本 MUST 可重复执行且记录完成标记。v2 启动后 MUST NOT 尝试读取旧格式数据。
-scenarios[6]{req_id,id,given,when,then}:
+  r_correlation_vector,Correlation vector KNN,analysis 相关性检测 MUST 使用向量 KNN 检索 而非关键词 TF 余弦 以保证语义级相关性质量 检索 MUST 排除同 source 且设最小相似度阈值
+  r_clustering_vector,Clustering embedding vectors,analysis 聚类 MUST 基于 embedding 向量 而非关键词 TF 向量 做质心聚类以保证语义级聚类质量
+scenarios[8]{req_id,id,given,when,then}:
   r1,happy,"",server 启动,"bun:sqlite 创建/打开 crystalith.db，WAL 模式启用"
   r2,happy,"",开发者定义 notebooks 表,Drizzle schema 类型通过 $inferSelect 自动推断 Notebook 类型
   r3,happy,"",新增一个 column,"drizzle-kit generate 产出增量 SQL，apply 后数据库更新"
   r4,happy,"",1万 chunk 向量检索,"sqlite-vec 返回 top-10，p50 < 10ms"
   r5,happy,"",前端 import Notebook 类型,TS 编译通过，类型与 server 一致
   r6,happy,"",v1 用户升级到 v2,一次性迁移脚本将旧 app.db + chroma/ 数据导入新 crystalith.db
+  r_correlation_vector,semantic_near,两个 chunk 语义相近用词不同,运行相关性检测,系统 SHALL 通过向量 KNN 识别为相关
+  r_clustering_vector,semantic_cluster,多 chunk 同主题用词不同,运行聚类,系统 SHALL 归入同一主题簇

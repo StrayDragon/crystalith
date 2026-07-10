@@ -1,8 +1,8 @@
 // Analysis router — POST /v2/analysis
 //
 // Runs multi-phase analysis:
-//  1. Topic clustering (keyword TF-based)
-//  2. Relation detection (similar pairs)
+//  1. Topic clustering (embedding-vector greedy centroid, c28)
+//  2. Relation detection (embedding-vector cosine similarity, c28)
 //  3. Contradiction detection (LLM pairwise on top similar pairs)
 //  4. LLM summary via generateObject
 import { generateObject } from 'ai';
@@ -14,6 +14,7 @@ import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
 import { chunks, notebooks, sources } from '../../db/schema.ts';
+import { getStoredVectors } from '../../db/vectors.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { clusterTopics } from './clustering.ts';
@@ -101,30 +102,40 @@ export const analysisRouter = new Elysia({ prefix: '/v2' }).post('/analysis', as
     return { topics: [], contradictions: [], relations: [], summary: 'No content to analyze.' };
   }
 
+  // Fetch stored embedding vectors for this notebook (c28 — real vectors).
+  const storedVectors = getStoredVectors(db(), notebookId);
+  const vectorByChunk = new Map(storedVectors.map((v) => [v.chunkId, v.vector]));
+
   // Build entry maps for the analysis modules
   const chunkTextMap = new Map<number, string>();
   for (const c of chunkRows) {
     chunkTextMap.set(c.id, c.text);
   }
 
-  // Phase 1: Topic clustering
-  const topics = clusterTopics(
-    chunkRows.map((c) => ({
+  // Only include chunks that have embedding vectors indexed.
+  const vectorEntries = chunkRows
+    .filter((c) => vectorByChunk.has(c.id))
+    .map((c) => ({
       chunkId: c.id,
       sourceId: c.sourceId,
+      vector: vectorByChunk.get(c.id)!,
       text: c.text,
-    })),
-  );
+    }));
 
-  // Phase 2: Relation detection (similar pairs)
-  const relations = detectRelations(
-    chunkRows.map((c) => ({
-      chunkId: c.id,
-      sourceId: c.sourceId,
-      text: c.text,
-    })),
-    notebookId,
-  );
+  if (vectorEntries.length === 0) {
+    return {
+      topics: [],
+      contradictions: [],
+      relations: [],
+      summary: 'No indexed content to analyze.',
+    };
+  }
+
+  // Phase 1: Topic clustering (embedding vectors)
+  const topics = clusterTopics(vectorEntries);
+
+  // Phase 2: Relation detection (embedding cosine similarity)
+  const relations = detectRelations(vectorEntries, notebookId);
 
   // Phase 3: Contradiction detection (LLM pairwise on top similar pairs)
   const contradictions = await detectContradictions(relations, chunkTextMap);
