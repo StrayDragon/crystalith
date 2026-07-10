@@ -1,15 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 
-import {
-  createDraftV1NotebooksNotebookIdSlidesDraftsPost as createSlidesDraft,
-  createOutputV1NotebooksNotebookIdOutputsOutputTypePost as createOutput,
-  deleteOutputV1NotebooksNotebookIdOutputsOutputIdDelete as deleteOutputApi,
-  getDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGet as getSlidesDraft,
-  getOutputV1NotebooksNotebookIdOutputsOutputIdGet as getOutput,
-  listOutputsV1NotebooksNotebookIdOutputsGet as listOutputs,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
+import { api } from '../../../../api/eden';
 import { useWorkspaceStore } from '../state/workspaceStore';
 import type {
   GenerationPreference,
@@ -81,7 +73,7 @@ function buildSlidesStreamUrl(
   stage: 'outline' | 'markdown',
   modelId?: string,
 ) {
-  const base = `/v1/notebooks/${notebookId}/slides/drafts/${slideId}/${stage}/stream`;
+  const base = `/v2/studio/slides/${slideId}/${stage}`;
   return modelId ? `${base}?model_id=${encodeURIComponent(modelId)}` : base;
 }
 
@@ -249,12 +241,13 @@ export function useOutputQueue({
     mutate: mutateOutputs,
   } = useSWR(
     activeNotebookId && isConnected ? ['workspace/outputs', activeNotebookId] : null,
-    () =>
-      unwrapData(
-        listOutputs<true>({
-          path: { notebook_id: activeNotebookId ?? 0 },
-        }),
-      ),
+    async () => {
+      const { data, error: fetchErr } = await api.v2.outputs.get({
+        query: { notebook_id: String(activeNotebookId ?? 0) },
+      });
+      if (fetchErr) throw fetchErr;
+      return data ?? [];
+    },
     { revalidateOnFocus: false },
   );
 
@@ -383,13 +376,9 @@ export function useOutputQueue({
         source_ids: sourceIds.length ? sourceIds : undefined,
         generation_config: normalizeSlideGenerationConfig(generationConfig),
       };
-      const created = await unwrapData(
-        createSlidesDraft<true>({
-          path: { notebook_id: activeNotebookId },
-          body: payload,
-        }),
-      );
-      const draftId = created.id;
+      const { data: created, error: createErr } = await api.v2.studio.slides.post(payload);
+      if (createErr) throw createErr;
+      const draftId = created!.id;
 
       onQueueTotal();
       const job: OutputQueueJob = {
@@ -470,12 +459,13 @@ export function useOutputQueue({
               'markdown',
               job.modelId,
             );
-            const pollDraft = async () =>
-              unwrapData(
-                getSlidesDraft<true>({
-                  path: { notebook_id: job.notebookId ?? 0, slide_id: job.draftId ?? 0 },
-                }),
-              );
+            const pollDraft = async () => {
+              const { data: draftData, error: draftErr } = await api.v2.studio
+                .slides({ id: job.draftId! })
+                .get();
+              if (draftErr) throw draftErr;
+              return draftData as SlidesDraftSnapshot;
+            };
             await runSlidesStream(outlineUrl, 'outline', {
               signal: abortController.signal,
               pollDraft,
@@ -492,18 +482,16 @@ export function useOutputQueue({
           }
         } else if (job.notebookId) {
           const preference = job.preference;
-          const response = await unwrapData(
-            createOutput<true>({
-              path: { notebook_id: job.notebookId, output_type: job.type },
-              body: {
-                prompt: job.prompt || undefined,
-                source_ids: job.sourceIds.length ? job.sourceIds : undefined,
-                ...(preference ? { preference } : {}),
-                model_id: job.modelId || undefined,
-              },
-              signal: requestSignal,
-            }),
-          );
+          const body: Record<string, unknown> = {
+            notebook_id: job.notebookId,
+            type: job.type,
+            prompt: job.prompt || undefined,
+            source_ids: job.sourceIds.length ? job.sourceIds : undefined,
+            model_id: job.modelId || undefined,
+          };
+          if (preference) Object.assign(body, { preference });
+          const { data: response, error: createErr } = await api.v2.outputs.post(body);
+          if (createErr) throw createErr;
           if (isCancelled()) {
             const abortError = new Error('aborted');
             abortError.name = 'AbortError';
@@ -663,11 +651,8 @@ export function useOutputQueue({
       s.setOutputs(s.outputs.filter((item) => item.id !== outputId));
 
       try {
-        await unwrapData(
-          deleteOutputApi<true>({
-            path: { notebook_id: s.activeNotebookId, output_id: outputId },
-          }),
-        );
+        const { error: deleteErr } = await api.v2.outputs({ id: outputId }).delete();
+        if (deleteErr) throw deleteErr;
       } catch (error) {
         console.error('Failed to delete output:', error);
         await mutateOutputs();
@@ -685,11 +670,8 @@ export function useOutputQueue({
       const s = store.getState();
       if (!s.activeNotebookId || !isConnected) return null;
       try {
-        const output = await unwrapData(
-          getOutput<true>({
-            path: { notebook_id: s.activeNotebookId, output_id: outputId },
-          }),
-        );
+        const { data: output, error: getErr } = await api.v2.outputs({ id: outputId }).get();
+        if (getErr) throw getErr;
         const normalized = normalizeOutput(output);
         const s2 = store.getState();
         s2.setOutputs(s2.outputs.map((item) => (item.id === outputId ? normalized : item)));

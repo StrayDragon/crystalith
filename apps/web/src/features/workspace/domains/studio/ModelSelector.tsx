@@ -6,12 +6,14 @@ import { Select, Option, Typography, Chip, Alert } from '@material-tailwind/reac
 import { CloudQueue as CloudIcon, Computer as LocalIcon } from '@mui/icons-material';
 import { useState, useEffect, useCallback, type ReactElement } from 'react';
 
-import {
-  listModelsV1ModelsGet as listModels,
-  type ModelsListResponse,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
+import { api } from '../../../../api/eden';
 import { LAYER_LEVELS } from '../../../../shared/layer';
+
+interface ModelsListResponse {
+  models: Array<{ id: string; name: string; provider: string; capabilities: string[] }>;
+  default_chat?: string | null;
+  default_embedding?: string | null;
+}
 
 export interface ModelSelectorProps {
   /** Currently selected model ID */
@@ -54,13 +56,14 @@ export function ModelSelector({
       try {
         setLoading(true);
         setError(null);
-        const data = await unwrapData(
-          listModels<true>({
-            query: capability ? { capability } : undefined,
-          }),
-        );
+        const { data, error: fetchErr } = await api.v2.models.get({
+          query: capability ? { capability } : undefined,
+        });
+        if (fetchErr) throw fetchErr;
         if (!cancelled) {
-          setModelsData(data);
+          setModelsData(
+            data as unknown as ModelsListResponse,
+          );
         }
       } catch (error) {
         if (!cancelled) {
@@ -118,69 +121,32 @@ export function ModelSelector({
     );
   }
 
-  const models = modelsData.models;
-
-  // Find selected model for rendering custom selected state if needed
-  // MT Select handles display automatically based on Option children
+  // Extract model IDs from the models array
+  const modelIds = modelsData.models.map((model) => model.id);
 
   return (
-    <div className={className}>
+    <div className={`space-y-1.5 ${className}`}>
+      {label ? (
+        <Typography variant="small" className="text-gray-600 dark:text-slate-300">
+          {label}
+        </Typography>
+      ) : null}
       <Select
-        label={label}
         value={value || ''}
-        onChange={handleChange}
+        onChange={(val) => handleChange(val as string)}
         disabled={disabled}
         size={size}
-        menuProps={{
-          className: 'max-h-60 overflow-y-auto',
-          style: { zIndex: LAYER_LEVELS.popover },
-        }}
-        selected={(element) => {
-          // Custom render for selected value
-          // element is the React Element of the selected Option
-          if (!element) return null;
-          const modelId = (element as ReactElement<{ value?: string }>).props.value;
-          const model = models.find((m) => m.id === modelId);
-          if (!model) return element;
-
-          return (
-            <div className="flex items-center gap-2">
-              {model.provider === 'openai' ? (
-                <CloudIcon className="h-4 w-4 text-blue-500" />
-              ) : (
-                <LocalIcon className="h-4 w-4 text-green-500" />
-              )}
-              <span className="text-sm text-gray-900">{model.display_name}</span>
-            </div>
-          );
-        }}
       >
-        {models.map((model) => (
-          <Option key={model.id} value={model.id} className="flex items-center gap-2 p-2">
-            <div className="flex items-center gap-2 w-full">
-              {model.provider === 'openai' ? (
-                <CloudIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
-              ) : (
-                <LocalIcon className="h-4 w-4 text-green-500 flex-shrink-0" />
-              )}
-              <div className="flex-1 min-w-0 flex flex-col">
-                <Typography variant="small" className="font-medium text-gray-900 leading-snug">
-                  {model.display_name}
-                </Typography>
-                {model.description && (
-                  <Typography
-                    variant="small"
-                    className="text-[10px] text-gray-500 font-medium truncate"
-                  >
-                    {model.description}
-                  </Typography>
-                )}
-              </div>
+        {modelsData.models.map((model) => (
+          <Option key={model.id} value={model.id}>
+            <div className="flex items-center gap-2">
+              <Typography className="text-sm font-medium">{model.id}</Typography>
               <Chip
                 value={model.provider}
+                color="blue"
+                variant="ghost"
                 size="sm"
-                variant="outlined"
-                className="h-5 px-1.5 text-[10px] font-medium rounded-full normal-case border-gray-200 text-gray-500 flex items-center"
+                icon={<CloudIcon style={{ fontSize: 14 }} />}
               />
             </div>
           </Option>
@@ -189,5 +155,3 @@ export function ModelSelector({
     </div>
   );
 }
-
-export default ModelSelector;

@@ -217,7 +217,7 @@ export function useNotebooks() {
       const trimmed = name.trim();
       if (!trimmed) return false;
       try {
-        const { data: updated, error } = await api.v2.notebooks({ id: notebookId }).patch({
+        const { data: updated, error } = await api.v2.notebooks({ nid: notebookId }).patch({
           name: trimmed,
         });
         if (error) throw error;
@@ -246,7 +246,7 @@ export function useNotebooks() {
     async (notebookId: number) => {
       if (connectionState !== 'live') return false;
       try {
-        const { error } = await api.v2.notebooks({ id: notebookId }).delete();
+        const { error } = await api.v2.notebooks({ nid: notebookId }).delete();
         if (error) throw error;
         await mutate(async (current) => current?.filter((item) => item.id !== notebookId) ?? [], {
           revalidate: false,

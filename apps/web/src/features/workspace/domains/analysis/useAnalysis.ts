@@ -1,14 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import {
-  analyzeNotebookV1NotebooksNotebookIdAnalysisGet as analyzeNotebook,
-  type AnalysisResult,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
+import { api } from '../../../../api/eden';
 import { useWorkspaceStore } from '../../shared/state/workspaceStore';
 
 interface AnalysisState {
-  analysis: AnalysisResult | null;
+  analysis: Record<string, unknown> | null;
   isLoading: boolean;
   error: string;
 }
@@ -47,13 +43,16 @@ export function useAnalysis() {
 
     setAnalysisState((prev) => ({ ...prev, isLoading: true, error: '' }));
     try {
-      const analysis = await unwrapData(
-        analyzeNotebook<true>({
-          path: { notebook_id: activeNotebookId },
-        }),
-      );
-      setAnalysisState({ analysis, isLoading: false, error: '' });
-      return analysis;
+      const { data, error } = await api.v2.analysis.post({
+        notebook_id: activeNotebookId,
+      });
+      if (error) throw error;
+      setAnalysisState({
+        analysis: data as Record<string, unknown> | null,
+        isLoading: false,
+        error: '',
+      });
+      return data as Record<string, unknown> | null;
     } catch {
       setAnalysisState((prev) => ({
         ...prev,

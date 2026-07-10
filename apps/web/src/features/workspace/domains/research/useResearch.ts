@@ -1,52 +1,45 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
 
-import {
-  createResearchSessionV1NotebooksNotebookIdResearchPost,
-  listResearchSessionsV1NotebooksNotebookIdResearchGet,
-  getResearchSessionV1NotebooksNotebookIdResearchResearchIdGet,
-  deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete,
-  startResearchV1NotebooksNotebookIdResearchResearchIdStartPost,
-  approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost,
-  finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost,
-  skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost,
-  cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost,
-  resumeResearchV1NotebooksNotebookIdResearchResearchIdResumePost,
-  type ResearchSessionResponse,
-  type ResearchSessionListItem,
-  type ResearchStatus,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
+import { api } from '../../../../api/eden';
+import { streamRequest, type SseEvent } from '../../../../api/stream';
 
 // SSE Event types
 interface SSEStatusEvent {
-  status: ResearchStatus;
+  status: string;
   iteration: number;
   topic?: string;
 }
 
 interface SSEPlanEvent {
-  plan: {
+  iteration: number;
+  data: {
     queries: Array<{ query: string; engine: string; priority: number; reason: string }>;
     reasoning: string;
   };
-  iteration: number;
 }
 
 interface SSESearchProgressEvent {
   iteration: number;
-  result_count: number;
-  new_results: number;
+  data: {
+    result_count: number;
+    new_results: number;
+  };
 }
 
 interface SSEAnalysisEvent {
   iteration: number;
-  summary: string;
-  coverage: number;
-  need_more_search: boolean;
+  data: {
+    summary: string;
+    coverage: number;
+    need_more_search: boolean;
+  };
 }
 
 interface SSEReportEvent {
-  report_length: number;
+  iteration: number;
+  data: {
+    report_length: number;
+  };
 }
 
 interface SSEDoneEvent {
@@ -85,41 +78,66 @@ export type SSEEvent =
   | { type: 'connection'; data: SSEConnectionEvent }
   | { type: 'error'; data: { message: string } };
 
+// Eden response types
+interface ResearchSessionItem {
+  id: number;
+  notebook_id: number;
+  topic: string;
+  status: string;
+  current_iteration: number;
+  max_iterations: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ResearchSessionDetail {
+  id: number;
+  notebook_id: number;
+  topic: string;
+  status: string;
+  current_iteration: number;
+  max_iterations: number;
+  aggregated_results: Array<Record<string, unknown>> | null;
+  final_report: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 interface UseResearchResult {
   // State
-  sessions: ResearchSessionListItem[];
-  activeSession: ResearchSessionResponse | null;
+  sessions: ResearchSessionItem[];
+  activeSession: ResearchSessionDetail | null;
   isLoading: boolean;
   error: string;
   sseEvents: SSEEvent[];
 
   // Actions
   fetchSessions: () => Promise<void>;
-  fetchSession: (researchId: number) => Promise<ResearchSessionResponse | null>;
-  createSession: (topic: string, maxIterations?: number) => Promise<ResearchSessionResponse | null>;
+  fetchSession: (researchId: number) => Promise<ResearchSessionDetail | null>;
+  createSession: (topic: string, maxIterations?: number) => Promise<ResearchSessionDetail | null>;
   deleteSession: (researchId: number) => Promise<void>;
   startResearch: (researchId: number) => Promise<void>;
   approveSearchPlan: (researchId: number, feedback?: string) => Promise<void>;
   skipIteration: (researchId: number) => Promise<void>;
   finishResearch: (researchId: number) => Promise<void>;
   cancelResearch: (researchId: number) => Promise<void>;
-  resumeResearch: (researchId: number) => Promise<ResearchSessionResponse | null>;
+  resumeResearch: (researchId: number) => Promise<ResearchSessionDetail | null>;
   subscribeToSSE: (researchId: number) => void;
   unsubscribeFromSSE: () => void;
   clearEvents: () => void;
-  setActiveSession: (session: ResearchSessionResponse | null) => void;
+  setActiveSession: (session: ResearchSessionDetail | null) => void;
 }
 
 export function useResearch(notebookId: number | undefined): UseResearchResult {
-  const [sessions, setSessions] = useState<ResearchSessionListItem[]>([]);
-  const [activeSession, setActiveSession] = useState<ResearchSessionResponse | null>(null);
+  const [sessions, setSessions] = useState<ResearchSessionItem[]>([]);
+  const [activeSession, setActiveSession] = useState<ResearchSessionDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [sseEvents, setSSEEvents] = useState<SSEEvent[]>([]);
 
-  const sessionsRef = useRef<ResearchSessionListItem[]>([]);
-  const activeSessionRef = useRef<ResearchSessionResponse | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const sessionsRef = useRef<ResearchSessionItem[]>([]);
+  const activeSessionRef = useRef<ResearchSessionDetail | null>(null);
+  const eventSourceAbortRef = useRef<AbortController | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const staleCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastEventAtRef = useRef<number>(Date.now());
@@ -143,34 +161,30 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     setIsLoading(true);
     setError('');
     try {
-      const response = await unwrapData(
-        listResearchSessionsV1NotebooksNotebookIdResearchGet<true>({
-          path: { notebook_id: notebookId },
-        }),
-      );
-      setSessions(response);
+      const { data, error: fetchErr } = await api.v2.research.get({
+        query: { notebook_id: String(notebookId) },
+      });
+      if (fetchErr) throw fetchErr;
+      setSessions(data as ResearchSessionItem[]);
     } catch (error) {
-      setError(error instanceof Error ? error.message : '获取研究列表失败');
+      setError(err instanceof Error ? err.message : '获取研究列表失败');
     } finally {
       setIsLoading(false);
     }
   }, [notebookId]);
 
   const fetchSession = useCallback(
-    async (researchId: number): Promise<ResearchSessionResponse | null> => {
+    async (researchId: number): Promise<ResearchSessionDetail | null> => {
       if (!notebookId) return null;
       setIsLoading(true);
       setError('');
       try {
-        const response = await unwrapData(
-          getResearchSessionV1NotebooksNotebookIdResearchResearchIdGet<true>({
-            path: { notebook_id: notebookId, research_id: researchId },
-          }),
-        );
-        setActiveSession(response);
-        return response;
+        const { data, error: fetchErr } = await api.v2.research({ id: researchId }).get();
+        if (fetchErr) throw fetchErr;
+        setActiveSession(data as ResearchSessionDetail);
+        return data as ResearchSessionDetail;
       } catch (error) {
-        setError(error instanceof Error ? error.message : '获取研究详情失败');
+        setError(err instanceof Error ? err.message : '获取研究详情失败');
         return null;
       } finally {
         setIsLoading(false);
@@ -180,34 +194,35 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
   );
 
   const createSession = useCallback(
-    async (topic: string, maxIterations = 4): Promise<ResearchSessionResponse | null> => {
+    async (topic: string, maxIterations = 4): Promise<ResearchSessionDetail | null> => {
       if (!notebookId) return null;
       setIsLoading(true);
       setError('');
       try {
-        const data = await unwrapData(
-          createResearchSessionV1NotebooksNotebookIdResearchPost<true>({
-            path: { notebook_id: notebookId },
-            body: { topic, max_iterations: maxIterations },
-          }),
-        );
+        const { data, error: postErr } = await api.v2.research.post({
+          topic,
+          notebook_id: notebookId,
+          max_iterations: maxIterations,
+        });
+        if (postErr) throw postErr;
+        const sessionData = data as ResearchSessionDetail;
         setSessions((prev) => [
           {
-            id: data.id,
-            notebook_id: data.notebook_id,
-            topic: data.topic,
-            status: data.status,
-            current_iteration: data.current_iteration,
-            max_iterations: data.max_iterations,
-            created_at: data.created_at,
-            updated_at: data.created_at, // Use created_at as initial updated_at
+            id: sessionData.id,
+            notebook_id: sessionData.notebook_id,
+            topic: sessionData.topic,
+            status: sessionData.status,
+            current_iteration: sessionData.current_iteration,
+            max_iterations: sessionData.max_iterations,
+            created_at: sessionData.created_at,
+            updated_at: sessionData.created_at,
           },
           ...prev,
         ]);
-        setActiveSession(data);
-        return data;
+        setActiveSession(sessionData);
+        return sessionData;
       } catch (error) {
-        setError(error instanceof Error ? error.message : '创建研究失败');
+        setError(err instanceof Error ? err.message : '创建研究失败');
         return null;
       } finally {
         setIsLoading(false);
@@ -222,15 +237,14 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       setIsLoading(true);
       setError('');
       try {
-        await deleteResearchSessionV1NotebooksNotebookIdResearchResearchIdDelete<true>({
-          path: { notebook_id: notebookId, research_id: researchId },
-        });
+        const { error: delErr } = await api.v2.research({ id: researchId }).delete();
+        if (delErr) throw delErr;
         setSessions((prev) => prev.filter((s) => s.id !== researchId));
         if (activeSession?.id === researchId) {
           setActiveSession(null);
         }
       } catch (error) {
-        setError(error instanceof Error ? error.message : '删除研究失败');
+        setError(err instanceof Error ? err.message : '删除研究失败');
       } finally {
         setIsLoading(false);
       }
@@ -243,33 +257,29 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       if (!notebookId) return;
       setError('');
       try {
-        const response = await unwrapData(
-          startResearchV1NotebooksNotebookIdResearchResearchIdStartPost<true>({
-            path: { notebook_id: notebookId, research_id: researchId },
-          }),
-        );
-        setActiveSession(response);
+        // startResearch in v2 is implicit with POST /research
+        const { data, error: fetchErr } = await api.v2.research({ id: researchId }).get();
+        if (fetchErr) throw fetchErr;
+        setActiveSession(data as ResearchSessionDetail);
       } catch (error) {
-        setError(error instanceof Error ? error.message : '启动研究失败');
+        setError(err instanceof Error ? err.message : '启动研究失败');
       }
     },
     [notebookId],
   );
 
   const approveSearchPlan = useCallback(
-    async (researchId: number, feedback?: string) => {
+    async (researchId: number, _feedback?: string) => {
       if (!notebookId) return;
       setError('');
       try {
-        const response = await unwrapData(
-          approveSearchPlanV1NotebooksNotebookIdResearchResearchIdApprovePost<true>({
-            path: { notebook_id: notebookId, research_id: researchId },
-            body: { feedback },
-          }),
+        const { data, error: postErr } = await api.v2.research({ id: researchId }).approve.post();
+        if (postErr) throw postErr;
+        setActiveSession((prev) =>
+          prev ? { ...prev, status: (data as { status: string }).status } : prev,
         );
-        setActiveSession(response);
       } catch (error) {
-        setError(error instanceof Error ? error.message : '批准计划失败');
+        setError(err instanceof Error ? err.message : '批准计划失败');
       }
     },
     [notebookId],
@@ -280,14 +290,13 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       if (!notebookId) return;
       setError('');
       try {
-        const response = await unwrapData(
-          skipIterationV1NotebooksNotebookIdResearchResearchIdSkipPost<true>({
-            path: { notebook_id: notebookId, research_id: researchId },
-          }),
+        const { data, error: postErr } = await api.v2.research({ id: researchId }).skip.post();
+        if (postErr) throw postErr;
+        setActiveSession((prev) =>
+          prev ? { ...prev, status: (data as { status: string }).status } : prev,
         );
-        setActiveSession(response);
       } catch (error) {
-        setError(error instanceof Error ? error.message : '跳过迭代失败');
+        setError(err instanceof Error ? err.message : '跳过迭代失败');
       }
     },
     [notebookId],
@@ -298,76 +307,65 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       if (!notebookId) return;
       setError('');
       try {
-        const response = await unwrapData(
-          finishResearchV1NotebooksNotebookIdResearchResearchIdFinishPost<true>({
-            path: { notebook_id: notebookId, research_id: researchId },
-          }),
-        );
-        setActiveSession(response);
+        const { data, error: postErr } = await api.v2.research({ id: researchId }).finish.post();
+        if (postErr) throw postErr;
+        setActiveSession((prev) => (prev ? { ...prev, status: 'completed' } : prev));
       } catch (error) {
-        setError(error instanceof Error ? error.message : '结束研究失败');
+        setError(err instanceof Error ? err.message : '结束研究失败');
       }
     },
     [notebookId],
   );
 
-  // Cancel research - marks as cancelled without generating report
   const cancelResearch = useCallback(
     async (researchId: number) => {
       if (!notebookId) return;
       setError('');
       try {
-        const response = await unwrapData(
-          cancelResearchV1NotebooksNotebookIdResearchResearchIdCancelPost<true>({
-            path: { notebook_id: notebookId, research_id: researchId },
-          }),
-        );
-        setActiveSession(response);
-        // Update sessions list
+        const { data, error: postErr } = await api.v2.research({ id: researchId }).cancel.post();
+        if (postErr) throw postErr;
+        const newStatus = (data as { status: string }).status;
+        setActiveSession((prev) => (prev ? { ...prev, status: newStatus } : prev));
         setSessions((prev) =>
-          prev.map((s) => (s.id === researchId ? { ...s, status: response.status } : s)),
+          prev.map((s) => (s.id === researchId ? { ...s, status: newStatus } : s)),
         );
-        // Close SSE connection when cancelled
+        // Close SSE connection
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
           reconnectTimeoutRef.current = null;
         }
-        if (eventSourceRef.current) {
-          eventSourceRef.current.close();
-          eventSourceRef.current = null;
-        }
+        eventSourceAbortRef.current?.abort();
+        eventSourceAbortRef.current = null;
       } catch (error) {
-        setError(error instanceof Error ? error.message : '取消研究失败');
+        setError(err instanceof Error ? err.message : '取消研究失败');
       }
     },
     [notebookId],
   );
 
   const resumeResearch = useCallback(
-    async (researchId: number): Promise<ResearchSessionResponse | null> => {
+    async (researchId: number): Promise<ResearchSessionDetail | null> => {
       if (!notebookId) return null;
       setError('');
       try {
-        const response = await unwrapData(
-          resumeResearchV1NotebooksNotebookIdResearchResearchIdResumePost<true>({
-            path: { notebook_id: notebookId, research_id: researchId },
-          }),
-        );
-        setActiveSession(response);
+        const { data, error: postErr } = await api.v2.research({ id: researchId }).resume.post();
+        if (postErr) throw postErr;
+        const sessionData = data as ResearchSessionDetail;
+        setActiveSession(sessionData);
         setSessions((prev) =>
           prev.map((s) =>
             s.id === researchId
               ? {
                   ...s,
-                  status: response.status,
-                  current_iteration: response.current_iteration,
+                  status: sessionData.status,
+                  current_iteration: sessionData.current_iteration,
                 }
               : s,
           ),
         );
-        return response;
+        return sessionData;
       } catch (error) {
-        setError(error instanceof Error ? error.message : '继续研究失败');
+        setError(err instanceof Error ? err.message : '继续研究失败');
         return null;
       }
     },
@@ -375,7 +373,6 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
   );
 
   const unsubscribeFromSSE = useCallback(() => {
-    // Clear any pending reconnect timeout
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
@@ -384,13 +381,9 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       clearInterval(staleCheckIntervalRef.current);
       staleCheckIntervalRef.current = null;
     }
-    // Reset reconnect attempts
     reconnectAttemptRef.current = 0;
-    // Close connection
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
+    eventSourceAbortRef.current?.abort();
+    eventSourceAbortRef.current = null;
   }, []);
 
   const isResearchSessionActive = useCallback((researchId: number) => {
@@ -409,7 +402,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
     (researchId: number, isReconnect = false) => {
       if (!notebookId) return;
 
-      // Clear any pending reconnect timeout
+      // Clear pending reconnect
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
@@ -420,28 +413,19 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       }
 
       // Close existing connection
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-      }
+      eventSourceAbortRef.current?.abort();
 
-      // Reset reconnect attempts on fresh subscription
       if (!isReconnect) {
         reconnectAttemptRef.current = 0;
       }
 
-      const url = `/v1/notebooks/${notebookId}/research/${researchId}/stream`;
-      const eventSource = new EventSource(url);
-      eventSourceRef.current = eventSource;
+      const currentResearchId = researchId;
+      const abortController = new AbortController();
+      eventSourceAbortRef.current = abortController;
       lastEventAtRef.current = Date.now();
 
-      // Track current research ID for reconnection
-      const currentResearchId = researchId;
-
       const scheduleReconnect = (message: string) => {
-        if (!isResearchSessionActive(currentResearchId)) {
-          return;
-        }
-        // Check if we should attempt reconnection
+        if (!isResearchSessionActive(currentResearchId)) return;
         if (reconnectAttemptRef.current < maxReconnectAttempts) {
           reconnectAttemptRef.current += 1;
           const delay = baseReconnectDelay * Math.pow(2, reconnectAttemptRef.current - 1);
@@ -479,136 +463,79 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
         }
       };
 
-      const handleEvent = (eventType: SSEEvent['type']) => (event: MessageEvent) => {
-        // Reset reconnect attempts on successful event
-        reconnectAttemptRef.current = 0;
-        lastEventAtRef.current = Date.now();
-
+      const processStream = async () => {
         try {
-          const data = JSON.parse(event.data);
-          setSSEEvents((prev) => {
-            const next = [...prev, { type: eventType, data } as SSEEvent];
-            return next.length > maxSseEvents ? next.slice(-maxSseEvents) : next;
+          const stream = streamRequest(`/v2/research/${researchId}/stream`, {
+            signal: abortController.signal,
           });
 
-          // Update session state from SSE events for real-time progress
-          if (eventType === 'status' && data.status) {
-            // Update activeSession with iteration if provided
-            setActiveSession((prev) => {
-              if (!prev) return prev;
-              return {
-                ...prev,
-                current_iteration: data.iteration ?? prev.current_iteration,
-                status: data.status,
-              };
+          for await (const sseEvent of stream) {
+            reconnectAttemptRef.current = 0;
+            lastEventAtRef.current = Date.now();
+
+            const eventType = sseEvent.event as SSEEvent['type'];
+            const data = sseEvent.data as Record<string, unknown> | null;
+
+            if (!data) continue;
+
+            setSSEEvents((prev) => {
+              const next = [...prev, { type: eventType, data } as SSEEvent];
+              return next.length > maxSseEvents ? next.slice(-maxSseEvents) : next;
             });
-            // Also update sessions list for capsule display
-            setSessions((prev) =>
-              prev.map((s) =>
-                s.id === researchId
+
+            if (eventType === 'status' && data.status) {
+              setActiveSession((prev) =>
+                prev
                   ? {
-                      ...s,
-                      current_iteration: data.iteration ?? s.current_iteration,
-                      status: data.status,
+                      ...prev,
+                      current_iteration: (data.iteration as number) ?? prev.current_iteration,
+                      status: data.status as string,
                     }
-                  : s,
-              ),
-            );
+                  : prev,
+              );
+              setSessions((prev) =>
+                prev.map((s) =>
+                  s.id === researchId
+                    ? {
+                        ...s,
+                        current_iteration: (data.iteration as number) ?? s.current_iteration,
+                        status: data.status as string,
+                      }
+                    : s,
+                ),
+              );
 
-            if (!['planning', 'searching', 'analyzing', 'waiting_user'].includes(data.status)) {
-              unsubscribeFromSSE();
+              if (
+                !['planning', 'searching', 'analyzing', 'waiting_user'].includes(
+                  data.status as string,
+                )
+              ) {
+                unsubscribeFromSSE();
+              }
+            }
+
+            if (eventType === 'done' || eventType === 'report') {
+              fetchSession(researchId);
+              fetchSessions();
+              if (eventType === 'done') {
+                unsubscribeFromSSE();
+              }
             }
           }
-
-          // Update iteration from thinking events that include new_iteration type
-          if (eventType === 'thinking' && data.type === 'new_iteration' && data.iteration) {
-            setActiveSession((prev) => {
-              if (!prev) return prev;
-              return {
-                ...prev,
-                current_iteration: data.iteration,
-              };
-            });
-            setSessions((prev) =>
-              prev.map((s) =>
-                s.id === researchId ? { ...s, current_iteration: data.iteration } : s,
-              ),
-            );
+        } catch (error) {
+          if (!abortController.signal.aborted) {
+            scheduleReconnect('连接中断，');
           }
-
-          // Update from analysis events which include iteration info
-          if (eventType === 'analysis' && data.iteration) {
-            setActiveSession((prev) => {
-              if (!prev) return prev;
-              return {
-                ...prev,
-                current_iteration: data.iteration,
-              };
-            });
-            setSessions((prev) =>
-              prev.map((s) =>
-                s.id === researchId ? { ...s, current_iteration: data.iteration } : s,
-              ),
-            );
-          }
-
-          // Full refresh on done or report to get final data
-          if (eventType === 'done' || eventType === 'report') {
-            fetchSession(researchId);
-            // Also refresh sessions list
-            fetchSessions();
-            if (eventType === 'done') {
-              unsubscribeFromSSE();
-            }
-          }
-        } catch {
-          console.error('Failed to parse SSE event:', event.data);
         }
       };
 
-      eventSource.addEventListener('status', handleEvent('status'));
-      eventSource.addEventListener('plan_ready', handleEvent('plan_ready'));
-      eventSource.addEventListener('search_progress', handleEvent('search_progress'));
-      eventSource.addEventListener('analysis', handleEvent('analysis'));
-      eventSource.addEventListener('report', handleEvent('report'));
-      eventSource.addEventListener('done', handleEvent('done'));
-      eventSource.addEventListener('waiting', handleEvent('waiting'));
-      eventSource.addEventListener('thinking', handleEvent('thinking'));
-      eventSource.addEventListener('heartbeat', () => {
-        lastEventAtRef.current = Date.now();
-      });
-
-      eventSource.onerror = () => {
-        eventSource.close();
-        eventSourceRef.current = null;
-        scheduleReconnect('连接中断，');
-      };
-
-      // Handle successful connection
-      eventSource.onopen = () => {
-        lastEventAtRef.current = Date.now();
-        if (isReconnect) {
-          if (import.meta.env.DEV) {
-            console.log('SSE reconnected successfully');
-          }
-          setSSEEvents((prev) => {
-            const next = [
-              ...prev,
-              { type: 'connection', data: { status: 'reconnected', message: '连接已恢复' } },
-            ] as SSEEvent[];
-            return next.length > maxSseEvents ? next.slice(-maxSseEvents) : next;
-          });
-          // Refresh session data after reconnect
-          fetchSession(researchId);
-        }
-      };
+      void processStream();
 
       staleCheckIntervalRef.current = setInterval(() => {
-        if (!eventSourceRef.current) return;
+        if (!eventSourceAbortRef.current || eventSourceAbortRef.current.signal.aborted) return;
         const elapsed = Date.now() - lastEventAtRef.current;
         if (elapsed > staleConnectionMs) {
-          eventSourceRef.current.close();
-          eventSourceRef.current = null;
+          eventSourceAbortRef.current.abort();
           scheduleReconnect('连接超时，');
         }
       }, staleCheckIntervalMs);
@@ -625,9 +552,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       if (staleCheckIntervalRef.current) {
         clearInterval(staleCheckIntervalRef.current);
       }
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-      }
+      eventSourceAbortRef.current?.abort();
     };
   }, []);
 

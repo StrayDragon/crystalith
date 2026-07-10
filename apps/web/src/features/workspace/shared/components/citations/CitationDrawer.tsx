@@ -5,11 +5,8 @@ import {
 } from '@mui/icons-material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import {
-  getCitationContextV1NotebooksNotebookIdCitationsContextGet,
-  type CitationContextResponse,
-} from '../../../../../api/generated';
-import { unwrapData } from '../../../../../api/unwrap';
+import { api } from '../../../../../api/eden';
+import type { CitationContextResponse } from '../../../../../api/shared-types';
 import { useLayer } from '../../../../../shared/layer';
 import { useWorkspaceStore } from '../../state/workspaceStore';
 import type { Citation } from '../../types';
@@ -128,21 +125,20 @@ export default function CitationDrawer({
     setError('');
     setContext(null);
 
-    unwrapData(
-      getCitationContextV1NotebooksNotebookIdCitationsContextGet<true>({
-        path: { notebook_id: notebookId },
-        query: { chunk_id: citation.chunkId, before: 1, after: 1 },
-      }),
-    )
-      .then((response) => {
-        setContext(response);
-      })
-      .catch((error) => {
-        setError(error?.message || '加载引用上下文失败');
-      })
-      .finally(() => {
+    const fetchContext = async () => {
+      try {
+        const { data, error: fetchErr } = await api.v2.citations.context.get({
+          query: { chunk_id: String(citation.chunkId), before: '1', after: '1' },
+        });
+        if (fetchErr) throw fetchErr;
+        setContext(data as CitationContextResponse);
+      } catch (err) {
+        setError((err as Error)?.message || '加载引用上下文失败');
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+    void fetchContext();
   }, [open, citation, notebookId, isConnected]);
 
   const headerMeta = useMemo(() => {
@@ -196,7 +192,7 @@ export default function CitationDrawer({
 
         <div className="px-4 py-3 flex items-center justify-between gap-2 border-b border-gray-100 dark:border-slate-800">
           <div className="text-xs font-medium text-gray-500 dark:text-slate-300 truncate">
-            {citation?.snippet ? `“${citation.snippet}”` : '—'}
+            {citation?.snippet ? `"${citation.snippet}"` : '—'}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {onLocateSource && (
