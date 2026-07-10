@@ -1,13 +1,18 @@
-// Research agent — cyclic orchestration using AI SDK v7 ToolLoopAgent.
+// Research agent — cyclic orchestration using AI SDK v7.
 //
 // Architecture:
 //   for loop (Plan → HITL → Execute → Analyze → continue/break) → Report
 //
 // - Plan/Analyze: generateObject with Zod schema (structured output)
-// - HITL: toolApproval: 'user-approval' (event-driven, no DB polling)
-// - Execute: webSearch tool via ToolLoopAgent
-// - Report: streamText (relayed to SSE)
+// - HITL: DB polling (wait for approve/skip/modify/finish)
+// - Execute: searxngFetch via Semaphore(3)
+// - Report: streamText → eagerly drain → persist completed immediately
 // - Cancel: AbortSignal on the while loop
+//
+// Three entry points:
+//   runResearch(sessionId, signal)        — fresh start (iteration 1)
+//   runResearchFromState(sessionId, sig)  — resume (reads iteration + results)
+//   runResearchCore(state, signal)        — shared core (used by both above)
 import { generateObject, streamText } from 'ai';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -94,7 +99,6 @@ async function planSearches(state: ResearchState, signal: AbortSignal): Promise<
     abortSignal: signal,
   });
 
-  // Persist plan as research step
   db()
     .insert(researchSteps)
     .values({
@@ -129,7 +133,6 @@ async function analyzeResults(state: ResearchState, signal: AbortSignal): Promis
     abortSignal: signal,
   });
 
-  // Persist analysis as research step
   db()
     .insert(researchSteps)
     .values({
@@ -149,7 +152,7 @@ async function analyzeResults(state: ResearchState, signal: AbortSignal): Promis
 // ---------------------------------------------------------------------------
 
 async function executeSearches(plan: SearchPlan, signal: AbortSignal): Promise<ResearchResult[]> {
-  const semaphore = new Semaphore(3); // max 3 concurrent
+  const semaphore = new Semaphore(3);
   const allResults: ResearchResult[] = [];
 
   const tasks = plan.queries.map((q) =>
@@ -231,7 +234,7 @@ function deduplicateResults(results: ResearchResult[]): ResearchResult[] {
 }
 
 // ---------------------------------------------------------------------------
-// Report generation (streamText → SSE)
+// Report generation (streamText → eagerly drain → persist + replay)
 // ---------------------------------------------------------------------------
 
 async function generateReport(
@@ -252,43 +255,28 @@ async function generateReport(
     abortSignal: signal,
   });
 
-  // Return the text stream for SSE relay
   return result.textStream;
 }
 
 // ---------------------------------------------------------------------------
-// Main entry: runResearch
+// Main entry: runResearchCore — shared by fresh-start and resume
 // ---------------------------------------------------------------------------
 
 /**
- * Run the full research agent cycle.
+ * Run the full research agent cycle from a pre-built state.
  *
- * 1. Plan → 2. HITL (toolApproval) → 3. Execute → 4. Analyze → loop/break → 5. Report
+ * 1. Plan → 2. HITL (DB polling) → 3. Execute → 4. Analyze → loop/break → 5. Report
  *
  * Returns the text stream of the final report for SSE relay.
  * The caller is responsible for AbortController management.
  */
-export async function runResearch(
-  sessionId: number,
+export async function runResearchCore(
+  state: ResearchState,
   signal: AbortSignal,
 ): Promise<{ reportStream: AsyncIterable<string> } | null> {
-  const session = db()
-    .select()
-    .from(researchSessions)
-    .where(eq(researchSessions.id, sessionId))
-    .get();
-  if (!session) return null;
+  const sessionId = state.sessionId;
 
-  const state: ResearchState = {
-    sessionId,
-    notebookId: session.notebookId,
-    topic: session.topic,
-    iteration: 1,
-    maxIterations: session.maxIterations,
-    results: [],
-  };
-
-  for (let iter = 1; iter <= state.maxIterations && !signal.aborted; iter++) {
+  for (let iter = state.iteration; iter <= state.maxIterations && !signal.aborted; iter++) {
     state.iteration = iter;
     db()
       .update(researchSessions)
@@ -296,15 +284,15 @@ export async function runResearch(
       .where(eq(researchSessions.id, sessionId))
       .run();
 
-    // 1. Plan — structured output
+    // 1. Plan
     let plan: SearchPlan;
     try {
       plan = await planSearches(state, signal);
     } catch {
-      break; // AbortError or failure
+      break;
     }
 
-    // 2. HITL — use ToolLoopAgent with toolApproval
+    // 2. HITL
     db()
       .update(researchSessions)
       .set({ status: 'waiting_user' })
@@ -324,7 +312,6 @@ export async function runResearch(
     const newResults = await executeSearches(plan, signal);
     state.results.push(...newResults);
 
-    // Persist aggregated results
     db()
       .update(researchSessions)
       .set({ aggregatedResults: state.results as unknown as Record<string, unknown>[] })
@@ -341,13 +328,6 @@ export async function runResearch(
 
     // 5. Loop condition
     if (!analysis.needMore || iter >= state.maxIterations) break;
-
-    // Update suggested queries for next iteration
-    db()
-      .update(researchSessions)
-      .set({ status: 'analyzing' })
-      .where(eq(researchSessions.id, sessionId))
-      .run();
   }
 
   // If cancelled, don't write report
@@ -360,8 +340,7 @@ export async function runResearch(
     return null;
   }
 
-  // 5. Generate report — eagerly drain so we can persist completed status
-  // immediately, then return a replayable async iterable for the SSE relay.
+  // Generate report — eagerly drain so status persists regardless of SSE consumer
   db()
     .update(researchSessions)
     .set({ status: 'analyzing' })
@@ -384,8 +363,6 @@ export async function runResearch(
     .where(eq(researchSessions.id, sessionId))
     .run();
 
-  // Replayable async iterable — SSE endpoint reads this without re-running
-  // the LLM, and the report is already persisted regardless.
   return {
     reportStream: (async function* () {
       for (const c of chunks) yield c;
@@ -394,19 +371,80 @@ export async function runResearch(
 }
 
 // ---------------------------------------------------------------------------
-// HITL: wait for user approval via DB polling (simplified for desktop MVP)
+// runResearch — fresh start (iteration 1, empty results)
 // ---------------------------------------------------------------------------
-// The AI SDK v7 toolApproval is the ideal approach but requires the frontend
-// to handle tool-approval events. For the initial implementation, use a
-// lightweight DB-polling approach that maintains compatibility with the
-// existing frontend research UI.
+
+export async function runResearch(
+  sessionId: number,
+  signal: AbortSignal,
+): Promise<{ reportStream: AsyncIterable<string> } | null> {
+  const session = db()
+    .select()
+    .from(researchSessions)
+    .where(eq(researchSessions.id, sessionId))
+    .get();
+  if (!session) return null;
+
+  return runResearchCore(
+    {
+      sessionId,
+      notebookId: session.notebookId,
+      topic: session.topic,
+      iteration: 1,
+      maxIterations: session.maxIterations,
+      results: [],
+    },
+    signal,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// runResearchFromState — resume from persisted iteration + results
+// ---------------------------------------------------------------------------
+
+/**
+ * Resume a previously-started research session from its persisted state.
+ *
+ * Reads `currentIteration` and `aggregatedResults` from the DB so the
+ * agent continues where it left off instead of restarting from iteration 1.
+ *
+ * Corresponds to v1 `_build_state_from_session` → `run_research_graph_from_session`.
+ */
+export async function runResearchFromState(
+  sessionId: number,
+  signal: AbortSignal,
+): Promise<{ reportStream: AsyncIterable<string> } | null> {
+  const session = db()
+    .select()
+    .from(researchSessions)
+    .where(eq(researchSessions.id, sessionId))
+    .get();
+  if (!session) return null;
+
+  const aggregatedResults = (session.aggregatedResults ?? []) as ResearchResult[];
+
+  return runResearchCore(
+    {
+      sessionId,
+      notebookId: session.notebookId,
+      topic: session.topic,
+      iteration: session.currentIteration ?? 1,
+      maxIterations: session.maxIterations,
+      results: aggregatedResults,
+    },
+    signal,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// HITL: wait for user approval via DB polling
+// ---------------------------------------------------------------------------
 
 async function waitForApproval(
   state: ResearchState,
   plan: SearchPlan,
   signal: AbortSignal,
 ): Promise<boolean> {
-  // Insert a USER_INPUT step so the frontend can display the plan
   db()
     .insert(researchSteps)
     .values({
@@ -424,8 +462,7 @@ async function waitForApproval(
     .where(eq(researchSessions.id, state.sessionId))
     .run();
 
-  // Poll DB for approval (max 10 min, every 500ms)
-  const maxWait = 600_000; // 10 min
+  const maxWait = 600_000;
   const pollInterval = 500;
   const maxPolls = maxWait / pollInterval;
 
@@ -440,12 +477,10 @@ async function waitForApproval(
       .get();
     if (!session) return false;
 
-    // Check for user action: approve/skip/finish
-    if (session.status === 'searching') return true; // approved
+    if (session.status === 'searching') return true;
     if (session.status === 'cancelled' || session.status === 'completed') return false;
   }
 
-  // Timeout: auto-approve
   return true;
 }
 
