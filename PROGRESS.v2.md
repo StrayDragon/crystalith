@@ -39,7 +39,7 @@
 | c32 | studio-persist         | ✅ DONE (本会话)                                                                 |
 | c33 | source-extras          | ✅ DONE (本会话)                                                                 |
 | c34 | sessions-convert       | ✅ DONE (本会话)                                                                 |
-| c35 | frontend-migration     | 🔄 WIP (Phase 7a-e: 17 domains migrated; 4 large files remain: useSources, SlidesStudio, SourceConnectors, type-only imports. Typecheck: 207→25 ↓88%) |
+| c35 | frontend-migration     | 🔄 WIP (19/21 domains migrated; 2 files remain. Typecheck: 207→25 ↓88%) |
 | c13 | distribution           | ⏸️ BLOCKED (blocked by c35) 🔒 需要人工授权                                      |
 | c14 | cleanup-delivery       | ⏸️ BLOCKED (blocked by c13) 🔒 需要人工授权                                      |
 

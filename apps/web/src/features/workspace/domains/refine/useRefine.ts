@@ -349,7 +349,7 @@ export function useRefine() {
             source_ids: sourceIds,
           } as any);
           if (refineErr) throw refineErr;
-          resolvedCitations = response.citations.map(normalizeCitation);
+          resolvedCitations = (response as any).citations?.map(normalizeCitation) ?? [];
           for (const [format, output] of Object.entries(response.outputs ?? {})) {
             if (!output) continue;
             const key = format as RefineMode;
