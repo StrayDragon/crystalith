@@ -20,6 +20,8 @@ import {
 } from '@crystalith/shared';
 import { parse as parseYaml } from 'yaml';
 
+import type { SsrfPolicy } from './net/url-safety.ts';
+
 export const CONFIG_PATH = process.env.CL_CONFIG_PATH ?? 'config/app.yaml';
 export const SECRET_PATH = process.env.CL_SECRET_PATH ?? 'config/secret.env';
 
@@ -223,4 +225,47 @@ export function getDefaultEmbeddingModel(): ModelConfig | undefined {
   const id = models.defaults.embedding;
   if (id) return models.available.find((m) => m.id === id);
   return models.available.find((m) => m.roles.includes('embed'));
+}
+
+// ---------------------------------------------------------------------------
+// Security + guardrail config (c25)
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse SSRF security policy from config YAML.
+ *
+ * Path: `source_ingestion.url_fetch.security`
+ * Returns an empty object when the section is absent (the default
+ * deny-private-IP posture baked into validateUrlForFetch).
+ */
+export function getSecurityPolicy(): SsrfPolicy {
+  const sec = (config().raw.source_ingestion as Record<string, unknown> | undefined)?.url_fetch as
+    | Record<string, unknown>
+    | undefined;
+  const security = sec?.security as Record<string, unknown> | undefined;
+  if (!security) return {};
+  return {
+    allowlistOnly: security.allowlist_only === true,
+    hostAllowlist: Array.isArray(security.allowlist_hosts)
+      ? (security.allowlist_hosts as string[])
+      : undefined,
+    domainAllowlist: Array.isArray(security.allowlist_domains)
+      ? (security.allowlist_domains as string[])
+      : undefined,
+    cidrAllowlist: Array.isArray(security.allowlist_cidrs)
+      ? (security.allowlist_cidrs as string[])
+      : undefined,
+  };
+}
+
+/**
+ * Read `app.http_guardrails.upload_max_bytes` from config.
+ * Falls back to 50 MB when absent or invalid.
+ */
+export function getUploadMaxBytes(): number {
+  const guardrails = (config().raw.app as Record<string, unknown> | undefined)?.http_guardrails as
+    | Record<string, unknown>
+    | undefined;
+  const n = guardrails?.upload_max_bytes;
+  return typeof n === 'number' && n > 0 ? n : 50 * 1024 * 1024;
 }

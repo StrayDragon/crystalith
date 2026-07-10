@@ -16,6 +16,7 @@ import {
 import { deleteSourceVectors } from '../../db/vectors.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
+import { getSecurityPolicy, getUploadMaxBytes } from '../../shared/config.ts';
 import { extractUrl } from '../../shared/extraction/factory.ts';
 import { validateUrlForFetch } from '../../shared/net/url-safety.ts';
 import { uploadDedupKey, urlDedupKey } from './dedup.ts';
@@ -183,11 +184,11 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     const file = (body as { file?: File }).file;
     if (!file) throw new NotFoundError('No file provided');
 
-    // Upload size limit (default 50 MB).
-    const UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
-    if (file.size > UPLOAD_MAX_BYTES) {
+    // Upload size limit (configurable, default 50 MB).
+    const maxBytes = getUploadMaxBytes();
+    if (file.size > maxBytes) {
       set.status = 413;
-      return { error: 'Payload Too Large', max_bytes: UPLOAD_MAX_BYTES, uploaded_bytes: file.size };
+      return { error: 'Payload Too Large', max_bytes: maxBytes, uploaded_bytes: file.size };
     }
 
     const buffer = new Uint8Array(await file.arrayBuffer());
@@ -451,7 +452,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
 
     // SSRF guard: validate URL before fetch.
     try {
-      await validateUrlForFetch(url);
+      await validateUrlForFetch(url, getSecurityPolicy());
     } catch (error) {
       set.status = 422;
       return { error: 'SSRF blocked', reason: (error as Error).message };

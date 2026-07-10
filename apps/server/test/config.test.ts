@@ -9,6 +9,8 @@ import {
   resetConfig,
   getModelById,
   getDefaultChatModel,
+  getSecurityPolicy,
+  getUploadMaxBytes,
 } from '../src/shared/config.ts';
 
 const TMP = join(tmpdir(), `crystalith-test-config-${process.pid}.yaml`);
@@ -99,5 +101,105 @@ models:
     const cfg = loadConfig(TMP);
     resetConfig(cfg);
     expect(getDefaultChatModel()?.id).toBe('m1');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// c25: SSRF security policy + upload max bytes config parsing
+// ---------------------------------------------------------------------------
+
+describe('config: security policy parsing', () => {
+  it('returns empty policy when security section is absent', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    expect(getSecurityPolicy()).toEqual({});
+  });
+
+  it('parses allowlist_hosts as string array', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+source_ingestion:
+  url_fetch:
+    security:
+      allowlist_hosts:
+        - example.com
+        - trusted.org
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    const policy = getSecurityPolicy();
+    expect(policy.hostAllowlist).toEqual(['example.com', 'trusted.org']);
+  });
+
+  it('parses allowlist_only flag', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+source_ingestion:
+  url_fetch:
+    security:
+      allowlist_only: true
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    expect(getSecurityPolicy().allowlistOnly).toBe(true);
+  });
+
+  it('parses cidrAllowlist', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+source_ingestion:
+  url_fetch:
+    security:
+      allowlist_cidrs:
+        - "10.0.0.0/8"
+        - "192.168.0.0/16"
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    expect(getSecurityPolicy().cidrAllowlist).toEqual(['10.0.0.0/8', '192.168.0.0/16']);
+  });
+});
+
+describe('config: upload max bytes', () => {
+  it('returns 50 MB when config is absent', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    expect(getUploadMaxBytes()).toBe(50 * 1024 * 1024);
+  });
+
+  it('reads upload_max_bytes from app.http_guardrails', () => {
+    writeFileSync(
+      TMP,
+      `models:
+  defaults: {}
+  available: []
+app:
+  http_guardrails:
+    upload_max_bytes: 1048576
+`,
+    );
+    resetConfig(loadConfig(TMP));
+    expect(getUploadMaxBytes()).toBe(1048576);
   });
 });

@@ -30,7 +30,7 @@
 | c23     | studio-analysis        | 🔄 WIP (contradiction✅; clustering/correlation降级→c28; studio落盘缺→G10/G11)   |
 | c24     | pipeline-integration   | 🔄 WIP (WS-A✅ / WS-B✅ 3缺口 / WS-C✅ 28 tests)                                 |
 | c25     | ssrf-config            | ⬜ TODO (GAP-BOARD G15)                                                          |
-| c26     | citation-context       | ⬜ TODO (GAP-BOARD G8)                                                           |
+| c26     | citation-context       | ✅ DONE                                                                          |
 | c27     | outputs-rag            | ✅ DONE                                                                          |
 | c28     | analysis-vector        | ⬜ TODO (GAP-BOARD G2)                                                           |
 | c29-c35 | v1-alignment           | ⬜ TODO (GAP-BOARD G1/G3/G9/G10/G11/G12/G13/G16,编号待定)                        |
@@ -154,7 +154,7 @@
 | G5  | research-export    | 🔴 /export 是JSON dump,不创建source                       | `api.py:1245-1469`                        | **c24-B ✅**   | P0     | ✅ DONE     |
 | G6  | research-hitl      | 🟡 HITL忽略modify/skip,只用approve                        | `graph.py:354-409`                        | **c24-B ✅**   | P1     | ✅ DONE     |
 | G7  | outputs-rag        | 🟡 无RAG检索(全chunk dump)+无citations                    | `output_graph.py`                         | **c27 ✅**     | P0     | ✅ DONE     |
-| G8  | citations-context  | 🔴 邻域证据审查缺失                                       | `citations/api.py`                        | c26            | P1     | ⬜ 已有提案 |
+| G8  | citations-context  | 🔴 邻域证据审查缺失                                       | `citations/api.py`                        | **c26 ✅**     | P1     | ✅ DONE     |
 | G9  | qa-noevidence      | 🟡 5个no-evidence reason仅产出1个                         | `service.py:62-69`                        | **c31** (新建) | P1     | ⬜ 待提案   |
 | G10 | studio-persist     | 🟡 Slidev无文件系统落盘(预览不可用)                       | `studio/storage.py`                       | **c32** (新建) | P1     | ⬜ 待提案   |
 | G11 | studio-endpoints   | 🟡 缺4端点(草稿编辑+HITL手动改outline/markdown)           | `studio/api.py`                           | **c32** (合并) | P1     | ⬜ 待提案   |
@@ -187,8 +187,8 @@ P2(体验降级):
 
 | 字段       | 值                                                                                                                                                                                                                                                                                                                                                                                |
 | :--------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 上次 Agent | pi-agent (Step 2.1 ✅ c27 outputs RAG retrieval)                                                                                                                                                                                                                                                                                                                                  |
-| 上次操作   | **Step 2.1 ✅**: c27 outputs RAG retrieval。改 pipeline.ts getContext 用 ragRegistry.retrieveWith('embed') 替代 dump-all。新增 `buildOutputQuery(type, prompt)` 构造语义查询。`citations` 附回 OutputResult。preference quality/speed → topK 10/3。保留显式 chunkIds 模式。183 pass / 0 fail。**下一步**: c25 SSRF config 或 c26 citation-context                                 |
+| 上次 Agent | pi-agent (c26 ✅ citation context neighborhood + v1 行为验证)                                                                                                                                                                                                                                                                                                                     |
+| 上次操作   | **c26 ✅**: citations 邻域证据审查。新增 `/citations/context` 端点 + `resolveChunkContext()`。支持 chunk_id/(source_id+chunk_index) 双模式解析,同源前后邻域窗口(0-5),metadata page_number/paragraph_index 富化,200字截断,1-based chunk_index。13 tests。**v1 行为逐项验证通过**。196 pass / 0 fail。**下一步**: c25 SSRF config                                                   |
 | 开放决策   | (1) **Auth**: 本地免鉴权 + 回环绑定（c13阶段）。(2) **React**: 暂锁18.2.0，待迁移MUI后升19。(3) AI SDK v7 tool() 用inputSchema。(4) **WS-B 拆分为多个对齐提案**(GAP-BOARD),不再作为单一批次;research 部分(resume/export/hitl)作为 c24-B 拆分项。(5) refine 回退对齐 v1(citation-aware RAG 摘要器)。(6) 前端迁移(~87%)在后端对齐后统一补齐(c35)。(7) oxlint warning 147 处非阻塞。 |
 | 已知问题   | **🔴 GAP-BOARD 16 项**: 见上方 GAP-BOARD 表(6 P0 / 6 P1 / 4 P2)。**🟡 P1**: web typecheck 207 errors(196噪音+11真实)。**🟡 P1**: v2无auth。**🟢 暂缓**: @material-tailwind→MUI迁移。**✅ 已修**: dedup 跨notebook误判409 + worker dispatch payload.type缺失。                                                                                                                     |
 | 质量门禁   | (本次仅文档更新,无代码变更)`bun oxlint` → 0 errors / 147 warnings ✅。`bun typecheck` (server) ✅。`bun test` (server) → 144 pass / 0 fail ✅。`bun test tests/bdd/` → 21 pass ✅                                                                                                                                                                                                 |
