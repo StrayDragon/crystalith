@@ -145,24 +145,24 @@
 > **原则: 一个一个做,不跳过,完整对齐 v1 行为契约。**
 > 优先级: P0 = 功能不可用/数据错误 | P1 = 行为实质偏离 | P2 = 体验降级
 
-| Gap | 域                 | 偏移描述                                                  | v1 参考                                   | 提案           | 优先级 | 状态        |
-| :-- | :----------------- | :-------------------------------------------------------- | :---------------------------------------- | :------------- | :----- | :---------- |
-| G1  | refine             | 🔴 换产品:纯文本变换器→应对齐为 citation-aware RAG 摘要器 | `refine/api.py`                           | **c29** ✅     | P0     | ✅ DONE     |
-| G2  | analysis           | 🔴 clustering/correlation 向量KNN降级为关键词TF           | `analysis/clustering.py`+`correlation.py` | c28            | P0     | 🔄 WIP      |
-| G3  | sources-embedding  | 🔴 异步embedding竞态:ready时向量未写入                    | `api_ingest.py:847-884`(同步)             | **c30** ✅     | P0     | ✅ DONE     |
-| G4  | research-resume    | 🔴 /resume 从头重跑,丢失累积结果                          | `graph.py:_build_state_from_session`      | **c24-B ✅**   | P0     | ✅ DONE     |
-| G5  | research-export    | 🔴 /export 是JSON dump,不创建source                       | `api.py:1245-1469`                        | **c24-B ✅**   | P0     | ✅ DONE     |
-| G6  | research-hitl      | 🟡 HITL忽略modify/skip,只用approve                        | `graph.py:354-409`                        | **c24-B ✅**   | P1     | ✅ DONE     |
-| G7  | outputs-rag        | 🟡 无RAG检索(全chunk dump)+无citations                    | `output_graph.py`                         | **c27 ✅**     | P0     | ✅ DONE     |
-| G8  | citations-context  | 🔴 邻域证据审查缺失                                       | `citations/api.py`                        | **c26 ✅**     | P1     | ✅ DONE     |
-| G9  | qa-noevidence      | 🟡 5个no-evidence reason仅产出1个                         | `service.py:62-69`                        | **c31** (新建) | P1     | ⬜ 待提案   |
-| G10 | studio-persist     | 🟡 Slidev无文件系统落盘(预览不可用)                       | `studio/storage.py`                       | **c32** (新建) | P1     | ⬜ 待提案   |
-| G11 | studio-endpoints   | 🟡 缺4端点(草稿编辑+HITL手动改outline/markdown)           | `studio/api.py`                           | **c32** (合并) | P1     | ⬜ 待提案   |
-| G12 | sources-endpoints  | 🟡 缺3端点(summary/per-source-qa/qa-to-source)            | `sources/api.py`+`qa/api.py`              | **c33** (新建) | P1     | ⬜ 待提案   |
-| G13 | sessions-endpoints | 🟡 缺2端点(GET单个+convert-to-output)                     | `sessions/api.py`                         | **c34** (新建) | P2     | ⬜ 待提案   |
-| G14 | source-connectors  | 🟡 sync是TODO stub,缺snapshot/apply/import-scope          | `source_connectors/api.py`                | c13 或独立     | P2     | ⬜          |
-| G15 | ssrf-config        | 🟡 白名单字段死代码(config不解析)                         | `config.py`                               | c25            | P2     | ⬜ 已有提案 |
-| G16 | frontend           | 🔴 ~87%未迁移,AI/流式域全打/v1→404                        | (整个前端)                                | **c35** (新建) | P0     | ⬜ 待提案   |
+| Gap | 域                 | 偏移描述                                                  | v1 参考                                   | 提案              | 优先级 | 状态        |
+| :-- | :----------------- | :-------------------------------------------------------- | :---------------------------------------- | :---------------- | :----- | :---------- |
+| G1  | refine             | 🔴 换产品:纯文本变换器→应对齐为 citation-aware RAG 摘要器 | `refine/api.py`                           | **c29** ✅        | P0     | ✅ DONE     |
+| G2  | analysis           | 🔴 clustering/correlation 向量KNN降级为关键词TF           | `analysis/clustering.py`+`correlation.py` | c28               | P0     | 🔄 WIP      |
+| G3  | sources-embedding  | 🔴 异步embedding竞态:ready时向量未写入                    | `api_ingest.py:847-884`(同步)             | **c30** ✅        | P0     | ✅ DONE     |
+| G4  | research-resume    | 🔴 /resume 从头重跑,丢失累积结果                          | `graph.py:_build_state_from_session`      | **c24-B ✅**      | P0     | ✅ DONE     |
+| G5  | research-export    | 🔴 /export 是JSON dump,不创建source                       | `api.py:1245-1469`                        | **c24-B ✅**      | P0     | ✅ DONE     |
+| G6  | research-hitl      | 🟡 HITL忽略modify/skip,只用approve                        | `graph.py:354-409`                        | **c24-B ✅**      | P1     | ✅ DONE     |
+| G7  | outputs-rag        | 🟡 无RAG检索(全chunk dump)+无citations                    | `output_graph.py`                         | **c27 ✅**        | P0     | ✅ DONE     |
+| G8  | citations-context  | 🔴 邻域证据审查缺失                                       | `citations/api.py`                        | **c26 ✅**        | P1     | ✅ DONE     |
+| G9  | qa-noevidence      | 🟡 5个no-evidence reason仅产出1个                         | `service.py:62-69`                        | **c31 ✅** (新建) | P1     | ✅ DONE     |
+| G10 | studio-persist     | 🟡 Slidev无文件系统落盘(预览不可用)                       | `studio/storage.py`                       | **c32** (新建)    | P1     | ⬜ 待提案   |
+| G11 | studio-endpoints   | 🟡 缺4端点(草稿编辑+HITL手动改outline/markdown)           | `studio/api.py`                           | **c32** (合并)    | P1     | ⬜ 待提案   |
+| G12 | sources-endpoints  | 🟡 缺3端点(summary/per-source-qa/qa-to-source)            | `sources/api.py`+`qa/api.py`              | **c33** (新建)    | P1     | ⬜ 待提案   |
+| G13 | sessions-endpoints | 🟡 缺2端点(GET单个+convert-to-output)                     | `sessions/api.py`                         | **c34** (新建)    | P2     | ⬜ 待提案   |
+| G14 | source-connectors  | 🟡 sync是TODO stub,缺snapshot/apply/import-scope          | `source_connectors/api.py`                | c13 或独立        | P2     | ⬜          |
+| G15 | ssrf-config        | 🟡 白名单字段死代码(config不解析)                         | `config.py`                               | c25               | P2     | ⬜ 已有提案 |
+| G16 | frontend           | 🔴 ~87%未迁移,AI/流式域全打/v1→404                        | (整个前端)                                | **c35** (新建)    | P0     | ⬜ 待提案   |
 
 ### GAP-BOARD 执行顺序(初步,可调整)
 
@@ -185,13 +185,13 @@ P2(体验降级):
 
 <!-- HANDOFF -->
 
-| 字段       | 值                                                                                                                                                                                                                                                                                                                                                                                |
-| :--------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 上次 Agent | pi-agent (c26 ✅ citation context neighborhood + v1 行为验证)                                                                                                                                                                                                                                                                                                                     |
-| 上次操作   | **c26 ✅**: citations 邻域证据审查。新增 `/citations/context` 端点 + `resolveChunkContext()`。支持 chunk_id/(source_id+chunk_index) 双模式解析,同源前后邻域窗口(0-5),metadata page_number/paragraph_index 富化,200字截断,1-based chunk_index。13 tests。**v1 行为逐项验证通过**。196 pass / 0 fail。**下一步**: c25 SSRF config                                                   |
-| 开放决策   | (1) **Auth**: 本地免鉴权 + 回环绑定（c13阶段）。(2) **React**: 暂锁18.2.0，待迁移MUI后升19。(3) AI SDK v7 tool() 用inputSchema。(4) **WS-B 拆分为多个对齐提案**(GAP-BOARD),不再作为单一批次;research 部分(resume/export/hitl)作为 c24-B 拆分项。(5) refine 回退对齐 v1(citation-aware RAG 摘要器)。(6) 前端迁移(~87%)在后端对齐后统一补齐(c35)。(7) oxlint warning 147 处非阻塞。 |
-| 已知问题   | **🔴 GAP-BOARD 16 项**: 见上方 GAP-BOARD 表(6 P0 / 6 P1 / 4 P2)。**🟡 P1**: web typecheck 207 errors(196噪音+11真实)。**🟡 P1**: v2无auth。**🟢 暂缓**: @material-tailwind→MUI迁移。**✅ 已修**: dedup 跨notebook误判409 + worker dispatch payload.type缺失。                                                                                                                     |
-| 质量门禁   | (本次仅文档更新,无代码变更)`bun oxlint` → 0 errors / 147 warnings ✅。`bun typecheck` (server) ✅。`bun test` (server) → 144 pass / 0 fail ✅。`bun test tests/bdd/` → 21 pass ✅                                                                                                                                                                                                 |
+| 字段       | 值                                                                                                                                                                                                                                                                                                                                                                                                          |
+| :--------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 上次 Agent | pi-agent (c25/c26/c27/c31 ✅ + v1 行为验证全部通过)                                                                                                                                                                                                                                                                                                                                                         |
+| 上次操作   | **c25 ✅** SSRF config + upload size。**c31 ✅** QA 5 NoEvidenceReason 对齐 v1(no_sources/embedding_empty/no_vector_hits/no_valid_chunks/low_similarity)。stream.ts noEvidenceResolver 改为动态回调。**累计完成**: c24 WS-B/C, c25, c26, c27, c28, c29, c30, c31 — 8 个 change 本会话完成。**剩余 GAP**: G10/G11 studio, G12 sources 端点, G13 sessions 端点, G14 connectors, G16 前端。202 pass / 0 fail。 |
+| 开放决策   | (1) **Auth**: 本地免鉴权 + 回环绑定（c13阶段）。(2) **React**: 暂锁18.2.0，待迁移MUI后升19。(3) AI SDK v7 tool() 用inputSchema。(4) **WS-B 拆分为多个对齐提案**(GAP-BOARD),不再作为单一批次;research 部分(resume/export/hitl)作为 c24-B 拆分项。(5) refine 回退对齐 v1(citation-aware RAG 摘要器)。(6) 前端迁移(~87%)在后端对齐后统一补齐(c35)。(7) oxlint warning 147 处非阻塞。                           |
+| 已知问题   | **🔴 GAP-BOARD 16 项**: 见上方 GAP-BOARD 表(6 P0 / 6 P1 / 4 P2)。**🟡 P1**: web typecheck 207 errors(196噪音+11真实)。**🟡 P1**: v2无auth。**🟢 暂缓**: @material-tailwind→MUI迁移。**✅ 已修**: dedup 跨notebook误判409 + worker dispatch payload.type缺失。                                                                                                                                               |
+| 质量门禁   | (本次仅文档更新,无代码变更)`bun oxlint` → 0 errors / 147 warnings ✅。`bun typecheck` (server) ✅。`bun test` (server) → 144 pass / 0 fail ✅。`bun test tests/bdd/` → 21 pass ✅                                                                                                                                                                                                                           |
 
 ---
 
