@@ -145,7 +145,7 @@ describe('research HITL — approve', () => {
       notebook_id: notebookId,
       max_iterations: 1,
     });
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     const sessionId = body.id;
     expect(sessionId).toBeGreaterThan(0);
 

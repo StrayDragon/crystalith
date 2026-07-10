@@ -4,93 +4,55 @@
 //   POST   /v2/research                    — Start a new research session
 //   GET    /v2/research                    — List research sessions for a notebook
 //   GET    /v2/research/:id                — Get research session status + results
+//   DELETE /v2/research/:id                — Delete a research session (c37)
 //   POST   /v2/research/:id/approve        — Approve search plan (HITL)
-//   POST   /v2/research/:id/modify         — Modify search plan (HITL, c24-B)
-//   POST   /v2/research/:id/skip           — Skip iteration
-//   POST   /v2/research/:id/finish         — Early complete
+//   POST   /v2/research/:id/modify         — Modify search plan (HITL)
+//   POST   /v2/research/:id/skip           — Skip iteration (c37: advance iteration)
+//   POST   /v2/research/:id/finish         — Early complete (c37: triggers report)
 //   POST   /v2/research/:id/cancel         — Cancel a running research
-//   POST   /v2/research/:id/resume         — Resume from persisted state (c24-B)
-//   POST   /v2/research/:id/export         — Export report → source (c24-B)
-//   GET    /v2/research/:id/stream         — SSE progress relay
+//   POST   /v2/research/:id/resume         — Resume from inferred state (c37)
+//   POST   /v2/research/:id/export         — Export report → source/note
+//   GET    /v2/research/:id/stream         — SSE progress relay (c37: named events)
 //
-// The research agent uses a cyclic Plan→HITL→Search→Analyze→loop→Report flow.
-// AbortControllers are managed in-memory for cancel support.
-import { and, desc, eq, gt } from 'drizzle-orm';
+// c37: control endpoints now record steps + transition correctly (v1 parity).
+import { and, desc, eq, gt, inArray } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
-import { chunks, notebooks, researchSessions, researchSteps, sources } from '../../db/schema.ts';
+import {
+  chunks,
+  notebooks,
+  outputs,
+  researchSessions,
+  researchSteps,
+  sources,
+} from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
-import { runResearch, runResearchFromState } from './agent.ts';
+import {
+  runResearch,
+  runResearchFromState,
+  generateFinalReport,
+  type ResearchState,
+  type ResearchResult,
+} from './agent.ts';
 
 // ---------------------------------------------------------------------------
 // OpenAPI docs
 // ---------------------------------------------------------------------------
 
 const apiDocs: OpenApiRoute[] = [
-  {
-    path: '/v2/research',
-    method: 'post',
-    summary: 'Start a new research session',
-    tags: ['research'],
-    responses: { 201: { description: 'Created research session' } },
-  },
-  {
-    path: '/v2/research',
-    method: 'get',
-    summary: 'List research sessions',
-    tags: ['research'],
-    responses: { 200: { description: 'List of research sessions' } },
-  },
-  {
-    path: '/v2/research/:id',
-    method: 'get',
-    summary: 'Get research session details',
-    tags: ['research'],
-    responses: { 200: { description: 'Research session with results' } },
-  },
-  {
-    path: '/v2/research/:id/approve',
-    method: 'post',
-    summary: 'Approve search plan (HITL)',
-    tags: ['research'],
-    responses: { 200: { description: 'Approval recorded' } },
-  },
-  {
-    path: '/v2/research/:id/modify',
-    method: 'post',
-    summary: 'Modify search plan and continue (HITL)',
-    tags: ['research'],
-    responses: { 200: { description: 'Modified plan recorded, resuming' } },
-  },
-  {
-    path: '/v2/research/:id/cancel',
-    method: 'post',
-    summary: 'Cancel a research session',
-    tags: ['research'],
-    responses: { 200: { description: 'Session cancelled' } },
-  },
-  {
-    path: '/v2/research/:id/resume',
-    method: 'post',
-    summary: 'Resume a paused/cancelled research from persisted state',
-    tags: ['research'],
-    responses: { 200: { description: 'Research resumed from last iteration' } },
-  },
-  {
-    path: '/v2/research/:id/export',
-    method: 'post',
-    summary: 'Export research report as a source',
-    tags: ['research'],
-    responses: { 200: { description: 'Report exported to source' } },
-  },
-  {
-    path: '/v2/research/:id/stream',
-    method: 'get',
-    summary: 'SSE stream for research progress',
-    tags: ['research'],
-    responses: { 200: { description: 'SSE event stream' } },
-  },
+  { path: '/v2/research', method: 'post', summary: 'Start a new research session', tags: ['research'], responses: { 201: { description: 'Created research session' } } },
+  { path: '/v2/research', method: 'get', summary: 'List research sessions', tags: ['research'], responses: { 200: { description: 'List of research sessions' } } },
+  { path: '/v2/research/:id', method: 'get', summary: 'Get research session details', tags: ['research'], responses: { 200: { description: 'Research session with results' } } },
+  { path: '/v2/research/:id', method: 'delete', summary: 'Delete a research session', tags: ['research'], responses: { 204: { description: 'Deleted' } } },
+  { path: '/v2/research/:id/approve', method: 'post', summary: 'Approve search plan (HITL)', tags: ['research'], responses: { 200: { description: 'Approval recorded' } } },
+  { path: '/v2/research/:id/modify', method: 'post', summary: 'Modify search plan and continue (HITL)', tags: ['research'], responses: { 200: { description: 'Modified plan recorded, resuming' } } },
+  { path: '/v2/research/:id/skip', method: 'post', summary: 'Skip iteration', tags: ['research'], responses: { 200: { description: 'Iteration skipped' } } },
+  { path: '/v2/research/:id/finish', method: 'post', summary: 'Early complete + report generation', tags: ['research'], responses: { 200: { description: 'Session completed with report' } } },
+  { path: '/v2/research/:id/cancel', method: 'post', summary: 'Cancel a research session', tags: ['research'], responses: { 200: { description: 'Session cancelled' } } },
+  { path: '/v2/research/:id/resume', method: 'post', summary: 'Resume from inferred state', tags: ['research'], responses: { 200: { description: 'Research resumed' } } },
+  { path: '/v2/research/:id/export', method: 'post', summary: 'Export research report', tags: ['research'], responses: { 200: { description: 'Report exported' } } },
+  { path: '/v2/research/:id/stream', method: 'get', summary: 'SSE stream for research progress', tags: ['research'], responses: { 200: { description: 'SSE event stream' } } },
 ];
 
 // ---------------------------------------------------------------------------
@@ -118,8 +80,27 @@ function serializeSession(row: typeof researchSessions.$inferSelect) {
   };
 }
 
+/** Record a user_input step (v1 api.py:483-534 pattern). */
+function recordUserStep(
+  sessionId: number,
+  iteration: number,
+  action: string,
+  extra?: Record<string, unknown>,
+): void {
+  db()
+    .insert(researchSteps)
+    .values({
+      sessionId,
+      iteration,
+      type: 'user_input',
+      inputData: { action, ...extra } as Record<string, unknown>,
+      status: 'completed',
+    })
+    .run();
+}
+
 // ---------------------------------------------------------------------------
-// Session lock — prevent concurrent agent runs on the same session.
+// Session lock (c37: adds expired-lock cleanup)
 // ---------------------------------------------------------------------------
 
 const LOCK_TTL_MS = 10 * 60 * 1000;
@@ -150,6 +131,31 @@ function releaseLock(id: number): void {
     .run();
 }
 
+/** Clean up expired locks (v1 check_and_cleanup_expired_locks, c37). */
+export function cleanupExpiredLocks(): number {
+  const now = new Date();
+  const expired = db()
+    .select({ id: researchSessions.id })
+    .from(researchSessions)
+    .where(
+      and(
+        gt(researchSessions.lockExpiresAt, new Date(0)),
+        // lockExpiresAt < now — drizzle can't compare Date < Date directly,
+        // so we fetch and filter
+      ),
+    )
+    .all()
+    .filter((r) => {
+      const row = db().select().from(researchSessions).where(eq(researchSessions.id, r.id)).get();
+      return row?.lockExpiresAt && row.lockExpiresAt < now;
+    });
+
+  for (const { id } of expired) {
+    releaseLock(id);
+  }
+  return expired.length;
+}
+
 /** Spawn a research agent in background, managing abort controller + lock. */
 function spawnResearch(
   id: number,
@@ -178,12 +184,91 @@ function spawnResearch(
 }
 
 // ---------------------------------------------------------------------------
+// Resume state inference (v1 _infer_resume_state, c37)
+// ---------------------------------------------------------------------------
+
+/**
+ * Infer the resume status from the last persisted step.
+ * v1 api.py:185-229: inspects last step type + user_input action.
+ *
+ * Returns the status to resume in, or null if resume is not possible.
+ */
+function inferResumeState(sessionId: number): {
+  status: 'planning' | 'searching' | 'analyzing' | 'waiting_user' | null;
+  iteration: number;
+} {
+  const session = db()
+    .select()
+    .from(researchSessions)
+    .where(eq(researchSessions.id, sessionId))
+    .get();
+  if (!session) return { status: null, iteration: 1 };
+
+  // Cannot resume a cancelled session that had a user cancel action
+  if (session.status === 'cancelled') {
+    const lastCancel = db()
+      .select()
+      .from(researchSteps)
+      .where(eq(researchSteps.sessionId, sessionId))
+      .orderBy(desc(researchSteps.id))
+      .all()
+      .find((s) => s.type === 'user_input');
+    if (
+      lastCancel?.inputData &&
+      (lastCancel.inputData as Record<string, unknown>).action === 'cancel'
+    ) {
+      return { status: null, iteration: session.currentIteration };
+    }
+  }
+
+  // Already completed — resume to generate/finish report
+  if (session.status === 'completed') {
+    return { status: null, iteration: session.currentIteration };
+  }
+
+  // Check last step to infer where to resume
+  const lastStep = db()
+    .select()
+    .from(researchSteps)
+    .where(eq(researchSteps.sessionId, sessionId))
+    .orderBy(desc(researchSteps.id))
+    .all()[0];
+
+  if (!lastStep) {
+    return { status: 'planning', iteration: session.currentIteration };
+  }
+
+  const iteration = session.currentIteration;
+
+  switch (lastStep.type) {
+    case 'user_input': {
+      const action = (lastStep.inputData as Record<string, unknown>)?.action;
+      if (action === 'approve') return { status: 'searching', iteration };
+      if (action === 'modify') return { status: 'planning', iteration };
+      if (action === 'skip') return { status: 'planning', iteration };
+      if (action === 'cancel') return { status: null, iteration };
+      return { status: 'planning', iteration };
+    }
+    case 'plan':
+      return { status: 'waiting_user', iteration };
+    case 'search':
+      return { status: 'analyzing', iteration };
+    case 'analyze':
+      return { status: 'planning', iteration };
+    case 'summary':
+      return { status: null, iteration }; // already has report
+    default:
+      return { status: 'planning', iteration };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 
 export const researchRouter = new Elysia({ prefix: '/v2' })
   // Start a new research session
-  .post('/research', async ({ body }) => {
+  .post('/research', async ({ body, set }) => {
     const { topic, notebook_id, max_iterations } = body as Record<string, unknown>;
     const notebookId = Number(notebook_id);
 
@@ -202,6 +287,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       .get();
 
     spawnResearch(session.id, runResearch);
+    set.status = 201;
     return serializeSession(session);
   })
 
@@ -221,10 +307,34 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     const id = Number(params.id);
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
-    return serializeSession(row);
+    const steps = db()
+      .select()
+      .from(researchSteps)
+      .where(eq(researchSteps.sessionId, id))
+      .orderBy(researchSteps.id)
+      .all();
+    return { ...serializeSession(row), steps };
   })
 
-  // Approve search plan
+  // Delete a research session (c37 — v1 api.py:440-463)
+  .delete('/research/:id', ({ params, set }) => {
+    const id = Number(params.id);
+    const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
+    if (!row) throw new NotFoundError(`Research session ${id} not found`);
+
+    // Cancel if running
+    const ac = activeResearch.get(id);
+    if (ac) {
+      ac.abort();
+      activeResearch.delete(id);
+    }
+
+    db().delete(researchSessions).where(eq(researchSessions.id, id)).run();
+    set.status = 204;
+    return '';
+  })
+
+  // Approve search plan (c37: record step + ensure resume)
   .post('/research/:id/approve', ({ params }) => {
     const id = Number(params.id);
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
@@ -233,6 +343,10 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       throw new NotFoundError(`Session ${id} is not waiting for approval (status: ${row.status})`);
     }
 
+    // Record approve step (v1 api.py:483-534)
+    recordUserStep(id, row.currentIteration, 'approve');
+
+    // Transition to searching so the agent loop unblocks
     db()
       .update(researchSessions)
       .set({ status: 'searching' })
@@ -242,7 +356,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     return { id, status: 'searching', approved: true };
   })
 
-  // Modify search plan (c24-B: HITL modify action — accept modified plan, record step, resume)
+  // Modify search plan (c37: record step + store plan in inputData)
   .post('/research/:id/modify', ({ params, body }) => {
     const id = Number(params.id);
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
@@ -258,20 +372,9 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       };
     };
 
-    // Record modification as completed user_input step
-    db()
-      .insert(researchSteps)
-      .values({
-        sessionId: id,
-        iteration: row.currentIteration,
-        type: 'user_input',
-        inputData: { action: 'modify' } as Record<string, unknown>,
-        outputData: plan as unknown as Record<string, unknown>,
-        status: 'completed',
-      })
-      .run();
+    // Record modify step with the new plan (v1 api.py:537-577)
+    recordUserStep(id, row.currentIteration, 'modify', { plan });
 
-    // Transition to searching so the agent loop unblocks
     db()
       .update(researchSessions)
       .set({ status: 'searching' })
@@ -281,33 +384,94 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     return { id, status: 'searching', modified: true };
   })
 
-  // Skip iteration
+  // Skip iteration (c37: record step + advance iteration + set planning)
   .post('/research/:id/skip', ({ params }) => {
     const id = Number(params.id);
+    const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
+    if (!row) throw new NotFoundError(`Research session ${id} not found`);
+
+    // Record skip step (v1 api.py:591-647)
+    recordUserStep(id, row.currentIteration, 'skip');
+
+    // Advance iteration; if at max, mark completed
+    const nextIteration = row.currentIteration + 1;
+    if (nextIteration > row.maxIterations) {
+      // At max iteration — skip completes the research
+      db()
+        .update(researchSessions)
+        .set({ status: 'completed', currentIteration: row.maxIterations })
+        .where(eq(researchSessions.id, id))
+        .run();
+      return { id, status: 'completed', skipped: true };
+    }
+
     db()
       .update(researchSessions)
-      .set({ status: 'searching' })
+      .set({ status: 'planning', currentIteration: nextIteration })
       .where(eq(researchSessions.id, id))
       .run();
-    return { id, skipped: true };
+
+    return { id, status: 'planning', skipped: true, next_iteration: nextIteration };
   })
 
-  // Finish early
-  .post('/research/:id/finish', ({ params }) => {
+  // Finish early (c37: record step + trigger report generation)
+  .post('/research/:id/finish', async ({ params }) => {
     const id = Number(params.id);
+    const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
+    if (!row) throw new NotFoundError(`Research session ${id} not found`);
+
+    // Record finish step (v1 api.py:650-687)
+    recordUserStep(id, row.currentIteration, 'finish');
+
+    // Set completed status first
     db()
       .update(researchSessions)
-      .set({ status: 'completed' })
+      .set({ status: 'analyzing' })
       .where(eq(researchSessions.id, id))
       .run();
-    return { id, status: 'completed' };
+
+    // Generate the report from accumulated results (v1 GenerateReport node)
+    const state: ResearchState = {
+      sessionId: id,
+      notebookId: row.notebookId,
+      topic: row.topic,
+      iteration: row.currentIteration,
+      maxIterations: row.maxIterations,
+      results: (row.aggregatedResults ?? []) as ResearchResult[],
+    };
+
+    try {
+      const report = await generateFinalReport(state);
+      db()
+        .update(researchSessions)
+        .set({ status: 'completed', finalReport: report })
+        .where(eq(researchSessions.id, id))
+        .run();
+      return { id, status: 'completed', report_generated: true };
+    } catch (error) {
+      // Fallback: mark completed even if report fails
+      db()
+        .update(researchSessions)
+        .set({ status: 'completed', finalReport: '(report generation failed)' })
+        .where(eq(researchSessions.id, id))
+        .run();
+      return {
+        id,
+        status: 'completed',
+        report_generated: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   })
 
-  // Cancel
+  // Cancel (c37: record step + release lock)
   .post('/research/:id/cancel', ({ params }) => {
     const id = Number(params.id);
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
+
+    // Record cancel step
+    recordUserStep(id, row.currentIteration, 'cancel');
 
     const ac = activeResearch.get(id);
     if (ac) {
@@ -317,35 +481,42 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
     db()
       .update(researchSessions)
-      .set({ status: 'cancelled' })
+      .set({ status: 'cancelled', lockedAt: null, lockExpiresAt: null })
       .where(eq(researchSessions.id, id))
       .run();
 
     return { id, status: 'cancelled' };
   })
 
-  // Resume from persisted state (c24-B: reads currentIteration + aggregatedResults)
+  // Resume from inferred state (c37: uses _infer_resume_state instead of force-planning)
   .post('/research/:id/resume', async ({ params }) => {
     const id = Number(params.id);
 
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
 
-    // Reset to planning if in a terminal state
-    if (row.status === 'completed' || row.status === 'cancelled') {
-      db()
-        .update(researchSessions)
-        .set({ status: 'planning' })
-        .where(eq(researchSessions.id, id))
-        .run();
+    // Infer resume state from last step (v1 _infer_resume_state)
+    const { status: inferredStatus, iteration } = inferResumeState(id);
+
+    if (inferredStatus === null) {
+      throw new Error(
+        `Session ${id} cannot be resumed (completed, cancelled by user, or already has a report)`,
+      );
     }
 
+    // Set the inferred status so runResearchFromState picks up correctly
+    db()
+      .update(researchSessions)
+      .set({ status: inferredStatus, currentIteration: iteration })
+      .where(eq(researchSessions.id, id))
+      .run();
+
     spawnResearch(id, runResearchFromState);
-    return { id, status: 'planning', resumed: true };
+    return { id, status: inferredStatus, resumed: true, iteration };
   })
 
-  // Export report → source (c24-B: chunk + embed + vector + source creation)
-  .post('/research/:id/export', async ({ params }) => {
+  // Export report → source or note (c37: adds export_type=note)
+  .post('/research/:id/export', async ({ params, body }) => {
     const id = Number(params.id);
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
@@ -353,6 +524,8 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     if (!row.finalReport) {
       throw new NotFoundError('Research has no final report to export');
     }
+
+    const export_type = (body as { export_type?: string })?.export_type ?? 'source';
 
     // Build markdown report content
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -367,9 +540,24 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       row.finalReport,
     ].join('\n');
 
+    if (export_type === 'note') {
+      // Create an Output record (v1 api.py:1431-1463)
+      const output = db()
+        .insert(outputs)
+        .values({
+          notebookId: row.notebookId,
+          type: 'BRIEFING',
+          prompt: `research:${id}`,
+          content: { title: `研究报告：${row.topic}`, sections: [{ heading: '报告', points: [{ text: row.finalReport }] }] },
+        })
+        .returning()
+        .get();
+      return { success: true, export_type: 'note', output_id: output.id };
+    }
+
+    // Default: export as source (v1 api.py:1245-1430)
     const filename = `研究报告_${row.topic.slice(0, 20)}_${timestamp}.md`;
 
-    // Create source record
     const source = db()
       .insert(sources)
       .values({
@@ -384,7 +572,6 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     const { chunkText } = await import('../../rag/chunker.ts');
     const reportChunks = chunkText(reportContent);
 
-    // Insert chunks
     const chunkRows: Array<{ id: number; text: string }> = [];
     for (const chunk of reportChunks) {
       const chunkRow = db()
@@ -406,11 +593,10 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
         const { insertChunkVector } = await import('../../db/vectors.ts');
         const vectors = await embedBatch(chunkRows.map((c) => c.text));
 
-        for (const [i, vec] of vectors.entries()) {
-          insertChunkVector(db(), chunkRows[i].id, row.notebookId, source.id, vec);
+        for (let i = 0; i < vectors.length; i++) {
+          insertChunkVector(db(), chunkRows[i].id, row.notebookId, source.id, vectors[i]);
         }
 
-        // Bump vector epoch to invalidate caches
         const { bumpVectorEpoch } = await import('../../rag/cache.ts');
         bumpVectorEpoch(row.notebookId);
       } catch (error) {
@@ -420,21 +606,20 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       }
     }
 
-    // Mark source ready
     db().update(sources).set({ status: 'ready' }).where(eq(sources.id, source.id)).run();
 
-    // Bump sources epoch
     const { bumpSourcesEpoch } = await import('../../rag/cache.ts');
     bumpSourcesEpoch(row.notebookId);
 
     return {
       success: true,
+      export_type: 'source',
       message: `报告已导出为来源：${filename}`,
       source_id: source.id,
     };
   })
 
-  // SSE stream endpoint
+  // SSE stream endpoint (c37: named events + heartbeat)
   .get('/research/:id/stream', ({ params, set }) => {
     const id = Number(params.id);
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
@@ -448,6 +633,16 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
       start(controller) {
         let lastStepId = 0;
         let closed = false;
+        const encoder = new TextEncoder();
+
+        const emit = (eventName: string, data: unknown) => {
+          controller.enqueue(encoder.encode(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`));
+        };
+
+        // Heartbeat every 30s (v1 api.py heartbeat)
+        const heartbeat = setInterval(() => {
+          if (!closed) emit('heartbeat', {});
+        }, 30_000);
 
         const poll = async () => {
           while (!closed) {
@@ -460,6 +655,7 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
               .get();
             if (!current) break;
 
+            // Emit status changes
             const steps = db()
               .select()
               .from(researchSteps)
@@ -467,18 +663,20 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
               .all();
 
             for (const step of steps) {
-              const event = deriveEvent(step);
-              controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`));
+              const { event, data } = deriveNamedEvent(step);
+              emit(event, data);
               lastStepId = step.id;
             }
 
             if (current.status === 'completed' || current.status === 'cancelled') {
-              controller.enqueue(
-                new TextEncoder().encode(
-                  `data: ${JSON.stringify({ type: 'done', status: current.status })}\n\n`,
-                ),
-              );
+              emit('done', {
+                type: 'done',
+                status: current.status,
+                total_results: (current.aggregatedResults as unknown[] | null)?.length ?? 0,
+                has_report: !!current.finalReport,
+              });
               closed = true;
+              clearInterval(heartbeat);
               controller.close();
               break;
             }
@@ -487,11 +685,8 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
         poll().catch((error) => {
           if (!closed) {
-            controller.enqueue(
-              new TextEncoder().encode(
-                `data: ${JSON.stringify({ type: 'error', error: String(error) })}\n\n`,
-              ),
-            );
+            emit('error', { type: 'error', message: String(error) });
+            clearInterval(heartbeat);
             controller.close();
           }
         });
@@ -502,23 +697,29 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 registerApiDoc(apiDocs);
 
 // ---------------------------------------------------------------------------
-// SSE event derivation
+// SSE event derivation (c37: named events with event: field)
 // ---------------------------------------------------------------------------
 
-function deriveEvent(step: typeof researchSteps.$inferSelect) {
+function deriveNamedEvent(step: typeof researchSteps.$inferSelect): {
+  event: string;
+  data: Record<string, unknown>;
+} {
+  // Keep `type` in the data payload for backward compatibility with
+  // frontend parsers that read type from the JSON body (not event: line).
+  const base = { iteration: step.iteration, data: step.outputData };
   switch (step.type) {
     case 'plan':
-      return { type: 'plan_ready', iteration: step.iteration, data: step.outputData };
+      return { event: 'plan_ready', data: { ...base, type: 'plan_ready' } };
     case 'user_input':
-      return { type: 'approval_request', iteration: step.iteration, data: step.outputData };
+      return { event: 'waiting', data: { ...base, type: 'approval_request' } };
     case 'search':
-      return { type: 'search_progress', iteration: step.iteration, data: step.outputData };
+      return { event: 'search_progress', data: { ...base, type: 'search_progress' } };
     case 'analyze':
-      return { type: 'analysis', iteration: step.iteration, data: step.outputData };
+      return { event: 'analysis', data: { ...base, type: 'analysis' } };
     case 'summary':
-      return { type: 'report', iteration: step.iteration, data: step.outputData };
+      return { event: 'report', data: { ...base, type: 'report' } };
     default:
-      return { type: 'thinking', iteration: step.iteration };
+      return { event: 'thinking', data: { iteration: step.iteration, type: 'thinking' } };
   }
 }
 
