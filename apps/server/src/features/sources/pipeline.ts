@@ -105,6 +105,7 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
     console.error(`[pipeline] contentStorage.save failed for source ${sourceRow.id}:`, error);
   });
 
+  let stage: 'parse' | 'embed' = 'parse';
   try {
     // 2. Parse
     const result = await parser!.parse(input.buffer, input.filename);
@@ -129,7 +130,12 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
       offset += c.text.length + 1; // +1 for the separator
     }
 
-    // 5. Mark ready
+    // 5. Embed synchronously — vectors MUST exist before marking ready (c30).
+    //    v1 awaits the full parse→embed→vector_store sequence before returning.
+    stage = 'embed';
+    await triggerEmbedding(sourceRow.id, sourceRow.notebookId);
+
+    // 6. Mark ready (only after vectors are written)
     db()
       .update(sources)
       .set({
@@ -138,12 +144,6 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
       })
       .where(eq(sources.id, sourceRow.id))
       .run();
-
-    // 6. Trigger embedding asynchronously (fire-and-forget)
-    //    Do not block the upload response — embedding runs in background.
-    triggerEmbedding(sourceRow.id, sourceRow.notebookId).catch((error) => {
-      console.error(`[pipeline] embedding failed for source ${sourceRow.id}:`, error);
-    });
 
     return {
       sourceId: sourceRow.id,
@@ -154,11 +154,12 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
+    const errorCode = stage === 'embed' ? 'EMBEDDING_FAILED' : 'PARSE_ERROR';
     db()
       .update(sources)
       .set({
         status: 'failed',
-        errorCode: 'PARSE_ERROR',
+        errorCode,
         errorMessage: message,
         lastErrorAt: new Date(),
       })
@@ -171,7 +172,7 @@ export async function ingestSource(input: IngestInput): Promise<IngestResult> {
       text: '',
       parserType: parser?.id ?? 'text',
       status: 'failed',
-      errorCode: 'PARSE_ERROR',
+      errorCode,
       errorMessage: message,
     };
   }
