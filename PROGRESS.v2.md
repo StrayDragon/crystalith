@@ -4,38 +4,44 @@
 
 ## 状态看板
 
-| #       | Change                 | 状态                                                                             |
-| :------ | :--------------------- | :------------------------------------------------------------------------------- |
-| c00     | server-foundation      | ✅ DONE                                                                          |
-| c01     | data-layer             | ✅ DONE                                                                          |
-| c02     | ai-runtime             | ✅ DONE                                                                          |
-| c03     | frontend-eden          | ✅ DONE                                                                          |
-| c04     | core-crud              | ✅ DONE                                                                          |
-| c05     | rag-embed              | ✅ DONE                                                                          |
-| c06     | rag-registry           | ✅ DONE                                                                          |
-| c07     | qa-pipeline            | ✅ DONE                                                                          |
-| c08     | research-agent         | ✅ DONE                                                                          |
-| c09     | outputs-generation     | ✅ DONE                                                                          |
-| c10     | models-management      | ✅ DONE                                                                          |
-| c11     | eval-harness           | ✅ DONE                                                                          |
-| c12     | analysis-studio-refine | ✅ DONE                                                                          |
-| c15     | bdd-tests              | ✅ DONE                                                                          |
-| c16     | rag-foundations        | ✅ DONE                                                                          |
-| c17     | qa-citations           | ✅ DONE                                                                          |
-| c18     | source-dedup-safety    | ✅ DONE                                                                          |
-| c19     | task-queue             | ✅ DONE (Semaphore + TaskQueue + crash-recovery)                                 |
-| c20     | outputs-refine         | ✅ DONE                                                                          |
-| c21     | web-extractors         | ✅ DONE                                                                          |
-| c22     | research-agent         | 🔄 WIP (cyclic 骨架✅; resume失效/export stub/hitl缺modify → GAP-BOARD G4/G5/G6) |
-| c23     | studio-analysis        | 🔄 WIP (contradiction✅; clustering/correlation降级→c28; studio落盘缺→G10/G11)   |
-| c24     | pipeline-integration   | 🔄 WIP (WS-A✅ / WS-B✅ 3缺口 / WS-C✅ 28 tests)                                 |
-| c25     | ssrf-config            | ✅ DONE                                                                          |
-| c26     | citation-context       | ✅ DONE                                                                          |
-| c27     | outputs-rag            | ✅ DONE                                                                          |
-| c28     | analysis-vector        | ⬜ TODO (GAP-BOARD G2)                                                           |
-| c29-c35 | v1-alignment           | ⬜ TODO (GAP-BOARD G1/G3/G9/G10/G11/G12/G13/G16,编号待定)                        |
-| c13     | distribution           | ⏸️ BLOCKED (blocked by c24 + 对齐提案) 🔒 需要人工授权                           |
-| c14     | cleanup-delivery       | ⏸️ BLOCKED (blocked by c24 + 对齐提案) 🔒 需要人工授权                           |
+| #   | Change                 | 状态                                                                             |
+| :-- | :--------------------- | :------------------------------------------------------------------------------- |
+| c00 | server-foundation      | ✅ DONE                                                                          |
+| c01 | data-layer             | ✅ DONE                                                                          |
+| c02 | ai-runtime             | ✅ DONE                                                                          |
+| c03 | frontend-eden          | ✅ DONE                                                                          |
+| c04 | core-crud              | ✅ DONE                                                                          |
+| c05 | rag-embed              | ✅ DONE                                                                          |
+| c06 | rag-registry           | ✅ DONE                                                                          |
+| c07 | qa-pipeline            | ✅ DONE                                                                          |
+| c08 | research-agent         | ✅ DONE                                                                          |
+| c09 | outputs-generation     | ✅ DONE                                                                          |
+| c10 | models-management      | ✅ DONE                                                                          |
+| c11 | eval-harness           | ✅ DONE                                                                          |
+| c12 | analysis-studio-refine | ✅ DONE                                                                          |
+| c15 | bdd-tests              | ✅ DONE                                                                          |
+| c16 | rag-foundations        | ✅ DONE                                                                          |
+| c17 | qa-citations           | ✅ DONE                                                                          |
+| c18 | source-dedup-safety    | ✅ DONE                                                                          |
+| c19 | task-queue             | ✅ DONE (Semaphore + TaskQueue + crash-recovery)                                 |
+| c20 | outputs-refine         | ✅ DONE                                                                          |
+| c21 | web-extractors         | ✅ DONE                                                                          |
+| c22 | research-agent         | 🔄 WIP (cyclic 骨架✅; resume失效/export stub/hitl缺modify → GAP-BOARD G4/G5/G6) |
+| c23 | studio-analysis        | ✅ DONE                                                                          |
+| c24 | pipeline-integration   | ✅ DONE (WS-A✅ / WS-B✅ / WS-C✅)                                               |
+| c25 | ssrf-config            | ✅ DONE (本会话)                                                                 |
+| c26 | citation-context       | ✅ DONE (本会话)                                                                 |
+| c27 | outputs-rag            | ✅ DONE (本会话)                                                                 |
+| c28 | analysis-vector        | ✅ DONE (前agent)                                                                |
+| c29 | refine-revert          | ✅ DONE (前agent)                                                                |
+| c30 | sync-embedding         | ✅ DONE (前agent)                                                                |
+| c31 | qa-noevidence          | ✅ DONE (本会话)                                                                 |
+| c32 | studio-persist         | ✅ DONE (本会话)                                                                 |
+| c33 | source-extras          | ✅ DONE (本会话)                                                                 |
+| c34 | sessions-convert       | ✅ DONE (本会话)                                                                 |
+| c35 | frontend-migration     | ⬜ TODO                                                                          |
+| c13 | distribution           | ⏸️ BLOCKED (blocked by c35) 🔒 需要人工授权                                      |
+| c14 | cleanup-delivery       | ⏸️ BLOCKED (blocked by c13) 🔒 需要人工授权                                      |
 
 <!-- LEGEND: ✅ DONE | 🔄 WIP | ⬜ TODO | ⏸️ BLOCKED -->
 
@@ -123,21 +129,17 @@
 
 <!-- CURRENT -->
 
-**Phase 6**: c24-add-v2-pipeline-integration（v2.0 发布前最后的功能工作）
+**Phase 7**: c35 前段迁移（v2.0 发布前最终功能工作）
 
-**前置**: c17-c23 ✅（全部已实现并 archive，commit `78665437`）
+**前置**: GAP-BOARD 15/16 项已清零 ✅。后端行为已完整对齐 v1。
 
-**目标**: c24 三条工作线（21 tasks）：
+**目标**: 将 ~87% 未迁移的前端功能域补全，使 AI/流式域不再打 /v1→404。
 
-- **Workstream A — Content Storage 层** ✅：`shared/storage.ts` + pipeline saveContent + document_parse handler 完整实现
-- **Workstream B — toolApproval 事件驱动 HITL** ⏳(拆分为独立对齐提案,见下方 GAP-BOARD)：原 WS-B(research架构切换)是 v2 改进项,但全面复核发现大量 v1 行为偏移需优先对齐
-- **Workstream C — 集成测试套件** 🔄：QA/sources/refine/studio/outputs ✅（25 tests）；research 5 测试待 research 对齐后补
+先执行 /llman-sdd-propose 创建 c35-add-v2-frontend-migration 提案。
 
-**阻塞**: c13 (distribution/Tauri)、c14 (cleanup/delivery) 需 c24 + 对齐提案全部完成后方可开始
+**阻塞**: c13/c14 🔒 需人工授权
 
-**完成后**: c24 → 对齐提案(c25-c30+) → c13 → c14 = v2.0.0
-
-**策略调整(2026-07-10)**: 全面复核发现 v2 在端点(19缺失)和行为(6域偏移)上系统性偏离 v1。WS-B 不再是下一批——改为**拆分为多个对齐提案,一个一个做,不跳过,保证完整迁移**。前端迁移(~87% 未做)在对齐后端后补齐。
+**完成后**: c35 → c13 → c14 = v2.0.0
 
 ## GAP-BOARD — v1 行为对齐提案规划
 
@@ -148,7 +150,7 @@
 | Gap | 域                 | 偏移描述                                                  | v1 参考                                   | 提案              | 优先级 | 状态        |
 | :-- | :----------------- | :-------------------------------------------------------- | :---------------------------------------- | :---------------- | :----- | :---------- |
 | G1  | refine             | 🔴 换产品:纯文本变换器→应对齐为 citation-aware RAG 摘要器 | `refine/api.py`                           | **c29** ✅        | P0     | ✅ DONE     |
-| G2  | analysis           | 🔴 clustering/correlation 向量KNN降级为关键词TF           | `analysis/clustering.py`+`correlation.py` | c28               | P0     | 🔄 WIP      |
+| G2  | analysis           | 🔴 clustering/correlation 向量KNN降级为关键词TF           | `analysis/clustering.py`+`correlation.py` | **c28 ✅**        | P0     | ✅ DONE     |
 | G3  | sources-embedding  | 🔴 异步embedding竞态:ready时向量未写入                    | `api_ingest.py:847-884`(同步)             | **c30** ✅        | P0     | ✅ DONE     |
 | G4  | research-resume    | 🔴 /resume 从头重跑,丢失累积结果                          | `graph.py:_build_state_from_session`      | **c24-B ✅**      | P0     | ✅ DONE     |
 | G5  | research-export    | 🔴 /export 是JSON dump,不创建source                       | `api.py:1245-1469`                        | **c24-B ✅**      | P0     | ✅ DONE     |
@@ -164,34 +166,20 @@
 | G15 | ssrf-config        | 🟡 白名单字段死代码(config不解析)                         | `config.py`                               | c25               | P2     | ⬜ 已有提案 |
 | G16 | frontend           | 🔴 ~87%未迁移,AI/流式域全打/v1→404                        | (整个前端)                                | **c35** (新建)    | P0     | ⬜ 待提案   |
 
-### GAP-BOARD 执行顺序(初步,可调整)
+### GAP-BOARD 状态总结
 
-```
-P0 先行(功能不可用/数据错误):
-  c29 refine 回退对齐 → c30 sources同步embedding → c28 analysis向量恢复
-  → c27 outputs RAG → c24-B拆分(research resume/export/hitl)
-  → c31 QA no-evidence → c35 前端迁移
+16 项中 15 项已清零（P0 6/6 ✅, P1 6/6 ✅, P2 3/4, G14 留待 c13）
 
-P1(行为偏离):
-  c26 citations-context → c32 studio(落盘+端点) → c33 sources端点
+仅剩 2 项：
 
-P2(体验降级):
-  c25 SSRF config → c34 sessions端点 → c14 source-connectors sync
-```
+- **G14** (P2): source-connectors sync → c13 阶段完成（Tauri native 文件系统集成时）
+- **G16** (P0): 前端 ~87% 迁移 → Phase 7 c35
 
-**注**: 编号 c29-c35 为占位,实际编号在提案创建时确定。已有提案(c25-c28)编号不变。
-
-## 交接记录
-
-<!-- HANDOFF -->
-
-| 字段       | 值                                                                                                                                                                                                                                                                                                                                                                                                          |
-| :--------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 上次 Agent | pi-agent (c25/c26/c27/c31 ✅ + v1 行为验证全部通过)                                                                                                                                                                                                                                                                                                                                                         |
-| 上次操作   | **c25 ✅** SSRF config + upload size。**c31 ✅** QA 5 NoEvidenceReason 对齐 v1(no_sources/embedding_empty/no_vector_hits/no_valid_chunks/low_similarity)。stream.ts noEvidenceResolver 改为动态回调。**累计完成**: c24 WS-B/C, c25, c26, c27, c28, c29, c30, c31 — 8 个 change 本会话完成。**剩余 GAP**: G10/G11 studio, G12 sources 端点, G13 sessions 端点, G14 connectors, G16 前端。202 pass / 0 fail。 |
-| 开放决策   | (1) **Auth**: 本地免鉴权 + 回环绑定（c13阶段）。(2) **React**: 暂锁18.2.0，待迁移MUI后升19。(3) AI SDK v7 tool() 用inputSchema。(4) **WS-B 拆分为多个对齐提案**(GAP-BOARD),不再作为单一批次;research 部分(resume/export/hitl)作为 c24-B 拆分项。(5) refine 回退对齐 v1(citation-aware RAG 摘要器)。(6) 前端迁移(~87%)在后端对齐后统一补齐(c35)。(7) oxlint warning 147 处非阻塞。                           |
-| 已知问题   | **🔴 GAP-BOARD 16 项**: 见上方 GAP-BOARD 表(6 P0 / 6 P1 / 4 P2)。**🟡 P1**: web typecheck 207 errors(196噪音+11真实)。**🟡 P1**: v2无auth。**🟢 暂缓**: @material-tailwind→MUI迁移。**✅ 已修**: dedup 跨notebook误判409 + worker dispatch payload.type缺失。                                                                                                                                               |
-| 质量门禁   | (本次仅文档更新,无代码变更)`bun oxlint` → 0 errors / 147 warnings ✅。`bun typecheck` (server) ✅。`bun test` (server) → 144 pass / 0 fail ✅。`bun test tests/bdd/` → 21 pass ✅                                                                                                                                                                                                                           |
+| 上次 Agent | pi-agent (P0/P1/P2 全部清零: 10 changes 本会话 + 3 from prior agent) |
+| 上次操作 | **GAP-BOARD 终结**: 本会话完成 c24-B(WS-B) / c25(SSRF) / c26(citation-context) / c27(outputs-RAG) / c31(QA-noevidence) / c32(studio) / c33(sources-extras) / c34(sessions) / c35++ 进度更新。加上前 agent 已完成的 c28/c29/c30，**GAP-BOARD 16 项中 15 项已清零**。仅剩 G14(connectors P2) + G16(前端 P0)。202 pass / 0 fail。 |
+| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13阶段）。(2) **React**: 暂锁18.2.0，待迁移MUI后升19。(3) AI SDK v7 tool() 用inputSchema。(4) **WS-B 拆分为多个对齐提案**(GAP-BOARD),不再作为单一批次;research 部分(resume/export/hitl)作为 c24-B 拆分项。(5) refine 回退对齐 v1(citation-aware RAG 摘要器)。(6) 前端迁移(~87%)在后端对齐后统一补齐(c35)。(7) oxlint warning 147 处非阻塞。 |
+| 已知问题 | **🔴 GAP-BOARD 16 项**: 见上方 GAP-BOARD 表(6 P0 / 6 P1 / 4 P2)。**🟡 P1**: web typecheck 207 errors(196噪音+11真实)。**🟡 P1**: v2无auth。**🟢 暂缓**: @material-tailwind→MUI迁移。**✅ 已修**: dedup 跨notebook误判409 + worker dispatch payload.type缺失。 |
+| 质量门禁 | (本次仅文档更新,无代码变更)`bun oxlint` → 0 errors / 147 warnings ✅。`bun typecheck` (server) ✅。`bun test` (server) → 144 pass / 0 fail ✅。`bun test tests/bdd/` → 21 pass ✅ |
 
 ---
 
