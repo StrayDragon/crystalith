@@ -147,9 +147,9 @@
 
 | Gap | 域                 | 偏移描述                                                  | v1 参考                                   | 提案           | 优先级 | 状态        |
 | :-- | :----------------- | :-------------------------------------------------------- | :---------------------------------------- | :------------- | :----- | :---------- |
-| G1  | refine             | 🔴 换产品:纯文本变换器→应对齐为 citation-aware RAG 摘要器 | `refine/api.py`                           | **c29** (新建) | P0     | ⬜ 待提案   |
-| G2  | analysis           | 🔴 clustering/correlation 向量KNN降级为关键词TF           | `analysis/clustering.py`+`correlation.py` | c28            | P0     | ⬜ 已有提案 |
-| G3  | sources-embedding  | 🔴 异步embedding竞态:ready时向量未写入                    | `api_ingest.py:847-884`(同步)             | **c30** (新建) | P0     | ⬜ 待提案   |
+| G1  | refine             | 🔴 换产品:纯文本变换器→应对齐为 citation-aware RAG 摘要器 | `refine/api.py`                           | **c29** ✅     | P0     | ✅ DONE     |
+| G2  | analysis           | 🔴 clustering/correlation 向量KNN降级为关键词TF           | `analysis/clustering.py`+`correlation.py` | c28            | P0     | 🔄 WIP      |
+| G3  | sources-embedding  | 🔴 异步embedding竞态:ready时向量未写入                    | `api_ingest.py:847-884`(同步)             | **c30** ✅     | P0     | ✅ DONE     |
 | G4  | research-resume    | 🔴 /resume 从头重跑,丢失累积结果                          | `graph.py:_build_state_from_session`      | c24-B(拆)      | P0     | ⬜          |
 | G5  | research-export    | 🔴 /export 是JSON dump,不创建source                       | `api.py:1245-1469`                        | c24-B(拆)      | P0     | ⬜          |
 | G6  | research-hitl      | 🟡 HITL忽略modify/skip,只用approve                        | `graph.py:354-409`                        | c24-B(拆)      | P1     | ⬜          |
