@@ -2,7 +2,7 @@
 // flow. Mirrors v1 features/sources/api_ingest.py:338-378 + 771-793.
 import { createHash } from 'node:crypto';
 
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { db } from '../../db/index.ts';
 import { sources } from '../../db/schema.ts';
@@ -51,7 +51,7 @@ export function checkDedup(notebookId: number, dedupKey: string): DedupResult {
   const existing = db()
     .select({ id: sources.id })
     .from(sources)
-    .where(eq(sources.notebookId, notebookId) && eq(sources.dedupKey, dedupKey))
+    .where(and(eq(sources.notebookId, notebookId), eq(sources.dedupKey, dedupKey)))
     .get();
 
   if (existing) {
