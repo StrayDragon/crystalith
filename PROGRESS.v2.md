@@ -39,9 +39,14 @@
 | c32 | studio-persist         | ✅ DONE (本会话)                                                                 |
 | c33 | source-extras          | ✅ DONE (本会话)                                                                 |
 | c34 | sessions-convert       | ✅ DONE (本会话)                                                                 |
-| c35 | frontend-migration     | ✅ DONE                                                           |
-| c13 | distribution           | ⏸️ BLOCKED (blocked by c35) 🔒 需要人工授权                                      |
-| c14 | cleanup-delivery       | ⏸️ BLOCKED (blocked by c13) 🔒 需要人工授权                                      |
+| c35 | frontend-migration     | ✅ DONE                                                                          |
+| c36 | align-qa-pipeline      | ⬜ TODO (v1↔v2 对拍：no-evidence/export/confidence/source_ids)                   |
+| c37 | align-research-agent   | ⬜ TODO (v1↔v2 对拍：resume/skip/approve/finish/delete)                          |
+| c38 | align-outputs-pipeline | ⬜ TODO (v1↔v2 对拍：source_ids RAG/postprocess/export)                          |
+| c39 | align-sources-sessions | ⬜ TODO (v1↔v2 对拍：竞态复发/dedup/tags/校验)                                   |
+| c40 | align-shared-infra     | ⬜ TODO (v1↔v2 对拍：config/retry/searchVectors)                                 |
+| c13 | distribution           | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                          |
+| c14 | cleanup-delivery       | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                          |
 
 <!-- LEGEND: ✅ DONE | 🔄 WIP | ⬜ TODO | ⏸️ BLOCKED -->
 
@@ -129,19 +134,27 @@
 
 <!-- CURRENT -->
 
-**✅ Phase 7 (c35) 完成。GAP-BOARD 16/16 项清零。**
+**🔄 v1↔v2 全面对拍完成，产出 5 个对齐提案 (c36-c40)。**
 
-**下一阶段**: c13 (distribution) + c14 (cleanup) → v2.0.0
-这些需要人工授权: 桌面分发 (Tauri + Bun 单二进制), 清理旧代码, 收尾发布。
+2026-07-10 深度对拍 `backend/py/` vs `apps/server/`，发现此前 GAP-BOARD 标记的多个 ✅ DONE
+实际未完全落地（"实现但没接通"）。已按域拆分 5 个 SDD change 提案：
+
+| Change | 域                 | P0 数 | 核心问题                                          |
+| :----- | :----------------- | :---: | :------------------------------------------------ |
+| c36    | QA pipeline        |   2   | no-evidence 分支未执行; export 端点缺失           |
+| c37    | research agent     |   4   | resume/skip/approve/finish 逻辑全部偏离           |
+| c38    | outputs pipeline   |   3   | source_ids 未接通(c27未完成); 缺 citation mapping |
+| c39    | sources + sessions |   4   | 竞态复发(2处); dedup默认关; tag无校验             |
+| c40    | shared infra       |   1   | config 90%未解析; retry不遵守Retry-After          |
 
 **当前状态**:
-- Server test: 202 pass / 0 fail ✅
-- Typecheck: server 0 / web 23 (all pre-existing) ✅
+
+- Server test: 200 pass / 2 fail（2 个网络依赖测试超时，非代码缺陷）
+- Typecheck: server 0 / web 23 (all pre-existing)
 - 19/21 前端域在 eden treaty 上运行
 
-**阻塞**: c13/c14 🔒 需人工授权
-
-**完成后**: c35 → c13 → c14 = v2.0.0
+**下一阶段**: c36-c40 逐个实现（按依赖序：c40→c36→c38→c39→c37，或并行）
+**之后**: c13 (distribution) + c14 (cleanup) → v2.0.0（等人工授权）
 
 ## GAP-BOARD — v1 行为对齐提案规划
 
@@ -166,11 +179,15 @@
 | G13 | sessions-endpoints | 🟡 缺2端点(GET单个+convert-to-output)                     | `sessions/api.py`                         | **c34 ✅**        | P2     | ✅ DONE     |
 | G14 | source-connectors  | 🟡 sync是TODO stub,缺snapshot/apply/import-scope          | `source_connectors/api.py`                | c13 或独立        | P2     | ⬜          |
 | G15 | ssrf-config        | 🟡 白名单字段死代码(config不解析)                         | `config.py`                               | c25               | P2     | ⬜ 已有提案 |
-| G16 | frontend           | ✅ 前端 API 迁移完成 (19/21 域, typecheck 207→23 ↓89%)       | (整个前端)                                | **c35** ✅       | P0     | ✅ DONE     |
+| G16 | frontend           | ✅ 前端 API 迁移完成 (19/21 域, typecheck 207→23 ↓89%)    | (整个前端)                                | **c35** ✅        | P0     | ✅ DONE     |
 
 ### GAP-BOARD 状态总结
 
 16 项中 15 项已清零（P0 6/6 ✅, P1 6/6 ✅, P2 3/4, G14 留待 c13）
+
+> ⚠️ **2026-07-10 全面对拍校正**: 上述多个 ✅ 标记经深度代码对拍后发现"实现但未接通"。
+> c36-c40 是对拍产出的修正提案，覆盖此前误标 DONE 的 gap（尤其 G3竞态复发/G4-G6 research/G7 outputs/G9 no-evidence）。
+> GAP-BOARD 的 ✅ 表示"端点/功能存在"，c36-c40 的范围是"行为逻辑完全对齐 v1"。
 
 仅剩 1 项：
 
@@ -178,11 +195,11 @@
 
 ✅ G16 (前端迁移) 已清零。GAP-BOARD 16/16 全部完成。
 
-| 上次 Agent | pi-agent (c35 Phase 7 前端迁移; GAP-BOARD 16/16 清零) |
-| 上次操作 | **c35 Phase 7 完成**: 19/21 前端域迁移至 eden treaty。typecheck 207→23 (↓89%)。GAP-BOARD G16 ✅。202 pass / 0 fail。 |
-| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13阶段）。(2) **React**: 暂锁18.2.0，待迁移MUI后升19。(3) AI SDK v7 tool() 用inputSchema。(4) **WS-B 拆分为多个对齐提案**(GAP-BOARD),不再作为单一批次;research 部分(resume/export/hitl)作为 c24-B 拆分项。(5) refine 回退对齐 v1(citation-aware RAG 摘要器)。(6) 前端迁移(~87%)在后端对齐后统一补齐(c35)。(7) oxlint warning 147 处非阻塞。 |
-| 已知问题 | **🟡 P2**: c13/c14 待授权 (Tauri desktop + 清理)。**🟡 P2**: SlidesStudioDialog (Slidev ESM 缺失), SourceConnectorsDialog 仍用旧 client。**🟡 P1**: web typecheck 23 errors (all pre-existing: SSE shapes, Slidev module, type drift)。**🟡 P1**: v2无auth。 |
-| 质量门禁 | `bun test` (server) → 202 pass / 0 fail ✅。`bun typecheck` (server) ✅。`bun test tests/bdd/` → 21 pass ✅。
+| 上次 Agent | v1↔v2 全面对拍 (6 并行 agent 分域审计 + 5 个 SDD change 提案 c36-c40) |
+| 上次操作 | **深度对拍 backend/py vs apps/server**: 发现 14 个 P0 + ~20 个 P1 缺口。已按域拆分为 c36(QA)/c37(research)/c38(outputs)/c39(sources+sessions)/c40(shared infra) 5 个 SDD change，均含 proposal+design+tasks+spec deltas，结构验证通过。修复 web lockfile 失同步。 |
+| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13阶段）。(2) **React**: 暂锁18.2.0，待迁移MUI后升19。(3) AI SDK v7 tool() 用inputSchema。(4) **c13/c14 等人工授权**。(5) c36-c40 实现顺序待定（建议 c40 先行，因 searchVectors source_ids 是 c36/c38 的底层依赖）。(6) oxlint warning 147 处非阻塞。 |
+| 已知问题 | **🔴 P0**: c36-c40 共 14 个 P0 缺口待实现（详见各 change tasks.md）。**🟡 P1**: web typecheck 23 errors (all pre-existing)。**🟡 P1**: v2无auth（c13）。**🟡 P2**: c13/c14 待授权。**🟡 P2**: SlidesStudioDialog (Slidev ESM 缺失), SourceConnectorsDialog 仍用旧 client。 |
+| 质量门禁 | `bun test` (server) → 200 pass / 2 fail（网络依赖测试超时，非代码缺陷）。`bun typecheck` (server) ✅。`bun run typecheck` (web) → 23 pre-existing errors。`bun test tests/bdd/` → 21 pass ✅。 |
 
 ---
 
