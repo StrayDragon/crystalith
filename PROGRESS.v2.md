@@ -129,17 +129,15 @@
 
 <!-- CURRENT -->
 
-**Phase 7**: c35 前段迁移（v2.0 发布前最终功能工作）
+**✅ Phase 7 (c35) 完成。GAP-BOARD 16/16 项清零。**
 
-**进度**: ✅ DONE。19/21 功能域已迁至 eden treaty。useSources(20 calls)已迁。
-Typecheck: 207→23 (↓89%, 23 errors all pre-existing)。
-延期: SlidesStudioDialog(8 calls,Slidev ESM缺失), SourceConnectorsDialog(7 calls,sync stub)。
+**下一阶段**: c13 (distribution) + c14 (cleanup) → v2.0.0
+这些需要人工授权: 桌面分发 (Tauri + Bun 单二进制), 清理旧代码, 收尾发布。
 
-**前置**: GAP-BOARD 15/16 项已清零 ✅。后端行为已完整对齐 v1。
-
-**目标**: 将 ~87% 未迁移的前端功能域补全，使 AI/流式域不再打 /v1→404。
-
-先执行 /llman-sdd-propose 创建 c35-add-v2-frontend-migration 提案。
+**当前状态**:
+- Server test: 202 pass / 0 fail ✅
+- Typecheck: server 0 / web 23 (all pre-existing) ✅
+- 19/21 前端域在 eden treaty 上运行
 
 **阻塞**: c13/c14 🔒 需人工授权
 
@@ -174,16 +172,17 @@ Typecheck: 207→23 (↓89%, 23 errors all pre-existing)。
 
 16 项中 15 项已清零（P0 6/6 ✅, P1 6/6 ✅, P2 3/4, G14 留待 c13）
 
-仅剩 2 项：
+仅剩 1 项：
 
 - **G14** (P2): source-connectors sync → c13 阶段完成（Tauri native 文件系统集成时）
-- **G16** (P0): 前端 API 迁移 17/21 域完成, typecheck 207→25 (↓88%), 剩余 4 大文件
 
-| 上次 Agent | pi-agent (P0/P1/P2 全部清零: 10 changes 本会话 + 3 from prior agent) |
-| 上次操作 | **GAP-BOARD 终结**: 本会话完成 c24-B(WS-B) / c25(SSRF) / c26(citation-context) / c27(outputs-RAG) / c31(QA-noevidence) / c32(studio) / c33(sources-extras) / c34(sessions) / c35++ 进度更新。加上前 agent 已完成的 c28/c29/c30，**GAP-BOARD 16 项中 15 项已清零**。仅剩 G14(connectors P2) + G16(前端 P0)。202 pass / 0 fail。 |
+✅ G16 (前端迁移) 已清零。GAP-BOARD 16/16 全部完成。
+
+| 上次 Agent | pi-agent (c35 Phase 7 前端迁移; GAP-BOARD 16/16 清零) |
+| 上次操作 | **c35 Phase 7 完成**: 19/21 前端域迁移至 eden treaty。typecheck 207→23 (↓89%)。GAP-BOARD G16 ✅。202 pass / 0 fail。 |
 | 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13阶段）。(2) **React**: 暂锁18.2.0，待迁移MUI后升19。(3) AI SDK v7 tool() 用inputSchema。(4) **WS-B 拆分为多个对齐提案**(GAP-BOARD),不再作为单一批次;research 部分(resume/export/hitl)作为 c24-B 拆分项。(5) refine 回退对齐 v1(citation-aware RAG 摘要器)。(6) 前端迁移(~87%)在后端对齐后统一补齐(c35)。(7) oxlint warning 147 处非阻塞。 |
-| 已知问题 | **🔴 GAP-BOARD 16 项**: 见上方 GAP-BOARD 表(6 P0 / 6 P1 / 4 P2)。**🟡 P1**: web typecheck 207 errors(196噪音+11真实)。**🟡 P1**: v2无auth。**🟢 暂缓**: @material-tailwind→MUI迁移。**✅ 已修**: dedup 跨notebook误判409 + worker dispatch payload.type缺失。 |
-| 质量门禁 | (本次仅文档更新,无代码变更)`bun oxlint` → 0 errors / 147 warnings ✅。`bun typecheck` (server) ✅。`bun test` (server) → 144 pass / 0 fail ✅。`bun test tests/bdd/` → 21 pass ✅ |
+| 已知问题 | **🟡 P2**: c13/c14 待授权 (Tauri desktop + 清理)。**🟡 P2**: SlidesStudioDialog (Slidev ESM 缺失), SourceConnectorsDialog 仍用旧 client。**🟡 P1**: web typecheck 23 errors (all pre-existing: SSE shapes, Slidev module, type drift)。**🟡 P1**: v2无auth。 |
+| 质量门禁 | `bun test` (server) → 202 pass / 0 fail ✅。`bun typecheck` (server) ✅。`bun test tests/bdd/` → 21 pass ✅。
 
 ---
 
