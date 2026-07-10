@@ -436,6 +436,52 @@ export async function runResearchFromState(
 }
 
 // ---------------------------------------------------------------------------
+// Standalone report generation (c37: called by finish endpoint)
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate a final report from accumulated results without running the full
+ * agent cycle. Used by the finish endpoint (v1 api.py:650-687 → GenerateReport).
+ *
+ * Eagerly drains the streamText and returns the full report text.
+ */
+export async function generateFinalReport(state: ResearchState): Promise<string> {
+  const modelConfig = getDefaultChatModel();
+  const model = withRetry(await resolveModel(modelConfig!));
+
+  const context = state.results
+    .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.snippet}\n`)
+    .join('\n');
+
+  const result = streamText({
+    model,
+    system: `You are a research report writer. Produce a comprehensive markdown report.`,
+    prompt: `Topic: ${state.topic}\n\nResults:\n${context}\n\nWrite a detailed report with executive summary, findings, and conclusions.`,
+  });
+
+  const chunks: string[] = [];
+  for await (const chunk of result.textStream) {
+    chunks.push(chunk);
+  }
+
+  const fullReport = chunks.join('');
+
+  // Record a summary step
+  db()
+    .insert(researchSteps)
+    .values({
+      sessionId: state.sessionId,
+      iteration: state.iteration,
+      type: 'summary',
+      outputData: { report_length: fullReport.length } as Record<string, unknown>,
+      status: 'completed',
+    })
+    .run();
+
+  return fullReport || '(no report generated)';
+}
+
+// ---------------------------------------------------------------------------
 // HITL: wait for user approval via DB polling
 // ---------------------------------------------------------------------------
 
