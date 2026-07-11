@@ -11,7 +11,7 @@ import { db } from '../../db/index.ts';
 import { messages, notebooks, sessions, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
-import { streamQa } from './handler.ts';
+import { streamQa, generateQaDirect } from './handler.ts';
 import { resolvePreset, listPresets } from './presets.ts';
 
 // ---------------------------------------------------------------------------
@@ -203,7 +203,8 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       messageId = msg.id;
     }
 
-    const response = await streamQa({
+    // H7: direct generate (no SSE re-parse) — uses generateText, not streamText
+    const result = await generateQaDirect({
       model,
       question,
       notebookId: notebook_id,
@@ -214,63 +215,25 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       topK: top_k,
       minScore: min_score,
       sourceIds: source_ids,
+      onMessageSettled: (text, _failed, citations) => {
+        if (messageId) {
+          db()
+            .update(messages)
+            .set({ content: text, citations: citations ?? [] })
+            .where(eq(messages.id, messageId))
+            .run();
+        }
+      },
     });
 
-    // Read full SSE stream and extract final answer + metadata
-    const reader = response.body!.getReader();
-    const decoder = new TextDecoder();
-    let fullText = '';
-    const citations: unknown[] = [];
-    let finalMessageId: number | null = null;
-    let confidence: number | undefined;
-    let evidence: boolean | undefined;
-    let noEvidenceReason: string | undefined;
-
-    let done = false;
-    while (!done) {
-      const { value, done: isDone } = await reader.read();
-      done = isDone;
-      if (value) {
-        const text = decoder.decode(value, { stream: !isDone });
-        for (const line of text.split('\n')) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.text) fullText += data.text ?? '';
-              if (data.message_id !== undefined) {
-                finalMessageId = data.message_id ?? null;
-              }
-              if (data.citations) {
-                for (const c of data.citations) citations.push(c);
-              }
-              if (data.confidence !== undefined) confidence = data.confidence;
-              if (data.evidence !== undefined) evidence = data.evidence;
-              if (data.no_evidence_reason !== undefined) noEvidenceReason = data.no_evidence_reason;
-            } catch {
-              /* skip non-JSON */
-            }
-          }
-        }
-      }
-    }
-
-    // Persist assistant message content + citations
-    if (finalMessageId) {
-      db()
-        .update(messages)
-        .set({ content: fullText, citations: citations as unknown[] })
-        .where(eq(messages.id, finalMessageId))
-        .run();
-    }
-
     return {
-      answer: fullText,
-      citations,
-      message_id: finalMessageId,
+      answer: result.answer,
+      citations: result.citations,
+      message_id: messageId ?? null,
       session_id,
-      confidence,
-      evidence,
-      no_evidence_reason: noEvidenceReason,
+      confidence: result.confidence,
+      evidence: result.evidence,
+      no_evidence_reason: result.noEvidenceReason,
     };
   })
 

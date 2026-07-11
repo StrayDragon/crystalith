@@ -35,6 +35,9 @@ import {
   type ResearchState,
   type ResearchResult,
 } from './agent.ts';
+// H4: lock primitives moved to lock.ts to break circular dependency
+export { isLockHeld, acquireLock, releaseLock, renewLock, cleanupExpiredLocks } from './lock.ts';
+import { isLockHeld, acquireLock, releaseLock, cleanupExpiredLocks } from './lock.ts';
 
 // ---------------------------------------------------------------------------
 // OpenAPI docs
@@ -172,79 +175,8 @@ function recordUserStep(
 }
 
 // ---------------------------------------------------------------------------
-// Session lock (c37: adds expired-lock cleanup)
+// Session lock primitives — moved to lock.ts (H4: break circular dependency)
 // ---------------------------------------------------------------------------
-
-const LOCK_TTL_MS = 10 * 60 * 1000;
-
-export function isLockHeld(row: { lockExpiresAt: Date | null }, now: Date = new Date()): boolean {
-  return row.lockExpiresAt !== null && row.lockExpiresAt > now;
-}
-
-export function acquireLock(id: number): void {
-  const now = new Date();
-  const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
-  if (!row) throw new NotFoundError(`Research session ${id} not found`);
-  if (isLockHeld(row, now)) {
-    throw new Error(`Research session ${id} is locked by another run`);
-  }
-  db()
-    .update(researchSessions)
-    .set({ lockedAt: now, lockExpiresAt: new Date(now.getTime() + LOCK_TTL_MS) })
-    .where(eq(researchSessions.id, id))
-    .run();
-}
-
-function releaseLock(id: number): void {
-  db()
-    .update(researchSessions)
-    .set({ lockedAt: null, lockExpiresAt: null })
-    .where(eq(researchSessions.id, id))
-    .run();
-}
-
-/** c46: Renew lock during long runs (v1 _extend_lock_periodically, api.py:885). */
-export function renewLock(id: number): void {
-  const now = new Date();
-  db()
-    .update(researchSessions)
-    .set({ lockExpiresAt: new Date(now.getTime() + LOCK_TTL_MS) })
-    .where(eq(researchSessions.id, id))
-    .run();
-}
-
-/** Clean up expired locks (v1 check_and_cleanup_expired_locks, c37). */
-export function cleanupExpiredLocks(): number {
-  const now = new Date();
-  const expired = db()
-    .select()
-    .from(researchSessions)
-    .all()
-    .filter((row) => row.lockExpiresAt !== null && row.lockExpiresAt < now);
-
-  for (const row of expired) {
-    // v1 also cancels active statuses when the lock expires
-    if (
-      row.status === 'planning' ||
-      row.status === 'searching' ||
-      row.status === 'analyzing' ||
-      row.status === 'waiting_user'
-    ) {
-      db()
-        .update(researchSessions)
-        .set({
-          status: 'cancelled',
-          lockedAt: null,
-          lockExpiresAt: null,
-        })
-        .where(eq(researchSessions.id, row.id))
-        .run();
-    } else {
-      releaseLock(row.id);
-    }
-  }
-  return expired.length;
-}
 
 /** Spawn a research agent in background, managing abort controller + lock. */
 function spawnResearch(
