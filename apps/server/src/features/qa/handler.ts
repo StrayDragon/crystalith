@@ -23,6 +23,23 @@ export { retrieveAndJudge, noEvidenceAnswerForReason, resolveCitations };
 export type { NoEvidenceReason, JudgeResult, ContextStats };
 
 // ---------------------------------------------------------------------------
+// c45: Inline citation fallback (v1 _ensure_inline_citations, api.py:107-112)
+// ---------------------------------------------------------------------------
+
+/**
+ * If the answer has no [N] style inline citations but we have citations,
+ * append [1] as a fallback marker (v1 behavior).
+ */
+export function ensureInlineCitations(
+  answer: string,
+  citations: import('@crystalith/shared').Citation[],
+): string {
+  if (!citations.length) return answer;
+  if (answer.includes('[') && answer.includes(']')) return answer;
+  return `${answer} [1]`;
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -99,7 +116,11 @@ export async function streamQa(opts: QaHandlerOptions): Promise<Response> {
     confidenceResolver: async () => judgment.confidence,
     noEvidenceResolver: async () => judgment.reason,
     contextStats: judgment.contextStats,
-    onMessageSettled: opts.onMessageSettled,
+    onMessageSettled: (text, failed, citations) => {
+      // c45: apply inline citation fallback before persisting
+      const finalText = failed ? text : ensureInlineCitations(text, citations ?? []);
+      opts.onMessageSettled?.(finalText, failed, citations);
+    },
   });
 }
 
