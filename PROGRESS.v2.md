@@ -43,7 +43,7 @@
 | c36 | align-qa-pipeline      | ✅ DONE (确定性检索/no-evidence 5reason/export/confidence/source_ids) |
 | c37 | align-research-agent   | ✅ DONE (resume推断/skip推进/finish生成report/delete/SSE命名事件) |
 | c38 | align-outputs-pipeline | ✅ DONE (source_ids RAG接通/citation mapping/postprocess/export markdown) |
-| c39 | align-sources-sessions | ⬜ TODO (v1↔v2 对拍：竞态复发/dedup/tags/校验)                                   |
+| c39 | align-sources-sessions | ✅ DONE (竞态修复/dedup默认prompt/tags校验/link模式/QA向量/sessions补全) |
 | c40 | align-shared-infra     | ✅ DONE (config typed/retry Retry-After/searchVectors source_ids) |
 | c13 | distribution           | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                          |
 | c14 | cleanup-delivery       | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                          |

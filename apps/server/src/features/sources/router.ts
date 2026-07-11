@@ -161,15 +161,62 @@ function enrichSources(
 // ---------------------------------------------------------------------------
 
 export const sourcesRouter = new Elysia({ prefix: '/v2' })
-  // List sources for a notebook
-  .get('/notebooks/:nid/sources', ({ params }) => {
+  // List sources for a notebook (c39: tag filter + sort_by + N+1 fix)
+  .get('/notebooks/:nid/sources', ({ params, query }) => {
     const nid = Number(params.nid);
-    const rows = db()
+    const tagFilter = (query as { tag?: string }).tag;
+    const sortBy = (query as { sort_by?: string }).sort_by ?? 'date';
+    const sortOrder = (query as { sort_order?: string }).sort_order ?? 'desc';
+
+    let rows = db()
       .select()
       .from(sources)
       .where(eq(sources.notebookId, nid))
-      .orderBy(desc(sources.updatedAt))
       .all();
+
+    // Tag filter
+    if (tagFilter) {
+      const tagRow = db()
+        .select({ id: sourceTags.id })
+        .from(sourceTags)
+        .where(and(eq(sourceTags.notebookId, nid), eq(sourceTags.name, tagFilter)))
+        .get();
+      if (tagRow) {
+        const taggedSourceIds = db()
+          .select({ sourceId: sourceTagMap.sourceId })
+          .from(sourceTagMap)
+          .where(eq(sourceTagMap.tagId, tagRow.id))
+          .all()
+          .map((r) => r.sourceId);
+        rows = rows.filter((r) => taggedSourceIds.includes(r.id));
+      } else {
+        rows = [];
+      }
+    }
+
+    // Sort
+    rows.sort((a, b) => {
+      let cmp = 0;
+      switch (sortBy) {
+        case 'name':
+          cmp = a.filename.localeCompare(b.filename);
+          break;
+        case 'size': {
+          const ca = db().select({ c: sql<number>`COUNT(*)` }).from(chunks).where(eq(chunks.sourceId, a.id)).get();
+          const cb = db().select({ c: sql<number>`COUNT(*)` }).from(chunks).where(eq(chunks.sourceId, b.id)).get();
+          cmp = (ca?.c ?? 0) - (cb?.c ?? 0);
+          break;
+        }
+        case 'type':
+          cmp = (a.parserType ?? '').localeCompare(b.parserType ?? '');
+          break;
+        case 'date':
+        default:
+          cmp = a.updatedAt.getTime() - b.updatedAt.getTime();
+      }
+      return sortOrder === 'asc' ? cmp : -cmp;
+    });
+
     return enrichSources(rows);
   })
 
@@ -177,7 +224,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   .post('/sources/upload', async ({ body, query, set }) => {
     const notebookId = Number(query?.notebook_id);
     const dedupAction = ((query as Record<string, string> | undefined)?.dedup_action ??
-      'create_new') as 'prompt' | 'reuse' | 'create_new';
+      'prompt') as 'prompt' | 'reuse' | 'create_new';
     if (!notebookId) throw new NotFoundError('notebook_id query param is required');
 
     // body is FormData; Elysia parses multipart into { filename, file }
@@ -277,7 +324,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     }));
   })
 
-  // Tag CRUD
+  // Tag CRUD (c39: uniqueness check + notebook ownership + idempotent assign/remove)
   .get('/notebooks/:nid/sources/tags', ({ params }) => {
     const nid = Number(params.nid);
     return db()
@@ -294,10 +341,25 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       }));
   })
 
-  .post('/notebooks/:nid/sources/tags', ({ params, body }) => {
+  .post('/notebooks/:nid/sources/tags', ({ params, body, set }) => {
     const nid = Number(params.nid);
-    const { name } = body as { name: string };
-    const row = db().insert(sourceTags).values({ notebookId: nid, name }).returning().get();
+    const rawName = (body as { name: string }).name?.trim().slice(0, 64);
+    if (!rawName) {
+      set.status = 400;
+      return { error: 'Tag name is required' };
+    }
+    // Uniqueness check (case-insensitive, v1 api_tags.py:56-63)
+    const existing = db()
+      .select()
+      .from(sourceTags)
+      .where(eq(sourceTags.notebookId, nid))
+      .all()
+      .find((t) => t.name.toLowerCase() === rawName.toLowerCase());
+    if (existing) {
+      set.status = 409;
+      return { error: 'Tag name already exists', existing_tag_id: existing.id };
+    }
+    const row = db().insert(sourceTags).values({ notebookId: nid, name: rawName }).returning().get();
     return {
       id: row.id,
       notebook_id: row.notebookId,
@@ -307,12 +369,33 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     };
   })
 
-  .patch('/notebooks/:nid/sources/tags/:tid', ({ params, body }) => {
+  .patch('/notebooks/:nid/sources/tags/:tid', ({ params, body, set }) => {
+    const nid = Number(params.nid);
     const tid = Number(params.tid);
-    const { name } = body as { name: string };
-    const existing = db().select().from(sourceTags).where(eq(sourceTags.id, tid)).get();
-    if (!existing) throw new NotFoundError(`Tag ${tid} not found`);
-    db().update(sourceTags).set({ name }).where(eq(sourceTags.id, tid)).run();
+    const rawName = (body as { name: string }).name?.trim().slice(0, 64);
+    if (!rawName) {
+      set.status = 400;
+      return { error: 'Tag name is required' };
+    }
+    // Ownership check (v1 api_tags.py:81)
+    const existing = db()
+      .select()
+      .from(sourceTags)
+      .where(and(eq(sourceTags.id, tid), eq(sourceTags.notebookId, nid)))
+      .get();
+    if (!existing) throw new NotFoundError(`Tag ${tid} not found in notebook ${nid}`);
+    // Uniqueness check (exclude self)
+    const conflict = db()
+      .select()
+      .from(sourceTags)
+      .where(eq(sourceTags.notebookId, nid))
+      .all()
+      .find((t) => t.id !== tid && t.name.toLowerCase() === rawName.toLowerCase());
+    if (conflict) {
+      set.status = 409;
+      return { error: 'Tag name already exists', existing_tag_id: conflict.id };
+    }
+    db().update(sourceTags).set({ name: rawName }).where(eq(sourceTags.id, tid)).run();
     const updated = db().select().from(sourceTags).where(eq(sourceTags.id, tid)).get();
     return {
       id: updated!.id,
@@ -324,31 +407,75 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   .delete('/notebooks/:nid/sources/tags/:tid', ({ params, set }) => {
+    const nid = Number(params.nid);
     const tid = Number(params.tid);
+    // Ownership check (v1 api_tags.py:110)
+    const existing = db()
+      .select()
+      .from(sourceTags)
+      .where(and(eq(sourceTags.id, tid), eq(sourceTags.notebookId, nid)))
+      .get();
+    if (!existing) throw new NotFoundError(`Tag ${tid} not found in notebook ${nid}`);
     db().delete(sourceTags).where(eq(sourceTags.id, tid)).run();
     set.status = 204;
     return '';
   })
 
   .post('/notebooks/:nid/sources/tags/:tid/sources', ({ params, body }) => {
+    const nid = Number(params.nid);
     const tid = Number(params.tid);
     const { source_ids } = body as { source_ids: number[] };
+    // Idempotent: skip already-assigned (v1 api_tags.py)
+    let applied = 0;
+    let skipped = 0;
     for (const sid of source_ids) {
+      // Verify source exists in notebook
+      const src = db()
+        .select({ id: sources.id })
+        .from(sources)
+        .where(and(eq(sources.id, sid), eq(sources.notebookId, nid)))
+        .get();
+      if (!src) continue; // source doesn't exist in this notebook
+      // Check if already assigned
+      const existing = db()
+        .select()
+        .from(sourceTagMap)
+        .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
+        .get();
+      if (existing) {
+        skipped++;
+        continue;
+      }
       db().insert(sourceTagMap).values({ sourceId: sid, tagId: tid }).run();
+      applied++;
     }
-    return { tag_id: tid, source_ids, applied: source_ids.length };
+    return { tag_id: tid, source_ids, applied, skipped };
   })
 
   .delete('/notebooks/:nid/sources/tags/:tid/sources', ({ params, body }) => {
+    const nid = Number(params.nid);
     const tid = Number(params.tid);
     const { source_ids } = body as { source_ids: number[] };
+    // Idempotent: report how many were actually removed (v1 api_tags.py)
+    let removed = 0;
+    let skipped = 0;
     for (const sid of source_ids) {
+      const existing = db()
+        .select()
+        .from(sourceTagMap)
+        .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
+        .get();
+      if (!existing) {
+        skipped++;
+        continue;
+      }
       db()
         .delete(sourceTagMap)
         .where(and(eq(sourceTagMap.sourceId, sid), eq(sourceTagMap.tagId, tid)))
         .run();
+      removed++;
     }
-    return { tag_id: tid, source_ids, removed: source_ids.length };
+    return { tag_id: tid, source_ids, removed, skipped };
   })
 
   // Get source chunks
@@ -443,12 +570,12 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     };
   })
 
-  // Ingest from URL
+  // Ingest from URL (c39: dedup default prompt + link mode + SSRF fallback fix)
   .post('/notebooks/:nid/sources/from-url', async ({ params, body, query, set }) => {
     const nid = Number(params.nid);
-    const { url } = body as { url: string; mode?: string; title?: string };
+    const { url, mode, title } = body as { url: string; mode?: string; title?: string };
     const dedupAction = ((query as Record<string, string> | undefined)?.dedup_action ??
-      'create_new') as 'prompt' | 'reuse' | 'create_new';
+      'prompt') as 'prompt' | 'reuse' | 'create_new';
 
     // SSRF guard: validate URL before fetch.
     try {
@@ -478,13 +605,45 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       }
     }
 
-    // Fetch URL content via extractor factory (with SSRF guard already passed).
+    // Link mode: create a lightweight source without fetching URL content (v1 api_ingest.py:379-391)
+    if (mode === 'link') {
+      const linkTitle = title ?? url;
+      const snippet = `Link to ${linkTitle}`;
+      const sourceRow = db()
+        .insert(sources)
+        .values({
+          notebookId: nid,
+          filename: linkTitle,
+          mimeType: 'text/plain',
+          parserType: 'link',
+          status: 'ready',
+          dedupKey,
+          metadata: { url, mode: 'link' },
+        })
+        .returning()
+        .get();
+      // Single chunk with the link info
+      db()
+        .insert(chunks)
+        .values({
+          sourceId: sourceRow.id,
+          chunkIndex: 0,
+          text: snippet,
+          metadata: { url, type: 'link' },
+        })
+        .run();
+      bumpSourcesEpoch(nid);
+      set.status = 201;
+      return { source_id: sourceRow.id, filename: linkTitle, mode: 'link' };
+    }
+
+    // Default mode: fetch and extract URL content
     try {
       const extracted = await extractUrl(url, {});
       const buffer = new TextEncoder().encode(extracted.content);
       const result = await ingestSource({
         buffer,
-        filename: extracted.title || url.split('/').pop() || 'webpage.html',
+        filename: extracted.title || title || url.split('/').pop() || 'webpage.html',
         notebookId: nid,
         mimeType: 'text/html',
         dedupKey,
@@ -492,12 +651,19 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       return { ...result, extracted_by: extracted.extractorUsed, title: extracted.title };
     } catch {
       // Fallback to raw fetch if extractors all fail.
+      // c39: SSRF guard re-applied on fallback path (was bypassed before)
+      try {
+        await validateUrlForFetch(url, getSecurityPolicy());
+      } catch (error) {
+        set.status = 422;
+        return { error: 'SSRF blocked on fallback', reason: (error as Error).message };
+      }
       const response = await fetch(url);
       const html = await response.text();
       const buffer = new TextEncoder().encode(html);
       const result = await ingestSource({
         buffer,
-        filename: url.split('/').pop() || 'webpage.html',
+        filename: title || url.split('/').pop() || 'webpage.html',
         notebookId: nid,
         mimeType: 'text/html',
         dedupKey,

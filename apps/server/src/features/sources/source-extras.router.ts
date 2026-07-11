@@ -144,7 +144,7 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
     };
   })
 
-  // Per-source QA (v1 api_qa.py parity)
+  // Per-source QA (c39: vector retrieval instead of first-N chunks — v1 api_qa.py:82-119)
   .post('/notebooks/:nid/sources/:sid/qa', async ({ params, body }) => {
     const sid = Number(params.sid);
     const source = db().select().from(sources).where(eq(sources.id, sid)).get();
@@ -154,22 +154,37 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
     const { question } = body as { question: string };
     if (!question?.trim()) throw new NotFoundError('Question is required');
 
-    const chunkRows = db()
-      .select()
-      .from(chunks)
-      .where(eq(chunks.sourceId, sid))
-      .orderBy(chunks.chunkIndex)
-      .all();
-
-    if (chunkRows.length === 0) throw new NotFoundError('Source has no content');
-
-    const context = chunkRows
-      .slice(0, 15)
-      .map((c) => c.text)
-      .join('\n\n');
-
     const modelConfig = getDefaultChatModel();
     if (!modelConfig) throw new Error('No chat model configured');
+
+    // c39: Use vector retrieval scoped to this source (v1 cached_vector_search)
+    let contextChunks: Array<{ text: string; score: number }> = [];
+    try {
+      const { ragRegistry } = await import('../../rag/registry.ts');
+      const results = await ragRegistry.retrieveWith('embed', source.notebookId, question.trim(), {
+        topK: 5,
+        minScore: 0.1,
+        sourceIds: [sid],
+      });
+      contextChunks = results.map((r) => ({ text: r.text, score: r.score }));
+    } catch {
+      // Fallback: vector search unavailable — use first N chunks
+    }
+
+    // Fallback: if vector search returned nothing, take first chunks
+    if (contextChunks.length === 0) {
+      const chunkRows = db()
+        .select({ text: chunks.text })
+        .from(chunks)
+        .where(eq(chunks.sourceId, sid))
+        .orderBy(chunks.chunkIndex)
+        .all();
+      contextChunks = chunkRows.slice(0, 15).map((c) => ({ text: c.text, score: 0 }));
+    }
+
+    if (contextChunks.length === 0) throw new NotFoundError('Source has no content');
+
+    const context = contextChunks.map((c) => c.text).join('\n\n');
 
     const model = withRetry(await resolveModel(modelConfig));
     const { text } = await generateText({
@@ -243,12 +258,21 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
         const { bumpVectorEpoch, bumpSourcesEpoch } = await import('../../rag/cache.ts');
         bumpVectorEpoch(source.notebookId);
         bumpSourcesEpoch(source.notebookId);
-      } catch {
-        db().update(sources).set({ status: 'failed' }).where(eq(sources.id, newSource.id)).run();
+        // Only set ready after successful embedding (c39: fix ready-before-vectors race)
+        db().update(sources).set({ status: 'ready' }).where(eq(sources.id, newSource.id)).run();
+      } catch (error) {
+        console.error('[source-extras] qa-to-source embedding failed:', error);
+        db()
+          .update(sources)
+          .set({ status: 'failed', errorMessage: error instanceof Error ? error.message : 'Embedding failed' })
+          .where(eq(sources.id, newSource.id))
+          .run();
+        throw new Error('Failed to embed QA source');
       }
+    } else {
+      // No chunks — safe to mark ready
+      db().update(sources).set({ status: 'ready' }).where(eq(sources.id, newSource.id)).run();
     }
-
-    db().update(sources).set({ status: 'ready' }).where(eq(sources.id, newSource.id)).run();
 
     return {
       source_id: newSource.id,
