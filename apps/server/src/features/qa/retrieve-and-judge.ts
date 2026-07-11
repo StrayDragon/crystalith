@@ -118,21 +118,10 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
     max_tokens: maxTokens,
   };
 
-  // Step 1-2: Check source_ids scope (v1: no source_ids → no_sources)
+  // Step 1-2: empty/missing source_ids → no_sources (v1 service.py:295-316)
   const normalizedSourceIds = opts.sourceIds?.length ? opts.sourceIds : undefined;
-
   if (!normalizedSourceIds) {
-    // Check if notebook has ANY sources — v1 returns no_sources when empty
-    const sourceCount = db()
-      .select({ id: sources.id })
-      .from(sources)
-      .where(eq(sources.notebookId, opts.notebookId))
-      .all().length;
-    if (sourceCount === 0) {
-      return noEvidence('no_sources', emptyStats);
-    }
-    // If sourceIds not specified but sources exist, search all (v1 behavior
-    // when source_ids is null and sources exist — search whole notebook)
+    return noEvidence('no_sources', emptyStats);
   }
 
   // Step 3-4: Retrieve via RAG strategy (embed + search happen inside)

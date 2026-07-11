@@ -12,7 +12,7 @@ import { join } from 'node:path';
 // CRUD: POST (create) / GET (list/id) / PATCH (edit draft fields)
 // Slidev (c32): write .md to cwd/slides/ for preview
 import { generateObject, streamText } from 'ai';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 import { z } from 'zod';
 
@@ -124,11 +124,16 @@ function serializeSlide(row: typeof studioSlides.$inferSelect) {
 }
 
 function getContext(slide: typeof studioSlides.$inferSelect): string {
+  const sourceIds = (slide.sourceIds ?? []).filter((id) => id > 0);
+  if (sourceIds.length === 0) {
+    throw new Error('source_ids required — select at least one source');
+  }
+
   const chunkRows = db()
     .select({ text: chunks.text, filename: sources.filename })
     .from(chunks)
     .innerJoin(sources, eq(chunks.sourceId, sources.id))
-    .where(eq(sources.notebookId, slide.notebookId))
+    .where(and(eq(sources.notebookId, slide.notebookId), inArray(sources.id, sourceIds)))
     .all();
   return chunkRows
     .map((c) => c.text)
@@ -143,6 +148,41 @@ function writeSlideFile(notebookId: number, slideId: number, markdown: string): 
   writeFileSync(join(dir, `${slideId}.md`), markdown, 'utf-8');
 }
 
+/** Sync slide markdown into outputs table (v1 _sync_output). */
+function syncSlideOutput(slide: typeof studioSlides.$inferSelect, markdown: string): void {
+  const existingOutput = db()
+    .select()
+    .from(outputs)
+    .where(eq(outputs.prompt, `studio:${slide.id}`))
+    .get();
+
+  if (existingOutput) {
+    db()
+      .update(outputs)
+      .set({ content: { title: slide.title, markdown, stage: 'markdown' } })
+      .where(eq(outputs.id, existingOutput.id))
+      .run();
+  } else {
+    db()
+      .insert(outputs)
+      .values({
+        notebookId: slide.notebookId,
+        type: 'SLIDES',
+        prompt: `studio:${slide.id}`,
+        content: { title: slide.title, markdown, stage: 'markdown' },
+      })
+      .run();
+  }
+}
+
+function requireSourceIds(raw: unknown): number[] {
+  const ids = Array.isArray(raw) ? (raw as number[]).map(Number).filter((n) => n > 0) : [];
+  if (ids.length === 0) {
+    throw new Error('source_ids required — select at least one source');
+  }
+  return ids;
+}
+
 // ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
@@ -150,11 +190,17 @@ function writeSlideFile(notebookId: number, slideId: number, markdown: string): 
 export const studioRouter = new Elysia({ prefix: '/v2' })
   // Create slide draft
   .post('/studio/slides', ({ body }) => {
-    const { notebook_id, title, prompt, source_ids } = body as Record<string, unknown>;
+    const { notebook_id, title, prompt, source_ids, generation_config } = body as Record<
+      string,
+      unknown
+    >;
     const notebookId = Number(notebook_id);
+    if (!notebookId) throw new Error('notebook_id required');
 
     const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
     if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
+
+    const sourceIds = requireSourceIds(source_ids);
 
     const slide = db()
       .insert(studioSlides)
@@ -162,7 +208,8 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
         notebookId,
         title: title ? String(title) : null,
         prompt: prompt ? String(prompt) : null,
-        sourceIds: source_ids ? (source_ids as number[]) : null,
+        sourceIds,
+        generationConfig: (generation_config as Record<string, unknown>) ?? null,
         stage: 'input',
         status: 'idle',
       })
@@ -204,8 +251,7 @@ export const studioRouter = new Elysia({ prefix: '/v2' })
     if (title !== undefined) updateData.title = String(title);
     if (prompt !== undefined) updateData.prompt = String(prompt);
     if (source_ids !== undefined) {
-      const ids = Array.isArray(source_ids) ? (source_ids as number[]).filter((n) => n > 0) : [];
-      updateData.sourceIds = ids;
+      updateData.sourceIds = requireSourceIds(source_ids);
     }
     if (generation_config !== undefined) {
       updateData.generationConfig = generation_config as Record<string, unknown>;
@@ -337,8 +383,9 @@ Each slide separated by ---. Keep content concise.`,
         .where(eq(studioSlides.id, id))
         .run();
 
-      // Persist to filesystem on AI generation too (c39 gap fix — v1 api.py:530-531)
+      // Persist to filesystem + sync outputs (v1 api.py:530-532)
       writeSlideFile(slide.notebookId, id, markdown);
+      syncSlideOutput(slide, markdown);
 
       const updated = db().select().from(studioSlides).where(eq(studioSlides.id, id)).get();
       return serializeSlide(updated!);
@@ -367,30 +414,7 @@ Each slide separated by ---. Keep content concise.`,
       console.error('[studio] slidev file write failed:', error);
     }
 
-    // Sync to outputs table
-    const existingOutput = db()
-      .select()
-      .from(outputs)
-      .where(eq(outputs.prompt, `studio:${id}`))
-      .get();
-
-    if (existingOutput) {
-      db()
-        .update(outputs)
-        .set({ content: { title: slide.title, markdown, stage: 'markdown' } })
-        .where(eq(outputs.id, existingOutput.id))
-        .run();
-    } else {
-      db()
-        .insert(outputs)
-        .values({
-          notebookId: slide.notebookId,
-          type: 'SLIDES',
-          prompt: `studio:${id}`,
-          content: { title: slide.title, markdown, stage: 'markdown' },
-        })
-        .run();
-    }
+    syncSlideOutput(slide, markdown);
 
     db()
       .update(studioSlides)

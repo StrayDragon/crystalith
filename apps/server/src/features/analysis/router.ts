@@ -140,7 +140,7 @@ export const analysisRouter = new Elysia({ prefix: '/v2' }).post('/analysis', as
   // Phase 3: Contradiction detection (LLM pairwise on top similar pairs)
   const contradictions = await detectContradictions(relations, chunkTextMap);
 
-  // Phase 4: LLM summary via generateObject using topic/relation/contradiction context
+  // Phase 4: LLM summary (narrative only — not the primary graph contract)
   const context = buildAnalysisContext(topics, relations, contradictions, chunkRows);
 
   const modelConfig = getDefaultChatModel();
@@ -154,26 +154,48 @@ export const analysisRouter = new Elysia({ prefix: '/v2' }).post('/analysis', as
     prompt: context,
   });
 
-  // Merge LLM summary with computed graph data (preserve chunk_ids + scores).
-  // The LLM produces the summary/names/relations text, but the computed
-  // topics/relations/contradictions carry the chunk-level grounding that
-  // v1 returns (types.py:10-27). We merge by matching topic names.
+  // Primary response matches v1 AnalysisResult (types.py) + shared AnalysisResultSchema:
+  // chunk-level snake_case edges. LLM narrative is additive under `narrative`.
   const topicByName = new Map(topics.map((t) => [t.name, t]));
-  const mergedTopics = object.topics.map((t) => {
-    const computed = topicByName.get(t.name);
+  const mergedTopics = topics.map((t) => {
+    const llm = object.topics.find((lt) => lt.name === t.name);
     return {
-      ...t,
-      chunk_ids: computed?.chunkIds ?? [],
+      id: t.id,
+      name: t.name,
+      chunk_ids: t.chunkIds,
+      keywords: llm?.keywords?.length ? llm.keywords : t.keywords,
+      summary: llm?.summary,
     };
+  });
+  // Include any LLM-only topics that didn't match computed clusters
+  for (const lt of object.topics) {
+    if (!topicByName.has(lt.name)) {
+      mergedTopics.push({
+        id: `llm-${lt.name}`,
+        name: lt.name,
+        chunk_ids: [],
+        keywords: lt.keywords,
+        summary: lt.summary,
+      });
+    }
+  }
+
+  const toApiRelation = (r: (typeof relations)[number]) => ({
+    source_chunk_id: r.sourceChunkId,
+    target_chunk_id: r.targetChunkId,
+    relation_type: r.relationType,
+    score: r.score,
   });
 
   return {
-    ...object,
     topics: mergedTopics,
-    // Attach the raw computed relations/contradictions with chunk-level edges
-    // (the LLM versions are for readability; these are for grounding)
-    computed_relations: relations,
-    computed_contradictions: contradictions,
+    relations: relations.map(toApiRelation),
+    contradictions: contradictions.map(toApiRelation),
+    summary: object.summary,
+    narrative: {
+      relations: object.relations,
+      contradictions: object.contradictions,
+    },
   };
 });
 
