@@ -46,6 +46,11 @@
 | c39 | align-sources-sessions | ✅ DONE (竞态修复/dedup默认prompt/tags校验/link模式/QA向量/sessions补全)                     |
 | c40 | align-shared-infra     | ✅ DONE (config typed/retry Retry-After/searchVectors source_ids)                            |
 | c41 | ts-upgrade             | ✅ DONE (TS ^5→^7, Go-native tsc, tsconfig unified)                                          |
+| c42 | outputs-contract       | ✅ DONE (OutputRead契约/citation树映射持久化/RAG失败传播/字段级postprocess/错误码)           |
+| c43 | studio-sse-rag         | ✅ DONE (SSE流式端点/ragRegistry接入/drafts-latest/stale清理/preview/frontmatter确定性)      |
+| c44 | sources-search-extract | ✅ DONE (web search真实现/extractors完整响应/dedup配置门控/re-embed强制FAILED/400+归属)     |
+| c45 | qa-context-citations   | ✅ DONE (ContextStats字段对齐/inline citation兜底/low_similarity空citations/prompt指令)     |
+| c46 | parsers-research       | ✅ DONE (CSV markdown-table parser/report富prompt/AI失败fallback/lock续期/dedup增强)        |
 | c13 | distribution           | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                      |
 | c14 | cleanup-delivery       | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                                      |
 
@@ -137,58 +142,40 @@
 
 <!-- CURRENT -->
 
-**2026-07-11 代码复核 + P0/Studio/Connectors 修复（不采信旧文档总结）。**
+**2026-07-11 第三轮深度复核 + c42–c46 提案与实现（5 个 SDD change 覆盖全部 P0 + P1）。**
 
-### 复核结论（相对 PROGRESS 乐观表述的修正）
+### 复核方法
 
-旧 CURRENT 写「仅 1 个 P0 + 多数 P2」**不成立**。对照 `backend/py` 源码复核后，核心 AI 域仍有多处用户可见断裂；本会话已修一批，仍有残留。
+使用 ai-sdk + elysiajs 库 skill，派出 5 个并行 Explore agent 对照 `backend/py` 源码逐域复核。
+发现 8 个 P0（用户可见契约断裂）+ 约 20 个 P1（行为实质偏离），按功能域分组为 5 个 SDD change。
 
-### 本会话已修（P0 + Studio/Connectors）
+### 本会话实现（c42–c46）
 
-| 域                | 修复                                                                                                     |
-| ----------------- | -------------------------------------------------------------------------------------------------------- |
-| **QA**            | 空 `source_ids` → `no_sources`；stream 持久化 citations；export `inArray` 全量 sources                   |
-| **Research HITL** | `waitForApproval` 识别 modify/skip/finish；modify 应用新 plan；finish 不再被 agent 覆盖 report           |
-| **Analysis**      | 主字段返回 snake_case chunk-level `relations`/`contradictions`（对齐 v1 + 前端）                         |
-| **Studio**        | 强制 `source_ids`；`getContext` 按 source 过滤；AI markdown 同步 outputs；UI/队列改 v2 POST（弃 v1 SSE） |
-| **Connectors**    | 实现 snapshot / sync-check / apply / import-scope + 文件系统扫描；UI 迁 eden v2                          |
+| Change | 域 | P0 修复 | P1 修复 |
+| ------ | -- | ------- | ------- |
+| **c42** | Outputs | POST 返回 OutputRead 契约；citations 递归映射进 content 树并持久化 | RAG 失败传播；字段级 postprocess；export citations 字段补全；错误码 503/422/400 |
+| **c43** | Studio | SSE 流式端点（outline/markdown stream）；getContext 接入 ragRegistry | drafts/latest；stale-RUNNING 清理；preview 文件；generation_config 解释；frontmatter 确定性 |
+| **c44** | Sources | /search 接入真 web search（SearXNG）；/extractors 完整 ExtractorsListResponse | dedup 配置门控；re-embed 强制 FAILED；summary/QA 400+归属；connector 不可用 409 |
+| **c45** | QA | ContextStats 字段名对齐 v1（total_tokens 等 + compressed） | inline citation 兜底；low_similarity 空 citations；/prompt: 指令解析 |
+| **c46** | Parsers+Research | CSV 专用 parser（markdown-table 分块） | report 6 段富 prompt；AI 失败 fallback；lock 续期；search dedup 增强 |
 
-### 仍开放（未在本会话清零）
+### 仍开放（后置项）
 
-#### P1（本会话第二批已修）
-
-- ~~QA：notebook / source_ids 归属校验~~ ✅
-- ~~Research：`inferResumeState`；`cleanupExpiredLocks` 启动调用~~ ✅（SSE `waiting` 时机仍可后置）
-- ~~Outputs：`bumpSourcesEpoch`；GET/DELETE/export 归属 helper~~ ✅（citation 嵌回 content tree 仍可后置）
-- ~~Sources：link embed；re-embed processing→ready/failed~~ ✅
-- ~~Refine：`chunk_index` 1-based~~ ✅
-- ~~Messages list 默认 limit 200~~ ✅
-
-#### 仍开放
-
-- Sources `/search` 仍非 v1 web search graph（RAG placeholder）
-- Outputs citation-in-content mapping；Research SSE `waiting` 时机
-- Parsers CSV/audio/video；Plugin host；ToolLoopAgent
+- P1 残留：stats preset（chart+table）；context window 压缩；export note STRUCTURED 类型；finish 后台生成；waiting SSE 心跳
+- P2 架构债：audio/video parsers；plugin host；ToolLoopAgent 迁移；batch DELETE 方法（BREAKING，留 c14）
 - c13/c14 等人授权；web typecheck；`api/generated/` → c14
-
-#### P2 / 架构债
-
-- Parsers：无专用 CSV/audio/video（CSV→text）
-- Plugin host 缺失（connectors/studio 硬编码）
-- AI SDK：仍无 `ToolLoopAgent` / `toolApproval`（research 继续 DB 轮询 HITL）
-- c13 distribution / c14 cleanup — 等人工授权
-- web typecheck 残留 errors；`api/generated/` 类型残留 → c14
 
 **当前状态**:
 
-- Server test: **209 pass / 2 fail**（同前：research 网络 + URL 超时，非本会话回归）
-- 下一阶段建议: Sources web-search 真实现 / SSE waiting / c13 授权
+- Server test: **209 pass / 2 fail**（research 网络 + URL 超时，非回归）
+- Server typecheck: **✅ pass**
+- 下一阶段建议: 前端适配 SSE + OutputRead 契约；c13 授权
 
 ### GAP-BOARD 更新
 
-- G14 source-connectors：**本会话实现最小可用同步管线**（filesystem Obsidian/local-directory）。完整插件生态仍属 c13 范畴。
-- Studio 前后端契约断裂：**本会话已迁 v2**。
-- 2026-07-11 第二批：P1 行为债大部分已清。
+- 全部 8 个 P0 已清零（c42–c46）
+- P1 大部分已清零；残留 stats preset / context compression / export note / waiting 心跳为后置项
+- G14 source-connectors：最小可用管线 + c44 补充 409/schema 校验
 
 ## GAP-BOARD — v1 行为对齐提案规划
 
@@ -222,11 +209,11 @@
 > ⚠️ **对拍说明**: 早期 ✅ 曾表示「端点存在」而非「行为对齐」。c36–c40 + 2026-07-11 复核修了多处伪对齐。
 > `llman sdd list`: 部分 change tasks.md 可能仍未勾选/未 archive——**不要仅凭本表 archive**。
 
-| 上次 Agent | P0 commit + P1 行为债清扫 |
-| 上次操作 | **commit** `4f407387`（P0/studio/connectors）。**fix P1**: QA ownership；Outputs bumpSourcesEpoch+ownership；Sources link embed+re-embed lifecycle；Refine 1-based chunk_index；messages limit=200；Research inferResumeState+startup cleanupExpiredLocks。 |
-| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) Sources `/search` web graph 是否做。(5) SDD archive 卫生。 |
-| 已知问题 | **🟡 残留**: Sources `/search` stub；Outputs citation-in-content；Research SSE waiting；parsers/plugins/ToolLoopAgent。**🟡**: web typecheck；`api/generated/` → c14。 |
-| 质量门禁 | `bun test` (server) → 209 pass / 2 fail（网络超时，非本会话回归）。 |
+| 上次 Agent | 第三轮深度复核 + c42–c46 提案与实现 |
+| 上次操作 | **commits**: `996e2a88`（P1 行为债）→ `7ee5972a`（c42–c46 提案）→ `4707d0f5`（c42 outputs 契约）→ `baf7e326`（c43 studio SSE+RAG）→ `4a392a9b`（c44 sources search/extractors）→ `4ce61589`（c45 QA context/citations）→ `33abbf83`（c46 CSV parser+research resilience）。 |
+| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) 前端适配 SSE + OutputRead 契约。(5) SDD archive 卫生。 |
+| 已知问题 | **🟡 后置**: stats preset；context window 压缩；export note STRUCTURED；finish 后台生成；waiting SSE 心跳；audio/video parsers；plugin host；ToolLoopAgent。**🟡**: web typecheck；`api/generated/` → c14。 |
+| 质量门禁 | `bun test` (server) → 209 pass / 2 fail（网络超时，非回归）。`bun typecheck` (server) → ✅ pass。 |
 
 ---
 
