@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "studio-slides-workflow"
 purpose: 定义 SLIDES 的端到端工作流：draft 单一事实源、outline/markdown SSE、保存同步与预览链路。该规范用于保证断线重连、重试与预览刷新时的状态一致性。
 valid_scope[2]: src/,tests/
-requirements[8]{req_id,title,statement}:
+requirements[11]{req_id,title,statement}:
   r1,"Slides are draft-centric across three stages",slides MUST 围绕 draft 运行 input/outline/markdown 三阶段并可恢复。
   r2,Draft API contract is stable,draft CRUD、outline 保存、markdown 保存端点 MUST 保持稳定；当 slides workflow capability 不可用时，这些端点 MUST 返回稳定且可执行的 unavailable 诊断，而不是假设 slides 默认可用。
   r3,SSE endpoints and events are stable,outline/markdown stream MUST 使用稳定事件集合 `progress/toolcall/done/busy/error`。
@@ -11,7 +11,10 @@ requirements[8]{req_id,title,statement}:
   r6,Successful generation persists draft before done,生成成功 MUST 先持久化 draft（含 chunk_ids/stage/status），再发 `done`。
   r7,Preview always uses latest saved markdown,预览前端流程 MUST 先保存 markdown，再刷新当前 active slides workflow plugin 声明的预览目标；宿主与客户端 MUST NOT 硬编码 Slidev 作为唯一预览实现。
   r8,Slides UI availability follows tools contract,Studio slides 相关 UI（工具卡片、dialog、入口动作）MUST 以 `/v1/workspace/tools` 返回的 `SLIDES` tool 作为可用性唯一来源，不得依赖硬编码假设 slides 默认存在。
-scenarios[10]{req_id,id,given,when,then}:
+  "studio-sse-streaming",Outline and markdown generation MUST stream via SSE,"studio outline 和 markdown 生成 MUST 通过 SSE 端点流式返回 progress/toolcall/busy/done/error 事件，MUST NOT 返回同步 JSON（对齐 v1 /drafts/:id/outline/stream 与 /markdown/stream）"
+  "studio-latest-draft",Studio MUST provide drafts/latest endpoint,studio MUST 提供 GET 端点返回 notebook 下按 updated_at desc 的最新 draft，MUST NOT 缺失该端点
+  "studio-stale-running-guard",Studio MUST clear stale RUNNING status and guard concurrent generation,studio MUST 清理超过阈值（10min）的 RUNNING 状态 draft，并发生成时 MUST 返回 busy 事件而非覆盖
+scenarios[13]{req_id,id,given,when,then}:
   r1,"draft-centric-stages-are-recoverable","",用户在 input/outline/markdown 任一阶段中断并稍后返回,系统 SHALL 能从 draft 恢复到最近保存的阶段状态
   r2,"draft-endpoints-remain-stable","",客户端调用 draft CRUD 与保存端点,系统 SHALL 保持端点与字段语义稳定以避免客户端漂移
   r2,"draft-endpoints-fail-fast-when-slides-plugin-is-unavailable","",客户端在未安装/未启用/未选定 active slides workflow plugin 的情况下创建或生成 slides draft,系统 SHALL 返回稳定 error_code / message / hint / details
@@ -22,3 +25,6 @@ scenarios[10]{req_id,id,given,when,then}:
   r7,"preview-uses-latest-markdown","",用户触发预览刷新,系统 SHALL 先保存 markdown 再刷新当前 active plugin 声明的预览目标以确保一致性
   r7,"preview-uses-plugin-declared-renderer","",用户触发预览刷新且当前 active slides workflow plugin 已声明 preview contract,系统 SHALL 先保存 markdown
   r8,"slides-dialog-is-gated-by-tools-availability","",`/v1/workspace/tools` 未返回 `SLIDES`,客户端 SHALL 不把 slides 视为可直接打开的可用能力
+  "studio-sse-streaming","client-requests-stream",客户端请求 outline/markdown stream 端点,生成进行中,系统 SHALL 通过 SSE 逐个发送 progress/toolcall/done/error 事件
+  "studio-latest-draft","notebook-has-drafts",notebook 下存在多个 draft,客户端请求 drafts/latest,系统 SHALL 返回 updated_at 最新的 draft
+  "studio-stale-running-guard","running-too-long",某 draft status=RUNNING 且超过 10min,下一次生成请求,系统 SHALL 清理 stale 状态后继续而非永久阻塞

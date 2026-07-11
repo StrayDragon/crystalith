@@ -2,7 +2,7 @@ kind: llman.sdd.spec
 name: "source-ingestion-management-and-tags"
 purpose: "定义来源管理与标签体系：列表、排序、过滤、chunks、删除、re-embed、tag CRUD 与绑定关系。该规范强调查询语义与失效规则可预测，避免因缓存或排序漂移导致 UI/服务不一致。"
 valid_scope[2]: src/,tests/
-requirements[9]{req_id,title,statement}:
+requirements[12]{req_id,title,statement}:
   r1,Source list query semantics are stable,来源列表 MUST 支持 tag 精确过滤与稳定排序（date/name/size/type + asc/desc）。
   r2,"Source list can be epoch-cached",列表结果 MUST 基于 `sources_epoch` 缓存并在来源变更后 O(1) 失效。
   r3,Chunks endpoint returns deterministic order,来源 chunks 接口 MUST 按 `chunk_index` 升序返回。
@@ -12,7 +12,10 @@ requirements[9]{req_id,title,statement}:
   r7,Source failures include diagnostic fields,来源在失败或不可恢复状态下 MUST 提供结构化诊断信息，以支持 UI 给出可操作的修复建议。
   r8,"Batch operations return per-item results and keep epoch consistent","批量删除、批量 re-embed 与 tag 绑定/解绑 MUST 返回逐项结果并保持 `sources_epoch` 失效语义可预测。"
   r9,Optional source dedup does not silently drop data,系统 MAY 支持来源去重，但在命中去重时 MUST 不得静默丢弃用户导入请求。
-scenarios[9]{req_id,id,given,when,then}:
+  "sources-reembed-requires-failed","Re-embed MUST require FAILED status","POST /sources/:id/re-embed MUST 校验 source 状态为 failed，非 failed MUST 返回 400"
+  "sources-batch-per-item-results","Batch endpoints MUST return per-item results","batch re-embed 和 batch delete MUST 返回 per-item results 数组（含 error_code/message），且 batch delete MUST 使用 DELETE 方法"
+  "tag-binding-response-and-ownership",Tag binding MUST return v1 response shape and verify ownership,"tag binding MUST 返回 {count, results:[SourceBatchItemResult]} 结构，且 DELETE binding MUST 校验 source 属于该 notebook"
+scenarios[12]{req_id,id,given,when,then}:
   r1,"list-sources-with-filters-and-sort","",用户按 tag 过滤并指定排序参数查询来源列表,系统 SHALL 返回稳定排序结果并按 tag 精确过滤
   r2,"source-list-cache-invalidates-on-epoch-bump","",来源集合发生变更并 bump `sources_epoch`,系统 SHALL 使来源列表缓存 O(1) 失效并在下次查询重建
   r3,"chunks-are-ordered-by-chunk-index","",客户端请求某来源的 chunks,系统 SHALL 按 `chunk_index` 升序返回结果
@@ -22,3 +25,6 @@ scenarios[9]{req_id,id,given,when,then}:
   r7,"source-ingestion-fails-with-stable-error-code","",某来源导入/解析/索引失败并进入 FAILED 状态,系统 SHALL 返回稳定的 `error_code`
   r8,"batch-delete-returns-partial-failures","",用户发起批量删除且其中部分来源不可删除或不存在,系统 SHALL 返回逐项成功/失败结果
   r9,"dedup-hit-requires-explicit-user-choice","",系统检测到新导入来源与既有来源 dedup_key 冲突,系统 SHALL 提供“复用既有来源”或“仍创建新来源”的明确选择（或等价机制）
+  "sources-reembed-requires-failed","reembed-ready-source",source 状态为 ready,"客户端请求 re-embed",系统 SHALL 返回 400 拒绝
+  "sources-batch-per-item-results","batch-delete",客户端请求 batch delete,删除完成,"系统 SHALL 返回 per-item results 数组且使用 DELETE 方法"
+  "tag-binding-response-and-ownership","delete-binding-cross-notebook",source 属于其它 notebook,客户端请求 DELETE binding,系统 SHALL 拒绝（404 或 400）
