@@ -1,0 +1,9 @@
+kind: llman.sdd.delta
+ops[3]{op,req_id,title,statement,from,to,name}:
+  add_requirement,outputs-citation-tree-mapping,"Citations MUST be recursively mapped into the content tree and persisted","outputs 生成管线 MUST 递归遍历 content 对象，把每个 citations 数字索引数组替换为完整 Citation dict（v1 _map_citations 等价），并持久化映射后的 content；同时返回扁平 citations 数组",null,null,null
+  add_requirement,outputs-rag-failure-propagation,"Outputs retrieval failure MUST propagate not dump all chunks","outputs 检索失败时 MUST 抛出错误使请求失败，MUST NOT 回退为选取 notebook 全部 chunk（违背检索子集意图）",null,null,null
+  add_requirement,outputs-postprocess-field-level,"Postprocess MUST do per-type field-level backfill","outputs 后处理 MUST 对每个输出类型逐字段补默认值（如 GUIDE 的 examples/exercises、MINDMAP 的 children），而非仅做顶层空检查后整体替换",null,null,null
+op_scenarios[3]{req_id,id,given,when,then}:
+  outputs-citation-tree-mapping,content-has-numeric-indices,"content 树中某节点含 citations:[1,3]","管线持久化","系统 SHALL 把 [1,3] 替换为对应第 1、3 个检索 chunk 的完整 Citation dict 并写入 content"
+  outputs-rag-failure-propagation,retrieval-throws,"retrieveWith 抛出错误","管线处理","系统 SHALL 传播错误使请求失败，而非 dump 全量 chunk"
+  outputs-postprocess-field-level,guide-missing-examples,"LLM 输出 GUIDE 类型但 examples 为空","后处理阶段","系统 SHALL 为 examples 字段补默认值而非整体替换为 fallback"

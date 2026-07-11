@@ -1,0 +1,9 @@
+kind: llman.sdd.delta
+ops[3]{op,req_id,title,statement,from,to,name}:
+  add_requirement,outputs-response-contract,"POST outputs MUST return OutputRead contract","POST /v2/outputs MUST 返回 v1 OutputRead 兼容的 snake_case 实体（id/notebook_id/type/prompt/chunk_ids/content/created_at/updated_at），MUST NOT 返回 camelCase PipelineResult",null,null,null
+  add_requirement,outputs-export-fields,"Export JSON citations and sources MUST match v1 fields","GET /outputs/:id/export?format=json 的 citations MUST 包含 chunk_index/page_number/paragraph_index/score；sources MUST 使用 {source_id,source_name,mime_type,parser_type} 字段名",null,null,null
+  add_requirement,outputs-error-mapping,"Output generation errors MUST map to granular HTTP codes","输出生成错误 MUST 映射到细分 HTTP 状态码：model 不可用→503、schema 校验失败→422、值错误→400，MUST NOT 统一返回 500",null,null,null
+op_scenarios[3]{req_id,id,given,when,then}:
+  outputs-response-contract,post-returns-output-read,"客户端 POST 创建 output","请求成功","系统 SHALL 返回 snake_case OutputRead（含 id/notebook_id/created_at 等字段）"
+  outputs-export-fields,json-export-citations,"客户端请求 format=json 导出","导出构建","citations SHALL 含 chunk_index/page_number/paragraph_index/score 且 sources 用 source_id/source_name/mime_type/parser_type"
+  outputs-error-mapping,model-unavailable,"配置的 model 不可用","生成阶段","系统 SHALL 返回 503 而非 500"
