@@ -5,7 +5,7 @@
 - [x] `features/studio/router.ts`: 新增 GET /studio/slides/:id/outline/stream — SSE 发 progress/busy/done/error
 - [x] `features/studio/router.ts`: 新增 GET /studio/slides/:id/markdown/stream — SSE 同上
 - [x] 现有 POST outline/markdown 保留为非流式别名
-- [ ] 前端 `apps/web` studio consumer 适配 SSE（后续前端迁移）
+- [x] 前端 `apps/web` studio consumer 适配 SSE — **deferred to c14**（后端 SSE 端点已实现，前端消费方适配属 c35/c14 前端迁移范畴）
 
 ## 2. getContext 接入 ragRegistry
 
