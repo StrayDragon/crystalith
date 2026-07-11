@@ -35,4 +35,4 @@
 ## 6. 文档 + commit
 
 - [x] 更新 `PROGRESS.v2.md`：记录 TS 7.0.2 升级 + Go 原生编译器切换
-- [ ] `git commit -m "dev: upgrade typescript to ^7 (Go native tsc, ~10x faster)"`
+- [x] `git commit -m "dev: upgrade typescript to ^7 (Go native tsc, ~10x faster)"` ✅ committed as 9687ba2
