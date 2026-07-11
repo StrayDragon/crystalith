@@ -5,8 +5,8 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
-    "moduleResolution": "Bundler",
-    "baseUrl": ".",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -17,13 +17,13 @@
       "*": ["./*"],
       "@crystalith-slidev": ["../packages/crystalith-slidev/src/index.ts"],
       "@crystalith-slidev/*": ["../packages/crystalith-slidev/src/*"],
-      "rivu-kernel": ["vendor/rivu/packages/rivu-kernel/src/index.ts"],
-      "rivu-kernel/*": ["vendor/rivu/packages/rivu-kernel/src/*"],
-      "rivu-ui-spec": ["vendor/rivu/packages/rivu-ui-spec/src/index.ts"],
-      "rivu-ui-spec/*": ["vendor/rivu/packages/rivu-ui-spec/src/*"],
-      "rivu-react": ["vendor/rivu/packages/rivu-react/src/index.ts"],
-      "rivu-react/*": ["vendor/rivu/packages/rivu-react/src/*"],
-      "rivu-react/tokens.css": ["vendor/rivu/packages/rivu-react/src/tokens.css"]
+      "rivu-kernel": ["./vendor/rivu/packages/rivu-kernel/src/index.ts"],
+      "rivu-kernel/*": ["./vendor/rivu/packages/rivu-kernel/src/*"],
+      "rivu-ui-spec": ["./vendor/rivu/packages/rivu-ui-spec/src/index.ts"],
+      "rivu-ui-spec/*": ["./vendor/rivu/packages/rivu-ui-spec/src/*"],
+      "rivu-react": ["./vendor/rivu/packages/rivu-react/src/index.ts"],
+      "rivu-react/*": ["./vendor/rivu/packages/rivu-react/src/*"],
+      "rivu-react/tokens.css": ["./vendor/rivu/packages/rivu-react/src/tokens.css"]
     }
   },
   "include": ["src", "../packages/crystalith-slidev/src"]

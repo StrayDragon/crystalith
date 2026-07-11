@@ -47,12 +47,14 @@ if (typeof window !== 'undefined' && !window.ResizeObserver) {
 }
 
 if (typeof window !== 'undefined' && !window.IntersectionObserver) {
-  window.IntersectionObserver = class IntersectionObserver {
+  (window.IntersectionObserver as unknown) = class {
     readonly root = null;
 
     readonly rootMargin = '0px';
 
-    readonly thresholds = [0];
+    readonly thresholds: ReadonlyArray<number> = [0];
+
+    readonly scrollMargin = '0px';
 
     disconnect() {}
 
@@ -63,7 +65,7 @@ if (typeof window !== 'undefined' && !window.IntersectionObserver) {
     }
 
     unobserve() {}
-  } as typeof IntersectionObserver;
+  };
 }
 
 if (typeof URL !== 'undefined' && !('createObjectURL' in URL)) {

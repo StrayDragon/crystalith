@@ -1,0 +1,5 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  add_requirement,r7,"TypeScript toolchain version","项目 MUST 使用 typescript@^7（Go 原生编译器 tsgo），确保 ~10x 类型检查加速。三个 workspace（server/web/shared）MUST 统一使用 `\"typescript\": \"^7\"` 作为 devDependency。tsconfig 中 moduleResolution MUST 统一为小写 `\"bundler\"`。",null,null,null
+op_scenarios[1]{req_id,id,given,when,then}:
+  r7,"check-tsc-version","","运行 `bun tsc --version`","输出 MUST 为 `Version 7.0.2`"
