@@ -94,21 +94,33 @@ function notFound(id: number): never {
 
 export const sessionsRouter = new Elysia({ prefix: '/v2' })
   // List sessions for a notebook
-  .get('/notebooks/:nid/sessions', ({ params }) => {
+  .get('/notebooks/:nid/sessions', ({ params, query }) => {
     const nid = Number(params.nid);
+    const offset = Number((query as { offset?: string }).offset ?? 0);
+    const limit = Math.min(200, Math.max(1, Number((query as { limit?: string }).limit ?? 50)));
     const rows = db()
       .select()
       .from(sessions)
       .where(eq(sessions.notebookId, nid))
       .orderBy(desc(sessions.updatedAt))
-      .all();
+      .all()
+      .slice(offset, offset + limit);
     return rows.map(serializeSession);
+  })
+
+  // Get a single session (c39: v1 api.py:200-209)
+  .get('/notebooks/:nid/sessions/:sid', ({ params }) => {
+    const nid = Number(params.nid);
+    const sid = Number(params.sid);
+    const row = db().select().from(sessions).where(eq(sessions.id, sid)).get();
+    if (!row || row.notebookId !== nid) notFound(sid);
+    return serializeSession(row);
   })
 
   // Create a session
   .post(
     '/notebooks/:nid/sessions',
-    ({ params, body }) => {
+    ({ params, body, set }) => {
       const nid = Number(params.nid);
       const row = db()
         .insert(sessions)
@@ -118,18 +130,20 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
         })
         .returning()
         .get();
+      set.status = 201;
       return serializeSession(row);
     },
     { body: SessionCreateSchema },
   )
 
-  // Update a session
+  // Update a session (c39: notebook ownership check)
   .patch(
     '/notebooks/:nid/sessions/:sid',
     ({ params, body }) => {
+      const nid = Number(params.nid);
       const sid = Number(params.sid);
       const existing = db().select().from(sessions).where(eq(sessions.id, sid)).get();
-      if (!existing) notFound(sid);
+      if (!existing || existing.notebookId !== nid) notFound(sid);
 
       const updateData: Record<string, unknown> = {};
       if (body.title !== undefined) updateData.title = body.title;
@@ -156,22 +170,23 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
     { body: SessionUpdateSchema },
   )
 
-  // Delete a session
+  // Delete a session (c39: notebook ownership check)
   .delete('/notebooks/:nid/sessions/:sid', ({ params, set }) => {
+    const nid = Number(params.nid);
     const sid = Number(params.sid);
     const existing = db().select().from(sessions).where(eq(sessions.id, sid)).get();
-    if (!existing) notFound(sid);
+    if (!existing || existing.notebookId !== nid) notFound(sid);
     db().delete(sessions).where(eq(sessions.id, sid)).run();
     set.status = 204;
     return '';
   })
 
-  // Convert session to source (c34: chunk + embed + vector — v1 behavior)
-  .post('/notebooks/:nid/sessions/:sid/convert-to-source', async ({ params }) => {
+  // Convert session to source (c34: chunk + embed + vector — v1 behavior; c39: ownership + 201)
+  .post('/notebooks/:nid/sessions/:sid/convert-to-source', async ({ params, set }) => {
+    const nid = Number(params.nid);
     const sid = Number(params.sid);
     const sessionRow = db().select().from(sessions).where(eq(sessions.id, sid)).get();
-    if (!sessionRow) notFound(sid);
-    const nid = sessionRow.notebookId;
+    if (!sessionRow || sessionRow.notebookId !== nid) notFound(sid);
 
     const msgRows = db()
       .select()
@@ -246,15 +261,22 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
         const { bumpVectorEpoch, bumpSourcesEpoch } = await import('../../rag/cache.ts');
         bumpVectorEpoch(nid);
         bumpSourcesEpoch(nid);
+        // Only set ready after successful embedding (c39: fix ready-before-vectors race)
+        db().update(sources).set({ status: 'ready' }).where(eq(sources.id, source.id)).run();
       } catch (error) {
         console.error('[sessions] convert embedding failed:', error);
-        db().update(sources).set({ status: 'failed' }).where(eq(sources.id, source.id)).run();
+        db()
+          .update(sources)
+          .set({ status: 'failed', errorMessage: error instanceof Error ? error.message : 'Embedding failed' })
+          .where(eq(sources.id, source.id))
+          .run();
+        throw new Error('Failed to embed session source');
       }
+    } else {
+      db().update(sources).set({ status: 'ready' }).where(eq(sources.id, source.id)).run();
     }
 
-    // Mark source ready
-    db().update(sources).set({ status: 'ready' }).where(eq(sources.id, source.id)).run();
-
+    set.status = 201;
     return {
       source_id: source.id,
       filename,
@@ -263,12 +285,12 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
     };
   })
 
-  // Convert session to output (c34: v1 convert_session_to_output parity)
-  .post('/notebooks/:nid/sessions/:sid/convert-to-output', ({ params, body }) => {
+  // Convert session to output (c34: v1 parity; c39: ownership + 201 + chunk_ids)
+  .post('/notebooks/:nid/sessions/:sid/convert-to-output', ({ params, body, set }) => {
+    const nid = Number(params.nid);
     const sid = Number(params.sid);
     const sessionRow = db().select().from(sessions).where(eq(sessions.id, sid)).get();
-    if (!sessionRow) notFound(sid);
-    const nid = sessionRow.notebookId;
+    if (!sessionRow || sessionRow.notebookId !== nid) notFound(sid);
 
     const { output_type } = body as { output_type: string };
     if (!['PARAGRAPH', 'BULLETS', 'STRUCTURED'].includes(output_type)) {
@@ -331,17 +353,29 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
       };
     }
 
+    // Collect chunk_ids from message citations (v1 api.py:491-500, c39)
+    const chunkIds = [
+      ...new Set(
+        msgRows
+          .flatMap((m) => (m.citations as Array<{ chunk_id?: number }> | null) ?? [])
+          .map((c) => c.chunk_id)
+          .filter((id): id is number => typeof id === 'number'),
+      ),
+    ];
+
     const output = db()
       .insert(outputs)
       .values({
         notebookId: nid,
         type: output_type as 'PARAGRAPH' | 'BULLETS' | 'STRUCTURED',
         prompt: `Session conversion: ${title}`,
+        chunkIds,
         content,
       })
       .returning()
       .get();
 
+    set.status = 201;
     return {
       output_id: output.id,
       output_type,
