@@ -100,6 +100,21 @@ function maybeSetSessionTitle(sessionId: number, question: string): void {
   db().update(sessions).set({ title: cleaned }).where(eq(sessions.id, sessionId)).run();
 }
 
+/**
+ * c45: Parse /prompt:<preset> directive from question text (v1 presets.py:9-30).
+ * Returns { preset, question } — preset extracted from leading /prompt:xxx.
+ */
+function parsePromptDirective(
+  question: string,
+  bodyPreset?: string,
+): { preset: string; question: string } {
+  const match = question.match(/^\/prompt:(\w+)\s+/);
+  if (match) {
+    return { preset: match[1]!, question: question.slice(match[0].length) };
+  }
+  return { preset: bodyPreset ?? 'default', question };
+}
+
 /** Validate notebook exists + optional session/source_ids ownership (v1 qa/api.py). */
 function assertQaOwnership(opts: {
   notebookId: number;
@@ -139,16 +154,19 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
   // Non-streaming QA
   .post('/qa', async ({ body }) => {
     const {
-      question,
+      question: rawQuestion,
       notebook_id,
       session_id,
-      preset,
+      preset: bodyPreset,
       directive,
       strategy_id,
       top_k,
       min_score,
       source_ids,
     } = body as unknown as QaRequest;
+
+    // c45: parse /prompt:<preset> directive from question text (v1 presets.py:9-30)
+    const { preset, question } = parsePromptDirective(rawQuestion, bodyPreset);
 
     assertQaOwnership({
       notebookId: notebook_id,
@@ -171,7 +189,7 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
     const modelConfig = getDefaultChatModel();
     if (!modelConfig) throw new Error('No chat model configured');
     const model = withRetry(await resolveModel(modelConfig));
-    const systemPrompt = resolvePreset(preset ?? 'default', directive ?? 'Mixed');
+    const systemPrompt = resolvePreset(preset, directive ?? 'Mixed');
 
     // Create provisional assistant message
     let messageId: number | undefined;
@@ -258,16 +276,19 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
   // Streaming QA
   .post('/qa/stream', async ({ body }) => {
     const {
-      question,
+      question: rawQuestion,
       notebook_id,
       session_id,
-      preset,
+      preset: bodyPreset,
       directive,
       strategy_id,
       top_k,
       min_score,
       source_ids,
     } = body as unknown as QaRequest;
+
+    // c45: parse /prompt:<preset> directive from question text
+    const { preset, question } = parsePromptDirective(rawQuestion, bodyPreset);
 
     assertQaOwnership({
       notebookId: notebook_id,
@@ -289,7 +310,7 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
     const modelConfig = getDefaultChatModel();
     if (!modelConfig) throw new Error('No chat model configured');
     const model = withRetry(await resolveModel(modelConfig));
-    const systemPrompt = resolvePreset(preset ?? 'default', directive ?? 'Mixed');
+    const systemPrompt = resolvePreset(preset, directive ?? 'Mixed');
 
     // Create provisional assistant message
     let messageId: number | undefined;

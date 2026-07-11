@@ -36,12 +36,13 @@ export interface StreamQaOptions {
    * by the deterministic retrieval stage (c36).
    */
   contextStats?: {
-    total: number;
-    system: number;
-    history: number;
-    retrieval: number;
-    query: number;
+    total_tokens: number;
+    system_tokens: number;
+    history_tokens: number;
+    retrieval_tokens: number;
+    query_tokens: number;
     max_tokens: number;
+    compressed: boolean;
   };
   /**
    * Optional sink for tool-result events emitted during the fullStream loop.

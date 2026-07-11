@@ -63,12 +63,13 @@ export interface JudgeResult {
 }
 
 export interface ContextStats {
-  total: number;
-  system: number;
-  history: number;
-  retrieval: number;
-  query: number;
+  total_tokens: number;
+  system_tokens: number;
+  history_tokens: number;
+  retrieval_tokens: number;
+  query_tokens: number;
   max_tokens: number;
+  compressed: boolean;
 }
 
 export interface RetrieveAndJudgeOptions {
@@ -110,12 +111,13 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
   const minScore = opts.minScore ?? EVIDENCE_THRESHOLD_DEFAULT;
   const maxTokens = opts.maxTokens ?? 8000;
   const emptyStats: ContextStats = {
-    total: opts.historyTokens ?? 0,
-    system: 0,
-    history: opts.historyTokens ?? 0,
-    retrieval: 0,
-    query: Math.ceil(opts.question.length / 4),
+    total_tokens: opts.historyTokens ?? 0,
+    system_tokens: 0,
+    history_tokens: opts.historyTokens ?? 0,
+    retrieval_tokens: 0,
+    query_tokens: Math.ceil(opts.question.length / 4),
     max_tokens: maxTokens,
+    compressed: false,
   };
 
   // Step 1-2: empty/missing source_ids → no_sources (v1 service.py:295-316)
@@ -219,8 +221,9 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
   // Step 10: Low similarity check (v1: similarity_avg < max(min_score, threshold))
   const similarityAvg = avg(validResults.map((r) => r.score));
   const evidenceThreshold = Math.max(minScore, EVIDENCE_THRESHOLD_DEFAULT);
+  // c45: low_similarity MUST return empty citations (v1 service.py:455-464)
   if (similarityAvg < evidenceThreshold) {
-    return noEvidence('low_similarity', emptyStats, citations);
+    return noEvidence('low_similarity', emptyStats, []);
   }
 
   // Step 11: Confidence
@@ -239,12 +242,13 @@ export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<J
     context,
     confidence,
     contextStats: {
-      total: (opts.historyTokens ?? 0) + retrievalTokens + Math.ceil(opts.question.length / 4),
-      system: 0,
-      history: opts.historyTokens ?? 0,
-      retrieval: retrievalTokens,
-      query: Math.ceil(opts.question.length / 4),
+      total_tokens: (opts.historyTokens ?? 0) + retrievalTokens + Math.ceil(opts.question.length / 4),
+      system_tokens: 0,
+      history_tokens: opts.historyTokens ?? 0,
+      retrieval_tokens: retrievalTokens,
+      query_tokens: Math.ceil(opts.question.length / 4),
       max_tokens: maxTokens,
+      compressed: false,
     },
   };
 }

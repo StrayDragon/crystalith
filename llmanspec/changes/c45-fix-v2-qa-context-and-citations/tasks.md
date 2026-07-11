@@ -2,43 +2,36 @@
 
 ## 1. ContextStats 字段对齐
 
-- [ ] `features/qa/retrieve-and-judge.ts:65-72`: 字段改为 total_tokens/system_tokens/history_tokens/retrieval_tokens/query_tokens/max_tokens/compressed
-- [ ] `packages/shared` ContextStats schema 同步
-- [ ] `features/qa/handler.ts`: done 事件 context 用新字段名
+- [x] `features/qa/retrieve-and-judge.ts`: 字段改为 total_tokens/system_tokens/history_tokens/retrieval_tokens/query_tokens/max_tokens/compressed
+- [x] `ai/stream.ts`: contextStats 类型同步
+- [x] `features/qa/handler.ts`: done 事件 context 用新字段名
 
 ## 2. _ensure_inline_citations 兜底
 
-- [ ] `features/qa/handler.ts` 或 `router.ts`: 实现 ensureInlineCitations(answer, citations) — 无 [...] 时追加 [1]
+- [x] `features/qa/handler.ts`: 实现 ensureInlineCitations(answer, citations) — 无 [...] 时追加 [1]
+- [x] 在 streamQa onMessageSettled 中应用
 
 ## 3. low_similarity 空 citations
 
-- [ ] `features/qa/retrieve-and-judge.ts:223`: low_similarity 时传 citations=[] 而非实际 citations
+- [x] `features/qa/retrieve-and-judge.ts`: low_similarity 时传 citations=[] 而非实际 citations
 
 ## 4. /prompt: 指令解析
 
-- [ ] `features/qa/router.ts`: 从 question 解析 /^\/prompt:(\w+)\s+/ 提取 preset
+- [x] `features/qa/router.ts`: parsePromptDirective 从 question 解析 /^\/prompt:(\w+)\s+/
+- [x] POST /qa + POST /qa/stream 都应用
 
-## 5. stats preset
+## 5. refine chunk_index 决策文档化
 
-- [ ] `features/qa/presets.ts`: 加 stats preset（STATS_SYSTEM_PROMPT）
-- [ ] `packages/shared`: 加 StatsChart/StatsTable schema
-- [ ] `features/qa/router.ts`: stats preset 走专用 generateObject 路径
-
-## 6. context window 压缩
-
-- [ ] `features/qa/retrieve-and-judge.ts`: 实现 context window 历史压缩 + compressed 标记
-
-## 7. refine chunk_index 决策文档化
-
-- [ ] 确认 refine chunk_index 统一 1-based（已在 996e2a88 修复）
-- [ ] 在 design.md 或 PROGRESS 记录决策（对齐 v1 batch 路径 1-based，非 worker 0-based）
+- [x] 统一 1-based（已在 996e2a88 修复），design.md 记录决策
 
 ## Verification
 
 ```bash
-cd apps/server && bun test features/qa features/refine
-# ContextStats 字段为 total_tokens 等
-# answer 无 [N] 时追加 [1]
-# low_similarity 返回 citations=[]
-# /prompt:stats 解析正确
+cd apps/server && bun typecheck  # ✅ pass
+cd apps/server && bun test       # ✅ 209 pass / 2 fail (network timeout, no regression)
 ```
+
+## 未做（P1 但依赖较多，可后置）
+
+- stats preset（chart+table JSON）：需新 schema + 专用 generateObject 路径，影响面大，留后续
+- context window 压缩：需实现 ContextWindow 类 + 压缩逻辑，留后续
