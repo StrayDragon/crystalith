@@ -13,6 +13,7 @@ import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { chunkText } from '../../rag/chunker.ts';
 import { contentStorage } from '../../shared/storage.ts';
 import { guessMimeType, registerParser, selectParser } from './parser-registry.ts';
+import { csvParser } from './parsers/csv.ts';
 import { htmlParser } from './parsers/html.ts';
 import { pdfParser } from './parsers/pdf.ts';
 import { textParser } from './parsers/text.ts';
@@ -23,6 +24,7 @@ import { textParser } from './parsers/text.ts';
 
 registerParser(pdfParser);
 registerParser(htmlParser);
+registerParser(csvParser); // c46: CSV before text so it takes precedence
 registerParser(textParser);
 
 /** Async trigger: index source chunks via embed strategy (fire-and-forget). */

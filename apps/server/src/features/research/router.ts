@@ -203,6 +203,16 @@ function releaseLock(id: number): void {
     .run();
 }
 
+/** c46: Renew lock during long runs (v1 _extend_lock_periodically, api.py:885). */
+export function renewLock(id: number): void {
+  const now = new Date();
+  db()
+    .update(researchSessions)
+    .set({ lockExpiresAt: new Date(now.getTime() + LOCK_TTL_MS) })
+    .where(eq(researchSessions.id, id))
+    .run();
+}
+
 /** Clean up expired locks (v1 check_and_cleanup_expired_locks, c37). */
 export function cleanupExpiredLocks(): number {
   const now = new Date();
