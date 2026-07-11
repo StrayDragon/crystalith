@@ -337,6 +337,9 @@ Each slide separated by ---. Keep content concise.`,
         .where(eq(studioSlides.id, id))
         .run();
 
+      // Persist to filesystem on AI generation too (c39 gap fix — v1 api.py:530-531)
+      writeSlideFile(slide.notebookId, id, markdown);
+
       const updated = db().select().from(studioSlides).where(eq(studioSlides.id, id)).get();
       return serializeSlide(updated!);
     } catch (error) {

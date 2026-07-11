@@ -104,5 +104,10 @@ async function checkContradiction(left: string, right: string): Promise<boolean>
   });
 
   const response = result.text.trim().toLowerCase();
-  return response.startsWith('yes') || response === 'true';
+  // v1 contradiction.py:18-26: yes/true → True, no/false → False,
+  // fallback: "contradict" in text and "not" not in text → True
+  if (response.startsWith('yes') || response === 'true') return true;
+  if (response.startsWith('no') || response === 'false') return false;
+  // Ambiguous wording fallback (v1 _is_contradiction)
+  return response.includes('contradict') && !response.includes('not contradict');
 }

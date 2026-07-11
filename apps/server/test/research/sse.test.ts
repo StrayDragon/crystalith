@@ -216,7 +216,7 @@ describe('research SSE stream', () => {
     expect(doneEvent!.status).toBe('cancelled');
   });
 
-  it('approval_request contains the search plan data', async () => {
+  it('plan_ready contains the search plan data', async () => {
     const { body: startRes } = await post('/v2/research', {
       topic: 'Plan data in SSE',
       notebook_id: notebookId,
@@ -232,10 +232,12 @@ describe('research SSE stream', () => {
     await waitForStatus(sessionId, 'completed');
 
     const events = await eventsPromise;
-    const approvalEvent = events.find((e) => e.type === 'approval_request');
-    expect(approvalEvent).toBeTruthy();
+    // The plan data is in the plan_ready event (from the plan step).
+    // The approval_request event (from the user_input step) carries the action.
+    const planEvent = events.find((e) => e.type === 'plan_ready');
+    expect(planEvent).toBeTruthy();
 
-    const data = approvalEvent!.data as { queries?: unknown[]; reasoning?: string } | undefined;
+    const data = planEvent!.data as { queries?: unknown[]; reasoning?: string } | undefined;
     expect(data).toBeTruthy();
     expect(data!.queries).toBeTruthy();
     expect(Array.isArray(data!.queries)).toBe(true);

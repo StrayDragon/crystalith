@@ -19,13 +19,18 @@ import { chunks, sources } from '../../db/schema.ts';
 export interface CitationContextChunk {
   chunk_id: number;
   chunk_index: number; // 1-based for v1 API compatibility
-  text: string; // truncated to 200 chars
+  text: string; // full text (v1 returns untruncated)
   page_number: number | null;
   paragraph_index: number | null;
 }
 
 export interface CitationContextResult {
-  citation: CitationContextChunk & { source_name: string };
+  citation: CitationContextChunk & {
+    source_id: number;
+    source_name: string;
+    snippet: string;
+    score: number | null;
+  };
   before: CitationContextChunk[];
   chunk: CitationContextChunk;
   after: CitationContextChunk[];
@@ -115,8 +120,8 @@ export async function resolveChunkContext(
     neighborsAfter?: number;
   },
 ): Promise<CitationContextResult> {
-  const before = opts.neighborsBefore ?? 2;
-  const after = opts.neighborsAfter ?? 2;
+  const before = opts.neighborsBefore ?? 1;
+  const after = opts.neighborsAfter ?? 1;
 
   // Resolve target
   let target: { chunk: typeof chunks.$inferSelect; source: typeof sources.$inferSelect } | null;
@@ -162,7 +167,10 @@ export async function resolveChunkContext(
   return {
     citation: {
       ...toContextChunk(target.chunk),
+      source_id: target.source.id,
       source_name: target.source.filename,
+      snippet: (target.chunk.text ?? '').slice(0, 200),
+      score: null,
     },
     before: beforeChunks,
     chunk: currentChunk,
@@ -179,7 +187,7 @@ function toContextChunk(chunk: typeof chunks.$inferSelect): CitationContextChunk
   return {
     chunk_id: chunk.id,
     chunk_index: chunk.chunkIndex + 1, // 1-based (v1 compat)
-    text: (chunk.text ?? '').slice(0, 200),
+    text: chunk.text ?? '', // full text (v1 returns untruncated — c39 gap fix)
     page_number: extractPageNumber(meta),
     paragraph_index: extractParagraphIndex(meta),
   };

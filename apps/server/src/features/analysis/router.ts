@@ -154,7 +154,27 @@ export const analysisRouter = new Elysia({ prefix: '/v2' }).post('/analysis', as
     prompt: context,
   });
 
-  return object;
+  // Merge LLM summary with computed graph data (preserve chunk_ids + scores).
+  // The LLM produces the summary/names/relations text, but the computed
+  // topics/relations/contradictions carry the chunk-level grounding that
+  // v1 returns (types.py:10-27). We merge by matching topic names.
+  const topicByName = new Map(topics.map((t) => [t.name, t]));
+  const mergedTopics = object.topics.map((t) => {
+    const computed = topicByName.get(t.name);
+    return {
+      ...t,
+      chunk_ids: computed?.chunkIds ?? [],
+    };
+  });
+
+  return {
+    ...object,
+    topics: mergedTopics,
+    // Attach the raw computed relations/contradictions with chunk-level edges
+    // (the LLM versions are for readability; these are for grounding)
+    computed_relations: relations,
+    computed_contradictions: contradictions,
+  };
 });
 
 registerApiDoc(apiDocs);
