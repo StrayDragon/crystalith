@@ -2,13 +2,13 @@
 //
 // Mirrors v1 `features/qa/api.py` on Elysia + AI SDK streamText.
 // c36: deterministic retrieval (retrieveAndJudge) + evidence short-circuit.
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
-import { messages, sessions, sources } from '../../db/schema.ts';
+import { messages, notebooks, sessions, sources } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { streamQa } from './handler.ts';
@@ -100,6 +100,34 @@ function maybeSetSessionTitle(sessionId: number, question: string): void {
   db().update(sessions).set({ title: cleaned }).where(eq(sessions.id, sessionId)).run();
 }
 
+/** Validate notebook exists + optional session/source_ids ownership (v1 qa/api.py). */
+function assertQaOwnership(opts: {
+  notebookId: number;
+  sessionId?: number;
+  sourceIds?: number[];
+}): void {
+  const nb = db().select().from(notebooks).where(eq(notebooks.id, opts.notebookId)).get();
+  if (!nb) throw new NotFoundError(`Notebook ${opts.notebookId} not found`);
+
+  if (opts.sessionId !== undefined) {
+    const session = db().select().from(sessions).where(eq(sessions.id, opts.sessionId)).get();
+    if (!session || session.notebookId !== opts.notebookId) {
+      throw new NotFoundError(`Session ${opts.sessionId} not found`);
+    }
+  }
+
+  if (opts.sourceIds?.length) {
+    const found = db()
+      .select({ id: sources.id })
+      .from(sources)
+      .where(and(eq(sources.notebookId, opts.notebookId), inArray(sources.id, opts.sourceIds)))
+      .all();
+    if (found.length !== opts.sourceIds.length) {
+      throw new Error('Unknown source_id in source_ids');
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
@@ -121,6 +149,12 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       min_score,
       source_ids,
     } = body as unknown as QaRequest;
+
+    assertQaOwnership({
+      notebookId: notebook_id,
+      sessionId: session_id,
+      sourceIds: source_ids,
+    });
 
     const history = session_id ? loadHistory(session_id) : [];
 
@@ -234,6 +268,12 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       min_score,
       source_ids,
     } = body as unknown as QaRequest;
+
+    assertQaOwnership({
+      notebookId: notebook_id,
+      sessionId: session_id,
+      sourceIds: source_ids,
+    });
 
     const history = session_id ? loadHistory(session_id) : [];
 

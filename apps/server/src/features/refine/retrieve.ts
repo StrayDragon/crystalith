@@ -79,7 +79,7 @@ export async function retrieveForRefine(
     source_id: r.source_id,
     source_name: sourceNameMap.get(r.source_id) ?? 'unknown',
     chunk_id: r.chunk_id,
-    chunk_index: r.chunk_index, // 0-based (v2 convention)
+    chunk_index: r.chunk_index + 1, // 1-based (v1 refine/api.py:295)
     snippet: r.text.trim().slice(0, 200),
     page_number: extractPageNumber(chunkMetaMap.get(r.chunk_id)),
     paragraph_index: extractParagraphIndex(chunkMetaMap.get(r.chunk_id)),
@@ -91,7 +91,7 @@ export async function retrieveForRefine(
   const context = filtered
     .map((r, i) => {
       const name = sourceNameMap.get(r.source_id) ?? 'unknown';
-      return `[${i + 1}] Source: ${name} (chunk ${r.chunk_index})\n${r.text}`;
+      return `[${i + 1}] Source: ${name} (chunk ${r.chunk_index + 1})\n${r.text}`;
     })
     .join('\n\n');
 

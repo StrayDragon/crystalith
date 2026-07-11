@@ -12,10 +12,25 @@ import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
 import { outputs, notebooks, sources, chunks } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
+import { bumpSourcesEpoch } from '../../rag/cache.ts';
 import { getDefaultChatModel, getModelById } from '../../shared/config.ts';
 import { listOutputTypes, type ToolOutputType } from './generator.ts';
 import { runOutputPipeline } from './pipeline.ts';
 import { renderOutputToMarkdown, splitTextToChunks } from './render.ts';
+
+function requireOutputInNotebook(
+  id: number,
+  notebookIdRaw: string | undefined,
+): typeof outputs.$inferSelect {
+  const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
+  if (!row) throw new NotFoundError(`Output ${id} not found`);
+  if (notebookIdRaw !== undefined && notebookIdRaw !== '') {
+    if (row.notebookId !== Number(notebookIdRaw)) {
+      throw new NotFoundError(`Output ${id} not found`);
+    }
+  }
+  return row;
+}
 
 // ---------------------------------------------------------------------------
 // OpenAPI docs
@@ -141,37 +156,27 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     return rows.map(serializeOutput);
   })
 
-  // Get a single output (c38 gap fix: notebook ownership check)
+  // Get a single output (ownership enforced when notebook_id provided)
   .get('/outputs/:id', ({ params, query }) => {
     const id = Number(params.id);
-    const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
-    if (!row) throw new NotFoundError(`Output ${id} not found`);
-    const nid = (query as { notebook_id?: string }).notebook_id;
-    if (nid && row.notebookId !== Number(nid)) throw new NotFoundError(`Output ${id} not found`);
+    const row = requireOutputInNotebook(id, (query as { notebook_id?: string }).notebook_id);
     return serializeOutput(row);
   })
 
-  // Delete output (c38 gap fix: notebook ownership check)
+  // Delete output
   .delete('/outputs/:id', ({ params, query, set }) => {
     const id = Number(params.id);
-    const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
-    if (!row) throw new NotFoundError(`Output ${id} not found`);
-    const nid = (query as { notebook_id?: string }).notebook_id;
-    if (nid && row.notebookId !== Number(nid)) throw new NotFoundError(`Output ${id} not found`);
+    requireOutputInNotebook(id, (query as { notebook_id?: string }).notebook_id);
     db().delete(outputs).where(eq(outputs.id, id)).run();
     set.status = 204;
     return '';
   })
 
-  // Export output as markdown or json (c38 gap fix: default markdown + Citations/Sources sections)
+  // Export output as markdown or json
   .get('/outputs/:id/export', ({ params, query }) => {
     const id = Number(params.id);
-    // c38 gap fix: default format is markdown (v1 api.py:411)
     const format = (query.format as 'markdown' | 'json') ?? 'markdown';
-    const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
-    if (!row) throw new NotFoundError(`Output ${id} not found`);
-    const nid = (query as { notebook_id?: string }).notebook_id;
-    if (nid && row.notebookId !== Number(nid)) throw new NotFoundError(`Output ${id} not found`);
+    const row = requireOutputInNotebook(id, (query as { notebook_id?: string }).notebook_id);
 
     const exportedAt = new Date().toISOString();
 
@@ -316,8 +321,10 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       const strategy = new EmbedStrategy();
       await strategy.indexSource(sourceRow.id, sourceRow.notebookId);
       db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
+      bumpSourcesEpoch(sourceRow.notebookId);
     } catch {
       db().update(sources).set({ status: 'failed' }).where(eq(sources.id, sourceRow.id)).run();
+      bumpSourcesEpoch(sourceRow.notebookId);
     }
 
     set.status = 201;

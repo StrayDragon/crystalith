@@ -14,7 +14,7 @@ import { outputsRouter } from './features/outputs/router.ts';
 import { promptPresetsRouter } from './features/prompt-presets/router.ts';
 import { qaRouter } from './features/qa/router.ts';
 import { refineRouter } from './features/refine/router.ts';
-import { researchRouter } from './features/research/router.ts';
+import { researchRouter, cleanupExpiredLocks } from './features/research/router.ts';
 import { sessionsRouter } from './features/sessions/router.ts';
 import { sourceConnectorsRouter } from './features/source-connectors/router.ts';
 import { sourcesRouter } from './features/sources/router.ts';
@@ -37,6 +37,8 @@ const stageLimiters = createStageLimiters();
 
 // Crash recovery: mark stalled running tasks as failed on startup.
 taskQueue.recoverStaleTasks();
+// Research: release/cancel sessions whose locks expired while the process was down.
+cleanupExpiredLocks();
 
 // Start worker dispatch loop.
 taskQueue.startWorker(async (taskId, signal) => {

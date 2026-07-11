@@ -155,14 +155,21 @@
 
 ### 仍开放（未在本会话清零）
 
-#### P1（实质偏离）
+#### P1（本会话第二批已修）
 
-- QA：notebook / source_ids 归属校验仍弱
-- Research：`inferResumeState` 与 v1 仍有分歧；`cleanupExpiredLocks` 无调用；SSE `waiting` 时机
-- Outputs：convert-to-source 缺 `bumpSourcesEpoch`；归属可选；citation 未嵌回 content tree
-- Sources：link 模式不 embed；`/search` 仍是 RAG placeholder（非 v1 web search graph）；re-embed status 生命周期
-- Refine：`chunk_index` 0-based vs v1 1-based
-- Messages list 默认 limit 20（v1=200）
+- ~~QA：notebook / source_ids 归属校验~~ ✅
+- ~~Research：`inferResumeState`；`cleanupExpiredLocks` 启动调用~~ ✅（SSE `waiting` 时机仍可后置）
+- ~~Outputs：`bumpSourcesEpoch`；GET/DELETE/export 归属 helper~~ ✅（citation 嵌回 content tree 仍可后置）
+- ~~Sources：link embed；re-embed processing→ready/failed~~ ✅
+- ~~Refine：`chunk_index` 1-based~~ ✅
+- ~~Messages list 默认 limit 200~~ ✅
+
+#### 仍开放
+
+- Sources `/search` 仍非 v1 web search graph（RAG placeholder）
+- Outputs citation-in-content mapping；Research SSE `waiting` 时机
+- Parsers CSV/audio/video；Plugin host；ToolLoopAgent
+- c13/c14 等人授权；web typecheck；`api/generated/` → c14
 
 #### P2 / 架构债
 
@@ -175,12 +182,13 @@
 **当前状态**:
 
 - Server test: **209 pass / 2 fail**（同前：research 网络 + URL 超时，非本会话回归）
-- 下一阶段建议: 清 P1 行为债 → 再授权 c13/c14
+- 下一阶段建议: Sources web-search 真实现 / SSE waiting / c13 授权
 
 ### GAP-BOARD 更新
 
 - G14 source-connectors：**本会话实现最小可用同步管线**（filesystem Obsidian/local-directory）。完整插件生态仍属 c13 范畴。
 - Studio 前后端契约断裂：**本会话已迁 v2**。
+- 2026-07-11 第二批：P1 行为债大部分已清。
 
 ## GAP-BOARD — v1 行为对齐提案规划
 
@@ -214,10 +222,10 @@
 > ⚠️ **对拍说明**: 早期 ✅ 曾表示「端点存在」而非「行为对齐」。c36–c40 + 2026-07-11 复核修了多处伪对齐。
 > `llman sdd list`: 部分 change tasks.md 可能仍未勾选/未 archive——**不要仅凭本表 archive**。
 
-| 上次 Agent | 代码复核 + P0/Studio/Connectors 修复 + PROGRESS 纠偏 |
-| 上次操作 | **fix**: QA source_ids/stream citations/export；Research HITL modify/skip/finish；Analysis snake_case edges；Studio source_ids+UI v2；Connectors snapshot/sync/apply + UI v2。**doc**: 重写 CURRENT，纠正「仅1个P0」乐观结论。 |
-| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) 残留 P1 是否继续修 vs 推迟。(5) SDD archive 卫生。 |
-| 已知问题 | **🟡 P1**: QA 归属校验；Research resume/locks/SSE；Outputs bumpSourcesEpoch；Sources link/search；Refine chunk_index；messages limit。**🟡 P2**: parsers/plugins/ToolLoopAgent。**🟡**: web typecheck；`api/generated/` → c14。 |
+| 上次 Agent | P0 commit + P1 行为债清扫 |
+| 上次操作 | **commit** `4f407387`（P0/studio/connectors）。**fix P1**: QA ownership；Outputs bumpSourcesEpoch+ownership；Sources link embed+re-embed lifecycle；Refine 1-based chunk_index；messages limit=200；Research inferResumeState+startup cleanupExpiredLocks。 |
+| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) Sources `/search` web graph 是否做。(5) SDD archive 卫生。 |
+| 已知问题 | **🟡 残留**: Sources `/search` stub；Outputs citation-in-content；Research SSE waiting；parsers/plugins/ToolLoopAgent。**🟡**: web typecheck；`api/generated/` → c14。 |
 | 质量门禁 | `bun test` (server) → 209 pass / 2 fail（网络超时，非本会话回归）。 |
 
 ---

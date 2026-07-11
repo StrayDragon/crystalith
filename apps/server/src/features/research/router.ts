@@ -207,23 +207,31 @@ function releaseLock(id: number): void {
 export function cleanupExpiredLocks(): number {
   const now = new Date();
   const expired = db()
-    .select({ id: researchSessions.id })
+    .select()
     .from(researchSessions)
-    .where(
-      and(
-        gt(researchSessions.lockExpiresAt, new Date(0)),
-        // lockExpiresAt < now — drizzle can't compare Date < Date directly,
-        // so we fetch and filter
-      ),
-    )
     .all()
-    .filter((r) => {
-      const row = db().select().from(researchSessions).where(eq(researchSessions.id, r.id)).get();
-      return row?.lockExpiresAt && row.lockExpiresAt < now;
-    });
+    .filter((row) => row.lockExpiresAt !== null && row.lockExpiresAt < now);
 
-  for (const { id } of expired) {
-    releaseLock(id);
+  for (const row of expired) {
+    // v1 also cancels active statuses when the lock expires
+    if (
+      row.status === 'planning' ||
+      row.status === 'searching' ||
+      row.status === 'analyzing' ||
+      row.status === 'waiting_user'
+    ) {
+      db()
+        .update(researchSessions)
+        .set({
+          status: 'cancelled',
+          lockedAt: null,
+          lockExpiresAt: null,
+        })
+        .where(eq(researchSessions.id, row.id))
+        .run();
+    } else {
+      releaseLock(row.id);
+    }
   }
   return expired.length;
 }
@@ -310,27 +318,40 @@ function inferResumeState(sessionId: number): {
     return { status: 'planning', iteration: session.currentIteration };
   }
 
-  const iteration = session.currentIteration;
-
   switch (lastStep.type) {
     case 'user_input': {
       const action = (lastStep.inputData as Record<string, unknown>)?.action;
-      if (action === 'approve') return { status: 'searching', iteration };
-      if (action === 'modify') return { status: 'planning', iteration };
-      if (action === 'skip') return { status: 'planning', iteration };
-      if (action === 'cancel') return { status: null, iteration };
-      return { status: 'planning', iteration };
+      // v1 api.py:203-212 — finish/skip-at-max → completed; approve/modify → searching
+      if (action === 'finish') return { status: null, iteration: lastStep.iteration };
+      if (action === 'cancel') return { status: null, iteration: lastStep.iteration };
+      if (action === 'skip') {
+        if (lastStep.iteration >= session.maxIterations) {
+          return { status: null, iteration: lastStep.iteration };
+        }
+        return { status: 'planning', iteration: lastStep.iteration };
+      }
+      // approve / modify / unknown → continue searching with that iteration
+      return { status: 'searching', iteration: lastStep.iteration };
     }
     case 'plan':
-      return { status: 'waiting_user', iteration };
+      return { status: 'waiting_user', iteration: lastStep.iteration };
     case 'search':
-      return { status: 'analyzing', iteration };
-    case 'analyze':
-      return { status: 'planning', iteration };
+      return { status: 'analyzing', iteration: lastStep.iteration };
+    case 'analyze': {
+      const needMore = Boolean(
+        (lastStep.outputData as Record<string, unknown> | null)?.need_more_search ??
+        (lastStep.outputData as Record<string, unknown> | null)?.needMore,
+      );
+      if (needMore && lastStep.iteration < session.maxIterations) {
+        return { status: 'planning', iteration: lastStep.iteration + 1 };
+      }
+      // Re-run analysis toward report (v1)
+      return { status: 'analyzing', iteration: lastStep.iteration };
+    }
     case 'summary':
-      return { status: null, iteration }; // already has report
+      return { status: null, iteration: lastStep.iteration };
     default:
-      return { status: 'planning', iteration };
+      return { status: 'planning', iteration: session.currentIteration };
   }
 }
 
