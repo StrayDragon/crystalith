@@ -276,38 +276,80 @@ function isContentEmpty(content: Record<string, unknown>, type: string): boolean
   }
 }
 
-/** Generate minimal fallback content for a type (v1 output_graph.py:198-287). */
+/** Generate fallback content matching v1 output_graph.py:198-287 exactly.
+ * Uses friendly error note (not raw exception), `label` for MINDMAP,
+ * `citations: []` on every leaf so mapCitationsIntoContent can attach fallback. */
 function generateFallbackContent(type: string, error?: unknown): Record<string, unknown> {
-  const errorMsg = error instanceof Error ? error.message : 'Generation failed';
-  const _fallback = true; // v1 _fallback marker
+  const errorNote = '⚠️ AI 模型生成失败，请稍后重试或使用更强大的模型。';
+  const _fallback = true;
+  // Use prompt as title when available (v1 uses the user's prompt)
+  const title = error instanceof Error ? error.message.slice(0, 80) : '';
+
   switch (type) {
     case 'FAQ':
-      return { title: '生成失败', items: [{ question: '生成失败', answer: errorMsg }], _fallback };
-    case 'BULLETS':
-      return { title: '生成失败', items: [{ text: errorMsg }], _fallback };
-    case 'TIMELINE':
-      return { title: '生成失败', events: [], _fallback };
-    case 'QUIZ':
-      return { title: '生成失败', questions: [], _fallback };
+      return {
+        items: [{ question: title || errorNote, answer: errorNote, citations: [] }],
+        _fallback,
+      };
     case 'GUIDE':
       return {
-        title: '生成失败',
-        objective: errorMsg,
-        modules: [],
-        examples: [],
-        exercises: [],
+        modules: [
+          {
+            title: title || errorNote,
+            objective: { text: errorNote, citations: [] },
+            key_points: [],
+            examples: [],
+            exercises: [],
+          },
+        ],
+        _fallback,
+      };
+    case 'TIMELINE':
+      return {
+        events: [
+          { date: '—', event: title || errorNote, description: errorNote, citations: [] },
+        ],
+        _fallback,
+      };
+    case 'MINDMAP':
+      return {
+        root: { label: title || errorNote, citations: [], children: [] },
+        _fallback,
+      };
+    case 'QUIZ':
+      return {
+        questions: [
+          {
+            type: 'short_answer',
+            question: title || errorNote,
+            options: [],
+            answer: errorNote,
+            explanation: '',
+            citations: [],
+          },
+        ],
         _fallback,
       };
     case 'BRIEFING':
-      return { title: '生成失败', sections: [], points: [], _fallback };
-    case 'MINDMAP':
-      return { root: { title: '生成失败', children: [] }, _fallback };
+      return {
+        sections: [
+          { heading: title || '生成失败', points: [{ text: errorNote, citations: [] }] },
+        ],
+        _fallback,
+      };
     case 'PARAGRAPH':
-      return { text: errorMsg, _fallback };
+      return { text: errorNote, citations: [], _fallback };
+    case 'BULLETS':
+      return { items: [{ text: errorNote, citations: [] }], _fallback };
     case 'STRUCTURED':
-      return { title: '生成失败', bullets: [{ text: errorMsg }], terms: [], _fallback };
+      return {
+        title: title || '生成失败',
+        bullets: [{ text: errorNote, citations: [] }],
+        terms: [],
+        _fallback,
+      };
     default:
-      return { title: '生成失败', _error: errorMsg, _fallback };
+      return { _fallback };
   }
 }
 

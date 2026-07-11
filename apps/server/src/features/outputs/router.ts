@@ -7,6 +7,7 @@
 import { desc, eq, inArray } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
+import { NoSuchModelError, TypeValidationError, APICallError, NoObjectGeneratedError } from 'ai';
 import { withRetry } from '../../ai/middleware.ts';
 import { resolveModel } from '../../ai/providers.ts';
 import { db } from '../../db/index.ts';
@@ -121,12 +122,23 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
 
     // Resolve model (config default or explicit model_id override)
     const modelConfig = model_id ? getModelById(String(model_id)) : getDefaultChatModel();
-    // c42: granular error mapping (v1 api.py:309-361)
+    // c42: granular error mapping (v1 api.py:309-361) — typed exceptions, not string matching
     if (!modelConfig) {
       set.status = 503;
       return { error: 'No chat model configured', error_code: 'MODEL_UNAVAILABLE' };
     }
-    const model = withRetry(await resolveModel(modelConfig));
+
+    let model;
+    try {
+      model = withRetry(await resolveModel(modelConfig));
+    } catch (error) {
+      // Model resolution failure → 503 (v1 ModelConfigurationError)
+      if (error instanceof NoSuchModelError) {
+        set.status = 503;
+        return { error: 'Model not available', error_code: 'MODEL_UNAVAILABLE' };
+      }
+      throw error;
+    }
 
     let result;
     try {
@@ -144,9 +156,17 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       });
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      // Schema validation failure → 422; retrieval/value errors → 400
-      if (msg.includes('retrieval') || msg.includes('validation')) {
-        set.status = msg.includes('validation') ? 422 : 400;
+      // Typed error mapping (v1 api.py:309-361)
+      if (error instanceof TypeValidationError || error instanceof NoObjectGeneratedError) {
+        set.status = 422; // schema validation failure
+        return { error: msg, error_code: 'SCHEMA_VALIDATION_FAILED' };
+      }
+      if (error instanceof NoSuchModelError || error instanceof APICallError) {
+        set.status = 503; // model unavailable / API error
+        return { error: msg, error_code: 'MODEL_ERROR' };
+      }
+      if (msg.includes('retrieval')) {
+        set.status = 400; // value/retrieval error
         return { error: msg };
       }
       set.status = 500;
