@@ -23,8 +23,7 @@ type SlidesDraftSnapshot = {
   markdown?: string | null;
 };
 
-const SLIDES_STREAM_POLL_INTERVAL_MS = 1000;
-const SLIDES_STREAM_TIMEOUT_MS = 180000;
+const SLIDES_GENERATE_TIMEOUT_MS = 180000;
 
 export interface OutputQueueJob {
   id: string;
@@ -67,26 +66,6 @@ function normalizeSlideGenerationConfig(config?: SlideGenerationConfig | null) {
   };
 }
 
-function buildSlidesStreamUrl(
-  notebookId: number,
-  slideId: number,
-  stage: 'outline' | 'markdown',
-  modelId?: string,
-) {
-  const base = `/v2/studio/slides/${slideId}/${stage}`;
-  return modelId ? `${base}?model_id=${encodeURIComponent(modelId)}` : base;
-}
-
-function parseSseMessage(event: Event) {
-  const raw = (event as MessageEvent).data;
-  if (!raw || typeof raw !== 'string') return {};
-  try {
-    return JSON.parse(raw) as Record<string, any>;
-  } catch {
-    return {};
-  }
-}
-
 function hasSlidesStageCompleted(stage: SlidesStreamStage, draft: SlidesDraftSnapshot): boolean {
   if (draft.status !== 'idle') return false;
   if (stage === 'outline') {
@@ -95,115 +74,46 @@ function hasSlidesStageCompleted(stage: SlidesStreamStage, draft: SlidesDraftSna
   return draft.stage === 'markdown' && (draft.output_id != null || Boolean(draft.markdown?.trim()));
 }
 
-function runSlidesStream(
-  url: string,
+/** Generate outline/markdown via v2 POST (non-SSE). Replaces v1 EventSource streams. */
+async function runSlidesGenerate(
+  slideId: number,
   stage: SlidesStreamStage,
-  options?: {
-    signal?: AbortSignal;
-    pollDraft?: () => Promise<SlidesDraftSnapshot>;
-  },
+  options?: { signal?: AbortSignal },
 ): Promise<void> {
   const signal = options?.signal;
-  const pollDraft = options?.pollDraft;
+  if (signal?.aborted) {
+    const abortError = new Error('aborted');
+    abortError.name = 'AbortError';
+    throw abortError;
+  }
 
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    let polling = false;
-    let pollTimer: number | null = null;
-    let timeoutTimer: number | null = null;
-    const eventSource = new EventSource(url);
+  const timeout = AbortSignal.timeout(SLIDES_GENERATE_TIMEOUT_MS);
+  const combined = signal != null ? AbortSignal.any([signal, timeout]) : timeout;
 
-    const cleanup = () => {
-      eventSource.close();
-      if (signal) {
-        signal.removeEventListener('abort', handleAbort);
-      }
-      if (pollTimer != null) {
-        window.clearInterval(pollTimer);
-      }
-      if (timeoutTimer != null) {
-        window.clearTimeout(timeoutTimer);
-      }
-    };
+  const slides = api.v2.studio.slides({ id: slideId });
+  const { error } =
+    stage === 'outline'
+      ? await slides.outline.post(undefined, { fetch: { signal: combined } })
+      : await slides.markdown.post(undefined, { fetch: { signal: combined } });
 
-    const finalize = (fn: () => void) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      fn();
-    };
+  if (error) {
+    const message =
+      typeof error === 'object' && error !== null && 'value' in error
+        ? String((error as { value?: unknown }).value ?? '生成失败，请稍后重试。')
+        : '生成失败，请稍后重试。';
+    throw new Error(message);
+  }
 
-    const rejectWithMessage = (message: string) => {
-      finalize(() => reject(new Error(message)));
-    };
-
-    const pollDraftState = async () => {
-      if (!pollDraft || polling || settled) return;
-      polling = true;
-      try {
-        const draft = await pollDraft();
-        if (settled) return;
-        if (draft.status === 'error') {
-          rejectWithMessage(draft.error_message?.trim() || '生成失败，请稍后重试。');
-          return;
-        }
-        if (hasSlidesStageCompleted(stage, draft)) {
-          finalize(resolve);
-        }
-      } catch {
-      } finally {
-        polling = false;
-      }
-    };
-
-    const handleAbort = () => {
-      const abortError = new Error('aborted');
-      abortError.name = 'AbortError';
-      finalize(() => reject(abortError));
-    };
-
-    if (signal?.aborted) {
-      handleAbort();
-      return;
-    }
-
-    signal?.addEventListener('abort', handleAbort);
-
-    eventSource.addEventListener('done', () => {
-      finalize(resolve);
-    });
-
-    eventSource.addEventListener('busy', (event) => {
-      const data = parseSseMessage(event);
-      const message =
-        typeof data.message === 'string' ? data.message : '演示正在生成中，请稍后重试。';
-      rejectWithMessage(message);
-    });
-
-    eventSource.addEventListener('error', (event) => {
-      const data = parseSseMessage(event);
-      const message = typeof data.message === 'string' ? data.message : '生成失败，请稍后重试。';
-      rejectWithMessage(message);
-    });
-
-    eventSource.onerror = () => {
-      if (!pollDraft) {
-        rejectWithMessage('生成失败，请稍后重试。');
-        return;
-      }
-      void pollDraftState();
-    };
-
-    if (pollDraft) {
-      pollTimer = window.setInterval(() => {
-        void pollDraftState();
-      }, SLIDES_STREAM_POLL_INTERVAL_MS);
-      timeoutTimer = window.setTimeout(() => {
-        rejectWithMessage('生成超时，请稍后重试。');
-      }, SLIDES_STREAM_TIMEOUT_MS);
-      void pollDraftState();
-    }
-  });
+  // Confirm stage settled (server returns after completion, but re-check for safety)
+  const { data: draft, error: draftErr } = await api.v2.studio.slides({ id: slideId }).get();
+  if (draftErr) throw draftErr;
+  const snapshot = draft as SlidesDraftSnapshot;
+  if (snapshot.status === 'error') {
+    throw new Error(snapshot.error_message?.trim() || '生成失败，请稍后重试。');
+  }
+  if (!hasSlidesStageCompleted(stage, snapshot)) {
+    throw new Error('生成未完成，请稍后重试。');
+  }
 }
 
 export function useOutputQueue({
@@ -362,9 +272,10 @@ export function useOutputQueue({
       }
 
       const payload = {
+        notebook_id: activeNotebookId,
         title: title.trim() || undefined,
         prompt: prompt.trim() || undefined,
-        source_ids: sourceIds.length ? sourceIds : undefined,
+        source_ids: sourceIds,
         generation_config: normalizeSlideGenerationConfig(generationConfig),
       };
       const { data: created, error: createErr } = await api.v2.studio.slides.post(payload);
@@ -429,32 +340,11 @@ export function useOutputQueue({
 
         if (job.type === 'SLIDES') {
           if (job.notebookId && job.draftId) {
-            const outlineUrl = buildSlidesStreamUrl(
-              job.notebookId,
-              job.draftId,
-              'outline',
-              job.modelId,
-            );
-            const markdownUrl = buildSlidesStreamUrl(
-              job.notebookId,
-              job.draftId,
-              'markdown',
-              job.modelId,
-            );
-            const pollDraft = async () => {
-              const { data: draftData, error: draftErr } = await api.v2.studio
-                .slides({ id: job.draftId! })
-                .get();
-              if (draftErr) throw draftErr;
-              return draftData as SlidesDraftSnapshot;
-            };
-            await runSlidesStream(outlineUrl, 'outline', {
+            await runSlidesGenerate(job.draftId, 'outline', {
               signal: abortController.signal,
-              pollDraft,
             });
-            await runSlidesStream(markdownUrl, 'markdown', {
+            await runSlidesGenerate(job.draftId, 'markdown', {
               signal: abortController.signal,
-              pollDraft,
             });
             if (!isCancelled()) {
               await mutateOutputs();

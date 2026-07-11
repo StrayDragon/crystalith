@@ -137,36 +137,50 @@
 
 <!-- CURRENT -->
 
-**✅ c36-c40 + 两轮 P0/P1 修复完成。第三轮复核完成。**
+**2026-07-11 代码复核 + P0/Studio/Connectors 修复（不采信旧文档总结）。**
 
-### 第三轮复核结论
+### 复核结论（相对 PROGRESS 乐观表述的修正）
 
-所有之前修复 **全部 HOLD（无回归）**。新发现 1 个 P0 + ~15 个 P1 + ~20 个 P2/P3。
+旧 CURRENT 写「仅 1 个 P0 + 多数 P2」**不成立**。对照 `backend/py` 源码复核后，核心 AI 域仍有多处用户可见断裂；本会话已修一批，仍有残留。
 
-#### P0（1 项）
+### 本会话已修（P0 + Studio/Connectors）
 
-1. **analysis: relations/contradictions 非 chunk-level edges** — 顶层 relations 仍是 LLM 文本对象；真正的 chunk edges 在非标准的 `computed_relations`（且用 camelCase 非 v1 snake_case）
+| 域                | 修复                                                                                                     |
+| ----------------- | -------------------------------------------------------------------------------------------------------- |
+| **QA**            | 空 `source_ids` → `no_sources`；stream 持久化 citations；export `inArray` 全量 sources                   |
+| **Research HITL** | `waitForApproval` 识别 modify/skip/finish；modify 应用新 plan；finish 不再被 agent 覆盖 report           |
+| **Analysis**      | 主字段返回 snake_case chunk-level `relations`/`contradictions`（对齐 v1 + 前端）                         |
+| **Studio**        | 强制 `source_ids`；`getContext` 按 source 过滤；AI markdown 同步 outputs；UI/队列改 v2 POST（弃 v1 SSE） |
+| **Connectors**    | 实现 snapshot / sync-check / apply / import-scope + 文件系统扫描；UI 迁 eden v2                          |
 
-#### P1（~15 项，按域）
+### 仍开放（未在本会话清零）
 
-- **QA**: export sources 查询 bug（只取第一个）; streaming 不持久化 citations; export 缺 notebook 校验
-- **research**: resume 对非 planning 无效; inferResumeState 三处分歧; cleanupExpiredLocks 从不调用; SSE 不发 waiting 事件
-- **outputs**: convert-to-source 缺 bumpSourcesEpoch; source_ids 不校验归属; GET/DELETE 归属可选
-- **analysis**: computed_relations camelCase; contradiction fallback 谓词分歧
-- **studio**: AI 生成路径不 sync outputs; source_ids 不强制
-- **CRUD**: messages POST 不设 201 + list limit=20(v1=200); models 响应 shape 与前端不匹配; models 忽略 capability 过滤
+#### P1（实质偏离）
 
-#### P2/P3（~20 项，可推迟）
+- QA：notebook / source_ids 归属校验仍弱
+- Research：`inferResumeState` 与 v1 仍有分歧；`cleanupExpiredLocks` 无调用；SSE `waiting` 时机
+- Outputs：convert-to-source 缺 `bumpSourcesEpoch`；归属可选；citation 未嵌回 content tree
+- Sources：link 模式不 embed；`/search` 仍是 RAG placeholder（非 v1 web search graph）；re-embed status 生命周期
+- Refine：`chunk_index` 0-based vs v1 1-based
+- Messages list 默认 limit 20（v1=200）
 
-field shape / 路径差异 / 排序 / filename / 分页 / RAG 编排器 / SLIDES guard 等。
+#### P2 / 架构债
+
+- Parsers：无专用 CSV/audio/video（CSV→text）
+- Plugin host 缺失（connectors/studio 硬编码）
+- AI SDK：仍无 `ToolLoopAgent` / `toolApproval`（research 继续 DB 轮询 HITL）
+- c13 distribution / c14 cleanup — 等人工授权
+- web typecheck 残留 errors；`api/generated/` 类型残留 → c14
 
 **当前状态**:
 
-- Server test: 209 pass / 2 fail（网络测试）
-- Typecheck: server 0 / web 23 (all pre-existing)
+- Server test: **209 pass / 2 fail**（同前：research 网络 + URL 超时，非本会话回归）
+- 下一阶段建议: 清 P1 行为债 → 再授权 c13/c14
 
-**残留 gap 大部分是 P2 级兼容/体验差异，可推迟到 c13/c14。**
-**下一阶段**: c13 (distribution) + c14 (cleanup) → v2.0.0（等人工授权）
+### GAP-BOARD 更新
+
+- G14 source-connectors：**本会话实现最小可用同步管线**（filesystem Obsidian/local-directory）。完整插件生态仍属 c13 范畴。
+- Studio 前后端契约断裂：**本会话已迁 v2**。
 
 ## GAP-BOARD — v1 行为对齐提案规划
 
@@ -174,37 +188,37 @@ field shape / 路径差异 / 排序 / filename / 分页 / RAG 编排器 / SLIDES
 > **原则: 一个一个做,不跳过,完整对齐 v1 行为契约。**
 > 优先级: P0 = 功能不可用/数据错误 | P1 = 行为实质偏离 | P2 = 体验降级
 
-| Gap | 域                 | 偏移描述                                                  | v1 参考                                   | 提案              | 优先级 | 状态        |
-| :-- | :----------------- | :-------------------------------------------------------- | :---------------------------------------- | :---------------- | :----- | :---------- |
-| G1  | refine             | 🔴 换产品:纯文本变换器→应对齐为 citation-aware RAG 摘要器 | `refine/api.py`                           | **c29** ✅        | P0     | ✅ DONE     |
-| G2  | analysis           | 🔴 clustering/correlation 向量KNN降级为关键词TF           | `analysis/clustering.py`+`correlation.py` | **c28 ✅**        | P0     | ✅ DONE     |
-| G3  | sources-embedding  | 🔴 异步embedding竞态:ready时向量未写入                    | `api_ingest.py:847-884`(同步)             | **c30** ✅        | P0     | ✅ DONE     |
-| G4  | research-resume    | 🔴 /resume 从头重跑,丢失累积结果                          | `graph.py:_build_state_from_session`      | **c24-B ✅**      | P0     | ✅ DONE     |
-| G5  | research-export    | 🔴 /export 是JSON dump,不创建source                       | `api.py:1245-1469`                        | **c24-B ✅**      | P0     | ✅ DONE     |
-| G6  | research-hitl      | 🟡 HITL忽略modify/skip,只用approve                        | `graph.py:354-409`                        | **c24-B ✅**      | P1     | ✅ DONE     |
-| G7  | outputs-rag        | 🟡 无RAG检索(全chunk dump)+无citations                    | `output_graph.py`                         | **c27 ✅**        | P0     | ✅ DONE     |
-| G8  | citations-context  | 🔴 邻域证据审查缺失                                       | `citations/api.py`                        | **c26 ✅**        | P1     | ✅ DONE     |
-| G9  | qa-noevidence      | 🟡 5个no-evidence reason仅产出1个                         | `service.py:62-69`                        | **c31 ✅** (新建) | P1     | ✅ DONE     |
-| G10 | studio-persist     | 🟡 Slidev无文件系统落盘(预览不可用)                       | `studio/storage.py`                       | **c32 ✅**        | P1     | ✅ DONE     |
-| G11 | studio-endpoints   | 🟡 缺4端点(草稿编辑+HITL手动改outline/markdown)           | `studio/api.py`                           | **c32 ✅** (合并) | P1     | ✅ DONE     |
-| G12 | sources-endpoints  | 🟡 缺3端点(summary/per-source-qa/qa-to-source)            | `sources/api.py`+`qa/api.py`              | **c33 ✅**        | P1     | ✅ DONE     |
-| G13 | sessions-endpoints | 🟡 缺2端点(GET单个+convert-to-output)                     | `sessions/api.py`                         | **c34 ✅**        | P2     | ✅ DONE     |
-| G14 | source-connectors  | 🟡 sync是TODO stub,缺snapshot/apply/import-scope          | `source_connectors/api.py`                | c13 或独立        | P2     | ⬜ 唯一开放 |
-| G15 | ssrf-config        | 🟡 白名单字段死代码(config不解析)                         | `config.py`                               | **c25** ✅        | P2     | ✅ DONE     |
-| G16 | frontend           | ✅ 前端 API 迁移完成 (19/21 域, typecheck 207→23 ↓89%)    | (整个前端)                                | **c35** ✅        | P0     | ✅ DONE     |
+| Gap | 域                 | 偏移描述                                                  | v1 参考                                   | 提案                                      | 优先级 | 状态                            |
+| :-- | :----------------- | :-------------------------------------------------------- | :---------------------------------------- | :---------------------------------------- | :----- | :------------------------------ |
+| G1  | refine             | 🔴 换产品:纯文本变换器→应对齐为 citation-aware RAG 摘要器 | `refine/api.py`                           | **c29** ✅                                | P0     | ✅ DONE                         |
+| G2  | analysis           | 🔴 clustering/correlation 向量KNN降级为关键词TF           | `analysis/clustering.py`+`correlation.py` | **c28 ✅**                                | P0     | ✅ DONE                         |
+| G3  | sources-embedding  | 🔴 异步embedding竞态:ready时向量未写入                    | `api_ingest.py:847-884`(同步)             | **c30** ✅                                | P0     | ✅ DONE                         |
+| G4  | research-resume    | 🔴 /resume 从头重跑,丢失累积结果                          | `graph.py:_build_state_from_session`      | **c24-B ✅**                              | P0     | ✅ DONE                         |
+| G5  | research-export    | 🔴 /export 是JSON dump,不创建source                       | `api.py:1245-1469`                        | **c24-B ✅**                              | P0     | ✅ DONE                         |
+| G6  | research-hitl      | 🟡 HITL忽略modify/skip,只用approve                        | `graph.py:354-409`                        | **c24-B ✅** + 2026-07-11 HITL 修复       | P1     | ✅ DONE                         |
+| G7  | outputs-rag        | 🟡 无RAG检索(全chunk dump)+无citations                    | `output_graph.py`                         | **c27 ✅**                                | P0     | ✅ DONE                         |
+| G8  | citations-context  | 🔴 邻域证据审查缺失                                       | `citations/api.py`                        | **c26 ✅**                                | P1     | ✅ DONE                         |
+| G9  | qa-noevidence      | 🟡 5个no-evidence reason仅产出1个                         | `service.py:62-69`                        | **c31 ✅** (新建)                         | P1     | ✅ DONE                         |
+| G10 | studio-persist     | 🟡 Slidev无文件系统落盘(预览不可用)                       | `studio/storage.py`                       | **c32 ✅**                                | P1     | ✅ DONE                         |
+| G11 | studio-endpoints   | 🟡 缺4端点(草稿编辑+HITL手动改outline/markdown)           | `studio/api.py`                           | **c32 ✅** (合并)                         | P1     | ✅ DONE                         |
+| G12 | sources-endpoints  | 🟡 缺3端点(summary/per-source-qa/qa-to-source)            | `sources/api.py`+`qa/api.py`              | **c33 ✅**                                | P1     | ✅ DONE                         |
+| G13 | sessions-endpoints | 🟡 缺2端点(GET单个+convert-to-output)                     | `sessions/api.py`                         | **c34 ✅**                                | P2     | ✅ DONE                         |
+| G14 | source-connectors  | 🟡 sync是TODO stub,缺snapshot/apply/import-scope          | `source_connectors/api.py`                | **2026-07-11 最小管线**                   | P2     | ✅ 最小可用（插件生态仍属 c13） |
+| G15 | ssrf-config        | 🟡 白名单字段死代码(config不解析)                         | `config.py`                               | **c25** ✅                                | P2     | ✅ DONE                         |
+| G16 | frontend           | ✅ 前端 API 迁移完成 (19/21 域, typecheck 207→23 ↓89%)    | (整个前端)                                | **c35** ✅ + Studio/Connectors 本会话补迁 | P0     | ✅ DONE                         |
 
 ### GAP-BOARD 状态总结
 
-**15/16 清零**（P0 6/6 ✅, P1 6/6 ✅, P2 3/4）。**仅剩 G14**（source-connectors → c13）。
+**16/16 主 gap 清零或最小可用**（G14 文件系统管线已落地；完整插件 host 仍属 c13）。
 
-> ⚠️ **对拍说明**: 早期 ✅ 曾表示「端点存在」而非「行为对齐」。c36–c40 补行为对齐。
-> `llman sdd list`: c25–c27 的 tasks.md 可能仍未勾选/未 archive（实现与 tasks 卫生不同步）——**不要仅凭本表 archive**。
+> ⚠️ **对拍说明**: 早期 ✅ 曾表示「端点存在」而非「行为对齐」。c36–c40 + 2026-07-11 复核修了多处伪对齐。
+> `llman sdd list`: 部分 change tasks.md 可能仍未勾选/未 archive——**不要仅凭本表 archive**。
 
-| 上次 Agent | 文档卫生 + PROGRESS 矛盾清理 |
-| 上次操作 | **doc**: 重写 root/backend AGENTS + README；新增 `apps/server/AGENTS.md`；删除过时 `GAP-REPORT.v1v2.md`；c14 tasks 明确 generated 类型迁移后再删；PROGRESS 域对比表标为历史快照，修正 G14/G15/c22 状态矛盾。 |
-| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) 残留 P1 是否继续修 vs 推迟。(5) c24–c27 / c36–c40 SDD archive 卫生（tasks 与实现不一致时暂缓）。 |
-| 已知问题 | **🔴 P0(1)**: analysis relations 非 chunk-level edges。**🟡 P1(~15)**: 见 CURRENT 段。**🟡 P2/P3(~20)**: 可推迟。**🟡**: web typecheck ~22 errors。**🟡**: v2无auth（c13）。**🟡**: `api/generated/` 类型残留 → c14。 |
-| 质量门禁 | `bun test` (server) → 209 pass / 2 fail（网络测试）。`bun typecheck` (server) ✅。`bun test tests/bdd/` → 21 pass ✅。 |
+| 上次 Agent | 代码复核 + P0/Studio/Connectors 修复 + PROGRESS 纠偏 |
+| 上次操作 | **fix**: QA source_ids/stream citations/export；Research HITL modify/skip/finish；Analysis snake_case edges；Studio source_ids+UI v2；Connectors snapshot/sync/apply + UI v2。**doc**: 重写 CURRENT，纠正「仅1个P0」乐观结论。 |
+| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) 残留 P1 是否继续修 vs 推迟。(5) SDD archive 卫生。 |
+| 已知问题 | **🟡 P1**: QA 归属校验；Research resume/locks/SSE；Outputs bumpSourcesEpoch；Sources link/search；Refine chunk_index；messages limit。**🟡 P2**: parsers/plugins/ToolLoopAgent。**🟡**: web typecheck；`api/generated/` → c14。 |
+| 质量门禁 | `bun test` (server) → 209 pass / 2 fail（网络超时，非本会话回归）。 |
 
 ---
 

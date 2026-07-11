@@ -7,6 +7,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import useSWR from 'swr';
 
+import { api } from '../../../../../api/eden';
+import { useLayer } from '../../../../../shared/layer';
+import { toast } from '../../../../../shared/toast';
+import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
 import type {
   ConnectorBindingRead,
   ImportResultItem,
@@ -19,19 +23,7 @@ import type {
   SourceConnectorDescriptor,
   SourceConnectorsListResponse,
   SyncCheckResult,
-} from '../../../../../api/generated';
-import {
-  applyImportScopeV1NotebooksNotebookIdSourceConnectorBindingsBindingIdImportScopePost as applyImportScope,
-  applySyncCheckV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckApplyPost as applySyncCheck,
-  createConnectorBindingV1NotebooksNotebookIdSourceConnectorsConnectorIdBindingsPost as createConnectorBinding,
-  listSourceConnectorsV1NotebooksNotebookIdSourceConnectorsGet as listSourceConnectors,
-  snapshotBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSnapshotPost as snapshotBinding,
-  syncCheckBindingV1NotebooksNotebookIdSourceConnectorBindingsBindingIdSyncCheckPost as syncCheckBinding,
-} from '../../../../../api/generated';
-import { unwrapData } from '../../../../../api/unwrap';
-import { useLayer } from '../../../../../shared/layer';
-import { toast } from '../../../../../shared/toast';
-import { useFocusTrap } from '../../../shared/hooks/useFocusTrap';
+} from './source-connector-types';
 
 type Step = 'select' | 'config' | 'snapshot' | 'scope' | 'sync';
 
@@ -155,7 +147,13 @@ export default function SourceConnectorsDialog({
   const canQuery = Boolean(open && notebookId && isConnected);
   const { data, error, isLoading, mutate } = useSWR<SourceConnectorsListResponse>(
     canQuery ? ['workspace/source-connectors', notebookId] : null,
-    () => unwrapData(listSourceConnectors<true>({ path: { notebook_id: notebookId ?? 0 } })),
+    async () => {
+      const { data: response, error: fetchErr } = await api.v2
+        .notebooks({ nid: notebookId! })
+        ['source-connectors'].get();
+      if (fetchErr) throw fetchErr;
+      return response as SourceConnectorsListResponse;
+    },
     { revalidateOnFocus: false },
   );
 
@@ -219,13 +217,13 @@ export default function SourceConnectorsDialog({
     setSyncCheck(null);
     setSyncApplyResult(null);
     try {
-      const created = await unwrapData(
-        createConnectorBinding<true>({
-          path: { notebook_id: notebookId, connector_id: selectedConnector.connector_id },
-          body: { connection_config: connectionConfig },
-        }),
-      );
-      setBinding(created);
+      const { data: created, error: createErr } = await api.v2
+        .notebooks({ nid: notebookId })
+        ['source-connectors']({ connectorId: selectedConnector.connector_id })
+        .bindings.post({ connection_config: connectionConfig });
+      if (createErr) throw createErr;
+      if (!created) throw new Error('创建绑定失败');
+      setBinding(created as ConnectorBindingRead);
       setSnapshot(null);
       setSelectedDirs({});
       setSelectedFiles({});
@@ -246,13 +244,14 @@ export default function SourceConnectorsDialog({
     setSyncCheck(null);
     setSyncApplyResult(null);
     try {
-      const snap = await unwrapData(
-        snapshotBinding<true>({
-          path: { notebook_id: notebookId, binding_id: binding.id },
-        }),
-      );
-      setSnapshot(snap);
-      toast.success(`快照已加载：${safeArray(snap.entries).length} 项`);
+      const { data: snap, error: snapErr } = await api.v2
+        .notebooks({ nid: notebookId })
+        ['source-connector-bindings']({ bindingId: binding.id })
+        .snapshot.post();
+      if (snapErr) throw snapErr;
+      if (!snap) throw new Error('加载快照失败');
+      setSnapshot(snap as Snapshot);
+      toast.success(`快照已加载：${safeArray((snap as Snapshot).entries).length} 项`);
     } catch (error) {
       const message = error instanceof Error ? error.message : '加载快照失败';
       toast.error(message);
@@ -281,17 +280,17 @@ export default function SourceConnectorsDialog({
     setSyncCheck(null);
     setSyncApplyResult(null);
     try {
-      const result = await unwrapData(
-        applyImportScope<true>({
-          path: { notebook_id: notebookId, binding_id: binding.id },
-          body: scopePayload,
-        }),
-      );
-      setBinding(result.binding);
-      setImportResult(result);
+      const { data: result, error: importErr } = await api.v2
+        .notebooks({ nid: notebookId })
+        ['source-connector-bindings']({ bindingId: binding.id })
+        ['import-scope'].post(scopePayload);
+      if (importErr) throw importErr;
+      if (!result) throw new Error('导入失败');
+      setBinding((result as ImportScopeApplyResponse).binding);
+      setImportResult(result as ImportScopeApplyResponse);
       await onSourcesChanged?.();
       toast.success(
-        `导入完成：新增 ${safeArray(result.imported_source_ids).length} · 复用 ${safeArray(result.reused_source_ids).length}`,
+        `导入完成：新增 ${safeArray((result as ImportScopeApplyResponse).imported_source_ids).length} · 复用 ${safeArray((result as ImportScopeApplyResponse).reused_source_ids).length}`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : '导入失败';
@@ -316,12 +315,13 @@ export default function SourceConnectorsDialog({
     setSyncCheck(null);
     setSyncApplyResult(null);
     try {
-      const result = await unwrapData(
-        syncCheckBinding<true>({
-          path: { notebook_id: notebookId, binding_id: binding.id },
-        }),
-      );
-      setSyncCheck(result);
+      const { data: result, error: syncErr } = await api.v2
+        .notebooks({ nid: notebookId })
+        ['source-connector-bindings']({ bindingId: binding.id })
+        ['sync-check'].post();
+      if (syncErr) throw syncErr;
+      if (!result) throw new Error('同步检查失败');
+      setSyncCheck(result as SyncCheckResult);
       toast.success('同步检查完成');
     } catch (error) {
       const message = error instanceof Error ? error.message : '同步检查失败';
@@ -337,17 +337,17 @@ export default function SourceConnectorsDialog({
     setBusy(true);
     setSyncApplyResult(null);
     try {
-      const result = await unwrapData(
-        applySyncCheck<true>({
-          path: { notebook_id: notebookId, binding_id: binding.id },
-          body: { sync_check_id: syncCheck.id },
-        }),
-      );
-      setBinding(result.binding);
-      setSyncApplyResult(result);
+      const { data: result, error: applyErr } = await api.v2
+        .notebooks({ nid: notebookId })
+        ['source-connector-bindings']({ bindingId: binding.id })
+        ['sync-check'].apply.post({ sync_check_id: syncCheck.id });
+      if (applyErr) throw applyErr;
+      if (!result) throw new Error('同步应用失败');
+      setBinding((result as ImportScopeApplyResponse).binding);
+      setSyncApplyResult(result as ImportScopeApplyResponse);
       await onSourcesChanged?.();
       toast.success(
-        `同步应用完成：新增 ${safeArray(result.imported_source_ids).length} · 复用 ${safeArray(result.reused_source_ids).length}`,
+        `同步应用完成：新增 ${safeArray((result as ImportScopeApplyResponse).imported_source_ids).length} · 复用 ${safeArray((result as ImportScopeApplyResponse).reused_source_ids).length}`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : '同步应用失败';

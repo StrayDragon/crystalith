@@ -2,7 +2,7 @@
 //
 // Mirrors v1 `features/qa/api.py` on Elysia + AI SDK streamText.
 // c36: deterministic retrieval (retrieveAndJudge) + evidence short-circuit.
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { withRetry } from '../../ai/middleware.ts';
@@ -273,12 +273,16 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       topK: top_k,
       minScore: min_score,
       sourceIds: source_ids,
-      onMessageSettled: (text, failed) => {
+      onMessageSettled: (text, failed, citations) => {
         if (!messageId) return;
         if (failed || text.trim() === '') {
           db().delete(messages).where(eq(messages.id, messageId)).run();
         } else {
-          db().update(messages).set({ content: text }).where(eq(messages.id, messageId)).run();
+          db()
+            .update(messages)
+            .set({ content: text, citations: (citations ?? []) as unknown[] })
+            .where(eq(messages.id, messageId))
+            .run();
         }
       },
     });
@@ -336,7 +340,7 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
       ),
     ];
     const sourceRows = sourceIds.length
-      ? db().select().from(sources).where(eq(sources.id, sourceIds[0])).all() // simplified
+      ? db().select().from(sources).where(inArray(sources.id, sourceIds)).all()
       : [];
     const sourcesMeta = sourceRows.map((s) => ({
       id: s.id,

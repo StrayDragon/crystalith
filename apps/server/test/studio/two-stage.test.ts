@@ -54,6 +54,7 @@ import {
 const BASE = 'http://test.local';
 let app: Elysia;
 let notebookId: number;
+let sourceId: number;
 
 beforeAll(() => {
   setupIntegrationEnv();
@@ -69,6 +70,7 @@ beforeAll(() => {
     .values({ notebookId, filename: 'doc.md', status: 'ready' })
     .returning()
     .get();
+  sourceId = src.id;
   orm
     .insert(chunks)
     .values({ sourceId: src.id, chunkIndex: 0, text: 'Reference material for the slides.' })
@@ -105,6 +107,7 @@ describe('studio two-stage generation', () => {
       notebook_id: notebookId,
       title: 'My Deck',
       prompt: 'Focus on clarity',
+      source_ids: [sourceId],
     });
     expect(status).toBe(200);
     const slide = body as { id: number; stage: string; status: string };
@@ -153,6 +156,7 @@ describe('studio two-stage generation', () => {
     const created = await post('/v2/studio/slides', {
       notebook_id: notebookId,
       title: 'Review Deck',
+      source_ids: [sourceId],
     });
     const id = (created.body as { id: number }).id;
     await post(`/v2/studio/slides/${id}/outline`);
@@ -169,6 +173,7 @@ describe('studio two-stage generation', () => {
     const created = await post('/v2/studio/slides', {
       notebook_id: notebookId,
       title: 'No Outline Deck',
+      source_ids: [sourceId],
     });
     const id = (created.body as { id: number }).id;
 

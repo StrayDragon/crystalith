@@ -19,16 +19,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import SlideshowIcon from '@mui/icons-material/Slideshow';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import {
-  createDraftV1NotebooksNotebookIdSlidesDraftsPost as createSlidesDraft,
-  getLatestDraftV1NotebooksNotebookIdSlidesDraftsLatestGet as getLatestSlidesDraft,
-  getDraftV1NotebooksNotebookIdSlidesDraftsSlideIdGet as getSlidesDraft,
-  updateDraftV1NotebooksNotebookIdSlidesDraftsSlideIdPatch as updateSlidesDraft,
-  updateOutlineV1NotebooksNotebookIdSlidesDraftsSlideIdOutlinePut as updateSlidesOutline,
-  updateMarkdownV1NotebooksNotebookIdSlidesDraftsSlideIdMarkdownPut as updateSlidesMarkdown,
-  type WorkspaceToolsDiagnostics,
-} from '../../../../api/generated';
-import { unwrapData } from '../../../../api/unwrap';
+import { api } from '../../../../api/eden';
 import { t } from '../../../../shared/i18n';
 import { toast } from '../../../../shared/toast';
 import { useFocusTrap } from '../../shared/hooks/useFocusTrap';
@@ -49,6 +40,11 @@ import type {
 } from '../../shared/types';
 import { ModelSelector } from './ModelSelector';
 import { buildFrontmatterPreview, normalizeGenerationConfig } from './utils/slides';
+
+/** Minimal tools diagnostics shape (was from generated client). */
+type WorkspaceToolsDiagnostics = {
+  slides?: { available?: boolean; message?: string | null } | null;
+} | null;
 
 const STAGES: { id: SlideStage; label: string }[] = [
   { id: 'input', label: '输入' },
@@ -216,10 +212,9 @@ export default function SlidesStudioDialog({
   const [isPreviewSyncing, setIsPreviewSyncing] = useState(false);
   const [showMarkdownEditor, setShowMarkdownEditor] = useState(false);
 
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const generateAbortRef = useRef<AbortController | null>(null);
   const autoPreviewRef = useRef<number | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
-  const maxEvents = 200;
   const isConfigOnly = openMode === 'config';
   const isPreviewMode = openMode === 'preview';
   const slidesConfigLoading = false;
@@ -285,10 +280,10 @@ export default function SlidesStudioDialog({
   }, [draft?.sourceIds, selectedSourceIds]);
   const previewStatusTone = isPreviewSyncing ? 'blue' : previewReady ? 'green' : 'gray';
 
-  const closeEventSource = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+  const closeGenerate = useCallback(() => {
+    if (generateAbortRef.current) {
+      generateAbortRef.current.abort();
+      generateAbortRef.current = null;
     }
   }, []);
 
@@ -404,12 +399,20 @@ export default function SlidesStudioDialog({
     setLoading(true);
     setError('');
     try {
-      const latest = draftId
-        ? await unwrapData(
-            getSlidesDraft<true>({ path: { notebook_id: notebookId, slide_id: draftId } }),
-          )
-        : await unwrapData(getLatestSlidesDraft<true>({ path: { notebook_id: notebookId } }));
-      syncFromDraft(normalizeDraft(latest));
+      if (draftId) {
+        const { data, error: fetchErr } = await api.v2.studio.slides({ id: draftId }).get();
+        if (fetchErr) throw fetchErr;
+        syncFromDraft(normalizeDraft(data));
+      } else {
+        const { data, error: fetchErr } = await api.v2.studio.slides.get({
+          query: { notebook_id: String(notebookId) },
+        });
+        if (fetchErr) throw fetchErr;
+        const list = Array.isArray(data) ? data : [];
+        const latest = list.at(-1) ?? null;
+        if (latest) syncFromDraft(normalizeDraft(latest));
+        else resetDraftState();
+      }
     } catch (error: any) {
       const status = resolveErrorStatus(error);
       if (status === 404) {
@@ -427,10 +430,9 @@ export default function SlidesStudioDialog({
       if (!notebookId || !isConnected) return;
       const targetId = slideId ?? draft?.id;
       if (!targetId) return;
-      const latest = await unwrapData(
-        getSlidesDraft<true>({ path: { notebook_id: notebookId, slide_id: targetId } }),
-      );
-      syncFromDraft(normalizeDraft(latest));
+      const { data, error: fetchErr } = await api.v2.studio.slides({ id: targetId }).get();
+      if (fetchErr) throw fetchErr;
+      syncFromDraft(normalizeDraft(data));
     },
     [draft?.id, isConnected, notebookId, syncFromDraft],
   );
@@ -442,12 +444,12 @@ export default function SlidesStudioDialog({
       setIsGenerating(false);
       void loadDraft();
     } else {
-      closeEventSource();
+      closeGenerate();
       setIsFullscreen(false);
       setIsQueueing(false);
       setIsGenerating(false);
     }
-  }, [closeEventSource, loadDraft, open]);
+  }, [closeGenerate, loadDraft, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -493,7 +495,7 @@ export default function SlidesStudioDialog({
     setConfigFrontmatter((prev) => prev || configDefaults?.frontmatter || '');
   }, [configDefaults, open, slidesConfig]);
 
-  useEffect(() => () => closeEventSource(), [closeEventSource]);
+  useEffect(() => () => closeGenerate(), [closeGenerate]);
 
   useEffect(() => {
     if (!draft?.id) {
@@ -592,22 +594,19 @@ export default function SlidesStudioDialog({
       generation_config: buildGenerationConfigPayload(),
     };
     if (!draft) {
-      const created = await unwrapData(
-        createSlidesDraft<true>({
-          path: { notebook_id: notebookId },
-          body: payload,
-        }),
-      );
+      const { data: created, error: createErr } = await api.v2.studio.slides.post({
+        notebook_id: notebookId,
+        ...payload,
+      });
+      if (createErr) throw createErr;
       const normalized = normalizeDraft(created);
       syncFromDraft(normalized);
       return normalized;
     }
-    const updated = await unwrapData(
-      updateSlidesDraft<true>({
-        path: { notebook_id: notebookId, slide_id: draft.id },
-        body: payload,
-      }),
-    );
+    const { data: updated, error: updateErr } = await api.v2.studio
+      .slides({ id: draft.id })
+      .patch(payload);
+    if (updateErr) throw updateErr;
     const normalized = normalizeDraft(updated);
     syncFromDraft(normalized);
     return normalized;
@@ -687,12 +686,10 @@ export default function SlidesStudioDialog({
         bullets: item.bullets.map((bullet) => bullet.trim()).filter(Boolean),
       })),
     };
-    const updated = await unwrapData(
-      updateSlidesOutline<true>({
-        path: { notebook_id: notebookId, slide_id: draft.id },
-        body: { outline },
-      }),
-    );
+    const { data: updated, error: updateErr } = await api.v2.studio
+      .slides({ id: draft.id })
+      .outline.put({ outline });
+    if (updateErr) throw updateErr;
     syncFromDraft(normalizeDraft(updated));
   }, [draft, isConnected, notebookId, outlineItems, outlineTitle, syncFromDraft, title]);
 
@@ -702,106 +699,48 @@ export default function SlidesStudioDialog({
       setError(t('studio.slides.connection_required'));
       return;
     }
-    const updated = await unwrapData(
-      updateSlidesMarkdown<true>({
-        path: { notebook_id: notebookId, slide_id: draft.id },
-        body: { markdown: markdown },
-      }),
-    );
+    const { data: updated, error: updateErr } = await api.v2.studio
+      .slides({ id: draft.id })
+      .markdown.put({ markdown });
+    if (updateErr) throw updateErr;
     syncFromDraft(normalizeDraft(updated));
     onOutputsUpdated();
   }, [draft, isConnected, markdown, notebookId, onOutputsUpdated, syncFromDraft]);
 
-  const buildOutlineStreamUrl = useCallback(
-    (slideId: number) => {
-      if (!notebookId) return '';
-      const base = `/v1/notebooks/${notebookId}/slides/drafts/${slideId}/outline/stream`;
-      return configModelId ? `${base}?model_id=${encodeURIComponent(configModelId)}` : base;
-    },
-    [configModelId, notebookId],
-  );
-
-  const buildMarkdownStreamUrl = useCallback(
-    (slideId: number) => {
-      if (!notebookId) return '';
-      const base = `/v1/notebooks/${notebookId}/slides/drafts/${slideId}/markdown/stream`;
-      return configModelId ? `${base}?model_id=${encodeURIComponent(configModelId)}` : base;
-    },
-    [configModelId, notebookId],
-  );
-
-  const startEventSource = useCallback(
-    (
-      url: string,
+  const runGenerateStage = useCallback(
+    async (
+      slideId: number,
+      stage: 'outline' | 'markdown',
       handlers: { onDone?: () => Promise<void> | void; onError?: () => Promise<void> | void } = {},
     ) => {
-      closeEventSource();
+      closeGenerate();
       setIsGenerating(true);
       setEvents([]);
       setDebugTimings(null);
       setError('');
-      const eventSource = new EventSource(url);
-      eventSourceRef.current = eventSource;
+      const ac = new AbortController();
+      generateAbortRef.current = ac;
 
-      const handleFinish = async (hasError = false) => {
+      try {
+        setEvents((prev) => [...prev, { type: 'progress', message: '生成中...' }]);
+        const slides = api.v2.studio.slides({ id: slideId });
+        const { error: genErr } =
+          stage === 'outline'
+            ? await slides.outline.post(undefined, { fetch: { signal: ac.signal } })
+            : await slides.markdown.post(undefined, { fetch: { signal: ac.signal } });
+        if (genErr) throw genErr;
         setIsGenerating(false);
-        closeEventSource();
-        if (hasError) {
-          if (handlers.onError) await handlers.onError();
-          return;
-        }
+        generateAbortRef.current = null;
         if (handlers.onDone) await handlers.onDone();
-      };
-
-      eventSource.addEventListener('progress', (event) => {
-        const data = JSON.parse((event as MessageEvent).data || '{}');
-        setEvents((prev) => {
-          const next = [...prev, { type: 'progress', message: data.message || '生成中...' }];
-          return next.length > maxEvents ? next.slice(-maxEvents) : next;
-        });
-      });
-
-      eventSource.addEventListener('toolcall', (event) => {
-        const data = JSON.parse((event as MessageEvent).data || '{}');
-        setEvents((prev) => {
-          const next = [...prev, { type: 'toolcall', message: data.name || '调用生成工具' }];
-          return next.length > maxEvents ? next.slice(-maxEvents) : next;
-        });
-      });
-
-      eventSource.addEventListener('busy', (event) => {
-        const data = JSON.parse((event as MessageEvent).data || '{}');
-        setError(data.message || '当前演示正在生成中。');
-        void handleFinish(true);
-      });
-
-      eventSource.addEventListener('error', (event) => {
-        const data = JSON.parse((event as MessageEvent).data || '{}');
-        setError(data.message || '生成失败，请稍后重试。');
-        void handleFinish(true);
-      });
-
-      eventSource.addEventListener('done', async (event) => {
-        try {
-          const data = JSON.parse((event as MessageEvent).data || '{}');
-          if (
-            data &&
-            typeof data === 'object' &&
-            data.timings_ms &&
-            typeof data.timings_ms === 'object'
-          ) {
-            setDebugTimings(data.timings_ms);
-            if (import.meta.env.DEV) {
-              console.log('slides done timings_ms', data.timings_ms);
-            }
-          }
-        } catch {
-          // ignore parse errors
-        }
-        await handleFinish();
-      });
+      } catch (error) {
+        setIsGenerating(false);
+        generateAbortRef.current = null;
+        if (error instanceof Error && error.name === 'AbortError') return;
+        setError(error instanceof Error ? error.message : '生成失败，请稍后重试。');
+        if (handlers.onError) await handlers.onError();
+      }
     },
-    [closeEventSource],
+    [closeGenerate],
   );
 
   const handleGenerateOutline = useCallback(async () => {
@@ -812,22 +751,13 @@ export default function SlidesStudioDialog({
     }
     const saved = await saveInputStage();
     if (!saved) return;
-    const url = buildOutlineStreamUrl(saved.id);
-    if (!url) return;
-    startEventSource(url, {
+    await runGenerateStage(saved.id, 'outline', {
       onDone: async () => {
         await refreshDraft(saved.id);
         setActiveStage('outline');
       },
     });
-  }, [
-    buildOutlineStreamUrl,
-    isConnected,
-    notebookId,
-    refreshDraft,
-    saveInputStage,
-    startEventSource,
-  ]);
+  }, [isConnected, notebookId, refreshDraft, runGenerateStage, saveInputStage]);
 
   const handleGenerateMarkdown = useCallback(async () => {
     if (!notebookId || !draft) return;
@@ -840,9 +770,7 @@ export default function SlidesStudioDialog({
       return;
     }
     await handleSaveOutline();
-    const url = buildMarkdownStreamUrl(draft.id);
-    if (!url) return;
-    startEventSource(url, {
+    await runGenerateStage(draft.id, 'markdown', {
       onDone: async () => {
         await refreshDraft(draft.id);
         setActiveStage('markdown');
@@ -850,14 +778,13 @@ export default function SlidesStudioDialog({
       },
     });
   }, [
-    buildMarkdownStreamUrl,
     draft,
     handleSaveOutline,
     isConnected,
     notebookId,
     onOutputsUpdated,
     refreshDraft,
-    startEventSource,
+    runGenerateStage,
   ]);
 
   const handleGenerateAll = useCallback(async () => {
@@ -868,14 +795,10 @@ export default function SlidesStudioDialog({
     }
     const saved = await saveInputStage();
     if (!saved) return;
-    const outlineUrl = buildOutlineStreamUrl(saved.id);
-    if (!outlineUrl) return;
-    startEventSource(outlineUrl, {
+    await runGenerateStage(saved.id, 'outline', {
       onDone: async () => {
         await refreshDraft(saved.id);
-        const markdownUrl = buildMarkdownStreamUrl(saved.id);
-        if (!markdownUrl) return;
-        startEventSource(markdownUrl, {
+        await runGenerateStage(saved.id, 'markdown', {
           onDone: async () => {
             await refreshDraft(saved.id);
             setActiveStage('markdown');
@@ -884,16 +807,7 @@ export default function SlidesStudioDialog({
         });
       },
     });
-  }, [
-    buildMarkdownStreamUrl,
-    buildOutlineStreamUrl,
-    isConnected,
-    notebookId,
-    onOutputsUpdated,
-    refreshDraft,
-    saveInputStage,
-    startEventSource,
-  ]);
+  }, [isConnected, notebookId, onOutputsUpdated, refreshDraft, runGenerateStage, saveInputStage]);
 
   const buildPreview = useCallback(
     async (force = false) => {

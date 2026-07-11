@@ -319,8 +319,21 @@ export async function runResearchCore(
       .where(eq(researchSessions.id, sessionId))
       .run();
 
-    const approved = await waitForApproval(state, plan, signal);
-    if (!approved || signal.aborted) break;
+    const decision = await waitForApproval(state, plan, signal);
+    if (signal.aborted || decision.action === 'cancel') break;
+    if (decision.action === 'finish') {
+      // finish endpoint already generated+persisted the report — do not overwrite
+      return null;
+    }
+    if (decision.action === 'skip') {
+      // Jump to next iteration (re-plan); for-loop will ++ so set iter = next-1
+      iter = decision.nextIteration - 1;
+      state.iteration = decision.nextIteration;
+      continue;
+    }
+
+    // approve / modify / timeout — use decision.plan (modify replaces local plan)
+    plan = decision.plan;
 
     // 3. Execute searches
     db()
@@ -359,6 +372,22 @@ export async function runResearchCore(
       .run();
     return null;
   }
+
+  // finish/skip-at-max may have already completed the session
+  const afterLoop = db()
+    .select()
+    .from(researchSessions)
+    .where(eq(researchSessions.id, sessionId))
+    .get();
+  if (afterLoop?.status === 'completed') {
+    const report = afterLoop.finalReport ?? '';
+    return {
+      reportStream: (async function* () {
+        if (report) yield report;
+      })(),
+    };
+  }
+  if (afterLoop?.status === 'cancelled') return null;
 
   // Generate report — eagerly drain so status persists regardless of SSE consumer
   db()
@@ -506,15 +535,39 @@ export async function generateFinalReport(state: ResearchState): Promise<string>
 // HITL: wait for user approval via DB polling
 // ---------------------------------------------------------------------------
 
+type HitlDecision =
+  | { action: 'approve' | 'modify' | 'timeout'; plan: SearchPlan }
+  | { action: 'skip'; nextIteration: number }
+  | { action: 'finish' }
+  | { action: 'cancel' };
+
+function loadLatestUserInput(sessionId: number): { action: string; plan?: SearchPlan } | null {
+  const step = db()
+    .select()
+    .from(researchSteps)
+    .where(eq(researchSteps.sessionId, sessionId))
+    .orderBy(researchSteps.id)
+    .all()
+    .filter((s) => s.type === 'user_input')
+    .pop();
+  if (!step?.inputData || typeof step.inputData !== 'object') return null;
+  const data = step.inputData as Record<string, unknown>;
+  const action = typeof data.action === 'string' ? data.action : '';
+  if (!action) return null;
+  const plan = data.plan as SearchPlan | undefined;
+  return { action, plan };
+}
+
+/**
+ * Poll DB until the user acts (approve/modify/skip/finish/cancel) or timeout.
+ * Mirrors v1 graph HITL branch (graph.py:354-409).
+ */
 async function waitForApproval(
   state: ResearchState,
   plan: SearchPlan,
   signal: AbortSignal,
-): Promise<boolean> {
-  // Do NOT insert a user_input step here — the plan step is already recorded
-  // by planSearches, and the control endpoint (approve/modify/skip) records
-  // the user_input step with the correct action. A spurious step here would
-  // confuse inferResumeState and trigger false SSE events. (c37 gap fix)
+): Promise<HitlDecision> {
+  // Do NOT insert a user_input step here — control endpoints record it.
 
   db()
     .update(researchSessions)
@@ -528,20 +581,46 @@ async function waitForApproval(
 
   for (let i = 0; i < maxPolls && !signal.aborted; i++) {
     await sleep(pollInterval);
-    if (signal.aborted) return false;
+    if (signal.aborted) return { action: 'cancel' };
 
     const session = db()
       .select()
       .from(researchSessions)
       .where(eq(researchSessions.id, state.sessionId))
       .get();
-    if (!session) return false;
+    if (!session) return { action: 'cancel' };
 
-    if (session.status === 'searching') return true;
-    if (session.status === 'cancelled' || session.status === 'completed') return false;
+    // finish endpoint: analyzing → completed (report already written)
+    if (session.status === 'analyzing' || session.status === 'completed') {
+      return { action: 'finish' };
+    }
+    if (session.status === 'cancelled') {
+      return { action: 'cancel' };
+    }
+
+    // skip endpoint: advances iteration and sets planning (or completed at max)
+    if (session.status === 'planning' && session.currentIteration > state.iteration) {
+      return { action: 'skip', nextIteration: session.currentIteration };
+    }
+
+    // approve / modify: both set searching
+    if (session.status === 'searching') {
+      const userInput = loadLatestUserInput(state.sessionId);
+      if (userInput?.action === 'modify' && userInput.plan?.queries?.length) {
+        return {
+          action: 'modify',
+          plan: {
+            queries: userInput.plan.queries,
+            reasoning: userInput.plan.reasoning || '用户修改的计划',
+          },
+        };
+      }
+      return { action: 'approve', plan };
+    }
   }
 
-  return true;
+  // Timeout — auto-approve original plan (v1 graph.py:411-419)
+  return { action: 'timeout', plan };
 }
 
 function sleep(ms: number): Promise<void> {

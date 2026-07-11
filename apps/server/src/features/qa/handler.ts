@@ -42,8 +42,12 @@ export interface QaHandlerOptions {
   minScore?: number;
   /** Scope retrieval to specific sources (v1 source_ids). */
   sourceIds?: number[];
-  /** Lifecycle hook for the provisional assistant message. */
-  onMessageSettled?: (accumulatedText: string, failed: boolean) => void;
+  /** Lifecycle hook for the provisional assistant message (includes citations). */
+  onMessageSettled?: (
+    accumulatedText: string,
+    failed: boolean,
+    citations?: import('@crystalith/shared').Citation[],
+  ) => void;
 }
 
 // ---------------------------------------------------------------------------
