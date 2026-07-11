@@ -96,6 +96,14 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     const nb = db().select().from(notebooks).where(eq(notebooks.id, notebookId)).get();
     if (!nb) throw new NotFoundError(`Notebook ${notebookId} not found`);
 
+    // c38 gap fix: source_ids is required when chunk_ids is not provided (v1 api.py:292-293)
+    const resolvedSourceIds = source_ids ? (source_ids as number[]).map(Number) : undefined;
+    const resolvedChunkIds = chunk_ids ? (chunk_ids as number[]).map(Number) : undefined;
+    if (!resolvedChunkIds?.length && !resolvedSourceIds?.length) {
+      set.status = 400;
+      return { error: 'source_ids must not be empty (or provide chunk_ids)' };
+    }
+
     // Resolve model (config default or explicit model_id override)
     const modelConfig = model_id ? getModelById(String(model_id)) : getDefaultChatModel();
     if (!modelConfig) throw new Error('No chat model configured');
@@ -105,8 +113,8 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
       model,
       notebookId,
       type: String(type) as ToolOutputType,
-      chunkIds: chunk_ids ? (chunk_ids as number[]).map(Number) : undefined,
-      sourceIds: source_ids ? (source_ids as number[]).map(Number) : undefined,
+      chunkIds: resolvedChunkIds,
+      sourceIds: resolvedSourceIds,
       prompt: prompt ? String(prompt) : undefined,
       preference: preference === 'speed' ? 'speed' : 'quality',
       topK: top_k ? Number(top_k) : undefined,
@@ -133,30 +141,37 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     return rows.map(serializeOutput);
   })
 
-  // Get a single output
-  .get('/outputs/:id', ({ params }) => {
+  // Get a single output (c38 gap fix: notebook ownership check)
+  .get('/outputs/:id', ({ params, query }) => {
     const id = Number(params.id);
     const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
     if (!row) throw new NotFoundError(`Output ${id} not found`);
+    const nid = (query as { notebook_id?: string }).notebook_id;
+    if (nid && row.notebookId !== Number(nid)) throw new NotFoundError(`Output ${id} not found`);
     return serializeOutput(row);
   })
 
-  // Delete output
-  .delete('/outputs/:id', ({ params, set }) => {
+  // Delete output (c38 gap fix: notebook ownership check)
+  .delete('/outputs/:id', ({ params, query, set }) => {
     const id = Number(params.id);
     const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
     if (!row) throw new NotFoundError(`Output ${id} not found`);
+    const nid = (query as { notebook_id?: string }).notebook_id;
+    if (nid && row.notebookId !== Number(nid)) throw new NotFoundError(`Output ${id} not found`);
     db().delete(outputs).where(eq(outputs.id, id)).run();
     set.status = 204;
     return '';
   })
 
-  // Export output as markdown or json (v1 api.py:407-476)
+  // Export output as markdown or json (c38 gap fix: default markdown + Citations/Sources sections)
   .get('/outputs/:id/export', ({ params, query }) => {
     const id = Number(params.id);
-    const format = (query.format as 'markdown' | 'json') ?? 'json';
+    // c38 gap fix: default format is markdown (v1 api.py:411)
+    const format = (query.format as 'markdown' | 'json') ?? 'markdown';
     const row = db().select().from(outputs).where(eq(outputs.id, id)).get();
     if (!row) throw new NotFoundError(`Output ${id} not found`);
+    const nid = (query as { notebook_id?: string }).notebook_id;
+    if (nid && row.notebookId !== Number(nid)) throw new NotFoundError(`Output ${id} not found`);
 
     const exportedAt = new Date().toISOString();
 
@@ -200,11 +215,40 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     }
 
     // Markdown format — type-aware rendering (v1 _extract_text_from_output)
-    const markdown = renderOutputToMarkdown(
+    // + Citations and Sources sections (v1 api.py:441-476)
+    const bodyMarkdown = renderOutputToMarkdown(
       row.type,
       row.content as Record<string, unknown> | null,
       row.prompt,
     );
+    // Build citations + sources sections
+    const chunkIds = (row.chunkIds as number[] | null) ?? [];
+    const citationRows = chunkIds.length
+      ? db()
+          .select({ chunkId: chunks.id, text: chunks.text, sourceId: chunks.sourceId, sourceName: sources.filename })
+          .from(chunks)
+          .innerJoin(sources, eq(chunks.sourceId, sources.id))
+          .where(inArray(chunks.id, chunkIds))
+          .all()
+      : [];
+    const citationLines = citationRows.map((c, i) => {
+      const snippet = c.text.slice(0, 200).trim();
+      return snippet ? `[${i + 1}] ${c.sourceName}\n> ${snippet}` : `[${i + 1}] ${c.sourceName}`;
+    });
+    const sourceIds = [...new Set(citationRows.map((c) => c.sourceId))];
+    const sourceRows = sourceIds.length
+      ? db().select().from(sources).where(inArray(sources.id, sourceIds)).all()
+      : [];
+    const markdown = [
+      bodyMarkdown,
+      '',
+      '## Citations',
+      citationLines.length ? citationLines.join('\n\n') : '无引用',
+      '',
+      '## Sources',
+      sourceRows.map((s) => `- ${s.filename} (${s.status})`).join('\n') || '无来源',
+    ].join('\n');
+
     return new Response(markdown, {
       headers: {
         'Content-Type': 'text/markdown; charset=utf-8',

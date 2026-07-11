@@ -174,7 +174,7 @@ describe('research HITL — approve', () => {
     expect(row!.finalReport!.length).toBeGreaterThan(0);
   });
 
-  it('approval request creates a user_input research step', async () => {
+  it('plan step contains the search plan data at waiting_user', async () => {
     const { body } = await post('/v2/research', {
       topic: 'Test approval step',
       notebook_id: notebookId,
@@ -187,10 +187,12 @@ describe('research HITL — approve', () => {
       .from(researchSteps)
       .where(eq(researchSteps.sessionId, body.id))
       .all();
-    const userInputSteps = steps.filter((s) => s.type === 'user_input');
-    expect(userInputSteps.length).toBeGreaterThanOrEqual(1);
-    expect(userInputSteps[0].outputData).toBeTruthy();
-    const plan = userInputSteps[0].outputData as { queries?: unknown[]; reasoning?: string };
+    // The plan step (type='plan') holds the search plan data.
+    // waitForApproval no longer inserts a spurious user_input step (c37 gap fix).
+    const planSteps = steps.filter((s) => s.type === 'plan');
+    expect(planSteps.length).toBeGreaterThanOrEqual(1);
+    expect(planSteps[0].outputData).toBeTruthy();
+    const plan = planSteps[0].outputData as { queries?: unknown[]; reasoning?: string };
     expect(plan.queries).toBeTruthy();
     expect(Array.isArray(plan.queries)).toBe(true);
     expect(plan.reasoning).toBeTruthy();

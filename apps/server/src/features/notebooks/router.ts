@@ -8,7 +8,7 @@ import { desc, eq } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
-import { notebooks } from '../../db/schema.ts';
+import { notebooks, sessions, sourceTags, templates } from '../../db/schema.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 
 // ---------------------------------------------------------------------------
@@ -85,11 +85,35 @@ export const notebooksRouter = new Elysia({ prefix: '/v2' })
     return rows.map(serializeNotebook);
   })
 
-  // Create a notebook
+  // Create a notebook (c39 gap fix: template_id apply-on-create — v1 service.py:19-50)
   .post(
     '/notebooks',
-    ({ body }) => {
+    ({ body, query, set }) => {
+      const templateId = (query as { template_id?: string }).template_id
+        ? Number((query as { template_id?: string }).template_id)
+        : undefined;
+
       const row = db().insert(notebooks).values({ name: body.name }).returning().get();
+
+      // Apply template: create sessions + tags from config (v1 service.py:36-46)
+      if (templateId) {
+        const template = db().select().from(templates).where(eq(templates.id, templateId)).get();
+        if (!template) {
+          throw new NotFoundError(`Template ${templateId} not found`);
+        }
+        const config = (template.configJson ?? {}) as {
+          session_titles?: string[];
+          source_tags?: string[];
+        };
+        for (const title of config.session_titles ?? []) {
+          db().insert(sessions).values({ notebookId: row.id, title }).run();
+        }
+        for (const tagName of config.source_tags ?? []) {
+          db().insert(sourceTags).values({ notebookId: row.id, name: tagName }).run();
+        }
+      }
+
+      set.status = 201;
       return serializeNotebook(row);
     },
     { body: NotebookCreateSchema },

@@ -151,7 +151,11 @@ async function analyzeResults(state: ResearchState, signal: AbortSignal): Promis
 // Sub-function: Execute searches (concurrent with semaphore)
 // ---------------------------------------------------------------------------
 
-async function executeSearches(plan: SearchPlan, signal: AbortSignal): Promise<ResearchResult[]> {
+async function executeSearches(
+  state: ResearchState,
+  plan: SearchPlan,
+  signal: AbortSignal,
+): Promise<ResearchResult[]> {
   const semaphore = new Semaphore(3);
   const allResults: ResearchResult[] = [];
 
@@ -170,7 +174,24 @@ async function executeSearches(plan: SearchPlan, signal: AbortSignal): Promise<R
   );
 
   await Promise.all(tasks);
-  return deduplicateResults(allResults);
+  const deduped = deduplicateResults(allResults);
+
+  // Record search step (c37 gap fix: v1 graph.py:573-587 records search results)
+  db()
+    .insert(researchSteps)
+    .values({
+      sessionId: state.sessionId,
+      iteration: state.iteration,
+      type: 'search',
+      outputData: {
+        result_count: deduped.length,
+        queries_executed: plan.queries.length,
+      } as Record<string, unknown>,
+      status: 'completed',
+    })
+    .run();
+
+  return deduped;
 }
 
 async function searxngFetch(
@@ -308,7 +329,7 @@ export async function runResearchCore(
       .where(eq(researchSessions.id, sessionId))
       .run();
 
-    const newResults = await executeSearches(plan, signal);
+    const newResults = await executeSearches(state, plan, signal);
     state.results.push(...newResults);
 
     db()
@@ -490,16 +511,10 @@ async function waitForApproval(
   plan: SearchPlan,
   signal: AbortSignal,
 ): Promise<boolean> {
-  db()
-    .insert(researchSteps)
-    .values({
-      sessionId: state.sessionId,
-      iteration: state.iteration,
-      type: 'user_input',
-      outputData: plan as unknown as Record<string, unknown>,
-      status: 'pending',
-    })
-    .run();
+  // Do NOT insert a user_input step here — the plan step is already recorded
+  // by planSearches, and the control endpoint (approve/modify/skip) records
+  // the user_input step with the correct action. A spurious step here would
+  // confuse inferResumeState and trigger false SSE events. (c37 gap fix)
 
   db()
     .update(researchSessions)

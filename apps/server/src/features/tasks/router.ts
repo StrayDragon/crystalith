@@ -70,13 +70,15 @@ export function tasksRouter(taskQueue: TaskQueue) {
         .all();
       return rows.map(serializeTask);
     })
-    .post('/tasks/:id/cancel', ({ params }) => {
+    .post('/tasks/:id/cancel', ({ params, set }) => {
       const id = Number(params.id);
       const task = db().select().from(tasksTable).where(eq(tasksTable.id, id)).get();
       if (!task) throw new NotFoundError(`Task ${id} not found`);
 
+      // c39 gap fix: return 409 for non-cancellable state (v1 api.py:71-76)
       if (task.status !== 'pending' && task.status !== 'running') {
-        throw new NotFoundError(`Task ${id} cannot be cancelled from status '${task.status}'`);
+        set.status = 409;
+        return { error: `Task ${id} cannot be cancelled from status '${task.status}'` };
       }
 
       // Use TaskQueue.cancel for proper AbortSignal interruption

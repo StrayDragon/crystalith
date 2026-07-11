@@ -389,6 +389,10 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     const id = Number(params.id);
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
+    // Status guard: only skip from waiting_user (v1 api.py:602-606)
+    if (row.status !== 'waiting_user') {
+      throw new Error(`Cannot skip from status '${row.status}' (must be waiting_user)`);
+    }
 
     // Record skip step (v1 api.py:591-647)
     recordUserStep(id, row.currentIteration, 'skip');
@@ -419,6 +423,10 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     const id = Number(params.id);
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
+    // Status guard: reject from terminal states (v1 api.py:659-663)
+    if (row.status === 'completed' || row.status === 'cancelled') {
+      throw new Error(`Cannot finish from terminal status '${row.status}'`);
+    }
 
     // Record finish step (v1 api.py:650-687)
     recordUserStep(id, row.currentIteration, 'finish');
@@ -469,6 +477,14 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
     const id = Number(params.id);
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
+    // Status guard: idempotent on already-cancelled (v1 returns 200);
+    // reject from completed (v1 api.py:699-703)
+    if (row.status === 'cancelled') {
+      return { id, status: 'cancelled', message: 'Already cancelled' };
+    }
+    if (row.status === 'completed') {
+      throw new Error(`Cannot cancel from terminal status 'completed'`);
+    }
 
     // Record cancel step
     recordUserStep(id, row.currentIteration, 'cancel');
@@ -494,6 +510,12 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
 
     const row = db().select().from(researchSessions).where(eq(researchSessions.id, id)).get();
     if (!row) throw new NotFoundError(`Research session ${id} not found`);
+    // Status guard: only resume non-active sessions (v1 api.py:749-753).
+    // Resuming an active session (planning/searching/waiting_user) would spawn
+    // a second concurrent agent.
+    if (row.status !== 'cancelled' && row.lockExpiresAt && isLockHeld(row)) {
+      throw new Error(`Session ${id} is still active (status: ${row.status}, lock held)`);
+    }
 
     // Infer resume state from last step (v1 _infer_resume_state)
     const { status: inferredStatus, iteration } = inferResumeState(id);

@@ -134,27 +134,34 @@
 
 <!-- CURRENT -->
 
-**🔄 v1↔v2 全面对拍完成，产出 5 个对齐提案 (c36-c40)。**
+**✅ c36-c40 + 第二轮 P0/P1 修复全部完成。**
 
-2026-07-10 深度对拍 `backend/py/` vs `apps/server/`，发现此前 GAP-BOARD 标记的多个 ✅ DONE
-实际未完全落地（"实现但没接通"）。已按域拆分 5 个 SDD change 提案：
+c36-c40 实现后进行了第二轮 5-agent 复核，修复了全部 4 个 P0 + 关键 P1。
 
-| Change | 域                 | P0 数 | 核心问题                                          |
-| :----- | :----------------- | :---: | :------------------------------------------------ |
-| c36    | QA pipeline        |   2   | no-evidence 分支未执行; export 端点缺失           |
-| c37    | research agent     |   4   | resume/skip/approve/finish 逻辑全部偏离           |
-| c38    | outputs pipeline   |   3   | source_ids 未接通(c27未完成); 缺 citation mapping |
-| c39    | sources + sessions |   4   | 竞态复发(2处); dedup默认关; tag无校验             |
-| c40    | shared infra       |   1   | config 90%未解析; retry不遵守Retry-After          |
+### 第二轮修复清单
+
+**P0（4/4 ✅）**:
+- research search step 记录 + waitForApproval 多余 step 移除
+- outputs source_ids 必填校验（空时 400）
+- notebooks template_id apply-on-create（创建子 sessions + tags）
+
+**P1 关键修复（✅）**:
+- research: skip/finish/cancel/resume status guards
+- outputs: GET/DELETE/export notebook 归属校验 + export 默认 markdown + Citations/Sources 段
+- analysis: 响应保留 computed chunk_ids + contradiction 模糊措辞 fallback
+- citations: /context 返回全文（非截断 200）+ citation 对象补 source_id/snippet/score + window 默认 1/1
+- studio: AI markdown 落盘文件系统
+- models: GET 单个 + role 过滤
+- tasks: cancel 返回 409（非 404）
+- messages: notebook 归属校验
 
 **当前状态**:
-
-- Server test: 200 pass / 2 fail（2 个网络依赖测试超时，非代码缺陷）
+- Server test: 209 pass / 2 fail（2 个网络依赖测试超时，非代码缺陷）
 - Typecheck: server 0 / web 23 (all pre-existing)
 - 19/21 前端域在 eden treaty 上运行
 
-**下一阶段**: c36-c40 逐个实现（按依赖序：c40→c36→c38→c39→c37，或并行）
-**之后**: c13 (distribution) + c14 (cleanup) → v2.0.0（等人工授权）
+**残留 P2（~20 项，可推迟）**: SSE header / 分页 / field shape / workspace stub / RAG 编排器 等。
+**下一阶段**: c13 (distribution) + c14 (cleanup) → v2.0.0（等人工授权）
 
 ## GAP-BOARD — v1 行为对齐提案规划
 
@@ -195,11 +202,11 @@
 
 ✅ G16 (前端迁移) 已清零。GAP-BOARD 16/16 全部完成。
 
-| 上次 Agent | v1↔v2 全面对拍 (6 并行 agent 分域审计 + 5 个 SDD change 提案 c36-c40) |
-| 上次操作 | **深度对拍 backend/py vs apps/server**: 发现 14 个 P0 + ~20 个 P1 缺口。已按域拆分为 c36(QA)/c37(research)/c38(outputs)/c39(sources+sessions)/c40(shared infra) 5 个 SDD change，均含 proposal+design+tasks+spec deltas，结构验证通过。修复 web lockfile 失同步。 |
-| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13阶段）。(2) **React**: 暂锁18.2.0，待迁移MUI后升19。(3) AI SDK v7 tool() 用inputSchema。(4) **c13/c14 等人工授权**。(5) c36-c40 实现顺序待定（建议 c40 先行，因 searchVectors source_ids 是 c36/c38 的底层依赖）。(6) oxlint warning 147 处非阻塞。 |
-| 已知问题 | **🔴 P0**: c36-c40 共 14 个 P0 缺口待实现（详见各 change tasks.md）。**🟡 P1**: web typecheck 23 errors (all pre-existing)。**🟡 P1**: v2无auth（c13）。**🟡 P2**: c13/c14 待授权。**🟡 P2**: SlidesStudioDialog (Slidev ESM 缺失), SourceConnectorsDialog 仍用旧 client。 |
-| 质量门禁 | `bun test` (server) → 200 pass / 2 fail（网络依赖测试超时，非代码缺陷）。`bun typecheck` (server) ✅。`bun run typecheck` (web) → 23 pre-existing errors。`bun test tests/bdd/` → 21 pass ✅。 |
+| 上次 Agent | c36-c40 实现 + 第二轮深度复核 (5 并行 agent 逐域验证) |
+| 上次操作 | **c36-c40 全部实现并提交**: c40(shared infra)→c36(QA)→c38(outputs)→c37(research)→c39(sources+sessions)。每轮 bun test 209 pass / 2 fail(网络)，typecheck clean。**第二轮复核**: 5 agent 逐域验证 c36-c40 修复全部 VERIFIED，发现残留 4 P0 + ~18 P1 + ~20 P2（详见 CURRENT 段）。 |
+| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13阶段）。(2) **React**: 暂锁18.2.0，待迁移MUI后升19。(3) AI SDK v7 tool() 用inputSchema。(4) **c13/c14 等人工授权**。(5) 残留 gap 修复 vs 推迟到 c13/c14 的决策。(6) oxlint warning 147 处非阻塞。 |
+| 已知问题 | **🔴 P0(4)**: research search step 未记录 / waitForApproval 多余 step / outputs source_ids 可选(v1必填) / notebooks template_id 未实现。**🟡 P1(~18)**: 见 CURRENT 段详细列表（research status guards / outputs 归属 / analysis schema / studio 落盘 / models GET 单个等）。**🟡 P2(~20)**: SSE header / 分页 / field shape 等。**🟡 P1**: web typecheck 23 errors (all pre-existing)。**🟡 P1**: v2无auth（c13）。 |
+| 质量门禁 | `bun test` (server) → 209 pass / 2 fail（网络依赖测试超时，非代码缺陷）。`bun typecheck` (server) ✅。`bun run typecheck` (web) → 23 pre-existing errors。`bun test tests/bdd/` → 21 pass ✅。 |
 
 ---
 
