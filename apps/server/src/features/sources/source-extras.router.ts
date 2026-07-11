@@ -91,11 +91,18 @@ function parseSummaryResponse(response: string): {
 
 export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
   // Source summary (v1 api_summary.py parity)
-  .get('/notebooks/:nid/sources/:sid/summary', async ({ params }) => {
+  .get('/notebooks/:nid/sources/:sid/summary', async ({ params, set }) => {
+    const nid = Number(params.nid);
     const sid = Number(params.sid);
     const source = db().select().from(sources).where(eq(sources.id, sid)).get();
     if (!source) throw new NotFoundError(`Source ${sid} not found`);
-    if (source.status !== 'ready') throw new NotFoundError('Source is not ready');
+    // c44: verify notebook ownership (v1 api_summary.py:82)
+    if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
+    // c44: "not ready" → 400 (v1 api_summary.py:86)
+    if (source.status !== 'ready') {
+      set.status = 400;
+      return { error: 'Source is not ready' };
+    }
 
     const chunkRows = db()
       .select()
@@ -145,11 +152,18 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
   })
 
   // Per-source QA (c39: vector retrieval instead of first-N chunks — v1 api_qa.py:82-119)
-  .post('/notebooks/:nid/sources/:sid/qa', async ({ params, body }) => {
+  .post('/notebooks/:nid/sources/:sid/qa', async ({ params, body, set }) => {
+    const nid = Number(params.nid);
     const sid = Number(params.sid);
     const source = db().select().from(sources).where(eq(sources.id, sid)).get();
     if (!source) throw new NotFoundError(`Source ${sid} not found`);
-    if (source.status !== 'ready') throw new NotFoundError('Source is not ready');
+    // c44: verify notebook ownership (v1 api_qa.py:64)
+    if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
+    // c44: "not ready" → 400 (v1 api_qa.py:67)
+    if (source.status !== 'ready') {
+      set.status = 400;
+      return { error: 'Source is not ready' };
+    }
 
     const { question } = body as { question: string };
     if (!question?.trim()) throw new NotFoundError('Question is required');
@@ -204,9 +218,12 @@ export const sourceExtrasRouter = new Elysia({ prefix: '/v2' })
 
   // Convert per-source QA to a source (v1 api_qa.py:204 parity)
   .post('/notebooks/:nid/sources/:sid/qa-to-source', async ({ params, body }) => {
+    const nid = Number(params.nid);
     const sid = Number(params.sid);
     const source = db().select().from(sources).where(eq(sources.id, sid)).get();
     if (!source) throw new NotFoundError(`Source ${sid} not found`);
+    // c44: verify notebook ownership (v1 api_qa.py:221)
+    if (source.notebookId !== nid) throw new NotFoundError(`Source ${sid} not found`);
 
     const { question, answer } = body as { question: string; answer: string };
     if (!question?.trim() || !answer?.trim()) {
