@@ -69,7 +69,7 @@ function parseRetryAfter(value: unknown): number | undefined {
 
 // hey-api calls `const _fetch = opts.fetch; _fetch(request)` — unbound `globalThis.fetch`
 // throws "Illegal invocation" in browser contexts (e.g. Cursor webview).
-const browserFetch: typeof fetch = (input, init) => globalThis.fetch(input, init);
+const browserFetch = ((input, init) => globalThis.fetch(input, init)) as typeof fetch;
 
 client.setConfig({
   baseUrl: '',

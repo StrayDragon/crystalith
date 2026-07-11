@@ -40,11 +40,12 @@
 | c33 | source-extras          | ✅ DONE (本会话)                                                                 |
 | c34 | sessions-convert       | ✅ DONE (本会话)                                                                 |
 | c35 | frontend-migration     | ✅ DONE                                                                          |
-| c36 | align-qa-pipeline      | ✅ DONE (确定性检索/no-evidence 5reason/export/confidence/source_ids) |
-| c37 | align-research-agent   | ✅ DONE (resume推断/skip推进/finish生成report/delete/SSE命名事件) |
-| c38 | align-outputs-pipeline | ✅ DONE (source_ids RAG接通/citation mapping/postprocess/export markdown) |
-| c39 | align-sources-sessions | ✅ DONE (竞态修复/dedup默认prompt/tags校验/link模式/QA向量/sessions补全) |
-| c40 | align-shared-infra     | ✅ DONE (config typed/retry Retry-After/searchVectors source_ids) |
+| c36 | align-qa-pipeline      | ✅ DONE (确定性检索/no-evidence 5reason/export/confidence/source_ids)            |
+| c37 | align-research-agent   | ✅ DONE (resume推断/skip推进/finish生成report/delete/SSE命名事件)                |
+| c38 | align-outputs-pipeline | ✅ DONE (source_ids RAG接通/citation mapping/postprocess/export markdown)        |
+| c39 | align-sources-sessions | ✅ DONE (竞态修复/dedup默认prompt/tags校验/link模式/QA向量/sessions补全)         |
+| c40 | align-shared-infra     | ✅ DONE (config typed/retry Retry-After/searchVectors source_ids)                |
+| c41 | ts-upgrade             | ✅ DONE (TS ^5→^7, Go-native tsc, tsconfig unified)                              |
 | c13 | distribution           | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                          |
 | c14 | cleanup-delivery       | ⏸️ BLOCKED (等人工授权) 🔒 需要人工授权                                          |
 
@@ -141,9 +142,11 @@
 所有之前修复 **全部 HOLD（无回归）**。新发现 1 个 P0 + ~15 个 P1 + ~20 个 P2/P3。
 
 #### P0（1 项）
+
 1. **analysis: relations/contradictions 非 chunk-level edges** — 顶层 relations 仍是 LLM 文本对象；真正的 chunk edges 在非标准的 `computed_relations`（且用 camelCase 非 v1 snake_case）
 
 #### P1（~15 项，按域）
+
 - **QA**: export sources 查询 bug（只取第一个）; streaming 不持久化 citations; export 缺 notebook 校验
 - **research**: resume 对非 planning 无效; inferResumeState 三处分歧; cleanupExpiredLocks 从不调用; SSE 不发 waiting 事件
 - **outputs**: convert-to-source 缺 bumpSourcesEpoch; source_ids 不校验归属; GET/DELETE 归属可选
@@ -152,9 +155,11 @@
 - **CRUD**: messages POST 不设 201 + list limit=20(v1=200); models 响应 shape 与前端不匹配; models 忽略 capability 过滤
 
 #### P2/P3（~20 项，可推迟）
+
 field shape / 路径差异 / 排序 / filename / 分页 / RAG 编排器 / SLIDES guard 等。
 
 **当前状态**:
+
 - Server test: 209 pass / 2 fail（网络测试）
 - Typecheck: server 0 / web 23 (all pre-existing)
 
@@ -201,9 +206,9 @@ field shape / 路径差异 / 排序 / filename / 分页 / RAG 编排器 / SLIDES
 ✅ G16 (前端迁移) 已清零。GAP-BOARD 16/16 全部完成。
 
 | 上次 Agent | c36-c40 + 两轮 P0/P1 修复 + 第三轮复核 |
-| 上次操作 | **三轮完整复核**: c36-c40 实现 → 第二轮复核修 4P0+18P1 → 第三轮复核确认全部 HOLD，新发现 1P0(analysis relations) + ~15P1 + ~20P2。残留 gap 主要是细节级兼容差异。 |
+| 上次操作 | **c41 TS 7.0.2 升级完成 + 三轮完整复核**: c36-c40 实现 → 第二轮复核修 4P0+18P1 → 第三轮复核确认全部 HOLD，新发现 1P0(analysis relations) + ~15P1 + ~20P2。残留 gap 主要是细节级兼容差异。**c41**: typescript ^5→^7, Go 原生 tsc ~10x 加速, tsconfig 统一 moduleResolution, 修 8 个 TS 7.0 回归。 |
 | 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13阶段）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) 残留 P1 是否继续修 vs 推迟。(5) oxlint warning 非阻塞。 |
-| 已知问题 | **🔴 P0(1)**: analysis relations 非 chunk-level edges。**🟡 P1(~15)**: 见 CURRENT 段。**🟡 P2/P3(~20)**: 可推迟。**🟡 P1**: web typecheck 23 errors (pre-existing)。**🟡 P1**: v2无auth（c13）。 |
+| 已知问题 | **🔴 P0(1)**: analysis relations 非 chunk-level edges。**🟡 P1(~15)**: 见 CURRENT 段。**🟡 P2/P3(~20)**: 可推迟。**🟡 P1**: web typecheck 22 errors (pre-existing)。**🟡 P1**: v2无auth（c13）。 |
 | 质量门禁 | `bun test` (server) → 209 pass / 2 fail（网络测试）。`bun typecheck` (server) ✅。`bun test tests/bdd/` → 21 pass ✅。 |
 
 ---
