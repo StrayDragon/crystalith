@@ -142,7 +142,7 @@
 
 <!-- CURRENT -->
 
-**2026-07-11 第三轮深度复核 + c42–c46 提案与实现（5 个 SDD change 覆盖全部 P0 + P1）。**
+**2026-07-11 第三轮深度复核 + c42–c46 实现 + 验证审计修复。全部 8 P0 清零，28/28 验证项通过。**
 
 ### 复核方法
 
@@ -159,6 +159,23 @@
 | **c45** | QA | ContextStats 字段名对齐 v1（total_tokens 等 + compressed） | inline citation 兜底；low_similarity 空 citations；/prompt: 指令解析 |
 | **c46** | Parsers+Research | CSV 专用 parser（markdown-table 分块） | report 6 段富 prompt；AI 失败 fallback；lock 续期；search dedup 增强 |
 
+### SDD 归档状态
+
+c42–c46 已全部 archive（`llman sdd archive run`），spec deltas 合并到 11 个 capability specs（+31 requirements）。
+39/39 specs 验证通过。c42–c46 不再出现在 active changes 列表中。
+
+### 验证审计（3 个并行 Explore agent 对照源码逐项验证）
+
+28 项验证中 25 项直接通过，3 项有偏差——**已全部修复**（commit `d3ffdd7c`）：
+
+| 偏差 | 严重度 | 修复 |
+| ---- | ------ | ---- |
+| MINDMAP fallback 用 `title` 而非 v1 的 `label` 键（渲染 bug） | 中 | 改为 `label`；完整重写 fallback 对齐 v1 `output_graph.py:198-287` |
+| Fallback 缺 `citations:[]` + 用 raw errorMsg | 中 | 所有叶子加 `citations: []`；用友好提示 `"⚠️ AI 模型生成失败..."` |
+| 错误码用字符串匹配（fragile） | 中 | 改用 AI SDK typed exceptions（`TypeValidationError`→422, `NoSuchModelError`→503 等） |
+| CSV 缺 `csv_row_start/end` metadata | 低 | parser 返回 `pages[]`；pipeline 优先用 pages 而非 `chunkText` |
+| `/prompt:` regex 大小写不一致 | 低 | 对齐 v1: `[a-z0-9_-]{1,32}` + case-insensitive + `toLowerCase()` |
+
 ### 仍开放（后置项）
 
 - P1 残留：stats preset（chart+table）；context window 压缩；export note STRUCTURED 类型；finish 后台生成；waiting SSE 心跳
@@ -169,6 +186,8 @@
 
 - Server test: **209 pass / 2 fail**（research 网络 + URL 超时，非回归）
 - Server typecheck: **✅ pass**
+- SDD: c42–c46 **archived**，39/39 specs ✅
+- 验证审计: **28/28 通过**（含修复后）
 - 下一阶段建议: 前端适配 SSE + OutputRead 契约；c13 授权
 
 ### GAP-BOARD 更新
@@ -207,13 +226,13 @@
 **16/16 主 gap 清零或最小可用**（G14 文件系统管线已落地；完整插件 host 仍属 c13）。
 
 > ⚠️ **对拍说明**: 早期 ✅ 曾表示「端点存在」而非「行为对齐」。c36–c40 + 2026-07-11 复核修了多处伪对齐。
-> `llman sdd list`: 部分 change tasks.md 可能仍未勾选/未 archive——**不要仅凭本表 archive**。
+> c42–c46 已 archived，验证审计 28/28 通过（含修复）。
 
-| 上次 Agent | 第三轮深度复核 + c42–c46 提案与实现 |
-| 上次操作 | **commits**: `996e2a88`（P1 行为债）→ `7ee5972a`（c42–c46 提案）→ `4707d0f5`（c42 outputs 契约）→ `baf7e326`（c43 studio SSE+RAG）→ `4a392a9b`（c44 sources search/extractors）→ `4ce61589`（c45 QA context/citations）→ `33abbf83`（c46 CSV parser+research resilience）。 |
-| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) 前端适配 SSE + OutputRead 契约。(5) SDD archive 卫生。 |
+| 上次 Agent | 第三轮深度复核 + c42–c46 实现 + 验证审计修复 |
+| 上次操作 | **commits**: `996e2a88`（P1 行为债）→ `7ee5972a`（c42–c46 提案）→ `4707d0f5`–`33abbf83`（c42–c46 实现）→ `f1b53fa2`（tasks 全勾）→ `73be56b1`（archive +31 reqs 合并）→ `d3ffdd7c`（验证审计 5 项偏差修复: MINDMAP label/fallback citations/typed errors/CSV row metadata/prompt case-folding）。 |
+| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) 前端适配 SSE + OutputRead 契约。(5) SDD archive 卫生（c24–c27 旧未勾 tasks 仍 active）。 |
 | 已知问题 | **🟡 后置**: stats preset；context window 压缩；export note STRUCTURED；finish 后台生成；waiting SSE 心跳；audio/video parsers；plugin host；ToolLoopAgent。**🟡**: web typecheck；`api/generated/` → c14。 |
-| 质量门禁 | `bun test` (server) → 209 pass / 2 fail（网络超时，非回归）。`bun typecheck` (server) → ✅ pass。 |
+| 质量门禁 | `bun test` (server) → 209 pass / 2 fail（网络超时，非回归）。`bun typecheck` (server) → ✅ pass。`llman sdd validate --specs` → 39/39 ✅。验证审计 → 28/28 ✅。 |
 
 ---
 
