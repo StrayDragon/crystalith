@@ -142,7 +142,7 @@
 
 <!-- CURRENT -->
 
-**2026-07-11 第三轮深度复核 + c42–c46 实现 + 验证审计修复。全部 8 P0 清零，28/28 验证项通过。**
+**2026-07-11 第三轮深度复核 + c42–c46 实现 + 验证审计 + QA 架构审查。全部 8 P0 清零，28/28 验证通过，7/7 HIGH 架构修复完成。**
 
 ### 复核方法
 
@@ -176,9 +176,27 @@ c42–c46 已全部 archive（`llman sdd archive run`），spec deltas 合并到
 | CSV 缺 `csv_row_start/end` metadata | 低 | parser 返回 `pages[]`；pipeline 优先用 pages 而非 `chunkText` |
 | `/prompt:` regex 大小写不一致 | 低 | 对齐 v1: `[a-z0-9_-]{1,32}` + case-insensitive + `toLowerCase()` |
 
+### QA 架构审查（cl-codebase-cleanup skill + 3 个并行 Explore agent）
+
+使用 cl-codebase-cleanup skill 的 7 类代码债务框架审查 c42–c46 新代码。
+发现 7 个 HIGH + 12 个 MEDIUM + 18 个 LOW——**7 个 HIGH 已全部修复**（commit `2fa63263`）：
+
+| # | 问题 | 严重度 | 修复 | 新模块 |
+| - | ---- | ------ | ---- | ------ |
+| H1 | `/search` 不传 host → 永远返回空结果（**功能 bug**） | HIGH | `searchWeb` 默认调 `getSearxngHost()`；`webSearchTool.execute` 委托 `searchWeb` | `web-search.ts` |
+| H2 | extractors 硬编码在 router + 读错配置源(env vs config) | HIGH | `listExtractorMetadata()` 在 factory.ts，用 extractor 的 `isAvailable(config)` | `factory.ts` |
+| H3 | connector 409 抛 plain object 非 Error | HIGH | `ConnectorUnavailableError extends Error` | `source-connectors/router.ts` |
+| H4 | agent.ts ↔ router.ts 循环依赖 | HIGH | lock 函数提取到独立模块 | **`research/lock.ts`** |
+| H5 | 两个 SSE 端点 ~90% 重复 | HIGH | `createSseResponse()` 共享 headers/busy guard/error handling | **`studio/service.ts`** |
+| H6 | POST 与 SSE 重复生成逻辑 | HIGH | `generateOutline()`/`generateMarkdown()` 共享核心；router 643→~190 行 | `studio/service.ts` |
+| H7 | non-streaming /qa 生成 SSE 再解析回来（脆弱） | HIGH | `generateQaDirect()` 用 `generateText` 直接返回 | `qa/handler.ts` |
+
+**MEDIUM 未修（可后置）**：citation hydration 重复 3 处；ContextStats 未定义在 shared；错误 envelope 不一致；streamNoEvidence 不走 ensureInlineCitations；dedup 块重复；batch re-embed 跳过 FAILED 门控；SLIDES 缺 postprocess case。
+
 ### 仍开放（后置项）
 
 - P1 残留：stats preset（chart+table）；context window 压缩；export note STRUCTURED 类型；finish 后台生成；waiting SSE 心跳
+- MEDIUM 架构债：citation hydration 共享 helper；ContextStats 定义到 shared；错误 envelope 统一；SLIDES postprocess
 - P2 架构债：audio/video parsers；plugin host；ToolLoopAgent 迁移；batch DELETE 方法（BREAKING，留 c14）
 - c13/c14 等人授权；web typecheck；`api/generated/` → c14
 
@@ -188,7 +206,8 @@ c42–c46 已全部 archive（`llman sdd archive run`），spec deltas 合并到
 - Server typecheck: **✅ pass**
 - SDD: c42–c46 **archived**，39/39 specs ✅
 - 验证审计: **28/28 通过**（含修复后）
-- 下一阶段建议: 前端适配 SSE + OutputRead 契约；c13 授权
+- QA 架构审查: **7/7 HIGH 修复完成**；MEDIUM/LOW 后置
+- 下一阶段建议: 前端适配 SSE + OutputRead 契约；c13 授权；MEDIUM 架构债清理
 
 ### GAP-BOARD 更新
 
@@ -228,11 +247,11 @@ c42–c46 已全部 archive（`llman sdd archive run`），spec deltas 合并到
 > ⚠️ **对拍说明**: 早期 ✅ 曾表示「端点存在」而非「行为对齐」。c36–c40 + 2026-07-11 复核修了多处伪对齐。
 > c42–c46 已 archived，验证审计 28/28 通过（含修复）。
 
-| 上次 Agent | 第三轮深度复核 + c42–c46 实现 + 验证审计修复 |
-| 上次操作 | **commits**: `996e2a88`（P1 行为债）→ `7ee5972a`（c42–c46 提案）→ `4707d0f5`–`33abbf83`（c42–c46 实现）→ `f1b53fa2`（tasks 全勾）→ `73be56b1`（archive +31 reqs 合并）→ `d3ffdd7c`（验证审计 5 项偏差修复: MINDMAP label/fallback citations/typed errors/CSV row metadata/prompt case-folding）。 |
+| 上次 Agent | 第三轮深度复核 + c42–c46 实现 + 验证审计 + QA 架构审查 |
+| 上次操作 | **commits**: `996e2a88`（P1 行为债）→ `7ee5972a`（c42–c46 提案）→ `4707d0f5`–`33abbf83`（c42–c46 实现）→ `f1b53fa2`（tasks 全勾）→ `73be56b1`（archive +31 reqs 合并）→ `d3ffdd7c`（验证审计 5 项偏差修复）→ `2fa63263`（QA 架构审查 7 个 HIGH 修复: /search host bug/extractor factory/connector Error/lock.ts 循环依赖/studio service.ts 提取/qa generateQaDirect）。 |
 | 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) 前端适配 SSE + OutputRead 契约。(5) SDD archive 卫生（c24–c27 旧未勾 tasks 仍 active）。 |
-| 已知问题 | **🟡 后置**: stats preset；context window 压缩；export note STRUCTURED；finish 后台生成；waiting SSE 心跳；audio/video parsers；plugin host；ToolLoopAgent。**🟡**: web typecheck；`api/generated/` → c14。 |
-| 质量门禁 | `bun test` (server) → 209 pass / 2 fail（网络超时，非回归）。`bun typecheck` (server) → ✅ pass。`llman sdd validate --specs` → 39/39 ✅。验证审计 → 28/28 ✅。 |
+| 已知问题 | **🟡 后置 P1**: stats preset；context window 压缩；export note STRUCTURED；finish 后台生成；waiting SSE 心跳。**🟡 MEDIUM 架构债**: citation hydration 共享；ContextStats→shared；错误 envelope 统一；SLIDES postprocess。**🟡 P2**: audio/video parsers；plugin host；ToolLoopAgent；web typecheck；`api/generated/` → c14。 |
+| 质量门禁 | `bun test` (server) → 209 pass / 2 fail（网络超时，非回归）。`bun typecheck` (server) → ✅ pass。`llman sdd validate --specs` → 39/39 ✅。验证审计 → 28/28 ✅。QA 架构审查 → 7/7 HIGH ✅。 |
 
 ---
 
