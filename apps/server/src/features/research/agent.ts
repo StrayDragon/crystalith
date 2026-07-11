@@ -23,6 +23,7 @@ import { db } from '../../db/index.ts';
 import { researchSessions, researchSteps } from '../../db/schema.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { Semaphore } from '../../shared/semaphore.ts';
+import { renewLock } from './router.ts';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -243,12 +244,36 @@ function combineSignals(...signals: AbortSignal[]): AbortSignal {
 // Deduplication
 // ---------------------------------------------------------------------------
 
+/** c46: Enhanced dedup — URL normalization + title similarity (v1 graph.py:517-562). */
+function normalizeUrl(url: string): string {
+  return url
+    .toLowerCase()
+    .replace(/[?#].*$/, '') // strip query/fragment
+    .replace(/\/+$/, '') // strip trailing slashes
+    .replace(/^https?:\/\/www\./, 'https://'); // strip www. prefix
+}
+
+function titleSimilarity(a: string, b: string): number {
+  const wordsA = new Set(a.toLowerCase().split(/\s+/).filter(Boolean));
+  const wordsB = new Set(b.toLowerCase().split(/\s+/).filter(Boolean));
+  if (wordsA.size === 0 || wordsB.size === 0) return 0;
+  let common = 0;
+  for (const w of wordsA) if (wordsB.has(w)) common++;
+  return common / Math.max(wordsA.size, wordsB.size);
+}
+
 function deduplicateResults(results: ResearchResult[]): ResearchResult[] {
-  const seen = new Set<string>();
+  const seenUrls = new Set<string>();
+  const seenTitles: string[] = [];
   return results.filter((r) => {
-    const key = r.url.toLowerCase().replace(/[?#].*$/, '');
-    if (seen.has(key)) return false;
-    seen.add(key);
+    const urlKey = normalizeUrl(r.url);
+    if (seenUrls.has(urlKey)) return false;
+    // c46: title similarity check (v1 word-overlap ≥ 0.85)
+    if (r.title && seenTitles.some((t) => titleSimilarity(t, r.title) >= 0.85)) {
+      return false;
+    }
+    seenUrls.add(urlKey);
+    if (r.title) seenTitles.push(r.title);
     return true;
   });
 }
@@ -298,6 +323,8 @@ export async function runResearchCore(
 
   for (let iter = state.iteration; iter <= state.maxIterations && !signal.aborted; iter++) {
     state.iteration = iter;
+    // c46: renew lock each iteration to prevent expiry on long runs (v1 _extend_lock_periodically)
+    renewLock(sessionId);
     db()
       .update(researchSessions)
       .set({ status: 'planning', currentIteration: iter })
@@ -309,7 +336,14 @@ export async function runResearchCore(
     try {
       plan = await planSearches(state, signal);
     } catch {
-      break;
+      // c46: fallback 2-query plan (v1 graph.py:225-236) — don't abort the run
+      plan = {
+        queries: [
+          { query: state.topic, engine: 'Web', priority: 1, reason: 'fallback' },
+          { query: `${state.topic} overview`, engine: 'Web', priority: 2, reason: 'fallback' },
+        ],
+        reasoning: 'Fallback plan (AI planning failed)',
+      };
     }
 
     // 2. HITL
@@ -356,7 +390,13 @@ export async function runResearchCore(
     try {
       analysis = await analyzeResults(state, signal);
     } catch {
-      break;
+      // c46: fallback coverage analysis (v1 graph.py:675-686) — don't abort the run
+      analysis = {
+        summary: 'Analysis failed — using fallback',
+        coverageEstimate: 0.5,
+        needMore: false,
+        suggestedQueries: [],
+      };
     }
 
     // 5. Loop condition
@@ -505,8 +545,43 @@ export async function generateFinalReport(state: ResearchState): Promise<string>
 
   const result = streamText({
     model,
-    system: `You are a research report writer. Produce a comprehensive markdown report.`,
-    prompt: `Topic: ${state.topic}\n\nResults:\n${context}\n\nWrite a detailed report with executive summary, findings, and conclusions.`,
+    // c46: v1 REPORT_SYSTEM_PROMPT (graph.py:94-128) — 6-section structured template
+    system: `You are an expert research analyst writing a comprehensive research report.
+
+Your report should be well-structured, insightful, and actionable. Follow this template:
+
+## Report Structure:
+
+1. **Executive Summary** (2-3 sentences)
+   - Key findings and main takeaway
+
+2. **Background & Context**
+   - Why this topic matters
+   - Current landscape
+
+3. **Key Findings** (3-5 main points)
+   - Each finding with supporting evidence
+   - Include source references [1], [2], etc.
+
+4. **Analysis & Insights**
+   - Patterns and trends observed
+   - Implications and significance
+
+5. **Recommendations** (if applicable)
+   - Actionable next steps
+   - Areas for further research
+
+6. **References**
+   - Numbered list of sources cited
+
+## Guidelines:
+- Write in clear, professional language
+- Use Markdown formatting (headers, lists, bold, links)
+- Be objective and evidence-based
+- Cite sources using [n] notation
+- Keep the report focused and concise (500-1500 words)
+- Write in the same language as the research topic`,
+    prompt: `Topic: ${state.topic}\n\nResults:\n${context}\n\nWrite a detailed report following the structure above.`,
   });
 
   const chunks: string[] = [];
