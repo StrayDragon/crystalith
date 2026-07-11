@@ -506,17 +506,38 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     }));
   })
 
-  // Re-embed a source
+  // Re-embed a source (v1: processing → ready/failed)
   .post('/sources/:id/re-embed', async ({ params }) => {
     const id = Number(params.id);
     const row = db().select().from(sources).where(eq(sources.id, id)).get();
     if (!row) sourceNotFound(id);
-    // Trigger re-embed via embed strategy (fire-and-forget)
-    const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
-    const strategy = new EmbedStrategy();
-    deleteSourceVectors(db(), id);
-    await strategy.indexSource(id, row.notebookId);
-    return { source_id: id, re_embedded: true };
+
+    db()
+      .update(sources)
+      .set({ status: 'processing', errorMessage: null })
+      .where(eq(sources.id, id))
+      .run();
+
+    try {
+      const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
+      const strategy = new EmbedStrategy();
+      deleteSourceVectors(db(), id);
+      await strategy.indexSource(id, row.notebookId);
+      db().update(sources).set({ status: 'ready' }).where(eq(sources.id, id)).run();
+      bumpSourcesEpoch(row.notebookId);
+      return { source_id: id, re_embedded: true };
+    } catch (error) {
+      db()
+        .update(sources)
+        .set({
+          status: 'failed',
+          errorMessage: error instanceof Error ? error.message : String(error),
+        })
+        .where(eq(sources.id, id))
+        .run();
+      bumpSourcesEpoch(row.notebookId);
+      throw error;
+    }
   })
 
   // Search sources (placeholder — delegates to embed strategy)
@@ -563,14 +584,34 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     const reembedded: number[] = [];
     const failed: number[] = [];
     for (const sid of source_ids) {
+      const row = db().select().from(sources).where(eq(sources.id, sid)).get();
+      if (!row || row.notebookId !== nid) {
+        failed.push(sid);
+        continue;
+      }
+      db()
+        .update(sources)
+        .set({ status: 'processing', errorMessage: null })
+        .where(eq(sources.id, sid))
+        .run();
       try {
         deleteSourceVectors(db(), sid);
         await strategy.indexSource(sid, nid);
+        db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sid)).run();
         reembedded.push(sid);
-      } catch {
+      } catch (error) {
+        db()
+          .update(sources)
+          .set({
+            status: 'failed',
+            errorMessage: error instanceof Error ? error.message : String(error),
+          })
+          .where(eq(sources.id, sid))
+          .run();
         failed.push(sid);
       }
     }
+    if (reembedded.length || failed.length) bumpSourcesEpoch(nid);
     return {
       reembedded_ids: reembedded,
       failed_ids: failed,
@@ -614,10 +655,10 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       }
     }
 
-    // Link mode: create a lightweight source without fetching URL content (v1 api_ingest.py:379-391)
+    // Link mode: create a lightweight source, then embed so it is searchable (v1 still embeds)
     if (mode === 'link') {
       const linkTitle = title ?? url;
-      const snippet = `Link to ${linkTitle}`;
+      const snippet = `# ${linkTitle}\n\n${url}\n\n来源链接（未抓取正文）`;
       const sourceRow = db()
         .insert(sources)
         .values({
@@ -625,13 +666,12 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
           filename: linkTitle,
           mimeType: 'text/plain',
           parserType: 'link',
-          status: 'ready',
+          status: 'processing',
           dedupKey,
           metadata: { url, mode: 'link' },
         })
         .returning()
         .get();
-      // Single chunk with the link info
       db()
         .insert(chunks)
         .values({
@@ -641,6 +681,22 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
           metadata: { url, type: 'link' },
         })
         .run();
+
+      try {
+        const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
+        const strategy = new EmbedStrategy();
+        await strategy.indexSource(sourceRow.id, nid);
+        db().update(sources).set({ status: 'ready' }).where(eq(sources.id, sourceRow.id)).run();
+      } catch (error) {
+        db()
+          .update(sources)
+          .set({
+            status: 'failed',
+            errorMessage: error instanceof Error ? error.message : String(error),
+          })
+          .where(eq(sources.id, sourceRow.id))
+          .run();
+      }
       bumpSourcesEpoch(nid);
       set.status = 201;
       return { source_id: sourceRow.id, filename: linkTitle, mode: 'link' };

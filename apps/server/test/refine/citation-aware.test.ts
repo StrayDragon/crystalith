@@ -131,9 +131,10 @@ describe('retrieveForRefine (citation-aware)', () => {
     expect(cite.snippet).toBe('relevant evidence text here');
     expect(cite.page_number).toBe(3);
     expect(cite.paragraph_index).toBe(7);
-    // context: [N] Source: <filename> (chunk <idx>)\n<full text>
-    expect(result.context).toContain('[1] Source: report.pdf (chunk 0)');
+    // context: [N] Source: <filename> (chunk <idx>)\n<full text> — 1-based idx
+    expect(result.context).toContain('[1] Source: report.pdf (chunk 1)');
     expect(result.context).toContain('relevant evidence text here');
+    expect(cite.chunk_index).toBe(1);
   });
 
   it('filters out chunks not in source_ids (post-filter)', async () => {
