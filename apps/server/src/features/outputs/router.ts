@@ -121,24 +121,42 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
 
     // Resolve model (config default or explicit model_id override)
     const modelConfig = model_id ? getModelById(String(model_id)) : getDefaultChatModel();
-    if (!modelConfig) throw new Error('No chat model configured');
+    // c42: granular error mapping (v1 api.py:309-361)
+    if (!modelConfig) {
+      set.status = 503;
+      return { error: 'No chat model configured', error_code: 'MODEL_UNAVAILABLE' };
+    }
     const model = withRetry(await resolveModel(modelConfig));
 
-    const result = await runOutputPipeline({
-      model,
-      notebookId,
-      type: String(type) as ToolOutputType,
-      chunkIds: resolvedChunkIds,
-      sourceIds: resolvedSourceIds,
-      prompt: prompt ? String(prompt) : undefined,
-      preference: preference === 'speed' ? 'speed' : 'quality',
-      topK: top_k ? Number(top_k) : undefined,
-      minScore: min_score ? Number(min_score) : undefined,
-      modelId: model_id ? String(model_id) : undefined,
-    });
+    let result;
+    try {
+      result = await runOutputPipeline({
+        model,
+        notebookId,
+        type: String(type) as ToolOutputType,
+        chunkIds: resolvedChunkIds,
+        sourceIds: resolvedSourceIds,
+        prompt: prompt ? String(prompt) : undefined,
+        preference: preference === 'speed' ? 'speed' : 'quality',
+        topK: top_k ? Number(top_k) : undefined,
+        minScore: min_score ? Number(min_score) : undefined,
+        modelId: model_id ? String(model_id) : undefined,
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      // Schema validation failure → 422; retrieval/value errors → 400
+      if (msg.includes('retrieval') || msg.includes('validation')) {
+        set.status = msg.includes('validation') ? 422 : 400;
+        return { error: msg };
+      }
+      set.status = 500;
+      return { error: msg };
+    }
 
+    // c42: return v1 OutputRead contract (snake_case) instead of PipelineResult
+    const row = db().select().from(outputs).where(eq(outputs.id, result.outputId)).get();
     set.status = 201;
-    return result;
+    return serializeOutput(row!);
   })
 
   // List outputs for a notebook
@@ -181,40 +199,53 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     const exportedAt = new Date().toISOString();
 
     if (format === 'json') {
-      // Hydrate citations + sources metadata
+      // c42: full citation fields + correct source metadata (v1 OutputExportJson)
       const chunkIds = (row.chunkIds as number[] | null) ?? [];
       const citationRows = chunkIds.length
         ? db()
             .select({
               chunkId: chunks.id,
               text: chunks.text,
+              chunkIndex: chunks.chunkIndex,
               sourceId: chunks.sourceId,
               sourceName: sources.filename,
+              chunkMeta: chunks.metadata,
             })
             .from(chunks)
             .innerJoin(sources, eq(chunks.sourceId, sources.id))
             .where(inArray(chunks.id, chunkIds))
             .all()
         : [];
-      const citations = citationRows.map((c) => ({
-        source_id: c.sourceId,
-        source_name: c.sourceName,
-        chunk_id: c.chunkId,
-        snippet: c.text.slice(0, 200),
-      }));
+      const citations = citationRows.map((c, i) => {
+        const meta = (c.chunkMeta as Record<string, unknown> | null) ?? {};
+        return {
+          source_id: c.sourceId,
+          source_name: c.sourceName,
+          chunk_id: c.chunkId,
+          chunk_index: c.chunkIndex + 1, // 1-based
+          page_number: typeof meta.page === 'number' ? meta.page : null,
+          paragraph_index: typeof meta.paragraph_index === 'number' ? meta.paragraph_index : null,
+          snippet: c.text.slice(0, 200),
+          score: 1 - i * 0.01, // approximate (ranking preserved)
+        };
+      });
       const sourceIds = [...new Set(citations.map((c) => c.source_id))];
       const sourceRows = sourceIds.length
         ? db().select().from(sources).where(inArray(sources.id, sourceIds)).all()
         : [];
       return {
-        id: row.id,
         notebook_id: row.notebookId,
-        type: row.type,
-        content: row.content,
+        output_id: row.id,
+        output_type: row.type,
         prompt: row.prompt,
-        chunk_ids: row.chunkIds,
+        content: row.content,
         citations,
-        sources: sourceRows.map((s) => ({ id: s.id, filename: s.filename, status: s.status })),
+        sources: sourceRows.map((s) => ({
+          source_id: s.id,
+          source_name: s.filename,
+          mime_type: s.mimeType,
+          parser_type: s.parserType,
+        })),
         exported_at: exportedAt,
       };
     }

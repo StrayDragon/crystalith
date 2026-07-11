@@ -99,24 +99,11 @@ export async function runOutputPipeline(input: PipelineInput): Promise<PipelineR
         minScore,
         sourceIds: input.sourceIds,
       });
-    } catch {
-      // Fallback: if RAG is unavailable, get all chunks (scoped to sourceIds if set)
-      const rows = db()
-        .select({
-          id: chunks.id,
-          text: chunks.text,
-          sourceId: chunks.sourceId,
-          chunkIndex: chunks.chunkIndex,
-        })
-        .from(chunks)
-        .innerJoin(sources, eq(chunks.sourceId, sources.id))
-        .where(eq(sources.notebookId, input.notebookId))
-        .all();
-      const filtered = input.sourceIds?.length
-        ? rows.filter((r) => input.sourceIds!.includes(r.sourceId))
-        : rows;
-      chunkRows = filtered.map((r) => ({ ...r, score: 0 }));
-      return finishPipeline(input, chunkRows);
+    } catch (error) {
+      // c42: RAG failure MUST propagate — do NOT dump all chunks (v1 has no such fallback)
+      throw new Error(
+        `Output retrieval failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
 
     chunkRows = searchResults.map((r) => ({
@@ -156,11 +143,14 @@ async function finishPipeline(
   const { content: postprocessed, warnings } = postprocessOutput(object, input.type);
 
   // Map citations: LLM may reference chunks by index [1], [2] — map to full Citation objects
-  // v1 output_graph.py:722-742. If the LLM output has no explicit citation indices,
-  // fall back to attaching all retrieved chunks (current behavior).
-  const citations = mapCitations(postprocessed, chunkRows);
+  // v1 output_graph.py:722-742. Build a citation map (1-based index → Citation).
+  const { citations, citationMap } = buildCitationMap(chunkRows);
 
-  // Persist
+  // c42: recursively map citations INTO the content tree (v1 _map_citations).
+  // Replaces numeric [1,3] arrays with full Citation dicts, then persists the mapped content.
+  const mappedContent = mapCitationsIntoContent(postprocessed, citationMap, citations);
+
+  // Persist — content now has resolved citation objects (not bare integers)
   const row = db()
     .insert(outputs)
     .values({
@@ -168,7 +158,7 @@ async function finishPipeline(
       type: input.type,
       prompt: input.prompt ?? null,
       chunkIds: chunkRows.map((c) => c.id),
-      content: postprocessed as Record<string, unknown>,
+      content: mappedContent as Record<string, unknown>,
     })
     .returning()
     .get();
@@ -176,7 +166,7 @@ async function finishPipeline(
   return {
     outputId: row.id,
     type: input.type,
-    content: postprocessed,
+    content: mappedContent,
     chunkCount: chunkRows.length,
     citations,
     warnings,
@@ -202,11 +192,65 @@ function postprocessOutput(object: unknown, type: string): PostprocessResult {
     content = generateFallbackContent(type) as Record<string, unknown>;
   }
 
-  // sanitize_citations_indices: clean up any invalid citation references
-  // (the LLM might emit [0] or negative indices — clamp to valid range)
-  content = sanitizeCitations(content);
+  // c42: per-type field-level backfill (v1 _ensure_minimum_content output_graph.py:290-375)
+  content = ensureMinimumContentFields(content, type);
 
   return { content, warnings };
+}
+
+/**
+ * c42: per-type field-level backfill (v1 output_graph.py:290-375).
+ * Ensures required arrays/objects exist for each type instead of whole-object replacement.
+ */
+function ensureMinimumContentFields(
+  content: Record<string, unknown>,
+  type: string,
+): Record<string, unknown> {
+  const ensureArray = (key: string): void => {
+    if (!Array.isArray(content[key]) || (content[key] as unknown[]).length === 0) {
+      content[key] = [];
+    }
+  };
+  const ensureString = (key: string, fallback = ''): void => {
+    if (typeof content[key] !== 'string' || !content[key]) {
+      content[key] = fallback;
+    }
+  };
+
+  switch (type) {
+    case 'FAQ':
+    case 'BULLETS':
+      ensureArray('items');
+      break;
+    case 'TIMELINE':
+      ensureArray('events');
+      break;
+    case 'QUIZ':
+      ensureArray('questions');
+      break;
+    case 'GUIDE':
+      ensureArray('modules');
+      ensureArray('examples');
+      ensureArray('exercises');
+      break;
+    case 'BRIEFING':
+      ensureArray('sections');
+      ensureArray('points');
+      break;
+    case 'MINDMAP':
+      if (!content.root || typeof content.root !== 'object') {
+        content.root = { title: '', children: [] };
+      }
+      break;
+    case 'PARAGRAPH':
+      ensureString('text');
+      break;
+    case 'STRUCTURED':
+      ensureArray('bullets');
+      ensureArray('terms');
+      break;
+  }
+  return content;
 }
 
 /** Check if the content object has meaningful data for its type. */
@@ -232,47 +276,54 @@ function isContentEmpty(content: Record<string, unknown>, type: string): boolean
   }
 }
 
-/** Generate minimal fallback content for a type. */
+/** Generate minimal fallback content for a type (v1 output_graph.py:198-287). */
 function generateFallbackContent(type: string, error?: unknown): Record<string, unknown> {
   const errorMsg = error instanceof Error ? error.message : 'Generation failed';
+  const _fallback = true; // v1 _fallback marker
   switch (type) {
     case 'FAQ':
-      return { items: [{ question: '生成失败', answer: errorMsg }] };
+      return { title: '生成失败', items: [{ question: '生成失败', answer: errorMsg }], _fallback };
     case 'BULLETS':
-      return { items: [{ text: errorMsg }] };
+      return { title: '生成失败', items: [{ text: errorMsg }], _fallback };
+    case 'TIMELINE':
+      return { title: '生成失败', events: [], _fallback };
+    case 'QUIZ':
+      return { title: '生成失败', questions: [], _fallback };
+    case 'GUIDE':
+      return {
+        title: '生成失败',
+        objective: errorMsg,
+        modules: [],
+        examples: [],
+        exercises: [],
+        _fallback,
+      };
+    case 'BRIEFING':
+      return { title: '生成失败', sections: [], points: [], _fallback };
+    case 'MINDMAP':
+      return { root: { title: '生成失败', children: [] }, _fallback };
     case 'PARAGRAPH':
-      return { text: errorMsg };
+      return { text: errorMsg, _fallback };
     case 'STRUCTURED':
-      return { title: '生成失败', bullets: [{ text: errorMsg }], terms: [] };
+      return { title: '生成失败', bullets: [{ text: errorMsg }], terms: [], _fallback };
     default:
-      return { title: '生成失败', _error: errorMsg };
+      return { title: '生成失败', _error: errorMsg, _fallback };
   }
 }
 
-/** Clamp/clean citation indices in the content to valid 1-based range. */
-function sanitizeCitations(content: Record<string, unknown>): Record<string, unknown> {
-  // Citation indices may appear in the text fields — no structured cleanup
-  // needed since we map citations separately. This is a pass-through for now.
-  return content;
-}
-
 // ---------------------------------------------------------------------------
-// Citation mapping (v1 output_graph.py:722-742)
+// Citation mapping (v1 output_graph.py:108-195, 722-742)
 // ---------------------------------------------------------------------------
 
 /**
- * Map LLM citation references to full Citation objects.
- *
- * v1: the LLM outputs content with inline [1], [2] references. MapCitations
- * resolves these numeric indices to the corresponding retrieved chunk and
- * builds full Citation objects with source_name, snippet, score.
- *
- * Since the LLM doesn't explicitly list which chunks it cited, we map ALL
- * retrieved chunks (the ones that were in the context) — this is the same
- * behavior as before, but now using full Citation objects with metadata.
+ * Build a 1-based citation map from retrieved chunks (v1 _build_citation).
+ * Returns { citations: flat array, citationMap: index → Citation }.
  */
-function mapCitations(content: unknown, chunkRows: ChunkRow[]): Citation[] {
-  if (chunkRows.length === 0) return [];
+function buildCitationMap(chunkRows: ChunkRow[]): {
+  citations: Citation[];
+  citationMap: Map<number, Citation>;
+} {
+  if (chunkRows.length === 0) return { citations: [], citationMap: new Map() };
 
   // Hydrate source names
   const sourceIds = [...new Set(chunkRows.map((c) => c.sourceId))];
@@ -296,11 +347,12 @@ function mapCitations(content: unknown, chunkRows: ChunkRow[]): Citation[] {
     .all();
   const chunkMetaMap = new Map(chunkMetaRows.map((c) => [c.id, c.metadata]));
 
-  return chunkRows.map((c) => {
+  const citationMap = new Map<number, Citation>();
+  const citations: Citation[] = chunkRows.map((c, i) => {
     const meta = (chunkMetaMap.get(c.id) ?? {}) as Record<string, unknown>;
     const pageNumber = typeof meta.page === 'number' ? meta.page : null;
     const paragraphIndex = typeof meta.paragraph_index === 'number' ? meta.paragraph_index : null;
-    return {
+    const citation: Citation = {
       source_id: c.sourceId,
       source_name: sourceMap.get(c.sourceId) ?? 'unknown',
       chunk_id: c.id,
@@ -310,5 +362,46 @@ function mapCitations(content: unknown, chunkRows: ChunkRow[]): Citation[] {
       snippet: c.text.slice(0, 200),
       score: c.score,
     };
+    citationMap.set(i + 1, citation); // 1-based index
+    return citation;
   });
+
+  return { citations, citationMap };
+}
+
+/**
+ * Recursively map citation indices INTO the content tree (v1 _map_citations).
+ *
+ * Walks the content object; wherever a `citations` key holds a numeric array
+ * like [1, 3], replaces it with the full Citation dicts from citationMap.
+ * If indices don't resolve, falls back to the first citation (v1 behavior).
+ */
+function mapCitationsIntoContent(
+  content: unknown,
+  citationMap: Map<number, Citation>,
+  fallback: Citation[],
+): unknown {
+  if (Array.isArray(content)) {
+    return content.map((item) => mapCitationsIntoContent(item, citationMap, fallback));
+  }
+  if (content && typeof content === 'object' && !Array.isArray(content)) {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(content as Record<string, unknown>)) {
+      if (key === 'citations' && Array.isArray(value)) {
+        // Resolve numeric indices to full Citation objects (v1 _resolve_citations)
+        const indices = value
+          .map((v) => (typeof v === 'number' && v > 0 ? v : null))
+          .filter((v): v is number => v !== null);
+        const resolved = indices
+          .map((idx) => citationMap.get(idx))
+          .filter((c): c is Citation => c !== undefined);
+        // Fallback: if no indices resolved but we have citations, use the first (v1)
+        result[key] = resolved.length > 0 ? resolved : fallback.length > 0 ? [fallback[0]!] : [];
+      } else {
+        result[key] = mapCitationsIntoContent(value, citationMap, fallback);
+      }
+    }
+    return result;
+  }
+  return content;
 }
