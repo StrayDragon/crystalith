@@ -295,11 +295,7 @@ export const qaRouter = new Elysia({ prefix: '/v2' })
     // Find the assistant message to export
     let assistantMessage;
     if (messageId) {
-      assistantMessage = db()
-        .select()
-        .from(messages)
-        .where(eq(messages.id, messageId))
-        .get();
+      assistantMessage = db().select().from(messages).where(eq(messages.id, messageId)).get();
       if (!assistantMessage || assistantMessage.sessionId !== sessionId) {
         throw new NotFoundError('Message not found');
       }

@@ -174,13 +174,17 @@ export function useRefine() {
     error: toolsError,
     isLoading: toolsLoading,
     mutate: refreshTools,
-  } = useSWR(isConnected ? 'workspace/tools' : null, async () => {
-    const { data, error } = await api.v2.workspace.tools.get();
-    if (error) throw error;
-    return data as any;
-  }, {
-    revalidateOnFocus: false,
-  });
+  } = useSWR(
+    isConnected ? 'workspace/tools' : null,
+    async () => {
+      const { data, error } = await api.v2.workspace.tools.get();
+      if (error) throw error;
+      return data as any;
+    },
+    {
+      revalidateOnFocus: false,
+    },
+  );
 
   const toolsDiagnostics = useMemo(() => toolsData?.diagnostics ?? null, [toolsData]);
 

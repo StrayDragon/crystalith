@@ -12,8 +12,9 @@ context: |-
   - Canonical specs: llmanspec/specs
   - Active change workspaces: llmanspec/changes (archive: llmanspec/changes/archive)
   - Deferred proposals / parked changes: llmanspec/notplan-changes
-  - v2 changes use c<NN>- prefix: c00 (foundation, done) → c14 (cleanup). Lower number = higher priority.
+  - v2 changes use c<NN>- prefix: c00 (foundation) → c41+ (align/cleanup). Lower number ≈ earlier foundation; check PROGRESS.v2.md + `llman sdd list` for truth.
   - All c<NN> changes are batch:all — must read all design.md before implementing any.
+  - Do not archive a change solely because PROGRESS marks ✅ — tasks.md may be incomplete (e.g. c25–c27).
 
   Spec-workflow-specific notes:
   - For v2, do NOT run `pnpm run api:sync` (v1 OpenAPI chain removed in v2).

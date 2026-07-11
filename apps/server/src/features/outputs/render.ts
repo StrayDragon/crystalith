@@ -269,7 +269,10 @@ function renderStructured(content: Record<string, unknown>, parts: string[]): vo
  */
 export function splitTextToChunks(text: string, chunkSize = 500, overlap = 50): string[] {
   if (!text.trim()) return [];
-  const paragraphs = text.split('\n\n').map((p) => p.trim()).filter(Boolean);
+  const paragraphs = text
+    .split('\n\n')
+    .map((p) => p.trim())
+    .filter(Boolean);
   const chunks: string[] = [];
 
   for (const para of paragraphs) {

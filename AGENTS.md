@@ -11,58 +11,61 @@ Keep this managed block so `llman sdd update` can refresh it.
 
 # Crystalith v2 — AI Agent Guidelines
 
-> This file replaces the v1 AGENTS.md. The repository is being rewritten in Bun + TypeScript (Elysia + React).
-> The Python v1 implementation is preserved in `backend/py/` as a reference SSOT for the rewrite.
+> Bun + TypeScript rewrite (Elysia + React). Python v1 lives in `backend/py/` as a **reference SSOT** — do not modify it.
+> **Progress SSOT**: always read `PROGRESS.v2.md` first (status board, current batch, gaps, handoff).
 
-## Project Structure (v2 Target)
+## Project Structure
 
 ```
 crystalith/
 ├── apps/
-│   ├── server/           # ✅ Bun + Elysia (Phase 0 scaffold done)
+│   ├── server/           # Bun + Elysia + Drizzle + AI SDK + sqlite-vec
 │   │   └── src/
 │   │       ├── server.ts           # Entry: Elysia HTTP server
-│   │       ├── features/           # Business domains (notebooks, qa, sources, ...)
-│   │       ├── shared/             # Cross-cutting (db, ai, config, vector, utils)
+│   │       ├── features/           # Business domains
+│   │       ├── ai/                 # Provider registry, generate, stream
+│   │       ├── rag/                # Chunk/embed/search + strategy registry
+│   │       ├── shared/             # Config, queue, net, extraction
 │   │       └── db/                 # Drizzle schema + migrations
-│   └── web/               # Vite + React + TypeScript SPA (reused, API layer updated)
+│   └── web/               # Vite + React + TypeScript SPA
 │       └── src/
 │           ├── features/workspace/ # Main workspace UI
-│           ├── api/                # API client layer (eden RPC replacing generated client)
+│           ├── api/                # eden RPC (+ legacy generated types until c14)
 │           └── shared/             # Shared UI utilities, Layer system
-├── package.json          # ✅ Bun workspace root
-├── config/               # Runtime config (app.yaml + secret.env)
-├── llmanspec/            # Spec-driven development specs + changes
-├── backend/py/           # 🔒 v1 Python reference SSOT — do NOT modify
-└── scripts/              # Maintenance scripts
+├── packages/
+│   ├── shared/            # Zod schemas + types SSOT
+│   └── crystalith-slidev/ # Slidev integration
+├── config/                # Runtime config (app.yaml + secret.env)
+├── llmanspec/             # Spec-driven development specs + changes
+├── backend/py/            # 🔒 v1 Python reference SSOT — do NOT modify
+├── data/                  # Runtime DB + uploads (gitignored)
+└── scripts/               # Maintenance scripts
 ```
 
 ## Current State
 
-The repo is in **v2 scaffold** phase on branch `v2-dev`:
+> Detail: `PROGRESS.v2.md`. Summary as of 2026-07-11:
 
-- ✅ Phase 0 scaffold done: Bun workspace + Elysia server skeleton
-- ✅ pnpm → bun migration complete
-- ✅ Shared packages workspace set up (`packages/shared/`)
-- Python v1 code is preserved intact in `backend/py/` as reference
-- `llmanspec/specs/` contains ~34 business-level specs
-- `llmanspec/changes/` contains 15 v2 migration changes (with dependency graph)
+- ✅ Core server + data layer + AI runtime + RAG + feature routers (c00–c12, c15–c41)
+- ✅ Frontend API migration largely done (c35); residual type imports from `api/generated/` until c14
+- ✅ Behavior-align batches c36–c40 + multi-round review complete
+- ⏸️ **c13** distribution (Tauri / single-binary) — blocked on human auth
+- ⏸️ **c14** cleanup delivery (delete v1 Python, generated client, tag v2.0.0) — blocked on human auth
+- 🔄 Active SDD hygiene: some DONE changes still have unchecked/partial `tasks.md` (see `llman sdd list`) — do not archive until tasks match reality
 
 ## Reference: v1 Python Implementation
 
 `backend/py/` is the Python v1 codebase (FastAPI + pydantic-ai + SQLAlchemy + ChromaDB).
-During v2 rewrite, treat this as a **reference SSOT** for understanding feature behavior and domain logic.
-Read it to understand **what** the feature does, then design a better **how** in TypeScript.
-Do NOT blindly copy/paste — understand the intent and optimize for the Bun/Elysia/ai-sdk stack.
+Read it to understand **what** a feature does, then implement a better **how** in TypeScript.
 
-Key entry points in v1:
+Key entry points:
 
 - `backend/py/src/crystalith/features/*/` — business domains
-- `backend/py/src/crystalith/web/routers.py` — route registration (18 routers)
-- `backend/py/src/crystalith/shared/ai/` — AI agent runtime (pydantic-ai + pydantic-graph)
-- `backend/py/src/crystalith/db/models.py` — 17 SQLAlchemy tables
+- `backend/py/src/crystalith/web/routers.py` — route registration
+- `backend/py/src/crystalith/shared/ai/` — AI agent runtime
+- `backend/py/src/crystalith/db/models.py` — SQLAlchemy tables
 
-## v2 Target Stack
+## v2 Stack
 
 | Role                 | Technology                                                                                                |
 | -------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -70,41 +73,41 @@ Key entry points in v1:
 | Web Framework        | **Elysia** (eden RPC — zero-codegen type-safe client)                                                     |
 | ORM                  | **Drizzle ORM** (bun-sqlite driver)                                                                       |
 | AI Runtime           | **Vercel AI SDK v7** (`ai` + `@ai-sdk/*` — ToolLoopAgent + WorkflowAgent + generateObject + toolApproval) |
-| Schema Validation    | **Zod** (shared frontend/backend)                                                                         |
+| Schema Validation    | **Zod** (shared frontend/backend via `packages/shared`)                                                   |
 | Vector Store         | **sqlite-vec** (in-process, same DB file)                                                                 |
-| PDF Parsing          | **unpdf** (pdf.js based, MIT)                                                                             |
-| Template Engine      | **Nunjucks** (already used in frontend)                                                                   |
-| Desktop Distribution | **Tauri v2** + Bun sidecar (post-Phase-4)                                                                 |
+| PDF Parsing          | **unpdf**                                                                                                 |
+| Template Engine      | **Nunjucks** (frontend)                                                                                   |
+| Desktop Distribution | **Tauri v2** + Bun sidecar (c13)                                                                          |
 
 ## Build, Test, and Development Commands
 
-From repo root (Bun workspace):
+From repo root:
 
-- `bun install` — install all dependencies (server + frontend + shared)
-- `bun dev` — start full dev environment (parallel: server --watch + Vite HMR)
-- `bun test` — run all tests
+- `bun install` — install all dependencies
+- `bun dev` / `just dev` — server --watch + Vite HMR
+- `bun test` — run tests
 - `bun typecheck` — typecheck everything
 
-Fast path (individual packages):
+Fast path:
 
-- `cd apps/server && bun dev` — Elysia server with hot reload (port 8032)
-- `cd apps/web && bun dev` — Vite dev server (port 3000)
+- `cd apps/server && bun dev` — Elysia server (port 8032)
+- `cd apps/web && bun dev` — Vite (port 3000)
 - `cd apps/web && bun test` — Vitest
-- `cd apps/web && bun run typecheck` — TypeScript typechecking
+- `cd apps/web && bun run typecheck` — frontend typecheck
 
 ## Coding Style
 
 - **TypeScript/React**: 2-space indentation; `PascalCase` components; `useX` hooks; `camelCase` elsewhere
-- **Layer System** (z-index): Use the unified Layer system in `apps/web/src/shared/layer/` — never hardcode z-index values
-- Frontend uses `oxfmt` for formatting; match existing style
+- **Layer System** (z-index): Use `apps/web/src/shared/layer/` — never hardcode z-index
+- Formatter: `oxfmt`; linter: `oxlint`
 
-## v2 Migration Workflow
+## v2 Workflow
 
-1. Run `llman sdd list` to see all active changes and their status
-2. Read relevant v1 code in `backend/py/` to understand a feature
-3. Design v2 implementation, then implement in `apps/server/` with Elysia + Drizzle + AI SDK
-4. Frontend API calls gradually switch from generated client to eden RPC
-5. Do NOT modify v1 Python code; Python is the reference SSOT
+1. Read `PROGRESS.v2.md` (`<!-- CURRENT -->` batch + known gaps)
+2. Run `llman sdd list` for active change status (do not assume PROGRESS ✅ means tasks/archive are clean)
+3. Read relevant v1 code in `backend/py/` for behavior
+4. Implement in `apps/server/` / `apps/web/` / `packages/shared/`
+5. Do NOT modify `backend/py/`
 
 ## Commit Guidelines
 
@@ -115,16 +118,17 @@ Fast path (individual packages):
 ## Key Decisions
 
 - **All 20+ features preserved** — research, analysis, studio, refine, etc. are core business
-- **RAG strategies are pluggable** — registry pattern (Embed, BM25, Hybrid, Page Index, GraphRAG)
+- **RAG strategies are pluggable** — registry (Embed, BM25, Hybrid, Page Index; GraphRAG later)
 - **Built-in Eval Benchmark Harness** — Golden Dataset + LLM-as-Judge
-- **Rivu dropped** — v2 replaces server-side state machine with message-embedded JSON components
-- **Single binary distribution** — `bun build --compile` → ~75MB self-contained executable
-- **Tauri desktop app** — post-Phase-4, Bun sidecar + Rust shell
-- **AI SDK v7 是唯一 AI 层** — ToolLoopAgent(agent runtime) + WorkflowAgent(工作流) + generateObject(结构化输出) + toolApproval(HITL) + streamText(流式)。不引入 Pi agent-core、Mastra、LangGraph.js、XState 等任何第三方 agent/工作流框架。
+- **Rivu dropped** — message-embedded JSON components instead of server-side state machine
+- **Single binary** — `bun build --compile`
+- **AI SDK v7 only** — no Pi agent-core, Mastra, LangGraph.js, XState, etc.
+- **Zod SSOT** — types only in `packages/shared`; no `@elysiajs/swagger` / Elysia `t.*`
+- **React locked at 18.2.0** for now (see PROGRESS open decisions)
 
 ## Agent-Specific Instructions
 
-- For v2 design decisions, check `llmanspec/changes/` for the relevant change spec
-- When implementing a feature, trace through the v1 Python code to understand behavior
-- Use llman SDD workflow for spec changes: `/llman-sdd-*` skills
-- For spec-driven development conventions, see `llmanspec/config.yaml`
+- Progress / handoff: `PROGRESS.v2.md`
+- Design decisions: `llmanspec/changes/`
+- Package-local rules: `apps/server/AGENTS.md`, `apps/web/AGENTS.md`, `config/AGENTS.md`, `backend/py/AGENTS.md`
+- Spec workflow: `/llman-sdd-*` skills; conventions in `llmanspec/config.yaml`

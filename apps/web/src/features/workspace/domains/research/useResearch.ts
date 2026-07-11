@@ -306,7 +306,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
       if (!notebookId) return;
       setError('');
       try {
-        const { data, error: postErr } = await api.v2.research({ id: researchId }).finish.post();
+        const { error: postErr } = await api.v2.research({ id: researchId }).finish.post();
         if (postErr) throw postErr;
         setActiveSession((prev) => (prev ? { ...prev, status: 'completed' } : prev));
       } catch (error) {
@@ -521,7 +521,7 @@ export function useResearch(notebookId: number | undefined): UseResearchResult {
               }
             }
           }
-        } catch (error) {
+        } catch {
           if (!abortController.signal.aborted) {
             scheduleReconnect('连接中断，');
           }

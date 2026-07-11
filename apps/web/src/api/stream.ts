@@ -64,7 +64,7 @@ export async function* streamRequest(
   const url = `${BASE_URL}${path}`;
   const headers: Record<string, string> = {
     Accept: 'text/event-stream',
-    ...options.headers
+    ...options.headers,
   };
 
   if (options.body !== undefined) {

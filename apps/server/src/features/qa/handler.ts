@@ -1,5 +1,7 @@
 import type { LanguageModelV4 } from '@ai-sdk/provider';
-import type { Citation, ChatTurn } from '@crystalith/shared';
+import type { ChatTurn } from '@crystalith/shared';
+
+import { streamQaResponse } from '../../ai/stream.ts';
 // QA handler — deterministic retrieval + streamText generation.
 //
 // c36: aligned with v1 `run_qa_pipeline`. The retrieval+judgment is now
@@ -15,7 +17,6 @@ import {
   type JudgeResult,
   type ContextStats,
 } from './retrieve-and-judge.ts';
-import { streamQaResponse } from '../../ai/stream.ts';
 
 // Re-export for consumers (router, presets)
 export { retrieveAndJudge, noEvidenceAnswerForReason, resolveCitations };
@@ -102,19 +103,13 @@ export async function streamQa(opts: QaHandlerOptions): Promise<Response> {
  * Stream a no-evidence answer as SSE without invoking the LLM.
  * Emits chunk + done events matching the normal stream shape.
  */
-function streamNoEvidence(
-  answer: string,
-  judgment: JudgeResult,
-  opts: QaHandlerOptions,
-): Response {
+function streamNoEvidence(answer: string, judgment: JudgeResult, opts: QaHandlerOptions): Response {
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       const emit = (event: string, data: unknown) => {
-        controller.enqueue(
-          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-        );
+        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
       };
 
       try {

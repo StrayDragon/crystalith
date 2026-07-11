@@ -225,7 +225,12 @@ export const outputsRouter = new Elysia({ prefix: '/v2' })
     const chunkIds = (row.chunkIds as number[] | null) ?? [];
     const citationRows = chunkIds.length
       ? db()
-          .select({ chunkId: chunks.id, text: chunks.text, sourceId: chunks.sourceId, sourceName: sources.filename })
+          .select({
+            chunkId: chunks.id,
+            text: chunks.text,
+            sourceId: chunks.sourceId,
+            sourceName: sources.filename,
+          })
           .from(chunks)
           .innerJoin(sources, eq(chunks.sourceId, sources.id))
           .where(inArray(chunks.id, chunkIds))

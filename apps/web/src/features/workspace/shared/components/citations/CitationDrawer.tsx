@@ -132,8 +132,8 @@ export default function CitationDrawer({
         });
         if (fetchErr) throw fetchErr;
         setContext(data as unknown as CitationContextResponse);
-      } catch (err) {
-        setError((err as Error)?.message || '加载引用上下文失败');
+      } catch (error) {
+        setError((error as Error)?.message || '加载引用上下文失败');
       } finally {
         setLoading(false);
       }

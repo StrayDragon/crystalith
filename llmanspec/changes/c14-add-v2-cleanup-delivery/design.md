@@ -19,7 +19,8 @@ All gates must pass for `v2.0.0` tag:
 grep -r "backend/py" . --include="*.md" --include="*.json" --exclude-dir=.git | wc -l  # → 0
 
 # 0 generated client references
-grep -r "generated" frontend/web/src --include="*.ts" --include="*.tsx" | wc -l  # → 0
+rg "api/generated" apps/web/src   # → 0
+bun typecheck
 
 # Full test suite
 bun test                    # All packages

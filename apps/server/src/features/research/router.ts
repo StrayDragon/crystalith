@@ -15,7 +15,7 @@
 //   GET    /v2/research/:id/stream         — SSE progress relay (c37: named events)
 //
 // c37: control endpoints now record steps + transition correctly (v1 parity).
-import { and, desc, eq, gt, inArray } from 'drizzle-orm';
+import { and, desc, eq, gt } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
@@ -41,18 +41,90 @@ import {
 // ---------------------------------------------------------------------------
 
 const apiDocs: OpenApiRoute[] = [
-  { path: '/v2/research', method: 'post', summary: 'Start a new research session', tags: ['research'], responses: { 201: { description: 'Created research session' } } },
-  { path: '/v2/research', method: 'get', summary: 'List research sessions', tags: ['research'], responses: { 200: { description: 'List of research sessions' } } },
-  { path: '/v2/research/:id', method: 'get', summary: 'Get research session details', tags: ['research'], responses: { 200: { description: 'Research session with results' } } },
-  { path: '/v2/research/:id', method: 'delete', summary: 'Delete a research session', tags: ['research'], responses: { 204: { description: 'Deleted' } } },
-  { path: '/v2/research/:id/approve', method: 'post', summary: 'Approve search plan (HITL)', tags: ['research'], responses: { 200: { description: 'Approval recorded' } } },
-  { path: '/v2/research/:id/modify', method: 'post', summary: 'Modify search plan and continue (HITL)', tags: ['research'], responses: { 200: { description: 'Modified plan recorded, resuming' } } },
-  { path: '/v2/research/:id/skip', method: 'post', summary: 'Skip iteration', tags: ['research'], responses: { 200: { description: 'Iteration skipped' } } },
-  { path: '/v2/research/:id/finish', method: 'post', summary: 'Early complete + report generation', tags: ['research'], responses: { 200: { description: 'Session completed with report' } } },
-  { path: '/v2/research/:id/cancel', method: 'post', summary: 'Cancel a research session', tags: ['research'], responses: { 200: { description: 'Session cancelled' } } },
-  { path: '/v2/research/:id/resume', method: 'post', summary: 'Resume from inferred state', tags: ['research'], responses: { 200: { description: 'Research resumed' } } },
-  { path: '/v2/research/:id/export', method: 'post', summary: 'Export research report', tags: ['research'], responses: { 200: { description: 'Report exported' } } },
-  { path: '/v2/research/:id/stream', method: 'get', summary: 'SSE stream for research progress', tags: ['research'], responses: { 200: { description: 'SSE event stream' } } },
+  {
+    path: '/v2/research',
+    method: 'post',
+    summary: 'Start a new research session',
+    tags: ['research'],
+    responses: { 201: { description: 'Created research session' } },
+  },
+  {
+    path: '/v2/research',
+    method: 'get',
+    summary: 'List research sessions',
+    tags: ['research'],
+    responses: { 200: { description: 'List of research sessions' } },
+  },
+  {
+    path: '/v2/research/:id',
+    method: 'get',
+    summary: 'Get research session details',
+    tags: ['research'],
+    responses: { 200: { description: 'Research session with results' } },
+  },
+  {
+    path: '/v2/research/:id',
+    method: 'delete',
+    summary: 'Delete a research session',
+    tags: ['research'],
+    responses: { 204: { description: 'Deleted' } },
+  },
+  {
+    path: '/v2/research/:id/approve',
+    method: 'post',
+    summary: 'Approve search plan (HITL)',
+    tags: ['research'],
+    responses: { 200: { description: 'Approval recorded' } },
+  },
+  {
+    path: '/v2/research/:id/modify',
+    method: 'post',
+    summary: 'Modify search plan and continue (HITL)',
+    tags: ['research'],
+    responses: { 200: { description: 'Modified plan recorded, resuming' } },
+  },
+  {
+    path: '/v2/research/:id/skip',
+    method: 'post',
+    summary: 'Skip iteration',
+    tags: ['research'],
+    responses: { 200: { description: 'Iteration skipped' } },
+  },
+  {
+    path: '/v2/research/:id/finish',
+    method: 'post',
+    summary: 'Early complete + report generation',
+    tags: ['research'],
+    responses: { 200: { description: 'Session completed with report' } },
+  },
+  {
+    path: '/v2/research/:id/cancel',
+    method: 'post',
+    summary: 'Cancel a research session',
+    tags: ['research'],
+    responses: { 200: { description: 'Session cancelled' } },
+  },
+  {
+    path: '/v2/research/:id/resume',
+    method: 'post',
+    summary: 'Resume from inferred state',
+    tags: ['research'],
+    responses: { 200: { description: 'Research resumed' } },
+  },
+  {
+    path: '/v2/research/:id/export',
+    method: 'post',
+    summary: 'Export research report',
+    tags: ['research'],
+    responses: { 200: { description: 'Report exported' } },
+  },
+  {
+    path: '/v2/research/:id/stream',
+    method: 'get',
+    summary: 'SSE stream for research progress',
+    tags: ['research'],
+    responses: { 200: { description: 'SSE event stream' } },
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -570,7 +642,10 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
           notebookId: row.notebookId,
           type: 'BRIEFING',
           prompt: `research:${id}`,
-          content: { title: `研究报告：${row.topic}`, sections: [{ heading: '报告', points: [{ text: row.finalReport }] }] },
+          content: {
+            title: `研究报告：${row.topic}`,
+            sections: [{ heading: '报告', points: [{ text: row.finalReport }] }],
+          },
         })
         .returning()
         .get();
@@ -658,7 +733,9 @@ export const researchRouter = new Elysia({ prefix: '/v2' })
         const encoder = new TextEncoder();
 
         const emit = (eventName: string, data: unknown) => {
-          controller.enqueue(encoder.encode(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`));
+          controller.enqueue(
+            encoder.encode(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`),
+          );
         };
 
         // Heartbeat every 30s (v1 api.py heartbeat)

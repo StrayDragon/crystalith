@@ -131,7 +131,10 @@ function ChunkItem({ chunk }: { chunk: ChunkRead }) {
 }
 
 async function fetchSourceSummary(notebookId: number, sourceId: number) {
-  const { data, error } = await api.v2.notebooks({ nid: notebookId }).sources({ sid: sourceId }).summary.get();
+  const { data, error } = await api.v2
+    .notebooks({ nid: notebookId })
+    .sources({ sid: sourceId })
+    .summary.get();
   if (error) throw error;
   return data as any;
 }
@@ -297,7 +300,10 @@ export default function SourceDetailDialog({
 
     // Call real API
     try {
-      const { data: response, error: qaErr } = await api.v2.notebooks({ nid: notebookId }).sources({ sid: source.id }).qa.post({ question: userMessage.content } as any);
+      const { data: response, error: qaErr } = await api.v2
+        .notebooks({ nid: notebookId })
+        .sources({ sid: source.id })
+        .qa.post({ question: userMessage.content } as any);
       if (qaErr) throw qaErr;
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,

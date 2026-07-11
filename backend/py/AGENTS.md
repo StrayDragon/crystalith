@@ -1,22 +1,22 @@
 # backend/py — v1 Python Reference Implementation
 
-> ⚠️ **This is the v1 Python backend, preserved as a reference SSOT for the v2 TypeScript rewrite.**
-> See root `AGENTS.md` and `llmanspec/changes/` for the v2 plan.
+> ⚠️ **v1 Python backend, preserved as a reference SSOT for the v2 TypeScript rewrite.**
+> See root `AGENTS.md`, `apps/server/AGENTS.md`, and `PROGRESS.v2.md`.
 >
-> **Do NOT modify this codebase** during v2 development unless it's a critical bugfix that applies
-> to both v1 and the v2 design. The v2 server lives in `server/` (to be scaffolded in Phase 0).
+> **Do NOT modify this codebase** during v2 development unless it's a critical bug fix that
+> applies to both v1 and the v2 design. The live v2 server is **`apps/server/`**.
 
 ## Historically (v1)
 
 This directory contained the Python backend for Crystalith:
+
 - FastAPI + uvicorn HTTP server
 - pydantic-ai + pydantic-graph for AI agent runtime
 - SQLAlchemy[asyncio] + alembic for data layer
 - ChromaDB for vector storage
-- 21 feature modules, ~94 API endpoints, ~39k lines
+- 21 feature modules, ~94 API endpoints
 
-The previous python cleanup removed ~5,200 lines of
-glue code (Rivu, Ollama, probe monitoring, etc.) while preserving all business features.
+Earlier cleanup removed ~5,200 lines of glue (Rivu, Ollama, probe monitoring, etc.) while preserving business features.
 
 ## Build, Test, and Development (v1)
 

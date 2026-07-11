@@ -2,7 +2,7 @@ import { SourceSchema } from '@crystalith/shared';
 // Sources CRUD + upload router — /v2/sources, /v2/notebooks/:nid/sources
 //
 // Mirrors v1 `features/sources/api.py` + `features/sources/api_ingest.py`.
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { Elysia, NotFoundError } from 'elysia';
 
 import { db } from '../../db/index.ts';
@@ -168,11 +168,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     const sortBy = (query as { sort_by?: string }).sort_by ?? 'date';
     const sortOrder = (query as { sort_order?: string }).sort_order ?? 'desc';
 
-    let rows = db()
-      .select()
-      .from(sources)
-      .where(eq(sources.notebookId, nid))
-      .all();
+    let rows = db().select().from(sources).where(eq(sources.notebookId, nid)).all();
 
     // Tag filter
     if (tagFilter) {
@@ -202,8 +198,16 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
           cmp = a.filename.localeCompare(b.filename);
           break;
         case 'size': {
-          const ca = db().select({ c: sql<number>`COUNT(*)` }).from(chunks).where(eq(chunks.sourceId, a.id)).get();
-          const cb = db().select({ c: sql<number>`COUNT(*)` }).from(chunks).where(eq(chunks.sourceId, b.id)).get();
+          const ca = db()
+            .select({ c: sql<number>`COUNT(*)` })
+            .from(chunks)
+            .where(eq(chunks.sourceId, a.id))
+            .get();
+          const cb = db()
+            .select({ c: sql<number>`COUNT(*)` })
+            .from(chunks)
+            .where(eq(chunks.sourceId, b.id))
+            .get();
           cmp = (ca?.c ?? 0) - (cb?.c ?? 0);
           break;
         }
@@ -359,7 +363,11 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       set.status = 409;
       return { error: 'Tag name already exists', existing_tag_id: existing.id };
     }
-    const row = db().insert(sourceTags).values({ notebookId: nid, name: rawName }).returning().get();
+    const row = db()
+      .insert(sourceTags)
+      .values({ notebookId: nid, name: rawName })
+      .returning()
+      .get();
     return {
       id: row.id,
       notebook_id: row.notebookId,
@@ -453,7 +461,8 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
   })
 
   .delete('/notebooks/:nid/sources/tags/:tid/sources', ({ params, body }) => {
-    const nid = Number(params.nid);
+    const _nid = Number(params.nid);
+    void _nid;
     const tid = Number(params.tid);
     const { source_ids } = body as { source_ids: number[] };
     // Idempotent: report how many were actually removed (v1 api_tags.py)

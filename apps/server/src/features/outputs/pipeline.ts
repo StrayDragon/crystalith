@@ -1,4 +1,5 @@
 import type { LanguageModelV4 } from '@ai-sdk/provider';
+import type { Citation } from '@crystalith/shared';
 // Output pipeline — RAG retrieval → build context → generateObject →
 // postprocess → map citations → persist.
 //
@@ -8,7 +9,6 @@ import type { LanguageModelV4 } from '@ai-sdk/provider';
 // source_ids filtering is now wired through (c27 was incomplete — it called
 // RAG but never passed source_ids to the retrieval layer).
 import { eq, inArray } from 'drizzle-orm';
-import type { Citation } from '@crystalith/shared';
 
 import { db } from '../../db/index.ts';
 import { chunks, outputs, sources } from '../../db/schema.ts';
@@ -75,7 +75,12 @@ export async function runOutputPipeline(input: PipelineInput): Promise<PipelineR
   if (input.chunkIds && input.chunkIds.length > 0) {
     // Explicit selection — direct fetch
     const rows = db()
-      .select({ id: chunks.id, text: chunks.text, sourceId: chunks.sourceId, chunkIndex: chunks.chunkIndex })
+      .select({
+        id: chunks.id,
+        text: chunks.text,
+        sourceId: chunks.sourceId,
+        chunkIndex: chunks.chunkIndex,
+      })
       .from(chunks)
       .where(inArray(chunks.id, input.chunkIds))
       .all();
@@ -97,7 +102,12 @@ export async function runOutputPipeline(input: PipelineInput): Promise<PipelineR
     } catch {
       // Fallback: if RAG is unavailable, get all chunks (scoped to sourceIds if set)
       const rows = db()
-        .select({ id: chunks.id, text: chunks.text, sourceId: chunks.sourceId, chunkIndex: chunks.chunkIndex })
+        .select({
+          id: chunks.id,
+          text: chunks.text,
+          sourceId: chunks.sourceId,
+          chunkIndex: chunks.chunkIndex,
+        })
         .from(chunks)
         .innerJoin(sources, eq(chunks.sourceId, sources.id))
         .where(eq(sources.notebookId, input.notebookId))
@@ -121,7 +131,10 @@ export async function runOutputPipeline(input: PipelineInput): Promise<PipelineR
   return finishPipeline(input, chunkRows);
 }
 
-async function finishPipeline(input: PipelineInput, chunkRows: ChunkRow[]): Promise<PipelineResult> {
+async function finishPipeline(
+  input: PipelineInput,
+  chunkRows: ChunkRow[],
+): Promise<PipelineResult> {
   // Build context
   const context =
     chunkRows.length > 0
@@ -274,7 +287,12 @@ function mapCitations(content: unknown, chunkRows: ChunkRow[]): Citation[] {
   const chunkMetaRows = db()
     .select({ id: chunks.id, metadata: chunks.metadata })
     .from(chunks)
-    .where(inArray(chunks.id, chunkRows.map((c) => c.id)))
+    .where(
+      inArray(
+        chunks.id,
+        chunkRows.map((c) => c.id),
+      ),
+    )
     .all();
   const chunkMetaMap = new Map(chunkMetaRows.map((c) => [c.id, c.metadata]));
 

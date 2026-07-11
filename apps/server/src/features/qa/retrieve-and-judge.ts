@@ -1,3 +1,4 @@
+import type { Citation } from '@crystalith/shared';
 // Deterministic retrieval + evidence judge — ports v1 `run_qa_pipeline`
 // (service.py:274-487).
 //
@@ -13,7 +14,6 @@ import { and, eq, inArray } from 'drizzle-orm';
 
 import { db } from '../../db/index.ts';
 import { chunks, sources } from '../../db/schema.ts';
-import type { Citation } from '@crystalith/shared';
 import { ragRegistry } from '../../rag/registry.ts';
 import { computeConfidence } from './confidence.ts';
 
@@ -105,9 +105,7 @@ export interface RetrieveAndJudgeOptions {
  * 11. Compute confidence
  * 12. evidence=true
  */
-export async function retrieveAndJudge(
-  opts: RetrieveAndJudgeOptions,
-): Promise<JudgeResult> {
+export async function retrieveAndJudge(opts: RetrieveAndJudgeOptions): Promise<JudgeResult> {
   const topK = opts.topK ?? 5;
   const minScore = opts.minScore ?? EVIDENCE_THRESHOLD_DEFAULT;
   const maxTokens = opts.maxTokens ?? 8000;
@@ -206,7 +204,8 @@ export async function retrieveAndJudge(
     const chunk = chunkMap.get(r.chunk_id)!;
     const metadata = (chunk.metadata ?? {}) as Record<string, unknown>;
     const pageNumber = typeof metadata.page === 'number' ? metadata.page : null;
-    const paragraphIndex = typeof metadata.paragraph_index === 'number' ? metadata.paragraph_index : null;
+    const paragraphIndex =
+      typeof metadata.paragraph_index === 'number' ? metadata.paragraph_index : null;
     return {
       source_id: r.source_id,
       source_name: sourceMap.get(r.source_id) ?? 'unknown',

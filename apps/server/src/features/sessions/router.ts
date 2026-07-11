@@ -267,7 +267,10 @@ export const sessionsRouter = new Elysia({ prefix: '/v2' })
         console.error('[sessions] convert embedding failed:', error);
         db()
           .update(sources)
-          .set({ status: 'failed', errorMessage: error instanceof Error ? error.message : 'Embedding failed' })
+          .set({
+            status: 'failed',
+            errorMessage: error instanceof Error ? error.message : 'Embedding failed',
+          })
           .where(eq(sources.id, source.id))
           .run();
         throw new Error('Failed to embed session source');

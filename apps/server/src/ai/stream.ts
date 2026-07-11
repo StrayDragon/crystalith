@@ -35,7 +35,14 @@ export interface StreamQaOptions {
    * Context stats (v1 ContextStats) attached to the done event when pre-computed
    * by the deterministic retrieval stage (c36).
    */
-  contextStats?: { total: number; system: number; history: number; retrieval: number; query: number; max_tokens: number };
+  contextStats?: {
+    total: number;
+    system: number;
+    history: number;
+    retrieval: number;
+    query: number;
+    max_tokens: number;
+  };
   /**
    * Optional sink for tool-result events emitted during the fullStream loop.
    * Each tool call's result is forwarded here so the caller can accumulate

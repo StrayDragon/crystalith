@@ -5,12 +5,18 @@
 - [ ] `git rm -rf backend/py/`
 - [ ] 验证: 仓库不含 Python 代码
 
-## 2. Delete OpenAPI Chain
+## 2. Delete OpenAPI / generated client (deferred from frontend migration)
 
-- [ ] `git rm apps/web/openapi.gen.json`
+> c35 已把运行时调用迁到 eden；`apps/web/src/api/generated/` 仍有 ~18 处 **类型** import。
+> 删除前必须先迁类型，否则 typecheck 会炸。
+
+- [ ] 盘点 `apps/web/src` 中所有 `api/generated` import（类型 vs 运行时）
+- [ ] 将残留类型迁到 `@crystalith/shared` 或 eden/`App` 推导类型（禁止再依赖 generated）
+- [ ] 清理 `api/setup.ts` / `setupTests.ts` 等对 `generated/client.gen` 的运行时接线
+- [ ] `git rm apps/web/openapi.gen.json`（若仍存在）
 - [ ] `git rm -rf apps/web/src/api/generated/`
-- [ ] 从 package.json 移除 `@hey-api/openapi-ts`
-- [ ] 验证: 前端编译无 generated client 引用
+- [ ] 从 package.json 移除 `@hey-api/openapi-ts` 及相关 `api:sync` / openapi 脚本（若仍存在）
+- [ ] 验证: `rg "api/generated" apps/web/src` → 0；`bun typecheck`（web）通过
 
 ## 3. Delete UPGRADES
 
@@ -33,7 +39,8 @@
 ## Verification
 
 ```bash
-grep -r "backend/py" . --include="*.md" --include="*.json" --exclude-dir=.git | wc -l  # 0
-grep -r "generated" frontend/web/src --include="*.ts" --include="*.tsx" | wc -l  # 0
-llman sdd validate --all --strict --no-interactive  # all pass
+rg "backend/py" --glob '*.md' --glob '*.json' -g '!.git' | wc -l   # expect 0 after v1 delete (docs may need rewrite)
+rg "api/generated" apps/web/src                                    # expect 0
+bun typecheck
+llman sdd validate --all --strict --no-interactive                 # all pass
 ```

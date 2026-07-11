@@ -12,7 +12,7 @@ Phase 5 是 v2 的终点：删除 v1 Python 代码，前端完全切换到 v2 AP
 ## What Changes
 
 - **REMOVED** `backend/py/` — 完整删除 v1 Python 代码
-- **REMOVED** `apps/web/openapi.gen.json` + `apps/web/src/api/generated/` — 删除 OpenAPI 生成链
+- **REMOVED** `apps/web/openapi.gen.json` + `apps/web/src/api/generated/` — 删除 OpenAPI 生成链（**先**把残留类型 import 迁到 `@crystalith/shared` / eden，再删）
 - **REMOVED** `UPGRADES/` — 调研文档已固化到 llmanspec changes，移除
 - **NEW** Eval 回归检测全量通过 (所有端点行为对比)
 - **NEW** GraphRAG / HyDE / Self-RAG 策略 (P2)
