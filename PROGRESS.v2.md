@@ -134,33 +134,31 @@
 
 <!-- CURRENT -->
 
-**✅ c36-c40 + 第二轮 P0/P1 修复全部完成。**
+**✅ c36-c40 + 两轮 P0/P1 修复完成。第三轮复核完成。**
 
-c36-c40 实现后进行了第二轮 5-agent 复核，修复了全部 4 个 P0 + 关键 P1。
+### 第三轮复核结论
 
-### 第二轮修复清单
+所有之前修复 **全部 HOLD（无回归）**。新发现 1 个 P0 + ~15 个 P1 + ~20 个 P2/P3。
 
-**P0（4/4 ✅）**:
-- research search step 记录 + waitForApproval 多余 step 移除
-- outputs source_ids 必填校验（空时 400）
-- notebooks template_id apply-on-create（创建子 sessions + tags）
+#### P0（1 项）
+1. **analysis: relations/contradictions 非 chunk-level edges** — 顶层 relations 仍是 LLM 文本对象；真正的 chunk edges 在非标准的 `computed_relations`（且用 camelCase 非 v1 snake_case）
 
-**P1 关键修复（✅）**:
-- research: skip/finish/cancel/resume status guards
-- outputs: GET/DELETE/export notebook 归属校验 + export 默认 markdown + Citations/Sources 段
-- analysis: 响应保留 computed chunk_ids + contradiction 模糊措辞 fallback
-- citations: /context 返回全文（非截断 200）+ citation 对象补 source_id/snippet/score + window 默认 1/1
-- studio: AI markdown 落盘文件系统
-- models: GET 单个 + role 过滤
-- tasks: cancel 返回 409（非 404）
-- messages: notebook 归属校验
+#### P1（~15 项，按域）
+- **QA**: export sources 查询 bug（只取第一个）; streaming 不持久化 citations; export 缺 notebook 校验
+- **research**: resume 对非 planning 无效; inferResumeState 三处分歧; cleanupExpiredLocks 从不调用; SSE 不发 waiting 事件
+- **outputs**: convert-to-source 缺 bumpSourcesEpoch; source_ids 不校验归属; GET/DELETE 归属可选
+- **analysis**: computed_relations camelCase; contradiction fallback 谓词分歧
+- **studio**: AI 生成路径不 sync outputs; source_ids 不强制
+- **CRUD**: messages POST 不设 201 + list limit=20(v1=200); models 响应 shape 与前端不匹配; models 忽略 capability 过滤
+
+#### P2/P3（~20 项，可推迟）
+field shape / 路径差异 / 排序 / filename / 分页 / RAG 编排器 / SLIDES guard 等。
 
 **当前状态**:
-- Server test: 209 pass / 2 fail（2 个网络依赖测试超时，非代码缺陷）
+- Server test: 209 pass / 2 fail（网络测试）
 - Typecheck: server 0 / web 23 (all pre-existing)
-- 19/21 前端域在 eden treaty 上运行
 
-**残留 P2（~20 项，可推迟）**: SSE header / 分页 / field shape / workspace stub / RAG 编排器 等。
+**残留 gap 大部分是 P2 级兼容/体验差异，可推迟到 c13/c14。**
 **下一阶段**: c13 (distribution) + c14 (cleanup) → v2.0.0（等人工授权）
 
 ## GAP-BOARD — v1 行为对齐提案规划
@@ -202,11 +200,11 @@ c36-c40 实现后进行了第二轮 5-agent 复核，修复了全部 4 个 P0 + 
 
 ✅ G16 (前端迁移) 已清零。GAP-BOARD 16/16 全部完成。
 
-| 上次 Agent | c36-c40 实现 + 第二轮深度复核 (5 并行 agent 逐域验证) |
-| 上次操作 | **c36-c40 全部实现并提交**: c40(shared infra)→c36(QA)→c38(outputs)→c37(research)→c39(sources+sessions)。每轮 bun test 209 pass / 2 fail(网络)，typecheck clean。**第二轮复核**: 5 agent 逐域验证 c36-c40 修复全部 VERIFIED，发现残留 4 P0 + ~18 P1 + ~20 P2（详见 CURRENT 段）。 |
-| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13阶段）。(2) **React**: 暂锁18.2.0，待迁移MUI后升19。(3) AI SDK v7 tool() 用inputSchema。(4) **c13/c14 等人工授权**。(5) 残留 gap 修复 vs 推迟到 c13/c14 的决策。(6) oxlint warning 147 处非阻塞。 |
-| 已知问题 | **🔴 P0(4)**: research search step 未记录 / waitForApproval 多余 step / outputs source_ids 可选(v1必填) / notebooks template_id 未实现。**🟡 P1(~18)**: 见 CURRENT 段详细列表（research status guards / outputs 归属 / analysis schema / studio 落盘 / models GET 单个等）。**🟡 P2(~20)**: SSE header / 分页 / field shape 等。**🟡 P1**: web typecheck 23 errors (all pre-existing)。**🟡 P1**: v2无auth（c13）。 |
-| 质量门禁 | `bun test` (server) → 209 pass / 2 fail（网络依赖测试超时，非代码缺陷）。`bun typecheck` (server) ✅。`bun run typecheck` (web) → 23 pre-existing errors。`bun test tests/bdd/` → 21 pass ✅。 |
+| 上次 Agent | c36-c40 + 两轮 P0/P1 修复 + 第三轮复核 |
+| 上次操作 | **三轮完整复核**: c36-c40 实现 → 第二轮复核修 4P0+18P1 → 第三轮复核确认全部 HOLD，新发现 1P0(analysis relations) + ~15P1 + ~20P2。残留 gap 主要是细节级兼容差异。 |
+| 开放决策 | (1) **Auth**: 本地免鉴权 + 回环绑定（c13阶段）。(2) **React**: 暂锁18.2.0。(3) **c13/c14 等人工授权**。(4) 残留 P1 是否继续修 vs 推迟。(5) oxlint warning 非阻塞。 |
+| 已知问题 | **🔴 P0(1)**: analysis relations 非 chunk-level edges。**🟡 P1(~15)**: 见 CURRENT 段。**🟡 P2/P3(~20)**: 可推迟。**🟡 P1**: web typecheck 23 errors (pre-existing)。**🟡 P1**: v2无auth（c13）。 |
+| 质量门禁 | `bun test` (server) → 209 pass / 2 fail（网络测试）。`bun typecheck` (server) ✅。`bun test tests/bdd/` → 21 pass ✅。 |
 
 ---
 
