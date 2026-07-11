@@ -271,6 +271,17 @@ export function getUploadMaxBytes(): number {
   return typeof n === 'number' && n > 0 ? n : 50 * 1024 * 1024;
 }
 
+/**
+ * c44: Dedup config gate (v1 settings.source_ingestion.dedup.enabled).
+ * Defaults to true when absent (v1 default).
+ */
+export function getDedupEnabled(): boolean {
+  const ingestion = (config().raw.source_ingestion as Record<string, unknown> | undefined);
+  const dedup = ingestion?.dedup as Record<string, unknown> | undefined;
+  const enabled = dedup?.enabled;
+  return enabled !== false; // default true
+}
+
 // ---------------------------------------------------------------------------
 // c40: AI / concurrency / embedding / search config (typed parsing)
 //

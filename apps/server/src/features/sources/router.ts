@@ -16,7 +16,7 @@ import {
 import { deleteSourceVectors } from '../../db/vectors.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
-import { getSecurityPolicy, getUploadMaxBytes } from '../../shared/config.ts';
+import { getDedupEnabled, getSecurityPolicy, getUploadMaxBytes } from '../../shared/config.ts';
 import { extractUrl } from '../../shared/extraction/factory.ts';
 import { validateUrlForFetch } from '../../shared/net/url-safety.ts';
 import { uploadDedupKey, urlDedupKey } from './dedup.ts';
@@ -244,9 +244,9 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
 
     const buffer = new Uint8Array(await file.arrayBuffer());
 
-    // Dedup check.
-    const dedupKey = uploadDedupKey(buffer);
-    if (dedupAction !== 'create_new') {
+    // c44: Dedup check — gated by config (v1 source_ingestion.dedup.enabled)
+    const dedupKey = getDedupEnabled() ? uploadDedupKey(buffer) : undefined;
+    if (dedupKey && dedupAction !== 'create_new') {
       const hit = db()
         .select({ id: sources.id })
         .from(sources)
@@ -506,11 +506,15 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     }));
   })
 
-  // Re-embed a source (v1: processing → ready/failed)
+  // Re-embed a source (v1: requires FAILED status; processing → ready/failed)
   .post('/sources/:id/re-embed', async ({ params }) => {
     const id = Number(params.id);
     const row = db().select().from(sources).where(eq(sources.id, id)).get();
     if (!row) sourceNotFound(id);
+    // c44: v1 _reembed_existing_source rejects non-failed with 400
+    if (row.status !== 'failed') {
+      throw new Error(`Source ${id} is not in failed status (current: ${row.status})`);
+    }
 
     db()
       .update(sources)
@@ -540,23 +544,39 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     }
   })
 
-  // Search sources (placeholder — delegates to embed strategy)
+  // c44: Search sources via real web search (v1 run_search_graph + SearXNG)
   .post('/notebooks/:nid/sources/search', async ({ params, body }) => {
     const nid = Number(params.nid);
     const { query, engine } = body as { query: string; engine?: string };
-    const { EmbedStrategy } = await import('../../rag/embed-strategy.ts');
-    const strategy = new EmbedStrategy();
-    const results = await strategy.retrieve(query, nid, { topK: 10 });
+    const results: Array<{
+      title: string;
+      url: string;
+      snippet: string;
+      source_id?: number;
+    }> = [];
+
+    try {
+      // Use the existing SearXNG web-search tool (same as research agent)
+      const { searchWeb } = await import('../../ai/tools/web-search.ts');
+      const webResults = await searchWeb(query, { maxResults: 10 });
+      for (const r of webResults) {
+        results.push({
+          title: r.title,
+          url: r.url,
+          snippet: r.snippet ?? '',
+        });
+      }
+    } catch (error) {
+      // SearXNG unavailable — return error info, not a crash
+      console.error('[sources/search] web search failed:', error);
+    }
+
     return {
-      status: 'ok',
+      status: results.length > 0 ? 'ok' : 'no_results',
       query,
-      engine: engine ?? 'Web',
-      results: results.map((r) => ({
-        chunk_id: r.chunk_id,
-        source_id: r.source_id,
-        text: r.text.slice(0, 200),
-        score: r.score,
-      })),
+      engine: engine ?? 'searxng',
+      created_at: new Date().toISOString(),
+      results,
     };
   })
 
@@ -635,9 +655,9 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       return { error: 'SSRF blocked', reason: (error as Error).message };
     }
 
-    // Dedup check.
-    const dedupKey = urlDedupKey(url);
-    if (dedupAction !== 'create_new') {
+    // c44: Dedup check — gated by config (v1 source_ingestion.dedup.enabled)
+    const dedupKey = getDedupEnabled() ? urlDedupKey(url) : undefined;
+    if (dedupKey && dedupAction !== 'create_new') {
       const hit = db()
         .select({ id: sources.id })
         .from(sources)
@@ -737,7 +757,7 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     }
   })
 
-  // Extractor policy routes
+  // c44: Extractor policy routes — GET returns full ExtractorsListResponse (v1 api_ingest.py:79-153)
   .get('/notebooks/:nid/extractors', ({ params }) => {
     const nid = Number(params.nid);
     const policy = db()
@@ -745,7 +765,45 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
       .from(notebookExtractorPolicies)
       .where(eq(notebookExtractorPolicies.notebookId, nid))
       .get();
-    return policy ?? { notebookId: nid, mode: 'inherit_global', enabledExtractors: null };
+    const mode = policy?.mode ?? 'inherit_global';
+    const enabledExtractors = policy?.enabledExtractors ?? null;
+
+    // Build per-extractor availability report (v1 ExtractorFactory.get_available_extractors)
+    const allExtractors = [
+      {
+        name: 'readability',
+        available: true,
+        display_name: 'Readability (built-in)',
+        priority: 10,
+        requires_api_key: false,
+        recovery_hint: null,
+      },
+      {
+        name: 'jina',
+        available: Boolean(process.env.JINA_API_KEY),
+        display_name: 'Jina Reader',
+        priority: 20,
+        requires_api_key: true,
+        recovery_hint: 'Set JINA_API_KEY environment variable',
+      },
+      {
+        name: 'firecrawl',
+        available: Boolean(process.env.FIRECRAWL_API_KEY),
+        display_name: 'Firecrawl',
+        priority: 30,
+        requires_api_key: true,
+        recovery_hint: 'Set FIRECRAWL_API_KEY environment variable',
+      },
+    ];
+
+    return {
+      notebook_id: nid,
+      mode,
+      enabled_extractors: enabledExtractors,
+      extractors: allExtractors,
+      default_extractor: 'readability',
+      fallback_enabled: mode === 'inherit_global',
+    };
   })
   .patch('/notebooks/:nid/extractors', ({ params, body }) => {
     const nid = Number(params.nid);

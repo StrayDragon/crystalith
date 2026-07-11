@@ -106,7 +106,18 @@ function getBindingOr404(notebookId: number, bindingId: number) {
 
 function getConnectorOr404(connectorId: string) {
   const connector = getBuiltinConnector(connectorId.trim());
-  if (!connector) throw new NotFoundError(`Source connector ${connectorId} not found`);
+  // c44: unavailable connector → 409 with install hint (v1 _get_connector_plugin_or_409)
+  if (!connector) {
+    throw {
+      status: 409,
+      body: {
+        error_code: 'CONNECTOR_UNAVAILABLE',
+        message: `Source connector "${connectorId}" is not available`,
+        hint: `Install or enable the "${connectorId}" connector plugin`,
+        plugin_diagnostic: { connector_id: connectorId, loaded: false },
+      },
+    };
+  }
   return connector;
 }
 

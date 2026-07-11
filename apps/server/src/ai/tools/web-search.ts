@@ -33,6 +33,45 @@ const DEFAULT_CONFIG: WebSearchConfig = {
   maxResults: 10,
 };
 
+/**
+ * Raw web search via SearXNG (used by /sources/search endpoint).
+ * Returns empty list if SearXNG is not configured or unavailable.
+ */
+export async function searchWeb(
+  query: string,
+  opts?: { maxResults?: number; host?: string; timeoutMs?: number },
+): Promise<WebSearchResultItem[]> {
+  const host = opts?.host ?? DEFAULT_CONFIG.host;
+  if (!host) return [];
+  const maxResults = opts?.maxResults ?? DEFAULT_CONFIG.maxResults;
+  const timeoutMs = opts?.timeoutMs ?? DEFAULT_CONFIG.timeoutMs;
+
+  const url = new URL('/search', host);
+  url.searchParams.set('q', query);
+  url.searchParams.set('format', 'json');
+  url.searchParams.set('safesearch', '1');
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const resp = await fetch(url, { signal: controller.signal });
+    if (!resp.ok) return [];
+    const data = (await resp.json()) as { results?: Array<Record<string, unknown>> };
+    const results = data.results ?? [];
+    return results.slice(0, maxResults).map((r) => ({
+      title: String(r.title ?? ''),
+      url: String(r.url ?? ''),
+      snippet: String(r.content ?? ''),
+      source: String(r.engine ?? ''),
+    }));
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /** Build a webSearch tool bound to a SearXNG config. */
 export function webSearchTool(config: Partial<WebSearchConfig> = {}) {
   const cfg = { ...DEFAULT_CONFIG, ...config };
