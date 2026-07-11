@@ -1,0 +1,7 @@
+kind: llman.sdd.delta
+ops[2]{op,req_id,title,statement,from,to,name}:
+  add_requirement,preset-inline-directive,"QA MUST parse /prompt: directive from question text","QA MUST 从 question 文本解析 /prompt:<preset> 前缀指令（如 /prompt:stats <query>），MUST NOT 只接受 body preset 字段",null,null,null
+  add_requirement,preset-stats,"QA MUST support stats preset with chart and table JSON","QA MUST 支持 stats preset，产出 chart+table 结构化 JSON（STATS_SYSTEM_PROMPT + StatsChart/StatsTable schema），MUST NOT 缺失该 preset",null,null,null
+op_scenarios[2]{req_id,id,given,when,then}:
+  preset-inline-directive,question-has-directive,"question 文本为 /prompt:stats 销售数据","解析阶段","系统 SHALL 提取 preset=stats 并以剩余文本作为 query"
+  preset-stats,client-uses-stats,"客户端选择 stats preset","生成阶段","系统 SHALL 产出 chart+table 结构化 JSON"

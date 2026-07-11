@@ -1,0 +1,9 @@
+kind: llman.sdd.delta
+ops[3]{op,req_id,title,statement,from,to,name}:
+  add_requirement,studio-sse-streaming,"Outline and markdown generation MUST stream via SSE","studio outline 和 markdown 生成 MUST 通过 SSE 端点流式返回 progress/toolcall/busy/done/error 事件，MUST NOT 返回同步 JSON（对齐 v1 /drafts/:id/outline/stream 与 /markdown/stream）",null,null,null
+  add_requirement,studio-latest-draft,"Studio MUST provide drafts/latest endpoint","studio MUST 提供 GET 端点返回 notebook 下按 updated_at desc 的最新 draft，MUST NOT 缺失该端点",null,null,null
+  add_requirement,studio-stale-running-guard,"Studio MUST clear stale RUNNING status and guard concurrent generation","studio MUST 清理超过阈值（10min）的 RUNNING 状态 draft，并发生成时 MUST 返回 busy 事件而非覆盖",null,null,null
+op_scenarios[3]{req_id,id,given,when,then}:
+  studio-sse-streaming,client-requests-stream,"客户端请求 outline/markdown stream 端点","生成进行中","系统 SHALL 通过 SSE 逐个发送 progress/toolcall/done/error 事件"
+  studio-latest-draft,notebook-has-drafts,"notebook 下存在多个 draft","客户端请求 drafts/latest","系统 SHALL 返回 updated_at 最新的 draft"
+  studio-stale-running-guard,running-too-long,"某 draft status=RUNNING 且超过 10min","下一次生成请求","系统 SHALL 清理 stale 状态后继续而非永久阻塞"

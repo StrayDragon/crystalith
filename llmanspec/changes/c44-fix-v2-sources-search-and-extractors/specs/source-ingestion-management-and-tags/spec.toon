@@ -1,0 +1,9 @@
+kind: llman.sdd.delta
+ops[3]{op,req_id,title,statement,from,to,name}:
+  add_requirement,sources-reembed-requires-failed,"Re-embed MUST require FAILED status","POST /sources/:id/re-embed MUST 校验 source 状态为 failed，非 failed MUST 返回 400",null,null,null
+  add_requirement,sources-batch-per-item-results,"Batch endpoints MUST return per-item results","batch re-embed 和 batch delete MUST 返回 per-item results 数组（含 error_code/message），且 batch delete MUST 使用 DELETE 方法",null,null,null
+  add_requirement,tag-binding-response-and-ownership,"Tag binding MUST return v1 response shape and verify ownership","tag binding MUST 返回 {count, results:[SourceBatchItemResult]} 结构，且 DELETE binding MUST 校验 source 属于该 notebook",null,null,null
+op_scenarios[3]{req_id,id,given,when,then}:
+  sources-reembed-requires-failed,reembed-ready-source,"source 状态为 ready","客户端请求 re-embed","系统 SHALL 返回 400 拒绝"
+  sources-batch-per-item-results,batch-delete,"客户端请求 batch delete","删除完成","系统 SHALL 返回 per-item results 数组且使用 DELETE 方法"
+  tag-binding-response-and-ownership,delete-binding-cross-notebook,"source 属于其它 notebook","客户端请求 DELETE binding","系统 SHALL 拒绝（404 或 400）"

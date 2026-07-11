@@ -1,0 +1,5 @@
+kind: llman.sdd.delta
+ops[1]{op,req_id,title,statement,from,to,name}:
+  add_requirement,csv-parser-markdown-table,"CSV parser MUST produce markdown-table chunks with row metadata","CSV 解析 MUST 使用专用 CSVParser 产出 markdown-table 格式分块（50 rows/chunk，200 char cell 截断），并在 chunk metadata 中记录 csv_row_start/csv_row_end，MUST NOT 把 CSV 当纯文本 pass-through",null,null,null
+op_scenarios[1]{req_id,id,given,when,then}:
+  csv-parser-markdown-table,csv-upload,"客户端上传 .csv 文件","解析阶段","系统 SHALL 产出 markdown-table 格式分块并记录 csv_row_start/csv_row_end metadata"
