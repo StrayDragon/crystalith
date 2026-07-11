@@ -1,6 +1,7 @@
 import type { LanguageModelV4 } from '@ai-sdk/provider';
-import type { ChatTurn } from '@crystalith/shared';
+import type { ChatTurn, Citation } from '@crystalith/shared';
 
+import { generateText } from 'ai';
 import { streamQaResponse } from '../../ai/stream.ts';
 // QA handler — deterministic retrieval + streamText generation.
 //
@@ -177,4 +178,73 @@ function streamNoEvidence(answer: string, judgment: JudgeResult, opts: QaHandler
 /** Rough token estimate (~4 chars/token). */
 function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
+}
+
+// ---------------------------------------------------------------------------
+// H7: Non-streaming QA — direct generate (replaces SSE re-parse)
+// ---------------------------------------------------------------------------
+
+export interface QaDirectResult {
+  answer: string;
+  citations: Citation[];
+  confidence: number;
+  evidence: boolean;
+  noEvidenceReason: string | undefined;
+  contextStats: import('./retrieve-and-judge.ts').ContextStats;
+}
+
+/**
+ * Run QA with deterministic retrieval + direct generation (no SSE).
+ * H7: replaces the old approach of generating an SSE stream then parsing it back.
+ * Uses generateText instead of streamText for the non-streaming path.
+ */
+export async function generateQaDirect(opts: QaHandlerOptions): Promise<QaDirectResult> {
+  const topK = opts.topK ?? 5;
+  const minScore = opts.minScore ?? 0.2;
+
+  const historyTokens = estimateTokens(opts.history.map((m) => m.content).join(' '));
+  const judgment = await retrieveAndJudge({
+    notebookId: opts.notebookId,
+    question: opts.question,
+    sourceIds: opts.sourceIds,
+    topK,
+    minScore,
+    strategyId: opts.strategyId,
+    historyTokens,
+  });
+
+  // No evidence → short-circuit
+  if (!judgment.evidence) {
+    const answer = noEvidenceAnswerForReason(judgment.reason ?? null);
+    opts.onMessageSettled?.(answer, false);
+    return {
+      answer,
+      citations: judgment.citations,
+      confidence: 0,
+      evidence: false,
+      noEvidenceReason: judgment.reason ?? undefined,
+      contextStats: judgment.contextStats,
+    };
+  }
+
+  // Evidence found → generate with context injection (direct, no SSE)
+  const systemWithContext = `${opts.systemPrompt}\n\nSource material:\n${judgment.context}`;
+  const { text } = await generateText({
+    model: opts.model,
+    system: systemWithContext,
+    messages: [...opts.history, { role: 'user' as const, content: opts.question }],
+  });
+
+  // Apply inline citation fallback
+  const finalText = ensureInlineCitations(text, judgment.citations);
+  opts.onMessageSettled?.(finalText, false, judgment.citations);
+
+  return {
+    answer: finalText,
+    citations: judgment.citations,
+    confidence: judgment.confidence,
+    evidence: true,
+    noEvidenceReason: undefined,
+    contextStats: judgment.contextStats,
+  };
 }

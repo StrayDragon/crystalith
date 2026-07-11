@@ -16,7 +16,8 @@ import {
 import { deleteSourceVectors } from '../../db/vectors.ts';
 import { registerApiDoc, type OpenApiRoute } from '../../openapi.ts';
 import { bumpSourcesEpoch } from '../../rag/cache.ts';
-import { getDedupEnabled, getSecurityPolicy, getUploadMaxBytes } from '../../shared/config.ts';
+import { config, getDedupEnabled, getSecurityPolicy, getUploadMaxBytes } from '../../shared/config.ts';
+import { listExtractorMetadata } from '../../shared/extraction/factory.ts';
 import { extractUrl } from '../../shared/extraction/factory.ts';
 import { validateUrlForFetch } from '../../shared/net/url-safety.ts';
 import { uploadDedupKey, urlDedupKey } from './dedup.ts';
@@ -768,33 +769,8 @@ export const sourcesRouter = new Elysia({ prefix: '/v2' })
     const mode = policy?.mode ?? 'inherit_global';
     const enabledExtractors = policy?.enabledExtractors ?? null;
 
-    // Build per-extractor availability report (v1 ExtractorFactory.get_available_extractors)
-    const allExtractors = [
-      {
-        name: 'readability',
-        available: true,
-        display_name: 'Readability (built-in)',
-        priority: 10,
-        requires_api_key: false,
-        recovery_hint: null,
-      },
-      {
-        name: 'jina',
-        available: Boolean(process.env.JINA_API_KEY),
-        display_name: 'Jina Reader',
-        priority: 20,
-        requires_api_key: true,
-        recovery_hint: 'Set JINA_API_KEY environment variable',
-      },
-      {
-        name: 'firecrawl',
-        available: Boolean(process.env.FIRECRAWL_API_KEY),
-        display_name: 'Firecrawl',
-        priority: 30,
-        requires_api_key: true,
-        recovery_hint: 'Set FIRECRAWL_API_KEY environment variable',
-      },
-    ];
+    // Use factory's listExtractorMetadata — reads real config, not env vars (H2 fix)
+    const allExtractors = listExtractorMetadata(config().raw);
 
     return {
       notebook_id: nid,

@@ -36,6 +36,48 @@ export class ExtractionError extends Error {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Metadata / availability report (v1 ExtractorsListResponse)
+// ---------------------------------------------------------------------------
+
+export interface ExtractorMetadata {
+  name: string;
+  available: boolean;
+  display_name: string;
+  priority: number;
+  requires_api_key: boolean;
+  recovery_hint: string | null;
+}
+
+const DISPLAY_NAMES: Record<string, string> = {
+  readability: 'Readability (built-in)',
+  jina: 'Jina Reader',
+  firecrawl: 'Firecrawl',
+};
+
+const RECOVERY_HINTS: Record<string, string> = {
+  jina: 'Set extraction.jina_api_key in config',
+  firecrawl: 'Set extraction.firecrawl_api_key in config',
+};
+
+/**
+ * List all extractors with availability + metadata (v1 ExtractorsListResponse).
+ * Uses each extractor's isAvailable() against the real config object, not env vars.
+ */
+export function listExtractorMetadata(config: unknown): ExtractorMetadata[] {
+  return DEFAULT_ORDER.map((name, index) => {
+    const ext = extractors[name];
+    return {
+      name,
+      available: ext ? ext.isAvailable(config) : false,
+      display_name: DISPLAY_NAMES[name] ?? name,
+      priority: (index + 1) * 10,
+      requires_api_key: name !== 'readability',
+      recovery_hint: RECOVERY_HINTS[name] ?? null,
+    };
+  });
+}
+
 /**
  * Extract URL content by trying extractors in order. Returns the first
  * successful result. Throws ExtractionError if all extractors fail.

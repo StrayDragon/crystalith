@@ -23,7 +23,7 @@ import { db } from '../../db/index.ts';
 import { researchSessions, researchSteps } from '../../db/schema.ts';
 import { getDefaultChatModel } from '../../shared/config.ts';
 import { Semaphore } from '../../shared/semaphore.ts';
-import { renewLock } from './router.ts';
+import { renewLock } from './lock.ts';
 
 // ---------------------------------------------------------------------------
 // Types
